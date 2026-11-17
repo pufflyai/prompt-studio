@@ -1,26 +1,102 @@
-import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import type { ExtensionStorageApi, StorageRecord } from "@pstdio/sdk/extensions";
+
+export { TICKET_KEY_PREFIX, TICKETS_COLLECTION, ticketRecordId } from "./ticket-record-address";
+
+import { migratePlannerStorage } from "./migrate-storage";
+import { liveRecord, ticketRecordId } from "./ticket-record-address";
+import { ticketRecordPages } from "./ticket-selection";
 import { readTicketTags, type StoredTicketRecord, writeTicketTags } from "./ticket-tag-storage";
 import type { StoredTicket } from "./types";
 
-export const TICKETS_COLLECTION = "tickets";
+const live = liveRecord;
+// Like the collection writes before, saved JSON drops undefined fields.
+const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as never;
+
 export const ticketRecords = (storage: ExtensionStorageApi) => {
-  const records = storage.collection<StoredTicketRecord>(TICKETS_COLLECTION);
+  // Reads must not see the records before an older project's tickets have moved into them.
+  const observe = async (id: string) => {
+    await migratePlannerStorage({ storage });
+    const record = await storage.records.read(ticketRecordId(storage, id));
+    return { record, stored: live(record) ? (record.value as unknown as StoredTicketRecord) : undefined };
+  };
+  const save = async (id: string, value: StoredTicket, record: StorageRecord, stored?: StoredTicketRecord) => {
+    const outcome = await storage.records.commit({
+      operationId: storage.ids.create(),
+      edits: [
+        {
+          recordId: ticketRecordId(storage, id),
+          observedRevision: record.revision,
+          replace: json(writeTicketTags(value, stored)),
+          ...(record.deleted ? { deleted: false } : {}),
+        },
+      ],
+    });
+    return outcome.state !== "refused";
+  };
   return {
-    ...records,
     get: async (id: string) => {
-      const stored = await records.get(id);
+      const { stored } = await observe(id);
       return stored && readTicketTags(stored);
     },
-    list: async () => (await records.list()).map(readTicketTags),
-    read: async (id: string) => {
-      const observed = await records.read(id);
-      return observed && { ...observed, stored: observed.value, value: readTicketTags(observed.value) };
+    list: async () => {
+      await migratePlannerStorage({ storage });
+      const tickets: StoredTicket[] = [];
+      for await (const page of ticketRecordPages(storage)) tickets.push(...page);
+      return tickets;
     },
-    put: async (id: string, value: StoredTicket) => records.put(id, writeTicketTags(value, await records.get(id))),
-    update: async (id: string, value: StoredTicket) =>
-      records.update(id, writeTicketTags(value, await records.get(id))),
-    updateIfUnchanged: async (id: string, revision: string, value: StoredTicket, stored?: StoredTicketRecord) =>
-      records.updateIfUnchanged(id, revision, writeTicketTags(value, stored ?? (await records.get(id)))),
+    read: async (id: string) => {
+      const { record, stored } = await observe(id);
+      return stored && { revision: record.revision, stored, value: readTicketTags(stored) };
+    },
+    put: async (id: string, value: StoredTicket) => {
+      const { record, stored } = await observe(id);
+      await save(id, value, record, stored);
+    },
+    update: async (id: string, value: StoredTicket) => {
+      const { record, stored } = await observe(id);
+      if (!stored) throw new Error(`Item not found: ${id}`);
+      await save(id, value, record, stored);
+    },
+    /** Saves only while the ticket still has the revision `read` returned; false for changed or deleted tickets. */
+    updateIfUnchanged: async (id: string, revision: string, value: StoredTicket, stored?: StoredTicketRecord) => {
+      const current = stored ?? (await observe(id)).stored;
+      const saved = await storage.records.commitIfCurrent({
+        operationId: storage.ids.create(),
+        edits: [
+          {
+            recordId: ticketRecordId(storage, id),
+            expectedRevision: revision,
+            replace: json(writeTicketTags(value, current)),
+          },
+        ],
+      });
+      return saved !== null && saved.state !== "refused";
+    },
+    /** Creates the ticket unless a live one exists; relay order refuses a concurrent create of the same ID. */
+    createIfAbsent: async (id: string, value: StoredTicket) => {
+      const { record, stored } = await observe(id);
+      if (stored) return false;
+      const outcome = await storage.records.commit({
+        operationId: storage.ids.create(),
+        edits: [
+          {
+            recordId: ticketRecordId(storage, id),
+            expectedRevision: record.revision,
+            replace: json(value),
+            ...(record.deleted ? { deleted: false } : {}),
+          },
+        ],
+      });
+      return outcome.state !== "refused";
+    },
+    delete: async (id: string) => {
+      const { record, stored } = await observe(id);
+      if (!stored) return;
+      await storage.records.commit({
+        operationId: storage.ids.create(),
+        edits: [{ recordId: ticketRecordId(storage, id), expectedRevision: record.revision, deleted: true }],
+      });
+    },
   };
 };
 

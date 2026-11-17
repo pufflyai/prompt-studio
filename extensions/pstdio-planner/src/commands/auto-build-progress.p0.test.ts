@@ -3,6 +3,7 @@ import { putAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { autoBuildDispatches, autoBuildPullRequestNotifications } from "../data/auto-build-dispatches";
 import { saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
+import { observeTicketRecords } from "../data/storage-reads.fixture";
 import { ticketsCollection } from "../data/ticket-context.fixture";
 
 import { withWriteGuard } from "../data/write-guard";
@@ -40,7 +41,10 @@ async function monitorFixture() {
     lastRequestStarted: ago(5),
   });
   const followups: string[] = [];
-  const fetched: string[] = [];
+  // Tickets are records since storage version 5; their record reads count as fetches.
+  const tickets = observeTicketRecords(ctx.storage);
+  ctx.storage.records = tickets.storage.records;
+  const fetched = tickets.reads;
   const collection = ctx.storage.collection.bind(ctx.storage);
   ctx.storage.collection = <T>(name: string) => {
     const source = collection<T>(name);
