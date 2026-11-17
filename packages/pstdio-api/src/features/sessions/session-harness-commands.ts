@@ -249,14 +249,17 @@ export const invokeSessionHarnessOperation = async (
 export const createSessionHarnessOperation = async (
   deps: SessionsRouteDeps,
   input: Parameters<SessionsRouteDeps["sessionService"]["create"]>[0] & {
-    operationWorkspace?: Parameters<typeof workspaceSessionReadiness>[0];
+    workspaceId?: string;
   },
   operation: HarnessOperation,
   onCreated: (session: { id: string; title: string; status: string }) => Promise<void>,
   signal?: AbortSignal,
 ) => {
-  const { operationWorkspace, ...sessionInput } = input;
-  const readiness = workspaceSessionReadiness(operationWorkspace);
+  const { workspaceId, ...sessionInput } = input;
+  const workspace = workspaceId ? await deps.workspaceService.get(workspaceId) : null;
+  if (workspaceId && (!workspace || workspace.deleted_at || workspace.archived))
+    throw new HarnessOperationError("Choose an active workspace before running this command.", 409);
+  const readiness = workspaceSessionReadiness(workspace);
   if (readiness.kind !== "ready") throw new HarnessOperationError(readiness.message, 409);
   const session = await deps.sessionService.create(
     { ...sessionInput, status: "completed" },

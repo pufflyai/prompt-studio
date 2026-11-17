@@ -25,7 +25,12 @@ export const NativeChatNotices = ({ host, state, session }: NativeChatNoticesPro
       <NativeChatDraftRecovery
         recovered={draft.recovered}
         hidden={(saved) =>
-          Boolean(pending?.some((item) => item.failure && chatDraftContentKey(item) === chatDraftContentKey(saved)))
+          Boolean(
+            pending?.some(
+              (item) =>
+                item.failure && !item.failureDismissed && chatDraftContentKey(item) === chatDraftContentKey(saved),
+            ),
+          )
         }
         onRestore={session.restoreDraft}
       />
@@ -35,7 +40,7 @@ export const NativeChatNotices = ({ host, state, session }: NativeChatNoticesPro
 };
 
 export const NativeChatErrors = ({ state, session }: Omit<NativeChatNoticesProps, "host">) => {
-  const failures = state.pending?.filter((item) => item.failure);
+  const failures = state.pending?.filter((item) => item.failure && !item.failureDismissed);
   if (!state.error && !failures?.length) return null;
   return (
     <Box position="relative" h="0">

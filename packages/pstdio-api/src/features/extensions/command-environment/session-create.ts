@@ -75,7 +75,7 @@ export const createScopedSession = async (
     ? await createSessionHarnessOperation(
         deps,
         {
-          operationWorkspace: workspace,
+          workspaceId: workspace.id,
           project_id: input.projectId,
           title: sessionInput.title,
           agent: agentId,

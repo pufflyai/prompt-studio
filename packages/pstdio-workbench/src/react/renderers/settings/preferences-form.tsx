@@ -46,13 +46,17 @@ const PreferenceFormBody = ({
     if (entry) return preferences.setValue(name, paramValueToPreference(entry.schema, value), entry.scope);
   }, mode);
   const dirty = Object.keys(draft.staged).length > 0;
-  const error = Object.values(draft.errors).join("\n");
-  const [dismissed, setDismissed] = useState<string>();
+  const [dismissed, setDismissed] = useState<typeof draft.errors>({});
+  const fieldErrors = Object.entries(draft.errors);
+  const error = fieldErrors
+    .filter(([name, message]) => dismissed[name] !== message)
+    .map(([, message]) => message)
+    .join("\n");
   const changes = {
     dirty,
     saving: draft.saving,
     onSave: () => {
-      setDismissed(error);
+      setDismissed(draft.errors);
       return draft.save();
     },
     onReset: () => {
@@ -69,17 +73,17 @@ const PreferenceFormBody = ({
         params={preferenceSchemaToParams(entries)}
         defaultValues={draft.staged}
         onChange={(name, value) => {
-          setDismissed(undefined);
+          setDismissed({});
           if (byName.has(name)) draft.change(name, value);
         }}
         fullWidth
       />
-      {error && error !== dismissed ? (
+      {error ? (
         <ActionErrorSlot>
-          <AlertMessage compact status="error" title={error} onClose={() => setDismissed(error)} />
+          <AlertMessage compact status="error" title={error} onClose={() => setDismissed(draft.errors)} />
         </ActionErrorSlot>
       ) : null}
-      {!settingsPage && (mode === "apply" || Boolean(error)) ? <SettingsActions {...changes} /> : null}
+      {!settingsPage && (mode === "apply" || fieldErrors.length > 0) ? <SettingsActions {...changes} /> : null}
     </Stack>
   );
 };

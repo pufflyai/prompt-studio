@@ -39,6 +39,14 @@ test("an unavailable workspace rejects a native operation before creating a sess
       body: JSON.stringify(folderProjectInput({ name: "Workspace provisioning" })),
     });
     const project = await response.json();
+    const workspace = (await app.deps.workspaceService.getDefault(project.id))!;
+    await app.deps.workspaceService.updateProviderProjection(workspace.id, {
+      provider_state: "provisioning",
+      execution_kind: workspace.execution_kind,
+      root_path: workspace.root_path,
+      provider_capabilities_json: workspace.provider_capabilities_json,
+      provider_error_json: null,
+    });
     await expect(
       createSessionHarnessOperation(
         app.deps,
@@ -46,18 +54,12 @@ test("an unavailable workspace rejects a native operation before creating a sess
           project_id: project.id,
           title: "Native operation",
           agent: "native-test",
-          operationWorkspace: {
-            id: "provisioning-workspace",
-            initializing: true,
-            setup_error: null,
-            provider_state: "provisioning",
-            provider_error_json: null,
-          },
+          workspaceId: workspace.id,
         },
         { kind: "command", text: "/compact" },
         async () => {},
       ),
-    ).rejects.toThrow("still provisioning");
+    ).rejects.toThrow("provider state is provisioning");
     expect(await app.deps.sessionService.list(project.id)).toEqual([]);
   } finally {
     await app.close();
