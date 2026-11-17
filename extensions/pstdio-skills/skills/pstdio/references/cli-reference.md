@@ -136,18 +136,9 @@ pst pstdio.planner ticket-tag create --name <name> [--type <single_select|multi_
 pst pstdio.planner ticket-tag delete --tag <tag>
 ```
 
-## Reports
+## Historical Reports compatibility
 
-These aliases are available when the `reports` extension is enabled.
-
-```sh
-pst pstdio.reports reports write [--workspace <id>] [--kind <kind>] [--name <name>] --template <template> [--source <source>]
-pst pstdio.reports reports read --id <report-id>
-pst pstdio.reports reports save [--workspace <id>] [--name <name>]
-pst pstdio.reports reports delete [--workspace <id>] [--name <name>]
-```
-
-`reports write` returns absolute host paths in the default project folder for the report and its evidence files. Edit those paths, then use `reports save`. These paths do not refer to a remote workspace filesystem.
+`pst reports read --id <RP-reference>` remains available with the Reports compatibility extension. Migrate linked historical evidence with `pst pstdio.planner migrate-ticket-outcomes --id <ticket>`. New implementation and review handoffs use resource Activity; see the shipped `use-resource-activity` skill.
 
 Workspace params must match the provider declaration. Unknown keys, invalid values, and missing required values fail before creation. Omitted params use declared defaults. For Git worktrees, `base` defaults to the current branch; pass `base: main` explicitly to start from `main`. Errors list the accepted params and options.
 
@@ -216,3 +207,7 @@ to clear it. Reorder saved views with `pst views reorder --board <boardId>
 Saved views and defaults are project data. Active selection and unsaved edits
 stay local to each client. Old locally saved views are dropped. See the
 [board view reference](https://prompt.studio/docs/references/cli/board-views/).
+
+## Resource Activity
+
+Use `pst resources activity list`, `read`, `publish`, `resolve`, `handoff`, `attach`, and `download`. Every command takes `--resource` with complete ResourceRef JSON. `publish --file <json>` accepts a comment or a typed implementation/review outcome. See the shipped `use-resource-activity` skill for schemas and revision rules. Sessions are context, not Activity destinations. Historical Reports commands are compatibility tools; new handoffs use Activity.

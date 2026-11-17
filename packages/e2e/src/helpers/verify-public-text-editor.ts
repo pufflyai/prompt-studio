@@ -17,7 +17,9 @@ export const verifyPublicTextEditor = async (page: Page, selected: boolean, init
 
 /** The default Markdown renderer must edit the same declared public source as its installed peer. */
 export const verifyNativePublicTextEditor = async (page: Page, initial: string) => {
-  const editor = page.getByRole("region", { name: "Main", exact: true }).getByTestId("content-editable");
+  const editor = page
+    .getByRole("region", { name: "Main", exact: true })
+    .getByRole("textbox", { name: "", exact: true });
   await expect(editor).toHaveCount(1);
   await expect(editor).toHaveAttribute("contenteditable", "true");
   await expect(editor).toHaveText(initial);

@@ -1,5 +1,12 @@
-import { defineExtension, defineKeybinding } from "@pstdio/sdk/extensions";
-import { createNoteCommand, deleteNoteCommand, renameNoteCommand, resolveNoteCommand } from "./src/commands";
+import { defineExtension, defineKeybinding, packageAsset } from "@pstdio/sdk/extensions";
+import {
+  authorizeNoteActivityCommand,
+  createNoteCommand,
+  deleteNoteCommand,
+  renameNoteCommand,
+  resolveNoteCommand,
+  resolveNotesCommand,
+} from "./src/commands";
 import { createFolderCommand, deleteFolderCommand, moveNoteCommand, renameFolderCommand } from "./src/folder-commands";
 import { noteShortcuts } from "./src/keyboard";
 import { documents } from "./src/mounts";
@@ -10,6 +17,7 @@ import { noteText } from "./src/text-source";
 import { notesTree, notesTreeNavigation } from "./src/tree";
 
 export default defineExtension({
+  translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   artifactMounts: [documents],
   textSources: [noteText],
   resourceKinds: [note],
@@ -17,6 +25,8 @@ export default defineExtension({
   views: [editor, notesTree],
   pages: [notesPage],
   commands: [
+    resolveNotesCommand,
+    authorizeNoteActivityCommand,
     createNoteCommand,
     deleteNoteCommand,
     renameNoteCommand,

@@ -2,10 +2,12 @@ import { describe, expect, test } from "bun:test";
 import extension from "./extension";
 
 describe("pstdio-reports extension", () => {
-  test("registers reports commands, template, and skill", () => {
+  test("registers historical report commands and templates", () => {
     expect(extension.commands?.map((command) => command.id).sort()).toEqual([
       "reports.delete",
+      "reports.export",
       "reports.read",
+      "reports.redirect",
       "reports.save",
       "reports.write",
       "templates.delete",
@@ -24,6 +26,5 @@ describe("pstdio-reports extension", () => {
       type: "report",
       title: "Change request",
     });
-    expect(extension.skills?.find((skill) => skill.id === "use-reports")).toMatchObject({ title: "Use reports" });
   });
 });

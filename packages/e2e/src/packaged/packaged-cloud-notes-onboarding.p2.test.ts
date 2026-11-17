@@ -28,7 +28,9 @@ test(
         await browserExpect(sidebar.getByRole("option", { name: "From device A", exact: true })).toBeVisible();
         await sidebar.getByRole("button", { name: "New note", exact: true }).click();
         phase("new note selected; await editor");
-        const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
+        const editor = page
+          .getByRole("region", { name: "Main", exact: true })
+          .getByRole("textbox", { name: "", exact: true });
         await browserExpect(editor).toBeVisible();
         phase("editor visible; fill note");
         await editor.fill("Created on device B");

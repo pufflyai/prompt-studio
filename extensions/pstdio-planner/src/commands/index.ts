@@ -34,6 +34,7 @@ import { linkReviewCommand } from "./link-review";
 import { listTicketFilesCommand } from "./list-ticket-files";
 import { listTicketTemplatesCommand } from "./list-ticket-templates";
 import { listTicketsCommand } from "./list-tickets";
+import { migrateTicketOutcomesCommand } from "./migrate-ticket-outcomes";
 import { nextTicketsCommand } from "./next-tickets";
 import { openTicketsCommand } from "./open-tickets";
 import { pullTicketCommand } from "./pull-ticket";
@@ -74,6 +75,7 @@ import {
   proposalRefinedCommand,
   refineTicketCommand,
 } from "./ticket-actions";
+import { ticketActivityContextCommand } from "./ticket-activity";
 import {
   createTicketFileCommand,
   deleteTicketFileCommand,
@@ -119,6 +121,8 @@ import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = [
   cleanupBoardCommand,
+  migrateTicketOutcomesCommand,
+  ticketActivityContextCommand,
   ticketRelatedOpeningsCommand,
   resolveTicketPathCommand,
   submitRevisionCommand,

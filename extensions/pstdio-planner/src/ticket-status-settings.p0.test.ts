@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { createMemoryActivity, createMemoryStorage } from "@pstdio/sdk/testing";
+import { makeCommandContext } from "./commands/command-context.fixture";
 import { statusesCollection } from "./data/collections";
 import { putTicket, ticketContext, ticketsCollection } from "./data/ticket-context.fixture";
 import type { Ticket } from "./data/types";
@@ -108,4 +109,23 @@ test("missing status settings cannot erase the stored workflow", async () => {
   const before = await readStatusSettings.run(context(storage), {});
   await expect(saveStatusSettings.run(context(storage), {} as never)).rejects.toThrow("Statuses are required");
   expect(await readStatusSettings.run(context(storage), {})).toEqual(before);
+});
+
+test("removing a status in settings preserves its display name in ticket history", async () => {
+  const storage = createMemoryStorage();
+  const activity = createMemoryActivity();
+  const ctx = makeCommandContext({ storage, params: {}, overrides: { activity } });
+  const current = await readStatusSettings.run(ctx, {});
+  await putTicket(storage, makeTicket("ready"));
+  await saveStatusSettings.run(ctx, { statuses: current.statuses.filter((status) => status.id !== "ready") });
+  const page = await activity.query({
+    resource: { projectId: ctx.projectId, extensionId: ctx.extensionId, type: "ticket", id: "ticket-1" },
+  });
+  expect(page.items[0]!.changes).toMatchObject([
+    {
+      label: "Status",
+      beforeLabel: current.statuses.find((status) => status.id === "ready")!.label,
+      afterLabel: "Backlog",
+    },
+  ]);
 });

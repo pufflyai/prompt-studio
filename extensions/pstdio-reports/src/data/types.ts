@@ -1,4 +1,5 @@
 export interface StoredReportFile {
+  activityAttachmentId?: string;
   id: string;
   name: string;
   blobId: string;
@@ -10,6 +11,8 @@ export interface StoredReportFile {
 }
 
 export interface StoredReport {
+  cleanupBlobIds?: string[];
+  activityRefs?: { resource: import("@pstdio/sdk/extensions").ResourceRef; id: string }[];
   id: string;
   workspaceShorthand: string;
   workspaceId: string | null;

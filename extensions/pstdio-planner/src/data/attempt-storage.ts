@@ -51,6 +51,7 @@ const isReview = (value: unknown) =>
   isString(value.id) &&
   isNullableString(value.sessionId) &&
   isNullableString(value.reportId) &&
+  (value.activityId === undefined || isString(value.activityId)) &&
   isString(value.reviewedHeadSha) &&
   isActor(value.reviewer) &&
   reviewStates.has(String(value.state)) &&
@@ -65,7 +66,9 @@ const isRevision = (value: unknown) =>
   Number(value.revision) > 0 &&
   isString(value.baseSha) &&
   isString(value.headSha) &&
-  isString(value.changeRequestReportId) &&
+  isNullableString(value.changeRequestReportId) &&
+  (value.changeRequestReportId !== null || isString(value.changeRequestActivityId)) &&
+  (value.changeRequestActivityId === undefined || isString(value.changeRequestActivityId)) &&
   isString(value.submittedAt) &&
   isActor(value.submittedBy) &&
   Array.isArray(value.reviews) &&
