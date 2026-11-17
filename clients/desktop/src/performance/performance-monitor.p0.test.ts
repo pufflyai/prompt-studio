@@ -102,6 +102,25 @@ describe("desktop performance monitor", () => {
     expect(harness.endpoint.opened).toBe(1);
   });
 
+  test("publishes render evidence only to the dedicated local reader", async () => {
+    const harness = createHarness(true);
+    let readRenders: (() => unknown) | undefined;
+    harness.options.openEndpoint = async (_snapshot, renders) => {
+      readRenders = renders;
+      return { close: async () => {} };
+    };
+    try {
+      await harness.monitor.start();
+      const renderCapture = { status: "recording", startedAt: "2026-11-17T12:00:00.000Z" };
+      harness.monitor.reportRendererState({ frameRate: [60], pausedExtensionIds: [], renderCapture });
+      expect(readRenders?.()).toEqual(renderCapture);
+      expect(harness.monitor.snapshot()).not.toHaveProperty("renderCapture");
+    } finally {
+      await harness.monitor.stop();
+    }
+    expect(readRenders?.()).toBeNull();
+  });
+
   test("reports CPU per process for the measured window, busiest first", async () => {
     const harness = createHarness();
     await harness.monitor.setEnabled(true);

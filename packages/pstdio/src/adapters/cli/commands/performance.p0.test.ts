@@ -18,11 +18,11 @@ const endpointPath = () => {
   return join(root, "endpoint.json");
 };
 
-const serve = async (path: string, body: string) => {
+const serve = async (path: string, body: string, operation?: string) => {
   const token = "a".repeat(64);
   const server: Server = createServer((socket) => {
     socket.once("data", (request) => {
-      expect(request.toString()).toBe(`${token}\n`);
+      expect(request.toString()).toBe(operation ? `${token} ${operation}\n` : `${token}\n`);
       socket.end(body);
     });
   });
@@ -98,10 +98,19 @@ test("reads only an explicitly collected render capture from the local endpoint"
     unnamedRenders: 0,
     truncated: false,
   };
-  await serve(path, `${JSON.stringify({ version: 1, host: "desktop", processes: [], renderCapture })}\n`);
+  await serve(path, `${JSON.stringify({ capture: renderCapture })}\n`, "renders");
   const log = mock();
   await createHandler({ log, resolveEndpoint: () => path })({ action: "renders" });
   expect(JSON.parse(log.mock.calls[0]?.[0])).toEqual(renderCapture);
+});
+
+test("asks the local desktop to start a render capture", async () => {
+  const path = endpointPath();
+  const capture = { status: "recording", startedAt: "2026-11-17T12:00:00.000Z" };
+  await serve(path, `${JSON.stringify({ capture })}\n`, "start-renders");
+  const log = mock();
+  await createHandler({ log, resolveEndpoint: () => path })({ action: "renders", start: true });
+  expect(JSON.parse(log.mock.calls[0]?.[0])).toEqual(capture);
 });
 
 test("requires the saved recording directory without starting monitoring", async () => {

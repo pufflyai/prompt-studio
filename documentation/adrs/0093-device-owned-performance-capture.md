@@ -20,6 +20,8 @@ Version 2 snapshots extend the existing snapshot endpoint with a shared timestam
 
 Expose permission-checked `performance.read` and `performance.control` webview capabilities. Control additionally requires a local user interaction. The runtime has no route that can change the device preference. Subscriptions belong to their webview connection and are disposed when it disconnects.
 
+React render captures use an explicit start request on the desktop's authenticated local socket. Requests only reach the active workbench and never change the monitoring preference. The render summary stays out of the shared snapshot and recordings, and the same socket serves it to the local CLI.
+
 Export `workbenchSlots.developerSettings` using the existing settings-panel contribution model. Resolve scope and location by the host-owned target, not a substring of a slot identifier. Embedded controls dispose independently of the shared panel and other contributors.
 
 ## Recording bounds

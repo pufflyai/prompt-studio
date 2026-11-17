@@ -17,6 +17,7 @@ import { recoveryError } from "./lifecycle/recovery-error";
 import { createRuntimeRecovery } from "./lifecycle/runtime-recovery";
 import { startWorkbench } from "./lifecycle/start-workbench";
 import { createDesktopPerformanceMonitor } from "./performance/create-desktop-performance-monitor";
+import { requestRenderCapture } from "./performance/request-render-capture";
 import { createApplicationMenuTemplate, setApplicationCommandsEnabled } from "./release/application-menu";
 import { createDesktopUpdateChannel } from "./release/desktop-update-channel";
 import { DesktopUpdateManager } from "./release/desktop-update-manager";
@@ -47,6 +48,8 @@ let state: DesktopState = initialDesktopState;
 let windowController: DesktopWindowController | null = null;
 const performanceMonitor = createDesktopPerformanceMonitor({
   windows: () => windowController,
+  startRenderCapture: () =>
+    requestRenderCapture(state.kind === "workbench" ? windowController?.visibleWorkbenchContents() : undefined),
   backend: () => {
     const descriptor = runtimeManager.runtime?.descriptor;
     const identity = runtimeManager.processIdentity;

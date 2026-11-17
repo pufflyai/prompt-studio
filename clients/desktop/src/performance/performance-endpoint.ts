@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { rmSync, writeFileSync } from "node:fs";
 import { connect, createServer, type Socket } from "node:net";
 import { dirname } from "node:path";
+import type { ReactRenderCapture } from "pstdio-api-contracts/performance-diagnostics";
 import { securePerformanceDirectory } from "pstdio-diagnostics";
 import { readPerformanceEndpointDescriptor } from "pstdio-paths";
 
@@ -15,9 +16,13 @@ const isServing = (port: number) =>
     socket.once("error", () => resolve(false));
   });
 
-// The credential file protects access on every platform. The listener accepts
-// only loopback connections and never reads a snapshot before authenticating.
-export const openPerformanceEndpoint = async (path: string, read: () => unknown) => {
+interface RenderCaptureEndpoint {
+  read: () => ReactRenderCapture | null;
+  start: () => Promise<ReactRenderCapture>;
+}
+
+// The owner-only credential protects reads and the one bounded capture action.
+export const openPerformanceEndpoint = async (path: string, read: () => unknown, renders?: RenderCaptureEndpoint) => {
   const previous = readPerformanceEndpointDescriptor(path);
   if (previous && (await isServing(previous.port))) {
     throw new Error("Another app is already serving performance diagnostics.");
@@ -33,22 +38,34 @@ export const openPerformanceEndpoint = async (path: string, read: () => unknown)
     socket.setEncoding("utf8");
     socket.setTimeout(2_000, () => socket.destroy());
     let request = "";
+    const endUnauthenticated = () => socket.end();
+    socket.once("end", endUnauthenticated);
     const authenticate = (chunk: string) => {
-      if (request.length + chunk.length > token.length + 1) {
+      if (request.length + chunk.length > token.length + " start-renders\n".length) {
         socket.destroy();
         return;
       }
       request += chunk;
       if (!request.endsWith("\n")) return;
       socket.off("data", authenticate);
-      if (request !== `${token}\n`) {
+      socket.off("end", endUnauthenticated);
+      const reply = (value: unknown) => {
+        if (!socket.destroyed) socket.end(`${JSON.stringify(value)}\n`);
+      };
+      if (request === `${token}\n`) reply(read());
+      else if (request === `${token} renders\n` && renders) reply({ capture: renders.read() });
+      else if (request === `${token} start-renders\n` && renders) {
+        void Promise.resolve()
+          .then(renders.start)
+          .then(
+            (capture) => reply({ capture }),
+            (error) => reply({ error: (error instanceof Error ? error.message : String(error)).slice(0, 500) }),
+          );
+      } else {
         socket.destroy();
-        return;
       }
-      socket.end(`${JSON.stringify(read())}\n`);
     };
     socket.on("data", authenticate);
-    socket.on("end", () => socket.end());
   });
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);

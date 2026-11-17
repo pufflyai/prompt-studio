@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { PerformanceCapture } from "./performance-capture";
-import { type ReactRenderCapture, renderCaptureSchema } from "./render-capture";
+import { renderCaptureSchema } from "./render-capture";
 
 // Local performance diagnostics are shared by the desktop host, the dashboard, and
 // the `pst performance` command. Nothing here is sent to the runtime or a server.
@@ -113,8 +113,6 @@ export interface PerformanceSnapshotV1 {
   frameRate: number[];
   // Extensions whose views are unloaded until the person resumes them.
   pausedExtensionIds: string[];
-  /** Latest explicitly requested workbench capture. It is not part of performance recordings. */
-  renderCapture?: ReactRenderCapture;
 }
 
 export type {
@@ -144,5 +142,7 @@ export {
   RENDER_CAPTURE_LIMITS,
   type ReactRenderCapture,
   type ReactRenderSummaryRow,
+  type RenderCaptureOperation,
+  renderCaptureReplySchema,
   renderCaptureSchema,
 } from "./render-capture";

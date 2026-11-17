@@ -23,7 +23,6 @@ export const createPerformanceDiagnosticsAdapter = (controller: PerformanceMonit
       if (!navigator.userActivation?.isActive) throw new Error("Performance controls require a local user interaction");
       if (request.operation === "set-enabled") return controller.setEnabled(request.enabled);
       if (request.operation === "set-render-overlay") return controller.setRenderOverlayEnabled(request.enabled, owner);
-      if (request.operation === "start-render-capture") return controller.startRenderCapture(owner);
       if (request.operation === "pause-extension") pausedExtensions.pause(request.installedExtensionId);
       if (request.operation === "resume-extension") pausedExtensions.resume(request.installedExtensionId);
     },

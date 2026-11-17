@@ -75,7 +75,7 @@ export const createReactRenderOverlay = (options: RenderOverlayOptions) => {
   return {
     state: () => {
       const supported = scanner.isSupported();
-      return { supported, captureSupported: supported, enabled: highlighting, scope: "workbench" as const };
+      return { supported, enabled: highlighting, scope: "workbench" as const };
     },
     setEnabled(enabled: boolean) {
       if (enabled) requireSupport();
@@ -101,7 +101,8 @@ export const createReactRenderOverlay = (options: RenderOverlayOptions) => {
         onChange();
       }, duration);
       capture = { until: performance.now() + duration, timer, summary };
-      result = { status: "recording", startedAt };
+      const recording = { status: "recording", startedAt } as const;
+      result = recording;
       try {
         reconcile();
       } catch (error) {
@@ -110,7 +111,7 @@ export const createReactRenderOverlay = (options: RenderOverlayOptions) => {
         result = undefined;
         throw error;
       }
-      onChange();
+      return recording;
     },
     clearCapture() {
       if (!result) return;

@@ -3,6 +3,7 @@ import {
   PERFORMANCE_LIMITS,
   type PerformanceRecordingExport,
   type PerformanceSnapshot,
+  type ReactRenderCapture,
   type RendererStateReport,
   type SlowFrame,
   type SlowFrameReport,
@@ -19,7 +20,8 @@ export interface PerformanceHost {
   recordings?: () => Promise<PerformanceRecordingExport | null>;
   retainCapture?: (monitoring?: boolean) => Promise<() => Promise<void>>;
   reportFrames: (report: SlowFrameReport) => void;
-  reportState: (report: RendererStateReport) => void;
+  reportState: (report: RendererStateReport) => void | Promise<void>;
+  onRenderCaptureRequest?: (start: () => Promise<ReactRenderCapture>) => () => void;
 }
 
 interface DesktopPerformanceBridge {
@@ -31,6 +33,7 @@ interface DesktopPerformanceBridge {
   releasePerformanceCapture?: (id: string) => Promise<void>;
   reportSlowFrames: (report: SlowFrameReport) => Promise<void>;
   reportRendererState: (report: RendererStateReport) => Promise<void>;
+  onRenderCaptureRequest?: PerformanceHost["onRenderCaptureRequest"];
 }
 
 export const BROWSER_PERFORMANCE_MONITORING_KEY = "pstdio-dashboard:performance-monitoring";
@@ -60,9 +63,8 @@ const desktopHost = (bridge: DesktopPerformanceBridge): PerformanceHost => ({
     // A report sent while monitoring turns off is dropped by main; nothing to recover.
     void bridge.reportSlowFrames(report).catch(() => {});
   },
-  reportState: (report) => {
-    void bridge.reportRendererState(report).catch(() => {});
-  },
+  reportState: (report) => bridge.reportRendererState(report),
+  onRenderCaptureRequest: bridge.onRenderCaptureRequest,
 });
 
 const browserHost = (storage: WorkbenchStorageLike): PerformanceHost => {
@@ -93,7 +95,8 @@ const browserHost = (storage: WorkbenchStorageLike): PerformanceHost => {
         capabilities: { processMetrics: false, idleWakeups: false, privateMemory: false, slowFrames: source },
         processes: [],
         frames,
-        ...state,
+        frameRate: state.frameRate,
+        pausedExtensionIds: state.pausedExtensionIds,
       };
     },
     reportFrames: (report) => {

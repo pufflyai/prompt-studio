@@ -52,6 +52,7 @@ const desktopPublicMethods = [
   "getUpdateChannel",
   "getWorkbenchState",
   "onCommand",
+  "onRenderCaptureRequest",
   "onStartupAppearance",
   "onStartupState",
   "openLogs",

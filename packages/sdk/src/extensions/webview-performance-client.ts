@@ -16,8 +16,6 @@ export interface WebviewPerformanceClient {
   setEnabled(enabled: boolean): Promise<void>;
   /** Requires a local user action. Read state().renderOverlay before using this on older hosts. */
   setRenderOverlayEnabled(enabled: boolean): Promise<void>;
-  /** Requires a local user action and a host that advertises render capture support. */
-  startRenderCapture?(): Promise<void>;
   pauseExtension(installedExtensionId: string): Promise<void>;
   resumeExtension(installedExtensionId: string): Promise<void>;
   /** Listener lifetime belongs to this view. Does not start a collector. */
@@ -37,7 +35,6 @@ export const createWebviewPerformanceClient = (host: GuestHost) =>
     setEnabled: (enabled) => host.call("performance.control", { operation: "set-enabled", enabled }),
     setRenderOverlayEnabled: (enabled) =>
       host.call("performance.control", { operation: "set-render-overlay", enabled }),
-    startRenderCapture: () => host.call("performance.control", { operation: "start-render-capture" }),
     pauseExtension: (installedExtensionId) =>
       host.call("performance.control", { operation: "pause-extension", installedExtensionId }),
     resumeExtension: (installedExtensionId) =>

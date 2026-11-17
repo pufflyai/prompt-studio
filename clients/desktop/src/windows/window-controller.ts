@@ -134,6 +134,10 @@ export class DesktopWindowController {
     this.#workbench?.webContents.send(DESKTOP_CHANNELS.command, commandId);
   }
 
+  visibleWorkbenchContents() {
+    return this.#workbench?.getVisible() ? this.#workbench.webContents : undefined;
+  }
+
   async setTitleBarAppearance(appearance: TitleBarAppearance) {
     if (process.platform === "darwin") return;
     // Updating the hidden native overlay can suppress ready-to-show (ADR 0021).

@@ -106,6 +106,27 @@ const desktopApi: PromptStudioDesktopApi = Object.freeze({
   getPerformanceRecordings: () => ipcRenderer.invoke(DESKTOP_CHANNELS.getPerformanceRecordings),
   reportSlowFrames: (report: unknown) => ipcRenderer.invoke(DESKTOP_CHANNELS.reportSlowFrames, report),
   reportRendererState: (report: unknown) => ipcRenderer.invoke(DESKTOP_CHANNELS.reportRendererState, report),
+  onRenderCaptureRequest: (start: () => Promise<unknown>) => {
+    const receive = (event: Electron.IpcRendererEvent, expiresAt: number) => {
+      const [port] = event.ports;
+      if (!port) return;
+      if (Date.now() >= expiresAt) {
+        port.close();
+        return;
+      }
+      void Promise.resolve()
+        .then(start)
+        .then(
+          (capture) => port.postMessage({ capture }),
+          (error) =>
+            port.postMessage({ error: (error instanceof Error ? error.message : String(error)).slice(0, 500) }),
+        )
+        .finally(() => port.close())
+        .catch(() => {});
+    };
+    ipcRenderer.on(DESKTOP_CHANNELS.requestRenderCapture, receive);
+    return () => ipcRenderer.removeListener(DESKTOP_CHANNELS.requestRenderCapture, receive);
+  },
 });
 
 contextBridge.exposeInMainWorld("promptStudioDesktop", desktopApi);

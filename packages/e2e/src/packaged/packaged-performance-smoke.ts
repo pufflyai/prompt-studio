@@ -102,11 +102,11 @@ export const expectPackagedRenderCapture = async () => {
     const lines = createInterface({ input: socket });
     lines.once("line", (credential) => {
       lines.close();
-      if (credential !== token) {
+      if (credential !== `${token} renders`) {
         socket.destroy();
         return;
       }
-      socket.end(`${JSON.stringify({ version: 1, host: "desktop", processes: [], renderCapture })}\n`);
+      socket.end(`${JSON.stringify({ capture: renderCapture })}\n`);
     });
   });
   try {

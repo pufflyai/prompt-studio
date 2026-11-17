@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { ReactRenderCapture } from "pstdio-api-contracts/performance-diagnostics";
 import type { PerformanceHost } from "./performance-host";
 import { createPerformanceMonitoringController } from "./performance-monitoring-controller";
 import { createPerformanceDiagnosticsAdapter } from "./performance-service";
@@ -35,19 +36,15 @@ test("render highlighting needs local activation and ends with its monitoring ow
       "local user interaction",
     );
     expect(enabled).toBe(false);
-    await expect(adapter.control({ operation: "start-render-capture" })).rejects.toThrow("local user interaction");
     activation.isActive = true;
     const secondRelease = await controller.retainCapture();
     const owner = {};
-    await adapter.control({ operation: "start-render-capture" }, owner);
-    expect(overlay.readCapture()?.status).toBe("recording");
     await adapter.control({ operation: "set-render-overlay", enabled: true }, owner);
     expect((await adapter.state()).renderOverlay?.enabled).toBe(true);
     adapter.releaseControlOwner({});
     expect(enabled).toBe(true);
     adapter.releaseControlOwner(owner);
     expect(enabled).toBe(false);
-    expect(overlay.readCapture()).toBeUndefined();
     expect(monitoring).toBe(true);
     await adapter.control({ operation: "set-render-overlay", enabled: true }, owner);
     await release();
@@ -62,4 +59,43 @@ test("render highlighting needs local activation and ends with its monitoring ow
     if (previous) Object.defineProperty(globalThis, "navigator", previous);
     else Reflect.deleteProperty(globalThis, "navigator");
   }
+});
+
+test("a CLI capture waits for desktop publication and can retry a rejected start", async () => {
+  let start: (() => Promise<ReactRenderCapture>) | undefined;
+  let failPublication = true;
+  const overlay = createReactRenderOverlay({
+    scanner: { isSupported: () => true, scan() {}, setOptions() {} },
+    setVisible() {},
+  });
+  const controller = createPerformanceMonitoringController(
+    {
+      kind: "desktop",
+      isEnabled: async () => true,
+      setEnabled: async () => {},
+      snapshot: async () => null,
+      reportFrames() {},
+      async reportState(report) {
+        if (report.renderCapture && failPublication) throw new Error("Desktop rejected publication");
+      },
+      onRenderCaptureRequest(listener) {
+        start = listener;
+        return () => {
+          start = undefined;
+        };
+      },
+    },
+    overlay,
+  );
+  try {
+    await controller.load();
+    await expect(start!()).rejects.toThrow("Desktop rejected publication");
+    expect(overlay.readCapture()).toBeUndefined();
+    failPublication = false;
+    expect((await start!()).status).toBe("recording");
+  } finally {
+    controller.dispose();
+  }
+  expect(start).toBeUndefined();
+  expect(overlay.readCapture()).toBeUndefined();
 });

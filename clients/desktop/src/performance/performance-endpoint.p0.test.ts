@@ -71,6 +71,28 @@ describe("performance endpoint", () => {
     expect(await read(path)).toBeNull();
   });
 
+  test("requires the local credential before requesting render capture", async () => {
+    const path = endpointPath();
+    let starts = 0;
+    const endpoint = await openPerformanceEndpoint(path, () => ({ snapshot: true }), {
+      read: () => null,
+      start: async () => ({ status: "recording", startedAt: new Date(++starts).toISOString() }),
+    });
+    try {
+      const { token } = readPerformanceEndpointDescriptor(path)!;
+      expect(await read(path, "wrong-token start-renders")).toBeNull();
+      expect(await read(path, `${token} start-renders extra`)).toBeNull();
+      expect(starts).toBe(0);
+      expect(await read(path, `${token} start-renders`)).toEqual({
+        capture: { status: "recording", startedAt: new Date(1).toISOString() },
+      });
+      expect(await read(path, `${token} renders`)).toEqual({ capture: null });
+      expect(await read(path)).toEqual({ snapshot: true });
+    } finally {
+      await endpoint.close();
+    }
+  });
+
   test("closes even when a client never authenticates or closes its side", async () => {
     const path = endpointPath();
     const endpoint = await openPerformanceEndpoint(path, () => ({ ok: true }));

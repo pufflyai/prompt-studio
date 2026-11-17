@@ -6,6 +6,7 @@ import {
   type PerformanceProcessSample,
   type PerformanceRecordingExport,
   type PerformanceSnapshot,
+  type ReactRenderCapture,
   type RendererStateReport,
   rendererStateReportSchema,
   type SlowFrame,
@@ -37,7 +38,10 @@ export interface PerformanceMonitorOptions {
   platform: NodeJS.Platform;
   // Logical CPUs. Electron divides each process's CPU by this count.
   cpuCount: number;
-  openEndpoint: (read: () => PerformanceSnapshot | null) => Promise<{ close: () => Promise<void> }>;
+  openEndpoint: (
+    read: () => PerformanceSnapshot | null,
+    readRenders: () => ReactRenderCapture | null,
+  ) => Promise<{ close: () => Promise<void> }>;
   createCapture?: () => PerformanceCaptureOwner | Promise<PerformanceCaptureOwner>;
   recordings?: () => PerformanceRecordingExport;
   now?: () => number;
@@ -190,7 +194,8 @@ export class DesktopPerformanceMonitor {
       },
       processes: this.#latest?.processes ?? [],
       frames: this.#frames,
-      ...this.#rendererState,
+      frameRate: this.#rendererState.frameRate,
+      pausedExtensionIds: this.#rendererState.pausedExtensionIds,
     };
   }
 
@@ -214,7 +219,10 @@ export class DesktopPerformanceMonitor {
       // Prime Electron's CPU window after scheduling so a slow first read does not delay the capture cadence.
       this.#options.readMetrics();
       this.#lastSampleAt = this.#now();
-      this.#endpoint = await this.#options.openEndpoint(() => this.snapshot());
+      this.#endpoint = await this.#options.openEndpoint(
+        () => this.snapshot(),
+        () => this.#rendererState.renderCapture ?? null,
+      );
     } catch (error) {
       await this.#end();
       throw error;

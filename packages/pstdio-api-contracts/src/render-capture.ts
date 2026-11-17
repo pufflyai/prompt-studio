@@ -32,3 +32,10 @@ export const renderCaptureSchema = z.discriminatedUnion("status", [
 
 export type ReactRenderCapture = z.infer<typeof renderCaptureSchema>;
 export type ReactRenderSummaryRow = z.infer<typeof component>;
+
+export type RenderCaptureOperation = "renders" | "start-renders";
+
+export const renderCaptureReplySchema = z.union([
+  z.strictObject({ capture: renderCaptureSchema.nullable() }),
+  z.strictObject({ error: z.string().max(500) }),
+]);

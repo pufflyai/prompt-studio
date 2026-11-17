@@ -190,8 +190,6 @@ export type {
   PerformanceResponseSample,
   PerformanceRuntimeReading,
   PerformanceSnapshot,
-  ReactRenderCapture,
-  ReactRenderSummaryRow,
 } from "pstdio-api-contracts/performance-diagnostics";
 export {
   ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
