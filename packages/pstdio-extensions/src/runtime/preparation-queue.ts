@@ -125,16 +125,23 @@ export const waitForPreparation = (
   options: PreparationOptions,
   scope: ReturnType<typeof preparationPriority.getStore>,
   request: () => void,
-  cancel: () => void,
+  cancel: () => void | Promise<void>,
 ) => {
   scope?.jobs.add(request);
   const result = new Promise<unknown>((resolve, reject) => {
     const abort = () => {
       job.waiters.delete(waiter);
       waiter.removeAbort();
-      reject(options.signal!.reason);
-      if (job.waiters.size) request();
-      else cancel();
+      if (job.waiters.size) {
+        reject(options.signal!.reason);
+        request();
+      } else {
+        try {
+          Promise.resolve(cancel()).then(() => reject(options.signal!.reason), reject);
+        } catch (error) {
+          reject(error);
+        }
+      }
     };
     const waiter: Waiter = {
       resolve,

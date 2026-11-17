@@ -21,7 +21,9 @@ export interface ActorRef {
 export interface AttemptReview {
   id: string;
   sessionId: string | null;
+  /** @deprecated Historical Reports evidence. New outcomes use activityId. */
   reportId: string | null;
+  activityId?: string;
   reviewedHeadSha: string;
   reviewer: ActorRef;
   state: "started" | "submitted" | "disconnected" | "failed" | "dismissed";
@@ -35,7 +37,9 @@ export interface AttemptRevision {
   revision: number;
   baseSha: string;
   headSha: string;
-  changeRequestReportId: string;
+  /** @deprecated Historical Reports evidence. New outcomes use changeRequestActivityId. */
+  changeRequestReportId: string | null;
+  changeRequestActivityId?: string;
   submittedAt: string;
   submittedBy: ActorRef;
   reviews: AttemptReview[];
@@ -131,6 +135,7 @@ export type AttemptEventType =
   | "stack_updated";
 
 export interface AttemptTimelineEvent {
+  activityId?: string;
   id: string;
   workspaceId: string;
   revision: number | null;
