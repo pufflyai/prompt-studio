@@ -63,6 +63,6 @@ Run `pst harness-claude-code quotas` to inspect the native account quota snapsho
 
 ## Restart after quota reset
 
-In this extension's settings, enable **Restart after quota reset** to resume conversations stopped by quota errors. The setting is off by default and applies only to this device. Sessions resumes the unchanged failed conversation 15 seconds after the latest exhausted quota window resets. It checks the preference and native quota again before continuing. Manual stops, archived conversations, changed runs and unrelated failures stay stopped. A running host is required; queued restarts survive host restart. Unknown reset times cannot schedule a restart.
+In this extension's settings, enable **Restart after quota reset** to resume conversations stopped by quota errors. The setting is off by default and applies only to this device. Sessions resumes the unchanged failed conversation 15 seconds after the latest exhausted quota window that applies to its selected model resets. It checks the preference and native quota again before continuing. Manual stops, archived conversations, changed runs and unrelated failures stay stopped. The host must be running to resume the conversation. Queued restarts survive host restart. Unknown reset times cannot schedule a restart.
 
 *Updated at: 2026-11-17*

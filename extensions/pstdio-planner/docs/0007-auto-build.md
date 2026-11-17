@@ -106,7 +106,7 @@ Answer the run’s pending decisions inline below Supervisor. Previous and Next 
 
 ## Supervisor quota cooldowns
 
-Both event-driven wakes and scheduled progress checks read the supervisor harness's quota availability. While any applicable reported window is exhausted, Auto Build stays enabled and waits. A known `resetsAt` is retained with that supervisor and harness; checks before it neither query quotas again nor contact the agent. At the deadline, a fresh quota check decides whether work can continue. An exhausted window without a known reset keeps waiting for later checks. Multiple exhausted windows use the latest reset. Changing the supervisor harness clears the old cooldown.
+Both event-driven wakes and scheduled progress checks read quota availability for the supervisor's selected model. Account-wide windows apply to all models. Auto Build stays enabled and waits while an applicable window is exhausted. It saves a known reset for the current harness and model and checks quota again when the deadline arrives. An exhausted window without a known reset keeps waiting for later checks. Multiple exhausted windows use the latest reset. Changing the model or harness checks quota for the new selection.
 
 The harness's optional **Restart after quota reset** setting can also resume a quota-stopped supervisor or other conversation at reset plus 15 seconds. Planner and the restart worker use guarded run identity so another continuation supersedes the delayed request.
 

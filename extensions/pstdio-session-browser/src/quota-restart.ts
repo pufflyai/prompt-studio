@@ -73,7 +73,7 @@ export const scheduleQuotaRestart = async (ctx: ExtensionContextBase, sessionId:
     !(await hasQuotaFailure(ctx, session.id))
   )
     return false;
-  const quota = await readQuotaAvailability(ctx, session.agent);
+  const quota = await readQuotaAvailability(ctx, session.agent, session.lastSelectedModel);
   if (!quota.restartAfterQuotaReset || !quota.limited || !quota.resetsAt) return false;
   await enqueueRestart(ctx, session, quota.resetsAt);
   return true;
@@ -91,7 +91,7 @@ export const restartAfterQuotaReset = async (ctx: ExtensionContextBase, input: Q
     !(await hasQuotaFailure(ctx, session.id))
   )
     return { restarted: false };
-  const quota = await readQuotaAvailability(ctx, input.harnessId);
+  const quota = await readQuotaAvailability(ctx, input.harnessId, session.lastSelectedModel);
   if (!quota.known || !quota.restartAfterQuotaReset) return { restarted: false };
   if (quota.limited) {
     if (quota.resetsAt) await enqueueRestart(ctx, session, quota.resetsAt);

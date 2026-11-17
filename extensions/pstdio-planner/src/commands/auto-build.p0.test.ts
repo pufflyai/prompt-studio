@@ -414,3 +414,50 @@ test("fresh quota discovery is saved once and reconsidered after the reset", asy
     setSystemTime();
   }
 });
+
+test("a supervisor changing models does not reuse the previous model's cooldown", async () => {
+  const { ctx, ticket, storage, sessions, prompts } = await supervisorFixture();
+  await ticket("Waiting work");
+  await autoBuildCommand.run(ctx, {});
+  const supervisor = sessions.get(prompts[0]!.sessionId)!;
+  supervisor.status = "failed";
+  supervisor.agent = "pstdio.harness-claude-code.harness.claude-code";
+  supervisor.lastSelectedModel = "opus";
+  await storage.set("auto-build-supervisor", {
+    sessionId: supervisor.id,
+    quotaCooldown: {
+      harnessId: supervisor.agent,
+      modelId: "sonnet",
+      resetsAt: new Date(Date.now() + 60_000).toISOString(),
+    },
+  });
+  let readModel = false;
+  ctx.commands.execute = async (_ref, options) => {
+    expect(options?.params).toEqual({ harnessId: supervisor.agent, modelId: "opus" });
+    readModel = true;
+    return { ok: true, status: "success", value: { limited: false } } as never;
+  };
+  expect((await autoBuildCommand.run(ctx, {})).prompted).toBe(true);
+  expect(readModel).toBe(true);
+});
+
+test("a legacy cooldown still blocks a selected model when no fresh reset is known", async () => {
+  const { ctx, ticket, storage, sessions, prompts } = await supervisorFixture();
+  await ticket("Waiting work");
+  await autoBuildCommand.run(ctx, {});
+  const supervisor = sessions.get(prompts[0]!.sessionId)!;
+  supervisor.status = "failed";
+  supervisor.agent = "pstdio.harness-claude-code.harness.claude-code";
+  supervisor.lastSelectedModel = "opus";
+  const quotaCooldown = { harnessId: supervisor.agent, resetsAt: new Date(Date.now() + 60_000).toISOString() };
+  await storage.set("auto-build-supervisor", { sessionId: supervisor.id, quotaCooldown });
+  let reportsExhaustion = true;
+  ctx.commands.execute = async () =>
+    ({ ok: true, status: "success", value: { known: reportsExhaustion, limited: reportsExhaustion } }) as never;
+
+  expect((await autoBuildCommand.run(ctx, {})).prompted).toBe(false);
+  reportsExhaustion = false;
+  expect((await autoBuildCommand.run(ctx, {})).prompted).toBe(false);
+  expect(prompts).toHaveLength(1);
+  expect(await storage.get("auto-build-supervisor")).toMatchObject({ quotaCooldown });
+});

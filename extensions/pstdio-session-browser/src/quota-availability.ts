@@ -2,7 +2,7 @@ import { type CommandRef, defineCommand, type ExtensionContextBase, l10n, params
 
 type QuotaSnapshot = {
   status: string;
-  limits: { remainingPercent: number; resetsAt?: string }[];
+  limits: { remainingPercent: number; resetsAt?: string; modelFamily?: string }[];
   restartAfterQuotaReset?: boolean;
 };
 const unknown = () => ({
@@ -15,6 +15,7 @@ const unknown = () => ({
 export const readQuotaAvailability = async (
   ctx: Pick<ExtensionContextBase, "commands"> & { signal?: AbortSignal },
   harnessId: string,
+  modelId?: string | null,
 ) => {
   const extensionId = /^(.*)\.harness\.[^.]+$/.exec(harnessId)?.[1];
   if (!extensionId) return unknown();
@@ -38,9 +39,12 @@ export const readQuotaAvailability = async (
       )
     )
       return unknown();
-    const exhausted = result.value.limits.filter(
-      (limit) => Number.isFinite(limit.remainingPercent) && limit.remainingPercent <= 0,
+    const modelParts = modelId && modelId !== "default" ? modelId.toLowerCase().split(/[^a-z0-9]+/) : undefined;
+    const applicableLimits = result.value.limits.filter(
+      ({ modelFamily }) => !modelFamily || !modelParts || modelParts.includes(modelFamily),
     );
+    if (!applicableLimits.length) return unknown();
+    const exhausted = applicableLimits.filter(({ remainingPercent }) => remainingPercent === 0);
     const dates = exhausted.map((limit) => Date.parse(limit.resetsAt ?? ""));
     const knownReset = dates.length > 0 && dates.every(Number.isFinite) && Math.max(...dates) > Date.now();
     return {
@@ -59,6 +63,6 @@ export const quotaAvailability = defineCommand({
   id: "quota-availability",
   title: l10n("quota.availability.title", "Read harness quota availability"),
   cli: true,
-  params: { harnessId: params.text({ required: true }) },
-  run: (ctx, input) => readQuotaAvailability(ctx, input.harnessId),
+  params: { harnessId: params.text({ required: true }), modelId: params.text() },
+  run: (ctx, input) => readQuotaAvailability(ctx, input.harnessId, input.modelId),
 });

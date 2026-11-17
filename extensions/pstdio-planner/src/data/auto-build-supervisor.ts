@@ -10,7 +10,7 @@ export interface NextTicketQuery {
 
 interface AutoBuildSupervisor {
   sessionId?: string;
-  quotaCooldown?: { harnessId: string; resetsAt: string };
+  quotaCooldown?: { harnessId: string; modelId?: string; resetsAt: string };
   lastWake?: string;
   pendingWakeRevision?: string;
   scope?: { revision: string; queries: NextTicketQuery[] };

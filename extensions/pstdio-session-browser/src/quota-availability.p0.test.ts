@@ -63,3 +63,28 @@ test("an earlier elapsed exhausted meter does not hide a later known reset", asy
   ]);
   expect(await quotaAvailability.run(ctx, { harnessId })).toMatchObject({ limited: true, resetsAt: later });
 });
+
+test("only account windows and windows for the selected model can block it", async () => {
+  const sonnetReset = new Date(Date.now() + 120_000).toISOString();
+  const sharedReset = new Date(Date.now() + 60_000).toISOString();
+  const modelWindows = [
+    { modelFamily: "sonnet", remainingPercent: 0, resetsAt: sonnetReset },
+    { modelFamily: "opus", remainingPercent: 50 },
+  ];
+
+  expect(await quotaAvailability.run(snapshot(modelWindows), { harnessId, modelId: "claude-opus-4-6" })).toMatchObject({
+    known: true,
+    limited: false,
+  });
+  expect(await quotaAvailability.run(snapshot(modelWindows), { harnessId, modelId: "sonnet" })).toMatchObject({
+    known: true,
+    limited: true,
+    resetsAt: sonnetReset,
+  });
+  const sharedExhausted = snapshot([...modelWindows, { remainingPercent: 0, resetsAt: sharedReset }]);
+  expect(await quotaAvailability.run(sharedExhausted, { harnessId, modelId: "opus" })).toMatchObject({
+    known: true,
+    limited: true,
+    resetsAt: sharedReset,
+  });
+});
