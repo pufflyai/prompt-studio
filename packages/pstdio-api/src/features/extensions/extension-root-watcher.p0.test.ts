@@ -169,11 +169,13 @@ describe("createExtensionRootWatcher", () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-root-error-"));
     const watchers: FakeWatcher[] = [];
     const errors: unknown[] = [];
+    const attachments: string[] = [];
     const watchError = Object.assign(new Error("EPERM: operation not permitted, watch"), { code: "EPERM" });
 
     const watcher = await createExtensionRootWatcher({
       listExtensionRoots: async () => [{ path: join(root, "extensions"), ownerRoot: root, sync: async () => {} }],
       onError: (error) => errors.push(error),
+      onAttach: (root) => attachments.push(root.path),
       watch: (_path, listener, onError) => {
         const fake = new FakeWatcher(listener, onError);
         watchers.push(fake);
@@ -182,6 +184,9 @@ describe("createExtensionRootWatcher", () => {
     });
 
     try {
+      expect(attachments).toEqual([join(root, "extensions")]);
+      await watcher.refresh();
+      expect(attachments).toHaveLength(1);
       watchers[0]?.onError?.(watchError);
 
       expect(errors).toEqual([watchError]);
@@ -191,6 +196,7 @@ describe("createExtensionRootWatcher", () => {
 
       expect(watchers).toHaveLength(2);
       expect(watchers[1]?.closed).toBe(false);
+      expect(attachments).toEqual([join(root, "extensions"), join(root, "extensions")]);
     } finally {
       watcher.dispose();
       rmSync(root, { recursive: true, force: true });
