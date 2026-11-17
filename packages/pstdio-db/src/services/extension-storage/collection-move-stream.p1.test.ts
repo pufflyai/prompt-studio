@@ -249,3 +249,31 @@ test("an offline write that a compacted checkpoint refuses still reaches the mov
 
   for (const device of [mover, restored]) expect(await device.moved("a")).toEqual({ title: "A offline" });
 });
+
+test("edits a device makes to items it moved itself survive when another device's move wins", async () => {
+  const [first, second] = await peers();
+  await first.tickets.set("a", { title: "A" });
+  await syncAll([first, second]);
+  // Offline from each other: the second device creates two items, then both devices move.
+  await second.tickets.set("d", { title: "D" });
+  await second.tickets.set("e", { title: "E" });
+  await first.move();
+  await second.move();
+  const d = await second.record("d");
+  await second.records.commitIfCurrent({
+    operationId: crypto.randomUUID(),
+    edits: [{ recordId: d.recordId, expectedRevision: d.revision, replace: { title: "D edited" } }],
+  });
+  const e = await second.record("e");
+  await second.records.commit({
+    operationId: crypto.randomUUID(),
+    edits: [{ recordId: e.recordId, observedRevision: e.revision, replace: { title: "E edited" } }],
+  });
+  await syncAll([first, second], 4);
+
+  for (const device of [first, second]) {
+    expect(await device.moved("a")).toEqual({ title: "A" });
+    expect(await device.moved("d")).toEqual({ title: "D edited" });
+    expect(await device.moved("e")).toEqual({ title: "E edited" });
+  }
+});

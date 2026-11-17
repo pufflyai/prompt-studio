@@ -62,9 +62,10 @@ export const createDisplacedSaves = (owner: StorageOwner) => {
     notes.delete(tx);
     const canonical = (ids: string[]) => journal.canonical(ids);
     const views = async (ids: string[]) => (await rebaseOrderedProjection(journal, tx, owner, ids)).views;
+    const markers = async () => [...(await journal.canonical(await collectionMarkers(tx, owner))).values()];
     const prepared = [];
     for (const save of decided) {
-      const next = await forwardDisplacedSave({ ...save, canonical, views });
+      const next = await forwardDisplacedSave({ ...save, canonical, views, markers });
       if (next) prepared.push(next);
     }
     const list = async (prefix: string) =>

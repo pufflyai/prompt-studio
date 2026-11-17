@@ -96,9 +96,114 @@ const unwrappedChanges = (changes: OrderedOperation["edits"][number]["changes"])
     return field === "value" ? [{ ...change, path: ["value", ...rest] }] : [];
   });
 
+const stampOperation = (stamp: string | undefined) => {
+  const value = stamp ? parts(stamp) : undefined;
+  if (value?.[0] === "pending") return value[1];
+  return value?.[0] === "canonical" ? value[2] : undefined;
+};
+
+/** The collection item a record was moved from, found through the live markers of its scope. */
+const movedFromItem = (recordId: string, markers: OrderedRecord[]) => {
+  const target = parts(recordId);
+  if (target?.length !== 4 || target[2] !== "kv") return undefined;
+  for (const marker of markers) {
+    const found = collectionMarker(marker.recordId);
+    if (!found || !live(marker) || found.scopeType !== target[0] || found.scopeId !== target[1]) continue;
+    const prefix = (orderedBody(marker).value as { keyPrefix?: unknown } | null)?.keyPrefix;
+    if (typeof prefix === "string" && target[3]!.startsWith(prefix))
+      return storageRecordId(
+        [found.scopeType, found.scopeId, "collection", found.name],
+        target[3]!.slice(prefix.length),
+      );
+  }
+  return undefined;
+};
+
+/** Record body changes wrapped back into the `{ value, sortOrder }` envelope of a collection item. */
+const wrappedChanges = (changes: OrderedOperation["edits"][number]["changes"]) =>
+  changes.flatMap((change) => {
+    const [body, ...rest] = change.path;
+    if (body === undefined) {
+      if (!("set" in change)) return [];
+      const set = change.set as { value?: Json } | null;
+      return [{ path: ["value", "value"], set: set && typeof set === "object" ? (set.value ?? null) : null }];
+    }
+    return body === "value" ? [{ ...change, path: ["value", "value", ...rest] }] : [];
+  });
+
+const movedTexts = (edit: OrderedOperation["edits"][number], prefix: string[]) =>
+  (edit.texts ?? []).flatMap((text) =>
+    text.path[0] === "value" ? [{ ...text, path: [...prefix, ...text.path.slice(1)], dependencies: [] }] : [],
+  );
+
+/**
+ * Own edits to a record this device's own move created, when relay order refused that move and
+ * another move of the same item won. While the old item is live, the edit goes to it so the winning
+ * catch-up move carries it; once the item has moved, it goes to the record with its post-move base.
+ */
+// One stranded edit: to its live old item, or to the moved record once the old item is gone.
+const strandedEdit = (
+  edit: OrderedOperation["edits"][number],
+  from: string,
+  old: OrderedRecord | undefined,
+  record: OrderedRecord | undefined,
+): OrderedEdit | undefined => {
+  const deleted = edit.deleted === undefined ? {} : { deleted: edit.deleted };
+  if (old && !old.deleted) {
+    const texts = movedTexts(edit, ["value", "value"]);
+    return {
+      recordId: from,
+      changes: wrappedChanges(edit.changes),
+      ...(texts.length ? { texts } : {}),
+      ...deleted,
+      base: null,
+    };
+  }
+  if (!old?.deleted || !writtenByMove(old.lifetime) || !record || record.deleted) return undefined;
+  const texts = movedTexts(edit, ["value"]);
+  const base = {
+    version: 1,
+    exists: true,
+    deleted: false,
+    lifetime: record.lifetime,
+    stamps: { "": record.stamps[""]! },
+  };
+  return {
+    recordId: edit.recordId,
+    changes: edit.changes,
+    ...(texts.length ? { texts } : {}),
+    ...deleted,
+    base: base as OrderedBase,
+  };
+};
+
+const strandedMoveEdits = async (
+  operation: OrderedOperation,
+  canonical: Reader,
+  markers: () => Promise<OrderedRecord[]>,
+) => {
+  const candidates = operation.edits.filter(
+    (edit) => !collectionItem(edit.recordId) && writtenByMove(edit.base?.stamps[""] ?? ""),
+  );
+  if (!candidates.length) return [];
+  const current = await canonical(candidates.map((edit) => edit.recordId));
+  const known = await markers();
+  const edits: OrderedEdit[] = [];
+  for (const edit of candidates) {
+    const record = current.get(edit.recordId);
+    // The record its move created is still there, so this edit was refused for another reason.
+    if (live(record) && stampOperation(record.stamps[""]) === stampOperation(edit.base?.stamps[""])) continue;
+    const from = movedFromItem(edit.recordId, known);
+    const next = from && strandedEdit(edit, from, (await canonical([from])).get(from), record);
+    if (next) edits.push(next);
+  }
+  return edits;
+};
+
 /**
  * Re-author this device's own save that relay order refused or skipped because a collection move
- * deleted its items. Other refusals, and moves themselves, are not forwarded.
+ * deleted its items, or because the move that created the record it edited lost to another move.
+ * Other refusals, and moves themselves, are not forwarded.
  */
 export const forwardDisplacedSave = async (input: {
   operation: OrderedOperation;
@@ -106,6 +211,8 @@ export const forwardDisplacedSave = async (input: {
   skipped: ReadonlySet<string>;
   canonical: Reader;
   views: Reader;
+  /** Live collection markers, to map a moved record back to its collection item. */
+  markers: () => Promise<OrderedRecord[]>;
 }): Promise<Prepared | undefined> => {
   const { operation } = input;
   if (isOrderedMoveOperation(operation)) return undefined;
@@ -133,6 +240,7 @@ export const forwardDisplacedSave = async (input: {
       },
     ];
   });
+  edits.push(...(await strandedMoveEdits(decided, input.canonical, input.markers)));
   if (!edits.length) return undefined;
   const forwarded = await prepareOrderedOperation(
     { operationId: crypto.randomUUID(), edits },
