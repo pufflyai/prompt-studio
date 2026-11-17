@@ -4,8 +4,15 @@ import type { LoadedExtension } from "./extension-runtime";
 
 const loadedByPath = new Map<string, { key: string; loaded: LoadedExtension }>();
 const loadingByPath = new Map<string, Map<string | null, Promise<LoadedExtension>>>();
+const retainedSourceLimit = 128;
 const revisionKey = (revision: PreparedExtensionRevision | null) =>
   revision ? JSON.stringify([revision.host, revision.id, revision.entryPath]) : null;
+
+const retainLoadedSource = (path: string, entry: { key: string; loaded: LoadedExtension }) => {
+  loadedByPath.delete(path);
+  loadedByPath.set(path, entry);
+  if (loadedByPath.size > retainedSourceLimit) loadedByPath.delete(loadedByPath.keys().next().value!);
+};
 
 // Discovery shares accepted callbacks across projects. Authoring/check loads deliberately
 // remain outside this cache so a failed evaluation can recover without editing its source.
@@ -20,7 +27,11 @@ export const loadAcceptedExtensionSource = async (
   const accepted = await readAcceptedRevision(sourcePath);
   const key = revisionKey(accepted);
   const cached = loadedByPath.get(path);
-  if (key && cached?.key === key) return cached.loaded;
+  if (key && cached?.key === key) {
+    retainLoadedSource(path, cached);
+    return cached.loaded;
+  }
+  if (cached) loadedByPath.delete(path);
   const pending = loadingByPath.get(path) ?? new Map<string | null, Promise<LoadedExtension>>();
   const current = pending.get(key);
   if (current) return current;
@@ -36,13 +47,21 @@ export const loadAcceptedExtensionSource = async (
       if (loaded.preparedRevision && !loaded.diagnostics.some((diagnostic) => diagnostic.severity === "error")) {
         const actual = revisionKey(await readAcceptedRevision(sourcePath));
         // An install can accept a newer revision while this import is evaluating.
-        if (actual && actual === revisionKey(loaded.preparedRevision)) loadedByPath.set(path, { key: actual, loaded });
+        if (actual && actual === revisionKey(loaded.preparedRevision))
+          retainLoadedSource(path, { key: actual, loaded });
       }
       return loaded;
     })
     .finally(() => {
       if (pending.get(key) === loading) pending.delete(key);
       if (pending.size === 0 && loadingByPath.get(path) === pending) loadingByPath.delete(path);
+    })
+    .catch(async (error) => {
+      const current = revisionKey(await readAcceptedRevision(sourcePath));
+      // A failed compare-and-set can mean a newer revision is already available.
+      // The obsolete in-flight entry has been released, so all callers can join the newer load.
+      if (current && current !== key) return loadAcceptedExtensionSource(sourcePath, load);
+      throw error;
     });
   pending.set(key, loading);
   loadingByPath.set(path, pending);

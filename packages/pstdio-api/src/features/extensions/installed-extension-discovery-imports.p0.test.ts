@@ -117,3 +117,30 @@ test("discovery joins first admission after its accepted marker has been publish
   }
   expect(readRuntimeImportCount() - before).toBe(1);
 });
+
+test("an obsolete cold admission still discovers the revision that was accepted while it evaluated", async () => {
+  const { source, manifests, discover } = fixture();
+  const started = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const first = loadAcceptedExtensionSource(source, async (accepted) => {
+    if (accepted) return loadExtensionSource(source);
+    started.resolve();
+    await release.promise;
+    throw new Error("Another revision won acceptance");
+  });
+  let second: ReturnType<typeof discover> | undefined;
+  try {
+    await started.promise;
+    writeFileSync(join(source, "extension.ts"), 'export default { commands: { current: { title: "Current" } } };');
+    await acceptPreparedRevision(source, await prepareExtensionRevision(source));
+    second = discover("project-with-current-revision");
+    release.resolve();
+    const accepted = await first;
+    await second;
+    expect(accepted.manifest.commands).toEqual(["current"]);
+    expect(manifests.at(-1)?.commands).toEqual(["current"]);
+  } finally {
+    release.resolve();
+    await Promise.allSettled([first, second]);
+  }
+});
