@@ -7,7 +7,9 @@ export const implementTicketCommand = defineCommand({
   id: "implement-ticket",
   mutating: true,
   title: "Implement ticket",
-  cli: { globalAliases: [["tickets", "implement"]], examples: ["pstdio tickets implement --id PS-1"] },
+  cli: {
+    examples: ["pstdio pstdio.planner implement-ticket --id PS-1"],
+  },
   params: {
     id: params.text({ required: true }),
     agent: params.harness({ label: "Model" }),

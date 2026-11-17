@@ -71,6 +71,10 @@ const toTranscriptMessages = (entry: ClaudeCodeTranscriptEntry, toolMap: Map<str
     ];
   }
 
+  // Live output omits provider-injected context. Treating it as a submission here splits
+  // the same reply into different turns, so recovery appends the reply a second time.
+  if (role === "user" && entry.isMeta) return [];
+
   if (typeof entry.error === "string") {
     return [{ id: entry.uuid, role, parts: [apiErrorPart(entry.error, content)], createdAt } satisfies SessionMessage];
   }

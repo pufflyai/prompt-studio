@@ -1,6 +1,6 @@
 import type { ExtensionWorkspace } from "pstdio-api-contracts/extension-kernel";
+import { git } from "pstdio-wt";
 import type { WorkspacesRouteDeps } from "./deps";
-import { workspaceGitPaths } from "./worktree-cleanup";
 
 type WorkspaceLocation = Pick<ExtensionWorkspace, "root_path" | "execution_kind">;
 
@@ -28,6 +28,6 @@ export const resolveWorkspaceExecutionTarget = async (
   if (access === "diff" && !capabilities.diff) return undefined;
   return {
     workspace,
-    root: access === "diff" ? (workspaceGitPaths(workspace)?.worktreeRoot ?? workspace.root_path) : workspace.root_path,
+    root: access === "diff" ? await git(workspace.root_path, ["rev-parse", "--show-toplevel"]) : workspace.root_path,
   };
 };

@@ -1,8 +1,61 @@
 import { describe, expect, mock, test } from "bun:test";
 import { Box } from "@chakra-ui/react";
+import { TreeRowTags } from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
 import { createWorkbench, type ResourceRef, resourceContextMenuPath } from "../../../core";
 import { resolveTreeListSelection, toTreeListSection } from "./tree-list-adapter";
+
+test("section creation menus keep the inline input bound to their section and workspace", () => {
+  const workbench = createWorkbench();
+  const requests: unknown[] = [];
+  const resource = { type: "workspace", id: "folder" };
+  const section = toTreeListSection(
+    {
+      id: "files",
+      nodes: [],
+      actions: [
+        {
+          id: "create-file",
+          label: "New file",
+          params: { name: { type: "text", required: true } },
+          inlineInput: { field: "name", placement: "child" },
+          run: () => {},
+        },
+      ],
+    },
+    {},
+    { workbench, resource, onRequestParams: (request) => requests.push(request) },
+  );
+  expect(section.contextMenuItems?.map((action) => action.label)).toEqual(["New file"]);
+  section.contextMenuItems?.[0]?.onAction?.();
+  expect(requests).toMatchObject([
+    { sectionId: "files", request: { context: { resource } }, inlineInput: { field: "name" } },
+  ]);
+});
+
+test("resource rows retain gesture-dependent actions through menu adaptation", () => {
+  const workbench = createWorkbench();
+  let calls = 0;
+  workbench.commands.registerCommand(
+    { id: "note.copy", label: "Copy", copyResultToClipboard: true },
+    {
+      execute() {
+        calls++;
+      },
+    },
+  );
+  workbench.layout.registerMenuItem(resourceContextMenuPath("note"), { commandId: "note.copy" });
+  const section = toTreeListSection(
+    { id: "notes", nodes: [{ id: "a", label: "A", resource: { type: "note", id: "a" } }] },
+    {},
+    { workbench },
+  );
+  const action = section.nodes[0]?.contextMenuItems?.[0];
+  expect(action?.runOnSelect).toBe(true);
+  action?.onAction?.();
+  expect(calls).toBe(1);
+  workbench.dispose();
+});
 
 test("offscreen resource rows defer menu resolution until requested", () => {
   const workbench = createWorkbench();
@@ -288,6 +341,26 @@ describe("toTreeListSection", () => {
   });
 });
 describe("toTreeListSection end content", () => {
+  test("shows a row's tags before its count badge", () => {
+    const workbench = createWorkbench();
+    const tags = [
+      { id: "eu", label: "EU", color: "blue" },
+      { id: "draft", label: "Draft" },
+    ];
+    const section = toTreeListSection(
+      {
+        id: "rulebooks",
+        nodes: [
+          { id: "apparel", label: "Apparel", tags, badge: { label: "3", color: "red" } },
+          { id: "shoes", label: "Shoes", tags: [] },
+        ],
+      },
+      {},
+      { workbench },
+    );
+    expect(section.nodes[0]?.endContent).toMatchObject({ type: TreeRowTags, props: { tags, badge: { label: "3" } } });
+    expect(section.nodes[1]?.endContent).toBeUndefined();
+  });
   test("does not render a chevron for menu-backed tree rows", () => {
     const workbench = createWorkbench();
     workbench.commands.registerCommand({ id: "help.open", label: "Open help" }, { execute: () => undefined });

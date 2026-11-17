@@ -42,7 +42,7 @@ type DesktopIpcOptions = {
     setEnabled: (enabled: boolean) => Promise<void>;
     snapshot: () => unknown;
     recordings?: () => unknown;
-    retainCapture?: () => Promise<() => Promise<void>>;
+    retainCapture?: (monitoring?: boolean) => Promise<() => Promise<void>>;
     reportFrames: (report: unknown) => void;
     reportRendererState: (report: unknown) => void;
   };
@@ -121,7 +121,7 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
   const stopCaptureIpc = registerPerformanceCaptureIpc({
     ipcMain: options.ipcMain,
     assertSender: (event) => assertSender(event, options),
-    retain: () => options.performance.retainCapture?.() ?? Promise.resolve(async () => {}),
+    retain: (monitoring) => options.performance.retainCapture?.(monitoring) ?? Promise.resolve(async () => {}),
   });
   const stopTitleBarGeometryIpc = registerTitleBarGeometryIpc({
     ipcMain: options.ipcMain,

@@ -3,6 +3,8 @@ export type {
   HarnessAuthenticationInput,
   HarnessAuthenticationPrompt,
   HarnessAuthenticationQuestion,
+  ProjectSyncFile,
+  ProjectSyncSource,
   ProjectSyncState,
   ProjectSyncStatus,
   TextEditingConnectionInput,

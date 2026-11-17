@@ -14,6 +14,7 @@ import type { CommandParamFieldRenderer } from "../command-palette/command-param
 import { WorkbenchKeyboardLayer } from "../keybindings/keyboard-layer";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
+import { WorkbenchPanelMenuHosts } from "../panel-menu/panel-menu-hosts";
 import { movePanelHost } from "../region/move-panel-host";
 import { WorkbenchPanelDropFrame } from "../region/panel-drop-frame";
 import { WorkbenchPanelViewHosts } from "../region/panel-view-hosts";
@@ -26,6 +27,7 @@ import { installWorkbenchKanbanRenderer } from "../renderers/kanban/install-kanb
 import { installWorkbenchTreeRenderer } from "../renderers/tree/install-tree-renderer";
 import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { ViewActivityContext } from "../shared/view-activity-context";
 import { WorkbenchFloatingSidePanel } from "../side-panel/side-panel";
 import { useWorkbenchFileIconThemePreferences } from "../theme/use-workbench-file-icon-theme-preferences";
 import { useWorkbenchThemePreferences } from "../theme/use-workbench-theme-preferences";
@@ -247,25 +249,29 @@ export const Workbench = (props: WorkbenchProps) => {
   const fileIconThemePreferences = useWorkbenchFileIconThemePreferences(props.workbench);
 
   return (
-    <UiScopeProvider active={active}>
-      <HostStorageScope scope={props.workbench.host.storageScope}>
-        <WorkbenchThemeProvider
-          themePreferences={themePreferences}
-          fileIconThemePreferences={fileIconThemePreferences}
-          defaultThemePreference={mode?.defaultTheme}
-          preferenceScope={mode?.defaultTheme ? mode.id : undefined}
-          themeStorage={props.themeStorage}
-        >
-          <UiScopeRoot>
-            <WorkbenchTabDragProvider workbench={props.workbench}>
-              <WorkbenchPanelViewHosts workbench={props.workbench}>
-                <WorkbenchContent {...props} />
-              </WorkbenchPanelViewHosts>
-            </WorkbenchTabDragProvider>
-            <Toaster />
-          </UiScopeRoot>
-        </WorkbenchThemeProvider>
-      </HostStorageScope>
-    </UiScopeProvider>
+    <ViewActivityContext value={active}>
+      <UiScopeProvider active={active}>
+        <HostStorageScope scope={props.workbench.host.storageScope}>
+          <WorkbenchThemeProvider
+            themePreferences={themePreferences}
+            fileIconThemePreferences={fileIconThemePreferences}
+            defaultThemePreference={mode?.defaultTheme}
+            preferenceScope={mode?.defaultTheme ? mode.id : undefined}
+            themeStorage={props.themeStorage}
+          >
+            <UiScopeRoot>
+              <WorkbenchTabDragProvider workbench={props.workbench}>
+                <WorkbenchPanelViewHosts workbench={props.workbench}>
+                  <WorkbenchPanelMenuHosts workbench={props.workbench}>
+                    <WorkbenchContent {...props} />
+                  </WorkbenchPanelMenuHosts>
+                </WorkbenchPanelViewHosts>
+              </WorkbenchTabDragProvider>
+              <Toaster />
+            </UiScopeRoot>
+          </WorkbenchThemeProvider>
+        </HostStorageScope>
+      </UiScopeProvider>
+    </ViewActivityContext>
   );
 };

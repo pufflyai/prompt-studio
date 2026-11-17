@@ -1,7 +1,8 @@
-import { Flex, Stack } from "@chakra-ui/react";
+import { Button, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { AttachedMenu, ResizableSplitLayout, ScrollArea } from "@pstdio/ui";
 import { useState } from "react";
-import { DEFAULT_PLATFORM } from "../benchmarks/platforms";
+import { DEFAULT_SUITES, PLATFORMS } from "../benchmarks/platforms";
 import { storyRefs, storyRuns } from "../webview/story-runs";
 import { RunForm, type RunRequest } from "./run-form";
 import { RunList } from "./run-list";
@@ -12,25 +13,49 @@ interface RunsStoryProps {
 const RunsStory = (props: RunsStoryProps) => {
   const [request, setRequest] = useState<RunRequest>({
     commits: ["pstdio@0.45.0", "pstdio@0.43.0"],
-    suites: ["storage", "runtime"],
-    platforms: [DEFAULT_PLATFORM],
+    suites: DEFAULT_SUITES,
+    platforms: PLATFORMS.map((platform) => platform.id),
   });
+  const [collapsed, setCollapsed] = useState(false);
   return (
-    <Flex gap="lg" wrap="wrap" align="flex-start" p="lg">
-      <Stack flex="1 1 24rem" maxW="lg">
-        <RunForm
-          value={request}
-          refs={storyRefs}
-          pending={false}
-          error={props.error}
-          onChange={setRequest}
-          onStart={() => {}}
-        />
-      </Stack>
-      <Stack flex="999 1 32rem" minW="0">
-        <RunList runs={storyRuns} onCancel={() => {}} onOpen={() => {}} />
-      </Stack>
-    </Flex>
+    <ResizableSplitLayout
+      h="100dvh"
+      resizableSide="right"
+      collapsed={collapsed}
+      collapsible
+      defaultSizePx={280}
+      minSizePx={144}
+      maxSizePx={320}
+      contentMinSizePx={320}
+      resizeLabel="Resize New run menu"
+      onCollapsedChange={setCollapsed}
+      contentPanel={
+        <Stack p="lg" minW="0">
+          {collapsed ? (
+            <Button alignSelf="end" onClick={() => setCollapsed(false)}>
+              New run
+            </Button>
+          ) : null}
+          <RunList runs={storyRuns} onCancel={() => {}} onOpen={() => {}} />
+        </Stack>
+      }
+      resizablePanel={
+        <AttachedMenu>
+          <ScrollArea h="full">
+            <Stack p="lg">
+              <RunForm
+                value={request}
+                refs={storyRefs}
+                pending={false}
+                error={props.error}
+                onChange={setRequest}
+                onStart={() => {}}
+              />
+            </Stack>
+          </ScrollArea>
+        </AttachedMenu>
+      }
+    />
   );
 };
 const meta: CanvasMeta<typeof RunsStory> = {
@@ -38,7 +63,7 @@ const meta: CanvasMeta<typeof RunsStory> = {
   component: RunsStory,
   fullscreen: true,
   description:
-    "Open the commit input to see every tag; pstdio@0.45.0 is Measured and not run again. Pick a platform other than Linux x64 to see Relay storage disabled.",
+    "Open the commit input to see every tag; pstdio@0.45.0 is Measured and not run again. All eight workloads are selected on Linux x64, Apple Silicon Mac and Windows x64.",
 };
 export default meta;
 type Story = CanvasFrame<typeof RunsStory>;

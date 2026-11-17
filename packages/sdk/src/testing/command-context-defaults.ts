@@ -1,4 +1,5 @@
 import type { CommandContext, ExtensionResourcesApi, ExtensionStorageApi } from "pstdio-api-contracts/extension-kernel";
+import { createMemoryActivity } from "./memory-activity";
 import { createMemoryRepoFiles } from "./memory-repo-files";
 
 const unavailable = (): never => {
@@ -101,6 +102,7 @@ export const createCommandContextDefaults = (input: {
       listProviders: async () => [],
       getDefault: async () => null,
       list: async () => [],
+      query: async () => ({ items: [], nextCursor: null }),
       get: async () => null,
       getByShorthand: async () => null,
       create: unavailable,
@@ -150,7 +152,7 @@ export const createCommandContextDefaults = (input: {
       combineQueuedFollowUps: unavailable,
       steerQueuedFollowUp: unavailable,
     },
-    activity: { record: async () => ({ id: crypto.randomUUID() }) },
+    activity: createMemoryActivity(),
     automation: { enqueue: unavailable, get: async () => undefined, list: async () => [], cancel: unavailable },
     // A signed-out device: every project is local until a test overrides the account.
     account: {
@@ -163,6 +165,7 @@ export const createCommandContextDefaults = (input: {
       renameDevice: unavailable,
       removeDevice: unavailable,
       projectSyncStatus: async () => ({ state: "local", offlineReady: false }),
+      retryProjectSyncSource: unavailable,
       syncProject: unavailable,
       stopProjectSync: unavailable,
       resolveReturnedChanges: unavailable,

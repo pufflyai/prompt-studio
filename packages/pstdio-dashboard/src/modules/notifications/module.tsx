@@ -82,7 +82,7 @@ export const createNotificationsModule = () =>
               {
                 id: dashboardCommandIds.openNotifications,
                 label: "Open notifications",
-                category: "Dashboard",
+                category: "Notifications",
                 icon: "Inbox",
               },
               {

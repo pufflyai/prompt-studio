@@ -82,10 +82,15 @@ describe("webview account client", () => {
 
     await client.account.renameDevice("device-2", "Studio Mac");
     await client.account.stopProjectSync("project-2");
+    await client.account.retryProjectSyncSource("sessions", "project-2");
 
     expect(calls).toEqual([
       { method: "account.manage", params: { op: "renameDevice", id: "device-2", name: "Studio Mac" } },
       { method: "account.manage", params: { op: "stopProjectSync", projectId: "project-2" } },
+      {
+        method: "account.manage",
+        params: { op: "retryProjectSyncSource", sourceId: "sessions", projectId: "project-2" },
+      },
     ]);
   });
 });

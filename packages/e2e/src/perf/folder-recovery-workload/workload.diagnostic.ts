@@ -8,7 +8,7 @@
  *   bun packages/e2e/src/perf/folder-recovery-workload/workload.diagnostic.ts [output-directory]
  */
 import { randomFillSync } from "node:crypto";
-import { mkdir, mkdtemp, open, readdir, rm, statfs } from "node:fs/promises";
+import { mkdir, mkdtemp, open, readdir, rm, statfs, writeFile } from "node:fs/promises";
 import { cpus, release, tmpdir, totalmem } from "node:os";
 import { join, resolve } from "node:path";
 import type { ProjectFolderRecoveryStatus } from "pstdio-api-contracts";
@@ -47,7 +47,7 @@ const totalBytes = workload.reduce((sum, file) => sum + file.bytes, 0);
 // capture after the laptop's files are removed. The rest is headroom for other work on the machine.
 const requiredFreeBytes = 5 * totalBytes;
 
-const output = resolve(process.argv[2] ?? ".pstdio/extension-storage/pstdio.pstdio-artifacts/folder-recovery-workload");
+const output = resolve(process.argv[2] ?? ".pstdio/extension-storage/pstdio.artifacts/folder-recovery-workload");
 const root = resolve(import.meta.dir, "../../../../..");
 await mkdir(output, { recursive: true });
 const logs: string[] = [];
@@ -120,6 +120,8 @@ const writeSource = async (folder: string) => {
     }
     digests[file.path] = hash.digest("hex");
   }
+  // Only a folder with a root `.pstignore` is copied; an empty one excludes nothing.
+  await writeFile(join(folder, ".pstignore"), "");
   return digests;
 };
 
@@ -273,6 +275,8 @@ const main = async () => {
     const otherFolder = join(work, "other-project");
     await mkdir(otherFolder);
     await Bun.write(join(otherFolder, "notes.md"), "another account");
+    // Only a folder with a root `.pstignore` is copied.
+    await Bun.write(join(otherFolder, ".pstignore"), "");
     const otherProject = await other!.client.projects.create(
       folderProjectInput({ name: "Another account" }, otherFolder),
     );

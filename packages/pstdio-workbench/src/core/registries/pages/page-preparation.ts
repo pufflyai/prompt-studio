@@ -103,6 +103,7 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
       ...(page && pageState
         ? {
             page: resolvePagePlacements({
+              pageOwnerLocation: next.location,
               page,
               state: pageState,
               staticInstanceKey: staticPageInstanceKey(page, next.location?.resource, input.resources),

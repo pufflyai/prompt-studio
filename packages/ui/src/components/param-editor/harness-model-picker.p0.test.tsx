@@ -1,6 +1,23 @@
 import { expect, test } from "bun:test";
 import { HarnessModelPicker } from "./harness-model-picker";
 
+test("the selected model leads the list so long model lists keep it visible", () => {
+  const field = HarnessModelPicker({
+    label: "Model",
+    harnessId: "saved",
+    model: "C",
+    harnesses: [{ id: "saved", name: "Saved" }],
+    models: [
+      { id: "A", name: "A" },
+      { id: "B", name: "B" },
+      { id: "C", name: "C" },
+    ],
+    onHarnessChange: () => {},
+    onModelChange: () => {},
+  });
+  expect(field.props.param.options.map((option: { id: string }) => option.id)).toEqual(["C", "A", "B"]);
+});
+
 test("locking an existing harness keeps model selection enabled", () => {
   const changes: string[] = [];
   const field = HarnessModelPicker({

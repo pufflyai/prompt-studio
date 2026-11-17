@@ -5,16 +5,14 @@ import { join } from "node:path";
 import { z } from "zod";
 import { recoveryChunkSchema } from "./chunks";
 
-const journalSchema = z.strictObject({
+// Journals written before PS-1130 also hold a retired `enrolled` flag; parsing drops it.
+const journalSchema = z.object({
   version: z.literal(1),
-  /** Set once the starter policy decision for this source was applied. A later
-   * missing `.pstignore` is then a deliberate deletion, never a reason to seed again. */
-  enrolled: z.boolean(),
   /** A complete local capture that has not been acknowledged by the relay yet. */
   candidate: recoveryChunkSchema.nullable(),
 });
 export type RecoveryJournal = z.infer<typeof journalSchema>;
-const empty: RecoveryJournal = { version: 1, enrolled: false, candidate: null };
+const empty: RecoveryJournal = { version: 1, candidate: null };
 type Change = Partial<Omit<RecoveryJournal, "version">>;
 // Read-modify-write of one journal is serialized within the process.
 const updates = new Map<string, Promise<unknown>>();

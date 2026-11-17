@@ -141,6 +141,6 @@ export const SidenavLevels: Story = {
 export const ResourceList: Story = {
   id: "pstdio-workbench-guides-onboarding--resource-list",
   name: "18. Resource list",
-  description: "An extension supplies grouped resources with one level of children through the public SDK.",
+  description: "An extension supplies grouped resources with nested children through the public SDK.",
   render: () => <OnboardingFrame createWorkbench={() => createExtensionPreview(resourceListExtension, "resources")} />,
 };

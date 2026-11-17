@@ -1,5 +1,5 @@
 import { defineConfig } from "@playwright/test";
-import { playwrightQuarantineSelection } from "pstdio-scripts/test-quarantine";
+import { playwrightQuarantineSelection } from "pstdio-scripts/testing";
 
 const quarantine = process.env.E2E_TEST_LANE === "quarantine";
 export default defineConfig({
@@ -16,6 +16,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   fullyParallel: false,
   reporter: [
+    ...(process.env.CI_PLAN_REPORTER ? [[process.env.CI_PLAN_REPORTER] as [string]] : []),
     ["line"],
     [
       "json",

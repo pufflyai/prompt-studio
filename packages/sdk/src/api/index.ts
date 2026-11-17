@@ -27,6 +27,9 @@ export type {
   ProjectFolderSource,
   ProjectFolderSourceRef,
   ProjectRecoveryPoint,
+  ProjectSyncFile,
+  ProjectSyncSource,
+  ProjectSyncStatus,
   ResourceRef,
   RestoreProjectFolderInput,
   RestoreProjectInput,
@@ -75,7 +78,13 @@ export type {
   WorkbenchExtensionViewBody,
   WorkbenchExtensionViewRecord,
 } from "./extensions";
-export type { CreateProjectInput, UpdateProjectInput } from "./projects";
+export type {
+  CreateProjectInput,
+  ProjectComposition,
+  ProjectCompositionInput,
+  ResourceOpener,
+  UpdateProjectInput,
+} from "./projects";
 export type {
   CreateNotificationInput,
   ListNotificationsQuery,

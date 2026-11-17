@@ -28,6 +28,22 @@ test("an open harness menu cannot change model or harness when its controls beco
   expect(selected).toEqual([]);
 });
 
+test("the selected model leads the list so long model lists keep it visible", () => {
+  const menu = HarnessModelMenu({
+    agentOptions: [{ value: "a", label: "A" }],
+    selectedAgent: "a",
+    onSelectAgent: () => {},
+    modelOptions: [
+      { value: "one", label: "One" },
+      { value: "two", label: "Two" },
+      { value: "three", label: "Three" },
+    ],
+    selectedModel: "three",
+    onSelectModel: () => {},
+  });
+  expect(menu.props.items.map((item: { id: string }) => item.id)).toEqual(["three", "one", "two"]);
+});
+
 test("harness choices and the selected row use the owning extension icon, with an absent-icon fallback", () => {
   const CustomIcon = () => null;
   const props = {

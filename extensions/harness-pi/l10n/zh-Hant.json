@@ -1,4 +1,6 @@
 {
   "harness.pi": "Pi",
-  "params.thinking": "思考"
+  "params.thinking": "思考",
+  "quotas.title": "查看帳戶配額",
+  "quotas.description": "查看 Pi 是否提供帳戶配額資訊。"
 }

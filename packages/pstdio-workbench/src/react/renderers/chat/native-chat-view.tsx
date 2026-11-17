@@ -14,9 +14,9 @@ import {
   uploadNativeChatAttachments,
 } from "./native-chat-attachments";
 import {
-  NativeChatApproval,
   NativeChatControls,
   NativeChatHarnessControls,
+  nativeChatApproval,
   nativeChatCommands,
   nativeChatDecision,
 } from "./native-chat-controls";
@@ -116,7 +116,11 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
     extra: { prompt?: string; direction?: "up" | "down"; steps?: number; target?: ChatQueuedRequest } = {},
   ) => run({ type: "queue", operation, item, ...extra, values, attachments }).then(() => undefined);
   const find = (id: string) => findQueuedChatRequest(conversation.queuedFollowUps, id);
+  const forkMessage = conversation.fork
+    ? (messageId: string) => run({ type: "fork", messageId }).then(() => undefined)
+    : undefined;
   const Host = props.Host ?? PassthroughChatHost;
+  const approval = nativeChatApproval(conversation, run, session.reportError);
   return (
     <Host
       session={session}
@@ -143,9 +147,7 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
             linkHandler={host.linkHandler ?? props.linkHandler}
             messages={host.messages ?? messages}
             historyMessages={state.historyMessages}
-            onForkMessage={
-              conversation.fork ? (messageId) => run({ type: "fork", messageId }).then(() => undefined) : undefined
-            }
+            onForkMessage={forkMessage}
             forkDisabledReason={
               conversation.fork?.disabledReason ??
               (conversation.readOnly ? "This conversation is read only." : undefined)
@@ -170,12 +172,15 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
             }
             readOnlyQueue={conversation.readOnly || conversation.queueReadOnly}
             queueSteeringUnavailableReason={conversation.queueSteeringUnavailableReason}
-            onSubmitMessage={nativeChatInputHandler({
-              account: host.account,
-              session,
-              run,
-              draft: { attachments, values },
-            })}
+            onSubmitMessage={(text, files, questionResponse) =>
+              approval && questionResponse && questionResponse.callId === approval.prompt.callId
+                ? approval.answer(questionResponse)
+                : nativeChatInputHandler({ account: host.account, session, run, draft: { attachments, values } })(
+                    text,
+                    files,
+                    questionResponse,
+                  )
+            }
             onInterrupt={
               conversation.streaming && !conversation.readOnly
                 ? () => {
@@ -183,7 +188,7 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
                   }
                 : undefined
             }
-            approvalPrompt={<NativeChatApproval run={run} conversation={conversation} />}
+            chatInputQuestionPrompt={approval?.prompt}
             chatInputCommands={nativeChatCommands(conversation, host.account, run, values)}
             composerDecision={nativeChatDecision(
               conversation,
@@ -213,15 +218,17 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
               <NativeChatAttachmentActions disabled={Boolean(conversation.readOnly) || uploading > 0} upload={upload} />
             }
             attachmentList={
-              <NativeChatAttachmentList
-                attachments={attachments}
-                resolvedAttachments={host.attachments}
-                disabled={Boolean(conversation.readOnly)}
-                remove={(id) =>
-                  // A shared file may still belong to a queue edit; remove only its draft reference.
-                  changeActive({ attachments: attachments.filter((attachment) => attachment.id !== id) })
-                }
-              />
+              attachments.length ? (
+                <NativeChatAttachmentList
+                  attachments={attachments}
+                  resolvedAttachments={host.attachments}
+                  disabled={Boolean(conversation.readOnly)}
+                  remove={(id) =>
+                    // A shared file may still belong to a queue edit; remove only its draft reference.
+                    changeActive({ attachments: attachments.filter((attachment) => attachment.id !== id) })
+                  }
+                />
+              ) : undefined
             }
             queuedFollowUps={queuedFollowUps}
             onQueuedFollowUpSelect={(item) => {

@@ -16,6 +16,7 @@ import {
   workbenchModes,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
+import { workbenchExtensionMetadataSchema } from "pstdio-api-contracts";
 import type { LoadedExtensionSource } from "../../runtime/loader";
 import { normalizeExtensionSources } from "../../runtime/normalize";
 import { createWorkbenchExtensionMetadata } from "./workbench-extension-metadata";
@@ -33,6 +34,17 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
     enginesPstdio: "^0.1.0",
   },
   definition,
+});
+test("preserves clipboard command declarations through normalization and public metadata", () => {
+  const command = defineCommand({
+    id: "copy-reference",
+    title: "Copy reference",
+    copyResultToClipboard: true,
+    run: () => "reference",
+  });
+  const runtime = normalizeExtensionSources([source(defineExtension({ commands: [command] }))]);
+  const metadata = createWorkbenchExtensionMetadata({ runtime });
+  expect(metadata.commands[0]?.copyResultToClipboard).toBe(true);
 });
 test("keeps status detail views qualified through runtime normalization and public metadata", () => {
   const view = defineView({
@@ -109,6 +121,22 @@ describe("createWorkbenchExtensionMetadata", () => {
     const runtime = normalizeExtensionSources([source(defineExtension({ commands: [rename] }))]);
     const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
     expect(metadata.commands[0]?.resourceMutation).toEqual(resourceMutation);
+  });
+
+  test("preserves native command confirmation through normalization and transport metadata", () => {
+    const confirmation = {
+      kind: "delete" as const,
+      subjectParam: "path",
+      confirmedParam: "confirmed",
+      buttonLabel: "Delete",
+    };
+    const remove = defineCommand({ id: "delete-file", title: "Delete file", confirmation, async run() {} });
+    const runtime = normalizeExtensionSources([source(defineExtension({ commands: [remove] }))]);
+    expect(runtime.commands[0]?.confirmation).toEqual(confirmation);
+    const metadata = workbenchExtensionMetadataSchema.parse(
+      createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null }),
+    );
+    expect(metadata.commands[0]?.confirmation).toEqual(confirmation);
   });
 
   test("publishes resource menu slot declarations", () => {

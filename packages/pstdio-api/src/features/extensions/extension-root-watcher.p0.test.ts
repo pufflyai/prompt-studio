@@ -54,6 +54,7 @@ describe("createExtensionRootWatcher", () => {
       listExtensionRoots: async () => [
         {
           path: join(root, "extensions"),
+          ownerRoot: root,
           sync: async () => {
             synced.push("extensions");
           },
@@ -94,6 +95,7 @@ describe("createExtensionRootWatcher", () => {
       listExtensionRoots: async () => [
         {
           path: join(root, "extensions"),
+          ownerRoot: root,
           sync: async () => {
             syncs++;
             activeSyncs++;
@@ -138,7 +140,7 @@ describe("createExtensionRootWatcher", () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-root-refresh-"));
     const firstRoot = join(root, "first");
     const secondRoot = join(root, "second");
-    let roots = [{ path: firstRoot, sync: async () => {} }];
+    let roots = [{ path: firstRoot, ownerRoot: root, sync: async () => {} }];
     const watchers: FakeWatcher[] = [];
 
     const watcher = await createExtensionRootWatcher({
@@ -151,7 +153,7 @@ describe("createExtensionRootWatcher", () => {
     });
 
     try {
-      roots = [{ path: secondRoot, sync: async () => {} }];
+      roots = [{ path: secondRoot, ownerRoot: root, sync: async () => {} }];
       await watcher.refresh();
 
       expect(watchers).toHaveLength(2);
@@ -170,7 +172,7 @@ describe("createExtensionRootWatcher", () => {
     const watchError = Object.assign(new Error("EPERM: operation not permitted, watch"), { code: "EPERM" });
 
     const watcher = await createExtensionRootWatcher({
-      listExtensionRoots: async () => [{ path: join(root, "extensions"), sync: async () => {} }],
+      listExtensionRoots: async () => [{ path: join(root, "extensions"), ownerRoot: root, sync: async () => {} }],
       onError: (error) => errors.push(error),
       watch: (_path, listener, onError) => {
         const fake = new FakeWatcher(listener, onError);
@@ -200,7 +202,7 @@ describe("createExtensionRootWatcher", () => {
     const watchers: FakeWatcher[] = [];
 
     const watcher = await createExtensionRootWatcher({
-      listExtensionRoots: async () => [{ path: join(root, "extensions"), sync: async () => {} }],
+      listExtensionRoots: async () => [{ path: join(root, "extensions"), ownerRoot: root, sync: async () => {} }],
       onError: () => {},
       watch: (_path, listener, onError) => {
         const fake = new FakeWatcher(listener, onError);

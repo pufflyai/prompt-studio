@@ -3,7 +3,7 @@ import { parsePageUrl, serializePageUrl } from "./page-url";
 
 const page = {
   id: "artifact",
-  ref: { kind: "page" as const, id: "artifact", extensionId: "pstdio.pstdio-artifacts" },
+  ref: { kind: "page" as const, id: "artifact", extensionId: "pstdio.artifacts" },
   path: "artifacts/view",
 };
 const resource = {
@@ -74,7 +74,7 @@ describe("extension page URLs", () => {
   });
   test("round trips a resource through the dashboard route without losing ownership", () => {
     const url = serializePageUrl({ projectId: resource.projectId, page, resource });
-    expect(url).toStartWith("/projects/project%20one/extensions/pstdio.pstdio-artifacts/artifacts/view?");
+    expect(url).toStartWith("/projects/project%20one/extensions/pstdio.artifacts/artifacts/view?");
     expect(parsePageUrl({ url, projectId: resource.projectId, pages: [page] })).toEqual({
       pageId: page.id,
       resource,

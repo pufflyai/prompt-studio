@@ -79,6 +79,15 @@ API. The workbench package itself does not depend on the API host.
    contracts, and package artifacts. It must not depend on `@pstdio/workbench`;
    workbench adapters for extension metadata belong in `@pstdio/workbench`.
 
+   [Accepted preparation ownership](../../adrs/0147-share-extension-preparation-and-retain-accepted-revisions.md)
+   adds six private module contracts: `preparation-client` owns queue/lifecycle transport,
+   `preparation-server` owns worker dispatch/events, `preparation-command` owns host-spawned
+   child transport, `preparation-worker` owns runtime preparation tasks, `prepared-cache`
+   owns artifact leases/maintenance, and `revision-dependencies` owns pure input collection
+   and hashing. They support the API's worker composition without importing the whole
+   runtime or starting another worker. The pure input module is also safe in a fresh
+   compiled inspector. The package has exactly eighteen export entries.
+
    The private `pstdio-psx` service consumes the runtime's distribution subpath
    for package validation. It owns PostgreSQL release metadata and S3 package
    storage. It does not import API host packages. E2E fixtures drive its production
@@ -91,6 +100,10 @@ API. The workbench package itself does not depend on the API host.
    `@pstdio/sdk` as a development dependency to verify the public HTTP client
    against the real routes. Production API code does not import the SDK.
 
+   `pstdio-api/extension-input-inspector` is the third private API export. It owns the
+   private digest-only compiled command and imports pure revision inputs. The CLI invokes
+   it before application boot; importing the app entry would load unrelated host code.
+
    Host tests use fake harnesses, such as the one from
    `writeProvisionHarnessExtension` or `workbench-fixture`. They never load the
    real harness extensions. Each harness tests its own process handling, and the
@@ -99,9 +112,8 @@ API. The workbench package itself does not depend on the API host.
    A host package that loads another workspace package from source in its tests
    declares it as a development dependency, without importing it. Pull request
    CI then runs those tests when the loaded package changes. `pstdio-api`
-   declares `extension-lab`, `pstdio-base-themes`, `pstdio-planner`,
-   `pstdio-skills` and `workbench-fixture`. `pstdio-extensions` declares
-   `extension-lab`. `pstdio-extension-testbench` declares `pstdio-base-themes`
+   declares `extension-lab`, `git-workspaces`, `pstdio-base-themes`, `pstdio-planner`,
+   `pstdio-skills` and `workbench-fixture`. `pstdio-extension-testbench` declares `pstdio-base-themes`
    and `pstdio-planner`.
 
 5. **Primitive UI**
@@ -175,6 +187,13 @@ API. The workbench package itself does not depend on the API host.
    from each entry's pinned Git origin and is not embedded in the host binary.
    Cross-package relative imports are only allowed for the
    generated embed manifest allowlist enforced by the boundary checker.
+
+Git workspace policy belongs to `extensions/git-workspaces`, which consumes only
+public SDK workspace, process and managed-directory facilities. The host retains
+identity, permissions, readiness, session cancellation and generic provider
+lifecycle coordination. Its legacy `pstdio.worktree` ID maps to the installed
+`pstdio.git-workspaces.workspace-type.git` contribution; it has no built-in Git
+creation or cleanup path. Shared Git diff and merge services remain in core.
 
 The API declares Notes and Planner as development dependencies for the isolated
 checkpoint save-handler proof. Their source handlers are test inputs, not runtime
@@ -259,3 +278,5 @@ The database uses the contract-layer `ResourceRef` type for persisted resource v
 ## Canvas authoring tooling
 
 The published `@pstdio/canvas` package owns the canvas file format, preview composition, source indexing, and the `pstdio-canvas` command that builds and watches a project's canvases. It has no application-layer dependencies; React is a peer dependency. Projects, UI packages and repository preview builds use it as development tooling. The UI Canvas extension depends on its released version for the build manifest, frame messages and the nested-frame loader; it never runs the build itself. Published extensions may use its type-only imports inside colocated `.canvas.tsx` examples without declaring a runtime dependency. Runtime imports still require a declared, allowed dependency. Published extension type checks exclude `.canvas.tsx` examples; `bun run --cwd packages/canvas-tests typecheck` checks them through each owner’s `tsconfig.canvas.json` (or the UI examples configuration). This keeps repository examples independent of extension installation and published SDK/UI versions.
+
+The repository-owned `pstdio-scripts/testing` entry groups source-only test policy, fixture selection, and file sharding. API test workers consume its shared allocator as a development dependency; packaged runtime code does not import this test surface.

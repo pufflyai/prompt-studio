@@ -1,18 +1,15 @@
-import { Button, Flex, Grid, HStack, Text } from "@chakra-ui/react";
-import { EmptyState, SimpleCard } from "@pstdio/ui";
+import { Button, HStack } from "@chakra-ui/react";
+import { EmptyState } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { CompareRow } from "../benchmarks/analysis";
 import { platformLabel } from "../benchmarks/platforms";
-import type { Verdict } from "../benchmarks/stats";
 import { metricId } from "../trends/trend-summary";
 import { shortSha } from "../webview/format";
 import { PageFrame } from "../webview/page-frame";
 import { PlatformControl } from "../webview/platform-control";
 import { type CommitOptionView, CommitPicker } from "./commit-picker";
-import { BASE_COLOR, HEAD_COLOR, isSingleSample, ResultsTable } from "./results-table";
+import { BASE_COLOR, HEAD_COLOR, ResultsTable } from "./results-table";
 import { SampleDetail } from "./sample-detail";
-
-export type ResultFilter = "all" | Verdict;
 
 export interface CompareViewProps {
   commits: CommitOptionView[];
@@ -20,13 +17,11 @@ export interface CompareViewProps {
   head?: string;
   platform: string;
   rows: CompareRow[];
-  filter: ResultFilter;
   selected?: string;
   onBaseChange: (sha: string) => void;
   onBaseClear: () => void;
   onHeadChange: (sha: string) => void;
   onPlatformChange: (platform: string) => void;
-  onFilterChange: (filter: ResultFilter) => void;
   onSelect: (id: string) => void;
   // Shown above the results, such as a failed sync.
   notice?: ReactNode;
@@ -36,14 +31,12 @@ export interface CompareViewProps {
   measuring: string[];
 }
 
-const FILTERS: { value: ResultFilter; label: string }[] = [
-  { value: "all", label: "All metrics" },
-  { value: "regressed", label: "Regressed" },
-  { value: "improved", label: "Improved" },
-  { value: "unchanged", label: "No significant change" },
-];
-
-const ORDER: Record<Verdict, number> = { regressed: 0, improved: 1, unchanged: 2, inconclusive: 3 };
+const ORDER: Record<NonNullable<CompareRow["change"]>["verdict"], number> = {
+  regressed: 0,
+  improved: 1,
+  unchanged: 2,
+  inconclusive: 3,
+};
 
 // Regressions first, then improvements, each by size, so the rows that need attention lead.
 export const sortRows = (rows: CompareRow[]) =>
@@ -52,65 +45,38 @@ export const sortRows = (rows: CompareRow[]) =>
     return ORDER[a.change.verdict] - ORDER[b.change.verdict] || Math.abs(b.change.change) - Math.abs(a.change.change);
   });
 
-// With one sample per commit there is no verdict to filter by, so the tiles summarize what was measured.
-const SingleSampleTiles = (props: { rows: CompareRow[]; compared?: number }) => {
-  const { rows, compared } = props;
-  const overBudget = rows.filter((row) => row.budget !== undefined && row.head && row.head.median > row.budget);
-  const tiles = [
-    { label: compared === undefined ? "Metrics measured" : "Metrics compared", value: compared ?? rows.length },
-    { label: "Over budget", value: overBudget.length },
-    { label: "Samples per commit", value: 1 },
-  ];
-  return (
-    <Grid templateColumns="repeat(auto-fit, minmax(12rem, 1fr))" gap="md">
-      {tiles.map((tile) => (
-        <SimpleCard key={tile.label} p="md" display="flex" flexDirection="column" gap="2xs">
-          <Text textStyle="label/S/regular" color="fg.muted">
-            {tile.label}
-          </Text>
-          <Text textStyle="heading/XL">{tile.value}</Text>
-        </SimpleCard>
-      ))}
-    </Grid>
-  );
-};
-
 export const CompareView = (props: CompareViewProps) => {
-  const { commits, base, head, platform, rows, filter, selected } = props;
+  const { commits, base, head, platform, rows, selected } = props;
   const find = (sha?: string) => commits.find((commit) => commit.sha === sha);
   const missing = [find(base), find(head)].filter((commit) => commit && !commit.measured);
   const waiting = missing.length > 0 && missing.every((commit) => commit && props.measuring.includes(commit.sha));
-  const compared = rows.filter((row) => row.change);
-  const single = rows.length > 0 && rows.every(isSingleSample);
-  const visible = sortRows(rows).filter((row) => single || filter === "all" || row.change?.verdict === filter);
+  const visible = sortRows(rows);
   const detail = rows.find((row) => metricId(row) === selected) ?? visible[0];
-  const count = (value: ResultFilter) =>
-    value === "all" ? compared.length : compared.filter((row) => row.change?.verdict === value).length;
   return (
     <PageFrame
       toolbar={
-        <HStack flex="1" justify="flex-end" minW="0">
-          <PlatformControl value={platform} onValueChange={props.onPlatformChange} />
-        </HStack>
+        <>
+          <CommitPicker
+            label="Base"
+            color={BASE_COLOR}
+            value={find(base)}
+            options={commits}
+            onChange={props.onBaseChange}
+            onClear={props.onBaseClear}
+          />
+          <CommitPicker
+            label="Head"
+            color={HEAD_COLOR}
+            value={find(head)}
+            options={commits}
+            onChange={props.onHeadChange}
+          />
+          <HStack flex="1" justify="flex-end" minW="0">
+            <PlatformControl value={platform} onValueChange={props.onPlatformChange} />
+          </HStack>
+        </>
       }
     >
-      <Flex gap="md" wrap="wrap">
-        <CommitPicker
-          label="Base"
-          color={BASE_COLOR}
-          value={find(base)}
-          options={commits}
-          onChange={props.onBaseChange}
-          onClear={props.onBaseClear}
-        />
-        <CommitPicker
-          label="Head"
-          color={HEAD_COLOR}
-          value={find(head)}
-          options={commits}
-          onChange={props.onHeadChange}
-        />
-      </Flex>
       {props.notice}
       {missing.length ? (
         <EmptyState
@@ -133,36 +99,6 @@ export const CompareView = (props: CompareViewProps) => {
         </EmptyState>
       ) : (
         <>
-          {single ? <SingleSampleTiles rows={rows} compared={base ? compared.length : undefined} /> : null}
-          <Grid
-            display={single ? "none" : undefined}
-            templateColumns="repeat(auto-fit, minmax(12rem, 1fr))"
-            gap="md"
-            role="group"
-            aria-label="Filter by result"
-          >
-            {FILTERS.map((option) => (
-              <SimpleCard
-                key={option.value}
-                as="button"
-                p="md"
-                textAlign="start"
-                display="flex"
-                flexDirection="column"
-                gap="2xs"
-                cursor="pointer"
-                aria-pressed={filter === option.value}
-                borderColor={filter === option.value ? "border.accent" : "border.subtle"}
-                _hover={{ bg: "bg.subtle" }}
-                onClick={() => props.onFilterChange(option.value)}
-              >
-                <Text textStyle="label/S/regular" color="fg.muted">
-                  {option.label}
-                </Text>
-                <Text textStyle="heading/XL">{count(option.value)}</Text>
-              </SimpleCard>
-            ))}
-          </Grid>
           <ResultsTable
             rows={visible}
             baseChosen={Boolean(base)}

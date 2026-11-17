@@ -1,3 +1,4 @@
+import { workspaceQuerySchema } from "pstdio-api-contracts";
 import type {
   CreateExtensionWorkspaceInput,
   ExtensionWorkspaceCreateInput,
@@ -5,7 +6,7 @@ import type {
 } from "pstdio-api-contracts/extension-kernel";
 import { legacyResourceOwner } from "pstdio-db";
 import { type CommandRunnerEnvironment, createReadBoundary } from "pstdio-extensions";
-import { readableWorkspaces } from "../../../services/personal-history/queries";
+import { queryReadableWorkspaces, readableWorkspaces } from "../../../services/personal-history/queries";
 import { readDeviceWorkspaceCapacity } from "../../workspaces/device-capacity";
 import { toExtensionWorkspace } from "../../workspaces/extension-workspace";
 import { removeWorkspaceWorktree } from "../../workspaces/remove-workspace-worktree";
@@ -16,7 +17,6 @@ import {
   createProviderBackedWorkspace,
   resolveWorkspaceExecutionTarget,
 } from "../../workspaces/workspace-provider-service";
-import { cleanupWorkspaceWorktree } from "../../workspaces/worktree-cleanup";
 import type { ExtensionsRouteDeps } from "../deps";
 import { fireExtensionEventAsync } from "../extension-event-runtime";
 import { validateLegacyAnchors } from "./resource-link-policy";
@@ -82,7 +82,6 @@ export const createExtensionWorkspace = async (
     providerId: workspaceInput.providerId,
     params: workspaceInput.params,
     standalone: !shorthandBase,
-    setupWorktree: runtimeDeps.setupWorkspaceWorktree,
     provision: (workspace, repoPath) => runtimeDeps.runWorkspaceProvisioning(deps, { projectId, workspace, repoPath }),
     signal: input.signal,
   });
@@ -118,6 +117,11 @@ export const createWorkspacesApi = (
     listProviders: () => read(() => listWorkspaceProviders(deps, input.projectId)),
     getDefault: async () =>
       read(async () => projectOptionalWorkspace(await read(() => deps.workspaceService.getDefault(input.projectId)))),
+    query: (query) =>
+      read(async () => {
+        const page = await queryReadableWorkspaces(deps, input.projectId, workspaceQuerySchema.parse(query ?? {}));
+        return { items: page.rows.map(projectWorkspace), nextCursor: page.nextCursor };
+      }),
     list: async () =>
       read(async () =>
         Promise.all(
@@ -198,7 +202,7 @@ export const createWorkspacesApi = (
     removeWorktree: async (id) => {
       const workspace = await requireScopedWorkspace(id);
       const removed = await removeWorkspaceWorktree(deps, workspace, {
-        cleanup: runtimeDeps.cleanupWorkspaceWorktree ?? cleanupWorkspaceWorktree,
+        cleanup: runtimeDeps.deleteProviderBackedWorkspace,
         fireEvent: runtimeDeps.fireExtensionEventAsync ?? fireExtensionEventAsync,
       });
       return { removed };

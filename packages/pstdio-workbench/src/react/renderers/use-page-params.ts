@@ -3,25 +3,26 @@ import { resolvePageParams } from "pstdio-api-contracts";
 import { createContext, useContext, useLayoutEffect, useRef } from "react";
 import { useShallow } from "zustand/react/shallow";
 import type { WorkbenchCore, WorkbenchPanelInstance } from "../../core";
-import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { useOptionalWorkbenchStore } from "../shared/use-workbench-store";
 
 export const PageViewOwnerContext = createContext<string | undefined>(undefined);
 
-export const usePageParams = (workbench: WorkbenchCore, placement?: WorkbenchPanelInstance) => {
+export const usePageParams = (workbench: WorkbenchCore, placement?: WorkbenchPanelInstance, enabled = true) => {
   const owner = placement?.placementIdentity;
   const context = placement?.pageContext;
   const inheritedPageId = useContext(PageViewOwnerContext);
   const placementPageId = owner?.kind === "page" ? owner.pageId : undefined;
-  const pageId = useWorkbenchStore(workbench.pages.store, (state) => {
+  const store = enabled ? workbench.pages.store : undefined;
+  const pageId = useOptionalWorkbenchStore(store, (state) => {
     if (context)
       return Object.values(state.pages).find(
         (page) => page.ref.id === context.page.id && page.ref.extensionId === context.page.extensionId,
       )?.id;
     return owner ? placementPageId : inheritedPageId;
   });
-  const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
-  const params = useWorkbenchStore(
-    workbench.pages.store,
+  const projectId = useOptionalWorkbenchStore(store, (state) => state.projectId);
+  const params = useOptionalWorkbenchStore(
+    store,
     useShallow((state) =>
       pageId && (context || pageId === state.activePageId)
         ? resolvePageParams(state.pages[pageId]?.params, context ? context.params : state.location?.params)

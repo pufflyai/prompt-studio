@@ -1,6 +1,8 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import {
   addResourceAnchorsSchema,
+  relatedResourcePageSchema,
+  relatedResourceQuerySchema,
   removeResourceAnchorsSchema,
   resourceAnchorPageSchema,
   resourceAnchorQueryPageSchema,
@@ -58,8 +60,29 @@ const queryPage = createRoute({
   },
 });
 
+const related = createRoute({
+  method: "post",
+  path: "/projects/{projectId}/resource-anchors/related",
+  tags: ["Resources"],
+  request: { params, body: { content: { "application/json": { schema: relatedResourceQuerySchema } } } },
+  responses: {
+    200: {
+      description: "One page of distinct related resources",
+      content: { "application/json": { schema: relatedResourcePageSchema } },
+    },
+    ...responses,
+  },
+});
+
 export const createResourceAnchorRoutes = (deps: ExtensionsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
+  routes.openapi(related, async (c) => {
+    try {
+      return c.json(await createResourceLinksApi(deps, c.req.valid("param")).queryRelated(c.req.valid("json")), 200);
+    } catch (err) {
+      return c.json({ error: err instanceof Error ? err.message : String(err) }, 400);
+    }
+  });
   routes.openapi(add, async (c) => {
     const body = c.req.valid("json");
     try {

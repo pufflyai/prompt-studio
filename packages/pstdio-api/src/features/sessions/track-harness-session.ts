@@ -94,6 +94,8 @@ export const trackHarnessSession = (
     },
   })
     .then(async (exit) => {
+      // An ended run has no idle turn; open streams must not keep showing one.
+      entry?.turns.busy();
       await finishControls(entry, exit.status);
       // The run is over, so nobody can answer an open question any more. Closing the channel here
       // rather than in `store.remove` keeps a failed checkpoint from leaving an answerable ask.

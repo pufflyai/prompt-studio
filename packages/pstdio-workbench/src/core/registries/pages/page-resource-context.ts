@@ -1,5 +1,6 @@
 import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
+import { canonicalResourceRef } from "../../shared/contributions/resource-identity";
 import type { WorkbenchPageContribution, WorkbenchPageResourceCodec } from "./page-registry-types";
 import { pageStateOwnerKey } from "./page-state-key";
 
@@ -8,7 +9,7 @@ export const pageResourceContextKey = (
   resource: ResourceRef | undefined,
 ) =>
   JSON.stringify([
-    resourceKey(resource),
+    resourceKey(resource && canonicalResourceRef(resource)),
     page?.document ? (resource?.metadata?.[page.document.metadataKey] ?? null) : null,
   ]);
 

@@ -54,7 +54,6 @@ const fixture = async () => {
     catalog,
     chunks: () => local,
     transport: () => ({ transport, signal: controller.signal }) as never,
-    enroll: async () => {},
     changed: () => {},
     signal: controller.signal,
   });

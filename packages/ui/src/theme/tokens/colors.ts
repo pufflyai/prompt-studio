@@ -131,8 +131,8 @@ export const border = {
 
   subtle: {
     value: {
-      _light: "#EDF2EE",
-      _dark: "#1A1E26",
+      _light: "#E5EBE6",
+      _dark: "#242933",
     },
   },
 

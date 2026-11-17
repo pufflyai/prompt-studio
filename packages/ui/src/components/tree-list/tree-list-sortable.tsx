@@ -161,7 +161,8 @@ const SortableSections = (props: SortableSectionsProps) => {
     onToggleNode: rest.onToggleNode,
     onToggleSection: rest.onToggleSection,
   });
-  if (props.virtualize && props.scrollRef)
+  // Empty lists need real droppable sections; there are no virtual rows to attach them to.
+  if (props.virtualize && props.scrollRef && rows.length > 0)
     return <VirtualTreeList {...props} rows={rows} scrollRef={props.scrollRef} sortable indicator={indicator} />;
   return (
     <SortableContext

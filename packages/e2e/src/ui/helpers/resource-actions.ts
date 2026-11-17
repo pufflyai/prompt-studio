@@ -55,10 +55,11 @@ export const expectResourceMenuItems = async (page: Page, labels: string[]) => {
 export const openSessionSidePanel = async (page: Page, title: string) => {
   await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
-  await page
-    .locator('[data-workbench-panel-header="side"]')
-    .getByRole("tab", { selected: true })
-    .click({ button: "right" });
+  const header = page.locator('[data-workbench-panel-header="side"]');
+  const chooser = page.locator('[data-workbench-panel="side"]').getByRole("group", { name: "Available tabs" });
+  await expect(header.getByRole("tab", { selected: true }).or(chooser)).toBeVisible();
+  if (await chooser.isVisible()) await chooser.getByRole("button", { name: "New session", exact: true }).click();
+  await header.getByRole("tab", { selected: true }).click({ button: "right" });
   await switchSession(page, title);
   const tab = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: title, exact: true });
   await tab.click({ button: "right" });

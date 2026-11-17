@@ -6,19 +6,29 @@ import { WorkbenchCommandPalette } from "./command-palette";
 
 const createPaletteWorkbench = () => {
   const workbench = createWorkbench();
-  for (const [id, label, group, keybinding] of [
-    ["workspaces.open", "Open workspaces", "Dashboard", "Alt+Shift+W"],
-    ["tickets.open", "Open tickets", "Planner", "Alt+Shift+P"],
-    ["notes.create", "New note", "Notes", "Mod+Alt+N"],
+  for (const [id, label, group, keybinding, icon] of [
+    ["workspaces.open", "Open workspaces", "Workspaces", "Alt+Shift+W", "FolderGit2"],
+    ["tickets.open", "Open tickets", "Tickets", "Alt+Shift+P", "SquareKanban"],
+    ["notes.create", "New note", "Notes", "N", "StickyNote"],
   ]) {
-    workbench.commands.registerCommand({ id, label, category: group }, { execute: () => undefined });
-    workbench.keybindings.registerKeybinding({ action: { kind: "command", commandId: id }, keybinding });
+    workbench.commands.registerCommand({ id, label, category: group, icon }, { execute: () => undefined });
+    workbench.keybindings.registerKeybinding({
+      action: { kind: "command", commandId: id },
+      keybinding,
+      layer: id === "notes.create" ? "create" : undefined,
+    });
     const placementId = `${id}.palette`;
     workbench.commands.registerCommand({ id: placementId, label, category: group }, { execute: () => undefined });
     workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
       commandId: placementId,
       sourceCommandId: id,
     });
+  }
+  for (const [id, title, icon] of [
+    ["terminal", "Open terminal", "SquareTerminal"],
+    ["session", "New session", "MessageCircle"],
+  ]) {
+    workbench.layout.registerPanel({ id, title, icon, region: "main", rendererId: id, eligibleLocations: {} });
   }
   return workbench;
 };

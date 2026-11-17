@@ -1,4 +1,5 @@
 import type { Skill } from "pstdio-api-contracts";
+import { remapPackageAssets } from "pstdio-extensions";
 import {
   type ProjectExtensionRuntimeSnapshot,
   resolveEnabledSourceForRecord,
@@ -34,6 +35,7 @@ const extensionSkillDescription = (contribution: Record<string, unknown>, pref: 
 
 const toExtensionSkill = (input: {
   contribution: unknown;
+  assetRoot: string;
   includeDisabled: boolean;
   installedSource: EnabledExtensionSource["installedSource"];
   instance: EnabledExtensionSource["instance"];
@@ -66,7 +68,7 @@ const toExtensionSkill = (input: {
     created_at: input.instance.created_at,
     updated_at: input.instance.updated_at,
     deleted_at: null,
-    source_path: input.installedSource.source_path,
+    source_path: input.assetRoot,
   } satisfies ExtensionSkillMetadata;
 };
 
@@ -85,11 +87,21 @@ export const listExtensionSkills = async (
   const items: ExtensionSkillMetadata[] = [];
 
   for (const skill of snapshot.runtime.skills) {
-    const source = resolveEnabledSourceForRecord(skill.sourcePath, snapshot.enabledSources);
+    const source = resolveEnabledSourceForRecord(
+      skill.sourcePath,
+      snapshot.enabledSources,
+      snapshot.runtime.extensions,
+    );
     if (!source) continue;
 
     const item = toExtensionSkill({
-      contribution: skill.contribution,
+      contribution: remapPackageAssets(
+        skill.contribution,
+        snapshot.runtime.extensions.find((extension) => extension.sourcePath === skill.sourcePath)?.packagePath ??
+          source.installedSource.source_path,
+        source.installedSource.source_path,
+      ),
+      assetRoot: source.installedSource.source_path,
       includeDisabled: input.includeDisabled,
       installedSource: source.installedSource,
       instance: source.instance,

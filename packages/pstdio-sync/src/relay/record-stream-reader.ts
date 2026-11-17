@@ -11,6 +11,7 @@ import type { DocumentRelay, SyncFailure } from "./document-sync-types";
 import { decodeOrderedEntry, orderedEntryId } from "./ordered-stream-entry";
 import type { createRecordAssets } from "./record-assets";
 import { decodeRecordFrame as decodeFrame, type RecordFrame } from "./record-frames";
+import { recordAssetNames } from "./transfer-progress";
 
 // Downloads that run at once, so a page of small frames that name large blobs stays bounded.
 const parallelDownloads = 8;
@@ -18,13 +19,21 @@ const parallelDownloads = 8;
 const mapLimited = async <T, R>(items: T[], action: (item: T) => Promise<R>) => {
   const results: R[] = new Array(items.length);
   let next = 0;
+  let failed = false;
+  let failure: unknown;
   const worker = async () => {
-    while (next < items.length) {
+    while (!failed && next < items.length) {
       const index = next++;
-      results[index] = await action(items[index]!);
+      try {
+        results[index] = await action(items[index]!);
+      } catch (error) {
+        failed = true;
+        failure = error;
+      }
     }
   };
   await Promise.all(Array.from({ length: Math.min(parallelDownloads, items.length) }, worker));
+  if (failed) throw failure;
   return results;
 };
 
@@ -44,7 +53,7 @@ const decodeRecordFrame = async (bytes: Uint8Array, format?: "ordered", allowPoi
 /** False when a referenced file cannot be decrypted or does not match; network errors still throw. */
 const downloaded = async (files: ReturnType<typeof createRecordAssets>, frames: RecordFrame[]) => {
   try {
-    for (const frame of frames) await files.download(frame.assets);
+    for (const frame of frames) await files.download(frame.assets, recordAssetNames(frame.records, frame.format));
     return true;
   } catch (error) {
     if (error instanceof UnreadableSyncData) return false;

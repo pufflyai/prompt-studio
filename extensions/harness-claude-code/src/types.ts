@@ -29,6 +29,8 @@ export type ClaudeCodeTranscriptEntry = {
   uuid: string;
   type: string;
   timestamp?: string;
+  /** Provider context, such as expanded skill instructions, rather than a person's submission. */
+  isMeta?: boolean;
   message: {
     role: string;
     content: string | ClaudeCodeContentBlock[];

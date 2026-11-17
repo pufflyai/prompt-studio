@@ -6,8 +6,8 @@ import {
   verifyPlaywrightQuarantineReport,
   verifyQuarantineAttempt,
 } from "./quarantine-reports";
+import { quarantineGroups } from "./quarantine-selection";
 import { selectedQuarantineRegistry } from "./quarantine-test-files";
-import { quarantineGroups } from "./run-quarantined-tests";
 import { browserQuarantineReportPath, quarantineDirectory } from "./test-quarantine";
 import { readWorkspacePackages } from "./workspace-packages";
 

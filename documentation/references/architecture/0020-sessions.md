@@ -8,7 +8,7 @@ CLI and dashboard clients call the session API. Domain services coordinate datab
 
 ## Presentation ownership
 
-The default-installed `pstdio.pstdio-session-browser` extension owns browsing,
+The default-installed `pstdio.session-browser` extension owns browsing,
 search, session actions, draft policy and conversation composition. It declares
 native `chat` and tree views through the public SDK. The workbench renders chat
 with `@pstdio/ui/chat-ui` in its own document; no extension React entry or webview
@@ -227,7 +227,7 @@ Rules:
 5. Switching agents clears the previous `agent_session_id`; the new session's `last_selected_model` is the provided request model or `null`.
 6. Provider adapters own provider-specific model payload translation. The session layer only passes model strings.
 
-The dashboard restores harness parameters from the session's `params_json` alongside its agent and model. Unrelated sync updates keep unsent parameter picks. For a new conversation, the project-local recent harness selection remembers explicit parameters with the agent and model. Parameters are checked against the selected model's schema once its catalog is loaded. Resetting a parameter sends its default value explicitly, so the server can replace the previous saved value.
+The dashboard restores harness parameters from the session's `params_json` alongside its agent and model. Unrelated sync updates keep unsent parameter picks. For a new conversation, the project-local recent harness selection remembers explicit parameters and the last model for each harness. Parameters are checked against the selected model's schema once its catalog is loaded. Resetting a parameter sends its default value explicitly, so the server can replace the previous saved value.
 
 ### 2) Planner ticket attempt — `pstdio-planner.run-attempt`
 

@@ -1,24 +1,9 @@
 import { prepareWorkbenchNavigation } from "./controllers/navigation/compound-navigation";
 import { openPageDialog } from "./controllers/navigation/page-dialog";
+import { canOpenCorePanel } from "./controllers/navigation/panel-target";
 import type { WorkbenchRegion } from "./registries/layout/layout-model";
-import { replacedPageSlot } from "./registries/modes/placement-replacement";
 import { createNavigationRegistry, type NavigationTargetPanel } from "./registries/navigation/navigation-registry";
 import type { WorkbenchCore } from "./workbench-core-types";
-
-type PageSlotPanelRef = Extract<NavigationTargetPanel["panel"], { kind: "page-slot" }>;
-
-const findPagePanelOwner = (core: WorkbenchCore, panel: PageSlotPanelRef) =>
-  core.pages
-    .listPages()
-    .find((candidate) => candidate.ref.extensionId === panel.page.extensionId && candidate.ref.id === panel.page.id);
-
-const canOpenCorePanel = (core: WorkbenchCore, target: NavigationTargetPanel) => {
-  const panel = target.panel;
-  if (panel.kind === "shell-placement") return Boolean(core.shellPlacements.getPlacement(panel.id));
-  if (panel.kind !== "page-slot") return Boolean(core.modePlacements.getPlacement(panel));
-  if (replacedPageSlot(core.modePlacements, panel)) return true;
-  return Boolean(findPagePanelOwner(core, panel)?.slots.some((slot) => slot.id === panel.id));
-};
 
 export const revealPanelRegion = (core: WorkbenchCore, region: WorkbenchRegion) => {
   if (region === "secondary" && !core.shell.getPanelPolicy("secondary").open) {

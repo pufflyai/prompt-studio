@@ -58,6 +58,7 @@ export const observeTextMember = (deps: TextEditingDeps, connection: TextConnect
         .filter((person) => person.participantId !== ownParticipantId)
         .map((person) => ({
           id: person.participantId,
+          deviceId: person.deviceId,
           label: person.label,
           deviceName: person.deviceName,
           selection: person.seedId === seedId ? person.selection : null,

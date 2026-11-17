@@ -12,7 +12,7 @@ export const acceptanceOwner = "example.shared-notes";
 export const createCloudAcceptanceFixture = async (
   root: string,
   children: Set<ChildProcess>,
-  options: { cloudUi?: boolean; signal?: AbortSignal } = {},
+  options: { cloudUi?: boolean; signal?: AbortSignal; extensions?: string[] } = {},
 ) => {
   options.signal?.throwIfAborted();
   const key = join(root, "peer-key.pem");
@@ -59,7 +59,9 @@ export const createCloudAcceptanceFixture = async (
   );
   // The unrelated extension consumes the packed public SDK. It has no sync, merge or crypto code.
   installBuiltSdk(source);
-  const defaults = JSON.parse(e2eExtensions("pstdio-notes", "pstdio-artifacts", "pstdio-planner"));
+  const defaults = JSON.parse(
+    e2eExtensions(...(options.extensions ?? ["pstdio-notes", "pstdio-artifacts", "pstdio-planner"])),
+  );
   if (options.cloudUi) defaults.defaultExtensions.push(...JSON.parse(e2eExtensions("pstdio-cloud")).defaultExtensions);
   defaults.defaultExtensions.push({ source, installName: "shared-notes", skipInstall: true });
   const peer = await startPublicTextPeer(root, undefined, options.signal);

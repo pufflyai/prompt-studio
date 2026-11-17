@@ -35,7 +35,7 @@ jobs:
           bun-version-file: package.json
       - uses: actions/setup-node@v5
         with:
-          node-version: "24.22.1"
+          node-version: "26.7.0"
       - run: bun install --frozen-lockfile
       - run: bun run --cwd services/psx test:integration
       - run: docker build -f infra/psx/Dockerfile -t pstdio-psx-smoke .
@@ -98,7 +98,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}
       - uses: actions/setup-node@v5
         with:
-          node-version: "24.22.1"
+          node-version: "26.7.0"
       - name: Check the built image and pinned Bun runtime
         env:
           SERVICE: ${{ matrix.service }}
@@ -137,7 +137,7 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - run: bun test infra/container-entrypoint.p0.test.ts infra/relay/portable-smoke-images.p0.test.ts
+      - run: bun test infra/container-entrypoint.p0.test.ts
   plan:
     runs-on: ubuntu-latest
     steps:

@@ -1,7 +1,14 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { AgentModel, HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
+import type {
+  AgentModel,
+  HarnessApprovalChannel,
+  HarnessContext,
+  HarnessProvider,
+  HarnessSession,
+  HarnessStartInput,
+} from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
 import { authenticateClaude, getClaudeAuthentication } from "./authentication";
 import { claudeCommandState, prepareClaudeOperation } from "./commands";
@@ -95,6 +102,7 @@ const sessionEnv = (ctx: HarnessContext, sessionId: string) => ({
 
 type ClaudeCodeDeps = {
   detect: NonNullable<HarnessProvider["detect"]>;
+  startSession: (input: Parameters<typeof startClaudeCodeSession>[0]) => Promise<HarnessSession>;
   listModels: (ctx: HarnessContext) => Promise<AgentModel[]>;
   now: () => number;
   readTranscript: (agentSessionId: string, cwd?: string) => Promise<string>;
@@ -102,6 +110,7 @@ type ClaudeCodeDeps = {
 
 const defaultDeps: ClaudeCodeDeps = {
   detect: detectClaude,
+  startSession: startClaudeCodeSession,
   listModels: discoverClaudeModels,
   now: Date.now,
   readTranscript: defaultReadTranscript,
@@ -175,10 +184,14 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
       return { agentSessionId: result.sessionId };
     },
     getCommandState: (_ctx, input) => claudeCommandState(input),
+    // This catalog is static; mode changes come from committed session params.
+    watchCommandState: () => () => {},
     prepareOperation: (ctx, input, operation) => prepareClaudeOperation(input, operation, ctx.projectId),
 
-    start: (ctx, input) =>
-      startClaudeCodeSession({
+    // Hosts from PS-1197 on pass approvals on start too. Drop the widened type once a released SDK
+    // declares `approvals` on HarnessStartInput.
+    start: (ctx, input: HarnessStartInput & { approvals?: HarnessApprovalChannel }) =>
+      deps.startSession({
         prompt: input.prompt,
         attachments: input.attachments,
         model: input.model,
@@ -187,6 +200,9 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
         env: sessionEnv(ctx, input.sessionId),
         events: input.events,
         questions: input.questions,
+        approvals: input.approvals,
+        turns: input.turns,
+        signal: input.signal,
       }),
 
     resume: (ctx, input) =>
@@ -202,6 +218,8 @@ export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {})
         messageOffset: input.messageOffset,
         questions: input.questions,
         approvals: input.approvals,
+        turns: input.turns,
+        signal: input.signal,
       }),
 
     getMessages: async (_ctx, input) => {

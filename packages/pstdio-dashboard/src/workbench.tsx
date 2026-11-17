@@ -17,9 +17,11 @@ import { createHelpModule } from "./modules/help/module";
 import { createKeyboardShortcutsModule } from "./modules/keyboard-shortcuts/module";
 import { createNotificationsModule } from "./modules/notifications/module";
 import { createPerformanceModule } from "./modules/performance/module";
-import type { DesktopProjectTabsController } from "./modules/projects/desktop-project-tabs-controller";
+import type { PerformanceMonitoringController } from "./modules/performance/performance-monitoring-controller";
 import { createProjectsModule } from "./modules/projects/module";
+import type { DesktopProjectTabs } from "./modules/projects/project-selection-sync";
 import { createProjectOpeningModule } from "./modules/projects/setup/module";
+import type { ProjectSetupHandoff } from "./modules/projects/setup/project-setup-handoff";
 import { createRecentResourcesModule } from "./modules/recent-resources/module";
 import { createResourceLinksModule } from "./modules/resource-links/module";
 import { createSessionsModule } from "./modules/sessions/module";
@@ -35,20 +37,28 @@ import { DASHBOARD_SIDENAV_REGION_SIZE } from "./shared/workbench/dashboard-side
 export { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
 
 interface CreateDashboardWorkbenchInput {
-  projectTabs?: DesktopProjectTabsController;
+  /** Desktop creates hidden workbenches for background tabs. */
+  active?: boolean;
+  /** The project of a desktop tab. In the browser, the URL or the saved selection decides it. */
+  projectId?: string;
+  projectTabs?: DesktopProjectTabs;
+  setupHandoff?: ProjectSetupHandoff;
   pageLocationBrowser?: WorkbenchPageLocationBrowser;
+  performance?: PerformanceMonitoringController;
   storage?: WorkbenchStorageLike;
   layoutDebounceMs?: number;
 }
 
 type CreateDashboardModulesInput = {
   initialProjectId?: string;
-  projectTabs?: DesktopProjectTabsController;
+  performance?: PerformanceMonitoringController;
+  projectTabs?: DesktopProjectTabs;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
+  setupHandoff?: ProjectSetupHandoff;
 };
 
 export const createDashboardModules = (input: CreateDashboardModulesInput & { settings: SettingsRegistry }) => {
-  const projectOpening = createProjectOpeningModule();
+  const projectOpening = createProjectOpeningModule({ handoff: input.setupHandoff });
   return [
     createSidenavModule(),
     createWorkspacesModule(),
@@ -69,7 +79,7 @@ export const createDashboardModules = (input: CreateDashboardModulesInput & { se
     createCommandPaletteModule(),
     createSessionsModule(),
     createNotificationsModule(),
-    createPerformanceModule(input.settings),
+    createPerformanceModule(input.settings, input.performance),
     createUpdatesModule(),
     createWorkbenchTerminalModule(),
     createTerminalModule(),
@@ -88,6 +98,8 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   });
   const persistence = createLocalStorageWorkbenchPersistence({
     namespace: dashboardWorkbenchStorageNamespace,
+    // Desktop tabs keep several workbenches; each keeps its own view state and write generations.
+    scope: input.projectTabs ? `project/${input.projectId ?? "selection"}` : undefined,
     storage,
     debounceMs: input.layoutDebounceMs,
   });
@@ -95,10 +107,13 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   const pageLocationBrowser =
     input.pageLocationBrowser ??
     (typeof window === "undefined" ? undefined : createDashboardPageLocationBrowser(window));
-  // The URL decides the project, so shared links and bookmarks open the project they name.
-  const urlProjectId = pageLocationBrowser && readPageUrlProjectId(pageLocationBrowser.current().url);
+  // In the browser the URL decides the project, so shared links and bookmarks open the project they name.
+  const urlProjectId = input.projectTabs
+    ? undefined
+    : pageLocationBrowser && readPageUrlProjectId(pageLocationBrowser.current().url);
   if (urlProjectId) projectSelectionPersistence.setSelectedProjectId(urlProjectId);
   const workbench = createWorkbench({
+    active: input.active,
     queries: getDashboardScopedQueries(),
     startPage: dashboardHomePage,
     initialSidePanelMode: "closed",
@@ -120,8 +135,10 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   });
   const modules = createDashboardModules({
     settings: workbench.settings,
-    initialProjectId: urlProjectId,
+    initialProjectId: input.projectTabs ? input.projectId : urlProjectId,
+    performance: input.performance,
     projectTabs: input.projectTabs,
+    setupHandoff: input.setupHandoff,
     projectSelectionPersistence,
   });
   for (const module of modules) workbench.registerModule(module);

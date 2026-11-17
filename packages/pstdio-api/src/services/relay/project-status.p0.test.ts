@@ -36,3 +36,13 @@ test("catching up after the first download waits to sync instead of restarting t
     offlineReady: false,
   });
 });
+
+test("a retryable request error keeps the existing download and transport state", () => {
+  const retrying = { ...ready, error: "Cloud source failed; retry scheduled" };
+  expect(projectSyncStatus([{ ...retrying, firstDownloaded: false, downloaded: false }])).toMatchObject({
+    state: "first-download-incomplete",
+    offlineReady: false,
+  });
+  expect(projectSyncStatus([{ ...retrying, connected: false }]).state).toBe("offline");
+  expect(projectSyncStatus([{ ...retrying, needsAttention: true }]).state).toBe("needs-attention");
+});

@@ -1,23 +1,18 @@
 import {
   defineCommand,
   defineExtension,
-  defineHook,
   defineKeybinding,
   defineSchedule,
   defineSkill,
   packageAsset,
   params,
-  workspaceEvents,
   workspaceSlots,
 } from "@pstdio/sdk/extensions";
 import { repairRemovedCommand, repairRemovedSchedule } from "./merge-queue-repair";
 import { benchmarkCommands, syncCommandRef } from "./src/benchmarks/commands";
-import { navigationItems, navigationTrees, pages, views } from "./src/pages";
+import { navigationTrees, pages, viewMenus, views } from "./src/pages";
+import { healthSync, releaseCommands } from "./src/releases/commands";
 
-const INSTALL_COMMAND = ["bun", "install", "--frozen-lockfile"];
-const BUILD_COMMAND = ["bun", "run", "build"];
-// Chained via a shell because spawnDetached runs a single executable (no shell operators).
-const PROVISION_COMMAND = ["sh", "-c", `${INSTALL_COMMAND.join(" ")} && ${BUILD_COMMAND.join(" ")}`];
 const ISOLATED_COMMAND = ["bun", "run", "dev:isolated"];
 const HIGH_IMPACT_ISSUE_DISCOVERY_PROMPT = [
   "Inspect this repository for one high-impact user-facing bug, reliability failure, data-loss risk, security weakness, or material violation of its documented architecture.",
@@ -27,7 +22,7 @@ const HIGH_IMPACT_ISSUE_DISCOVERY_PROMPT = [
   "2. Check existing open and archived planner tickets. Stop if an equivalent issue is already tracked, was archived after being addressed, or was previously rejected; use the archived ticket's history and rejection rationale instead of recreating it.",
   "3. Reproduce the candidate safely with a focused existing test, diagnostic command, deterministic steps, failing architecture check, or a concrete code trace against a documented rule. Do not perform destructive, production-facing, or exploitative security validation. An unverified hypothesis does not qualify.",
   "4. Establish material impact and actionability for users, security, data integrity, reliability, or architecture before creating anything.",
-  "5. Only when every gate passes, create exactly one evidence-backed planner ticket with the `pst tickets` CLI and save it with `pst tickets save`.",
+  "5. Only when every gate passes, create exactly one evidence-backed planner ticket with the `pst pstdio.planner` CLI and save it with `pst pstdio.planner save-ticket`.",
   "For a reproduced defect, record the reproduction steps or failing command, observed result, expected result, material impact, relevant code area, and validation direction.",
   "For an architecture infraction, cite the governing rule, offending dependency or code path, concrete evidence, architectural risk, and intended boundary to restore.",
   "If any gate fails or no valuable reproduced fix is found, report that outcome and create no ticket. A no-ticket result is a successful run.",
@@ -170,12 +165,14 @@ export default defineExtension({
     openInIsolationCommand,
     stopIsolationCommand,
     ...Object.values(benchmarkCommands),
+    ...Object.values(releaseCommands),
     repairRemovedCommand,
   ],
   views,
   pages,
-  navigationItems,
+  translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   navigationTrees,
+  viewMenus,
   keybindings: [
     ...(
       [
@@ -210,8 +207,19 @@ export default defineExtension({
       title: "Write a blog post",
       source: packageAsset("./skills/write-blog-post", import.meta.url),
     }),
+    defineSkill({
+      id: "restore-repository",
+      title: "Restore the Prompt Studio repository",
+      source: packageAsset("./skills/restore-repository", import.meta.url),
+    }),
   ],
   schedules: [
+    defineSchedule({
+      id: "daily-release-health",
+      title: "Sync release pipeline health",
+      schedule: "0 7 * * *",
+      command: healthSync.ref,
+    }),
     defineSchedule({
       id: "daily-issue-discovery",
       title: "Daily high-impact issue discovery",
@@ -226,18 +234,5 @@ export default defineExtension({
       command: syncCommandRef,
     }),
     repairRemovedSchedule,
-  ],
-  hooks: [
-    // Install + build run in the background so session launch isn't blocked on them.
-    defineHook({
-      id: "workspace-ready",
-      event: workspaceEvents.ready,
-      async run(ctx, payload) {
-        await ctx.process.spawnDetached({
-          command: PROVISION_COMMAND,
-          cwd: payload.workspaceDir,
-        });
-      },
-    }),
   ],
 });

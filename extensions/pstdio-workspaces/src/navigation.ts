@@ -38,7 +38,7 @@ export const openFiles = defineCommand({
   id: "open-files",
   title: "Open project files",
   cli: true,
-  palette: [{ group: "Workspaces" }],
+  palette: [{ group: "Workspaces", icon: "files" }],
   async run(ctx) {
     const workspace = await ctx.workspaces.getDefault();
     if (!workspace) {

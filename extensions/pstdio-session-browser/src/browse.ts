@@ -1,6 +1,7 @@
 import {
   defineCommandPaletteResource,
   type ExtensionContextBase,
+  type ExtensionSession,
   l10n,
   type TreeNode,
   type TreeRendererPageParams,
@@ -12,7 +13,8 @@ import {
 import { sessionBrowser } from "../refs";
 import { create } from "./navigation";
 import { sessionResource, sessionTarget } from "./resource";
-import { sessionIndicator } from "./session-indicator";
+import { sessionDisplayStatus, sessionIndicator } from "./session-indicator";
+import { pinSession, readPinnedSessions, readSessionPins } from "./session-pins";
 
 const icons: Record<string, string> = {
   completed: "circle-check",
@@ -42,32 +44,55 @@ const sessionDayLabel = (date: Date) => {
     year: date.getFullYear() === now.getFullYear() ? undefined : "numeric",
   });
 };
-const sessionNodes = (
+// Keep date groups aligned with the public query's lastActivity ordering.
+const sessionActivityDate = (session: ExtensionSession) =>
+  new Date(
+    Math.max(
+      ...[session.createdAt, session.updatedAt, session.lastRequestStarted, session.lastRequestEnded]
+        .filter((timestamp) => timestamp != null)
+        .map((timestamp) => Date.parse(timestamp)),
+    ),
+  );
+const sessionNodes = async (
   ctx: ExtensionContextBase,
   sessions: Awaited<ReturnType<typeof ctx.sessions.query>>["items"],
   workspaceId?: string,
+  pinned = false,
 ) => {
+  const pins = await readSessionPins(ctx, sessions);
   const nodes: TreeNode[] = [];
   let date = "";
   for (const session of sessions) {
-    const day = new Date(session.lastRequestStarted ?? session.updatedAt).toLocaleDateString(undefined, {
+    if (pins.get(session.id) !== pinned) continue;
+    const activityDate = sessionActivityDate(session);
+    const day = activityDate.toLocaleDateString(undefined, {
       dateStyle: "medium",
     });
-    if (day !== date) {
+    if (!pinned && day !== date) {
       date = day;
       nodes.push({
         id: `date:${date}`,
-        label: sessionDayLabel(new Date(session.lastRequestStarted ?? session.updatedAt)),
+        label: sessionDayLabel(activityDate),
         disabled: true,
       });
     }
     const resource = sessionResource(session, ctx.projectId);
+    const status = sessionDisplayStatus(session);
     nodes.push({
       id: session.id,
       label: session.title,
-      icon: icons[session.status] ?? "circle-dashed",
-      iconColor: sessionStatusColor(session.status),
+      icon: icons[status] ?? "circle-dashed",
+      iconColor: sessionStatusColor(status),
       resource,
+      contextMenuActions: [
+        {
+          id: "pin",
+          label: pinned ? l10n("commands.unpin", "Unpin session") : l10n("commands.pin", "Pin session"),
+          icon: pinned ? "pin-off" : "pin",
+          command: pinSession.ref,
+          params: { sessionId: session.id, pinned: !pinned },
+        },
+      ],
       target: workspaceId
         ? { kind: "panel", panel: sessionBrowser.panels.conversation, resource, open: "preview" }
         : sessionTarget(resource),
@@ -84,17 +109,26 @@ const queryPage = async (ctx: ExtensionContextBase, input: TreeRendererQueryPara
     search: input.filter?.trim() || undefined,
     ...(cursor ? { cursor } : {}),
   });
-  const nodes = sessionNodes(ctx, page.items, workspaceId);
+  const nodes = await sessionNodes(ctx, page.items, workspaceId);
   return { nodes, workspaceId, nextCursor: page.nextCursor ?? undefined };
 };
 export const browsePage = async (ctx: ExtensionContextBase, input: TreeRendererPageParams) => {
+  if (input.cursor.startsWith("pinned:")) {
+    const workspaceId = input.renderer.resource?.type === "workspace" ? input.renderer.resource.id : undefined;
+    const page = await readPinnedSessions(ctx, workspaceId, input.filter?.trim(), input.cursor.slice(7));
+    return {
+      nodes: await sessionNodes(ctx, page.items, workspaceId, true),
+      nextCursor: page.nextCursor ? `pinned:${page.nextCursor}` : undefined,
+    };
+  }
   const { nodes, nextCursor } = await queryPage(ctx, input, input.cursor);
   return { nodes, nextCursor };
 };
 export const browse = async (ctx: ExtensionContextBase, input: TreeRendererQueryParams): Promise<TreeViewSection[]> => {
   const { nodes, workspaceId, nextCursor } = await queryPage(ctx, input);
+  const pinned = await readPinnedSessions(ctx, workspaceId, input.filter?.trim());
   let visibleNodes: TreeNode[] =
-    nodes.length || nextCursor
+    nodes.length || nextCursor || pinned.items.length || pinned.nextCursor
       ? nodes
       : [{ id: "empty", label: l10n("sessions.empty", "No sessions yet"), disabled: true }];
   if (workspaceId)
@@ -118,6 +152,17 @@ export const browse = async (ctx: ExtensionContextBase, input: TreeRendererQuery
       },
     ];
   return [
+    ...(pinned.items.length || pinned.nextCursor
+      ? [
+          {
+            id: "pinned",
+            label: l10n("sessions.pinned", "Pinned"),
+            collapsible: false,
+            nodes: await sessionNodes(ctx, pinned.items, workspaceId, true),
+            nextCursor: pinned.nextCursor ? `pinned:${pinned.nextCursor}` : undefined,
+          },
+        ]
+      : []),
     {
       id: "sessions",
       label: l10n("sessions.title", "Sessions"),
@@ -160,7 +205,7 @@ export const search = defineCommandPaletteResource({
         id: session.id,
         label: session.title,
         icon: "message-circle",
-        indicator: sessionIndicator(session.status),
+        indicator: sessionIndicator(sessionDisplayStatus(session)),
         target: sessionTarget(sessionResource(session, ctx.projectId)),
       })),
     };

@@ -5,7 +5,7 @@ import type { ClaudeCodeContentBlock, ClaudeCodeToolResultBlock, ClaudeCodeToolU
 import { parseStdoutLine } from "./types";
 import { parseTimestamp } from "./utils";
 
-type StreamContext = { index: number; toolMap: Map<string, string>; localReply?: boolean };
+type StreamContext = { index: number; runId: string; toolMap: Map<string, string>; localReply?: boolean };
 
 const trackToolUse = (block: ClaudeCodeToolUseBlock, ctx: StreamContext) => {
   const part = toolUsePart(block);
@@ -22,7 +22,7 @@ const handleContentBlockDelta = (parsed: Record<string, unknown>, ctx: StreamCon
 
   if (delta.type === "text_delta") {
     return {
-      id: `stream-text-${ctx.index}`,
+      id: `stream-text-${ctx.runId}-${ctx.index}`,
       role: "assistant",
       parts: [{ type: "text", text: delta.text as string }],
       index: ctx.index,
@@ -31,7 +31,7 @@ const handleContentBlockDelta = (parsed: Record<string, unknown>, ctx: StreamCon
 
   if (delta.type === "thinking_delta") {
     return {
-      id: `stream-reasoning-${ctx.index}`,
+      id: `stream-reasoning-${ctx.runId}-${ctx.index}`,
       role: "assistant",
       parts: [{ type: "reasoning", text: delta.thinking as string }],
       index: ctx.index,
@@ -50,7 +50,7 @@ const handleContentBlockStart = (parsed: Record<string, unknown>, ctx: StreamCon
     // A plan becomes answerable only when its permission request supplies the preview.
     if (block.name === EXIT_PLAN_MODE) return null;
     return {
-      id: `stream-tool-${ctx.index}`,
+      id: `stream-tool-${ctx.runId}-${ctx.index}`,
       role: "assistant",
       parts: [part],
       index: ctx.index,
@@ -59,7 +59,7 @@ const handleContentBlockStart = (parsed: Record<string, unknown>, ctx: StreamCon
 
   if (block.type === "tool_result") {
     return {
-      id: `stream-tool-result-${ctx.index}`,
+      id: `stream-tool-result-${ctx.runId}-${ctx.index}`,
       role: "assistant",
       parts: [trackedToolResult(block as ClaudeCodeToolResultBlock, ctx)],
       index: ctx.index,
@@ -68,7 +68,7 @@ const handleContentBlockStart = (parsed: Record<string, unknown>, ctx: StreamCon
 
   if (block.type === "thinking") {
     return {
-      id: `stream-thinking-${ctx.index}`,
+      id: `stream-thinking-${ctx.runId}-${ctx.index}`,
       role: "assistant",
       parts: [{ type: "reasoning", text: "" }],
       index: ctx.index,
@@ -81,7 +81,7 @@ const handleContentBlockStart = (parsed: Record<string, unknown>, ctx: StreamCon
 const contentBlockToMessage = (block: ClaudeCodeContentBlock, ctx: StreamContext): SessionMessage | null => {
   if (block.type === "text") {
     return {
-      id: `stream-assistant-text-${ctx.index}`,
+      id: `stream-assistant-text-${ctx.runId}-${ctx.index}`,
       role: "assistant",
       parts: [{ type: "text", text: block.text }],
       index: ctx.index,
@@ -90,7 +90,7 @@ const contentBlockToMessage = (block: ClaudeCodeContentBlock, ctx: StreamContext
 
   if (block.type === "thinking") {
     return {
-      id: `stream-assistant-thinking-${ctx.index}`,
+      id: `stream-assistant-thinking-${ctx.runId}-${ctx.index}`,
       role: "assistant",
       parts: [{ type: "reasoning", text: block.thinking }],
       index: ctx.index,
@@ -101,7 +101,7 @@ const contentBlockToMessage = (block: ClaudeCodeContentBlock, ctx: StreamContext
     const part = trackToolUse(block, ctx);
     if (block.name === EXIT_PLAN_MODE) return null;
     return {
-      id: `stream-assistant-tool-${ctx.index}`,
+      id: `stream-assistant-tool-${ctx.runId}-${ctx.index}`,
       role: "assistant",
       parts: [part],
       index: ctx.index,
@@ -110,7 +110,7 @@ const contentBlockToMessage = (block: ClaudeCodeContentBlock, ctx: StreamContext
 
   if (block.type === "tool_result") {
     return {
-      id: `stream-assistant-tool-result-${ctx.index}`,
+      id: `stream-assistant-tool-result-${ctx.runId}-${ctx.index}`,
       role: "assistant",
       parts: [trackedToolResult(block, ctx)],
       index: ctx.index,
@@ -127,7 +127,7 @@ const handleAssistant = (parsed: Record<string, unknown>, ctx: StreamContext): S
   if (typeof parsed.error === "string") {
     return [
       {
-        id: typeof parsed.uuid === "string" ? parsed.uuid : `stream-assistant-${ctx.index}`,
+        id: typeof parsed.uuid === "string" ? parsed.uuid : `stream-assistant-${ctx.runId}-${ctx.index}`,
         role: "assistant",
         parts: [apiErrorPart(parsed.error, content)],
         index: ctx.index,
@@ -138,7 +138,7 @@ const handleAssistant = (parsed: Record<string, unknown>, ctx: StreamContext): S
   if (typeof content === "string" && content.length > 0) {
     return [
       {
-        id: typeof parsed.uuid === "string" ? parsed.uuid : `stream-assistant-${ctx.index}`,
+        id: typeof parsed.uuid === "string" ? parsed.uuid : `stream-assistant-${ctx.runId}-${ctx.index}`,
         role: "assistant",
         parts: [{ type: "text", text: content }],
         index: ctx.index,
@@ -170,7 +170,7 @@ const handleUser = (parsed: Record<string, unknown>, ctx: StreamContext): Sessio
   return (content as ClaudeCodeContentBlock[])
     .filter((block): block is ClaudeCodeToolResultBlock => block.type === "tool_result")
     .map((block, offset) => ({
-      id: `stream-user-tool-result-${ctx.index + offset}`,
+      id: `stream-user-tool-result-${ctx.runId}-${ctx.index + offset}`,
       role: "assistant",
       parts: [trackedToolResult(block, ctx, parsed.tool_use_result)],
       index: ctx.index + offset,
@@ -180,7 +180,7 @@ const handleUser = (parsed: Record<string, unknown>, ctx: StreamContext): Sessio
 const handleResult = (parsed: Record<string, unknown>, ctx: StreamContext): SessionMessage => {
   const usage = (parsed.usage ?? {}) as Record<string, number | undefined>;
   return {
-    id: `stream-result-${ctx.index}`,
+    id: `stream-result-${ctx.runId}-${ctx.index}`,
     role: "system",
     parts: [
       ...(parsed.local_command && typeof parsed.result === "string" && !ctx.localReply
@@ -230,7 +230,12 @@ const dispatchStdoutEvent = (parsed: Record<string, unknown>, ctx: StreamContext
         parts: [{ type: "text", text: `\n\n${plan}\n\n` }],
         index: ctx.index,
       },
-      { id: `stream-assistant-tool-${ctx.index + 1}`, role: "assistant", parts: [part], index: ctx.index + 1 },
+      {
+        id: `stream-assistant-tool-${ctx.runId}-${ctx.index + 1}`,
+        role: "assistant",
+        parts: [part],
+        index: ctx.index + 1,
+      },
     ];
   }
 
@@ -256,7 +261,9 @@ export async function* normalizeClaudeCodeStream(
   raw: AsyncIterable<RawLogEvent>,
   options: { compact?: boolean } = {},
 ): AsyncGenerator<SessionMessage> {
-  const ctx: StreamContext = { index: 0, toolMap: new Map() };
+  // Every resume starts its event counter at zero; generated IDs must still identify
+  // different messages when several runs belong to the same conversation.
+  const ctx: StreamContext = { index: 0, runId: crypto.randomUUID(), toolMap: new Map() };
   let compact = options.compact;
 
   for await (const event of raw) {
@@ -268,7 +275,7 @@ export async function* normalizeClaudeCodeStream(
     }
     if (event.type === "stderr") {
       yield {
-        id: `stream-error-${ctx.index}`,
+        id: `stream-error-${ctx.runId}-${ctx.index}`,
         role: "system",
         createdAt: Date.now(),
         parts: [normalizeErrorPart({ message: event.data })],

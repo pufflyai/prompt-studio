@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 
 test("Notes and Sidenav levels keep rows users pinned to the header", async ({ page, request }) => {
@@ -77,7 +77,7 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   await row("Sessions").click();
   await expect(sidenav.getByText("Today", { exact: true })).toBeVisible();
   await row("Level session").click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversation\?resource=/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.session-browser\/conversation\?resource=/);
   await expect(firstRow).toHaveAccessibleName("Tickets");
   await row("Search").click();
   await expect(page.getByRole("dialog")).toBeVisible();

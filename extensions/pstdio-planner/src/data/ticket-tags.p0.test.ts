@@ -6,6 +6,7 @@ import { TAGS_COLLECTION, TICKETS_COLLECTION } from "./collections";
 import { DEFAULT_TAGS } from "./seed";
 import { seedTicketIdentity } from "./ticket-context.fixture";
 import { ticketRecords } from "./ticket-records";
+import { readTicketTags } from "./ticket-tag-storage";
 import type { StoredTag, StoredTicket } from "./types";
 
 const option = (id: string, sortOrder: number) => ({
@@ -43,6 +44,13 @@ const ticket: StoredTicket = {
   createdAt: "2026-10-01T00:00:00.000Z",
   updatedAt: "2026-10-01T00:00:00.000Z",
 };
+
+test("concurrent option choices have the same resolved order before and after serialization", () => {
+  const read = (options: Record<string, boolean>) =>
+    readTicketTags({ ...ticket, tags: {}, tagSelections: { flags: { type: "multi", options } } }).tags?.flags;
+  expect(read({ risky: true, "needs-docs": true })).toEqual(["needs-docs", "risky"]);
+  expect(read({ "needs-docs": true, risky: true })).toEqual(["needs-docs", "risky"]);
+});
 
 const offlineDevices = async () => {
   const definitions = [...DEFAULT_TAGS.map((seed) => seed()), track, flags];
@@ -169,4 +177,19 @@ test("a multi-select conversion keeps a concurrent changed scalar visible", asyn
   await first.put(ticket.id, { ...merged, tags: { ...merged.tags, flags: ["risky"] } });
   await pair.merge();
   for (const device of [0, 1] as const) expect((await tagsOn(device))?.flags).toEqual(["risky"]);
+});
+
+test("repeated multi and single conversions keep only the newly selected flags", async () => {
+  const { pair, set, tagsOn } = await offlineDevices();
+  await set(0, "flags", ["risky", "blocked-upstream"]);
+  await pair.merge();
+  const first = ticketRecords(pair.devices[0]);
+  const observed = (await first.get(ticket.id))!;
+  await first.put(ticket.id, { ...observed, tags: { ...observed.tags, flags: "risky" } });
+  await pair.merge();
+  for (const device of [0, 1] as const) expect((await tagsOn(device))?.flags).toBe("risky");
+  await set(0, "flags", ["risky", "needs-docs"]);
+  await pair.merge();
+  for (const device of [0, 1] as const)
+    expect(new Set((await tagsOn(device))?.flags)).toEqual(new Set(["risky", "needs-docs"]));
 });

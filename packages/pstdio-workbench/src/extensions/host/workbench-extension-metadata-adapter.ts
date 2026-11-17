@@ -229,6 +229,8 @@ export const toInternalWorkbenchExtensionMetadata = (
     })),
     panels: adaptedPanels,
     resourceKinds: metadata.resourceKinds.map((kind) => ({
+      activity: kind.activity,
+      activityHandoff: kind.activityHandoff,
       id: kind.localId,
       relatedOpeningsCommand: kind.relatedOpeningsCommand,
       extensionId: kind.extensionId,

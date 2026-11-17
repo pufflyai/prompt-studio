@@ -88,7 +88,10 @@ export async function verifyPackagedNativeSettings(page: Page, input: NativeSett
         ).length,
     );
   expect(scrolls).toBe(1);
-  await page.getByTestId("extension-detail-back").click();
+  await page
+    .getByRole("navigation", { name: "breadcrumb" })
+    .getByRole("button", { name: "Extensions", exact: true })
+    .click();
   await entry.click();
   await expect(detail).toHaveValue("Native controls persist their values");
   const first = page.getByRole("textbox", { name: "First choice", exact: true });
@@ -113,7 +116,10 @@ export async function verifyPackagedNativeSettings(page: Page, input: NativeSett
   await expect
     .poll(async () => (await execute("read-instant-values")).values)
     .toEqual({ first: "First saved choice", second: "Second saved choice" });
-  await page.getByTestId("extension-detail-back").click();
+  await page
+    .getByRole("navigation", { name: "breadcrumb" })
+    .getByRole("button", { name: "Extensions", exact: true })
+    .click();
   await entry.click();
   await expect(first).toHaveValue("First saved choice");
   await expect(second).toHaveValue("Second saved choice");

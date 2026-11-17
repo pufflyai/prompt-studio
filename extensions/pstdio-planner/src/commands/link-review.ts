@@ -9,8 +9,7 @@ export const linkReviewCommand = defineCommand({
   id: "link-review",
   title: "Link review",
   cli: {
-    globalAliases: [["tickets", "link-review"]],
-    examples: ["pst tickets link-review --id PS-1 --url https://github.com/org/repo/pull/456"],
+    examples: ["pst pstdio.planner link-review --id PS-1 --url https://github.com/org/repo/pull/456"],
   },
   params: {
     id: params.text({ required: true }),
@@ -20,6 +19,10 @@ export const linkReviewCommand = defineCommand({
   async run(ctx, commandParams) {
     const ticket = await findTicket(ctx, commandParams.id);
     if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
+    if (inferReviewLinkTarget(commandParams.url).provider === "github")
+      throw new Error(
+        "Import the PR with pst pstdio.github pull-requests import, then use pst resources link with purpose result for implementation evidence or context for reference.",
+      );
     if (ticket.reviewLinks?.some((link) => link.url === commandParams.url)) return withTicketTagIds(ticket);
 
     const now = new Date().toISOString();

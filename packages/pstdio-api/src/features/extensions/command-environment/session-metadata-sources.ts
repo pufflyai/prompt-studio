@@ -46,8 +46,12 @@ export const observeSessionMetadataSources = async (
   const workspace = source.workspace;
   if (!workspace || workspace.initializing || workspace.setup_error || !workspace.provider_capabilities_json?.diff)
     return;
-  const watch = await observeWorkspaceDiff(deps, { project_id: projectId, workspace_id: workspace.id }, () =>
-    notify("workspace"),
+  const abort = new AbortController();
+  if (!own(() => abort.abort())) return;
+  await observeWorkspaceDiff(
+    deps,
+    { project_id: projectId, workspace_id: workspace.id },
+    () => notify("workspace"),
+    abort.signal,
   ).catch(() => undefined);
-  if (watch) own(watch.close);
 };

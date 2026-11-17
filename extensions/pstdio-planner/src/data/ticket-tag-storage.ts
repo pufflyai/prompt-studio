@@ -1,12 +1,8 @@
+import { resolveSelectedValues, type StorageSelection } from "@pstdio/sdk/extensions";
 import { tagValueIds } from "./ticket-tags";
 import type { StoredTicket, StoredTicketTags } from "./types";
 
-type TagSelection = (
-  | { type: "single"; value: string | null }
-  | { type: "multi"; value?: string | null; replacedValue?: string | null }
-) & {
-  options?: Record<string, boolean>;
-};
+type TagSelection = StorageSelection;
 
 export interface StoredTicketRecord extends StoredTicket {
   tagSelections?: Record<string, TagSelection>;
@@ -19,19 +15,7 @@ export const readTicketTags = (stored: StoredTicketRecord) => {
   if (!tagSelections) return ticket;
   const tags: StoredTicketTags = { ...stored.tags };
   for (const [tagId, selection] of Object.entries(tagSelections)) {
-    const options = selection.options ?? {};
-    const previous =
-      selection.type === "single" ? tagValueIds(selection.value ?? undefined) : tagValueIds(stored.tags?.[tagId]);
-    const selected = [...new Set([...previous, ...Object.keys(options)])].filter(
-      (id) => options[id] ?? previous.includes(id),
-    );
-    if (
-      selection.type === "multi" &&
-      selection.value != null &&
-      selection.value !== selection.replacedValue &&
-      !selected.includes(selection.value)
-    )
-      selected.push(selection.value);
+    const selected = resolveSelectedValues(stored.tags?.[tagId], selection);
     // A later offline option write can follow a concurrent scalar conversion. Expose
     // that list so the user can resolve it, as with existing tag-definition changes.
     if (selection.type === "single" && selected.length < 2) {
@@ -43,7 +27,8 @@ export const readTicketTags = (stored: StoredTicketRecord) => {
 };
 
 const multiSelection = (current: TagSelection | undefined, legacy: string[], before: string[], value: string[]) => {
-  const options = current?.type === "multi" ? { ...current.options } : {};
+  const options = { ...current?.options };
+  if (current?.type === "single") for (const id of Object.keys(options)) options[id] = value.includes(id);
   // Keep the scalar channel, recording exactly which choice this conversion consumed.
   // A concurrent scalar change then remains visible until a later edit resolves it.
   if (current?.value !== undefined) {
@@ -68,7 +53,14 @@ export const writeTicketTags = (next: StoredTicket, stored?: StoredTicketRecord)
     const value = tags[tagId];
     if (JSON.stringify(previous[tagId]) === JSON.stringify(value)) continue;
     if (!Array.isArray(value)) {
-      selections[tagId] = { type: "single", value: value ?? null };
+      const options = { ...selections[tagId]?.options };
+      // Consume observed choices without deleting their paths: a concurrent offline
+      // addition then remains independent from this scalar conversion.
+      selections[tagId] = {
+        type: "single",
+        value: value ?? null,
+        ...(Object.keys(options).length ? { options, replacedOptions: { ...options } } : {}),
+      };
       continue;
     }
     selections[tagId] = multiSelection(

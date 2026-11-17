@@ -1,4 +1,4 @@
-import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
+import type { PageLocation, PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import { contributionRefId } from "@pstdio/sdk/extensions";
 import type { ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 import { SINGLE_RESOURCE_INSTANCE_KEY } from "../placements/placement-instance-key";
@@ -84,6 +84,7 @@ export const validateWorkbenchPage = (page: WorkbenchPageContribution) => {
 };
 
 const placementFor = <Value>(input: {
+  pageOwnerLocation?: PageLocation;
   page: WorkbenchPageContribution;
   slot: ResolvedPageSlot;
   instanceKey: string;
@@ -103,6 +104,7 @@ const placementFor = <Value>(input: {
     order: input.slot.order ?? 0,
     value: input.resolvePagePlacement({
       identity,
+      pageOwnerLocation: input.pageOwnerLocation,
       pageId: input.page.id,
       slotId: input.slot.id,
       role: input.slot.role,
@@ -118,6 +120,7 @@ const placementFor = <Value>(input: {
 };
 
 export const resolvePagePlacements = <Value>(input: {
+  pageOwnerLocation?: PageLocation;
   page: WorkbenchPageContribution;
   state: WorkbenchPageRuntimeState;
   staticInstanceKey: string;

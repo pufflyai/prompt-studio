@@ -9,13 +9,24 @@ blocked_reason: ""
 
 # {{TICKET_TITLE}}
 
-<!-- A reader should know within a minute what changes for users and why. Put detail in the ticket's files. -->
+<!-- Use concise bullets. A reader should quickly understand the outcome, reason, and mechanism. Keep simple proposals here; link supporting files only when they help review. Remove comments and unused optional sections. -->
 
-[One or two sentences: what users can do after this ships.]
+- [What users can do after this ships.]
 
 ## Why
 
-[What is broken or missing today, and why it should change now. At most three sentences.]
+- [What is broken or missing today, and why it should change now.]
+
+## How
+
+- [Explain the mechanism and main component or workflow changes. Do not just repeat the goal.]
+- [Link technical design, API shapes, schemas, or research when they need separate review.]
+
+## Downsides
+
+<!-- Optional: omit when no concrete cost, limitation, or trade-off helps the decision. -->
+
+- [A concrete cost, limitation, or remaining trade-off.]
 
 ## Scenarios
 

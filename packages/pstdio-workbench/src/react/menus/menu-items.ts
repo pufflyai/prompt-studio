@@ -15,6 +15,7 @@ export interface WorkbenchMenuItem {
   commandId: string;
   label: string;
   description?: string;
+  disabledReason?: string;
   icon: string | undefined;
   iconSrc?: string;
   overflowLabel?: string;
@@ -66,6 +67,7 @@ export const listWorkbenchMenuItemsFromState = (
         commandId: record.command.id,
         label: action.label ?? record.command.label,
         ...(availability.description ? { description: availability.description } : {}),
+        ...(availability.disabledReason ? { disabledReason: availability.disabledReason } : {}),
         icon: action.icon ?? record.command.icon,
         ...(action.iconSrc ? { iconSrc: action.iconSrc } : {}),
         ...(action.overflowLabel ? { overflowLabel: action.overflowLabel } : {}),

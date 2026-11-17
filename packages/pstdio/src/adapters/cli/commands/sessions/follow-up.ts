@@ -5,7 +5,7 @@ import { followUpSession as defaultFollowUp } from "@/features/sessions/api/foll
 import { deleteCliSessionAttachments, uploadCliSessionAttachments } from "./session-attachments";
 
 export const command = "follow-up";
-export const describe = "Send a follow-up prompt to an existing session";
+export const describe = "Queue a follow-up, or use --steer to deliver input to the active run now";
 
 export const builder = (yargs: Argv) =>
   yargs
@@ -107,7 +107,8 @@ const buildSteeringInput = (input: FollowUpApiInput, expectedRunStartedAt: strin
 };
 
 const followUpOutput = (result: Awaited<ReturnType<typeof defaultFollowUp>>) => {
-  const lines = [`Follow-up sent to session ${result.id}`];
+  const queued = result.follow_up?.status === "queued";
+  const lines = [`Follow-up ${queued ? "queued for" : "sent to"} session ${result.id}`];
   lines.push(`Agent:  ${result.agent ?? "unknown"}`);
   lines.push(`Status: ${result.status}`);
   if (result.follow_up) {
@@ -116,6 +117,10 @@ const followUpOutput = (result: Awaited<ReturnType<typeof defaultFollowUp>>) => 
         ? `Follow-up: queued (position ${result.follow_up.queue_position})`
         : "Follow-up: dispatched";
     lines.push(decisionLine);
+    if (queued)
+      lines.push(
+        "The active agent has not received this message. For time-sensitive input, use --steer when sending; use sessions queue and sessions steer to deliver an already queued message.",
+      );
   }
   return lines.join("\n");
 };

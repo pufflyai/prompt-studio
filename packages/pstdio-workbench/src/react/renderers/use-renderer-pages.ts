@@ -2,6 +2,7 @@ import type { CollectionPage, CollectionPageRequest } from "@pstdio/sdk/extensio
 import { useRef, useState } from "react";
 import { appendRendererRows, loadRendererPage } from "./renderer-page-continuation";
 import { rendererPagePosition } from "./renderer-page-position";
+import { clampCollectionPageSize, defaultCollectionPageSize } from "./renderer-page-size";
 
 interface PagePosition {
   identity: string;
@@ -23,7 +24,7 @@ export const useRendererPages = <TRow>(input: {
   const [collapse, setCollapse] = useState({ scope: input.scope, groups: [] as string[] });
   const collapsedGroups = collapse.scope === input.scope ? collapse.groups : [];
   const setCollapsedGroups = (groups: string[]) => setCollapse({ scope: input.scope, groups });
-  const [limit, setLimit] = useState(Math.max(1, Math.min(100, input.initialPageSize ?? 100)));
+  const [limit, setLimit] = useState(clampCollectionPageSize(input.initialPageSize ?? defaultCollectionPageSize));
   const identity = JSON.stringify([input.identity, input.fields, search, collapsedGroups, limit]);
   const [position, setPosition] = useState<PagePosition>({ identity, offset: 0 });
   const current = position.identity === identity ? position : { identity, offset: 0 };
@@ -89,7 +90,7 @@ export const useRendererPages = <TRow>(input: {
             displayed,
             loading,
             onSearchChange: setSearch,
-            onPageSizeChange: (size: number) => setLimit(Math.max(1, Math.min(100, size))),
+            onPageSizeChange: (size: number) => setLimit(clampCollectionPageSize(size)),
             onCollapsedGroupsChange: setCollapsedGroups,
             onPageChange: (index: number) => {
               if (result) go(index);

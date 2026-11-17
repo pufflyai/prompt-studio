@@ -87,6 +87,7 @@ It loads project sessions, groups them by date in the left rail, and renders the
 3. After initialization, the user can keep or change the selected model before sending a follow-up.
 4. The submitted request body uses `model` for the currently selected model on that request.
 5. The persisted session field is `last_selected_model` in the API/DB and `lastSelectedModel` in dashboard state. It is the latest selected model, not an immutable session model.
+6. Switching to another harness in the composer restores the last model and run parameters remembered for that harness in the project.
 
 ## Interface
 

@@ -2,6 +2,7 @@ import type {
   FileRendererSectionTarget,
   FileSourcePosition,
   ModeRegionSettings,
+  PageLocation,
   PlacementIdentity,
   ViewLocation,
 } from "@pstdio/sdk/extensions";
@@ -193,6 +194,8 @@ export type RegisteredPlaceholderContribution = Omit<PlaceholderContribution, "p
   RegisteredContributionMetadata;
 
 export interface WorkbenchWidgetPlacement {
+  /** Owning route for restoring a page slot after it moves to an auxiliary region. */
+  pageOwnerLocation?: PageLocation;
   /** Page identity that opened this tab automatically. Manual opening or pinning clears it. */
   relatedSource?: string;
   widgetId: string;

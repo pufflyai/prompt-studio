@@ -6,12 +6,11 @@
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.3.0 || ^0.4.0"
+    "pstdio": "^0.3.0 || ^0.4.0 || ^0.5.0"
   },
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun ../../../scripts/ci/run-bun-tests.ts",
     "typecheck": "bun check"
   },
   "dependencies": {
@@ -20,9 +19,10 @@
     "@pstdio/sdk": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4",
     "@pstdio/ui": "0.26.0",
     "fonteditor-core": "^2.6.3",
+    "lucide-react": "^0.556.0",
     "pako": "^2.1.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",

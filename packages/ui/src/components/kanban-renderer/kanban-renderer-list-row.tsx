@@ -122,7 +122,11 @@ const buildListRowItem = (item: KanbanRendererListItem, hasChildren: boolean): L
     disabled: action.isDisabled,
     separatorBefore: action.separatorBefore,
     endContent: action.endContent,
-    onAction: action.onClick,
+    runOnSelect: Boolean(action.onSelect),
+    onAction: () => {
+      action.onSelect?.();
+      void action.onClick?.();
+    },
   })),
 });
 
@@ -224,7 +228,8 @@ export const KanbanRendererListRow = (props: KanbanRendererListRowProps) => {
       <ListRow
         {...rowItem}
         aria-label={isGroup ? undefined : item.title}
-        variant={isGroup ? "compact" : "collection"}
+        // Group headers sit flush in the list like resource rows: same density as compact, no rounded corners.
+        variant={isGroup ? "full-width" : "collection"}
         depth={row.depth}
         isSelected={isSelected}
         isExpanded={isExpanded}

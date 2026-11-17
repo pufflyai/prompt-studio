@@ -269,7 +269,7 @@ export const seedScaleRuntime = async (home: string, kind: Workload, churn: bool
 };
 
 export const configureScaleView = async (runtime: ScaleRuntime, projectId: string, mode: "board" | "list") => {
-  const path = `/v1/projects/${projectId}/boards/pstdio.pstdio-planner.view.tickets/views`;
+  const path = `/v1/projects/${projectId}/boards/pstdio.planner.view.tickets/views`;
   const view = await runtime.request<{ id: string }>(path, "POST", {
     title: `Scale ${mode}`,
     settings: { viewMode: mode, rowGrouping: "none", columnGrouping: "status", displayProperties: ["id"] },

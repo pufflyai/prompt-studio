@@ -18,7 +18,7 @@ const instance = {
 const installedSource = {
   id: "installed-1",
   install_name: "pstdio-planner",
-  extension_id: "pstdio.pstdio-planner",
+  extension_id: "pstdio.planner",
   display_name: "Project Planner",
   source_hash: "old-hash",
   source_kind: "git",
@@ -31,7 +31,7 @@ const installed = {
   installName: "pstdio-planner",
   manifest: { name: "pstdio-planner" },
   metadata: {
-    id: "pstdio.pstdio-planner",
+    id: "pstdio.planner",
     name: "pstdio-planner",
     displayName: "Project Planner",
     version: "0.8.0",
@@ -69,9 +69,14 @@ describe("extension upgrade service", () => {
       stdout: `${"a".repeat(40)}\trefs/tags/pstdio@0.27.0\n${releaseCommit}\trefs/tags/pstdio@0.27.0^{}\n`,
     }));
 
-    expect(await resolveExtensionReleaseCommit("https://example.com/extensions.git", "pstdio@0.27.0", run)).toBe(
-      releaseCommit,
-    );
+    expect(
+      await resolveExtensionReleaseCommit(
+        "https://example.com/extensions.git",
+        "pstdio@0.27.0",
+        "extensions/demo",
+        run,
+      ),
+    ).toBe(releaseCommit);
     expect(run).toHaveBeenCalledWith(
       expect.stringMatching(/git(?:\.exe)?$/),
       expect.arrayContaining(["https://example.com/extensions.git"]),
@@ -82,7 +87,7 @@ describe("extension upgrade service", () => {
   test("ends git options before the remote URL and allows only https and file transport", async () => {
     const run = mock(async () => ({ exitCode: 0, stderr: "", stdout: `${"c".repeat(40)}\trefs/heads/main\n` }));
 
-    await resolveExtensionReleaseCommit("https://example.com/extensions.git", "main", run);
+    await resolveExtensionReleaseCommit("https://example.com/extensions.git", "main", "extensions/demo", run);
 
     expect(run).toHaveBeenCalledWith(
       expect.stringMatching(/git(?:\.exe)?$/),
@@ -137,7 +142,7 @@ describe("extension upgrade service", () => {
 
   test("offers the bundled source update when a full host ref maps to another commit", async () => {
     const ref = "a".repeat(40);
-    const origin = packagedExtensionCatalog.extensions.find((entry) => entry.installName === "pstdio-planner")!.origin;
+    const origin = packagedExtensionCatalog.extensions.find((entry) => entry.installName === "planner")!.origin;
     const manifest: BundledExtensionSources = {
       ref,
       commit: "b".repeat(40),
@@ -145,7 +150,7 @@ describe("extension upgrade service", () => {
         {
           ...origin,
           installName: "pstdio-planner",
-          id: "pstdio.pstdio-planner",
+          id: "pstdio.planner",
           version: "1.0.0",
           sha256: "c".repeat(64),
         },
@@ -395,8 +400,8 @@ describe("catalog extension installation and upgrades", () => {
   test("upgrades a source-ref extension without a catalog entry", async () => {
     const originUrl = "https://example.com/acme/extensions.git";
     const sourceRef = `${originUrl}@${"1".repeat(40)}#extensions/recipes`;
-    const installExtensionSource = mock(async (input: { prepareNamedSource?: (...args: never[]) => unknown }) => {
-      expect(input.prepareNamedSource).toBeFunction();
+    const installExtensionSource = mock(async (input: { originSource?: { kind: string } }) => {
+      expect(input.originSource?.kind).toBe("release");
       return installed as never;
     });
     const registerInstalledSource = mock(
@@ -463,7 +468,7 @@ describe("catalog extension installation and upgrades", () => {
         source_ref: `${originUrl}@${oldCommit}#extensions/recipes`,
       }),
     ).toBe(true);
-    expect(resolveReleaseCommit).toHaveBeenCalledWith(originUrl, "v2.0.0");
+    expect(resolveReleaseCommit).toHaveBeenCalledWith(originUrl, "v2.0.0", "extensions/recipes");
   });
 });
 
@@ -475,7 +480,7 @@ describe("catalog Git installs on a registry host", () => {
       fetch: () =>
         Response.json({
           versions: versions.map((version) => ({
-            id: "pstdio.pstdio-planner",
+            id: "pstdio.planner",
             version,
             enginesPstdio: `^${EXTENSION_API_VERSION}`,
             sha256: "0".repeat(64),

@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim AS builder
+FROM node:26.7.0-bookworm-slim AS builder
 
 COPY --from=oven/bun:1.4.4 /usr/local/bin/bun /usr/local/bin/bun
 
@@ -6,6 +6,7 @@ WORKDIR /app
 
 # Copy the full workspace so every package.json declared in bun.lock is present.
 COPY package.json bun.lock bunfig.toml .npmrc tsconfig.base.json ./
+COPY patches patches
 COPY packages packages
 COPY clients clients
 COPY extensions extensions

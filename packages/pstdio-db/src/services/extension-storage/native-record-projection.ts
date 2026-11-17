@@ -13,6 +13,7 @@ import {
 } from "../../db/schemas.pg";
 import { orderedAssetRevision } from "./ordered-native-assets";
 import { orderedOwnerWhere } from "./ordered-sql";
+import { derivedQueryValues, readDerivedQueryIndexes } from "./record-derived-fields";
 import { decodeProjectionValue, encodeProjectionValue } from "./record-projection-codec";
 import { loadResourceDocuments } from "./resource-document-persistence";
 
@@ -91,6 +92,7 @@ export const refreshNativeRecordText = async (tx: Transaction, owner: StorageOwn
       ),
     );
   let changed = 0;
+  const derived = await readDerivedQueryIndexes(tx, owner);
   for (const row of rows) {
     const record = await materialized(
       {
@@ -115,6 +117,7 @@ export const refreshNativeRecordText = async (tx: Transaction, owner: StorageOwn
       .update(storage_current_records)
       .set({
         value: encodeProjectionValue(record.value),
+        query_values: encodeProjectionValue(derivedQueryValues(derived, record)) as typeof row.query_values,
         revision: record.revision,
         native_versions: record.nativeVersions ?? {},
       })

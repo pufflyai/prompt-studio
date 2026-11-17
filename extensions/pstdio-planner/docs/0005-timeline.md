@@ -42,16 +42,16 @@ Open **Auto Build** in the header to start it or inspect its supervisor, running
 
 ## CLI
 
-Run `pst pstdio-planner timeline --help` to see the commands. For example:
+Run `pst pstdio.planner timeline --help` to see the commands. For example:
 
 ```sh
-pst pstdio-planner timeline plan read
-pst pstdio-planner auto-build configure --enabled true --prompt 'Choose valid tickets for the next release.'
-pst pstdio-planner auto-build configure --enabled false
-pst pstdio-planner timeline track create --name Product
-pst pstdio-planner timeline deadline create --date 2026-10-15 --name Preview
-pst pstdio-planner timeline ticket create --content '# Build the preview' --deadline 2026-10-15
-pst pstdio-planner timeline plan move --ticket PS-32 --deadline none
+pst pstdio.planner timeline plan read
+pst pstdio.planner auto-build configure --enabled true --prompt 'Choose valid tickets for the next release.'
+pst pstdio.planner auto-build configure --enabled false
+pst pstdio.planner timeline track create --name Product
+pst pstdio.planner timeline deadline create --date 2026-10-15 --name Preview
+pst pstdio.planner timeline ticket create --content '# Build the preview' --deadline 2026-10-15
+pst pstdio.planner timeline plan move --ticket PS-32 --deadline none
 ```
 
 ## Recover an interrupted write

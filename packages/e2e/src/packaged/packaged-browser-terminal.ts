@@ -1,9 +1,9 @@
 import { expect, type Page } from "@playwright/test";
 
 export const verifyPackagedTerminal = async (page: Page, origin: string, projectId: string, token: string) => {
-  await page.goto(`${origin}/projects/${projectId}/extensions/pstdio.workbench-fixture/lab`);
-  const iframe = page.locator('iframe[title="Lab"]');
-  await expect(iframe.contentFrame().getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
+  await page.goto(`${origin}/projects/${projectId}/extensions/test.webview-host/host`);
+  const iframe = page.locator('iframe[title="Host page"]');
+  await expect(iframe.contentFrame().getByRole("heading", { name: "Host contract" })).toBeVisible();
   const connection = page.waitForEvent("websocket", (socket) => new URL(socket.url()).pathname === "/v1/terminal");
   const showSecondary = page.getByRole("button", { name: "Show Bottom Panel" });
   if (await showSecondary.isVisible()) await showSecondary.click();

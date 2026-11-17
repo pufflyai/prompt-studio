@@ -106,9 +106,7 @@ for (const { name, resource, views } of routeCases) {
           .getLayout()
           .regions.main.widgets.map((placement) => placement.viewId)
           .sort(),
-      ).toEqual(
-        views.map((id) => contributionRefId({ kind: "view", extensionId: "pstdio.pstdio-workspaces", id })).sort(),
-      );
+      ).toEqual(views.map((id) => contributionRefId({ kind: "view", extensionId: "pstdio.workspaces", id })).sort());
       if (!views.length) {
         const page = workbench.pages.getPage(workbench.pages.store.getState().activePageId!);
         expect(pagePlaceholderView(page?.main.empty)).toEqual(workspaceViews.summary);

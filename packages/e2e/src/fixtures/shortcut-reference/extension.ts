@@ -58,6 +58,7 @@ export default defineExtension({
     }),
   ],
   keybindings: [
+    defineKeybinding({ id: "go-collision", layer: "go", key: "K", action: { kind: "page", page: page.ref } }),
     defineKeybinding({
       id: "greet",
       key: "alt+shift+g",

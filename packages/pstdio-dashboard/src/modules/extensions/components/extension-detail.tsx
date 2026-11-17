@@ -8,12 +8,13 @@ import type {
 import { AlertMessage, Switch, type SwitchProps } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import type { ExecuteOptionCommand } from "@pstdio/workbench/react";
-import { ArrowLeft, ArrowUpCircle, Blocks, RotateCw, SlidersHorizontal, Timer } from "lucide-react";
+import { ArrowUpCircle, Blocks, RotateCw, SlidersHorizontal, Timer } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
-import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
+import { createExtensionStringResolver } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import { ExtensionConnectionsCard } from "./extension-connections-card";
 import { ExtensionContributions } from "./extension-contributions";
@@ -39,7 +40,6 @@ export interface ExtensionDetailProps {
   upgrading?: boolean;
   uninstalling?: boolean;
   togglingAutomationId?: string;
-  onBack: () => void;
   onToggle: (enabled: boolean) => void;
   onToggleAutomation: (automation: WorkbenchExtensionAutomationRecord, enabled: boolean) => void;
   /** Runs the commands that load a setting's choices. */
@@ -66,7 +66,6 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     upgrading,
     uninstalling,
     togglingAutomationId,
-    onBack,
     onToggle,
     onToggleAutomation,
     executeOptionCommand,
@@ -76,11 +75,12 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     onUninstall,
   } = props;
   const { t } = useTranslation("projects");
+  const resolveString = createExtensionStringResolver(getRuntimeCollections(), projectId);
   const failed = extension.status === "error";
   // Changed source on disk is adopted by reloading it. Upgrade is only for sources a release replaces.
   const showReload = !extension.canUpgrade && extension.updateAvailable;
   const hasErrorDiagnostics = diagnostics.some((diagnostic) => diagnostic.severity === "error");
-  const hasSettings = settingsToParams(settings).length > 0;
+  const hasSettings = settingsToParams(settings, {}, resolveString).length > 0;
   const connections = metadata?.connections ?? [];
   const hasConnections = !!projectId && connections.length > 0;
   const hasSettingsContent = hasSettings || Boolean(settingsViews) || hasConnections || automations.length > 0;
@@ -103,22 +103,6 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
         header={
           <Stack gap="md">
             <Stack gap="md" paddingX="lg" paddingTop="lg">
-              <HStack justifyContent="space-between">
-                <Button variant="ghost" size="2xs" onClick={onBack} data-testid="extension-detail-back">
-                  <ArrowLeft size={12} />
-                  {t("projectSettings.extensionsPanel.detail.back")}
-                </Button>
-                {unavailableHarnesses.length > 0 && (
-                  <ExtensionHealthPopover
-                    extension={extension}
-                    diagnostics={diagnostics}
-                    unavailableHarnesses={unavailableHarnesses}
-                    upgrading={upgrading}
-                    onUpgrade={onUpgrade}
-                  />
-                )}
-              </HStack>
-
               <HStack gap="md" alignItems="center">
                 <Flex
                   alignItems="center"
@@ -140,6 +124,15 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                     {t(`projectSettings.extensionsPanel.scope.${extension.scope}`)}
                   </Text>
                 </Stack>
+                {unavailableHarnesses.length > 0 && (
+                  <ExtensionHealthPopover
+                    extension={extension}
+                    diagnostics={diagnostics}
+                    unavailableHarnesses={unavailableHarnesses}
+                    upgrading={upgrading}
+                    onUpgrade={onUpgrade}
+                  />
+                )}
                 {extension.canUpgrade && (
                   <Button
                     variant="primary"
@@ -239,6 +232,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
               <Stack gap="lg" paddingX="lg">
                 {hasSettings ? (
                   <ExtensionSettingsForm
+                    resolveString={resolveString}
                     settings={settings}
                     executeOptionCommand={executeOptionCommand}
                     onChangeSetting={onChangeSetting}
@@ -267,7 +261,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                       <HStack key={automation.id} gap="md" minH="7" data-testid="extension-automation-row">
                         <Stack gap="0" flex="1" minW="0">
                           <Text textStyle="label/S/regular" truncate>
-                            {resolveLocalizableString(automation.title, automation.extensionId)}
+                            {resolveString(automation.title, automation.extensionId)}
                           </Text>
                           <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle" truncate>
                             {automation.commandId} ·{" "}
@@ -280,7 +274,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                           disabled={togglingAutomationId === automation.id}
                           onCheckedChange={(details) => onToggleAutomation(automation, details.checked)}
                           aria-label={t("projectSettings.extensionsPanel.automations.toggleAriaLabel", {
-                            name: resolveLocalizableString(automation.title, automation.extensionId),
+                            name: resolveString(automation.title, automation.extensionId),
                           })}
                         />
                       </HStack>
@@ -294,6 +288,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
           <Tabs.Content value="contributions">
             <Stack paddingX="lg">
               <ExtensionContributions
+                resolveString={resolveString}
                 workbench={props.workbench}
                 metadata={metadata}
                 extensionId={extension.extensionId}

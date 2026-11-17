@@ -1,6 +1,6 @@
 import { rmSync } from "node:fs";
-import { expect, test } from "@playwright/test";
 import { createPlannerAttempt, createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 import {
   createResourceActionsProject as createProject,
@@ -81,7 +81,7 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
       (response) =>
         response.request().method() === "POST" &&
         new URL(response.url()).pathname.endsWith(
-          "/extensions/commands/pstdio.pstdio-planner.view.tickets.kanban.onAttributeChange/execute",
+          "/extensions/commands/pstdio.planner.view.tickets.kanban.onAttributeChange/execute",
         ) &&
         response.status() === 200,
     );
@@ -147,9 +147,7 @@ test("keeps ticket creation and ticket status settings available", async ({ page
   const createResponse = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
-      new URL(response.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.pstdio-planner.command.create-ticket/execute",
-      ),
+      new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio.planner.command.create-ticket/execute"),
   );
   await createDialog.getByRole("button", { name: "Create ticket", exact: true }).click();
   expect((await createResponse).ok()).toBe(true);

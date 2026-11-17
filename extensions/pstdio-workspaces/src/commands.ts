@@ -12,8 +12,10 @@ import {
 import { readChanges, readDiff } from "./diffs";
 import { createDirectory, createFile, renameEntry } from "./files";
 import { device, open, openFiles, openHistory, openSession, openTerminal } from "./navigation";
+import { sessionPresentation } from "./session-presentation";
 import { setLimit } from "./settings";
 export const commands = {
+  "session-presentation": sessionPresentation,
   create: create,
   "read-form": readForm,
   delete: remove,

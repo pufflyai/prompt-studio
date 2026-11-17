@@ -51,6 +51,8 @@ export interface NormalizedExtension {
   description?: string;
   /** Path to the extension's package directory. */
   packagePath: string;
+  /** Installed package that owns an immutable prepared copy. */
+  originalPackagePath?: string;
   /** Path to the imported contributions entry file. */
   sourcePath: string;
   sourceKind: ExtensionSourceKind;
@@ -69,7 +71,8 @@ export interface RuntimeCliContribution {
   description?: Localizable<string>;
   examples?: string[];
   hidden?: boolean;
-  globalAliases?: string[][];
+  /** Host-generated namespace migration paths; extensions cannot declare root shortcuts. */
+  deprecatedPaths?: string[][];
 }
 
 export interface RuntimeCommandRecord {
@@ -86,7 +89,9 @@ export interface RuntimeCommandRecord {
   palette: CommandPaletteContribution[];
   cli?: RuntimeCliContribution;
   automation: boolean;
+  copyResultToClipboard?: boolean;
   mutating: boolean;
+  confirmation?: import("@pstdio/sdk/extensions").CommandDefinition["confirmation"];
   resourceMutation?: import("@pstdio/sdk/extensions").CommandDefinition["resourceMutation"];
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with extension-specific params
   run: CommandRunHandler<any, any>;

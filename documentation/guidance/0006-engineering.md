@@ -22,6 +22,8 @@
 12. Fix a problem in the part of the system responsible for it. Do not build a large solution for a small local issue.
 13. Reconsider a design that needs a workaround flag, special case, duplicate data, or internal details exposed across layers.
 14. Tests must prove restored behavior and system rules rather than preserve a workaround.
+15. Design Planner reads and actions for thousands of tickets. Never load the complete ticket collection to filter, count, resolve relationships, or perform an action. Query only the required records and fields; use bounded pages for bulk work and scoped existence checks for shared-resource protection. See [Planner scale](0003-nonfunctional-requirements.md#3-performance).
+16. The database holds structured data and references only, never blobs. Store bytes such as file contents, transcripts, document snapshots, encrypted payloads, and cached remote data in file storage. Keep only their ID, hash, and size in the database. This includes caches and private bookkeeping rows. Every cache and history needs a rule that removes entries. See [What belongs in the database](../references/architecture/0031-database-contents.md).
 
 ## 3. Before writing code
 
@@ -59,7 +61,7 @@
 1. Keep all extension-owned project files under `.pstdio/extension-storage/<publisher>.<name>/`: configuration, caches, drafts, prototypes, screenshots, ticket and report checkouts, and migration backups.
 2. Use `ctx.extensionFiles` or declared artifact mounts for files and `ctx.storage` for structured project data. Both file APIs stay inside the full extension-ID directory.
 3. Prompt Studio 0.46 does not read the older `<name>/` or `.publishers/<publisher>/` folders.
-4. Keep artifact drafts and prototypes under `.pstdio/extension-storage/pstdio.pstdio-artifacts/`. Put report evidence under the `filesPath` returned by `pst reports write`.
+4. Keep artifact drafts and prototypes under `.pstdio/extension-storage/pstdio.artifacts/`. Put report evidence under the `filesPath` returned by `pst pstdio.reports reports write`.
 5. Do not create extension data folders directly under `.pstdio/` or keep runtime data in extension source folders. `.pstdio/extensions/` holds extension source.
 6. Files an extension deliberately edits as project source, such as icon fonts, stay at their configured paths. The extension's own settings and working files stay in extension storage.
 

@@ -2,10 +2,10 @@ import type { ChildProcess } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { homeFrame, homePage } from "../helpers/home-loading";
 import { type Browser, chromium, expect, test } from "../scripts/playwright-test";
+import { packagedFixtureExtensions } from "./packaged-fixture-extensions";
 import { signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 test("packaged Main fullscreen exits with Escape and resets on reload", async () => {
@@ -13,7 +13,7 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
   try {
-    const defaults = JSON.parse(e2eExtensions("workbench-fixture", "pstdio-home"));
+    const defaults = JSON.parse(await packagedFixtureExtensions(root, ["pstdio-home"], ["webview"]));
     defaults.defaultExtensions[0].force = true;
     const started = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(defaults) });
     child = started.child;
@@ -38,7 +38,7 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     await expect(picker).toBeVisible();
     await page.screenshot({ path: test.info().outputPath("empty-project-selection.png") });
 
-    const installedRoot = join(root, "extensions", "workbench-fixture");
+    const installedRoot = join(root, "extensions", "webview-host");
     await expect.poll(() => existsSync(join(installedRoot, "package.json"))).toBe(true);
     const installedNote = join(installedRoot, "local-note.txt");
     writeFileSync(installedNote, "Keep the installed source");
@@ -77,10 +77,10 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     await enter.click();
     await page.reload();
     await expect(enter).toBeVisible();
-    await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
-    const guest = page.frameLocator('iframe[title="Lab"]');
-    await expect(guest.getByRole("heading", { name: "Sandbox webview", exact: true })).toBeVisible();
-    await page.locator('iframe[title="Lab"]').focus();
+    await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/test.webview-host/host`);
+    const guest = page.frameLocator('iframe[title="Host page"]');
+    await expect(guest.getByRole("heading", { name: "Host contract", exact: true })).toBeVisible();
+    await page.locator('iframe[title="Host page"]').focus();
     await guest.locator("body").dispatchEvent("keydown", {
       key: "\u00a0",
       code: "Space",
@@ -94,7 +94,7 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
-    await expect(page.locator('iframe[title="Lab"]')).toBeFocused();
+    await expect(page.locator('iframe[title="Host page"]')).toBeFocused();
     for (const [key, symbol, label] of [
       ["S", "Í", /Sidenav/],
       ["B", "ı", /Bottom Panel/],

@@ -26,6 +26,7 @@ export {
 } from "@/components/activity";
 // Curated design-system groups (see components/<group>/index.ts).
 export * from "@/components/command-palette";
+export { ImageViewer, type ImageViewerImage, type ImageViewerProps } from "@/components/image-viewer/image-viewer";
 export * from "@/components/layout";
 export { ListRow } from "@/components/list-row/list-row";
 export type {
@@ -45,6 +46,7 @@ export type {
 export { NotificationCenter } from "@/components/notification-center";
 export * from "@/components/overlays";
 export * from "@/components/primitives";
+export { LazyRichMessage } from "@/components/rich-text/lazy-rich-message";
 export { Sidenav } from "@/components/sidenav/sidenav";
 export { useSidenavStore } from "@/components/sidenav/sidenav.store";
 export type { SidenavProps } from "@/components/sidenav/sidenav.types";
@@ -81,6 +83,7 @@ export { getTreeListOrderStore, useTreeListOrderStore } from "@/components/tree-
 export { applyTreeListOrder } from "@/components/tree-list/tree-list-order-filter";
 export type { TreeListPagination } from "@/components/tree-list/tree-list-page-boundary";
 export type { TreeListMove, TreeListMoveEndpoint, TreeListMovePolicy } from "@/components/tree-list/tree-list-reorder";
+export { useTreeListRowVisibility } from "@/components/tree-list/tree-list-reveal";
 export type { VisibilityOverride } from "@/components/tree-list/tree-list-visibility.store";
 export {
   getTreeListVisibilityStore,
@@ -93,6 +96,7 @@ export {
   filterVisibleSections,
   resolveVisibility,
 } from "@/components/tree-list/tree-list-visibility-filter";
+export { TreeRowTags, type TreeRowTagsProps } from "@/components/tree-list/tree-row-tags";
 
 // Theme + utils.
 export type { MonacoThemeData, VsCodeColorTheme } from "@/theme";
@@ -143,4 +147,4 @@ export {
 } from "./components/settings/settings-page";
 export { HostStorageScope } from "./utils/host-storage";
 export { ScopedDialog, ScopedMenu, ScopedPopover, ScopedTooltip, useScopedMenu } from "./utils/scoped-overlays";
-export { Portal, UiScopeProvider, UiScopeRoot, useUiScope } from "./utils/ui-scope";
+export { Portal, UiScopeActivity, UiScopeProvider, UiScopeRoot, useUiScope } from "./utils/ui-scope";

@@ -28,9 +28,7 @@ test.skipIf(nativeRecoverySupported)(
         keys: [{ generation: 1, secret: "A".repeat(43) }],
       });
       const chunks = await createRecoveryChunkStore({ root: join(root, "chunks"), space });
-      const error = await captureRecoveryFolder({ root: source, chunks, firstEnrollment: true }).catch(
-        (error) => error,
-      );
+      const error = await captureRecoveryFolder({ root: source, chunks }).catch((error) => error);
       expect(error).toMatchObject({ code: "ENOTSUP" });
       expect(folderRecoveryError(error)).toMatchObject({ code: "unsupported", path: null });
       expect(await readdir(source)).toEqual(["draft"]);

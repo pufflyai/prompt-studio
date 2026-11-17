@@ -6,6 +6,8 @@ export interface CommandParamFieldProps {
   entry: CommandParamEntry;
   value: CommandParamValue;
   disabled: boolean;
+  fullWidth?: boolean;
+  changeDelay?: number;
   onChange: (value: CommandParamValue) => void;
   /** Updates a compound field using its latest stored value. */
   onUpdateValue?: (update: (current: CommandParamValue) => CommandParamValue) => void;
@@ -33,6 +35,8 @@ export const CommandParamField = (props: CommandParamFieldProps) => {
   const selection = param.type === "selection";
   return (
     <ParamEditorRow
+      fullWidth={props.fullWidth}
+      changeDelay={props.changeDelay}
       param={
         selection
           ? {

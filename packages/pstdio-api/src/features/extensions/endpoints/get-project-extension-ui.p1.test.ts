@@ -179,3 +179,30 @@ test("describes webviews only after the checks of enabled sources finish", async
     ensure.mockRestore();
   }
 });
+
+test("describes the project's tools when one source's webview check fails", async () => {
+  const project = await createProject("Webview check failure");
+  const sourcePath = createTestExtensionSource({
+    root: pstdioHome,
+    name: "broken-check",
+    displayName: "Broken check",
+    installName: "broken-check-source",
+  });
+  await handle.deps.extensionService.enableInstalledSourceForProject({
+    displayName: "Broken check",
+    extensionId: "test.broken-check",
+    installName: "broken-check-source",
+    manifest: { displayName: "Broken check", id: "test.broken-check", name: "broken-check" },
+    name: "broken-check",
+    projectId: project.id,
+    sourcePath,
+  });
+  const ensure = spyOn(handle.deps, "ensureExtensionWebviews").mockRejectedValue(new Error("check failed"));
+  try {
+    const response = await app.request(`/v1/projects/${project.id}/extensions/ui`);
+    expect(response.status).toBe(200);
+    expect(ensure).toHaveBeenCalled();
+  } finally {
+    ensure.mockRestore();
+  }
+});

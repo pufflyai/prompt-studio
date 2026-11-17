@@ -167,7 +167,7 @@ test("an incomplete event owns a later rejected stream result without delaying i
         const ownerError = session.getSnapshot().error;
         result.reject(new Error("Stream result failed"));
         await Bun.sleep(0);
-        console.log(JSON.stringify({ ownerError, unhandled }));
+        console.log(JSON.stringify({ ownerError, finalError: session.getSnapshot().error, unhandled }));
         release();
         session.dispose();
         if (unhandled.length) process.exitCode = 1;
@@ -182,5 +182,104 @@ test("an incomplete event owns a later rejected stream result without delaying i
   ]);
   expect(code).toBe(0);
   expect(stderr).toBe("");
-  expect(JSON.parse(stdout)).toEqual({ ownerError: "Chat stream ended with an incomplete event.", unhandled: [] });
+  expect(JSON.parse(stdout)).toEqual({
+    ownerError: "Chat stream ended with an incomplete event.",
+    finalError: "Stream result failed",
+    unhandled: [],
+  });
+});
+
+test("a previous watch's late result cannot replace a reconnected transcript's state", async () => {
+  const frames = [...chatRendererStreamFrames({ revision: 0, snapshot: { notice: "x".repeat(80 * 1024) } })];
+  const result = Promise.withResolvers<unknown>();
+  let watches = 0;
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async () => undefined,
+    watch: () =>
+      ++watches === 1
+        ? {
+            result: result.promise,
+            async *[Symbol.asyncIterator]() {
+              yield frames[0];
+            },
+          }
+        : {
+            async *[Symbol.asyncIterator]() {
+              yield { revision: 0, snapshot: { notice: "Recovered" } };
+            },
+          },
+  });
+  const release = session.retain();
+  try {
+    await Bun.sleep(0);
+    expect(session.getSnapshot().error).toContain("incomplete");
+    session.reconnect();
+    await Bun.sleep(0);
+    result.reject(new Error("Previous stream failed"));
+    await Bun.sleep(0);
+    expect(session.getSnapshot().error).toBeUndefined();
+    expect(session.getSnapshot().conversation.notice).toBe("Recovered");
+  } finally {
+    release();
+    await session.dispose();
+  }
+});
+
+test("a late result does not replace a malformed event's validation failure", async () => {
+  const result = Promise.withResolvers<unknown>();
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async () => undefined,
+    watch: () => ({
+      result: result.promise,
+      async *[Symbol.asyncIterator]() {
+        yield { revision: -1 };
+      },
+    }),
+  });
+  const release = session.retain();
+  try {
+    await Bun.sleep(0);
+    const validationError = session.getSnapshot().error;
+    expect(validationError).toBeDefined();
+    result.reject(new Error("Later stream result failed"));
+    await Bun.sleep(0);
+    expect(session.getSnapshot().error).toBe(validationError);
+  } finally {
+    release();
+    await session.dispose();
+  }
+});
+
+test.each([
+  "Newer action failed",
+  "Chat stream ended with an incomplete event.",
+])("a late stream result cannot replace the newer action failure %s", async (actionError) => {
+  const frames = [...chatRendererStreamFrames({ revision: 0, snapshot: { notice: "x".repeat(80 * 1024) } })];
+  const result = Promise.withResolvers<unknown>();
+  const session = createChatSession({
+    query: async () => ({}),
+    action: async () => {
+      throw new Error(actionError);
+    },
+    watch: () => ({
+      result: result.promise,
+      async *[Symbol.asyncIterator]() {
+        yield frames[0];
+      },
+    }),
+  });
+  const release = session.retain();
+  try {
+    await Bun.sleep(0);
+    expect(session.getSnapshot().error).toContain("incomplete");
+    await expect(session.run({ type: "openResource", id: "workspace" })).rejects.toThrow(actionError);
+    result.reject(new Error("Older stream failed"));
+    await Bun.sleep(0);
+    expect(session.getSnapshot().error).toBe(actionError);
+  } finally {
+    release();
+    await session.dispose();
+  }
 });

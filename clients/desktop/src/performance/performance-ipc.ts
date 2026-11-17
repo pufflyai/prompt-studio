@@ -5,7 +5,7 @@ import { DESKTOP_CHANNELS } from "../desktop-api";
 export const registerPerformanceCaptureIpc = (input: {
   ipcMain: IpcMain;
   assertSender: (event: IpcMainInvokeEvent) => void;
-  retain: () => Promise<() => Promise<void>>;
+  retain: (monitoring: boolean) => Promise<() => Promise<void>>;
 }) => {
   const owners = new Map<WebContents, { leases: Map<string, Promise<() => Promise<void>>>; cleanup: () => void }>();
   const releaseAll = (sender: WebContents) => {
@@ -16,9 +16,10 @@ export const registerPerformanceCaptureIpc = (input: {
   };
   const validId = (value: unknown): value is string =>
     typeof value === "string" && value.length > 0 && value.length < 128;
-  input.ipcMain.handle(DESKTOP_CHANNELS.retainPerformanceCapture, async (event, id: unknown) => {
+  input.ipcMain.handle(DESKTOP_CHANNELS.retainPerformanceCapture, async (event, id: unknown, monitoring = false) => {
     input.assertSender(event);
     if (!validId(id)) throw new Error("Invalid performance capture owner");
+    if (typeof monitoring !== "boolean") throw new Error("Invalid performance monitoring owner");
     let leases = owners.get(event.sender)?.leases;
     if (!leases) {
       leases = new Map();
@@ -34,7 +35,7 @@ export const registerPerformanceCaptureIpc = (input: {
       event.sender.once("render-process-gone", release);
     }
     if (leases.has(id)) return;
-    const lease = input.retain();
+    const lease = input.retain(monitoring);
     leases.set(id, lease);
     try {
       await lease;

@@ -19,9 +19,12 @@ test("resolves nightly refs to the bundled source commit without Git", async () 
     throw new Error("Resolving bundled or full-commit refs must not invoke Git");
   };
   try {
-    expect(await resolveExtensionReleaseCommit(url, releaseRef, run)).toBe(manifest.commit);
-    expect(await resolveExtensionReleaseCommit("https://example.com/other", releaseRef, run)).toBe(releaseRef);
-    expect(await resolveExtensionReleaseCommit(url, "D".repeat(40), run)).toBe("d".repeat(40));
+    expect(await resolveExtensionReleaseCommit(url, releaseRef, "extensions/demo", run)).toBe(manifest.commit);
+    expect(await resolveExtensionReleaseCommit(url, releaseRef, "extensions/optional", run)).toBe(releaseRef);
+    expect(await resolveExtensionReleaseCommit("https://example.com/other", releaseRef, "extensions/demo", run)).toBe(
+      releaseRef,
+    );
+    expect(await resolveExtensionReleaseCommit(url, "D".repeat(40), "extensions/demo", run)).toBe("d".repeat(40));
   } finally {
     files.splice(files.indexOf(file), 1);
   }

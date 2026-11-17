@@ -3,7 +3,11 @@ import { randomBytes } from "node:crypto";
 import { chmod, lstat, mkdir, mkdtemp, readdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ProjectFolderRecoveryStatus, ProjectFolderSource } from "pstdio-api-contracts";
+import {
+  type ProjectFolderRecoveryStatus,
+  type ProjectFolderSource,
+  projectFolderRecoveryStatusSchema,
+} from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { runTestCommand } from "../scripts/run-test-command";
@@ -47,6 +51,8 @@ const writeSourceFolder = async (folder: string, hookMarker: string) => {
   await writeFile(join(folder, "README.md"), "# Recovered without a Git host\n");
   await writeFile(join(folder, "src/app.ts"), "export const version = 1;\n");
   await writeFile(join(folder, ".gitignore"), ".env\nbuild/\n");
+  // Only a folder with a root `.pstignore` is copied, and `.gitignore` does not apply to it.
+  await writeFile(join(folder, ".pstignore"), "node_modules/\n");
   git(folder, "init", "-q", "-b", "main");
   git(folder, "config", "user.name", "Folder Owner");
   git(folder, "config", "user.email", "owner@example.test");
@@ -138,6 +144,7 @@ test.skipIf(process.platform === "win32")(
       const otherFolder = join(root, "other-project");
       await mkdir(otherFolder);
       await writeFile(join(otherFolder, ".env"), `${secondSecret}\n`);
+      await writeFile(join(otherFolder, ".pstignore"), "");
       const otherProject = await other.client.projects.create(
         folderProjectInput({ name: "Another account" }, otherFolder),
       );
@@ -173,6 +180,15 @@ test.skipIf(process.platform === "win32")(
       await desktop.client.account.retryProjectSync(project.id);
       await waitFor(() => failedReads > 0);
       expect((await listedCopy(desktop, project.id, laptopDevice))?.available ?? false).toBe(false);
+      // HTTP response delivery precedes client verification and atomic retention.
+      // Retry may cancel that unfinished response; only retained chunks are finished work.
+      const retained = new Set(
+        [...new Bun.Glob("**/*.blob").scanSync(join(desktop.home, "storage/folder-recovery/chunks"))].map(
+          (path) => `~${path.split(/[\\/]/).at(-1)!.slice(0, -".blob".length)}`,
+        ),
+      );
+      expect(retained.size).toBeGreaterThan(0);
+      const resumedAt = desktopReads().length;
       peer.failBlobReads(() => false);
       await desktop.client.account.retryProjectSync(project.id);
       const listed = await waitForValue(
@@ -181,7 +197,7 @@ test.skipIf(process.platform === "win32")(
       );
       const reads = desktopReads().map((read) => read.blobId);
       expect(reads.length).toBeGreaterThan(2 * interruptAfter);
-      expect(new Set(reads).size).toBe(reads.length);
+      expect(reads.slice(resumedAt).filter((id) => retained.has(id))).toEqual([]);
       phase(`desktop downloaded ${reads.length} blobs after an interruption`);
       expect(listed).toMatchObject({
         current: false,
@@ -221,9 +237,17 @@ test.skipIf(process.platform === "win32")(
         (await cli(["download", project.id, ...source])).stdout,
       ) as ProjectFolderRecoveryStatus;
       expect(downloaded.download).toMatchObject({ state: "complete", error: null });
-      expect(JSON.parse((await cli(["status", project.id])).stdout)).toEqual(
-        await desktop.client.projects.folderRecovery(project.id),
-      );
+      const cliStatus = projectFolderRecoveryStatusSchema.parse(JSON.parse((await cli(["status", project.id])).stdout));
+      const liveStatus = await desktop.client.projects.folderRecovery(project.id);
+      expect(cliStatus.download).toEqual(downloaded.download);
+      expect(cliStatus.restore).toEqual(result.restore);
+      expect(cliStatus.download).toEqual(liveStatus.download);
+      expect(cliStatus.restore).toEqual(liveStatus.restore);
+      // Attaching the restored folder schedules capture, whose live state can advance between these reads.
+      for (const status of [cliStatus, liveStatus]) {
+        expect(status.capture).toMatchObject({ folder: restored, error: null });
+        expect(["idle", "pending", "running"]).toContain(status.capture.state);
+      }
       phase("desktop restored through the CLI");
 
       // Exact bytes, permissions and link text; `.pstignore` and Git-ignored files apply as captured.
@@ -250,24 +274,8 @@ test.skipIf(process.platform === "win32")(
       expect(refused.stderr).toContain("exists");
       expect(await readdir(existing)).toEqual([]);
 
-      // A folder created while the restore runs is kept; the restore fails instead of replacing it.
-      const racing = join(root, "racing");
-      const running = await desktop.client.projects.restoreFolder(project.id, {
-        deviceId: laptopDevice,
-        sourceId: listed.sourceId,
-        path: racing,
-      });
-      await mkdir(racing);
-      await writeFile(join(racing, "local-work.txt"), "created while restoring");
-      expect(running.restore.state).toBe("running");
-      const raced = await waitForValue(
-        () => desktop.client.projects.folderRecovery(project.id),
-        (status) => status?.restore.state !== "running",
-      );
-      expect(raced.restore).toMatchObject({ state: "failed", error: { code: "destination_created" } });
-      expect(await readdir(racing)).toEqual(["local-work.txt"]);
       expect((await readdir(root)).filter((name) => name.startsWith("."))).toEqual([]);
-      phase("existing and concurrently created destinations kept");
+      phase("existing destination kept without staging files");
 
       // The restored folder is now the desktop's own source; the laptop's copy stays restorable beside it.
       await waitFor(async () => !!(await ownCopy(desktop, project.id)));

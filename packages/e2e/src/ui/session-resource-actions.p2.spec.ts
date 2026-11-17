@@ -1,4 +1,4 @@
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { type APIRequestContext, expect, type Page, test } from "../scripts/session-test";
 import {
   createResourceActionsProject,
   openSessionSidePanel,
@@ -19,15 +19,15 @@ const row = (page: Page, title: string) =>
 const menuItem = (page: Page, name: string) =>
   page.locator("[role=menu][data-state=open]").getByRole("menuitem", { name, exact: true });
 const breadcrumbMenu = async (page: Page) => page.locator("[data-workbench-breadcrumb-resource-actions]").click();
-const commandRoute = (name: string) => `**/extensions/commands/pstdio.pstdio-session-browser.command.${name}/execute`;
+const commandRoute = (name: string) => `**/extensions/commands/pstdio.session-browser.command.${name}/execute`;
 const rejectCommand = (page: Page, name: string, sessionId: string, message: string) =>
   page.route(commandRoute(name), async (route) => {
     const body = route.request().postDataJSON();
     expect(body.params.sessionId).toBe(sessionId);
     await route.fulfill({
       json: {
-        commandId: `pstdio.pstdio-session-browser.command.${name}`,
-        extensionId: "pstdio.pstdio-session-browser",
+        commandId: `pstdio.session-browser.command.${name}`,
+        extensionId: "pstdio.session-browser",
         outcome: { ok: false, status: "error", reason: message, error: { message }, notices: [] },
       },
     });
@@ -41,6 +41,7 @@ test("drafts omit management actions and workspace session rows explain guarded 
   await prepareResourceActionsDashboard(page, project.id);
   await page.goto(`/projects/${project.id}/sessions`);
   await breadcrumbMenu(page);
+  await expect(menuItem(page, "Copy session ID")).toHaveCount(0);
   await expect(menuItem(page, "Rename session")).toHaveCount(0);
   await expect(menuItem(page, "Delete session")).toHaveCount(0);
   await page.keyboard.press("Escape");
@@ -76,6 +77,31 @@ test("drafts omit management actions and workspace session rows explain guarded 
     status: "awaiting_input",
   });
   await expect(page).toHaveURL(new RegExp(workspace.id));
+});
+
+test("copying a failed session reference uses the invoking row and preserves the open session", async ({
+  page,
+  request,
+  context,
+  browserName,
+}) => {
+  const project = await createResourceActionsProject(request);
+  const open = await createSession(request, project.id, "Open conversation");
+  const failed = await createSession(request, project.id, "Failed conversation");
+  const failedStatus = await request.patch(`/v1/sessions/${failed.id}/status`, { data: { status: "failed" } });
+  expect(failedStatus.ok()).toBe(true);
+  expect(await failedStatus.json()).toMatchObject({ id: failed.id, status: "failed" });
+  if (browserName === "chromium") await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await prepareResourceActionsDashboard(page, project.id);
+  await page.goto(`/projects/${project.id}/sessions`);
+  await row(page, open.title).click();
+  await row(page, failed.title).click({ button: "right" });
+  await menuItem(page, "Copy session ID").click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(failed.id);
+  await expect(page).toHaveURL(new RegExp(open.id));
+  await breadcrumbMenu(page);
+  await menuItem(page, "Copy session ID").click();
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(open.id);
 });
 
 test("shared session actions rename another row without changing the selected session", async ({ page, request }) => {
@@ -142,7 +168,7 @@ test("archive keeps saved data, preserves a different page, and rolls back faile
   await menuItem(page, "Archive session").click();
   await page.getByRole("button", { name: "Archive session", exact: true }).click();
   await expect(page).toHaveURL(
-    new RegExp(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations/compose$`),
+    new RegExp(`/projects/${project.id}/extensions/pstdio.session-browser/conversations/compose$`),
   );
   await expect(page.getByText("No sessions yet", { exact: true })).toBeVisible();
 });
@@ -178,7 +204,7 @@ test("delete confirms, keeps a failed session usable, closes only its views, and
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(row(page, b.title)).toBeHidden();
   await expect(page).toHaveURL(
-    new RegExp(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations/compose$`),
+    new RegExp(`/projects/${project.id}/extensions/pstdio.session-browser/conversations/compose$`),
   );
   await expect(kept).toBeVisible();
   expect((await request.get(`/v1/sessions/${b.id}`)).status()).toBe(404);

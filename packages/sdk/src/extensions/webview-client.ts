@@ -14,18 +14,20 @@ import type { SettingsMap } from "./define-extension";
 import type { GuestHost } from "./define-extension-view";
 import { createWebviewAccountClient, type WebviewAccountClient } from "./webview-account-client";
 import { type ArtifactMountKey, artifactMountId } from "./webview-capabilities";
+import type { WebviewCommandQuery, WebviewCommandQueryOptions } from "./webview-command-query";
 import { createWebviewEditingClient, type WebviewEditingClient } from "./webview-editing";
 import { createWebviewEventsClient, type WebviewEventsClient } from "./webview-events";
 import { createWebviewFilesClient, type WebviewFilesClient } from "./webview-files-client";
 import { createWebviewPageClient, type WebviewPageClient } from "./webview-page-client";
 import { createWebviewPerformanceClient, type WebviewPerformanceClient } from "./webview-performance-client";
 import { createWebviewQueryClient } from "./webview-query";
+import { getWebviewServiceQueries } from "./webview-service-query";
 import { type CommandStreamOptions, openWebviewCommandStream, type WebviewStreamsClient } from "./webview-streams";
 
 // Command types derive from a record of `defineCommand` values (the extension's
 // exported commands map), not from `typeof extension`: `defineExtension` cannot keep
 // per-command result types (see ADR 0012-temporary-webview-client-type-source).
-type CommandFn<TDefinition> =
+type CommandCall<TDefinition> =
   TDefinition extends CommandDefinition<infer TSchema, infer TResult, infer _TSettings, infer _TChunk>
     ? TSchema extends ParamObjectSchema
       ? Partial<ParamsOf<TSchema>> extends ParamsOf<TSchema>
@@ -33,6 +35,16 @@ type CommandFn<TDefinition> =
         : (params: ParamsOf<TSchema>) => Promise<TResult>
       : () => Promise<TResult>
     : never;
+
+type CommandQueryFn<TDefinition> =
+  TDefinition extends CommandDefinition<infer Schema, infer Result, infer _Settings, infer _Chunk>
+    ? Schema extends ParamObjectSchema
+      ? Partial<ParamsOf<Schema>> extends ParamsOf<Schema>
+        ? (params?: ParamsOf<Schema>, options?: WebviewCommandQueryOptions) => WebviewCommandQuery<Result>
+        : (params: ParamsOf<Schema>, options?: WebviewCommandQueryOptions) => WebviewCommandQuery<Result>
+      : (params?: undefined, options?: WebviewCommandQueryOptions) => WebviewCommandQuery<Result>
+    : never;
+type CommandFn<TDefinition> = CommandCall<TDefinition> & { query: CommandQueryFn<TDefinition> };
 
 export type WebviewCommandsClient<TCommands> = {
   [K in keyof TCommands & string]: CommandFn<TCommands[K]>;
@@ -69,6 +81,12 @@ export type WebviewClient<TCommands, TSettings = undefined> = {
   placement: { close(): Promise<void> };
   notify: { toast(notice: CommandNotice): Promise<void> };
   preferences: {
+    query(
+      name: string,
+      scope?: WebviewPreferencesGetParams["scope"],
+    ): import("./webview-service-query").WebviewServiceQuery<
+      import("pstdio-api-contracts/extension-kernel").WebviewPreferenceQueryValue
+    >;
     get(
       name: string,
       scope?: WebviewPreferencesGetParams["scope"],
@@ -136,7 +154,14 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
     {
       get: (_target, commandKey) => {
         if (typeof commandKey !== "string") return undefined;
-        return (params?: JsonObject) => runCommand(commandKey, params);
+        return Object.assign((params?: JsonObject) => runCommand(commandKey, params), {
+          query: (params?: JsonObject, queryOptions?: WebviewCommandQueryOptions) =>
+            createWebviewQueryClient(host, extensionId).command(
+              { extensionId, kind: "command", id: commandKey },
+              params,
+              { ...queryOptions, workspaceId: queryOptions?.workspaceId ?? options?.workspaceId },
+            ),
+        });
       },
     },
   );
@@ -185,6 +210,12 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
     placement: { close: () => host.call("placement.close", {}) },
     notify: { toast: (notice) => host.call("notification.show", notice) },
     preferences: {
+      query: (name, scope) =>
+        getWebviewServiceQueries(host, "preferences").query({
+          service: "preference",
+          name,
+          scope: scope ?? { scope: "user" },
+        }),
       get: (name, scope) => host.call("preferences.get", { name, scope }),
       set: (name, value, scope) => host.call("preferences.set", { name, value, scope }),
     },

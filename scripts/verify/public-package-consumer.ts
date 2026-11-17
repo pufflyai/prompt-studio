@@ -1,6 +1,7 @@
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { writeCompositionPackageConsumer } from "./composition-package-consumer";
 import { freshInstallArgs } from "./fresh-install";
 import { verifyMonacoPackageAssets } from "./monaco-package-assets";
 import { verifyProviderPackageConsumer } from "./provider-package-consumer";
@@ -80,6 +81,7 @@ const writeConsumerTypecheckConfig = (directory: string, react: boolean, workben
       include: [
         "consumer.ts",
         "storage-consumer.ts",
+        "composition-consumer.ts",
         ...(workbenchConsumer ? [workbenchConsumer] : []),
         "performance-example/*.ts",
         "performance-example/*.tsx",
@@ -211,6 +213,11 @@ const chartTasks: GanttTask[] = [{ id: "work", label: "Work", start: 0, end: 7 }
 const gantt = createElement(GanttChart, { tasks: chartTasks, ariaLabel: "Packed project forecast", formatValue: (value: number) => String(value) });
 if (!chartColor("vis.categorical.1")) throw new Error("Packed UI lost its chart theme");
 void gantt;
+import { DashboardRenderer, type DashboardDefinition, type DashboardDataSource } from "@pstdio/ui/dashboard-renderer";
+const dashboardValue: DashboardDefinition = { mode: "vertical", widgets: [{ id: "orders", title: "Orders", kind: "metric", source: "sales", layout: { x: 0, y: 0, w: 4, h: 3 } }] };
+const dashboardSources: DashboardDataSource[] = [{ id: "sales", name: "Sales", metric: { value: 1240 }, series: [{ label: "Monday", value: 120 }], table: { data: [{ Orders: 120 }] } }];
+const dashboard = createElement(DashboardRenderer, { value: dashboardValue, sources: dashboardSources, onChange: (next) => { void next.widgets; } });
+void dashboard;
 import { KeyframeTimeline, sampleTrack, type KeyframeTrack } from "@pstdio/ui/keyframe-timeline";
 const animationTrack: KeyframeTrack = { id: "opacity", label: "Opacity", keyframes: [{ id: "start", time: 0, value: 0 }, { id: "end", time: 2, value: 1 }] };
 if (sampleTrack(animationTrack, 1) !== 0.5) throw new Error("Animation interpolation changed");
@@ -264,6 +271,7 @@ void [invalidAttribute, invalidColumn];
         : ""),
   );
   writeStoragePackageConsumer(directory);
+  writeCompositionPackageConsumer(directory);
   const workbenchConsumer = writeWorkbenchPackageConsumer(directory, react, Object.keys(overrides));
   if (react && dependencies["@pstdio/ui"]) {
     cpSync(join(directory, "node_modules/@pstdio/ui/examples/performance"), join(directory, "performance-example"), {
@@ -274,6 +282,7 @@ void [invalidAttribute, invalidColumn];
   run(directory, ["node_modules/typescript/bin/tsc", "-p", "tsconfig.json"]);
   run(directory, ["check", "-p", "tsconfig.json"]);
   if (workbenchConsumer) run(directory, [workbenchConsumer]);
+  run(directory, ["composition-consumer.ts"]);
   if (react) {
     writeFileSync(
       join(directory, "vite.config.ts"),

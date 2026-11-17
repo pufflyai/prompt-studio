@@ -11,4 +11,4 @@ export {
   sealUpdate,
 } from "./envelopes";
 export { UnreadableSyncData } from "./sealing";
-export { createSyncId, createSyncSpace, type SyncSpace } from "./space";
+export { createSyncId, createSyncSpace, restoreSyncSpace, type SyncSpace, type SyncSpaceTransfer } from "./space";

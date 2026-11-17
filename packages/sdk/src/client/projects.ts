@@ -6,6 +6,8 @@ import type {
   InitialWorkspaceRequest,
   Page,
   PageQuery,
+  ProjectComposition,
+  ProjectCompositionInput,
   ProjectCreateRequest,
   ProjectDetails,
   ProjectFolder,
@@ -19,12 +21,21 @@ import type {
   RestoreProjectResult,
   UpdateProjectInput,
 } from "pstdio-api-contracts";
-import type { ExtensionWorkspace } from "pstdio-api-contracts/extension-kernel";
+import type { ExtensionWorkspace, ResourceRef, ResourceResolution } from "pstdio-api-contracts/extension-kernel";
 import type { Project, Workspace } from "../resources";
 import { pageQuery } from "./page-query";
 import type { RequestFn } from "./request";
 
 export type ProjectClient = {
+  resolveResourceOpenings(
+    projectId: string,
+    resources: ResourceRef[],
+    options?: { signal?: AbortSignal },
+  ): Promise<ResourceResolution[]>;
+  /** The project's editable default page and resource openers. */
+  composition(projectId: string): Promise<ProjectComposition>;
+  /** Replace composition choices. Enabling tools never overwrites an explicit configuration. */
+  setComposition(projectId: string, input: ProjectCompositionInput): Promise<ProjectComposition>;
   /** Lists this device's recovery points for a cloud project, with their capture times. */
   recoveryPoints(projectId: string): Promise<ProjectRecoveryPoint[]>;
   /** Restores the project, or one extension, to a listed recovery point. The restore syncs like any edit. */
@@ -69,6 +80,15 @@ export type ProjectClient = {
 };
 
 export const createProjectClient = (request: RequestFn): ProjectClient => ({
+  resolveResourceOpenings: (projectId, resources, options) =>
+    request(`/v1/projects/${encodeURIComponent(projectId)}/resource-openings`, {
+      method: "POST",
+      body: { resources },
+      signal: options?.signal,
+    }),
+  composition: (projectId) => request(`/v1/projects/${encodeURIComponent(projectId)}/composition`),
+  setComposition: (projectId, input) =>
+    request(`/v1/projects/${encodeURIComponent(projectId)}/composition`, { method: "PUT", body: input }),
   recoveryPoints: (projectId) => request(`/v1/projects/${encodeURIComponent(projectId)}/recovery-points`),
   restore: (projectId, input) =>
     request(`/v1/projects/${encodeURIComponent(projectId)}/restore`, { method: "POST", body: input }),

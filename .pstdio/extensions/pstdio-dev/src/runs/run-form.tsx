@@ -1,5 +1,5 @@
 import { Box, Button, Fieldset, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
-import { Checkbox, Chip, SimpleCard, SimpleCardBody } from "@pstdio/ui";
+import { Checkbox, Chip } from "@pstdio/ui";
 import { X } from "lucide-react";
 import { JOB_LIMIT_MINUTES, PLATFORMS, platformLabel, runsOn, SUITES, type SuiteOption } from "../benchmarks/platforms";
 import { CopySha } from "../webview/copy-sha";
@@ -65,122 +65,118 @@ export const RunForm = (props: RunFormProps) => {
     if (!value.commits.includes(ref)) onChange({ ...value, commits: [...value.commits, ref] });
   };
   return (
-    <SimpleCard>
-      <SimpleCardBody display="flex" flexDirection="column" gap="lg">
-        <Text textStyle="heading/S">New run</Text>
-        <Stack gap="xs">
-          <Text textStyle="label/S/regular" color="fg.muted">
-            Commits, branches, or tags
-          </Text>
-          {value.commits.map((ref) => {
-            const known = find(ref);
+    <Stack gap="lg">
+      <Text textStyle="heading/S">New run</Text>
+      <Stack gap="xs">
+        <Text textStyle="label/S/regular" color="fg.muted">
+          Commits, branches, or tags
+        </Text>
+        {value.commits.map((ref) => {
+          const known = find(ref);
+          return (
+            <HStack key={ref} gap="sm" bg="bg.subtle" borderRadius="xs" px="sm" py="2xs">
+              <Text textStyle="mono/XS" truncate>
+                {ref}
+              </Text>
+              {known && known.sha !== ref ? <CopySha sha={known.sha} /> : null}
+              <Box flex="1" />
+              {measured(ref) ? <Chip>Measured</Chip> : null}
+              <IconButton
+                size="xs"
+                variant="ghost"
+                aria-label={`Remove ${ref}`}
+                onClick={() => onChange({ ...value, commits: value.commits.filter((entry) => entry !== ref) })}
+              >
+                <X />
+              </IconButton>
+            </HStack>
+          );
+        })}
+        <RefInput
+          options={refs.filter((option) => option.ref === "main" || option.ref.startsWith("pstdio@"))}
+          chosen={value.commits}
+          onAdd={addCommit}
+        />
+      </Stack>
+      <Fieldset.Root>
+        <Fieldset.Legend textStyle="label/S/regular" color="fg.muted">
+          Suites
+        </Fieldset.Legend>
+        <Stack gap="xs" pt="xs">
+          {SUITES.map((suite) => {
+            const disabled = !available(suite, value.platforms);
             return (
-              <HStack key={ref} gap="sm" bg="bg.subtle" borderRadius="xs" px="sm" py="2xs">
-                <Text textStyle="mono/XS" truncate>
-                  {ref}
-                </Text>
-                {known && known.sha !== ref ? <CopySha sha={known.sha} /> : null}
-                <Box flex="1" />
-                {measured(ref) ? <Chip>Measured</Chip> : null}
-                <IconButton
-                  size="xs"
-                  variant="ghost"
-                  aria-label={`Remove ${ref}`}
-                  onClick={() => onChange({ ...value, commits: value.commits.filter((entry) => entry !== ref) })}
-                >
-                  <X />
-                </IconButton>
-              </HStack>
+              <Checkbox
+                key={suite.id}
+                disabled={disabled}
+                checked={!disabled && value.suites.includes(suite.id)}
+                onCheckedChange={() => onChange({ ...value, suites: toggle(value.suites, suite.id) })}
+              >
+                <Stack gap="0">
+                  <Text textStyle="label/S/regular">{suite.label}</Text>
+                  {disabled ? (
+                    <Text textStyle="label/XS" color="fg.muted">
+                      {suite.reason}
+                    </Text>
+                  ) : null}
+                </Stack>
+              </Checkbox>
             );
           })}
-          <RefInput
-            options={refs.filter((option) => option.ref === "main" || option.ref.startsWith("pstdio@"))}
-            chosen={value.commits}
-            onAdd={addCommit}
-          />
         </Stack>
-        <Fieldset.Root>
-          <Fieldset.Legend textStyle="label/S/regular" color="fg.muted">
-            Suites
-          </Fieldset.Legend>
-          <Stack gap="xs" pt="xs">
-            {SUITES.map((suite) => {
-              const disabled = !available(suite, value.platforms);
-              return (
-                <Checkbox
-                  key={suite.id}
-                  disabled={disabled}
-                  checked={!disabled && value.suites.includes(suite.id)}
-                  onCheckedChange={() => onChange({ ...value, suites: toggle(value.suites, suite.id) })}
-                >
-                  <Stack gap="0">
-                    <Text textStyle="label/S/regular">{suite.label}</Text>
-                    {disabled ? (
-                      <Text textStyle="label/XS" color="fg.muted">
-                        {suite.reason}
-                      </Text>
-                    ) : null}
-                  </Stack>
-                </Checkbox>
-              );
-            })}
-          </Stack>
-        </Fieldset.Root>
-        <Fieldset.Root>
-          <Fieldset.Legend textStyle="label/S/regular" color="fg.muted">
-            Platforms
-          </Fieldset.Legend>
-          <HStack gap="md" wrap="wrap" pt="xs">
-            {PLATFORMS.map((platform) => (
-              <Checkbox
-                key={platform.id}
-                checked={value.platforms.includes(platform.id)}
-                onCheckedChange={() => onChange({ ...value, platforms: toggle(value.platforms, platform.id) })}
-              >
-                {platform.label}
-              </Checkbox>
-            ))}
-          </HStack>
-        </Fieldset.Root>
-        {skipped.length ? (
-          <Stack gap="2xs">
-            {skipped.map((line) => (
-              <Text key={line} textStyle="label/XS" color="fg.muted">
-                {line}
-              </Text>
-            ))}
-          </Stack>
-        ) : null}
-        <HStack justify="space-between" gap="md" wrap="wrap" borderTopWidth="1px" borderColor="border.subtle" pt="md">
-          <Stack gap="0">
-            <Text textStyle="label/S/medium" color={minutes > JOB_LIMIT_MINUTES ? "fg.warning" : undefined}>
-              {minutes > JOB_LIMIT_MINUTES
-                ? `About ${minutes} min, over the ${JOB_LIMIT_MINUTES}-minute job limit`
-                : `About ${minutes} min`}
-            </Text>
-            <Text textStyle="label/XS" color="fg.muted">
-              {jobs} parallel jobs · each benchmark runs once
-              {reused
-                ? ` · ${reused} measured ${reused > 1 ? "commits reuse their" : "commit reuses its"} results`
-                : ""}
-            </Text>
-          </Stack>
-          <Button
-            size="sm"
-            variant="primary"
-            onClick={() => onStart({ ...value, commits: fresh, suites: chosen.map((suite) => suite.id) })}
-            disabled={Boolean(problem)}
-            loading={pending}
-          >
-            Start run
-          </Button>
+      </Fieldset.Root>
+      <Fieldset.Root>
+        <Fieldset.Legend textStyle="label/S/regular" color="fg.muted">
+          Platforms
+        </Fieldset.Legend>
+        <HStack gap="md" wrap="wrap" pt="xs">
+          {PLATFORMS.map((platform) => (
+            <Checkbox
+              key={platform.id}
+              checked={value.platforms.includes(platform.id)}
+              onCheckedChange={() => onChange({ ...value, platforms: toggle(value.platforms, platform.id) })}
+            >
+              {platform.label}
+            </Checkbox>
+          ))}
         </HStack>
-        {problem || error ? (
-          <Text textStyle="label/S/regular" color={error ? "fg.error" : "fg.muted"}>
-            {error ?? problem}
+      </Fieldset.Root>
+      {skipped.length ? (
+        <Stack gap="2xs">
+          {skipped.map((line) => (
+            <Text key={line} textStyle="label/XS" color="fg.muted">
+              {line}
+            </Text>
+          ))}
+        </Stack>
+      ) : null}
+      <HStack justify="space-between" gap="md" wrap="wrap" borderTopWidth="1px" borderColor="border.subtle" pt="md">
+        <Stack gap="0">
+          <Text textStyle="label/S/medium" color={minutes > JOB_LIMIT_MINUTES ? "fg.warning" : undefined}>
+            {minutes > JOB_LIMIT_MINUTES
+              ? `About ${minutes} min, over the ${JOB_LIMIT_MINUTES}-minute job limit`
+              : `About ${minutes} min`}
           </Text>
-        ) : null}
-      </SimpleCardBody>
-    </SimpleCard>
+          <Text textStyle="label/XS" color="fg.muted">
+            {jobs} parallel jobs · each benchmark runs once
+            {reused ? ` · ${reused} measured ${reused > 1 ? "commits reuse their" : "commit reuses its"} results` : ""}
+          </Text>
+        </Stack>
+        <Button
+          size="sm"
+          variant="primary"
+          onClick={() => onStart({ ...value, commits: fresh, suites: chosen.map((suite) => suite.id) })}
+          disabled={Boolean(problem)}
+          loading={pending}
+        >
+          Start run
+        </Button>
+      </HStack>
+      {problem || error ? (
+        <Text textStyle="label/S/regular" color={error ? "fg.error" : "fg.muted"}>
+          {error ?? problem}
+        </Text>
+      ) : null}
+    </Stack>
   );
 };

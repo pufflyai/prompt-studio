@@ -34,6 +34,8 @@ export interface ListRowActionMenuItem {
   /** Trailing content rendered after the label. Use for Kbd shortcuts, counts, or badges. */
   endContent?: ReactNode;
   onAction?: () => void;
+  /** Start actions requiring a browser user gesture before the menu closes. */
+  runOnSelect?: boolean;
 }
 
 /** Inline action rendered on a row, optionally backed by a menu. */
@@ -53,7 +55,7 @@ export interface ListRowAction {
 }
 
 export type ListRowVariant = "default" | "compact" | "collection" | "full-width" | "tree" | "file" | "empty-state";
-export type ListRowTone = "default" | "danger";
+export type ListRowTone = "default" | "danger" | "muted";
 export type ListRowMenuPlacement =
   | "top"
   | "top-start"
@@ -75,6 +77,8 @@ export interface ListRowItem {
   description?: ReactNode;
   icon?: ReactNode;
   iconColor?: IconProps["color"];
+  /** Subdued foreground; the row remains fully interactive. */
+  tone?: ListRowTone;
   indicator?: {
     icon: ReactNode;
     color?: IconProps["color"];
@@ -135,7 +139,6 @@ export interface ListRowProps
   /** Shows context-menu actions from an inline trigger in addition to right-click access. */
   showContextMenuTrigger?: boolean;
   variant?: ListRowVariant;
-  tone?: ListRowTone;
   selectedBg?: ListRowRootProps["bg"];
   hoverBg?: ListRowRootProps["bg"];
   /** Wrap content into a single child element. Used for `<Menu.Item asChild><ListRow asChild>…</ListRow></Menu.Item>` and link components. */

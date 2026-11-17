@@ -1,8 +1,8 @@
 import { spawnSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, test } from "../scripts/automation-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
@@ -88,7 +88,7 @@ test("preserves the Contributions tab selected while extension settings load", a
       await route.continue();
     },
   );
-  await page.getByTestId("extension-entry").filter({ hasText: "Workbench fixture" }).click();
+  await page.getByTestId("extension-entry").filter({ hasText: "Automation fixture" }).click();
   const contributions = page.getByRole("tab", { name: "Contributions", exact: true });
   try {
     await expect.poll(() => held).toBe(2);
@@ -103,10 +103,10 @@ test("preserves the Contributions tab selected while extension settings load", a
 test("disables and enables an extension automation", async ({ page, request }) => {
   const project = await createProject(request);
   await openExtensions(page, project.id);
-  const installedRow = page.getByTestId("extension-entry").filter({ hasText: "Workbench fixture" });
+  const installedRow = page.getByTestId("extension-entry").filter({ hasText: "Automation fixture" });
 
   await installedRow.click();
-  const automationRow = page.getByTestId("extension-automation-row").filter({ hasText: "Lab heartbeat" });
+  const automationRow = page.getByTestId("extension-automation-row").filter({ hasText: "Contract heartbeat" });
   await expect(automationRow).toBeVisible();
   const automationCheckbox = automationRow.locator("input[type='checkbox']");
   const automationSwitch = automationRow.locator("[data-scope='switch'][data-part='control']");
@@ -119,13 +119,16 @@ test("disables and enables an extension automation", async ({ page, request }) =
   await automationSwitch.click();
   expect((await disableAutomationResponse).status()).toBe(200);
   await expect(automationCheckbox).not.toBeChecked();
-  await page.getByTestId("extension-detail-back").click();
+  await page
+    .getByRole("navigation", { name: "breadcrumb" })
+    .getByRole("button", { name: "Extensions", exact: true })
+    .click();
   await expect(installedRow.getByTestId("extension-automation-status")).toContainText("0/1");
   await disableAutomationReads.wait();
   await disableAutomationReads.release();
 
   await installedRow.click();
-  const enabledAutomationRow = page.getByTestId("extension-automation-row").filter({ hasText: "Lab heartbeat" });
+  const enabledAutomationRow = page.getByTestId("extension-automation-row").filter({ hasText: "Contract heartbeat" });
   const enabledAutomationCheckbox = enabledAutomationRow.locator("input[type='checkbox']");
   const enabledAutomationSwitch = enabledAutomationRow.locator("[data-scope='switch'][data-part='control']");
   await expect(enabledAutomationCheckbox).not.toBeChecked();
@@ -137,7 +140,10 @@ test("disables and enables an extension automation", async ({ page, request }) =
   await enabledAutomationSwitch.click();
   expect((await enableAutomationResponse).status()).toBe(200);
   await expect(enabledAutomationCheckbox).toBeChecked();
-  await page.getByTestId("extension-detail-back").click();
+  await page
+    .getByRole("navigation", { name: "breadcrumb" })
+    .getByRole("button", { name: "Extensions", exact: true })
+    .click();
   await expect(installedRow.getByTestId("extension-automation-status")).toContainText("1/1");
   await enableAutomationReads.wait();
   await enableAutomationReads.release();
@@ -178,12 +184,12 @@ test("keeps all dropdown automation switches disabled while a change is saving",
 test("turns automations off and on in the extension list dropdown", async ({ page, request }) => {
   const project = await createProject(request);
   await openExtensions(page, project.id);
-  const installedRow = page.getByTestId("extension-entry").filter({ hasText: "Workbench fixture" });
+  const installedRow = page.getByTestId("extension-entry").filter({ hasText: "Automation fixture" });
   const trigger = installedRow.getByTestId("extension-automations-trigger");
   await trigger.click();
   const popover = page.getByTestId("extension-automations-popover").filter({ visible: true });
   await expect(popover).toBeVisible();
-  const checkbox = popover.getByRole("checkbox", { name: "Toggle automation Lab heartbeat" });
+  const checkbox = popover.getByRole("checkbox", { name: "Toggle automation Contract heartbeat" });
   await expect(checkbox).toBeChecked();
 
   for (const enabled of [false, true]) {

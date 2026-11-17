@@ -178,6 +178,10 @@ The document address is the project, extension and document ID. The extension's
 records use `records`; text files use a separate address based on their stable file ID.
 Foreign keys remove these rows when their project or document is removed.
 
+Encrypted relay index nodes for receipts, logs and personal history are not rows. They
+live in files beside the database (`PSTDIO_HOME/pstdio.db-index-nodes/`) with their own retention rules; see
+[What belongs in the database](0031-database-contents.md#encrypted-index-nodes).
+
 A database transaction locks the document row, checks its revision and loads the saved
 state plus its remaining updates when needed. A bounded cache reuses a matching loaded
 document. A save appends only its new update. Every 128 updates, the same transaction
@@ -249,7 +253,7 @@ The code lives in `packages/pstdio-api/src/services/project-recovery/`.
 
 | Part | Rule |
 | --- | --- |
-| Coverage | Every entry below the default workspace's folder except paths the root `.pstignore` excludes. `.gitignore` does not apply. The first enrollment seeds `node_modules/`; an inherited copy keeps its policy, including deliberate absence. External Git administration and object stores are captured only inside registered repository roots. |
+| Coverage | Only a default workspace folder with a root `.pstignore` is copied; without one there is no copy and nothing creates the file. A copied folder includes every entry except paths the `.pstignore` excludes and `.pstdio/extension-storage/`, which syncs through records and is excluded after the folder's own rules. `.gitignore` does not apply. A restored copy keeps its policy. External Git administration and object stores are captured only inside registered repository roots. |
 | Chunks | Bounded 1 MiB chunks sealed with the account's private-project key. A device reuses its own sealed chunk for equal content; nothing is shared or deduplicated across accounts. Plaintext exists only in one in-memory chunk. |
 | Manifest | Pages of entries and a root manifest form a DAG of chunks. A capture records its interval, applied policy, exclusions, Git dependencies and counts. |
 | Scheduling | Startup, reconnect, a new project folder and an explicit capture scan at once; change hints wait for a quiet period and the 30-second gap after the previous scan. One process owns a source through a lock; the unacknowledged candidate is journaled across restarts. |

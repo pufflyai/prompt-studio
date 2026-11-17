@@ -15,7 +15,7 @@ test("finds published artifacts as resources and opens the latest version", asyn
   });
   expect(created.ok()).toBe(true);
   const project = (await created.json()) as { id: string };
-  const extensionId = "pstdio.pstdio-artifacts";
+  const extensionId = "pstdio.artifacts";
   const execute = async (command: string, params: Record<string, unknown>) => {
     const response = await request.post(
       `${uiOrigin}/v1/projects/${project.id}/extensions/commands/${extensionId}.command.${command}/execute`,

@@ -5,7 +5,9 @@ created: "{{CREATED_AT}}"
 
 # Contracts
 
-[What interfaces (HTTP, SDK, IPC, CLI, events) are touched by this ticket and the exact shapes each side must honor.]
+<!-- Use for proposal review when interface shapes affect the decision, and refine during implementation. Use concise bullets and compact examples. Keep only relevant surfaces and sections. Mark existing and proposed shapes clearly; link inspected source for existing behavior. -->
+
+- [Which interfaces (HTTP, SDK, IPC, CLI, events) change and why their shapes matter.]
 
 ## Surfaces
 
@@ -13,6 +15,7 @@ created: "{{CREATED_AT}}"
 
 - Location: [File path or route definition]
 - Callers: [UI, SDK, extension, or external client]
+- Status: [Existing or proposed; link the current definition when available.]
 
 #### Request
 
@@ -41,3 +44,8 @@ created: "{{CREATED_AT}}"
 ## Backward compatibility
 
 - [What existing callers assume and how this change affects them]
+
+## Design choices
+
+- [Why this shape was chosen, a meaningful alternative, and the cost or limitation.]
+- [Material assumption or unresolved choice that affects review.]

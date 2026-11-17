@@ -1,9 +1,9 @@
-import { expect, type Request, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, type Request, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const questionPrompt = "Question follow-up test __fake_question_prompt__";
-const actionCommand = "pstdio.pstdio-session-browser.view.conversation.chat.onAction";
+const actionCommand = "pstdio.session-browser.view.conversation.chat.onAction";
 const actionRoute = `**/extensions/commands/${actionCommand}/execute`;
 const isQuestionReply = (request: Request, sessionId: string) => {
   if (request.method() !== "POST" || !request.url().endsWith(`/extensions/commands/${actionCommand}/execute`))

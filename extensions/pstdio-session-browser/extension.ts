@@ -6,6 +6,7 @@ import {
   definePage,
   definePlacement,
   defineView,
+  defineViewMenu,
   l10n,
   packageAsset,
   viewDataEvents,
@@ -18,7 +19,9 @@ import { sessionBrowser } from "./refs";
 import { act } from "./src/actions";
 import { browse, browsePage, search } from "./src/browse";
 import { connectionRefresh } from "./src/controls";
+import { copySessionId } from "./src/copy-session-id";
 import { readDraft, saveDraft } from "./src/drafts";
+import { listSessionLinks } from "./src/linked-resources";
 import { acknowledgeNativeInputs } from "./src/native-recovery";
 import { nativeSubmissionIndex } from "./src/native-submission";
 import {
@@ -34,6 +37,7 @@ import {
   switchConversation,
 } from "./src/navigation";
 import { sessionId } from "./src/resource";
+import { pinSession, sessionPinsChanged, sessionPinsIndex } from "./src/session-pins";
 import { composerControls, readSnapshot } from "./src/snapshot";
 import { conversationTab } from "./src/tab";
 import { watch } from "./src/watch";
@@ -134,19 +138,50 @@ const list = defineView({
     searchPlaceholder: l10n("sessions.search", "Search sessions"),
     defaultExpandedNodeIds: ["workspace-sessions"],
     structure: [{ id: "sessions", label: l10n("sessions.title", "Sessions"), collapsible: false }],
-    refreshEvents: [viewDataEvents.sessionsChanged],
+    refreshEvents: [viewDataEvents.sessionsChanged, sessionPinsChanged],
     body: browse,
     page: browsePage,
+  },
+});
+const links = defineView({
+  id: "linked-resources",
+  title: l10n("links.related", "Related resources"),
+  icon: "link",
+  body: {
+    kind: "tree",
+    body: listSessionLinks,
+    defaultExpandedSectionIds: ["tickets", "sessions", "workspaces", "related"],
+    refreshEvents: [
+      viewDataEvents.resourceAnchorsChanged,
+      viewDataEvents.resourcesChanged,
+      viewDataEvents.sessionsChanged,
+      viewDataEvents.workspacesChanged,
+    ],
   },
 });
 export default defineExtension({
   defaultLocale: "en",
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
-  storageIndexes: [nativeSubmissionIndex],
-  commands: [create, newInViewer, open, rename, archive, remove, fork, stop, switchConversation, resolve, watch],
-  views: [conversation, list],
+  storageIndexes: [nativeSubmissionIndex, sessionPinsIndex],
+  commands: [
+    pinSession,
+    create,
+    newInViewer,
+    open,
+    copySessionId,
+    rename,
+    archive,
+    remove,
+    fork,
+    stop,
+    switchConversation,
+    resolve,
+    watch,
+  ],
+  views: [conversation, list, links],
   pages: [sessions, compose, session, draft],
   placements: [viewer],
+  viewMenus: [defineViewMenu({ id: "session.resources", owner: conversation.ref, view: links.ref, side: "right" })],
   navigationItems: [
     defineNavigationItem({
       id: "sessions",
@@ -157,6 +192,7 @@ export default defineExtension({
     }),
   ],
   navigationTrees: [
+    defineNavigationTree({ id: "session-list", owner: session.ref, view: list.ref, resourceScope: "project" }),
     defineNavigationTree({ id: "sessions", owner: sessions.ref, view: list.ref, resourceScope: "project" }),
     defineNavigationTree({
       id: "workspace-sessions",
@@ -179,7 +215,7 @@ export default defineExtension({
       layer: "current",
       key: "N",
       targetScope: "panel",
-      when: { resourceType: [workbenchResourceKinds.session, draftKind] },
+      when: { resourceType: [workbenchResourceKinds.session, draftKind], view: conversation.ref },
       action: { kind: "command", target: { command: newInViewer.ref } },
     }),
     defineKeybinding({

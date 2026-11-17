@@ -2,7 +2,7 @@
 name: pstdio
 description: Use Prompt Studio and its pst CLI. Covers project setup, .pstdio/config.json, agent setup, commands, extensions, and troubleshooting. Use for Prompt Studio questions, requests to configure a project or agent, or when the shell cannot find the pst command.
 metadata:
-  version: 0.0.9
+  version: 0.0.10
 ---
 
 # Prompt Studio
@@ -54,6 +54,8 @@ A session is one agent conversation. It runs in one workspace and can be linked 
 
 See [Sessions](https://prompt.studio/docs/references/cli/sessions/).
 
+A normal follow-up sent during a turn waits in the queue. A successful command does not mean the active agent has read it. Check the returned delivery status. If another agent needs a correction or dependency update during its current turn, use `pst sessions follow-up --id <id> --steer --prompt "<message>"`. Steering delivers live input and fails if the active run cannot accept it; do not silently replace that failure with queued delivery. To deliver an already queued message, read `pst sessions queue --id <id>`, then use `pst sessions steer` with that message's queue position, revision, and active-run identity. Do not resend the same message as a second request.
+
 ### Agents
 
 Agents are external coding tools such as Claude Code, Codex, and OpenCode. Harness extensions connect them. A new session uses the agent you pass with `--agent`. Without it, the session uses the project's default agent from the project settings, and then the first available agent. `pst agents setup` does not choose a default. See [Agents and harnesses](https://prompt.studio/docs/guides/concepts/agents/).
@@ -66,11 +68,13 @@ Skills are Markdown instructions for agents. Their source is an enabled extensio
 - `pst agents install-skills <agent-id> --force` replaces the folder of each enabled skill with the source and discards local edits in it. It never touches folders of skills that are not enabled. `setup` has no `--force`.
 - Automatic sync during workspace setup updates only files Prompt Studio wrote that are still unchanged. It keeps edited files and same-name files it did not write. Delete a kept file to let the next sync write the current version.
 
+Refresh skills from the matching installed host and extension version. Source on `main` can document commands that an older host does not expose; check `pst <command> --help` before using it. Compare kept folders with their source before replacement and preserve local edits. A successful missing-only install does not mean existing skills were updated.
+
 To change a skill for good, edit its source, not the installed copy. See [Agents](https://prompt.studio/docs/references/cli/agents/).
 
 ### Tickets
 
-Tickets belong to the Planner extension (`pstdio-planner`). Each ticket has a shorthand such as `PS-12`, a status, and a separate draft flag. `pst tickets write` or `pst tickets pull` writes a local copy under `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/` in the project folder. Use the absolute `path` the command returns, even from another workspace, then run `pst tickets save`. See [Planner](https://prompt.studio/docs/extensions/planner/).
+Tickets belong to the Planner extension (`planner`). Each ticket has a shorthand such as `PS-12`, a status, and a separate draft flag. `pst pstdio.planner write-ticket` or `pst pstdio.planner pull-ticket` writes a local copy under `.pstdio/extension-storage/pstdio.planner/tickets/<shorthand>/` in the project folder. Use the absolute `path` the command returns, even from another workspace, then run `pst pstdio.planner save-ticket`. See [Planner](https://prompt.studio/docs/extensions/planner/).
 
 ## Project files
 
@@ -79,9 +83,9 @@ Tickets belong to the Planner extension (`pstdio-planner`). Each ticket has a sh
 ├── config.json                  # Link to the project
 ├── extensions/                  # Repo-scoped extension source
 └── extension-storage/           # All extension-owned project files
-    ├── pstdio.pstdio-planner/tickets/  # Ticket copies and planning files
-    ├── pstdio.pstdio-reports/reports/  # Reports and evidence
-    └── pstdio.pstdio-artifacts/        # Artifact drafts and prototypes
+    ├── pstdio.planner/tickets/  # Ticket copies and planning files
+    ├── pstdio.reports/reports/  # Historical report checkouts
+    └── pstdio.artifacts/        # Artifact drafts and prototypes
 ```
 
 Each extension keeps its configuration, caches, drafts, and evidence in its own folder under `extension-storage/`. Use the paths that extension commands return.
@@ -122,3 +126,7 @@ See [Add tools](https://prompt.studio/docs/guides/getting-started/add-tools/).
 
 - [CLI reference and troubleshooting](references/cli-reference.md), including what to do when the shell cannot find `pst`
 - [Troubleshooting](https://prompt.studio/docs/guides/getting-started/troubleshooting/)
+
+### Resource Activity
+
+Opted-in resources keep discussion, meaningful changes, and implementation/review outcomes together. Sessions keep their own conversation and have no Activity feed. Use `use-resource-activity` to read context, attach evidence, and publish an immutable outcome on the worked-on resource. `pst resources activity --help` lists the commands. Planner owns ticket status and exact revision checks. New handoffs do not require Reports; historical RP references remain readable through compatibility links.

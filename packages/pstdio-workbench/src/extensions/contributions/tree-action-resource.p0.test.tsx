@@ -176,3 +176,46 @@ for (const projected of ["bound", "unbound"] as const) {
     }
   });
 }
+
+test("renderer-declared tree Copy actions retain selection-time execution", async () => {
+  const workbench = createWorkbench();
+  workbench.registerModule({
+    id: "test.tree-clipboard",
+    activate: (context) =>
+      registerWorkbenchExtensionTreeRenderers({
+        metadata: {
+          ...metadata,
+          commands: [
+            { id: "pstdio.lab.command.copy", extensionId: "pstdio.lab", title: "Copy", copyResultToClipboard: true },
+            { id: "pstdio.lab.command.open", extensionId: "pstdio.lab", title: "Open" },
+          ],
+        },
+        projectId: "project-1",
+        workbench: context,
+        executeCommand: () => [
+          {
+            id: "files",
+            nodes: [
+              {
+                id: "note",
+                label: "Note",
+                contextMenuActions: [
+                  { id: "copy", label: "Copy", command: { kind: "command", id: "copy" } },
+                  { id: "open", label: "Open", command: { kind: "command", id: "open" } },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+  });
+  try {
+    const sections = await getWorkbenchRenderers(workbench).getBody(treeId, {});
+    const adapted = toTreeListSection(sections[0]!, {}, { workbench });
+    const [copy, open] = adapted.nodes[0]?.contextMenuItems ?? [];
+    expect(copy?.runOnSelect).toBe(true);
+    expect(open?.runOnSelect).not.toBe(true);
+  } finally {
+    await workbench.dispose();
+  }
+});

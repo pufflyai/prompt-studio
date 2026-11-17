@@ -20,7 +20,7 @@ import { plannerSchemaChanged, plannerTicketsChanged } from "../events";
 export const readTicketTagsCommand = defineCommand({
   id: "ticket-tag.read",
   title: "Read ticket tags",
-  cli: { globalAliases: [["tags", "list"]], examples: ["pstdio tags list"] },
+  cli: { examples: ["pstdio pstdio.planner ticket-tag read"] },
   async run(ctx, _commandParams) {
     await migratePlannerStorage(ctx);
     return readTicketTags(ctx.storage);
@@ -31,7 +31,9 @@ export const createTicketTagCommand = defineCommand({
   id: "ticket-tag.create",
   mutating: true,
   title: "Create ticket tag",
-  cli: { globalAliases: [["tags", "create"]], examples: ["pstdio tags create --name Priority --type single_select"] },
+  cli: {
+    examples: ["pstdio pstdio.planner ticket-tag create --name Priority --type single_select"],
+  },
   params: {
     name: params.text({ label: "Name", required: true }),
     type: params.text({ label: "Type", required: false }),
@@ -39,8 +41,7 @@ export const createTicketTagCommand = defineCommand({
   async run(ctx, commandParams) {
     const type = commandParams.type === "multi_select" ? "multi_select" : "single_select";
     const result = await createTicketTag({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       name: commandParams.name,
       type,
     });
@@ -55,8 +56,7 @@ export const updateTicketTagCommand = defineCommand({
   mutating: true,
   title: "Update ticket tag",
   cli: {
-    globalAliases: [["tags", "update"]],
-    examples: ["pstdio tags update --tag-id default-priority --sort-order 0"],
+    examples: ["pstdio pstdio.planner ticket-tag update --tag-id default-priority --sort-order 0"],
   },
   params: {
     tagId: params.text({ label: "Tag", required: true }),
@@ -68,8 +68,7 @@ export const updateTicketTagCommand = defineCommand({
     const type =
       commandParams.type === "multi_select" || commandParams.type === "single_select" ? commandParams.type : undefined;
     const result = await updateTicketTag({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       tagId: commandParams.tagId,
       name: commandParams.name,
       type,
@@ -85,14 +84,16 @@ export const deleteTicketTagCommand = defineCommand({
   id: "ticket-tag.delete",
   mutating: true,
   title: "Delete ticket tag",
-  cli: { globalAliases: [["tags", "delete"]], examples: ["pstdio tags delete --tag Priority"] },
+  cli: {
+    examples: ["pstdio pstdio.planner ticket-tag delete --tag Priority"],
+  },
   params: {
     tagId: params.text({ label: "Tag", required: false }),
     tag: params.text({ label: "Tag name", required: false }),
   },
   async run(ctx, commandParams) {
     const tagId = commandParams.tagId ?? (await resolveTagId(ctx.storage, commandParams.tag ?? ""));
-    const result = await deleteTicketTag({ storage: ctx.storage, resources: ctx.resources, tagId });
+    const result = await deleteTicketTag({ ...ctx, tagId });
     await ctx.events.emit(plannerTicketsChanged, {});
     await ctx.events.emit(plannerSchemaChanged, {});
     return result;
@@ -104,8 +105,7 @@ export const createTagOptionCommand = defineCommand({
   mutating: true,
   title: "Create tag option",
   cli: {
-    globalAliases: [["tags", "options", "create"]],
-    examples: ["pstdio tags options create --tag-id default-priority --name Urgent --color red"],
+    examples: ["pstdio pstdio.planner ticket-tag create-option --tag-id default-priority --name Urgent --color red"],
   },
   params: {
     tagId: params.text({ label: "Tag", required: true }),
@@ -116,8 +116,7 @@ export const createTagOptionCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const result = await createTagOption({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       tagId: commandParams.tagId,
       name: commandParams.name,
       color: commandParams.color,
@@ -135,8 +134,9 @@ export const updateTagOptionCommand = defineCommand({
   mutating: true,
   title: "Update tag option",
   cli: {
-    globalAliases: [["tags", "options", "update"]],
-    examples: ["pstdio tags options update --tag-id default-priority --option-id default-priority-urgent --color red"],
+    examples: [
+      "pstdio pstdio.planner ticket-tag update-option --tag-id default-priority --option-id default-priority-urgent --color red",
+    ],
   },
   params: {
     tagId: params.text({ label: "Tag", required: true }),
@@ -149,8 +149,7 @@ export const updateTagOptionCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const result = await updateTagOption({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       tagId: commandParams.tagId,
       optionId: commandParams.optionId,
       name: commandParams.name,
@@ -170,8 +169,9 @@ export const deleteTagOptionCommand = defineCommand({
   mutating: true,
   title: "Delete tag option",
   cli: {
-    globalAliases: [["tags", "options", "delete"]],
-    examples: ["pstdio tags options delete --tag-id default-priority --option-id default-priority-urgent"],
+    examples: [
+      "pstdio pstdio.planner ticket-tag delete-option --tag-id default-priority --option-id default-priority-urgent",
+    ],
   },
   params: {
     tagId: params.text({ label: "Tag", required: true }),
@@ -179,8 +179,7 @@ export const deleteTagOptionCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const result = await deleteTagOption({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       tagId: commandParams.tagId,
       optionId: commandParams.optionId,
     });
@@ -195,9 +194,8 @@ export const applyTicketTagDraftCommand = defineCommand({
   mutating: true,
   title: "Apply ticket tag draft",
   cli: {
-    globalAliases: [["tags", "apply-draft"]],
     examples: [
-      "pstdio tags apply-draft --tag-id default-priority --options-to-update '[]' --options-to-create '[]' --option-ids-to-delete '[]'",
+      "pstdio pstdio.planner ticket-tag apply-draft --tag-id default-priority --options-to-update '[]' --options-to-create '[]' --option-ids-to-delete '[]'",
     ],
   },
   params: {
@@ -212,8 +210,7 @@ export const applyTicketTagDraftCommand = defineCommand({
     const type =
       commandParams.type === "multi_select" || commandParams.type === "single_select" ? commandParams.type : undefined;
     const result = await applyTagDraft({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       tagId: commandParams.tagId,
       name: commandParams.name,
       type,
@@ -237,8 +234,7 @@ export const setTicketTagsCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const result = await setTicketTags({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       ticketId: commandParams.rowId,
       tagIds: commandParams.tagIds ?? [],
     });

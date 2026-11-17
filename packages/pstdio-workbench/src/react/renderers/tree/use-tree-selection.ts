@@ -8,6 +8,7 @@ export const useTreeSelection = (
   treeViewId: string,
   input: Parameters<typeof resolveTreeListSelection>[0],
 ) => {
+  input = { ...input, resourceReferenceKey: (resource) => workbench.pages.resourceReferenceKey(resource) };
   const { sections, childrenByNodeId } = input;
   const selectedNodeIds = resolveTreeListSelection(input);
   const ids = typeof selectedNodeIds === "string" ? [selectedNodeIds] : (selectedNodeIds ?? []);

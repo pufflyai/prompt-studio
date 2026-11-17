@@ -5,7 +5,7 @@ import {
   nativeFileContentSchema,
   resolveFileRendererPresentation,
 } from "pstdio-api-contracts";
-import { createReadBoundary } from "pstdio-extensions";
+import { canonicalRuntimeId, createReadBoundary } from "pstdio-extensions";
 import { StorageRevisionChangedError } from "pstdio-sync";
 import { z } from "zod";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
@@ -23,7 +23,9 @@ const resolveFile = async (
   input: NativeDocumentTarget & { projectId: string; signal?: AbortSignal },
 ) => {
   const snapshot = await createReadBoundary(input.signal)(() => deps.extensionRuntimeCatalog.get(input.projectId));
-  const view = snapshot.runtime.views.find((view) => view.id === input.fileRendererId);
+  const view = snapshot.runtime.views.find(
+    (view) => view.id === canonicalRuntimeId(snapshot.runtime, input.fileRendererId),
+  );
   const handler = (operation: string) =>
     snapshot.runtime.privateHandlers.find(
       (handler) =>

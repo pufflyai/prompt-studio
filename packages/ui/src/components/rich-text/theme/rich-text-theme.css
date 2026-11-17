@@ -722,7 +722,7 @@ li.rich-text__nestedListItem {
   font-family: var(--chakra-fonts-body);
   font-size: calc(var(--chakra-font-sizes-lg) * var(--rich-text-font-scale));
   font-weight: var(--chakra-font-weights-medium);
-  line-height: 100%;
+  line-height: 120%;
   color: var(--chakra-colors-fg, var(--chakra-colors-fg));
   margin-top: var(--chakra-spacing-lg, 1.5rem);
   margin-bottom: var(--chakra-spacing-md, 1rem);
@@ -732,7 +732,7 @@ li.rich-text__nestedListItem {
   font-family: var(--chakra-fonts-body);
   font-size: calc(var(--chakra-font-sizes-lg) * var(--rich-text-font-scale));
   font-weight: var(--chakra-font-weights-medium);
-  line-height: 100%;
+  line-height: 120%;
   color: var(--chakra-colors-fg, var(--chakra-colors-fg));
   margin-top: var(--chakra-spacing-2, 0.5rem);
 }

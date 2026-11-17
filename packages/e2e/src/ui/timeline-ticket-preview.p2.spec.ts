@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 
 test("timeline ticket selection keeps the planner visible and replaces the unpinned side preview", async ({
@@ -24,7 +24,7 @@ test("timeline ticket selection keeps the planner visible and replaces the unpin
       if (window === window.top) localStorage.setItem("onboarding-complete", "true");
     });
     await page.setViewportSize({ width: 1440, height: 1000 });
-    const timelinePath = `/projects/${id}/extensions/pstdio.pstdio-planner/ticket-timeline`;
+    const timelinePath = `/projects/${id}/extensions/pstdio.planner/ticket-timeline`;
     await page.goto(timelinePath);
     const timeline = page.frameLocator('iframe[title="Project Timeline"]');
     const side = page.locator('[data-workbench-panel="side"]');
@@ -80,10 +80,10 @@ test("timeline tickets keep their preview while the attention bubble opens and r
     await page.addInitScript(() => {
       if (window === window.top) localStorage.setItem("onboarding-complete", "true");
     });
-    const timelinePath = `/projects/${id}/extensions/pstdio.pstdio-planner/ticket-timeline`;
+    const timelinePath = `/projects/${id}/extensions/pstdio.planner/ticket-timeline`;
     await page.goto(timelinePath);
     const timeline = page.frameLocator('iframe[title="Project Timeline"]');
-    await timeline.locator(`[data-ticket="${ticket.id}"]`).click();
+    await timeline.locator(`[data-ticket="${ticket.id}"]`).getByText(ticket.title, { exact: true }).click();
     const side = page.locator('[data-workbench-panel="side"]');
     await expect(side.getByRole("textbox")).toContainText("Ticket awaiting input");
     const card = timeline.locator(`[data-ticket="${ticket.id}"]`);
@@ -127,7 +127,7 @@ test("selecting a gate preview keeps its gate review controls accessible", async
     await page.addInitScript(() => {
       if (window === window.top) localStorage.setItem("onboarding-complete", "true");
     });
-    const timelinePath = `/projects/${id}/extensions/pstdio.pstdio-planner/ticket-timeline`;
+    const timelinePath = `/projects/${id}/extensions/pstdio.planner/ticket-timeline`;
     await page.goto(timelinePath);
     const timeline = page.frameLocator('iframe[title="Project Timeline"]');
     await timeline.locator(`[data-ticket="${gate.ticket.id}"]`).click();

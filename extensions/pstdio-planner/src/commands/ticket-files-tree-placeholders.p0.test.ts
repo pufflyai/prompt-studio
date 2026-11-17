@@ -1,76 +1,45 @@
 import { describe, expect, test } from "bun:test";
 import { workspacePages } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { makeCommandArgs } from "./command-context.fixture";
+import { workspaceArgs } from "./archive-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { listTicketFilesTreeCommand } from "./ticket-files";
 
 const treeParams = (ticket: { id: string; shorthand: string }) => ({
   renderer: {
-    rendererId: "pstdio.pstdio-planner.view.ticket-files",
+    rendererId: "pstdio.planner.view.ticket-files",
     resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
   },
 });
 
 describe("ticket files tree empty sections", () => {
-  test("renders single disabled rows for empty files, workspaces, and sessions sections", async () => {
+  test("keeps creation available while hiding empty linked-resource groups", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...(await workspaceArgs({ storage, params: { title: "Ticket" } })));
 
     const sections = await listTicketFilesTreeCommand.run(
-      ...makeCommandArgs({
+      ...(await workspaceArgs({
         storage,
         params: treeParams(ticket),
         overrides: { workspaces: { list: async () => [] } },
-      }),
+      })),
     );
 
-    const filesSection = sections.find((section) => section.id === "files");
-    const workspacesSection = sections.find((section) => section.id === "workspaces");
-    const sessionsSection = sections.find((section) => section.id === "sessions");
-
-    expect(filesSection).toMatchObject({
-      collapsible: true,
-      nodes: [{ id: "files-empty", label: "No files", icon: "FileText", disabled: true, rowVariant: "empty-state" }],
-    });
-    expect(filesSection).not.toHaveProperty("emptyState");
-    expect(workspacesSection).toMatchObject({
-      nodes: [
-        {
-          id: "workspaces-empty",
-          label: "No workspaces",
-          icon: "GitBranch",
-          disabled: true,
-          rowVariant: "empty-state",
-        },
-      ],
-    });
-    expect(workspacesSection).not.toHaveProperty("emptyState");
-    expect(sessionsSection).toMatchObject({
-      nodes: [
-        {
-          id: "sessions-empty",
-          label: "No sessions",
-          icon: "MessageCircle",
-          disabled: true,
-          rowVariant: "empty-state",
-        },
-      ],
-    });
-    expect(sessionsSection).not.toHaveProperty("emptyState");
+    expect(sections.map((section) => section.id)).toEqual(["ticket"]);
+    expect(sections[0].nodes[0].contextMenuActions).toContainEqual(expect.objectContaining({ id: "create" }));
   });
 });
 
 describe("ticket files tree workspace metadata", () => {
   test("adds workspace metadata to ticket-linked workspace resource nodes", async () => {
     const storage = createMemoryStorage();
-    const parent = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Parent" } }));
+    const parent = await createTicketCommand.run(...(await workspaceArgs({ storage, params: { title: "Parent" } })));
     const ticket = await createTicketCommand.run(
-      ...makeCommandArgs({ storage, params: { title: "Child", parentId: parent.id } }),
+      ...(await workspaceArgs({ storage, params: { title: "Child", parentId: parent.id } })),
     );
 
     const sections = await listTicketFilesTreeCommand.run(
-      ...makeCommandArgs({
+      ...(await workspaceArgs({
         storage,
         params: treeParams(ticket),
         overrides: {
@@ -88,7 +57,7 @@ describe("ticket files tree workspace metadata", () => {
             ],
           },
         },
-      }),
+      })),
     );
 
     expect(sections.find((section) => section.id === "workspaces")?.nodes[0]).toMatchObject({
@@ -112,7 +81,7 @@ describe("ticket files tree workspace metadata", () => {
                   label: `${parent.shorthand} Parent`,
                   shorthand: parent.shorthand,
                   metadata: {
-                    resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+                    resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
                   },
                 },
               },

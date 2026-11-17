@@ -1,6 +1,6 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { text } from "pstdio-extensions/workbench";
 import type { WorkbenchCommandExecutionContext } from "../../core";
+import { runCommandConfirmation } from "./workbench-command-confirmation";
 import type { WorkbenchExtensionCommandContext } from "./workbench-extension-command";
 
 export const runResourceMutation = async (
@@ -10,10 +10,14 @@ export const runResourceMutation = async (
   execution: WorkbenchCommandExecutionContext | undefined,
   persist: () => Promise<unknown>,
 ) => {
+  const withoutPreview = () =>
+    command.confirmation
+      ? runCommandConfirmation(context, command, params, persist, undefined, execution?.signal)
+      : persist();
   const mutation = command.resourceMutation;
-  if (!mutation) return persist();
+  if (!mutation) return withoutPreview();
   const id = params?.[mutation.idParam] ?? execution?.resource?.id;
-  if (typeof id !== "string") return persist();
+  if (typeof id !== "string") return withoutPreview();
   const subject = execution?.resource;
   // A command can present a resource whose canonical identity belongs to another provider.
   const resource =
@@ -24,7 +28,7 @@ export const runResourceMutation = async (
       : { type: mutation.resourceType, id, extensionId: command.extensionId, projectId: context.projectId };
   const rawLabel = mutation.kind === "rename" ? params?.[mutation.labelParam] : undefined;
   // Leave invalid input to the command; never display a title that it cannot save.
-  if (mutation.kind === "rename" && (typeof rawLabel !== "string" || !rawLabel.trim())) return persist();
+  if (mutation.kind === "rename" && (typeof rawLabel !== "string" || !rawLabel.trim())) return withoutPreview();
   const mutate = async () => {
     const preview = context.workbench.resources.preview.begin(
       resource,
@@ -39,21 +43,6 @@ export const runResourceMutation = async (
       throw error;
     }
   };
-  if (mutation.kind !== "remove") return mutate();
-  const title = text(command.title, "Delete");
-  let saved: Promise<unknown> | undefined;
-  const confirmed = await context.workbench.commandPalette.requestConfirmation(
-    resource.label ? `${title}: ${resource.label}` : title,
-    {
-      description: text(command.description),
-      buttonLabel: title,
-      onConfirm: async () => {
-        saved = mutate();
-        await saved;
-      },
-    },
-  );
-  // Programmatic confirmation resolution remains supported; UI confirmation saves
-  // before closing, so a failed mutation stays in the dialog for a retry.
-  return confirmed ? (saved ?? mutate()) : undefined;
+  if (mutation.kind !== "remove" && !command.confirmation) return mutate();
+  return runCommandConfirmation(context, command, params, mutate, resource.label, execution?.signal);
 };

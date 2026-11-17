@@ -95,8 +95,8 @@ const resolveViewSettings = (
   settings: import("../../../core").KanbanRendererSettings,
 ) => (props.resolveSettings ? props.resolveSettings(settings) : settings);
 
-const hasKanbanRowTarget = (row: KanbanRendererRow) =>
-  Boolean(row.target || row.children?.some((child) => child.target));
+const hasKanbanRowTarget = (row: KanbanRendererRow): boolean =>
+  Boolean(row.target || row.children?.some(hasKanbanRowTarget));
 
 const loadKanbanRows = async (
   contribution: ReactRegisteredKanbanRendererContribution,
@@ -136,6 +136,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     identity: rendererQueryKey([contribution.id, resourceKey(placement.resource), settings, filter, sorts, pageParams]),
     scope: storageKey,
     fields: kanbanPageFields(attributes, settings),
+    initialPageSize: contribution.initialPageSize,
     rowId: (row) => row.id,
   });
   const paged = Boolean(contribution.executePage);

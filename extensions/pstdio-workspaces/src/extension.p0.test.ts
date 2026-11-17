@@ -32,7 +32,7 @@ test("the Workspaces title menu opens the shared creation dialog", async () => {
           icon: "plus",
           action: {
             kind: "command",
-            target: { command: { kind: "command", extensionId: "pstdio.pstdio-workspaces", id: "show-create" } },
+            target: { command: { kind: "command", extensionId: "pstdio.workspaces", id: "show-create" } },
           },
         }),
       ]),

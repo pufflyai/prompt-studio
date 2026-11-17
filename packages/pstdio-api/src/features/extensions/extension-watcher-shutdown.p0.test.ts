@@ -23,7 +23,7 @@ for (const kind of ["root", "source"] as const) {
         ? await createExtensionRootWatcher({
             listExtensionRoots: async () => {
               await wait();
-              return calls === 1 ? [] : [{ path: root, sync: async () => {} }];
+              return calls === 1 ? [] : [{ path: root, ownerRoot: root, sync: async () => {} }];
             },
             watch,
           })

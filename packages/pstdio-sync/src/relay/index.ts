@@ -19,3 +19,4 @@ export type { AssetReferences } from "./record-assets";
 export { decodeRecordFrame, encodeRecordFrame, type RecordFrame, recordFrameCost } from "./record-frames";
 export { createRecordStreamSync, recordFrameLimit } from "./record-stream";
 export type { RecordBytes, RecordStreamCursor, RecordStreamStore } from "./record-stream-types";
+export type { SyncFileTransfer } from "./transfer-progress";

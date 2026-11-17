@@ -118,7 +118,7 @@ export const startPackagedServe = async (
   env: Record<string, string> = {},
   binaryPath = PACKAGED_BINARY_PATH,
   observe?: (process: PackagedRuntimeObservation) => void,
-  onOutput?: (chunk: Buffer) => void,
+  onOutput?: (chunk: Buffer, stream: "stdout" | "stderr") => void,
   signal?: AbortSignal,
 ) => {
   signal?.throwIfAborted();
@@ -159,8 +159,8 @@ export const startPackagedServe = async (
   signal?.addEventListener("abort", abort, { once: true });
   child.once("close", () => signal?.removeEventListener("abort", abort));
   if (onOutput) {
-    child.stdout?.on("data", onOutput);
-    child.stderr?.on("data", onOutput);
+    child.stdout?.on("data", (chunk: Buffer) => onOutput(chunk, "stdout"));
+    child.stderr?.on("data", (chunk: Buffer) => onOutput(chunk, "stderr"));
   }
   try {
     if (child.pid !== undefined) observe?.({ pid: child.pid, descriptor: null });

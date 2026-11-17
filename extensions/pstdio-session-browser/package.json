@@ -1,13 +1,13 @@
 {
-  "name": "pstdio-session-browser",
-  "version": "0.1.0",
+  "name": "session-browser",
+  "version": "0.2.0",
   "displayName": "Sessions",
   "icon": "messages-circle",
   "description": "Browse conversations and compose with native chat in Main and Side.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.4.0"
+    "pstdio": "^0.5.0"
   },
   "pstdio": {
     "scope": "user"
@@ -15,11 +15,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun ../../scripts/ci/run-bun-tests.ts",
+    "test": "bun test",
     "typecheck": "bun check"
   },
   "dependencies": {
-    "@pstdio/sdk": "0.47.0-preview.sha-ce1af652bbf51fce0b29b5e74f4e7f0a16d60ab4"
+    "@pstdio/sdk": "0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",

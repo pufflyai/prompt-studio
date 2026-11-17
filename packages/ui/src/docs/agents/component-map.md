@@ -32,6 +32,7 @@ Use this map to choose the first component to inspect in the live Canvas catalog
 ## Data display
 
 - `DataTable` handles tabular data.
+- `DashboardRenderer` from `@pstdio/ui/dashboard-renderer` composes caller-owned metric, chart, and table sources in an editable responsive grid. Pass a controlled definition and `onChange` for Apply/Cancel editing, or omit the handler for read-only use. See **Design system/Components/Data display/Dashboard**.
 - `KanbanRenderer` handles switchable board/list data views with filtering, grouping, and ordering.
 - `Avatar`, `KanbanRendererCard`, `KanbanRendererList`, `ResourceBadge`, `WorkspaceBadge`, `InfoCard`, and `Activity` cover common data surfaces.
 - Use `Design system/Foundations/Component gallery / Composites` for advanced examples before composing `KanbanRenderer`, `ParamEditor`, or `Activity` from scratch.

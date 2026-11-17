@@ -2,6 +2,7 @@
   "name": "pstdio-api",
   "private": true,
   "exports": {
+    "./extension-input-inspector": "./src/features/extensions/webview-input-inspector.ts",
     "./app": "./src/app.ts",
     "./runtime": "./src/features/runtime/routes.ts"
   },
@@ -14,7 +15,7 @@
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
-    "test": "PSTDIO_DEFAULT_EXTENSIONS='[]' PSTDIO_EXTENSION_WEBVIEW_BUILDS='0' bun src/test-utils/run-api-tests.ts",
+    "test": "bun ../../scripts/test.ts --scope pstdio-api",
     "test:coverage": "PSTDIO_DEFAULT_EXTENSIONS='[]' PSTDIO_EXTENSION_WEBVIEW_BUILDS='0' bun src/test-utils/run-api-tests.ts --coverage"
   },
   "dependencies": {
@@ -44,11 +45,13 @@
     "@types/cmd-shim": "5.0.2",
     "cmd-shim": "7.0.0",
     "extension-lab": "workspace:*",
-    "pstdio-base-themes": "workspace:*",
-    "pstdio-benchmarks": "workspace:*",
-    "pstdio-planner": "workspace:*",
-    "pstdio-skills": "workspace:*",
+    "base-themes": "workspace:*",
+    "planner": "workspace:*",
+    "skills": "workspace:*",
     "typescript": "6.0.2",
-    "workbench-fixture": "workspace:*"
+    "workbench-fixture": "workspace:*",
+    "pstdio-scripts": "workspace:*",
+    "github": "workspace:*",
+    "git-workspaces": "workspace:*"
   }
 }

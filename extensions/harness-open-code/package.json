@@ -1,12 +1,12 @@
 {
   "name": "harness-open-code",
-  "version": "0.46.0",
+  "version": "0.47.0",
   "displayName": "OpenCode",
   "description": "Contributes the OpenCode agent harness.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.3.1 || ^0.4.0"
+    "pstdio": "^0.3.1 || ^0.4.0 || ^0.5.0"
   },
   "pstdio": {
     "scope": "user"
@@ -14,8 +14,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun ../../scripts/ci/run-bun-tests.ts --silent",
-    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage",
+    "test": "bun test --silent",
+    "test:coverage": "bun test --coverage",
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write ."

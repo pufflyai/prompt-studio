@@ -169,6 +169,3 @@ volumes:
 networks:
   default:
     internal: true
-    ipam:
-      config:
-        - subnet: ${RELAY_TEST_SUBNET:-10.254.237.0/24}

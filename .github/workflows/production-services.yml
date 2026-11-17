@@ -14,6 +14,9 @@ on:
       artifact_attempt:
         required: true
         type: string
+      candidate_artifact_id:
+        required: true
+        type: string
       channel:
         required: true
         type: string
@@ -33,7 +36,8 @@ jobs:
       - name: Download the exact selected candidate identity
         uses: actions/download-artifact@v4
         with:
-          name: production-candidate-attempt-${{ github.run_attempt }}
+          artifact-ids: ${{ inputs.candidate_artifact_id }}
+          merge-multiple: true
       - name: Select immutable certified service artifact IDs
         id: inputs
         run: |

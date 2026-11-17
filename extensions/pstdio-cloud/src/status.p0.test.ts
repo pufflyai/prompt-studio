@@ -11,6 +11,22 @@ const account: AccountStatus = {
 const synced: ProjectSyncStatus = { state: "synced", offlineReady: true };
 
 describe("Cloud status", () => {
+  test("shows connection loss before sign-in and account loading", () => {
+    const offline: ProjectSyncStatus = { state: "offline", offlineReady: true };
+    expect(cloudStatus({ ...account, login: null }, offline).key).toBe("offline");
+    expect(cloudStatus({ ...account, signInRequired: true }, offline).key).toBe("offline");
+    expect(cloudStatus(undefined, undefined, undefined, false).key).toBe("offline");
+    expect(cloudStatus({ ...account, login: null }, synced, undefined, false).key).toBe("offline");
+    expect(cloudStatus({ ...account, login: null }, synced).key).toBe("signIn");
+  });
+  test("keeps folder preparation and setup failure visible after the download finishes", () => {
+    expect(cloudStatus(account, synced, { state: "preparing" }).key).toBe("preparing");
+    expect(cloudStatus(account, synced, { state: "failed", error: "Cannot prepare folder" }).key).toBe("attention");
+    expect(cloudStatus(account, synced, { state: "ready" }).key).toBe("synced");
+  });
+  test("keeps a disconnected account visible before its feature flags can be refreshed", () => {
+    expect(cloudStatus({ ...account, features: null }, { state: "offline", offlineReady: true }).key).toBe("offline");
+  });
   test("distinguishes a local project from a disconnected cloud project", () => {
     expect(cloudStatus(account, { state: "local", offlineReady: true }).key).toBe("local");
     expect(cloudStatus(account, { state: "offline", offlineReady: true }).key).toBe("offline");
@@ -41,5 +57,31 @@ describe("Cloud status", () => {
     expect(cloudStatus(account, { ...downloading, download: { completed: 4, total: null } }).percent).toBeUndefined();
     expect(cloudStatus(account, { ...downloading, download: { completed: 4, total: 10 } }).percent).toBe(40);
     expect(cloudStatus(account, { ...downloading, download: { completed: 10, total: 10 } }).percent).toBeUndefined();
+  });
+  test("distinguishes internal work, waiting, uploads and downloads from actual source activity", () => {
+    const source = {
+      id: "sessions",
+      phase: "record-stream:merge",
+      connected: true,
+      busy: true,
+      downloaded: false,
+      files: [],
+    };
+    const initial: ProjectSyncStatus = { state: "first-download-incomplete", offlineReady: false, sources: [source] };
+    expect(cloudStatus(account, initial).key).toBe("checking");
+    expect(cloudStatus(account, { ...initial, sources: [{ ...source, busy: false }] }).key).toBe("waiting");
+    expect(cloudStatus(account, { ...initial, sources: [{ ...source, connected: false }] }).key).toBe("offline");
+    const file = {
+      id: "file",
+      direction: "upload" as const,
+      status: "active" as const,
+      byteLength: 12,
+      totalBytes: 40,
+      completedBytes: 10,
+    };
+    expect(cloudStatus(account, { ...initial, sources: [{ ...source, files: [file] }] }).key).toBe("uploading");
+    expect(
+      cloudStatus(account, { ...initial, sources: [{ ...source, files: [{ ...file, direction: "download" }] }] }).key,
+    ).toBe("downloading");
   });
 });

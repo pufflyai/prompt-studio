@@ -13,5 +13,6 @@
     "verbatimModuleSyntax": true,
     "types": ["bun"]
   },
-  "include": ["extension.ts", "src/**/*.ts", "src/**/*.tsx"]
+  "include": ["extension.ts", "src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["src/**/*.canvas.tsx", ".canvas"]
 }

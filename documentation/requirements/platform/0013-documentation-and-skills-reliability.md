@@ -72,7 +72,7 @@ States: fixed and verified, open, blocked, accepted limit. "Fixed" means fixed i
 | R14 | Source and installed checks use different inner JSON shapes | Accepted limit | CLI maintainers | Both shapes are documented; unify when the source check can call the host checker |
 | R15 | Packaged tests launched a browser the installer does not provision | Fixed and verified | Developer tooling | Clean `PLAYWRIGHT_BROWSERS_PATH` runs; CI installs `--no-shell` only |
 | R16 | Isolated stack needed image edits behind a managed proxy and CA | Fixed and verified | Developer tooling | `NODE_EXTRA_CA_CERTS` build context, tested with a test CA |
-| R17 | Missing login files became empty folders on the host | Fixed and verified | Developer tooling | `isolated-host-files.p0.test.ts` |
+| R17 | Missing login files became empty folders on the host | Fixed and verified | Developer tooling | `scripts/dev/isolated-host-files.ts` |
 | R18 | `--down` left unnamed `node_modules` volumes behind | Fixed and verified | Developer tooling | Start, recreate, and down leave zero volumes |
 | R19 | Cold first `dev:isolated` start outlasts the 90 s readiness wait | Blocked on approval | Developer tooling | Measured 171 s and 176 s; needs an approved readiness rule |
 | R20 | API requests stall while default extensions install | Open | Runtime maintainers | Requests should answer or fail clearly during installs |
@@ -111,7 +111,7 @@ States: fixed and verified, open, blocked, accepted limit. "Fixed" means fixed i
 
 ## Delivery order and ownership
 
-P0 means a prerequisite or a blocker to trusting the workflow. P1 means required follow-through before closing this initiative. Assign real owners and tickets using `pst`; save edited tickets with `pst tickets save --id PS-XXX`. Keep findings visible until they pass or have an explicitly accepted follow-up with truthful user-facing limits.
+P0 means a prerequisite or a blocker to trusting the workflow. P1 means required follow-through before closing this initiative. Assign real owners and tickets using `pst`; save edited tickets with `pst pstdio.planner save-ticket --id PS-XXX`. Keep findings visible until they pass or have an explicitly accepted follow-up with truthful user-facing limits.
 
 | Workstream | Priority | Suggested owner | Depends on | Reviewable output |
 | --- | --- | --- | --- | --- |
@@ -159,7 +159,7 @@ Internal targets: [requirements](..), [architecture references](../../references
 - Distinguish composer goal/plan/state/confirmation fixture coverage from rich metrics, complete UI composition, and live provider proof. Preserve unresolved bare CLI-group help as a requirement.
 - Keep [backend isolation](../../adrs/0058-isolate-extension-backends.md), [repository trust](../../adrs/0059-trust-step-for-repo-extensions.md), and dynamic page titles proposed unless new implementation and evidence justify a status change.
 
-Skill targets: [pstdio-skills](../../../extensions/pstdio-skills/skills), [Planner skills](../../../extensions/pstdio-planner/skills), [Reports skill](../../../extensions/pstdio-reports/skills), and [Artifacts skill](../../../extensions/pstdio-artifacts/skills).
+Skill targets: [pstdio-skills](../../../extensions/pstdio-skills/skills), [Planner skills](../../../extensions/pstdio-planner/skills), [Resource Activity skill](../../../extensions/pstdio-skills/skills/use-resource-activity), and [Artifacts skill](../../../extensions/pstdio-artifacts/skills).
 
 - Route `create-pstdio-extension` to the working walkthrough first, then link the relevant contract at each decision: version preflight, scope/source location, storage, native actions, navigation, webviews, and validation. Use public URLs/anchors from exported skills; repository-relative links cannot assume an application checkout.
 - Keep focused offline instructions and bundled relative assets usable after export. Explain `rowId`/`rowIds` versus `onRowActivate`'s `row`, plain-array collection results, update-only operations, persistence before events, and real project separation.
@@ -281,7 +281,7 @@ bun run --cwd clients/landing-page build
 PSTDIO_VERIFY_PLATFORM_PKG=cli-linux-x64 bun run --cwd scripts verify:packages
 ```
 
-Use [packaged auto-start tests](../../../packages/e2e/src/packaged/packaged.p1.test.ts), [runtime lifecycle tests](../../../packages/e2e/src/packaged/runtime-lifecycle.p1.test.ts), [core extension smoke checks](../../../packages/e2e/src/packaged/packaged-core-extensions-smoke.p1.test.ts), and [packaged serve checks](../../../packages/e2e/src/packaged/packaged-serve-smoke.p2.test.ts) to select the focused regression runs. Browser runs use `bun run dev:playwright` and its printed URL; stop with `bun run dev:playwright:down`. Never start the app directly or inspect its live database.
+Use [packaged auto-start tests](../../../packages/e2e/src/packaged/packaged.p1.test.ts), [runtime lifecycle tests](../../../packages/e2e/src/packaged/runtime-lifecycle.p1.test.ts), and [packaged serve checks](../../../packages/e2e/src/packaged/packaged-serve-smoke.p2.test.ts) to select the focused regression runs. Browser runs use `bun run dev:playwright` and its printed URL; stop with `bun run dev:playwright:down`. Never start the app directly or inspect its live database.
 
 ## Implementation handoff checklist
 

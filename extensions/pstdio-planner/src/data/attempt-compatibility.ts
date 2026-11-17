@@ -5,7 +5,7 @@ import type { AttemptRecord, AttemptState } from "./attempt-types";
 
 // Compatibility output is evidence about the variant, never a workflow precondition.
 export const legacyAttemptOutput = async (storage: ExtensionStorageApi, variant: AttemptRecord) => {
-  const retired = (await readRetiredWorkspaceIds(storage)).has(variant.workspaceId);
+  const retired = (await readRetiredWorkspaceIds(storage, [variant.workspaceId])).has(variant.workspaceId);
   const revision = variant.revisions.at(-1);
   const verdict = revision ? deriveRevisionVerdict(revision) : null;
   let state: AttemptState = "implementing";

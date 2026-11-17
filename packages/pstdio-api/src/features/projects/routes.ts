@@ -33,6 +33,12 @@ import {
 } from "./endpoints/harness-param-defaults";
 import { listProjectsHandler, listProjectsRoute } from "./endpoints/list-projects";
 import { openProjectHandler, openProjectRoute } from "./endpoints/open-project";
+import {
+  getProjectCompositionHandler,
+  getProjectCompositionRoute,
+  putProjectCompositionHandler,
+  putProjectCompositionRoute,
+} from "./endpoints/project-composition";
 import { queryProjectsHandler, queryProjectsRoute } from "./endpoints/query-projects";
 import {
   listRecoveryPointsHandler,
@@ -41,11 +47,15 @@ import {
   restoreProjectRoute,
 } from "./endpoints/recovery";
 import { removeProjectHandler, removeProjectRoute } from "./endpoints/remove-project";
+import { resolveResourceOpeningsHandler, resolveResourceOpeningsRoute } from "./endpoints/resource-openings";
 import { retryProjectSetupHandler, retryProjectSetupRoute } from "./endpoints/retry-project-setup";
 import { updateProjectHandler, updateProjectRoute } from "./endpoints/update-project";
 
 export const createProjectRoutes = (deps: ProjectsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
+  routes.openapi(resolveResourceOpeningsRoute, resolveResourceOpeningsHandler(deps));
+  routes.openapi(getProjectCompositionRoute, getProjectCompositionHandler(deps));
+  routes.openapi(putProjectCompositionRoute, putProjectCompositionHandler(deps));
   routes.openapi(listRecoveryPointsRoute, listRecoveryPointsHandler(deps));
   routes.openapi(restoreProjectRoute, restoreProjectHandler(deps));
 

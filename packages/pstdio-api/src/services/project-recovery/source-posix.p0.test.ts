@@ -1,5 +1,5 @@
 import { afterEach, test as baseTest, expect } from "bun:test";
-import { mkdir, mkdtemp, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { nativeRecoverySupported } from "./native-recovery.fixture";
@@ -57,24 +57,6 @@ test("source enumeration preserves UTF-8 names and link target text without read
     expect([...source.root.children()].sort()).toEqual(["café.txt", "external"]);
     expect(source.root.readlink("external")).toBe("/missing/private-target");
     await expect(source.root.open("../outside")).rejects.toThrow();
-  } finally {
-    source.close();
-  }
-});
-
-test("failed starter-policy preparation never leaves a partial policy in the source folder", async () => {
-  const root = await mkdtemp(join(tmpdir(), "recovery-policy-publication-"));
-  roots.push(root);
-  await mkdir(join(root, "source"));
-  const blockedStage = join(root, "not-a-directory");
-  await writeFile(blockedStage, "existing work");
-  const source = await openRecoverySource(join(root, "source"));
-  try {
-    await expect(
-      source.root.create(".pstignore", new TextEncoder().encode("node_modules/\n"), blockedStage),
-    ).rejects.toThrow();
-    expect(await readFile(join(root, "source/.pstignore")).catch((error) => error.code)).toBe("ENOENT");
-    expect(await readFile(blockedStage, "utf8")).toBe("existing work");
   } finally {
     source.close();
   }

@@ -3,15 +3,19 @@
 Status: Implemented in core for macOS and Linux (PS-1069); Cloud extension UI pending (PS-1068).
 Created: 2026-10-30. Owner: platform. Ticket: PS-960, under PS-716. The user chose project-folder coverage with a separate
 `.pstignore` file on 2026-10-30. `.gitignore` does not control sync, so `.env` files
-remain included unless explicitly excluded in `.pstignore`. This document and
+remain included unless explicitly excluded in `.pstignore`. On 2026-11-10 (PS-1130) the user made the
+folder copy opt-in: only a folder with a root `.pstignore` is copied, because project records already sync
+the data most tools keep, and copying it again doubled the upload. This document and
 [PRD 0014](0014-local-first-sync.md) reflect that decision. PS-1069 implemented the runtime
-in #1793 (capture and transfer), #1858 (restore and public API, SDK and CLI) and a third PR
-(integrated qualification, the 5 GiB workload and documentation).
+in #1793 (capture and transfer), #1858 (restore and public API, SDK and CLI) and #1866
+(integrated qualification, the 5 GiB workload and documentation). All three PRs are merged.
 
 ## Implementation status
 
-Checked 2026-11-07 on the third PS-1069 PR's branch; not released yet. Core captures, downloads
-and restores project folders on macOS and Linux (glibc 2.28 or later) through a public API, SDK and
+Source and acceptance evidence reconciled 2026-11-17. The original integrated and 5 GiB
+qualification ran on 2026-11-07; later source changes are identified below and do not restamp that
+measurement. Core captures, downloads and restores project folders on macOS and Linux
+(glibc 2.28 or later) through a public API, SDK and
 `pst projects folder`. The Cloud extension UI does not exist yet (PS-1068), so the CLI and SDK are
 the only ways to restore. User and reference documentation:
 [Cloud sync guide](../../guides/concepts/0007-cloud-sync.md#restore-a-project-folder-on-another-computer),
@@ -44,6 +48,9 @@ and the [workload results](../../references/performance/0008-folder-recovery-wor
   `.pstdio/extensions` register disabled. Restored entries keep permission bits only. External Git
   administration is rebuilt under `.pstdio/recovery/<copy>/`; links to unrestored targets are
   omitted and listed.
+- Since #1957, capture walking, hashing and encryption, plus publish/download chunk verification,
+  run in Bun workers. The compiled host includes the worker entry point. The original 5 GiB sample
+  predates this change; it is not a measurement of the current worker implementation.
 - Progress for capture, download and restore is derived in memory and exposed by
   `GET /projects/{id}/folder/sources|recovery`, `POST /projects/{id}/folder/capture|download|restore|cancel`,
   the SDK `projects` methods, `pst projects folder` and the `folder` field of project sync status.
@@ -53,9 +60,9 @@ Gaps that remain:
 - No Cloud extension UI or critical Playwright folder/download scenario (PS-1068). Opening a cloud
   project in the picker creates a managed folder first, after which a restored folder stays beside
   it; restore before opening. A second restore is not bound as its own workspace.
-- Capture hashing and encryption run on the host's main thread; no worker yet.
-- Windows and musl Linux: the native capture adapter loads `libSystem` or glibc, so capture cannot
-  run there, and restore reports `unsupported`.
+- Windows and musl Linux report `unsupported` before capture or restore touches the folder.
+  Unsupported-platform refusal preserves data; it does not establish recovery capability there.
+  The Windows qualification required by ADR 0138 remains outstanding.
 - Progress has no per-entry problem list or pending file and byte counts.
 - A restored folder is sealed again with new random chunk IDs, so the restoring device uploads
   the whole folder once more as its own copy.
@@ -75,12 +82,12 @@ project list apart; it is not the deployed relay. Unit and service tests live ne
 | Group | Result | Evidence |
 | --- | --- | --- |
 | 1. Bytes and metadata without Git | Passed | Integrated: the laptop stops before any folder byte downloads; the restored tree matches type, permission bits, size and SHA-256 of every entry, link text and empty folders. `restore.p0`. |
-| 2. `.pstignore` | Passed | Integrated: starter policy seeded and restored; root and nested `node_modules` excluded; `.env` and Git-ignored `build/` restored. `policy.p0` (globs, negation, last rule, existing/emptied/absent policies), `capture.p0`, `folder-recovery.p1` and the endpoint test (deliberate absence survives restore). |
+| 2. `.pstignore` | Passed | Integrated (PS-1130 replaced seeding with opt-in: no `.pstignore`, no copy; `local-source.p0`, `watch.p0`): policy restored; root and nested `node_modules` excluded; `.env` and Git-ignored `build/` restored. `policy.p0` (globs, negation, last rule, existing/emptied/absent policies), `capture.p0`, `folder-recovery.p1` (opting out by removing `.pstignore`) and the endpoint test (an empty policy survives restore). |
 | 3. Functional Git | Passed | Integrated: HEAD, branches, all commits (unpushed on two branches), reflog, staged and unstaged diffs, untracked files and local config match; `git fsck --full` passes; the post-checkout hook never runs. `git-dependencies.p0` and `restore.p0` cover linked worktrees, submodules, unregistered and crafted administration. Detached commits are covered only by object-level capture, not a dedicated test. |
 | 4. Restarts, watcher loss, interruption | Passed | Integrated: a download interrupted by relay failures resumes after retry and reads no blob twice. `schedule.p0`, `local-source.p0` (restart candidate, new folder scanned at once), `capture.p0` (changing files stay pending), `transfer.p0` (corruption, cancellation). Quota and full-disk failures are mapped to errors but not exercised end to end. |
 | 5. Independent copies and confidentiality | Passed, device removal unproved | Integrated: the laptop's and the desktop's copies are both listed and restorable; the second account sees neither the project nor its copy; relay blobs and documents contain no known file name, credential or file bytes from either account. Device removal is not tested for folders. |
-| 6. Destination safety | Passed | Integrated: an existing empty folder is refused without writes; a folder created during a restore is kept with `destination_created` and no staging is left; hooks do not run. `restore.p0` (traversal, links, case collisions, cancellation, staging cleanup), endpoint test (restored extension stays disabled and its code never runs). |
-| 7. Interfaces and the 1 GiB file | Partly proved | Integrated: `pst projects folder sources` equals the API listing, `status` equals `folderRecovery`, CLI `download` and `restore` complete and an existing destination fails with exit status 1. No Playwright scenario (no UI). The [5 GiB workload](../../references/performance/0008-folder-recovery-workload.md) passed on 2026-11-07: capture and upload 249.6 s, download with the laptop off 191.0 s, CLI restore 58.7 s, every digest matched; all 140 record saves completed with an update at the relay (max 787 ms) and all 103 second-account captures published (max 4.6 s) during the transfers. |
+| 6. Destination safety | Core filesystem checks passed; extension-activation qualification unresolved | Integrated: an existing empty folder is refused without writes, no staging is left and hooks do not run. The deterministic real-filesystem `restore.p0` owner creates a destination during an awaited progress callback and verifies `destination_created`, preserved bytes and staging cleanup; #2099 removed only the duplicate unsynchronized packaged race. `restore.p0` also covers traversal, links, case collisions and cancellation. The endpoint test retains disabled-extension and no-code-execution assertions; its shared-marker failure remains under investigation. A frozen module URL can be reused for identical bytes at another source path, so the URL alone does not establish which device requested evaluation. A passing disabled-instance check does not qualify the no-code-execution contract. |
+| 7. Interfaces and the 1 GiB file | Partly proved | Integrated: `pst projects folder sources` equals the API listing, completed download/restore receipts agree across CLI and API while live capture may advance, CLI `download` and `restore` complete and an existing destination fails with exit status 1. No Playwright scenario (no UI). The [5 GiB workload](../../references/performance/0008-folder-recovery-workload.md) passed on 2026-11-07: capture and upload 249.6 s, download with the laptop off 191.0 s, CLI restore 58.7 s, every digest matched; all 140 record saves completed and all 103 second-account captures published (max 4.6 s) during the transfers. The original record probe could complete on another document stream; its reported latency does not qualify the subsequently tightened notes-stream-specific probe. |
 
 ## Outcome and boundary
 
@@ -126,29 +133,27 @@ PS-960 has no linked prerequisite tickets. Its assigned base contains these modu
 
 ## Folder coverage and `.pstignore`
 
-The project folder is the inclusion boundary. Include everything except paths matched
-by the root `.pstignore`. `.gitignore`, Git tracked/untracked state, global Git rules
+Only a project folder with a root `.pstignore` is copied (PS-1130). A folder without
+one takes no copy and Prompt Studio never creates the file; its data already syncs as
+project records, and its source is expected to come from its own Git host. Removing
+`.pstignore` stops new copies; earlier copies stay restorable.
+
+Within a copied folder, the folder is the inclusion boundary. Include everything except
+paths matched by the root `.pstignore` and `.pstdio/extension-storage/`. `.gitignore`, Git tracked/untracked state, global Git rules
 and extension cache declarations do not filter the folder capture. The same rule works
 without Git installed and for non-Git projects.
 
-When a new folder is first enrolled without an inherited capture policy, create a
-missing `.pstignore` with this starter rule. Do not overwrite an existing file or
-recreate a deleted one:
+The one built-in exclusion is `.pstdio/extension-storage/` (PS-1134), which already
+syncs through project records. Core applies it after the folder's own rules, so no rule
+re-includes it. Otherwise a folder that opts in decides what to skip, for example
+`node_modules/`, `.cache/` or `dist/`. An empty `.pstignore` includes every other
+project-folder file. `.env` and `.env.*` remain included unless the policy excludes
+them, even when `.gitignore` does. The first PS-1069 design seeded a starter
+`.pstignore` with `node_modules/`; PS-1130 removed seeding along with opt-out by
+deletion.
 
-```text
-node_modules/
-```
-
-This skips dependency directories at any depth. Users can remove that rule or add
-their own, such as `.cache/` or `dist/`. There are no other built-in path exclusions.
-An empty or deliberately deleted `.pstignore` means all project-folder files are
-included. `.env` and `.env.*` are not in the starter rules and remain included even
-when `.gitignore` excludes them.
-
-Restoring a capture inherits its applied policy, including an empty file or deliberate
-absence. Starting capture on that new device must not seed a starter policy over the
-restored choice. Record absence in the manifest, so round-trip recovery preserves it
-without a separate local preference flag.
+Restoring a capture writes its `.pstignore`, so the restored folder keeps copying under
+the same rules.
 
 Use one UTF-8 `.pstignore` at the project root. Nested `.pstignore` files are ordinary
 files, not additional policies. Use familiar ignore-file patterns: `#` comments,
@@ -168,8 +173,9 @@ Re-scan when it changes, and verify it is unchanged before publishing the manife
 | Saved source, binaries, new files, dotfiles, empty directories and executable bits | Include unless matched by `.pstignore`. No commit or push is needed. |
 | `.git`, nested repositories and submodule files | Include unless matched by `.pstignore`, including objects, index, refs, reflogs, config and hooks. No separate Git opt-in. |
 | `.env`, key files and other credential-bearing files | Include unless explicitly matched by `.pstignore`, encrypted on the client before transfer. No secret-pattern exclusions. |
-| `node_modules`, build output, caches and Git-ignored files | Apply `.pstignore` only. The starter file excludes `node_modules/`; build output and caches remain included until users add rules. Size or transfer failures are not exclusions. |
-| `.pstdio/config.json`, `.pstdio/extensions` and `.pstdio/extension-storage` content | Include unless matched by `.pstignore`, including local extension code, caches, drafts, reports and nested workspace files. Preserve publisher paths. |
+| `node_modules`, build output, caches and Git-ignored files | Apply `.pstignore` only. Nothing is excluded until users add rules. Size or transfer failures are not exclusions. |
+| `.pstdio/config.json` and `.pstdio/extensions` content | Include unless matched by `.pstignore`, including local extension code. Preserve publisher paths. |
+| `.pstdio/extension-storage` content | Never copied (PS-1130 follow-up, PS-1134): it already syncs through project records, attachments and shared mounts. Core applies this after `.pstignore`, so no rule re-includes it. |
 | Files already represented by extension records or declared mounts | Apply `.pstignore` to their on-disk capture. This does not change the separate shared-record or declared-file sync owner. The scanner is read-only. |
 | Root `.pstignore` | Always retain the exact applied policy with the capture. |
 | Included symlinks | Retain the link and its exact target text without following it. An external target does not become part of the project folder. |
@@ -376,12 +382,11 @@ Implementation acceptance must prove:
 
 1. Two isolated runtimes recover all included non-Git text, binary, hidden and new files,
    directories and supported metadata with no Git host or online source device.
-2. The starter `.pstignore` skips nested `node_modules` folders and copies itself.
-   `.env`, keys and other Git-ignored files recover unless explicitly excluded in
-   `.pstignore`. Existing policies are not overwritten; deleting or emptying one
-   removes exclusions. Restore on a new device preserves the applied policy, including
-   deliberate absence, without regenerating starter rules. Custom globs, negation and
-   non-Git projects follow the same rules.
+2. A folder without a root `.pstignore` is not copied, and nothing creates the file.
+   A `.pstignore` with `node_modules/` skips nested `node_modules` folders and copies
+   itself. `.env`, keys and other Git-ignored files recover unless explicitly excluded
+   in `.pstignore`; emptying it removes exclusions. Restore on a new device preserves
+   the applied policy. Custom globs, negation and non-Git projects follow the same rules.
    Excluded files are not read/uploaded, while included failures remain blockers.
 3. Full Git state restores saved edits, staged content, unpushed and detached commits,
    reflogs and local config. Linked worktrees and submodules recover without source

@@ -1,8 +1,8 @@
 import { defineCommand, l10n, params, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
-import { serviceFor } from "./artifact-context";
+import { artifactOwnerFor, serviceFor } from "./artifact-context";
 import { removeArtifact, renameArtifact } from "./artifact-mutations";
-import { artifactUrl, extensionId } from "./contracts";
-import { sitesPath } from "./mounts";
+import { artifactUrl } from "./contracts";
+import { sitePaths } from "./mounts";
 import { artifactActionsSlot } from "./resource-kinds";
 
 const artifactParam = params.text({ required: true, resolvedFrom: "resource" });
@@ -22,7 +22,10 @@ export const resolveResources = defineCommand({
     if (requested.length > 100) throw new Error("Resolve at most 100 artifacts.");
     const refs = new Map(
       requested
-        .filter((ref) => ref.type === "artifact" && ref.extensionId === extensionId && ref.projectId === ctx.projectId)
+        .filter(
+          (ref) =>
+            ref.type === "artifact" && ref.extensionId === artifactOwnerFor(ctx) && ref.projectId === ctx.projectId,
+        )
         .map((ref) => [resourceKey(ref), ref]),
     );
     if (!refs.size) return [];
@@ -39,7 +42,8 @@ export const resolvePath = defineCommand({
   title: l10n("commands.resolvePath", "Resolve artifact path"),
   params: { path: params.text({ required: true }), workspaceId: params.text({ required: true }) },
   async run(ctx, input) {
-    const name = input.path.startsWith(sitesPath) ? input.path.slice(sitesPath.length) : "";
+    const prefix = sitePaths.find((prefix) => input.path.startsWith(prefix));
+    const name = prefix ? input.path.slice(prefix.length) : "";
     const revisionId = /^([^/]+)\.html$/.exec(name)?.[1];
     return revisionId ? serviceFor(ctx).resolveRevision(revisionId) : null;
   },

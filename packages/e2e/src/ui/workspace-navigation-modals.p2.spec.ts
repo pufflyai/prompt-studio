@@ -1,7 +1,7 @@
 import { rmSync } from "node:fs";
-import { expect, test } from "@playwright/test";
 import type { ListProjectExtensionsResponse } from "pstdio-api-contracts";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 import { getSidenavEntry } from "./helpers/sidenav-navigation";
 import { prepareDashboard } from "./helpers/workspace-files";
@@ -24,7 +24,7 @@ test("Files opens without Home and workspace creation stays in a keyboard-access
     const inventory = (await (
       await request.get(`${uiOrigin}/v1/projects/${project.id}/extensions`)
     ).json()) as ListProjectExtensionsResponse;
-    const home = inventory.extensions.find((extension) => extension.extensionId === "pstdio.pstdio-home");
+    const home = inventory.extensions.find((extension) => extension.extensionId === "pstdio.home");
     expect(home).toBeDefined();
     expect(
       (
@@ -71,7 +71,7 @@ test("Files opens without Home and workspace creation stays in a keyboard-access
     await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
     await page.getByRole("menuitem", { name: "Create workspace", exact: true }).click();
     await form.getByRole("button", { name: "Create workspace", exact: true }).click();
-    await expect(page).toHaveURL(/extensions\/pstdio\.pstdio-workspaces\/workspace\?/);
+    await expect(page).toHaveURL(/extensions\/pstdio\.workspaces\/workspace\?/);
     await expect(page.getByRole("dialog")).toHaveCount(0);
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${project.id}`);

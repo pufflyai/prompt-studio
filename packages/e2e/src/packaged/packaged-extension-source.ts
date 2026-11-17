@@ -6,10 +6,26 @@ import { packWorkspacePackageTarball } from "../local-workspace-registry";
 
 const repoRoot = join(import.meta.dirname, "../../../..");
 
+export const preparePackagedPackageArtifacts = (root: string) =>
+  Object.freeze(
+    Object.fromEntries(
+      ["sdk", "ui"].map((name) => [
+        `@pstdio/${name}`,
+        packWorkspacePackageTarball(join(repoRoot, "packages", name), root),
+      ]),
+    ),
+  );
+
 export async function preparePackagedExtensionSource(
   root: string,
   packagePath: string,
-  options: { install?: boolean; offline?: boolean; env?: NodeJS.ProcessEnv; signal?: AbortSignal } = {},
+  options: {
+    install?: boolean;
+    offline?: boolean;
+    env?: NodeJS.ProcessEnv;
+    signal?: AbortSignal;
+    packageArtifacts?: Readonly<Record<string, string>>;
+  } = {},
 ) {
   mkdirSync(root, { recursive: true });
   const source = join(root, "extension-source");
@@ -24,7 +40,10 @@ export async function preparePackagedExtensionSource(
   manifest.overrides = {};
   for (const name of ["sdk", "ui"]) {
     if (!manifest.dependencies?.[`@pstdio/${name}`]) continue;
-    const tarball = `file:${packWorkspacePackageTarball(join(repoRoot, "packages", name), root)}`;
+    const artifact =
+      options.packageArtifacts?.[`@pstdio/${name}`] ??
+      packWorkspacePackageTarball(join(repoRoot, "packages", name), root);
+    const tarball = `file:${artifact}`;
     manifest.dependencies[`@pstdio/${name}`] = tarball;
     manifest.overrides[`@pstdio/${name}`] = tarball;
   }

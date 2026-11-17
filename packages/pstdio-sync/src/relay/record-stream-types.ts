@@ -5,6 +5,7 @@ import type { DocumentRelay, SyncFailure } from "./document-sync-types";
 import type { OrderedIndexReference } from "./ordered-receipt-index-blobs";
 import type { AssetReferences } from "./record-assets";
 import type { RecordFrame } from "./record-frames";
+import type { FileProgress } from "./transfer-progress";
 
 /** What a device has read from its owner's record stream. Saved with the records it describes. */
 export interface RecordStreamCursor {
@@ -102,4 +103,5 @@ export interface RecordStreamInput {
   assets?: AssetStore;
   quarantine(failure: SyncFailure): Promise<void>;
   limits?: { bytes: number; updates: number };
+  fileProgress?: FileProgress;
 }

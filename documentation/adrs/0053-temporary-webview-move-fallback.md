@@ -22,6 +22,8 @@ Keep this fallback in the workbench view host and shared split-panel layout. Do 
 
 Explicit iframe moves between panels, including switching Side between floating and attached presentation and changing whole-panel positions, reload the iframe in browsers without `moveBefore`. React view identity is retained. Ordinary tab selection, panel hiding, and page navigation preserve iframe state in all supported engines because their hosts stay connected. Both Side presentation slots stay mounted; closing keeps its host in the last slot while hiding the shell.
 
+Attached view menus also retain one host when shown as a popup. Closing hides the connected popup slot. Resizing back to attached presentation is an explicit move and follows the same browser limitation.
+
 ## Removal
 
 Remove the explicit-move fallback when every supported browser implements `moveBefore`. Verify iframe markers and unsaved input across moves in browser tests before removing it. If preserving explicit iframe moves in older WebKit becomes a requirement, replace the fallback with a separately designed layout that keeps every iframe under one permanent parent.

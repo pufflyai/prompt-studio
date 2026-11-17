@@ -29,7 +29,14 @@ const Offline: Story = {
 };
 const Narrow: Story = {
   id: "primitives-document-participants--narrow",
-  args: { participants, label: "Other editors" },
+  args: {
+    participants: Array.from({ length: 12 }, (_, index) => ({
+      ...participants[index % participants.length],
+      id: `editor-${index}`,
+      label: `Long participant name ${index + 1}`,
+    })),
+    label: "Other editors",
+  },
   render: (args) => (
     <Box maxW="3xs">
       <DocumentParticipants {...args} />

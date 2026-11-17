@@ -6,15 +6,21 @@ import {
   chatRendererSnapshotSchema,
 } from "pstdio-api-contracts";
 import { createWorkbenchStore } from "../../core/shared/store/workbench-store";
-import { hydrateChatDraft, recoverChatDraft } from "./chat-draft-recovery";
+import {
+  canReplaceRecoveredChatDraft,
+  chatDraftContentKey,
+  hydrateChatDraft,
+  rebaseChatRecoveryKey,
+  recoverChatDraft,
+} from "./chat-draft-recovery";
 import { createChatDraftRestoration } from "./chat-draft-restoration";
 import { createChatEventReader } from "./chat-event-reader";
 import { clearDeliveredChatRecoveries } from "./chat-failed-submission";
 import { type ChatQueryContext, createChatFiniteRead } from "./chat-finite-read";
 import { type ChatPendingSubmission, createChatSubmissionPresentation } from "./chat-pending-submission";
 import { createChatSessionDraft } from "./chat-session-draft";
+import { watchChatSession } from "./chat-session-watch";
 import { createChatSnapshot } from "./chat-snapshot";
-import type { createChatStreamReader } from "./chat-stream-reader";
 import { createChatSubmissionRunner } from "./chat-submission";
 import { createChatSubmissionHandoff } from "./chat-submission-handoff";
 
@@ -42,9 +48,6 @@ const executeChatAction = async (
   return chatRendererActionResultSchema.parse((await handler(chatRendererActionSchema.parse(action))) ?? {});
 };
 
-const emptyChatDraft = (draft: ChatDraft) =>
-  !draft.text && !draft.attachments.length && !draft.recovered?.length && !Object.keys(draft.values).length;
-
 const initialChatState = (initial?: ChatRendererSnapshot) => ({
   conversation: {
     ...chatRendererSnapshotSchema.parse(initial ?? {}),
@@ -66,30 +69,6 @@ const assertChatActionAvailable = (conversation: ChatRendererSnapshot, action: C
     throw new Error("This conversation is read-only.");
   if (conversation.queueReadOnly && action.type === "queue")
     throw new Error("This queue is read-only. Refresh it before editing.");
-};
-
-const watchChatSession = async (
-  watch: NonNullable<ChatSessionInput["watch"]>,
-  signal: AbortSignal,
-  active: () => boolean,
-  reader: ReturnType<typeof createChatStreamReader>,
-  fail: (error: unknown) => void,
-) => {
-  try {
-    const stream = watch(signal);
-    void stream.result?.catch(() => undefined);
-    for await (const event of stream) {
-      if (signal.aborted) break;
-      if (active()) reader.accept(event);
-    }
-    if (active()) reader.finish();
-    await stream.result;
-  } catch (error) {
-    if (active()) {
-      reader.reset();
-      fail(error);
-    }
-  }
 };
 
 const projectChatState = (
@@ -129,16 +108,28 @@ const trackChatAction = <T>(
   return running;
 };
 
+const chatErrorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
 /** One owner per project/view/resource, shared across page/panel changes. */
 export const createChatSession = (input: ChatSessionInput) => {
   let state = initialChatState(input.initial);
+  let errorRevision = 0;
   const projection = createWorkbenchStore({ name: "workbench.chat", initialState: state });
   const present = createChatSubmissionPresentation();
   const publish = (update: Partial<typeof state>) => {
+    if (Object.hasOwn(update, "error")) errorRevision++;
     state = projectChatState(state, update, present);
     if (!retired) projection.setState(state, true, "projectChat");
   };
-  const fail = (error: unknown) => publish({ error: error instanceof Error ? error.message : String(error) });
+  const fail = (error: unknown) => publish({ error: chatErrorMessage(error) });
+  const failWatch = (error: unknown) => {
+    const previous = state.error;
+    fail(error);
+    const revision = errorRevision;
+    return (cause?: unknown) => {
+      if (errorRevision === revision) publish({ error: cause === undefined ? previous : chatErrorMessage(cause) });
+    };
+  };
   let holds = 0;
   let observing = false;
   let controller: AbortController | undefined;
@@ -149,7 +140,8 @@ export const createChatSession = (input: ChatSessionInput) => {
   const actions = new Set<Promise<unknown>>();
   let retired = false;
   const retiredState = initialChatState();
-  let recoverableDraft: ChatDraft | undefined;
+  // Unchanged composer writes may replace the object without creating newer work.
+  let recoverableDraft: string | undefined;
   const merge = (
     incoming: ChatRendererSnapshot,
     issued = ++clock,
@@ -159,6 +151,8 @@ export const createChatSession = (input: ChatSessionInput) => {
   ) => {
     const pending = state.pending;
     const merged = snapshots.merge(state, incoming, issued, expectedValues, action);
+    // Host control defaults do not create a new composer draft; explicit user edits still fence recovery.
+    recoverableDraft = rebaseChatRecoveryKey(recoverableDraft, state.draft, merged.state.draft);
     hasLoaded = true;
     publish({ ...merged.state, loading: false });
     const recovery = clearDeliveredChatRecoveries(state.draft, pending ?? [], state.pending);
@@ -177,7 +171,7 @@ export const createChatSession = (input: ChatSessionInput) => {
         recoverChatDraft(
           state.draft,
           recovered,
-          (drafts.changes() === 0 && emptyChatDraft(state.draft)) || state.draft === recoverableDraft,
+          canReplaceRecoveredChatDraft(state.draft, drafts.changes(), recoverableDraft),
         ),
       );
       recoverableDraft = undefined;
@@ -222,7 +216,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     void Promise.all([query, hydration]).then(() => {
       if (active()) publish({ initializing: false });
     });
-    if (input.watch) void watchChatSession(input.watch, signal, active, reader, fail);
+    if (input.watch) void watchChatSession(input.watch, signal, active, reader, failWatch);
     drafts.persist();
   };
   const execute = async (
@@ -249,7 +243,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     changeDraft,
     fail,
     markRecoverable: () => {
-      recoverableDraft = state.draft;
+      recoverableDraft = chatDraftContentKey(state.draft);
     },
   });
   const run = (action: ChatRendererAction, handler = input.action) => {

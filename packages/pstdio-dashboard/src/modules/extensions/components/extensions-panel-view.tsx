@@ -18,6 +18,7 @@ import { ExtensionListRow } from "./extension-list-row";
 import { MarketplaceExtensionRow } from "./marketplace-extension-row";
 
 export interface ExtensionsPanelViewProps {
+  projectId?: string;
   extensions: ProjectExtensionInstance[];
   marketplace: MarketplaceExtension[];
   diagnostics: ExtensionDiagnostic[];
@@ -43,6 +44,9 @@ export interface ExtensionsPanelViewProps {
   addingFolderName?: string;
   onDropFolder?: (folder: DroppedExtensionFolder) => void;
 }
+
+const compareDisplayName = (a: { displayName: string }, b: { displayName: string }) =>
+  a.displayName.localeCompare(b.displayName);
 
 const getDiagnosticsByExtensionId = (extensions: ProjectExtensionInstance[], diagnostics: ExtensionDiagnostic[]) => {
   const installedExtensionIds = new Set(extensions.map((extension) => extension.extensionId));
@@ -102,8 +106,9 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
   const [search, setSearch] = useState("");
 
   const diagnosticsByExtensionId = getDiagnosticsByExtensionId(extensions, diagnostics);
-  const visible = extensions.filter((extension) => matchesSearch(extension, search));
-  const availableMarketplace = marketplace.filter((extension) => !extension.installed);
+  const sortedExtensions = [...extensions].sort(compareDisplayName);
+  const visible = sortedExtensions.filter((extension) => matchesSearch(extension, search));
+  const availableMarketplace = marketplace.filter((extension) => !extension.installed).sort(compareDisplayName);
   const visibleMarketplace = availableMarketplace.filter((extension) => matchesMarketplaceSearch(extension, search));
   const installingNames = new Set(installingMarketplaceNames);
   const upgradable = extensions.filter((extension) => extension.canUpgrade);
@@ -175,6 +180,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
 
       {visible.map((extension) => (
         <ExtensionListRow
+          projectId={props.projectId}
           key={extension.id}
           extension={extension}
           diagnostics={diagnosticsByExtensionId.get(extension.extensionId) ?? []}

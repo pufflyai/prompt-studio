@@ -5,7 +5,7 @@ import { readWorkflowStatuses } from "../data/workflow-statuses";
 export const implementationPolicyCommand = defineCommand({
   id: "implementation-policy",
   title: l10n("commands.implementationPolicy.title", "Read ticket implementation policy"),
-  cli: { examples: ["pst pstdio-planner implementation-policy"] },
+  cli: { examples: ["pst pstdio.planner implementation-policy"] },
   async run(ctx, _commandParams) {
     const settings = await ctx.settings.all();
     return {

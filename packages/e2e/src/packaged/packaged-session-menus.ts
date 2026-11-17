@@ -211,7 +211,7 @@ export const verifyPackagedSessionMenus = async (
   await page.getByRole("menuitem", { name: "Switch session", exact: true }).click();
   const picker = page.getByRole("dialog", { name: "Switch session", exact: true });
   await picker.getByRole("textbox").fill("Packaged session actions");
-  await expect(picker.getByRole("img", { name: "Session status: completed" })).toBeVisible();
+  await expect(picker.getByRole("img", { name: "Session status: pending" })).toBeVisible();
   for (const title of ["Packaged session actions updated", "Packaged session actions"]) {
     const updated = await fetch(`${baseUrl}/v1/sessions/${session.id}/title`, {
       method: "PATCH",
@@ -255,7 +255,7 @@ export const verifyPackagedSessionMenus = async (
     .click();
   await page.getByRole("button", { name: "Delete session", exact: true }).click();
   await expect(page).toHaveURL(
-    new RegExp(`/projects/${projectId}/extensions/pstdio.pstdio-session-browser/conversations/compose$`),
+    new RegExp(`/projects/${projectId}/extensions/pstdio.session-browser/conversations/compose$`),
   );
   const deleted = await fetch(`${baseUrl}/v1/sessions/${session.id}`, { headers: authorization });
   expect(deleted.status).toBe(404);

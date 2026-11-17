@@ -1,13 +1,13 @@
 {
-  "name": "pstdio-reports",
-  "version": "0.46.0",
+  "name": "reports",
+  "version": "0.46.1",
   "displayName": "Agent Reports",
   "icon": "FileChartColumn",
   "description": "Built-in pstdio workspace reports for agent handoffs.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.2.1 || ^0.3.0 || ^0.4.0"
+    "pstdio": "^0.5.0"
   },
   "pstdio": {
     "scope": "user"
@@ -15,12 +15,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun ../../scripts/ci/run-bun-tests.ts",
-    "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --coverage",
+    "test": "bun test",
+    "test:coverage": "bun test --coverage",
     "typecheck": "bun check"
   },
   "dependencies": {
-    "@pstdio/sdk": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4"
+    "@pstdio/sdk": "0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",

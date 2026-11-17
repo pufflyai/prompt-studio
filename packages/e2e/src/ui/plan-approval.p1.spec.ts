@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { isSessionChatAction, sessionChatActionRoute } from "../helpers/session-chat-actions";
+import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 
 test("plan actions take over the composer and restore its draft without sending it", async ({ page, request }) => {

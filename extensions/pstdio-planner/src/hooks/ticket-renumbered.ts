@@ -1,7 +1,7 @@
 import { defineHook, resourceEvents } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { moveTicketCheckout } from "../data/ticket-checkout";
-import { plannerTicketsChanged } from "../events";
+import { emitPlannerTicketsChanged } from "../events";
 
 export const ticketRenumberedHook = defineHook({
   id: "ticket-renumbered",
@@ -13,7 +13,7 @@ export const ticketRenumberedHook = defineHook({
     try {
       if (ctx.projectFiles) await moveTicketCheckout(ctx.projectFiles, ticket, event.previousShorthand);
     } finally {
-      await ctx.events.emit(plannerTicketsChanged, { ticketId: ticket.id });
+      await emitPlannerTicketsChanged(ctx, { ticketId: ticket.id });
     }
   },
 });

@@ -1,7 +1,6 @@
-import { expect, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, test } from "../scripts/webview-test";
 import { uiOrigin } from "../ui-server";
-import { scrollSidenavToEnd } from "./helpers/sidenav-navigation";
 
 test("moving a webview between panels preserves its browsing context", async ({ page, request }) => {
   const response = await request.post(`${uiOrigin}/v1/projects`, {
@@ -13,14 +12,12 @@ test("moving a webview between panels preserves its browsing context", async ({ 
     await page.addInitScript((projectId: string) => {
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, project.id);
-    await page.goto(`/projects/${project.id}/`);
-    await scrollSidenavToEnd(page);
-    await page.getByRole("option", { name: "Lab mode", exact: true }).click();
-    const tab = page.getByRole("tab", { name: "Overview", exact: true });
+    await page.goto(`/projects/${project.id}/extensions/test.webview-host/host`);
+    const tab = page.getByRole("tab", { name: "Host page", exact: true });
     await expect(tab).toBeVisible();
-    const element = page.locator('iframe[title="Overview"]');
+    const element = page.locator('iframe[title="Host page"]');
     await expect(element).toBeVisible();
-    await expect(element.contentFrame().getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
+    await expect(element.contentFrame().getByRole("heading", { name: "Host contract" })).toBeVisible();
     const frame = await (await element.elementHandle())?.contentFrame();
     expect(frame).toBeTruthy();
     await frame!.evaluate(() => Reflect.set(window, "placementMarker", "original context"));
@@ -30,7 +27,7 @@ test("moving a webview between panels preserves its browsing context", async ({ 
       await expect(
         page
           .getByRole("region", { name: destination === "Side" ? "Side Panel" : "Main", exact: true })
-          .locator('iframe[title="Overview"]'),
+          .locator('iframe[title="Host page"]'),
       ).toBeVisible();
       expect(frame!.isDetached()).toBe(false);
       expect(await frame!.evaluate(() => Reflect.get(window, "placementMarker"))).toBe("original context");
@@ -62,7 +59,7 @@ test("a webview connects when its frame is reattached while the runtime loads", 
   const runtimeRequested = Promise.withResolvers<void>();
   const reattached = Promise.withResolvers<void>();
   let runtimeRequests = 0;
-  await page.route("**/pstdio.workbench-fixture.view.overview/runtime", async (route) => {
+  await page.route("**/test.webview-host.view.page/runtime", async (route) => {
     runtimeRequests += 1;
     if (runtimeRequests > 1) return route.continue();
     runtimeRequested.resolve();
@@ -75,13 +72,13 @@ test("a webview connects when its frame is reattached while the runtime loads", 
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, project.id);
     // The runtime is deliberately held below; wait for the host document, not the iframe's load.
-    await page.goto(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab-mode`, {
+    await page.goto(`/projects/${project.id}/extensions/test.webview-host/host`, {
       waitUntil: "domcontentloaded",
     });
     await runtimeRequested.promise;
     // Reinserting an iframe gives it a new browsing context, as React StrictMode
     // and DOM moves without moveBefore do.
-    await page.locator('iframe[title="Overview"]').evaluate((iframe) => {
+    await page.locator('iframe[title="Host page"]').evaluate((iframe) => {
       const parent = iframe.parentNode!;
       const next = iframe.nextSibling;
       iframe.remove();
@@ -89,7 +86,7 @@ test("a webview connects when its frame is reattached while the runtime loads", 
     });
     reattached.resolve();
     await expect(
-      page.locator('iframe[title="Overview"]').contentFrame().getByRole("heading", { name: "Sandbox webview" }),
+      page.locator('iframe[title="Host page"]').contentFrame().getByRole("heading", { name: "Host contract" }),
     ).toBeVisible();
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${project.id}`);

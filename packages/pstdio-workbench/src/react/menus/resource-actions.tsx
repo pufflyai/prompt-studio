@@ -15,7 +15,8 @@ const toResourceContextAction = (item: TreeListActionMenuItem): ResourceContextA
   endContent: item.endContent,
   isDisabled: item.disabled,
   separatorBefore: item.separatorBefore,
-  onClick: () => item.onAction?.(),
+  onSelect: item.runOnSelect ? () => item.onAction?.() : undefined,
+  onClick: item.runOnSelect ? undefined : () => item.onAction?.(),
 });
 export const createWorkbenchResourceActions = (
   workbench: WorkbenchCoreContributionContext,

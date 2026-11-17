@@ -8,13 +8,12 @@
   "type": "module",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.3.0 || ^0.4.0"
+    "pstdio": "^0.3.0 || ^0.4.0 || ^0.5.0"
   },
   "pstdio": {
     "scope": "repo"
   },
   "scripts": {
-    "test": "bun ../../../scripts/ci/run-bun-tests.ts",
     "lint": "bun check",
     "typecheck": "bun check"
   },

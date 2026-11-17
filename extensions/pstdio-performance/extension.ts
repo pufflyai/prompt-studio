@@ -6,6 +6,7 @@ import {
   packageAsset,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
+import { diagnosticCommands } from "./src/diagnostics/commands";
 
 const meter = defineView({
   id: "meter",
@@ -25,7 +26,7 @@ const details = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./src/details-view.tsx", import.meta.url),
-    capabilities: ["performance.read", "performance.control", "clipboard.write"],
+    capabilities: ["performance.read", "performance.control", "commands.execute", "clipboard.write"],
   },
 });
 
@@ -40,6 +41,7 @@ export default defineExtension({
     "zh-Hant": packageAsset("./l10n/zh-Hant.json", import.meta.url),
   },
   views: [meter, details],
+  commands: Object.values(diagnosticCommands),
   statusBarItems: [
     defineStatusBarItem({
       id: "performance",

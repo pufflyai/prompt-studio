@@ -39,6 +39,10 @@ export interface WorkbenchExtensionHostMenuRegistration
 
 export interface RegisterWorkbenchExtensionContributionsInput extends ChatCommandTransport {
   queries?: ScopedQueryClient;
+  resourceActivity?: Omit<
+    import("../../core/registries/resources/resource-activity").ResourceActivityBinding,
+    "capabilities"
+  >;
   /** Stable requested locale and fallback hierarchy for localized tab results. */
   presentationLocale?: string;
   terminalRendererOwners?: TerminalRendererOwners;
@@ -68,6 +72,8 @@ export interface RegisterWorkbenchExtensionContributionsInput extends ChatComman
   ): Promise<unknown> | unknown;
   projectId: string;
   resolveTreeNodeResource?: RegisterWorkbenchExtensionTreeRenderersInput["resolveNodeResource"];
+  treeSources?: RegisterWorkbenchExtensionTreeRenderersInput["treeSources"];
+  renderTreeNodeEndContent?: RegisterWorkbenchExtensionTreeRenderersInput["renderNodeEndContent"];
   renderWebview?(input: WorkbenchPanelRenderInput): unknown;
   settingsSectionId?: string;
   settingsSectionTitle?: string;

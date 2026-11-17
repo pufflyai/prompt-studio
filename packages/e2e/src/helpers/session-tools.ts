@@ -7,7 +7,7 @@ export const verifySessionTools = async (page: Page) => {
   await expect(editor).toBeVisible();
   const landingPath = new URL(page.url()).pathname.replace(
     /\/sessions\/compose$/,
-    "/extensions/pstdio.pstdio-session-browser/conversations/compose",
+    "/extensions/pstdio.session-browser/conversations/compose",
   );
   const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
   await expect(breadcrumb).toContainText("Sessions");

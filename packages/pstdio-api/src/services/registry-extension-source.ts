@@ -1,4 +1,3 @@
-import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createRegistryClient, parseRegistrySourceRef } from "pstdio-extensions/distribution";
 import type { ExtensionCatalogEntry } from "../features/extensions/extension-catalog";
@@ -20,13 +19,11 @@ export const createRegistryExtensionSource = (
     return null;
   };
   const installRelease = async (id: string, registry: string, options: Omit<InstallExtensionSourceInput, "source">) => {
-    const client = createRegistryClient(registry);
-    const release = await client.latest(id, EXTENSION_API_VERSION, options.signal);
     return install({
       ...options,
       source: id,
       installName: options.installName ?? id,
-      prepareNamedSource: (_name, tempDir, _ref, signal) => client.prepare(release, join(tempDir, "package"), signal),
+      registrySource: { url: registry, id },
     });
   };
   const hasNewerRelease = async (registry: string, id: string, installedVersion: string) => {

@@ -29,7 +29,13 @@ const pointDetail = (point: FocusedPoint, series: PlatformSeries) =>
 // One time series per benchmark: a median line per platform, and the budget when it has one.
 export const TrendCard = (props: TrendCardProps) => {
   const { series, versions } = props;
-  const [focused, setFocused] = useState<FocusedPoint | null>(null);
+  // Chart updates emit fresh point objects. Keep only identity so focus cannot trigger a render loop,
+  // and read its current measurement from the series when results refresh.
+  const [focused, setFocused] = useState<string | null>(null);
+  const focusedSeries = series.find((entry) => focused?.startsWith(`${entry.platform}/`));
+  const focusedPoint = focusedSeries?.metric.points.find(
+    (point) => point && `${focusedSeries.platform}/${point.version}` === focused,
+  );
   const [first] = series;
   if (!first) return null;
   const { metric } = first;
@@ -47,9 +53,16 @@ export const TrendCard = (props: TrendCardProps) => {
           )}
         </HStack>
         <Stack gap="2xs">
-          <TrendChart series={series} versions={versions} height={180} onFocusPoint={setFocused} />
+          <TrendChart
+            series={series}
+            versions={versions}
+            height={180}
+            onFocusPoint={(point) => setFocused(point ? `${point.platform}/${point.version}` : null)}
+          />
           <Text textStyle="label/XS" color="fg.muted" minH="4" aria-live="polite" truncate>
-            {focused ? pointDetail(focused, first) : ""}
+            {focusedPoint && focusedSeries
+              ? pointDetail({ ...focusedPoint, platform: focusedSeries.platform }, focusedSeries)
+              : ""}
           </Text>
         </Stack>
       </SimpleCardBody>

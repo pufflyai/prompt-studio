@@ -10,6 +10,14 @@ const hasContent = (draft: ChatDraft) =>
 
 export const chatDraftContentKey = (draft: ChatDraft) => JSON.stringify(chatDraftContent(draft));
 
+export const canReplaceRecoveredChatDraft = (draft: ChatDraft, changes: number, recoveryKey: string | undefined) =>
+  (changes === 0 &&
+    !draft.text &&
+    !draft.attachments.length &&
+    !draft.recovered?.length &&
+    !Object.keys(draft.values).length) ||
+  chatDraftContentKey(draft) === recoveryKey;
+
 /** Keep both drafts when someone starts typing before the extension's storage read completes. */
 export const hydrateChatDraft = (current: ChatDraft, saved: ChatDraft) => {
   const key = chatDraftContentKey;
@@ -36,3 +44,7 @@ export const recoverChatDraft = (current: ChatDraft, failed: ChatDraft, replace:
   if (!current.recovered?.length) return failed;
   return hydrateChatDraft(failed, { text: "", attachments: [], values: {}, recovered: current.recovered });
 };
+
+/** Host control hydration advances the same recovered content; user edits keep their own boundary. */
+export const rebaseChatRecoveryKey = (key: string | undefined, previous: ChatDraft, next: ChatDraft) =>
+  chatDraftContentKey(previous) === key ? chatDraftContentKey(next) : key;

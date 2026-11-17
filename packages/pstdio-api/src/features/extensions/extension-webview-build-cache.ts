@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { initializePublishedWebviewRevision } from "pstdio-extensions/prepared-cache";
 
 export const publishedWebviewModule = (distDir: string) => join(distDir, "module.js");
 
@@ -14,6 +15,8 @@ export const readWebviewBuildSignature = (distDir: string) => {
 };
 
 export const prepareWebviewBuildCache = (distDir: string, activeStages: Set<string>) => {
+  const published = readWebviewBuildSignature(distDir);
+  if (published) initializePublishedWebviewRevision(distDir, published);
   // A failed replacement must not leave a reusable signature and a persisted error.
   rmSync(join(distDir, "build-signature.txt"), { force: true });
   const parent = dirname(distDir);

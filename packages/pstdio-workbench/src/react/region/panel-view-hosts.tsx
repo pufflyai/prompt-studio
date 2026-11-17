@@ -1,4 +1,5 @@
 import { Box } from "@chakra-ui/react";
+import { UiScopeActivity } from "@pstdio/ui";
 import {
   Activity,
   createContext,
@@ -123,12 +124,14 @@ const PanelViewPortal = (props: {
       }}
     >
       {/* The retained view owns its viewport, so another tab cannot reset its scroll position. */}
-      <RegionScrollArea>
-        {/* Preserve collection state while deferring updates and reads for hidden pages. */}
-        <Activity mode={active || !collection ? "visible" : "hidden"}>
-          <WorkbenchWidgetHost workbench={workbench} placement={placement} region={region} visible={active} />
-        </Activity>
-      </RegionScrollArea>
+      <UiScopeActivity active={active}>
+        <RegionScrollArea>
+          {/* Preserve collection state while deferring updates and reads for hidden pages. */}
+          <Activity mode={active || !collection ? "visible" : "hidden"}>
+            <WorkbenchWidgetHost workbench={workbench} placement={placement} region={region} visible={active} />
+          </Activity>
+        </RegionScrollArea>
+      </UiScopeActivity>
     </Box>,
     host,
   );
@@ -152,7 +155,8 @@ const PageContentViewHosts = (props: {
     () => releaseViewerHosts(workbench, new Set(retained.map((placement) => placement.widgetId))),
     [workbench, retained],
   );
-  if (content) hosts.set(viewerHostKey(workbench, content.widgetId), content);
+  // Retention already includes current content. Resolve its host key only in that
+  // pass: a released view gets a new key when it returns after retention expires.
   return [...hosts].map(([key, placement]) => (
     <PanelViewPortal
       key={key}

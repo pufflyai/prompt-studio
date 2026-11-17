@@ -76,5 +76,11 @@ export const useCommandMutation = <TParams, TResult>(input: CommandMutationInput
   });
 };
 
-export { useScopedQueries, useScopedQuery, useWebviewQuery, useWebviewScope } from "./scoped-query";
+export {
+  useScopedQueries,
+  useScopedQuery,
+  useWebviewCommandQuery,
+  useWebviewQuery,
+  useWebviewScope,
+} from "./scoped-query";
 export { useWebviewVisibility } from "./webview-visibility";

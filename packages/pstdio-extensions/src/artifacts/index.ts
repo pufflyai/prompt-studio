@@ -6,6 +6,7 @@ export {
   resolveArtifactMountRoot,
 } from "./artifact-mount";
 export { isPackageAssetDescriptor } from "./asset-validation";
+export { migrateExtensionFiles } from "./extension-file-migration";
 export {
   type ExtensionStorageOwner,
   extensionFilesPath,

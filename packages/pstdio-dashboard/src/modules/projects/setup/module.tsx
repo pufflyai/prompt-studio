@@ -8,6 +8,7 @@ import {
   getCachedDashboardExtensionMetadata,
   subscribeDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
+import type { ProjectSetupHandoff } from "./project-setup-handoff";
 
 const setupOverlayPrefix = "dashboard.project-opening.setup.";
 const ownedContributionPrefix = `workbench.overlay.${encodeURIComponent(setupOverlayPrefix)}`;
@@ -30,7 +31,7 @@ type OpeningRequest = {
 };
 
 // Owns only a single explicit project-opening request. Enabled extensions own setup content/state.
-export const createProjectOpeningModule = () => {
+export const createProjectOpeningModule = (input: { handoff?: ProjectSetupHandoff } = {}) => {
   let context: WorkbenchModuleContext;
   let request: OpeningRequest | undefined;
   let cleaning = false;
@@ -89,7 +90,7 @@ export const createProjectOpeningModule = () => {
     pending.views = (metadata.projectSetups ?? []).map(({ view }) => `${view.extensionId}.view.${view.id}`);
     next(pending);
   };
-  const open = async (project: Promise<{ id: string; created?: boolean }>) => {
+  const start = async (project: Promise<{ id: string; created?: boolean }>, handOff: boolean) => {
     close();
     const completion = Promise.withResolvers<void>();
     const pending: OpeningRequest = { registrations: [], finish: () => completion.resolve() };
@@ -103,6 +104,11 @@ export const createProjectOpeningModule = () => {
         return;
       }
       pending.projectId = opened.id;
+      if (handOff && input.handoff) {
+        close();
+        input.handoff.hand(opened.id);
+        return;
+      }
       // Selection happens in the creator after this promise resolves; registration may finish later.
       ready();
       await completion.promise;
@@ -111,6 +117,7 @@ export const createProjectOpeningModule = () => {
       // The project creator owns its recoverable error beside the folder picker.
     }
   };
+  const open = (project: Promise<{ id: string; created?: boolean }>) => start(project, true);
   const module = {
     id: "dashboard.project-opening",
     activate(ctx) {
@@ -132,10 +139,17 @@ export const createProjectOpeningModule = () => {
         removeOrphans(request?.instanceId);
         rotating = false;
       });
+      const claimHandedSetup = () => {
+        const projectId = getDashboardSelectedProjectId(ctx);
+        if (projectId && input.handoff?.take(projectId))
+          void start(Promise.resolve({ id: projectId, created: true }), false);
+      };
       const selection = subscribeDashboardSelectedProject(ctx, () => {
         if (request && getDashboardSelectedProjectId(ctx) !== request.projectId) close();
         else ready();
+        claimHandedSetup();
       });
+      claimHandedSetup();
       const registration = subscribeDashboardExtensionsReadyProject(ctx, ready);
       const metadata = subscribeDashboardExtensionMetadata(
         () => {

@@ -71,12 +71,14 @@ Commands and hooks get `ctx.terminal` (an `ExtensionTerminalApi`) when the host 
 `terminal.session` and `createTerminalSessionBridge` are deprecated in 0.44. Use the host
 terminal surface for new views. Existing webviews can still declare the `terminal.session` capability. It is the only public webview terminal capability in this version. Its calls are serializable operations: `open`, `write`, `resize`, `kill`, and `subscribe`. `open` returns only a `sessionId`, and the bridge pushes output and exit events to the webview. Use `createTerminalSessionBridge(host)` from `@pstdio/sdk/extensions` to get a bridge for the `Terminal` component from `@pstdio/ui/terminal`. The capability gate rejects webviews that did not declare the capability.
 
-Closing a terminal panel kills its session. A session opened through `ctx.terminal` belongs to the invocation that opened it and is killed when that invocation ends. When the app exits, the PTY supervisor kills any session that is still running.
+Closing a terminal panel kills its session; closing the workbench that shows it does not. A session opened through `ctx.terminal` belongs to the invocation that opened it and is killed when that invocation ends. When the app exits, the PTY supervisor kills any session that is still running.
 
 `kill()` signals the session's process group, so the shell and everything it started stop together. The default signal is `SIGHUP`, which shells honor even when they ignore `SIGTERM`. The host then sends `SIGKILL` to the group, because a shell that exits may leave children running. The call always settles. A job that moves to its own process group and ignores the hangup keeps running, as `nohup` jobs do in any terminal.
 
 In the dashboard, a WebSocket at `/v1/terminal` opens a PTY in the runtime and carries output, exit, input, resize, and kill messages. Webviews that declare `terminal.session` use this same transport.
 
+A terminal panel opens its PTY with an attach key made of its project and panel placement. Such a PTY outlives its socket: closing the workbench that shows it, such as closing a desktop project tab or reloading the page, only detaches it. Reopening the panel resumes the same shell and replays up to 256 KiB of its recent output. Only closing the panel, the process exiting, or the app exiting ends it. A second window that opens the same panel while the PTY is attached elsewhere gets its own shell. A PTY opened without an attach key still ends with its socket.
+
 Logs record only lifecycle data: session ID, process ID, exit code, and signal. Terminal content is never logged.
 
-*Updated at: 2026-10-18*
+*Updated at: 2026-11-11*

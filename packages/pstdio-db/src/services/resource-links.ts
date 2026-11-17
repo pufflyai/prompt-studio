@@ -2,9 +2,10 @@ import { and, eq, or, sql } from "drizzle-orm";
 import type { ResourceAnchor, ResourceRef, ResourceRole } from "pstdio-api-contracts/extension-kernel";
 import type { DbClient } from "../db/connection.pglite";
 import { resource_anchors as edges } from "../db/schemas/resource-anchors";
+import { queryRelatedResources } from "./related-resource-query";
 import { lockResourceLinkSource } from "./resource-link-source";
 
-type Database = Pick<DbClient, "select" | "insert" | "delete" | "update" | "transaction">;
+type Database = Pick<DbClient, "select" | "insert" | "delete" | "update" | "transaction" | "execute">;
 export type CanonicalResource = ResourceRef & { projectId: string; extensionId: string };
 type Edge = typeof edges.$inferSelect;
 
@@ -128,6 +129,7 @@ const refsMatch = (resource: CanonicalResource, refs: ResourceRef[]) =>
   );
 
 export const createResourceLinksDBService = (db: Database) => ({
+  related: (input: Parameters<typeof queryRelatedResources>[1]) => queryRelatedResources(db, input),
   add: (resource: CanonicalResource, anchors: ResourceAnchor[], details = anchors) =>
     db.transaction(async (tx) => {
       const touchSource = await lockResourceLinkSource(tx, resource);

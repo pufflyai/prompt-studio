@@ -47,8 +47,7 @@ export const writeReportCommand = defineCommand({
   id: "reports.write",
   title: "Write report",
   cli: {
-    globalAliases: [["reports", "write"]],
-    examples: ["pstdio reports write --kind review --template review"],
+    examples: ["pstdio pstdio.reports reports write --kind review --template review"],
   },
   params: {
     workspace: params.text(),

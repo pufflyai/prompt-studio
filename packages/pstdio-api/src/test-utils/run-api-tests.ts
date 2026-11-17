@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
-import { createApiTestPlan } from "./api-test-plan";
+import { createApiTestPlan } from "./api-test-plan.fixture";
 import { runApiTestFiles } from "./api-test-scheduler";
 import { recordStalledProcesses, stopProcessTree } from "./api-test-stall";
 
@@ -21,7 +21,10 @@ if (selected !== undefined && (!Array.isArray(selected) || selected.some((file) 
 }
 const timingFile = option("--timings");
 const timingData = timingFile ? await Bun.file(timingFile).json() : undefined;
-const plan = createApiTestPlan(Array.from(new Bun.Glob("src/**/*.test.{ts,tsx}").scanSync({ cwd: packageRoot })), {
+const discovered =
+  (selected as string[] | undefined) ??
+  Array.from(new Bun.Glob("src/**/*.test.{ts,tsx}").scanSync({ cwd: packageRoot }));
+const plan = createApiTestPlan(discovered, {
   files: selected as string[] | undefined,
   shard: option("--shard"),
   timings: timingData?.files ?? timingData,

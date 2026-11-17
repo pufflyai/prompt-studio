@@ -46,11 +46,9 @@ export const setAccountFeatureInTransaction = async (
       .where(and(eq(accountFeatures.accountId, accountId), eq(accountFeatures.feature, feature)));
 };
 
-export const setAccountFeatureByEmail = async (
-  db: ManagerDatabase,
-  input: { email: string; feature: "relay"; enabled: boolean },
-) => {
-  const email = z.email().parse(input.email.trim());
+/** The one account a verified Google email signed in to. Operators name accounts by email. */
+export const findAccountIdByEmail = async (db: Pick<ManagerDatabase, "selectDistinct">, address: string) => {
+  const email = z.email().parse(address.trim());
   const matches = await db
     .selectDistinct({ accountId: accounts.id })
     .from(accounts)
@@ -64,8 +62,15 @@ export const setAccountFeatureByEmail = async (
       ),
     );
   if (matches.length !== 1)
-    throw new Error("No unique account with that verified Google email. Sign in once before granting a feature.");
-  const { accountId } = matches[0];
+    throw new Error("No unique account with that verified Google email. The person must sign in once first.");
+  return matches[0].accountId;
+};
+
+export const setAccountFeatureByEmail = async (
+  db: ManagerDatabase,
+  input: { email: string; feature: "relay"; enabled: boolean },
+) => {
+  const accountId = await findAccountIdByEmail(db, input.email);
   await withAccountTransaction(db, accountId, (transaction) =>
     setAccountFeatureInTransaction(transaction, { accountId, feature: input.feature, enabled: input.enabled }),
   );

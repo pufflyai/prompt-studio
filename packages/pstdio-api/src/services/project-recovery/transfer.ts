@@ -6,8 +6,8 @@ import {
   readRecoveryManifest,
   recoveryManifestSchema,
 } from "./manifest";
+import { verifyRecoveryCaptureInWorker } from "./recovery-worker-client";
 import { walkRecoveryGraph } from "./transfer-graph";
-import { verifyRecoveryCapture } from "./verify-capture";
 
 type Transport = Awaited<ReturnType<ReturnType<typeof createDocumentRelay>["manifestBlobs"]>>;
 interface TransferInput {
@@ -52,7 +52,7 @@ export const publishRecoveryCapture = async (
   let manifest: RecoveryManifest;
   try {
     manifest = await readRecoveryManifest(input.chunks, input.candidate);
-    await verifyRecoveryCapture(input.chunks, manifest, input.signal);
+    await verifyRecoveryCaptureInWorker(input.chunks, manifest, input.signal);
   } catch (error) {
     if (input.signal?.aborted) throw error;
     throw new RecoveryCandidateInvalid(error);
@@ -93,6 +93,6 @@ export const downloadRecoveryCapture = async (input: TransferInput) => {
     },
   });
   const manifest = await readRecoveryManifest(input.chunks, input.candidate);
-  await verifyRecoveryCapture(input.chunks, manifest, input.signal);
+  await verifyRecoveryCaptureInWorker(input.chunks, manifest, input.signal);
   return manifest;
 };

@@ -18,9 +18,11 @@ export const hasBundledExtensionSource = async (origin: { url: string; path: str
   );
 };
 
-export const resolveBundledExtensionCommit = async (url: string, ref: string) => {
+export const resolveBundledExtensionCommit = async (origin: { url: string; path: string }, ref: string) => {
   const bundle = await readBundle();
-  return bundle && matchesRelease(bundle, ref) && bundle.sources.some((source) => source.url === url)
+  return bundle &&
+    matchesRelease(bundle, ref) &&
+    bundle.sources.some((source) => source.url === origin.url && source.path === origin.path)
     ? bundle.commit
     : null;
 };

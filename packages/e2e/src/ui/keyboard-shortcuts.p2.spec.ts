@@ -1,11 +1,13 @@
-import { expect } from "@playwright/test";
+import { test as causalTest } from "../helpers/causal-evidence-test";
 import { folderProjectInput } from "../helpers/folder-project";
+import { expect, mergeTests, test as sessionTest } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
-import { test } from "./helpers/notification-settings";
+import { test as notificationTest } from "./helpers/notification-settings";
 import { installShortcutReferenceExtension } from "./helpers/shortcut-reference-extension";
 import { showSidenavEntry } from "./helpers/sidenav-navigation";
 import { changeThemeThroughCommandPalette } from "./helpers/theme-picker";
 
+const test = mergeTests(notificationTest, sessionTest, causalTest);
 test.use({ notificationsEnabled: true });
 
 test("the fullscreen shortcut toggles from editing and completes shortcut mode", async ({ page, request }) => {
@@ -15,7 +17,7 @@ test("the fullscreen shortcut toggles from editing and completes shortcut mode",
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations/compose`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.session-browser/conversations/compose`);
   const draft = page.locator('[data-workbench-region="main"]').getByRole("textbox").last();
   await draft.fill("Keep fullscreen draft");
   await page.keyboard.press("Alt+Shift+Z");
@@ -27,7 +29,7 @@ test("the fullscreen shortcut toggles from editing and completes shortcut mode",
   await expect(page.getByRole("button", { name: "Enter Main fullscreen", exact: true })).toBeVisible();
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await expect(draft).toContainText("Keep fullscreen draft");
-  await page.keyboard.press("Shift+/");
+  await page.keyboard.press("ControlOrMeta+/");
   const reference = page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true });
   await reference.getByRole("textbox", { name: "Search keyboard shortcuts" }).fill("fullscreen");
   const action = reference.getByRole("group", { name: "Toggle Main fullscreen", exact: true });
@@ -42,13 +44,13 @@ test("Go destinations use shortcut mode while history chords respect editing foc
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await page.goto(`/projects/${project.id}`);
-  const home = new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`);
+  const home = new RegExp(`/projects/${project.id}/extensions/pstdio\\.home/home$`);
   await expect(page).toHaveURL(home);
   await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("g");
   await page.keyboard.press("s");
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.session-browser\/conversations\/compose$/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   const composer = page.locator(
     '[data-workbench-panel="main"] [data-testid="content-editable"][contenteditable="true"]',
@@ -56,19 +58,19 @@ test("Go destinations use shortcut mode while history chords respect editing foc
   const help = page.getByRole("button", { name: "Help", exact: true });
   await expect(composer).toBeFocused();
   await page.keyboard.press("Alt+Shift+ArrowLeft");
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.session-browser\/conversations\/compose$/);
   await help.focus();
   await page.keyboard.press("Alt+Shift+ArrowLeft");
   await expect(page).toHaveURL(home);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await help.focus();
   await page.keyboard.press("Alt+Shift+ArrowRight");
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.session-browser\/conversations\/compose$/);
   await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
   await expect(composer).toBeFocused();
   // Shortcut help is available outside inputs; history restores the composer's focus.
   await page.getByRole("button", { name: "Help", exact: true }).focus();
-  await page.keyboard.press("Shift+/");
+  await page.keyboard.press("ControlOrMeta+/");
   const reference = page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true });
   await expect(reference).toBeVisible();
   await reference.getByRole("textbox", { name: "Search keyboard shortcuts" }).fill("Keyboard shortcuts");
@@ -86,7 +88,7 @@ test("direct panel shortcuts open, focus, move and close tabs without entering s
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.session-browser/conversations`);
   await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   const secondary = page.locator('[data-workbench-region="secondary"]');
   const before = await secondary.getByRole("tab").count();
@@ -148,7 +150,7 @@ test("direct panel shortcuts open, focus, move and close tabs without entering s
     await page.locator("body").dispatchEvent("keydown", input);
     await expect(toggle).toHaveAttribute("aria-pressed", String(wasOpen));
     await expect(page.getByRole("region", { name: "Keyboard shortcut mode", exact: true })).toBeHidden();
-    await page.keyboard.press("Shift+/");
+    await page.keyboard.press("ControlOrMeta+/");
     const reference = page.getByRole("dialog", { name: "Keyboard shortcuts", exact: true });
     const search = reference.getByRole("textbox", { name: "Search keyboard shortcuts" });
     await search.fill("Keep this search");
@@ -182,15 +184,26 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   await page.getByRole("menuitem", { name: /^Keyboard shortcuts/ }).click();
 
   await expect(page.getByText("Keyboard shortcuts", { exact: true }).last()).toBeVisible();
+  const dialog = page.getByRole("dialog").last();
+  const search = dialog.getByRole("textbox", { name: "Search keyboard shortcuts" });
+  // Built-in wording can change while the registered action and its chord stay the same.
+  for (const commandId of [
+    "workbench.toggleCommandPalette",
+    "workbench.action.showCommands",
+    "workbench.action.changeTheme",
+    "workbench.action.navigateBack",
+    "workbench.action.navigateForward",
+    "workbench.toggleSideBar",
+    "dashboard.openNotifications",
+    "dashboard.openShortcuts",
+  ]) {
+    await search.fill(commandId);
+    const action = dialog.getByRole("group");
+    await expect(action).toHaveCount(1);
+    await expect(action.locator("kbd").last()).toBeVisible();
+  }
+  await search.clear();
   for (const label of [
-    "Toggle Command Palette",
-    "Run Command",
-    "Choose color theme",
-    "Go back",
-    "Go forward",
-    "Toggle Sidenav",
-    "Open notifications",
-    "Keyboard shortcuts",
     "Shortcut greeting",
     "Go to shortcut destination",
     "Shortcut inspector",
@@ -199,7 +212,6 @@ test("lists every registered keyboard shortcut", async ({ page, request }, testI
   ]) {
     await expect(page.getByText(label, { exact: true }).last()).toBeVisible();
   }
-  const dialog = page.getByRole("dialog").last();
   await testInfo.attach("shortcut-inventory", { body: await dialog.innerText(), contentType: "text/plain" });
   await dialog.getByRole("group", { name: "Go to shortcut destination", exact: true }).scrollIntoViewIfNeeded();
   await testInfo.attach("shortcut-reference", { body: await page.screenshot(), contentType: "image/png" });
@@ -295,34 +307,41 @@ test("changes and saves the theme through the command palette", { tag: "@smoke" 
   await changeThemeThroughCommandPalette(page);
 });
 
-test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async ({ page, request }) => {
+test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async ({
+  page,
+  request,
+  causalEvidence,
+}) => {
+  causalEvidence.mark("project-create:started");
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "Shortcut defaults" }),
   });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
+  causalEvidence.mark("project-create:completed", { projectId: project.id });
+  await installShortcutReferenceExtension(request, apiBase, project.id);
   await page.goto(`/projects/${project.id}/tickets`);
   await expect(page.getByRole("option", { name: /^Notes/ }).first()).toBeVisible({ timeout: 30_000 });
   for (const [key, label, destination] of [
-    ["S", "Sessions", /\/extensions\/pstdio\.pstdio-session-browser\/conversations\/compose$/],
+    ["S", "Sessions", /\/extensions\/pstdio\.session-browser\/conversations\/compose$/],
     ["W", "Workspaces", /\/workspaces$/],
     ["N", "Notes", /\/notes$/],
     ["K", "Tickets", /\/tickets$/],
     ["A", "Artifacts", /\/artifacts$/],
   ] as const) {
     await page.getByRole("option", { name: "Home", exact: true }).click();
-    await (await showSidenavEntry(page, "Tickets")).click();
     await showSidenavEntry(page, label);
     const row = page.getByRole("option", { name: new RegExp(`^${label}`) }).first();
     await row.focus();
+    await expect(page).not.toHaveURL(destination);
     await page.keyboard.press("Alt+Shift+Space");
     await page.keyboard.press("g");
     await page.keyboard.press(key);
     if (key === "K") {
       const choices = page.getByRole("dialog", { name: "Choose action", exact: true });
-      await expect(choices.getByRole("button", { name: "Go to kiln 1", exact: true })).toBeVisible();
-      await expect(choices.getByRole("button", { name: "Go to tickets 2", exact: true })).toBeVisible();
-      await page.keyboard.press("2");
+      await expect(choices.getByRole("button", { name: "Go to tickets 1", exact: true })).toBeVisible();
+      await expect(choices.getByRole("button", { name: "Go to shortcut destination 2", exact: true })).toBeVisible();
+      await page.keyboard.press("1");
     }
     await expect(page).toHaveURL(destination);
     await page.keyboard.press("Escape");
@@ -330,7 +349,7 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("g");
   await page.keyboard.press("h");
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`));
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.home/home$`));
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("c");
   await page.keyboard.press("n");
@@ -345,14 +364,18 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await expect(ticketForm.getByText("Properties", { exact: true })).toBeVisible();
   await ticketForm.locator('[contenteditable="true"]').first().fill("# Shortcut ticket");
   await ticketForm.getByRole("button", { name: "Create ticket", exact: true }).click();
+  causalEvidence.mark("ticket-create:clicked");
   await expect(ticketForm).not.toBeVisible();
   await expect(page.getByRole("tab", { name: /Shortcut ticket/ }).first()).toBeVisible();
   await page.getByRole("button", { name: "Help", exact: true }).focus();
+  causalEvidence.mark("workspace-shortcut:started");
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("c");
   await page.keyboard.press("w");
+  causalEvidence.mark("workspace-shortcut:dispatched");
   const workspaceForm = page.frameLocator('iframe[title="Workspace action"]');
-  await expect(workspaceForm.getByText("Create workspace", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Create workspace", exact: true })).toBeVisible();
+  causalEvidence.mark("workspace-dialog:visible");
   await workspaceForm.getByRole("button", { name: "Cancel", exact: true }).click();
   await expect(page.locator('iframe[title="Workspace action"]')).not.toBeVisible();
   await page.getByRole("button", { name: "Help", exact: true }).click();

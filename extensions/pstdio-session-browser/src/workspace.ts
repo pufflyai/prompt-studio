@@ -1,35 +1,44 @@
-import type { ChatRendererSnapshot, ExtensionContextBase, ExtensionWorkspace } from "@pstdio/sdk/extensions";
+import type {
+  ChatRendererSnapshot,
+  CommandOutcome,
+  ExtensionContextBase,
+  ExtensionWorkspace,
+} from "@pstdio/sdk/extensions";
+import { workspacePages } from "@pstdio/sdk/extensions";
 
-export const workspacePresentation = async (
-  ctx: ExtensionContextBase,
-  selected: ExtensionWorkspace | undefined,
-  input: { id?: string; existingSession?: boolean; available?: boolean } = {},
-): Promise<NonNullable<ChatRendererSnapshot["workspace"]>> => {
-  const summary =
-    selected?.capabilities?.diff &&
-    !selected.device &&
-    selected.executionKind !== "remote" &&
-    !selected.initializing &&
-    !selected.setupError
-      ? await ctx.workspaces.diffSummary(selected.id, "current").catch(() => undefined)
-      : undefined;
+type WorkspacePresentation = NonNullable<ChatRendererSnapshot["workspace"]>;
+type WorkspacePresentationInput = { id?: string; existingSession?: boolean; available?: boolean };
+
+export const readWorkspacePresentation = async (ctx: ExtensionContextBase, input: WorkspacePresentationInput = {}) => {
+  // Workspaces owns this optional presentation. Missing or failed tools must not stop the conversation.
+  let outcome: CommandOutcome<WorkspacePresentation> | undefined;
+  try {
+    outcome = await ctx.commands.execute<WorkspacePresentationInput, WorkspacePresentation>(
+      { kind: "command", extensionId: workspacePages.workspace.extensionId, id: "session-presentation" },
+      { params: input },
+    );
+  } catch {
+    // The optional tool may be unavailable while its runtime is loading or shutting down.
+  }
   return {
-    controlId: "workspace",
-    deviceControlId: "device",
-    ...(selected?.setupError ? { status: "error", statusLabel: selected.setupError } : {}),
-    ...(selected?.initializing ? { status: "loading" } : {}),
-    additions: summary?.additions ?? 0,
-    deletions: summary?.deletions ?? 0,
-    ...(input.existingSession &&
-    input.id &&
-    selected?.id === input.id &&
-    input.available !== false &&
-    !selected.initializing &&
-    !selected.setupError
-      ? { openResourceId: input.id }
-      : {}),
+    available: Boolean(outcome?.ok),
+    workspace: outcome?.ok ? outcome.value : { controlId: "workspace", deviceControlId: "device" },
   };
 };
+
+export const withWorkspaceControls = (
+  controls: NonNullable<ChatRendererSnapshot["controls"]>,
+  presentation: Awaited<ReturnType<typeof readWorkspacePresentation>>,
+) => ({
+  controls: presentation.available ? controls : controls.filter((control) => control.id !== "workspace"),
+  workspace: presentation.workspace,
+});
+
+export const workspaceSnapshot = async (
+  ctx: ExtensionContextBase,
+  controls: NonNullable<ChatRendererSnapshot["controls"]>,
+  input: WorkspacePresentationInput = {},
+) => withWorkspaceControls(controls, await readWorkspacePresentation(ctx, input));
 
 export const savedWorkspaceControls = (
   id: string | undefined,

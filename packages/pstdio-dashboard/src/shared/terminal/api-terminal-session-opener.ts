@@ -67,8 +67,16 @@ const terminalWebSocketUrl = () => {
   return url.toString();
 };
 
-/** Opens a PTY over one bidirectional WebSocket, including stdin and resize. */
-export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = (request, view, signal) =>
+/**
+ * Opens a PTY over one bidirectional WebSocket, including stdin and resize. With an attach key the
+ * PTY outlives the socket: `detach` leaves it running, and the next open with that key resumes it.
+ */
+export const openDashboardTerminalSession = (
+  request: Parameters<WorkbenchTerminalSessionOpener>[0],
+  view?: Parameters<WorkbenchTerminalSessionOpener>[1],
+  signal?: Parameters<WorkbenchTerminalSessionOpener>[2],
+  attachKey?: string,
+): ReturnType<WorkbenchTerminalSessionOpener> =>
   new Promise((resolve, reject) => {
     if (signal?.aborted) return reject(signal.reason);
     const url = terminalWebSocketUrl();
@@ -89,7 +97,7 @@ export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = (req
       send(
         view
           ? { type: "openView", request: { ...view, cols: request.cols, rows: request.rows } }
-          : { type: "open", request },
+          : { type: "open", request, ...(attachKey ? { attachKey } : {}) },
       ),
     );
     socket.addEventListener("message", (event) => {
@@ -105,6 +113,7 @@ export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = (req
 
       opened = true;
       releaseAdmission();
+      let detached = false;
       resolve({
         id: message.sessionId,
         write(data) {
@@ -114,9 +123,18 @@ export const openDashboardTerminalSession: WorkbenchTerminalSessionOpener = (req
           send({ type: "resize", cols, rows });
         },
         kill(signal) {
+          if (detached) return;
           if (socket.readyState === WebSocket.OPEN) send({ type: "kill", signal });
           socket.close();
         },
+        ...(attachKey
+          ? {
+              detach() {
+                detached = true;
+                socket.close();
+              },
+            }
+          : {}),
         onData: hub.onData,
         onTitle: hub.onTitle,
         onExit: hub.onExit,

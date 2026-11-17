@@ -62,9 +62,19 @@ export const createTerminalSessionCleanup = (input: {
       const settled = Promise.withResolvers<void>();
       disposal = settled.promise;
       const run = async () => {
-        const running = input.sessions().filter((session) => session.status === "running");
-        const results = await Promise.allSettled(running.map((session) => kill({ sessionId: session.id })));
-        const errors = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+        const errors: unknown[] = [];
+        // Sessions the host keeps running are detached synchronously, before any later kill can reach them.
+        const killed = input
+          .sessions()
+          .filter((session) => session.status === "running")
+          .filter((session) => {
+            const adapter = input.adapters.get(session.id);
+            if (!adapter?.detach) return true;
+            collectCleanupFailures(errors, [() => adapter.detach?.(), () => input.cleanup(session.id)]);
+            return false;
+          });
+        const results = await Promise.allSettled(killed.map((session) => kill({ sessionId: session.id })));
+        errors.push(...results.flatMap((result) => (result.status === "rejected" ? [result.reason] : [])));
         for (const session of input.sessions()) {
           try {
             input.cleanup(session.id);

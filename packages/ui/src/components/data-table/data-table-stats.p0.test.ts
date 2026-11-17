@@ -59,3 +59,26 @@ describe("data table column stats", () => {
     });
   });
 });
+
+test.each(["sparkline", "bar-chart"] as const)("%s statistics use the latest measured values", (type) => {
+  const renderer = { type };
+  const rows: RowData[] = [
+    { History: { values: [8, 0, null] } },
+    { History: { values: [9, 4, null] } },
+    { History: { values: [10, 4] } },
+    { History: { values: [null, null] } },
+  ];
+  expect(countUniqueStatValues(rows, "History", renderer)).toBe(2);
+  expect(buildTopValuesStat(rows, "History", 3, renderer)).toEqual([
+    { label: "4", count: 2, percentage: 67 },
+    { label: "0", count: 1, percentage: 33 },
+  ]);
+  expect(buildHistogramStat(rows, "History", 2, renderer)).toEqual({
+    min: 0,
+    max: 4,
+    bins: [
+      { start: 0, end: 2, count: 1 },
+      { start: 2, end: 4, count: 2 },
+    ],
+  });
+});

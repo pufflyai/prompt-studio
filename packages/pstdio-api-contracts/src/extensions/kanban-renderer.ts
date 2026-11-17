@@ -61,6 +61,7 @@ export const kanbanViewSettingsSchema = z.object({
   viewMode: z.enum(["board", "list"]),
   columnGrouping: z.string(),
   rowGrouping: z.string(),
+  subGroupings: z.array(z.string()).optional(),
   displayProperties: z.array(z.string()),
   showChildren: z.boolean().optional(),
 });
@@ -109,6 +110,7 @@ const extensionKanbanRendererRowActionSchema = z.object({
 export const extensionKanbanRendererRecordSchema = extensionRendererRecordBaseSchema.extend({
   kind: z.enum(["kanban", "resourceList"]).optional(),
   queryMode: z.literal("paged").optional(),
+  initialPageSize: z.number().int().positive().optional(),
   toolbarActions: z.array(viewToolbarActionRecordSchema).optional(),
   extensionInstanceId: z.string().optional(),
   attributes: z.array(kanbanRendererAttributeSchema).optional(),

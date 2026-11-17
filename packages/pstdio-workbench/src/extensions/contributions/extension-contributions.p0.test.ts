@@ -35,6 +35,20 @@ describe("buildWorkbenchExtensionMenuRegistrations", () => {
     });
     expect(result.registrations[0]?.command.resourceMutation).toEqual(mutation);
   });
+  test("dashboard parameter forms omit host consent without changing the API command schema", () => {
+    const params = { path: { type: "text" }, confirmed: { type: "boolean" } };
+    const command = {
+      ...metadata.commands[0],
+      params,
+      confirmation: { kind: "delete" as const, confirmedParam: "confirmed" },
+    };
+    const result = buildWorkbenchExtensionMenuRegistrations({
+      metadata: { ...metadata, commands: [command] },
+      menuSlotsById: new Map([["note.headerPrimary", { menuPath: ["header"] }]]),
+    });
+    expect(Object.keys(result.registrations[0]!.command.params!)).toEqual(["path"]);
+    expect(command.params.confirmed).toEqual({ type: "boolean" });
+  });
   test("keeps each declaration's identity when another declaration is inserted", () => {
     const original = metadata.menuContributions[0];
     const build = (contributions: typeof metadata.menuContributions) =>

@@ -145,7 +145,6 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
           }
           loadingContributions={marketplaceContributions.isLoading}
           installing={installingMarketplaceNames.includes(selectedMarketplace.installName)}
-          onBack={() => openList()}
           onInstall={() => void handleInstallMarketplace(selectedMarketplace)}
         />
       </>
@@ -247,6 +246,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       {replacementDialog}
       {errorNotice}
       <ExtensionsPanelView
+        projectId={projectId}
         extensions={extensions}
         marketplace={marketplace}
         diagnostics={metadataQuery.data?.diagnostics ?? []}

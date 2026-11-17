@@ -13,11 +13,11 @@ import type { TicketContext } from "../data/ticket-identity";
 import { withTicketTagIds } from "../data/ticket-tags";
 import type { Ticket } from "../data/types";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
-import { plannerTicketsChanged } from "../events";
+import { emitPlannerTicketsChanged } from "../events";
 import { notifyBlocked, resolveBlockedNotification } from "../planner-notifications";
 import { deriveTitle } from "../utils/derive-title";
 
-// Powers the markdown editor's save-on-edit autosave and the `pst tickets update`
+// Powers the markdown editor's save-on-edit autosave and the `pst pstdio.planner update-ticket`
 // CLI path. The board passes ids; the CLI passes display names/shorthands, so the
 // status, tags, parent, and dependency inputs are resolved server-side
 // (Decision 3). The ticket title is the start of the body, so a content save
@@ -27,8 +27,7 @@ export const updateTicketCommand = defineCommand({
   mutating: true,
   title: "Update ticket",
   cli: {
-    globalAliases: [["tickets", "update"]],
-    examples: ["pstdio tickets update --id PS-1 --status 'In Progress' --tags High --tags Bug"],
+    examples: ["pstdio pstdio.planner update-ticket --id PS-1 --status 'In Progress' --tags High --tags Bug"],
   },
   params: {
     id: params.text({ required: true }),
@@ -78,7 +77,7 @@ export const updateTicketCommand = defineCommand({
       updatedAt: new Date().toISOString(),
     };
     const next = await updateTicket(ctx, draft);
-    await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
+    await emitPlannerTicketsChanged(ctx, { ticketId: existing.id });
     await syncBlockedNotificationSafely(ctx, existing, next);
     return withTicketTagIds(next);
   },

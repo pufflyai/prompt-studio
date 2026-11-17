@@ -10,6 +10,7 @@ import { createHarnessReadCapability } from "./harness-read-capability";
 
 interface CreateDashboardExtensionWebviewAdaptersInput {
   base: ExtensionWebviewHostAdapters;
+  queryAuthority?: { id: string; assertCurrent(): void };
   extensionId: string;
   extensionInstanceId?: string;
   projectId?: string;

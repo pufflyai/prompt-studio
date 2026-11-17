@@ -3,6 +3,7 @@ import { placementIdentityKey } from "../../registries/layout/placement-reconcil
 import { isPageContent } from "../../registries/pages/page-main";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { preparePlacementClose } from "./placement-close-guards";
+import { rememberClosedTab } from "./reopen-tab";
 import { editSharedPagePlacement, isDetachedPagePlacement } from "./shared-page-placement";
 
 export const createPlacementCloseController = (resolveCore: () => WorkbenchCore) => (identity: PlacementIdentity) => {
@@ -15,7 +16,12 @@ export const createPlacementCloseController = (resolveCore: () => WorkbenchCore)
     .find((item) => item.placementIdentity && placementIdentityKey(item.placementIdentity) === key);
   if (!placement) throw new Error(`Placement is not open: ${key}`);
   if (!placement.closable) throw new Error(`Placement is fixed and cannot close: ${key}`);
-  const completeClose = () => {
+  const location = placement.pageOwnerLocation ?? core.pages.store.getState().location;
+  const projectId = core.pages.store.getState().projectId;
+  const region = ["main", "side", "secondary"].find((region) =>
+    core.layout.getLayout().regions[region as "main"].widgets.includes(placement),
+  ) as "main" | "side" | "secondary" | undefined;
+  const remove = () => {
     if (identity.kind === "page") {
       if (isDetachedPagePlacement(core, placement)) {
         editSharedPagePlacement(core, placement, identity, { kind: "close" });
@@ -27,6 +33,17 @@ export const createPlacementCloseController = (resolveCore: () => WorkbenchCore)
     }
     if (identity.kind === "mode") core.modePlacements.closePlacement(identity);
     else core.shellPlacements.closePlacement(identity);
+  };
+  const completeClose = () => {
+    remove();
+    if (region)
+      rememberClosedTab(core, {
+        placement,
+        region,
+        location,
+        projectId,
+        removalVersion: core.resources.getRemovalVersion(),
+      });
   };
   const invocation = core.viewers.captureContext(identity);
   const prepared = preparePlacementClose(core, identity);

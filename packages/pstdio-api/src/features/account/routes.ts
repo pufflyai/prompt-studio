@@ -8,6 +8,7 @@ import {
 } from "../../services/account/native-account";
 import type { AppBindings } from "../../types";
 import { enforceDeviceCommandBodyLimit } from "./device-command-body";
+import { expectedAccountQuery, expectedProjectAccountQuery, readExpectedAccount } from "./read-identity";
 
 const json = <T extends z.ZodType>(schema: T) => ({ content: { "application/json": { schema } } });
 const responses = {
@@ -55,6 +56,19 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
     async (c) => c.json(await service.login(c.req.valid("json").managerOrigin), 200),
   );
   routes.openapi(
+    createRoute({
+      method: "post",
+      path: "/account/projects/{id}/sync/sources/{sourceId}/retry",
+      tags,
+      request: { params: params.extend({ sourceId: z.string().min(1) }) },
+      responses,
+    }),
+    async (c) => {
+      const { id, sourceId } = c.req.valid("param");
+      return c.json(await service.retryProjectSync(id, sourceId), 200);
+    },
+  );
+  routes.openapi(
     createRoute({ method: "get", path: "/account/login/{id}", tags, request: { params }, responses }),
     (c) => c.json(service.loginStatus(c.req.valid("param").id), 200),
   );
@@ -63,8 +77,24 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
     async (c) => c.json(await service.cancelLogin(c.req.valid("param").id), 200),
   );
   routes.openapi(
-    createRoute({ method: "get", path: "/account/projects/{id}/sync", tags, request: { params }, responses }),
-    async (c) => c.json(await service.projectSyncStatus(c.req.valid("param").id), 200),
+    createRoute({
+      method: "get",
+      path: "/account/projects/{id}/sync",
+      tags,
+      request: { params, query: expectedProjectAccountQuery },
+      responses,
+    }),
+    async (c) => {
+      const query = c.req.valid("query");
+      return c.json(
+        await service.projectSyncStatus(
+          c.req.valid("param").id,
+          c.req.raw.signal,
+          query.local === "true" ? null : readExpectedAccount(query),
+        ),
+        200,
+      );
+    },
   );
   routes.openapi(
     createRoute({ method: "post", path: "/account/projects/{id}/retry", tags, request: { params }, responses }),
@@ -83,8 +113,13 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
   routes.openapi(createRoute({ method: "post", path: "/account/logout", tags, responses }), async (c) =>
     c.json(await service.logout(), 200),
   );
-  routes.openapi(createRoute({ method: "get", path: "/account/devices", tags, responses }), async (c) =>
-    c.json(await service.devices(), 200),
+  routes.openapi(
+    createRoute({ method: "get", path: "/account/devices", tags, request: { query: expectedAccountQuery }, responses }),
+    async (c) => {
+      const query = c.req.valid("query");
+      const expected = readExpectedAccount(query);
+      return c.json(await service.devices(c.req.raw.signal, expected), 200);
+    },
   );
   routes.openapi(
     createRoute({

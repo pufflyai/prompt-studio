@@ -35,7 +35,6 @@ test("available Git extensions show source contributions when catalog and manife
         metadata={metadata}
         loadingContributions={false}
         installing={false}
-        onBack={() => {}}
         onInstall={() => {}}
       />
     </ChakraProvider>,

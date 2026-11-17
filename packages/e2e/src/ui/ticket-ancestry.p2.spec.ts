@@ -1,6 +1,6 @@
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
+import { type APIRequestContext, expect, type Page, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const createProject = async (request: APIRequestContext, folderPath?: string) => {

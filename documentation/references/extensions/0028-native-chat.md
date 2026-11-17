@@ -109,8 +109,19 @@ fragments arrive. This also supports a single large message or tool result witho
 truncating it. No query refresh, transcript polling or execution service is added.
 Malformed/interleaved or naturally incomplete events report a stream error;
 disposal/reconnect discards unfinished fragments without stopping work.
+When a command ends with unfinished fragments, its failed result takes precedence
+in the reported error. An unsettled result does not delay reporting incomplete
+assembly; a later rejection supplies the underlying failure while that watch
+still owns the presentation. Failures from retired watches cannot replace current state.
 Live fields take precedence over a delayed query; a notice-only event does not
-displace history. Reconnect keeps displayed state. Connection errors offer Retry.
+displace history. Reconnect keeps displayed state. A `command_stream_overflow` from
+the conversation watch stays in diagnostics and automatically restarts observation
+after a cancellable delay, doubling from one second up to 30 seconds on repeated
+overflow. Recovery discards unfinished fragments and resets stream revisions while
+retaining displayed history and drafts. It never replays user actions or agent work,
+and stops when the observation is released. A late overflow clears only the
+incomplete-event error still owned by that watch; newer action errors remain visible.
+Other connection errors offer Retry.
 Refresh events follow the normal native renderer path. A versioned `recoverDraft`
 event restores work after an accepted asynchronous native operation fails. The
 host restores an unchanged cleared composer, or retains the failed work under

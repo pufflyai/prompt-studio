@@ -1,10 +1,8 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { isPreparationHost } from "pstdio-extensions";
+import { runExtensionPreparation } from "./extension-preparation";
 import type { LoadedExtension } from "./extension-runtime";
-import { inspectManagedWebviewBuildInputs, prepareManagedWebviewBuildSource } from "./extension-webview-build-source";
-import { buildExtensionWebviewBatch } from "./extension-webview-builder";
-import { classifyWebviewEntry, collectExtensionWebviews, resolvePackageAssetFile } from "./extension-webviews";
+import { classifyWebviewEntry, collectExtensionWebviews, resolveWebviewSourceEntry } from "./extension-webviews";
+import { prepareWebviewArtifacts } from "./prepared-webview";
 
 export const validateExtensionWebviews = async (
   loaded: LoadedExtension,
@@ -13,28 +11,27 @@ export const validateExtensionWebviews = async (
   signal = new AbortController().signal,
 ) => {
   const views = collectExtensionWebviews(loaded).filter((view) => classifyWebviewEntry(view.entry).kind === "managed");
-  if (!views.length) return;
-  const root = await mkdtemp(join(tmpdir(), "pstdio-extension-build-check-"));
+  if (loaded.preparedRevision) loaded.preparedRevision.webviews = {};
+  const inputs = views.map((view) => ({
+    entryPath: resolveWebviewSourceEntry(view.entry, packagePath, loaded.preparedRevision?.packagePath),
+    installName,
+    packageName: loaded.metadata.name,
+    packagePath,
+  }));
   try {
-    const entryPaths = views.map((view, index) => {
-      signal.throwIfAborted();
-      const input = {
-        entryPath: resolvePackageAssetFile(view.entry),
-        installName,
-        packageName: loaded.metadata.name,
-        packagePath,
-      };
-      const source = prepareManagedWebviewBuildSource({
-        ...input,
-        buildInputs: inspectManagedWebviewBuildInputs(input),
-        shellDir: join(root, String(index), "source"),
-      });
-      if (!source.success) throw new Error(`Extension webview ${view.id} cannot activate: ${source.details}`);
-      return source.entryPath;
-    });
-    const outcome = await buildExtensionWebviewBatch({ entryPaths, outdir: join(root, "dist"), signal });
-    if (!outcome.success) throw new Error(`Extension webviews cannot activate: ${outcome.details}`);
-  } finally {
-    await rm(root, { recursive: true, force: true });
+    const artifacts = isPreparationHost
+      ? await runExtensionPreparation<Awaited<ReturnType<typeof prepareWebviewArtifacts>>>(
+          "webview.artifacts",
+          inputs,
+          { signal },
+        )
+      : await prepareWebviewArtifacts(inputs, signal);
+    for (const [index, view] of views.entries())
+      if (loaded.preparedRevision) {
+        const artifact = artifacts[index]!;
+        loaded.preparedRevision.webviews![view.id] = { id: artifact.id, distDir: artifact.distDir };
+      }
+  } catch (error) {
+    throw new Error(`Extension webviews cannot activate: ${error instanceof Error ? error.message : String(error)}`);
   }
 };

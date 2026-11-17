@@ -10,14 +10,14 @@ const projects = [
   { id: "kanban", label: "Agentic kanban", icon: <Columns3 /> },
   { id: "design", label: "Agentic design", icon: <PenTool /> },
 ];
-const Example = (props: { initialTabs?: WindowTab[]; platform?: string }) => {
-  const { initialTabs = projects, platform = "darwin" } = props;
+const Example = (props: { initialTabs?: WindowTab[]; platform?: string; activeOnlyClose?: boolean }) => {
+  const { initialTabs = projects, platform = "darwin", activeOnlyClose = false } = props;
   const [tabs, setTabs] = useState(initialTabs);
   const [selectedId, setSelectedId] = useState(tabs[0]?.id);
   return (
     <WindowTitleBar platform={platform}>
       <WindowTabs
-        tabs={tabs}
+        tabs={activeOnlyClose ? tabs.map((tab) => ({ ...tab, closable: tab.id === selectedId })) : tabs}
         selectedId={selectedId}
         aria-label="Project tabs"
         onSelect={setSelectedId}
@@ -60,7 +60,7 @@ export const KeyboardReordering: Story = {
 };
 export const PointerReordering: Story = {
   id: "components-navigation-window-tabs--pointer-reordering",
-  render: () => <Example />,
+  render: () => <Example activeOnlyClose />,
 };
 export const DropOutside: Story = {
   id: "components-navigation-window-tabs--drop-outside",

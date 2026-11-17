@@ -92,9 +92,8 @@ export const useExecuteExtensionCommand = (
       }: { commandId: string; body: Omit<CommandExecuteRequest, "projectId">; signal?: AbortSignal },
       { api, projectId },
     ) => api.extensions.execute(commandId, { ...body, projectId }, { signal }),
-    accept: (response, _value, cache, { projectId, owner }) => {
+    accept: (response, _value, _cache, { projectId, owner }) => {
       publishExtensionCommandEvent(response, { projectId }, owner);
       surfaceWebviewCommandOutcome(response, showNotice);
-      cache.invalidateMetadata();
     },
   });

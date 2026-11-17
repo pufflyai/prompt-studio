@@ -1,6 +1,45 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { browse, browsePage, search } from "./browse";
+import { sessionPinsIndex } from "./session-pins";
+
+test("activity-ordered sessions keep date headings unique when older requests finish or change today", async () => {
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const earlier = new Date(yesterday);
+  earlier.setDate(earlier.getDate() - 1);
+  const items = [
+    { id: "finished", lastRequestStarted: yesterday.toISOString(), lastRequestEnded: today.toISOString() },
+    { id: "started", lastRequestStarted: today.toISOString(), lastRequestEnded: null },
+    { id: "renamed", lastRequestStarted: yesterday.toISOString(), updatedAt: today.toISOString() },
+    { id: "older", lastRequestStarted: yesterday.toISOString(), lastRequestEnded: null },
+  ].map((session) => ({
+    title: session.id,
+    status: "completed",
+    createdAt: earlier.toISOString(),
+    updatedAt: yesterday.toISOString(),
+    lastRequestEnded: yesterday.toISOString(),
+    ...session,
+  }));
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
+    params: {},
+    overrides: { sessions: { query: async () => ({ items: items as never, nextCursor: null }) } },
+  });
+  const sections = await browse(ctx, { renderer: { rendererId: "list" } });
+  const nodes = sections[0]!.nodes;
+  expect(new Set(nodes.map((node) => node.id)).size).toBe(nodes.length);
+  expect(nodes.map((node) => node.resource?.id ?? node.label)).toEqual([
+    { $l10n: "sessions.today", default: "Today" },
+    "finished",
+    "started",
+    "renamed",
+    { $l10n: "sessions.yesterday", default: "Yesterday" },
+    "older",
+  ]);
+});
 
 test("recent sessions retain Today and Yesterday groups alongside older calendar dates", async () => {
   const today = new Date();
@@ -10,7 +49,7 @@ test("recent sessions retain Today and Yesterday groups alongside older calendar
   const earlier = new Date(today);
   earlier.setDate(earlier.getDate() - 5);
   const ctx = makeCommandContext({
-    storage: createMemoryStorage(),
+    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
     params: {},
     overrides: {
       sessions: {
@@ -43,7 +82,7 @@ test("recent sessions retain Today and Yesterday groups alongside older calendar
 test("browsing and search use bounded public queries, workspace scope and cursor pages", async () => {
   const queries: unknown[] = [];
   const ctx = makeCommandContext({
-    storage: createMemoryStorage(),
+    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
     params: {},
     overrides: {
       sessions: {
@@ -80,7 +119,7 @@ test("browsing and search use bounded public queries, workspace scope and cursor
 
 test("workspace sessions keep the contextual page and open chat in shared Side preview", async () => {
   const ctx = makeCommandContext({
-    storage: createMemoryStorage(),
+    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
     params: {},
     overrides: {
       sessions: {
@@ -109,7 +148,7 @@ test("project history pages preserve ordering and date identities through exhaus
     updatedAt: "2026-11-09T10:00:00Z",
   }));
   const ctx = makeCommandContext({
-    storage: createMemoryStorage(),
+    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
     params: {},
     overrides: {
       sessions: {
@@ -154,7 +193,7 @@ test("session resource search follows cursors beyond the public 200-row page lim
     updatedAt: "2026-11-06T00:00:00Z",
   }));
   const ctx = makeCommandContext({
-    storage: createMemoryStorage(),
+    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
     params: {},
     overrides: {
       sessions: {
@@ -184,7 +223,7 @@ test("session resource search follows cursors beyond the public 200-row page lim
 test("session rows preserve status colors and singular resource identity alongside the Sessions collection", async () => {
   const statuses = ["completed", "failed", "cancelled", "disconnected", "queued", "in_progress", "awaiting_input"];
   const ctx = makeCommandContext({
-    storage: createMemoryStorage(),
+    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
     params: {},
     overrides: {
       sessions: {

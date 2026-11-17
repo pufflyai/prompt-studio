@@ -22,6 +22,14 @@ const resolveProjectTabs = (projectIds: readonly string[], _dataVersion: unknown
     return project ? [{ id, label: project.name, icon: <Folder aria-hidden="true" /> }] : [];
   });
 
+export const openProjectTabSettings = async (controller: DesktopProjectTabsController, projectId: string) => {
+  controller.select(projectId);
+  const workbench = controller.getActiveWorkbench();
+  if (!workbench || workbench.context.get(dashboardSelectedProjectIdContextKey) !== projectId) return;
+  const panel = workbench.settings.listPanels().find((panel) => panel.scope === "project" && !panel.parentPanelId);
+  await workbench.commands.executeCommand("workbench.settings.open", { panelId: panel?.id });
+};
+
 export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
   const { workbench, controller, platform } = props;
   const projectIds = useSyncExternalStore(controller.subscribe, controller.getProjectIds, controller.getProjectIds);
@@ -30,11 +38,29 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
     workbench.context.store,
     (state) => state.values[dashboardSelectedProjectIdContextKey],
   );
-  const tabs = resolveProjectTabs(projectIds, dataVersion);
+  const tabs = resolveProjectTabs(projectIds, dataVersion).map((tab) => ({
+    ...tab,
+    closable: tab.id === selected,
+    contextActions: [
+      {
+        key: "project-settings",
+        label: "Project settings",
+        onClick: async () => {
+          try {
+            await openProjectTabSettings(controller, tab.id);
+          } catch (error) {
+            (controller.getActiveWorkbench() ?? workbench).notifications.captureActionError("Open project settings")(
+              error,
+            );
+          }
+        },
+      },
+    ],
+  }));
   // Clicking the tab of the project the user is already in leaves the open Sidenav level instead.
   const selectTab = (id: string) => {
     if (id === selected) workbench.pageLocations.navigateToRootLevel();
-    else void controller.select(workbench, id);
+    else controller.select(id);
   };
   if (typeof selected !== "string") return <WindowTitleBar platform={platform} />;
 
@@ -53,8 +79,8 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
         selectedId={typeof selected === "string" ? selected : undefined}
         aria-label="Project tabs"
         onSelect={selectTab}
-        onClose={(id) => void controller.close(workbench, id)}
-        onReorder={(id, targetId) => controller.reorder(workbench, id, targetId)}
+        onClose={(id) => controller.close(id)}
+        onReorder={(id, targetId) => controller.reorder(id, targetId)}
       />
       <Tooltip content="Open / create project" positioning={{ placement: "bottom" }}>
         <IconButton

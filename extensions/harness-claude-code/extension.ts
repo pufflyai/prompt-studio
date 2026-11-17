@@ -1,7 +1,9 @@
 import { defineExtension, defineHarness, defineHook, workspaceEvents } from "@pstdio/sdk/extensions";
 import { createClaudeCodeHarness } from "./src/harness";
+import { quotasCommand } from "./src/quotas";
 
 export default defineExtension({
+  commands: [quotasCommand],
   harnesses: [defineHarness(createClaudeCodeHarness())],
   hooks: [
     // Materialize the project skill catalog into the workspace before sessions launch,

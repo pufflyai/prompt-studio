@@ -181,7 +181,8 @@ const DataTableCellView = (props: DataTableCellViewProps) => {
       key: action.label,
       label: action.label,
       icon: action.icon,
-      onClick: () => action.onSelect(cellContext),
+      onSelect: action.runOnSelect ? () => action.onSelect(cellContext) : undefined,
+      onClick: action.runOnSelect ? undefined : () => action.onSelect(cellContext),
     })) ?? [];
   const cellElement = (
     <Table.Cell
@@ -191,8 +192,7 @@ const DataTableCellView = (props: DataTableCellViewProps) => {
       overflow="hidden"
       overflowWrap={wrapRows ? "anywhere" : undefined}
       padding="xs"
-      height={wrapRows ? undefined : "10"}
-      maxHeight={wrapRows ? undefined : "10"}
+      height="var(--table-row-height)"
       borderRight="1px solid"
       borderColor="border.subtle"
       _last={{ borderRight: "none" }}
@@ -246,7 +246,7 @@ export const DataTableBodyRow = (props: DataTableBodyRowProps) => {
       data-active={rowIsActive ? "true" : undefined}
       data-selected={rowIsSelected ? "true" : undefined}
       aria-selected={rowIsSelected ? "true" : undefined}
-      height={wrapRows ? undefined : "10"}
+      height="var(--table-row-height)"
       cursor={rowIsInteractive ? "pointer" : undefined}
       onClick={rowIsInteractive ? () => onRowClick?.(row.original) : undefined}
       borderTop={noBorder ? "none" : "1px solid"}

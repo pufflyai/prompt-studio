@@ -4,6 +4,14 @@ import extension from "../extension";
 import { newInViewer } from "./navigation";
 import { conversationTab } from "./tab";
 
+test("a conversation that has not started shows Pending in its tab", async () => {
+  const ctx = makeCommandContext({ storage: createMemoryStorage(), params: {} });
+  const tab = await conversationTab.query(ctx, {
+    renderer: { rendererId: "conversation", resource: { type: "session-draft", id: "new" } },
+  });
+  expect(tab.indicator).toMatchObject({ icon: "circle-dashed", color: "fg.muted", label: "Session status: pending" });
+});
+
 test("New session in an existing viewer starts a draft immediately with its workspace and device", async () => {
   const opened: unknown[] = [];
   const resource = {

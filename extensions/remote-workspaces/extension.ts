@@ -17,7 +17,7 @@ const launch = defineCommand({
   automation: true,
   cli: true,
   mutating: true,
-  palette: [{ group: "PocketCoder", label: l10n("commands.launch", "Launch PocketCoder session") }],
+  palette: [{ group: "PocketCoder", icon: "cloud", label: l10n("commands.launch", "Launch PocketCoder session") }],
   menus: [
     { slot: projectSlots.headerOverflow, label: l10n("commands.launch", "Launch PocketCoder session"), icon: "cloud" },
   ],

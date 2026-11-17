@@ -1,8 +1,11 @@
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useState, useSyncExternalStore } from "react";
+import { PstdioConnectionError } from "../../client/request";
 import type { ScopedQuery } from "../scoped-query";
+import type { WebviewCommandQuery } from "../webview-command-query";
 import type { createWebviewQueryClient, WebviewQueryDescriptor } from "../webview-query";
 
 type WebviewQueries = ReturnType<typeof createWebviewQueryClient>;
+type QueryObservation<T> = Pick<ScopedQuery<T>, "getSnapshot" | "subscribe" | "isDisposed">;
 export const useWebviewScope = (client: WebviewQueries) =>
   useSyncExternalStore(client.subscribeScope, client.getScope, client.getScope);
 
@@ -15,15 +18,45 @@ export const useWebviewQuery = <T>(client: WebviewQueries, descriptor: WebviewQu
 
 /** Observe an existing query owner without owning its cache or another event subscription. */
 export const useScopedQuery = <T>(query: ScopedQuery<T>, active = true) => {
-  const snapshot = useSyncExternalStore(
-    active ? query.subscribe : () => () => {},
-    query.getSnapshot,
-    query.getSnapshot,
-  );
-  return { ...snapshot, refresh: query.invalidate, accept: query.accept };
+  const snapshot = useScopedQueries([query], active)[0]!;
+  const connectionLost = snapshot.error instanceof PstdioConnectionError;
+  // Recovery belongs to the displayed page; registration and imperative reads must still settle.
+  useEffect(() => {
+    if (!active || !connectionLost || snapshot.fetching || query.isDisposed()) return;
+    const timer = setTimeout(() => {
+      if (!query.isDisposed()) query.invalidate();
+    }, 1_000);
+    return () => clearTimeout(timer);
+  }, [active, connectionLost, snapshot.fetching, query]);
+  const presentation = { ...snapshot, refresh: query.invalidate, accept: query.accept };
+  if (connectionLost) {
+    presentation.error = undefined;
+    presentation.loading ||= snapshot.data === undefined;
+  }
+  return presentation;
 };
 
-const selectQueries = <T>(queries: readonly ScopedQuery<T>[]) => {
+/** Observe a read-only host projection; hiding the view releases its optional host membership. */
+export const useWebviewCommandQuery = <T>(query: WebviewCommandQuery<T>, active = true) => {
+  const snapshot = useScopedQueries([query], active)[0]!;
+  const [owner, setOwner] = useState<{ query: WebviewCommandQuery<T>; abort: AbortController }>();
+  useLayoutEffect(() => {
+    if (!active) return;
+    const owner = { query, abort: new AbortController() };
+    setOwner(owner);
+    return () => {
+      owner.abort.abort();
+    };
+  }, [query, active]);
+  const refresh = () => {
+    if (!active || !owner || owner.query !== query || owner.abort.signal.aborted) return;
+    // UI Retry is optional work; errors are already published in the query snapshot.
+    void query.refresh(owner.abort.signal).catch(() => {});
+  };
+  return { ...snapshot, refresh };
+};
+
+const selectQueries = <T>(queries: readonly QueryObservation<T>[]) => {
   let snapshots = queries.map((query) => query.getSnapshot());
   return {
     queries,
@@ -33,7 +66,8 @@ const selectQueries = <T>(queries: readonly ScopedQuery<T>[]) => {
       return snapshots;
     },
     subscribe(listener: () => void) {
-      const stops = [...new Set(queries)].map((query) => query.subscribe(listener));
+      // A layout effect or an earlier source can retire a handle before this passive subscription.
+      const stops = [...new Set(queries)].flatMap((query) => (query.isDisposed() ? [] : [query.subscribe(listener)]));
       return () => {
         for (const stop of stops) stop();
       };
@@ -42,7 +76,7 @@ const selectQueries = <T>(queries: readonly ScopedQuery<T>[]) => {
 };
 
 /** Observe a changing collection of existing owners without conditional hooks or a second cache. */
-export const useScopedQueries = <T>(queries: readonly ScopedQuery<T>[], active = true) => {
+export const useScopedQueries = <T>(queries: readonly QueryObservation<T>[], active = true) => {
   const [current, setCurrent] = useState(() => selectQueries(queries));
   let selection = current;
   if (queries.length !== current.queries.length || queries.some((query, index) => query !== current.queries[index])) {

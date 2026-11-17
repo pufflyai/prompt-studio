@@ -9,11 +9,11 @@ import {
   type ExtensionCatalog,
   type ExtensionCatalogEntry,
   getExtensionCatalog,
+  selectExtensionCatalogEntry,
 } from "../features/extensions/extension-catalog";
 import {
   type InstallExtensionSourceInput,
   installExtensionSource as installExtensionSourceDefault,
-  prepareReleaseExtensionSource,
   resolvePstdioHome,
   toExtensionEnableInput,
 } from "../features/extensions/install-extension-source";
@@ -42,7 +42,7 @@ export type ExtensionUpgradeServiceDeps = {
   installExtensionSource?: (input: InstallExtensionSourceInput) => ReturnType<typeof installExtensionSourceDefault>;
   catalog?: ExtensionCatalog;
   release: ExtensionRelease | null;
-  resolveReleaseCommit?: (originUrl: string, releaseRef: string) => Promise<string>;
+  resolveReleaseCommit?: (originUrl: string, releaseRef: string, sourcePath: string) => Promise<string>;
   workspaceService: WorkspaceService;
 };
 
@@ -66,9 +66,9 @@ const installFromRecordedOrigin = (input: {
     source: input.installName,
     installName: input.installName,
     force: true,
+    retainBackup: true,
     ref: input.origin.ref,
-    prepareNamedSource: (_name, tempDir, ref) =>
-      prepareReleaseExtensionSource(input.origin, tempDir, ref ?? input.origin.ref),
+    originSource: { kind: "release", origin: input.origin },
     ...(input.repoPath ? { repoPath: input.repoPath } : {}),
     reuseInstalledDependencies: true,
   });
@@ -86,9 +86,12 @@ const matchesCatalogOrigin = (
 const matchesPinnedRelease = async (source: ReturnType<typeof parseExtensionSourceRef>, ref: string) => {
   if (source?.commit !== ref.toLowerCase()) return false;
   // Nightly refs can map to another bundled source commit. Only that local alias can change a pinned target.
-  const bundled = await resolveBundledExtensionCommit(source.url, ref);
+  const bundled = await resolveBundledExtensionCommit(source, ref);
   return !bundled || bundled === source.commit;
 };
+
+const releaseCommitKey = (origin: { url: string; path: string }, ref: string) =>
+  `${origin.url}\0${origin.path}\0${ref}`;
 
 export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps) => {
   const install = deps.installExtensionSource ?? installExtensionSourceDefault;
@@ -96,18 +99,22 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const catalog = deps.catalog ? Promise.resolve(deps.catalog) : getExtensionCatalog();
   const releaseCommits = new Map<string, Promise<string>>();
   const previewSources = new Map<string, ReturnType<typeof install>>();
-  const catalogEntry = async (installName: string) =>
-    (await catalog).extensions.find((entry) => entry.installName === installName || entry.extensionId === installName);
+  const catalogEntry = async (installName: string) => selectExtensionCatalogEntry(await catalog, installName);
   const releaseRefFor = (entry: ExtensionCatalogEntry) => {
     if (entry.origin.ref !== "{hostRelease}") return entry.origin.ref;
     if (deps.release) return deps.release.ref;
     throw new ExtensionUpgradeUnavailableError("This extension requires a Prompt Studio host release ref.");
   };
-  const currentReleaseCommit = (originUrl: string, releaseRef: string) => {
-    const key = `${originUrl}\0${releaseRef}`;
+  const currentReleaseCommit = (origin: { url: string; path: string }, releaseRef: string) => {
+    const key = releaseCommitKey(origin, releaseRef);
     let commit = releaseCommits.get(key);
     if (!commit) {
-      commit = (deps.resolveReleaseCommit ?? resolveExtensionReleaseCommit)(originUrl, releaseRef);
+      commit = (deps.resolveReleaseCommit ?? resolveExtensionReleaseCommit)(origin.url, releaseRef, origin.path).catch(
+        (error) => {
+          if (releaseCommits.get(key) === commit) releaseCommits.delete(key);
+          throw error;
+        },
+      );
       releaseCommits.set(key, commit);
     }
     return commit;
@@ -152,7 +159,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     if (!(await canReadSource(entry, parsed, releaseRef))) return false;
     if (!parsed) return compatibilityError(source) !== null;
     try {
-      return parsed.commit !== (await currentReleaseCommit(parsed.url, releaseRef));
+      return parsed.commit !== (await currentReleaseCommit(parsed, releaseRef));
     } catch (error) {
       // Keep the recovery action available when the release ref cannot be checked yet.
       return !(error instanceof GitUnavailableError);
@@ -169,26 +176,22 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const installForRelease = async (installName: string, repoPath?: string) => {
     const entry = await requireCatalogEntry(installName);
     if (deps.release?.source === "registry" && entry.extensionId) {
-      return registry.installCatalog(entry, { installName, force: true, repoPath });
+      return registry.installCatalog(entry, { installName, force: true, retainBackup: true, repoPath });
     }
     const workspaceSource = deps.release?.source === "workspace" && entry.origin.ref === "{hostRelease}";
     const source =
       workspaceSource && deps.release?.source === "workspace"
         ? join(deps.release.root, entry.origin.path)
         : installName;
-    const installed = await install({
+    return install({
       source,
       installName,
       force: true,
       ...(workspaceSource ? { skipInstall: true } : { hostReleaseRef: deps.release?.ref }),
       ...(repoPath ? { repoPath } : {}),
       reuseInstalledDependencies: true,
+      retainBackup: true,
     });
-    const installedOrigin = installed.source.kind === "named" ? parseExtensionSourceRef(installed.source.ref) : null;
-    if (installedOrigin) {
-      releaseCommits.set(`${installedOrigin.url}\0${releaseRefFor(entry)}`, Promise.resolve(installedOrigin.commit));
-    }
-    return installed;
   };
 
   const prepareMarketplaceExtensionSource = async (installName: string) => {
@@ -251,6 +254,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
       installed = await registry.installRecorded(existing.installedSource, {
         installName: existing.installedSource.install_name,
         force: true,
+        retainBackup: true,
         repoPath,
       });
     } else if (entry) {
@@ -273,12 +277,8 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
       ...toExtensionEnableInput(installed),
     });
     const installedOrigin = parseExtensionSourceRef(installedSource.source_ref);
-    if (installedOrigin) {
-      const releaseRef = entry ? releaseRefFor(entry) : deps.release?.ref;
-      if (releaseRef) {
-        releaseCommits.set(`${installedOrigin.url}\0${releaseRef}`, Promise.resolve(installedOrigin.commit));
-      }
-    }
+    const releaseRef = entry ? releaseRefFor(entry) : deps.release?.ref;
+    if (installedOrigin && releaseRef) releaseCommits.delete(releaseCommitKey(installedOrigin, releaseRef));
 
     return {
       changed: existing.installedSource.source_hash !== installed.sourceHash,

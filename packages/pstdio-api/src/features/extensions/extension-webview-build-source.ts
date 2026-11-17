@@ -12,7 +12,10 @@ import {
   symlinkSync,
 } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
+import { isPreparationHost } from "pstdio-extensions";
+import { runExtensionPreparation } from "./extension-preparation";
 import { collectLocalCssInputs } from "./extension-webview-css-inputs";
+import { hashWebviewDependencyInputs } from "./webview-dependency-inputs";
 
 type PackageJson = {
   dependencies?: Record<string, unknown>;
@@ -37,6 +40,7 @@ export type ManagedWebviewBuildInputs = {
   dependencyNames: string[];
   dependencyNodeModules: string | null;
   missingDependencies: string[];
+  missingFiles: string[];
   signature: string;
 };
 
@@ -155,6 +159,7 @@ const inspectLocalImportGraph = (packagePath: string, entryPath: string) => {
   const hash = createHash("sha256");
   const pending = [entryPath];
   const packageImports = new Set<string>();
+  const missingFiles: string[] = [];
   const visited = new Set<string>();
 
   while (pending.length > 0) {
@@ -162,8 +167,15 @@ const inspectLocalImportGraph = (packagePath: string, entryPath: string) => {
     if (!filePath || visited.has(filePath)) continue;
     visited.add(filePath);
 
+    const relativePath = normalizedRelativePath(packagePath, filePath);
+    // A missing file is a build input too: the build fails, and adding the file changes the signature.
+    if (!existsSync(filePath)) {
+      addHashEntry(hash, relativePath, "missing");
+      missingFiles.push(relativePath);
+      continue;
+    }
     const content = readFileSync(filePath);
-    addHashEntry(hash, normalizedRelativePath(packagePath, filePath), content);
+    addHashEntry(hash, relativePath, content);
     if ([".tsx", ".jsx"].includes(extname(filePath))) packageImports.add("react");
 
     try {
@@ -183,7 +195,7 @@ const inspectLocalImportGraph = (packagePath: string, entryPath: string) => {
     }
   }
 
-  return { packageImports, signature: hash.digest("hex") };
+  return { missingFiles, packageImports, signature: hash.digest("hex") };
 };
 
 const addOptionalFile = (hash: ReturnType<typeof createHash>, path: string, filePath: string) =>
@@ -216,12 +228,16 @@ const buildInputSignature = (
   return hash.digest("hex");
 };
 
-export const inspectManagedWebviewBuildInputs = (input: ManagedWebviewBuildSourceInput): ManagedWebviewBuildInputs => {
+export const inspectManagedWebviewBuildInputs = (
+  input: ManagedWebviewBuildSourceInput,
+  dependencyHash?: string,
+): ManagedWebviewBuildInputs => {
   const manifest = readPackageJson(input.packagePath);
-  const { packageImports, signature: sourceGraphSignature } = inspectLocalImportGraph(
-    input.packagePath,
-    input.entryPath,
-  );
+  const {
+    missingFiles,
+    packageImports,
+    signature: sourceGraphSignature,
+  } = inspectLocalImportGraph(input.packagePath, input.entryPath);
   const dependencyNames = declaredDependencyNames(manifest).filter((name) => packageImports.has(name));
   const packageNodeModules = join(input.packagePath, "node_modules");
   const packageMissingDependencies = missingDependenciesIn(packageNodeModules, dependencyNames);
@@ -244,13 +260,19 @@ export const inspectManagedWebviewBuildInputs = (input: ManagedWebviewBuildSourc
     dependencyNames,
     dependencyNodeModules,
     missingDependencies,
-    signature: buildInputSignature(
-      manifest,
-      dependencyNames,
-      dependencyNodeModules,
-      missingDependencies,
-      sourceGraphSignature,
-    ),
+    missingFiles,
+    signature: createHash("sha256")
+      .update(dependencyHash ?? hashWebviewDependencyInputs(input.packagePath, [input.entryPath]))
+      .update(
+        buildInputSignature(
+          manifest,
+          dependencyNames,
+          dependencyNodeModules,
+          missingDependencies,
+          sourceGraphSignature,
+        ),
+      )
+      .digest("hex"),
   };
 };
 
@@ -269,16 +291,23 @@ const mirrorPackageSource = (packagePath: string, shellDir: string) => {
   }
 };
 
+export const missingWebviewDependenciesError = (buildInputs: ManagedWebviewBuildInputs, packagePath: string) =>
+  buildInputs.missingDependencies.length
+    ? `Missing extension webview dependencies: ${buildInputs.missingDependencies.join(", ")}. Run \`bun install\` in ${packagePath}.`
+    : undefined;
+
 export const prepareManagedWebviewBuildSource = (
   input: PrepareManagedWebviewBuildSourceInput,
 ): ManagedWebviewBuildSourceResult => {
   const buildInputs = input.buildInputs ?? inspectManagedWebviewBuildInputs(input);
-  if (buildInputs.missingDependencies.length > 0) {
+  if (buildInputs.missingFiles.length > 0) {
     return {
-      details: `Missing extension webview dependencies: ${buildInputs.missingDependencies.join(", ")}. Run \`bun install\` in ${input.packagePath}.`,
+      details: `Missing extension webview source files: ${buildInputs.missingFiles.join(", ")}. Check the entry path of the webview in ${input.packagePath}.`,
       success: false,
     };
   }
+  const missingDependencies = missingWebviewDependenciesError(buildInputs, input.packagePath);
+  if (missingDependencies) return { details: missingDependencies, success: false };
 
   const packageNodeModules = join(input.packagePath, "node_modules");
   if (buildInputs.dependencyNames.length === 0 || buildInputs.dependencyNodeModules === packageNodeModules) {
@@ -303,4 +332,19 @@ export const prepareManagedWebviewBuildSource = (
     entryPath: join(input.shellDir, relative(input.packagePath, input.entryPath)),
     success: true,
   };
+};
+
+export const inspectManagedWebviewBuildInputsAsync = async (
+  input: ManagedWebviewBuildSourceInput,
+  signal?: AbortSignal,
+) => {
+  if (!isPreparationHost) {
+    const { inspectSinglePreparedWebviewInputs } = await import("./prepared-webview-inputs");
+    return inspectSinglePreparedWebviewInputs(input, signal);
+  }
+  return runExtensionPreparation<ManagedWebviewBuildInputs>("webview.inspect", input, { signal });
+};
+export const prepareManagedWebviewBuildSourceAsync = async (input: PrepareManagedWebviewBuildSourceInput) => {
+  if (!isPreparationHost) return prepareManagedWebviewBuildSource(input);
+  return runExtensionPreparation<ManagedWebviewBuildSourceResult>("webview.prepare", input);
 };

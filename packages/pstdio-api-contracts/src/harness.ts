@@ -99,6 +99,23 @@ export type ApprovalService = {
   dispose(): void;
 };
 
+/** Work the provider keeps running after its turn ends, such as a background command or subagent. */
+export type HarnessBackgroundTask = {
+  id: string;
+  description: string;
+};
+
+/**
+ * Host channel for a provider whose run stays open between turns. While a turn is idle, the host
+ * shows the conversation as waiting and delivers queued follow-ups through `steer`.
+ */
+export type HarnessTurnChannel = {
+  /** The turn ended but the run stays open for these tasks. Call again when the list changes. */
+  idle(input: { backgroundTasks: HarnessBackgroundTask[] }): void;
+  /** A new turn started, either from delivered input or from a finished task waking the provider. */
+  busy(): void;
+};
+
 /** "activity": the host kills the session when no events arrive for a while; "provider": the provider self-terminates. */
 export type TimeoutStrategy = "activity" | "provider";
 
@@ -157,6 +174,10 @@ export type HarnessStartInput = {
   events: HarnessEventSink;
   /** Channel for asking the person something. Present on start and on resume. */
   questions?: HarnessQuestionChannel;
+  /** Channel for tool approvals. Providers that report the Approvals capability use it. Present on start and on resume. */
+  approvals?: HarnessApprovalChannel;
+  /** Report turns that end while the run stays open. Present on start and on resume. */
+  turns?: HarnessTurnChannel;
   /** Aborted when the host cancels the request that started or resumed this session. */
   signal?: AbortSignal;
 };
@@ -166,7 +187,6 @@ export type HarnessResumeInput = HarnessStartInput & {
   /** Index offset so resumed streams align message patches with existing history. */
   messageOffset?: number;
   questionResponse?: QuestionResponse;
-  approvals?: HarnessApprovalChannel;
 };
 
 export type HarnessReattachInput = {

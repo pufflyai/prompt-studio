@@ -5,6 +5,8 @@ export type { AccountDevice, AccountLogin, AccountLoginStatus, AccountStatus, De
 export type {
   ProjectReturnAction,
   ProjectReturnRecord,
+  ProjectSyncFile,
+  ProjectSyncSource,
   ProjectSyncState,
   ProjectSyncStatus,
 } from "../../project-sync";
@@ -38,6 +40,8 @@ export interface ExtensionAccountApi {
   /** Stops the device from renewing Cloud access. Removing the current device signs it out. */
   removeDevice(id: string): Promise<void>;
   projectSyncStatus(projectId?: string): Promise<ProjectSyncStatus>;
+  /** Cancels and drains just this source before retrying; local work and checkpoints stay. */
+  retryProjectSyncSource(sourceId: string, projectId?: string): Promise<void>;
   /** Syncs the project on every device of the account that has it. */
   syncProject(projectId?: string): Promise<void>;
   /**

@@ -14,6 +14,7 @@ import type {
   WorkspaceFileEntry,
   WorkspaceFilesResponse,
   WorkspaceProviderDescriptor,
+  WorkspaceQuery,
   WorkspaceResolvedEntry,
   WriteWorkspaceFileInput,
 } from "pstdio-api-contracts";
@@ -22,12 +23,14 @@ import type { Workspace, WorkspaceListItem } from "../resources";
 import { pageQuery } from "./page-query";
 import type { RequestFn } from "./request";
 import type { createSessionStreamTransport } from "./session-stream";
-import { type WorkspaceDiffWatchInput, watchWorkspaceDiff } from "./workspace-diff-stream";
+import { type WorkspaceDiffWatchInput, watchWorkspaceDiff, watchWorkspaceFiles } from "./workspace-diff-stream";
 import { createWorkspaceDiffClient } from "./workspace-diffs";
 
 export type WorkspaceClient = ReturnType<typeof createWorkspaceDiffClient> & {
   /** Observe external file and Git changes while a local diff is presented. */
   watchDiff(workspaceId: string, input: WorkspaceDiffWatchInput): Promise<void>;
+  /** Observe external changes while a local file explorer is presented. */
+  watchFiles(workspaceId: string, input: WorkspaceDiffWatchInput): Promise<void>;
   /** Resolve a protected existing local entry for platform integrations. */
   resolveEntry(workspaceId: string, path: string): Promise<WorkspaceResolvedEntry>;
   getCapacity(): Promise<WorkspaceCapacity>;
@@ -39,7 +42,7 @@ export type WorkspaceClient = ReturnType<typeof createWorkspaceDiffClient> & {
   ): Promise<Page<WorkspaceProviderDescriptor>>;
   /** @deprecated Use queryProviders for bounded pages. */
   listProviders(projectId: string, options?: { signal?: AbortSignal }): Promise<WorkspaceProviderDescriptor[]>;
-  query(projectId: string, input?: PageQuery): Promise<Page<WorkspaceListItem & ExtensionWorkspace>>;
+  query(projectId: string, input?: WorkspaceQuery): Promise<Page<WorkspaceListItem & ExtensionWorkspace>>;
   /** @deprecated Use query to read one bounded page. */
   list(projectId: string): Promise<(WorkspaceListItem & ExtensionWorkspace)[]>;
   getByShorthand(projectId: string, shorthand: string): Promise<Workspace & ExtensionWorkspace>;
@@ -78,6 +81,7 @@ export const createWorkspaceClient = (
   streams: ReturnType<typeof createSessionStreamTransport>,
 ): WorkspaceClient => ({
   watchDiff: (id, input) => watchWorkspaceDiff(streams, id, input),
+  watchFiles: (id, input) => watchWorkspaceFiles(streams, id, input),
   ...createWorkspaceDiffClient(request),
   resolveEntry: (workspaceId, path) =>
     request(`/v1/workspaces/${encodeURIComponent(workspaceId)}/entry?${new URLSearchParams({ path })}`),
@@ -144,7 +148,11 @@ export const createWorkspaceClient = (
     const query = params.toString();
     return request(`/v1/workspaces/${workspaceId}/activity${query ? `?${query}` : ""}`);
   },
-  query: (projectId, input) => request(`/v1/projects/${encodeURIComponent(projectId)}/workspaces${pageQuery(input)}`),
+  query: (projectId, input) => {
+    const query = new URLSearchParams(pageQuery(input).replace(/^\?/, ""));
+    if (input?.anchors !== undefined) query.set("anchors", JSON.stringify(input.anchors));
+    return request(`/v1/projects/${encodeURIComponent(projectId)}/workspaces?${query}`);
+  },
   list: (projectId) => request(`/v1/workspaces?projectId=${encodeURIComponent(projectId)}`),
   getByShorthand: (projectId, shorthand) =>
     request(

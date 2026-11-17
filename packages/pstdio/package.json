@@ -1,6 +1,6 @@
 {
   "name": "pstdio",
-  "version": "0.46.0",
+  "version": "0.47.0",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
@@ -41,21 +41,21 @@
     "typecheck": "bun check",
     "lint": "bun run typecheck && biome lint .",
     "format": "biome format --write .",
-    "test": "bun ../../scripts/ci/run-bun-tests.ts --conditions=production --silent",
+    "test": "bun ../../scripts/test.ts --scope pstdio",
     "test:coverage": "bun ../../scripts/ci/run-bun-tests.ts --conditions=production --coverage"
   },
   "dependencies": {
     "@tanstack/react-db": "^0.1.74",
-    "react": "^19.2.4",
+    "react": "19.2.4",
     "yargs": "^18.0.0"
   },
   "optionalDependencies": {
-    "@pstdio/cli-darwin-arm64": "0.46.0",
-    "@pstdio/cli-darwin-x64": "0.46.0",
-    "@pstdio/cli-linux-x64": "0.46.0",
-    "@pstdio/cli-linux-arm64": "0.46.0",
-    "@pstdio/cli-win-x64": "0.46.0",
-    "@pstdio/cli-win-arm64": "0.46.0"
+    "@pstdio/cli-darwin-arm64": "0.47.0",
+    "@pstdio/cli-darwin-x64": "0.47.0",
+    "@pstdio/cli-linux-x64": "0.47.0",
+    "@pstdio/cli-linux-arm64": "0.47.0",
+    "@pstdio/cli-win-x64": "0.47.0",
+    "@pstdio/cli-win-arm64": "0.47.0"
   },
   "devDependencies": {
     "@pstdio/sdk": "workspace:*",

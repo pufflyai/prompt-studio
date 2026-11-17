@@ -5,7 +5,7 @@
     "": {
       "name": "pstdio-notes",
       "dependencies": {
-        "@pstdio/sdk": "0.47.0-nightly.20261102222512",
+        "@pstdio/sdk": "0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -16,7 +16,9 @@
   "packages": {
     "@noble/hashes": ["@noble/hashes@2.4.0", "", {}, "sha512-X5XaVWZIBCT7HHZGm5I7ZQXDwLG+bGXuSrMQAW+7Zvl87h1kmc1ZB1VSRJcpUfoUrGQp4Fkoxm5kZ+Ms+aW+eA=="],
 
-    "@pstdio/sdk": ["@pstdio/sdk@0.47.0-nightly.20261102222512", "", { "dependencies": { "@noble/hashes": "^2.4.0", "mustache": "^4.2.0", "yjs": "^13.6.29", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-rz+T9LdzFrHTp2gvIFq8vI0CzcPZeEHCMujKXxe9q7BZsxnB/gVV/KplInmq6E69fEt416UBdatkXoWwXnleJg=="],
+    "@pstdio/sdk": ["@pstdio/sdk@0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77", "", { "dependencies": { "@noble/hashes": "^2.4.0", "@tanstack/query-core": "5.90.20", "mustache": "^4.2.0", "yjs": "^13.6.29", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "19.2.4" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-WsVD3ZxSFBddwv7u+wlTav+cURjns3hWGTNdSUfK9GbWwrhzE3qY2ngk1dgStVbVaHLLsk7ajdcTjtzxwQOl9Q=="],
+
+    "@tanstack/query-core": ["@tanstack/query-core@5.90.20", "", {}, "sha512-OMD2HLpNouXEfZJWcKeVKUgQ5n+n3A2JFmBaScpNDUqSrQSjiveC7dKMe53uJUg1nDG16ttFPz2xfilz6i2uVg=="],
 
     "@types/bun": ["@types/bun@1.4.2", "", { "dependencies": { "bun-types": "1.4.2" } }, "sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ=="],
 

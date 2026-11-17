@@ -1,4 +1,5 @@
 import { fetchWithBackoff, serviceAddress, serviceUrl } from "./http";
+import { fetchWithInactivity } from "./inactivity-response";
 
 export const createRelayAccess = (input: {
   managerOrigin: string;
@@ -14,12 +15,16 @@ export const createRelayAccess = (input: {
   const renew = async () => {
     const response = await fetchWithBackoff(
       () =>
-        fetch(serviceUrl(address, "/v1/environment-access"), {
-          method: "POST",
-          signal: input.signal,
-          headers: { authorization: `Bearer ${input.renewalGrant}`, "content-type": "application/json" },
-          body: JSON.stringify({ workbenchId: input.workbenchId }),
-        }),
+        fetchWithInactivity(
+          serviceUrl(address, "/v1/environment-access"),
+          {
+            method: "POST",
+            signal: input.signal,
+            headers: { authorization: `Bearer ${input.renewalGrant}`, "content-type": "application/json" },
+            body: JSON.stringify({ workbenchId: input.workbenchId }),
+          },
+          { signal: input.signal, inactivityMs: 30_000 },
+        ),
       input.signal,
     );
     if (!response.ok) {

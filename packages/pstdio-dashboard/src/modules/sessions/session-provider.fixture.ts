@@ -22,17 +22,25 @@ const allMetadata = createWorkbenchExtensionMetadata({ runtime });
 const metadata = Object.fromEntries(
   Object.entries(allMetadata).map(([key, records]) => [
     key,
-    records?.filter((record: { extensionId?: string; id?: string }) =>
-      key === "extensions" ? record.id === sessionBrowserId : record.extensionId === sessionBrowserId,
-    ),
+    Array.isArray(records)
+      ? records.filter((record: { extensionId?: string; id?: string }) =>
+          key === "extensions" ? record.id === sessionBrowserId : record.extensionId === sessionBrowserId,
+        )
+      : records,
   ]),
 ) as typeof allMetadata;
 
 export const registerSessionProvider = (
   workbench: WorkbenchCore,
-  input: { projectId?: string; sessions?: Partial<ExtensionContextBase["sessions"]> } = {},
+  input: {
+    projectId?: string;
+    sessions?: Partial<ExtensionContextBase["sessions"]>;
+    resources?: Partial<ExtensionContextBase["resources"]>;
+  } = {},
 ) => {
-  const storage = createMemoryStorage();
+  const storage = createMemoryStorage({
+    indexes: runtime.extensions.find((extension) => extension.id === sessionBrowserId)?.definition.storageIndexes,
+  });
   return registerWorkbenchExtensionContributions({
     workbench,
     projectId: input.projectId ?? "project-1",
@@ -48,6 +56,7 @@ export const registerSessionProvider = (
           projectId: input.projectId ?? "project-1",
           resource: body.resource,
           sessions: input.sessions,
+          resources: input.resources,
           navigation: {
             open: (target) => {
               navigationRequests.push(target);
@@ -62,7 +71,7 @@ export const registerSessionProvider = (
         : await handler?.handler(ctx, body.params ?? {});
       return {
         commandId,
-        extensionId: "pstdio.pstdio-session-browser",
+        extensionId: "pstdio.session-browser",
         outcome: { ok: true, status: "success", value, navigationRequests },
       };
     },

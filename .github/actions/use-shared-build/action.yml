@@ -4,14 +4,14 @@ runs:
   using: composite
   steps:
     # A missing artifact (a rerun of only this job, or a failed upload) is a cache miss.
-    - name: Download the run's shared build archives
+    - name: "[phase:cache-restore] Download the run's shared build archives"
       id: download
       continue-on-error: true
       uses: actions/download-artifact@v4
       with:
         name: ci-build-shared-attempt-${{ github.run_attempt }}
         path: ${{ runner.temp }}/shared-build/build_host
-    - name: Import the shared build archives
+    - name: "[phase:cache-restore] Import the shared build archives"
       if: steps.download.outcome == 'success'
       shell: bash
       run: bun scripts/ci/merge-build-cache.ts "$RUNNER_TEMP/shared-build" .cache/ci-build

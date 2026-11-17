@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { getCollection, getWriter } from "@/lib/sync/collections";
-import { isProjectWorkspaceReady, workspaceState } from "./workspace-state";
+import { isProjectWorkspaceAttached, isProjectWorkspaceReady, workspaceState } from "./workspace-state";
 
 test("folder setup is ready only after successful initialization", () => {
   const folder = { provider_state: "ready", execution_kind: "local", root_path: "/notes", is_default: true };
@@ -24,8 +24,10 @@ test("a ready folder on another device cannot make this device's project ready",
   try {
     getWriter("workspaces")?.truncateAndWrite([otherDevice, local]);
     expect(isProjectWorkspaceReady("cloud")).toBe(false);
+    expect(isProjectWorkspaceAttached("cloud")).toBe(false);
     getWriter("workspaces")?.truncateAndWrite([otherDevice, { ...local, root_path: "/this-machine/project" }]);
     expect(isProjectWorkspaceReady("cloud")).toBe(true);
+    expect(isProjectWorkspaceAttached("cloud")).toBe(true);
     getWriter("workspaces")?.truncateAndWrite([otherDevice]);
     expect(isProjectWorkspaceReady("cloud")).toBe(false);
   } finally {

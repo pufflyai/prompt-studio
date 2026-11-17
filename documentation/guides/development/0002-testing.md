@@ -2,7 +2,7 @@
 
 ## Validation
 
-Use Bun 1.4.4 and Node 24, matching CI. Install dependencies with `bun install --frozen-lockfile`. The database workspace installation generates an empty engine image matched to the installed PGlite version. Source runtimes and migration workers restore this image instead of running PostgreSQL initialization for every open. It contains no application schema or user data; source startup still runs application migrations. Installations that use `--ignore-scripts` must run `bun run --cwd packages/pstdio-db postinstall` before starting the source API. The root pins `node-gyp` so native addon install scripts use the local build tool instead of a temporary `bunx node-gyp@latest` download.
+Use Bun 1.4.4 and Node 26.7.0, matching CI. Install dependencies with `bun install --frozen-lockfile`. The database workspace installation generates an empty engine image matched to the installed PGlite version. Source runtimes and migration workers restore this image instead of running PostgreSQL initialization for every open. It contains no application schema or user data; source startup still runs application migrations. Installations that use `--ignore-scripts` must run `bun run --cwd packages/pstdio-db postinstall` before starting the source API. The root pins `node-gyp` so native addon install scripts use the local build tool instead of a temporary `bunx node-gyp@latest` download.
 
 When upgrading Bun, align the root `packageManager` pin, Bun engine requirements, all `@types/bun` dependencies, the lockfile, and every Docker image, including `infra/local/Dockerfile`. Update the local Bun executable and current setup documentation to the same version before validating.
 
@@ -33,6 +33,8 @@ Choose checks that cover the changed behavior and its affected callers. Start wi
 
 Documentation-only changes need content, link, path, and formatting checks. A documentation path in a source comment, prompt, or test fixture does not by itself require application tests.
 
+Test product behavior. Do not add tests of tests, fixtures, setup, runners, suite selection, reports, or benchmark instrumentation. Repository-local tools do not need their own automated suites. Review these changes with static checks and the affected product scenarios.
+
 ```bash
 bun run --cwd scripts verify:docs-links      # relative links, published routes, anchors, exported skills
 bun run --cwd scripts verify:sdk-reference   # SDK references name every public method
@@ -42,26 +44,96 @@ bun run --cwd scripts verify:docs-snippets   # authoring guide code equals infra
 `static_checks` runs the first two on every stage. External sites are checked separately by the **Documentation links** workflow (`.github/workflows/docs-external-links.yml`) every Monday and on manual dispatch, so an outage elsewhere cannot fail a pull request. Run it locally with `bun run --cwd scripts verify:docs-external-links`.
 
 ```bash
-bun test <path-to-test> # from the owning package directory
-bun run --cwd packages/<name> test
-bun run --cwd packages/<name> lint
-bun run --cwd packages/e2e test:ui -- src/ui/<name>.spec.ts
-bun run --cwd packages/canvas-tests test:browser -- src/ui/<name>.spec.ts
-```
-
-Run a single dashboard test through the package script, because the dashboard runner needs two flags:
-
-```bash
+bun run test -- --file packages/pstdio-dashboard/src/workbench.p0.test.ts
 bun run --cwd packages/pstdio-dashboard test -- src/workbench.p0.test.ts
+bun run test -- --scope pstdio-api --priority p1
+bun run test -- --stage merge_queue --base origin/main --list
+bun run test -- --file packages/e2e/src/ui/startup.p1.spec.ts
 ```
 
-The script runs `bun test --conditions production --tsconfig-override tsconfig.app.json`. `--tsconfig-override tsconfig.app.json` loads the `@/*` path alias; a plain `bun test <file>` in the dashboard fails with `Cannot find module '@/...'`. `--conditions production` makes dependencies resolve their `production` export condition, as the built dashboard does. `test:coverage` uses the same flags. The dashboard imports `@pstdio/ui` and `@pstdio/workbench` from their `dist` folders, so build them first after changing them.
+The standard command discovers tests once, selects their runner, and prepares the dependencies they need. It applies dashboard export conditions and path aliases, API file-process isolation, browser homes, native packaging, and existing time limits. Package `test` scripts use this command with their owning scope. Low-level lifecycle commands remain available for diagnosing their native runners.
 
-Build the affected package's dependencies first when its checks load compiled exports. Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks in the [testing guidance](../../guidance/0005-testing.md#5-packaged-files). Documentation-reference-only edits do not.
+Preview a plan with `--list`, optionally saving it with `--out test-results/ci/plan.json`. Saved plans include exact files, reasons, setup dependencies, lanes, required host and artifact, source identity, and a digest. Execute that selection with `bun run test -- --plan test-results/ci/plan.json`; `--job <assignment>` selects one CI assignment. A changed checkout cannot execute a saved plan. Previewing installs or builds nothing. `--stage pull_request`, `merge_queue`, `main`, `nightly`, and `stable` preserve the existing stage policy; nightly and stable expose their functional host assignments. Dedicated performance workflows retain their fixed native workloads and budget classification.
 
-During implementation, run targeted tests. Before marking a draft PR ready, follow [Finishing a pull request](../../guidance/0004-ci.md#1-finishing-a-pull-request), including the full test run after integrating main for behavioral features and meaningful regressions. Routine copy, spacing, cosmetic and documentation changes require only relevant scoped checks, without a full command or browser runs. Explicit user-requested validation still applies. Run full validation only when explicitly requested. For that case, `bun run validate` checks changesets, the lockfile, formatting, package boundaries, extension API versions, and the extension API report, then builds before translation checks, lint, and tests. `bun run test` runs unit packages through Lerna, then the E2E script, CLI, UI, Vite terminal, and separate Canvas suites. `bun run test:e2e` runs app checks; `bun run test:canvas` runs component server checks and browser interactions. Lerna excludes both browser packages from its unit pass. Packaged and desktop tests run separately in CI.
+`--file` and positional paths accept repository-relative or owning-package-relative files. `--files-from <json>` selects a nonempty JSON array of discovered repository paths. `--priority p0,p1`, `--scope <workspace>`, and `--runner <kind>` narrow selection. `--artifact compiled-cli` selects packaged CLI cases, including their pure P0 helpers; `--artifact packaged-desktop` selects the packaged Electron cases. Native artifact consumers keep `E2E_PACKAGED_BINARY_PATH` when provided. `--prebuilt` skips build/package prerequisites; fixture preparation and execution evidence still run.
 
-The complete local test run schedules one workspace suite at a time. Suites such as the API already own worker pools; running several suites together multiplies those pools and can starve native CLI fixtures. Priority and CI commands retain their own scheduling. The complete local run may take longer because workspace suites do not overlap.
+A local selection includes applicable registered quarantine cases once in a separate lane. Use `--lane quarantine` to diagnose only those cases. Complete, verified registered assertion failures stay visible without failing the stable result. Missing cases, skipped quarantine cases, setup errors, cancellation, unexpected execution, and missing native reports fail verification. Bun files are assigned to shards before execution; Playwright retains its native case sharding. Both use the same saved plan and aggregate completeness gate.
+
+`--timings <json>` supplies a frozen version-1 snapshot. Its `capturedAt` and `observations` stay in the plan. Each observation records `kind` (`file` or `package`), repository-relative `key`, `profile` (`<owner>/<runner>` for files, `package-checks` or `contracts` for package batches), `host` (`linux/x64`), `configuration` (`source:stable:P0`), `coverage`, `durationMs`, `samples`, `observedAt`, `sourceSha`, and `provenance`. Only matching observations within thirty days of the snapshot date affect assignment. Missing observations use the shared allocator's compatible median estimate; a snapshot with no matching observations keeps deterministic round-robin assignment. Timing never changes selection or browser case sharding.
+
+Release consumers use `--performance-family storage|planner|desktop --prebuilt` after restoring their exact candidate. These plans retain the complete fixed family and native lifecycle, source and artifact binding, and transported native evidence. `execution.json` records setup, test, and cleanup phases with source, plan, invocation, host, duration, completeness, and known prebuilt status. Fixture-input records separate preparation reuse hits, copied bytes, and copying time. CI timing reports keep required-gate wait, end-to-end completion, unique runner time, and the source workflow's execution critical path separate; unavailable dependencies or timestamps remain unknown.
+
+The root/package default keeps integrations, packaged/native journeys, and performance workloads as explicit selections. An explicit priority, file, runner, or artifact can select these families. Production extension unit tests remain independently runnable with `bun test`, public dependencies, and their own setup. Repository-local tools and demo applications do not have automated suites. Host browser scenarios opt into small installable fixtures for harnesses, webviews, settings, modes, menus, or document layout. The separate Workbench fixture Lab UI is retired; Extension Lab and its example applications remain available.
+
+Compatible priority runs share one completed extension preparation per runner and lane. The executor owns a private directory on the host's temporary storage, separate from checkout reports, so Windows CI's existing Dev Drive also holds package preparation. The producer performs the normal frozen prerequisite installs, retains the package payload cache and immutable public tarballs, removes disposable setup dependencies, and publishes its source/cache catalog only after preparation finishes. Consumers copy source without dependencies and borrow that cache until executor cleanup; every runtime still performs its own fresh install. Ordinary child installers inherit the same cache, including packaged browser workers. Prepared packaged consumers keep their private homes beneath that owner, so forced child termination cannot abandon them outside executor cleanup. Stable and quarantine lanes keep separate preparations. Result uploads exclude producer payloads, including after interruption; execution and native reports remain retained.
+
+Changes to packaged runtime behavior, assets, or file inclusion also require the packaged checks in the [testing guidance](../../guidance/0005-testing.md#5-packaged-files). Documentation-reference-only edits do not.
+
+## Targeted local review
+
+Use focused tests while developing. Before review readiness, commit the candidate and inspect its complete branch diff with:
+
+```sh
+bun run test:review --base origin/main --list
+bun run test:review --base origin/main
+# Add a critical interaction or boundary that the automatic selection does not establish:
+bun run test:review --base origin/main --test packages/e2e/src/ui/startup.p1.spec.ts
+```
+
+Fetch the base first, following [PR completion](../../guidance/0004-ci.md#1-finishing-a-pull-request). The command rejects dirty source, unknown options, and unknown extra tests. It selects from the merge base through HEAD, including changes in earlier commits and deletions. The list operation does not install or build.
+
+| Layer | Selection |
+| --- | --- |
+| Static | Documentation links; changed code formatting and boundaries; public contract checks when relevant |
+| Queue minimum | All fast repository/package P0; affected P1 API/database and Bun contracts; affected service integrations; canonical dashboard smoke; packaged desktop smoke and affected packaged flows. Membership comes from the common PR/merge-queue planner and owning runners |
+| Additional contracts | Affected source/API/CLI contracts, including consumers of changed helpers and fixtures |
+| Changed tests | Added or edited files at every priority, using the registered runner |
+| Browser | Always run the canonical `e2e test:smoke` command used by queue CI, plus edited or explicitly selected app scenarios |
+| CI evidence | Normal PR checks, plus explicitly justified exceptional coverage; deferred breadth is an inventory for nightly/release coverage, not a mandatory PR matrix |
+
+Execution currently supports macOS and Linux; Windows agents can inspect the plan and use isolated CI. Every invocation includes the shared PR/queue test minimum on the actual local host, including packaging and its selected flows; Linux artifact qualification remains a hosted CI requirement. This applies even to narrow or documentation-only diffs; documentation-only tasks can still use scoped verification without invoking this command. Queue tests are never deferred. The command installs into a private scratch clone, builds selected prerequisites once with one build task at a time, then executes checks serially. Existing runner worker pools and per-test limits remain unchanged. It does not create a Prompt Studio implementation workspace or run workspace-ready hooks. Mutable dependencies, Nx indexes, restored build outputs, reports and runtime state belong to that run. Browser scenarios use the existing wrapper's dynamic ports and isolated home. A running Docker daemon is required for queue service integrations. Missing prerequisites fail the run rather than skipping tests. Install supported browser binaries beforehand; the immutable browser cache remains readable across runs. Source tests use their existing temporary fixtures. Service integrations use unique Compose projects and automatically allocated networks. Each launcher records its exact project and config before startup; the supervisor cleans those projects after stopping test processes, including on interruption. Cleanup failures prevent a pass; unrelated Docker resources are never pruned.
+
+The local target is **15 minutes from invocation**, including source selection, clone, install, build, tests and owned-process cleanup. This is a target, not a cancellation deadline. Broad changes must finish every selected check even when they take longer. The runner warns at 15 minutes, continues automatically, and records elapsed time and `exceededTarget` in its report. Never reduce coverage or shorten a benchmark to meet the target. Explicit interruption still stops owned processes and preserves partial evidence. Individual test, fixture and CI job limits remain unchanged.
+
+Local prerequisite builds reuse the existing Nx HTTP archive protocol. Worktrees of one repository share complete archives under the Git common directory's `pstdio-local-review-builds/v1/<platform>-<architecture>/` folder. Each invocation owns a loopback server that stops with the run. Archive publication is atomic and never replaces an existing entry. Nx hashes source and transitive inputs, configuration, declared build environment and Bun/Node/platform runtimes. Cache misses build normally; an unavailable cache at startup falls back to cold builds. Dependencies and restored outputs remain private. Installed Chakra theme declarations are regenerated in every private install before cached builds, because they live outside the archived outputs. Only prerequisite setup receives this endpoint; all selected tests still execute. Do not share archives across untrusted repositories or delete the shared archive directory while other runs are active.
+
+Reports live in `test-results/local-review/<run-id>.json`. Each report names the revision, merge base, plan, phase commands, durations, result and private evidence directory. Its `buildCache` field records the shared archive directory, hit/miss/store counts and any startup failure; use these with build-phase timings to compare cold and warm runs. The worker's `checks.json` and runner artifacts record individual check results. Bun’s [parent-death and descendant cleanup](https://bun.sh/blog/bun-v1.4#no-orphans-v1-3-14v1-4-0), owned process groups, and a descendant snapshot protect cancellation, including detached children. Tests keep their usual environment so daemon-lifecycle assertions retain their meaning. Scratch directories are retained for diagnosis; remove only the directory named in your report after retaining the needed evidence. Never delete another run's resources.
+
+`local_passed` means the selected local checks passed. Review readiness also requires normal latest-head PR CI and any explicitly required exceptional checks. The deferred list records coverage not run locally; it does not require `ci:full`, native, packaged or benchmark matrices for every PR. Report unrun and failed diagnostics honestly without treating optional breadth as a routine readiness gate.
+
+Native, additional packaged and benchmark suites beyond the required profile are reserved for exceptional high-risk changes that focused checks cannot establish, or an explicit user request. Record the concrete risk, affected behavior and smallest complete owning workload before dispatch. A transitive shared dependency or an unedited deferred test alone is not enough. Normal nightly and stable validation continue to cover complete matrices.
+
+When an exceptional case needs source benchmark qualification, use `gh workflow run benchmarks.yml --ref <candidate-branch> -f commits=<exact-sha> -f qualify_source=true -f release_channel=stable`. This preserves the selected suite’s original workloads, host policy, quarantines and limits. Do not use this as a routine PR completion step. Source qualification does not publish or certify signed release artifacts.
+
+After repairs, rerun failed or affected checks and record their inputs. A complete full-suite rerun is not required. Documentation and routine cosmetic changes retain [scoped verification](../../guidance/0005-testing.md#4-prove-it-works). Explicit full-validation requests still apply. Existing runs keep their original commands, revisions and interrupted or completed status.
+
+## Complete a full test run without stopping at the first failure
+
+The shorthand `bun run test` uses Lerna's default bail and chains later phases with `&&`. A failure can therefore leave most of the required workload unrun. For full validation, run the following phases individually, in order, retaining each exit status and log. Continue after test failures; do not join the commands with `&&` or use a shell that exits after the first failed command.
+
+```sh
+CI_PRIORITY=P2 bun x --no-install lerna run test --no-bail --concurrency 1 --ignore e2e --ignore canvas-tests
+CI_PRIORITY=P2 bun run build -- --scope e2e --include-dependencies --no-bail --concurrency 1
+bun test:p1 --scope e2e --runner bun
+CI_PRIORITY=P2 bun run --cwd packages/e2e test:cli
+CI_PRIORITY=P2 bun run --cwd packages/e2e test:ui
+CI_PRIORITY=P2 bun run --cwd packages/e2e test:vite-terminal
+CI_PRIORITY=P2 bun x --no-install lerna run build:previews --scope canvas-tests --no-bail --concurrency 1
+```
+
+Run the Canvas browser phase only after its preview build above succeeds on the current source. The `test:canvas` shorthand does not guard this dependency when collecting failures under P2.
+
+```sh
+CI_PRIORITY=P2 bun run --cwd packages/canvas-tests test:browser
+```
+
+This covers the normal full-test workload without dropping later independent phases after a failure. P2 disables the P1 fail-fast behavior inside maintained runners; it does not shorten the workload or change time limits. If a build fails, do not run dependent tests against old output. Record the blocked phases and finish any independent phases. A nonzero result or an unrun required phase means the full run did not pass, even if the last command succeeds. Required packaged, desktop and benchmark scopes remain separate and follow the same repair cycle.
+
+Collect all failures before repairing them as a batch. During repairs, select only failed cases/files and new regressions through the owning runner. Run blocked or unrun scopes once their prerequisites are repaired. For example, the API's `--files` option and Playwright's file selection/`--grep` avoid rerunning successful suites. Keep whole benchmark workloads and inseparable fixtures intact. Preserve the first failure; a later pass without a cause repair does not resolve it.
+
+Use this complete sequence only for explicitly requested full validation. Collect failures, repair them together, and rerun failed or affected checks. Repeat the entire sequence on final source only when the explicit validation request requires it. Submit consolidated fixes for normal latest-head CI; do not manually restart successful jobs.
+
+## Browser and API setup
 
 Install browser dependencies before running browser tests:
 
@@ -69,15 +141,15 @@ Install browser dependencies before running browser tests:
 bun run --cwd packages/e2e playwright install --with-deps chromium firefox webkit
 ```
 
-For manual app validation, use `bun run dev:playwright`, open the printed dashboard URL, and stop it with `bun run dev:playwright:down`. Do not start a development server directly or use the developer database.
+For manual app validation, use `bun run dev:isolated -- --name <unique-run-id>`, open the printed dashboard URL, and stop only that stack with `bun run dev:isolated -- --name <unique-run-id> --down`. The legacy `dev:playwright` shortcuts share a fixed name and must not be used concurrently. Do not start a development server directly or use the developer database.
 
 Run `bun run --cwd packages/e2e test:smoke` for basic dashboard browser E2E. It runs the real dashboard with isolated runtime data, without starting Canvas. The discovered startup P1 file covers empty and selected project flows and project switching. Keyboard/theme permutations remain in their P2 suite. These tests also run in the full UI suite.
 
-API tests retain one fresh Bun process per file and at most two active files, with the existing 30-second per-test limit. Run focused API regressions with `bun run --cwd packages/pstdio-api test --files='["src/app-config.p0.test.ts"]'`. Unknown, duplicate, or empty explicit file selections fail. Without `--files`, the driver selects every API test file. `--shard=1/4` partitions that selection; optional `--timings=path.json` balances complete files from recorded durations. Timing files use Bun's `{ "version": 1, "files": { "src/example.test.ts": 120 } }` format. Missing durations use a measured fallback; no test is dropped because of elapsed time.
+API tests retain one fresh Bun process per file and at most two active files, with the existing 30-second per-test limit. Run focused API regressions with `bun run test -- --file packages/pstdio-api/src/app-config.p0.test.ts`. The API driver accepts only the exact planned files and keeps its fresh file-process pool. Its low-level `--files` and `--timings` options remain available for runner diagnosis. The API pool and shared planner reuse the same deterministic duration allocator, retaining round-robin assignment without observations and median estimates for missing durations.
 
 `scripts/ci/run-bun-tests.ts` adds `--bail=1` only for `CI_PRIORITY=P1`; other priorities collect all failures. The API scheduler also stops pending P1 files and waits for active child processes to stop. App Playwright uses `maxFailures=1` only for P1. Existing test limits, source conditions, and manual quarantine selection remain unchanged.
 
-The Bun wrapper and API driver save reports under `test-results/ci/bun` and `test-results/ci/api`. Reports include actual source revision, platform, priority, JUnit case IDs and outcomes, executed counts, and per-file timings. API reports list every selected file and distinguish failures, P1 cancellation, external cancellation signals, and missing reports. A successful child without a case report fails. Bun's bailed JUnit omits later cases, so partial reports explicitly leave the unreported selected-case count unknown. Direct `bun test` calls do not produce these wrapper manifests.
+The standard executor saves `execution.json` beside per-run native case reports under `test-results/ci/planned`. Direct lifecycle calls retain their native report folders. Reports include actual source revision, platform, priority, JUnit case IDs and outcomes, executed counts, and per-file timings. API reports list every selected file and distinguish failures, P1 cancellation, external cancellation signals, and missing reports. A successful child without a case report fails. Bun's bailed JUnit omits later cases, so partial reports explicitly leave the unreported selected-case count unknown. Direct `bun test` calls do not produce these wrapper manifests.
 
 ## Test priorities
 
@@ -185,7 +257,7 @@ Copy `dist/pstdio` to a private path and point `E2E_PACKAGED_BINARY_PATH` at the
 
 ## Isolation
 
-Packaged desktop update-channel and database-recovery tests use `PSTDIO_DEFAULT_EXTENSIONS=[]`. They keep real project creation, Settings and CLI checks, database ownership conflicts, damaged control files, and recovery after repair. These host checks do not use an agent harness. Navigation customization keeps its workbench fixture extension configuration across relaunches. Cold default-extension installation remains covered by `packages/e2e/src/packaged/packaged-core-extensions-smoke.p1.test.ts`, which runs in the native packaged toolchain checks, including Windows, with its existing workload and allowance. Attached backend-recovery tests keep their existing cold extension setup.
+Packaged desktop update-channel and database-recovery tests use `PSTDIO_DEFAULT_EXTENSIONS=[]`. They keep real project creation, Settings and CLI checks, database ownership conflicts, damaged control files, and recovery after repair. These host checks do not use an agent harness. Failing navigation-customization and cold core-extension smoke cases were removed with the quarantine cleanup. Their failure evidence and source remain in Git history. Attached backend shutdown retains its existing cold extension setup.
 
 The signed Windows installation check follows [the 0.46 database baseline](../../adrs/0103-database-baseline-replaces-in-place-upgrades.md). Updating an older baseline must retain the raw database and the original project's JSON export, preserve workspace files, and support a new project in the fresh database. Updates within the current baseline must preserve the active project. Installer, signature, launcher, CLI, and Squirrel feed checks run for both transitions.
 
@@ -220,7 +292,7 @@ Packaged desktop specs import `test` from `clients/desktop/src/testing/packaged-
 
 Compiled builds generate an empty application database image with the installed PGlite version and current Drizzle migrations. The image holds only `template1`, the database the runtime opens; it leaves out the unused `postgres` and `template0` databases because a first start must write every image file, which is slow on Windows. New, empty database directories load that image, including its migration history. The runtime unpacks the image into `pstdio.db.restoring` beside the data folder, then moves the finished folder into place. A start that stops while unpacking leaves the data folder empty, so the next start unpacks the image again. The normal migrator still runs, so later schema changes follow the same upgrade path. Nonempty directories always open their existing files, including damaged databases that need recovery. This moves PostgreSQL initialization and fresh schema creation into the build and reduces cold startup. PGlite documents this approach in its [pre-populated filesystem guide](https://pglite.dev/docs/prepopulatedfs).
 
-Use the pinned Bun 1.4.4 toolchain for installs and compiled builds. Bun 1.3.14 can reject a valid large tarball when its first network chunk is shorter than the gzip header. This caused intermittent PGlite installation failures on macOS. The [upstream extraction fix](https://github.com/oven-sh/bun/pull/34861) is included since 1.4.2. CI and Docker builds use the same version. The landing-page builder also provides Node 24 for Astro and Vite, matching their runtime in regular CI builds; Bun manages dependencies and runs the package scripts.
+Use the pinned Bun 1.4.4 toolchain for installs and compiled builds. Bun 1.3.14 can reject a valid large tarball when its first network chunk is shorter than the gzip header. This caused intermittent PGlite installation failures on macOS. The [upstream extraction fix](https://github.com/oven-sh/bun/pull/34861) is included since 1.4.2. CI and Docker builds use the same version. The landing-page builder also provides Node 26.7.0 for Astro and Vite, matching their runtime in regular CI builds; Bun manages dependencies and runs the package scripts.
 
 Tests install local fixture extensions from `packages/e2e/src/default-extensions.ts`. Select `pstdio.workbench-fixture.harness.fake` for ordinary session tests. A Planner attempt starts a session; `startSession: false` is not a supported command parameter. Tests for a real provider must supply a controlled executable or explicitly opt into live integration tests.
 
@@ -242,25 +314,17 @@ Windows packaged-toolchain CI opts into a ReFS Dev Drive owned by the job and se
 
 App reports and traces are under `packages/e2e/playwright-report` and `packages/e2e/test-results`; component reports use those folder names under `packages/canvas-tests`. Desktop results are under `clients/desktop/test-results`. Each packaged test home attaches complete redacted copies of `logs.jsonl` and `desktop-runtime.log` as files before removal. Startup errors include the last 50 runtime output lines. Electron traces start before the lifecycle-page wait, after the sidecar startup wait has protected process isolation; an unavailable attachment states why a trace could not start or be saved. Missing evidence warns without replacing the original build or test failure.
 
-Linux UI, CLI, and packaged/Vite jobs use the official `mcr.microsoft.com/playwright:v1.60.0-noble` image. They run as user 1001, matching the owner of GitHub's mounted home directory; Firefox rejects a root process using that user's home. The image includes browser binaries and system libraries, so these jobs do not install Ubuntu packages or browsers during setup. Keep the image version aligned with the installed Playwright version when updating dependencies. Desktop jobs still run on their native Linux and macOS runners.
+Linux UI, CLI, and packaged/Vite jobs use the official `mcr.microsoft.com/playwright:v1.60.0-noble` image. They run as user 1001, matching the owner of GitHub's mounted home directory; Firefox rejects a root process using that user's home. The image includes browser binaries and system libraries, so these jobs do not install Ubuntu packages or browsers during setup. Keep the image version aligned with the installed Playwright version when updating dependencies. Edited-test rows on Linux for the app, CLI, packaged-browser, Vite, component and browser-helper runners use the same image, matching where their nightly suites run. Desktop jobs still run on their native Linux and macOS runners because they configure Electron's sandbox with `sudo`. They drive Electron rather than a Playwright browser, so they install no browsers. Packaged CLI rows run on the native toolchain hosts their nightly suite uses. Those rows, macOS browser rows, and browser benchmark suites install the browsers they use.
 
 The browser container installs the root manifest's Bun version with `scripts/ci/setup-container-bun.ts`. This temporary bootstrap uses Bun's official registry archive because the normal setup action requires `unzip`, which the image lacks. ADR 0026 describes when to remove it.
 
-Obsolete dashboard specs were removed. Current tests cover project selection, ticket workflows, session follow-ups, workspace files and terminals, extension lifecycle, and workbench navigation. Add coverage for restored features against the current UI. Live Claude, Codex, and OpenCode follow-up tests skip unless `E2E_AGENTS` selects the provider. Packaged browser checks cover Chromium, Firefox, and WebKit; the main UI suite covers Chromium. The packaged webview suite gives commands/settings, workspace panels/session tabs, and documents/collections independent cold fixtures and test results. It keeps every assertion and the existing 120-second per-test allowance.
+Obsolete dashboard specs were removed. Current tests cover project selection, ticket workflows, session follow-ups, workspace files and terminals, extension lifecycle, and workbench navigation. Add coverage for restored features against the current UI. Live Claude, Codex, and OpenCode follow-up tests skip unless `E2E_AGENTS` selects the provider. Packaged native-settings checks cover Chromium, Firefox, and WebKit; the main UI suite covers Chromium. The packaged webview suite gives Chromium commands/settings, workspace panels/session tabs, and documents/collections independent cold fixtures and test results; Firefox retains commands/settings. The failing WebKit case was removed. Remaining cases keep the existing 120-second per-test allowance.
 
-### Flaky-test quarantine and reliability runs
+### Failing quarantined tests
 
-`scripts/ci/test-quarantine.json` records confirmed flakes, their affected platforms, owners, first-failure evidence, and removal criteria. The shared Bun wrapper, API file driver, and packaged Bun/Playwright runners exclude only registered cases on the listed platform. CI executes them separately in quarantine steps, without retries or changed limits. Only the registered test steps allow failures; setup and build failures remain blocking. A separate report check requires every registered case to execute exactly once and records its failure count in the job summary. Missing reports, skipped cases and retries fail that check. Bun JUnit reports, packaged browser JSON reports, and traces are uploaded with attempt-specific names. A passing stable gate does not mean that quarantine passed. [ADR 0101](../../adrs/0101-temporary-flaky-test-quarantine.md) records the temporary trade-off.
+Remove known-failing quarantined cases and their entries from `scripts/ci/test-quarantine.json`. For a mixed file, remove only the failing case or generated variant and its unused setup. Delete the file when no cases remain. Preserve the first-failure evidence in the ticket or report and use Git history when restoring coverage after a fix. Do not rename, skip, retry, relax, or return the failed case to the stable lane.
 
-Database coverage uses the same stable selection. Quarantined cases do not contribute to its line-coverage report; their separate lane owns their execution evidence.
-
-The Apple Silicon desktop row runs its registered packaged cases in a separate step against the same built app. The normal desktop suite retains the project-tab lifecycle case on Linux, Windows and Intel macOS. `E2E_TEST_LANE=quarantine bun run --cwd clients/desktop test:packaged` selects the registered cases on an affected native machine. The separate report check remains required and uploads beside the stable desktop results.
-
-Run registered cases locally with `E2E_TEST_LANE=quarantine bun run --cwd packages/pstdio-db test`, `E2E_TEST_LANE=quarantine bun run --cwd scripts test`, or `E2E_TEST_LANE=quarantine bun run --cwd packages/e2e test:packaged:browser`. Use the normal package scripts for the stable lane. Direct `bun test <file>` remains available for diagnosis and does not apply quarantine selection.
-
-Compiled CLI quarantine runs after native package verification against that same binary. For diagnosis, set `E2E_PACKAGED_BINARY_PATH` to the compiled executable and run `E2E_TEST_LANE=quarantine bun run --cwd packages/e2e test:packaged:cli`. The API quarantine step runs its registered file in an isolated source-conditions process, with the same 30-second test allowance as normal API shards.
-
-Each CI pipeline executes each test once per applicable platform, including performance and quarantine cases. Do not repeat a test or create multiple reliability refs to obtain a passing result. Quarantine confirmed flakes with first-failure evidence, an owner and a removal criterion; keep their limits and assertions, and require their separate execution report. A later pass does not erase an earlier failure.
+The recorded failing cases have been removed and the registry is empty. The quarantine runners remain available for focused diagnosis. If a case is registered during diagnosis, its separate lane must execute it exactly once and retain the native report; missing reports, setup failures, skipped cases, and retries still fail verification. A passing stable gate does not mean the diagnostic case passed.
 
 To investigate a failure, keep retries disabled and run only the affected spec once:
 
@@ -296,22 +360,13 @@ The **Design system/Patterns/Chat/Chat panel streaming ready** story opens an ov
 
 Use the **Design system/Patterns/Chat/Chat panel rendering** Canvas stories to inspect long turns. `RenderingWorkloads` starts with an empty chat and prepares fixtures before the measured mount. `LongTurnScrolling` checks bounded responses, sticky user context, expansion, scrolling, hidden-page recovery, session switching, and tail following during streaming. `ContinuousScrolling` checks the sticky message on each animation frame while scrolling up and down within one large response. A check that waits for scrolling to settle does not cover this behavior.
 
-The fixed workloads in `packages/ui/src/components/chat-ui/performance/chat-rendering-fixtures.ts` are:
-
-- Rich turns: 500 turns and 1,000 messages, with four Markdown repetitions and three tools per turn.
-- Plain turns: the same message roles and count, with short text only.
-- Long turns: one rich user message followed by 1,000 or 5,000 rich responses. Each response has one Markdown repetition, reasoning, and three tools.
-- Large response: one user message and one response containing 100 repetitions of rich Markdown.
-
-Use [Write a benchmark](0016-writing-benchmarks.md) for the shared runner, sample count, CPU throttling and retained-heap helper. The standalone chat config keeps its three-sample default. Record viewport size, browser version, hardware, commit, and competing work; compare the same fixed fixtures.
-
-The measurement excludes module loading, fixture construction, API requests, and database work. It measures mount, scrolling to the middle, session switching, and streaming one response in 384-character chunks. Readiness requires a visible chat viewport and three animation frames. Each phase attaches a CPU profile, script/layout/style/task times, long tasks, and mounted row/editor/table/DOM counts to the Playwright report. These component timings are not end-to-end session-opening timings. A stopped or timed-out measurement is incomplete, not a performance result. Existing budgets and execution allowances remain unchanged.
+The standalone rich/plain/1,000/5,000-response timing permutations and profiling suite are retired by PS-233. Canvas stories remain exploration and functional examples. B4 owns the fixed end-to-end streaming workload; temporary profiles stay outside acceptance. See the [frozen workload ledger](../../references/performance/0009-frozen-workload-ledger.md) for unchanged product targets and unresolved old guards.
 
 The shared chat list virtualizes each user message and response independently with four rows of overscan. It also retains the user row for the visible turn. A native CSS sticky element follows scrolling inside a wrapper bounded by the turn's measured height; its position does not depend on React rendering each scroll offset. Logical turns still determine sticky context, question visibility, and final-response actions; their length does not determine mounted response count. Markdown display imports only changed content and installs editing plugins and source tracking only when editable. Rich messages still use Lexical for selection, copying, links, highlighting, and rich nodes.
 
 The viewport preserves its visible pixel offset across hiding and resumes tail following when appropriate. The scroll library's hidden-element limitation and the isolated restoration hook are recorded in [Temporary hidden conversation scroll restoration](../../adrs/0075-temporary-hidden-conversation-scroll-restoration.md).
 
-This boundary bounds the number of mounted messages, not the size of one message. A large response, an expanded user message, or a merged reasoning/tool timeline still mounts all its content. Parsing, node creation, and layout therefore scale with that content. Measure this limit separately rather than splitting the benchmark input or hiding rich content to make a budget pass.
+This boundary bounds the number of mounted messages, not the size of one message. A large response, an expanded user message, or a merged reasoning/tool timeline still mounts all its content. Parsing, node creation, and layout therefore scale with that content. Investigate this limit with temporary profiling; do not shrink frozen input or hide rich content to pass a budget.
 
 ## Time limits
 
@@ -326,7 +381,7 @@ Scope each benchmark to one operation. Establish explicit readiness prerequisite
 
 The database package's `test` and `test:coverage` tasks declare Nx `parallelism: false`. Nx runs each without competing package tasks from the same invocation. The export-worker check starts both real database engines within its existing allowance; concurrent package work can starve that setup. Other package tasks keep their normal concurrency. `NX_PARALLEL` alone does not limit Lerna's explicit package concurrency.
 
-The subnav benchmark measures trusted clicks and request completion in the browser's monotonic clock. Match every observed request to its [Resource Timing](https://www.w3.org/TR/resource-timing/) entry, including repeated URLs. Missing or ambiguous timing fails the measurement. Do not subtract browser `performance.timeOrigin` from protocol wall-clock timestamps: those clocks can disagree and report minutes for a request the browser completed in milliseconds. Network observation still verifies quiescence, response status, content and all linked sessions.
+The retired subnav benchmark measured trusted clicks and request completion in the browser's monotonic clock. Match every observed request to its [Resource Timing](https://www.w3.org/TR/resource-timing/) entry, including repeated URLs. Missing or ambiguous timing fails the measurement. Do not subtract browser `performance.timeOrigin` from protocol wall-clock timestamps: those clocks can disagree and report minutes for a request the browser completed in milliseconds. Network observation still verifies quiescence, response status, content and all linked sessions.
 
 To review a timeout:
 
@@ -347,11 +402,7 @@ On 2026-10-28 the user approved a 60-second Windows allowance for two packaged c
 
 Use [Write a benchmark](0016-writing-benchmarks.md#desktop-benchmarks) for packaging commands, shared helpers, sampling, desktop workloads and budget evidence. The [nonfunctional requirements](../../guidance/0003-nonfunctional-requirements.md) set mandatory product targets. Regular performance coverage runs in nightly CI and stable-release validation.
 
-Installed harness compatibility resolves and pins npm versions before execution. When `latest` equals `minimum` and both lanes are scheduled, the required minimum lane owns their single execution; a latest-only invocation still executes. The Windows x64 Pi 0.73.1 cold detection/model case runs once in its version-specific quarantine before the blocking tool/session-resume case. Its report must prove exactly one first attempt; the 3000 ms probe remains unchanged.
-
-The final full battery additionally confirmed Intel macOS harness-submenu dismissal and compiled collection-view restart flakes. Both complete cases passed in the prior battery with unchanged sources. Their exact darwin-x64 cases join the existing native quarantine lanes; other platforms remain blocking and no deadline or assertion changes.
-
-Desktop benchmarks retain one complete ordered Playwright invocation: launch cases (including the quarantined cold start) precede renderer cases. The runner classifies the resulting first-attempt report: stable/setup failures block CI, quarantined failures remain visible in a separate mandatory report. Comparison artifacts retain all measurements and the quarantine evidence. No second invocation repeats or moves the cold scenario after renderer work.
+Installed harness compatibility resolves and pins npm versions before execution. When `latest` equals `minimum` and both lanes are scheduled, the required minimum lane owns their single execution; a latest-only invocation still executes. The installed Pi compatibility suite retains its tool/session-resume case. Its failing cold detection/model case was removed with the quarantine cleanup.
 
 ## Critical UI checks
 
@@ -360,3 +411,5 @@ Require browser or visual checks only for critical risks: a blocked primary task
 Keep Canvas examples for design exploration without a corresponding test per example. Identify the critical risk in each retained browser test. Avoid exhaustive variant, viewport, and theme matrices; remove duplicate checks already covered by owning-package tests. Ordinary relevant unit, type, and build checks still apply. Fixed performance workloads and budgets remain unchanged.
 
 Run `bun run test:canvas` for the native Canvas fixture harness and critical browser checks. It uses the live preview renderer and sandbox. Test failures retain Playwright reports, traces, and screenshots.
+
+The cross-container database ownership check keeps its SQLite lease on a unique Docker-owned volume. Docker Desktop host bind mounts do not provide the Linux file-lock semantics this check exercises. Only readiness signals and the source checkout use host mounts. The fixture retains its Compose configuration for interrupted local-review cleanup and removes its containers and volume when complete.

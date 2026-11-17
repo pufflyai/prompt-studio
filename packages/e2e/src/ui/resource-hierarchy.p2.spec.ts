@@ -1,7 +1,7 @@
 import { rmSync } from "node:fs";
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerAttempt, createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
+import { type APIRequestContext, expect, type Page, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
@@ -84,7 +84,11 @@ test("navigates ticket ancestry to a linked workspace and back", async ({ page, 
     await expect(breadcrumb).toContainText(root.shorthand);
     await expect(breadcrumb).toContainText(parent.shorthand);
     await expect(breadcrumb).toContainText(child.shorthand);
-    await expect(sidenav.getByRole("button", { name: "New file", includeHidden: true })).toHaveCount(1);
+    await sidenav
+      .getByRole("option", { name: `${child.shorthand} ${child.title}`, exact: true })
+      .click({ button: "right" });
+    await expect(page.getByRole("menuitem", { name: "New file", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
     await expect(sidenav.getByRole("button", { name: "Create workspace", includeHidden: true })).toHaveCount(1);
 
     const workspaceRow = sidenav.getByRole("option", {
@@ -112,7 +116,11 @@ test("navigates ticket ancestry to a linked workspace and back", async ({ page, 
     await page.getByRole("button", { name: "Navigate back" }).click();
     await expect(breadcrumb).toContainText(child.shorthand);
     await expect(breadcrumb).not.toContainText(attempt.workspace.workspace_shorthand);
-    await expect(sidenav.getByRole("button", { name: "New file", includeHidden: true })).toHaveCount(1);
+    await sidenav
+      .getByRole("option", { name: `${child.shorthand} ${child.title}`, exact: true })
+      .click({ button: "right" });
+    await expect(page.getByRole("menuitem", { name: "New file", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
     await expect(sidenav.getByRole("button", { name: "Create workspace", includeHidden: true })).toHaveCount(1);
   } catch (error) {
     failures.push(error);
