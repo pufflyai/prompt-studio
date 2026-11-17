@@ -1,0 +1,81 @@
+name: PS243 original startup repair verification
+on:
+  push:
+    branches: [test/ps243-startup-repair]
+permissions:
+  contents: read
+  actions: read
+env:
+  NX_DAEMON: "false"
+jobs:
+  startup:
+    name: Original startup (${{ matrix.job }})
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        job: [edited-0, edited-1]
+    env:
+      GH_TOKEN: ${{ github.token }}
+      UI_PERF_ASSERT_BUDGETS: "1"
+      PLAYWRIGHT_TRACE: "off"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ab2362c063ff8789e9b2d77a8b20bdb15845b0ee
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - name: Set up Bun in the Playwright image
+        run: |
+          echo "BUN_INSTALL_CACHE_DIR=/tmp/pstdio-ci-bun-cache" >> "$GITHUB_ENV"
+          echo "E2E_BUN_CACHE_DIR=/tmp/pstdio-ci-bun-cache" >> "$GITHUB_ENV"
+          node scripts/ci/setup-container-bun.ts
+      - name: Install dependencies and restore the original Playwright build-cache profile
+        uses: ./.github/actions/setup-ci-cache
+        with:
+          profile: playwright
+      - name: Download original immutable plan
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: "14331646075"
+          merge-multiple: true
+          run-id: "44089825358"
+          github-token: ${{ github.token }}
+          path: test-results/ci
+      - name: Bind original plan to exact repaired source
+        shell: bash
+        run: |
+          mkdir -p test-results/ci/startup-repair
+          cp test-results/ci/plan.json test-results/ci/startup-repair/original-plan.json
+          git rev-parse HEAD HEAD^{tree} > test-results/ci/startup-repair/source.txt
+          git diff --exit-code
+          git diff 3944dd91c6c9fc5bc3f0782af4eb4aa2eaf27951 HEAD --binary > test-results/ci/startup-repair/repair.patch
+          bun -e 'import { readFileSync, writeFileSync } from "node:fs"; import { sealTestPlan, validateTestPlan } from "./scripts/ci/test-plan"; import { testPlanSource } from "./scripts/ci/test-plan-source"; const original = JSON.parse(readFileSync("test-results/ci/startup-repair/original-plan.json", "utf8")); validateTestPlan(original); const { digest, ...body } = original; const next = sealTestPlan({ ...body, source: testPlanSource(process.cwd()) }); if (JSON.stringify(next.setup) !== JSON.stringify(original.setup) || JSON.stringify(next.runs) !== JSON.stringify(original.runs)) throw new Error("Repair verification changed selection"); validateTestPlan(next, testPlanSource(process.cwd())); writeFileSync("test-results/ci/plan.json", JSON.stringify(next, null, 2)); writeFileSync("test-results/ci/startup-repair/provenance.json", JSON.stringify({originalSource: original.source, repairedSource: next.source, originalDigest: digest, repairedDigest: next.digest, setupAndRunsByteIdentical: true, profiling: false, timeoutOrWorkloadChanges: false}, null, 2));'
+      - name: Execute original selected cold-start jobs without profiling
+        shell: bash
+        env:
+          PLAN_JOB: ${{ matrix.job }}
+          PLAN_PREBUILT: "false"
+          PLAN_DISPLAY: "true"
+          CI_PLAN_OUTPUT_DIR: test-results/ci/startup-repair/execution-${{ matrix.job }}
+        run: bun scripts/ci/run-ci-test-job.ts
+      - name: Hash repair verification evidence
+        if: always()
+        shell: bash
+        run: |
+          find test-results/ci/startup-repair -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > test-results/ci/startup-repair/SHA256SUMS
+      - name: Preserve original plan, phase inputs and every native outcome
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps243-startup-repair-${{ matrix.job }}-attempt-${{ github.run_attempt }}
+          path: |
+            test-results/ci
+            packages/e2e/test-results
+          if-no-files-found: error
