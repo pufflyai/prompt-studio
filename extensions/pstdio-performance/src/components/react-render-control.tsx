@@ -21,11 +21,11 @@ export const ReactRenderControl = (props: ReactRenderControlProps) => {
       >
         {t("reactScan.highlight", "Highlight React renders")}
       </Switch>
-      <Text textStyle="label/S/regular" color="fg.muted">
-        {state?.supported
-          ? t("reactScan.workbenchOnly", "Workbench only")
-          : t("reactScan.unavailable", "React Scan is unavailable in this build.")}
-      </Text>
+      {!state?.supported ? (
+        <Text textStyle="label/S/regular" color="fg.muted">
+          {t("reactScan.unavailable", "React Scan is unavailable in this build.")}
+        </Text>
+      ) : null}
     </Stack>
   );
 };

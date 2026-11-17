@@ -4,27 +4,21 @@ import {
   defineExtensionView,
   type GuestHost,
   type PerformanceMonitoringState,
-  type WebviewClient,
 } from "@pstdio/sdk/extensions";
 import { useWebviewCommandQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { PerformancePopoverContent } from "./components/performance-popover-content";
 import { PerformanceRoot } from "./components/performance-root";
-import { RuntimeDiagnostics } from "./components/runtime-diagnostics";
-import type { diagnosticCommands } from "./diagnostics/commands";
-import { createDiagnosticsStore, type DiagnosticsStore } from "./diagnostics/store";
 import { createSnapshotQuery } from "./snapshot-query";
 
 interface DetailsProps {
-  client: WebviewClient<typeof diagnosticCommands>;
-  diagnostics: DiagnosticsStore;
+  client: ReturnType<typeof createWebviewClient>;
   host: GuestHost;
 }
 
 const Details = (props: DetailsProps) => {
-  const { client, diagnostics, host } = props;
-  const captures = useSyncExternalStore(diagnostics.subscribe, diagnostics.get);
+  const { client, host } = props;
   const { performance } = client;
   const { data: snapshot, error: readError } = useWebviewCommandQuery(
     createSnapshotQuery(client),
@@ -92,27 +86,17 @@ const Details = (props: DetailsProps) => {
       onDismissActionError={() => setError(undefined)}
       onPause={(installedExtensionId) => run(performance.pauseExtension(installedExtensionId))}
       onResume={(installedExtensionId) => run(performance.resumeExtension(installedExtensionId))}
-      diagnostics={
-        <RuntimeDiagnostics
-          {...captures}
-          onStart={(kind, seconds) => void diagnostics.start(kind, seconds)}
-          onCancel={(id) => void diagnostics.cancel(id)}
-          onExport={(id) =>
-            run(diagnostics.export(id).then((result) => navigator.clipboard.writeText(JSON.stringify(result, null, 2))))
-          }
-        />
-      }
     />
   );
 };
 
 export default defineExtensionView({
   render(context) {
-    const client = createWebviewClient<typeof diagnosticCommands>(context.host);
+    const client = createWebviewClient(context.host);
     const root = createRoot(context.mount);
     root.render(
       <PerformanceRoot context={context}>
-        <Details client={client} diagnostics={createDiagnosticsStore(client)} host={context.host} />
+        <Details client={client} host={context.host} />
       </PerformanceRoot>,
     );
     return () => {

@@ -103,6 +103,17 @@ export const ManyExtensions: Story = {
   id: "settings-developer-tools-performance-popover--many-extensions",
   args: { snapshot: manyExtensionsSnapshot },
 };
+export const ShortViewport: Story = {
+  id: "extensions-performance-popover--short-viewport",
+  args: { snapshot: manyExtensionsSnapshot },
+  decorators: [
+    (Story) => (
+      <Box height="xs" display="flex" flexDirection="column" minH="0">
+        <Story />
+      </Box>
+    ),
+  ],
+};
 export const AllExtensions: Story = {
   id: "settings-developer-tools-performance-popover--all-extensions",
   args: { snapshot: manyExtensionsSnapshot },

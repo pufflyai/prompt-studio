@@ -2,4 +2,4 @@
 "performance": minor
 ---
 
-Add a React Scan toggle to highlight workbench renders from the Performance popover.
+Add React render highlighting and shared popover scrolling, and keep backend diagnostic captures in the CLI.

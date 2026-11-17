@@ -1,7 +1,6 @@
 import { Box, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage, PopoverHeader, Tooltip } from "@pstdio/ui";
+import { AlertMessage, PopoverHeader, ScrollArea, Tooltip } from "@pstdio/ui";
 import { Check, Copy, Gauge } from "lucide-react";
-import type { ReactNode } from "react";
 import { extensionName } from "../cpu-sources";
 import { performanceHistory } from "../performance-history";
 import { useTranslations } from "../translations";
@@ -64,7 +63,6 @@ const FrameRateSection = (props: FrameRateSectionProps) => {
 
 export interface PerformancePopoverContentProps extends CpuSectionProps {
   renderOverlay?: ReactRenderControlProps;
-  diagnostics?: ReactNode;
   copied?: boolean;
   // A failed copy, pause or resume, shown below the header that started it.
   actionError?: string;
@@ -73,7 +71,7 @@ export interface PerformancePopoverContentProps extends CpuSectionProps {
 }
 
 export const PerformancePopoverContent = (props: PerformancePopoverContentProps) => {
-  const { copied, actionError, onCopy, onDismissActionError, diagnostics, renderOverlay, ...cpu } = props;
+  const { copied, actionError, onCopy, onDismissActionError, renderOverlay, ...cpu } = props;
   const { snapshot } = cpu;
   const { t } = useTranslations();
   const buckets = snapshot?.frameRate ?? [];
@@ -91,14 +89,11 @@ export const PerformancePopoverContent = (props: PerformancePopoverContentProps)
     : t("popover.copy", "Copy performance snapshot");
 
   return (
-    <Stack gap="0" data-testid="performance-popover">
-      {/* The details webview scrolls itself; its header stays in place above the measurements. */}
+    <Stack gap="0" minH="0" maxH="100dvh" overflow="hidden" data-testid="performance-popover">
       <PopoverHeader
         icon={<Gauge />}
         title={t("popover.title", "Performance")}
-        position="sticky"
-        top="0"
-        zIndex="1"
+        flexShrink="0"
         actions={
           <Tooltip content={copyLabel}>
             <IconButton size="2xs" variant="ghost" aria-label={copyLabel} onClick={onCopy}>
@@ -107,34 +102,30 @@ export const PerformancePopoverContent = (props: PerformancePopoverContentProps)
           </Tooltip>
         }
       />
-      <Stack gap="sm" paddingX="md" paddingBottom="sm">
-        {actionError ? <AlertMessage status="error" title={actionError} onClose={onDismissActionError} /> : null}
-        <FrameRateSection buckets={buckets} />
-        {renderOverlay ? <ReactRenderControl {...renderOverlay} /> : null}
-        {sustained ? (
-          <AlertMessage status="warning" title={t("popover.sustainedTitle", "Sustained high CPU")}>
-            {t("popover.sustainedBody", "{{process}} averaged {{cpu}} CPU over the last {{seconds}} seconds.", {
-              process: sustainedName(),
-              cpu: `${sustained.averageCpuPercent}%`,
-              seconds: (snapshot?.warning?.windowMs ?? 0) / 1000,
-            })}
-          </AlertMessage>
-        ) : null}
-        {snapshot?.version === 2 ? (
-          <>
-            <Box borderTopWidth="1px" borderColor="border.subtle" />
-            <BackendSection history={performanceHistory(snapshot)} />
-          </>
-        ) : null}
-        <Box borderTopWidth="1px" borderColor="border.subtle" />
-        <CpuSection {...cpu} />
-        {diagnostics ? (
-          <>
-            <Box borderTopWidth="1px" borderColor="border.subtle" />
-            {diagnostics}
-          </>
-        ) : null}
-      </Stack>
+      <ScrollArea minH="0" contentProps={{ paddingX: "md", paddingBottom: "sm" }}>
+        <Stack gap="sm">
+          {actionError ? <AlertMessage status="error" title={actionError} onClose={onDismissActionError} /> : null}
+          <FrameRateSection buckets={buckets} />
+          {renderOverlay ? <ReactRenderControl {...renderOverlay} /> : null}
+          {sustained ? (
+            <AlertMessage status="warning" title={t("popover.sustainedTitle", "Sustained high CPU")}>
+              {t("popover.sustainedBody", "{{process}} averaged {{cpu}} CPU over the last {{seconds}} seconds.", {
+                process: sustainedName(),
+                cpu: `${sustained.averageCpuPercent}%`,
+                seconds: (snapshot?.warning?.windowMs ?? 0) / 1000,
+              })}
+            </AlertMessage>
+          ) : null}
+          {snapshot?.version === 2 ? (
+            <>
+              <Box borderTopWidth="1px" borderColor="border.subtle" />
+              <BackendSection history={performanceHistory(snapshot)} />
+            </>
+          ) : null}
+          <Box borderTopWidth="1px" borderColor="border.subtle" />
+          <CpuSection {...cpu} />
+        </Stack>
+      </ScrollArea>
     </Stack>
   );
 };
