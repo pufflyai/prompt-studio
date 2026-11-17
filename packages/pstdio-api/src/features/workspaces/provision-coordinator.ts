@@ -7,6 +7,7 @@ import {
   fireExtensionEventAsync,
 } from "../extensions/extension-event-runtime";
 import { ensureWorkspaceConfig } from "./workspace-config";
+import { hasPendingRestoredFolderSetup } from "./workspace-provider-identity";
 
 export type ProvisionCoordinatorDeps = ExtensionEventDeps;
 export type WorkspaceProvisioningHooks = {
@@ -55,8 +56,8 @@ export const runWorkspaceProvisioning = async <
 
 const projectQueues = new Map<string, Promise<unknown>>();
 const pendingRemovals = new Map<string, number>();
-// Runs one project's provisioning and removal in order, so removal never interleaves with a config write.
-const inProjectWorkspaceQueue = <T>(projectId: string, task: () => Promise<T>) => {
+// Folder setup, provisioning and removal share a queue so they cannot change readiness or config out of order.
+export const inProjectWorkspaceQueue = <T>(projectId: string, task: () => Promise<T>) => {
   const queued = (projectQueues.get(projectId) ?? Promise.resolve()).catch(() => undefined).then(task);
   projectQueues.set(projectId, queued);
   return queued.finally(() => {
@@ -84,10 +85,12 @@ export const provisionProjectWorkspaces = (
   deps: ProvisionCoordinatorDeps,
   projectId: string,
   hooks: WorkspaceProvisioningHooks = defaultHooks(),
+  options: { skipWorkspaceId?: string } = {},
 ) =>
   inProjectWorkspaceQueue(projectId, async () => {
     for (const workspace of await deps.workspaceService.list(projectId)) {
       if (pendingRemovals.has(projectId)) return;
+      if (workspace.id === options.skipWorkspaceId || hasPendingRestoredFolderSetup(workspace)) continue;
       if (workspace.provider_state !== "ready" || workspace.execution_kind !== "local" || !workspace.root_path)
         continue;
       await runWorkspaceProvisioning(

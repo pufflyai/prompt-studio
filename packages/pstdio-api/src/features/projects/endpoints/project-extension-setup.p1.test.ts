@@ -87,6 +87,36 @@ test("setup retry preserves a disabled provider when its default moves to user s
   ).toBe(true);
 });
 
+test("an interrupted restored folder still registers copied tools as disabled when setup is retried", async () => {
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  const fixture = await extension("copied-tool");
+  const project = await handle.deps.projectService.create({ name: "Restored project" });
+  const folder = join(root, "restored");
+  await cp(fixture.source, join(folder, ".pstdio/extensions/copied-tool"), { recursive: true });
+  const marker = join(root, "copied-tool-ran");
+  await writeFile(
+    join(folder, ".pstdio/extensions/copied-tool/extension.ts"),
+    `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(marker)}, "ran");\nexport default {};\n`,
+  );
+  const initial = { provider_id: "pstdio.root", params: { path: folder } };
+  const failed = await initializeProjectWorkspace(
+    handle.deps,
+    project.id,
+    initial,
+    async () => {
+      throw new Error("Interrupted before repo discovery");
+    },
+    { restored: true },
+  );
+  expect(failed.setup_error).toBe("Interrupted before repo discovery");
+
+  const retried = await initializeProjectWorkspace(handle.deps, project.id, initial);
+  expect(retried.setup_error).toBeNull();
+  const instances = await handle.deps.extensionService.listProjectExtensionInstances(project.id);
+  expect(instances.map(({ instance }) => instance.enabled)).toEqual([false]);
+  expect(await Bun.file(marker).exists()).toBe(false);
+});
+
 test.each([
   "skipped",
   "required",

@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { provisionProjectWorkspaces } from "../workspaces/provision-coordinator";
 import { initializeProjectWorkspace } from "./project-folder";
 
 let root: string;
@@ -88,4 +89,47 @@ test("project logs retain the failed setup step when the workspace records its e
     initializing: false,
     setup_error: "fixture setup failed",
   });
+});
+
+test("background provisioning waits for restored folder setup", async () => {
+  const project = await handle.deps.projectService.create({ name: "Restored project" });
+  const folder = join(root, "restored");
+  mkdirSync(folder);
+  const started = Promise.withResolvers<void>();
+  const allowSetup = Promise.withResolvers<[]>();
+  const setup = initializeProjectWorkspace(
+    handle.deps,
+    project.id,
+    { provider_id: "pstdio.root", params: { path: folder } },
+    () => {
+      started.resolve();
+      return allowSetup.promise;
+    },
+    { restored: true },
+  );
+  await started.promise;
+  const provisioningStates: boolean[] = [];
+  const service = handle.deps.workspaceService;
+  const background = provisionProjectWorkspaces(
+    {
+      ...handle.deps,
+      workspaceService: {
+        ...service,
+        list: async (projectId) => {
+          const workspaces = await service.list(projectId);
+          provisioningStates.push(workspaces.some((workspace) => workspace.initializing));
+          return workspaces;
+        },
+      },
+    },
+    project.id,
+  );
+
+  try {
+    expect(await service.getDefault(project.id)).toMatchObject({ initializing: true, provider_state: "ready" });
+  } finally {
+    allowSetup.resolve([]);
+    await Promise.all([setup, background]);
+  }
+  expect(provisioningStates).toEqual([false]);
 });
