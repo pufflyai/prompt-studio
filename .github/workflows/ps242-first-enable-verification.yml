@@ -1,0 +1,81 @@
+name: PS242 first enable verification
+on:
+  push:
+    branches: [test/ps242-first-enable-verification]
+permissions:
+  contents: read
+  actions: read
+env:
+  NX_DAEMON: "false"
+jobs:
+  startup:
+    name: First enable (${{ matrix.source }})
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        source: [db4580fdfc0d11093738879f96ee95c3617e0a6a]
+    env:
+      GH_TOKEN: ${{ github.token }}
+      UI_PERF_ASSERT_BUDGETS: "1"
+      PLAYWRIGHT_TRACE: "off"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ matrix.source }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - name: Set up Bun in the Playwright image
+        run: |
+          echo "BUN_INSTALL_CACHE_DIR=/tmp/pstdio-ci-bun-cache" >> "$GITHUB_ENV"
+          echo "E2E_BUN_CACHE_DIR=/tmp/pstdio-ci-bun-cache" >> "$GITHUB_ENV"
+          node scripts/ci/setup-container-bun.ts
+      - name: Install dependencies and restore the original Playwright build-cache profile
+        uses: ./.github/actions/setup-ci-cache
+        with:
+          profile: playwright
+      - name: Download original immutable plan
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: "14333222855"
+          merge-multiple: true
+          run-id: "44095389327"
+          github-token: ${{ github.token }}
+          path: test-results/ci
+      - name: Preserve exact source and instrument verification evidence only
+        shell: bash
+        run: |
+          mkdir -p test-results/ci/workspaces-dom
+          cp test-results/ci/plan.json test-results/ci/workspaces-dom/original-plan.json
+          git rev-parse HEAD HEAD^{tree} > test-results/ci/workspaces-dom/source-before.txt
+          git diff --exit-code
+          git diff --binary > test-results/ci/workspaces-dom/instrumentation.patch
+          bun -e 'import { readFileSync, writeFileSync } from "node:fs"; import { sealTestPlan, validateTestPlan } from "./scripts/ci/test-plan"; import { testPlanSource } from "./scripts/ci/test-plan-source"; const original = JSON.parse(readFileSync("test-results/ci/workspaces-dom/original-plan.json", "utf8")); validateTestPlan(original); const { digest, ...body } = original; const next = sealTestPlan({ ...body, source: testPlanSource(process.cwd()) }); if (JSON.stringify(next.setup) !== JSON.stringify(original.setup) || JSON.stringify(next.runs) !== JSON.stringify(original.runs)) throw new Error("Diagnostic changed selection"); validateTestPlan(next, testPlanSource(process.cwd())); writeFileSync("test-results/ci/plan.json", JSON.stringify(next, null, 2)); writeFileSync("test-results/ci/workspaces-dom/provenance.json", JSON.stringify({originalSource: original.source, diagnosticSource: next.source, originalDigest: digest, diagnosticDigest: next.digest, setupAndRunsByteIdentical: true, instrumentation: "None. Exact failed merged source plus reviewed first-enable repair; original whole group/workload/allowances unchanged.", acceptanceQualification:true}, null, 2));'
+      - name: Execute original complete cold packaged group
+        env:
+          PLAN_JOB: packaged-cli-P2-3/4
+          PLAN_PREBUILT: "false"
+          PLAN_DISPLAY: "true"
+          PS242_DIAGNOSTIC_SOURCE: ${{ matrix.source }}
+          CI_PLAN_OUTPUT_DIR: test-results/ci/workspaces-dom/execution
+        run: bun scripts/ci/run-ci-test-job.ts
+      - name: Hash diagnostic evidence
+        if: always()
+        shell: bash
+        run: |
+          find test-results/ci/workspaces-dom -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > test-results/ci/workspaces-dom/SHA256SUMS
+      - name: Preserve DOM, original plan and native outcomes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps242-first-enable-${{ matrix.source }}-attempt-${{ github.run_attempt }}
+          path: |
+            test-results/ci
+            packages/e2e/test-results
+          if-no-files-found: error
