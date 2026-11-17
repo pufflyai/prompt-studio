@@ -44,10 +44,14 @@ test("keeps waiting for a slow runtime and opens automatically without replacing
     await app.lifecyclePage.clock.pauseAt(now + 100);
     await app.lifecyclePage.reload();
     await expect(app.lifecyclePage.getByRole("status")).toContainText("Opening Prompt Studio");
-    await app.lifecyclePage.clock.runFor(19_000);
+    await app.lifecyclePage.clock.runFor(14_000);
     await expect(app.lifecyclePage.getByText(/This is taking longer than usual/)).not.toBeVisible();
     await app.lifecyclePage.clock.runFor(2_000);
-    await expect(app.lifecyclePage.getByText(/This is taking longer than usual/)).toBeVisible();
+    const slowNotice = app.lifecyclePage.getByRole("status").filter({ hasText: /This is taking longer than usual/ });
+    await expect(slowNotice).toBeVisible();
+    const copyLogs = slowNotice.getByRole("button", { name: "Copy startup logs" });
+    await copyLogs.click();
+    await expect(copyLogs).toHaveText("Copied");
     expect(await app.lifecyclePage.evaluate(() => window.promptStudioDesktop.getStartupState())).toMatchObject({
       kind: "starting",
     });
@@ -89,6 +93,7 @@ test("quits from recovery after the runtime crashes", async () => {
     await waitForAutomaticRecovery(launched);
     process.kill(launched.runtime.pid, process.platform === "win32" ? undefined : "SIGKILL");
     await waitForVisibleElement(app.lifecyclePage, '[role="alert"] :is(h1, h2, h3)', "Prompt Studio needs attention");
+    await expect(app.lifecyclePage.getByRole("button", { name: "Copy startup logs" })).toBeVisible();
 
     await app.lifecyclePage.getByRole("button", { name: "Quit", exact: true }).click();
 

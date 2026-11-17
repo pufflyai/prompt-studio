@@ -2,6 +2,7 @@ import { Box, Button, Heading, HStack, Spinner, Stack, Text } from "@chakra-ui/r
 import { AlertMessage, SimpleCard, SimpleCardBody, WindowTitleBar } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
+import { CopyStartupLogsButton } from "./copy-startup-logs-button";
 import { DesktopStartingState } from "./desktop-starting-state";
 
 interface DesktopLifecycleActions {
@@ -55,7 +56,17 @@ const RecoveryState = (props: {
           <Heading textStyle="heading/M" flexShrink="0">
             Prompt Studio needs attention
           </Heading>
-          <AlertMessage status="error" title={state.error.code}>
+          <AlertMessage
+            status="neutral"
+            variant="surface"
+            colorPalette="gray"
+            title="Something is wrong"
+            endElement={
+              availableActions.has("copy_diagnostics") && (
+                <CopyStartupLogsButton copyStartupLogs={actions.copyDiagnostics} />
+              )
+            }
+          >
             {state.error.message}
           </AlertMessage>
           <HStack gap="xs" flexWrap="wrap" flexShrink="0">
@@ -63,11 +74,6 @@ const RecoveryState = (props: {
             {availableActions.has("open_logs") && (
               <Button variant="outline" onClick={actions.openLogs}>
                 Open logs
-              </Button>
-            )}
-            {availableActions.has("copy_diagnostics") && (
-              <Button variant="outline" onClick={actions.copyDiagnostics}>
-                Copy diagnostics
               </Button>
             )}
             {availableActions.has("quit") && (
@@ -108,7 +114,9 @@ export const DesktopLifecycleView = (props: DesktopLifecycleViewProps) => {
       <WindowTitleBar platform={platform} />
       <Box flex="1" minHeight="0" display="flex" justifyContent="center" padding="xl">
         <Box width="full" maxWidth="2xl" height="full" display="flex" alignItems="center" justifyContent="center">
-          {state.kind === "starting" && <DesktopStartingState phase={state.phase} />}
+          {state.kind === "starting" && (
+            <DesktopStartingState phase={state.phase} copyStartupLogs={actions.copyDiagnostics} />
+          )}
           {state.kind === "recovery" && <RecoveryState actions={actions} state={state} />}
           {state.kind === "closing" && <ClosingState />}
         </Box>

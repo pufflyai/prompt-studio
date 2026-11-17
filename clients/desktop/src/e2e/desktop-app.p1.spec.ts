@@ -280,7 +280,17 @@ test("keeps startup failures in an actionable recovery window", async () => {
     await expect(window.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
     expect(await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible())).toBe(true);
     await expect(window.getByRole("button", { name: "Open logs" })).toBeVisible();
-    await expect(window.getByRole("button", { name: "Copy diagnostics" })).toBeVisible();
+    await electronApp.evaluate(({ clipboard }) => {
+      let copiedText = "";
+      clipboard.writeText = (text) => {
+        copiedText = text;
+      };
+      clipboard.readText = () => copiedText;
+    });
+    const copyLogs = window.getByRole("button", { name: "Copy startup logs" });
+    await copyLogs.click();
+    await expect(copyLogs).toHaveText("Copied");
+    expect(await electronApp.evaluate(({ clipboard }) => clipboard.readText())).toContain("state: recovery");
     await expect(window.getByRole("button", { name: "Quit" })).toBeVisible();
     expect(
       await electronApp.evaluate(

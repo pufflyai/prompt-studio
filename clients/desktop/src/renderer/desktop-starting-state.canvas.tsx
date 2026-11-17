@@ -4,7 +4,7 @@ import { DesktopStartupProgress } from "./desktop-starting-state";
 const meta = {
   title: "Product/Desktop/Startup progress",
   component: DesktopStartupProgress,
-  args: { phase: "database" },
+  args: { phase: "database", copyStartupLogs: async () => {} },
 } satisfies CanvasMeta<typeof DesktopStartupProgress>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;
@@ -21,7 +21,7 @@ export const UpdatingLocalData: Story = {
 export const UpdateTakingLonger: Story = {
   args: { phase: "migrations", takingLonger: true },
 };
-export const RemovingPreviousData: Story = {
+export const CleaningUpStaleData: Story = {
   args: { phase: "cleanup" },
 };
 export const ReclaimingSpace: Story = {
@@ -41,4 +41,7 @@ export const LoadingTools: Story = {
 export const TakingLonger: Story = {
   id: "patterns-desktop-startup-progress--taking-longer",
   args: { phase: "database", takingLonger: true },
+};
+export const WaitingWithoutProgress: Story = {
+  args: { phase: "database", takingLonger: true, waitingWithoutProgress: true },
 };
