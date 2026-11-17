@@ -38,6 +38,7 @@ export {
 } from "./ordered-json";
 export { prepareOrderedLocalAdoption } from "./ordered-local-adoption";
 export {
+  OrderedMoveGuardError,
   type OrderedMoveInput,
   OrderedMoveTargetExistsError,
   type OrderedRecordMove,

@@ -21,7 +21,7 @@ afterEach(async () => {
   for (const close of cleanup.splice(0).reverse()) await close();
 });
 
-const peers = async (count = 2, options: { checkpoints?: boolean; uploads?: (number | undefined)[] } = {}) => {
+const peers = async (count = 2, options: { checkpoints?: boolean } = {}) => {
   const projectId = crypto.randomUUID();
   const owner = { workbenchId: projectId, extensionId: "example.tickets" };
   const space = await createSyncSpace({
@@ -32,9 +32,7 @@ const peers = async (count = 2, options: { checkpoints?: boolean; uploads?: (num
   const documentId = await space.documentId(JSON.stringify([owner.extensionId, "record-stream"]));
   const wire = createRelay();
   const { relay } = wire;
-  const device = async (_: unknown, index: number) => {
-    // A device with an upload budget loses its connection after that many updates.
-    let budget = options.uploads?.[index] ?? Number.POSITIVE_INFINITY;
+  const device = async () => {
     const { db, close } = await createDb({ path: ":memory:" });
     cleanup.push(close);
     const now = new Date().toISOString();
@@ -46,17 +44,7 @@ const peers = async (count = 2, options: { checkpoints?: boolean; uploads?: (num
     const sync = createRecordStreamSync({
       space,
       documentId,
-      relay: {
-        ...relay,
-        update: async (update: Parameters<typeof relay.update>[0]) => {
-          if (budget-- <= 0) throw new Error("Network unavailable");
-          return relay.update(update);
-        },
-        replace: async (state: Parameters<typeof relay.replace>[0]) => {
-          if (budget-- <= 0) throw new Error("Network unavailable");
-          return relay.replace(state);
-        },
-      },
+      relay,
       store: service.documents.recordStream(owner),
       // Compacting after every update makes a returning device adopt a checkpoint instead of the stream.
       ...(options.checkpoints ? { limits: { bytes: Number.MAX_SAFE_INTEGER, updates: 0 } } : {}),
@@ -238,7 +226,7 @@ const copyStorage = async (from: Device["db"], to: Device["db"]) => {
 };
 
 test("an offline write that a compacted checkpoint refuses still reaches the moved record", async () => {
-  const devices = await peers(3, { checkpoints: true, uploads: [undefined, 1] });
+  const devices = await peers(3, { checkpoints: true });
   const [mover, offline, restored] = devices;
   await mover.tickets.set("a", { title: "A" });
   await syncAll([mover, offline]);
@@ -246,11 +234,17 @@ test("an offline write that a compacted checkpoint refuses still reaches the mov
   await copyStorage(offline.db, restored.db);
   await mover.move();
   await mover.sync.synchronize();
-  // The offline device uploads its save, which relay order refuses, then loses its connection before
-  // its own forward goes out.
-  await offline.sync.synchronize().catch(() => {});
+  // The offline device uploads its save, which relay order refuses.
+  await offline.sync.synchronize();
   devices.wire.trim();
-  // A copy from before the upload settles that refusal from the compacted checkpoint.
+  // A copy from before the upload learns that refusal only from the compacted checkpoint, which
+  // settles it without the stream path, and must forward the write itself.
+  const copied = new Set((await restored.db.select().from(storage_ordered_operations)).map((row) => row.operation_id));
+  await restored.sync.synchronize();
+  const authored = (await restored.db.select().from(storage_ordered_operations)).filter(
+    (row) => !copied.has(row.operation_id) && !row.operation_id.startsWith("move:"),
+  );
+  expect(authored.length).toBeGreaterThan(0);
   await syncAll([restored, mover], 3);
 
   for (const device of [mover, restored]) expect(await device.moved("a")).toEqual({ title: "A offline" });

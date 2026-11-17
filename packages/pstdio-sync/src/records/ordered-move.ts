@@ -1,4 +1,4 @@
-import { fingerprint, type Json } from "pstdio-sync-contracts";
+import { canonicalJson, fingerprint, type Json } from "pstdio-sync-contracts";
 import { jsonPointer, parseJsonPointer } from "./ordered-json";
 import {
   type OrderedEdit,
@@ -31,6 +31,15 @@ const MOVE_GROUP_BYTES = 2 * 1024 * 1024;
 export const orderedMoveOperationId = () => `move:${crypto.randomUUID()}`;
 export const isOrderedMoveOperation = (operation: Pick<OrderedOperation, "operationId">) =>
   operation.operationId.startsWith("move:");
+
+export class OrderedMoveGuardError extends Error {
+  constructor(
+    readonly recordId: string,
+    readonly found: unknown,
+  ) {
+    super(`Cannot move: ${recordId} now holds ${JSON.stringify(found ?? null)}`);
+  }
+}
 
 const startsWith = (path: string[], prefix: string[]) => prefix.every((key, index) => path[index] === key);
 
@@ -77,6 +86,22 @@ const movedEdits = async (record: OrderedRecord, target: OrderedRecord | undefin
   return [created, removed];
 };
 
+// Another device's marker can arrive between the caller's first read and a group, so check it here.
+const guardEdit = async (
+  views: ReadonlyMap<string, OrderedRecord>,
+  guard: NonNullable<OrderedMoveInput["guard"]>,
+): Promise<OrderedEdit> => {
+  const record = views.get(guard.recordId);
+  const current = record && !record.deleted ? readOrderedPath(record.value, guard.path) : undefined;
+  if (canonicalJson(current ?? null) !== canonicalJson(guard.value))
+    throw new OrderedMoveGuardError(guard.recordId, current);
+  return {
+    recordId: guard.recordId,
+    changes: [{ path: guard.path, set: guard.value }],
+    expectedRevision: await observeOrderedRecord(record),
+  };
+};
+
 export interface OrderedMoveInput {
   moves: OrderedRecordMove[];
   /** The part of each old value that becomes the new record's value. */
@@ -86,8 +111,9 @@ export interface OrderedMoveInput {
   /** A catch-up move during sync leaves an item whose target is taken where it is instead of failing. */
   conflict?: "throw" | "skip";
   /**
-   * Rewrite this value on the condition that its record is unchanged since `views`, so relay order
-   * refuses the group if another device changed it, such as a collection marker naming another prefix.
+   * A live record whose value at `path` must already equal `value`, such as the collection marker's
+   * key prefix. The group rewrites it on the condition that it is unchanged since `views`, so relay
+   * order refuses the group if another device changes it later.
    */
   guard?: { recordId: string; path: string[]; value: Json };
 }
@@ -121,12 +147,7 @@ export const prepareOrderedMove = async (views: ReadonlyMap<string, OrderedRecor
     moved++;
   }
   const remaining = input.moves.slice(next);
-  if (moved && input.guard)
-    edits.push({
-      recordId: input.guard.recordId,
-      changes: [{ path: input.guard.path, set: input.guard.value }],
-      expectedRevision: await observeOrderedRecord(views.get(input.guard.recordId)),
-    });
+  if (moved && input.guard) edits.push(await guardEdit(views, input.guard));
   if (!edits.length) return { moved, remaining, operation: undefined, identity: undefined };
   // Two devices can run the same move; each save needs its own identity in relay order.
   const operation = await prepareOrderedOperation({ operationId: orderedMoveOperationId(), edits }, views);
