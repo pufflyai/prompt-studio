@@ -38,8 +38,8 @@ test("the Workspaces extension saves shared views and isolates each project's se
     await page.getByRole("textbox", { name: "View name" }).fill("Release workspaces");
     await page.getByRole("button", { name: "Rename", exact: true }).click();
     await page.getByRole("button", { name: "Display settings" }).click();
-    await page.getByRole("button", { name: "Children Hidden", exact: true }).click();
-    await page.getByRole("menuitem", { name: "Nested", exact: true }).click();
+    await page.getByRole("button", { name: "Child rows Hide", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Show", exact: true }).click();
     await page.keyboard.press("Escape");
     // Keep the real persistence request pending long enough to expose a click-before-save race.
     await page.route(`**/v1/projects/${first!.id}/board-views/*`, async (route) => {
@@ -63,8 +63,8 @@ test("the Workspaces extension saves shared views and isolates each project's se
       ).settings.showChildren,
     ).toBe(true);
     await page.getByRole("button", { name: "Display settings" }).click();
-    await page.getByRole("button", { name: "Children Nested", exact: true }).click();
-    await page.getByRole("menuitem", { name: "Hidden", exact: true }).click();
+    await page.getByRole("button", { name: "Child rows Show", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Hide", exact: true }).click();
     await page.keyboard.press("Escape");
     await saveView(false);
     await expect(page.getByLabel("Unsaved view changes")).toHaveCount(0);
