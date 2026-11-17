@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -144,6 +144,10 @@ describe("syncRepoExtensionsForProject", () => {
     const repoPath = join(tempRoot, "repo");
     const extensionPath = join(repoPath, ".pstdio", "extensions", "worktree-bootstrap");
     writeExtension(extensionPath, "worktree-bootstrap");
+    writeFileSync(
+      join(extensionPath, "extension.ts"),
+      'export default { commands: { hello: { title: "Hello", params: {}, run: () => "hello" } } };\n',
+    );
 
     await syncRepoExtensionsForProject({
       extensionService,
@@ -154,6 +158,8 @@ describe("syncRepoExtensionsForProject", () => {
     const [instance] = await extensionInstancesService.list({ scope_id: project.id, scope_type: "project" });
     expect(instance).toBeDefined();
     await extensionService.setProjectExtensionEnabled(instance!.id, false);
+    const accepted = await installedExtensionSourcesService.getBySourcePath(extensionPath);
+    expect(accepted?.manifest_json.commands).toEqual(["hello"]);
 
     await syncRepoExtensionsForProject({
       extensionService,
@@ -164,6 +170,9 @@ describe("syncRepoExtensionsForProject", () => {
 
     const disabled = await extensionInstancesService.get(instance!.id);
     expect(disabled?.enabled).toBe(false);
+    expect((await installedExtensionSourcesService.getBySourcePath(extensionPath))?.manifest_json).toEqual(
+      accepted?.manifest_json,
+    );
   });
 
   test("marks removed repo-local folders missing without deleting rows", async () => {
@@ -289,4 +298,40 @@ describe("syncRepoExtensionsForProject", () => {
 
     expect(result?.enabled).toEqual(["repo-b"]);
   });
+});
+
+test("does not import a restored tool that stays disabled during later discovery", async () => {
+  const project = await projectService.create({ name: "Restored tool" });
+  const repoPath = join(tempRoot, "restored");
+  const extensionPath = join(repoPath, ".pstdio", "extensions", "restored-tool");
+  const marker = join(tempRoot, "restored-code-ran");
+  writeExtension(extensionPath, "restored-tool");
+  writeFileSync(
+    join(extensionPath, "extension.ts"),
+    `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(marker)}, "ran");\nexport default {};\n`,
+  );
+  const input = { extensionService, installedExtensionSourcesService, projectId: project.id, repoPath };
+  await syncRepoExtensionsForProject({ ...input, enable: () => false });
+  expect(existsSync(marker)).toBe(false);
+  await syncRepoExtensionsForProject(input);
+  expect(existsSync(marker)).toBe(false);
+  const [instance] = await extensionInstancesService.list({ scope_id: project.id, scope_type: "project" });
+  expect(instance?.enabled).toBe(false);
+});
+
+test("keeps a disabled tool's accepted metadata when its mutable manifest is removed", async () => {
+  const project = await projectService.create({ name: "Accepted disabled tool" });
+  const repoPath = join(tempRoot, "repo");
+  const extensionPath = join(repoPath, ".pstdio", "extensions", "accepted-tool");
+  writeExtension(extensionPath, "accepted-tool");
+  const input = { extensionService, installedExtensionSourcesService, projectId: project.id, repoPath };
+  await syncRepoExtensionsForProject(input);
+  const source = await installedExtensionSourcesService.getBySourcePath(extensionPath);
+  const [instance] = await extensionInstancesService.list({ scope_id: project.id, scope_type: "project" });
+  await extensionService.setProjectExtensionEnabled(instance!.id, false);
+  rmSync(join(extensionPath, "package.json"));
+  const result = await syncRepoExtensionsForProject(input);
+  expect(result).toMatchObject({ missing: [], skipped: [], enabled: [] });
+  expect((await installedExtensionSourcesService.get(source!.id))?.status).toBe("loaded");
+  expect((await extensionInstancesService.get(instance!.id))?.enabled).toBe(false);
 });
