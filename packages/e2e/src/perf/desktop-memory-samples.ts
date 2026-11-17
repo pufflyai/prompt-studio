@@ -4,6 +4,13 @@ import { createInterface } from "node:readline";
 import type { KernelProcessReading } from "pstdio-diagnostics";
 import { readProcessTable } from "./critical/owned-processes";
 
+const retireGenerations = (identities: Map<number, string>, pids: Iterable<number>) =>
+  [...pids].flatMap((pid) => {
+    const processStartId = identities.get(pid);
+    identities.delete(pid);
+    return processStartId ? [{ pid, processStartId }] : [];
+  });
+
 export const ownedProcessTree = async (
   processes: number[][],
   roots: number[],
@@ -13,6 +20,11 @@ export const ownedProcessTree = async (
   const live = new Set(processes.map(([pid]) => pid!));
   const priorReadings = new Map<number, KernelProcessReading | null>();
   const reused = new Set<number>();
+  // Root generations stay pinned; positively exited descendants no longer own a PID.
+  const retired = retireGenerations(
+    identities,
+    [...identities.keys()].filter((pid) => !live.has(pid) && !roots.includes(pid)),
+  );
   for (const [pid, identity] of identities) {
     if (!live.has(pid)) continue;
     const reading = await read(pid);
@@ -31,7 +43,7 @@ export const ownedProcessTree = async (
         expanded = true;
       }
   }
-  return { live, owned, priorReadings, reused };
+  return { live, owned, priorReadings, reused, retired };
 };
 
 /** Use the packaged sidecar's kernel sampler, outside the observed app's process tree. */
@@ -89,7 +101,7 @@ export const sampleDesktopMemory = (
     // Validate remembered parents before expanding their branches; a rejected parent
     // cannot introduce unrelated descendants into the retained ownership set.
     const rootPids = roots();
-    const { owned, priorReadings, reused } = await ownedProcessTree(processes, rootPids, identities, read);
+    const { owned, priorReadings, reused, retired } = await ownedProcessTree(processes, rootPids, identities, read);
     const readings: { pid: number; reading: KernelProcessReading | null }[] = [];
     for (const pid of owned) {
       const reading = priorReadings.has(pid) ? priorReadings.get(pid)! : await read(pid);
@@ -100,11 +112,15 @@ export const sampleDesktopMemory = (
     // Verify that exit with a fresh native snapshot; a live unreadable process,
     // missing root or reused PID still invalidates the complete sample.
     const unreadable = readings.filter(({ reading }) => reading === null);
-    const liveAfterRead = unreadable.length ? new Set((await readProcessTable()).map(([pid]) => pid!)) : undefined;
+    const unreadableStates = new Map(unreadable.map(({ pid }) => [pid, "absent"]));
+    const liveAfterRead = unreadable.length
+      ? new Set((await readProcessTable(unreadableStates)).map(([pid]) => pid!))
+      : undefined;
     const exitedDuringSample = unreadable.filter(({ pid }) => !rootPids.includes(pid) && !liveAfterRead!.has(pid));
     const exitedPids = new Set(exitedDuringSample.map(({ pid }) => pid));
+    retired.push(...retireGenerations(identities, exitedPids));
     const activeReadings = readings.filter(({ pid }) => !exitedPids.has(pid));
-    // Keep each original generation for this bounded capture, including after exit.
+    // Keep original root generations pinned for the entire bounded capture.
     // A static root PID must never acquire an unrelated replacement on a later sample.
     const complete =
       reused.size === 0 &&
@@ -120,7 +136,7 @@ export const sampleDesktopMemory = (
     samples.push(sample);
     appendFileSync(
       output,
-      `${JSON.stringify({ ...sample, elapsedMs: performance.now() - at, readings, exitedDuringSamplePids: [...exitedPids], reusedPids: [...reused] })}\n`,
+      `${JSON.stringify({ ...sample, elapsedMs: performance.now() - at, readings, retiredGenerations: retired, exitedDuringSamplePids: [...exitedPids], unreadableProcessStates: unreadable.map(({ pid }) => ({ pid, state: unreadableStates.get(pid) ?? "absent" })), reusedPids: [...reused] })}\n`,
     );
   };
   // Half-second spacing leaves room for enumeration and retains at least one sample per second.
