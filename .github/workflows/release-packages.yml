@@ -113,12 +113,13 @@ jobs:
           PATCH_SUMMARY: ${{ inputs.summary }}
         run: bun scripts/release/prepare-patch.ts
 
-  # Decides whether this run releases, and places the tag that packaged apps install
-  # core extensions from. Verification needs that tag, so it exists before any check runs.
+  # Publishing channels stay on main. Manual verification can exercise changed workflow
+  # definitions from an internal branch and installs extensions from its immutable candidate.
   plan:
     needs: prepare_patch
     if: >-
-      ${{ !cancelled() && github.ref == 'refs/heads/main' &&
+      ${{ !cancelled() &&
+      (github.ref == 'refs/heads/main' || (github.event_name == 'workflow_dispatch' && inputs.channel == 'verify')) &&
       inputs.channel != 'packages' &&
       (needs.prepare_patch.result == 'success' || needs.prepare_patch.result == 'skipped') }}
     runs-on: ubuntu-latest
