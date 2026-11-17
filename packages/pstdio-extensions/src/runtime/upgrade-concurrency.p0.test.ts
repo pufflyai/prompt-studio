@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { upgradeWorkerCount } from "./upgrade-concurrency";
 
-test.each([
+const hosts: [number, number, ReturnType<typeof upgradeWorkerCount>][] = [
   [1, 2, 1],
   [2, 16, 1],
   [4, 16, 2],
@@ -9,6 +9,11 @@ test.each([
   [16, 4, 1],
   [8, 16, 4],
   [64, 256, 4],
-])("sizes updates for %i cores and %i GiB", (cores, gib, count) => {
-  expect(upgradeWorkerCount(cores, gib * 1024 ** 3)).toBe(count);
-});
+  [8, 8, 2],
+];
+
+for (const [cores, gb, count] of hosts) {
+  test(`sizes updates for ${cores} cores and ${gb} GB`, () => {
+    expect(upgradeWorkerCount(cores, gb * 1_000_000_000)).toBe(count);
+  });
+}

@@ -66,9 +66,12 @@ export const useUpgradeProjectExtension = (projectId: string | undefined) =>
         instanceId: string;
         schedule?: (send: () => Promise<UpgradeProjectExtensionResponse>) => Promise<UpgradeProjectExtensionResponse>;
       },
-      { api, projectId },
+      { api, projectId, assertCurrent },
     ) => {
-      const send = () => api.extensions.upgradeProject(projectId, instanceId);
+      const send = () => {
+        assertCurrent();
+        return api.extensions.upgradeProject(projectId, instanceId);
+      };
       return schedule ? schedule(send) : send();
     },
     accept: (result, _value, cache) => cache.acceptUpgrade(result.extension),

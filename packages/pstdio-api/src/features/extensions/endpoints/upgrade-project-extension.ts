@@ -69,7 +69,9 @@ const upgradeInstance = async (
     changed: result.changed,
     extension: toProjectExtensionInstance(current.instance, current.installedSource, undefined, {
       canUpgrade:
-        current.installedSource.source_kind === "registry" &&
+        // Registration confirms the release actually installed. A later inventory read checks for newer releases.
+        current.installedSource.id === result.installedSource.id &&
+        current.installedSource.source_hash === result.installedSource.source_hash &&
         current.installedSource.source_ref === result.installedSource.source_ref
           ? false
           : await service.canUpgrade(current.installedSource),

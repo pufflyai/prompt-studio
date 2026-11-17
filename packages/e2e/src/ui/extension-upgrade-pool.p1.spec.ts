@@ -40,7 +40,7 @@ test("upgrade all respects host capacity across list and detail and immediately 
   await page.getByRole("option", { name: "Extensions", exact: true }).click();
   await page.getByTestId("extensions-upgrade-all").click();
   await expect.poll(() => requests.length).toBe(2);
-  const waiting = page.getByRole("button", { name: "Waiting to upgrade" });
+  const waiting = page.getByRole("button", { name: "Waiting to upgrade", exact: true });
   await expect(waiting).toBeDisabled();
   const waitingRow = page.getByTestId("extension-entry").filter({ has: waiting });
   await waitingRow.click();

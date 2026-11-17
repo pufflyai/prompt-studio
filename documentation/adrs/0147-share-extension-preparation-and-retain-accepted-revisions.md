@@ -6,7 +6,7 @@ Status: Accepted for PS-169; platform and performance qualification follows the 
 
 ## Decision
 
-A lazy pool of one to four worker threads owns expensive extension preparation. The API host allows one worker per two available CPUs and per 4 GiB of available memory capacity, including process memory limits, with at least one worker. The API advertises the limit to dashboard and CLI batch updates. One shared preparation queue admits at most
+A lazy pool of one to four worker threads owns expensive extension preparation. The API host allows one worker per two available CPUs and per 4 GB of available memory capacity, including process memory limits, with at least one worker. The API advertises the limit to dashboard and CLI batch updates. One shared preparation queue admits at most
 128 pending jobs, with the same number of execution owners and shared coalescing/cancellation. Individual installs with explicit portable
 names may overlap when their reserved source and possible target paths are disjoint. Both user and repo destinations,
 including conditional Windows escaping, are reserved before manifest scope is known. Lexical and nearest-existing-real

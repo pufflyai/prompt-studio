@@ -126,16 +126,19 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
 
   if (selected) {
     return (
-      <ExtensionDetailContainer
-        projectId={projectId}
-        extension={selected}
-        upgrading={upgradingInstanceIds.includes(selected.id)}
-        onUpgrade={() => void handleUpgrade(selected)}
-        metadata={metadataQuery.data}
-        agents={agents}
-        settingsInput={settingsInput}
-        onBack={() => openList()}
-      />
+      <>
+        {errorNotice}
+        <ExtensionDetailContainer
+          projectId={projectId}
+          extension={selected}
+          upgrading={upgradingInstanceIds.includes(selected.id)}
+          onUpgrade={() => void handleUpgrade(selected)}
+          metadata={metadataQuery.data}
+          agents={agents}
+          settingsInput={settingsInput}
+          onBack={() => openList()}
+        />
+      </>
     );
   }
 
