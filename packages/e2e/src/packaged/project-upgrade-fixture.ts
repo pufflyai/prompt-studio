@@ -60,7 +60,8 @@ export const upgradeCoreProjectTools = async (api: StackApi, project: string) =>
   const { extensions } = await api.get<{ extensions: ProjectExtension[] }>(path);
   const changes: { extension: string; version: string | null; next: string | null }[] = [];
   for (const tool of extensions) {
-    if (!/^pstdio\.(pstdio-)?(planner|session-browser)$/.test(tool.extensionId) || !tool.enabled) continue;
+    if (!/^pstdio\.((pstdio-)?(planner|session-browser)|harness-codex)$/.test(tool.extensionId) || !tool.enabled)
+      continue;
     if (tool.lastError?.code !== "extension_manifest_unsupported_api_version") continue;
     assert(tool.canUpgrade, `${tool.extensionId} is incompatible and has no supported upgrade`);
     const { extension } = await api.post<{ extension: ProjectExtension }>(`${path}/${tool.id}/upgrade`, {});
@@ -247,11 +248,18 @@ export const seedUpgradeProject = async (api: StackApi, input: ProjectUpgradeInp
     await Bun.write(join(folder, "handoff.txt"), "Historical handoff · 修正\n".repeat(6000));
   const project = await api.post<{ id: string; name: string }>("/projects", folderProjectInput({ name }, folder));
   const prefix = `/projects/${project.id}`;
-  console.log("[upgrade fixture] Installing Planner");
-  const { marketplace } = await api.get<{ marketplace: { installName: string }[] }>(`${prefix}/extensions`);
+  console.log("[upgrade fixture] Installing Planner and the conversation harness");
+  const { marketplace, extensions } = await api.get<{
+    marketplace: { installName: string }[];
+    extensions: ProjectExtension[];
+  }>(`${prefix}/extensions`);
   const plannerEntry = marketplace.find(({ installName }) => /^(pstdio-)?planner$/.test(installName));
   assert(plannerEntry, "The published baseline must offer Planner");
   await api.post(`${prefix}/extensions/install`, { source: { kind: "catalog", name: plannerEntry.installName } });
+  // The generated history belongs to the Codex harness. The reader needs its declaration to open it.
+  if (!extensions.some((extension) => extension.extensionId === "pstdio.harness-codex" && extension.enabled)) {
+    await api.post(`${prefix}/extensions/install`, { source: { kind: "catalog", name: "harness-codex" } });
+  }
   const commands = await planner(api, project.id);
   console.log("[upgrade fixture] Creating worktrees and conversations");
   const worktreeIds: string[] = [];

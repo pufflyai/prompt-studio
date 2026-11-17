@@ -179,7 +179,7 @@ Stable and patch certification use the previous stable release as the source and
 
 Both profiles start with a temporary home and a Git project with 1,000 files, 500 Planner tickets, 150 saved conversations, and three worktrees. Each has a saved view and links between tickets, workspaces, and conversations. The long-lived profile adds an archived and a deleted ticket, larger attachments, and longer transcripts.
 
-The check verifies the source binary, records a before snapshot of the project through its APIs, and stops the source. It opens the same disposable home with the compiled target. It uses the documented extension upgrade action if Planner or Sessions reports an incompatible API version. It compares data and file contents, opens the upgraded workbench, and checks that a new ticket edit persists after restart. Database retirement or a missing attachment fails the upgrade.
+The check verifies the source binary, records a before snapshot of the project through its APIs, and stops the source. It opens the same disposable home with the compiled target. It uses the documented extension upgrade action if Planner, Sessions, or the fixture's Codex harness reports an incompatible API version. It compares data and file contents, opens the upgraded workbench, and checks that a new ticket edit persists after restart. Database retirement or a missing attachment fails the upgrade.
 
 For a local run, build a target binary from the commit you want to check and install Playwright Chromium. Run from the repository root:
 

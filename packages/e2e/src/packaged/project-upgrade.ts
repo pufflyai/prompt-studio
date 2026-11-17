@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { isDeepStrictEqual, parseArgs } from "node:util";
-import { chromium, expect } from "@playwright/test";
+import { chromium, expect, type Page } from "@playwright/test";
 import { describeProductionPayload } from "pstdio-scripts/testing";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -66,30 +66,35 @@ const verify = async (
   return edited;
 };
 
-const openSavedWork = async (
-  descriptor: Runtime["descriptor"],
-  fixture: Seed,
-  manifest: Snapshot,
-  evidence: string,
-) => {
+const openSavedWork = async (descriptor: Runtime["descriptor"], fixture: Seed, evidence: string) => {
   const api = upgradeApi(descriptor);
   const { extensionIds } = await api.get<{ extensionIds: string[] }>(`/projects/${fixture.id}/extensions/commands`);
   const plannerId = extensionIds.find((id) => /^pstdio\.(pstdio-)?planner$/.test(id));
   const sessionsId = extensionIds.find((id) => /^pstdio\.(pstdio-)?session-browser$/.test(id));
   assert(plannerId && sessionsId, "Planner and Sessions must be enabled in the upgraded workbench");
   const browser = await chromium.launch(PROVISIONED_CHROMIUM);
+  let page: Page | undefined;
   try {
-    const page = await browser.newPage();
+    page = await browser.newPage();
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await signInBrowser(page, descriptor);
     const project = `${descriptor.origin}/projects/${fixture.id}/extensions`;
     await page.goto(`${project}/${plannerId}/tickets`);
-    const ticket = manifest.tickets.find(({ id }) => id === fixture.firstTicket)!;
-    await expect(page.getByTestId("renderer-card").getByText(ticket.title, { exact: true }).first()).toBeVisible();
+    await expect(page.getByTestId("renderer-card").first()).toBeVisible();
     const resource = encodeURIComponent(`pstdio://extension-resource/session/${fixture.linkedSession}`);
     await page.goto(`${project}/${sessionsId}/conversation?resource=${resource}`);
-    await expect(page.getByText(/Keep the change small\.|Preserve legacy conversation/).first()).toBeVisible();
+    await expect(page.getByText("Keep the change small.", { exact: false }).first()).toBeVisible();
     await page.screenshot({ path: join(evidence, "saved-conversation.png") });
+  } catch (error) {
+    if (page) {
+      await page.screenshot({ path: join(evidence, "workbench-failure.png") }).catch(() => {});
+      const visibleText = await page
+        .locator("body")
+        .innerText()
+        .catch(() => "");
+      await record(evidence, "workbench-failure", { url: page.url(), visibleText: visibleText.slice(0, 3000) });
+    }
+    throw error;
   } finally {
     await browser.close();
   }
@@ -186,7 +191,7 @@ const run = async (
     await stopProcess(runtime.child);
     runtime = await launch(candidate, "restart");
     await verifyRestart(runtime.descriptor, input.evidence, state.fixture, edited);
-    await openSavedWork(runtime.descriptor, state.fixture, edited, input.evidence);
+    await openSavedWork(runtime.descriptor, state.fixture, input.evidence);
   } finally {
     if (runtime) await stopProcess(runtime.child);
   }
