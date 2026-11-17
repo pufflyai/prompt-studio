@@ -48,3 +48,6 @@ markers remain necessary even with that API. Background and
 stopped jobs do not count as foreground activity.
 
 Reference: https://bun.sh/docs/runtime/child-process#terminal-pty-support
+
+Native references: [Darwin process metadata](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/sys/proc_info.h)
+and [the system ps command's argv parsing](https://github.com/apple-oss-distributions/adv_cmds/blob/main/ps/print.c).

@@ -8,7 +8,8 @@ const { symbols } = dlopen("/usr/lib/libSystem.B.dylib", {
 });
 const argumentLimit = new Int32Array(1);
 const argumentLimitSize = new BigUint64Array([BigInt(argumentLimit.byteLength)]);
-if (symbols.sysctl(ptr(new Int32Array([1, 8])), 2, ptr(argumentLimit), ptr(argumentLimitSize), null, 0) !== 0)
+const argumentLimitMib = new Int32Array([1, 8]);
+if (symbols.sysctl(ptr(argumentLimitMib), 2, ptr(argumentLimit), ptr(argumentLimitSize), null, 0) !== 0)
   throw new Error("Cannot read macOS process argument limit");
 
 const processInfo = (pid: number) => {
