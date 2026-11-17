@@ -124,7 +124,13 @@ export const createOrderedMemoryRecords = (
       [...canonical.values()].filter((record) => record.recordId.includes(',"collection-moved",'));
     const prepared = [];
     for (const save of decided) {
-      const next = await forwardDisplacedSave({ ...save, canonical: read, views: current, markers });
+      const next = await forwardDisplacedSave({
+        ...save,
+        canonical: read,
+        views: current,
+        markers,
+        refusedMove: async (operationId) => decisions.get(operationId)?.state === "refused",
+      });
       if (next) prepared.push(next);
     }
     prepared.push(...(await prepareCatchUpMoves(await planCatchUpMoves({ changed, canonical: read, list }), current)));

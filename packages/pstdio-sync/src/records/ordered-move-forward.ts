@@ -96,12 +96,6 @@ const unwrappedChanges = (changes: OrderedOperation["edits"][number]["changes"])
     return field === "value" ? [{ ...change, path: ["value", ...rest] }] : [];
   });
 
-const stampOperation = (stamp: string | undefined) => {
-  const value = stamp ? parts(stamp) : undefined;
-  if (value?.[0] === "pending") return value[1];
-  return value?.[0] === "canonical" ? value[2] : undefined;
-};
-
 /** The collection item a record was moved from, found through the live markers of its scope. */
 const movedFromItem = (recordId: string, markers: OrderedRecord[]) => {
   const target = parts(recordId);
@@ -151,12 +145,15 @@ const strandedEdit = (
   const deleted = edit.deleted === undefined ? {} : { deleted: edit.deleted };
   if (old && !old.deleted) {
     const texts = movedTexts(edit, ["value", "value"]);
+    // Based on the item as it is now: a catch-up that lands first leaves it a move tombstone, so
+    // this save is skipped and then forwarded to the moved record; newer edits there keep winning.
+    const base = { version: 1, exists: true, deleted: false, lifetime: old.lifetime, stamps: old.stamps };
     return {
       recordId: from,
       changes: wrappedChanges(edit.changes),
       ...(texts.length ? { texts } : {}),
       ...deleted,
-      base: null,
+      base: base as OrderedBase,
     };
   }
   if (!old?.deleted || !writtenByMove(old.lifetime) || !record || record.deleted) return undefined;
@@ -177,24 +174,40 @@ const strandedEdit = (
   };
 };
 
+// The moves an edit relied on: the one that created the record it saw, and ones its text follows.
+const reliedOnMoves = (edit: OrderedOperation["edits"][number]) => {
+  const root = parts(edit.base?.stamps[""] ?? "");
+  const created = root?.[0] === "pending" && root[1] ? [root[1]] : [];
+  const texts = (edit.texts ?? []).flatMap((text) => text.dependencies.map((dependency) => dependency.operationId));
+  return [...created, ...texts].filter((operationId) => isOrderedMoveOperation({ operationId }));
+};
+
 const strandedMoveEdits = async (
   operation: OrderedOperation,
-  canonical: Reader,
-  markers: () => Promise<OrderedRecord[]>,
+  input: {
+    canonical: Reader;
+    markers: () => Promise<OrderedRecord[]>;
+    refusedMove: (operationId: string) => Promise<boolean>;
+  },
 ) => {
-  const candidates = operation.edits.filter(
-    (edit) => !collectionItem(edit.recordId) && writtenByMove(edit.base?.stamps[""] ?? ""),
-  );
+  const candidates: OrderedOperation["edits"] = [];
+  for (const edit of operation.edits) {
+    if (collectionItem(edit.recordId)) continue;
+    // Only this device's own move that relay order refused strands its later edits.
+    for (const operationId of reliedOnMoves(edit))
+      if (await input.refusedMove(operationId)) {
+        candidates.push(edit);
+        break;
+      }
+  }
   if (!candidates.length) return [];
-  const current = await canonical(candidates.map((edit) => edit.recordId));
-  const known = await markers();
+  const current = await input.canonical(candidates.map((edit) => edit.recordId));
+  const known = await input.markers();
   const edits: OrderedEdit[] = [];
   for (const edit of candidates) {
-    const record = current.get(edit.recordId);
-    // The record its move created is still there, so this edit was refused for another reason.
-    if (live(record) && stampOperation(record.stamps[""]) === stampOperation(edit.base?.stamps[""])) continue;
     const from = movedFromItem(edit.recordId, known);
-    const next = from && strandedEdit(edit, from, (await canonical([from])).get(from), record);
+    const next =
+      from && strandedEdit(edit, from, (await input.canonical([from])).get(from), current.get(edit.recordId));
     if (next) edits.push(next);
   }
   return edits;
@@ -213,6 +226,8 @@ export const forwardDisplacedSave = async (input: {
   views: Reader;
   /** Live collection markers, to map a moved record back to its collection item. */
   markers: () => Promise<OrderedRecord[]>;
+  /** Whether this device's own move with this operation ID was refused in relay order. */
+  refusedMove: (operationId: string) => Promise<boolean>;
 }): Promise<Prepared | undefined> => {
   const { operation } = input;
   if (isOrderedMoveOperation(operation)) return undefined;
@@ -240,7 +255,7 @@ export const forwardDisplacedSave = async (input: {
       },
     ];
   });
-  edits.push(...(await strandedMoveEdits(decided, input.canonical, input.markers)));
+  edits.push(...(await strandedMoveEdits(decided, input)));
   if (!edits.length) return undefined;
   const forwarded = await prepareOrderedOperation(
     { operationId: crypto.randomUUID(), edits },

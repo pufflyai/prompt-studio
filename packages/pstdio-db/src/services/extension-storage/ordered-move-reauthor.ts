@@ -63,9 +63,10 @@ export const createDisplacedSaves = (owner: StorageOwner) => {
     const canonical = (ids: string[]) => journal.canonical(ids);
     const views = async (ids: string[]) => (await rebaseOrderedProjection(journal, tx, owner, ids)).views;
     const markers = async () => [...(await journal.canonical(await collectionMarkers(tx, owner))).values()];
+    const refusedMove = async (operationId: string) => (await journal.outcome(operationId))?.state === "refused";
     const prepared = [];
     for (const save of decided) {
-      const next = await forwardDisplacedSave({ ...save, canonical, views, markers });
+      const next = await forwardDisplacedSave({ ...save, canonical, views, markers, refusedMove });
       if (next) prepared.push(next);
     }
     const list = async (prefix: string) =>
