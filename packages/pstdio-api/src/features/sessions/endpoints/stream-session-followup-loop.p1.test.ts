@@ -239,8 +239,9 @@ describe("session stream follow-up resume continuity", () => {
     const initial = await sse.readUntil(
       (event) => event.event === "patch" && getPatchTextParts(event.data as JsonPatch).includes("FIRST DONE"),
     );
-    const firstSnapshot = initial.find((e) => e.event === "patch")?.data as JsonPatch | undefined;
-    expect(firstSnapshot && getPatchTextParts(firstSnapshot)).toContain("FIRST");
+    // Launch can still be waiting for workspace files when the stream first publishes an empty snapshot.
+    const firstSnapshot = initial.at(-1)?.data as JsonPatch | undefined;
+    expect(firstSnapshot && getPatchTextParts(firstSnapshot)).toEqual(["FIRST", "FIRST DONE"]);
 
     // Now release the first session; the follow-up auto-dispatches inside transitionStatus.
     firstExit();
