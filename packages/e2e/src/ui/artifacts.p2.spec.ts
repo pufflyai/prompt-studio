@@ -100,6 +100,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     expect(body.outcome.status, body.outcome.reason).toBe("success");
     return body.outcome.value;
   };
+  let releaseRead = () => {};
   try {
     expect(await execute("list", {})).toEqual([]);
     await page.addInitScript((projectId) => {
@@ -111,7 +112,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await page.goto(libraryUrl);
     const frame = page.frameLocator('iframe[title="Artifacts"]:visible').last();
     const artifactMenu = page.locator("[data-workbench-breadcrumb-resource-actions]");
-    const versionMenu = page.locator("[data-workbench-breadcrumb-resource-actions]");
+    const versionMenu = frame.getByRole("button", { name: "Versions", exact: true });
     await expect(frame.getByText("Your first artifact starts with an idea", { exact: true })).toBeVisible();
     const mainTabs = page.locator('[data-workbench-panel="main"]').getByRole("tab");
     writeFileSync(
@@ -127,7 +128,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
 
     await frame.getByRole("button", { name: "First page", exact: true }).click();
     await expect(artifactMenu).toBeVisible();
-    await expect(mainTabs).toHaveCount(2);
+    await expect(mainTabs).toHaveCount(0);
     const preview = frame.frameLocator('iframe[title^="Preview: "]').frameLocator("iframe");
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
     await expect(preview.getByText("Parent isolated")).toBeVisible();
@@ -141,10 +142,9 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await palette.getByRole("textbox").fill("Reference");
     await palette.getByText("Reference", { exact: true }).click();
     await expect(preview.getByRole("heading", { name: "Reference chart" })).toBeVisible();
-    const referenceTab = page.getByRole("tab", { name: "Reference", exact: true });
-    await expect(referenceTab).toHaveAttribute("aria-selected", "true");
+    await expect(mainTabs).toHaveCount(0);
     await expect(breadcrumbs.getByText("Reference", { exact: true })).toBeVisible();
-    await page.getByRole("tab", { name: "First page", exact: true }).click();
+    await page.goBack();
     await expect(preview.getByRole("button", { name: "Complete", exact: true })).toBeVisible();
     await expect(breadcrumbs.getByText("First page", { exact: true })).toBeVisible();
     await page.evaluate(() => {
@@ -180,31 +180,48 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     rmSync(join(repo, "update.html"));
     await expect(frame.locator('iframe[title^="Preview: "]')).toHaveAttribute("title", "Preview: Second page");
     await expect(preview.getByRole("button", { name: "Complete", exact: true })).toBeVisible();
-    await versionMenu.click();
-    await page.getByRole("menuitemradio", { name: "Second · Latest", exact: true }).click();
+    // A cold version read must keep the header mounted so keyboard focus returns to its trigger.
+    const readGate = new Promise<void>((resolve) => {
+      releaseRead = resolve;
+    });
+    const readRoute = "**/pstdio.artifacts.command.read/execute";
+    await page.route(readRoute, async (route) => {
+      if (route.request().postDataJSON()?.params?.revisionId === second.revisionId) await readGate;
+      await route.continue();
+    });
+    const reading = page.waitForRequest(
+      (request) =>
+        request.url().endsWith("pstdio.artifacts.command.read/execute") &&
+        request.postDataJSON()?.params?.revisionId === second.revisionId,
+    );
+    await versionMenu.press("ArrowDown");
+    await expect(frame.locator(`time[datetime="${second.publishedAt}"]`)).toBeVisible();
+    await frame.getByRole("menu").press("Home");
+    await frame.getByRole("menu").press("Enter");
+    await reading;
+    await expect(versionMenu).toBeFocused();
+    releaseRead();
+    await page.unroute(readRoute);
     await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
     await versionMenu.click();
-    await expect(page.getByRole("menuitemradio", { name: "Second · Latest", exact: true })).toBeChecked();
-    await page.getByRole("menuitemradio", { name: "First", exact: true }).click();
+    await expect(frame.getByRole("menuitemradio", { name: /^Second · Latest/ })).toBeChecked();
+    await frame.getByRole("menuitemradio", { name: /^First/ }).click();
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
     // The selected immutable revision is a saved preference, including across reloads.
     await page.reload();
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
-    // A published URL opens the same artifact tab from a fresh page location.
+    // A published URL opens a single-resource page from a fresh location.
     await page.goto(first.url);
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
-    const selectedTitle = await page.getByRole("tab", { name: /^(First|Second) page$/ }).innerText();
-    await expect(breadcrumbs.getByText(selectedTitle, { exact: true })).toBeVisible();
-    await expect(referenceTab).toBeVisible();
+    await expect(breadcrumbs.getByText("Second page", { exact: true })).toBeVisible();
+    await expect(mainTabs).toHaveCount(0);
     expect(await execute("revisions", { url: first.url })).toHaveLength(2);
     await artifactMenu.click();
     await page.getByRole("menuitem", { name: "Rename artifact…", exact: true }).click();
     await page.getByRole("textbox", { name: "Artifact name" }).fill("Launch notes");
     await page.getByRole("button", { name: "Run", exact: true }).click();
-    await expect(page.getByRole("tab", { name: "Launch notes", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Close Launch notes", exact: true }).click();
-    await referenceTab.click();
-    await page.getByRole("button", { name: "Close Reference", exact: true }).click();
+    await expect(breadcrumbs.getByText("Launch notes", { exact: true })).toBeVisible();
+    await breadcrumbs.getByText("Artifacts", { exact: true }).click();
     const card = frame.getByRole("button", { name: "Launch notes", exact: true });
     await expect(card).toBeVisible();
     // Thumbnails load only after their card enters the viewport.
@@ -226,6 +243,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await expect(frame.getByText("Your first artifact starts with an idea", { exact: true })).toBeVisible();
     expect(await execute("list", {})).toEqual([]);
   } finally {
+    releaseRead();
     await request.delete(`${uiOrigin}/v1/projects/${project.id}`).catch(() => {});
     rmSync(repo, { recursive: true, force: true });
   }

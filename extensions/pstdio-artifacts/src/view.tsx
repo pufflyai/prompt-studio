@@ -9,15 +9,9 @@ import {
 } from "@pstdio/sdk/extensions";
 import { useScopedQueries, useWebviewCommandQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import { AlertMessage, ChakraProvider, psTheme } from "@pstdio/ui";
-import { useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import { createArtifactQueries, createArtifactRevisionSelection } from "./artifact-queries";
-import {
-  artifactRevisionChoices,
-  newerVersionsChoice,
-  olderVersionsChoice,
-  revisionChoicePrefix,
-} from "./artifact-revision-choices";
 import type { ArtifactSummary } from "./artifacts";
 import type { commands } from "./commands";
 import { ArtifactLibrary } from "./components/artifact-library";
@@ -112,93 +106,29 @@ const ArtifactsApp = (props: AppProps) => {
     };
   }, [client, content, exportLabel, host, id, visible]);
 
-  const choices = useRef<ReturnType<typeof registerWebviewResourceAction> | null>(null);
-  const [choicePage, setChoicePage] = useState(0);
-  const versionsLabel = context.t("reader.versions", "Versions");
-  const currentChoices = useEffectEvent(() =>
-    artifactRevisionChoices(items ?? [], selected ?? content?.id ?? items?.[0]?.id, choicePage, context.t),
-  );
-  const chooseRevision = useEffectEvent(async (signal: AbortSignal, choiceId?: string) => {
-    signal.throwIfAborted();
-    if (choiceId === newerVersionsChoice || choiceId === olderVersionsChoice) {
-      const { page, lastPage } = currentChoices();
-      setChoicePage(Math.max(0, Math.min(lastPage, page + (choiceId === olderVersionsChoice ? 1 : -1))));
-      return;
-    }
-    const revisionId = choiceId?.startsWith(revisionChoicePrefix)
-      ? choiceId.slice(revisionChoicePrefix.length)
-      : undefined;
-    if (!revisionId || !items?.some((revision) => revision.id === revisionId))
-      throw new Error("The selected artifact revision is no longer available.");
+  const chooseRevision = async (revisionId: string) => {
     try {
       setActionError(undefined);
       await selection.save(revisionId);
     } catch (error) {
-      if (!signal.aborted) setActionError(String(error));
-      throw error;
+      setActionError(String(error));
     }
-  });
-  // A content read can change while an accepted preference write is still completing.
-  // The App key binds the resource; visibility binds the host's current view authority.
-  useEffect(() => {
-    if (!visible) return;
-    return () => {
-      const registration = choices.current;
-      choices.current = null;
-      void registration?.dispose().catch(() => {});
-    };
-  }, [visible]);
-  useEffect(() => {
-    if (!visible || !id || !items?.length || preference.data === undefined) return;
-    const values = artifactRevisionChoices(
-      items,
-      selected ?? content?.id ?? items[0]?.id,
-      choicePage,
-      context.t,
-    ).choices;
-    const existing = choices.current;
-    const registration =
-      existing ??
-      registerWebviewResourceAction(
-        host,
-        {
-          resource: { type: "artifact", id, projectId: hostProps.projectId, extensionId: host.extensionId },
-          label: versionsLabel,
-          choices: values,
-        },
-        chooseRevision,
-      );
-    choices.current = registration;
-    let cancelled = false;
-    void (existing ? registration.updateChoices(values, { label: versionsLabel }) : registration.ready).catch(
-      (error) => {
-        if (!cancelled && choices.current === registration) setActionError(String(error));
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    host,
-    hostProps.projectId,
-    id,
-    content,
-    items,
-    selected,
-    preference.data,
-    choicePage,
-    versionsLabel,
-    context.t,
-    visible,
-  ]);
+  };
 
   let body = (
     <Center flex="1">
       <Spinner />
     </Center>
   );
-  if (id && content && items) {
-    body = <ArtifactReader content={content} title={items[0]?.title} />;
+  if (id && items) {
+    body = (
+      <ArtifactReader
+        content={content}
+        revisions={items}
+        selectedId={selected ?? content?.id ?? items[0]?.id}
+        onSelect={(id) => void chooseRevision(id)}
+      />
+    );
   } else if (!id && items) {
     body = (
       <ArtifactLibrary

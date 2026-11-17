@@ -47,9 +47,9 @@ Artifacts are also searchable resources. Search by their current name to open th
 
 When an agent mentions a saved snapshot path, such as `.pstdio/extension-storage/pstdio.artifacts/sites/<revision-id>.html`, in a conversation, the link shows the artifact's current name and opens the artifact at its latest version instead of the raw file.
 
-The artifact list opens in a single Artifacts tab in Main. Opening an artifact adds its own tab, so you can return to the list without closing your previews. When the list is closed, Main's default placeholder and Add panel offer an Artifacts entry contributed by this page. Side and Bottom never offer the creation entry. The open list tab can move freely between Main, Side, and Bottom; while open anywhere, its singleton entry is omitted from all choices. Search can open another artifact while tabs are open. Switching tabs keeps each interactive preview's state. A link to a published URL opens the matching artifact tab.
+The library and each artifact open as pages, like Tickets. Opening another artifact changes the current page without adding tabs. Use the breadcrumb to return to the library, or browser Back and Forward to revisit a page. A published URL opens the matching artifact.
 
-Open the artifact actions dropdown beside the breadcrumb and choose a saved revision in **Versions**. New versions appear in this menu without resetting the preview you are looking at. Your selected version is remembered when you reopen the reader. Histories over 100 versions offer **Newer versions…** and **Older versions…** while keeping your selected version available. Use the action menu beside the breadcrumb to:
+Choose a saved revision from the **Versions** dropdown on the right of the panel header. The menu has a maximum height and scrolls through the history. Each version shows its creation date and time. New versions appear without resetting the current preview, and your selected version is remembered when you reopen the reader. Use the action menu beside the breadcrumb to:
 
 - Rename the artifact. The new name applies to all versions and later updates. The saved HTML does not change.
 - Delete the artifact. After you confirm, Artifacts removes all its versions and their saved copies. Your original source files stay.

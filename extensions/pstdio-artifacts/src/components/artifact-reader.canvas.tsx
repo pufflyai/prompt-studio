@@ -1,9 +1,7 @@
-import { Box, Button, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { createGlyphIcon, Header, ScopedMenu as Menu, Portal, ScrollArea } from "@pstdio/ui";
 import { useState } from "react";
 import { weeklyActivityHtml } from "../../examples/weekly-activity";
-import type { ArtifactContent, ArtifactSummary } from "../artifacts";
 import { ArtifactReader } from "./artifact-reader";
 import { exampleArtifact } from "./artifact-story-fixture";
 import { ArtifactTranslationStory } from "./artifact-translation-story";
@@ -15,61 +13,11 @@ const content = {
 ${Array.from({ length: 20 }, (_, index) => `<p>Scrollable result ${index + 1}</p>`).join("")}</section>
 ${Array.from({ length: 24 }, (_, index) => `<p>Document section ${index + 1}</p>`).join("")}`,
 };
-const ChevronDown = createGlyphIcon("arrow-down-1");
-const ReaderWithChrome = (props: {
-  content: ArtifactContent;
-  revisions: ArtifactSummary[];
-  onSelect(id: string): void;
-}) => (
-  <Stack height="full" minHeight="0" gap="0">
-    <Header>
-      <Text>{props.content.title}</Text>
-      <Menu.Root>
-        <Menu.Trigger asChild>
-          <Button variant="ghost" aria-label="Artifact actions">
-            <ChevronDown />
-          </Button>
-        </Menu.Trigger>
-        <Portal>
-          <Menu.Positioner>
-            <Menu.Content maxHeight="var(--available-height)">
-              <ScrollArea flex="1" minHeight="0" viewportProps={{ tabIndex: -1 }}>
-                <Menu.Item value="export">Export HTML</Menu.Item>
-                <Menu.Item value="rename">Rename artifact…</Menu.Item>
-                <Menu.Item value="delete">Delete artifact…</Menu.Item>
-                <Menu.Separator />
-                <Menu.ItemGroupLabel>Versions</Menu.ItemGroupLabel>
-                <Menu.RadioItemGroup
-                  aria-label="Versions"
-                  value={props.content.id}
-                  onValueChange={(event) => props.onSelect(event.value)}
-                >
-                  {props.revisions.map((revision, index) => (
-                    <Menu.RadioItem key={revision.id} value={revision.id}>
-                      <Menu.ItemText truncate>
-                        {revision.label || `Version ${props.revisions.length - index}`}
-                        {index === 0 ? " · Latest" : ""}
-                      </Menu.ItemText>
-                      <Menu.ItemIndicator>✓</Menu.ItemIndicator>
-                    </Menu.RadioItem>
-                  ))}
-                </Menu.RadioItemGroup>
-              </ScrollArea>
-            </Menu.Content>
-          </Menu.Positioner>
-        </Portal>
-      </Menu.Root>
-    </Header>
-    <Box flex="1" minHeight="0">
-      <ArtifactReader content={props.content} />
-    </Box>
-  </Stack>
-);
 const meta = {
   title: "Extensions/Artifacts/Reader",
   description:
-    "Export HTML belongs to the artifact actions beside the breadcrumb, with Rename and Delete. The same native resource dropdown contains a Versions radio group; there is no separate reader toolbar. Long histories use the shared ScrollArea. Document and nested preview scrollbars use the same shared thickness and theme colors.",
-  component: ReaderWithChrome,
+    "Artifacts open as single-resource pages, like Tickets, without resource tabs. The outlined Versions button is right aligned in the reader panel header. Its bounded dropdown uses ScrollArea and shows each saved version's creation date. Export HTML remains in the breadcrumb actions menu.",
+  component: ArtifactReader,
   decorators: [
     (Story) => (
       <ArtifactTranslationStory>
@@ -82,7 +30,7 @@ const meta = {
     revisions: [exampleArtifact],
     onSelect: () => {},
   },
-} satisfies CanvasMeta<typeof ReaderWithChrome>;
+} satisfies CanvasMeta<typeof ArtifactReader>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;
 const InteractiveReader = () => {
@@ -93,6 +41,7 @@ const InteractiveReader = () => {
         ...exampleArtifact,
         id: `revision-${40 - index}`,
         revisionId: `revision-${40 - index}`,
+        publishedAt: new Date(Date.UTC(2026, 10, 17 - index, 10)).toISOString(),
         label: `Version ${40 - index} — a long saved revision label that should stay within the dropdown`,
       }))
     : [exampleArtifact];
@@ -103,7 +52,7 @@ const InteractiveReader = () => {
         {manyVersions ? "Show one version" : "Show many versions"}
       </Button>
       <Box flex="1" minHeight="0" minWidth="0">
-        <ReaderWithChrome content={{ ...content, ...selected }} revisions={revisions} onSelect={setSelectedId} />
+        <ArtifactReader content={{ ...content, ...selected }} revisions={revisions} onSelect={setSelectedId} />
       </Box>
     </Stack>
   );

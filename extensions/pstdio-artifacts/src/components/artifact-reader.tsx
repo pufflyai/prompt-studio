@@ -1,17 +1,99 @@
-import { Stack } from "@chakra-ui/react";
-import type { ArtifactContent } from "../artifacts";
+import { Box, Button, Center, Spinner, Stack, Text } from "@chakra-ui/react";
+import { createGlyphIcon, Header, ScopedMenu as Menu, Portal, ScrollArea } from "@pstdio/ui";
+import type { ArtifactContent, ArtifactSummary } from "../artifacts";
 import { useArtifactTranslations } from "../translations";
 import { HtmlPreview } from "./html-preview";
 
-export const ArtifactReader = (props: { content: ArtifactContent; title?: string }) => {
-  const { t } = useArtifactTranslations();
+const ChevronDown = createGlyphIcon("arrow-down-1");
+const History = createGlyphIcon("history");
+const Check = createGlyphIcon("check");
+interface ArtifactReaderProps {
+  content?: ArtifactContent;
+  selectedId?: string;
+  revisions: ArtifactSummary[];
+  onSelect: (revisionId: string) => void;
+}
+
+export const ArtifactReader = (props: ArtifactReaderProps) => {
+  const { content, selectedId = content?.id, revisions, onSelect } = props;
+  const { t, locale } = useArtifactTranslations();
+  const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
+  const latest = revisions[0];
+  const title = latest?.title ?? content?.title ?? "";
+  const selectedIndex = revisions.findIndex((revision) => revision.id === selectedId);
+  const selected = revisions[selectedIndex];
+  const selectedLabel =
+    selected?.label?.trim() || t("reader.version", "Version {{number}}", { number: revisions.length - selectedIndex });
   return (
-    <Stack height="full" minHeight="0" gap="0">
-      <HtmlPreview
-        key={props.content.id}
-        html={props.content.html}
-        title={t("reader.preview", "Preview: {{title}}", { title: props.title ?? props.content.title })}
-      />
+    <Stack height="full" gap="0" minHeight="0" minWidth="0">
+      <Header flexShrink="0" minWidth="0" justifyContent="flex-end">
+        <Menu.Root lazyMount unmountOnExit positioning={{ placement: "bottom-end" }}>
+          <Menu.Trigger asChild>
+            <Button
+              variant="outline"
+              aria-label={t("reader.versions", "Versions")}
+              minWidth="0"
+              maxWidth="64"
+              flexShrink="1"
+            >
+              <History />
+              <Text truncate textStyle="paragraph/S/medium">
+                {selectedLabel}
+              </Text>
+              <ChevronDown />
+            </Button>
+          </Menu.Trigger>
+          <Portal>
+            <Menu.Positioner>
+              <Menu.Content
+                width="64"
+                minWidth="0"
+                maxWidth="var(--available-width)"
+                maxHeight="min(var(--available-height), var(--chakra-sizes-xs))"
+              >
+                <ScrollArea flex="1" minHeight="0" viewportProps={{ overscrollBehavior: "contain", tabIndex: -1 }}>
+                  <Menu.RadioItemGroup
+                    aria-label={t("reader.versions", "Versions")}
+                    value={selectedId}
+                    onValueChange={(event) => onSelect(event.value)}
+                  >
+                    {revisions.map((revision, index) => (
+                      <Menu.RadioItem key={revision.id} value={revision.id}>
+                        <Stack flex="1" minWidth="0" gap="0">
+                          <Menu.ItemText truncate>
+                            {revision.label?.trim() ||
+                              t("reader.version", "Version {{number}}", { number: revisions.length - index })}
+                            {revision.id === latest?.id ? t("reader.latest", " · Latest") : ""}
+                          </Menu.ItemText>
+                          <Text asChild textStyle="label/S/regular" color="fg.muted">
+                            <time dateTime={revision.publishedAt}>{date.format(new Date(revision.publishedAt))}</time>
+                          </Text>
+                        </Stack>
+                        <Menu.ItemIndicator>
+                          <Check />
+                        </Menu.ItemIndicator>
+                      </Menu.RadioItem>
+                    ))}
+                  </Menu.RadioItemGroup>
+                </ScrollArea>
+              </Menu.Content>
+            </Menu.Positioner>
+          </Portal>
+        </Menu.Root>
+      </Header>
+      <Box flex="1" minHeight="0" width="full" bg="bg.muted" overflow="hidden">
+        {content ? (
+          <HtmlPreview
+            key={content.id}
+            title={t("reader.preview", "Preview: {{title}}", { title })}
+            html={content.html}
+          />
+        ) : (
+          <Center height="full">
+            <Spinner />
+          </Center>
+        )}
+      </Box>
     </Stack>
   );
 };

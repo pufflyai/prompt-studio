@@ -1,14 +1,5 @@
-import { definePage, definePlacement, defineView, l10n, packageAsset, workbenchModes } from "@pstdio/sdk/extensions";
-import {
-  artifactPage,
-  artifactPanelRef,
-  artifactViewRef,
-  libraryPageRef,
-  libraryPanelRef,
-  libraryViewRef,
-} from "./artifact-refs";
-import { queryArtifactTab } from "./artifact-tab";
-import { changedEvent } from "./events";
+import { definePage, defineView, l10n, packageAsset, workbenchModes } from "@pstdio/sdk/extensions";
+import { artifactPage, libraryPageRef } from "./artifact-refs";
 import { artifact } from "./resource-kinds";
 
 export { artifact } from "./resource-kinds";
@@ -28,29 +19,8 @@ export const view = defineView({
       "preferences.get",
       "preferences.set",
       "navigation.open",
-      "placement.close",
     ],
   },
-});
-export const libraryPanel = definePlacement({
-  id: libraryViewRef.id,
-  mode: workbenchModes.project,
-  region: "main",
-  addableIn: ["main"],
-  replaces: [libraryPanelRef],
-  order: 0,
-  mountStrategy: "keep-mounted",
-  item: { kind: "view", view: view.ref, presence: "closed" },
-});
-export const artifactPanel = definePlacement({
-  id: artifactViewRef.id,
-  mode: workbenchModes.project,
-  region: "main",
-  replaces: [artifactPanelRef],
-  order: 1,
-  mountStrategy: "keep-mounted",
-  tab: { query: queryArtifactTab, refreshEvents: [changedEvent] },
-  item: { kind: "binding", binding: { kinds: [artifact.ref], view: view.ref, cardinality: "many" } },
 });
 export const library = definePage({
   id: libraryPageRef.id,
@@ -58,8 +28,7 @@ export const library = definePage({
   path: libraryPageRef.id,
   icon: "file-code",
   mode: workbenchModes.project,
-  main: { kind: "panels", landing: libraryPanel.ref },
-  panelView: libraryPanel.ref,
+  main: { kind: "view", presentation: "page", view: view.ref, cardinality: "one" },
   slots: [],
 });
 export const detail = definePage({
@@ -69,6 +38,6 @@ export const detail = definePage({
   mode: workbenchModes.project,
   parent: library.ref,
   resource: { kinds: [artifact.ref] },
-  main: { kind: "panels", landing: artifactPanel.ref },
+  main: { kind: "view", presentation: "page", view: view.ref, cardinality: "one" },
   slots: [],
 });
