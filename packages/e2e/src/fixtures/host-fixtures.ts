@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 export const hostFixtureSources = {
+  download: resolve(import.meta.dirname, "file-download"),
   harness: resolve(import.meta.dirname, "../../../workbench-fixture"),
   webview: resolve(import.meta.dirname, "../../../workbench-fixture/fixtures/webview-host"),
   panels: resolve(import.meta.dirname, "panel-views"),

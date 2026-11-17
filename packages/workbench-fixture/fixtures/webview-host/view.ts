@@ -16,15 +16,7 @@ export default defineExtensionView({
       output.textContent = String((response.outcome.value as { counter: number }).counter);
     };
     button.onclick = () => void run("bump");
-    const download = document.createElement("button");
-    download.textContent = "Download HTML";
-    download.onclick = () =>
-      void host.call("files.download", {
-        name: "résumé.html",
-        mimeType: "text/html",
-        data: new TextEncoder().encode("<!doctype html><h1>Résumé</h1>"),
-      });
-    mount.append(heading, output, button, download);
+    mount.append(heading, output, button);
     let projectId = propsStore.get().projectId;
     const unsubscribe = propsStore.subscribe((props) => {
       if (props.projectId !== projectId) {
