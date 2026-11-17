@@ -71,6 +71,8 @@ export const updatePreparationWatcher = async (input: WatchUpdate) => {
     state.watcher = await createExtensionRootWatcher({
       listExtensionRoots: async () =>
         state.roots.map((row) => ({ ...row, sync: async () => report({ sourcePath: row.path }) })),
+      // Reconcile every native attachment, including recovery after a watcher error.
+      onAttach: (row) => report({ sourcePath: row.path, attachment: true }),
       onError: (error) => report({ error: error instanceof Error ? error.message : String(error) }),
     });
   watchers.set(input.id, state);
