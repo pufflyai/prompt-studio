@@ -88,27 +88,39 @@ export const sampleDesktopMemory = (
     const processes = await readProcessTable();
     // Validate remembered parents before expanding their branches; a rejected parent
     // cannot introduce unrelated descendants into the retained ownership set.
-    const { owned, priorReadings, reused } = await ownedProcessTree(processes, roots(), identities, read);
+    const rootPids = roots();
+    const { owned, priorReadings, reused } = await ownedProcessTree(processes, rootPids, identities, read);
     const readings: { pid: number; reading: KernelProcessReading | null }[] = [];
     for (const pid of owned) {
       const reading = priorReadings.has(pid) ? priorReadings.get(pid)! : await read(pid);
       if (reading) identities.set(pid, reading.processStartId);
       readings.push({ pid, reading });
     }
+    // A short-lived descendant can exit between enumeration and its kernel read.
+    // Verify that exit with a fresh native snapshot; a live unreadable process,
+    // missing root or reused PID still invalidates the complete sample.
+    const unreadable = readings.filter(({ reading }) => reading === null);
+    const liveAfterRead = unreadable.length ? new Set((await readProcessTable()).map(([pid]) => pid!)) : undefined;
+    const exitedDuringSample = unreadable.filter(({ pid }) => !rootPids.includes(pid) && !liveAfterRead!.has(pid));
+    const exitedPids = new Set(exitedDuringSample.map(({ pid }) => pid));
+    const activeReadings = readings.filter(({ pid }) => !exitedPids.has(pid));
     // Keep each original generation for this bounded capture, including after exit.
     // A static root PID must never acquire an unrelated replacement on a later sample.
     const complete =
-      reused.size === 0 && readings.length > 0 && readings.every(({ reading }) => reading?.[memoryField] != null);
-    const total = complete ? readings.reduce((sum, { reading }) => sum + reading![memoryField]!, 0) : null;
+      reused.size === 0 &&
+      rootPids.every((pid) => owned.has(pid) && (!liveAfterRead || liveAfterRead.has(pid))) &&
+      activeReadings.length > 0 &&
+      activeReadings.every(({ reading }) => reading?.[memoryField] != null);
+    const total = complete ? activeReadings.reduce((sum, { reading }) => sum + reading![memoryField]!, 0) : null;
     const rss =
-      readings.length && readings.every(({ reading }) => reading?.residentBytes != null)
-        ? readings.reduce((sum, { reading }) => sum + reading!.residentBytes!, 0)
+      complete && activeReadings.every(({ reading }) => reading?.residentBytes != null)
+        ? activeReadings.reduce((sum, { reading }) => sum + reading!.residentBytes!, 0)
         : null;
-    const sample = { at, phase, total, count: readings.length, rss, heap: heap ? await heap() : null, cycle };
+    const sample = { at, phase, total, count: activeReadings.length, rss, heap: heap ? await heap() : null, cycle };
     samples.push(sample);
     appendFileSync(
       output,
-      `${JSON.stringify({ ...sample, elapsedMs: performance.now() - at, readings, reusedPids: [...reused] })}\n`,
+      `${JSON.stringify({ ...sample, elapsedMs: performance.now() - at, readings, exitedDuringSamplePids: [...exitedPids], reusedPids: [...reused] })}\n`,
     );
   };
   // Half-second spacing leaves room for enumeration and retains at least one sample per second.
