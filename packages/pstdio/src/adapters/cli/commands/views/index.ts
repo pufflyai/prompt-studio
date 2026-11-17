@@ -34,6 +34,10 @@ const edit = (yargs: Argv) =>
     .option("columns", { type: "string" })
     .option("rows", { type: "string" })
     .option("group", { type: "string", describe: "Table or resource list grouping field, or none" })
+    .option("subgroup", {
+      type: "string",
+      describe: "Resource list sub-grouping fields in order, comma-separated, or none",
+    })
     .option("children", { type: "string", choices: ["nested", "hidden"], describe: "Resource list child visibility" })
     .option("row-numbers", { type: "string", choices: ["show", "hide"] })
     .option("wrap-rows", { type: "string", choices: ["on", "off"] })

@@ -1,4 +1,4 @@
-import { Box, HStack, Icon, IconButton, Stack, Text, useRecipe } from "@chakra-ui/react";
+import { Box, chakra, HStack, Icon, Stack, Text, useRecipe } from "@chakra-ui/react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { ListRowItem, ListRowProps, RowContentProps } from "./list-row.types";
@@ -107,12 +107,28 @@ const RowChevron = (
   return (
     <>
       {showChevron && onToggleExpand ? (
-        <IconButton
+        // A separate toggle (the row itself opens the item) looks exactly like the plain chevron.
+        <chakra.button
+          type="button"
           aria-label={isExpanded ? "Collapse group" : "Expand group"}
           aria-expanded={isExpanded}
-          variant="ghost"
-          size="2xs"
           disabled={isDisabled}
+          color="fg.muted"
+          bg="transparent"
+          flexShrink={0}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          padding="0"
+          // A 20px target around the 12px chevron; the negative margin keeps the layout identical.
+          minW="20px"
+          minH="20px"
+          margin="-4px"
+          borderRadius="2xs"
+          cursor="pointer"
+          _hover={{ color: "fg" }}
+          _disabled={{ cursor: "not-allowed" }}
+          _focusVisible={{ outline: "2px solid", outlineColor: "colorPalette.focusRing" }}
           onClick={(event) => {
             event.stopPropagation();
             onToggleExpand();
@@ -121,7 +137,7 @@ const RowChevron = (
           onKeyDown={(event) => event.stopPropagation()}
         >
           <Icon as={ChevronRight} boxSize="12px" css={chevron()} data-open={isExpanded} />
-        </IconButton>
+        </chakra.button>
       ) : null}
       {showChevron && !onToggleExpand ? (
         <Box color="fg.muted" flexShrink={0} display="flex" alignItems="center">

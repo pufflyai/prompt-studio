@@ -210,3 +210,50 @@ test("group notes dispatch local public command refs in their owning extension",
   await Promise.resolve();
   expect(opened).toBe(false);
 });
+
+test("nested child rows keep their resources and navigation targets at every depth", async () => {
+  const workbench = createWorkbench();
+  const record = {
+    id: "rules",
+    extensionId: "example.rules",
+    title: "Rules",
+    queryHandlerId: "rules.query",
+    attributes: [],
+  } satisfies WorkbenchExtensionKanbanRendererRecord;
+  registerWorkbenchExtensionKanbanRenderers(
+    {
+      projectId: "project-1",
+      workbench,
+      executeCommand: async () => ({
+        rows: [
+          {
+            id: "rule",
+            title: "Rule",
+            attributes: {},
+            children: [
+              {
+                id: "check",
+                title: "Check",
+                attributes: {},
+                children: [
+                  {
+                    id: "example",
+                    title: "Example",
+                    attributes: {},
+                    target: { kind: "page", page: { kind: "page", id: "example" } },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    },
+    [record],
+  );
+  const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("rules")!;
+  const [rule] = await renderer.executeQuery(queryState, new AbortController().signal);
+  const example = rule.children?.[0]?.children?.[0];
+  expect(example?.id).toBe("example");
+  expect(example?.target).toMatchObject({ kind: "page", page: { extensionId: "example.rules", id: "example" } });
+});

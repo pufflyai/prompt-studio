@@ -7,7 +7,9 @@ import { readPlanCommand } from "../timeline/commands/read-plan";
 import { timelineViewSchema } from "../timeline/commands/view-schema";
 import { tagsCollection } from "./collections";
 import { migratePlannerStorage } from "./migrate-storage";
-import { putTicket, ticketsCollection } from "./ticket-context.fixture";
+import { seedTicketIdentity, ticketsCollection } from "./ticket-context.fixture";
+import { changeTicketRecord, ticketRecords } from "./ticket-records";
+import { queueTicketWrite } from "./ticket-write-queue";
 import type { Ticket } from "./types";
 
 const ticket = {
@@ -33,7 +35,9 @@ test("a project that already imported its templates gets the remaining cleanups 
     },
   });
   await storage.migrate(1, async () => {});
-  await putTicket(storage, ticket);
+  // Before storage version 5, tickets live in their collection; Planner writes would upgrade first.
+  seedTicketIdentity(storage, ticket);
+  await storage.collection("tickets").put(ticket.id, ticket);
   await storage.set("workspace-status-definitions-initialized", true);
   const ctx = makeCommandContext({ storage, params: {} });
 
@@ -62,7 +66,8 @@ test.each([
     options: [{ ...option, id: "default-human-requested-true", name: "Needs attention" }, option],
   });
   const original = { ...ticket, tags: { "default-human-requested": [option.id] }, content: "Keep this body" };
-  await ticketsCollection(storage).put(ticket.id, original);
+  seedTicketIdentity(storage, original);
+  await storage.collection("tickets").put(ticket.id, original);
   const requests = storage.collection("planner-review-requests");
   const request = { id: "request", ticketId: ticket.id, title: "Choose the scope" };
   await requests.put(request.id, request);
@@ -85,4 +90,40 @@ test.each([
   expect(await requests.get(request.id)).toEqual(request);
   await migratePlannerStorage(ctx);
   expect(await requests.get(request.id)).toEqual(request);
+});
+
+test("concurrent first reads of an upgraded project wait for the move instead of reading empty records", async () => {
+  const storage = createMemoryStorage({
+    collections: {
+      tickets: Object.fromEntries(["a", "b", "c"].map((id) => [id, { id, title: id.toUpperCase(), content: "" }])),
+    },
+  });
+  // A project at version 4 has not moved its tickets yet.
+  await storage.migrate(4, async () => {});
+
+  const records = ticketRecords(storage);
+  const read = await Promise.all(["a", "b", "c"].map((id) => records.get(id)));
+
+  expect(read.map((ticket) => ticket?.title)).toEqual(["A", "B", "C"]);
+});
+
+test("a ticket write queued by another command during an old project's upgrade does not block it", async () => {
+  const storage = createMemoryStorage({
+    collections: {
+      tickets: Object.fromEntries(
+        ["a", "b", "c"].map((id, index) => [id, { id, title: id, content: "", sortOrder: index + 1 }]),
+      ),
+    },
+  });
+  // Below version 4 the upgrade also imports ticket order.
+  await storage.migrate(3, async () => {});
+  const upgrade = migratePlannerStorage({ storage });
+  // Another command holds the same ticket's write queue with its own storage object.
+  const save = queueTicketWrite("c", () =>
+    changeTicketRecord({ ...storage }, "c", (ticket) => ({ ...ticket, title: "edited" })),
+  );
+  await Promise.all([upgrade, save]);
+
+  expect((await ticketRecords(storage).get("c"))?.title).toBe("edited");
+  expect((await ticketRecords(storage).get("c"))?.position).toBeString();
 });

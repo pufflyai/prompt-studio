@@ -24,12 +24,12 @@ const requireTag = async (storage: ExtensionStorageApi, tagId: string) => {
   return tag;
 };
 
-export const createTicketTag = async (input: {
-  storage: ExtensionStorageApi;
-  resources: TicketContext["resources"];
-  name: string;
-  type?: StoredTag["type"];
-}) => {
+export const createTicketTag = async (
+  input: TicketContext & {
+    name: string;
+    type?: StoredTag["type"];
+  },
+) => {
   const tags = await seedDefaultTags(input.storage);
   const sortOrder = Math.max(-1, ...tags.map((tag) => tag.sortOrder)) + 1;
   return putTag(input.storage, {
@@ -41,14 +41,14 @@ export const createTicketTag = async (input: {
   });
 };
 
-export const updateTicketTag = async (input: {
-  storage: ExtensionStorageApi;
-  resources: TicketContext["resources"];
-  tagId: string;
-  name?: string;
-  type?: StoredTag["type"];
-  sortOrder?: number;
-}) => {
+export const updateTicketTag = async (
+  input: TicketContext & {
+    tagId: string;
+    name?: string;
+    type?: StoredTag["type"];
+    sortOrder?: number;
+  },
+) => {
   const tag = await requireTag(input.storage, input.tagId);
   await assertSingleSelectConversion(input, tag, input.type);
   const next = await putTag(input.storage, {
@@ -57,42 +57,46 @@ export const updateTicketTag = async (input: {
     type: input.type ?? tag.type,
     sortOrder: input.sortOrder ?? tag.sortOrder,
   });
-  if (next.type !== tag.type) await convertTicketTagValues(input.storage, next);
+  if (next.type !== tag.type) await convertTicketTagValues(input, next);
   return next;
 };
 
 // Removes deleted options from every ticket's value for this tag.
-const removeTicketTagOptions = (storage: ExtensionStorageApi, tag: StoredTag, optionIds: Set<string>) =>
-  editTicketTagValues(storage, tag.id, (value) =>
-    tagValue(
-      tag,
-      tagValueIds(value).filter((id) => !optionIds.has(id)),
-      value,
-    ),
+const removeTicketTagOptions = (ctx: TicketContext, tag: StoredTag, optionIds: Set<string>) =>
+  editTicketTagValues(
+    ctx,
+    tag.id,
+    (value) =>
+      tagValue(
+        tag,
+        tagValueIds(value).filter((id) => !optionIds.has(id)),
+        value,
+      ),
+    [tag],
   );
 
 // Removing a tag also removes its value from every ticket so no ticket points
 // at a tag that no longer exists.
-export const deleteTicketTag = async (input: {
-  storage: ExtensionStorageApi;
-  resources: TicketContext["resources"];
-  tagId: string;
-}) => {
-  await editTicketTagValues(input.storage, input.tagId, () => undefined);
+export const deleteTicketTag = async (
+  input: TicketContext & {
+    tagId: string;
+  },
+) => {
+  await editTicketTagValues(input, input.tagId, () => undefined);
 
   await tagsCollection(input.storage).delete(input.tagId);
   return { tagId: input.tagId };
 };
 
-export const createTagOption = async (input: {
-  storage: ExtensionStorageApi;
-  resources: TicketContext["resources"];
-  tagId: string;
-  name: string;
-  color?: string;
-  icon?: string | null;
-  description?: string | null;
-}) => {
+export const createTagOption = async (
+  input: TicketContext & {
+    tagId: string;
+    name: string;
+    color?: string;
+    icon?: string | null;
+    description?: string | null;
+  },
+) => {
   const tag = await requireTag(input.storage, input.tagId);
   const sortOrder = Math.max(-1, ...tag.options.map((opt) => opt.sortOrder)) + 1;
   const created: StoredTagOption = {
@@ -107,17 +111,17 @@ export const createTagOption = async (input: {
   return created;
 };
 
-export const updateTagOption = async (input: {
-  storage: ExtensionStorageApi;
-  resources: TicketContext["resources"];
-  tagId: string;
-  optionId: string;
-  name?: string;
-  color?: string;
-  sortOrder?: number;
-  icon?: string | null;
-  description?: string | null;
-}) => {
+export const updateTagOption = async (
+  input: TicketContext & {
+    tagId: string;
+    optionId: string;
+    name?: string;
+    color?: string;
+    sortOrder?: number;
+    icon?: string | null;
+    description?: string | null;
+  },
+) => {
   const tag = await requireTag(input.storage, input.tagId);
   const options = tag.options.map((opt) =>
     opt.id === input.optionId
@@ -134,27 +138,27 @@ export const updateTagOption = async (input: {
   return putTag(input.storage, { ...tag, options });
 };
 
-export const deleteTagOption = async (input: {
-  storage: ExtensionStorageApi;
-  resources: TicketContext["resources"];
-  tagId: string;
-  optionId: string;
-}) => {
+export const deleteTagOption = async (
+  input: TicketContext & {
+    tagId: string;
+    optionId: string;
+  },
+) => {
   const tag = await requireTag(input.storage, input.tagId);
   await putTag(input.storage, { ...tag, options: tag.options.filter((opt) => opt.id !== input.optionId) });
-  await removeTicketTagOptions(input.storage, tag, new Set([input.optionId]));
+  await removeTicketTagOptions(input, tag, new Set([input.optionId]));
 
   return { tagId: input.tagId, optionId: input.optionId };
 };
 
 // Replaces a ticket's tag-option ids. The renderer/properties panel sends the full
 // next set across all tags.
-export const setTicketTags = async (input: {
-  storage: ExtensionStorageApi;
-  resources: TicketContext["resources"];
-  ticketId: string;
-  tagIds: string[];
-}) => {
+export const setTicketTags = async (
+  input: TicketContext & {
+    ticketId: string;
+    tagIds: string[];
+  },
+) => {
   const ticket = await ticketsCollection(input).get(input.ticketId);
   if (!ticket) return null;
   const tags = await ticketTagsForIds(input.storage, input.tagIds, ticket.tags);
@@ -177,16 +181,16 @@ export interface TagDraftOptionUpdate {
 // Applies a full tag draft (type + create/update/delete options) in a single tag
 // write so partial-save failures from per-option commands are no longer possible.
 // Ticket values of deleted options are removed after the tag write succeeds.
-export const applyTagDraft = async (input: {
-  storage: ExtensionStorageApi;
-  resources: TicketContext["resources"];
-  tagId: string;
-  name?: string;
-  type?: StoredTag["type"];
-  optionsToCreate: TagDraftOptionCreate[];
-  optionsToUpdate: TagDraftOptionUpdate[];
-  optionIdsToDelete: string[];
-}) => {
+export const applyTagDraft = async (
+  input: TicketContext & {
+    tagId: string;
+    name?: string;
+    type?: StoredTag["type"];
+    optionsToCreate: TagDraftOptionCreate[];
+    optionsToUpdate: TagDraftOptionUpdate[];
+    optionIdsToDelete: string[];
+  },
+) => {
   const tag = await requireTag(input.storage, input.tagId);
   const updatesById = new Map(input.optionsToUpdate.map((entry) => [entry.id, entry]));
   const deletedIds = new Set(input.optionIdsToDelete);
@@ -223,8 +227,8 @@ export const applyTagDraft = async (input: {
     options: [...kept, ...created],
   });
 
-  if (deletedIds.size > 0) await removeTicketTagOptions(input.storage, next, deletedIds);
-  if (next.type !== tag.type) await convertTicketTagValues(input.storage, next);
+  if (deletedIds.size > 0) await removeTicketTagOptions(input, { ...next, options: tag.options }, deletedIds);
+  if (next.type !== tag.type) await convertTicketTagValues(input, next);
 
   return { tagId: input.tagId };
 };
