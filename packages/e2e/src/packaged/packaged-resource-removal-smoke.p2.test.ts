@@ -49,6 +49,21 @@ test("packaged related loading cannot reopen a resource deleted during resolutio
     expect(response.status).toBe(201);
     const project = (await response.json()) as { id: string };
     await enablePackagedProjectExtension(runtime, project.id, "resource-removal");
+    const composition = await fetch(`${runtime.baseUrl}/v1/projects/${project.id}/composition`, {
+      method: "PUT",
+      headers: { ...runtimeAuthorization(runtime.descriptor), "content-type": "application/json" },
+      body: JSON.stringify({
+        defaultPage: { kind: "page", extensionId: "e2e.resource-removal", id: "home" },
+        resourceOpeners: [
+          {
+            resourceKind: { kind: "resource-kind", extensionId: "e2e.resource-removal", id: "document" },
+            opener: { kind: "page", extensionId: "e2e.resource-removal", id: "document" },
+            relatedOpenings: { kind: "command", extensionId: "e2e.resource-removal", id: "related" },
+          },
+        ],
+      }),
+    });
+    expect(composition.status).toBe(200);
     const page = await browser.newPage();
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await signInBrowser(page, runtime.descriptor);
@@ -64,8 +79,8 @@ test("packaged related loading cannot reopen a resource deleted during resolutio
     await page.getByText("Removal home", { exact: true }).first().click();
     await browserExpect(kept).toHaveCount(0);
     const held = Promise.withResolvers<void>();
-    await page.route("**/e2e.resource-removal.command.resolve/execute", async (route) => {
-      const resources = route.request().postDataJSON().params?.resources as Array<{ id: string }> | undefined;
+    await page.route(`**/v1/projects/${project.id}/resource-openings`, async (route) => {
+      const resources = route.request().postDataJSON().resources as Array<{ id: string }> | undefined;
       if (
         !resources?.some((resource) => resource.id === "deleted") ||
         !resources.some((resource) => resource.id === "kept")

@@ -15,6 +15,15 @@ import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "./index";
 import { isRuntimeNavigationTargetAvailable } from "./page-target-validation";
 
+const landing = definePage({
+  id: "landing",
+  title: "Landing",
+  path: "desk",
+  mode: workbenchModes.project,
+  main: { kind: "panels" },
+  slots: [],
+});
+
 const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensionSource => ({
   packagePath: "/fake/lab",
   sourcePath: "/fake/lab/extension.ts",
@@ -27,7 +36,7 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
     main: "./extension.ts",
     enginesPstdio: `^${EXTENSION_API_VERSION}`,
   },
-  definition,
+  definition: { ...definition, pages: [landing, ...(definition.pages ?? [])] },
 });
 const pageView = defineView({
   id: "page",
@@ -58,7 +67,7 @@ test("returned resource targets require available pages, panels, parents, and ev
     path: "resource",
     slots: [],
     mode: workbenchModes.project,
-    parent: workbenchPages.start,
+    parent: landing.ref,
     resource: { kinds: [ticketKind.ref] },
     main: { kind: "view", view: resourceView.ref, cardinality: "many" },
   });
@@ -97,7 +106,7 @@ test.each(["pin", "preview"] as const)("collection resource viewers accept %s pa
     title: "Resource",
     path: "resource",
     mode: workbenchModes.project,
-    parent: workbenchPages.start,
+    parent: landing.ref,
     resource: { kinds: [ticketKind.ref] },
     main: { kind: "panels", landing: viewer.ref },
     slots: [],
@@ -173,7 +182,7 @@ describe("page target validation", () => {
       title: "Tickets",
       path: "tickets",
       mode: workbenchModes.project,
-      parent: workbenchPages.start,
+      parent: landing.ref,
       resource: {
         kinds: [ticketKind.ref],
       },
@@ -223,14 +232,14 @@ describe("page target validation", () => {
         owner: workbenchModes.project,
         slot: "content",
         label: "Workspace",
-        action: { kind: "page", page: workbenchPages.workspace, resource: { type: "workspace", id: "ws-1" } },
+        action: { kind: "page", page: workbenchPages.session, resource: { type: "session", id: "s-1" } },
       }),
       defineNavigationItem({
         id: "bad-workspace",
         owner: workbenchModes.project,
         slot: "content",
         label: "Bad workspace",
-        action: { kind: "page", page: workbenchPages.workspace, resource: { type: "ticket", id: "PS-1" } },
+        action: { kind: "page", page: workbenchPages.session, resource: { type: "ticket", id: "PS-1" } },
       }),
     ];
     const diagnostics = diagnosticsFor(defineExtension({ navigationItems }));

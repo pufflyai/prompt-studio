@@ -167,7 +167,7 @@ const createPreviewMetadata = (definition: ExtensionDefinition) => {
 export const createExtensionPreview = (definition: ExtensionDefinition, pageId: string) => {
   const { handlers, metadata } = createPreviewMetadata(definition);
   const page = { extensionId, kind: "page" as const, id: pageId };
-  const workbench = createWorkbench({ startPage: page });
+  const workbench = createWorkbench({ defaultPage: page });
 
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   workbench.registerModule({

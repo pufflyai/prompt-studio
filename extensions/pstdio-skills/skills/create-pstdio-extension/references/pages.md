@@ -71,7 +71,7 @@ Tab labels use explicit tab presentation, resource label, then view title. Close
 
 Export `qualifyRef(owner, ref)` from provider contract modules. It supports nested page-panel refs and preserves command parameter/result types. Providers continue to register local definitions.
 
-Use `workbenchPages.sessions` and `workbenchPages.workspaces` without a resource for their home pages. Use `workbenchPages.session` with a session or session draft, and `workbenchPages.workspace` with a workspace.
+Use explicit ordinary page references for declared destinations. Use `ctx.resources.resolveOpenings` for bare resource links and `workbenchCommands.openDefaultPage` to return to the project’s configured default. Page names and paths belong to the tool.
 
 ## Sidenav levels
 

@@ -70,7 +70,7 @@ export interface CreateWorkbenchPageLocationControllerInput<Value> {
   navigationTrees: NavigationTreeRegistry;
   modes: NavigationLevelModes & { getActiveModeId?(): string | undefined };
   persistence: WorkbenchPageLocationPersistence;
-  startPage: PageRef;
+  defaultPage?: PageRef | (() => PageRef | undefined);
   getResourceRemovalVersion?(): number;
   getResourceRemovalEpoch?(): string;
   restoreLocation?(location: PageLocation, projectId: string, removalVersion?: number): PageLocation;
@@ -85,7 +85,7 @@ export interface WorkbenchPageLocationController {
   clearProject(): void;
   isCurrentProjectUrl(projectId: string): boolean;
   hasCurrentPageUrl(projectId: string): boolean;
-  /** Resolves the URL, saved location, or Start page without changing navigation. */
+  /** Resolves the URL, saved location, or configured default without changing navigation. */
   getBootLocation(projectId: string): PageLocation | undefined;
   boot(projectId: string): WorkbenchPageNavigationResult;
   switchProject(projectId: string): WorkbenchPageNavigationResult;
@@ -96,8 +96,9 @@ export interface WorkbenchPageLocationController {
   /** Update Main's route after selecting a view already in its current tray. */
   select(location: PageLocation): WorkbenchPageNavigationResult;
   navigateToParent(): WorkbenchPageNavigationResult;
-  /** Opens the last location outside every Sidenav level, or the start page when there is none. */
+  /** Opens the last location outside every Sidenav level, or the configured default when there is none. */
   navigateToRootLevel(): WorkbenchPageNavigationResult;
+  navigateToDefaultPage(): WorkbenchPageNavigationResult;
   closePlacement(identity: PlacementIdentity): WorkbenchPageNavigationResult;
   removeResource(resource: ResourceRef, retained: readonly PlacementIdentity[]): void;
   goBack(): void;

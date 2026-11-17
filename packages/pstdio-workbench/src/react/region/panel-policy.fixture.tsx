@@ -4,7 +4,7 @@ import type { WorkbenchRegionSettings } from "../../core/registries/layout/layou
 
 export const createPolicyWorkbench = (settings: WorkbenchRegionSettings = {}, legacy = false) => {
   const page = { kind: "page", extensionId: "preview", id: "policy" } as const;
-  const w = createWorkbench({ startPage: page, initialSidePanelMode: "attached" });
+  const w = createWorkbench({ defaultPage: page, initialSidePanelMode: "attached" });
   w.modes.registerMode({
     id: "policy",
     activate() {},

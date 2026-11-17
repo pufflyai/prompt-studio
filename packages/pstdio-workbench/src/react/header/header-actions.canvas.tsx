@@ -14,7 +14,7 @@ const openArtifact = (workbench: ReturnType<typeof createWorkbench>) =>
     open: "pin",
   });
 const createHeaderWorkbench = () => {
-  const workbench = createWorkbench({ startPage: page });
+  const workbench = createWorkbench({ defaultPage: page });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   workbench.views.registerView({
     id: "library",

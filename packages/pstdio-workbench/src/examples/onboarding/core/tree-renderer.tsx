@@ -43,7 +43,7 @@ const registerNavigationPage = (workbench: WorkbenchCore, page: (typeof navigati
   });
 };
 export const createTreeWorkbench = () => {
-  const workbench = createWorkbench({ startPage: pageRef("search") });
+  const workbench = createWorkbench({ defaultPage: pageRef("search") });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   for (const page of navigationPages) registerNavigationPage(workbench, page);
   workbench.views.registerView({

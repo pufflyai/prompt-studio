@@ -15,10 +15,8 @@ import {
 } from "@pstdio/workbench/extensions";
 import { logExtensionHostDiagnostic } from "pstdio-extensions/bridge/host";
 import i18n from "@/i18n";
-import { catalogChangeScopes } from "@/lib/extension-catalog-events";
-import { getDashboardQueryClient } from "@/lib/query-client";
 import { getDashboardScopedQueries } from "@/lib/scoped-queries";
-import { type CollectionChange, getRuntimeCollections, subscribeCollections } from "@/lib/sync/collections";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { executeExtensionCommand } from "@/shared/extensions/api";
@@ -37,7 +35,6 @@ import {
   setDashboardExtensionsRegisteredProject,
 } from "@/shared/extensions/extension-readiness";
 import { publishExtensionEvent } from "@/shared/extensions/extension-webview-broadcast";
-import { invalidateExtensionAuxiliaryQueries } from "@/shared/extensions/project-extension-cache";
 import { observeProjectResourceRemovals } from "@/shared/extensions/resource-removal-feed";
 import { subscribeResourceViewDataEvents } from "@/shared/extensions/resource-view-data-events";
 import {
@@ -49,6 +46,7 @@ import {
 import { syncActiveResourceContext } from "./active-resource-context";
 import { registerDashboardActivityRail } from "./extension-activity-rail";
 import { registerExtensionAppearance, resolveExtensionAppearancePreferences } from "./extension-appearance";
+import { observeCatalogInvalidations, observeProjectComposition } from "./extension-catalog-observation";
 import {
   captureExtensionContributionRefreshLayout,
   restoreExtensionContributionRefreshLayout,
@@ -59,8 +57,6 @@ import { type CreateExtensionsModuleInput, createExtensionModuleCatalog } from "
 import { createExtensionQueryObservation } from "./extension-query-observation";
 import { createExtensionSettingsRetirement } from "./extension-settings-authority";
 import { registerExtensionsPage } from "./extensions-page";
-
-const extensionSyncTables = new Set<CollectionChange["table"]>(["installed_extension_sources", "extension_instances"]);
 
 const hasSameSerializedMetadata = (
   current: ResolvedWorkbenchExtensionMetadata | undefined,
@@ -299,6 +295,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
       const unsubscribeActivation = observeCatalogActivation(ctx, () => projectId, metadataRefresh, appearanceRefresh);
       i18n.on("languageChanged", reapplyLocale);
       const unsubscribeProject = subscribeDashboardSelectedProject(ctx, refreshProject);
+      const unsubscribeComposition = observeProjectComposition(() => projectId, owner, metadataRefresh);
       const unsubscribeViewData = subscribeCoreViewDataEvents();
       const unsubscribeResourceData = subscribeResourceViewDataEvents({
         projectId: () => projectId,
@@ -306,14 +303,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           ctx.commandPaletteResources.listProviders().flatMap((provider) => provider.refreshEventIds ?? []),
       });
       const unsubscribeResourceRemoval = observeProjectResourceRemovals(ctx.resources, () => projectId, owner);
-      const unsubscribeSync = subscribeCollections((change) => {
-        if (!change) return;
-        if (extensionSyncTables.has(change.table)) {
-          const scopes = catalogChangeScopes(change);
-          if (!scopes.has(undefined) && !scopes.has(projectId)) return;
-          void invalidateExtensionAuxiliaryQueries(getDashboardQueryClient(owner), projectId);
-        }
-      });
+      const unsubscribeSync = observeCatalogInvalidations(() => projectId, owner);
 
       return {
         dispose() {
@@ -332,6 +322,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           i18n.off("languageChanged", reapplyLocale);
           activityRail.dispose();
           unsubscribeProject();
+          unsubscribeComposition();
           unsubscribeActivation();
           unsubscribeSync();
           unsubscribeViewData();

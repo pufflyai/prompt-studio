@@ -1,4 +1,4 @@
-import { contributionRefId, type ResourceRef, workspaceViews } from "@pstdio/sdk/extensions";
+import type { ResourceRef } from "@pstdio/sdk/extensions";
 import type { RuntimeCollections } from "@/lib/sync/collections";
 import { createWorkspaceChangeSource } from "./workspace-change-source";
 import { workspaceState } from "./workspace-state";
@@ -50,7 +50,7 @@ export const subscribeWorkspaceFileTree = (
 export const workspaceTreeSources = (owner: RuntimeCollections) =>
   new Map([
     [
-      contributionRefId(workspaceViews.tree),
+      "pstdio.workspaces.view.file-tree",
       (resource: ResourceRef | undefined, invalidate: () => void) =>
         subscribeWorkspaceFileTree(owner, resource, invalidate),
     ],

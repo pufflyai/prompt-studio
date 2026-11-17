@@ -4,8 +4,8 @@ import { createWorkbench } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
-import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
-import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
+import { openSessionsPage } from "@/shared/workbench/page-navigation";
+import { openWorkspaceFixture, registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
 import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionsModule } from "../module";
 import { registerSessionProvider } from "../session-provider.fixture";
@@ -19,7 +19,7 @@ test("opens an empty chat panel with a workspace session draft and reuses it on 
   registerSessionProvider(workbench);
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
   const workspace = createDashboardResource("workspace", "workspace-1", "Workspace", "GitBranch", "project-1");
-  openWorkspacesPage(workbench, workspace);
+  openWorkspaceFixture(workbench, workspace);
   const location = workbench.pages.store.getState().location;
   expect(workbench.layout.listPanelInstances("side")).toHaveLength(0);
 
@@ -93,7 +93,7 @@ test("opens a session beside an extension page and keeps each mode's sessions se
   });
   expect(workbench.pages.store.getState().location).toEqual(location);
   expect(workbench.sidePanel.getMode()).toBe("floating");
-  openWorkspacesPage(workbench);
+  openWorkspaceFixture(workbench);
   expect(workbench.layout.listPanelInstances("side")).toHaveLength(0);
   await openDashboardSidePanel(workbench);
   expect(workbench.layout.listPanelInstances("side")[0].resource?.id).not.toBe(notesSession.resource?.id);
@@ -108,7 +108,7 @@ test("opens a session tab alongside an extension reader", async () => {
   workbench.registerModule(createSessionsModule());
   registerSessionProvider(workbench);
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
-  openWorkspacesPage(workbench);
+  openWorkspaceFixture(workbench);
   workbench.views.registerView({ id: "reader", title: "Message", body: { kind: "react", render: () => null } });
   workbench.shellPlacements.registerPlacement({
     id: "reader",
@@ -136,7 +136,7 @@ test("reopens the active session when several session tabs exist", async () => {
   workbench.registerModule(createSessionsModule());
   registerSessionProvider(workbench);
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
-  openWorkspacesPage(workbench);
+  openWorkspaceFixture(workbench);
   for (let index = 0; index < 2; index++) {
     await workbench.commands.executeCommand(
       dashboardCommandIds.createSession,
@@ -163,7 +163,7 @@ test("a Side Panel requested while the project loads opens its session once the 
   expect(workbench.layout.listPanelInstances("side")).toHaveLength(0);
 
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
-  openWorkspacesPage(workbench);
+  openWorkspaceFixture(workbench);
   await opened;
   expect(workbench.sidePanel.getMode()).toBe("floating");
   expect(workbench.layout.listPanelInstances("side")).toEqual([
@@ -178,7 +178,7 @@ test("reopens the provider session after resource navigation clears an instance 
   workbench.registerModule(createSessionsModule());
   registerSessionProvider(workbench);
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
-  openWorkspacesPage(workbench);
+  openWorkspaceFixture(workbench);
   await openDashboardSidePanel(workbench);
   const draft = workbench.layout.getActivePanel("side")!;
   const resource = createDashboardResource(
@@ -210,7 +210,7 @@ test("an explicit reader override does not reuse its registered session renderer
   workbench.registerModule(createSessionsModule());
   registerSessionProvider(workbench);
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
-  openWorkspacesPage(workbench);
+  openWorkspaceFixture(workbench);
   await openDashboardSidePanel(workbench);
   const session = workbench.layout.getActivePanel("side")!;
   workbench.views.registerView({ id: "reader", title: "Reader", body: { kind: "react", render: () => null } });
@@ -228,7 +228,7 @@ test("the bubble opens a generic Side shell when Sessions is absent", async () =
   workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });
-  openWorkspacesPage(workbench);
+  openWorkspaceFixture(workbench);
   const location = workbench.pages.store.getState().location;
   await openDashboardSidePanel(workbench);
   expect(workbench.sidePanel.getMode()).toBe("floating");

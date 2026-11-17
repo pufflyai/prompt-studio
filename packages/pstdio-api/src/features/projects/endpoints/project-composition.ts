@@ -2,7 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { projectCompositionSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import type { ProjectsRouteDeps } from "../deps";
-import { readProjectComposition } from "../project-composition";
+import { announceProjectCompositionChange, readProjectComposition } from "../project-composition";
 
 const params = z.object({ projectId: z.string() }).strict();
 const responses = {
@@ -43,6 +43,6 @@ export const putProjectCompositionHandler =
     if (!(await deps.projectService.get(projectId))) return c.json({ error: "Project not found" }, 404);
     const composition = c.req.valid("json");
     await deps.projectInfoService.write(projectId, { composition: JSON.stringify(composition) });
-    deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "runtime_refresh" });
+    announceProjectCompositionChange(deps, projectId);
     return c.json(composition, 200);
   };

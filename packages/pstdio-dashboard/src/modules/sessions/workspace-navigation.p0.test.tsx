@@ -1,12 +1,14 @@
 import { afterEach, expect, test } from "bun:test";
-import { workspacePages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { treeViewSections } from "@/shared/workbench/workbench-view-test-helpers";
-import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
+import {
+  openWorkspaceFixture,
+  registerWorkspaceProviderViews,
+  workspacePages,
+} from "@/workspaces-provider.test-support";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionsModule } from "./module";
@@ -48,7 +50,15 @@ test("project folder navigation keeps project links; opening a workspace replace
   selectDashboardProject(workbench, { id: "project", name: "Project" });
   getWriter("workspaces")?.truncateAndWrite([
     { id: "folder", project_id: "project", name: "Project folder", is_default: true, archived: false },
-    { id: "workspace", project_id: "project", name: "Workspace", archived: false },
+    {
+      id: "workspace",
+      project_id: "project",
+      name: "Workspace",
+      archived: false,
+      is_default: false,
+      branch: "feature/work",
+      provider_capabilities_json: { files: "write", diff: true },
+    },
   ]);
   getWriter("sessions")?.truncateAndWrite([
     {
@@ -93,7 +103,7 @@ test("project folder navigation keeps project links; opening a workspace replace
   expect((await nodes()).map((node) => node.label)).toContain("Workspaces");
   expect((await nodes()).find((node) => node.id.endsWith(":workspace-sessions"))).toBeUndefined();
 
-  openWorkspacesPage(workbench, { type: "workspace", id: "workspace", label: "Workspace" });
+  openWorkspaceFixture(workbench, { type: "workspace", id: "workspace", label: "Workspace" });
   const workspaceNodes = await nodes();
   expect(workspaceNodes.map((node) => node.label)).not.toContain("Workspaces");
   expect(

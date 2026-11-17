@@ -201,7 +201,7 @@ test("keeps the Secondary Panel closed from Workspaces until requested", async (
   const showSecondary = controls.getByRole("button", { name: "Show Bottom Panel" });
   await expect(showSecondary).toHaveAttribute("aria-pressed", "false");
 
-  await page.goto(`/projects/${project.id}/workspaces`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
   await expect(
     page
       .getByRole("region", { name: "Main", exact: true })

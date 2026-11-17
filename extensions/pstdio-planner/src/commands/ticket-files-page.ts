@@ -48,7 +48,7 @@ export const listTicketFilesPage = async (
     const lookup = await readTicketParentLookup(ctx, new Map([[ticket.id, ticket]]));
     const resourceParent = ticketResourceReference(ticket, lookup, plannerOwnerFor(ctx));
     return {
-      nodes: buildWorkspacesSection(page.items, { resourceParent }, undefined).nodes,
+      nodes: (await buildWorkspacesSection(ctx, page.items, { resourceParent }, undefined)).nodes,
       nextCursor: page.nextCursor,
     };
   }

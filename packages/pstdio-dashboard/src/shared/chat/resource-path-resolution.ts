@@ -44,7 +44,7 @@ const positionedPage = (target: NavigationTargetPage, position: FileSourcePositi
 });
 
 // The workbench places a source position only inside a document the page opens, so other pages keep their target.
-const withSourcePosition = (
+export const withSourcePosition = (
   target: NavigationTarget,
   position: FileSourcePosition | undefined,
   documentKey: ResourcePathInput["documentKey"],

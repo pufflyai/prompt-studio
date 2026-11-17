@@ -13,7 +13,7 @@ const createBreadcrumbWorkbench = (target: {
   contributed?: boolean;
   cleanupBoard?: boolean;
 }) => {
-  const workbench = createWorkbench({ startPage: boardPage });
+  const workbench = createWorkbench({ defaultPage: boardPage });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   workbench.views.registerView({
     id: "body",

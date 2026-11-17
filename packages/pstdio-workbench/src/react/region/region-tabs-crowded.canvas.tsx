@@ -7,7 +7,7 @@ import { WorkbenchStory } from "../../examples/workbench-story";
 
 const createCrowdedWorkbench = () => {
   const page: PageRef = { extensionId: "preview", kind: "page", id: "crowded-tabs" };
-  const workbench = createWorkbench({ startPage: page, defaultPanelOpenByRegionId: { secondary: true } });
+  const workbench = createWorkbench({ defaultPage: page, defaultPanelOpenByRegionId: { secondary: true } });
   workbench.modes.registerMode({ id: "crowded", label: "Crowded tabs", activate: () => undefined });
   const labels = [
     "Diff",

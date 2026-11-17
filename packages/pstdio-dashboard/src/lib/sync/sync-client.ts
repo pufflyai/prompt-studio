@@ -2,7 +2,11 @@ import { createClient, parseSyncDeleteEvent as parseSdkSyncDeleteEvent, type Syn
 import type { ResourceAnchorChangeEvent, ResourceRemovedEvent } from "@pstdio/sdk/extensions";
 import { queryChangeEnvelopeSchema } from "pstdio-api-contracts/extension-kernel";
 import { apiClientOptions } from "@/lib/api";
-import { publishExtensionEvent, publishExtensionEventReset } from "@/shared/extensions/extension-webview-broadcast";
+import {
+  projectCompositionChangedEventId,
+  publishExtensionEvent,
+  publishExtensionEventReset,
+} from "@/shared/extensions/extension-webview-broadcast";
 import { publishResourceAnchorChange } from "@/shared/extensions/resource-anchor-feed";
 import { publishResourceRemoval } from "@/shared/extensions/resource-removal-feed";
 import { getRuntimeCollections } from "./collections";
@@ -80,6 +84,7 @@ export const startSync = (apiUrl: string, callbacks: SyncCallbacks = {}, options
     ...callbacks,
     onConnected: () => {
       publishExtensionEventReset({}, collections);
+      publishExtensionEvent({ id: projectCompositionChangedEventId }, collections);
       callbacks.onConnected?.();
     },
   });

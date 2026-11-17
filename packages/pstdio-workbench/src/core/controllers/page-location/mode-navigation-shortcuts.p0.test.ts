@@ -3,7 +3,7 @@ import { createWorkbench } from "../../workbench-core";
 
 const fixture = (label = "Project") => {
   const page = (id: string) => ({ kind: "page" as const, extensionId: "test", id });
-  const core = createWorkbench({ startPage: page("home") });
+  const core = createWorkbench({ defaultPage: page("home") });
   core.modes.registerMode({ id: "project", label, activate() {} });
   core.views.registerView({ id: "content", title: "Content", body: { kind: "react", render: () => null } });
   for (const id of ["home", "tickets", "ticket", "sessions"]) {

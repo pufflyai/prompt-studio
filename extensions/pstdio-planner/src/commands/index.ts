@@ -46,7 +46,7 @@ import { refinementPolicyCommand } from "./refinement-policy";
 import { reorderTicketCommand } from "./reorder-ticket";
 import { repairAttemptCommand } from "./repair-attempt";
 import { resolveTicketPathCommand } from "./resolve-ticket-path";
-import { resolveTicketResourcesCommand } from "./resolve-ticket-resources";
+import { resolveTicketOpeningCommand, resolveTicketResourcesCommand } from "./resolve-ticket-resources";
 import {
   cancelReviewRequestCommand,
   listReviewRequestsCommand,
@@ -142,6 +142,7 @@ export const plannerCommands = [
   checkAutoBuildCommand,
   documentLinkCommand,
   resolveTicketResourcesCommand,
+  resolveTicketOpeningCommand,
   checkMergedPullRequestsCommand,
   openTicketsCommand,
   linkTicketCommand,

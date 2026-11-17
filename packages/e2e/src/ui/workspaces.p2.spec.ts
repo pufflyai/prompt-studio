@@ -220,7 +220,7 @@ test.describe("Grouped Workspaces", () => {
       window.localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
     }, projectId);
 
-    await page.goto(`/projects/${projectId}/workspaces`);
+    await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-workspaces/workspaces`);
     const workspaceRow = page
       .getByRole("region", { name: "Main", exact: true })
       .getByRole("option")
@@ -236,7 +236,9 @@ test.describe("Grouped Workspaces", () => {
     await dialog.getByRole("button", { name: "Rename", exact: true }).click();
 
     await page.getByRole("button", { name: "Back to project", exact: true }).click();
-    await page.getByRole("option", { name: "Workspaces", exact: true }).click();
+    await page.keyboard.press("Alt+Shift+Space");
+    await page.keyboard.press("g");
+    await page.keyboard.press("w");
     await expect(
       page.getByRole("region", { name: "Main", exact: true }).getByRole("option").filter({ hasText: nextName }).first(),
     ).toBeVisible();

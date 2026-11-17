@@ -48,7 +48,7 @@ const createHarness = () => {
   const workbench = createWorkbench({
     pageLocationBrowser: browser.browser,
     pageLocationPersistence: persistence.persistence,
-    startPage: startRef,
+    defaultPage: startRef,
   });
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
   workbench.views.registerView({

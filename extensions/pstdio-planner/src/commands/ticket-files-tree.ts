@@ -160,7 +160,8 @@ export const listTicketFilesTree = async (
     children: children.tickets,
     nextCursor: children.nextCursor,
   });
-  const linkedWorkspacesSection = buildWorkspacesSection(
+  const linkedWorkspacesSection = await buildWorkspacesSection(
+    ctx,
     visibleWorkspaces,
     ticketMeta,
     providers.length > 0

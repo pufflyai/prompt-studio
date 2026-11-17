@@ -11,8 +11,10 @@ export const modePanelFixture = (
   extraPages: WorkbenchPageContribution[] = [],
   initialPage = "alpha",
   pageLocationPersistence?: WorkbenchPageLocationPersistence,
+  defaultPage?: PageRef,
 ) => {
   const w = createWorkbench({
+    defaultPage,
     initialSidePanelMode: "closed",
     defaultPanelOpenByRegionId: { secondary: false },
     pageLocationPersistence,

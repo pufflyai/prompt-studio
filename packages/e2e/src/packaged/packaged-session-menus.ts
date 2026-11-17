@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
-import { serializePageUrl, workspacePages } from "@pstdio/sdk/extensions";
+import { serializePageUrl } from "@pstdio/sdk/extensions";
+import { workspacePages } from "../helpers/installed-workspaces";
 import { isSessionChatAction } from "../helpers/session-chat-actions";
 import { verifyExtensionModeSessionRestore, verifyModePanelState } from "./packaged-mode-panel-state";
 import { verifyPageSessionTab } from "./packaged-page-session-tab";

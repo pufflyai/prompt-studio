@@ -6,6 +6,7 @@ import { registerKeyboardCommands } from "./controllers/keyboard/keyboard-regist
 import { connectWorkbenchPageBreadcrumbs } from "./controllers/page-location/page-breadcrumbs";
 import type { createCoreLayoutCache } from "./controllers/page-runtime/workbench-layout-cache-input";
 import { connectModeLayoutCache } from "./controllers/page-runtime/workbench-layout-context";
+import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
 import { runWorkbenchEffect } from "./shared/workbench-effect";
 import { connectWorkbenchCoreState } from "./workbench-core-connections";
 import type { createCoreRenderers } from "./workbench-core-renderers";
@@ -21,6 +22,15 @@ export const connectWorkbenchRuntime = (
   const disposeFullscreen = connectMainFullscreen(core);
   registerArrangementCommands(core);
   const disposeKeyboard = registerKeyboardCommands(core);
+  core.commands.registerCommand(
+    { id: "workbench.page.openDefault", label: "Open default page", category: "Navigation" },
+    {
+      execute: () => core.pageLocations.navigateToDefaultPage(),
+      isEnabled: () => Boolean(core.pages.store.getState().projectId),
+      isVisible: () => Boolean(core.pages.store.getState().projectId),
+    },
+  );
+  core.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: "workbench.page.openDefault" });
   const layout = connectModeLayoutCache(core, layoutCache);
   const breadcrumbSources = {
     breadcrumbs: core.breadcrumbs,

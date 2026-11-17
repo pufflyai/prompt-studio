@@ -6,6 +6,7 @@ import type {
   Disposable,
   MenuItem,
   MenuPath,
+  ResourceKindContribution,
   WorkbenchCommandExecutionContext,
   WorkbenchModuleContext,
   WorkbenchPanelRenderInput,
@@ -71,6 +72,7 @@ export interface RegisterWorkbenchExtensionContributionsInput extends ChatComman
     onArgsChange?: (args: unknown) => void,
   ): Promise<unknown> | unknown;
   projectId: string;
+  resolveRelatedResourceOpenings?: ResourceKindContribution["relatedOpenings"];
   resolveTreeNodeResource?: RegisterWorkbenchExtensionTreeRenderersInput["resolveNodeResource"];
   treeSources?: RegisterWorkbenchExtensionTreeRenderersInput["treeSources"];
   renderTreeNodeEndContent?: RegisterWorkbenchExtensionTreeRenderersInput["renderNodeEndContent"];

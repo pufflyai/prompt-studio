@@ -1,18 +1,21 @@
 import { Box } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { contributionRefId, resourceKey, workspacePages } from "@pstdio/sdk/extensions";
+import { contributionRefId, resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchCore, type WorkbenchModuleContext } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import { createHomeModule } from "@/home-page.fixture";
+import { createHomeModule, dashboardHomePage } from "@/home-page.fixture";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardHomePage } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { openSessionsPage } from "@/shared/workbench/page-navigation";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
-import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
+import {
+  openWorkspaceFixture,
+  registerWorkspaceProviderViews,
+  workspacePages,
+} from "@/workspaces-provider.test-support";
 import { createCommandPaletteModule } from "../command-palette/module";
 import { registerExtensionsPage } from "../extensions/extensions-page";
 import { createHeadersModule } from "../headers/module";
@@ -196,7 +199,7 @@ const linkSessionsToWorkspace = () => {
 const bootstrapWorkbench = (desktop = false) => {
   seedSidenavStory(PROJECT_ID);
   linkSessionsToWorkspace();
-  const workbench = createWorkbench({ startPage: dashboardHomePage });
+  const workbench = createWorkbench({ defaultPage: dashboardHomePage });
   registerWorkspaceProviderViews(workbench);
   workbench.navigationTrees.registerContribution({
     id: "story.workspace-navigation",
@@ -318,11 +321,11 @@ export const OverflowWithPinnedChrome: Story = {
 // Aggregate collection: Workspaces is not duplicated in the resource region.
 export const WorkspacesView: Story = {
   id: "dashboard-sidenav--workspaces-view",
-  render: () => <SidenavStory open={(workbench) => void openWorkspacesPage(workbench)} />,
+  render: () => <SidenavStory open={(workbench) => void openWorkspaceFixture(workbench)} />,
 };
 export const WorkspacesViewHover: Story = {
   id: "dashboard-sidenav--workspaces-view-hover",
-  render: () => <SidenavStory open={(workbench) => void openWorkspacesPage(workbench)} />,
+  render: () => <SidenavStory open={(workbench) => void openWorkspaceFixture(workbench)} />,
 };
 // F17: a separator marks the boundary before the ticket's resource tree.
 export const TicketMode: Story = {
@@ -357,7 +360,7 @@ export const ProjectFolder: Story = {
           .find(
             (entry) => entry.resource.type === "workspace" && entry.resource.metadata?.workspaceIsDefault,
           )?.resource;
-        if (folder) openWorkspacesPage(workbench, folder);
+        if (folder) openWorkspaceFixture(workbench, folder);
       }}
     />
   ),
@@ -373,7 +376,7 @@ export const WorkspaceResource: Story = {
           .find(
             (entry) => entry.resource.type === "workspace" && !entry.resource.metadata?.workspaceIsDefault,
           )?.resource;
-        if (workspace) openWorkspacesPage(workbench, workspace);
+        if (workspace) openWorkspaceFixture(workbench, workspace);
       }}
     />
   ),

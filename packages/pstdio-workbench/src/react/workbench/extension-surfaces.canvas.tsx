@@ -12,7 +12,7 @@ export default {
 
 const createSurface = (kind: "performance" | "shape-art") => {
   const page = { extensionId: "preview", kind: "page" as const, id: kind };
-  const workbench = createWorkbench({ startPage: page });
+  const workbench = createWorkbench({ defaultPage: page });
   workbench.modes.registerMode({ id: kind, activate: () => undefined });
   const names = kind === "performance" ? ["Trends", "Compare", "Runs", "New run"] : ["Shape Art", "Art settings"];
   for (const title of names) {

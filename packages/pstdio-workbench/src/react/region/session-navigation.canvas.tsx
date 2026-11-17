@@ -63,7 +63,7 @@ const registerDocuments = (w: ReturnType<typeof createWorkbench>) => {
 const SessionNavigation = ({ composer = false }: { composer?: boolean }) => {
   const [fixture] = useState(() => {
     const storage = createStoryStorage();
-    const w = createWorkbench({ startPage: page("sessions"), initialSidePanelMode: "attached" });
+    const w = createWorkbench({ defaultPage: page("sessions"), initialSidePanelMode: "attached" });
     w.modes.registerMode({ id: "project", chrome: { sidenav: "navigation" }, activate() {} });
     w.views.registerView({
       id: "session",

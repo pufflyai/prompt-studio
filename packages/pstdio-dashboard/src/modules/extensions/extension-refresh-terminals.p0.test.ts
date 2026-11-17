@@ -2,9 +2,9 @@ import { expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { createWorkbench, type WorkbenchLayout } from "@pstdio/workbench";
 import { createWorkbenchTerminalModule, openWorkbenchTerminal } from "@pstdio/workbench/react";
+import { dashboardHomePage } from "@/home-page.fixture";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardHomePage } from "@/shared/app/resources";
 import { resolveDashboardPersistenceScope } from "@/shared/workbench/dashboard-persistence-scope";
 import { createExtensionsModule } from "./module";
 import { emptyAppearance, flushMicrotasks, metadata } from "./module-test-fixtures";
@@ -12,7 +12,7 @@ import { emptyAppearance, flushMicrotasks, metadata } from "./module-test-fixtur
 test("keeps a Home terminal alive while an open Lab page receives fresh webview metadata", async () => {
   const layouts = new Map<string | undefined, WorkbenchLayout>();
   const workbench = createWorkbench({
-    startPage: dashboardHomePage,
+    defaultPage: dashboardHomePage,
     layoutPersistence: {
       getLayout: (scope) => layouts.get(scope),
       setLayout: (layout, scope) => {

@@ -275,7 +275,7 @@ export const createPageLocationHarness = (url = "/projects/p1") => {
     navigationTrees,
     modes,
     persistence: persistence.persistence,
-    startPage: startRef,
+    defaultPage: startRef,
     reportDiagnostic: (diagnostic) => diagnostics.push(diagnostic.message),
   });
   return {

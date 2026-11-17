@@ -1,16 +1,30 @@
-import { expect, test } from "bun:test";
+import { afterAll, expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
+import { preparePackagedExtensionSource } from "./packaged-extension-source";
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
 
-setupPackagedSmokeTests();
+let workspaceSources: string;
+let workspaceDefaults: string;
+setupPackagedSmokeTests(async () => {
+  workspaceSources = mkdtempSync(join(tmpdir(), "packaged-project-workspaces-"));
+  const source = await preparePackagedExtensionSource(
+    workspaceSources,
+    join(import.meta.dirname, "../../../../extensions/pstdio-workspaces"),
+    { install: true },
+  );
+  workspaceDefaults = JSON.stringify({ defaultExtensions: [{ installName: "pstdio-workspaces", source }] });
+});
+afterAll(() => {
+  if (workspaceSources) rmSync(workspaceSources, { recursive: true, force: true });
+});
 
 // Stable hosts use PSX; nightlies retain their exact main commit.
 const hostReleaseRef = /^(?:\{hostRelease\}|pstdio@\d|[0-9a-f]{40}$)/;
@@ -38,7 +52,10 @@ test(
 
     try {
       const logPath = join(tempRoot, "runtime.log");
-      const started = await startPackagedServe(tempRoot, { PSTDIO_LOG_PATH: logPath });
+      const started = await startPackagedServe(tempRoot, {
+        PSTDIO_LOG_PATH: logPath,
+        PSTDIO_DEFAULT_EXTENSIONS: workspaceDefaults,
+      });
       child = started.child;
 
       const repoPath = join(tempRoot, "project-folder");
@@ -144,7 +161,7 @@ test(
       expect(existsSync(join(repoPath, ".pstdio", "config.json"))).toBe(true);
 
       await stopProcess(child);
-      const restarted = await startPackagedServe(tempRoot);
+      const restarted = await startPackagedServe(tempRoot, { PSTDIO_DEFAULT_EXTENSIONS: workspaceDefaults });
       child = restarted.child;
       const projectsRes = await fetch(`${restarted.baseUrl}/v1/projects`, {
         headers: runtimeAuthorization(restarted.descriptor),

@@ -39,8 +39,16 @@ const alpha4Definition = () => {
     body: { kind: "webview", entry: packageAsset("./views/tickets.tsx", "file:///fake/lab/") },
   });
   const resourceKind = defineResourceKind({ id: "ticket" });
+  const overview = definePage({
+    id: "overview",
+    title: "Overview",
+    path: "overview",
+    mode: mode.ref,
+    main: { kind: "view", view: view.ref, cardinality: "one" },
+    slots: [],
+  });
   const page = definePage({
-    parent: { extensionId: "pstdio", kind: "page", id: "start" },
+    parent: overview.ref,
     id: "tickets",
     title: "Tickets",
     path: "tickets",
@@ -57,7 +65,7 @@ const alpha4Definition = () => {
   });
   return defineExtension({
     modes: [mode],
-    pages: [page],
+    pages: [overview, page],
     views: [view],
     resourceKinds: [resourceKind],
     placements: [

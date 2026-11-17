@@ -21,6 +21,7 @@ export interface ExtensionRefreshEvent extends FileRendererRefreshEnvelope, Quer
 export interface ExtensionResetEvent extends QueryChangeEnvelope {}
 
 const eventFeed = createRuntimeFeed<ExtensionRefreshEvent>();
+export const projectCompositionChangedEventId = "pstdio.event.project-composition-changed";
 const resetFeed = createRuntimeFeed<ExtensionResetEvent>();
 const commandTicks = createRuntimeState(() => ({ tick: 0 }));
 export const subscribeToExtensionCommandFeed = commandFeed.subscribe;

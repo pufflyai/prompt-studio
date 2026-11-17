@@ -38,12 +38,19 @@ test("ticket history and arbitrary related resources load only their visible pag
       })),
     );
   let resolved = 0;
-  ctx.resources.resolveMany = async (refs) => {
+  ctx.resources.resolveMany = async () => {
+    throw Error("Owner resolution bypasses configured opener");
+  };
+  ctx.resources.resolveOpenings = async (refs) => {
     expect(refs.length).toBeLessThanOrEqual(100);
     resolved += refs.length;
     return refs.map((resource) => ({
       resource,
-      target: { kind: "page", page: { kind: "page", id: "item", extensionId: "example" }, resource },
+      target: {
+        kind: "page",
+        page: { kind: "page", id: "configured-opening", extensionId: "example.viewer" },
+        resource,
+      },
     }));
   };
   const renderer = { rendererId: "ticket-files", resource: { type: "ticket", id: ticket.id } };
@@ -53,12 +60,18 @@ test("ticket history and arbitrary related resources load only their visible pag
   for (const id of ["sessions", "related"]) {
     const first = sections.find((section) => section.id === id)!;
     expect(first.nodes).toHaveLength(100);
+    if (id === "related")
+      for (const node of first.nodes)
+        expect(node.target).toMatchObject({ page: { id: "configured-opening", extensionId: "example.viewer" } });
     const second = await listTicketFilesPage(ctx, {
       renderer,
       parent: { kind: "section", id },
       cursor: first.nextCursor!,
     });
     expect(second.nodes).toHaveLength(100);
+    if (id === "related")
+      for (const node of second.nodes)
+        expect(node.target).toMatchObject({ page: { id: "configured-opening", extensionId: "example.viewer" } });
     const third = await listTicketFilesPage(ctx, {
       renderer,
       parent: { kind: "section", id },

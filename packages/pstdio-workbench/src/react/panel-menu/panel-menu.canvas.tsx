@@ -13,7 +13,7 @@ interface MenuWorkbenchOptions {
 }
 const createMenuWorkbench = (options: MenuWorkbenchOptions) => {
   const page = { extensionId: "preview", kind: "page" as const, id: "menus" };
-  const workbench = createWorkbench({ startPage: page });
+  const workbench = createWorkbench({ defaultPage: page });
   workbench.modes.registerMode({ id: "menus", activate: () => undefined });
   workbench.views.registerView({
     id: "document",

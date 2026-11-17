@@ -33,6 +33,7 @@ export const verifyProviderPackageConsumer = (root: string, sdkArchive: string, 
 export const save = defineCommand({ id: "save", title: "Save", params: { text: params.text({ required: true }) }, run: async (_ctx, input) => ({ text: input.text }) });
 const view = defineView({ id: "content", title: "Content", body: { kind: "controls", query: async () => ({ params: [] }) } });
 export const page = definePage({ id: "notes", title: "Notes", path: "notes", mode: workbenchModes.project, main: { kind: "view", view: view.ref, cardinality: "one" }, slots: [{ id: "inspector", region: "side", item: { kind: "view", view: view.ref, presence: "closed" } }] });
+export const form = definePage({ id: "edit", title: "Edit note", path: "edit", mode: workbenchModes.project, main: { kind: "view", view: view.ref, cardinality: "one" }, slots: [] });
 const localResult = (directory: WorkspaceProviderDirectory): WorkspaceProviderResult => ({
   state: "ready", executionKind: "local", executionTarget: { kind: "local", rootPath: directory.path },
   providerRef: { version: 1, data: { directory: directory.path } },
@@ -56,13 +57,14 @@ export const local = defineWorkspaceType({
   async resolve(ctx) { return localResult(await ctx.localDirectory!()); },
   async delete(ctx) { await (await ctx.localDirectory!()).remove(); },
 });
-export default defineExtension({ commands: [save], views: [view], pages: [page], workspaceTypes: [local] });\n`,
+export default defineExtension({ commands: [save], views: [view], pages: [page, form], workspaceTypes: [local] });\n`,
   );
   writeFileSync(
     join(provider, "contracts.ts"),
     `import { qualifyRef } from "@pstdio/sdk/extensions";
-import { page, save } from "./extension";
+import { form, page, save } from "./extension";
 export const notes = qualifyRef("verify.review-provider", page.ref);
+export const editNote = qualifyRef("verify.review-provider", form.ref);
 export const inspector = qualifyRef("verify.review-provider", page.panels.inspector);
 export const saveNote = qualifyRef("verify.review-provider", save.ref);\n`,
   );
@@ -79,11 +81,11 @@ export const saveNote = qualifyRef("verify.review-provider", save.ref);\n`,
   );
   writeFileSync(
     join(consumer, "consumer.ts"),
-    `import { notes, inspector, saveNote } from "review-provider/contracts";
-import { defineExtension, defineNavigationItem, defineView, homePages, workspacePages, workbenchModes, type CommandRef, type NavigationTarget } from "@pstdio/sdk/extensions";
+    `import { notes, editNote, inspector, saveNote } from "review-provider/contracts";
+import { defineExtension, defineNavigationItem, defineView, workbenchModes, type CommandRef, type NavigationTarget } from "@pstdio/sdk/extensions";
 const terminal = defineView({ id: "shell", title: "Shell", body: { kind: "terminal", session: async (ctx) => ({ workspaceId: ctx.workspaceId, env: { TOOL: "provider" } }) } });
-const modal: NavigationTarget = { kind: "dialog", page: workspacePages.form };
-if (homePages.home.extensionId !== "pstdio.home" || modal.page.extensionId !== "pstdio.workspaces") throw new Error("Bundled provider refs are not exported as values");
+const modal: NavigationTarget = { kind: "dialog", page: editNote };
+if (modal.page.extensionId !== "verify.review-provider") throw new Error("Dialog lost provider ownership");
 export const saved: CommandRef<{ text: string }, { text: string }> = saveNote;
 // @ts-expect-error Qualification must preserve command result types.
 export const wrong: CommandRef<{ text: string }, { revision: number }> = saveNote;

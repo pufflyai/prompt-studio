@@ -59,7 +59,7 @@ test("keeps HTTP same-origin and opens terminals through the runtime WebSocket e
     });
 
     await prepareDashboard(page, project.id);
-    await page.goto(`/projects/${project.id}/workspaces`);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
 
     await openWorkspaceTerminal(page, "Project folder");
     expect(apiRequestOrigins).toContain(new URL(baseURL ?? "").origin);

@@ -1,8 +1,7 @@
 import { posix } from "node:path";
-import { workspacePages } from "@pstdio/sdk/extensions";
-import type { Workspace } from "@pstdio/sdk/resources";
-import { serializePageUrl } from "pstdio-api-contracts";
+import { defaultPageResourceCodec, serializeWorkbenchPageUrl } from "pstdio-api-contracts";
 import type { Argv } from "yargs";
+import { apiClient } from "@/features/api-client";
 import { findProjectRoot, readConfig } from "@/features/config/config";
 import { listWorkspaces } from "@/features/workspaces/api/list-workspaces";
 
@@ -21,18 +20,24 @@ interface FileLinkInput {
   line?: number;
   column?: number;
 }
-const defaultDeps = { cwd: () => process.cwd(), findProjectRoot, readConfig, listWorkspaces, log: console.log };
-
-const workspaceFilePage = (workspace: Workspace) => {
-  if (
-    workspace.device ||
-    workspace.execution_kind === "remote" ||
-    workspace.provider_capabilities_json.files === "none"
-  )
-    throw new Error("Files are unavailable for this workspace.");
-  return workspace.is_default || !workspace.provider_capabilities_json.diff
-    ? workspacePages.files
-    : workspacePages.workspace;
+const defaultDeps = {
+  cwd: () => process.cwd(),
+  findProjectRoot,
+  readConfig,
+  listWorkspaces,
+  log: console.log,
+  openings: (
+    projectId: string,
+    resources: Parameters<ReturnType<typeof apiClient>["projects"]["resolveResourceOpenings"]>[1],
+  ) => apiClient().projects.resolveResourceOpenings(projectId, resources),
+  pages: async (projectId: string) =>
+    (await apiClient().extensions.metadata(projectId)).pages.map((page) => ({
+      id: page.id,
+      path: page.path,
+      document: page.document,
+      params: page.params,
+      ref: { kind: "page" as const, extensionId: page.extensionId, id: page.localId },
+    })),
 };
 
 export const createHandler =
@@ -56,20 +61,30 @@ export const createHandler =
       (workspace) => workspace.id === input.workspace || workspace.workspace_shorthand === input.workspace,
     );
     if (!workspace) throw new Error(`Workspace not found: ${input.workspace}`);
-    const page = workspaceFilePage(workspace);
-    const href = serializePageUrl({
+    const [openings, pages] = await Promise.all([
+      deps.openings(config.project_id, [
+        {
+          type: "workspace",
+          extensionId: "pstdio",
+          projectId: config.project_id,
+          id: workspace.id,
+          metadata: { workspaceFilePath: path },
+        },
+      ]),
+      deps.pages(config.project_id),
+    ]);
+    const target = openings[0]?.target;
+    if (target?.kind !== "page") throw new Error("The configured workspace file opener is unavailable.");
+    const href = serializeWorkbenchPageUrl({
       projectId: config.project_id,
-      page: {
-        id: page.id,
-        ref: page,
-        path: page.id,
-        document: { metadataKey: "workspaceFilePath" },
+      pages,
+      resources: defaultPageResourceCodec,
+      location: {
+        ...target,
+        ...(input.line !== undefined
+          ? { position: { line: input.line, ...(input.column !== undefined ? { column: input.column } : {}) } }
+          : {}),
       },
-      resource: { type: "workspace", id: workspace.id, metadata: { workspaceFilePath: path } },
-      position:
-        input.line !== undefined
-          ? { line: input.line, ...(input.column !== undefined ? { column: input.column } : {}) }
-          : undefined,
     });
     deps.log(JSON.stringify({ href }));
   };

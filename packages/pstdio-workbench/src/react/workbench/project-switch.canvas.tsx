@@ -29,7 +29,7 @@ const ProjectNotes = () => {
 };
 const createProjectSwitchWorkbench = () => {
   const page = { kind: "page", extensionId: "example", id: "home" } as const;
-  const workbench = createWorkbench({ initialSidePanelMode: "attached", startPage: page });
+  const workbench = createWorkbench({ initialSidePanelMode: "attached", defaultPage: page });
   workbench.modes.registerMode({ id: "project", activate() {} });
   workbench.views.registerView({
     id: "home",
