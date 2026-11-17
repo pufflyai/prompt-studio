@@ -10,7 +10,7 @@ const WORKSPACE_READY_POLL_MS = 25;
 
 type WaitOptions = { timeoutMs?: number; pollMs?: number; signal?: AbortSignal };
 
-// Awaited provisioning sets `initializing` while harness hooks sync their dirs.
+// Session workspace reads include both persisted creation state and the private maintenance gate.
 // Sessions must not spawn until it clears so a worktree never launches with a
 // half-copied `.claude/skills` (the "Unknown skill" race). Returns the latest
 // workspace; callers must reject launch if it is still `initializing`.

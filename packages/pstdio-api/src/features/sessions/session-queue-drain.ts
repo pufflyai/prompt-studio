@@ -40,7 +40,7 @@ export const createSessionQueueDrain = (deps: SessionsRouteDeps) => {
           if (session?.status !== "queued") return true;
           const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id);
           if (!(await hasCreateCapacity(deps, workspace?.id))) return false;
-          // A workspace that will become ready keeps the entry pending; its `set` event drains again.
+          // Lifecycle changes and quiet maintenance settlement both wake the queue when it becomes ready.
           if (workspaceSessionReadiness(workspace).kind === "wait") return true;
           const dispatch = await dispatchQueuedEntry(deps, session, entry);
           dispatches.push(dispatch?.settled);

@@ -1,7 +1,7 @@
 import { Button, HStack, Icon, Popover, Portal, Stack, Text } from "@chakra-ui/react";
 import type { ExtensionDiagnostic, ProjectExtensionInstance } from "@pstdio/sdk/api";
-import { useToaster } from "@pstdio/ui";
-import { ArrowUpCircle, CircleAlert, Copy, TriangleAlert } from "lucide-react";
+import { CopyButton } from "@pstdio/ui";
+import { ArrowUpCircle, CircleAlert, TriangleAlert } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useTranslation } from "react-i18next";
 import { loadErrorClipboardText, loadErrorField } from "./extension-load-error";
@@ -15,7 +15,6 @@ export interface ExtensionHealthPopoverProps {
 }
 
 export const ExtensionHealthPopover = (props: ExtensionHealthPopoverProps) => {
-  const toaster = useToaster();
   const { extension, diagnostics, unavailableHarnesses = [], upgrading, onUpgrade } = props;
   const { t } = useTranslation("projects");
 
@@ -29,11 +28,6 @@ export const ExtensionHealthPopover = (props: ExtensionHealthPopoverProps) => {
     errorCode === "extension_manifest_unsupported_api_version"
       ? t("projectSettings.extensionsPanel.health.incompatibleVersions")
       : errorCode;
-
-  const copyError = async () => {
-    await navigator.clipboard.writeText(loadErrorClipboardText(extension.lastError));
-    toaster.create({ type: "success", title: t("projectSettings.extensionsPanel.health.errorCopied") });
-  };
 
   if (count === 0) return null;
 
@@ -126,15 +120,11 @@ export const ExtensionHealthPopover = (props: ExtensionHealthPopoverProps) => {
                         {t("projectSettings.extensionsPanel.upgrade.action")}
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="2xs"
-                      onClick={() => void copyError()}
+                    <CopyButton
+                      text={loadErrorClipboardText(extension.lastError)}
+                      label={t("projectSettings.extensionsPanel.health.copyError")}
                       data-testid="extension-copy-error"
-                    >
-                      <Copy size={12} />
-                      {t("projectSettings.extensionsPanel.health.copyError")}
-                    </Button>
+                    />
                   </HStack>
                 )}
               </Stack>

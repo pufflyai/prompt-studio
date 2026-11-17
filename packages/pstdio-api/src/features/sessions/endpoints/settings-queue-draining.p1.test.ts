@@ -22,12 +22,14 @@ const pendingSession = (): HarnessSession => ({
 const startSession = mock((_ctx: unknown, _input: unknown) => pendingSession());
 
 const observeStarts = (count: number) => {
+  const first = Promise.withResolvers<void>();
   const started = Promise.withResolvers<void>();
   startSession.mockImplementation(() => {
+    first.resolve();
     if (startSession.mock.calls.length === count) started.resolve();
     return pendingSession();
   });
-  return started.promise;
+  return { first: first.promise, all: started.promise };
 };
 
 const createRegistry = () =>
@@ -78,6 +80,7 @@ describe("PATCH /v1/settings queue draining", () => {
       });
       const queued = await queuedRes.json();
       expect(queued.status).toBe("queued");
+      await started.first;
       expect(startSession).toHaveBeenCalledTimes(1);
 
       const settingsRes = await isolated.app.request("/v1/settings", {
@@ -86,7 +89,7 @@ describe("PATCH /v1/settings queue draining", () => {
         body: JSON.stringify({ max_concurrent_sessions: 2 }),
       });
       expect(settingsRes.status).toBe(200);
-      await started;
+      await started.all;
 
       expect(await isolated.deps.sessionService.get(queued.id)).toMatchObject({ id: queued.id, status: "in_progress" });
       expect(startSession).toHaveBeenCalledTimes(2);
@@ -137,6 +140,7 @@ describe("PATCH /v1/settings queue draining", () => {
       );
       const queuedSessions = await Promise.all(queuedResponses.map((response) => response.json()));
       expect(queuedSessions.map((session) => session.status)).toEqual(["queued", "queued"]);
+      await started.first;
       expect(startSession).toHaveBeenCalledTimes(1);
 
       const settingsRes = await isolated.app.request("/v1/settings", {
@@ -145,7 +149,7 @@ describe("PATCH /v1/settings queue draining", () => {
         body: JSON.stringify({ max_concurrent_sessions: null }),
       });
       expect(settingsRes.status).toBe(200);
-      await started;
+      await started.all;
 
       const drained = await Promise.all(queuedSessions.map((session) => isolated.deps.sessionService.get(session.id)));
       expect(drained.map((session) => session?.status)).toEqual(["in_progress", "in_progress"]);

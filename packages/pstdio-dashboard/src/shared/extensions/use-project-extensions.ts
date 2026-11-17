@@ -60,7 +60,7 @@ export const useUpgradeProjectExtension = (projectId: string | undefined) =>
   useExtensionMutation(projectId, "upgrade", {
     run: ({ instanceId }: { instanceId: string }, { api, projectId }) =>
       api.extensions.upgradeProject(projectId, instanceId),
-    accept: (_result, _value, cache) => cache.refresh(),
+    accept: (result, _value, cache) => cache.storeExtension(result.extension),
   });
 export const useUpdateProjectExtensionSetting = (projectId: string | undefined) =>
   useExtensionMutation(projectId, "setting", {

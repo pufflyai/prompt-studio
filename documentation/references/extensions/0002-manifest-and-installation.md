@@ -111,7 +111,24 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
   Healthy local-path extensions stay under local control.
 - In the extension panel, every row that can take a newer release shows an upgrade button next to
   its switch. The button upgrades only that extension. **Upgrade all** in the panel header runs
-  Upgrade for every extension that offers it, and only appears when at least one does.
+  Upgrade for every extension that offers it, with at most two installs running at once. Queued
+  buttons say Waiting; only active work shows Upgrading with a spinner and elapsed time. Individual
+  extension controls have no progress bar. Upgrade all retains its bottom-edge batch progress and
+  counts completed attempts. Completed and failed states omit elapsed seconds. Each final state has
+  an attached × button to dismiss it; errors show details and Retry directly in the grouped control,
+  without a result popover or additional status row. Fresh marketplace installs use the same controls
+  in the list and detail page. Their result follows the extension into the installed list/detail.
+  Install, toggle, upgrade and batch ownership share the catalog name, so an older result cannot
+  reappear after dismissal or clear a newer operation. Dismissing individual results does not change
+  batch counts. Successful responses update the displayed version and upgrade action
+  immediately, while the remaining inventory refreshes in the background. Workspaces are prepared
+  again only when an enabled upgrade changes skills or workspace setup hooks. Overlapping project
+  refresh requests share a maintenance pass; a change arriving mid-pass revisits only workspaces that
+  have not seen it. Healthy maintenance does not publish workspace lifecycle changes. New session
+  launches wait for file maintenance, including after a host interruption, and queued sessions wake
+  when it settles. Actual setup failures and recoveries remain visible on the workspace.
+  Upgrade requests still await maintenance completion; the two install slots are not released early
+  with an optimistic success response. Sequential waves of upgrades can require separate passes.
 - `pst extensions update [name]` runs that same host-owned upgrade path for the project in the
   current folder, or the one named with `--project-id`. When `name` is omitted, it upgrades every
   instance the host marks as eligible. The command does not replace healthy local sources or change

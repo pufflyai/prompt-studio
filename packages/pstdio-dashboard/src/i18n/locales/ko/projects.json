@@ -156,6 +156,20 @@
         "title": "{{name}}을(를) 교체할까요?",
         "message": "설치된 파일을 교체합니다. 이 확장을 사용하는 다른 프로젝트도 새 파일을 사용합니다.",
         "action": "교체"
+      },
+      "feedback": {
+        "queued": "대기 중",
+        "upgrading": "{{name}} 업그레이드 중",
+        "updating": "{{name}} 업데이트 중",
+        "updated": "확장 기능 업데이트 완료",
+        "installing": "{{name}} 설치 중",
+        "batch": "업그레이드 {{total}}개 중 {{count}}개 완료",
+        "retry": "다시 시도",
+        "dismiss": "닫기",
+        "upgradingButton": "업그레이드 중",
+        "batchFailed": "업그레이드 {{total}}개 중 {{count}}개 실패",
+        "installingButton": "설치 중",
+        "installedButton": "설치됨"
       }
     }
   },

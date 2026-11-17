@@ -6,10 +6,11 @@ import { useTranslation } from "react-i18next";
 interface ExtensionDeleteSectionProps {
   scope: ProjectExtensionInstance["scope"];
   uninstalling?: boolean;
+  disabled?: boolean;
   onUninstall: () => void;
 }
 
-export const ExtensionDeleteSection = ({ scope, uninstalling, onUninstall }: ExtensionDeleteSectionProps) => {
+export const ExtensionDeleteSection = ({ scope, uninstalling, disabled, onUninstall }: ExtensionDeleteSectionProps) => {
   const { t } = useTranslation("projects");
   return (
     <Stack gap="lg">
@@ -31,6 +32,7 @@ export const ExtensionDeleteSection = ({ scope, uninstalling, onUninstall }: Ext
             size="2xs"
             onClick={onUninstall}
             loading={uninstalling}
+            disabled={disabled}
             data-testid="extension-delete"
           >
             <Trash2 size={12} />

@@ -1,7 +1,7 @@
 import { Button, HStack } from "@chakra-ui/react";
 import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
-import { AlertMessage, useToaster } from "@pstdio/ui";
-import { ArrowUpCircle, Copy } from "lucide-react";
+import { AlertMessage, CopyButton } from "@pstdio/ui";
+import { ArrowUpCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { loadErrorClipboardText, loadErrorField } from "./extension-load-error";
 
@@ -12,16 +12,10 @@ export interface ExtensionDetailHealthProps {
 }
 
 export const ExtensionDetailHealth = (props: ExtensionDetailHealthProps) => {
-  const toaster = useToaster();
   const { extension, upgrading, onUpgrade } = props;
   const { t } = useTranslation("projects");
   const code = loadErrorField(extension.lastError, "code");
   const incompatible = code === "extension_manifest_unsupported_api_version";
-
-  const copyError = async () => {
-    await navigator.clipboard.writeText(loadErrorClipboardText(extension.lastError));
-    toaster.create({ type: "success", title: t("projectSettings.extensionsPanel.health.errorCopied") });
-  };
 
   return (
     <AlertMessage
@@ -40,10 +34,11 @@ export const ExtensionDetailHealth = (props: ExtensionDetailHealthProps) => {
               {t("projectSettings.extensionsPanel.upgrade.action")}
             </Button>
           )}
-          <Button onClick={() => void copyError()} data-testid="extension-copy-error">
-            <Copy size={12} />
-            {t("projectSettings.extensionsPanel.health.copyError")}
-          </Button>
+          <CopyButton
+            text={loadErrorClipboardText(extension.lastError)}
+            label={t("projectSettings.extensionsPanel.health.copyError")}
+            data-testid="extension-copy-error"
+          />
         </HStack>
       }
     >

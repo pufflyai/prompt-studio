@@ -231,6 +231,11 @@ describe("POST /v1/sessions isolated queue draining", () => {
   });
 
   test("starts the next queued session when capacity opens", async () => {
+    const firstStarted = Promise.withResolvers<void>();
+    startSession.mockImplementationOnce(() => {
+      firstStarted.resolve();
+      return pendingSession();
+    });
     const isolatedTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-drain-session-queue-test-"));
     const isolated = await createTestApp({
       databasePath: ":memory:",
@@ -262,6 +267,7 @@ describe("POST /v1/sessions isolated queue draining", () => {
       });
       expect(firstRes.status).toBe(201);
       const first = await firstRes.json();
+      await firstStarted.promise;
 
       const secondRes = await isolated.app.request("/v1/sessions", {
         method: "POST",
