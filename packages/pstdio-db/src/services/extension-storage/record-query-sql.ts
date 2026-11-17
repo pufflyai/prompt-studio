@@ -184,18 +184,53 @@ export const pageOrderSql = (index: StorageRecordIndex) =>
     sql`, `,
   );
 
-export const recordPageSql = (index: StorageRecordIndex, fields: string[], where: SQL, limit: number, offset = 0) => {
+const leadingInList = (index: StorageRecordIndex, predicate?: StoragePredicate) => {
+  const pending = predicate ? [predicate] : [];
+  while (pending.length) {
+    const child = pending.pop()!;
+    if ("all" in child) pending.push(...child.all);
+    else if ("field" in child && child.field === index.equality?.[0] && child.op === "in" && child.value.length > 1)
+      return child;
+  }
+};
+
+export const recordPageSql = (
+  index: StorageRecordIndex,
+  fields: string[],
+  where: SQL,
+  limit: number,
+  offset = 0,
+  predicate?: StoragePredicate,
+) => {
   const selected = fields.flatMap((name) => [
     sqlLiteral(projectionKey(name)),
     sql`coalesce(${recordFieldSql(index, name)}, 'null'::jsonb)`,
   ]);
   const sort = (index.orderBy ?? []).map((sort) => sql`coalesce(${recordFieldSql(index, sort.field)}, 'null'::jsonb)`);
+  // Each equality value supplies an ordered prefix. Merge only those prefixes,
+  // rather than scanning unrelated ordered rows or sorting every matching record.
+  const selection = leadingInList(index, predicate);
+  const candidates = selection
+    ? sql`WITH candidates AS MATERIALIZED (
+        SELECT page.* FROM (
+          SELECT DISTINCT value FROM (VALUES ${sql.join(
+            selection.value.map((value) => sql`(${json(value)})`),
+            sql`, `,
+          )}) AS input(value)
+        ) AS selected_values CROSS JOIN LATERAL (
+          SELECT record_id, revision, value, query_values FROM storage_current_records
+          WHERE ${where} AND ${recordEqualitySql(index, selection.field, sql`coalesce(${recordFieldSql(index, selection.field)}, 'null'::jsonb)`, sql`selected_values.value`)}
+          ORDER BY ${pageOrderSql(index)} LIMIT ${limit + offset}
+        ) AS page
+      )`
+    : sql``;
   return sql`
+    ${candidates}
     SELECT record_id, revision,
       jsonb_build_object(${sql.join(selected, sql`, `)}) AS fields,
       jsonb_build_array(${sql.join(sort, sql`, `)}) AS sort_values
-    FROM storage_current_records
-    WHERE ${where}
+    FROM ${sql.raw(selection ? "candidates" : "storage_current_records")}
+    ${selection ? sql`` : sql`WHERE ${where}`}
     ORDER BY ${pageOrderSql(index)} LIMIT ${limit} OFFSET ${offset}`;
 };
 
