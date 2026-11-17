@@ -17,12 +17,12 @@ import {
   useProjectExtensions,
   useSetExtensionAutomationEnabled,
   useSetProjectExtensionEnabled,
-  useUpgradeProjectExtension,
 } from "@/shared/extensions/use-project-extensions";
 import { AvailableExtensionDetail } from "./available-extension-detail";
 import { ExtensionDetailContainer } from "./extension-detail-container";
 import { ExtensionReplacementConfirmation } from "./extension-replacement-confirmation";
 import { ExtensionsPanelView } from "./extensions-panel-view";
+import { usePanelUpgrades } from "./use-panel-upgrades";
 
 interface ExtensionsPanelProps {
   projectId: string | undefined;
@@ -43,7 +43,6 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const agents = projectId && agentsQuery.isSuccess ? agentsQuery.data : undefined;
   const setEnabled = useSetProjectExtensionEnabled(projectId);
   const setAutomationEnabled = useSetExtensionAutomationEnabled(projectId);
-  const upgrade = useUpgradeProjectExtension(projectId);
   const installMarketplace = useInstallMarketplaceExtension(projectId);
   const addLocalFolder = useAddLocalExtensionFolder(projectId);
   const [replacement, setReplacement] = useState<{ name: string; retry: () => Promise<void> } | null>(null);
@@ -62,10 +61,16 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       resource: { type: "extension", extensionId: "pstdio", id, label: displayName },
     });
   const [installingMarketplaceNames, setInstallingMarketplaceNames] = useState<string[]>([]);
-  const [upgradingInstanceIds, setUpgradingInstanceIds] = useState<string[]>([]);
   const marketplaceContributions = useMarketplaceExtensionContributions(
     projectId,
     selectedMarketplaceName ?? undefined,
+  );
+
+  const { handleUpgradeAll, handleUpgrade, upgradingInstanceIds, queuedInstanceIds } = usePanelUpgrades(
+    projectId,
+    extensionsQuery.data?.upgradeConcurrency,
+    showError,
+    clearError,
   );
 
   if (extensionsQuery.isLoading) {
@@ -121,14 +126,19 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
 
   if (selected) {
     return (
-      <ExtensionDetailContainer
-        projectId={projectId}
-        extension={selected}
-        metadata={metadataQuery.data}
-        agents={agents}
-        settingsInput={settingsInput}
-        onBack={() => openList()}
-      />
+      <>
+        {errorNotice}
+        <ExtensionDetailContainer
+          projectId={projectId}
+          extension={selected}
+          upgrading={upgradingInstanceIds.includes(selected.id)}
+          onUpgrade={() => void handleUpgrade(selected, "detail")}
+          metadata={metadataQuery.data}
+          agents={agents}
+          settingsInput={settingsInput}
+          onBack={() => openList()}
+        />
+      </>
     );
   }
 
@@ -166,61 +176,6 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
     );
   };
 
-  // Every target is marked up front so each row shows it is queued. The upgrades then run one at a
-  // time: each fetches and installs a release, and one failure must not stop the rest.
-  const handleUpgradeAll = async (upgradable: ProjectExtensionInstance[]) => {
-    clearError();
-    setUpgradingInstanceIds((current) => [...new Set([...current, ...upgradable.map((extension) => extension.id)])]);
-    let upgraded = 0;
-    const failed: string[] = [];
-    for (const extension of upgradable) {
-      try {
-        await upgrade.mutateAsync({ instanceId: extension.id });
-        upgraded += 1;
-      } catch (error) {
-        failed.push(`${extension.displayName}: ${error instanceof Error ? error.message : String(error)}`);
-      } finally {
-        setUpgradingInstanceIds((current) => current.filter((id) => id !== extension.id));
-      }
-    }
-    if (upgraded > 0) {
-      toaster.create({
-        type: "success",
-        title: t("projectSettings.extensionsPanel.upgradeAll.succeeded", { count: upgraded }),
-      });
-    }
-    if (failed.length > 0) {
-      showError({
-        title: t("projectSettings.extensionsPanel.upgradeAll.failed", { count: failed.length }),
-        description: failed.join("\n"),
-      });
-    }
-  };
-
-  // Each row upgrades on its own, so several upgrades can run at once and each reports its own result.
-  const handleUpgrade = async (extension: ProjectExtensionInstance) => {
-    clearError();
-    setUpgradingInstanceIds((current) => [...new Set([...current, extension.id])]);
-    try {
-      const result = await upgrade.mutateAsync({ instanceId: extension.id });
-      toaster.create({
-        type: "success",
-        title: t(
-          result.changed
-            ? "projectSettings.extensionsPanel.upgrade.succeeded"
-            : "projectSettings.extensionsPanel.upgrade.current",
-        ),
-      });
-    } catch (error) {
-      showError({
-        title: t("projectSettings.extensionsPanel.upgrade.failed"),
-        description: error instanceof Error ? error.message : undefined,
-      });
-    } finally {
-      setUpgradingInstanceIds((current) => current.filter((id) => id !== extension.id));
-    }
-  };
-
   const handleDropFolder = async (folder: DroppedExtensionFolder) => {
     clearError();
     try {
@@ -255,13 +210,14 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         agents={agents}
         togglingInstanceId={setEnabled.isPending ? setEnabled.variables?.instanceId : undefined}
         togglingAutomation={setAutomationEnabled.isPending}
+        queuedInstanceIds={queuedInstanceIds}
         upgradingInstanceIds={upgradingInstanceIds}
         installingMarketplaceNames={installingMarketplaceNames}
         onToggle={handleToggle}
         onToggleAutomation={(extension, automation, enabled) =>
           setAutomationEnabled.mutateAsync({ instanceId: extension.id, automationId: automation.id, enabled })
         }
-        onUpgrade={(extension) => void handleUpgrade(extension)}
+        onUpgrade={(extension) => void handleUpgrade(extension, "list")}
         onOpen={(extension) => openDetail(`installed:${extension.id}`, extension.displayName)}
         onInstallMarketplace={(extension) => void handleInstallMarketplace(extension)}
         onOpenMarketplace={(extension) => openDetail(`marketplace:${extension.installName}`, extension.displayName)}

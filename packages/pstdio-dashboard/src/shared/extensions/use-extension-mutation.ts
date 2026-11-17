@@ -8,6 +8,7 @@ import { getProjectExtensionQueries } from "./project-extension-queries";
 
 type Cache = ReturnType<typeof createProjectExtensionCache>;
 interface Target {
+  assertCurrent: () => void;
   projectId: string;
   api: ReturnType<typeof getRuntimeApiClient>;
   owner: ReturnType<typeof getRuntimeCollections>;
@@ -40,11 +41,11 @@ export const useExtensionMutation = <Input extends object, Result>(
   useEffect(() => {
     if (!scope.isDisposed()) return scope.subscribe(() => {}, { automatic: false });
   }, [scope]);
-  const target = { projectId: projectId!, api: getRuntimeApiClient(owner), owner };
   const assertCurrent = () => {
     if (!projectId) throw new Error("Project id is required for this action.");
     if (scope.isDisposed()) throw new Error("This action belongs to a closed project or account.");
   };
+  const target = { projectId: projectId!, api: getRuntimeApiClient(owner), owner, assertCurrent };
   return useMutation<Result, Error, Input, Cache>({
     // A retired owner never inherits callbacks from the new account's observer.
     mutationKey: [...scope.key, "mutation", operation, ownerKey(scope)],
