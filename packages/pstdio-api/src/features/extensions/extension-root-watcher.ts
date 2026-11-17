@@ -32,6 +32,7 @@ export type CreateExtensionRootWatcherInput = {
   debounceMs?: number;
   ensureRoot?: (path: string, ownerRoot: string) => void;
   listExtensionRoots: () => Promise<ExtensionRootRegistration[]>;
+  onAttach?: (root: ExtensionRootRegistration) => void;
   onError?: (error: unknown) => void;
   watch?: WatchSource;
 };
@@ -131,6 +132,7 @@ export const createExtensionRootWatcher = async (
         (error) => handleWatchError(root.path, watcher, error),
       );
       registrations.set(root.path, { ...root, queued: false, running: false, timer: null, watcher });
+      input.onAttach?.(root);
     } catch (error) {
       input.onError?.(error);
     }
