@@ -56,7 +56,7 @@ Use **Versions** in the reader header to pick a saved version. New versions appe
 
 ## Export an artifact
 
-Choose **Export HTML** beside **Versions** to download the displayed saved version.
+Choose **Export HTML** in the artifact actions dropdown beside the breadcrumb, alongside Rename and Delete, to download the displayed saved version.
 The file includes its scripts, embedded images and the current preview theme, and
 opens in a browser without Prompt Studio. It starts from the saved HTML; temporary
 form values, filters and other preview state are not included. Your browser handles

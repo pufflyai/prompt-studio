@@ -6,17 +6,14 @@ import { HtmlPreview } from "./html-preview";
 
 const ChevronDown = createGlyphIcon("arrow-down-1");
 const History = createGlyphIcon("history");
-const Download = createGlyphIcon("download");
 interface ArtifactReaderProps {
   content: ArtifactContent;
   revisions: ArtifactSummary[];
   onSelect: (revisionId: string) => void;
-  onExport: () => void;
-  exporting?: boolean;
 }
 
 export const ArtifactReader = (props: ArtifactReaderProps) => {
-  const { content, revisions, onSelect, onExport, exporting } = props;
+  const { content, revisions, onSelect } = props;
   const { t } = useArtifactTranslations();
   const latest = revisions[0];
   const title = latest?.title ?? content.title;
@@ -63,10 +60,6 @@ export const ArtifactReader = (props: ArtifactReaderProps) => {
             </Menu.Content>
           </Menu.Positioner>
         </Menu.Root>
-        <Button variant="ghost" flexShrink="0" onClick={onExport} loading={exporting}>
-          <Download />
-          {t("reader.export", "Export HTML")}
-        </Button>
       </Header>
       <Box flex="1" minHeight="0" width="full" bg="bg.muted" overflow="hidden">
         <HtmlPreview

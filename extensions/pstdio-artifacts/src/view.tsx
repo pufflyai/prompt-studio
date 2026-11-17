@@ -5,10 +5,11 @@ import {
   defineExtensionView,
   type ExtensionViewRenderContext,
   type ResourceRef,
+  registerWebviewResourceAction,
 } from "@pstdio/sdk/extensions";
 import { useScopedQueries, useWebviewCommandQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import { AlertMessage, ChakraProvider, psTheme } from "@pstdio/ui";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import { createArtifactQueries, createArtifactRevisionSelection } from "./artifact-queries";
 import type { ArtifactSummary } from "./artifacts";
@@ -35,7 +36,6 @@ const ArtifactsApp = (props: AppProps) => {
   const [client] = useState(() => createWebviewClient<typeof commands>(host));
   const [actionError, setActionError] = useState<string>();
   const [creating, setCreating] = useState<ArtifactExample>();
-  const [exporting, setExporting] = useState(false);
   const id = hostProps.resource?.id;
   const visible = useWebviewVisibility();
   const selection = createArtifactRevisionSelection(client, hostProps.projectId, id ?? "library");
@@ -68,44 +68,50 @@ const ArtifactsApp = (props: AppProps) => {
     }
   };
 
+  const exportLabel = context.t("reader.export", "Export HTML");
+  useEffect(() => {
+    if (!id || !content) return;
+    const action = registerWebviewResourceAction(
+      host,
+      {
+        resource: content.resource,
+        label: exportLabel,
+        icon: "download",
+      },
+      async (signal) => {
+        setActionError(undefined);
+        try {
+          const result = await client.commands.export({
+            url: content.url,
+            revisionId: content.revisionId,
+            theme: readPreviewTheme(),
+          });
+          signal.throwIfAborted();
+          if (result.html === undefined) throw new Error("The export did not return HTML.");
+          await client.files.download({
+            name: result.fileName,
+            data: new TextEncoder().encode(result.html),
+            mimeType: "text/html;charset=utf-8",
+          });
+        } catch (error) {
+          if (!signal.aborted) setActionError(String(error));
+          throw error;
+        }
+      },
+    );
+    void action.ready.catch((error) => setActionError(String(error)));
+    return () => {
+      void action.dispose().catch(() => {});
+    };
+  }, [client, content, exportLabel, host, id]);
+
   let body = (
     <Center flex="1">
       <Spinner />
     </Center>
   );
   if (id && content && items) {
-    const exportHtml = async () => {
-      setActionError(undefined);
-      setExporting(true);
-      try {
-        const result = await client.commands.export({
-          url: content.url,
-          revisionId: content.revisionId,
-          theme: readPreviewTheme(),
-        });
-        if (result.html === undefined) throw new Error("The export did not return HTML.");
-        await client.files.download({
-          name: result.fileName,
-          data: new TextEncoder().encode(result.html),
-          mimeType: "text/html;charset=utf-8",
-        });
-      } catch (error) {
-        setActionError(String(error));
-      } finally {
-        setExporting(false);
-      }
-    };
-    body = (
-      <ArtifactReader
-        content={content}
-        revisions={items}
-        onSelect={setSelected}
-        onExport={() => {
-          void exportHtml();
-        }}
-        exporting={exporting}
-      />
-    );
+    body = <ArtifactReader content={content} revisions={items} onSelect={setSelected} />;
   } else if (!id && items) {
     body = (
       <ArtifactLibrary

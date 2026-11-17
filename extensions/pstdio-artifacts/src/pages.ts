@@ -23,6 +23,7 @@ export const view = defineView({
     capabilities: [
       "commands.execute",
       "files.download",
+      "resources.actions.register",
       "commands.query",
       "preferences.get",
       "preferences.set",

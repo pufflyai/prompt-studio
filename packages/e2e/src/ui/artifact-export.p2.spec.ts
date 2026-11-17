@@ -79,11 +79,18 @@ test("exports the displayed saved version as an interactive offline HTML file an
         }),
       }),
     );
-    await frame.getByRole("button", { name: "Export HTML", exact: true }).click();
+    await expect(frame.getByRole("button", { name: "Export HTML", exact: true })).toHaveCount(0);
+    const exportFromMenu = async () => {
+      await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
+      await expect(page.getByRole("menuitem", { name: "Rename artifact…", exact: true })).toBeVisible();
+      await expect(page.getByRole("menuitem", { name: "Delete artifact…", exact: true })).toBeVisible();
+      await page.getByRole("menuitem", { name: "Export HTML", exact: true }).click();
+    };
+    await exportFromMenu();
     await expect(frame.getByText(/Export unavailable/)).toBeVisible();
     await page.unroute(route);
     const downloaded = page.waitForEvent("download");
-    await frame.getByRole("button", { name: "Export HTML", exact: true }).click();
+    await exportFromMenu();
     const file = await downloaded;
     expect(file.suggestedFilename()).toBe("Audit report.html");
     const destination = join(repo, "exported.html");

@@ -1,5 +1,6 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { createGlyphIcon, Header, ResourceActionMenu } from "@pstdio/ui";
 import { weeklyActivityHtml } from "../../examples/weekly-activity";
 import { ArtifactReader } from "./artifact-reader";
 import { exampleArtifact } from "./artifact-story-fixture";
@@ -9,8 +10,11 @@ const content = {
   ...exampleArtifact,
   html: "<title>Release overview</title><h1>Release overview</h1><button onclick=\"this.textContent='Complete'\">Mark complete</button>",
 };
+const ChevronDown = createGlyphIcon("arrow-down-1");
 const meta = {
   title: "Extensions/Artifacts/Reader",
+  description:
+    "Export HTML belongs to the artifact actions beside the breadcrumb, with Rename and Delete. Versions remains a reader control.",
   component: ArtifactReader,
   decorators: [
     (Story) => (
@@ -19,16 +23,31 @@ const meta = {
       </ArtifactTranslationStory>
     ),
     (Story) => (
-      <Box height="100dvh">
-        <Story />
-      </Box>
+      <Stack height="100dvh" gap="0">
+        <Header>
+          <Text>{content.title}</Text>
+          <ResourceActionMenu
+            actions={[
+              { key: "rename", label: "Rename artifact…" },
+              { key: "export", label: "Export HTML", onClick: () => {} },
+              { key: "delete", label: "Delete artifact…" },
+            ]}
+          >
+            <Button variant="ghost" aria-label="Artifact actions">
+              <ChevronDown />
+            </Button>
+          </ResourceActionMenu>
+        </Header>
+        <Box flex="1" minH="0">
+          <Story />
+        </Box>
+      </Stack>
     ),
   ],
   args: {
     content,
     revisions: [exampleArtifact],
     onSelect: () => {},
-    onExport: () => {},
   },
 } satisfies CanvasMeta<typeof ArtifactReader>;
 export default meta;
