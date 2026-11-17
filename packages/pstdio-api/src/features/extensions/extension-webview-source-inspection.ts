@@ -9,8 +9,8 @@ import { hashRevisionSource } from "pstdio-extensions/revision-dependencies";
 import { runExtensionPreparation } from "./extension-preparation";
 import { type LoadedExtension, type LoadedExtensionSnapshot, loadExtensionSource } from "./extension-runtime";
 
-export const inspectWebviewSource = (sourcePath: string) =>
-  runExtensionPreparation<LoadedExtension>("source.inspect", { sourcePath });
+export const inspectWebviewSource = (sourcePath: string, signal?: AbortSignal) =>
+  runExtensionPreparation<LoadedExtension>("source.inspect", { sourcePath }, { signal });
 
 export const inspectWebviewLoadKey = (sourcePath: string) =>
   runExtensionPreparation<string>("source.webview-key", { sourcePath });
