@@ -322,9 +322,9 @@ Obsolete dashboard specs were removed. Current tests cover project selection, ti
 
 ### Failing quarantined tests
 
-Remove known-failing quarantined cases and their entries from `scripts/ci/test-quarantine.json`. For a mixed file, remove only the failing case or generated variant and its unused setup. Delete the file when no cases remain. Preserve the first-failure evidence in the ticket or report and use Git history when restoring coverage after a fix. Do not rename, skip, retry, relax, or return the failed case to the stable lane.
+Keep confirmed intermittent cases in `scripts/ci/test-quarantine.json`, selected by exact title, file and affected platform. Record their owner, failure/pass evidence and removal criteria. Preserve their assertions and workloads. Do not quarantine deterministic product defects or incomplete setup. Restore cases to the stable lane after repairing their cause and retaining native first-attempt evidence.
 
-The recorded failing cases have been removed and the registry is empty. The quarantine runners remain available for focused diagnosis. If a case is registered during diagnosis, its separate lane must execute it exactly once and retain the native report; missing reports, setup failures, skipped cases, and retries still fail verification. A passing stable gate does not mean the diagnostic case passed.
+Each separate quarantine lane executes its selected cases exactly once and retains the native report. Browser entries preserve their known error signature in both planned and standalone reporting, so unrelated assertions and setup or cleanup errors remain blocking. Missing reports, skipped cases and retries also fail verification. A complete known failure is reported as `quarantined-failure`, separately from stable success; it is not a behavior pass. See [ADR 0101](../../adrs/0101-temporary-flaky-test-quarantine.md).
 
 To investigate a failure, keep retries disabled and run only the affected spec once:
 

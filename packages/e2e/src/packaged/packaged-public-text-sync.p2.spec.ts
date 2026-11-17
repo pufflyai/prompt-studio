@@ -181,10 +181,13 @@ for (const presentation of ["native", "installed"] as const) {
 
     await appendAgentText(first.client, project.id, ": agent");
     const finalText = `${stopped}: agent`;
-    await expect.poll(left.readText).toBe(finalText);
-    await expect.poll(right.readText).toBe(finalText);
+    // Restored hosts and retained editors reconcile the agent's projected update asynchronously.
+    await expect.poll(left.readText, { timeout: 15_000 }).toBe(finalText);
+    await expect.poll(right.readText, { timeout: 15_000 }).toBe(finalText);
     for (const folder of [firstFolder, secondFolder])
-      await expect.poll(() => readPublicTextCopy(folder, "paper.public-text-source", "selected.md")).toBe(finalText);
+      await expect
+        .poll(() => readPublicTextCopy(folder, "paper.public-text-source", "selected.md"), { timeout: 15_000 })
+        .toBe(finalText);
 
     for (const folder of [firstFolder, secondFolder]) {
       expect(readPublicTextCopy(folder, "paper.public-text-source", "private.md")).toBe("Source owner private text");
