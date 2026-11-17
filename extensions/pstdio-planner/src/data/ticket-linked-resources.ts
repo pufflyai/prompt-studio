@@ -5,7 +5,9 @@ import {
   type ResourceResolution,
   resourceKey,
 } from "@pstdio/sdk/extensions";
+import { inferReviewLinkTarget } from "./review-links";
 import { ticketPageTarget } from "./ticket-page-target";
+import type { StoredTicketReviewLink } from "./types";
 
 // Keep the saved display preference identity while broadening it to every resource kind.
 export const TICKET_LINKED_RESOURCES_ATTRIBUTE = "workspace";
@@ -29,6 +31,30 @@ const badgeItem = (saved: ResourceRef, resolved: ResourceResolution | undefined)
     tooltip: `${resource.extensionId ?? "pstdio"} · ${label}${available ? "" : " · Unavailable"}`,
     ...(resolved?.target ? { action: resolved.target, resource } : {}),
   } satisfies CollectionBadgeItem;
+};
+
+export const appendLegacyPullRequestBadges = (items: CollectionBadgeItem[], links: StoredTicketReviewLink[]) => {
+  const saved = new Set(
+    items.filter((item) => item.resource?.type === "pull-request").map((item) => item.resource?.id),
+  );
+  const badges = [...items];
+  for (const link of links) {
+    if (badges.length >= 8) break;
+    if (link.provider !== "github" || link.kind !== "pull_request") continue;
+    const url = URL.parse(link.url);
+    if (url?.protocol !== "https:" || url.username || url.password) continue;
+    const { externalId } = inferReviewLinkTarget(url.href);
+    if (!externalId || saved.has(url.href)) continue;
+    saved.add(url.href);
+    badges.push({
+      id: `saved-review:${link.id}`,
+      label: `#${externalId}`,
+      icon: "git-pull-request",
+      tooltip: url.href,
+      action: { kind: "href", href: url.href },
+    });
+  }
+  return badges;
 };
 
 export const loadTicketLinkedResources = async (

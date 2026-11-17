@@ -67,6 +67,38 @@ describe("queryTicketsCommand", () => {
     expect(result.rows.map((row) => row.title)).toEqual(["Archived"]);
   });
 
+  test("keeps a saved GitHub review link visible before the provider imports it", async () => {
+    const { storage, counter } = countStorageWrites(createMemoryStorage());
+    const url = "https://github.com/acme/tools/pull/12";
+    await putTicket(
+      storage,
+      makeTicket({
+        reviewLinks: [
+          {
+            id: "legacy-12",
+            url,
+            provider: "github",
+            kind: "pull_request",
+            externalId: "12",
+            title: null,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+      }),
+    );
+    const ctx = makeCommandContext({ storage, params: {} });
+    await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
+    counter.writes = 0;
+
+    const result = await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
+
+    expect(result.rows[0]?.attributes.linkedResourceItems).toMatchObject([
+      { label: "#12", action: { kind: "href", href: url } },
+    ]);
+    expect(counter.writes).toBe(0);
+  });
+
   test.each([
     "pstdio.pstdio-planner",
     "pstdio.planner",
