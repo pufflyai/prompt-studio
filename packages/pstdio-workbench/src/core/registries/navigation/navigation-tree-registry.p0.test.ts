@@ -290,3 +290,23 @@ test("declared navigation actions follow contribution lifetime without reading d
   registration.dispose();
   expect(registry.listActions()).toEqual([]);
 });
+
+test("places trailing utility contributions after extension tools", async () => {
+  const registry = createNavigationTreeRegistry();
+  for (const [id, sourceExtensionId, order] of [
+    ["settings", "pstdio", 1],
+    ["skills", "pstdio.skill-browser", 0],
+    ["help", "pstdio", 0],
+  ] as const)
+    registry.registerContribution({
+      id,
+      owner: project,
+      sourceExtensionId,
+      declarationIndex: 0,
+      order,
+      slot: "footer",
+      getSections: () => [{ id: "navigation.footer", nodes: [{ id, label: id }] }],
+    });
+  const sections = await registry.getSections(project, "footer");
+  expect(sections.flatMap((section) => section.nodes.map((node) => node.id))).toEqual(["help", "skills", "settings"]);
+});

@@ -113,6 +113,8 @@ export interface ExtensionResourcesApi {
   removed(resource: ResourceRef): Promise<void>;
   /** Allocate an ID and shorthand. idPrefix selects the same compact ID format as storage.ids.create. */
   allocate(input: { kind: string; idPrefix?: string }): Promise<{ id: string; shorthand: string }>;
+  /** Allocate 1–100 IDs and consecutive shorthands for one kind in one save, in order. Later allocations continue after them. */
+  allocateMany(input: { kind: string; count: number; idPrefix?: string }): Promise<{ id: string; shorthand: string }[]>;
   /** Read the core-owned current number. Returns null for an unknown resource. */
   identity(input: { kind: string; id: string }): Promise<ResourceIdentity | null>;
   /** Read at most 100 current identities in input order. Unknown IDs return null. */

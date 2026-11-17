@@ -1,4 +1,4 @@
-import { integer, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { projects } from "./projects";
 import type { JsonObject } from "./types";
 
@@ -68,13 +68,3 @@ export const automation_runs = pgTable(
     ),
   ],
 );
-
-export const automation_run_events = pgTable("automation_run_events", {
-  cursor: integer("cursor").primaryKey().generatedAlwaysAsIdentity(),
-  run_id: text("run_id")
-    .notNull()
-    .references(() => automation_runs.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
-  payload_json: jsonb("payload_json").$type<JsonObject>().notNull(),
-  created_at: text("created_at").notNull(),
-});

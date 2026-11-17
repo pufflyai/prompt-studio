@@ -17,9 +17,18 @@ export const tablePageFields = (
 
 export const kanbanPageFields = (
   attributes: Pick<AttributeDescriptor, "id" | "display">[],
-  settings: Pick<KanbanRendererSettings, "displayProperties" | "columnGrouping" | "rowGrouping" | "viewMode">,
+  settings: Pick<
+    KanbanRendererSettings,
+    "displayProperties" | "columnGrouping" | "rowGrouping" | "subGroupings" | "viewMode"
+  >,
 ) => {
-  const fields = new Set(["title", ...settings.displayProperties, settings.columnGrouping, settings.rowGrouping]);
+  const fields = new Set([
+    "title",
+    ...settings.displayProperties,
+    settings.columnGrouping,
+    settings.rowGrouping,
+    ...(settings.subGroupings ?? []),
+  ]);
   fields.delete("none");
   if (settings.viewMode === "list") fields.add("id");
   for (const attribute of attributes) {

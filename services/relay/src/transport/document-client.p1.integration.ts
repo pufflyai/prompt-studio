@@ -16,7 +16,7 @@ import { startRelay } from "../service";
 import { createTransportFixture } from "./integration-fixture";
 
 const fixture = createTransportFixture();
-beforeAll(() => fixture.initialize());
+beforeAll(() => fixture.initialize(), process.platform === "linux" ? 10_000 : undefined);
 afterAll(() => fixture.close());
 const day = 86_400_000;
 const open = async () => {

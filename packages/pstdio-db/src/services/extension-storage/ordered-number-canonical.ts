@@ -75,13 +75,16 @@ const canonicalNumberIndex = (
         value: number.value,
       })),
     )) {
-      const rows = await tx.execute(sql`SELECT i.resource_id FROM storage_ordered_resource_numbers i
-        INNER JOIN (SELECT DISTINCT extension_id, kind, prefix, value FROM jsonb_to_recordset(${batch}::jsonb)
-          AS k(extension_id text, kind text, prefix text, value bigint)) k USING(extension_id, kind, prefix, value)
-        WHERE i.workbench_id = ${owner.workbenchId} AND i.current = true
-          AND EXISTS (SELECT 1 FROM storage_ordered_resource_numbers other WHERE other.workbench_id=i.workbench_id
-            AND other.current=true AND other.extension_id=i.extension_id AND other.kind=i.kind
-            AND other.prefix=i.prefix AND other.value=i.value AND other.resource_id COLLATE "C" < i.resource_id COLLATE "C")`);
+      // Every other current holder of a requested number is itself a claimant, so the losers are the
+      // claimants after the first one per number, found in one pass instead of one prefix scan per number.
+      const rows = await tx.execute(sql`SELECT resource_id FROM (
+          SELECT i.resource_id, min(i.resource_id COLLATE "C")
+            OVER (PARTITION BY i.extension_id, i.kind, i.prefix, i.value) AS first
+          FROM storage_ordered_resource_numbers i
+          INNER JOIN (SELECT DISTINCT extension_id, kind, prefix, value FROM jsonb_to_recordset(${batch}::jsonb)
+            AS k(extension_id text, kind text, prefix text, value bigint)) k USING(extension_id, kind, prefix, value)
+          WHERE i.workbench_id = ${owner.workbenchId} AND i.current = true
+        ) claims WHERE resource_id COLLATE "C" > first`);
       for (const row of rows.rows as { resource_id: string }[]) losers.add(row.resource_id);
     }
     return [...losers].sort();
