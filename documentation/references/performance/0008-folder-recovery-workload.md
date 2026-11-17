@@ -1,6 +1,6 @@
 # Folder recovery workload
 
-The [PRD 0015](../../requirement-book/book.json) large workload. One
+The [canonical recovery requirements](../../requirement-book/book.json) large workload. One
 account's laptop captures a fixed 5 GiB project folder, uploads it, and turns off. A second computer
 signs in, downloads every byte and restores the folder through `pst projects folder restore`. Record
 sync and a second account must keep progressing while the large files transfer. This is a
@@ -42,7 +42,9 @@ the runner stops the desktop right after the restore, before it uploads that fol
 ## Results, 2026-11-07
 
 Apple M5, 10 cores, 32 GiB RAM, macOS 26 (Darwin 25.5.0), Bun 1.4.4, compiled host from the PS-1069
-qualification branch. Other agents were running on the machine, so treat the times as one sample.
+qualification branch, before #1957 moved capture and verification to workers. Other agents were
+running on the machine, so treat the times as one historical sample, not a measurement of the current
+worker implementation.
 
 | Phase | Time | Throughput |
 | --- | ---: | ---: |
@@ -72,8 +74,10 @@ peer 82 MB.
 
 - The packaged peer stands in for the relay, account manager and object store on one machine. It does
   not establish hosted throughput, capacity or cost; hosted acceptance remains PS-789.
-- Downloads fetch one 1 MiB chunk at a time and capture runs on the host's main thread. Both bound
-  throughput; record saves still completed throughout.
+- Downloads fetch one 1 MiB chunk at a time. In the recorded sample capture also ran on the host's
+  main thread; record saves still completed throughout. Since #1957, capture and publish/download
+  verification run in Bun workers. This reference has no new fixed-workload measurement after that
+  change and no completed sample for the tightened notes-stream-specific progress probe.
 - The desktop's 1.26 GB download peak is the largest memory use in the run and has not been profiled.
 - A restored folder is sealed again with new chunk IDs, so the restoring computer uploads the whole
   folder once more as its own copy. The runner stops the desktop before that upload.

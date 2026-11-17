@@ -363,6 +363,8 @@ R1–R60 and refined decisions retained as proposed intent; implementation evide
 
 Not carried as independent requirements: Historical architecture comparison and superseded relay design.
 
+The recovery evidence reconciliation in #2123 changes no normative intent. Its distinction between historical 5 GiB results and current worker implementation remains in [the workload reference](../references/performance/0008-folder-recovery-workload.md). Extension execution safety, platform capability and the notes-stream-specific workload remain acceptance work; this migration does not qualify them.
+
 ## documentation/guidance/0001-mission.md
 
 Product policy moves to the canonical book; procedural guidance remains in its existing location.
