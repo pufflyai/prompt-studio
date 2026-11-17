@@ -142,126 +142,135 @@ test("an online owner's queue recovers by itself after its automatic refresh als
   await expect(draft).toHaveText("Keep queue recovery draft");
 });
 
-test("remote workspaces open synced history; offline sessions stay readable and new drafts choose a device", async ({
-  page,
-  request,
-}) => {
-  const main = page.locator('[data-workbench-panel="main"]');
-  await page.addInitScript((projectId: string) => {
-    localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
-    localStorage.setItem(
-      `pstdio-dashboard:command-params:recent-harness:${projectId}`,
-      JSON.stringify({ harnessId: "pstdio.pstdio-browser-remote.harness.browser-remote" }),
-    );
-  }, fixture.projectId);
-  await page.goto(sessionUrl());
-  const fileRequests: string[] = [];
-  page.on("request", (request) => {
-    if (
-      request.url().includes(`/v1/workspaces/${fixture.workspaceId}/`) &&
-      /\/(files|file|diff)(\?|$)/.test(request.url())
-    )
-      fileRequests.push(request.url());
+test.describe(() => {
+  test.beforeAll("Enable Workspaces for the history view", async ({ request }) => {
+    const enabled = await request.post(`${fixture.origin}/fixture/action`, {
+      data: { action: "enable-workspaces" },
+    });
+    await expect(enabled).toBeOK();
   });
-  await main.getByRole("button", { name: "Open workspace", exact: true }).click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.workspaces\/history\?/);
-  await expect(
-    page
-      .getByRole("region", { name: "Main", exact: true })
-      .getByRole("option")
-      .filter({ hasText: "Remote conversation" }),
-  ).toBeVisible();
-  await expect(page.getByRole("tab", { name: "Changes", exact: true })).toHaveCount(0);
-  expect(fileRequests).toEqual([]);
-  const queuedResponse = await request.post(`${fixture.origin}/v1/sessions/${fixture.sessionId}/follow-up`, {
-    data: { prompt: "Readable offline queue" },
-  });
-  expect(queuedResponse.ok()).toBe(true);
-  // An incomplete saved queue must not hide essential controls for an online owner.
-  await request.post(`${fixture.origin}/fixture/action`, { data: { action: "queue-unavailable" } });
-  await page.goto(sessionUrl());
-  await expect(main.getByRole("button", { name: "Refresh queue", exact: true })).toBeVisible();
-  await expect(
-    main.getByRole("button", { name: "Edit queued message: Readable offline queue", exact: true }),
-  ).toHaveCount(0);
-  await expect(main.getByText(/Laptop is offline/).filter({ visible: true })).toHaveCount(0);
-  await expect(
-    main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
-  ).toHaveAttribute("contenteditable", "true");
-  await main
-    .locator('[data-testid="content-editable"][contenteditable="true"]')
-    .filter({ visible: true })
-    .fill("Keep this draft while refreshing");
-  await expect(main.getByRole("button", { name: "Stop Response", exact: true })).toBeVisible();
-  await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toBeVisible();
-  await main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }).fill("");
-  await request.post(`${fixture.origin}/fixture/action`, { data: { action: "queue-available" } });
-  await expect(main.getByRole("button", { name: "Refresh queue", exact: true })).toHaveCount(0);
-  await expect(
-    main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
-  ).toHaveAttribute("contenteditable", "true");
-  await request.post(`${fixture.origin}/fixture/action`, { data: { action: "offline" } });
-  await page.goto(sessionUrl());
-  await expect(
-    page
-      .getByText(/Laptop is offline/)
+
+  test("remote workspaces open synced history; offline sessions stay readable and new drafts choose a device", async ({
+    page,
+    request,
+  }) => {
+    const main = page.locator('[data-workbench-panel="main"]');
+    await page.addInitScript((projectId: string) => {
+      localStorage.setItem("onboarding-complete", "true");
+      localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
+      localStorage.setItem(
+        `pstdio-dashboard:command-params:recent-harness:${projectId}`,
+        JSON.stringify({ harnessId: "pstdio.pstdio-browser-remote.harness.browser-remote" }),
+      );
+    }, fixture.projectId);
+    await page.goto(sessionUrl());
+    const fileRequests: string[] = [];
+    page.on("request", (request) => {
+      if (
+        request.url().includes(`/v1/workspaces/${fixture.workspaceId}/`) &&
+        /\/(files|file|diff)(\?|$)/.test(request.url())
+      )
+        fileRequests.push(request.url());
+    });
+    await main.getByRole("button", { name: "Open workspace", exact: true }).click();
+    await expect(page).toHaveURL(/\/extensions\/pstdio\.workspaces\/history\?/);
+    await expect(
+      page
+        .getByRole("region", { name: "Main", exact: true })
+        .getByRole("option")
+        .filter({ hasText: "Remote conversation" }),
+    ).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Changes", exact: true })).toHaveCount(0);
+    expect(fileRequests).toEqual([]);
+    const queuedResponse = await request.post(`${fixture.origin}/v1/sessions/${fixture.sessionId}/follow-up`, {
+      data: { prompt: "Readable offline queue" },
+    });
+    expect(queuedResponse.ok()).toBe(true);
+    // An incomplete saved queue must not hide essential controls for an online owner.
+    await request.post(`${fixture.origin}/fixture/action`, { data: { action: "queue-unavailable" } });
+    await page.goto(sessionUrl());
+    await expect(main.getByRole("button", { name: "Refresh queue", exact: true })).toBeVisible();
+    await expect(
+      main.getByRole("button", { name: "Edit queued message: Readable offline queue", exact: true }),
+    ).toHaveCount(0);
+    await expect(main.getByText(/Laptop is offline/).filter({ visible: true })).toHaveCount(0);
+    await expect(
+      main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
+    ).toHaveAttribute("contenteditable", "true");
+    await main
+      .locator('[data-testid="content-editable"][contenteditable="true"]')
       .filter({ visible: true })
-      .first(),
-  ).toBeVisible();
-  await expect(main.getByText("Working on Laptop.", { exact: true }).filter({ visible: true }).first()).toBeVisible();
-  await expect(
-    main.getByText("Readable offline queue", { exact: true }).filter({ visible: true }).first(),
-  ).toBeVisible();
-  await expect(
-    main.getByRole("button", { name: "Edit queued message: Readable offline queue", exact: true }),
-  ).toHaveCount(0);
-  await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
-  await expect(
-    page
-      .locator('[data-testid="content-editable"][contenteditable]:not([contenteditable="false"])')
-      .filter({ visible: true }),
-  ).toHaveCount(0);
-  await expect(main.getByRole("button", { name: "Stop Response", exact: true })).toHaveCount(0);
-  await page.screenshot({ path: test.info().outputPath("offline-readable.png") });
-  // Preserve the reconnect/presence race at the actual server-side owner boundary.
-  await request.post(`${fixture.origin}/fixture/action`, { data: { action: "hold-presence" } });
-  try {
-    await request.post(`${fixture.origin}/fixture/action`, { data: { action: "online" } });
-    await main.getByRole("button", { name: "Check connection", exact: true }).click();
-  } finally {
-    await request.post(`${fixture.origin}/fixture/action`, { data: { action: "release-presence" } });
-  }
-  await expect(
-    main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
-  ).toHaveAttribute("contenteditable", "true");
-  await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toBeVisible();
-  await expect(
-    main.getByRole("button", { name: "Edit queued message: Readable offline queue", exact: true }),
-  ).toBeVisible();
-  await expect(main.getByText(/Laptop is offline/).filter({ visible: true })).toHaveCount(0);
-  await page.goto(
-    `${fixture.origin}/projects/${fixture.projectId}/extensions/pstdio.session-browser/conversations/compose`,
-  );
-  // Drafts expose the shared device selector only when this account has multiple devices.
-  await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
-  await main.getByRole("button", { name: "Select device", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Laptop", exact: true }).click();
-  await expect(main.getByRole("button", { name: "Select workspace", exact: true })).toContainText("Laptop workspace");
-  const editor = main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true });
-  await editor.fill("New session on Laptop");
-  await page.reload();
-  await expect(editor).toHaveText("New session on Laptop");
-  await expect(main.getByRole("button", { name: "Select device", exact: true })).toContainText("Laptop");
-  await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
-  await main.getByTestId("send-message-button").filter({ visible: true }).click();
-  await expect(main.getByText("Working on Laptop.", { exact: true }).filter({ visible: true }).first()).toBeVisible();
-  await expect(main.getByRole("button", { name: "Select device", exact: true })).toHaveCount(0);
-  await expect
-    .poll(async () => {
-      const state = await (await request.get(`${fixture.origin}/fixture/state`)).json();
-      expect(state.sourceSessions).toEqual([]);
-      return state.targetSessions.some((session: { title: string }) => session.title === "New session on Laptop");
-    })
-    .toBe(true);
+      .fill("Keep this draft while refreshing");
+    await expect(main.getByRole("button", { name: "Stop Response", exact: true })).toBeVisible();
+    await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toBeVisible();
+    await main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }).fill("");
+    await request.post(`${fixture.origin}/fixture/action`, { data: { action: "queue-available" } });
+    await expect(main.getByRole("button", { name: "Refresh queue", exact: true })).toHaveCount(0);
+    await expect(
+      main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
+    ).toHaveAttribute("contenteditable", "true");
+    await request.post(`${fixture.origin}/fixture/action`, { data: { action: "offline" } });
+    await page.goto(sessionUrl());
+    await expect(
+      page
+        .getByText(/Laptop is offline/)
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible();
+    await expect(main.getByText("Working on Laptop.", { exact: true }).filter({ visible: true }).first()).toBeVisible();
+    await expect(
+      main.getByText("Readable offline queue", { exact: true }).filter({ visible: true }).first(),
+    ).toBeVisible();
+    await expect(
+      main.getByRole("button", { name: "Edit queued message: Readable offline queue", exact: true }),
+    ).toHaveCount(0);
+    await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
+    await expect(
+      page
+        .locator('[data-testid="content-editable"][contenteditable]:not([contenteditable="false"])')
+        .filter({ visible: true }),
+    ).toHaveCount(0);
+    await expect(main.getByRole("button", { name: "Stop Response", exact: true })).toHaveCount(0);
+    await page.screenshot({ path: test.info().outputPath("offline-readable.png") });
+    // Preserve the reconnect/presence race at the actual server-side owner boundary.
+    await request.post(`${fixture.origin}/fixture/action`, { data: { action: "hold-presence" } });
+    try {
+      await request.post(`${fixture.origin}/fixture/action`, { data: { action: "online" } });
+      await main.getByRole("button", { name: "Check connection", exact: true }).click();
+    } finally {
+      await request.post(`${fixture.origin}/fixture/action`, { data: { action: "release-presence" } });
+    }
+    await expect(
+      main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
+    ).toHaveAttribute("contenteditable", "true");
+    await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toBeVisible();
+    await expect(
+      main.getByRole("button", { name: "Edit queued message: Readable offline queue", exact: true }),
+    ).toBeVisible();
+    await expect(main.getByText(/Laptop is offline/).filter({ visible: true })).toHaveCount(0);
+    await page.goto(
+      `${fixture.origin}/projects/${fixture.projectId}/extensions/pstdio.session-browser/conversations/compose`,
+    );
+    // Drafts expose the shared device selector only when this account has multiple devices.
+    await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
+    await main.getByRole("button", { name: "Select device", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Laptop", exact: true }).click();
+    await expect(main.getByRole("button", { name: "Select workspace", exact: true })).toContainText("Laptop workspace");
+    const editor = main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true });
+    await editor.fill("New session on Laptop");
+    await page.reload();
+    await expect(editor).toHaveText("New session on Laptop");
+    await expect(main.getByRole("button", { name: "Select device", exact: true })).toContainText("Laptop");
+    await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
+    await main.getByTestId("send-message-button").filter({ visible: true }).click();
+    await expect(main.getByText("Working on Laptop.", { exact: true }).filter({ visible: true }).first()).toBeVisible();
+    await expect(main.getByRole("button", { name: "Select device", exact: true })).toHaveCount(0);
+    await expect
+      .poll(async () => {
+        const state = await (await request.get(`${fixture.origin}/fixture/state`)).json();
+        expect(state.sourceSessions).toEqual([]);
+        return state.targetSessions.some((session: { title: string }) => session.title === "New session on Laptop");
+      })
+      .toBe(true);
+  });
 });
