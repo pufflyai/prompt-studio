@@ -9,9 +9,9 @@ import {
   params,
   type ResourceRef,
 } from "@pstdio/sdk/extensions";
+import { readTicketAttempts } from "../data/attempt-queries";
 import { putAttempt, readAttempt } from "../data/attempt-storage";
 import type { AttemptRecord, ActorRef as PlannerActor } from "../data/attempt-types";
-import { readTicketAttempts } from "../data/attempt-queries";
 import { findTicket } from "../data/resolve";
 import { withQueuedWriteGuard } from "../data/write-guard";
 

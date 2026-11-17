@@ -1,5 +1,6 @@
 import type { ExtensionStorageApi, StoragePredicate } from "@pstdio/sdk/extensions";
 import { answeredReviewRequest, pendingReviewRequest } from "./review-query-indexes";
+import { preparePlannerIndexes } from "./storage-indexes";
 
 export const readReviewCounts = async (storage: ExtensionStorageApi, ids: string[]) => {
   if (!ids.length) return new Map<string, { total: number; pending: number; answered: number }>();
@@ -9,6 +10,7 @@ export const readReviewCounts = async (storage: ExtensionStorageApi, ids: string
       for (const [id, counts] of await readReviewCounts(storage, ids.slice(start, start + 100))) result.set(id, counts);
     return result;
   }
+  await preparePlannerIndexes(storage);
   const selected: StoragePredicate = { field: "ticketId", op: "in", value: ids };
   const count = (where?: StoragePredicate) =>
     storage.records.aggregate({
