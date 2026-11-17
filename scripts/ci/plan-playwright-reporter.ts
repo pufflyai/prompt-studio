@@ -10,7 +10,10 @@ interface Case {
 // Structural reporter types keep scope planning independent of installed Playwright.
 export default class PlanReporter {
   private selected: Case[] = [];
-  private finished = new Map<string, { id: string; file: string; outcome: string; retry: number; title: string }>();
+  private finished = new Map<
+    string,
+    { id: string; file: string; outcome: string; retry: number; title: string; errorMessages: string[] }
+  >();
   private errors: string[] = [];
   private shard = "1/1";
   onBegin(config: { shard?: { current: number; total: number } }, suite: { allTests(): Case[] }) {
@@ -18,7 +21,7 @@ export default class PlanReporter {
     this.shard = config.shard ? `${config.shard.current}/${config.shard.total}` : "1/1";
     if (this.shard !== process.env.CI_PLAN_SHARD) this.errors.push("Unexpected Playwright shard");
   }
-  onTestEnd(test: Case, result: { status: string; retry: number }) {
+  onTestEnd(test: Case, result: { status: string; retry: number; errors?: { message?: string }[] }) {
     if (this.finished.has(test.id)) this.errors.push(`Repeated case: ${test.id}`);
     this.finished.set(test.id, {
       id: test.id,
@@ -26,6 +29,7 @@ export default class PlanReporter {
       file: relative(process.env.CI_TEST_ROOT!, test.location.file).replaceAll("\\", "/"),
       outcome: result.status,
       retry: result.retry,
+      errorMessages: (result.errors ?? []).map((error) => error.message ?? "Unknown Playwright case error"),
     });
   }
   onError(error: { message?: string }) {

@@ -10,6 +10,7 @@ interface ReportedCase {
   file: string;
   title: string;
   outcome: string;
+  errorMessages?: string[];
 }
 const matchesTitle = (title: string, name: string) => title === name || title.endsWith(` > ${name}`);
 const matchesCase = (actual: ReportedCase, expected: ExpectedCase) =>
@@ -21,7 +22,18 @@ export const verifyBunQuarantineCases = (reported: ReportedCase[], expected: Exp
     const found = reported.filter((actual) => matchesCase(actual, entry));
     if (found.length !== 1 || !["success", "failure"].includes(found[0]!.outcome))
       throw new Error(`Quarantine case must execute exactly once: ${entry.file}: ${entry.name}`);
-    if (found[0]!.outcome === "failure") failures++;
+    const actual = found[0]!;
+    if (actual.outcome === "failure") {
+      const signature = entry.failureMessageIncludes;
+      if (
+        signature &&
+        (!signature.length ||
+          !actual.errorMessages?.length ||
+          actual.errorMessages.some((message) => !signature.every((text) => message.includes(text))))
+      )
+        throw new Error(`Unexpected quarantine failure: ${entry.file}: ${entry.name}`);
+      failures++;
+    }
   }
   if (reported.some((actual) => actual.outcome !== "skipped" && !expected.some((entry) => matchesCase(actual, entry))))
     throw new Error("Unexpected quarantine execution");
@@ -69,19 +81,14 @@ export const verifyPlaywrightQuarantineReport = (
     const results = entry.tests.flatMap((test) => test.results);
     if (results.length !== 1 || !["passed", "failed", "timedOut"].includes(results[0]!.status))
       throw new Error(`Quarantine case must execute exactly once: ${entry.title}`);
-    const actual = {
+    const result = results[0]!;
+    const errors = result.errors?.length ? result.errors : [result.error];
+    return {
       file: relative(root, resolve(report.config.rootDir, entry.file)).replaceAll("\\", "/"),
       title: entry.title,
       outcome: results[0]!.status === "passed" ? "success" : "failure",
+      errorMessages: errors.map((error) => error?.message ?? "Unknown Playwright case error"),
     };
-    const signature = expected.find((candidate) => matchesCase(actual, candidate))?.failureMessageIncludes;
-    if (actual.outcome === "failure" && signature) {
-      const result = results[0]!;
-      const errors = result.errors?.length ? result.errors : [result.error];
-      if (!signature.length || errors.some((error) => !signature.every((text) => error?.message?.includes(text))))
-        throw new Error(`Unexpected quarantine failure: ${actual.file}: ${actual.title}`);
-    }
-    return actual;
   });
   return verifyBunQuarantineCases(records, expected);
 };
