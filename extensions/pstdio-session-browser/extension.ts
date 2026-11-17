@@ -1,4 +1,5 @@
 import {
+  type ControlValueMap,
   defineExtension,
   defineKeybinding,
   defineNavigationItem,
@@ -20,7 +21,6 @@ import { act } from "./src/actions";
 import { browse, browsePage, search } from "./src/browse";
 import { connectionRefresh } from "./src/controls";
 import { copySessionId } from "./src/copy-session-id";
-import { readDraft, saveDraft } from "./src/drafts";
 import { listSessionLinks } from "./src/linked-resources";
 import { acknowledgeNativeInputs } from "./src/native-recovery";
 import { nativeSubmissionIndex } from "./src/native-submission";
@@ -59,12 +59,11 @@ const conversation = defineView({
       controls: composerControls,
     },
     refreshEvents: [viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged],
-    query: (ctx, { renderer }) => readSnapshot(ctx, renderer.resource),
-    loadDraft: (ctx, { draftKey }) => readDraft(ctx, draftKey),
-    saveDraft: async (ctx, { renderer, draftKey, draft }) => {
-      await saveDraft(ctx, draftKey, draft);
-      const id = sessionId(renderer.resource);
-      if (id) await acknowledgeNativeInputs(ctx, id, draft);
+    query: (ctx, { renderer, values }) => readSnapshot(ctx, renderer.resource, values as ControlValueMap | undefined),
+    saveDraft: async (ctx, input) => {
+      const id = sessionId(input.renderer.resource);
+      const client = "draftClientId" in input ? input.draftClientId : undefined;
+      if (id && typeof client === "string") await acknowledgeNativeInputs(ctx, id, input.draft, client);
     },
     stream: watch.ref,
     onAction: act,

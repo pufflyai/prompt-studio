@@ -22,6 +22,7 @@ interface ChatRendererSessionOwner {
   render: WorkbenchPanelRenderInput;
   registration: RegisterWorkbenchExtensionContributionsInput;
   presentationKey: string;
+  draftClientId?: string;
   releaseDrafts?(): void;
   bindings?: ReturnType<typeof createChatRendererBindings>;
   untrack?(): void;
@@ -109,7 +110,7 @@ export const createChatRendererOwner = (
       });
     };
     if (!owner) {
-      const { session, releaseDrafts, isSource } = createChatSessionProvider({
+      const { session, releaseDrafts, isSource, draftClientId } = createChatSessionProvider({
         input: () => owner?.registration ?? registration,
         view,
         render,
@@ -119,7 +120,7 @@ export const createChatRendererOwner = (
         binding,
         idle: retention.trim,
       });
-      owner = { session, render, registration, presentationKey: crypto.randomUUID(), releaseDrafts };
+      owner = { session, render, registration, presentationKey: crypto.randomUUID(), releaseDrafts, draftClientId };
       sessions.set(key, owner);
       const capturedOwner = owner;
       owner.bindings = createChatRendererBindings({
@@ -137,14 +138,15 @@ export const createChatRendererOwner = (
         session.query.dispose();
       });
     }
-    const { session } = owner;
+    const { session, draftClientId } = owner;
     owner.bindings!.attach(render, registration, token);
     const { required: run } = binding();
     return {
       session,
       key: owner.presentationKey,
       linkHandler: createChatLinkHandler(session, body, run),
-      action: (action: Parameters<ChatSession["run"]>[0]) => run(body.actionHandlerId, { action }),
+      action: (action: Parameters<ChatSession["run"]>[0]) =>
+        run(body.actionHandlerId, { action, ...(draftClientId && { draftClientId }) }),
     };
   };
   return {

@@ -171,7 +171,12 @@ not locally owned. Replacing the complete draft values (including restoring a
 recovered draft) releases ownership of removed keys, allowing current defaults to
 fill those keys again.
 
-`loadDraft` and `saveDraft` use extension-owned project storage. Persist the complete
+Sessions keeps its composer in browser storage. Its `legacySessionDraft` declaration
+omits `loadDraft` and opts into local persistence. The query receives local
+control values to construct composer controls. The save callback acknowledges only
+the original submission from a recovery event, after the browser saves it.
+
+For views with a provider-managed loader, `loadDraft` and `saveDraft` control persistence. Persist the complete
 `ChatDraft`, including `recovered`. Saves wait for hydration and follow edit order.
 When typing races an older saved draft, both texts and attachment lists survive.
 Restore saved draft swaps them without discarding current work. Failed hydration
@@ -224,8 +229,6 @@ that public context for workspace navigation and scoped links; it grants no loca
 execution ownership or cross-project access.
 A logical default workspace can have no local folder. Harnesses with optional cwd
 can start there; harnesses requiring files receive the existing folder setup error.
-Use project `ctx.storage.files` and a small record pointer for durable draft bodies
-when a project has no folder.
 `resolveLink` confirms resource candidates and returns a label, icon and href;
 `resolveImage` resolves image sources through scoped file APIs. Opening links
 dispatches `openLink`; resource buttons dispatch `openResource`. Use public

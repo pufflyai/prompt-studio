@@ -1,15 +1,13 @@
 import type { ChatRendererSnapshot, ControlValueMap, ExtensionContextBase, ResourceRef } from "@pstdio/sdk/extensions";
 import { commandDraftTag, commandIntent, commandSuggestions } from "./command-intent";
 import { composerControls, conversationOperations } from "./controls";
-import { readDraft } from "./drafts";
 import { selectedHarness, selectedWorkspace } from "./selection";
 import { workspaceSnapshot } from "./workspace";
 
-const initialDraftValues = (resource: ResourceRef | undefined, saved: ControlValueMap, override?: ControlValueMap) => ({
+const initialDraftValues = (resource: ResourceRef | undefined, override?: ControlValueMap) => ({
   harness: { harnessId: typeof resource?.metadata?.agent === "string" ? resource.metadata.agent : "" },
   ...(typeof resource?.metadata?.workspaceId === "string" ? { workspace: resource.metadata.workspaceId } : {}),
   device: typeof resource?.metadata?.deviceId === "string" ? resource.metadata.deviceId : "",
-  ...saved,
   ...override,
 });
 
@@ -18,12 +16,8 @@ export const draftSnapshot = async (
   resource?: ResourceRef,
   override?: ControlValueMap,
 ): Promise<ChatRendererSnapshot> => {
-  const [saved, allWorkspaces, devices] = await Promise.all([
-    readDraft(ctx, resource?.id ?? "draft"),
-    ctx.workspaces.list(),
-    ctx.account.devices().catch(() => []),
-  ]);
-  const values: ControlValueMap = initialDraftValues(resource, saved.values, override);
+  const [allWorkspaces, devices] = await Promise.all([ctx.workspaces.list(), ctx.account.devices().catch(() => [])]);
+  const values: ControlValueMap = initialDraftValues(resource, override);
   const deviceId = typeof values.device === "string" ? values.device : "";
   const device = devices.find((device) => device.id === deviceId);
   const remote = Boolean(deviceId && !device?.current);

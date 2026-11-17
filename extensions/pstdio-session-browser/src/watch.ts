@@ -78,7 +78,7 @@ const matchesCanonicalMessages = (messages: SessionMessage[], displayed: Session
 const watchNotice = (current: Awaited<ReturnType<typeof readSessionSnapshot>> | undefined, queueError?: string) =>
   current ? executionNotice(current.reads.execution, queueError) || current.nativeNotice : queueError;
 
-export const watchConversation = async (ctx: CommandContext, resource?: ResourceRef) => {
+export const watchConversation = async (ctx: CommandContext, resource?: ResourceRef, draftClientId?: string) => {
   const id = sessionId(resource);
   // A visible draft retains its shared watch until disposal, without reconnect churn.
   if (!id) return retainDraftWatch(ctx.signal);
@@ -135,6 +135,7 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
     });
     return writes;
   };
+  const restore = (recoverDraft: ChatDraft) => writeEvent({ recoverDraft });
   const write = (snapshot: ChatRendererSnapshot) => {
     if (snapshot.messages) canonicalDisplay = matchesCanonicalMessages(messages, snapshot.messages);
     return writeEvent({ snapshot });
@@ -264,8 +265,8 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
       delete snapshot.streamingStartedAt;
     }
     await write(snapshot);
-    if (result.sessionRead || result.marks.some(([field]) => field === "storage"))
-      await recoverNativeInputs(ctx, id, session, (recoverDraft) => writeEvent({ recoverDraft }), emittedRecovery);
+    if (draftClientId && (result.sessionRead || result.marks.some(([field]) => field === "storage")))
+      await recoverNativeInputs(ctx, id, session, restore, emittedRecovery, draftClientId);
   };
   try {
     stopMetadata = metadata.query.subscribe(changed);
@@ -308,6 +309,9 @@ export const watch = defineCommand({
   id: "watch",
   title: "Watch conversation",
   stream: streamOf<ChatRendererStreamEvent & JsonObject>(),
-  params: { renderer: params.json<{ resource?: ResourceRef }>() },
-  run: (ctx, input) => watchConversation(ctx, input.renderer?.resource ?? ctx.resource),
+  params: {
+    renderer: params.json<{ resource?: ResourceRef }>(),
+    draftClientId: params.text(),
+  },
+  run: (ctx, input) => watchConversation(ctx, input.renderer?.resource ?? ctx.resource, input.draftClientId),
 });

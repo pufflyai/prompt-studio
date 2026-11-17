@@ -8,7 +8,10 @@ Choose **Copy session ID** from a saved session's menu to share its full Prompt 
 
 Other tools use `sessionBrowser` from `@pstdio/sdk/extensions`. This package re-exports the same implementation-free contract from `pstdio-session-browser/refs`. Session and draft resources retain `extensionId: "pstdio"`; navigation refs belong to this provider. New navigation uses provider refs. The host retains deprecated page/panel/command definitions that target the provider renderer, without another chat implementation or persistence owner. Missing or disabled providers use normal unavailable-target feedback.
 
-Draft bodies, files and control values are stored through public project storage, with small record pointers to durable blobs. Projects without a local folder remain supported. The native host transfers legacy `session-drafts` and `session-attachments` snapshots only after a successful durable save. Removing an attachment chip releases that draft reference, not an attachment still used elsewhere.
+Each browser keeps its own draft text, attachment references, and composer settings,
+including for projects without a local folder and for conversations running on another
+device. Main and Side show the same local composer. Sending a message delivers it to
+the session's owner. Removing an attachment chip releases its draft reference.
 
 Creation uses `sessionBrowser.commands.create`. With `side: true`, an optional
 `panel` placement ref selects an existing compatible destination (for example a

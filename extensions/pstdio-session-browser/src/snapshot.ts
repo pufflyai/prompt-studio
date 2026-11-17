@@ -2,7 +2,6 @@ import type { ChatRendererSnapshot, ControlValueMap, ExtensionContextBase, Resou
 import { composerControls, conversationOperations } from "./controls";
 import { conversationState } from "./conversation-state";
 import { draftSnapshot } from "./draft-snapshot";
-import { readDraft } from "./drafts";
 import { nativePresentation } from "./native-presentation";
 import { sessionId } from "./resource";
 import { readSnapshotInputs, readSnapshotWorkspace, type SnapshotOptions, type SnapshotReads } from "./snapshot-reads";
@@ -84,14 +83,7 @@ export const readSessionSnapshot = async (
   const nativeProjection =
     !nativeRead && options.previous?.native
       ? options.previous.native
-      : await nativePresentation(
-          ctx,
-          id,
-          harness,
-          session.agent ?? "",
-          values ?? (options.messages === false ? undefined : (await readDraft(ctx, id)).values),
-          session,
-        );
+      : await nativePresentation(ctx, id, harness, session.agent ?? "", values, session);
   const { notice: nativeNotice, ...native } = nativeProjection;
   Object.assign(snapshot, native);
   // Queue/device feedback has priority; an explicit empty notice retires earlier native failures.

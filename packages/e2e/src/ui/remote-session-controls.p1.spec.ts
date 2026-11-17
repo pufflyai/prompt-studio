@@ -21,6 +21,7 @@ const sessionUrl = () =>
 test("remote primary controls keep commands, queues, questions and approvals on their online owner", async ({
   page,
   request,
+  browser,
 }) => {
   const main = page.locator('[data-workbench-panel="main"]');
   await page.addInitScript((projectId: string) => {
@@ -44,6 +45,25 @@ test("remote primary controls keep commands, queues, questions and approvals on 
   await expect(editor).toHaveAttribute("contenteditable", "true");
   await expect(main.getByText("Working on Laptop.", { exact: true }).filter({ visible: true }).first()).toBeVisible();
   await editor.fill("Queued from the browser");
+  const otherBrowser = await browser.newContext();
+  try {
+    await otherBrowser.addInitScript((projectId: string) => {
+      localStorage.setItem("onboarding-complete", "true");
+      localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
+    }, fixture.projectId);
+    const otherPage = await otherBrowser.newPage();
+    await otherPage.goto(sessionUrl());
+    const otherDraft = otherPage
+      .locator('[data-workbench-panel="main"] [data-testid="content-editable"][contenteditable="true"]')
+      .filter({ visible: true });
+    await expect(otherDraft).toHaveText("");
+    await otherDraft.fill("Second browser draft");
+    await otherPage.reload();
+    await expect(otherDraft).toHaveText("Second browser draft");
+    await expect(editor).toHaveText("Queued from the browser");
+  } finally {
+    await otherBrowser.close();
+  }
   // The initial stream can carry a saved read-only queue before the owner read recovers.
   // Select the actual queue action, not the same toolbar button while it still means Stop.
   await main.getByRole("button", { name: "Queue message", exact: true }).click();
@@ -229,13 +249,7 @@ test("remote workspaces open synced history; offline sessions stay readable and 
   await page.getByRole("menuitem", { name: "Laptop", exact: true }).click();
   await expect(main.getByRole("button", { name: "Select workspace", exact: true })).toContainText("Laptop workspace");
   const editor = main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true });
-  const saved = page.waitForResponse(
-    (response) =>
-      response.url().endsWith("/extensions/commands/pstdio.session-browser.view.conversation.chat.saveDraft/execute") &&
-      response.request().postDataJSON()?.params?.draft?.text === "New session on Laptop",
-  );
   await editor.fill("New session on Laptop");
-  expect((await saved).ok()).toBe(true);
   await page.reload();
   await expect(editor).toHaveText("New session on Laptop");
   await expect(main.getByRole("button", { name: "Select device", exact: true })).toContainText("Laptop");
