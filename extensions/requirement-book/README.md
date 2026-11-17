@@ -18,4 +18,4 @@ Evidence collection, observations, source inspectors and automatic evidence chec
 
 People and agents use the same public commands. `read --query` searches intent, `get --reference` retrieves one rule, and `read --revision accepted` reads the configured target branch. `book validate` and `book import` support complete-book changes with schema, reference, retired-identity and target-digest checks. Import refuses surviving legacy requirement authorities.
 
-The populated working migration remains subject to repository review; the accepted branch changes only after merge. This extension is installed locally and is not in the default catalog.
+The populated working migration remains subject to repository review. The accepted branch changes only after merge. Install Requirement Book from a local checkout. Marketplace downloads and packaged releases exclude it.
