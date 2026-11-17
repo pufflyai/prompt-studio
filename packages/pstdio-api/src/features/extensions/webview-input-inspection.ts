@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { isMainThread } from "node:worker_threads";
+import { restoreRuntimeModuleImports, snapshotRuntimeModuleImports } from "pstdio-extensions/revision-dependencies";
 import { isPackagedRuntime } from "pstdio-paths";
 import { withExtensionWebviewBuildSlot } from "./extension-webview-builder";
 import { runCommand } from "./install-extension-dependencies";
@@ -18,18 +19,20 @@ export const inspectWebviewDependencyInputs = async (
     signal?.throwIfAborted();
     const env = { ...process.env };
     delete env.BUN_BE_BUN;
+    const imports = snapshotRuntimeModuleImports();
     const result = await runCommand(
       process.execPath,
       isPackagedRuntime()
         ? ["extension-input-inspector"]
         : [fileURLToPath(new URL("./webview-input-inspector.entry.ts", import.meta.url))],
-      { cwd: packagePath, env, signal, stdin: JSON.stringify({ packagePath, entryPaths }) },
+      { cwd: packagePath, env, signal, stdin: JSON.stringify({ packagePath, entryPaths, imports }) },
     );
     signal?.throwIfAborted();
     if (result.exitCode !== 0) throw new Error(result.stderr.trim() || "Extension frontend input inspection failed.");
-    const digest: unknown = JSON.parse(result.stdout);
-    if (typeof digest !== "string" || !/^[a-f0-9]{64}$/.test(digest))
+    const output = JSON.parse(result.stdout) as { digest?: unknown; imports?: unknown } | null;
+    if (typeof output?.digest !== "string" || !/^[a-f0-9]{64}$/.test(output.digest))
       throw new Error("Invalid extension frontend input digest.");
-    return digest;
+    restoreRuntimeModuleImports(output.imports);
+    return output.digest;
   });
 };
