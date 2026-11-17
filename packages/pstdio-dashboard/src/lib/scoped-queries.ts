@@ -1,5 +1,6 @@
 import type { AccountStatus } from "@pstdio/sdk/client";
 import { accountEvents, createScopedQueryClient } from "@pstdio/sdk/extensions";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import {
   publishExtensionEvent,
   subscribeToExtensionEventFeed,
@@ -41,8 +42,13 @@ const runtimeQueries = createRuntimeState(
       authority.invalidate({ ...event, type: "changed" });
     }, owner);
     const stopReset = subscribeToExtensionEventReset((event) => {
-      queries.invalidate({ ...event, type: "reset" });
-      authority.invalidate({ ...event, type: "reset" });
+      const reset = {
+        ...event,
+        ...(event.extensionId ? { extensionId: canonicalExtensionId(event.extensionId) } : {}),
+        type: "reset" as const,
+      };
+      queries.invalidate(reset);
+      authority.invalidate(reset);
     }, owner);
     const stopCatalog = subscribeExtensionCatalogChanges(owner, (event) => publishExtensionEvent(event, owner));
     // One event-driven identity guard remains active for this runtime; there is no timer.
