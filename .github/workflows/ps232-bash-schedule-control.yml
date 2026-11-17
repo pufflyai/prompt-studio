@@ -1,0 +1,52 @@
+name: PS232 original Bash schedule control
+on:
+  push:
+    branches: [test/ps232-bash-schedule-control-20261117]
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+env:
+  NX_DAEMON: "false"
+  CI_PRIORITY: P0
+  TEST_PRIORITIES: P0
+  LERNA_FILTER: '--scope @pstdio/desktop --scope @pstdio/workbench --scope canvas --scope dev --scope git-workspaces --scope harness-copilot --scope planner --scope pstdio-api-contracts --scope pstdio-db --scope pstdio-file-types --scope pstdio-relay --scope pstdio-skill-browser --scope pstdio-theme --scope reports --scope social-radar'
+jobs:
+  schedule:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [overlap, serial]
+    env:
+      DIAGNOSTIC_SCHEDULE: ${{ matrix.mode }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: ./.github/actions/setup-ci-cache
+      - name: Bind original source and schedule inputs
+        run: |
+          mkdir -p test-results/bash-startup/checks
+          git rev-parse HEAD HEAD^{tree}
+          cat /etc/profile > test-results/bash-startup/system-profile.txt
+          /bin/bash --version > test-results/bash-startup/bash-version.txt
+      - name: Build original package owners and dependencies
+        run: bun run build -- $LERNA_FILTER --include-dependencies --no-bail
+      - name: Run original sorted 54-file Desktop owner with actual 15-owner lint schedule
+        run: bun scripts/diagnostics/ps232-bash-schedule.ts
+      - name: Retain schedule evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps232-bash-${{ matrix.mode }}-attempt-${{ github.run_attempt }}
+          path: |
+            test-results/bash-startup
+            test-results/ci
+          if-no-files-found: error
