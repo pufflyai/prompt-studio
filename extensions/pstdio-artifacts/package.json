@@ -1,6 +1,6 @@
 {
   "name": "artifacts",
-  "version": "0.46.1",
+  "version": "0.47.0",
   "displayName": "Artifacts",
   "description": "Publish interactive HTML pages and browse their saved revisions.",
   "publisher": "pstdio",

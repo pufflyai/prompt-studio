@@ -1,5 +1,22 @@
 # Prompt Studio Skills
 
+## 0.46.0
+
+_2026-11-17_
+
+### Minor Changes
+
+- 52fbda2: Use canonical first-party package names and concise Notes commands on migration-capable API 0.5 hosts. Remove declared global CLI shortcuts and use publisher-qualified Planner and Reports commands.
+
+### Patch Changes
+
+- 6df8aac: Clarify committed-candidate validation, reuse of unchanged passing checks, and refreshing skills with a compatible installed host.
+- b510245: Prepare bundled extensions for API 0.5 without dropping their existing host ranges, and return Planner, Reports and Artifacts paths and links using the host-provided owner.
+
+  Use publisher-qualified Planner and Reports commands in shipped skills, prompts, help examples and documentation so agent instructions also work after the API 0.5 shortcut removal.
+
+  Keep ticket page ancestry and fresh draft ignore rules on the host-provided owner, including timeline rows, pulls and workspace provisioning.
+
 ## 0.45.2
 
 _2026-11-12_

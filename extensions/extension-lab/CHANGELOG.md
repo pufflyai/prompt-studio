@@ -6,6 +6,24 @@ _2026-11-12_
 
 ### Minor Changes
 
+- 324e652: Preserve shared project and document state while views switch or reopen, adopt retained read owners and scoped invalidation, and keep required saves and bounded recovery work with their domain owners.
+
+### Patch Changes
+
+- b510245: Prepare bundled extensions for API 0.5 without dropping their existing host ranges, and return Planner, Reports and Artifacts paths and links using the host-provided owner.
+
+  Use publisher-qualified Planner and Reports commands in shipped skills, prompts, help examples and documentation so agent instructions also work after the API 0.5 shortcut removal.
+
+  Keep ticket page ancestry and fresh draft ignore rules on the host-provided owner, including timeline rows, pulls and workspace provisioning.
+
+- 7f6118f: Choose Marmalade tools with single keys from shortcut mode, so Extension Lab loads on hosts that reject direct typing shortcuts.
+
+## 0.47.0
+
+_2026-11-12_
+
+### Minor Changes
+
 - 547e56b: Keep Canvas and Lab state in ordered record fields, migrate retained shared content, and document explicit collaborative text and paged logs.
 
 ### Patch Changes
