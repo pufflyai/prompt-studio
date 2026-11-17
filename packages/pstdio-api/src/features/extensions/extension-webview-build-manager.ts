@@ -100,7 +100,7 @@ const currentSourceLoader =
   (
     input: CreateExtensionWebviewBuildManagerInput,
     backoff: ReturnType<typeof createWebviewBuildBackoff>,
-    loadSource: typeof inspectWebviewSource,
+    loadSource: Parameters<typeof loadCurrentWebviewSource>[0]["loadSource"],
     getInstalledSource: ReturnType<typeof installedSourceGetter>,
     isDisposed: () => boolean,
   ) =>
@@ -135,7 +135,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
   const pending = createPendingWebviewChecks((id, webviews) => {
     if (!disposed) checked.set(id, new Set(webviews));
   });
-  const loadSource = input.loadSource ?? inspectWebviewSource;
+  const loadSource = input.loadSource ?? input.inspectSource ?? inspectWebviewSource;
   const webviewCacheRoot = input.webviewCacheRoot ?? defaultWebviewCacheRoot(process.env);
   const { reportResult } = createBuildReporters(input);
   const getInstalledSource = installedSourceGetter(input);
