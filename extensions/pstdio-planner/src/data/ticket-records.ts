@@ -22,9 +22,13 @@ export const ticketRecords = (storage: ExtensionStorageApi) => {
   // Like the collection writes before, a save keeps the observed lifetime: a ticket another
   // device deleted is not brought back, and a stale read is read again before saving.
   const save = async (id: string, value: StoredTicket, requireLive: boolean) => {
+    let seenLive = false;
     for (let attempt = 0; attempt < 5; attempt++) {
       const { record, stored } = await observe(id);
       if (requireLive && !stored) throw new Error(`Item not found: ${id}`);
+      // Deleted while this save retried: the delete wins, as it did for the collection before.
+      if (seenLive && !stored) return;
+      seenLive ||= !!stored;
       const recordId = ticketRecordId(storage, id);
       const replace = json(writeTicketTags(value, stored));
       if (stored) {

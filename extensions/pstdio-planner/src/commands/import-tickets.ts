@@ -49,17 +49,31 @@ const rejectCycles = (tickets: ImportedTicket[], next: (ticket: ImportedTicket) 
   for (const ticket of tickets) visit(ticket.key, new Set());
 };
 
-const validLink = (link: unknown) =>
-  !!link &&
-  (typeof (link as { workspace?: unknown }).workspace === "string" ||
-    typeof (link as { session?: unknown }).session === "string");
+// Exactly one of workspace or session, as a string.
+const validLink = (link: unknown) => {
+  if (!link || typeof link !== "object") return false;
+  const { workspace, session } = link as { workspace?: unknown; session?: unknown };
+  return (typeof workspace === "string") !== (typeof session === "string") && (workspace ?? session) !== "";
+};
+const isString = (value: unknown) => typeof value === "string";
+const optionalString = (value: unknown) => value === undefined || isString(value);
+const optionalStrings = (value: unknown) => value === undefined || (Array.isArray(value) && value.every(isString));
+
+/** The title and content a ticket is saved with; content's first line becomes the title. */
+const ticketText = (ticket: ImportedTicket) => ({
+  title: ticket.content ? deriveTitle(ticket.content) : ticket.title!,
+  content: ticket.content ?? "",
+});
 
 const validateTicket = (ticket: ImportedTicket) => {
+  const fields = [ticket.title, ticket.content, ticket.status, ticket.parent].every(optionalString);
+  if (!fields || !optionalStrings(ticket.tags) || !optionalStrings(ticket.dependsOn))
+    throw new Error(`Ticket "${ticket.key}" has a field of the wrong type.`);
   if (!ticket.title && !ticket.content) throw new Error(`Ticket "${ticket.key}" needs a title or content.`);
-  if (!(ticket.links ?? []).every(validLink))
-    throw new Error(`Ticket "${ticket.key}" has a link without a workspace or session.`);
-  // One ticket is one record, and a record holds at most 256 KiB.
-  if (new TextEncoder().encode(JSON.stringify(ticket)).length > MAX_TICKET_BYTES)
+  if (ticket.links !== undefined && !(Array.isArray(ticket.links) && ticket.links.every(validLink)))
+    throw new Error(`Ticket "${ticket.key}" needs exactly one workspace or session in each link.`);
+  // One ticket is one record, and a record holds at most 256 KiB, including the derived title.
+  if (new TextEncoder().encode(JSON.stringify({ ...ticket, ...ticketText(ticket) })).length > MAX_TICKET_BYTES)
     throw new Error(`Ticket "${ticket.key}" is larger than ${MAX_TICKET_BYTES / 1024} KiB.`);
 };
 
@@ -139,10 +153,9 @@ const allocate = async (ctx: CommandContext, count: number) => {
   return identities;
 };
 
-const saveGroups = async (ctx: CommandContext, tickets: StoredTicket[]) => {
+const saveGroups = async (ctx: CommandContext, tickets: StoredTicket[], progress: { saved: number }) => {
   let group: StoredTicket[] = [];
   let bytes = 0;
-  let saved = 0;
   const flush = async () => {
     if (!group.length) return;
     const outcome = await ctx.storage.records.commit({
@@ -152,9 +165,8 @@ const saveGroups = async (ctx: CommandContext, tickets: StoredTicket[]) => {
         replace: json(ticketRecord(ticket)),
       })),
     });
-    if (outcome.state === "refused")
-      throw new Error(`The ticket import was refused after saving ${saved} of ${tickets.length} tickets.`);
-    saved += group.length;
+    if (outcome.state === "refused") throw new Error("Relay order refused a group of tickets.");
+    progress.saved += group.length;
     group = [];
     bytes = 0;
   };
@@ -218,6 +230,7 @@ export const importTicketsCommand = defineCommand({
     const ids = new Map(tickets.map((ticket, index) => [ticket.key, identities[index]!.id]));
     const reference = (value: string) => ids.get(value) ?? resolved.existing.get(value)!;
     const now = new Date().toISOString();
+    const progress = { saved: 0 };
     try {
       await withTicketOrder(ctx, async () => {
         await ensureTicketStorage(ctx);
@@ -227,13 +240,12 @@ export const importTicketsCommand = defineCommand({
           position = ctx.storage.positions.between(position);
           stored.push({
             id: identities[index]!.id,
-            title: ticket.content ? deriveTitle(ticket.content) : ticket.title!,
-            content: ticket.content ?? "",
+            ...ticketText(ticket),
             statusId: resolved.status(ticket.status),
             tags: tags[index]!,
             attachments: [],
             parentId: ticket.parent ? reference(ticket.parent) : null,
-            dependsOn: (ticket.dependsOn ?? []).map(reference),
+            dependsOn: [...new Set((ticket.dependsOn ?? []).map(reference))],
             blockedReason: null,
             userPrompt: null,
             draft: false,
@@ -243,12 +255,21 @@ export const importTicketsCommand = defineCommand({
             updatedAt: now,
           } as StoredTicket);
         }
-        await saveGroups(ctx, stored);
+        await saveGroups(ctx, stored, progress);
       });
       await addLinks(ctx, tickets, ids, resolved.targets);
+    } catch (error) {
+      // Saved groups stay; say which tickets exist so a retry can leave them out.
+      const saved = tickets.slice(0, progress.saved).map((ticket) => ticket.key);
+      throw new Error(
+        `The ticket import stopped after saving ${progress.saved} of ${tickets.length} tickets` +
+          (saved.length ? ` (keys ${saved[0]} to ${saved.at(-1)})` : "") +
+          `: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
+      );
     } finally {
       // Groups saved before a failure are already visible, so views refresh either way.
-      await emitPlannerTicketsChanged(ctx, {});
+      await emitPlannerTicketsChanged(ctx, {}).catch(() => undefined);
     }
     return {
       tickets: Object.fromEntries(tickets.map((ticket, index) => [ticket.key, identities[index]!])),

@@ -134,7 +134,7 @@ describe("importTicketsCommand validation and failures", () => {
     ] satisfies ImportedTicket[][])
       await expect(importTickets(storage, tickets)).rejects.toThrow("cycle");
     await expect(importTickets(storage, [{ key: "a", title: "A", links: [{} as never] }])).rejects.toThrow(
-      "without a workspace or session",
+      "exactly one workspace or session",
     );
     expect(await ticketsCollection(storage).list()).toEqual([]);
   });
@@ -168,5 +168,31 @@ describe("importTicketsCommand validation and failures", () => {
     expect(emitted).toHaveLength(1);
     // The fixture keeps ticket numbers per storage object, so read through the importing one.
     expect(await ticketsCollection(failing).list()).toHaveLength(100);
+  });
+});
+
+describe("importTicketsCommand input checks", () => {
+  test("wrong field types, ambiguous links and records too large with their title fail before numbering", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    for (const ticket of [
+      { key: "a", content: 123 },
+      { key: "a", title: "A", dependsOn: "b" },
+      { key: "a", title: "A", links: [{ workspace: "WS-1", session: "s" }] },
+      // A single long line becomes the title too, which doubles the stored size.
+      { key: "a", content: "x".repeat(150 * 1024) },
+    ])
+      await expect(importTickets(storage, [ticket as never])).rejects.toThrow();
+    expect(await ticketsCollection(storage).list()).toEqual([]);
+  });
+
+  test("duplicate dependencies are stored once", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    const result = await importTickets(storage, [
+      { key: "a", title: "A" },
+      { key: "b", title: "B", dependsOn: ["a", "a"] },
+    ]);
+    expect((await ticketsCollection(storage).get(result.tickets.b!.id))?.dependsOn).toEqual([result.tickets.a!.id]);
   });
 });
