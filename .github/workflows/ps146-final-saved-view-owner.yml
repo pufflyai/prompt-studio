@@ -1,7 +1,7 @@
 name: PS146 final saved view owner verification
 on:
   push:
-    branches: [test/ps146-final-owner]
+    branches: [test/ps146-private-transfer-owner]
 permissions:
   contents: read
   actions: read
@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: 3b69179c4173dc8fd6b0ad97eb7fce5f81f91763
+          ref: 359aa9ea612292c107566a044bc3fe0076fdbca6
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
@@ -65,6 +65,11 @@ jobs:
           PLAN_DISPLAY: "true"
           CI_PLAN_OUTPUT_DIR: test-results/ci/final-saved-view-owner/execution-${{ matrix.job }}
         run: bun scripts/ci/run-ci-test-job.ts
+      - name: Record hardware after the complete owning workload
+        if: always()
+        run: |
+          cat /proc/cpuinfo > test-results/ci/final-saved-view-owner/cpuinfo.txt
+          cat /sys/fs/cgroup/cpu.max > test-results/ci/final-saved-view-owner/cpu-max.txt
       - name: Hash repair verification evidence
         if: always()
         shell: bash
@@ -78,4 +83,72 @@ jobs:
           path: |
             test-results/ci
             packages/e2e/test-results
+          if-no-files-found: error
+
+  cold-control:
+    name: Cold inspector transfer (${{ matrix.revision }})
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - revision: before
+            source: ef809d53a15e033288a7909c16e6434c93841386
+          - revision: repaired
+            source: b5793193534755800687a8eebe1bd624f773b756
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ matrix.source }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - name: Set up Bun in the Playwright image
+        run: |
+          echo "BUN_INSTALL_CACHE_DIR=/tmp/pstdio-ci-bun-cache" >> "$GITHUB_ENV"
+          node scripts/ci/setup-container-bun.ts
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          profile: playwright
+      - name: Exercise real fresh inspector children and same-size edit
+        shell: bash
+        env:
+          CONTROL_SOURCE: ${{ matrix.source }}
+          CONTROL_REVISION: ${{ matrix.revision }}
+        run: |
+          mkdir -p test-results/ci/cold-control
+          python3 - <<'PYCONTROL'
+          from pathlib import Path
+          import base64
+          Path('/tmp/243-cold-inspector-transfer-control.ts').write_bytes(base64.b64decode("aW1wb3J0IGFzc2VydCBmcm9tICJub2RlOmFzc2VydC9zdHJpY3QiOwppbXBvcnQgeyBta2R0ZW1wU3luYywgbWtkaXJTeW5jLCB3cml0ZUZpbGVTeW5jLCBybVN5bmMsIHN0YXRTeW5jLCB1dGltZXNTeW5jIH0gZnJvbSAibm9kZTpmcyI7CmltcG9ydCB7IHRtcGRpciB9IGZyb20gIm5vZGU6b3MiOwppbXBvcnQgeyBqb2luLCByZXNvbHZlIH0gZnJvbSAibm9kZTpwYXRoIjsKCmNvbnN0IHJvb3QgPSBta2R0ZW1wU3luYyhqb2luKHRtcGRpcigpLCAiY29sZC1pbnNwZWN0b3ItY29udHJvbC0iKSk7CmNvbnN0IGluc3BlY3RvciA9IHJlc29sdmUoInBhY2thZ2VzL3BzdGRpby1hcGkvc3JjL2ZlYXR1cmVzL2V4dGVuc2lvbnMvd2Vidmlldy1pbnB1dC1pbnNwZWN0b3IudHMiKTsKY29uc3Qgd3JhcHBlciA9IGpvaW4ocm9vdCwgImluc3BlY3QudHMiKTsKY29uc3Qgc291cmNlID0gam9pbihyb290LCAidmlldyIpOwpta2RpclN5bmMoc291cmNlKTsKd3JpdGVGaWxlU3luYyh3cmFwcGVyLCBgY29uc3Qgb3JpZ2luYWxTY2FuPUJ1bi5UcmFuc3BpbGVyLnByb3RvdHlwZS5zY2FuSW1wb3J0czsgY29uc3Qgb3JpZ2luYWxUcmFuc2Zvcm09QnVuLlRyYW5zcGlsZXIucHJvdG90eXBlLnRyYW5zZm9ybVN5bmM7IGxldCBzY2Fucz0wLHRyYW5zZm9ybXM9MDsgQnVuLlRyYW5zcGlsZXIucHJvdG90eXBlLnNjYW5JbXBvcnRzPWZ1bmN0aW9uKC4uLmFyZ3MpeyBzY2FucysrO3JldHVybiBvcmlnaW5hbFNjYW4uYXBwbHkodGhpcyxhcmdzKTsgfTsgQnVuLlRyYW5zcGlsZXIucHJvdG90eXBlLnRyYW5zZm9ybVN5bmM9ZnVuY3Rpb24oLi4uYXJncyl7IHRyYW5zZm9ybXMrKztyZXR1cm4gb3JpZ2luYWxUcmFuc2Zvcm0uYXBwbHkodGhpcyxhcmdzKTsgfTsgY29uc3Qge3J1bkV4dGVuc2lvbklucHV0SW5zcGVjdG9yfT1hd2FpdCBpbXBvcnQoJHtKU09OLnN0cmluZ2lmeShpbnNwZWN0b3IpfSk7IGF3YWl0IHJ1bkV4dGVuc2lvbklucHV0SW5zcGVjdG9yKCk7IHByb2Nlc3Muc3RkZXJyLndyaXRlKEpTT04uc3RyaW5naWZ5KHtzY2Fucyx0cmFuc2Zvcm1zfSkpO2ApOwp3cml0ZUZpbGVTeW5jKGpvaW4oc291cmNlLCAicGFja2FnZS5qc29uIiksIEpTT04uc3RyaW5naWZ5KHtuYW1lOiJjb2xkLWluc3BlY3Rvci12aWV3In0pKTsKd3JpdGVGaWxlU3luYyhqb2luKHNvdXJjZSwgIm1haW4udHMiKSwgJ2V4cG9ydCBjb25zdCBsb2FkPSgpPT5pbXBvcnQoIi4vIisibGVhZiIpOycpOwp3cml0ZUZpbGVTeW5jKGpvaW4oc291cmNlLCAibGVhZi50cyIpLCBBcnJheS5mcm9tKHtsZW5ndGg6NTAwfSwoXyxpKT0+YGV4cG9ydCB7dmFsdWUgYXMgdmFsdWUke2l9fSBmcm9tICIuL21vZHVsZS0ke2l9IjtgKS5qb2luKCJcbiIpKTsKZm9yKGxldCBpPTA7aTw1MDA7aSsrKXdyaXRlRmlsZVN5bmMoam9pbihzb3VyY2UsYG1vZHVsZS0ke2l9LnRzYCksYGV4cG9ydCBjb25zdCB2YWx1ZT0ke2l9O2ApOwpjb25zdCBpbXBvcnRzPW5ldyBNYXA8c3RyaW5nLHVua25vd24+KCk7IGNvbnN0IG9ic2VydmF0aW9uczphbnlbXT1bXTsKYXN5bmMgZnVuY3Rpb24gaW5zcGVjdCgpewogY29uc3QgY2hpbGQ9QnVuLnNwYXduKFtwcm9jZXNzLmV4ZWNQYXRoLHdyYXBwZXJdLHtjd2Q6c291cmNlLHN0ZGluOkJ1ZmZlci5mcm9tKEpTT04uc3RyaW5naWZ5KHtwYWNrYWdlUGF0aDpzb3VyY2UsZW50cnlQYXRoczpbam9pbihzb3VyY2UsIm1haW4udHMiKV0saW1wb3J0czpbLi4uaW1wb3J0c119KSksc3Rkb3V0OiJwaXBlIixzdGRlcnI6InBpcGUifSk7CiBjb25zdCBbZXhpdCxzdGRvdXQsc3RkZXJyXT1hd2FpdCBQcm9taXNlLmFsbChbY2hpbGQuZXhpdGVkLG5ldyBSZXNwb25zZShjaGlsZC5zdGRvdXQpLnRleHQoKSxuZXcgUmVzcG9uc2UoY2hpbGQuc3RkZXJyKS50ZXh0KCldKTsKIGFzc2VydC5lcXVhbChleGl0LDAsc3RkZXJyKTsgY29uc3Qgb3V0cHV0PUpTT04ucGFyc2Uoc3Rkb3V0KTsgY29uc3Qgc3RhdHM9SlNPTi5wYXJzZShzdGRlcnIpOwogY29uc3QgZGlnZXN0PXR5cGVvZiBvdXRwdXQ9PT0ic3RyaW5nIj9vdXRwdXQ6b3V0cHV0LmRpZ2VzdDsKIGZvcihjb25zdCBba2V5LHZhbHVlXSBvZiBvdXRwdXQuaW1wb3J0cz8/W10pIGltcG9ydHMuc2V0KGtleSx2YWx1ZSk7CiBjb25zdCBvYnNlcnZlZD17Li4uc3RhdHMsZGlnZXN0LHBheWxvYWRCeXRlczpCdWZmZXIuYnl0ZUxlbmd0aChKU09OLnN0cmluZ2lmeShbLi4uaW1wb3J0c10pKSxlbnRyaWVzOmltcG9ydHMuc2l6ZX07b2JzZXJ2YXRpb25zLnB1c2gob2JzZXJ2ZWQpO3JldHVybiBvYnNlcnZlZDsKfQpsZXQgZmFpbHVyZTpzdHJpbmd8dW5kZWZpbmVkOwp0cnl7CiBjb25zdCBmaXJzdD1hd2FpdCBpbnNwZWN0KCk7IGNvbnN0IHNlY29uZD1hd2FpdCBpbnNwZWN0KCk7IGFzc2VydC5lcXVhbChmaXJzdC5kaWdlc3Qsc2Vjb25kLmRpZ2VzdCk7CiBjb25zdCBsZWFmPWpvaW4oc291cmNlLCJtb2R1bGUtMTIzLnRzIik7Y29uc3QgYmVmb3JlPXN0YXRTeW5jKGxlYWYpO3dyaXRlRmlsZVN5bmMobGVhZiwiZXhwb3J0IGNvbnN0IHZhbHVlPTk5OTsiKTt1dGltZXNTeW5jKGxlYWYsYmVmb3JlLmF0aW1lLGJlZm9yZS5tdGltZSk7CiBjb25zdCBlZGl0ZWQ9YXdhaXQgaW5zcGVjdCgpO2Fzc2VydC5ub3RFcXVhbChlZGl0ZWQuZGlnZXN0LGZpcnN0LmRpZ2VzdCk7CiBjb25zdCB0aGlyZD1hd2FpdCBpbnNwZWN0KCk7YXNzZXJ0LmVxdWFsKHRoaXJkLmRpZ2VzdCxlZGl0ZWQuZGlnZXN0KTsKIGFzc2VydC5vayhzZWNvbmQuc2NhbnMrc2Vjb25kLnRyYW5zZm9ybXM8KGZpcnN0LnNjYW5zK2ZpcnN0LnRyYW5zZm9ybXMpLzEwLCJmcmVzaCBjaGlsZHJlbiBtdXN0IHJldXNlIHVuY2hhbmdlZCBpbXBvcnQgcGFyc2luZyIpOwogYXNzZXJ0Lm9rKGVkaXRlZC5zY2FucytlZGl0ZWQudHJhbnNmb3JtczwxMCwic2F2ZWQgZWRpdCBtdXN0IHBhcnNlIGl0cyBjaGFuZ2VkIGJ5dGVzIHdpdGhvdXQgcmVzY2FubmluZyB1bmNoYW5nZWQgY2hpbGRyZW4iKTsKIGFzc2VydC5vayh0aGlyZC5zY2Fucyt0aGlyZC50cmFuc2Zvcm1zPDEwLCJuZXh0IGZyZXNoIGd1YXJkIHJldXNlcyB0aGUgdXBkYXRlZCBwYXJzZSByZXN1bHRzIik7Cn1jYXRjaChlcnJvcil7ZmFpbHVyZT1TdHJpbmcoZXJyb3IpO3Byb2Nlc3MuZXhpdENvZGU9MTt9ZmluYWxseXtybVN5bmMocm9vdCx7cmVjdXJzaXZlOnRydWUsZm9yY2U6dHJ1ZX0pO30KY29uc29sZS5sb2coSlNPTi5zdHJpbmdpZnkoe3NvdXJjZTpwcm9jZXNzLmVudi5DT05UUk9MX1NPVVJDRSxvYnNlcnZhdGlvbnMsZmFpbHVyZSx0ZW1wb3JhcnlDb3VudGVyQ29udHJvbDp0cnVlLGFjY2VwdGFuY2VRdWFsaWZpY2F0aW9uOmZhbHNlLHJvb3RSZW1vdmVkOnRydWV9LG51bGwsMikpOwo="))
+          PYCONTROL
+          set +e
+          bun /tmp/243-cold-inspector-transfer-control.ts > test-results/ci/cold-control/result.json 2> test-results/ci/cold-control/stderr.log
+          status=$?
+          set -e
+          cat test-results/ci/cold-control/result.json
+          cat test-results/ci/cold-control/stderr.log
+          echo "$status" > test-results/ci/cold-control/exit-code.txt
+          if [ "$CONTROL_REVISION" = before ]; then test "$status" = 1; else test "$status" = 0; fi
+      - name: Check owning graph and private child behavior
+        if: matrix.revision == 'repaired'
+        run: >
+          bun test
+          packages/pstdio-extensions/src/runtime/runtime-source-snapshot.p0.test.ts
+          packages/pstdio-extensions/src/runtime/revision-dependency-artifacts.p0.test.ts
+          packages/pstdio-extensions/src/runtime/revision-file-inputs.p0.test.ts
+          packages/pstdio-extensions/src/runtime/revision-file-hash.p0.test.ts
+          packages/pstdio-extensions/src/runtime/prepared-cache.p0.test.ts
+          packages/pstdio-api/src/features/extensions/webview-input-inspector.p0.test.ts
+      - name: Preserve every control outcome
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps243-cold-control-${{ matrix.revision }}
+          path: test-results/ci/cold-control
           if-no-files-found: error
