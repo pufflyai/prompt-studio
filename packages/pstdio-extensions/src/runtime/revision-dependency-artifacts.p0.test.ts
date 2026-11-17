@@ -16,7 +16,7 @@ for (const conflict of [false, true]) {
     conflict
       ? "conflicting physical dependency bindings reject preparation"
       : "ancestor alias bindings share the same frozen dependency",
-    () => {
+    async () => {
       const root = realpathSync(mkdtempSync(join(tmpdir(), "revision-physical-bindings-")));
       roots.push(root);
       const source = join(root, "source");
@@ -47,10 +47,10 @@ for (const conflict of [false, true]) {
       const copy = () =>
         copyRevisionDependencies(packages, source, revisionSnapshotPath(generation, source), generation);
       if (conflict) {
-        expect(copy).toThrow();
+        await expect(copy()).rejects.toThrow();
         return;
       }
-      copy();
+      await copy();
       const aliased = revisionSnapshotLocation(
         generation,
         join(source, "node_modules", "outer", "node_modules", "shared", "index.js"),
@@ -60,3 +60,41 @@ for (const conflict of [false, true]) {
     },
   );
 }
+
+test("nested package roots share their frozen files and dependency bindings", async () => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "revision-nested-packages-")));
+  roots.push(root);
+  const source = join(root, "source");
+  const outer = join(root, "outer");
+  const inner = join(outer, "inner");
+  const generation = join(root, "generation");
+  const packages = new Map() as ReturnType<typeof collectRevisionDependencies>;
+  packages.contents = new Map();
+  packages.compilerInputs = new Map();
+  for (const path of [source, outer, inner]) {
+    mkdirSync(path, { recursive: true });
+    writeFileSync(join(path, "index.js"), path === inner ? "accepted nested bytes" : "outer bytes");
+    packages.set(path, {
+      path,
+      files: new Set(["index.js"]),
+      allFiles: true,
+      dependencies: new Map(),
+      moduleInputs: new Map(),
+      bindings: new Map(),
+    });
+  }
+  packages.get(source)!.bindings.set(join(source, "node_modules", "outer"), outer);
+  packages.get(source)!.bindings.set(join(source, "node_modules", "inner"), inner);
+  await copyRevisionDependencies(packages, source, revisionSnapshotPath(generation, source), generation);
+  writeFileSync(join(inner, "index.js"), "mutable nested edit");
+  expect(readFileSync(revisionSnapshotPath(generation, join(inner, "index.js")), "utf8")).toBe("accepted nested bytes");
+  expect(
+    readFileSync(revisionSnapshotLocation(generation, join(source, "node_modules", "inner", "index.js")), "utf8"),
+  ).toBe("accepted nested bytes");
+  expect(
+    readFileSync(
+      revisionSnapshotLocation(generation, join(source, "node_modules", "outer", "inner", "index.js")),
+      "utf8",
+    ),
+  ).toBe("accepted nested bytes");
+});
