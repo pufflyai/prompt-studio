@@ -4,7 +4,7 @@ import { saveTicketContent } from "./commands/save-ticket-content";
 import { ticketsCollection } from "./data/collections";
 import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "./data/document-selection";
 import { readTicketFileContent } from "./data/ticket-file-content";
-import { TICKETS_COLLECTION } from "./data/ticket-records";
+import { ticketRecordId } from "./data/ticket-record-address";
 
 export const ticketText = defineTextSource({
   id: "ticket-document",
@@ -14,7 +14,8 @@ export const ticketText = defineTextSource({
     if (!ticket) throw new Error("Ticket unavailable");
     if (documentId === TICKET_BODY_DOCUMENT)
       return {
-        source: { kind: "collection", collection: TICKETS_COLLECTION, id: ticket.id, field: "/content" },
+        // A moved ticket keeps its text binding, so this declaration opens the same text document.
+        source: { kind: "record", recordId: ticketRecordId(ctx.storage, ticket.id), field: "/content" },
         content: ticket.content,
         editable: true,
       };

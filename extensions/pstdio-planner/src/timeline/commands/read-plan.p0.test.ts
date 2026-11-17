@@ -9,6 +9,7 @@ import { statusesCollection } from "../../data/collections";
 import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../../data/document-selection";
 import { migratePlannerStorage } from "../../data/migrate-storage";
 import { DEFAULT_STATUSES } from "../../data/seed";
+import { ticketIdOfRecord } from "../../data/storage-reads.fixture";
 import { createTicketTag } from "../../data/tag-operations";
 import { timelineBoard } from "../../data/ticket-board";
 import { putTicket, ticketContext, ticketsCollection } from "../../data/ticket-context.fixture";
@@ -93,6 +94,12 @@ test("the plan reads one ticket snapshot without loading workspace session histo
         return items.list();
       },
     };
+  };
+  // Tickets are records since storage version 5; each listing pass reads its page of ticket bodies.
+  const readMany = storage.records.readMany.bind(storage.records);
+  storage.records.readMany = async (recordIds) => {
+    if (recordIds.some((recordId) => ticketIdOfRecord(recordId))) ticketReads++;
+    return readMany(recordIds);
   };
   ctx.workspaces.list = async () => [
     { id: "workspace", anchors_json: [{ type: "ticket", id: ticket.id, label: ticket.shorthand }] } as never,

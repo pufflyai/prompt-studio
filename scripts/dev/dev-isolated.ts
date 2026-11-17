@@ -11,6 +11,7 @@ import { join, posix, resolve } from "node:path";
 import { waitForRuntimeDescriptor } from "./desktop-runtime-startup";
 import { resolveCredentialMounts, writeCredentialComposeFile, writeExtraCaContext } from "./isolated-host-files";
 import { resolveIsolatedUser } from "./isolated-user";
+import { seedLargeProject } from "./seed-large-project";
 import { resolveWorkingTreeDefaultExtensions } from "./working-tree-extensions";
 
 const COMPOSE_FILE = "infra/local/compose.yaml";
@@ -39,6 +40,7 @@ const usage = `Usage:
   bun run dev:isolated -- --down                # tear the stack down (incl. volumes)
   bun run dev:isolated -- --logs                # follow logs
   bun run dev:isolated -- --desktop             # unified runtime for Electron development
+  bun run dev:isolated -- --large               # also seed large connected projects
 
 Multiple instances: each --name produces an independent stack with its own ports,
 state volumes, and demo project. Omit --name to get a random suffix.`;
@@ -333,6 +335,12 @@ const main = async () => {
   process.stdout.write(`Sessions:  ${dashboardUrl}projects/${project.id}/sessions\n`);
   process.stdout.write(`Logs:      bun run dev:isolated -- --name ${projectName} --logs\n`);
   process.stdout.write(`Stop:      bun run dev:isolated -- --name ${projectName} --down\n`);
+  if (hasFlag(args, "--large")) {
+    for (const project of await seedLargeProject(resolve(pstdioHome, "..", "connection.json")))
+      process.stdout.write(
+        `Large:     ${project.project}: ${project.tickets} tickets, ${project.workspaces} workspaces, ${project.sessions} sessions, ${project.links} links ${project.url}\n`,
+      );
+  }
 };
 
 if (import.meta.main) {
