@@ -9,7 +9,12 @@ const ROOT = "large-project";
 const git = (folder: string, ...args: string[]) => {
   const result = spawnSync(
     "git",
-    ["-c", "user.name=Prompt Studio", "-c", "user.email=dev@prompt.studio", "-c", "init.defaultBranch=main", ...args],
+    [
+      ...["-c", "user.name=Prompt Studio", "-c", "user.email=dev@prompt.studio", "-c", "init.defaultBranch=main"],
+      // Global signing or hooks must not prompt or fail inside a generated fixture repository.
+      ...["-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null"],
+      ...args,
+    ],
     { cwd: folder, encoding: "utf8" },
   );
   if (result.status !== 0) throw new Error(`git ${args.join(" ")} failed in ${folder}: ${result.stderr}`);

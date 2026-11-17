@@ -132,13 +132,13 @@ After the stack starts, the seeder goes through product APIs only:
 - **Sessions:** 1,000 sessions per project with short transcripts, imported in one `POST /v1/session-imports` job. Imported sessions belong to each project's main workspace.
 - **Links:** every second session, and each workspace if any, is linked to a ticket in the same `import-tickets` calls.
 
-It prints each project's URL and counts, and how many milliseconds a ticket took in each import call, so a slowdown as projects grow is visible. Seeding takes tens of minutes. Rerunning resumes without duplicates. Change the counts with `PSTDIO_LARGE_PROJECTS`, `PSTDIO_LARGE_TICKETS`, `PSTDIO_LARGE_FILES`, `PSTDIO_LARGE_WORKSPACES` and `PSTDIO_LARGE_SESSIONS`. To seed a stack that is already running, pass its `connection.json`:
+It prints each project's URL and counts at the end. Its progress lines show how many milliseconds a ticket took in each import call, so a slowdown as projects grow is visible. Without workspaces, seeding three projects takes about 15 minutes; Planner imports one project at a time. Rerunning resumes: it creates only the tickets, workspaces and sessions that are missing, and waits for an import that is still running. Tickets that an interrupted import saved keep no links. Change the counts with `PSTDIO_LARGE_PROJECTS`, `PSTDIO_LARGE_TICKETS`, `PSTDIO_LARGE_FILES`, `PSTDIO_LARGE_WORKSPACES` and `PSTDIO_LARGE_SESSIONS`. To seed a stack that is already running, pass its `connection.json`:
 
 ```bash
 bun scripts/dev/seed-large-project.ts __test-tmp__/dev-isolated/my-large/connection.json
 ```
 
-The platform does not allow links between projects, so each project's links stay within it.
+The platform does not allow links between projects, so each project's links stay within it. The seeder passes host paths into the stack, so `--large` works on macOS and Linux hosts.
 
 The first start of a new stack builds its image and can exceed the start timeout before seeding begins. Rerun the same command; the stack and the seeding resume.
 
