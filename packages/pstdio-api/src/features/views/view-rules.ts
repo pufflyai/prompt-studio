@@ -3,8 +3,10 @@ import {
   dataTableRendererSettingsSchema,
   findViewFilterProblem,
   findViewSortsProblem,
+  type KanbanViewSettings,
   kanbanViewSettingsSchema,
 } from "pstdio-api-contracts";
+import { normalizeSubGroupings } from "pstdio-api-contracts/collections";
 import type { ViewFilterGroup, ViewSort } from "pstdio-api-contracts/extension-kernel";
 
 export type BoardKind = "kanban" | "resourceList" | "dataTable";
@@ -38,6 +40,14 @@ const validateKanbanSettings = (input: object, fields: BoardField[]) => {
   checkIds(settings.displayProperties, idsFor(fields, "displayable"), "displayable field");
   return settings;
 };
+/** Normalizes a resource list's levels the way the list shows them, so a grouping change never fails. */
+const resolveResourceListSettings = (settings: KanbanViewSettings, fields: BoardField[]) => {
+  if (settings.viewMode !== "list" || settings.rowGrouping !== "none")
+    throw new BoardViewError("Resource lists require list display; use subGroupings for more grouping levels.");
+  checkIds(settings.subGroupings ?? [], idsFor(fields, "groupable"), "groupable field");
+  if (!settings.subGroupings) return settings;
+  return { ...settings, subGroupings: normalizeSubGroupings(settings.columnGrouping, settings.subGroupings) };
+};
 const validateDataTableSettings = (input: object, fields: BoardField[]) => {
   const parsed = dataTableRendererSettingsSchema.strict().safeParse(input);
   if (!parsed.success) throw settingsProblem(Object.keys(dataTableRendererSettingsSchema.shape), "data table");
@@ -61,16 +71,14 @@ export const validateBoardView = (
   fields: BoardField[],
   sent: { filter?: unknown; sorts?: unknown },
 ) => {
-  const settings =
+  const validated =
     kind !== "dataTable"
       ? validateKanbanSettings(view.settings, fields)
       : validateDataTableSettings(view.settings, fields);
-  if (
-    kind === "resourceList" &&
-    "viewMode" in settings &&
-    (settings.viewMode !== "list" || settings.rowGrouping !== "none")
-  )
-    throw new BoardViewError("Resource lists require list display and one grouping.");
+  if (kind === "kanban" && "subGroupings" in validated && validated.subGroupings)
+    throw new BoardViewError("subGroupings apply to resource lists only; boards use rowGrouping.");
+  const settings =
+    kind === "resourceList" && "viewMode" in validated ? resolveResourceListSettings(validated, fields) : validated;
   const problem =
     (sent.filter === undefined ? undefined : findViewFilterProblem(view.filter, fields)) ??
     (sent.sorts === undefined ? undefined : findViewSortsProblem(view.sorts, fields));
