@@ -32,6 +32,8 @@ export interface OrderedMemoryState {
   canonical: Map<string, OrderedRecord>;
   decisions: Map<string, OrderedDecision>;
   identities: Map<string, string>;
+  /** Records whose edits relay order skipped, by operation, so their author can forward them. */
+  skipped?: Map<string, string[]>;
 }
 
 const verifyIdentities = (local: ReadonlyMap<string, string>, remote: ReadonlyMap<string, string>) => {
@@ -108,20 +110,26 @@ export const createOrderedMemoryRecords = (
   };
   // Like the database store: forward this device's refused saves that a move displaced, and move old
   // collection items still live although their collection moved. Skipped saves are not tracked here.
-  const settleMoves = async (refused: OrderedOperation[], changed: string[]) => {
+  // Decided saves of this device: refused ones, and ones whose edits relay order partly skipped.
+  const settleMoves = async (
+    decided: { operation: OrderedOperation; refused: boolean; skipped: Set<string> }[],
+    changed: string[],
+  ) => {
     const read = async (ids: string[]) =>
       new Map(ids.flatMap((id) => (canonical.has(id) ? [[id, canonical.get(id)!]] : [])));
     const current = async () => views;
     const list = async (prefix: string) =>
       [...views].filter(([id, record]) => id.startsWith(prefix) && !record.deleted).map(([id]) => id);
+    const markers = async () =>
+      [...canonical.values()].filter((record) => record.recordId.includes(',"collection-moved",'));
     const prepared = [];
-    for (const operation of refused) {
+    for (const save of decided) {
       const next = await forwardDisplacedSave({
-        operation,
-        refused: true,
-        skipped: new Set(),
+        ...save,
         canonical: read,
         views: current,
+        markers,
+        refusedMove: async (operationId) => decisions.get(operationId)?.state === "refused",
       });
       if (next) prepared.push(next);
     }
@@ -203,15 +211,17 @@ export const createOrderedMemoryRecords = (
         const operation = await prepareOrderedLocalAdoption(record, canonical.get(record.recordId));
         if (operation) pending.set(operation.operationId, operation);
       }
-      const refused = [...pending.values()].filter(
-        (operation) => decisions.get(operation.operationId)?.state === "refused",
-      );
+      const decided = [...pending.values()].flatMap((operation) => {
+        const refused = decisions.get(operation.operationId)?.state === "refused";
+        const skipped = new Set(state.skipped?.get(operation.operationId) ?? []);
+        return refused || skipped.size ? [{ operation, refused, skipped }] : [];
+      });
       for (const id of decisions.keys()) pending.delete(id);
       await rebuild();
       const changed = [...new Set([...before.keys(), ...canonical.keys()])].filter(
         (id) => JSON.stringify(before.get(id)) !== JSON.stringify(canonical.get(id)),
       );
-      await settleMoves(refused, changed);
+      await settleMoves(decided, changed);
     },
   };
 };
@@ -231,6 +241,13 @@ export const admitMemoryOperations = async (
       state.decisions,
     );
     state.decisions.set(operation.operationId, result.decision);
+    if (result.skipped.length) {
+      state.skipped ??= new Map();
+      state.skipped.set(
+        operation.operationId,
+        result.skipped.map((skip) => skip.recordId),
+      );
+    }
     for (const record of result.records) state.canonical.set(record.recordId, record);
   }
 };

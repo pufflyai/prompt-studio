@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
-import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { seedTicketIdentity } from "../data/ticket-context.fixture";
+import { observeTicketRecords } from "../data/storage-reads.fixture";
+import { createTicketRecordStorage, seedTicketIdentity } from "../data/ticket-context.fixture";
 import type { Ticket } from "../data/types";
 import { queuedRun } from "./archive-context.fixture";
 import { archiveTicketColumnAction } from "./archive-ticket";
@@ -20,23 +20,31 @@ const row = (index: number): Ticket => ({
 
 test("archive all selects bounded column pages and never reads unrelated tickets or workspaces", async () => {
   const rows = Array.from({ length: 5000 }, (_, index) => row(index));
-  const storage = createMemoryStorage({
-    collections: { tickets: Object.fromEntries(rows.map((ticket) => [ticket.id, ticket])) },
-  });
+  const storage = await createTicketRecordStorage(rows);
   for (const ticket of rows.slice(0, 205)) seedTicketIdentity(storage, ticket);
+  // Tickets are records since storage version 5; their record reads count as ticket reads.
+  const tickets = observeTicketRecords(storage);
+  storage.records = tickets.storage.records;
   const original = storage.collection.bind(storage);
-  const readIds: string[] = [];
+  const readIds = tickets.reads;
   const commit = storage.records.commitIfCurrent;
   let largestBatch = 0,
     commitCount = 0;
+  let writing = 0;
+  let peak = 0;
   storage.records.commitIfCurrent = async (group) => {
     largestBatch = Math.max(largestBatch, group.edits.length);
     commitCount++;
-    expect(group.edits.every((edit) => !edit.replace && edit.set?.["/value/archived"] === true)).toBe(true);
-    return commit(group);
+    expect(group.edits.every((edit) => !edit.replace && edit.set?.["/archived"] === true)).toBe(true);
+    writing++;
+    peak = Math.max(peak, writing);
+    try {
+      await Promise.resolve();
+      return await commit(group);
+    } finally {
+      writing--;
+    }
   };
-  let writing = 0;
-  let peak = 0;
   storage.collection = <T>(name: string) => {
     const collection = original<T>(name);
     if (name !== "tickets") return collection;

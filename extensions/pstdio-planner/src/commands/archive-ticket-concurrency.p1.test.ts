@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { ticketIdOfRecord } from "../data/storage-reads.fixture";
 import type { StoredTicket } from "../data/types";
 import { queuedRun } from "./archive-context.fixture";
 import { archiveTicketColumnAction, archiveTicketCommand } from "./archive-ticket";
@@ -11,27 +12,25 @@ test("archiving one ticket changes only its archive fields after a concurrent ed
   const ctx = makeCommandContext({ storage, params: {}, overrides: { settings: { get: async () => false } } });
   const ticket = await createTicketCommand.run(ctx, { title: "Original" });
   const collection = storage.collection.bind(storage);
-  let edited = false;
-  storage.collection = <T>(name: string) => {
-    const records = collection<T>(name);
-    return {
-      ...records,
-      read: async (id: string) => {
-        if (name === "tickets" && !edited) {
-          edited = true;
-          const current = await collection<StoredTicket>(name).get(id);
-          await collection<StoredTicket>(name).put(id, {
-            ...current!,
-            content: "# Concurrent title\n\nNew body",
-            title: "Concurrent title",
-            statusId: "ready",
-          });
-        }
-        return records.read(id);
-      },
-    };
+  let reads = 0;
+  // Tickets are records since storage version 5. Finding the ticket is the first read; another edit
+  // lands as the archive reads the ticket it saves.
+  const read = storage.records.read.bind(storage.records);
+  storage.records.read = async (recordId, ...rest) => {
+    const id = ticketIdOfRecord(recordId);
+    if (id && ++reads === 2) {
+      const current = await collection<StoredTicket>("tickets").get(id);
+      await collection<StoredTicket>("tickets").put(id, {
+        ...current!,
+        content: "# Concurrent title\n\nNew body",
+        title: "Concurrent title",
+        statusId: "ready",
+      });
+    }
+    return read(recordId, ...rest);
   };
   await archiveTicketCommand.run({ ...ctx, resource: { type: "ticket", id: ticket.id } }, {});
+  expect(reads).toBeGreaterThanOrEqual(2);
   expect(await collection("tickets").get(ticket.id)).toMatchObject({
     archived: true,
     statusId: "ready",

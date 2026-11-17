@@ -7,7 +7,9 @@ import type { createExtensionService } from "../../services/extension-service";
 import type { createProjectService } from "../../services/project-service";
 import type { createWorkspaceService } from "../../services/workspace-service";
 import type { HarnessRegistryService } from "../harnesses/harness-registry-service";
+import type { EventBus } from "../sync/event-bus";
 import { syncInstalledExtensionsForProjects } from "./default-extensions";
+import { createEnabledWebviewSourceInspection } from "./enabled-webview-source-inspection";
 import { runExtensionPreparation } from "./extension-preparation";
 import { createExtensionRootWatcher } from "./extension-root-watcher";
 import { hashExtensionSourceAsync, type LoadedExtensionSnapshot } from "./extension-runtime";
@@ -36,6 +38,7 @@ export const createInstalledExtensionRuntime = (input: {
   createRootWatcher?: typeof createExtensionRootWatcher;
   createSourceWatcher?: typeof createExtensionSourceWatcher;
   createWebviewBuildManager?: typeof createExtensionWebviewBuildManager;
+  eventBus?: Pick<EventBus, "subscribe">;
   extensionService: ReturnType<typeof createExtensionService>;
   harnessRegistry: HarnessRegistryService;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
@@ -114,6 +117,7 @@ export const createInstalledExtensionRuntime = (input: {
     );
     return rows;
   };
+  const webviewSourceInspection = createEnabledWebviewSourceInspection(input.extensionService.hasEnabledProjectSource);
   const webviewBuildManager: RuntimeProcess & {
     adopt: (sourcePath: string, validatedSource?: LoadedExtensionSnapshot) => Promise<void>;
     ensure: (installedExtensionId: string, webviewId?: string) => Promise<void>;
@@ -121,9 +125,12 @@ export const createInstalledExtensionRuntime = (input: {
   } = input.webviewBuilds
     ? createWebviewBuildManager({
         listInstalledSources: listExistingInstalledSources,
+        inspectSource: webviewSourceInspection.inspect,
         getInstalledSource: async (installedExtensionId) => {
           const row = await input.installedExtensionSourcesService.get(installedExtensionId);
-          return row ? (selectExistingSources([row])[0] ?? null) : null;
+          return row && (await input.extensionService.hasEnabledProjectSource(row.source_path))
+            ? (selectExistingSources([row])[0] ?? null)
+            : null;
         },
         reportBuildFailure: async (installedExtensionId, webviewId, error, expectedSource) => {
           // A snapshot serves each webview's built module URL, so a finished build — for
@@ -170,7 +177,14 @@ export const createInstalledExtensionRuntime = (input: {
   };
   const candidateInspection = createRuntimeCandidateInspection({
     acceptedId: async (path) => (await readAcceptedRevision(path))?.id,
+    isEligible: input.extensionService.hasEnabledProjectSource,
     onError: reportError,
+  });
+  const unsubscribeEnablement = input.eventBus?.subscribe((event) => {
+    if (event.table === "extension_instances") {
+      void candidateInspection.reconcile().catch(reportError);
+      void webviewSourceInspection.reconcile().catch(reportError);
+    }
   });
   // Provisioning can write into a watched folder, so unchanged content must not
   // provision again. A rejected callback leaves the previous baseline eligible.
@@ -182,7 +196,8 @@ export const createInstalledExtensionRuntime = (input: {
       await input.provisionWorkspacesUsingSource(sourcePath);
       provisionedSourceHashes.set(sourcePath, sourceHash);
     }
-    void candidateInspection.inspect(sourcePath);
+    // Keep disabled sources watched for metadata, without executing their code.
+    if (await input.extensionService.hasEnabledProjectSource(sourcePath)) void candidateInspection.inspect(sourcePath);
   };
   // Editing a watched folder rebuilds the assets of the extension the project already adopted. It
   // never re-reads contributions from disk: adopting new source is an explicit act. Skill files
@@ -203,6 +218,8 @@ export const createInstalledExtensionRuntime = (input: {
   };
 
   const refresh = async (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => {
+    await candidateInspection.reconcile();
+    await webviewSourceInspection.reconcile();
     if (sourcePath) {
       // A single changed source invalidates only the projects that use it.
       input.projectRuntimeCatalog.invalidate({ sourcePath, reason: "source_changed" });
@@ -235,7 +252,9 @@ export const createInstalledExtensionRuntime = (input: {
     ready,
     stopPreparation,
     dispose: async () => {
+      unsubscribeEnablement?.();
       await candidateInspection.dispose();
+      await webviewSourceInspection.dispose();
       await stopPreparation();
       webviewBuildManager.dispose();
       await ready.catch(() => {});
