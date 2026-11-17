@@ -1,7 +1,7 @@
 # Devices that return never override devices that stayed in sync
 
 Proposed: 2026-11-07
-Status: Accepted for PS-1116. Amends [PRD 0014](../requirements/platform/0014-local-first-sync.md) R2 and [ADR 0137](0137-order-record-saves-and-declare-collaborative-text.md). The Cloud extension's status states and review popovers ship separately because extensions use only released SDK types.
+Status: Accepted for PS-1116. Amends [PRD 0014](../requirement-book/book.json) R2 and [ADR 0137](0137-order-record-saves-and-declare-collaborative-text.md). The Cloud extension's status states and review popovers ship separately because extensions use only released SDK types.
 
 ## Context
 
