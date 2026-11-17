@@ -132,6 +132,7 @@ export const recordFieldSql = (
     (_, position) =>
       sql`jsonb_typeof(${source} #> ARRAY[${sql.join(path.slice(0, position), sql`, `)}]::text[]) = 'object'`,
   );
+  const ancestors = parents.length ? sql.join(parents, sql` AND `) : sql`true`;
   const type = field.type === "array" ? "array" : field.type;
   const validArray =
     field.type === "array"
@@ -142,7 +143,7 @@ export const recordFieldSql = (
       ? sql`OR (jsonb_typeof(${value}) = 'object' AND ${value} ? ${sqlLiteral(projectionStringTag)})`
       : sql``;
   const validObject = field.type === "object" ? sql`AND NOT (${value} ? ${sqlLiteral(projectionStringTag)})` : sql``;
-  return sql`(CASE WHEN (${sql.join(parents, sql` AND `)}) AND (${value} = 'null'::jsonb OR (jsonb_typeof(${value}) = ${sqlLiteral(type)} ${validArray} ${validObject}) ${encodedString}) THEN ${value} ELSE NULL END)`;
+  return sql`(CASE WHEN (${ancestors}) AND (${value} = 'null'::jsonb OR (jsonb_typeof(${value}) = ${sqlLiteral(type)} ${validArray} ${validObject}) ${encodedString}) THEN ${value} ELSE NULL END)`;
 };
 export const sortFieldSql = (
   index: StorageRecordIndex,
