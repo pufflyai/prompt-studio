@@ -3,6 +3,7 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSyn
 import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { cssModuleInputs } from "./css-module-inputs";
 import { mirrorPackageChild } from "./mirror-package-child";
+import { cachedRuntimeModuleImports, retainRuntimeModuleImports } from "./runtime-module-import-cache";
 
 const moduleExtensions = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".css", ".mts", ".cts"];
 const executableExtensions = new Set(moduleExtensions.filter((extension) => extension !== ".json"));
@@ -36,7 +37,6 @@ const transpilerLoader = (filePath: string) => {
 };
 
 const transpilers = new Map<Bun.JavaScriptLoader, Bun.Transpiler>();
-const importsByContent = new Map<string, string[]>();
 const importsByBytes = new WeakMap<Buffer, { digest: string; imports: Map<string, string[]> }>();
 
 export const readRuntimeModuleImports = (
@@ -55,7 +55,7 @@ export const readRuntimeModuleImports = (
   const inspected = bytes.imports.get(mode);
   if (inspected) return inspected;
   const cacheKey = `${mode}\0${bytes.digest}`;
-  const cached = importsByContent.get(cacheKey);
+  const cached = cachedRuntimeModuleImports(cacheKey);
   if (cached) {
     bytes.imports.set(mode, cached);
     return cached;
@@ -83,8 +83,7 @@ export const readRuntimeModuleImports = (
   // Staged and installed copies share parsing, not filesystem identities. Fresh bytes
   // still validate every read, and graph/package resolution below remains uncached.
   // Bound retained parse results without retaining their source buffers.
-  if (importsByContent.size >= 12_288) importsByContent.delete(importsByContent.keys().next().value!);
-  importsByContent.set(cacheKey, imports);
+  retainRuntimeModuleImports(cacheKey, imports);
   bytes.imports.set(mode, imports);
   return imports;
 };

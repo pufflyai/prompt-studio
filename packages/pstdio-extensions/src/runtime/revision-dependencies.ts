@@ -342,3 +342,4 @@ export {
   hashRevisionDependencies,
   hashRevisionDependenciesAsync,
 } from "./revision-dependency-artifacts";
+export { restoreRuntimeModuleImports, snapshotRuntimeModuleImports } from "./runtime-module-import-cache";
