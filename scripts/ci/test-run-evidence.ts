@@ -11,8 +11,6 @@ interface ReportedCase {
   title: string;
   outcome: string;
 }
-export const registeredStableEmpty = (run: PlannedRun) =>
-  run.lane === "stable" && run.files.every((file) => run.quarantineIds.some((id) => id.startsWith(`${file}:`)));
 export const collectRunEvidence = (
   root: string,
   directory: string,
@@ -79,7 +77,7 @@ export const collectRunEvidence = (
         identity(report) &&
         report.complete &&
         report.shard === (run.shard ?? "1/1") &&
-        (report.selected.length > 0 || registeredStableEmpty(run)) &&
+        report.selected.length > 0 &&
         !report.errors.length &&
         report.cases.length === report.selected.length &&
         new Set(report.selected).size === report.selected.length &&

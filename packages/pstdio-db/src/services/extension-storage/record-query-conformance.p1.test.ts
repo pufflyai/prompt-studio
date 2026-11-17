@@ -311,6 +311,25 @@ test("selective in-list pages probe the declared equality index after ordinary w
   expect(rows).toBeLessThan(500);
 });
 
+test("ordered pages accept an in-list that fits the database parameter limit", async () => {
+  const { records } = await fixture();
+  await records.defineIndexes([
+    {
+      name: "groups",
+      fields: { group: { path: ["group"], type: "string" }, rank: { path: ["rank"], type: "number" } },
+      equality: ["group"],
+      orderBy: [{ field: "rank", direction: "asc" }],
+    },
+  ]);
+  await records.commit({ operationId: "seed", edits: [{ recordId: "match", replace: { group: "visible", rank: 1 } }] });
+  const page = await records.query({
+    index: "groups",
+    where: { field: "group", op: "in", value: [...Array<string>(22_000).fill("other"), "visible"] },
+    limit: 2,
+  });
+  expect(page.records.map((row) => row.recordId)).toEqual(["match"]);
+});
+
 test("in-list pages merge duplicate and null selections with filters, offsets and cursors", async () => {
   const f = await fixture();
   const memory = createMemoryStorage({ workbenchId: f.owner.workbenchId, extensionId: f.owner.extensionId }).records;
