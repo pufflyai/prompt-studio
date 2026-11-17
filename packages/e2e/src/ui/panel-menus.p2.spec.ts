@@ -2,6 +2,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { homeFrame } from "../helpers/home-loading";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { switchSession } from "../helpers/session-side-panel";
+import { verifyNativePublicTextEditor } from "../helpers/verify-public-text-editor";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
@@ -50,7 +51,7 @@ test("preserves browser Forward history between extension pages after refresh", 
   await page.reload();
   await page.goForward();
   await expect(page).toHaveURL(/\/extensions\/pstdio\.planner\/ticket\?resource=/);
-  await expect(page.getByRole("region", { name: "Main", exact: true }).getByRole("textbox")).toHaveText(ticket.content);
+  await verifyNativePublicTextEditor(page, ticket.content);
 });
 
 test("keeps the project selector and Session Panel available on project home", async ({ page, request }) => {
