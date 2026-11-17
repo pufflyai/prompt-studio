@@ -248,8 +248,14 @@ const createComposeServiceMonitor = (
   };
 };
 
-const waitForSeededProject = async (apiPort: number, token: string | undefined) => {
-  for (let attempt = 0; attempt < 90; attempt += 1) {
+// A cold start installs and validates every extension before the API answers, which can take
+// several minutes, so wait for as long as the container runs.
+const waitForSeededProject = async (
+  apiPort: number,
+  token: string | undefined,
+  monitor: ReturnType<typeof createComposeServiceMonitor>,
+) => {
+  while (monitor.isContainerRunning()) {
     try {
       const response = await fetch(`http://127.0.0.1:${apiPort}/v1/projects`, {
         headers: token ? { authorization: `Bearer ${token}` } : undefined,
@@ -266,7 +272,9 @@ const waitForSeededProject = async (apiPort: number, token: string | undefined) 
     await Bun.sleep(1_000);
   }
 
-  throw new Error("Timed out waiting for the isolated demo project.");
+  throw new Error(
+    `The isolated container stopped before the demo project was ready.\n${monitor.readContainerLogs()}`,
+  );
 };
 
 const main = async () => {
@@ -316,13 +324,9 @@ const main = async () => {
   const port = desktopMode
     ? apiPort
     : lookupHostPort(projectName, repoRoot, containerPorts.dashboard, hostPorts, desktopMode);
-  const token = desktopMode
-    ? await waitForRuntimeDescriptor(
-        pstdioHome,
-        createComposeServiceMonitor(projectName, repoRoot, hostPorts, desktopMode),
-      )
-    : apiToken;
-  const project = await waitForSeededProject(apiPort, token);
+  const monitor = createComposeServiceMonitor(projectName, repoRoot, hostPorts, desktopMode);
+  const token = desktopMode ? await waitForRuntimeDescriptor(pstdioHome, monitor) : apiToken;
+  const project = await waitForSeededProject(apiPort, token, monitor);
   const dashboardUrl = resolveIsolatedDashboardUrl(port);
   writeFileSync(
     resolve(pstdioHome, "..", "connection.json"),
