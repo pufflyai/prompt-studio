@@ -184,13 +184,15 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await frame.getByRole("menuitemradio", { name: "Second · Latest", exact: true }).click();
     await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
     await versionMenu.click();
+    await expect(frame.getByRole("menuitemradio", { name: "Second · Latest", exact: true })).toBeChecked();
     await frame.getByRole("menuitemradio", { name: "First", exact: true }).click();
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
+    // The selected immutable revision is a saved preference, including across reloads.
     await page.reload();
-    await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
+    await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
     // A published URL opens the same artifact tab from a fresh page location.
     await page.goto(first.url);
-    await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
+    await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
     const selectedTitle = await page.getByRole("tab", { name: /^(First|Second) page$/ }).innerText();
     await expect(breadcrumbs.getByText(selectedTitle, { exact: true })).toBeVisible();
     await expect(referenceTab).toBeVisible();
@@ -211,7 +213,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await expect(card.locator("iframe")).toHaveCount(1);
     await card.focus();
     await card.press("Enter");
-    await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
+    await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
     await artifactMenu.click();
     await page.getByRole("menuitem", { name: "Delete artifact…", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Delete artifact", exact: true }).click();

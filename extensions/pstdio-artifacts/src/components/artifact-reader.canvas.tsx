@@ -1,6 +1,7 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { createGlyphIcon, Header, ResourceActionMenu } from "@pstdio/ui";
+import { useState } from "react";
 import { weeklyActivityHtml } from "../../examples/weekly-activity";
 import { ArtifactReader } from "./artifact-reader";
 import { exampleArtifact } from "./artifact-story-fixture";
@@ -14,7 +15,7 @@ const ChevronDown = createGlyphIcon("arrow-down-1");
 const meta = {
   title: "Extensions/Artifacts/Reader",
   description:
-    "Export HTML belongs to the artifact actions beside the breadcrumb, with Rename and Delete. Versions remains a reader control.",
+    "Export HTML belongs to the artifact actions beside the breadcrumb, with Rename and Delete. Versions is an outlined, right-aligned dropdown with a bounded trigger and a ScrollArea for long lists.",
   component: ArtifactReader,
   decorators: [
     (Story) => (
@@ -52,8 +53,32 @@ const meta = {
 } satisfies CanvasMeta<typeof ArtifactReader>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;
+const InteractiveReader = () => {
+  const [manyVersions, setManyVersions] = useState(false);
+  const [selectedId, setSelectedId] = useState(exampleArtifact.id);
+  const revisions = manyVersions
+    ? Array.from({ length: 40 }, (_, index) => ({
+        ...exampleArtifact,
+        id: `revision-${40 - index}`,
+        revisionId: `revision-${40 - index}`,
+        label: `Version ${40 - index} — a long saved revision label that should stay within the dropdown`,
+      }))
+    : [exampleArtifact];
+  const selected = revisions.find((revision) => revision.id === selectedId) ?? revisions[0]!;
+  return (
+    <Stack height="full" minHeight="0" gap="0">
+      <Button alignSelf="start" onClick={() => setManyVersions((value) => !value)}>
+        {manyVersions ? "Show one version" : "Show many versions"}
+      </Button>
+      <Box flex="1" minHeight="0" minWidth="0">
+        <ArtifactReader content={{ ...content, ...selected }} revisions={revisions} onSelect={setSelectedId} />
+      </Box>
+    </Stack>
+  );
+};
 export const Interactive: Story = {
   id: "extensions-artifacts-reader--interactive",
+  render: () => <InteractiveReader />,
 };
 export const NewRevision: Story = {
   id: "extensions-artifacts-reader--new-revision",
