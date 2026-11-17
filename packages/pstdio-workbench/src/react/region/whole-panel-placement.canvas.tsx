@@ -1,6 +1,6 @@
 import { IconButton, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getWorkbenchRenderers } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 import { createArrangementWorkbench } from "./panel-arrangement-workbench";
@@ -29,6 +29,7 @@ const createPlacementWorkbench = (embeddedNavigation = false) => {
   return w;
 };
 const PlacementStory = (props: {
+  lateActions?: boolean;
   restricted?: boolean;
   reversed?: boolean;
   dark?: boolean;
@@ -42,6 +43,7 @@ const PlacementStory = (props: {
       core.shell.repositionPanel("sidenav", "right");
       core.shell.repositionPanel("activity", "bottom");
     }
+    if (props.lateActions) core.modes.getMode("arrangement")!.regionSettings = { side: { movable: false } };
     if (props.restricted)
       core.modes.getMode("arrangement")!.regionSettings = {
         main: { movable: false },
@@ -52,6 +54,32 @@ const PlacementStory = (props: {
       };
     return core;
   });
+  useEffect(() => {
+    if (!props.lateActions) return;
+    let admitted = false;
+    // Diagnostic controlled arrival of a valid mode-policy update between Shift and F10.
+    // The real mode registry/layout and actual header/menu renderers own every transition.
+    const admit = (event: KeyboardEvent) => {
+      if (
+        admitted ||
+        event.key !== "Shift" ||
+        !(event.target instanceof Element) ||
+        !event.target.closest('[data-workbench-panel-header="side"]')
+      )
+        return;
+      admitted = true;
+      const before = document.activeElement;
+      workbench.modes.getMode("arrangement")!.regionSettings = { side: { movable: true } };
+      workbench.layout.restoreLayout(workbench.layout.getLayout());
+      (window as unknown as { __ps136Admission: unknown }).__ps136Admission = {
+        key: event.key,
+        before: before?.outerHTML,
+        oldNode: before,
+      };
+    };
+    document.addEventListener("keydown", admit, true);
+    return () => document.removeEventListener("keydown", admit, true);
+  }, [props.lateActions, workbench]);
   return <WorkbenchStory workbench={workbench} initialThemePreference={props.dark ? "pstdio-dark" : "pstdio-light"} />;
 };
 const meta = {
@@ -86,4 +114,9 @@ export const MoveActions: Story = {
 export const ReversedMoveActions: Story = {
   id: "pstdio-workbench-reference-core-api-whole-panel-placement--reversed-move-actions",
   args: { reversed: true },
+};
+
+export const LateMoveActions: Story = {
+  id: "ps136-controlled-late-panel-movement-actions",
+  args: { lateActions: true },
 };

@@ -295,6 +295,17 @@ export const Terminal = (props: TerminalProps) => {
         ?.getAttribute("aria-controls")
         ?.split(" ")
         .some((id) => previousFocus?.closest(`[id="${CSS.escape(id)}"]`));
+      console.log(
+        "PS136_TERMINAL_FOCUS",
+        JSON.stringify({
+          at: Date.now(),
+          previous: previousFocus?.outerHTML?.slice(0, 300),
+          current: current?.outerHTML?.slice(0, 300),
+          restored,
+          same: current === previousFocus,
+          ancestor: Boolean(container && current?.contains(container)),
+        }),
+      );
       // Deferred construction must respect a focus choice made after the request.
       if (current === previousFocus || restored || (container && current?.contains(container)))
         xtermRef.current?.focus();

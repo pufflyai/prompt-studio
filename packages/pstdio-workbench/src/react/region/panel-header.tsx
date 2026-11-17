@@ -18,6 +18,7 @@ export const PanelHeader = (props: PanelHeaderProps) => {
   const headerProps = {
     ...rest,
     "data-workbench-panel-header": region,
+    "data-ps136-position-actions": positionActions.length,
     "aria-label": `${label} panel header`,
     tabIndex: 0,
   };
