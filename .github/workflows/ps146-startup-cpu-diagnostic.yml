@@ -62,11 +62,11 @@ jobs:
           bun --help > test-results/ci/startup-cpu/bun-help.txt
           python3 - <<'PY'
           from pathlib import Path
-          p = Path('packages/pstdio-extensions/src/runtime/preparation-worker.ts')
-          p.write_text('import { startSamplingProfiler } from "bun:jsc";\nstartSamplingProfiler(process.env.PS146_WORKER_PROFILE_DIR);\n' + p.read_text())
+          p = Path('packages/pstdio-api/src/features/extensions/extension-preparation-worker.ts')
+          p.write_text('import { startSamplingProfiler, samplingProfilerStackTraces } from "bun:jsc";\nimport { appendFileSync } from "node:fs";\nconst cpuProfileRoot = process.env.PS146_WORKER_PROFILE_DIR!;\nconst cpuProfileFile = `${cpuProfileRoot}/${process.pid}-${crypto.randomUUID()}.jsonl`;\nstartSamplingProfiler(cpuProfileRoot);\nsetInterval(() => appendFileSync(cpuProfileFile, JSON.stringify({ time: Date.now(), ...samplingProfilerStackTraces() }) + "\\n"), 2000).unref();\n' + p.read_text())
           PY
           git diff --binary > test-results/ci/startup-cpu/instrumentation.patch
-          bun -e 'import { readFileSync, writeFileSync } from "node:fs"; import { sealTestPlan, validateTestPlan } from "./scripts/ci/test-plan"; import { testPlanSource } from "./scripts/ci/test-plan-source"; const original = JSON.parse(readFileSync("test-results/ci/startup-cpu/original-plan.json", "utf8")); validateTestPlan(original); const { digest, ...body } = original; const next = sealTestPlan({ ...body, source: testPlanSource(process.cwd()) }); if (JSON.stringify(next.setup) !== JSON.stringify(original.setup) || JSON.stringify(next.runs) !== JSON.stringify(original.runs)) throw new Error("Diagnostic changed selection"); validateTestPlan(next, testPlanSource(process.cwd())); writeFileSync("test-results/ci/plan.json", JSON.stringify(next, null, 2)); writeFileSync("test-results/ci/startup-cpu/provenance.json", JSON.stringify({originalSource: original.source, diagnosticSource: next.source, originalDigest: digest, diagnosticDigest: next.digest, setupAndRunsByteIdentical: true, instrumentation: "Two added worker-profiler lines only; no deadline or workload change.", acceptanceQualification: false}, null, 2));'
+          bun -e 'import { readFileSync, writeFileSync } from "node:fs"; import { sealTestPlan, validateTestPlan } from "./scripts/ci/test-plan"; import { testPlanSource } from "./scripts/ci/test-plan-source"; const original = JSON.parse(readFileSync("test-results/ci/startup-cpu/original-plan.json", "utf8")); validateTestPlan(original); const { digest, ...body } = original; const next = sealTestPlan({ ...body, source: testPlanSource(process.cwd()) }); if (JSON.stringify(next.setup) !== JSON.stringify(original.setup) || JSON.stringify(next.runs) !== JSON.stringify(original.runs)) throw new Error("Diagnostic changed selection"); validateTestPlan(next, testPlanSource(process.cwd())); writeFileSync("test-results/ci/plan.json", JSON.stringify(next, null, 2)); writeFileSync("test-results/ci/startup-cpu/provenance.json", JSON.stringify({originalSource: original.source, diagnosticSource: next.source, originalDigest: digest, diagnosticDigest: next.digest, setupAndRunsByteIdentical: true, instrumentation: "Six profiler lines in actual configured API worker, with2s raw sample drains; no deadline or workload change.", acceptanceQualification: false}, null, 2));'
       - name: Execute unchanged selected cold-start jobs with CPU profiles
         shell: bash
         env:
@@ -74,9 +74,8 @@ jobs:
           PLAN_PREBUILT: "false"
           PLAN_DISPLAY: "true"
           CI_PLAN_OUTPUT_DIR: test-results/ci/startup-cpu/execution-${{ matrix.job }}
-          BUN_CPU_PROFILE: "1"
         run: |
-          export BUN_CPU_PROFILE_DIR="$GITHUB_WORKSPACE/test-results/ci/startup-cpu/processes"
+          export BUN_OPTIONS="--cpu-prof --cpu-prof-dir=$GITHUB_WORKSPACE/test-results/ci/startup-cpu/processes"
           export PS146_WORKER_PROFILE_DIR="$GITHUB_WORKSPACE/test-results/ci/startup-cpu/workers"
           python3 - <<'PY'
           import json, os, pathlib, subprocess, time
