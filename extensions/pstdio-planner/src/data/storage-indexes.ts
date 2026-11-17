@@ -1,5 +1,6 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { attemptQueryIndexes } from "./attempt-queries";
+import { migratePlannerStorage } from "./migrate-storage";
 import { plannerNavigationIndexes } from "./navigation-queries";
 import { ticketSelectionIndexes } from "./ticket-selection";
 
@@ -9,5 +10,8 @@ export const plannerStorageIndexes = () => [
   ...ticketSelectionIndexes,
   ...attemptQueryIndexes,
 ];
-export const preparePlannerIndexes = (storage: ExtensionStorageApi) =>
-  storage.records.defineIndexes(plannerStorageIndexes());
+// Queries must not run before an older project's tickets have moved into the indexed records.
+export const preparePlannerIndexes = async (storage: ExtensionStorageApi) => {
+  await migratePlannerStorage({ storage });
+  await storage.records.defineIndexes(plannerStorageIndexes());
+};

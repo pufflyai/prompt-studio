@@ -1,4 +1,5 @@
-import { Badge, HStack, Image } from "@chakra-ui/react";
+import { Badge, chakra, HStack, Image } from "@chakra-ui/react";
+import { ImageViewer } from "@/components/image-viewer/image-viewer";
 import type { Param } from "./param-editor.types";
 import { ParamEditorControlItem } from "./param-editor-control-item";
 import { ParamEditorReadOnlyValue } from "./param-editor-read-only-value";
@@ -36,18 +37,21 @@ const ReadOnlyContent = (props: Pick<ParamEditorReadOnlyFieldProps["param"], "va
     const images = value.type === "image" ? [{ src: value.src, alt: value.alt }] : value.images;
     return (
       <HStack gap="2xs" flexWrap="wrap">
-        {images.map((image) => (
-          <Image
-            key={`${image.src}-${image.alt}`}
-            src={image.src}
-            alt={image.alt}
-            width="96px"
-            height="72px"
-            borderRadius="sm"
-            borderWidth="1px"
-            borderColor="border.subtle"
-            objectFit="cover"
-          />
+        {images.map((image, index) => (
+          <ImageViewer key={`${image.src}-${image.alt}`} images={images} initialIndex={index}>
+            <chakra.button type="button" aria-label={`View ${image.alt}`} cursor="zoom-in" borderRadius="sm">
+              <Image
+                src={image.src}
+                alt={image.alt}
+                width="96px"
+                height="72px"
+                borderRadius="sm"
+                borderWidth="1px"
+                borderColor="border.subtle"
+                objectFit="cover"
+              />
+            </chakra.button>
+          </ImageViewer>
         ))}
       </HStack>
     );

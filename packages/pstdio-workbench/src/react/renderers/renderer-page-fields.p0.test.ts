@@ -41,3 +41,15 @@ test("board pages include displayed badge data and list short ids", () => {
     }),
   ).toEqual(["title", "people", "status", "id", "peopleItems"]);
 });
+
+test("resource list pages include every sub-grouping field so rows land in their groups", () => {
+  expect(
+    kanbanPageFields([], {
+      viewMode: "list",
+      columnGrouping: "region",
+      rowGrouping: "none",
+      subGroupings: ["channel", "severity"],
+      displayProperties: [],
+    }).sort(),
+  ).toEqual(["channel", "id", "region", "severity", "title"]);
+});

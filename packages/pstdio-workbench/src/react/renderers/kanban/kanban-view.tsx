@@ -96,8 +96,8 @@ const resolveViewSettings = (
   settings: import("../../../core").KanbanRendererSettings,
 ) => (props.resolveSettings ? props.resolveSettings(settings) : settings);
 
-const hasKanbanRowTarget = (row: KanbanRendererRow) =>
-  Boolean(row.target || row.children?.some((child) => child.target));
+const hasKanbanRowTarget = (row: KanbanRendererRow): boolean =>
+  Boolean(row.target || row.children?.some(hasKanbanRowTarget));
 
 const loadKanbanRows = async (
   contribution: ReactRegisteredKanbanRendererContribution,

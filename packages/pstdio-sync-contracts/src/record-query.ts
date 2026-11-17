@@ -41,6 +41,8 @@ export interface StorageRecordIndex {
   hierarchy?: { idField: string; parentField: string; labelField: string; breadcrumbField: string; separator: string };
   /** Extension collection in the selected scope; field paths are relative to its items. */
   collection?: string;
+  /** Records whose `records.id` key in the selected scope starts with this prefix, such as moved collection items. */
+  keyPrefix?: string;
   /** Selectable fields. Declaring a field does not make it an equality key. */
   fields: Record<string, StorageIndexField>;
   /** Explicit equality keys preceding the sort keys. Defaults to no equality keys. */

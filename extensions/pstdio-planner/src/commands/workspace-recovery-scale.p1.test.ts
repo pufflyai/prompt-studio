@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import type { AttemptRecord } from "../data/attempt-types";
+import { migratePlannerStorage } from "../data/migrate-storage";
 import { makeCommandContext } from "./command-context.fixture";
 import { readRecoverySeed } from "./workspace-recovery";
 
@@ -20,6 +21,8 @@ test("recovery tries surviving code first and pages only the selected workspace'
       ),
     },
   });
+  // The project's one-time storage upgrade may list its small legacy collections; recovery must not.
+  await migratePlannerStorage({ storage });
   const collection = storage.collection.bind(storage);
   storage.collection = <T>(name: string) => ({
     ...collection<T>(name),
