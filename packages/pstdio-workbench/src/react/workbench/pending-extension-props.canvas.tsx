@@ -1,6 +1,6 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { ExtensionFrame } from "pstdio-extensions/bridge/host";
+import { createHostEventPublisher, ExtensionFrame } from "pstdio-extensions/bridge/host";
 import runtimeScript from "pstdio-extensions/bridge/webview-runtime.bundle.js?raw";
 import { renderInlineExtensionRuntimeHtml } from "pstdio-extensions/bridge/webview-runtime-html";
 import { useEffect, useState } from "react";
@@ -27,6 +27,15 @@ const view = {
 
 const PendingExtensionProps = () => {
   const [frameProps, setFrameProps] = useState({ pageParams: { range: "now-6h" } });
+  const [activeView, setActiveView] = useState(view);
+  const [hostEvents] = useState(createHostEventPublisher);
+  const [disconnects, setDisconnects] = useState(0);
+  useEffect(() => hostEvents.onDisconnect(() => setDisconnects((count) => count + 1)), [hostEvents]);
+  const replaceUrl = (field: "runtimeUrl" | "moduleUrl") =>
+    setActiveView((current) => ({
+      ...current,
+      webview: { ...current.webview, [field]: `${current.webview[field]}#next` },
+    }));
   const range = frameProps.pageParams.range;
   const [committedRange, setCommittedRange] = useState(range);
   // Child passive effects run before this marker is published. The guest stays
@@ -36,8 +45,17 @@ const PendingExtensionProps = () => {
     <Stack height="full" gap="md" padding="md">
       <Button onClick={() => setFrameProps({ pageParams: { range: "now-24h" } })}>Update host props</Button>
       <Text aria-label="Committed host range">{committedRange}</Text>
+      <Button onClick={() => replaceUrl("runtimeUrl")}>Replace guest runtime</Button>
+      <Button onClick={() => replaceUrl("moduleUrl")}>Replace guest module</Button>
+      <Text data-testid="guest-disconnects">{disconnects}</Text>
       <Box flex="1" minH="0">
-        <ExtensionFrame title="Pending props" theme="dark" view={view} props={frameProps} />
+        <ExtensionFrame
+          title="Pending props"
+          theme="dark"
+          view={activeView}
+          hostEvents={hostEvents}
+          props={frameProps}
+        />
       </Box>
     </Stack>
   );
