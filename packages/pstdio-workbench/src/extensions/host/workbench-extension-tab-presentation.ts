@@ -8,6 +8,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, WorkbenchPanelTab, WorkbenchTabSnapshot } from "../../core";
+import { resolveWebviewPageProps } from "../bridge/webview-page-props";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 import { executeWorkbenchExtensionCommand } from "./workbench-extension-command";
 import type { RegisterWorkbenchExtensionContributionsInput } from "./workbench-extension-host-types";
@@ -92,7 +93,7 @@ export const createWorkbenchExtensionTabPresentation = (
       },
     );
   const scoped = root.forScope({ projectId: input.projectId, extensionId: metadata.extensionId });
-  const queries = new Map<string, ScopedQuery<WorkbenchTabSnapshot>>();
+  const queries = new Map<string, { resourceKey: string; query: ScopedQuery<WorkbenchTabSnapshot> }>();
   const legacy = new Map<() => void, Map<string, () => void>>();
   const releases = new Set<() => void>();
   let disposed = false;
@@ -108,13 +109,20 @@ export const createWorkbenchExtensionTabPresentation = (
   };
   const queryFor = (instance: Parameters<WorkbenchPanelTab["getSnapshot"]>[0]) => {
     const resource = instance.resource;
-    const key = resourceKey(resource) ?? "unbound";
-    let query = queries.get(key);
+    const state = input.workbench.pages.store.getState();
+    const owner = instance.placementIdentity;
+    const pageParams =
+      instance.pageContext || (owner?.kind === "page" && owner.pageId === state.activePageId)
+        ? resolveWebviewPageProps(state, instance).pageParams
+        : undefined;
+    const resourceIdentity = resourceKey(resource) ?? "unbound";
+    const key = JSON.stringify([resourceIdentity, pageParams]);
+    let query = queries.get(key)?.query;
     if (!query || query.isDisposed()) {
       query = scoped.query({
         id: `tab:${metadata.placementId}:${metadata.queryHandlerId}`,
-        resourceKey: key,
-        params: input.presentationLocale,
+        resourceKey: resourceIdentity,
+        params: { locale: input.presentationLocale, pageParams },
         dependsOn: [
           viewDataEvents.extensionCatalogChanged.id,
           viewDataEvents.extensionTranslationsChanged.id,
@@ -131,6 +139,7 @@ export const createWorkbenchExtensionTabPresentation = (
                   rendererId: metadata.placementId,
                   projectId: input.projectId,
                   ...(resource ? { resource } : {}),
+                  ...(pageParams ? { pageParams } : {}),
                   invocation: { placement: "visible" },
                 },
               },
@@ -139,17 +148,19 @@ export const createWorkbenchExtensionTabPresentation = (
             input.projectId,
           ),
       });
-      queries.set(key, query);
+      queries.set(key, { resourceKey: resourceIdentity, query });
       for (const [listener, bindings] of legacy) bindings.set(key, observe(query, listener));
       for (const [oldKey, old] of queries)
-        if (oldKey !== key && queries.size > 128 && !old.active()) queries.delete(oldKey);
+        if (oldKey !== key && queries.size > 128 && !old.query.active()) queries.delete(oldKey);
     }
     return query;
   };
   const preview = input.workbench.resources.preview.subscribeRefresh(async (resource) => {
-    const query = queries.get(resourceKey(resource)!);
-    if (!query) return;
-    await query.refreshObserved();
+    await Promise.all(
+      [...queries.values()]
+        .filter((entry) => entry.resourceKey === resourceKey(resource))
+        .map((entry) => entry.query.refreshObserved()),
+    );
   });
   return {
     refreshEvents: metadata.refreshEventIds,
@@ -163,9 +174,23 @@ export const createWorkbenchExtensionTabPresentation = (
     subscribe(listener, instance) {
       if (disposed) return { dispose() {} };
       let stop: () => void;
-      if (instance) stop = observe(queryFor(instance), listener);
-      else {
-        const bindings = new Map([...queries].map(([key, query]) => [key, observe(query, listener)]));
+      if (instance) {
+        let query = queryFor(instance);
+        let unobserve = observe(query, listener);
+        const unsubscribe = input.workbench.pages.store.subscribe(() => {
+          const next = queryFor(instance);
+          if (next === query) return;
+          unobserve();
+          query = next;
+          unobserve = observe(query, listener);
+          listener();
+        });
+        stop = () => {
+          unobserve();
+          unsubscribe();
+        };
+      } else {
+        const bindings = new Map([...queries].map(([key, entry]) => [key, observe(entry.query, listener)]));
         legacy.set(listener, bindings);
         stop = () => {
           legacy.delete(listener);

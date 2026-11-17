@@ -32,6 +32,12 @@ export const previewExtensions = [
     icon: "Kanban",
   },
   {
+    installName: "pstdio-skill-browser",
+    extensionId: "pstdio.pstdio-skill-browser",
+    displayName: "Skill Browser",
+    icon: "sparkles",
+  },
+  {
     installName: "reports",
     extensionId: "pstdio.reports",
     displayName: "Agent Reports",

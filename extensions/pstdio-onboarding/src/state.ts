@@ -1,6 +1,17 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { type OnboardingState, onboardingExtensions, onboardingStateSchema, type UpdateOnboarding } from "./types";
 
+const availableOnboardingExtensions = async (
+  extensions: NonNullable<ExtensionContextBase["extensions"]>,
+  names: string[],
+) => {
+  if (!names.includes("pstdio-skill-browser")) return names;
+  const inventory = await extensions.list();
+  const available = inventory.marketplace.find((entry) => entry.extensionId === "pstdio.pstdio-skill-browser");
+  if (!available) return names.filter((name) => name !== "pstdio-skill-browser");
+  return names.map((name) => (name === "pstdio-skill-browser" ? available.installName : name));
+};
+
 const initial = { completed: false, hidden: false, harnesses: null, workAreas: null } satisfies OnboardingState;
 export const createSetupState = () => {
   const read = async (ctx: ExtensionContextBase) =>
@@ -29,7 +40,7 @@ export const createSetupState = () => {
       } else state = { ...current, completed: true };
       if (names) {
         if (!ctx.extensions) throw new Error("This host does not support extension installation.");
-        await ctx.extensions.install(names);
+        await ctx.extensions.install(await availableOnboardingExtensions(ctx.extensions, names));
       }
       const { hidden, ...choices } = state;
       await ctx.settings.set("choices", choices);
