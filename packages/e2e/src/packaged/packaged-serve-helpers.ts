@@ -115,7 +115,7 @@ export const waitForPackagedReady = async (
 
 export const startPackagedServe = async (
   tempRoot: string,
-  env: Record<string, string> = {},
+  env: Record<string, string | undefined> = {},
   binaryPath = PACKAGED_BINARY_PATH,
   observe?: (process: PackagedRuntimeObservation) => void,
   onOutput?: (chunk: Buffer, stream: "stdout" | "stderr") => void,

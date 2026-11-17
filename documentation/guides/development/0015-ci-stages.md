@@ -171,6 +171,28 @@ A source-built diagnostic cannot certify a stable release app. Other channels:
 
 If a stable release stops halfway, re-run the `publish` job. It skips the steps that already finished.
 
+## Populated project upgrades
+
+**Verify a populated project upgrade** selects one version pair for Linux x64 and Apple Silicon. A manual run checks out and compiles the exact current `main` commit. It defaults to the current stable release as the source. Supply `from_tag` to start from another published release that supports session import. When the source release already includes the current `main` commit, the workflow records that there is no newer commit to test.
+
+Stable and patch certification use the previous stable release as the source and the exact packaged CLI from the candidate build. Both platform results must pass before publishing. The setup needs a published source release and the target build. Nightly availability has no effect on this check.
+
+Both profiles start with a temporary home and a Git project with 1,000 files, 500 Planner tickets, 150 saved conversations, and three worktrees. Each has a saved view and links between tickets, workspaces, and conversations. The long-lived profile adds an archived and a deleted ticket, larger attachments, and longer transcripts.
+
+The check verifies the source binary, records a before snapshot of the project through its APIs, and stops the source. It opens the same disposable home with the compiled target. It uses the documented extension upgrade action if Planner or Sessions reports an incompatible API version. It compares data and file contents, opens the upgraded workbench, and checks that a new ticket edit persists after restart. Database retirement or a missing attachment fails the upgrade.
+
+For a local run, build a target binary from the commit you want to check and install Playwright Chromium. Run from the repository root:
+
+```sh
+target=$(git rev-parse HEAD)
+PSTDIO_EXTENSION_RELEASE_REF="$target" bun run build -- --scope pstdio --include-dependencies
+bun --no-env-file packages/e2e/src/packaged/project-upgrade.ts \
+  --from 'pstdio@0.47.0' --candidate dist/pstdio \
+  --candidate-ref "$target" --profile aged
+```
+
+Omit `--profile` to run both profiles. For a retained local source binary, supply its tag and `--baseline-binary` after checking its release checksum. GitHub Actions saves the source tag, target commit, binary digests, before and after manifests, and startup logs. Find the same files locally under `test-results/project-upgrades`.
+
 ## Extra diagnostics
 
 These expensive workflows are exceptions, not routine PR requirements. Use them only for a concrete high-risk change that focused local checks and normal PR CI cannot establish, or an explicit user request. Record the risk and smallest complete workload first. Deferred inventory entries and shared dependency changes do not automatically justify a full matrix. Nightly and release validation retain their declared complete coverage.

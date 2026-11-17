@@ -3,6 +3,7 @@ import {
   productionBenchmarkPlatforms,
   productionDesktopPlatforms,
   productionPerformanceWorkloads,
+  projectUpgradePlatforms,
 } from "./production-platforms";
 
 export interface ProductionCandidate {
@@ -81,6 +82,7 @@ export const requiredProductionChecks = (channel: string) => {
   return [
     "functional",
     "services",
+    ...(channel === "stable" ? projectUpgradePlatforms().map(({ target }) => `project-upgrade-${target}`) : []),
     ...targets.map((target) => `desktop-${target === "linux-x64" ? "shared" : "native"}-${target}`),
     ...productionBenchmarkPlatforms().map(({ target }) => `performance-desktop-${target}`),
     ...productionPerformanceWorkloads(channel).map((row) => `performance-${row.family}-${row.os}`),
@@ -125,7 +127,8 @@ if (import.meta.main) {
     errors.push("candidate: identity unavailable");
   }
   const results: Record<string, { result: string }> = JSON.parse(process.env.PRODUCTION_RESULTS ?? "{}");
-  const required = requiredProductionChecks(process.env.CHANNEL ?? "stable");
+  const channel = process.env.CHANNEL ?? "stable";
+  const required = requiredProductionChecks(channel);
   const observations: ProductionEvidence[] = [];
   for await (const path of new Bun.Glob("production-evidence/**/*.json").scan(".")) {
     try {
@@ -154,7 +157,9 @@ if (import.meta.main) {
     }
   }
   if (!candidate) errors.push(...required.map((check) => `${check}: missing`));
-  for (const check of ["candidate", "functional", "signed_functional", "performance", "services"])
+  const jobs = ["candidate", "functional", "signed_functional", "performance", "services"];
+  if (channel === "stable") jobs.push("project_upgrade");
+  for (const check of jobs)
     if (results[check]?.result !== "success") errors.push(`${check}: ${results[check]?.result ?? "missing"}`);
   const releaseEligible =
     errors.length === 0 &&

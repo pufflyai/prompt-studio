@@ -8,12 +8,21 @@ export interface StackConnection {
 
 const BUSY = /Another Planner write is running|Retry when it finishes/;
 
-export const createStackApi = (connection: StackConnection) => {
+export const createStackApi = (connection: Pick<StackConnection, "apiPort" | "apiToken">) => {
   const base = `http://127.0.0.1:${connection.apiPort}/v1`;
   const headers = { authorization: `Bearer ${connection.apiToken}`, "content-type": "application/json" };
   // An import of 1,000 tickets can wait behind other projects' imports, so commands get far more time
   // than Bun's default; a runtime that stops answering still ends the call.
   const within = (minutes: number) => ({ signal: AbortSignal.timeout(minutes * 60_000) });
+  const raw = async (path: string, init?: RequestInit) => {
+    const response = await fetch(base + path, {
+      ...within(2),
+      ...init,
+      headers: { authorization: headers.authorization, ...init?.headers },
+    });
+    if (!response.ok) throw new Error(`${init?.method ?? "GET"} ${path}: HTTP ${response.status}`);
+    return response;
+  };
 
   const request = async <T>(method: string, path: string, body?: unknown) => {
     const response = await fetch(`${base}${path}`, {
@@ -59,6 +68,8 @@ export const createStackApi = (connection: StackConnection) => {
   return {
     get: <T>(path: string) => request<T>("GET", path),
     post: <T>(path: string, body: unknown) => request<T>("POST", path, body),
+    put: <T>(path: string, body: unknown) => request<T>("PUT", path, body),
+    raw,
     command,
   };
 };

@@ -1,4 +1,4 @@
-import { downloadHostBinary, hostBinaryName } from "./published-host-binary";
+import { preparePublishedHost } from "./published-host-binary";
 
 const releasesUrl = "https://api.github.com/repos/pufflyai/prompt-studio/releases?per_page=30";
 
@@ -18,16 +18,5 @@ export const preparePublishedNightlyHost = async () => {
   );
   if (!nightly) throw new Error("No published nightly release");
 
-  const checksumsUrl = `https://github.com/pufflyai/prompt-studio/releases/download/${encodeURIComponent(nightly.tag_name)}/checksums.sha256`;
-  const checksums = await fetch(checksumsUrl);
-  if (!checksums.ok) throw new Error(`Cannot download ${nightly.tag_name} checksums: HTTP ${checksums.status}`);
-  const name = hostBinaryName();
-  const sha256 = (await checksums.text())
-    .split("\n")
-    .map((line) => line.trim().split(/\s+/))
-    .find(([, file]) => file === name)?.[0];
-  if (!sha256) throw new Error(`${nightly.tag_name} publishes no ${name}`);
-
-  const path = await downloadHostBinary({ tag: nightly.tag_name, cacheFolder: `pstdio-${nightly.tag_name}`, sha256 });
-  return { tag: nightly.tag_name, path };
+  return preparePublishedHost(nightly.tag_name);
 };
