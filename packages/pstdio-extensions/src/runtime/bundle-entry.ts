@@ -23,9 +23,8 @@ const packageRelativePath = (realPackagePath: string, realPath: string) => {
   return rel;
 };
 
-// A prepared revision nests the package below the snapshot root, so its dependencies are not at
-// the start of the relative path. Bun resolves their file locations itself.
-const shouldPreserveImportMetaUrl = (relativePath: string) => !relativePath.split("/").includes("node_modules");
+const shouldPreserveImportMetaUrl = (relativePath: string) =>
+  relativePath !== "node_modules" && !relativePath.startsWith("node_modules/");
 
 const preserveImportMetaUrlPlugin = (packagePath: string) => {
   const realPackagePath = realpathSync(packagePath);
@@ -45,7 +44,8 @@ const preserveImportMetaUrlPlugin = (packagePath: string) => {
 
         const sourcePath = join(packagePath, relativePath);
         const loader = asJavaScriptLoader(args.loader);
-        // Without explicit paths the transpiler declares `__filename` as "input.js".
+        // Without explicit paths the transpiler declares `__filename` as "input.js". Dependencies of a
+        // prepared copy pass through here too, and some locate their own files through `__filename`.
         const transpiler = new Bun.Transpiler({
           define: {
             "import.meta.url": JSON.stringify(pathToFileURL(sourcePath).href),

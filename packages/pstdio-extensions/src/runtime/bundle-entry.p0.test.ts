@@ -131,7 +131,7 @@ test("a prepared copy imports dependencies that find their own file through __fi
     [
       'import { createRequire } from "node:module";',
       'const require2 = createRequire(typeof __filename === "string" ? __filename : import.meta.url);',
-      "export const dependencyFile = typeof require2.resolve;",
+      'export const dependencyFile = [typeof require2.resolve, typeof __filename === "string" ? __filename : ""];',
     ].join("\n"),
   );
   const entry = join(packagePath, "extension.ts");
@@ -146,7 +146,8 @@ test("a prepared copy imports dependencies that find their own file through __fi
   try {
     const bundlePath = await bundleEntry(entry, packagePath, join(snapshotRoot, "out"), snapshotRoot);
     const loaded = await import(bundlePath);
-    expect(loaded.default).toEqual({ dependencyFile: "function", ownFile: entry });
+    // Each file keeps its own location, so a dependency can find files next to it.
+    expect(loaded.default).toEqual({ dependencyFile: ["function", join(dependency, "index.js")], ownFile: entry });
   } finally {
     rmSync(snapshotRoot, { recursive: true, force: true });
   }
