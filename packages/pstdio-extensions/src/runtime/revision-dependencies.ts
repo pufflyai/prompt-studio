@@ -1,12 +1,12 @@
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative } from "node:path";
 import { inspectCompilerConfiguration, type RevisionCompilerInput } from "./revision-compiler-inputs";
-import { resolveRevisionModule } from "./revision-module-inputs";
+import { createRevisionModuleResolver } from "./revision-module-inputs";
 import { inspectRevisionModule } from "./revision-module-inspection";
 
 export { copyRevisionSource, hashRevisionSource } from "./revision-file-inputs";
 
-import { collectRuntimeModulePaths } from "./runtime-source-snapshot";
+import { collectRuntimeModulePaths, createLocalImportResolver } from "./runtime-source-snapshot";
 
 const dependencies = (manifest: {
   dependencies?: Record<string, unknown>;
@@ -87,12 +87,13 @@ const inspectEntries = (
   compilerInputs: Map<string, RevisionCompilerInput>,
   browser: boolean,
   knownPaths: Set<string>,
+  resolveLocalImport: ReturnType<typeof createLocalImportResolver>,
   context: string,
 ) => {
   const modulePaths = new Set<string>();
   for (const entry of entries) {
     if (inspected.has(`${context}:${entry}`)) continue;
-    for (const rel of collectRuntimeModulePaths(canonical, entry, readSource, knownPaths)) {
+    for (const rel of collectRuntimeModulePaths(canonical, entry, readSource, knownPaths, resolveLocalImport)) {
       files.add(rel);
       knownPaths.add(rel);
       modulePaths.add(rel);
@@ -169,6 +170,8 @@ export const collectRevisionDependencies = (
   options: { entryPath?: string; entryPaths?: string[]; target?: "browser" } = {},
 ) => {
   const contents = new Map<string, Buffer>();
+  const resolveLocalImport = createLocalImportResolver();
+  const resolveRevisionModule = createRevisionModuleResolver();
   const packages = Object.assign(
     new Map<
       string,
@@ -321,6 +324,7 @@ export const collectRevisionDependencies = (
       packages.compilerInputs,
       browser,
       contextFiles.get(contextKey)!,
+      resolveLocalImport,
       context,
     );
   };

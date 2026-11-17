@@ -47,7 +47,12 @@ const createDeps = (input: { skills?: unknown[] } = {}) => {
       extensionStorageService: createTestDocumentStorage(),
       extensionRuntimeCatalog: {
         get: mock(async () => ({ runtime: { schedules: [] as Array<Record<string, unknown>> } })),
-        getSourcesRuntime: mock(async () => ({ hooks: [], skills: input.skills ?? [] })),
+        getSourcesRuntime: mock(async () => ({
+          extensions: [installedSource],
+          diagnostics: [],
+          hooks: [],
+          skills: input.skills ?? [],
+        })),
       },
       extensionService: {
         enableInstalledSourceForProject: async () => ({ instance: extensionInstance(true), installedSource }),

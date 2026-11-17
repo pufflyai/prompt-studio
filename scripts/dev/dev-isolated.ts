@@ -8,7 +8,7 @@ import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { join, posix, resolve } from "node:path";
-import { waitForRuntimeDescriptor } from "./desktop-runtime-startup";
+import { readRuntimeToken, waitForRuntimeDescriptor } from "./desktop-runtime-startup";
 import { resolveCredentialMounts, writeCredentialComposeFile, writeExtraCaContext } from "./isolated-host-files";
 import { resolveIsolatedUser } from "./isolated-user";
 import { seedLargeProject } from "./seed-large-project";
@@ -248,25 +248,78 @@ const createComposeServiceMonitor = (
   };
 };
 
-const waitForSeededProject = async (apiPort: number, token: string | undefined) => {
-  for (let attempt = 0; attempt < 90; attempt += 1) {
-    try {
-      const response = await fetch(`http://127.0.0.1:${apiPort}/v1/projects`, {
-        headers: token ? { authorization: `Bearer ${token}` } : undefined,
-      });
-      if (response.ok) {
-        const projects = (await response.json()) as Array<{ id: string; name: string }>;
-        const project = projects.find((entry) => entry.name === SEEDED_PROJECT_NAME) ?? projects[0];
-        if (project) return project;
-      }
-    } catch {
-      // The container is still booting.
-    }
+const STILL_WAITING_EVERY_MS = 30_000;
+// Once the API answers, the container's own setup creates the demo project within seconds.
+const PROJECT_AFTER_API_MS = 5 * 60_000;
+const REJECTED_TOKEN_LIMIT = 30;
+const DOCKER_FAILURE_LIMIT = 5;
 
+type ProjectAnswer = { project?: { id: string; name: string }; status?: number };
+
+/** One request for the demo project; a container that is still booting answers nothing. */
+const askForProject = async (apiPort: number, token: string | undefined): Promise<ProjectAnswer> => {
+  try {
+    const response = await fetch(`http://127.0.0.1:${apiPort}/v1/projects`, {
+      headers: token ? { authorization: `Bearer ${token}` } : undefined,
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!response.ok) return { status: response.status };
+    const projects = (await response.json()) as Array<{ id: string; name: string }>;
+    return {
+      status: response.status,
+      project: projects.find((entry) => entry.name === SEEDED_PROJECT_NAME) ?? projects[0],
+    };
+  } catch {
+    return {};
+  }
+};
+
+// A cold start installs and validates every extension before the API answers, which can take
+// several minutes, so the wait has no fixed limit while the container runs and the API has not
+// answered. `token` is read on every attempt: the desktop runtime may replace a descriptor left
+// by an earlier container.
+const waitForSeededProject = async (
+  apiPort: number,
+  token: () => string | undefined,
+  monitor: ReturnType<typeof createComposeServiceMonitor>,
+) => {
+  const started = Date.now();
+  let lastNotice = started;
+  let answeredAt: number | undefined;
+  let rejected = 0;
+  let dockerFailures = 0;
+  const running = () => {
+    try {
+      const result = monitor.isContainerRunning();
+      dockerFailures = 0;
+      return result;
+    } catch (error) {
+      // A briefly busy Docker daemon must not end a start that is otherwise healthy.
+      if (++dockerFailures >= DOCKER_FAILURE_LIMIT) throw error;
+      return true;
+    }
+  };
+  while (running()) {
+    const { project, status } = await askForProject(apiPort, token());
+    if (project) return project;
+    rejected = status === 401 || status === 403 ? rejected + 1 : 0;
+    if (rejected >= REJECTED_TOKEN_LIMIT)
+      throw new Error(`The isolated API keeps rejecting its token (HTTP ${status}).`);
+    if (status === 200) answeredAt ??= Date.now();
+    if (answeredAt !== undefined && Date.now() - answeredAt > PROJECT_AFTER_API_MS)
+      throw new Error(
+        `The isolated API answered, but no project appeared within ${PROJECT_AFTER_API_MS / 60_000} minutes.\n${monitor.readContainerLogs()}`,
+      );
+    if (Date.now() - lastNotice >= STILL_WAITING_EVERY_MS) {
+      lastNotice = Date.now();
+      process.stdout.write(
+        `Still starting after ${Math.round((lastNotice - started) / 1_000)} s; follow it with --logs.\n`,
+      );
+    }
     await Bun.sleep(1_000);
   }
 
-  throw new Error("Timed out waiting for the isolated demo project.");
+  throw new Error(`The isolated container stopped before the demo project was ready.\n${monitor.readContainerLogs()}`);
 };
 
 const main = async () => {
@@ -316,13 +369,13 @@ const main = async () => {
   const port = desktopMode
     ? apiPort
     : lookupHostPort(projectName, repoRoot, containerPorts.dashboard, hostPorts, desktopMode);
-  const token = desktopMode
-    ? await waitForRuntimeDescriptor(
-        pstdioHome,
-        createComposeServiceMonitor(projectName, repoRoot, hostPorts, desktopMode),
-      )
-    : apiToken;
-  const project = await waitForSeededProject(apiPort, token);
+  const monitor = createComposeServiceMonitor(projectName, repoRoot, hostPorts, desktopMode);
+  let token = desktopMode ? await waitForRuntimeDescriptor(pstdioHome, monitor) : apiToken;
+  const project = await waitForSeededProject(
+    apiPort,
+    () => (token = desktopMode ? (readRuntimeToken(pstdioHome) ?? token) : apiToken),
+    monitor,
+  );
   const dashboardUrl = resolveIsolatedDashboardUrl(port);
   writeFileSync(
     resolve(pstdioHome, "..", "connection.json"),
