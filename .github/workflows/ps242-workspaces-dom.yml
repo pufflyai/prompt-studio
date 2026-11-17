@@ -1,0 +1,112 @@
+name: PS242 Workspaces DOM diagnostic
+on:
+  push:
+    branches: [test/ps242-workspaces-dom]
+permissions:
+  contents: read
+  actions: read
+env:
+  NX_DAEMON: "false"
+jobs:
+  startup:
+    name: Workspaces DOM (${{ matrix.source }})
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        source: [78c6f104302e80ab689d013e0b016d6a7304795d, 0f12554fc]
+    env:
+      GH_TOKEN: ${{ github.token }}
+      UI_PERF_ASSERT_BUDGETS: "1"
+      PLAYWRIGHT_TRACE: "off"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ matrix.source }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - name: Set up Bun in the Playwright image
+        run: |
+          echo "BUN_INSTALL_CACHE_DIR=/tmp/pstdio-ci-bun-cache" >> "$GITHUB_ENV"
+          echo "E2E_BUN_CACHE_DIR=/tmp/pstdio-ci-bun-cache" >> "$GITHUB_ENV"
+          node scripts/ci/setup-container-bun.ts
+      - name: Install dependencies and restore the original Playwright build-cache profile
+        uses: ./.github/actions/setup-ci-cache
+        with:
+          profile: playwright
+      - name: Download original immutable plan
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: "14333222855"
+          merge-multiple: true
+          run-id: "44095389327"
+          github-token: ${{ github.token }}
+          path: test-results/ci
+      - name: Preserve exact source and instrument failure evidence only
+        shell: bash
+        run: |
+          mkdir -p test-results/ci/workspaces-dom
+          cp test-results/ci/plan.json test-results/ci/workspaces-dom/original-plan.json
+          git rev-parse HEAD HEAD^{tree} > test-results/ci/workspaces-dom/source-before.txt
+          git diff --exit-code
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('packages/e2e/src/packaged/packaged-workspaces-devices.p2.test.ts')
+          s=p.read_text()
+          s=s.replace('      const page = await opened.value.newPage();', '''      const page = await opened.value.newPage();
+                const diagnosticEvents: unknown[] = [];
+                const diagnosticBodies: Promise<void>[] = [];
+                const diagnosticRoot = `test-results/workspaces-dom/${process.env.PS242_DIAGNOSTIC_SOURCE}`;
+                page.on("console", message => diagnosticEvents.push({at:Date.now(), kind:"console", type:message.type(), text:message.text()}));
+                page.on("pageerror", error => diagnosticEvents.push({at:Date.now(), kind:"pageerror", message:error.message, stack:error.stack}));
+                page.on("request", request => diagnosticEvents.push({at:Date.now(), kind:"request", method:request.method(), path:new URL(request.url()).pathname}));
+                page.on("requestfailed", request => diagnosticEvents.push({at:Date.now(), kind:"requestfailed", path:new URL(request.url()).pathname, failure:request.failure()}));
+                page.on("response", response => {
+                  const path = new URL(response.url()).pathname;
+                  diagnosticEvents.push({at:Date.now(), kind:"response", path, status:response.status()});
+                  if (path.endsWith("/extensions/ui")) diagnosticBodies.push(response.text().then(async body => { await Bun.write(`${diagnosticRoot}/ui-response.json`, body); }).catch(error => { diagnosticEvents.push({kind:"ui-body-error", message:String(error)}); }));
+                });''')
+          needle='      await expectUI(page.getByTestId("resource-list-renderer")).toBeVisible();'
+          assert s.count(needle)==1
+          s=s.replace(needle,'''      try {
+          '''+needle+'''
+                } catch (error) {
+                  await Bun.write(`${diagnosticRoot}/events.json`, JSON.stringify(diagnosticEvents, null, 2));
+                  await Bun.write(`${diagnosticRoot}/page.html`, await page.content());
+                  await Bun.write(`${diagnosticRoot}/page-url.txt`, new URL(page.url()).origin + new URL(page.url()).pathname);
+                  await page.screenshot({ path:`${diagnosticRoot}/page.png`, fullPage:true });
+                  await Promise.allSettled(diagnosticBodies);
+                  throw error;
+                }''')
+          p.write_text(s)
+          PY
+          git diff --binary > test-results/ci/workspaces-dom/instrumentation.patch
+          bun -e 'import { readFileSync, writeFileSync } from "node:fs"; import { sealTestPlan, validateTestPlan } from "./scripts/ci/test-plan"; import { testPlanSource } from "./scripts/ci/test-plan-source"; const original = JSON.parse(readFileSync("test-results/ci/workspaces-dom/original-plan.json", "utf8")); validateTestPlan(original); const { digest, ...body } = original; const next = sealTestPlan({ ...body, source: testPlanSource(process.cwd()) }); if (JSON.stringify(next.setup) !== JSON.stringify(original.setup) || JSON.stringify(next.runs) !== JSON.stringify(original.runs)) throw new Error("Diagnostic changed selection"); validateTestPlan(next, testPlanSource(process.cwd())); writeFileSync("test-results/ci/plan.json", JSON.stringify(next, null, 2)); writeFileSync("test-results/ci/workspaces-dom/provenance.json", JSON.stringify({originalSource: original.source, diagnosticSource: next.source, originalDigest: digest, diagnosticDigest: next.digest, setupAndRunsByteIdentical: true, instrumentation: "Browser events plus DOM, URL and screenshot after unchanged visibility assertion fails; no deadline/workload change.", acceptanceQualification:false}, null, 2));'
+      - name: Execute original complete cold packaged group
+        env:
+          PLAN_JOB: packaged-cli-P2-3/4
+          PLAN_PREBUILT: "false"
+          PLAN_DISPLAY: "true"
+          PS242_DIAGNOSTIC_SOURCE: ${{ matrix.source }}
+          CI_PLAN_OUTPUT_DIR: test-results/ci/workspaces-dom/execution
+        run: bun scripts/ci/run-ci-test-job.ts
+      - name: Hash diagnostic evidence
+        if: always()
+        shell: bash
+        run: |
+          find test-results/ci/workspaces-dom -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > test-results/ci/workspaces-dom/SHA256SUMS
+      - name: Preserve DOM, original plan and native outcomes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps242-workspaces-dom-${{ matrix.source }}-attempt-${{ github.run_attempt }}
+          path: |
+            test-results/ci
+            packages/e2e/test-results
+          if-no-files-found: error
