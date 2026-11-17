@@ -93,8 +93,9 @@ test("discovery joins first admission after its accepted marker has been publish
   const adopted = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   const before = readRuntimeImportCount();
-  const first = loadAcceptedExtensionSource(source, async () => {
+  const first = loadAcceptedExtensionSource(source, async (_accepted, markAccepting) => {
     const loaded = await loadExtensionSource(source);
+    markAccepting(loaded.preparedRevision!);
     await acceptPreparedRevision(source, loaded.preparedRevision!);
     adopted.resolve();
     await release.promise;
@@ -116,4 +117,39 @@ test("discovery joins first admission after its accepted marker has been publish
     await Promise.all([first, second]);
   }
   expect(readRuntimeImportCount() - before).toBe(1);
+});
+
+test.each([
+  "throw",
+  "diagnostics",
+])("an obsolete cold admission adopts the newer revision after %s", async (failure) => {
+  const { source, manifests, discover } = fixture();
+  const started = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  if (failure === "diagnostics")
+    writeFileSync(join(source, "extension.ts"), 'throw new Error("Obsolete module could not import");');
+  const first = loadAcceptedExtensionSource(source, async (accepted) => {
+    if (accepted) return loadExtensionSource(source);
+    const failed = failure === "diagnostics" ? await loadExtensionSource(source) : undefined;
+    started.resolve();
+    await release.promise;
+    if (failed) return failed;
+    throw new Error("Another revision won acceptance");
+  });
+  let second: ReturnType<typeof discover> | undefined;
+  try {
+    await started.promise;
+    writeFileSync(join(source, "extension.ts"), 'export default { commands: { current: { title: "Current" } } };');
+    await acceptPreparedRevision(source, await prepareExtensionRevision(source));
+    second = discover("project-with-current-revision");
+    expect(await Promise.race([second.then(() => "current"), Bun.sleep(1_000).then(() => "waiting")])).toBe("current");
+    release.resolve();
+    const accepted = await first;
+    await second;
+    expect(accepted.manifest.commands).toEqual(["current"]);
+    expect(manifests.at(-1)?.commands).toEqual(["current"]);
+  } finally {
+    release.resolve();
+    await Promise.allSettled([first, second]);
+  }
 });

@@ -55,8 +55,7 @@ const validateIndex = (index: StorageRecordIndex) => {
 export const validateIndexes = (indexes: StorageRecordIndex[]) => {
   const names = new Set<string>();
   for (const index of indexes) {
-    if (!index.name || index.name.startsWith("@pstdio/query-format/") || names.has(index.name))
-      throw new Error("Index names must be unique, nonempty and outside reserved query caches");
+    if (!index.name || names.has(index.name)) throw new Error("Index names must be unique and nonempty");
     names.add(index.name);
     validateIndex(index);
   }

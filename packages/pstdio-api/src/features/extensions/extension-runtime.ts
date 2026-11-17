@@ -97,14 +97,19 @@ export const loadExtensionSource = async (
   sourcePath: string,
   options: { accepted?: boolean; preparedRevision?: PreparedExtensionRevision } = {},
 ) => {
-  const load = async (accepted: PreparedExtensionRevision | null) => {
+  const load = async (
+    accepted: PreparedExtensionRevision | null,
+    markAccepting?: (revision: PreparedExtensionRevision) => void,
+  ) => {
     const diagnostics: RuntimeExtensionDiagnostic[] = [];
     const loaded = await loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics, {
       preparedRevision: options.preparedRevision ?? accepted ?? undefined,
       immutableAssets: true,
     });
-    if (options.accepted && loaded?.preparedRevision && !diagnostics.some((d) => d.severity === "error") && !accepted)
+    if (options.accepted && loaded?.preparedRevision && !diagnostics.some((d) => d.severity === "error") && !accepted) {
+      markAccepting?.(loaded.preparedRevision);
       await acceptPreparedRevision(sourcePath, loaded.preparedRevision, { expectedId: null });
+    }
 
     if (!loaded) {
       const first = diagnostics[0];

@@ -3,7 +3,7 @@ import type { StorageOwner } from "pstdio-sync";
 import { fingerprint, formatViewDate, type Json, type StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_current_records as current, storage_record_indexes as indexes } from "../../db/schemas.pg";
-import { formatCacheFields, formatCachePrefix, formatCacheSource } from "./record-format-key";
+import { formatCacheFields, formatCachePrefix, formatCacheSource, formatDatabasePrefix } from "./record-format-key";
 import { decodeProjectionValue, encodeProjectionValue, projectionKey } from "./record-projection-codec";
 import { recordFieldSql, recordScopeSql } from "./record-query-sql";
 import type { StorageDiagnostics } from "./storage-diagnostics";
@@ -14,8 +14,40 @@ export const retainDateFormatIndexes = async (installed: StorageRecordIndex[], d
   );
   return installed.filter((index) => {
     const source = formatCacheSource(index.name);
-    return source && signatures.get(source[0]) === source[1];
+    return source && !signatures.has(index.name) && signatures.get(source[0]) === source[1];
   });
+};
+
+export const installDateFormatIndex = async (
+  tx: Pick<DbClient, "insert">,
+  owner: StorageOwner,
+  index: StorageRecordIndex,
+) => {
+  const digest = await fingerprint(index.name);
+  await tx.insert(indexes).values({
+    workbench_id: owner.workbenchId,
+    extension_id: owner.extensionId,
+    name: index.name,
+    database_name: `${formatDatabasePrefix}${digest.slice(0, 32)}`,
+    definition: encodeProjectionValue(index as unknown as Json) as unknown as StorageRecordIndex,
+  });
+};
+
+const findFormatSlot = async (
+  tx: Pick<DbClient, "select">,
+  owner: StorageOwner,
+  identity: [string, string, string],
+) => {
+  const ownerWhere = and(eq(indexes.workbench_id, owner.workbenchId), eq(indexes.extension_id, owner.extensionId));
+  for (let slot = 0; ; slot++) {
+    const name = formatCachePrefix + JSON.stringify(slot ? [...identity, slot] : identity);
+    const [row] = await tx
+      .select({ databaseName: indexes.database_name })
+      .from(indexes)
+      .where(and(ownerWhere, eq(indexes.name, name)));
+    if (!row) return { name, exists: false };
+    if (row.databaseName.startsWith(formatDatabasePrefix)) return { name, exists: true };
+  }
 };
 
 /** A local formatting cache has one owner and is maintained from canonical values on every commit. */
@@ -31,19 +63,13 @@ export const prepareDateFormatIndexes = async (
   for (const field of Object.values(requested.fields)) {
     if (!field.format) continue;
     const format = field.format;
-    const name =
-      formatCachePrefix + JSON.stringify([declared.name, signature, await fingerprint(format as unknown as Json)]);
+    const { name, exists } = await findFormatSlot(tx, owner, [
+      declared.name,
+      signature,
+      await fingerprint(format as unknown as Json),
+    ]);
     formatCacheFields.set(field, name);
-    const ownerWhere = and(eq(indexes.workbench_id, owner.workbenchId), eq(indexes.extension_id, owner.extensionId));
-    if (
-      (
-        await tx
-          .select({ name: indexes.name })
-          .from(indexes)
-          .where(and(ownerWhere, eq(indexes.name, name)))
-      ).length
-    )
-      continue;
+    if (exists) continue;
     // Cache only dates. Markdown bodies and unrelated fields never cross this backfill boundary.
     let after: string | undefined;
     for (;;) {
@@ -86,14 +112,7 @@ export const prepareDateFormatIndexes = async (
         },
       },
     };
-    const digest = await fingerprint(name);
-    await tx.insert(indexes).values({
-      workbench_id: owner.workbenchId,
-      extension_id: owner.extensionId,
-      name,
-      database_name: `storage_format_${digest.slice(0, 32)}`,
-      definition: encodeProjectionValue(definition as unknown as Json) as unknown as StorageRecordIndex,
-    });
+    await installDateFormatIndex(tx, owner, definition);
   }
 };
 
@@ -116,7 +135,7 @@ export const pruneDateFormatIndexes = async (
   const cached = await tx
     .select({ name: indexes.name })
     .from(indexes)
-    .where(and(ownerWhere, sql`starts_with(${indexes.name}, ${formatCachePrefix})`))
+    .where(and(ownerWhere, sql`starts_with(${indexes.database_name}, ${formatDatabasePrefix})`))
     .orderBy(indexes.name);
   const evicted = cached
     .filter((entry) => !pinned.has(entry.name))

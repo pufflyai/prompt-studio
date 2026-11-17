@@ -3,9 +3,9 @@ import { appendTicketPositionFromStorage } from "../data/indexed-ticket-order";
 import { ensureTicketStorage } from "../data/read-migrated-tickets";
 import { resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
-import { ticketTagsForIds } from "../data/tag-cardinality";
 import { withTicketOrder } from "../data/ticket-order";
 import { ticketRecord, ticketRecordId } from "../data/ticket-records";
+import { assertOneTagValue, ticketTagsFromIds } from "../data/ticket-tags";
 import type { StoredTicket } from "../data/types";
 import { emitPlannerTicketsChanged } from "../events";
 import { deriveTitle } from "../utils/derive-title";
@@ -274,15 +274,14 @@ export const importTicketsCommand = defineCommand({
     const tickets = validate(input.tickets);
     await ensureTicketStorage(ctx);
     const resolved = await resolveInputs(ctx, tickets);
-    // Tag rules such as single-select are checked before any number is allocated.
-    const tags: Awaited<ReturnType<typeof ticketTagsForIds>>[] = [];
-    for (const ticket of tickets)
-      tags.push(
-        await ticketTagsForIds(
-          ctx.storage,
-          (ticket.tags ?? []).map((value) => resolved.tagIds.get(value)!),
-        ),
-      );
+    // Tag rules such as single-select are checked before any number is allocated. The tag list is
+    // read once for the whole import.
+    const tagDefinitions = await seedDefaultTags(ctx.storage);
+    const tags = tickets.map((ticket) => {
+      const ids = (ticket.tags ?? []).map((value) => resolved.tagIds.get(value)!);
+      for (const tag of tagDefinitions) assertOneTagValue(tag, ids);
+      return ticketTagsFromIds(tagDefinitions, ids);
+    });
     const identities = await allocate(ctx, tickets.length);
     const ids = new Map(tickets.map((ticket, index) => [ticket.key, identities[index]!.id]));
     const reference = (value: string) => ids.get(value) ?? resolved.existing.get(value)!;

@@ -17,6 +17,7 @@ import {
   type StorageRecord,
   type StorageRecordIndex,
   type StorageRecordQueries,
+  type StorageRecordQuery,
 } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import {
@@ -27,10 +28,15 @@ import {
 } from "../../db/schemas.pg";
 import { traceStorageQuery } from "./query-trace";
 import { aggregateRecordQuery } from "./record-aggregate-query";
-import { prepareDateFormatIndexes, pruneDateFormatIndexes, retainDateFormatIndexes } from "./record-date-format";
+import {
+  installDateFormatIndex,
+  prepareDateFormatIndexes,
+  pruneDateFormatIndexes,
+  retainDateFormatIndexes,
+} from "./record-date-format";
 import { dependencyOrderedPageSql } from "./record-dependency-order";
 import { derivedQueryChanges, rebuildDerivedQueryValues } from "./record-derived-fields";
-import { formatCachePrefix, formatCacheSource } from "./record-format-key";
+import { formatDatabasePrefix } from "./record-format-key";
 import { dropRecordIndexes, installRecordIndex, recordIndexName } from "./record-index-lifecycle";
 import { decodeProjectionValue } from "./record-projection-codec";
 import { pageAfterSql, recordPageSql, recordScopeSql } from "./record-query-sql";
@@ -121,8 +127,84 @@ const matchesRecordCatalog = (
   catalog: { name: string; databaseName: string }[],
   names: ReadonlyMap<string, string>,
 ) => {
-  const declared = catalog.filter((row) => !formatCacheSource(row.name));
+  const declared = catalog.filter((row) => !row.databaseName.startsWith(formatDatabasePrefix));
   return declared.length === names.size && declared.every((row) => row.databaseName === names.get(row.name));
+};
+
+const defineRecordIndexes = async (
+  db: DbClient,
+  owner: StorageOwner,
+  scope: NonNullable<ReturnType<typeof and>>,
+  definitions: StorageRecordIndex[],
+  diagnostics?: StorageDiagnostics,
+) => {
+  traceStorageQuery("indexes-start", definitions.map(({ name }) => name).join(","));
+  validateIndexes(definitions);
+  const publicDesired = orderDefinitions(structuredClone(definitions));
+  const names = new Map(
+    await Promise.all(publicDesired.map(async (index) => [index.name, await recordIndexName(owner, index)] as const)),
+  );
+  await db.transaction(async (tx) => {
+    // The physical name hashes the complete definition and implementation version.
+    // Check that exact catalog identity before hydrating definitions needed only for replacement.
+    const catalog = await tx
+      .select({ name: indexes.name, databaseName: indexes.database_name })
+      .from(indexes)
+      .where(scope);
+    if (matchesRecordCatalog(catalog, names)) return;
+    const previous = await tx.select().from(indexes).where(scope);
+    const decoded = previous.map((row) => ({
+      index: decodeProjectionValue(row.definition as unknown as Json) as unknown as StorageRecordIndex,
+      cached: row.database_name.startsWith(formatDatabasePrefix),
+    }));
+    const installed = orderDefinitions(decoded.map(({ index }) => index));
+    const retained = await retainDateFormatIndexes(
+      decoded.filter(({ cached }) => cached).map(({ index }) => index),
+      publicDesired,
+    );
+    const desired = orderDefinitions([...publicDesired, ...retained]);
+    await dropRecordIndexes(tx, scope);
+    await tx.delete(indexes).where(scope);
+    await rebuildDerivedQueryValues(tx, owner, derivedQueryChanges(installed, desired), diagnostics);
+    for (const index of publicDesired) await installRecordIndex(tx, owner, index);
+    for (const index of retained) await installDateFormatIndex(tx, owner, index);
+    // Expression indexes get planner statistics only from ANALYZE, not from CREATE INDEX.
+    // Dropping indexes needs none, and analyzing the table shared by all owners is slow.
+    if (desired.length) await tx.execute(sql`ANALYZE storage_current_records`);
+  });
+};
+
+const prepareQueryMetadata = async (
+  tx: Pick<DbClient, "select" | "execute" | "insert" | "delete">,
+  owner: StorageOwner,
+  query: StorageRecordQuery,
+  getIndex: (connection: Reader, name: string) => Promise<StorageRecordIndex>,
+  diagnostics?: StorageDiagnostics,
+) => {
+  validateRelatedQueryFields(query);
+  const declared = await getIndex(tx, query.index);
+  const index = requestedRecordIndex(declared, query);
+  const revisionOnly = query.limit === 0;
+  if (!revisionOnly) {
+    await prepareTextOrder(tx, index);
+    await prepareDateFormatIndexes(tx, owner, declared, index, diagnostics);
+  }
+  const related = await loadRelatedQueryIndexes(
+    query.where,
+    async (name) => {
+      const declared = await getIndex(tx, name);
+      const target = requestedRecordIndex(declared, query.related?.[name] ?? {});
+      if (!revisionOnly) await prepareDateFormatIndexes(tx, owner, declared, target, diagnostics);
+      return target;
+    },
+    index,
+  );
+  traceStorageQuery("query-metadata", query.index);
+  if (!revisionOnly) {
+    await pruneDateFormatIndexes(tx, owner, related.definitions);
+    if (related.hasIdentity) await prepareResourceQueryValues(tx, owner);
+  }
+  return { declared, index, related };
 };
 
 export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnostics?: StorageDiagnostics) => {
@@ -133,7 +215,13 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     const [index] = await connection
       .select()
       .from(indexes)
-      .where(and(ownerWhere(indexes), eq(indexes.name, name)));
+      .where(
+        and(
+          ownerWhere(indexes),
+          eq(indexes.name, name),
+          sql`NOT starts_with(${indexes.database_name}, ${formatDatabasePrefix})`,
+        ),
+      );
     if (!index) throw new Error(`Storage index not installed: ${name}`);
     return decodeProjectionValue(index.definition as unknown as Json) as unknown as StorageRecordIndex;
   };
@@ -159,67 +247,15 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
         revision: sql<string>`coalesce((${projection}), 0)::text || ':' || md5(coalesce(string_agg(${indexes.database_name}, ',' ORDER BY ${indexes.database_name} COLLATE "C"), ''))`,
       })
       .from(indexes)
-      .where(and(ownerWhere(indexes), sql`NOT starts_with(${indexes.name}, ${formatCachePrefix})`));
+      .where(and(ownerWhere(indexes), sql`NOT starts_with(${indexes.database_name}, ${formatDatabasePrefix})`));
     return row.revision + identityRevision;
   };
   const api: StorageRecordQueries = {
-    defineIndexes: async (definitions) => {
-      traceStorageQuery("indexes-start", definitions.map(({ name }) => name).join(","));
-      validateIndexes(definitions);
-      const publicDesired = orderDefinitions(structuredClone(definitions));
-      const names = new Map(
-        await Promise.all(
-          publicDesired.map(async (index) => [index.name, await recordIndexName(owner, index)] as const),
-        ),
-      );
-      await db.transaction(async (tx) => {
-        // The physical name hashes the complete definition and implementation version.
-        // Check that exact catalog identity before hydrating definitions needed only for replacement.
-        const catalog = await tx
-          .select({ name: indexes.name, databaseName: indexes.database_name })
-          .from(indexes)
-          .where(ownerWhere(indexes));
-        if (matchesRecordCatalog(catalog, names)) return;
-        const previous = await tx.select().from(indexes).where(ownerWhere(indexes));
-        const installed = orderDefinitions(
-          decodeProjectionValue(
-            previous.map((row) => row.definition) as unknown as Json,
-          ) as unknown as StorageRecordIndex[],
-        );
-        const desired = orderDefinitions([
-          ...publicDesired,
-          ...(await retainDateFormatIndexes(installed, publicDesired)),
-        ]);
-        await dropRecordIndexes(tx, ownerWhere(indexes)!);
-        await tx.delete(indexes).where(ownerWhere(indexes));
-        await rebuildDerivedQueryValues(tx, owner, derivedQueryChanges(installed, desired), diagnostics);
-        for (const index of desired) await installRecordIndex(tx, owner, index);
-        // Expression indexes get planner statistics only from ANALYZE, not from CREATE INDEX.
-        // Dropping indexes needs none, and analyzing the table shared by all owners is slow.
-        if (desired.length) await tx.execute(sql`ANALYZE storage_current_records`);
-      });
-    },
+    defineIndexes: (definitions) => defineRecordIndexes(db, owner, ownerWhere(indexes)!, definitions, diagnostics),
     query: (query) =>
       db.transaction(async (tx) => {
         traceStorageQuery("query-start", query.index);
-        validateRelatedQueryFields(query);
-        const declared = await getIndex(tx, query.index);
-        const index = requestedRecordIndex(declared, query);
-        await prepareTextOrder(tx, index);
-        await prepareDateFormatIndexes(tx, owner, declared, index, diagnostics);
-        const related = await loadRelatedQueryIndexes(
-          query.where,
-          async (name) => {
-            const declared = await getIndex(tx, name);
-            const target = requestedRecordIndex(declared, query.related?.[name] ?? {});
-            await prepareDateFormatIndexes(tx, owner, declared, target, diagnostics);
-            return target;
-          },
-          index,
-        );
-        traceStorageQuery("query-metadata", query.index);
-        await pruneDateFormatIndexes(tx, owner, related.definitions);
-        if (related.hasIdentity) await prepareResourceQueryValues(tx, owner);
+        const { declared, index, related } = await prepareQueryMetadata(tx, owner, query, getIndex, diagnostics);
         const revision = await getRevision(tx, related.hasIdentity);
         traceStorageQuery("query-execute", query.index);
         const page = await prepareRecordQuery(owner, index, query, revision, related);
