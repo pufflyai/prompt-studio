@@ -12,6 +12,7 @@ export interface ViewFlags {
   columns?: string;
   rows?: string;
   group?: string;
+  subgroup?: string;
   children?: string;
   "row-numbers"?: string;
   "wrap-rows"?: string;
@@ -20,7 +21,7 @@ export interface ViewFlags {
 type Board = Pick<BoardSummary, "kind" | "fields">;
 const kindFlags: Record<Board["kind"], readonly (keyof ViewFlags)[]> = {
   kanban: ["mode", "columns", "rows"],
-  resourceList: ["group", "children"],
+  resourceList: ["group", "subgroup", "children"],
   dataTable: ["group", "row-numbers", "wrap-rows", "stats"],
 } as const;
 const kindNames = { kanban: "board", resourceList: "resource list", dataTable: "data table" };
@@ -56,6 +57,8 @@ const buildBoardSettings = (flags: ViewFlags) => {
 const buildResourceListSettings = (flags: ViewFlags) => {
   const settings: Partial<KanbanRendererSettings> = {};
   if (flags.group !== undefined) settings.columnGrouping = flags.group;
+  if (flags.subgroup !== undefined)
+    settings.subGroupings = flags.subgroup === "none" ? [] : flags.subgroup.split(",").filter(Boolean);
   if (flags.children !== undefined) settings.showChildren = toggle(flags.children, "nested", "hidden", "children");
   if (flags.show !== undefined) settings.displayProperties = flags.show.split(",").filter(Boolean);
   return settings;

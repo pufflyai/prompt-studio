@@ -1,6 +1,12 @@
 import { type SQL, sql } from "drizzle-orm";
 import { queryField } from "pstdio-sync/records";
-import type { Json, StoragePredicate, StorageRecordIndex, StorageRelatedSelection } from "pstdio-sync-contracts";
+import {
+  canonicalJson,
+  type Json,
+  type StoragePredicate,
+  type StorageRecordIndex,
+  type StorageRelatedSelection,
+} from "pstdio-sync-contracts";
 import { recordNumberTextSql } from "./record-number-text";
 import {
   encodeProjectionValue,
@@ -140,6 +146,14 @@ const fieldPredicateSql = (
       return sql`${stringBytesSql(field, true)} = decode(${projectionSubstringBytes(String(predicate.value).toLowerCase())}, 'hex')`;
     case "in": {
       if (!predicate.value.length) return sql`false`;
+      // Keep literal arrays for selective estimates without binding a large array member by member.
+      if (predicate.value.length > 1_000) {
+        const input = sql`jsonb_array_elements(${json(predicate.value)}) AS wanted(item)`;
+        const values = sql`${comparable} = ANY(ARRAY(SELECT item FROM ${input}))`;
+        if (!index.equality?.includes(predicate.field)) return values;
+        const keys = sql`ARRAY(SELECT ${equalityKey(sql`item`)} FROM ${input})`;
+        return sql`(${equalityKey(comparable)} = ANY(${keys}) AND ${values})`;
+      }
       // One hashed array comparison per row; an OR chain re-evaluates the field for every value.
       const values = sql`ARRAY[${sql.join(predicate.value.map(json), sql`, `)}]::jsonb[]`;
       if (!index.equality?.includes(predicate.field)) return sql`${comparable} = ANY(${values})`;
@@ -209,14 +223,14 @@ export const recordPageSql = (
   const sort = (index.orderBy ?? []).map((sort) => sql`coalesce(${recordFieldSql(index, sort.field)}, 'null'::jsonb)`);
   // Each equality value supplies an ordered prefix. Merge only those prefixes,
   // rather than scanning unrelated ordered rows or sorting every matching record.
-  const selection = leadingInList(index, predicate);
+  const leading = leadingInList(index, predicate);
+  const values = leading ? [...new Map(leading.value.map((value) => [canonicalJson(value), value])).values()] : [];
+  // Large lists and deep offsets use the ordinary indexed query to keep the intermediate merge bounded.
+  const selection = values.length * (limit + offset) <= 100_000 ? leading : undefined;
   const candidates = selection
     ? sql`WITH candidates AS MATERIALIZED (
         SELECT page.* FROM (
-          SELECT DISTINCT value FROM (VALUES ${sql.join(
-            selection.value.map((value) => sql`(${json(value)})`),
-            sql`, `,
-          )}) AS input(value)
+          SELECT value FROM jsonb_array_elements(${json(values)}) AS input(value)
         ) AS selected_values CROSS JOIN LATERAL (
           SELECT record_id, revision, value, query_values FROM storage_current_records
           WHERE ${where} AND ${recordEqualitySql(index, selection.field, sql`coalesce(${recordFieldSql(index, selection.field)}, 'null'::jsonb)`, sql`selected_values.value`)}

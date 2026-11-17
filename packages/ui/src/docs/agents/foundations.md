@@ -11,6 +11,8 @@ Use the `psTheme` Chakra system and package tokens instead of hard-coded visual 
 - Prefer Chakra layout props and local layout components over bespoke CSS.
 - Do not change border radius for local preference. Default to `xs` and use the existing recipe radius unless a component
   guide explicitly calls for another radius.
+- `full` is `100%`, so it draws a circle only on square elements (dots, avatars, square icon buttons). On anything wider,
+  such as a label, counter or chip, it draws an oval; use `xs` for those. `pill` is the capsule radius.
 - Preserve theme preference behavior by rendering canvas examples under the configured Canvas decorators.
 
 ## Layout defaults

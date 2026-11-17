@@ -95,7 +95,7 @@ export const ResourceListRenderer = (props: ResourceListRendererProps) => {
         emptyState={props.emptyState}
         emptyTitle={props.emptyTitle || "No resources found"}
         emptyDescription={props.emptyDescription ?? ""}
-        listKey={settings.columnGrouping}
+        listKey={[settings.columnGrouping, ...(settings.subGroupings ?? [])].join("/")}
         onLoadMore={props.page?.result?.cursor ? props.page.onLoadMore : undefined}
         loadingMore={props.page?.loading}
       />

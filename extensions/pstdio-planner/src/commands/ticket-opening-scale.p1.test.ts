@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { withDerivedTicketState } from "../data/collections";
+import { migratePlannerStorage } from "../data/migrate-storage";
 import { listTicketReviewRequests, readTicketReviewRequests } from "../data/review-request-storage";
-import { seedTicketIdentity } from "../data/ticket-context.fixture";
+import { observeTicketRecords } from "../data/storage-reads.fixture";
+import { createTicketRecordStorage, seedTicketIdentity } from "../data/ticket-context.fixture";
 import type { Ticket } from "../data/types";
 import { makeCommandContext } from "./command-context.fixture";
 import { getTicketContent } from "./get-ticket-content";
@@ -42,6 +44,8 @@ test("opening properties resolves only normalized linked dependencies for depend
   });
   const storage = createMemoryStorage({ collections: { tickets: { prerequisite, selected } } });
   for (const row of [prerequisite, selected]) seedTicketIdentity(storage, row);
+  // The project's one-time storage upgrade may list its small legacy collections; properties must not.
+  await migratePlannerStorage({ storage });
   const collection = storage.collection.bind(storage);
   storage.collection = <T>(name: string) => ({
     ...collection<T>(name),
@@ -128,10 +132,10 @@ test("opening a ticket with 5,000 records reads only its content and related nav
     ticket("archived-child", { parentId: selected.id, archived: true }),
   ];
   const rows = [...related, ...Array.from({ length: 5000 - related.length }, (_, index) => ticket(`other-${index}`))];
-  const storage = createMemoryStorage({
-    collections: { tickets: Object.fromEntries(rows.map((row) => [row.id, row])) },
-  });
+  const storage = await createTicketRecordStorage(rows);
   for (const row of related) seedTicketIdentity(storage, row);
+  const tickets = observeTicketRecords(storage);
+  storage.records = tickets.storage.records;
   const collection = storage.collection.bind(storage);
   const reads: string[] = [];
   storage.collection = <T>(name: string) => {
@@ -162,5 +166,6 @@ test("opening a ticket with 5,000 records reads only its content and related nav
       ?.nodes.map((node) => node.resource?.id)
       .sort(),
   ).toEqual(["dependent", "legacy"]);
+  reads.push(...tickets.reads.map((id) => `tickets/${id}`));
   expect(reads.filter((read) => read.startsWith("tickets/other-"))).toEqual([]);
 });

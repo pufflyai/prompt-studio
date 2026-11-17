@@ -174,6 +174,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       fileName: node.fileName,
       showContextMenuTrigger: node.showContextMenuTrigger,
       badge: node.badge,
+      tags: node.tags,
       iconTooltip: node.iconTooltip,
       tooltip: node.tooltip,
       resource,
