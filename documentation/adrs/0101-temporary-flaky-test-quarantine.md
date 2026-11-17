@@ -14,7 +14,7 @@ Hosted cold-start variance and browser, filesystem, process, and shutdown failur
 
 ## Temporary decision
 
-1. Keep confirmed intermittent cases in the [registry](../../scripts/ci/test-quarantine.json), selected by exact title, owning file and affected platform. Each entry names its owner, failure/pass evidence and removal criteria. Keep assertions and workloads unchanged.
+1. Keep confirmed intermittent cases in the [registry](../../scripts/ci/test-quarantine.json), selected by exact title, owning file and affected platform. Each entry names its owner, failure/pass evidence and removal criteria. Keep assertions and workloads unchanged. Browser entries retain the observed failure signature; a different case failure remains blocking.
 2. Run each registered case once in its separate quarantine lane. Report an observed known-case failure as `quarantined-failure`, separately from stable success. Deterministic product defects, missing benchmark ceilings and setup failures stay blocking.
 3. Execute registered cases with their existing assertions and workload; record any separately authorized execution allowance change. Keep setup and build failures blocking. Reject skipped cases, missing reports, retries, incomplete execution, and unknown failed or cancelled jobs.
 4. Require native execution evidence and report diagnostic failures separately from stable CI success.

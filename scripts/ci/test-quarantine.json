@@ -8,8 +8,10 @@
     "owner": "PS-1218",
     "evidence": [
       "https://github.com/pufflyai/prompt-studio/actions/runs/43872404304/job/133317092220",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/44049765383/job/133924730045"
+      "https://github.com/pufflyai/prompt-studio/actions/runs/44049765383/job/133924730045",
+      "https://github.com/pufflyai/prompt-studio/pull/2096"
     ],
-    "removalCriteria": "Fix the pending rename stall in PS-1218, then restore this unchanged case to the stable lane with passing native first-attempt evidence. Keep every assertion and reject missing, skipped, retried or incomplete quarantine execution."
+    "removalCriteria": "Fix the pending rename stall in PS-1218, then restore this unchanged case to the stable lane with passing native first-attempt evidence. Keep every assertion and reject missing, skipped, retried or incomplete quarantine execution.",
+    "failureMessageIncludes": ["toHaveAttribute", "Isolation first", "element(s) not found"]
   }
 ]
