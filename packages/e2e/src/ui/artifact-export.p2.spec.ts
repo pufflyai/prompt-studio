@@ -91,6 +91,13 @@ test("exports the displayed saved version as an interactive offline HTML file an
     const html = readFileSync(destination, "utf8");
     expect(html).toContain("Earlier audit");
     expect(html).not.toContain("Latest audit");
+    const cli = await execute("export", {
+      url: first.url,
+      revisionId: first.revisionId,
+      file_path: "exports/cli.html",
+    });
+    expect(cli.path).toBe("exports/cli.html");
+    expect(readFileSync(join(repo, cli.path), "utf8")).toContain("Earlier audit");
     const offline = await browser.newContext({
       offline: true,
       colorScheme: null,
