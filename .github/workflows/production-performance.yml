@@ -97,7 +97,7 @@ jobs:
         if: matrix.family == 'planner'
         # PS-1232: native Windows browser installation exceeded 3 min before measurements.
         # The user authorized setup allowances on 2026-11-17; keep product limits unchanged.
-        timeout-minutes: 8
+        timeout-minutes: ${{ matrix.os == 'windows-2025' && 8 || 3 }}
         run: bunx playwright@1.60.0 install --with-deps
       - name: "[phase:test] Collect every fixed workload with existing budgets"
         run: bun scripts/test.ts --performance-family ${{ matrix.family }} --prebuilt

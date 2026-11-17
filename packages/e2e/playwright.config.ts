@@ -10,8 +10,6 @@ export default defineConfig({
     process.env.TEST_PRIORITIES?.split(",").map((priority) => `**/*.${priority.toLowerCase()}.spec.ts`) ??
     "**/*.spec.ts",
   ...playwrightQuarantineSelection("playwright-ui", "packages/e2e/src/ui", quarantine),
-  // Project/tool preparation is part of these functional scenarios, outside benchmark budgets.
-  timeout: 120_000,
   expect: { timeout: 5_000 },
   fullyParallel: false,
   workers: 1,

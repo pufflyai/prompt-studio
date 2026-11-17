@@ -20,6 +20,9 @@ const versions = { codex: "codex-cli 0.157.0", claude: "2.1.203 (Claude Code)", 
 const executableSuffix = process.platform === "win32" ? ".exe" : "";
 const sessionsPath = dirname(fileURLToPath(import.meta.resolve("session-browser/refs")));
 
+// Whole-case allowance includes cold project/tool preparation and owned cleanup (PS-1232).
+test.setTimeout(120_000);
+
 for (const shell of environments) {
   test(`selects installed harnesses after a desktop launch with ${shell}`, async () => {
     test.skip(process.platform !== "win32" && !existsSync(shell), `${shell} is not available on this platform.`);

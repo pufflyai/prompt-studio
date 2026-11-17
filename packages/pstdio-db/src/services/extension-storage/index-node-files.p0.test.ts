@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { mkdtemp, readdir, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { createIndexNodeFiles } from "./index-node-files";
 
 const folders: string[] = [];
@@ -17,6 +17,17 @@ const owner = { workbenchId: "project-a", extensionId: "example.records" };
 const bytes = (size: number, fill = 1) => new Uint8Array(size).fill(fill);
 const ref = (blobId: string) => ({ blobId, byteLength: 1 });
 const id = (name: string) => name.padEnd(16, "x");
+
+test.each(["relative", "native spelling"])("durable receipts survive reopening from a %s root", async (kind) => {
+  const { root } = await setup();
+  const native = process.platform === "win32" ? root.toUpperCase().replaceAll("\\", "/") : root;
+  const spelling = kind === "relative" ? relative(process.cwd(), root) : native;
+  const files = createIndexNodeFiles(join(spelling, "new", "nodes"));
+  const node = { bytes: bytes(3, 7), children: [ref(id("child"))] };
+  await files.write(owner, "receipts", id("durable"), node);
+  const reopened = createIndexNodeFiles(join(root, "new", "nodes"));
+  expect(await reopened.read(owner, "receipts", id("durable"))).toEqual(node);
+});
 
 test("a node keeps its bytes and edges, and ids differing only in case stay distinct", async () => {
   const { files } = await setup();

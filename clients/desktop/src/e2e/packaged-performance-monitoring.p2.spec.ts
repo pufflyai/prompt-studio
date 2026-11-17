@@ -22,6 +22,9 @@ import { createPackagedProject, openPackagedProject } from "./packaged-project-h
 
 // Renderer CPU budgets are benchmarks in packaged-renderer.p3.bench.ts.
 
+// Whole-case allowance includes cold project/tool preparation and owned cleanup (PS-1232).
+test.setTimeout(120_000);
+
 test("keeps performance measurements live when switching and closing project tabs", async () => {
   let app: PackagedApp | null = null;
   try {
