@@ -9,13 +9,17 @@ import { ArtifactTranslationStory } from "./artifact-translation-story";
 
 const content = {
   ...exampleArtifact,
-  html: "<title>Release overview</title><h1>Release overview</h1><button onclick=\"this.textContent='Complete'\">Mark complete</button>",
+  html: `<title>Release overview</title><h1>Release overview</h1><button onclick="this.textContent='Complete'">Mark complete</button>
+<section style="height:12rem;overflow:auto;border:1px solid var(--artifact-border);margin-block:1rem">
+${Array.from({ length: 20 }, (_, index) => `<p>Scrollable result ${index + 1}</p>`).join("")}</section>
+${Array.from({ length: 24 }, (_, index) => `<p>Document section ${index + 1}</p>`).join("")}`,
+
 };
 const ChevronDown = createGlyphIcon("arrow-down-1");
 const meta = {
   title: "Extensions/Artifacts/Reader",
   description:
-    "Export HTML belongs to the artifact actions beside the breadcrumb, with Rename and Delete. Versions is an outlined, right-aligned dropdown with a bounded trigger and a ScrollArea for long lists.",
+    "Export HTML belongs to the artifact actions beside the breadcrumb, with Rename and Delete. Versions is an outlined, right-aligned dropdown with a bounded trigger and a ScrollArea for long lists. Document and nested preview scrollbars use the same shared thickness and theme colors.",
   component: ArtifactReader,
   decorators: [
     (Story) => (
