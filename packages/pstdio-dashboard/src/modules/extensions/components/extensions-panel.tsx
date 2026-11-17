@@ -132,7 +132,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
           projectId={projectId}
           extension={selected}
           upgrading={upgradingInstanceIds.includes(selected.id)}
-          onUpgrade={() => void handleUpgrade(selected)}
+          onUpgrade={() => void handleUpgrade(selected, "detail")}
           metadata={metadataQuery.data}
           agents={agents}
           settingsInput={settingsInput}
@@ -217,7 +217,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         onToggleAutomation={(extension, automation, enabled) =>
           setAutomationEnabled.mutateAsync({ instanceId: extension.id, automationId: automation.id, enabled })
         }
-        onUpgrade={(extension) => void handleUpgrade(extension)}
+        onUpgrade={(extension) => void handleUpgrade(extension, "list")}
         onOpen={(extension) => openDetail(`installed:${extension.id}`, extension.displayName)}
         onInstallMarketplace={(extension) => void handleInstallMarketplace(extension)}
         onOpenMarketplace={(extension) => openDetail(`marketplace:${extension.installName}`, extension.displayName)}

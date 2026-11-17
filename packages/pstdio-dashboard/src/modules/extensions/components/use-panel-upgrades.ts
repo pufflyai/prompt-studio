@@ -59,12 +59,14 @@ export const usePanelUpgrades = (
   };
 
   // Each row upgrades on its own, so several upgrades can run at once and each reports its own result.
-  const handleUpgrade = async (extension: ProjectExtensionInstance) => {
+  const handleUpgrade = async (extension: ProjectExtensionInstance, surface: "list" | "detail") => {
     clearError();
     if (!state.claim(extension.id)) return;
     state.set(extension.id, "running");
     try {
       const result = await upgrade.mutateAsync({ instanceId: extension.id });
+      // The detail already displays the confirmed version beside its navigation controls.
+      if (surface === "detail") return;
       toaster.create({
         type: "success",
         title: t(
