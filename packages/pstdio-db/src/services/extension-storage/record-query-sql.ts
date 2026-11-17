@@ -59,6 +59,14 @@ const recordIdentitySql = (index: StorageRecordIndex, alias = "storage_current_r
     WHERE identity.workbench_id = ${column("workbench_id", alias)} AND identity.extension_id = ${column("extension_id", alias)}
       AND identity.kind = ${sqlLiteral(index.identity.kind)} AND identity.resource_id = ${identityQueryText(id)})`;
 };
+const recordAncestorsSql = (source: SQL, path: SQL[]) => {
+  const parents = path.map(
+    (_, position) =>
+      sql`jsonb_typeof(${source} #> ARRAY[${sql.join(path.slice(0, position), sql`, `)}]::text[]) = 'object'`,
+  );
+  return parents.length ? sql.join(parents, sql` AND `) : sql`true`;
+};
+
 export const recordFieldSql = (
   index: StorageRecordIndex,
   name: string,
@@ -128,11 +136,7 @@ export const recordFieldSql = (
   const path = (field.path ?? []).map((part) => sqlLiteral(projectionKey(part)));
   const source = column("value", alias);
   const value = sql`(${source} #> ARRAY[${sql.join(path, sql`, `)}]::text[])`;
-  const parents = path.map(
-    (_, position) =>
-      sql`jsonb_typeof(${source} #> ARRAY[${sql.join(path.slice(0, position), sql`, `)}]::text[]) = 'object'`,
-  );
-  const ancestors = parents.length ? sql.join(parents, sql` AND `) : sql`true`;
+  const ancestors = recordAncestorsSql(source, path);
   const type = field.type === "array" ? "array" : field.type;
   const validArray =
     field.type === "array"
