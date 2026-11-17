@@ -1,5 +1,11 @@
 import "@pstdio/ui/style.css";
-import { createWebviewClient, defineExtensionView, type WebviewClient } from "@pstdio/sdk/extensions";
+import {
+  createWebviewClient,
+  defineExtensionView,
+  type GuestHost,
+  type PerformanceMonitoringState,
+  type WebviewClient,
+} from "@pstdio/sdk/extensions";
 import { useWebviewCommandQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
@@ -13,10 +19,11 @@ import { createSnapshotQuery } from "./snapshot-query";
 interface DetailsProps {
   client: WebviewClient<typeof diagnosticCommands>;
   diagnostics: DiagnosticsStore;
+  host: GuestHost;
 }
 
 const Details = (props: DetailsProps) => {
-  const { client, diagnostics } = props;
+  const { client, diagnostics, host } = props;
   const captures = useSyncExternalStore(diagnostics.subscribe, diagnostics.get);
   const { performance } = client;
   const { data: snapshot, error: readError } = useWebviewCommandQuery(
@@ -31,6 +38,33 @@ const Details = (props: DetailsProps) => {
     return () => clearTimeout(timer);
   }, [copied]);
   const [error, setError] = useState<string>();
+  const [renderOverlay, setRenderOverlay] = useState<PerformanceMonitoringState["renderOverlay"]>();
+  const [changingOverlay, setChangingOverlay] = useState(false);
+  const visible = useWebviewVisibility();
+  useEffect(() => {
+    if (!visible || snapshot === undefined) return;
+    let active = true;
+    void performance.state().then(
+      (state) => {
+        if (active) setRenderOverlay(state.renderOverlay);
+      },
+      () => {
+        if (active) setRenderOverlay(undefined);
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [performance, visible, snapshot]);
+  const changeOverlay = async (enabled: boolean) => {
+    setChangingOverlay(true);
+    try {
+      await host.call("performance.control", { operation: "set-render-overlay", enabled });
+      setRenderOverlay((await performance.state()).renderOverlay);
+    } finally {
+      setChangingOverlay(false);
+    }
+  };
   const run = (action: Promise<unknown>) => {
     setError(undefined);
     action.catch((cause) => setError(String(cause)));
@@ -48,6 +82,11 @@ const Details = (props: DetailsProps) => {
       snapshot={snapshot}
       error={readError?.message}
       copied={copied}
+      renderOverlay={{
+        state: renderOverlay,
+        pending: changingOverlay,
+        onEnabledChange: (enabled) => run(changeOverlay(enabled)),
+      }}
       actionError={error}
       onCopy={() => run(copy())}
       onDismissActionError={() => setError(undefined)}
@@ -73,7 +112,7 @@ export default defineExtensionView({
     const root = createRoot(context.mount);
     root.render(
       <PerformanceRoot context={context}>
-        <Details client={client} diagnostics={createDiagnosticsStore(client)} />
+        <Details client={client} diagnostics={createDiagnosticsStore(client)} host={context.host} />
       </PerformanceRoot>,
     );
     return () => {

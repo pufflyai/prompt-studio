@@ -44,13 +44,20 @@ test("measures while the Performance Monitoring extension is loaded and shows it
   await expect.poll(() => details.evaluate(() => document.visibilityState)).toBe("visible");
   await expect.poll(operations).toContain("subscribe");
   await expect(details.getByText("CPU is measured in the desktop app", { exact: true })).toBeVisible();
-  await expect(details.getByRole("checkbox")).toHaveCount(0);
+  const highlighting = details.getByRole("checkbox", { name: "Highlight React renders" });
+  await expect(highlighting).toBeEnabled();
+  await expect(highlighting).not.toBeChecked();
+  // Critical: the extension controls the workbench's scanner, not its own iframe.
+  await highlighting.check();
+  await expect(highlighting).toBeChecked();
+  await expect(page.locator("[data-react-scan] canvas")).toBeVisible();
 
   // Critical: reopening must reuse the webview document instead of repeating its startup.
   const detailFrame = page.locator('iframe[title="Performance details"]');
   const loadedFrame = await detailFrame.elementHandle();
   await meter(page).click();
   await expect(detailFrame).toBeHidden();
+  await expect(page.locator("[data-react-scan] canvas")).toBeVisible();
   await expect.poll(() => details.evaluate(() => document.visibilityState)).toBe("hidden");
   await expect.poll(operations).toContain("unsubscribe");
   expect(await loadedFrame!.evaluate((frame) => frame.isConnected)).toBe(true);
@@ -63,4 +70,7 @@ test("measures while the Performance Monitoring extension is loaded and shows it
     })
     .toBe(true);
   expect(await detailFrame.evaluate((frame, original) => frame === original, loadedFrame)).toBe(true);
+  await expect(highlighting).toBeChecked();
+  await highlighting.uncheck();
+  await expect(page.locator("[data-react-scan] canvas")).toBeHidden();
 });

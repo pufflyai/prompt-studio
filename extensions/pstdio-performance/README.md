@@ -24,6 +24,12 @@ Monitoring runs while this extension is enabled. Disable the extension to stop i
 
 Missing readings are shown as unavailable, never as zero. Memory uses the most precise measurement the platform reports; hover the memory values to see which one. See the [Developer tools guide](../../documentation/guides/0003-developer-tools.md) for every field and limit.
 
+## React Scan
+
+Open the Performance popover and enable **Highlight React renders**. Close the popover to use the workbench while React Scan highlights renders. Reopen it to turn highlighting off. The choice belongs to this window, starts off after reload, and stops when monitoring is disabled.
+
+Only the workbench is scanned; extension frames and other windows are separate. Unsupported hosts show an unavailable control. Production names may be shortened. Scanning adds overhead, and its early hook and idle infrastructure remain after pausing. It does not diagnose backend work or add render details to copied snapshots.
+
 ## For agents
 
 Agents read the same measurements without this extension's views:

@@ -88,5 +88,8 @@
   "popover.workbench": "Workbench",
   "popover.workbenchDetail": "이 창",
   "views.details": "성능 세부 정보",
-  "views.meter": "성능"
+  "views.meter": "성능",
+  "reactScan.highlight": "React 렌더링 강조 표시",
+  "reactScan.workbenchOnly": "워크벤치만",
+  "reactScan.unavailable": "이 빌드에서는 React Scan을 사용할 수 없습니다。"
 }

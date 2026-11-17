@@ -45,6 +45,14 @@ Select the meter to open the popover. It has these parts, from top to bottom:
 
 The copy button beside the title copies the current snapshot as JSON.
 
+### Highlight React renders
+
+Turn on **Highlight React renders** in the Performance popover, then close the popover and use the app. React Scan highlights components as the workbench renders. Open the popover again to turn it off. It also stops when monitoring is disabled, and starts off after every reload.
+
+Coverage is limited to this window's workbench. Extension frames and other windows are separate. Production component names may be shortened. Frequent renders do not by themselves prove wasted work, and React Scan does not explain backend CPU, layout, or garbage collection.
+
+Scanning adds overhead. Compare the same interaction with highlighting off and on. Pausing hides highlights and stops active scanning, but React Scan's early hook and idle infrastructure remain until the window closes. Unsupported hosts show an unavailable control. Render details are not added to copied snapshots.
+
 ### The CPU list
 
 Each number is the 30-second average CPU of that row's process, as a share of one core. One busy core shows about 100%, so a process that uses two cores shows about 200%. A new process shows its latest sample until it has 30 seconds of history. A row turns amber at 25% or more.

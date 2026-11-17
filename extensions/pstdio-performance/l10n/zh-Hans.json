@@ -88,5 +88,8 @@
   "popover.workbench": "Workbench",
   "popover.workbenchDetail": "此窗口",
   "views.details": "性能详情",
-  "views.meter": "性能"
+  "views.meter": "性能",
+  "reactScan.highlight": "高亮 React 渲染",
+  "reactScan.workbenchOnly": "仅限工作台",
+  "reactScan.unavailable": "此版本不支持 React Scan。"
 }

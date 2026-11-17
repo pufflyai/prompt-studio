@@ -88,5 +88,8 @@
   "popover.workbench": "Workbench",
   "popover.workbenchDetail": "此視窗",
   "views.details": "效能詳細資料",
-  "views.meter": "效能"
+  "views.meter": "效能",
+  "reactScan.highlight": "醒目顯示 React 算繪",
+  "reactScan.workbenchOnly": "僅限工作台",
+  "reactScan.unavailable": "此版本不支援 React Scan。"
 }

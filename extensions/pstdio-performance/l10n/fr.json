@@ -89,5 +89,8 @@
   "popover.workbench": "Workbench",
   "popover.workbenchDetail": "Cette fenêtre",
   "views.details": "Détails des performances",
-  "views.meter": "Performances"
+  "views.meter": "Performances",
+  "reactScan.highlight": "Surligner les rendus React",
+  "reactScan.workbenchOnly": "Espace de travail uniquement",
+  "reactScan.unavailable": "React Scan est indisponible dans cette version."
 }

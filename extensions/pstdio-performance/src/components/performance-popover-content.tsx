@@ -8,6 +8,7 @@ import { useTranslations } from "../translations";
 import { BackendSection } from "./backend-section";
 import { CpuSection, type CpuSectionProps } from "./cpu-section";
 import { FrameRateBars, frameRateColor } from "./frame-rate-bars";
+import { ReactRenderControl, type ReactRenderControlProps } from "./react-render-control";
 
 // Electron names only utility processes, so the others need a readable role.
 const ROLE_LABELS: Record<string, string> = {
@@ -62,6 +63,7 @@ const FrameRateSection = (props: FrameRateSectionProps) => {
 };
 
 export interface PerformancePopoverContentProps extends CpuSectionProps {
+  renderOverlay?: ReactRenderControlProps;
   diagnostics?: ReactNode;
   copied?: boolean;
   // A failed copy, pause or resume, shown below the header that started it.
@@ -71,7 +73,7 @@ export interface PerformancePopoverContentProps extends CpuSectionProps {
 }
 
 export const PerformancePopoverContent = (props: PerformancePopoverContentProps) => {
-  const { copied, actionError, onCopy, onDismissActionError, diagnostics, ...cpu } = props;
+  const { copied, actionError, onCopy, onDismissActionError, diagnostics, renderOverlay, ...cpu } = props;
   const { snapshot } = cpu;
   const { t } = useTranslations();
   const buckets = snapshot?.frameRate ?? [];
@@ -108,6 +110,7 @@ export const PerformancePopoverContent = (props: PerformancePopoverContentProps)
       <Stack gap="sm" paddingX="md" paddingBottom="sm">
         {actionError ? <AlertMessage status="error" title={actionError} onClose={onDismissActionError} /> : null}
         <FrameRateSection buckets={buckets} />
+        {renderOverlay ? <ReactRenderControl {...renderOverlay} /> : null}
         {sustained ? (
           <AlertMessage status="warning" title={t("popover.sustainedTitle", "Sustained high CPU")}>
             {t("popover.sustainedBody", "{{process}} averaged {{cpu}} CPU over the last {{seconds}} seconds.", {

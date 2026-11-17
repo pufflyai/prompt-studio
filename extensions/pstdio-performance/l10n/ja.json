@@ -88,5 +88,8 @@
   "popover.workbench": "Workbench",
   "popover.workbenchDetail": "このウィンドウ",
   "views.details": "パフォーマンスの詳細",
-  "views.meter": "パフォーマンス"
+  "views.meter": "パフォーマンス",
+  "reactScan.highlight": "React のレンダリングを強調表示",
+  "reactScan.workbenchOnly": "ワークベンチのみ",
+  "reactScan.unavailable": "このビルドでは React Scan を利用できません。"
 }
