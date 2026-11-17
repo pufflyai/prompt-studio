@@ -7,6 +7,7 @@ describe.if(process.env.INSTALLED_CLI_TESTS === "1")("installed Pi CLI", () => {
     await fixture?.close();
   }, 30_000);
 
+  // Cold CLI launches, tool execution, resume and the final session readback share this allowance.
   test("runs a tool and resumes its native session without an account", async () => {
     fixture = await piFixture(true);
     const events = fixture.sink();
@@ -24,5 +25,5 @@ describe.if(process.env.INSTALLED_CLI_TESTS === "1")("installed Pi CLI", () => {
       cwd: fixture.root,
     });
     expect(messages).toEqual(events.getMessages());
-  });
+  }, 45_000);
 });
