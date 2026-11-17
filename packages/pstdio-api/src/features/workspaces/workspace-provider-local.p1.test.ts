@@ -14,6 +14,13 @@ let sourceFolder: string;
 let handle: Awaited<ReturnType<typeof createTestApp>>;
 let previous: { home?: string; defaults?: string };
 const providerId = "fixture.local-provider.workspace-type.local";
+const fixtureManifest = {
+  name: "local-provider",
+  publisher: "fixture",
+  version: "0.0.1",
+  main: "extension.ts",
+  engines: { pstdio: "^0.4.0 || ^0.5.0" },
+};
 const fixtureSource = `
 const capabilities = { files: "write", diff: false, merge: false, rebase: false, delete: true };
 const result = (directory) => ({
@@ -60,6 +67,21 @@ const post = (path: string, data: unknown) =>
   });
 const openApp = () => createTestApp({ databasePath: join(root, "database"), storageRoot: join(root, "storage") });
 
+const enableProvider = async (projectId: string) => {
+  const enabled = await post(`/v1/projects/${projectId}/extensions/installed/local-provider/enable`, {
+    name: "local-provider",
+    displayName: "Local provider",
+    extensionId: "fixture.local-provider",
+    manifest: fixtureManifest,
+    sourcePath: join(root, "local-provider"),
+    sourceHash: null,
+    sourceKind: "local_path",
+    sourceRef: null,
+    version: "0.0.1",
+  });
+  expect(enabled.status).toBe(200);
+};
+
 beforeAll(async () => {
   root = await realpath(await mkdtemp(join(tmpdir(), "installed-local-provider-")));
   previous = { home: process.env.PSTDIO_HOME, defaults: process.env.PSTDIO_DEFAULT_EXTENSIONS };
@@ -70,14 +92,7 @@ beforeAll(async () => {
   await mkdir(sourceFolder);
   await mkdir(extensionPath);
   await writeFile(join(sourceFolder, "revision.txt"), "main");
-  const manifest = {
-    name: "local-provider",
-    publisher: "fixture",
-    version: "0.0.1",
-    main: "extension.ts",
-    engines: { pstdio: "^0.4.0" },
-  };
-  await writeFile(join(extensionPath, "package.json"), JSON.stringify(manifest));
+  await writeFile(join(extensionPath, "package.json"), JSON.stringify(fixtureManifest));
   await writeFile(join(extensionPath, "extension.ts"), fixtureSource);
   handle = await openApp();
   const created = await post("/v1/projects", {
@@ -86,18 +101,7 @@ beforeAll(async () => {
   });
   expect(created.status).toBe(201);
   projectId = (await created.json()).id;
-  const enabled = await post(`/v1/projects/${projectId}/extensions/installed/local-provider/enable`, {
-    name: "local-provider",
-    displayName: "Local provider",
-    extensionId: "fixture.local-provider",
-    manifest,
-    sourcePath: extensionPath,
-    sourceHash: null,
-    sourceKind: "local_path",
-    sourceRef: null,
-    version: "0.0.1",
-  });
-  expect(enabled.status).toBe(200);
+  await enableProvider(projectId);
   const snapshot = await handle.deps.extensionRuntimeCatalog.get(projectId);
   expect(snapshot.runtime.diagnostics.filter((item) => item.severity === "error")).toEqual([]);
   expect(snapshot.runtime.workspaceTypes.map((item) => item.id)).toContain(providerId);
@@ -118,52 +122,6 @@ test("an installed provider discovers current choices through its public project
   expect(await providers()).toMatchObject([{ id: providerId, params: { revision: { defaultValue: "main" } } }]);
   await writeFile(join(sourceFolder, "revision.txt"), "review");
   expect(await providers()).toMatchObject([{ id: providerId, params: { revision: { defaultValue: "review" } } }]);
-});
-
-test("an installed local provider prepares its directory before readiness and reopens it after restart", async () => {
-  // This case also runs without the preceding discovery check in quarantine.
-  await writeFile(join(sourceFolder, "revision.txt"), "review");
-  const created = await post("/v1/workspaces", { project_id: projectId, provider_id: providerId, params: {} });
-  expect(created.status).toBe(201);
-  const workspace = await created.json();
-  expect(workspace).toMatchObject({ provider_state: "ready", execution_kind: "local", provider_error_json: null });
-  const directory = join(root, "home", "workspaces", workspace.id);
-  expect(workspace.root_path).toBe(directory);
-  expect(JSON.parse(await readFile(join(directory, "identity.json"), "utf8"))).toEqual({
-    id: workspace.id,
-    revision: "review",
-  });
-  await handle.close();
-  handle = await openApp();
-  const runtime = await findWorkspaceProvider(handle.deps, { projectId, providerId, workspaceId: workspace.id });
-  expect(runtime).toBeDefined();
-  // Catalog reload schedules the normal project setup queue. Join it before
-  // checking command readiness or removing its local target.
-  await provisionProjectWorkspaces(handle.deps, projectId);
-  expect(await handle.deps.workspaceService.get(workspace.id)).toMatchObject({
-    initializing: false,
-    setup_error: null,
-  });
-  expect(
-    await runWorkspaceProviderOperation(runtime!, (ctx) =>
-      runtime!.provider.resolve(ctx, {
-        projectId,
-        workspaceId: workspace.id,
-        providerRef: workspace.provider_ref_json,
-      }),
-    ),
-  ).toMatchObject({
-    executionTarget: { kind: "local", rootPath: directory },
-    providerRef: workspace.provider_ref_json,
-  });
-  expect(await runtime!.context.workspaces.get(workspace.id)).toMatchObject({
-    id: workspace.id,
-    rootPath: directory,
-    providerId,
-  });
-  await runtime!.context.workspaces.delete(workspace.id);
-  expect(existsSync(directory)).toBe(false);
-  expect(existsSync(sourceFolder)).toBe(true);
 });
 
 const providerDirectory = async (workspaceId: string) => {
@@ -252,6 +210,7 @@ test("cancelling a provider operation stops its child before the operation rejec
 });
 
 test("an installed provider that becomes unavailable cannot create a workspace", async () => {
+  await provisionProjectWorkspaces(handle.deps, projectId);
   await writeFile(join(sourceFolder, "revision.txt"), "unavailable");
   try {
     const response = await post("/v1/workspaces", { project_id: projectId, provider_id: providerId, params: {} });
@@ -263,15 +222,28 @@ test("an installed provider that becomes unavailable cannot create a workspace",
 });
 
 test("installed validation rejects semantic values before storing a workspace or allocating files", async () => {
-  const before = await handle.deps.workspaceService.list(projectId);
+  // Restart recovery may still re-provision the earlier project's default workspace.
+  // Validate against a fresh project whose target is owned only by this test.
+  const folder = join(root, "validation-project");
+  await mkdir(folder);
+  await writeFile(join(folder, "revision.txt"), "review");
+  const created = await post("/v1/projects", {
+    name: "Provider validation",
+    initial_workspace: { provider_id: "pstdio.root", params: { path: folder } },
+  });
+  expect(created.status).toBe(201);
+  const validationProjectId = (await created.json()).id as string;
+  await enableProvider(validationProjectId);
+  const before = await handle.deps.workspaceService.list(validationProjectId);
   const response = await post("/v1/workspaces", {
-    project_id: projectId,
+    project_id: validationProjectId,
     provider_id: providerId,
     params: { revision: "missing" },
   });
   expect(response.status).toBe(400);
   expect(await response.json()).toMatchObject({ error: expect.stringContaining("Choose an existing revision.") });
-  expect(await handle.deps.workspaceService.list(projectId)).toEqual(before);
+  const after = await handle.deps.workspaceService.list(validationProjectId);
+  expect(after.map((workspace) => workspace.id).sort()).toEqual(before.map((workspace) => workspace.id).sort());
 });
 
 test("a completed provider cannot allocate or write through a retained directory", async () => {

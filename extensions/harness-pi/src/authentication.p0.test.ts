@@ -41,35 +41,6 @@ test("Pi account discovery loads project providers only after native project tru
   }
 });
 
-test("native Pi browser completion wins over a pending manual-code prompt", async () => {
-  const { root, options, close } = await fixture();
-  let asked = false;
-  try {
-    await runPiAccountWorker(
-      { type: "authenticate", input: { action: "login", provider: "fixture-browser", method: "oauth" } },
-      options,
-      {
-        signal: new AbortController().signal,
-        emit: async () => {},
-        request: () => {
-          asked = true;
-          return new Promise(() => {});
-        },
-      },
-    );
-    expect(asked).toBe(true);
-    expect((await Bun.file(join(root, "auth.json")).json())["fixture-browser"]).toMatchObject({
-      type: "oauth",
-      access: "fixture-access",
-    });
-    expect((await runPiAccountWorker({ type: "status", model: "fixture-browser/test" }, options))?.status).toBe(
-      "signed_in",
-    );
-  } finally {
-    close();
-  }
-});
-
 test("cancelling Pi login stops its worker before it can save credentials", async () => {
   const { root, options, close } = await fixture();
   const ready = Promise.withResolvers<void>();

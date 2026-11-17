@@ -1,7 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
+import { uiOrigin } from "../ui-server";
 import { preparedUiSourcesPath } from "./prepare-ui-fixtures";
+import { prepareUiRegistry } from "./prepare-ui-registry";
 
 const repoRoot = join(import.meta.dirname, "../../../..");
 const defaults = JSON.parse(process.env.PSTDIO_DEFAULT_EXTENSIONS!);
@@ -17,11 +19,13 @@ for (const entry of defaults.defaultExtensions) {
   delete entry.skipInstall;
 }
 const npmConfigPath = join(process.env.E2E_HOME!, ".npmrc");
-const registry = await startLocalWorkspaceRegistry({
-  configPath: npmConfigPath,
-  outputRoot: join(process.env.E2E_HOME!, "ui-registry"),
-  packagePaths: [join(repoRoot, "packages/sdk"), join(repoRoot, "packages/ui")],
-});
+const registry = await prepareUiRegistry(uiOrigin, () =>
+  startLocalWorkspaceRegistry({
+    configPath: npmConfigPath,
+    outputRoot: join(process.env.E2E_HOME!, "ui-registry"),
+    packagePaths: [join(repoRoot, "packages/sdk"), join(repoRoot, "packages/ui")],
+  }),
+);
 const child = Bun.spawn(
   [process.execPath, "--conditions=source", "src/index.ts", "serve", "--foreground", ...process.argv.slice(2)],
   {

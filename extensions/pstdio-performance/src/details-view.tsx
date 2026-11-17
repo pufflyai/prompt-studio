@@ -1,20 +1,28 @@
 import "@pstdio/ui/style.css";
-import { createWebviewClient, defineExtensionView, type WebviewPerformanceClient } from "@pstdio/sdk/extensions";
+import { createWebviewClient, defineExtensionView, type WebviewClient } from "@pstdio/sdk/extensions";
+import { useWebviewCommandQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import { PerformancePopoverContent } from "./components/performance-popover-content";
 import { PerformanceRoot } from "./components/performance-root";
-import { createSnapshotStore, type SnapshotStore } from "./snapshot-store";
+import { RuntimeDiagnostics } from "./components/runtime-diagnostics";
+import type { diagnosticCommands } from "./diagnostics/commands";
+import { createDiagnosticsStore, type DiagnosticsStore } from "./diagnostics/store";
+import { createSnapshotQuery } from "./snapshot-query";
 
 interface DetailsProps {
-  store: SnapshotStore;
-  performance: WebviewPerformanceClient;
+  client: WebviewClient<typeof diagnosticCommands>;
+  diagnostics: DiagnosticsStore;
 }
 
 const Details = (props: DetailsProps) => {
-  const { store, performance } = props;
-  const snapshot = useSyncExternalStore(store.subscribe, store.get);
-  const readError = useSyncExternalStore(store.subscribe, store.getError);
+  const { client, diagnostics } = props;
+  const captures = useSyncExternalStore(diagnostics.subscribe, diagnostics.get);
+  const { performance } = client;
+  const { data: snapshot, error: readError } = useWebviewCommandQuery(
+    createSnapshotQuery(client),
+    useWebviewVisibility(),
+  );
   const [copied, setCopied] = useState(false);
   // The check mark confirms one copy, then the button offers to copy again.
   useEffect(() => {
@@ -38,26 +46,39 @@ const Details = (props: DetailsProps) => {
   return (
     <PerformancePopoverContent
       snapshot={snapshot}
-      error={readError}
+      error={readError?.message}
       copied={copied}
       actionError={error}
       onCopy={() => run(copy())}
       onDismissActionError={() => setError(undefined)}
       onPause={(installedExtensionId) => run(performance.pauseExtension(installedExtensionId))}
       onResume={(installedExtensionId) => run(performance.resumeExtension(installedExtensionId))}
+      diagnostics={
+        <RuntimeDiagnostics
+          {...captures}
+          onStart={(kind, seconds) => void diagnostics.start(kind, seconds)}
+          onCancel={(id) => void diagnostics.cancel(id)}
+          onExport={(id) =>
+            run(diagnostics.export(id).then((result) => navigator.clipboard.writeText(JSON.stringify(result, null, 2))))
+          }
+        />
+      }
     />
   );
 };
 
 export default defineExtensionView({
   render(context) {
-    const client = createWebviewClient(context.host);
+    const client = createWebviewClient<typeof diagnosticCommands>(context.host);
     const root = createRoot(context.mount);
     root.render(
       <PerformanceRoot context={context}>
-        <Details store={createSnapshotStore(client.performance)} performance={client.performance} />
+        <Details client={client} diagnostics={createDiagnosticsStore(client)} />
       </PerformanceRoot>,
     );
-    return () => root.unmount();
+    return () => {
+      root.unmount();
+      client.queries.dispose();
+    };
   },
 });

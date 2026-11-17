@@ -7,45 +7,56 @@ import { nativeChatFileAllowed } from "./native-chat-files";
 import { composeNativeChatLinks } from "./native-chat-links";
 import { useSessionLinks } from "./use-session-links";
 
-export const createDashboardChatHost = (workbench: WorkbenchCore, projectId?: string) => {
-  return function DashboardChatHost({
+interface DashboardChatHostProps extends NativeChatHostProps {
+  workbench: WorkbenchCore;
+  projectId?: string;
+}
+
+// Keep the component at module scope so the compiler can retain unchanged host services.
+const DashboardChatHost = ({
+  workbench,
+  projectId,
+  session,
+  values,
+  attachments = [],
+  extensionId,
+  children,
+  linkHandler,
+}: DashboardChatHostProps) => {
+  const {
+    conversation,
+    messages: presented,
+    initializing,
+  } = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
+  const messages = useApiFileParts(presented, (url) => nativeChatFileAllowed(url, projectId, extensionId));
+  const attachmentUrls = useApiFileUrls([
+    ...new Set(
+      attachments.flatMap(({ url }) => (url && nativeChatFileAllowed(url, projectId, extensionId) ? [url] : [])),
+    ),
+  ]);
+  const links = useSessionLinks(workbench, projectId, conversation.workspaceId);
+  const account = useNativeHarnessAccount({
+    workbench,
+    projectId,
     session,
-    values,
-    attachments = [],
-    extensionId,
-    children,
-    linkHandler,
-  }: NativeChatHostProps) {
-    const {
-      conversation,
-      messages: presented,
-      initializing,
-    } = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
-    const messages = useApiFileParts(presented, (url) => nativeChatFileAllowed(url, projectId, extensionId));
-    const attachmentUrls = useApiFileUrls([
-      ...new Set(
-        attachments.flatMap(({ url }) => (url && nativeChatFileAllowed(url, projectId, extensionId) ? [url] : [])),
-      ),
-    ]);
-    const links = useSessionLinks(workbench, projectId, conversation.workspaceId);
-    const account = useNativeHarnessAccount({
-      workbench,
-      projectId,
-      session,
-      readOnly: conversation.readOnly,
-      initializing,
-      binding: conversation.nativeHarnessAccount,
-      value: conversation.nativeHarnessAccount ? values[conversation.nativeHarnessAccount.controlId] : undefined,
-    });
-    return children({
-      messages,
-      attachments: attachments.map((attachment) => ({
-        ...attachment,
-        ...(attachment.url && attachmentUrls.has(attachment.url) ? { url: attachmentUrls.get(attachment.url) } : {}),
-      })),
-      linkHandler: conversation.nativeLinks ? composeNativeChatLinks(linkHandler, links.handler) : linkHandler,
-      linkNotice: conversation.nativeLinks ? links.notice : undefined,
-      account,
-    });
-  };
+    readOnly: conversation.readOnly,
+    initializing,
+    binding: conversation.nativeHarnessAccount,
+    value: conversation.nativeHarnessAccount ? values[conversation.nativeHarnessAccount.controlId] : undefined,
+  });
+  return children({
+    messages,
+    attachments: attachments.map((attachment) => ({
+      ...attachment,
+      ...(attachment.url && attachmentUrls.has(attachment.url) ? { url: attachmentUrls.get(attachment.url) } : {}),
+    })),
+    linkHandler: conversation.nativeLinks ? composeNativeChatLinks(linkHandler, links.handler) : linkHandler,
+    linkNotice: conversation.nativeLinks ? links.notice : undefined,
+    account,
+  });
 };
+
+export const createDashboardChatHost = (workbench: WorkbenchCore, projectId?: string) =>
+  function BoundDashboardChatHost(props: NativeChatHostProps) {
+    return <DashboardChatHost {...props} workbench={workbench} projectId={projectId} />;
+  };

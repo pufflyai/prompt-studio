@@ -11,6 +11,7 @@ const createBreadcrumbWorkbench = (target: {
   page: typeof boardPage | typeof ticketPage;
   resource?: typeof ticket;
   contributed?: boolean;
+  cleanupBoard?: boolean;
 }) => {
   const workbench = createWorkbench({ startPage: boardPage });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
@@ -22,10 +23,35 @@ const createBreadcrumbWorkbench = (target: {
   workbench.pages.registerPage({
     id: "board",
     ref: boardPage,
-    title: "Board",
+    title: target.cleanupBoard ? "Tickets" : "Board",
     path: "board",
     modeId: "project",
-    main: { kind: "panels", empty: { kind: "view", id: "body" } },
+    main: target.cleanupBoard
+      ? {
+          kind: "view",
+          view: { kind: "view", id: "body" },
+          cardinality: "one",
+          presentation: "page",
+          tab: {
+            getSnapshot: () => ({
+              label: "Tickets",
+              menu: [
+                {
+                  id: "tickets",
+                  rows: [
+                    {
+                      id: "cleanup-board",
+                      label: "Cleanup board",
+                      icon: "sparkles",
+                      action: { kind: "command", commandId: "cleanup-board" },
+                    },
+                  ],
+                },
+              ],
+            }),
+          },
+        }
+      : { kind: "panels", empty: { kind: "view", id: "body" } },
     slots: [],
   });
   workbench.pages.registerPage({
@@ -82,6 +108,10 @@ const createBreadcrumbWorkbench = (target: {
     { execute: () => undefined },
   );
   workbench.layout.registerMenuItem(workbenchBreadcrumbLocationMenuPath, { commandId: "copy-link" });
+  workbench.commands.registerCommand(
+    { id: "cleanup-board", label: "Cleanup board", icon: "sparkles" },
+    { execute: () => undefined },
+  );
   workbench.pageLocations.setProject("preview");
   workbench.pageLocations.navigate({ kind: "page", ...target });
   if (target.contributed) workbench.pages.openSlot({ pageId: "ticket", slotId: "panel", resource: ticket });
@@ -110,4 +140,8 @@ export const PlainPage: Story = {
 export const ContributedPanelActions: Story = {
   id: "pstdio-workbench-reference-core-api-breadcrumb-actions--contributed-panel-actions",
   args: { workbench: createBreadcrumbWorkbench({ page: ticketPage, resource: ticket, contributed: true }) },
+};
+export const PlannerCleanupBoard: Story = {
+  args: { workbench: createBreadcrumbWorkbench({ page: boardPage, cleanupBoard: true }) },
+  description: "Open the chevron beside Tickets to find Cleanup board in the page actions menu.",
 };

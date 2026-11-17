@@ -7,7 +7,7 @@ import { runLargeSave } from "./large-save";
 import { runScenario } from "./scenario";
 import { observeTraffic } from "./traffic";
 
-const output = resolve(process.argv[2] ?? ".pstdio/extension-storage/pstdio.pstdio-artifacts/ps787");
+const output = resolve(process.argv[2] ?? ".pstdio/extension-storage/pstdio.artifacts/ps787");
 const image = process.argv[3];
 if (!image)
   throw new Error(

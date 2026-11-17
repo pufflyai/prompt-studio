@@ -104,7 +104,7 @@ test("legacy switch and rename collect the actual provider's missing parameters"
       calls.push({ commandId, body });
       return {
         commandId,
-        extensionId: "pstdio.pstdio-session-browser",
+        extensionId: "pstdio.session-browser",
         outcome: { ok: true, status: "success", value: {} },
       };
     },
@@ -116,7 +116,7 @@ test("legacy switch and rename collect the actual provider's missing parameters"
     expect(wb.commandPalette.getParamsRequest()).toMatchObject({
       record: {
         command: {
-          id: "pstdio.pstdio-session-browser.command.switch",
+          id: "pstdio.session-browser.command.switch",
           params: { session: { type: "resource", resourceType: "session", required: true } },
         },
       },
@@ -128,7 +128,7 @@ test("legacy switch and rename collect the actual provider's missing parameters"
     expect(wb.commandPalette.getParamsRequest()).toMatchObject({
       record: {
         command: {
-          id: "pstdio.pstdio-session-browser.command.rename",
+          id: "pstdio.session-browser.command.rename",
           params: { title: { type: "text", required: true } },
         },
       },
@@ -138,7 +138,7 @@ test("legacy switch and rename collect the actual provider's missing parameters"
     await wb.commands.executeCommand(dashboardCommandIds.renameSession, { title: "Updated" }, { resource });
     expect(calls).toMatchObject([
       {
-        commandId: "pstdio.pstdio-session-browser.command.rename",
+        commandId: "pstdio.session-browser.command.rename",
         body: { params: { sessionId: "saved", title: "Updated" }, resource },
       },
     ]);
@@ -168,7 +168,7 @@ test("legacy saved panel and page use the installed provider's tab status and Ne
       const value = handler ? await handler.handler(ctx, body.params ?? {}) : {};
       return {
         commandId,
-        extensionId: "pstdio.pstdio-session-browser",
+        extensionId: "pstdio.session-browser",
         outcome: { ok: true, status: "success", value },
       };
     },

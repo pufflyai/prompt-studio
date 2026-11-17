@@ -248,7 +248,7 @@ Build the relay image from the revision you want to measure, then run from the r
 ```sh
 docker build -f infra/relay/Dockerfile --target runtime -t pstdio-relay:measurement .
 bun packages/e2e/src/perf/relay-reference-workload/workload.diagnostic.ts \
-  .pstdio/extension-storage/pstdio.pstdio-artifacts/relay-measurement \
+  .pstdio/extension-storage/pstdio.artifacts/relay-measurement \
   pstdio-relay:measurement
 ```
 

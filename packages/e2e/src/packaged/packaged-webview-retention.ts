@@ -6,7 +6,7 @@ export const verifyPackagedWebviewRetention = async (page: Page) => {
   expect(frame).toBeTruthy();
   await frame!.evaluate(() => Reflect.set(window, "packagedRetentionMarker", "original context"));
   await page.getByRole("option", { name: "Home", exact: true }).click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-home\/home$/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.home\/home$/);
   await expect(iframe).toBeHidden();
   expect(frame!.isDetached()).toBe(false);
   await page.goBack();

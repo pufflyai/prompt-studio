@@ -28,7 +28,7 @@ const RunsTable = (props: {
   onOpen: (url: string) => void;
 }) => {
   const { runs, selected, onChoose, onOpen } = props;
-  const rows: RowData[] = runs.map((run) => ({
+  const rows: RowData[] = [...runs].reverse().map((run) => ({
     id: run.id,
     run: `${new Date(run.createdAt).toLocaleString()} · ${run.sha.slice(0, 7)}`,
     verification: run.status === "completed" ? (run.conclusion ?? "—") : run.status.replaceAll("_", " "),

@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { loadEmbeddedAssets, resolveMimeType } from "./embedded-assets";
 
-test("loads dashboard assets with Windows-style embedded names", () => {
+test.each([
+  "..\\..\\pstdio-dashboard\\dist\\index.html",
+  "packages/pstdio-dashboard/dist/index.html",
+])("loads dashboard assets from embedded name %s", (name) => {
   const previous = globalThis.Bun.embeddedFiles;
   const file = Object.assign(new Blob(["<html></html>"]), {
-    name: "..\\..\\pstdio-dashboard\\dist\\index.html",
+    name,
   });
   (globalThis.Bun as unknown as { embeddedFiles: unknown[] }).embeddedFiles = [file];
 

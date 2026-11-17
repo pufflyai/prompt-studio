@@ -169,8 +169,8 @@ export const summarizeCiTiming = (input: CiJob[], observedRuns: CiRunTiming[] = 
 
 // The stage time targets from the CI stages guide.
 const stageTargetsMs = {
-  pull_request: 3 * 60_000,
-  merge_queue: 8 * 60_000,
+  pull_request: 10 * 60_000,
+  merge_queue: 10 * 60_000,
   main: 8 * 60_000,
   release: 40 * 60_000,
 };

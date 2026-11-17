@@ -6,6 +6,52 @@ import { createDocumentSync, type DocumentRelay } from "pstdio-sync/relay";
 import type { Asset, StoredUpdate } from "pstdio-sync-contracts";
 import { createPublicationCatalog } from "./catalog-store";
 
+test("historical publication selectors retain their record keys and canonical-only selectors are reused", async () => {
+  for (const extensionId of ["pstdio.pstdio-notes", "pstdio.notes"]) {
+    const storage = createDocumentStorage({
+      owner: { workbenchId: "project", extensionId: "pstdio.published-extensions" },
+      store: createMemoryDocumentStore(),
+      assets: { verifyComplete: async () => {} } as never,
+    });
+    const asset = { sha256: "a".repeat(64), byteLength: 1, mediaType: "application/octet-stream" };
+    await storage.records.commit({
+      operationId: "old-publication",
+      edits: [
+        { recordId: `package:${asset.sha256}`, replace: { extensionId, version: "1.0.0" }, asset },
+        { recordId: extensionId, replace: { revision: asset.sha256, enabled: true } },
+      ],
+    });
+    const catalog = createPublicationCatalog({ records: storage.records, verifyComplete: async () => {} });
+    expect((await catalog.read("pstdio.notes")).value).toMatchObject({ extensionId: "pstdio.notes", version: "1.0.0" });
+    expect(await catalog.list()).toHaveLength(1);
+    await catalog.select(
+      { extensionId: "pstdio.notes", version: "1.0.0", revision: asset.sha256, enabled: false },
+      asset,
+    );
+    expect((await storage.records.list()).filter((r) => !r.recordId.startsWith("package:"))).toHaveLength(1);
+    expect((await catalog.read("pstdio.notes")).value).toMatchObject({ enabled: false });
+  }
+});
+
+test("distinct publication selector histories stop activation and writes without merging either history", async () => {
+  const storage = createDocumentStorage({
+    owner: { workbenchId: "project", extensionId: "pstdio.published-extensions" },
+    store: createMemoryDocumentStore(),
+    assets: {} as never,
+  });
+  await storage.records.commit({
+    operationId: "conflict",
+    edits: [
+      { recordId: "pstdio.pstdio-notes", replace: { revision: "a".repeat(64), enabled: true } },
+      { recordId: "pstdio.notes", replace: { revision: "b".repeat(64), enabled: false } },
+    ],
+  });
+  const catalog = createPublicationCatalog({ records: storage.records, verifyComplete: async () => {} });
+  await expect(catalog.read("pstdio.notes")).rejects.toThrow(/conflict/i);
+  await expect(catalog.list()).rejects.toThrow(/conflict/i);
+  expect(await storage.records.list()).toHaveLength(2);
+});
+
 test("republishing restores a deleted selection and stale selections cannot overwrite newer choices", async () => {
   const owner = { workbenchId: "project", extensionId: "pstdio.published-extensions" };
   const assets = { verifyComplete: async () => {} } as never;

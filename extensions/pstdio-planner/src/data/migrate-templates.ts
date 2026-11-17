@@ -1,6 +1,7 @@
 import type { ExtensionContextBase, JsonObject } from "@pstdio/sdk/extensions";
 
-type MigrationContext = Pick<ExtensionContextBase, "files" | "storage">;
+// Hosts since 0.46 keep no legacy tables, so templates arrive without needing `files`.
+type MigrationContext = Pick<ExtensionContextBase, "storage"> & Partial<Pick<ExtensionContextBase, "files">>;
 
 const ownedTypes = new Set(["document", "prompt", "ticket"]);
 const normalizeName = (name: string) => name.replaceAll("_", "-");
@@ -22,6 +23,7 @@ const importTemplates = async (ctx: MigrationContext, templates: ReturnType<type
   for (const { name, record } of templates) {
     if (await collection.get(name)) continue;
     if (typeof record.file_id !== "string") throw new Error("Invalid legacy template file.");
+    if (!ctx.files) throw new Error("Legacy templates need the files API to import.");
     const content = await ctx.files.readText(record.file_id);
     const attachments = collection.attachments(name);
     const blob = await attachments.put({

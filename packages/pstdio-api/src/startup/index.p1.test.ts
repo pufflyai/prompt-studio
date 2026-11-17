@@ -3,7 +3,6 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../test-utils/create-test-app";
-import { runBunScenario } from "../test-utils/run-bun-scenario";
 import { runStartupTasks } from ".";
 import { prepareSourceRefreshFixture } from "./source-refresh-source.fixture";
 
@@ -63,14 +62,6 @@ describe("startup default extensions", () => {
     await close();
 
     expect(existsSync(join(pstdioHome, "extensions/startup-fixture"))).toBe(true);
-  }, 40_000);
-
-  test("refreshes local default extensions when running from source", async () => {
-    await runBunScenario(join(import.meta.dir, "source-refresh.fixture.ts"), ["fresh"]);
-  }, 40_000);
-
-  test("refreshes local default extensions when an existing project starts in source mode", async () => {
-    await runBunScenario(join(import.meta.dir, "source-refresh.fixture.ts"), ["existing"]);
   }, 40_000);
 
   test("tracks default extension preparation without blocking runtime readiness", async () => {

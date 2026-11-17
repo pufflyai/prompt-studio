@@ -17,7 +17,7 @@ const view = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./src/view.tsx", import.meta.url),
-    capabilities: ["commands.execute", "navigation.open"],
+    capabilities: ["commands.query", "commands.execute", "navigation.open"],
   },
 });
 export const home = definePage({

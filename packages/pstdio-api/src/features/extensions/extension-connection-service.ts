@@ -1,3 +1,4 @@
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionConnectionsApi } from "pstdio-api-contracts/extension-kernel";
 import type { ConnectionSecretStore } from "./connection-secret-store";
 import { createExtensionConnectionRequestService } from "./extension-connection-request-service";
@@ -157,7 +158,11 @@ const removeConnection = async (deps: ExtensionConnectionServiceDeps, input: Con
   return true;
 };
 
-export const createExtensionConnectionService = (deps: ExtensionConnectionServiceDeps) => {
+export const createExtensionConnectionService = (input: ExtensionConnectionServiceDeps) => {
+  const deps: ExtensionConnectionServiceDeps = {
+    ...input,
+    getContribution: (key) => input.getContribution({ ...key, extensionId: canonicalExtensionId(key.extensionId) }),
+  };
   const requestService = createExtensionConnectionRequestService(deps);
   // Cleanup compares database references with secret files. Keep that comparison
   // ordered with credential writes now that startup cleanup runs beside requests.
@@ -181,7 +186,7 @@ export const createExtensionConnectionService = (deps: ExtensionConnectionServic
     return () => mutate(removeSecrets);
   };
   const removeExtension = (projectId: string, extensionId: string) =>
-    mutate(() => removeExtensionConnections(deps, projectId, extensionId));
+    mutate(() => removeExtensionConnections(deps, projectId, canonicalExtensionId(extensionId)));
 
   return { ...requestService, configure, list, prepareProjectRemoval, reconcile, remove, removeExtension };
 };

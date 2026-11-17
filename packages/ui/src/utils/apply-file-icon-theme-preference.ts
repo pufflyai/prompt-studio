@@ -13,6 +13,8 @@ export interface FileIconThemeDefinition {
 
 export interface FileIconThemePreferenceOption {
   id: string;
+  /** Historical choices supplied by the registering owner; discovery keeps one canonical option. */
+  aliases?: readonly string[];
   title?: string;
   definitions: Record<string, unknown>;
   fileExtensions: Record<string, string>;

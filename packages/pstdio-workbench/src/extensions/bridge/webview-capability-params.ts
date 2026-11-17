@@ -76,10 +76,31 @@ const terminalRequest = z.object({
 
 const projectId = { projectId: identifier.optional() };
 
+const serviceQuery = (source: z.ZodType) =>
+  z.discriminatedUnion("operation", [
+    z.strictObject({
+      operation: z.enum(["observe", "read", "refresh"]),
+      owner: identifier,
+      requestId: identifier,
+      source,
+    }),
+    z.strictObject({ operation: z.literal("close"), owner: identifier, requestId: identifier }),
+  ]);
+const accountQuery = serviceQuery(
+  z.discriminatedUnion("service", [
+    z.strictObject({ service: z.literal("status") }),
+    z.strictObject({ service: z.literal("projectSyncStatus"), projectId: identifier }),
+    z.strictObject({ service: z.literal("devices"), accountId: identifier, managerOrigin: identifier }),
+  ]),
+);
+const performanceQuery = serviceQuery(z.strictObject({ service: z.literal("snapshot") }));
 const schemas = {
-  "performance.read": z.strictObject({
-    operation: z.enum(["state", "snapshot", "subscribe", "unsubscribe", "recordings", "retain", "dispose"]),
-  }),
+  "performance.read": z.discriminatedUnion("operation", [
+    z.strictObject({ operation: z.literal("query"), query: performanceQuery }),
+    z.strictObject({
+      operation: z.enum(["state", "snapshot", "subscribe", "unsubscribe", "recordings", "retain", "dispose"]),
+    }),
+  ]),
   "performance.control": z.discriminatedUnion("operation", [
     z.strictObject({ operation: z.literal("set-enabled"), enabled: z.boolean() }),
     z.strictObject({ operation: z.enum(["pause-extension", "resume-extension"]), installedExtensionId: identifier }),
@@ -120,7 +141,13 @@ const schemas = {
   "notification.action": webviewNotificationActionParamsSchema,
   "notification.resolve": notificationIdentity,
   "notification.dismiss": notificationIdentity,
-  "preferences.get": preference,
+  "preferences.get": z.union([
+    preference,
+    z.strictObject({
+      op: z.literal("query"),
+      query: serviceQuery(preference.extend({ service: z.literal("preference") })),
+    }),
+  ]),
   "preferences.set": preference.extend({
     value: z.union([
       z.boolean(),
@@ -162,6 +189,7 @@ const schemas = {
     z.object({ op: z.literal("imageUrl"), mount: identifier, path: z.string() }),
   ]),
   "account.read": z.discriminatedUnion("op", [
+    z.strictObject({ op: z.literal("query"), query: accountQuery }),
     z.object({ op: z.literal("status") }),
     z.object({ op: z.literal("loginStatus"), id: identifier }),
     z.object({ op: z.literal("devices") }),

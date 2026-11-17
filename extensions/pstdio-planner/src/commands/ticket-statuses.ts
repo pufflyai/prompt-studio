@@ -13,7 +13,7 @@ import { plannerSchemaChanged, plannerTicketsChanged } from "../events";
 export const readTicketStatusesCommand = defineCommand({
   id: "ticket-status.read",
   title: "Read ticket statuses",
-  cli: { globalAliases: [["statuses", "list"]], examples: ["pstdio statuses list"] },
+  cli: { examples: ["pstdio pstdio.planner ticket-status read"] },
   async run(ctx, _commandParams) {
     return readTicketStatuses(ctx.storage);
   },
@@ -28,7 +28,9 @@ export const createTicketStatusCommand = defineCommand({
   id: "ticket-status.create",
   mutating: true,
   title: "Create ticket status",
-  cli: { globalAliases: [["statuses", "create"]], examples: ["pstdio statuses create --label Backlog --color gray"] },
+  cli: {
+    examples: ["pstdio pstdio.planner ticket-status create --label Backlog --color gray"],
+  },
   params: {
     label: params.text({ label: "Label", required: true }),
     color: params.text({ label: "Color", required: false }),
@@ -37,8 +39,7 @@ export const createTicketStatusCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const status = await createTicketStatus({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       name: commandParams.label,
       color: commandParams.color,
       icon: commandParams.icon,
@@ -56,8 +57,7 @@ export const updateTicketStatusCommand = defineCommand({
   mutating: true,
   title: "Update ticket status",
   cli: {
-    globalAliases: [["statuses", "update"]],
-    examples: ["pstdio statuses update --status-id backlog --label Backlog"],
+    examples: ["pstdio pstdio.planner ticket-status update --status-id backlog --label Backlog"],
   },
   params: {
     statusId: params.text({ label: "Status", required: true }),
@@ -69,8 +69,7 @@ export const updateTicketStatusCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const status = await updateTicketStatus({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       statusId: commandParams.statusId,
       name: commandParams.label,
       color: commandParams.color,
@@ -89,14 +88,16 @@ export const deleteTicketStatusCommand = defineCommand({
   id: "ticket-status.delete",
   mutating: true,
   title: "Delete ticket status",
-  cli: { globalAliases: [["statuses", "delete"]], examples: ["pstdio statuses delete --status TODO"] },
+  cli: {
+    examples: ["pstdio pstdio.planner ticket-status delete --status TODO"],
+  },
   params: {
     statusId: params.text({ label: "Status", required: false }),
     status: params.text({ label: "Status name", required: false }),
   },
   async run(ctx, commandParams) {
     const statusId = commandParams.statusId ?? (await resolveStatusId(ctx.storage, commandParams.status ?? ""));
-    const result = await deleteTicketStatus({ storage: ctx.storage, resources: ctx.resources, statusId });
+    const result = await deleteTicketStatus({ ...ctx, statusId });
     await ctx.events.emit(plannerTicketsChanged, {});
     await ctx.events.emit(plannerSchemaChanged, {});
     return result;
@@ -107,13 +108,15 @@ export const setDefaultTicketStatusCommand = defineCommand({
   id: "ticket-status.set-default",
   mutating: true,
   title: "Set default ticket status",
-  cli: { globalAliases: [["statuses", "set-default"]], examples: ["pstdio statuses set-default --status TODO"] },
+  cli: {
+    examples: ["pstdio pstdio.planner ticket-status set-default --status TODO"],
+  },
   params: {
     status: params.text({ label: "Status", required: true }),
   },
   async run(ctx, commandParams) {
     const statusId = await resolveStatusId(ctx.storage, commandParams.status);
-    const result = await setDefaultStatus({ storage: ctx.storage, resources: ctx.resources, statusId });
+    const result = await setDefaultStatus({ ...ctx, statusId });
     await ctx.events.emit(plannerTicketsChanged, {});
     await ctx.events.emit(plannerSchemaChanged, {});
     return result;
@@ -125,16 +128,14 @@ export const reorderTicketStatusesCommand = defineCommand({
   mutating: true,
   title: "Reorder ticket statuses",
   cli: {
-    globalAliases: [["statuses", "reorder"]],
-    examples: ['pstdio statuses reorder --status-ids \'["backlog","ready"]\''],
+    examples: ['pstdio pstdio.planner ticket-status reorder --status-ids \'["backlog","ready"]\''],
   },
   params: {
     statusIds: params.json<string[]>(),
   },
   async run(ctx, commandParams) {
     const result = await reorderTicketStatuses({
-      storage: ctx.storage,
-      resources: ctx.resources,
+      ...ctx,
       statusIds: commandParams.statusIds ?? [],
     });
     await ctx.events.emit(plannerTicketsChanged, {});

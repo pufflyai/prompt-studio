@@ -6,9 +6,9 @@ import { createPackagedHome, launchPackagedApp } from "./packaged-app-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
 const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
-const homePath = dirname(fileURLToPath(import.meta.resolve("pstdio-home/package.json")));
-const performancePath = dirname(fileURLToPath(import.meta.resolve("pstdio-performance/package.json")));
-const sessionsPath = dirname(fileURLToPath(import.meta.resolve("pstdio-session-browser/refs")));
+const homePath = dirname(fileURLToPath(import.meta.resolve("home/package.json")));
+const performancePath = dirname(fileURLToPath(import.meta.resolve("performance/package.json")));
+const sessionsPath = dirname(fileURLToPath(import.meta.resolve("session-browser/refs")));
 const preparedSources = JSON.parse(process.env.E2E_EXTENSION_SOURCES ?? "{}") as Record<string, string>;
 const benchmarkExtension = (installName: string, fallback: string) => ({
   installName,

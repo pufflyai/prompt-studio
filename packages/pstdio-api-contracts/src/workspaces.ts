@@ -159,6 +159,8 @@ export const workspaceFileEntrySchema = z.object({
   type: z.enum(["file", "directory"]),
   size: z.number().int().nonnegative().optional(),
   modified_at: z.string().optional(),
+  /** Set only for entries Git considers ignored in a repository. */
+  git_ignored: z.boolean().optional(),
 });
 
 export const workspaceFilesResponseSchema = z.object({

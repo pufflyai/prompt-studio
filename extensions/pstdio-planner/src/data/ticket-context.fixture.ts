@@ -1,6 +1,7 @@
 import type { ExtensionStorageApi, ResourceIdentity } from "@pstdio/sdk/extensions";
-import { makeCommandContext } from "@pstdio/sdk/testing";
+import { createMemoryStorage, type MemoryStorageOptions, makeCommandContext } from "@pstdio/sdk/testing";
 import { ticketsCollection as collection, putTicket as put } from "./collections";
+import { TICKET_KEY_PREFIX, TICKETS_COLLECTION } from "./ticket-record-address";
 import type { Ticket } from "./types";
 
 const seeded = new WeakMap<ExtensionStorageApi, Map<string, ResourceIdentity>>();
@@ -32,7 +33,7 @@ export const ticketContext = (storage: ExtensionStorageApi) => {
     storage,
     params: {},
     resourcePrefixes: { ticket: "T" },
-    overrides: { extensionId: "pstdio-planner" },
+    overrides: { extensionId: "planner" },
   });
   const core = ctx.resources;
   ctx.resources = {
@@ -76,4 +77,19 @@ export const ticketsCollection = (storage: ExtensionStorageApi) => {
       return true;
     },
   };
+};
+
+/**
+ * A project already on storage version 5: each ticket is a record, and the deprecated collection
+ * redirects to them. Seeding records skips the one-time move of large ticket sets.
+ */
+export const createTicketRecordStorage = async (tickets: Ticket[], options: MemoryStorageOptions = {}) => {
+  const storage = createMemoryStorage({
+    ...options,
+    kv: { ...options.kv, ...Object.fromEntries(tickets.map((ticket) => [`${TICKET_KEY_PREFIX}${ticket.id}`, ticket])) },
+  });
+  await storage.migrate(5, (_previous, migration) =>
+    migration.moveCollection(TICKETS_COLLECTION, { keyPrefix: TICKET_KEY_PREFIX }).then(() => undefined),
+  );
+  return storage;
 };

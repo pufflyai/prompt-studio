@@ -25,7 +25,7 @@ export const installChatOverflowReplay = (page: Page, sessionId: string) =>
       if (url.pathname.endsWith("/subscriptions") && init?.method === "POST" && typeof init.body === "string") {
         const body = JSON.parse(init.body);
         if (
-          body.command?.command_id === "pstdio.pstdio-session-browser.command.watch" &&
+          body.command?.command_id === "pstdio.session-browser.command.watch" &&
           body.command.body?.params?.renderer?.resource?.id === sessionId
         ) {
           subscriptionId = body.subscription_id;

@@ -1,5 +1,5 @@
 import type { LayoutModel } from "../../registries/layout/layout-model";
-import { createPlacement } from "../../registries/layout/layout-operations";
+import { createPlacement, findPlacementByWidgetId } from "../../registries/layout/layout-operations";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import type { WorkbenchPagePlacementInput } from "../../registries/pages/page-registry";
 import { pagePlacementContributionId } from "../../registries/views/view-placement";
@@ -21,8 +21,12 @@ export const toWidgetPlacement = (
   const panelId = pagePlacementContributionId(input.pageId, input.slotId);
   const panel = layout.getWidget(panelId);
   if (!panel) throw new Error(`Workbench page placement is not registered: ${input.pageId}.${input.slotId}`);
+  const widgetId = `workbench.page.${encodeURIComponent(placementIdentityKey(input.identity))}`;
+  const pageOwnerLocation =
+    input.pageOwnerLocation ?? findPlacementByWidgetId(layout.getLayout(), widgetId)?.placement.pageOwnerLocation;
   return {
-    ...createPlacement(`workbench.page.${encodeURIComponent(placementIdentityKey(input.identity))}`, panel, {
+    pageOwnerLocation,
+    ...createPlacement(widgetId, panel, {
       viewId: input.viewId,
       title: resource?.label ?? view.title ?? panel.title,
       role: input.role === "primary" ? "location" : "sub-panel",

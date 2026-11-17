@@ -40,7 +40,7 @@ test("workspace navigation owns selection while keeping ticket document context"
             type: "ticket",
             id: ticket.id,
             shorthand: ticket.shorthand,
-            extensionId: "pstdio.pstdio-planner",
+            extensionId: "pstdio.planner",
             projectId,
             role: "primary",
           },
@@ -56,7 +56,7 @@ test("workspace navigation owns selection while keeping ticket document context"
         title: "Workspace conversation",
         prompt: "Workspace conversation",
         agent: "pstdio.workbench-fixture.harness.fake",
-        anchors: [{ type: "ticket", id: ticket.id, extensionId: "pstdio.pstdio-planner", projectId }],
+        anchors: [{ type: "ticket", id: ticket.id, extensionId: "pstdio.planner", projectId }],
       },
     });
     expect(session.ok(), await session.text()).toBe(true);
@@ -64,7 +64,7 @@ test("workspace navigation owns selection while keeping ticket document context"
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("dashboard-wb2:selected-project:global", id);
     }, projectId!);
-    const board = `/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`;
+    const board = `/projects/${projectId}/extensions/pstdio.planner/tickets`;
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     const body = sidenav.getByRole("option", { name: `${ticket.shorthand} Workspace selection`, exact: true });
     const file = sidenav.getByRole("option", { name: "plan.md", exact: true });

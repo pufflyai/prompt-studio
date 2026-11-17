@@ -8,7 +8,7 @@ created: "2026-03-31T12:00:00Z"
 This proposal is no longer the current direction.
 
 Core attempt-status hooks were removed when ticket tables moved out of the
-backend. Planner ticket workflow automation now lives in the `pstdio-planner`
+backend. Planner ticket workflow automation now lives in the `planner`
 extension. Planner stores one managed attempt record per workspace and drives
 the workflow through its attempt commands. See [Attempts](../0002-attempts.md)
 for the current flow.

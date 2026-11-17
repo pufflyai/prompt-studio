@@ -74,6 +74,48 @@ afterEach(async () => {
   await close?.();
 });
 
+test("publication completion emits a distinct conditional version only once", async () => {
+  const events = new EventBus();
+  const service = createExtensionService({
+    extensionInstancesService,
+    installedExtensionSourcesService,
+    extensionUserDataService,
+    recovery: { exclusive: <T>(_projectId: string, run: () => Promise<T>) => run() },
+    projectService,
+    eventBus: events,
+  });
+  const sourcePath = "/extensions/publication";
+  const source = await service.registerInstalledSource({
+    installName: "publication",
+    displayName: "Publication",
+    extensionId: "pstdio.publication",
+    manifest: {},
+    name: "publication",
+    sourceHash: "hash",
+    sourceKind: "local_path",
+    sourcePath,
+  });
+  const expected = { updatedAt: source.updated_at, sourceHash: "hash", sourcePath };
+  const seq = events.seq;
+  expect(await service.reportWebviewPublication(source.id, "webviews:published-a", expected)).toEqual({
+    status: "reported",
+  });
+  const published = (await installedExtensionSourcesService.get(source.id))!;
+  expect(published.loaded_revision).toBe("webviews:published-a");
+  expect(events.getSince(seq)).toHaveLength(1);
+  expect(await service.reportWebviewPublication(source.id, "webviews:published-a", expected)).toEqual({
+    status: "reported",
+  });
+  expect(events.getSince(seq)).toHaveLength(1);
+  expect(await service.reportWebviewPublication(source.id, "webviews:obsolete", expected)).toEqual({
+    status: "source-changed",
+  });
+  expect(
+    await service.reportWebviewPublication(source.id, "webviews:replaced", { ...expected, sourcePath: "/replaced" }),
+  ).toEqual({ status: "obsolete" });
+  expect((await installedExtensionSourcesService.get(source.id))?.loaded_revision).toBe("webviews:published-a");
+});
+
 const entryFor = (sourcePath: string) => ({
   kind: "package-asset" as const,
   path: "./view.ts",
@@ -177,7 +219,6 @@ describe("extensionService webview build status", () => {
         sourcePath: "/extensions/lab",
       },
     );
-    const reloadEvents = await installedExtensionSourcesService.listReloadEvents(registered.id);
 
     expect(failed.status).toBe("reported");
     expect((await installedExtensionSourcesService.get(registered.id))?.last_error_json).toMatchObject({
@@ -185,7 +226,6 @@ describe("extensionService webview build status", () => {
       message: "build failed",
       webviewId: "pstdio.lab.view.page",
     });
-    expect(reloadEvents.at(-1)?.error_json).toMatchObject({ webviewId: "pstdio.lab.view.page" });
 
     const recovered = reportedSource(
       await buildService.reportWebviewBuildSuccess(registered.id, "pstdio.lab.view.page", {

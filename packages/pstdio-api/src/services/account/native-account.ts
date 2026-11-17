@@ -8,7 +8,6 @@ import type { RouteDeps } from "../../features/deps";
 import { apiLogger } from "../../lib/logger";
 import type { startFolderRecovery } from "../relay/folder-recovery";
 import type { RelayWorkbench } from "../relay/runtime";
-
 import { createAccountRefresh } from "./account-refresh";
 import { readAccountStatus } from "./account-status";
 import { createDeviceIdentity } from "./device-identity";
@@ -16,10 +15,13 @@ import { readManagerAccount } from "./manager-account";
 import { ManagerRequestDenied, managerOriginSchema, managerRequest } from "./manager-client";
 import { createMissingProjectRecovery } from "./missing-project-recovery";
 import { type CloudReturn, createNativeCloudReturn } from "./native-cloud-return";
+import { createNativeDeviceReader, readDeviceLogin } from "./native-device-read";
 import { createNativeLoginRequests } from "./native-login-requests";
+import { createNativeManagerCall } from "./native-manager-call";
 import { createNativePresence } from "./native-presence";
+import { connectionSyncStatus, createNativeProjectSyncReader } from "./native-project-sync-read";
 import { createNativeStore, type DeviceLogin } from "./native-store";
-import { initialProjectSyncStatus, recoveringProjectSyncStatus } from "./project-sync-readiness";
+import { initialProjectSyncStatus } from "./project-sync-readiness";
 
 type FolderRecoveryOwners = (projectId: string) => ReturnType<typeof startFolderRecovery> | undefined;
 
@@ -29,19 +31,6 @@ const loginSchema = z.object({
   deviceId: identitySchema,
   token: z.string().min(1),
   relayOrigin: z.string(),
-});
-const devicesSchema = z.object({
-  deviceId: identitySchema,
-  devices: z.array(
-    z.object({
-      id: identitySchema,
-      name: z.string(),
-      platform: z.string(),
-      createdAt: z.string(),
-      lastSeenAt: z.string(),
-      online: z.boolean(),
-    }),
-  ),
 });
 
 const connectionFor = (login: DeviceLogin, workbenchId: string) => ({
@@ -93,21 +82,6 @@ const createAccountWatch = () => {
   };
 };
 
-const readDeviceLogin = async (
-  store: ReturnType<typeof createNativeStore>,
-  environment: Pick<RouteDeps["environmentService"], "get">,
-  deviceId?: string,
-) => {
-  const login = await store.read();
-  const environmentId = deviceId ?? (await environment.get()).environmentId;
-  return login?.deviceId === environmentId ? login : null;
-};
-
-const publicDevices = (payload: unknown) => {
-  const listed = devicesSchema.parse(payload);
-  return listed.devices.map((device) => ({ ...device, current: device.id === listed.deviceId }));
-};
-
 const denied = (error: unknown) => error instanceof ManagerRequestDenied && error.status === 401;
 const devicePath = (id: string) => `/v1/devices/${encodeURIComponent(identitySchema.parse(id))}`;
 const projectPath = (id: string) => `/v1/workbenches/${encodeURIComponent(identitySchema.parse(id))}`;
@@ -125,18 +99,15 @@ const retryProjectSync = async (
   return { ok: true };
 };
 
-const connectionSyncStatus = async (
-  projectId: string,
-  login: DeviceLogin | null,
-  projectsFor: (login: DeviceLogin | null) => string[] | undefined,
-  projectStatus: (projectId: string) => Promise<ProjectSyncStatus>,
-  missing: { recovering(projectId: string): boolean },
-): Promise<ProjectSyncStatus> => {
-  const projects = projectsFor(login);
-  if (login && !projects) return { state: "offline", offlineReady: false };
-  if (!projects?.includes(projectId)) return { state: "local", offlineReady: false };
-  const status = await projectStatus(projectId);
-  return missing.recovering(projectId) ? recoveringProjectSyncStatus(status) : status;
+const readManagerOrigin = (managerOrigin?: string) => {
+  const parsed = managerOriginSchema.safeParse(
+    managerOrigin ?? process.env.PSTDIO_ACCOUNT_MANAGER_ORIGIN ?? "https://base.prompt.studio/accounts",
+  );
+  if (!parsed.success)
+    throw new AccountRequestError(
+      "Use the https address of an account service, such as https://accounts.example.test.",
+    );
+  return parsed.data;
 };
 
 export const createNativeAccount = (input: {
@@ -180,20 +151,14 @@ export const createNativeAccount = (input: {
     if (!login) throw new AccountRequestError("Log in first with pst login");
     return login;
   };
-  const call = async (path: string, body?: unknown, credential?: string, signal?: AbortSignal) => {
-    const login = await current();
-    if (credential && login.token !== credential) throw new Error("Device login changed");
-    try {
-      const cancellation = AbortSignal.any([shutdown.signal, ...(signal ? [signal] : [])]);
-      return await managerRequest(login.managerOrigin, path, login.token, body, cancellation);
-    } catch (error) {
-      if (!denied(error)) throw error;
-      // Removing this command owner drains its calls, so finish this rejected call before the refresh waits for it.
-      await store.reject(login.token);
-      void refresh();
-      throw new AccountRequestError("This device was removed from your account. Log in again with pst login");
-    }
-  };
+  const call = createNativeManagerCall({
+    current,
+    shutdown: shutdown.signal,
+    reject: store.reject,
+    refresh: () => refresh(),
+    changed: () => new AccountRequestError("The account changed before the device read completed"),
+    removed: () => new AccountRequestError("This device was removed from your account. Log in again with pst login"),
+  });
 
   // Syncs every cloud project of the account that exists here, then recovers the missing ones.
   // One that cannot be recovered yet is tried again on the next refresh.
@@ -308,15 +273,7 @@ export const createNativeAccount = (input: {
     refresh,
     watch: changes.watch,
     async login(managerOrigin?: string) {
-      const parsed = managerOriginSchema.safeParse(
-        managerOrigin ?? process.env.PSTDIO_ACCOUNT_MANAGER_ORIGIN ?? "https://base.prompt.studio/accounts",
-      );
-      if (!parsed.success)
-        throw new AccountRequestError(
-          "Use the https address of an account service, such as https://accounts.example.test.",
-        );
-      const origin = parsed.data;
-      return logins.start(origin);
+      return logins.start(readManagerOrigin(managerOrigin));
     },
     loginStatus: (id: string) => ({ status: logins.status(id) }),
     cancelLogin: logins.cancel,
@@ -326,15 +283,18 @@ export const createNativeAccount = (input: {
       const loginAttempt = logins.attempt();
       return { ...account, ...(loginAttempt ? { loginAttempt } : {}) };
     },
-    async projectSyncStatus(projectId: string): Promise<ProjectSyncStatus> {
-      if (!(await input.projects.get(projectId))) throw new AccountRequestError("Unknown project");
-      const status = await connectionSyncStatus(projectId, await readLogin(), projectsFor, projectStatus, missing);
-      return { ...status, ...(await away.status(projectId)) };
-    },
-    retryProjectSync: (projectId: string, sourceId?: string) =>
-      retryProjectSync(projectId, input.projects, refresh, retryProject, sourceId),
+    projectSyncStatus: createNativeProjectSyncReader({
+      login: readLogin,
+      exists: (id) => input.projects.get(id),
+      read: (id, login) => connectionSyncStatus(id, login, projectsFor, projectStatus, missing),
+      away: (id) => away.status(id),
+      changed: () => new AccountRequestError("The account changed before the project sync read completed"),
+      unknown: () => new AccountRequestError("Unknown project"),
+    }),
     resolveReturnedChanges: (id: string, action: ProjectReturnAction) =>
       away.resolve(id, action, input.projects, refresh),
+    retryProjectSync: (projectId: string, sourceId?: string) =>
+      retryProjectSync(projectId, input.projects, refresh, retryProject, sourceId),
     /** The project's folder capture, download and restore owner on this device. */
     async folderRecovery(projectId: string) {
       if (!(await input.projects.get(projectId))) throw new AccountRequestError("Unknown project");
@@ -347,7 +307,11 @@ export const createNativeAccount = (input: {
       return owner;
     },
     logout,
-    devices: async () => publicDevices(await call("/v1/devices")),
+    devices: createNativeDeviceReader({
+      current,
+      call,
+      changed: () => new AccountRequestError("The account changed before the device read completed"),
+    }),
     renameDevice: (id: string, name: string) => call(`${devicePath(id)}/rename`, { name }).then(() => ({ ok: true })),
     async removeDevice(id: string) {
       const login = await current();

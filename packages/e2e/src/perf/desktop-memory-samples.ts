@@ -1,8 +1,8 @@
-import { execFile, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import { appendFileSync } from "node:fs";
 import { createInterface } from "node:readline";
-import { promisify } from "node:util";
 import type { KernelProcessReading } from "pstdio-diagnostics";
+import { readProcessTable } from "./critical/owned-processes";
 
 export const ownedProcessTree = async (
   processes: number[][],
@@ -35,7 +35,20 @@ export const ownedProcessTree = async (
 };
 
 /** Use the packaged sidecar's kernel sampler, outside the observed app's process tree. */
-export const sampleDesktopMemory = (sidecar: string, roots: () => number[], output: string) => {
+export const sampleDesktopMemory = (
+  sidecar: string,
+  roots: () => number[],
+  output: string,
+  heap?: () => Promise<number>,
+) => {
+  const nativeMemory = {
+    darwin: { field: "physicalFootprintBytes", label: "macOS physical footprint including compressed memory" },
+    linux: { field: "residentBytes", label: "Linux resident set bytes" },
+    win32: { field: "privateCommittedBytes", label: "Windows private committed bytes" },
+  } as const;
+  const native = nativeMemory[process.platform as keyof typeof nativeMemory];
+  if (!native) throw new Error(`Unsupported memory host: ${process.platform}`);
+  const { field: memoryField, label: metric } = native;
   const observer = spawn(sidecar, ["performance-observer"], { stdio: ["pipe", "pipe", "ignore"] });
   const lines = createInterface({ input: observer.stdout });
   let pending: ReturnType<typeof Promise.withResolvers<KernelProcessReading | null>> | undefined;
@@ -58,14 +71,21 @@ export const sampleDesktopMemory = (sidecar: string, roots: () => number[], outp
   let phase = "startup";
   let stopped = false;
   const identities = new Map<number, string>();
-  const samples: { at: number; phase: string; total: number | null; count: number }[] = [];
+  const samples: {
+    at: number;
+    phase: string;
+    total: number | null;
+    count: number;
+    rss: number | null;
+    heap: number | null;
+    cycle: number;
+  }[] = [];
+  let cycle = 0;
+  let measuredAt = 0;
+  let measuredUntil = 0;
   const sample = async () => {
     const at = performance.now();
-    const { stdout } = await promisify(execFile)("ps", ["-axo", "pid=,ppid="]);
-    const processes = stdout
-      .trim()
-      .split("\n")
-      .map((line) => line.trim().split(/\s+/).map(Number));
+    const processes = await readProcessTable();
     // Validate remembered parents before expanding their branches; a rejected parent
     // cannot introduce unrelated descendants into the retained ownership set.
     const { owned, priorReadings, reused } = await ownedProcessTree(processes, roots(), identities, read);
@@ -78,11 +98,13 @@ export const sampleDesktopMemory = (sidecar: string, roots: () => number[], outp
     // Keep each original generation for this bounded capture, including after exit.
     // A static root PID must never acquire an unrelated replacement on a later sample.
     const complete =
-      reused.size === 0 &&
-      readings.length > 0 &&
-      readings.every(({ reading }) => reading?.physicalFootprintBytes != null);
-    const total = complete ? readings.reduce((sum, { reading }) => sum + reading!.physicalFootprintBytes!, 0) : null;
-    const sample = { at, phase, total, count: readings.length };
+      reused.size === 0 && readings.length > 0 && readings.every(({ reading }) => reading?.[memoryField] != null);
+    const total = complete ? readings.reduce((sum, { reading }) => sum + reading![memoryField]!, 0) : null;
+    const rss =
+      readings.length && readings.every(({ reading }) => reading?.residentBytes != null)
+        ? readings.reduce((sum, { reading }) => sum + reading!.residentBytes!, 0)
+        : null;
+    const sample = { at, phase, total, count: readings.length, rss, heap: heap ? await heap() : null, cycle };
     samples.push(sample);
     appendFileSync(
       output,
@@ -101,7 +123,12 @@ export const sampleDesktopMemory = (sidecar: string, roots: () => number[], outp
   void running.catch(() => {});
   return {
     phase: (value: string) => {
+      if (value === "measure") measuredAt = performance.now();
+      if (phase === "measure" && value !== phase) measuredUntil = performance.now();
       phase = value;
+    },
+    cycle: (value: number) => {
+      cycle = value;
     },
     close: async () => {
       stopped = true;
@@ -120,8 +147,8 @@ export const sampleDesktopMemory = (sidecar: string, roots: () => number[], outp
       for (let index = 0; index + 1 < samples.length; index++) {
         const current = samples[index]!,
           next = samples[index + 1]!;
-        if (current.phase !== "measure") continue;
-        const duration = next.at - current.at;
+        const duration = Math.max(0, Math.min(next.at, measuredUntil) - Math.max(current.at, measuredAt));
+        if (!duration) continue;
         if (current.total === null) missingMs += duration;
         else {
           weighted += current.total * duration;
@@ -129,7 +156,7 @@ export const sampleDesktopMemory = (sidecar: string, roots: () => number[], outp
         }
       }
       return {
-        metric: "macOS physical footprint including compressed memory",
+        metric,
         averageBytes: durationMs ? weighted / durationMs : null,
         durationMs,
         missingMs,
@@ -143,6 +170,16 @@ export const sampleDesktopMemory = (sidecar: string, roots: () => number[], outp
         measuredPeakBytes: Math.max(0, ...measured.map((sample) => sample.total ?? 0)),
         finalBytes: measured.at(-1)?.total,
         maximumProcessCount: Math.max(0, ...measured.map((sample) => sample.count)),
+        rssPeakBytes: measured.some((sample) => sample.rss === null)
+          ? null
+          : Math.max(...measured.map((sample) => sample.rss!)),
+        heapPeakBytes: measured.some((sample) => sample.heap === null || !Number.isFinite(sample.heap))
+          ? null
+          : Math.max(...measured.map((sample) => sample.heap!)),
+        cycles: [...new Set(measured.map((sample) => sample.cycle))].map((cycle) => ({
+          cycle,
+          retainedBytes: measured.findLast((sample) => sample.cycle === cycle)?.total,
+        })),
       };
     },
   };

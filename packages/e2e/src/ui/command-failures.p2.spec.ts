@@ -39,7 +39,7 @@ test.afterEach(async ({ page, request }) => {
 });
 
 const failure = "The command could not connect.";
-const archiveCommand = "pstdio.pstdio-planner.command.archive-ticket";
+const archiveCommand = "pstdio.planner.command.archive-ticket";
 
 const failCommand = async (page: Page, commandId: string, transport = false) => {
   await page.route(`**/extensions/commands/${commandId}/execute`, (route) =>
@@ -51,7 +51,7 @@ const failCommand = async (page: Page, commandId: string, transport = false) => 
           ? { message: failure }
           : {
               commandId,
-              extensionId: "pstdio.pstdio-planner",
+              extensionId: "pstdio.planner",
               outcome: { ok: false, status: "error", reason: failure, error: { message: failure }, notices: [] },
             },
       ),
@@ -105,14 +105,14 @@ test("a failing keybinding produces one report", async ({ page, request }) => {
       ...(metadata.keybindings ?? []),
       {
         id: "failure-report",
-        extensionId: "pstdio.pstdio-planner",
+        extensionId: "pstdio.planner",
         key: "Ctrl+Shift+Y",
         canonicalChord: "Ctrl+Shift+Y",
         parsed: { key: "Y", ctrl: true, shift: true, alt: false, meta: false, modifiers: ["Control", "Shift"] },
         action: {
           kind: "command",
           target: {
-            command: { kind: "command", extensionId: "pstdio.pstdio-planner", id: "archive-ticket" },
+            command: { kind: "command", extensionId: "pstdio.planner", id: "archive-ticket" },
             params: { ticketId: ticket.id },
           },
         },
@@ -138,7 +138,7 @@ test("a failing keybinding produces one report", async ({ page, request }) => {
 test("a failing Run attempt is reported only in its dialog", async ({ page, request }) => {
   const project = await createProject(request);
   const ticket = await createPlannerTicket(request, apiBase, project.id, { content: "# Failed attempt" });
-  await failCommand(page, "pstdio.pstdio-planner.command.run-attempt");
+  await failCommand(page, "pstdio.planner.command.run-attempt");
   await openBoard(page, project.id);
   await page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first().click({ button: "right" });
   await page.getByRole("menuitem", { name: "Run attempt", exact: true }).click();

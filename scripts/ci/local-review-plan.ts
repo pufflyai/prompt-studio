@@ -32,9 +32,9 @@ const selectionReason = (explicit: boolean, edited: boolean, priority: string | 
   return "affected extended coverage";
 };
 const deferredEvidence = (edited: boolean, priority: string | undefined) => {
+  if (priority === "P3") return "nightly/release benchmarks; exceptional diagnostics only";
   if (edited) return "edited_tests";
-  if (priority === "P3") return "complete benchmark diagnostics required";
-  return "ci:full diagnostics required";
+  return "nightly/release coverage; exceptional diagnostics only";
 };
 
 const selectTests = (
@@ -113,7 +113,8 @@ export const createLocalReviewPlan = ({ packages, tests, changed, additionalTest
   const buildCheck = setup.find((check) => check.id === "build-test-dependencies");
   for (const owner of queue.browserOwners)
     if (buildCheck && !buildCheck.command.includes(owner)) buildCheck.command.push("--scope", owner);
-  for (const check of setup) check.command.push("--concurrency", "1");
+  // Nx accepts a concurrency limit; Electron Forge's package command does not.
+  for (const check of setup.filter((check) => check.id.startsWith("build-"))) check.command.push("--concurrency", "1");
   const ui = packages.find((pkg) => pkg.name === "@pstdio/ui");
   // Generated declarations live in this install, outside Nx's portable build outputs.
   if (ui?.scripts["typegen:tokens"])

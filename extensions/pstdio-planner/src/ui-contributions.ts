@@ -11,7 +11,6 @@ import {
   workbenchModes,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
-import { attentionPanelTarget } from "./attention-panel";
 import { archiveTicketColumnAction } from "./commands/archive-ticket";
 import { attachTicketFileCommand } from "./commands/attach-ticket-file";
 import { createTicketCommand } from "./commands/create-ticket";
@@ -20,13 +19,13 @@ import { queryTickets } from "./commands/query-tickets";
 import { saveTicketContent } from "./commands/save-ticket-content";
 import { setTicketAttribute } from "./commands/set-ticket-attribute";
 import { listTicketFilesTree } from "./commands/ticket-files";
+import { listTicketFilesPage } from "./commands/ticket-files-page";
 import { queryTicketProperties } from "./commands/ticket-properties/query";
 import { updateTicketProperty } from "./commands/ticket-properties/update";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
-import { hasPendingInput, listTicketReviewRequests } from "./data/review-request-storage";
 import { REVIEW_REQUEST_ICON } from "./data/review-request-summary";
 import { DEFAULT_TIMELINE_DISPLAY_PROPERTIES, ticketBoard, timelineBoard } from "./data/ticket-board";
-import { ticketActivationTarget } from "./data/ticket-page-target";
+import { ticketPageTarget } from "./data/ticket-page-target";
 import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
 import { loadTicketText } from "./text-source";
 import { ticketCreateForm } from "./ticket-create-form";
@@ -49,6 +48,36 @@ const createTagSettingsView = (baseUrl: string) =>
       capabilities: ["commands.execute", "editing.session"],
     },
   });
+const createTicketFilesView = () =>
+  defineView({
+    id: "ticket-files",
+    title: l10n("panels.ticketFiles.title", "Files"),
+    icon: "Files",
+    body: {
+      kind: "tree",
+      structure: ticketNavigationStructure,
+      body: listTicketFilesTree,
+      page: listTicketFilesPage,
+      refreshEvents: [
+        plannerTicketsChanged,
+        viewDataEvents.sessionsChanged,
+        viewDataEvents.workspacesChanged,
+        viewDataEvents.resourceAnchorsChanged,
+        viewDataEvents.resourcesChanged,
+      ],
+      defaultExpandedSectionIds: [
+        "files",
+        "parent",
+        "depends-on",
+        "required-by",
+        "related",
+        "sub-tickets",
+        "workspaces",
+        "sessions",
+      ],
+    },
+  });
+
 export const createPlannerUi = (baseUrl: string) => {
   const tagSettings = createTagSettingsView(baseUrl);
   const settingsSection = defineSettingsSection({ id: "planner", title: "Project Planner", order: 25 });
@@ -100,10 +129,9 @@ export const createPlannerUi = (baseUrl: string) => {
         viewDataEvents.resourceAnchorsChanged,
         viewDataEvents.resourcesChanged,
       ],
-      onRowActivate: async (ctx, { row }) => {
+      onRowActivate: (ctx, { row }) => {
         if (!row.resource) return;
-        const pending = hasPendingInput(await listTicketReviewRequests(ctx.storage, row.resource.id));
-        ctx.navigation.open(pending ? attentionPanelTarget(row.resource) : ticketActivationTarget(row.resource, false));
+        ctx.navigation.open(ticketPageTarget(row.resource));
       },
       onAttributeChange: setTicketAttribute,
       onMove: moveTicketOnBoard,
@@ -164,18 +192,7 @@ export const createPlannerUi = (baseUrl: string) => {
       save: (ctx, input) => saveTicketContent(ctx, { content: input.content, resource: input.renderer.resource }),
     },
   });
-  const files = defineView({
-    id: "ticket-files",
-    title: l10n("panels.ticketFiles.title", "Files"),
-    icon: "Files",
-    body: {
-      kind: "tree",
-      structure: ticketNavigationStructure,
-      body: listTicketFilesTree,
-      refreshEvents: [plannerTicketsChanged, viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged],
-      defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
-    },
-  });
+  const files = createTicketFilesView();
   const properties = defineView({
     id: "ticket-properties",
     title: l10n("controls.ticketProperties.title", "Properties"),

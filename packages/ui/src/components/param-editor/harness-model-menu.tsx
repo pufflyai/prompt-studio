@@ -3,6 +3,7 @@ import { ChevronDown, Cpu, TerminalIcon } from "lucide-react";
 import { ListRow } from "../list-row/list-row";
 import { SearchableMenu, type SearchableMenuItem } from "../overlays/searchable-menu";
 import { Tooltip } from "../primitives/tooltip";
+import { moveSelectedModelFirst } from "./model-option-order";
 
 export interface WorkspacePanelMenuOption {
   label: string;
@@ -93,7 +94,7 @@ const buildModelMenuItems = (
     return [{ id: "model-loading", label: labels.modelLoading, icon: Cpu, isDisabled: true }];
   }
 
-  return modelOptions.map((option) => ({
+  return moveSelectedModelFirst(modelOptions, (option) => option.value === selectedModel).map((option) => ({
     id: option.value,
     label: option.label,
     secondaryLabel: option.description,
@@ -111,14 +112,16 @@ interface MenuTriggerButtonProps {
   ariaLabel: string;
   tooltip: string;
   disabled: boolean;
+  icon?: WorkspacePanelMenuOption["icon"];
   size: NonNullable<HarnessModelMenuProps["size"]>;
 }
 
 const MenuTriggerButton = (props: MenuTriggerButtonProps) => {
-  const { label, ariaLabel, tooltip, disabled, size } = props;
+  const { label, ariaLabel, tooltip, disabled, icon, size } = props;
   return (
     <Tooltip content={tooltip}>
       <Button variant="ghost" size={size} px="2" aria-label={ariaLabel} disabled={disabled}>
+        {icon ? <Icon as={icon} boxSize="14px" color="fg.muted" flexShrink={0} /> : null}
         <Text textStyle="label/XS/medium" color="fg">
           {label}
         </Text>
@@ -157,6 +160,7 @@ export const HarnessModelMenu = (props: HarnessModelMenuProps) => {
     modelSearchPlaceholder: labels?.modelSearchPlaceholder ?? "Search models…",
   };
 
+  const selectedAgentIcon = agentOptions.find((option) => option.value === selectedAgent)?.icon ?? TerminalIcon;
   const agentLabel =
     agentOptions.length === 0
       ? resolvedLabels.agentUnknown
@@ -202,6 +206,7 @@ export const HarnessModelMenu = (props: HarnessModelMenuProps) => {
               ariaLabel={resolvedLabels.agentSelect}
               tooltip={resolvedLabels.agentSelect}
               disabled={isSwitchDisabled}
+              icon={selectedAgentIcon}
               size={size}
             />
           </Box>
@@ -233,6 +238,7 @@ export const HarnessModelMenu = (props: HarnessModelMenuProps) => {
             ariaLabel={resolvedLabels.modelSelect}
             tooltip={isMenuDisabled ? resolvedLabels.modelNoneAvailable : resolvedLabels.modelSelect}
             disabled={isMenuDisabled}
+            icon={selectedAgentIcon}
             size={size}
           />
         </Box>
@@ -258,7 +264,7 @@ export const HarnessModelMenu = (props: HarnessModelMenuProps) => {
       parentList={{
         items: agentMenuItems,
         selectedLabel: selectedAgentLabel,
-        selectedIcon: agentOptions.find((option) => option.value === selectedAgent)?.icon ?? TerminalIcon,
+        selectedIcon: selectedAgentIcon,
         ariaLabel: resolvedLabels.agentSelect,
         disabled: isSwitchDisabled,
         showSearch: false,

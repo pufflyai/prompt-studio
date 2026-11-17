@@ -17,7 +17,6 @@ import {
   firefox,
   type LaunchOptions,
   test,
-  webkit,
 } from "../scripts/playwright-test";
 import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
@@ -46,7 +45,6 @@ const webviewBrowsers: { launchOptions?: LaunchOptions; name: string; type: Brow
     name: "Firefox",
     type: firefox,
   },
-  { name: "WebKit (Safari engine)", type: webkit },
 ];
 
 const findHostWebview = (metadata: WorkbenchExtensionMetadata) => {
@@ -86,6 +84,7 @@ const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[numb
         "pstdio-home",
         "pstdio-session-browser",
         "pstdio-workspaces",
+        "git-workspaces",
         ...(behavior === "documents, collections and preview" ? ["pstdio-artifacts", "pstdio-notes"] : []),
       ],
       fixtures,

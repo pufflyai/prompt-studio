@@ -6,7 +6,6 @@ import { join } from "node:path";
 import { chromium, expect as expectUI } from "@playwright/test";
 import { createClient } from "@pstdio/sdk/client";
 import type { KanbanRendererQueryResult, ResourceListRendererRow } from "@pstdio/sdk/extensions";
-import { $ } from "bun";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { e2eExtension } from "../default-extensions";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
@@ -15,6 +14,8 @@ import { preparePackagedExtensionSource } from "./packaged-extension-source";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
+import { removeTestDirectory } from "./remove-test-directory";
+import { waitForForeignWorkspaceHistory } from "./workspace-history-readiness.fixture";
 
 type ResourceListRendererQueryResult = Omit<KanbanRendererQueryResult, "rows"> & { rows: ResourceListRendererRow[] };
 let root: string;
@@ -119,7 +120,7 @@ const connectDevice = async (
   progress(`device ${name} connected`);
   const command = async (id: string, params: object = {}, resource?: object) => {
     const response = await fetch(
-      `${host.baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-workspaces.${id}/execute`,
+      `${host.baseUrl}/v1/projects/${projectId}/extensions/commands/pstdio.workspaces.${id}/execute`,
       {
         method: "POST",
         headers: { ...runtimeAuthorization(host.descriptor), "content-type": "application/json" },
@@ -132,7 +133,7 @@ const connectDevice = async (
   const query = async () => {
     const result = await command("view.workspaces.resourceList.query", {
       renderer: {
-        rendererId: "pstdio.pstdio-workspaces.view.workspaces",
+        rendererId: "pstdio.workspaces.view.workspaces",
         projectId,
         invocation: { placement: "visible" },
       },
@@ -227,14 +228,13 @@ test(
         });
         progress("wait for native session completion");
         await waitFor(async () => (await first.client.sessions.get(session.id)).status === "completed");
-        progress("wait for foreign history sync");
-        await waitFor(async () =>
-          (await second.client.sessions.query(projectId)).items.some((row) => row.id === session.id),
-        );
-        progress("wait for foreign workspace sync");
-        await waitFor(async () =>
-          (await second.client.workspaces.query(projectId)).items.some((row) => row.device?.id === first.id),
-        );
+        progress("wait for foreign session, workspace and history link sync");
+        const foreignWorkspace = await waitForForeignWorkspaceHistory({
+          sessionId: session.id,
+          deviceId: first.id,
+          readSessions: (workspaceId) => second.client.sessions.query(projectId, { workspaceId }),
+          readWorkspaces: () => second.client.workspaces.query(projectId),
+        });
         progress("query device groups and workspace history");
         const data = await second.query();
         const device = data.attributes!.find((field) => field.id === "device")!;
@@ -245,15 +245,15 @@ test(
             id: "create",
             action: {
               kind: "command",
-              target: { command: { kind: "command", extensionId: "pstdio.pstdio-workspaces", id: "show-create" } },
+              target: { command: { kind: "command", extensionId: "pstdio.workspaces", id: "show-create" } },
             },
           }),
         );
-        const foreign = data.rows.find((row) => row.resource?.device?.id === first.id)!;
+        const foreign = data.rows.find((row) => row.resource?.id === foreignWorkspace.id)!;
         expect(foreign.target).toMatchObject({ kind: "page", page: { id: "history" } });
         const history = await second.command("view.history.resourceList.query", {
           renderer: {
-            rendererId: "pstdio.pstdio-workspaces.view.history",
+            rendererId: "pstdio.workspaces.view.history",
             projectId,
             invocation: { placement: "visible" },
             resource: foreign.resource,
@@ -288,11 +288,7 @@ test(
         localStorage.setItem("onboarding-complete", "true");
         localStorage.setItem("dashboard-wb2:selected-project:global", id);
       }, projectId);
-      await signInBrowser(
-        page,
-        runtime.descriptor,
-        `/projects/${projectId}/extensions/pstdio.pstdio-workspaces/workspaces`,
-      );
+      await signInBrowser(page, runtime.descriptor, `/projects/${projectId}/extensions/pstdio.workspaces/workspaces`);
       progress("browser signed in");
       await expectUI(page.getByTestId("resource-list-renderer")).toBeVisible();
       progress("workspaces collection visible");
@@ -339,7 +335,7 @@ test(
       await peer.close();
       progress("device peer closed");
       progress("remove fixture directory");
-      await $`rm -rf ${root}`;
+      await removeTestDirectory(root);
       expect(existsSync(root)).toBe(false);
       progress("cleanup complete");
     }

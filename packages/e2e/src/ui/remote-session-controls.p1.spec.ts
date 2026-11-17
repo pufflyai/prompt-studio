@@ -69,7 +69,9 @@ test("remote primary controls keep commands, queues, questions and approvals on 
   await send.click();
   await expect.poll(async () => (await state()).answers).toEqual([{ callId: "remote-question", answers: [["Blue"]] }]);
   await request.post(`${fixture.origin}/fixture/action`, { data: { action: "approval" } });
-  await main.getByRole("button", { name: "Allow", exact: true }).click();
+  await main.getByRole("form", { name: "Question form" }).getByText("Allow", { exact: true }).click();
+  await expect(main.getByRole("radio", { name: "Allow", exact: true })).toBeChecked();
+  await send.click();
   await expect.poll(async () => (await state()).approvals).toEqual([{ id: "remote-approval", decision: "approve" }]);
   await main.getByRole("button", { name: "Stop Response", exact: true }).click();
   await expect.poll(async () => (await state()).stops).toEqual([fixture.sessionId]);
@@ -143,7 +145,7 @@ test("remote workspaces open synced history; offline sessions stay readable and 
       fileRequests.push(request.url());
   });
   await main.getByRole("button", { name: "Open workspace", exact: true }).click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-workspaces\/history\?/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.workspaces\/history\?/);
   await expect(
     page
       .getByRole("region", { name: "Main", exact: true })
@@ -219,7 +221,7 @@ test("remote workspaces open synced history; offline sessions stay readable and 
   ).toBeVisible();
   await expect(main.getByText(/Laptop is offline/).filter({ visible: true })).toHaveCount(0);
   await page.goto(
-    `${fixture.origin}/projects/${fixture.projectId}/extensions/pstdio.pstdio-session-browser/conversations/compose`,
+    `${fixture.origin}/projects/${fixture.projectId}/extensions/pstdio.session-browser/conversations/compose`,
   );
   // Drafts expose the shared device selector only when this account has multiple devices.
   await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
@@ -227,7 +229,13 @@ test("remote workspaces open synced history; offline sessions stay readable and 
   await page.getByRole("menuitem", { name: "Laptop", exact: true }).click();
   await expect(main.getByRole("button", { name: "Select workspace", exact: true })).toContainText("Laptop workspace");
   const editor = main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true });
+  const saved = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/extensions/commands/pstdio.session-browser.view.conversation.chat.saveDraft/execute") &&
+      response.request().postDataJSON()?.params?.draft?.text === "New session on Laptop",
+  );
   await editor.fill("New session on Laptop");
+  expect((await saved).ok()).toBe(true);
   await page.reload();
   await expect(editor).toHaveText("New session on Laptop");
   await expect(main.getByRole("button", { name: "Select device", exact: true })).toContainText("Laptop");

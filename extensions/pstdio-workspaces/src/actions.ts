@@ -2,6 +2,7 @@ import {
   type CommandContext,
   defineCommand,
   type JsonObject,
+  l10n,
   params,
   type ResourceAnchor,
   workbenchCommands,
@@ -16,7 +17,7 @@ import { workspacePages } from "./refs";
 
 const showForm = (ctx: CommandContext, operation: string, workspaceId?: string, path?: string) =>
   ctx.navigation.open({
-    kind: "page",
+    kind: "dialog",
     page: workspacePages.form,
     params: {
       operation,
@@ -86,14 +87,32 @@ export const showDelete = defineCommand({
     await remove.run(ctx, { id, confirmed: true });
   },
 });
+const entryConfirmation = {
+  confirmation: {
+    kind: "delete" as const,
+    subjectParam: "path",
+    confirmedParam: "confirmed",
+    description: l10n("confirmation.deleteEntryDescription", "The entry and its contents will be permanently removed."),
+    buttonLabel: l10n("confirmation.deleteEntryButton", "Delete"),
+  },
+};
 export const showDeleteEntry = defineCommand({
+  ...entryConfirmation,
   id: "show-delete-entry",
   title: "Delete entry",
   cli: true,
-  params: { path: params.text({ required: true, resolvedFrom: "resource" }) },
+  mutating: true,
+  params: { path: params.text({ required: true, resolvedFrom: "resource" }), confirmed: params.boolean() },
   async run(ctx, args) {
     const workspace = await requireWorkspace(ctx, ctx.resource);
-    showForm(ctx, "delete-entry", workspace.id, args.path);
+    // Older hosts and CLI presentation requests retain their existing confirmation path.
+    if (!args.confirmed) return showForm(ctx, "delete-entry", workspace.id, args.path);
+    await removeEntry.run(ctx, {
+      workspaceId: workspace.id,
+      path: args.path,
+      confirmed: true,
+      selected: filePath(ctx.resource),
+    });
   },
 });
 export const rename = defineCommand({

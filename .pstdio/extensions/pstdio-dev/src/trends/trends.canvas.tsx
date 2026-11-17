@@ -58,7 +58,7 @@ export const ReleasePendingTrends: Story = {
     pending: {
       version: "0.52.0",
       finished: ["linux-x64"],
-      running: ["darwin-arm64", "darwin-x64", "win32-x64"],
+      running: ["darwin-arm64", "win32-x64"],
       missing: [],
       failed: [],
     },

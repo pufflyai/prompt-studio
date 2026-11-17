@@ -6,6 +6,7 @@ import { createWorkbench, type WorkbenchCore } from "@pstdio/workbench";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { openProjectTabSettings } from "./components/desktop-project-tabs";
 import { DesktopProjectTabsController } from "./desktop-project-tabs-controller";
 import { createProjectsModule } from "./module";
 
@@ -213,4 +214,31 @@ test("a background workbench cannot change the visible tab", async () => {
   await first.commands.executeCommand(dashboardCommandIds.selectProject, { project: { id: "first", name: "first" } });
 
   expect(tabs.getActiveWorkbench()).toBe(workbenchOf("second"));
+});
+
+test("a project tab's settings action opens settings in that project's retained workbench", async () => {
+  const { tabs, workbenchOf } = setup({ selected: "first" });
+  const first = workbenchOf("first")!;
+  tabs.select("second");
+  const second = workbenchOf("second")!;
+  const opened: string[] = [];
+  for (const [id, workbench] of [
+    ["first", first],
+    ["second", second],
+  ] as const) {
+    workbench.settings.registerPanel({ id, title: id, kind: "schema", scope: "project", preferences: [] });
+    workbench.commands.registerCommand<{ panelId: string }, void>(
+      { id: "workbench.settings.open", label: "Open settings" },
+      {
+        execute: (input) => {
+          opened.push(`${id}:${input.panelId}`);
+        },
+      },
+    );
+  }
+  tabs.select("first");
+  await openProjectTabSettings(tabs, "second");
+  expect(tabs.getActiveWorkbench()).toBe(second);
+  expect(opened).toEqual(["second:second"]);
+  expect(getDashboardSelectedProjectId(first)).toBe("first");
 });

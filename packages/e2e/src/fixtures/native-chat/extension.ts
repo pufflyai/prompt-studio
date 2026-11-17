@@ -41,6 +41,19 @@ const fixturePresentation = (action: ChatRendererAction) => {
         ] satisfies SessionMessage[],
       },
     };
+  if (action.type === "operation" && action.id === "request-approval")
+    return {
+      snapshot: {
+        approval: {
+          id: "approval",
+          title: "Allow this operation?",
+          choices: [
+            { id: "allow", label: "Allow operation" },
+            { id: "deny", label: "Deny" },
+          ],
+        },
+      },
+    };
   if (action.type === "fork") {
     if (action.messageId !== "completed-reply") throw new Error("An unfinished reply cannot be forked.");
     return { snapshot: { notice: "Earlier reply forked while work continues" } };
@@ -74,6 +87,7 @@ const conversation = defineView({
         messages: [{ id: "history", role: "assistant", parts: [{ type: "text", text: "Native transcript" }] }],
         operations: [
           { id: "ask", label: "Ask a question" },
+          { id: "request-approval", label: "Request approval" },
           { id: "queue", label: "Show saved queue" },
           { id: "fork-history", label: "Show running replies" },
           { id: "decisions", label: "Show pending decisions" },
@@ -93,11 +107,6 @@ const conversation = defineView({
             ],
           },
         ],
-        approval: {
-          id: "approval",
-          title: "Allow this operation?",
-          choices: [{ id: "allow", label: "Allow operation" }],
-        },
       };
     },
     async loadDraft(ctx, { draftKey }) {

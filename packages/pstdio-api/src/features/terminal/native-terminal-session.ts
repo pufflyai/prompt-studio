@@ -1,6 +1,7 @@
 import { getCommandValue } from "@pstdio/sdk/extensions";
 import type { TerminalSessionHandle, TerminalViewOpenRequest } from "pstdio-api-contracts";
 import { extensionResourceRefSchema } from "pstdio-api-contracts";
+import { canonicalRuntimeId } from "pstdio-extensions";
 import { z } from "zod";
 import { resolveLocalWorkspaceTarget } from "../extensions/command-environment/workspace-target";
 import type { ExtensionsRouteDeps } from "../extensions/deps";
@@ -28,8 +29,12 @@ const sessionSchema = z
   })
   .strict();
 const installedOwnerKey = (snapshot: ProjectExtensionRuntimeSnapshot, sourcePath: string) => {
-  const source = resolveEnabledSourceForRecord(sourcePath, snapshot.enabledSources);
-  return JSON.stringify([sourcePath, source?.instance.id, source?.installedSource.id]);
+  const source = resolveEnabledSourceForRecord(sourcePath, snapshot.enabledSources, snapshot.runtime.extensions);
+  return JSON.stringify([
+    source?.installedSource.source_path ?? sourcePath,
+    source?.instance.id,
+    source?.installedSource.id,
+  ]);
 };
 
 /** Resolve executable settings on the host, then transfer PTY lifetime to the presentation's socket. */
@@ -38,13 +43,14 @@ export const openNativeTerminalSession = async (
   request: TerminalViewOpenRequest,
   signal: AbortSignal,
 ) => {
-  const { projectId, viewId, resource, cols, rows } = nativeTerminalOpenSchema.parse(request);
+  const { projectId, resource, cols, rows } = nativeTerminalOpenSchema.parse(request);
   if (resource?.projectId && resource.projectId !== projectId)
     throw new Error("Terminal resource belongs to another project");
   if (!deps.terminal) throw new Error("Terminal sessions are not available on this host");
   signal.throwIfAborted();
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
   signal.throwIfAborted();
+  const viewId = canonicalRuntimeId(snapshot.runtime, request.viewId);
   const view = snapshot.runtime.views.find((candidate) => candidate.id === viewId);
   if (!view || view.contribution.body.kind !== "terminal")
     throw new Error("Native terminal view is not enabled in this project");

@@ -117,6 +117,7 @@ const Action = ({
     setError("");
     try {
       await action();
+      if (host.presentation === "dialog") await client.placement.close();
     } catch (error) {
       setError(String(error));
       throw error;
@@ -132,7 +133,6 @@ const Action = ({
         anchors: host.pageParams?.anchors ? JSON.parse(String(host.pageParams.anchors)) : undefined,
         shorthandBase: typeof host.pageParams?.shorthand === "string" ? host.pageParams.shorthand : undefined,
       });
-      if (host.presentation === "dialog") await client.placement.close();
     });
   const cancel = () => {
     if (host.presentation === "dialog") return client.placement.close();
@@ -178,7 +178,7 @@ const Action = ({
   return (
     <ScrollArea h="full" w="full">
       <Stack maxW="xl" mx="auto" p="lg" gap="lg">
-        <Text textStyle="heading/M">{actionTitle(operation)}</Text>
+        {host.presentation !== "dialog" ? <Text textStyle="heading/M">{actionTitle(operation)}</Text> : null}
         {error && (
           <AlertMessage status="error" title="Workspace action failed">
             {error}

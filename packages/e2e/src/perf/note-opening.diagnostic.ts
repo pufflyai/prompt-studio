@@ -65,20 +65,20 @@ try {
   await expect
     .poll(async () => {
       const ui = await request(`/projects/${project.id}/extensions/ui`);
-      return ui.views?.some((view: { id: string }) => view.id === "pstdio.pstdio-notes.view.note-editor");
+      return ui.views?.some((view: { id: string }) => view.id === "pstdio.notes.view.note-editor");
     })
     .toBe(true);
   const bodies: string[] = [];
   for (let i = 0; i < 100; i++) {
     const id = `note-${String(i).padStart(3, "0")}`;
-    const folder = join(projectPath, ".pstdio/extension-storage/pstdio.pstdio-notes/documents", id);
+    const folder = join(projectPath, ".pstdio/extension-storage/pstdio.notes/documents", id);
     mkdirSync(folder, { recursive: true });
     const content = `---\ntitle: "Note ${i}"\n---\n\n# Note body ${i}\n\n${"A representative paragraph with **bold text**, a [link](https://example.com), and useful note content.\n\n".repeat(40)}`;
     writeFileSync(join(folder, "content.md"), content);
     bodies.push(content);
   }
   writeFileSync(
-    join(projectPath, ".pstdio/extension-storage/pstdio.pstdio-notes/documents/.order.json"),
+    join(projectPath, ".pstdio/extension-storage/pstdio.notes/documents/.order.json"),
     JSON.stringify(Array.from({ length: 100 }, (_, index) => `note-${String(index).padStart(3, "0")}`)),
   );
   const measure = async (page: Page, visit: string, note: number, iteration: number) => {
@@ -170,7 +170,7 @@ try {
       if (window === window.top) localStorage.setItem("onboarding-complete", "true");
     });
     await signInBrowser(page, started.descriptor);
-    await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.pstdio-notes/notes`);
+    await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.notes/notes`);
     await page.locator('[data-workbench-region="sidenav"]').getByRole("option", { name: "Notes", exact: true }).click();
     await expect(page.getByRole("option", { name: "Note 0", exact: true })).toBeVisible();
     await measure(page, "first", 0, iteration);

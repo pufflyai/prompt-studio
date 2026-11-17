@@ -15,6 +15,7 @@ const fixture = () => {
   const release = Promise.withResolvers<void>();
   let holdOpen = false;
   let holdConnection = false;
+  const connectionObservers = new Set<() => void>();
   let refuseConnection = false;
   let refuseSubmit = false;
   let revision = 1;
@@ -71,6 +72,7 @@ const fixture = () => {
         calls.push("connect");
         connectionEntered.resolve();
         if (holdConnection) await release.promise;
+        for (const notify of connectionObservers) notify();
         if (refuseConnection) {
           refuseConnection = false;
           return Response.json({
@@ -120,6 +122,17 @@ const fixture = () => {
     connectionEntered: connectionEntered.promise,
     holdConnection() {
       holdConnection = true;
+    },
+    waitConnections(count: number) {
+      if (calls.filter((call) => call === "connect").length >= count) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        const notify = () => {
+          if (calls.filter((call) => call === "connect").length < count) return;
+          connectionObservers.delete(notify);
+          resolve();
+        };
+        connectionObservers.add(notify);
+      });
     },
     holdOpen() {
       holdOpen = true;
@@ -425,6 +438,30 @@ test("retained native reopening waits for the admitted close finalizer before su
     await owner.close();
   } finally {
     release.resolve();
+    await f.stop();
+  }
+});
+
+test("ordinary close drains both an opening native editor and its replacement presentation", async () => {
+  const f = fixture();
+  f.holdOpen();
+  const replacement = f.connect();
+  try {
+    const opening = f.presentation.open();
+    await f.entered;
+    const closing = Promise.resolve(f.workbench.closePlacement(f.placement.placementIdentity!));
+    const successor = replacement.open();
+    const disposing = f.presentation.close();
+    const completed = Promise.allSettled([opening, successor, disposing, closing]);
+    await f.waitConnections(2);
+    f.resume();
+    const results = await completed;
+    expect(results.map((result) => result.status)).toEqual(["fulfilled", "fulfilled", "fulfilled", "fulfilled"]);
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(false);
+    expect(f.calls.filter((call) => call === "close")).toHaveLength(2);
+  } finally {
+    f.resume();
+    await replacement.close();
     await f.stop();
   }
 });

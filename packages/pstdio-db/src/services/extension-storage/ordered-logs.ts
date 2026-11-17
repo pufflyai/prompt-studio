@@ -1,3 +1,4 @@
+import { canonicalExtensionId, canonicalOwner, historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { DocumentStore, StorageOwner } from "pstdio-sync";
 import type { SyncSpace } from "pstdio-sync/encryption";
 import { createLogCollection, type LogDirectoryEntry, type LogRemote, type LogStreamStore } from "pstdio-sync/logs";
@@ -5,14 +6,15 @@ import type { OrderedIndexBlobs } from "pstdio-sync/relay";
 import type { Json, StorageLogDefinition } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { createEnvironmentDBService } from "../environment/environment";
+import { indexNodeFilesFor } from "./index-node-files";
+import { createLogIndexCache } from "./log-index-cache";
 import { hasOrderedLogPending } from "./ordered-log-pending";
 import type { LogPayloads } from "./ordered-log-sql";
 import { orderedLogStatistics } from "./ordered-log-statistics";
 import { createOrderedLogStore } from "./ordered-log-store";
-import { createOrderedManifestCache } from "./ordered-receipts-blobs";
 
 type Connector = (entry: LogDirectoryEntry, store: LogStreamStore) => Promise<LogRemote>;
-const ownerKey = (owner: StorageOwner) => JSON.stringify([owner.workbenchId, owner.extensionId]);
+const ownerKey = (owner: StorageOwner) => JSON.stringify([owner.workbenchId, canonicalExtensionId(owner.extensionId)]);
 const entryKey = (entry: LogDirectoryEntry) => JSON.stringify([entry.name, entry.scope, entry.stream]);
 
 /** The encrypted owner directory discovers device streams; payload histories stay out of that document. */
@@ -46,7 +48,7 @@ export const createOrderedLogs = (
     });
   const stream = async (owner: StorageOwner, entry: LogDirectoryEntry, payloads?: LogPayloads) =>
     createOrderedLogStore(db, {
-      owner,
+      owner: canonicalOwner(owner),
       name: entry.name,
       scope: entry.scope,
       stream: entry.stream,
@@ -74,6 +76,7 @@ export const createOrderedLogs = (
   return {
     async appendMany(owner: StorageOwner, definition: StorageLogDefinition, scope: string, values: Json[]) {
       if (!values.length) return [];
+      owner = canonicalOwner(owner);
       const owned = structuredClone({ ...definition, writer: definition.writer ?? "project" });
       const entry = { ...owned, scope, stream: owned.writer === "device" ? await this.writerId() : "project" };
       await register(owner, entry);
@@ -86,7 +89,7 @@ export const createOrderedLogs = (
     notify,
     watch,
     manifests: (owner: StorageOwner, space: SyncSpace, remote: OrderedIndexBlobs) =>
-      createOrderedManifestCache(db, owner, space, remote).blobs,
+      createLogIndexCache(indexNodeFilesFor(db), canonicalOwner(owner), space, remote),
     attach(owner: StorageOwner, connector: Connector) {
       const key = ownerKey(owner);
       connectors.set(key, connector);
@@ -104,7 +107,7 @@ export const createOrderedLogs = (
       }
     },
     async pending(owner: StorageOwner) {
-      if (!(await hasOrderedLogPending(db, owner))) return false;
+      if (!(await hasOrderedLogPending(db, canonicalOwner(owner)))) return false;
       for (const entry of await directory(owner))
         if ((await (await stream(owner, entry)).pending(1)).length) return true;
       return false;
@@ -115,9 +118,10 @@ export const createOrderedLogs = (
       scope: string,
       selected?: () => ReadonlySet<string> | undefined,
     ) {
+      owner = canonicalOwner(owner);
       const owned = structuredClone({ ...definition, writer: definition.writer ?? "project" });
       return createLogCollection({
-        address: JSON.stringify([owner.workbenchId, owner.extensionId, definition.name, scope]),
+        address: JSON.stringify([owner.workbenchId, historicalExtensionId(owner.extensionId), definition.name, scope]),
         definition: owned,
         scope,
         writerId: async () => (await environment.get()).environmentId,

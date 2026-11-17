@@ -1,6 +1,7 @@
 import { Box, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import { AlertMessage, PopoverHeader, Tooltip } from "@pstdio/ui";
 import { Check, Copy, Gauge } from "lucide-react";
+import type { ReactNode } from "react";
 import { extensionName } from "../cpu-sources";
 import { performanceHistory } from "../performance-history";
 import { useTranslations } from "../translations";
@@ -61,6 +62,7 @@ const FrameRateSection = (props: FrameRateSectionProps) => {
 };
 
 export interface PerformancePopoverContentProps extends CpuSectionProps {
+  diagnostics?: ReactNode;
   copied?: boolean;
   // A failed copy, pause or resume, shown below the header that started it.
   actionError?: string;
@@ -69,7 +71,7 @@ export interface PerformancePopoverContentProps extends CpuSectionProps {
 }
 
 export const PerformancePopoverContent = (props: PerformancePopoverContentProps) => {
-  const { copied, actionError, onCopy, onDismissActionError, ...cpu } = props;
+  const { copied, actionError, onCopy, onDismissActionError, diagnostics, ...cpu } = props;
   const { snapshot } = cpu;
   const { t } = useTranslations();
   const buckets = snapshot?.frameRate ?? [];
@@ -123,6 +125,12 @@ export const PerformancePopoverContent = (props: PerformancePopoverContentProps)
         ) : null}
         <Box borderTopWidth="1px" borderColor="border.subtle" />
         <CpuSection {...cpu} />
+        {diagnostics ? (
+          <>
+            <Box borderTopWidth="1px" borderColor="border.subtle" />
+            {diagnostics}
+          </>
+        ) : null}
       </Stack>
     </Stack>
   );

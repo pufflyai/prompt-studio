@@ -1,9 +1,18 @@
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import type { Locator } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { expect, test } from "../scripts/session-test";
+
+// Critical risk: a tool approval must take over the composer as the same question form agents use.
+const allowOperationInQuestionForm = async (main: Locator) => {
+  await main.getByRole("button", { name: "Request approval", exact: true }).click();
+  await main.getByRole("radiogroup").getByText("Allow operation", { exact: true }).click();
+  await main.getByRole("button", { name: "Send answer", exact: true }).click();
+  await expect(main.getByText("Operation approved", { exact: true })).toBeVisible();
+};
 
 // Critical risk: a delayed extension command must never gate the native composer or lose a typed draft.
 test("independent native chat paints and accepts input before history, then retains its draft across reload", async ({
@@ -101,8 +110,7 @@ test("independent native chat paints and accepts input before history, then reta
     const side = page.locator('[data-workbench-region="side"]');
     await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
     await expect(side.locator('[data-testid="content-editable"][contenteditable="true"]')).toBeVisible();
-    await main.getByRole("button", { name: "Allow operation", exact: true }).click();
-    await expect(main.getByText("Operation approved", { exact: true })).toBeVisible();
+    await allowOperationInQuestionForm(main);
     const chooser = page.waitForEvent("filechooser");
     await main.getByRole("button", { name: "Attach files", exact: true }).click();
     await (await chooser).setFiles({

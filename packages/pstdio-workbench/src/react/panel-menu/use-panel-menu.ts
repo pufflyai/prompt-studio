@@ -18,6 +18,7 @@ import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../share
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { resolvePanelCollapsible } from "../workbench/workbench-panel-state";
 import { getWorkbenchPanelMenuAttachment } from "./panel-menu-sizing";
+import { usePanelMenuContent } from "./use-panel-menu-content";
 
 const PANEL_MENU_SIZE = { defaultPx: 280, minPx: 144, maxPx: 320 };
 
@@ -86,6 +87,7 @@ const useWorkbenchPanelMenu = (
     regionState.widgets.find((placement) => placement.widgetId === regionState.activeWidgetId) ??
     regionState.widgets[0];
   const widget = activePlacement ? registeredWidgets[activePlacement.contributionId] : undefined;
+  const hasContent = usePanelMenuContent(workbench, activePlacement);
   const collapsible = useWorkbenchStore(workbench.layout.store, () => resolvePanelCollapsible(workbench, region));
   const panelStateKey = activePlacement ? `panel-menu:${activePlacement.widgetId}` : region;
   const open = useWorkbenchStore(workbench.panelMenuState.store, (state) => state.openByMenuId[panelStateKey] ?? true);
@@ -96,7 +98,10 @@ const useWorkbenchPanelMenu = (
     label: getWorkbenchPanelMenuLabel(panel, side),
     title: widget?.title ?? getWorkbenchPanelMenuLabel(panel, side),
     icon: widget?.icon ?? (side === "left" ? "PanelLeftOpen" : "PanelRightOpen"),
-    has: panelAvailable && (regionState.widgets.length > 0 || Boolean(workbench.layout.getPlaceholder(region))),
+    has:
+      panelAvailable &&
+      hasContent &&
+      (regionState.widgets.length > 0 || Boolean(workbench.layout.getPlaceholder(region))),
     collapsed: !open && collapsible,
     collapsible,
     size: resolveRegionSize(workbench.layout.getRegionSize(region)),
@@ -109,7 +114,7 @@ const useWorkbenchPanelMenu = (
 
 export const useWorkbenchPanelMenus = (workbench: WorkbenchCore, panel: WorkbenchPanelRegion) => {
   const views = [useWorkbenchPanelMenu(workbench, panel, "left"), useWorkbenchPanelMenu(workbench, panel, "right")];
-  const attachment = useWorkbenchPanelMenuAttachment(panel, views[0]!, views[1]!);
+  const attachment = useWorkbenchPanelMenuAttachment(workbench, panel, views[0]!, views[1]!);
   return views.map((view, index) => ({
     ...view,
     canAttach: attachment[index],
@@ -124,6 +129,7 @@ export const useWorkbenchPanelMenusPresent = (workbench: WorkbenchCore, panel: W
 };
 
 const useWorkbenchPanelMenuAttachment = (
+  workbench: WorkbenchCore,
   panel: WorkbenchPanelRegion,
   left: WorkbenchPanelMenuView,
   right: WorkbenchPanelMenuView,
@@ -140,26 +146,33 @@ const useWorkbenchPanelMenuAttachment = (
     ]),
   );
 
+  const sideMode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
+  const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Moving between retained hosts can change visibility without resizing either host.
   useLayoutEffect(() => {
-    const element = (root?.current ?? document).querySelector<HTMLElement>(`[data-workbench-panel="${panel}"]`);
-    if (!element) return;
+    const elements = [
+      ...(root?.current ?? document).querySelectorAll<HTMLElement>(`[data-workbench-panel="${panel}"]`),
+    ];
+    if (!elements.length) return;
 
     const menus = [
       { has: leftHas, open: !leftCollapsed, collapsible: leftCollapsible, minSize: leftMin },
       { has: rightHas, open: !rightCollapsed, collapsible: rightCollapsible, minSize: rightMin },
     ];
     const measure = () => {
-      const width = element.clientWidth;
-      if (width === 0) return;
+      const width = elements.find((element) => !element.closest("[inert]") && element.clientWidth > 0)?.clientWidth;
+      if (!width) return;
       const next = getWorkbenchPanelMenuAttachment(width, menus);
       // Split motion reports a width every frame; menus only change at attachment thresholds.
       setAttachment((previous) => (previous.every((value, index) => value === next[index]) ? previous : next));
     };
     measure();
     const observer = new ResizeObserver(measure);
-    observer.observe(element);
+    for (const element of elements) observer.observe(element);
     return () => observer.disconnect();
   }, [
+    sideMode,
+    fullscreen,
     panel,
     root,
     leftHas,

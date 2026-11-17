@@ -10,7 +10,7 @@ test("preserves resource ownership when resolving row actions", () => {
   const resource = {
     type: "ticket",
     id: "ticket-1",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     projectId,
     metadata: { documentId: "notes" },
   };
@@ -21,7 +21,7 @@ test("resolving an extension resource preserves its document metadata", () => {
   const resource = {
     type: "ticket",
     id: "ticket-1",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     projectId,
     metadata: { documentId: "notes" },
   };

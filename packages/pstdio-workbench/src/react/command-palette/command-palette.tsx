@@ -10,6 +10,7 @@ import {
   type WorkbenchCommandExecutionContext,
   type WorkbenchCore,
   workbenchCommandPaletteMenuPath,
+  workbenchPanelRegions,
 } from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { useShortcutCatalog } from "../keybindings/use-shortcut-catalog";
@@ -230,7 +231,7 @@ const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
     open,
     onClose,
   });
-  const compositionPanels = useWorkbenchCompositionPanels(workbench);
+  const compositionPanels = useWorkbenchCompositionPanels(workbench, workbenchPanelRegions);
 
   // A theme preview is never saved, so leaving the picker in any way shows the chosen theme again.
   const closePalette = () => {

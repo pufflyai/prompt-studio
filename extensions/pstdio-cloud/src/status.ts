@@ -1,6 +1,19 @@
 import type { AccountStatus, ProjectSyncStatus } from "@pstdio/sdk/extensions";
 import type { CloudProjectState } from "./project-state";
 
+const sourceStatus = (sync: ProjectSyncStatus) => {
+  if (sync.sources) {
+    const files = sync.sources.flatMap((source) => source.files).filter((file) => file.status === "active");
+    if (files.some((file) => file.direction === "download"))
+      return { key: "downloading", icon: "cloud-download", active: true };
+    if (files.some((file) => file.direction === "upload"))
+      return { key: "uploading", icon: "cloud-upload", active: true };
+    if (sync.sources.some((source) => !source.connected)) return { key: "offline", icon: "wifi-off", warning: true };
+    if (sync.sources.some((source) => source.busy)) return { key: "checking", icon: "refresh-cw", active: true };
+    if (sync.state !== "synced") return { key: "waiting", icon: "clock", warning: true };
+  }
+};
+
 export const cloudStatus = (
   account: AccountStatus | undefined,
   sync: ProjectSyncStatus | undefined,
@@ -14,6 +27,8 @@ export const cloudStatus = (
   if (!account.features?.relay) return { key: "signedIn", icon: "cloud" };
   if (sync.state === "local") return { key: "local", icon: "cloud-off" };
   if (sync.state === "needs-attention") return { key: "attention", icon: "triangle-alert", warning: true };
+  const source = sourceStatus(sync);
+  if (source) return { ...source, percent: undefined, count: undefined };
   if (sync.state === "first-download-incomplete") {
     const progress = sync.download;
     const percent =

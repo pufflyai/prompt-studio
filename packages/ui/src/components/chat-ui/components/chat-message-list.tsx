@@ -3,10 +3,9 @@ import { defaultRangeExtractor, measureElement } from "@tanstack/react-virtual";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import { useVirtualizer } from "@/utils/use-virtualizer";
 import { useMessageAnimationKeys } from "./chat-message-animation";
-import { ChatMessageListResponse } from "./chat-message-list-items";
+import { ChatMessageRowLayout } from "./chat-message-row-layout";
 import { buildChatMessageRows, getChatStickyRowIndex, hasChatRowGap } from "./chat-message-rows";
 import type { MessageGroup, SessionMessage } from "./message-types";
-import { StickyUserMessage } from "./sticky-user-message";
 import { useTailReady } from "./use-chat-tail-ready";
 
 interface ChatMessageListProps {
@@ -73,64 +72,33 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
       <Box position="relative" width="100%" style={{ height: totalSize }}>
         {virtualItems.map((virtualItem) => {
           const row = rows[virtualItem.index];
+          let height: number | undefined;
           if (row.type === "user") {
             const end =
               (measurements[row.endIndex]?.end ?? totalSize) -
               (hasChatRowGap(rows, row.endIndex) ? VIRTUAL_LIST_GAP : 0);
-            return (
-              <Box
-                key={virtualItem.key}
-                position="absolute"
-                left="0"
-                width="100%"
-                zIndex={1}
-                pointerEvents="none"
-                style={{ top: virtualItem.start, height: Math.max(virtualItem.size, end - virtualItem.start) }}
-              >
-                {/* Native sticky layout follows every scroll frame, including within one response. */}
-                <Box
-                  ref={virtualizer.measureElement}
-                  data-index={virtualItem.index}
-                  data-chat-message-list-item="user"
-                  data-chat-message-id={row.key}
-                  position="sticky"
-                  top="0"
-                  pointerEvents="auto"
-                  pb={hasChatRowGap(rows, virtualItem.index) ? "xs" : undefined}
-                >
-                  <StickyUserMessage
-                    message={row.message}
-                    expanded={expandedStickyMessageIds.has(row.message.animationKey ?? row.key)}
-                    animatedKeys={animatedKeys}
-                    onToggle={onToggleStickyMessage}
-                  />
-                </Box>
-              </Box>
-            );
+            height = Math.max(virtualItem.size, end - virtualItem.start);
           }
           return (
-            <Box
+            <ChatMessageRowLayout
               key={virtualItem.key}
-              ref={virtualizer.measureElement}
-              data-index={virtualItem.index}
-              data-chat-message-list-item={row.type}
-              data-chat-message-id={row.key}
-              position="absolute"
-              left="0"
-              width="100%"
-              pb={hasChatRowGap(rows, virtualItem.index) ? "xs" : undefined}
-              style={{ top: virtualItem.start }}
-            >
-              <ChatMessageListResponse
-                message={row.message}
-                streaming={streaming && row.isActiveTurn && row.showAssistantActions}
-                hideQuestionForms={!row.isActiveTurn || hideActiveQuestionForms}
-                animatedKeys={animatedKeys}
-                showAssistantActions={row.showAssistantActions}
-                onForkMessage={onForkMessage}
-                forkDisabledReason={forkDisabledReason}
-              />
-            </Box>
+              rowType={row.type}
+              rowId={row.key}
+              message={row.message}
+              index={virtualItem.index}
+              start={virtualItem.start}
+              height={height}
+              hasGap={hasChatRowGap(rows, virtualItem.index)}
+              measureElement={virtualizer.measureElement}
+              expanded={row.type === "user" && expandedStickyMessageIds.has(row.message.animationKey ?? row.key)}
+              animatedKeys={animatedKeys}
+              onToggleStickyMessage={onToggleStickyMessage}
+              streaming={row.type === "response" && streaming && row.isActiveTurn && row.showAssistantActions}
+              hideQuestionForms={row.type === "response" && (!row.isActiveTurn || hideActiveQuestionForms)}
+              showAssistantActions={row.type === "response" && row.showAssistantActions}
+              onForkMessage={onForkMessage}
+              forkDisabledReason={forkDisabledReason}
+            />
           );
         })}
       </Box>

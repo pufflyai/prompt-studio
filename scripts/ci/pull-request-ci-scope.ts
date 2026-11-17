@@ -1,13 +1,15 @@
-import { appendFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { changedFiles } from "./changed-files";
+import { diagnosticScope } from "./ci-diagnostic-scope";
 import { affectedPackages } from "./ci-packages";
 import { createCiTestPlan } from "./ci-test-plan";
+import { selectIntegrationFiles } from "./coverage-ownership";
+import { integrationSourceOwners } from "./integration-source-owners";
 import { partitionPackageChecks } from "./package-check-matrix";
 import {
   harnessCliLanes,
   productionDesktopCheckPlatforms,
-  productionDesktopPlatforms,
   productionToolchainPlatforms,
   quarantineBunHosts,
 } from "./production-platforms";
@@ -16,6 +18,7 @@ import { sourceCoverageArtifacts } from "./source-coverage-artifacts";
 import { discoverTestFiles, priorityFromFile } from "./test-discovery";
 import { testPlanSource } from "./test-plan-source";
 import type { TestPriority } from "./test-policy";
+import { createTestRuns } from "./test-runs";
 import { selectCiTests, selectEditedTests } from "./test-selection";
 import { compatibleTestTimings, type TestTimingSnapshot } from "./test-timing-snapshot";
 import { readWorkspacePackages } from "./workspace-packages";
@@ -46,75 +49,151 @@ const stageFor = (event: string, production: boolean, profile?: string) => {
 
 const prioritiesFor = (stage: ReturnType<typeof stageFor>): TestPriority[] => {
   if (stage === "full") return ["P0", "P1", "P2"];
-  return stage === "merge_queue" ? ["P0", "P1"] : ["P0"];
+  return stage === "main" ? ["P0"] : ["P0", "P1"];
 };
 
-// These checks depend only on the files they read. A queue entry diffs against the entry ahead
-// of it, which already checked its own changes, so PRs and the queue check only their own diff.
+// PRs and merge groups apply the same policy to their actual candidate and combined diff.
 const runsFileCheck = (stage: ReturnType<typeof stageFor>, touched: boolean) =>
   stage === "full" || (stage !== "main" && touched);
 
 const coverageForScope = (input: CiScopeInput, production: boolean, channel: string) =>
   input.coverage ?? (production && channel === "nightly");
 
-const resolveBaseScope = (input: CiScopeInput) => {
+const desktopRows = (
+  releaseChannel: string,
+  production: boolean,
+  requiredProfile: boolean,
+  signedCandidate: boolean,
+) => {
+  let clientRows = production ? productionDesktopCheckPlatforms(releaseChannel) : [];
+  if (requiredProfile)
+    clientRows = [{ target: "linux-x64", os: "ubuntu-latest", platform: "linux", arch: "x64", shard: 1, shards: 1 }];
+  return clientRows.map((row) => ({
+    ...row,
+    os: row.platform === "linux" ? "ubuntu-latest" : row.os,
+    tests: production,
+    packaged: !signedCandidate || (releaseChannel === "nightly" && row.platform === "win32"),
+  }));
+};
+
+export const ciDiffBase = (event?: string, eventPath?: string) => {
+  if (event === "merge_group") return JSON.parse(readFileSync(eventPath!, "utf8")).merge_group.base_sha as string;
+  if (event === "pull_request") return "HEAD^1";
+};
+
+const productionProfile = (event: string, profile?: string) =>
+  ["production", "compatibility"].includes(profile ?? "") ||
+  (event === "workflow_dispatch" && profile !== "merge_queue");
+
+const integrationOwnersFor = (packages: CiScopeInput["packages"], code: string[], all: boolean) =>
+  all ? packages.map((pkg) => pkg.name) : integrationSourceOwners(packages, code);
+
+const requiredEditedRows = (
+  input: CiScopeInput,
+  source: ReturnType<typeof selectCiTests>,
+  integrations: ReturnType<typeof selectCiTests>["packagedMatrix"],
+) => {
+  const covered = new Set<string>(
+    integrations.flatMap((row) => (JSON.parse(row.files) as string[]).map((file) => `packages/e2e/${file}`)),
+  );
+  for (const row of source.databaseMatrix) {
+    const owner = input.packages.find((pkg) => pkg.name === row.package)!;
+    for (const file of JSON.parse(row.files) as string[]) covered.add(`${owner.dir}/${file}`);
+  }
+  for (const [rows, runner] of [
+    [source.bunContractMatrix, "bun"],
+    [source.integrationMatrix, "integration"],
+  ] as const)
+    for (const row of rows)
+      for (const run of createTestRuns(
+        input.tests,
+        input.packages.map((pkg) => ({ ...pkg, scripts: {} })),
+        row.priority,
+        {
+          scope: row.packages.join(","),
+          runner,
+        },
+      ))
+        for (const file of run.files) covered.add(file);
+  const edited = input.tests.filter(
+    (file) =>
+      input.changedFiles.includes(file) && priorityFromFile(file) !== "P3" && !file.startsWith("clients/desktop/"),
+  );
+  return selectEditedTests(edited, input.packages, covered).filter((row) => row.platform === "linux");
+};
+
+export const resolveBaseScope = (input: CiScopeInput) => {
   const { event, changedFiles, packages, tests, profile, releaseChannel = "stable", signedCandidate = false } = input;
   for (const file of tests) priorityFromFile(file);
-  const production = profile === "production" || (event === "workflow_dispatch" && profile !== "merge_queue");
+  const production = productionProfile(event, profile);
   const stage = stageFor(event, production, profile);
   const code = changedFiles.filter((file) => !documentation(file));
   const shared = code.some((file) => sharedBuildInput(file) || !packages.some((pkg) => file.startsWith(`${pkg.dir}/`)));
   let affectedOwners = affectedPackages(packages, code);
-  if (shared || stage !== "pull_request") affectedOwners = packages.map((pkg) => pkg.name).sort();
+  if (shared || production) affectedOwners = packages.map((pkg) => pkg.name).sort();
   if (stage === "main") affectedOwners = [];
   const publicApi = code.some((file) => /^packages\/(sdk|ui|pstdio-api-contracts)\//.test(file));
   const extensions = code.some((file) => file.startsWith("extensions/"));
   const publishedExtensions = runsFileCheck(stage, shared || publicApi || extensions);
   // One Linux build per run feeds every host job that builds packages; each job still builds what it misses.
   const sharedBuild = affectedOwners.map((name) => `--scope ${name}`).join(" ");
+  const integrationOwners = integrationOwnersFor(packages, code, shared || production);
   const coverage = coverageForScope(input, production, releaseChannel);
+  const requiredProfile = stage === "pull_request" || stage === "merge_queue";
+  const checkOwners = requiredProfile ? packages.map((pkg) => pkg.name).sort() : affectedOwners;
   const matrices = selectCiTests(tests, packages, affectedOwners, prioritiesFor(stage), input.timingSnapshot, coverage);
-  const componentMatrix = stage === "merge_queue" ? [] : matrices.componentMatrix;
-  const browserSmoke = stage === "main" || stage === "merge_queue";
-  let clientRows = production ? productionDesktopCheckPlatforms(releaseChannel) : [];
-  // Signed validation runs every packaged desktop case on the release files; here only source checks remain.
-  if (production && signedCandidate)
-    clientRows = productionDesktopPlatforms(releaseChannel).map((row) => ({ ...row, shard: 1, shards: 1 }));
-  const clientMatrix = clientRows.map((row) => ({
-    ...row,
-    os: row.platform === "linux" ? "ubuntu-latest" : row.os,
-    tests: true,
-    packaged: !signedCandidate,
-  }));
+  if (requiredProfile) {
+    const baseline = selectCiTests(tests, packages, checkOwners, ["P0"], input.timingSnapshot, coverage);
+    matrices.databaseMatrix = [
+      ...baseline.databaseMatrix,
+      ...matrices.databaseMatrix.filter((row) => row.priority !== "P0"),
+    ];
+    matrices.integrationMatrix = [
+      ...baseline.integrationMatrix,
+      ...matrices.integrationMatrix.filter((row) => row.priority !== "P0"),
+    ];
+  }
+  const affectedIntegrations = requiredProfile
+    ? selectCiTests(
+        selectIntegrationFiles(
+          tests.filter((file) => file.startsWith("packages/e2e/src/packaged/")),
+          { platform: "linux", arch: "x64" },
+          { changed: code, owners: integrationOwners },
+        ),
+        packages,
+        packages.map((pkg) => pkg.name),
+        ["P1", "P2"],
+        input.timingSnapshot,
+      ).packagedMatrix
+    : [];
+  const componentMatrix = production ? matrices.componentMatrix : [];
+  const browserSmoke = !production;
+  const clientMatrix = desktopRows(releaseChannel, production, requiredProfile, signedCandidate);
   return {
     stage,
     production,
+    changedFiles,
+    requiredProfile,
     sourceCoverage: production && releaseChannel === "nightly",
     affectedOwners,
-    // Only tests edited by the PR run beyond P0. Support files, fixtures and runners rely on
-    // the affected P0 checks here and on the complete suites in nightly and stable validation.
-    editedMatrix:
-      stage === "pull_request"
-        ? selectEditedTests(
-            tests.filter((file) => code.includes(file)),
-            packages,
-          )
-        : [],
+    integrationOwners,
+    // Both gates include edited behavior tests; platform diagnostics remain outside the universal Linux profile.
+    editedMatrix: requiredProfile ? requiredEditedRows(input, matrices, affectedIntegrations) : [],
     ...matrices,
     appMatrix: production ? matrices.appMatrix : [],
-    // The toolchain job runs the packaged CLI suite on every host, including Linux x64.
-    packagedMatrix: production ? matrices.packagedMatrix.filter((row) => row.suite !== "cli") : [],
+    // Shared CLI journeys have one Linux owner; native toolchain rows consume only their contracts.
+    packagedMatrix: production ? matrices.packagedMatrix : affectedIntegrations,
     componentMatrix,
     clientMatrix,
-    toolchainMatrix: productionToolchainPlatforms(releaseChannel),
-    windows: production && productionDesktopPlatforms(releaseChannel).some((row) => row.platform === "win32"),
+    toolchainMatrix: production ? productionToolchainPlatforms(releaseChannel) : [],
+    windows: production && clientMatrix.some((row) => row.platform === "win32"),
     quarantineBunOs: production ? quarantineBunHosts(releaseChannel) : [],
     harnessMatrix: production ? harnessCliLanes(releaseChannel) : [],
     componentChecks: componentMatrix.length > 0,
     databaseTests: matrices.databaseMatrix.length > 0,
-    packageChecks: affectedOwners.length > 0,
+    packageChecks: checkOwners.length > 0,
     packageMatrix: partitionPackageChecks(
-      affectedOwners,
+      checkOwners,
       4,
       compatibleTestTimings(input.timingSnapshot, {
         kind: "package",
@@ -139,42 +218,11 @@ const resolveBaseScope = (input: CiScopeInput) => {
 };
 
 export const resolveCiScope = (input: CiScopeInput) => {
-  const windowsOnly = input.profile === "windows";
-  if (windowsOnly && input.signedCandidate)
-    throw new Error("Windows diagnostics cannot certify a signed release candidate");
-  if (windowsOnly && input.releaseChannel && input.releaseChannel !== "stable")
-    throw new Error("Windows diagnostics require the stable Windows lanes");
-  const scope = resolveBaseScope(windowsOnly ? { ...input, profile: "production" } : input);
-  if (!windowsOnly) return { ...scope, windowsOnly };
-  // Reuse complete stable Windows lanes, including their shards and quarantine evidence.
-  // This source diagnostic is separate from both the PR gate and signed release certification.
-  return {
-    ...scope,
-    windowsOnly,
-    affectedOwners: [],
-    packageChecks: false,
-    packageMatrix: [],
-    lernaFilter: "",
-    sharedBuild: "",
-    databaseTests: false,
-    databaseMatrix: [],
-    integrationMatrix: [],
-    bunContractMatrix: [],
-    componentChecks: false,
-    componentMatrix: [],
-    appMatrix: [],
-    packagedMatrix: [],
-    clientMatrix: scope.clientMatrix.filter((row) => row.platform === "win32"),
-    toolchainMatrix: scope.toolchainMatrix.filter((row) => row.platform_pkg.startsWith("cli-win-")),
-    quarantineBunOs: scope.quarantineBunOs.filter((os) => os.startsWith("windows")),
-    harnessMatrix: scope.harnessMatrix.filter(
-      (row) => "os" in row && typeof row.os === "string" && row.os.startsWith("windows"),
-    ),
-    dockerBuild: false,
-    license: false,
-    publishedExtensions: false,
-    sdkApiReport: false,
-  };
+  const native = ["windows", "macos"].includes(input.profile ?? "");
+  if (native && input.signedCandidate) throw new Error("Native diagnostics cannot certify a signed release candidate");
+  if (native && input.releaseChannel && input.releaseChannel !== "stable")
+    throw new Error("Native diagnostics require the stable native lanes");
+  return diagnosticScope(resolveBaseScope(native ? { ...input, profile: "production" } : input), input.profile);
 };
 
 if (import.meta.main) {
@@ -185,12 +233,7 @@ if (import.meta.main) {
   }
   const scope = resolveCiScope({
     event: process.env.GITHUB_EVENT_NAME ?? "",
-    changedFiles: changedFiles(
-      process.cwd(),
-      // A PR checkout is the tested merge candidate. Event base metadata can lag
-      // main; its first parent is the actual base and excludes upstream-only edits.
-      process.env.GITHUB_EVENT_NAME === "pull_request" ? "HEAD^1" : undefined,
-    ),
+    changedFiles: changedFiles(process.cwd(), ciDiffBase(process.env.GITHUB_EVENT_NAME, process.env.GITHUB_EVENT_PATH)),
     packages: readWorkspacePackages(process.cwd()),
     tests: discoverTestFiles(process.cwd()),
     profile,

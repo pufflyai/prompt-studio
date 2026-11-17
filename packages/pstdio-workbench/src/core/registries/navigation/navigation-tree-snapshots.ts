@@ -1,5 +1,6 @@
 import type { QueryChangeEnvelope, ScopedQueryClient } from "@pstdio/sdk/extensions";
 import type { TreeNode, TreeViewSection } from "../renderers/tree-renderer-types";
+import { resourceReadIdentity } from "../resources/resource-read-identity";
 import { createRendererQueryCache, type RendererQueryIdentity } from "../views/renderer-query-cache";
 import type { RendererReadRequest } from "../views/renderer-read-registry";
 import { stableNavigationValue } from "./navigation-target-key";
@@ -27,7 +28,9 @@ export const createNavigationTreeSnapshots = (queries?: ScopedQueryClient, obser
   ): RendererQueryIdentity => ({
     sourceId: sourceFor(contribution),
     queryScope: { projectId: context.projectId, extensionId: contribution.sourceExtensionId },
-    queryKey: JSON.stringify(stableNavigationValue([node ? "children" : "sections", context.resource, node])),
+    queryKey: JSON.stringify(
+      stableNavigationValue([node ? "children" : "sections", resourceReadIdentity(context.resource), node]),
+    ),
   });
   const read = <T>(
     contribution: NavigationTreeContribution,

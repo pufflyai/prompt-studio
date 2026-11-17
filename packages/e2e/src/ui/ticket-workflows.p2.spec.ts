@@ -80,7 +80,7 @@ const test = base.extend<{ fixture: Awaited<ReturnType<typeof createFixture>> }>
 });
 
 const openTicket = async (page: Page, projectId: string) => {
-  await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
+  await page.goto(`/projects/${projectId}/extensions/pstdio.planner/tickets`);
   await page
     .getByTestId("renderer-card")
     .filter({ hasText: "Ticket workflow" })
@@ -94,12 +94,17 @@ const openTicket = async (page: Page, projectId: string) => {
 test("refreshes ticket files after creating a file", async ({ page, fixture }) => {
   await openTicket(page, fixture.project.id);
   await expect(page.getByRole("tab", { name: "Ticket", exact: true })).toHaveCount(0);
-  await page.getByText("Files", { exact: true }).hover();
+  await page
+    .locator('[data-workbench-region="sidenav"]')
+    .getByRole("option", {
+      name: new RegExp(fixture.ticket.shorthand),
+    })
+    .click({ button: "right" });
   const fileResponse = page.waitForResponse(
     (response) =>
       response.url().includes("command.create-ticket-file/execute") && response.request().method() === "POST",
   );
-  await page.getByRole("button", { name: "New file", exact: true }).click();
+  await page.getByRole("menuitem", { name: "New file", exact: true }).click();
   const file = (await (await fileResponse).json()).outcome.value as { name: string };
   await expect(page.getByRole("option", { name: file.name, exact: true })).toBeVisible();
   await page.getByRole("option", { name: file.name, exact: true }).click();
@@ -170,7 +175,7 @@ test("opens ticket action sessions and hides the lone Sessions page tab", async 
   await page.getByRole("option", { name: "Sessions", exact: true }).first().click();
   await page.getByRole("option", { name: /Break into sub-tickets:/ }).click();
   await expect(page).toHaveURL(
-    new RegExp(`/extensions/pstdio\\.pstdio-session-browser/conversation\\?resource=.*${sessionId}`),
+    new RegExp(`/extensions/pstdio\\.session-browser/conversation\\?resource=.*${sessionId}`),
   );
   await expect(page.getByRole("tab", { name: "Session", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Close Session", exact: true })).toHaveCount(0);
@@ -193,7 +198,7 @@ test("Run attempt starts from the chosen base branch", async ({ page, fixture })
   const dialog = page.getByRole("dialog").filter({ has: page.getByText("Run attempt", { exact: true }) });
   await expect(dialog.getByRole("button", { name: "Git worktree", exact: true })).toBeVisible();
   await dialog.getByRole("button", { name: "main", exact: true }).click();
-  await page.getByRole("menuitemradio", { name: "feature/base", exact: true }).click();
+  await page.getByRole("menuitem", { name: "feature/base", exact: true }).click();
   const response = page.waitForResponse(
     (response) => response.request().method() === "POST" && response.url().includes("command.run-attempt/execute"),
   );

@@ -1,4 +1,5 @@
 import { Box, Center } from "@chakra-ui/react";
+import { useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import { createGlyphIcon } from "@pstdio/ui";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import type { ArtifactSummary } from "../artifacts";
@@ -6,31 +7,33 @@ import { useArtifactTranslations } from "../translations";
 import { HtmlPreview } from "./html-preview";
 
 const FileCodeIcon = createGlyphIcon("document-code");
-export type LoadArtifactPreview = (item: ArtifactSummary) => Promise<string>;
+export type LoadArtifactPreview = (item: ArtifactSummary, signal: AbortSignal) => Promise<string>;
 
 export const ArtifactThumbnail = (props: { item: ArtifactSummary; loadPreview: LoadArtifactPreview }) => {
   const { item, loadPreview } = props;
+  const visible = useWebviewVisibility();
   const { t } = useArtifactTranslations();
   const container = useRef<HTMLDivElement>(null);
   const [html, setHtml] = useState<string>();
-  const readPreview = useEffectEvent((revision: ArtifactSummary) => loadPreview(revision));
+  const readPreview = useEffectEvent((revision: ArtifactSummary, signal: AbortSignal) => loadPreview(revision, signal));
   useEffect(() => {
-    let cancelled = false;
+    if (!visible) return;
+    const abort = new AbortController();
     const observer = new IntersectionObserver((entries) => {
-      if (!entries.some((entry) => entry.isIntersecting)) return;
+      if (abort.signal.aborted || !entries.some((entry) => entry.isIntersecting)) return;
       observer.disconnect();
-      void readPreview(item)
+      void readPreview(item, abort.signal)
         .then((value) => {
-          if (!cancelled) setHtml(value);
+          if (!abort.signal.aborted) setHtml(value);
         })
         .catch(() => {});
     });
     if (container.current) observer.observe(container.current);
     return () => {
-      cancelled = true;
+      abort.abort();
       observer.disconnect();
     };
-  }, [item]);
+  }, [item, visible]);
 
   return (
     <Box

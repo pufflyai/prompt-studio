@@ -37,15 +37,26 @@ const pendingStateFor = (kind: WorkspaceProviderOperationKind) => {
   return "provisioning" as const;
 };
 
+const updateReconciledProjection = (
+  deps: WorkspacesRouteDeps,
+  workspace: WorkspaceRecord,
+  patch: Parameters<WorkspacesRouteDeps["workspaceService"]["updateProviderProjection"]>[1],
+) =>
+  deps.workspaceService.updateProviderOperationProjection(workspace.id, {
+    operationId: workspace.provider_operation_id,
+    operationKind: workspace.provider_operation_kind,
+    expectedState: workspace.provider_state,
+    patch,
+  });
+
 const updateResult = async (deps: WorkspacesRouteDeps, workspace: WorkspaceRecord, result: WorkspaceProviderResult) => {
-  const updated =
-    (await deps.workspaceService.updateProviderProjection(
-      workspace.id,
-      normalizeResult(workspace.provider_id, result, {
-        providerRef: workspace.provider_ref_json as unknown as WorkspaceProviderRef,
-      }),
-    )) ?? workspace;
-  if (updated.provider_state === "archived") await finalizeWorkspaceDelete(deps, updated);
+  const updated = await updateReconciledProjection(deps, workspace, {
+    ...normalizeResult(workspace.provider_id, result, {
+      providerRef: workspace.provider_ref_json as unknown as WorkspaceProviderRef,
+    }),
+    ...(result.state === "cancelled" ? { root_path: null, branch: null, display_path: null } : {}),
+  });
+  if (updated?.provider_state === "archived") await finalizeWorkspaceDelete(deps, updated);
 };
 
 const settleWithoutProviderMethod = async (
@@ -53,15 +64,15 @@ const settleWithoutProviderMethod = async (
   workspace: WorkspaceRecord,
   state: "cancelled" | "archived",
 ) => {
-  const updated =
-    (await deps.workspaceService.updateProviderProjection(workspace.id, {
-      ...projectionBase(workspace),
-      provider_state: state,
-      provider_operation_id: null,
-      provider_operation_kind: null,
-      provider_error_json: null,
-    })) ?? workspace;
-  if (state === "archived") await finalizeWorkspaceDelete(deps, updated);
+  const updated = await updateReconciledProjection(deps, workspace, {
+    ...projectionBase(workspace),
+    provider_state: state,
+    provider_operation_id: null,
+    provider_operation_kind: null,
+    provider_error_json: null,
+    ...(state === "cancelled" ? { root_path: null, branch: null, display_path: null } : {}),
+  });
+  if (updated && state === "archived") await finalizeWorkspaceDelete(deps, updated);
 };
 
 const reconcileCancellation = async (
@@ -198,7 +209,7 @@ const reconcileWorkspace = async (
     workspaceDir: workspace.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined,
   });
   if (!handle) {
-    await deps.workspaceService.updateProviderProjection(workspace.id, missingProviderPatch(workspace));
+    await updateReconciledProjection(deps, workspace, missingProviderPatch(workspace));
     return;
   }
 
@@ -214,6 +225,18 @@ const reconcileWorkspace = async (
       }),
     { signal: options.signal, timeoutMs: options.providerTimeoutMs },
   );
+  // The provider may have been disabled while its resolve callback was running.
+  // A late ready result must not restore execution through that old handle.
+  if (
+    !(await findWorkspaceProvider(deps, {
+      projectId: workspace.project_id,
+      providerId: workspace.provider_id,
+      workspaceId: workspace.id,
+    }))
+  ) {
+    await updateReconciledProjection(deps, workspace, missingProviderPatch(workspace));
+    return;
+  }
   await updateResult(deps, workspace, result);
 };
 
@@ -282,8 +305,9 @@ const reconcileProviderWorkspacePass = async (
             );
           }
         }
-        await deps.workspaceService.updateProviderProjection(
-          workspace.id,
+        await updateReconciledProjection(
+          deps,
+          workspace,
           failedOperationPatch(workspace, {
             kind,
             operationId: workspace.provider_operation_id ?? crypto.randomUUID(),

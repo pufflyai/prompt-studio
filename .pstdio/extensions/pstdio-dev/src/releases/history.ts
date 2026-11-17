@@ -1,5 +1,5 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
-import { gh, ghJson } from "../benchmarks/github";
+import { CANDIDATE_LIMIT, listReleaseJobs, listReleaseRuns, type ReleaseRun, releaseSelection } from "./github";
 import {
   countTests,
   emptyCounts,
@@ -26,48 +26,9 @@ export const readHealth = async (ctx: Context) => {
 };
 const writeHealth = (ctx: Context, value: HealthHistory) => filesOf(ctx).writeText(HISTORY, JSON.stringify(value));
 
-interface ApiRun {
-  id: number;
-  run_attempt: number;
-  created_at: string;
-  run_started_at: string;
-  updated_at: string;
-  head_sha: string;
-  html_url: string;
-  display_title: string;
-  event: string;
-  status: string;
-  conclusion: string | null;
-}
-interface Job {
-  id: number;
-  name: string;
-  status: string;
-  conclusion: string | null;
-  html_url: string;
-}
-
-const readRun = async (ctx: Context, run: ApiRun) => {
-  const pages = await gh(ctx, [
-    "api",
-    "--paginate",
-    `repos/{owner}/{repo}/actions/runs/${run.id}/attempts/${run.run_attempt}/jobs?per_page=100`,
-    "--jq",
-    ".jobs[]",
-  ]);
-  const jobs = pages
-    .split("\n")
-    .filter(Boolean)
-    .map((line) => JSON.parse(line) as Job);
-  // Ordinary main pushes update the version PR without building or validating a release.
-  const hasCandidate = jobs.some(
-    (job) => /^(release_build|production \/|production_unchanged \/)/.test(job.name) && job.conclusion !== "skipped",
-  );
-  if (
-    !hasCandidate &&
-    (run.event === "push" || !jobs.some((job) => job.name === "plan" && job.conclusion !== "skipped"))
-  )
-    return;
+const readRun = async (ctx: Context, run: ReleaseRun) => {
+  const jobs = await listReleaseJobs(ctx, run);
+  if (!releaseSelection(run, jobs).eligible) return;
   const selected = jobs.filter((job) => isTestJob(job.name) && job.conclusion !== "skipped");
   const counts = emptyCounts();
   const categories: TestCategoryCounts = {};
@@ -136,14 +97,10 @@ const readRun = async (ctx: Context, run: ApiRun) => {
 export const syncHealth = async (ctx: Context, changed: () => Promise<unknown>) => {
   const history = await readHealth(ctx);
   try {
-    const result = await ghJson<{ workflow_runs: ApiRun[] }>(ctx, [
-      "api",
-      "repos/{owner}/{repo}/actions/workflows/release-packages.yml/runs?per_page=100",
-    ]);
-    const candidates = result.workflow_runs
-      .filter((run) => run.event !== "push" || /Version Packages/.test(run.display_title))
-      .slice(0, 10);
-    for (const run of candidates) {
+    const runs = await listReleaseRuns(ctx);
+    let candidates = 0;
+    for (const run of runs) {
+      if (candidates === CANDIDATE_LIMIT) break;
       const previous = history.runs.find((entry) => entry.id === run.id);
       if (
         previous?.status === "completed" &&
@@ -153,36 +110,44 @@ export const syncHealth = async (ctx: Context, changed: () => Promise<unknown>) 
         previous.counts.quarantined !== undefined &&
         previous.categories !== undefined &&
         previous.runDurationSeconds !== undefined
-      )
+      ) {
+        candidates++;
         continue;
-      const next = await readRun(ctx, run).catch((error: unknown) =>
-        previous
-          ? {
-              ...previous,
-              errors: [
-                `Could not refresh attempt ${run.run_attempt}; showing cached attempt ${previous.attempt}: ${String(error)}`,
-              ],
-            }
-          : {
-              id: run.id,
-              attempt: run.run_attempt,
-              createdAt: run.created_at,
-              sha: run.head_sha,
-              url: run.html_url,
-              title: run.display_title,
-              status: run.status,
-              conclusion: run.conclusion,
-              counts: emptyCounts(),
-              categories: {},
-              testJobs: 0,
-              reportedJobs: 0,
-              pendingJobs: 0,
-              failedJobs: [],
-              published: false,
-              errors: [String(error)],
-            },
+      }
+      const result = await readRun(ctx, run).then(
+        (next) => ({ next, classified: true }),
+        (error: unknown) => ({
+          classified: false,
+          next: previous
+            ? {
+                ...previous,
+                errors: [
+                  `Could not refresh attempt ${run.run_attempt}; showing cached attempt ${previous.attempt}: ${String(error)}`,
+                ],
+              }
+            : {
+                id: run.id,
+                attempt: run.run_attempt,
+                createdAt: run.created_at,
+                sha: run.head_sha,
+                url: run.html_url,
+                title: run.display_title,
+                status: run.status,
+                conclusion: run.conclusion,
+                counts: emptyCounts(),
+                categories: {},
+                testJobs: 0,
+                reportedJobs: 0,
+                pendingJobs: 0,
+                failedJobs: [],
+                published: false,
+                errors: [String(error)],
+              },
+        }),
       );
+      const { next } = result;
       if (!next) continue;
+      if (result.classified) candidates++;
       history.runs = [...history.runs.filter((entry) => entry.id !== run.id), next].sort((a, b) =>
         a.createdAt.localeCompare(b.createdAt),
       );

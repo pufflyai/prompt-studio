@@ -2,7 +2,7 @@
 
 ## 1. Red: write a test first
 
-1. Follow the red, green, and refactor workflow for every change. Skip a test only when no useful test applies.
+1. Follow the red, green, and refactor workflow for supported product behavior. Changes to tests, test setup, runners, suite configuration, documentation, or configuration do not need tests of their own.
 2. Reproduce a bug with Playwright or another tool before fixing it.
 3. For a meaningful behavioral bug, write the smallest regression test that proves the expected behavior before changing code.
 4. Confirm the test fails for the right reason.
@@ -21,7 +21,7 @@
 3. Add or update end-to-end tests for new features, update documentation, and remove tests that cover only implementation details.
 4. Keep tests green.
 5. CI runs each test once per applicable platform. Never retry unchanged failures or run repeated reliability checks to obtain a pass. Verify cause repairs and the final revision through section 9.
-6. Quarantine confirmed flakes with evidence, an owner, and removal criteria. Run them once in a separate lane and require its execution report.
+6. Remove failing quarantined cases and their registry entries. Keep their failure evidence in the ticket or report so product coverage can be restored after the cause is fixed. Do not move known failures into the stable lane.
 
 ## 4. Prove it works
 
@@ -37,7 +37,7 @@
 
 1. When bundled runtime behavior, assets, or file inclusion change, update the relevant packaged smoke test. This includes built-in templates, prompts, skills, and other packaged defaults. Documentation-reference-only edits do not require packaged tests.
 2. Keep `packages/e2e/src/packaged/packaged-serve-smoke.p2.test.ts` in sync with packaged files.
-3. For runtime or package changes, require relevant packaged verification. Run focused packaged checks on an isolated host or retain latest-commit CI evidence. The full `bun run --cwd scripts verify:packages` command is not a mandatory local review step.
+3. Use packaged verification only for exceptional changes with a concrete installation, distribution or packaged-runtime risk that focused source checks cannot establish, or an explicit user request. Select the smallest complete owning workload and retain latest-commit evidence. Do not run the full `bun run --cwd scripts verify:packages` command for routine PRs.
 
 ## 6. Test design
 
@@ -46,7 +46,7 @@
 3. Put each test next to the file it tests.
 4. Avoid mocks. Test real behavior when possible.
 5. Test behavior users can use and rules the product still supports.
-6. When removing a feature, delete or update its tests. Do not add tests that only prove a removed feature, command, or setting stays absent.
+6. When removing a feature, delete or update its tests and their workflow, package-script and runner callers. Preview affected selectors through existing test discovery so an empty selection cannot break release validation. Do not add tests that only prove a removed feature, command, or setting stays absent.
 7. Write failure-case tests only for supported rules such as validation, permissions, and error handling.
 8. Do not write exhaustive UI permutations or cosmetic-only assertions. Use Canvas for exploration. Automate browser checks only for a critical behavior and name the risk in the test.
 9. Do not write tests for changes that only affect configuration or documentation.
@@ -54,6 +54,7 @@
 11. Do not keep tests that cover only implementation details.
 12. Demo/example extensions and repository-local tools do not carry automated test suites or app journeys. Test platform behavior with minimal fixtures, without exercising demo application features.
 13. Keep production extension suites focused on their own behavior and runnable with their declared public dependencies and extension-owned setup. Avoid installing unrelated extensions or starting the complete host for unit tests.
+14. Do not test test code. Remove meta tests that assert fixture generation, test setup, runners, discovery, suite selection, reporting, or benchmark instrumentation. Exercise those helpers through product behavior tests; inspect setup changes with static checks and the affected product scenarios.
 
 ## 7. Test commands
 
@@ -75,10 +76,17 @@
 ## 9. Targeted validation and repairs
 
 1. Finish implementation and settle known fixes before review validation. Use focused red/green checks during development. Commit the candidate before `bun run test:review`; the command validates an immutable disposable checkout of that revision.
-2. Use the complete merge-queue test selection as the minimum local review workload: repository/package P0, API/database P0/P1, P1 Bun contracts, queue service integrations and the canonical dashboard smoke. Derive membership from the queue planner and owning runners, not a separate filename list. Add affected contracts, added or edited tests, and the smallest additional scenarios needed to cover changed behavior. Include affected callers, permissions, persistence, lifecycle and integration boundaries. Test discovery owns membership. A changed helper, fixture or runner can affect tests whose files did not change.
-3. Inspect the plan with `bun run test:review --list`. Add relevant existing scenarios with `--test <repository-relative-file>`; additions never remove automatic coverage. Queue-selected tests always run locally, including service integrations and smoke. Native, packaged, component and benchmark workloads outside the queue minimum remain complete in CI. A missing Docker daemon or browser prerequisite fails the local run; it never shrinks the queue minimum. Retain evidence for deferred checks; unchanged suites may require `ci:full` diagnostics because ordinary PR CI runs only affected P0 and edited tests.
+2. Use the complete merge-queue test selection as the minimum local review workload: all fast repository/package P0, affected P1 source contracts and service integrations, the canonical dashboard smoke, packaged desktop smoke and affected packaged flows. Derive membership from the queue planner and owning runners, not a separate filename list. Add affected contracts, added or edited tests, and the smallest additional scenarios needed to cover changed behavior. Include affected callers, permissions, persistence, lifecycle and integration boundaries. Test discovery owns membership. A changed helper, fixture or runner can affect tests whose files did not change.
+3. Inspect the plan with `bun run test:review --list`. Add relevant existing scenarios with `--test <repository-relative-file>`; additions never remove automatic coverage. Queue-selected tests always run locally, including service integrations and smoke. A deferred inventory is not a request to run complete matrices. Native, packaged and benchmark workloads outside the queue minimum run only under the exceptional-check policy in [PR completion](0004-ci.md#1-finishing-a-pull-request); their normal complete coverage belongs to nightly and release validation. A missing Docker daemon or browser prerequisite fails the local run; it never shrinks the queue minimum. Retain evidence for explicitly required exceptional checks. Do not dispatch `ci:full` or benchmark diagnostics merely because ordinary PR CI omits unedited suites.
 4. Keep one failure list with revision, command, failed case or file, elapsed time and evidence. Failed, blocked, interrupted, deferred and unrun work never counts as passing. Aim for 15 minutes for routine local review. Broad changes run every selected check to completion even when they exceed that target; report the overrun and slow phases. Elapsed time alone never cancels or reduces coverage. Explicit interruption still stops owned processes and preserves partial evidence; individual test and benchmark limits remain unchanged.
 5. Repair failures together. Rerun failed tests and new regressions through their owning runners. Run blocked checks after their prerequisites are fixed. Preserve the first failure; retrying unchanged source does not resolve it. Reuse passing results only when their inputs remain unchanged, recording the original revision and scope honestly.
-6. Local runs own their checkout, installed dependencies, build output, runtime homes, ports and reports. Completed Nx build archives may be reused through the local review cache; indexes and restored outputs remain private, and test results are never reused. Compose launchers register exact per-run project names and retained configurations; after stopping test processes, the supervisor removes those projects and records cleanup failures. Docker allocates each network automatically. Use bounded runner concurrency. Do not coordinate machine-wide test slots for routine review checks or use shared mutable builds, databases or fixed stack names. Heavy full suites and performance measurements belong on isolated CI hosts.
-7. Explicit user resource holds and already-running workloads retain their original admission and attribution. A new policy does not authorize overlap with a held host or relabel interrupted work as targeted validation. Do not let automatic workspace startup hooks install or build in the background.
-8. Batch repairs before pushing. Normal latest-head CI remains required; do not manually rerun passing jobs. When full local validation is explicitly requested, use the [collect-all commands](../guides/development/0002-testing.md#complete-a-full-test-run-without-stopping-at-the-first-failure), preserve all results, and honor resource holds. No final full rerun is required by default.
+6. Local runs own their checkout, installed dependencies, build output, runtime homes, ports and reports. Completed Nx build archives may be reused through the local review cache; indexes and restored outputs remain private, and test results are never reused. Compose launchers register exact per-run project names and retained configurations; after stopping test processes, the supervisor removes those projects and records cleanup failures. Docker allocates each network automatically. Use bounded runner concurrency. Heavy full suites and performance measurements belong on isolated CI hosts.
+7. Batch repairs before pushing. Normal latest-head CI remains required; do not manually rerun passing jobs. When full local validation is explicitly requested, use the [collect-all commands](../guides/development/0002-testing.md#complete-a-full-test-run-without-stopping-at-the-first-failure) and preserve all results. No final full rerun is required by default.
+
+## 10. Frozen performance catalog
+
+1. PS-233 authorizes exactly B1–B8 in the versioned benchmark manifest. Do not add benchmarks automatically for features.
+2. Adding, deleting, replacing, resizing, reordering, relaxing or extending a scenario, metric, fixture, variant or platform requires an explicit human instruction. Label every benchmark PR `benchmark` and leave it for human review and merge under [004.1.11](0004-ci.md#1-finishing-a-pull-request). Agents must not treat a self-edited lock as authorization.
+3. Harness-only repairs may retain workload version and history when semantics are unchanged. Temporary profiling stays outside discovery, gates and the permanent catalog.
+4. PR and queue run the fast catalog check only. Measurements remain in dedicated nightly/release validation; no median-only acceptance, unchanged retries or workload reduction obtains a pass.
+5. Preserve raw observations, maxima, identity, incomplete results and unresolved guards. Missing measurements fail; new numeric limits require exact-workload baselines and human approval. See [frozen workload guidance](../guides/development/0016-writing-benchmarks.md) and [migration ledger](../references/performance/0009-frozen-workload-ledger.md).

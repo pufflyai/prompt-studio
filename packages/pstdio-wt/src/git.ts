@@ -74,14 +74,21 @@ export const requireGitExecutable = () => {
   return executable;
 };
 
-export const gitBytes = (cwd: string, args: string[]) =>
+export const gitBytes = (cwd: string, args: string[], signal?: AbortSignal) =>
   new Promise<Buffer>((resolve, reject) => {
+    signal?.throwIfAborted();
+    const abort = () => child.kill();
     // Keep both pipes owned through completion. See ADR 0024.
-    execFile(
+    const child = execFile(
       requireGitExecutable(),
       args,
       { cwd, encoding: "buffer", maxBuffer: Number.POSITIVE_INFINITY, windowsHide: true },
       (error, stdout, stderr) => {
+        signal?.removeEventListener("abort", abort);
+        if (signal?.aborted) {
+          reject(signal.reason);
+          return;
+        }
         if (error) {
           reject(
             typeof error.code === "number" ? new GitError(args.join(" "), error.code, stderr.toString().trim()) : error,
@@ -91,6 +98,9 @@ export const gitBytes = (cwd: string, args: string[]) =>
         resolve(stdout);
       },
     );
+    // execFile's completion drains the actual child and pipes before releasing the caller.
+    signal?.addEventListener("abort", abort, { once: true });
+    if (signal?.aborted) abort();
   });
 
 export const git = async (cwd: string, args: string[]) => (await gitBytes(cwd, args)).toString().trim();

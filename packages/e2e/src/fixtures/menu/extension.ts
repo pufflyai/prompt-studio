@@ -8,7 +8,11 @@ const content = defineView({
 const menu = defineView({
   id: "menu",
   title: "Attached menu",
-  body: { kind: "tree", body: async () => [{ id: "menu", label: "Menu", nodes: [] }] },
+  // Empty native menus are hidden; this fixture exercises controls with real menu content.
+  body: {
+    kind: "tree",
+    body: async () => [{ id: "menu", label: "Menu", nodes: [{ id: "item", label: "Menu item" }] }],
+  },
 });
 const page = definePage({
   id: "menu",

@@ -10,9 +10,10 @@ export interface TicketStatusDraft {
   actions?: string[];
 }
 
-import { putStatus, putTicket, statusesCollection, ticketsCollection } from "./data/collections";
+import { putStatus, statusesCollection } from "./data/collections";
 import { migratePlannerStorage } from "./data/migrate-storage";
 import { seedDefaultStatuses } from "./data/seed";
+import { reassignTicketStatuses } from "./data/ticket-bulk-edit";
 import type { StoredStatus } from "./data/types";
 import { plannerSchemaChanged, plannerTicketsChanged } from "./events";
 import { sortedBySortOrder } from "./utils/sort";
@@ -75,15 +76,14 @@ export const saveStatusSettings = defineCommand({
     const removed = stored.filter((status) => !nextIds.has(status.id));
     const fallbackId = (next.find((status) => status.isDefault) ?? next[0])?.id ?? null;
 
-    await Promise.all([
-      ...next.map((status) => putStatus(ctx.storage, status)),
-      ...removed.map((status) => statusesCollection(ctx.storage).delete(status.id)),
-      ...(await ticketsCollection(ctx).list()).map((ticket) =>
-        removed.some((status) => status.id === ticket.statusId)
-          ? putTicket(ctx, { ...ticket, statusId: fallbackId })
-          : undefined,
-      ),
-    ]);
+    await Promise.all(next.map((status) => putStatus(ctx.storage, status)));
+    // Keep removed definitions readable until bounded reassignment has saved its historical labels.
+    await reassignTicketStatuses(
+      ctx,
+      removed.map(({ id }) => id),
+      fallbackId,
+    );
+    await Promise.all(removed.map((status) => statusesCollection(ctx.storage).delete(status.id)));
     await ctx.events.emit(plannerTicketsChanged, {});
     await ctx.events.emit(plannerSchemaChanged, {});
 

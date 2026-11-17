@@ -66,8 +66,8 @@ export default defineConfig({
     createDashboardRuntimeConfigPlugin({ terminalWebSocketUrl }),
     ...(apiToken ? [createApiCredentialPlugin({ target: apiProxyTarget, token: apiToken })] : []),
     react({
-      // Workspace dist entries have already passed through the React compiler.
-      exclude: ["**/node_modules/**", "**/dist/**"],
+      // Workspace outputs and the prebuilt Monaco bundle do not need another React compilation.
+      exclude: ["**/node_modules/**", "**/dist/**", "**/dist-monaco/**"],
       babel: {
         plugins: [["babel-plugin-react-compiler"]],
       },

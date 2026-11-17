@@ -1,6 +1,6 @@
 {
   "name": "extension-lab",
-  "version": "0.47.0",
+  "version": "0.46.0",
   "displayName": "Extension Lab",
   "description": "Six complete example tools built with public extension pages, resources, modes, and themes.",
   "publisher": "pstdio",
@@ -9,7 +9,7 @@
     "./contracts": "./src/contracts.ts"
   },
   "engines": {
-    "pstdio": "^0.4.0"
+    "pstdio": "^0.4.0 || ^0.5.0"
   },
   "private": true,
   "type": "module",
@@ -19,19 +19,20 @@
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "0.47.0-preview.sha-32f3947e89f98a0abcb3ee8ddba2efe30061a893",
-    "@pstdio/ui": "0.47.0-preview.sha-32f3947e89f98a0abcb3ee8ddba2efe30061a893",
+    "@pstdio/sdk": "0.47.0-nightly.20261112030231",
+    "@pstdio/ui": "0.47.0-nightly.20261112030231",
+    "lucide-react": "^0.556.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "three": "^0.185.1",
-    "lucide-react": "^0.556.0"
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "typescript": "6.0.2",
-    "@types/three": "^0.185.4"
+    "@types/three": "^0.185.4",
+    "typescript": "6.0.2"
   },
   "icon": "FlaskConical"
 }

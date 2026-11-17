@@ -4,6 +4,7 @@ import type { Argv } from "yargs";
 import { resolveApiUrl } from "@/features/api-url";
 import { defineCommandGroup } from "../../command-group";
 import { resolveProjectId } from "../notifications/project";
+import * as activityCommand from "./activity";
 
 const roles = ["primary", "context", "source", "result"] as const;
 export const parseResource = (value: string): ResourceRef => {
@@ -22,6 +23,7 @@ const endpoints = (argv: Argv) =>
 
 export const { command, describe, subcommands, builder, handler } = defineCommandGroup(
   { name: "resources", describe: "Link resources in a project" },
+  activityCommand,
   {
     command: "link",
     describe: "Add or update a directed resource link",

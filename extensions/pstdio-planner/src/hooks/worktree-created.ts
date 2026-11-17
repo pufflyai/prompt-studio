@@ -18,12 +18,13 @@ export const copyOrWriteTicketFile = async (input: {
   resources: TicketContext["resources"];
   ticket: Ticket;
   workspaceFiles: WorkspaceFilesMount;
+  extensionId?: string;
 }) => {
   const relativePath = ticketMarkdownPath(input.ticket.shorthand);
   const content = (await input.projectFiles.exists(relativePath))
     ? await input.projectFiles.readText(relativePath)
     : await ticketToMarkdown(input, input.ticket);
-  await ensureTicketDraftsIgnored(input.workspaceFiles);
+  await ensureTicketDraftsIgnored(input.workspaceFiles, input.extensionId);
   await input.workspaceFiles.writeText(relativePath, content);
 };
 
@@ -45,6 +46,7 @@ export const worktreeCreatedHook = defineHook<WorkspaceProvisionPayload>({
       resources: ctx.resources,
       ticket,
       workspaceFiles: ctx.workspaceFiles,
+      extensionId: ctx.extensionId,
     });
   },
 });

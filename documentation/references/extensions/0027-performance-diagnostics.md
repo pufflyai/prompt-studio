@@ -14,6 +14,8 @@ Use `await client.performance.retain()` to hold capture ownership while your mon
 
 `setEnabled(boolean)` controls the existing device preference. `pauseExtension(installedExtensionId)` and `resumeExtension(installedExtensionId)` use the host's paused-view state, which the snapshot reports as `pausedExtensionIds`. They do not stop backend commands or sessions.
 
+On `main`, API 0.4.2 adds `client.performance.query()` under `performance.read`. It returns the readonly retained snapshot of the same window controller and collector. Observe it with `useWebviewCommandQuery(query, useWebviewVisibility())`; hiding a view releases optional sampling observation. Accepted `null` means monitoring is off, while initial failure remains unread with an error and failed refresh retains accepted data. Capture ownership still uses `retain()`. Existing `snapshot()` and `subscribe()` stay supported. Publish the matching host and SDK before separately released consumers adopt `query()`.
+
 ## Developer settings
 
 Register a normal `defineSettingsPanel` contribution with `slot: workbenchSlots.developerSettings`. Its referenced view appears as a device-local settings entry. Removing one contribution removes only that control. The host resolves this target explicitly and preserves existing global and project settings targets.

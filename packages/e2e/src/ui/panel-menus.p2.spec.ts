@@ -41,14 +41,14 @@ test("preserves browser Forward history between extension pages after refresh", 
 
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
   await page.getByText(ticket.content, { exact: true }).click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-planner\/ticket\?resource=/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.planner\/ticket\?resource=/);
 
   await page.goBack();
-  await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.planner/tickets`);
 
   await page.reload();
   await page.goForward();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-planner\/ticket\?resource=/);
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.planner\/ticket\?resource=/);
   await expect(page.getByRole("region", { name: "Main", exact: true }).getByRole("textbox")).toHaveText(ticket.content);
 });
 
@@ -240,7 +240,7 @@ test("updates a New session Sub Panel in place after the first message", async (
 
   await expect(sessionTabs).toHaveCount(2);
   await expect(activeTab).toContainText(prompt);
-  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.pstdio-home/home$`));
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/extensions/pstdio\\.home/home$`));
 });
 
 test("renames a moved session and restores its destination after reload", async ({ page, request }) => {
@@ -258,6 +258,8 @@ test("renames a moved session and restores its destination after reload", async 
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const side = page.locator('[data-workbench-panel-header="side"]');
   // The Sessions page owns its Main composer; explicitly add the Side Panel instance to move.
+  // Before the extension catalog arrives, + opens the sole built-in terminal directly.
+  await expect(side.getByRole("button", { name: "Add panel", exact: true })).toHaveAttribute("aria-haspopup", "menu");
   await side.getByRole("button", { name: "Add panel", exact: true }).click();
   await page.getByRole("menuitem", { name: "New session", exact: true }).click();
   await openTabCustomMenu(side.getByRole("tab", { name: "New session", exact: true, selected: true }));

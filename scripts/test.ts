@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { changedFiles } from "./ci/changed-files";
 import { createCiTestPlan } from "./ci/ci-test-plan";
+import { selectIntegrationFiles } from "./ci/coverage-ownership";
 import { createProductionPerformancePlan } from "./ci/production-performance-plan";
 import { resolveCiScope } from "./ci/pull-request-ci-scope";
 import { requestedTestFiles } from "./ci/requested-test-files";
@@ -79,7 +80,7 @@ if (performanceFamily) {
       throw new Error("Unknown test artifact");
     const priorities = (value("--priority") ?? inferred).toUpperCase().split(",");
     if (priorities.some((p) => !testPriorities.includes(p as "P0"))) throw new Error("Choose p0, p1, p2 or p3");
-    const selected = selectLocalTests(
+    let selected = selectLocalTests(
       requestedTestFiles(args, tests),
       Boolean(requested.length || artifact || value("--priority") || value("--runner") || value("--files-from")),
     ).filter(
@@ -90,6 +91,8 @@ if (performanceFamily) {
           (test.startsWith("packages/e2e/src/packaged/") && /\.test\.tsx?$/.test(test))) &&
         (artifact !== "packaged-desktop" || (testRunner(test) === "desktop" && test.includes("/packaged-"))),
     );
+    if (artifact && artifact !== "source")
+      selected = selectIntegrationFiles(selected, { platform: process.platform, arch: process.arch });
     const runs = priorities.flatMap((priority) =>
       createTestRuns(selected, packages, priority as "P0", { scope: value("--scope"), runner: value("--runner") }),
     );

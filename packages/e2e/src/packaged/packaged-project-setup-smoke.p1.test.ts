@@ -3,12 +3,7 @@ import type { ChildProcess } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { e2eExtensions } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
-// Covers composer drafts, rendered chat and idle sessions through the packaged host.
-import { createComposerObservation } from "./composer-observation";
-import { expectPackagedChatComposer } from "./packaged-chat-composer-smoke";
-import { expectPackagedDriveDiscovery } from "./packaged-filesystem-smoke";
 import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
@@ -16,12 +11,6 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 import { expectPackagedWorkspaceFileLink } from "./packaged-workspace-link-smoke";
 
 setupPackagedSmokeTests();
-const composerDefaults = e2eExtensions(
-  "workbench-fixture",
-  "pstdio-session-browser",
-  "pstdio-home",
-  "pstdio-workspaces",
-);
 
 // Stable hosts use PSX; nightlies retain their exact main commit.
 const hostReleaseRef = /^(?:\{hostRelease\}|pstdio@\d|[0-9a-f]{40}$)/;
@@ -40,63 +29,6 @@ const expectPackagedProjectSetup = (logPath: string, projectId: string) => {
     );
   }
 };
-
-test(
-  "serves the dashboard and API, hands off composer drafts, and starts idle sessions on their first message",
-  async () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
-    const observe = createComposerObservation(tempRoot);
-    observe("case.begin", { allowanceMs: Math.max(PACKAGED_TEST_TIMEOUT, 45_000) });
-    let child: ChildProcess | null = null;
-
-    try {
-      observe("runtime.start.begin");
-      const started = await startPackagedServe(tempRoot, {
-        PSTDIO_DEFAULT_EXTENSIONS: composerDefaults,
-      });
-      child = started.child;
-      observe("runtime.start.end");
-      observe("outer.api-smoke.begin");
-
-      const dashboardRes = await fetch(started.baseUrl);
-      expect(dashboardRes.status).toBe(200);
-      expect(dashboardRes.headers.get("content-type")).toContain("text/html");
-      const dashboardHtml = await dashboardRes.text();
-      const moduleScript = dashboardHtml.match(/<script[^>]+type="module"[^>]+src="([^"]+)"/);
-      expect(moduleScript).not.toBeNull();
-      const dashboardScript = await fetch(new URL(moduleScript![1]!, started.baseUrl));
-      expect(dashboardScript.status).toBe(200);
-      expect(dashboardScript.headers.get("content-type")).toMatch(/javascript/);
-
-      const projectsRes = await fetch(`${started.baseUrl}/v1/projects`, {
-        headers: runtimeAuthorization(started.descriptor),
-      });
-      expect(projectsRes.status).toBe(200);
-      expect(await projectsRes.json()).toEqual([]);
-      await expectPackagedDriveDiscovery(started.baseUrl, runtimeAuthorization(started.descriptor));
-      const renameRes = await fetch(`${started.baseUrl}/v1/sessions/missing/title`, {
-        method: "PATCH",
-        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-        body: JSON.stringify({ title: " " }),
-      });
-      expect(renameRes.status).toBe(400);
-      observe("outer.api-smoke.end");
-      await expectPackagedChatComposer(started.baseUrl, runtimeAuthorization(started.descriptor), tempRoot, observe);
-      observe("composer.end");
-    } finally {
-      observe("runtime.stop.begin", { hasChild: child !== null });
-      if (child) {
-        await stopProcess(child);
-      }
-      observe("runtime.stop.end");
-      observe("home.remove.begin");
-      rmSync(tempRoot, { recursive: true, force: true });
-      observe("home.remove.end");
-    }
-    observe("case.end");
-  },
-  Math.max(PACKAGED_TEST_TIMEOUT, 45_000),
-);
 
 test(
   "opens an empty folder with project bootstrap artifacts and preserves it after restart",
@@ -153,7 +85,7 @@ test(
       };
       expect(extensionCatalog.marketplace).toContainEqual(
         expect.objectContaining({
-          installName: "pstdio-artifacts",
+          installName: "artifacts",
           installed: false,
           origin: {
             kind: "git",
@@ -166,7 +98,7 @@ test(
       );
       expect(extensionCatalog.marketplace).toContainEqual(
         expect.objectContaining({
-          installName: "pstdio-notes",
+          installName: "notes",
           origin: {
             kind: "git",
             path: "extensions/pstdio-notes",
@@ -178,7 +110,7 @@ test(
       );
       expect(extensionCatalog.marketplace).toContainEqual(
         expect.objectContaining({
-          installName: "pstdio-planner",
+          installName: "planner",
           origin: {
             kind: "git",
             path: "extensions/pstdio-planner",

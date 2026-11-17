@@ -12,7 +12,7 @@ test("shares saved ticket views while keeping active views local", async ({
   const response = await request.post("/v1/projects", { data: folderProjectInput({ name: "Shared ticket views" }) });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
-  const path = `/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`;
+  const path = `/projects/${project.id}/extensions/pstdio.planner/tickets`;
   const secondContext = await browser.newContext({ baseURL: new URL(response.url()).origin });
   const setup = (projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
@@ -21,10 +21,21 @@ test("shares saved ticket views while keeping active views local", async ({
   await context.addInitScript(setup, project.id);
   await secondContext.addInitScript(setup, project.id);
   const second = await secondContext.newPage();
-  const boardPath = `/v1/projects/${project.id}/boards/pstdio.pstdio-planner.view.tickets/views`;
+  const boardPath = `/v1/projects/${project.id}/boards/pstdio.planner.view.tickets/views`;
   try {
-    await page.goto(path);
-    await second.goto(path);
+    await test.step("load both clients' initial board data", async () => {
+      await Promise.all(
+        [page, second].map(async (client) => {
+          const initialViews = client.waitForResponse(
+            (response) => new URL(response.url()).pathname === boardPath && response.request().method() === "GET",
+          );
+          const [response] = await Promise.all([initialViews, client.goto(path)]);
+          expect(await response.finished()).toBeNull();
+          expect(response.ok()).toBe(true);
+          await expect(client.getByRole("tab", { name: "All", exact: true })).toBeVisible();
+        }),
+      );
+    });
     await expect(second.getByRole("tab", { name: "All", exact: true })).toHaveAttribute("aria-selected", "true");
     await page.getByRole("button", { name: "Add view", exact: true }).click();
     const created = page.getByRole("tab", { name: "View 2", exact: true });
@@ -99,7 +110,7 @@ test("shares saved ticket views while keeping active views local", async ({
         "--project-id",
         project.id,
         "--board",
-        "pstdio.pstdio-planner.view.tickets",
+        "pstdio.planner.view.tickets",
         "--title",
         "Agent created",
         "--filter",
@@ -125,7 +136,7 @@ test("shares saved ticket views while keeping active views local", async ({
     await expect(second.getByRole("tab", { name: "Agent created", exact: true })).toBeVisible();
     const execute = async (name: string, params: Record<string, unknown>) => {
       const result = await request.post(
-        `/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.${name}/execute`,
+        `/v1/projects/${project.id}/extensions/commands/pstdio.planner.command.${name}/execute`,
         { data: { params } },
       );
       expect(result.ok(), await result.text()).toBe(true);

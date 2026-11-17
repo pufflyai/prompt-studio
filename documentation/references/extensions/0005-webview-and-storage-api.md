@@ -167,6 +167,8 @@ await refresh();
 const stop = client.events.subscribe(accountEvents.projectSyncChanged, refresh);
 ```
 
+On `main`, API 0.4.2 adds `client.account.query(source)`, a readonly retained query for `{service:"status"}`, `{service:"projectSyncStatus", projectId}` or `{service:"devices", accountId, managerOrigin}`. Declare `account.read` and observe it with `useWebviewCommandQuery(query, useWebviewVisibility())`. The runtime identity guard owns status; project and device reads are fenced by account and server identity. Optional view cancellation preserves another reader and the mandatory guard. Publish the matching host and SDK before independent adoption.
+
 The dashboard delivers `accountEvents.projectSyncChanged` only to webviews of the project that changed. The extension testbench does not provide an account; both capabilities answer `unsupported` there.
 
 ### Navigate from a webview
@@ -528,6 +530,8 @@ Declare `preferences.get` and `preferences.set` to save small view choices:
 await client.preferences.set("lastRange", "now-6h");
 const range = await client.preferences.get("lastRange");
 ```
+
+On `main`, API 0.4.2 adds `client.preferences.query(name, scope?)` under `preferences.get`. Its readonly query data is `{value}`: a loaded missing choice has `value: undefined`, while unread data is `undefined`. The host retains accepted choices across guest recreation, scopes invalidation to the effective preference project and keeps required `client.preferences.set` writes ordered after the guest closes. Observe through `useWebviewCommandQuery`; save through `set`, without publishing a second local snapshot. Publish the supporting host and SDK before independent adoption.
 
 An undeclared name belongs to the calling extension. Other extensions have separate values under the same name. Dashboard webviews store these values on the server, so browser reloads and Desktop restarts keep them, and other clients read the same values. `set` returns only after storage succeeds.
 

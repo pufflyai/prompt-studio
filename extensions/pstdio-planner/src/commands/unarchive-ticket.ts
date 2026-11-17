@@ -2,7 +2,7 @@ import { defineCommand, l10n } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { withTicketTagIds } from "../data/ticket-tags";
-import { plannerTicketsChanged } from "../events";
+import { emitPlannerTicketsChanged } from "../events";
 import { ticketMenuSlots } from "../resource-kinds";
 import { ticketRefFromCommandContext } from "./ticket-command-ref";
 
@@ -11,7 +11,9 @@ export const unarchiveTicketCommand = defineCommand({
   id: "unarchive-ticket",
   mutating: true,
   title: "Unarchive ticket",
-  cli: { globalAliases: [["tickets", "unarchive"]], examples: ["pstdio tickets unarchive --id PS-1"] },
+  cli: {
+    examples: ["pstdio pstdio.planner unarchive-ticket --id PS-1"],
+  },
   menus: [
     {
       slot: ticketMenuSlots.headerOverflow,
@@ -28,7 +30,7 @@ export const unarchiveTicketCommand = defineCommand({
 
     const next = { ...existing, archived: false, updatedAt: new Date().toISOString() };
     await ticketsCollection(ctx).put(next.id, next);
-    await ctx.events.emit(plannerTicketsChanged, { ticketId: next.id });
+    await emitPlannerTicketsChanged(ctx, { ticketId: next.id });
     return withTicketTagIds(next);
   },
 });

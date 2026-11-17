@@ -84,6 +84,7 @@ export {
   workspaceSlots,
   worktreeEvents,
 } from "pstdio-api-contracts/extension-kernel";
+export { deriveMarkdownTitle, resolveSelectedValues } from "pstdio-sync-contracts";
 export { SDK_VERSION } from "../version";
 export { CommandOutcomeError, type CommandResponse, getCommandValue, unwrapCommandOutcome } from "./command-outcome";
 export { commandRefId, contributionRefId } from "./contribution-reference";
@@ -237,4 +238,5 @@ export type { WebviewCommandQuery, WebviewCommandQueryOptions } from "./webview-
 export type { WebviewPageClient } from "./webview-page-client";
 export type { WebviewPerformanceClient } from "./webview-performance-client";
 export { createWebviewQueryClient, type WebviewQueryDescriptor } from "./webview-query";
+export type { WebviewServiceQuery } from "./webview-service-query";
 export type { CommandStream, CommandStreamOptions, WebviewStreamsClient } from "./webview-streams";

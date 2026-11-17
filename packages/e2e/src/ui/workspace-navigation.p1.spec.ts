@@ -47,7 +47,7 @@ test("project files keep project navigation and workspaces open their own sessio
     await page.goto(`/projects/${projectId}`);
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     await (await showSidenavEntry(page, "Files")).click();
-    await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-workspaces\/files\?/);
+    await expect(page).toHaveURL(/\/extensions\/pstdio\.workspaces\/files\?/);
     await expect(sidenav.locator('[data-tree-list-node-id="workspace-sessions"]')).toHaveCount(0);
     await (await showSidenavEntry(page, "Workspaces")).click();
     await page
@@ -56,7 +56,7 @@ test("project files keep project navigation and workspaces open their own sessio
       .filter({ hasText: workspace.workspace_shorthand })
       .first()
       .click();
-    await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-workspaces\/workspace\?/);
+    await expect(page).toHaveURL(/\/extensions\/pstdio\.workspaces\/workspace\?/);
     const session = sidenav.getByRole("option", { name: "Workspace session", exact: true });
     await expect(session).toBeVisible();
     await expect(sidenav.getByRole("option", { name: "Folder session", exact: true })).toHaveCount(0);

@@ -67,11 +67,14 @@ describe("queryTicketsCommand", () => {
     expect(result.rows.map((row) => row.title)).toEqual(["Archived"]);
   });
 
-  test("projects incoming workspaces and outgoing artifacts into the same display preference", async () => {
+  test.each([
+    "pstdio.pstdio-planner",
+    "pstdio.planner",
+  ])("projects incoming workspaces and outgoing artifacts for host owner %s", async (extensionId) => {
     const storage = createMemoryStorage();
     await putTicket(storage, makeTicket({}));
-    const ctx = makeCommandContext({ storage, params: {} });
-    const ticket = { type: "ticket", id: "ticket-1", extensionId: "pstdio.pstdio-planner", projectId: ctx.projectId };
+    const ctx = makeCommandContext({ storage, params: {}, overrides: { extensionId } });
+    const ticket = { type: "ticket", id: "ticket-1", extensionId, projectId: ctx.projectId };
     const workspace = {
       type: "workspace",
       id: "workspace",

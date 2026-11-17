@@ -73,7 +73,7 @@ export const HarnessParamField = (props: HarnessParamFieldProps) => {
     value: agent.id,
     disabled: agent.availability.type === "NOT_FOUND",
     description: agent.availability.reason,
-    icon: agent.icon ? () => <ExtensionIcon name={agent.icon} /> : undefined,
+    icon: agent.icon ? () => <ExtensionIcon name={agent.icon} size="xs" /> : undefined,
   }));
   const modelOptions = models.map((entry) => ({
     label: entry.label ?? entry.id,

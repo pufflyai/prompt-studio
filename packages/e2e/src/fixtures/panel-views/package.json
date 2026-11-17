@@ -6,7 +6,7 @@
   "publisher": "test",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.3.0 || ^0.4.0"
+    "pstdio": "^0.3.0 || ^0.4.0 || ^0.5.0"
   },
   "private": true,
   "type": "module",

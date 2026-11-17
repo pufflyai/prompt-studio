@@ -13,6 +13,8 @@ const commandParamDescriptorSchema = z
 
 export const extensionCommandRecordSchema = z.object({
   id: z.string(),
+  /** Structured identity for clients that retain historical contribution references. */
+  localId: z.string().optional(),
   extensionId: z.string(),
   title: localizableStringSchema,
   description: localizableStringSchema.optional(),
@@ -22,6 +24,15 @@ export const extensionCommandRecordSchema = z.object({
   automation: z.boolean().optional(),
   copyResultToClipboard: z.boolean().optional(),
   mutating: z.boolean().optional(),
+  confirmation: z
+    .object({
+      kind: z.literal("delete"),
+      confirmedParam: z.string(),
+      subjectParam: z.string().optional(),
+      description: localizableStringSchema.optional(),
+      buttonLabel: localizableStringSchema.optional(),
+    })
+    .optional(),
   resourceMutation: z
     .discriminatedUnion("kind", [
       z.object({ kind: z.literal("rename"), resourceType: z.string(), idParam: z.string(), labelParam: z.string() }),

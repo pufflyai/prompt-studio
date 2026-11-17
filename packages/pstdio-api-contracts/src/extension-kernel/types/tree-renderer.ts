@@ -77,16 +77,29 @@ export interface TreeSectionEmptyState {
 
 export type TreeNodeRowVariant = "empty-state" | "file";
 
+/** A display-only tag after a tree row's label. Uses the same shape as kanban `badge-list` items, without actions. */
+export interface TreeNodeTag {
+  id: string;
+  label: string;
+  icon?: string;
+  color?: string;
+  tooltip?: string;
+}
+
 export interface TreeNode {
   id: string;
   label: Localizable<string>;
   icon?: string;
   iconColor?: string;
+  /** Subdued foreground without disabling row actions or navigation. */
+  tone?: "default" | "muted";
   /** File icon theme hint for native file rows. */
   fileName?: string;
   showContextMenuTrigger?: boolean;
   /** Trailing count, using the same badge as notification counts. */
   badge?: { label: string; color?: string };
+  /** Tags after the label and before the count badge. Two show; the rest collapse into "+N". */
+  tags?: TreeNodeTag[];
   iconTooltip?: string;
   /** Shown while the pointer rests on the row or the row has keyboard focus. `iconTooltip` covers only the icon. */
   tooltip?: string;

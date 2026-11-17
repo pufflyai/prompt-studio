@@ -6,23 +6,23 @@ import {
   ticketToMarkdown,
   writeTicketMarkdown,
 } from "../data/draft-storage";
-import { readMigratedTickets } from "../data/read-migrated-tickets";
+import { appendTicketPositionFromStorage } from "../data/indexed-ticket-order";
+import { ensureTicketStorage } from "../data/read-migrated-tickets";
 import { resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { ticketTagsForIds } from "../data/tag-cardinality";
 import { allocateTicketIdentity } from "../data/ticket-identity";
-import { appendTicketPosition, withTicketOrder } from "../data/ticket-order";
+import { withTicketOrder } from "../data/ticket-order";
 
-// `pst tickets write`: create a draft ticket in extension storage and lay down its
-// local `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/ticket.md` via the host file primitive. The
-// draft is later reconciled with edits by `pst tickets save`.
+// `pst pstdio.planner write-ticket`: create a draft ticket in extension storage and lay down its
+// local `.pstdio/extension-storage/pstdio.planner/tickets/<shorthand>/ticket.md` via the host file primitive. The
+// draft is later reconciled with edits by `pst pstdio.planner save-ticket`.
 export const writeTicketCommand = defineCommand({
   id: "write-ticket",
   mutating: true,
   title: "Write draft ticket",
   cli: {
-    globalAliases: [["tickets", "write"]],
-    examples: ["pstdio tickets write --title 'Fix login' --status TODO --tags High"],
+    examples: ["pstdio pstdio.planner write-ticket --title 'Fix login' --status TODO --tags High"],
   },
   params: {
     title: params.text({ required: true }),
@@ -49,8 +49,8 @@ export const writeTicketCommand = defineCommand({
     const parentId = commandParams.parent !== undefined ? await resolveTicketId(ctx, commandParams.parent) : null;
 
     const ticket = await withTicketOrder(ctx, async () => {
-      const existing = await readMigratedTickets(ctx);
-      const position = appendTicketPosition(ctx.storage, existing);
+      await ensureTicketStorage(ctx);
+      const position = await appendTicketPositionFromStorage(ctx.storage);
       return putTicket(ctx, {
         id,
         title: commandParams.title,
@@ -70,7 +70,7 @@ export const writeTicketCommand = defineCommand({
       });
     });
 
-    await writeTicketMarkdown(projectFiles, ticket, await ticketToMarkdown(ctx, ticket));
+    await writeTicketMarkdown(projectFiles, ticket, await ticketToMarkdown(ctx, ticket), ctx.extensionId);
     return { shorthand: ticket.shorthand, path: resolvePath(ticketMarkdownPath(ticket.shorthand)) };
   },
 });

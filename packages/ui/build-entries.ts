@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 export const entries = {
+  "dashboard-renderer": path.resolve(import.meta.dirname, "src/components/dashboard-renderer/index.ts"),
   charts: path.resolve(import.meta.dirname, "src/components/charts/index.ts"),
   "keyframe-timeline": path.resolve(import.meta.dirname, "src/components/keyframe-timeline/index.ts"),
   index: path.resolve(import.meta.dirname, "src/index.ts"),

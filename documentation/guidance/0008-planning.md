@@ -36,7 +36,7 @@
 ## 4. Tickets and extension scope
 
 1. Manage tickets with the `pst` CLI.
-2. After editing a ticket, save it with `pst tickets save --id PS-XXX`.
+2. After editing a ticket, save it with `pst pstdio.planner save-ticket --id PS-XXX`.
 3. Use `pst --help` for command help.
 4. When asked to edit extensions, do not update templates in `packages/pstdio/files`.
 

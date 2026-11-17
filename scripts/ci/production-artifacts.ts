@@ -45,7 +45,7 @@ const repoRoot = join(import.meta.dir, "..", "..");
 // bare names and join them with `/`. Every platform then names the policy the same way.
 export const productionPolicyFiles = () =>
   [
-    ...[...new Bun.Glob("production-*.ts").scanSync(join(repoRoot, "scripts/ci"))].map((name) => `scripts/ci/${name}`),
+    ...[...new Bun.Glob("*.ts").scanSync(join(repoRoot, "scripts/ci"))].map((name) => `scripts/ci/${name}`),
     ...[...new Bun.Glob("production-*.yml").scanSync(join(repoRoot, ".github/workflows"))].map(
       (name) => `.github/workflows/${name}`,
     ),
@@ -64,7 +64,7 @@ export const productionPolicyFiles = () =>
     "bun.lock",
     "package.json",
   ]
-    .filter((path) => !path.endsWith(".test.ts"))
+    .filter((path) => !/\.(?:test|test-fixture)\.ts$/.test(path))
     .sort();
 
 export const productionPolicyDigest = () => {

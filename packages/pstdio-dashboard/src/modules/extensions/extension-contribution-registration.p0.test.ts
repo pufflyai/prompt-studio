@@ -142,7 +142,7 @@ describe("registerExtensionContributions", () => {
 describe("localizeDashboardExtensionCommandResponse", () => {
   test("resolves command result labels before native views render them", () => {
     const response = localizeDashboardExtensionCommandResponse({
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       outcome: {
         status: "success",
         value: {

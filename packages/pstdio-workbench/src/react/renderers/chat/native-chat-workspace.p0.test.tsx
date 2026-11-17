@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createChatSession } from "../../../extensions/contributions/chat-session";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
-import { NativeChatAttachmentActions } from "./native-chat-attachments";
+import { NativeChatAttachmentActions, NativeChatAttachmentList } from "./native-chat-attachments";
 import { NativeChatControls } from "./native-chat-controls";
 import { NativeChatWorkspace } from "./native-chat-workspace";
 
@@ -158,4 +158,18 @@ test("device selection exists only with multiple choices; saved remote identity 
   const saved = render([{ id: "laptop", name: "Laptop" }], true);
   expect(saved).toContain('data-testid="session-device"');
   expect(saved).not.toContain('aria-label="Select device"');
+});
+
+test("clearing draft attachments removes the tray even while attachment metadata is stale", () => {
+  const markup = renderToStaticMarkup(
+    <WorkbenchThemeProvider>
+      <NativeChatAttachmentList
+        attachments={[]}
+        resolvedAttachments={[{ id: "old", name: "removed.png", mediaType: "image/png" }]}
+        disabled={false}
+        remove={() => {}}
+      />
+    </WorkbenchThemeProvider>,
+  );
+  expect(markup).not.toContain("removed.png");
 });

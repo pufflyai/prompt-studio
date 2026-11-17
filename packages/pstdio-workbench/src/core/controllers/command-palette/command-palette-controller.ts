@@ -68,7 +68,9 @@ export interface WorkbenchCommandPaletteController {
   toggle(): void;
   requestConfirmation(
     label: string,
-    options?: Pick<WorkbenchCommandConfirmation, "description" | "buttonLabel" | "onConfirm">,
+    options?: Pick<WorkbenchCommandConfirmation, "description" | "buttonLabel" | "onConfirm"> & {
+      signal?: AbortSignal;
+    },
   ): Promise<boolean>;
   requestParams(request: WorkbenchCommandParamsRequest): void;
   clearParams(): void;
@@ -139,17 +141,30 @@ export const createWorkbenchCommandPaletteController = (
       setOpenState({ open: !internal.getState().open, view: "main", initialQuery: "", resourceSearch: null });
     },
     requestConfirmation(label, options) {
+      const { signal, onConfirm, ...presentation } = options ?? {};
+      if (signal?.aborted) return Promise.resolve(false);
       internal.getState().confirmation?.resolve(false);
       return new Promise<boolean>((resolve) => {
+        const abort = () => confirmation.resolve(false);
         const confirmation = {
           label,
-          ...options,
+          ...presentation,
+          ...(onConfirm
+            ? {
+                onConfirm: async () => {
+                  if (internal.getState().confirmation !== confirmation || signal?.aborted) return;
+                  await onConfirm();
+                },
+              }
+            : {}),
           resolve: (confirmed: boolean) => {
+            signal?.removeEventListener("abort", abort);
             if (internal.getState().confirmation === confirmation)
               internal.setState({ ...internal.getState(), confirmation: null });
-            resolve(confirmed);
+            resolve(confirmed && !signal?.aborted);
           },
         };
+        signal?.addEventListener("abort", abort, { once: true });
         internal.setState({ ...internal.getState(), confirmation });
       });
     },

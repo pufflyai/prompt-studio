@@ -66,6 +66,12 @@ Omitting `idPrefix` preserves canonical UUID output. Invalid ID prefixes fail be
 allocating a shorthand number. The resource kind's declared uppercase shorthand
 prefix and this lowercase ID prefix are separate: `idPrefix` never changes `PS-123`.
 
+On `main`, `resources.allocateMany({ kind, count, idPrefix? })` allocates 1 to 100 IDs
+and consecutive shorthands for one kind in a single save and returns them in order.
+Later `allocate` calls continue after the batch. Use it when an extension creates many
+resources at once, such as an import, and save the resources themselves in
+`storage.records.commit` groups. It shares API 0.5.0.
+
 Treat IDs as exact, case-sensitive strings and retain owner fields in references.
 An ID prefix is a readable label, not a globally registered resource type. Existing
 UUIDs are not rewritten, and existing core extension callers keep UUID output until
@@ -172,4 +178,26 @@ number is saved locally. Use it to refresh displayed numbers and generated refer
 The host handles collision repair and alias storage; extensions need no sync code.
 Workspace numbers (`WS-`) are separate and do not use this API.
 
-*Updated at: 2026-11-03*
+### Bounded related history (unreleased API 0.4.2)
+
+Use `ctx.resources.queryRelated({ resources, direction: "both", limit: 100 })`
+for one page of distinct related resources from the shared project link index.
+At most 100 selected references are accepted. `kind`, `owner`, and `excludeKinds`
+filter before pagination. A resource linked in both directions or to several
+selected resources occurs once. Resolve only that page with `resolveMany`.
+
+Personal remote history has its own provider. Use
+`ctx.workspaces.query({ anchors: [resource], limit: 100 })` to include active
+local and signed-in remote workspaces. This matches either link direction and
+honors project and owner qualifiers. `anchors: []` matches nothing; omitted
+anchors queries the project's active workspaces. Follow `nextCursor` for more.
+The HTTP client's `workspaces.query(projectId, input)` accepts the same selection.
+
+Use `ctx.sessions.query({ anchor: resource, includeWorkspaceAnchors: true,
+orderBy: "lastActivity", limit: 100 })` for direct session links and sessions in
+related active workspaces, deduplicated before pagination. This includes private
+remote workspace memberships. Session title `search` is a literal,
+case-insensitive substring applied before the limit. Each query defaults to 50
+rows and clamps its limit to 1–200. Resource-link pages default to 100 and cap at 100.
+
+*Updated at: 2026-11-14*

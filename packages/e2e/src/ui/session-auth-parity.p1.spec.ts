@@ -19,7 +19,7 @@ test("native auth checking stays quiet and sign-in replaces only empty conversat
     await route.fulfill({ json: { status: "signed_out", providers: [] } });
   });
   try {
-    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations/compose`);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.session-browser/conversations/compose`);
     const main = page.locator('[data-workbench-region="main"]');
     const editor = main.locator('[data-testid="content-editable"][contenteditable="true"]');
     await expect.poll(() => entered).toBe(true);
@@ -53,9 +53,7 @@ test("native auth checking stays quiet and sign-in replaces only empty conversat
       .poll(async () => (await (await request.get(`/v1/sessions/${saved.id}`)).json()).status)
       .toBe("completed");
     const resource = encodeURIComponent(`pstdio://extension-resource/session/${saved.id}`);
-    await page.goto(
-      `/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversation?resource=${resource}`,
-    );
+    await page.goto(`/projects/${project.id}/extensions/pstdio.session-browser/conversation?resource=${resource}`);
     await expect(main.getByRole("button", { name: "Sign in", exact: true })).toHaveCount(1);
     await expect(main.locator("[data-chat-message-id]")).not.toHaveCount(0);
     await expect(main.getByText("Saved before sign-out", { exact: true })).toBeVisible();

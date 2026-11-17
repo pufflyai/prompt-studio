@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import type { ExtensionRuntime } from "pstdio-extensions";
+import { readProjectComposition } from "../projects/project-composition";
 import type { ExtensionsRouteDeps, ExtensionWebviewMetadataDeps } from "./deps";
 import { buildAutomationRecords } from "./extension-automations";
 import { resolvePstdioHome } from "./install-extension-source";
@@ -130,6 +131,7 @@ export const assembleWorkbenchMetadata = async (
 
   return {
     ...metadata,
+    composition: await readProjectComposition(deps, projectId),
     projectSetups: projectSetups.filter((setup) => setup !== undefined),
     automations,
     ...supplementalMetadata(runtime),

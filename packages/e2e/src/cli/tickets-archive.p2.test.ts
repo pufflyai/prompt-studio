@@ -29,15 +29,15 @@ const createInitializedRepo = (name: string) => {
   return repo;
 };
 
-describe("pstdio tickets archive", () => {
+describe("pstdio pstdio.planner archive-ticket", () => {
   test(
     "archives a ticket",
     () => {
       const repo = createInitializedRepo("tk-archive");
 
-      const { shorthand } = JSON.parse(run('tickets create --content "Archive me"', repo));
+      const { shorthand } = JSON.parse(run('pstdio.planner create-ticket --content "Archive me"', repo));
 
-      const archived = JSON.parse(run(`tickets archive --id ${shorthand}`, repo));
+      const archived = JSON.parse(run(`pstdio.planner archive-ticket --id ${shorthand}`, repo));
 
       expect(archived.shorthand).toBe(shorthand);
       expect(archived.archived).toBe(true);
@@ -50,14 +50,14 @@ describe("pstdio tickets archive", () => {
     () => {
       const repo = createInitializedRepo("tk-archive-visible");
 
-      const { shorthand } = JSON.parse(run('tickets create --content "Visible archived"', repo));
+      const { shorthand } = JSON.parse(run('pstdio.planner create-ticket --content "Visible archived"', repo));
 
-      run(`tickets archive --id ${shorthand}`, repo);
+      run(`pstdio.planner archive-ticket --id ${shorthand}`, repo);
 
-      const byDefault = JSON.parse(run("tickets list", repo));
+      const byDefault = JSON.parse(run("pstdio.planner list-tickets", repo));
       expect(byDefault.map((ticket: { title: string }) => ticket.title)).not.toContain("Visible archived");
 
-      const tickets = JSON.parse(run("tickets list --archived", repo));
+      const tickets = JSON.parse(run("pstdio.planner list-tickets --archived", repo));
       expect(tickets.map((ticket: { title: string }) => ticket.title)).toContain("Visible archived");
     },
     TEST_TIMEOUT,
@@ -68,11 +68,11 @@ describe("pstdio tickets archive", () => {
     () => {
       const repo = createInitializedRepo("tk-archive-active");
 
-      run('tickets create --content "Active ticket"', repo);
-      const { shorthand } = JSON.parse(run('tickets create --content "Archived ticket"', repo));
-      run(`tickets archive --id ${shorthand}`, repo);
+      run('pstdio.planner create-ticket --content "Active ticket"', repo);
+      const { shorthand } = JSON.parse(run('pstdio.planner create-ticket --content "Archived ticket"', repo));
+      run(`pstdio.planner archive-ticket --id ${shorthand}`, repo);
 
-      const archivedOnly = JSON.parse(run("tickets list --archived", repo));
+      const archivedOnly = JSON.parse(run("pstdio.planner list-tickets --archived", repo));
       expect(archivedOnly.map((ticket: { title: string }) => ticket.title)).toEqual(["Archived ticket"]);
     },
     TEST_TIMEOUT,
@@ -83,7 +83,7 @@ describe("pstdio tickets archive", () => {
     () => {
       const repo = createInitializedRepo("tk-archive-missing");
 
-      const output = JSON.parse(run("tickets archive --id MISSING-99", repo));
+      const output = JSON.parse(run("pstdio.planner archive-ticket --id MISSING-99", repo));
 
       expect(output).toBeNull();
     },
@@ -95,10 +95,10 @@ describe("pstdio tickets archive", () => {
     () => {
       const repo = createInitializedRepo("tk-archive-twice");
 
-      const { shorthand } = JSON.parse(run('tickets create --content "Double archive"', repo));
+      const { shorthand } = JSON.parse(run('pstdio.planner create-ticket --content "Double archive"', repo));
 
-      run(`tickets archive --id ${shorthand}`, repo);
-      const archived = JSON.parse(run(`tickets archive --id ${shorthand}`, repo));
+      run(`pstdio.planner archive-ticket --id ${shorthand}`, repo);
+      const archived = JSON.parse(run(`pstdio.planner archive-ticket --id ${shorthand}`, repo));
 
       expect(archived.archived).toBe(true);
     },
@@ -106,20 +106,20 @@ describe("pstdio tickets archive", () => {
   );
 });
 
-describe("pstdio tickets unarchive", () => {
+describe("pstdio pstdio.planner unarchive-ticket", () => {
   test(
     "returns an archived ticket to the default list",
     () => {
       const repo = createInitializedRepo("tk-unarchive");
 
-      const { shorthand } = JSON.parse(run('tickets create --content "Restore me"', repo));
-      run(`tickets archive --id ${shorthand}`, repo);
+      const { shorthand } = JSON.parse(run('pstdio.planner create-ticket --content "Restore me"', repo));
+      run(`pstdio.planner archive-ticket --id ${shorthand}`, repo);
 
-      const restored = JSON.parse(run(`tickets unarchive --id ${shorthand}`, repo));
+      const restored = JSON.parse(run(`pstdio.planner unarchive-ticket --id ${shorthand}`, repo));
       expect(restored.shorthand).toBe(shorthand);
       expect(restored.archived).toBe(false);
 
-      const byDefault = JSON.parse(run("tickets list", repo));
+      const byDefault = JSON.parse(run("pstdio.planner list-tickets", repo));
       expect(byDefault.map((ticket: { shorthand: string }) => ticket.shorthand)).toEqual([shorthand]);
     },
     TEST_TIMEOUT,

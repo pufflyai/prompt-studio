@@ -1,13 +1,14 @@
 import { selectBrowserSmokeFiles } from "./browser-smoke-selection";
 import type { CiPlanRequest } from "./ci-native-test-plan";
 import { nativeCiRequests } from "./ci-native-test-plan";
+import { nativeSourceGroups, selectWindowsSourceContracts } from "./native-source-coverage";
 import type { resolveCiScope } from "./pull-request-ci-scope";
 import type { TestPackage } from "./runner-profiles";
 import { priorityFromFile, testRunner } from "./test-discovery";
+import { shardTestFiles } from "./test-file-shards";
 import { createTestPlan, mergeTestPlans, type PlanInput, type SourceIdentity, sealTestPlan } from "./test-plan";
 import { matchesPlatform, quarantineRegistry, quarantineRunnerForTest } from "./test-quarantine";
 import { createTestRuns } from "./test-runs";
-import { createWindowsUnitPlan } from "./test-selection-windows";
 import type { TestTimingSnapshot } from "./test-timing-snapshot";
 
 type Scope = ReturnType<typeof resolveCiScope>;
@@ -88,13 +89,11 @@ export const createCiTestPlan = (
         tests.filter((file) => testRunner(file) === "browser-helper" && priorityFromFile(file) === "P1"),
       );
   }
-  for (const row of scope.packagedMatrix)
-    add(
-      `packaged-${row.suite}-${row.priority}-${row.shard}`,
-      (JSON.parse(row.files) as string[]).map((file) => `packages/e2e/${file}`),
-      { shard: row.shard },
-    );
-  if (scope.production && !scope.windowsOnly)
+  for (const row of scope.packagedMatrix) {
+    const request = packagedRequest(row);
+    add(request.job, request.files, request.extra);
+  }
+  if (scope.production && !scope.diagnosticPlatform && scope.harnessCli)
     add(
       "cli",
       tests.filter((file) => testRunner(file) === "cli" && priorityFromFile(file) !== "P3"),
@@ -105,35 +104,28 @@ export const createCiTestPlan = (
   return sealTestPlan({ ...body, emptyJobs });
 };
 
+const packagedRequest = (row: Scope["packagedMatrix"][number]) => {
+  const job = `packaged-${row.suite}-${row.priority}-${row.shard}`;
+  const files = (JSON.parse(row.files) as string[]).map((file) => `packages/e2e/${file}`);
+  // Own browser file assignment here: Playwright's whole-file case sharding can leave a row empty.
+  if (row.suite === "browser") return { job, files: shardTestFiles(files, { shard: row.shard }).files, extra: {} };
+  return { job, files, extra: { shard: row.shard } };
+};
+
 const windowsRequests = (scope: Scope, tests: string[], packages: TestPackage[]) => {
   const requests: CiPlanRequest[] = [];
   if (!scope.windows) return requests;
-  {
-    const win = { platform: "win32", arch: "x64" };
-    for (let index = 1; index <= 4; index++) {
-      const shard = `${index}/4`;
-      for (const run of createWindowsUnitPlan(tests, packages, shard))
+  for (const group of nativeSourceGroups)
+    for (const priority of ["P0", "P1", "P2"] as const)
+      for (const run of createTestRuns(selectWindowsSourceContracts(tests, group), packages, priority))
         requests.push({
-          job: `windows-unit-${shard}`,
+          job: `windows-native-${group}`,
           files: run.files,
-          extra: { target: win, windowsAllowance: run.owner !== "pstdio-wt" },
+          extra: {
+            target: { platform: "win32", arch: "x64" },
+            windowsAllowance: !["pstdio-wt", "pstdio-api"].includes(run.owner),
+          },
         });
-    }
-    for (const [owner, count] of [
-      ["pstdio-api", 8],
-      ["pstdio-db", 4],
-    ] as const) {
-      const pkg = packages.find((entry) => entry.name === owner);
-      if (!pkg) continue;
-      const files = tests.filter((file) => file.startsWith(`${pkg.dir}/`) && /\.p[012]\.test\.tsx?$/.test(file)).sort();
-      for (let index = 1; index <= count; index++)
-        requests.push({
-          job: `windows-database-${owner}-${index}/${count}`,
-          files: files.filter((_, position) => position % count === index - 1),
-          extra: { target: win, windowsAllowance: owner !== "pstdio-api" },
-        });
-    }
-  }
   return requests;
 };
 

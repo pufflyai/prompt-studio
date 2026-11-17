@@ -81,7 +81,10 @@ export interface TreeNode {
   iconElement?: unknown;
   fileName?: string;
   iconColor?: string;
+  /** Subdued foreground without disabling row actions or navigation. */
+  tone?: "default" | "muted";
   badge?: { label: string; color?: string };
+  tags?: { id: string; label: string; icon?: string; color?: string; tooltip?: string }[];
   iconTooltip?: string;
   tooltip?: string;
   endContent?: unknown;
@@ -170,6 +173,8 @@ export interface TreeRendererContribution {
   defaultExpandedNodeIds?: string[];
   /** Identify the navigation data scope when it differs from the current page resource. */
   getReadKey?(ctx: TreeQueryContext): string;
+  /** Observe change hints only while this tree query has a mounted presentation. */
+  subscribe?(ctx: TreeQueryContext, invalidate: () => void): () => void;
   /** Synchronous layout available before the first content read. */
   getStructure?(ctx: TreeQueryContext): TreeViewSection[];
   getHeaderStructure?(ctx: TreeQueryContext): TreeViewSection[];

@@ -22,7 +22,7 @@ const setup = () => {
   workbench.registerModule(createSessionsModule());
   registerSessionProvider(workbench);
   workbench.registerModule(createRecentResourcesModule());
-  const home = { kind: "page" as const, id: "home", extensionId: "pstdio.pstdio-home" };
+  const home = { kind: "page" as const, id: "home", extensionId: "pstdio.home" };
   workbench.views.registerView({ id: "home-view", title: "Home", body: { kind: "react", render: () => null } });
   workbench.pages.registerPage({
     id: "home",

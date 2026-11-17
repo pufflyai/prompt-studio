@@ -1,4 +1,5 @@
 import { boardViewCreateSchema, boardViewUpdateSchema } from "pstdio-api-contracts";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionViewsApi, ViewRef } from "pstdio-api-contracts/extension-kernel";
 import { createBoardViewsService } from "../../views/board-views-service";
 import { BoardViewError } from "../../views/view-rules";
@@ -10,7 +11,8 @@ export const createViewsApi = (
   input: { projectId: string; extensionId: string },
 ): ExtensionViewsApi => {
   const service = createBoardViewsService(deps);
-  const boardId = (board: ViewRef) => `${board.extensionId ?? input.extensionId}.view.${board.id}`;
+  const boardId = (board: ViewRef) =>
+    `${canonicalExtensionId(board.extensionId ?? input.extensionId)}.view.${board.id}`;
   const requireView = async (board: ViewRef, id: string) => {
     const view = await service.get(input.projectId, id);
     if (view.boardId !== boardId(board)) throw new BoardViewError("View does not belong to this board", 404);

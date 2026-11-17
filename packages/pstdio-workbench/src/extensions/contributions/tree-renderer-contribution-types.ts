@@ -44,9 +44,12 @@ export interface ExtensionTreeNode {
   label: Localizable<string>;
   icon?: string;
   iconColor?: string;
+  /** Subdued foreground without disabling row actions or navigation. */
+  tone?: "default" | "muted";
   fileName?: string;
   showContextMenuTrigger?: boolean;
   badge?: import("@pstdio/sdk/extensions").TreeNode["badge"];
+  tags?: import("@pstdio/sdk/extensions").TreeNode["tags"];
   iconTooltip?: string;
   tooltip?: string;
   resource?: ExtensionTreeResource;

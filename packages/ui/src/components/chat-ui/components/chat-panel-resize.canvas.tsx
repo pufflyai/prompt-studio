@@ -3,14 +3,23 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useEffect, useState } from "react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import { ChatPanel } from "./chat-panel";
+import { useResizeFollowEvidence } from "./chat-panel-resize-evidence";
 import type { SessionMessage } from "./message-types";
 
 function FollowingControls(props: { onHide: () => void }) {
   const { onHide } = props;
   const { stopScroll, scrollToBottom } = useStickToBottomContext();
+  const record = useResizeFollowEvidence();
   return (
     <HStack>
-      <Button onClick={stopScroll}>Stop following</Button>
+      <Button
+        onClick={() => {
+          stopScroll();
+          record("stopped");
+        }}
+      >
+        Stop following
+      </Button>
       <Button onClick={() => void scrollToBottom("instant")}>Follow latest</Button>
       <Button
         onClick={() => {
@@ -56,7 +65,7 @@ function ResizingConversation() {
     })),
   ];
   return (
-    <Stack w="1200px" maxW="full" gap="sm">
+    <Stack data-chat-resize-fixture w="1200px" maxW="full" gap="sm">
       <HStack>
         <Button onClick={() => setHidden((current) => !current)}>
           {hidden ? "Show conversation" : "Hide conversation"}

@@ -7,7 +7,7 @@ const createContext = (core: WorkbenchCore) => {
   const listeners = new Set<() => void>();
   const context = {
     id: crypto.randomUUID(),
-    assertCurrent(projectId: string) {
+    assertCurrent(projectId: string | undefined) {
       if (
         isWorkbenchRetiring(core) ||
         !core.activation.isActive() ||

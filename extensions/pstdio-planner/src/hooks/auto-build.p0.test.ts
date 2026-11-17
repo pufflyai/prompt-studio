@@ -20,7 +20,7 @@ async function fixture() {
           const run: AutomationRun = {
             id: crypto.randomUUID(),
             projectId: "proj-1",
-            commandId: "pstdio-planner.command.auto-build",
+            commandId: `${ctx.extensionId}.command.auto-build`,
             status: "queued",
             createdAt: new Date().toISOString(),
             startedAt: null,

@@ -6,6 +6,7 @@ import { createRendererMutationBinding } from "./renderer-mutations";
 import { useWorkbenchConnection } from "./workbench-connection-provider";
 
 interface RendererReadOptions<T> {
+  enabled?: boolean;
   workbench: WorkbenchCore;
   ownerKey: string;
   /** What the read is about. A new key drops the old value and loads again. */
@@ -35,12 +36,14 @@ interface ReadState<T> {
 }
 
 export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
-  const { workbench, ownerKey, queryKey, refreshKey } = options;
+  const { workbench, ownerKey, queryKey, refreshKey, enabled = true } = options;
   const connected = useWorkbenchConnection();
   const scopeKey = JSON.stringify([options.queryScope, options.sourceId, options.dependency, options.queryEvents]);
   const [scopeRevision, setScopeRevision] = useState(0);
   const identity = JSON.stringify([queryKey, scopeKey, scopeRevision]);
-  const warm = workbench.views.reads.peek<T>({ ...options, queryKey: JSON.stringify([queryKey, refreshKey]) });
+  const warm = enabled
+    ? workbench.views.reads.peek<T>({ ...options, queryKey: JSON.stringify([queryKey, refreshKey]) })
+    : undefined;
   const [state, setState] = useState<ReadState<T>>(() => ({
     queryKey: identity,
     value: warm?.data,
@@ -64,6 +67,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
   // Query identity controls ownership. Rendering a new callback must not start another read.
   // biome-ignore lint/correctness/useExhaustiveDependencies: A connection change reloads views after missed sync events, including local contributions.
   useEffect(() => {
+    if (!enabled) return;
     if (!connected) {
       workbench.views.reads.markStale({
         ...callbacks.current,
@@ -138,7 +142,23 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
             setState({ queryKey: identity, loading: true });
             setScopeRevision((revision) => revision + 1);
           },
-          load: current.load,
+          load: (signal, publish) => {
+            const latest = callbacks.current;
+            const latestScope = JSON.stringify([
+              latest.queryScope,
+              latest.sourceId,
+              latest.dependency,
+              latest.queryEvents,
+            ]);
+            // Presentation enrichment can update the loader without changing its query.
+            // A surviving peer must still use the original scope after this presenter leaves it.
+            const sameQuery =
+              latest.workbench === workbench &&
+              latest.queryKey === queryKey &&
+              latest.refreshKey === current.refreshKey &&
+              latestScope === scopeKey;
+            return (sameQuery ? latest : current).load(signal, publish);
+          },
           onProgress: (value: T) => {
             // A replacement keeps even a partial snapshot. Progress within its original read still grows.
             startTransition(() =>
@@ -173,7 +193,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
       readBinding.current = undefined;
       binding.dispose();
     };
-  }, [workbench, ownerKey, queryKey, scopeKey, scopeRevision, connected]);
+  }, [workbench, ownerKey, queryKey, scopeKey, scopeRevision, connected, enabled]);
   useEffect(() => {
     if (lastRefreshKey.current === refreshKey) return;
     lastRefreshKey.current = refreshKey;

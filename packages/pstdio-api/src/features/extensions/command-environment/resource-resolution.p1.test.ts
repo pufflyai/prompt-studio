@@ -80,7 +80,7 @@ test("resource batches use enabled owners, preserve identity, and resolve host w
     });
     expect(result.find((r) => r.resource.id === workspace.id)).toMatchObject({
       resource: { label: "Current workspace", extensionId: "pstdio" },
-      target: { kind: "page", page: { id: "files", extensionId: "pstdio.pstdio-workspaces" } },
+      target: { kind: "page", page: { id: "files", extensionId: "pstdio.workspaces" } },
     });
     const worktree = await app.deps.workspaceService.createStandalone({
       project_id: project.id,
@@ -93,13 +93,55 @@ test("resource batches use enabled owners, preserve identity, and resolve host w
       resource: {
         metadata: { workspaceProviderState: "ready", workspaceSupportsDiff: true, workspaceType: "worktree" },
       },
-      target: { page: { id: "workspace", extensionId: "pstdio.pstdio-workspaces" } },
+      target: { page: { id: "workspace", extensionId: "pstdio.workspaces" } },
     });
     expect(result.find((r) => r.resource.id === "no-destination")?.target).toBeUndefined();
     await expect(api.resolveMany([{ ...ref("one"), projectId: "another-project" }])).rejects.toThrow("another project");
     await expect(api.resolveMany(Array.from({ length: 101 }, () => ref("one")))).rejects.toThrow("100");
     await app.deps.extensionService.setProjectExtensionEnabled(installed.instance.id, false);
     expect(await api.resolveMany([ref("one")])).toEqual([]);
+  } finally {
+    await app.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("published historical resource resolver declarations and outputs expose canonical owned refs", async () => {
+  const root = mkdtempSync(join(tmpdir(), "resource-rename-"));
+  const app = await createTestApp();
+  try {
+    const project = await app.deps.projectService.create({ name: "Resources" });
+    const manifest = {
+      name: "pstdio-notes",
+      publisher: "pstdio",
+      version: "1.0.0",
+      main: "extension.ts",
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+    };
+    writeFileSync(join(root, "package.json"), JSON.stringify(manifest));
+    writeFileSync(
+      join(root, "extension.ts"),
+      `export default {
+      commands:[{ id:"resolve",ref:{kind:"command",id:"resolve"},title:"Resolve",run:async(ctx,p)=>p.resources.map(r=>({resource:{...r,extensionId:"pstdio.pstdio-notes",label:"Retained"}})) }],
+      resourceKinds:[{id:"note",ref:{kind:"resource-kind",id:"note"},resolveMany:{kind:"command",extensionId:"pstdio.pstdio-notes",id:"resolve"}}]
+    }`,
+    );
+    await app.deps.extensionService.enableInstalledSourceForProject({
+      projectId: project.id,
+      sourcePath: root,
+      sourceKind: "local_path",
+      name: "pstdio-notes",
+      installName: "pstdio-notes",
+      extensionId: "pstdio.pstdio-notes",
+      displayName: "Notes",
+      manifest,
+    });
+    const api = createResourcesApi(app.deps, { projectId: project.id, extensionId: "example.caller" });
+    expect(
+      await api.resolveMany([
+        { extensionId: "pstdio.pstdio-notes", projectId: project.id, type: "note", id: "stable" },
+      ]),
+    ).toMatchObject([{ resource: { extensionId: "pstdio.notes", id: "stable", label: "Retained" } }]);
   } finally {
     await app.close();
     rmSync(root, { recursive: true, force: true });
