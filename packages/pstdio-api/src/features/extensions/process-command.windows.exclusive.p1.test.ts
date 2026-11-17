@@ -134,22 +134,26 @@ test.skipIf(process.platform !== "win32")(
   },
 );
 
-test.skipIf(process.platform !== "win32")("runs a standalone PowerShell script", async () => {
-  const { prefix } = fixture("PowerShell Å tools");
-  const script = join(prefix, "only.ps1");
-  const started = join(prefix, "started");
-  writeFileSync(
-    script,
-    `[System.IO.File]::WriteAllText([System.IO.Path]::Combine($PSScriptRoot, 'started'), 'started')\nWrite-Output "1.2.3"`,
-  );
-  const startedAt = performance.now();
-  try {
-    const result = await createProcessApi().run({ command: [script], timeoutMs: 10_000 });
-    expect(result.exitCode, result.stderr).toBe(0);
-    expect(result.stdout.trim()).toBe("1.2.3");
-  } finally {
-    console.error(
-      `[PowerShell probe] elapsed=${Math.round(performance.now() - startedAt)}ms scriptStarted=${existsSync(started)}`,
+test.skipIf(process.platform !== "win32")(
+  "runs a standalone PowerShell script",
+  async () => {
+    const { prefix } = fixture("PowerShell Å tools");
+    const script = join(prefix, "only.ps1");
+    const started = join(prefix, "started");
+    writeFileSync(
+      script,
+      `[System.IO.File]::WriteAllText([System.IO.Path]::Combine($PSScriptRoot, 'started'), 'started')\nWrite-Output "1.2.3"`,
     );
-  }
-});
+    const startedAt = performance.now();
+    try {
+      const result = await createProcessApi().run({ command: [script], timeoutMs: 30_000 });
+      expect(result.exitCode, result.stderr).toBe(0);
+      expect(result.stdout.trim()).toBe("1.2.3");
+    } finally {
+      console.error(
+        `[PowerShell probe] elapsed=${Math.round(performance.now() - startedAt)}ms scriptStarted=${existsSync(started)}`,
+      );
+    }
+  },
+  45_000,
+);

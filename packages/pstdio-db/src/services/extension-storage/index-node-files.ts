@@ -1,5 +1,5 @@
 import { link, mkdir, open, readdir, readFile, rename, rm, stat, utimes, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import type { StorageOwner } from "pstdio-sync";
 import { type OrderedIndexReference, readOrderedIndexReference } from "pstdio-sync/relay";
 import type { DbClient } from "../../db/connection.pglite";
@@ -110,7 +110,12 @@ export const createIndexNodeFiles = (root: string): IndexNodeFiles => {
     const created = await mkdir(directory, { recursive: true });
     if (durable && created) {
       const levels: string[] = [];
-      for (let level = directory; level !== dirname(created); level = dirname(level)) levels.push(level);
+      for (let level = directory; ; level = dirname(level)) {
+        levels.push(level);
+        // Native path comparison handles Windows case/separator differences. Always stop at
+        // the filesystem root even if mkdir returns a differently spelled ancestor.
+        if (relative(created, level) === "" || dirname(level) === level) break;
+      }
       for (const level of levels.reverse()) await flushDirectory(dirname(level));
     }
     directories.add(directory);

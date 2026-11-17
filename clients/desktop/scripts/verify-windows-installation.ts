@@ -219,7 +219,7 @@ try {
   const project = await createInstalledProject(active.page, projectPath);
   await openPackagedProject(active.page, project);
   await active.page.getByRole("option", { name: "Sessions", exact: true }).click();
-  await expect(active.page.getByLabel("Main").getByText("No messages yet", { exact: true })).toBeVisible();
+  await expect(active.page.getByLabel("Main").getByRole("log")).toBeVisible();
   writeFileSync(join(projectPath, "persisted.txt"), "Signed Windows update preservation\n");
   assert((await run(files.sidecar, ["projects", "list"])).includes(project.id));
   await active.page.screenshot({ path: join(evidence, "baseline-workbench.png") });

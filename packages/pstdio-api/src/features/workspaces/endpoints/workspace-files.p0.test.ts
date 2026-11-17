@@ -95,8 +95,8 @@ afterEach(() => {
 describe("GET /workspaces/:id/files", () => {
   test("reports Git-ignored entries, honoring tracked files, nested rules and plain folders", async () => {
     writeFileSync(join(root, ".gitignore"), "*.log\n.cache/\n!keep.log\n");
-    for (const name of ["debug.log", "tracked.log", "keep.log", "line\nbreak.log"])
-      writeFileSync(join(root, name), "text");
+    const ignoredNames = ["debug.log", ...(process.platform === "win32" ? [] : ["line\nbreak.log"])];
+    for (const name of [...ignoredNames, "tracked.log", "keep.log"]) writeFileSync(join(root, name), "text");
     mkdirSync(join(root, ".cache"));
     writeFileSync(join(root, ".cache/data.json"), "{}");
     const list = async (path = "", query?: string) => {
@@ -109,8 +109,7 @@ describe("GET /workspaces/:id/files", () => {
     await git(root, ["init"]);
     await git(root, ["add", "--force", "tracked.log"]);
     const entries = new Map((await list()).map((entry) => [entry.path, entry.git_ignored]));
-    expect(entries.get("debug.log")).toBe(true);
-    expect(entries.get("line\nbreak.log")).toBe(true);
+    for (const name of ignoredNames) expect(entries.get(name)).toBe(true);
     expect(entries.get(".cache")).toBe(true);
     expect(entries.get("tracked.log")).not.toBe(true);
     expect(entries.get("keep.log")).not.toBe(true);

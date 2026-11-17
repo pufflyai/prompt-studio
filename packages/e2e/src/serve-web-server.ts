@@ -20,16 +20,15 @@ const bunCacheDir = process.env.E2E_BUN_CACHE_DIR ?? join(tmpdir(), "pstdio-e2e-
 
 // The isolated `pstdio serve` runtime shared by the dashboard and performance suites.
 export const serveWebServer = {
-  // One process now boots the API, the dashboard, and the extension runtime,
-  // so it keeps the 30s budget the previous dashboard-boot server already
-  // used (the API-only server it replaced needed less).
   command: `bun src/scripts/serve-ui.ts --host ${serverUrl.hostname} --port ${serverUrl.port}`,
   // Liveness deliberately precedes background extension setup. Functional tests need their
   // installed tools registered, inside this same server-start allowance, before creating projects.
   // Playwright races URL and stdout conditions, so use only the combined completion signal.
   wait: { stdout: fixtureServerReady },
   reuseExistingServer: false,
-  timeout: 30_000,
+  // Cold tool installation alone took 26 s in release verification. This bounds fixture
+  // preparation as well as serve startup; product startup budgets are measured separately.
+  timeout: 120_000,
   env: {
     PSTDIO_DISABLE_EMBED_MANIFEST: "1",
     PSTDIO_DB_PATH: ":memory:",
