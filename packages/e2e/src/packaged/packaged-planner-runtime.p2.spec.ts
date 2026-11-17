@@ -76,10 +76,12 @@ const createProject = async (host: Host, name: string) => {
 };
 
 const installPlanner = (host: Host, cwd: string, source: string) =>
-  runPackagedAsync(["extensions", "add", source, "--name", "pstdio-planner"], cwd, {
-    HOME: host.home,
-    PSTDIO_HOME: host.home,
-  });
+  runPackagedAsync(
+    ["extensions", "add", source, "--name", "pstdio-planner"],
+    cwd,
+    { HOME: host.home, PSTDIO_HOME: host.home },
+    120_000,
+  );
 
 const plannerInstance = async (host: Host, projectId: string) => {
   const response = await fetch(`${host.baseUrl}/v1/projects/${projectId}/extensions`, {
@@ -173,6 +175,8 @@ const expectAutoBuildFilter = async (timeline: FrameLocator) => {
 };
 
 browserTest("serves populated Planner projects and recovers cached webviews", async () => {
+  // Two project installs, populated migrations and repeated cold module rebuilds share this allowance.
+  test.setTimeout(300_000);
   const startedAt = Date.now();
   const phase = (name: string) => logTestPhase(`Planner browser ${name} (${Date.now() - startedAt}ms)`);
   phase("runtime start");

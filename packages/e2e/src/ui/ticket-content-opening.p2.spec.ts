@@ -28,7 +28,9 @@ test("ticket content opens with pending requests while navigation details are st
       instructions: "Check the proposed behavior.",
       request: { kind: "task" },
     });
-    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    await page.addInitScript(() => {
+      if (window.top === window) localStorage.setItem("onboarding-complete", "true");
+    });
     await page.goto(`/projects/${id}/extensions/pstdio.planner/tickets`);
     const card = page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first();
     await expect(card).toBeVisible();

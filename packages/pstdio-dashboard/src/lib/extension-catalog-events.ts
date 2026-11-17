@@ -1,4 +1,5 @@
 import { viewDataEvents } from "@pstdio/sdk/extensions";
+import { hashKey } from "@tanstack/react-query";
 import type { CollectionChange, RuntimeCollections, SyncedRow } from "./sync/collections";
 
 const projectScope = (row: SyncedRow) =>
@@ -8,12 +9,7 @@ export const catalogChangeScopes = (change?: CollectionChange) => {
   const projects = new Set<string | undefined>();
   if (!change || !["installed_extension_sources", "extension_instances"].includes(change.table)) return projects;
   for (const { value, previousValue } of change.changes) {
-    if (
-      value &&
-      previousValue &&
-      Object.keys({ ...value, ...previousValue }).every((key) => Object.is(value[key], previousValue[key]))
-    )
-      continue;
+    if (value && previousValue && hashKey([value]) === hashKey([previousValue])) continue;
     for (const row of [previousValue, value])
       if (row) projects.add(change.table === "extension_instances" ? projectScope(row) : undefined);
   }
