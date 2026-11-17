@@ -94,6 +94,28 @@ const accountQuery = serviceQuery(
   ]),
 );
 const performanceQuery = serviceQuery(z.strictObject({ service: z.literal("snapshot") }));
+const resourceActionChoices = z
+  .array(
+    z
+      .object({
+        kind: z.literal("action").optional(),
+        closeOnSelect: z.boolean().optional(),
+        id: z.string().min(1).max(200),
+        label: z.string().trim().min(1).max(1000),
+        selected: z.boolean().optional(),
+        disabled: z.boolean().optional(),
+      })
+      .strict()
+      .refine((choice) => choice.kind !== "action" || !choice.selected, "Action rows cannot be selected"),
+  )
+  .min(1)
+  .max(1024)
+  .refine((choices) => new Set(choices.map((choice) => choice.id)).size === choices.length, "Choice IDs must be unique")
+  .refine(
+    (choices) => choices.filter((choice) => choice.selected).length <= 1,
+    "A choice group has one selected value",
+  );
+
 const schemas = {
   "performance.read": z.discriminatedUnion("operation", [
     z.strictObject({ operation: z.literal("query"), query: performanceQuery }),
@@ -113,6 +135,13 @@ const schemas = {
       resource: extensionResourceRefSchema,
       label: z.string().trim().min(1).max(200),
       icon: z.string().max(100).optional(),
+      choices: resourceActionChoices.optional(),
+    }),
+    z.object({
+      operation: z.literal("update-choices"),
+      registrationId: z.string().uuid(),
+      choices: resourceActionChoices,
+      label: z.string().trim().min(1).max(200).optional(),
     }),
     z.object({ operation: z.literal("unregister"), registrationId: z.string().uuid() }),
     z.object({

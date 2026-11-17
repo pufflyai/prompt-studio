@@ -16,6 +16,12 @@ import {
 import { trackPreparationStage } from "./preparation-stages";
 import { inspectPreparedWebviewInputs } from "./prepared-webview-inputs";
 
+// Preparation layout changes must invalidate completed artifacts as well as build inputs.
+const artifactId = (signature: string) =>
+  createHash("sha256")
+    .update(["entry-styles-v1", signature, Bun.version, JSON.stringify(extensionWebviewBuildOptions)].join("\0"))
+    .digest("hex");
+
 export const prepareWebviewArtifact = async (
   input: {
     entryPath: string;
@@ -30,9 +36,7 @@ export const prepareWebviewArtifact = async (
   // the fresh post-build inspection below still rejects edits before publication.
   const buildInputs = input.buildInputs ?? (await inspectManagedWebviewBuildInputsAsync(input, signal));
   signal.throwIfAborted();
-  const id = createHash("sha256")
-    .update([buildInputs.signature, Bun.version, JSON.stringify(extensionWebviewBuildOptions)].join("\0"))
-    .digest("hex");
+  const id = artifactId(buildInputs.signature);
   const root = join(resolvePstdioHome(), "cache", "prepared-webviews", id);
   const distDir = join(root, "dist");
   const complete = join(root, "complete.json");
@@ -97,13 +101,7 @@ export const prepareWebviewArtifacts = async (inputs: WebviewArtifactInput[], si
   mkdirSync(batch, { recursive: true });
   try {
     const { sources, signatures } = await inspectPreparedWebviewInputs(inputs, join(batch, "sources"), signal);
-    const artifacts = signatures.map((signature) =>
-      artifactPaths(
-        createHash("sha256")
-          .update([signature.signature, Bun.version, JSON.stringify(extensionWebviewBuildOptions)].join("\0"))
-          .digest("hex"),
-      ),
-    );
+    const artifacts = signatures.map((signature) => artifactPaths(artifactId(signature.signature)));
     const missing = artifacts
       .map((artifact, index) => ({ artifact, index }))
       .filter(({ artifact }) => !isCompleteArtifact(artifact));
@@ -135,6 +133,8 @@ export const prepareWebviewArtifacts = async (inputs: WebviewArtifactInput[], si
       const stage = join(artifact.root, `staging-${crypto.randomUUID()}`);
       cpSync(join(batch, "dist"), stage, { recursive: true });
       copyFileSync(join(stage, `entry-${index}.js`), join(stage, "module.js"));
+      const stylesheet = join(stage, `entry-${index}.css`);
+      if (existsSync(stylesheet)) copyFileSync(stylesheet, join(stage, "module.css"));
       withFileMutationLock(artifact.complete, () => {
         if (!isCompleteArtifact(artifact)) {
           rmSync(artifact.distDir, { recursive: true, force: true });

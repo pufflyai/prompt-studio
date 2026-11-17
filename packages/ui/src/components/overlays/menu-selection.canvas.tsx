@@ -12,6 +12,7 @@ const SelectionMenus = () => {
   const [pinned, setPinned] = useState(true);
   const [longLabel, setLongLabel] = useState(false);
   const [explicitTooltip, setExplicitTooltip] = useState(false);
+  const [revision, setRevision] = useState("first");
   const label = longLabel
     ? "Layout options — a long selected value whose full text remains available in a tooltip"
     : "Layout options";
@@ -89,6 +90,13 @@ const SelectionMenus = () => {
         actions={[
           { key: "main", label: "Main panel", icon: <GitBranch />, isSelected: true },
           { key: "reset", label: "Reset layout", icon: <RotateCcw /> },
+          ...["first", "second"].map((id) => ({
+            key: id,
+            label: id === "first" ? "First saved version" : "Second saved version",
+            group: { id: "versions", label: "Versions", selectionMode: "single" as const },
+            isSelected: revision === id,
+            onClick: () => setRevision(id),
+          })),
         ]}
       >
         <Button>Resource options</Button>

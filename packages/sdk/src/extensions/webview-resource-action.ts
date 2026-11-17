@@ -1,4 +1,4 @@
-import type { ResourceRef } from "pstdio-api-contracts/extension-kernel";
+import type { ResourceRef, WebviewResourceActionChoice } from "pstdio-api-contracts/extension-kernel";
 import type { GuestHost } from "./guest-host";
 
 /** Adds a current-reader action to its native resource menus. Requires resources.actions.register.
@@ -6,14 +6,14 @@ import type { GuestHost } from "./guest-host";
  */
 export const registerWebviewResourceAction = (
   host: GuestHost,
-  action: { resource: ResourceRef; label: string; icon?: string },
-  run: (signal: AbortSignal) => Promise<void>,
+  action: { resource: ResourceRef; label: string; icon?: string; choices?: readonly WebviewResourceActionChoice[] },
+  run: (signal: AbortSignal, choiceId?: string) => Promise<void>,
 ) => {
   const registrationId = crypto.randomUUID();
   const pending = new Map<string, AbortController>();
   let disposed = false;
   const stop = host.onEvent("resources.actions.invoke", (payload) => {
-    const event = payload as { type: string; registrationId: string; requestId: string };
+    const event = payload as { type: string; registrationId: string; requestId: string; choiceId?: string };
     if (event.registrationId !== registrationId || disposed) return;
     if (event.type === "cancel") {
       pending.get(event.requestId)?.abort();
@@ -25,7 +25,7 @@ export const registerWebviewResourceAction = (
     void Promise.resolve()
       .then(() => {
         controller.signal.throwIfAborted();
-        return run(controller.signal);
+        return run(controller.signal, event.choiceId);
       })
       .then(
         () => undefined,
@@ -46,6 +46,18 @@ export const registerWebviewResourceAction = (
   });
   return {
     ready,
+    /** Refresh up to 1024 choices without interrupting an accepted selection. */
+    async updateChoices(choices: readonly WebviewResourceActionChoice[], options?: { label?: string }) {
+      if (disposed) return;
+      await ready;
+      if (!disposed)
+        await host.call("resources.actions.register", {
+          operation: "update-choices",
+          registrationId,
+          choices,
+          ...options,
+        });
+    },
     async dispose() {
       if (disposed) return;
       disposed = true;

@@ -54,3 +54,51 @@ test("dispose aborts in-flight guest work before it can download and removes its
   expect(f.calls.at(-1)).toMatchObject({ operation: "unregister", registrationId: f.calls[0]!.registrationId });
   expect(f.calls.some((call) => call.operation === "complete")).toBe(false);
 });
+
+test("a resource choice callback receives its selected value and remains awaited", async () => {
+  const f = setup();
+  let selected: string | undefined;
+  const action = registerWebviewResourceAction(
+    f.host,
+    { resource, label: "Versions", choices: [{ id: "older", label: "First", selected: true }] },
+    async (_signal, value) => {
+      selected = value;
+    },
+  );
+  await action.ready;
+  expect(f.calls[0]).toMatchObject({ choices: [{ id: "older", label: "First", selected: true }] });
+  f.emit({ type: "execute", registrationId: f.calls[0]!.registrationId, requestId: "choice", choiceId: "older" });
+  await Bun.sleep(0);
+  expect(selected).toBe("older");
+  expect(f.calls.at(-1)).toMatchObject({ operation: "complete", requestId: "choice" });
+  await action.dispose();
+});
+
+test("refreshing a choice group keeps its accepted selection alive", async () => {
+  const f = setup();
+  const finish = Promise.withResolvers<void>();
+  let signal: AbortSignal | undefined;
+  const action = registerWebviewResourceAction(
+    f.host,
+    { resource, label: "Versions", choices: [{ id: "first", label: "First" }] },
+    async (accepted) => {
+      signal = accepted;
+      await finish.promise;
+      accepted.throwIfAborted();
+    },
+  );
+  await action.ready;
+  f.emit({ type: "execute", registrationId: f.calls[0]!.registrationId, requestId: "accepted", choiceId: "first" });
+  await Promise.resolve();
+  await action.updateChoices([{ id: "first", label: "First", selected: true }], { label: "Revisions" });
+  expect(signal?.aborted).toBe(false);
+  expect(f.calls.at(-1)).toMatchObject({
+    operation: "update-choices",
+    label: "Revisions",
+    choices: [{ id: "first", label: "First", selected: true }],
+  });
+  finish.resolve();
+  await Bun.sleep(0);
+  expect(f.calls.at(-1)).toMatchObject({ operation: "complete", requestId: "accepted", error: undefined });
+  await action.dispose();
+});

@@ -217,6 +217,16 @@ export interface WebviewKeyboardShortcutRequest {
   inputFocus?: boolean;
 }
 
+export interface WebviewResourceActionChoice {
+  /** Omit for a radio choice; action rows can navigate a paged list without changing its value. */
+  kind?: "action";
+  closeOnSelect?: boolean;
+  id: string;
+  label: string;
+  selected?: boolean;
+  disabled?: boolean;
+}
+
 export interface WebviewHostCapabilityParams {
   "performance.read": PerformanceReadRequest;
   "performance.control": PerformanceControlRequest;
@@ -225,7 +235,21 @@ export interface WebviewHostCapabilityParams {
     | { operation: "list"; resource: ResourceRef }
     | { operation: "execute"; resource: ResourceRef; key: string };
   "resources.actions.register":
-    | { operation: "register"; registrationId: string; resource: ResourceRef; label: string; icon?: string }
+    | {
+        operation: "register";
+        registrationId: string;
+        resource: ResourceRef;
+        label: string;
+        icon?: string;
+        /** One mutually exclusive native menu group, sharing a single live-view lease. */
+        choices?: readonly WebviewResourceActionChoice[];
+      }
+    | {
+        operation: "update-choices";
+        registrationId: string;
+        choices: readonly WebviewResourceActionChoice[];
+        label?: string;
+      }
     | { operation: "unregister"; registrationId: string }
     | { operation: "complete"; requestId: string; error?: string };
   "commands.execute": WebviewCommandsExecuteParams;

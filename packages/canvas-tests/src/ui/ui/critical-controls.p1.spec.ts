@@ -112,3 +112,20 @@ test("clipped dropdown captions reveal their full value and keep the menu usable
   await expect(preview.getByRole("tooltip")).toBeHidden();
   await expect(preview.getByRole("menu").first()).toBeVisible();
 });
+
+test("native resource choices announce their selection and restore focus on keyboard dismissal", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/overlays/menu-selection.canvas.tsx#CheckmarksAndAlignment",
+  );
+  const trigger = preview.getByRole("button", { name: "Resource options", exact: true });
+  await trigger.click();
+  await expect(preview.getByRole("menuitemradio", { name: "First saved version", exact: true })).toBeChecked();
+  await preview.getByRole("menuitemradio", { name: "Second saved version", exact: true }).click();
+  await expect(preview.getByRole("menu")).toBeHidden();
+  await trigger.click();
+  await expect(preview.getByRole("menuitemradio", { name: "Second saved version", exact: true })).toBeChecked();
+  await expect(preview.getByRole("menuitemradio", { name: "First saved version", exact: true })).not.toBeChecked();
+  await page.keyboard.press("Escape");
+  await expect(trigger).toBeFocused();
+});

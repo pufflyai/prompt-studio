@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { WebviewResourceActionChoice } from "pstdio-api-contracts/extension-kernel";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import {
   createResourceViewerFixture,
@@ -6,6 +7,7 @@ import {
 } from "../../core/controllers/resource-viewers/resource-viewer-test-fixture";
 import { resolveMenuEntries } from "../../react/menus/menu-entries";
 import { resolveResourceActionMenu } from "../../react/menus/resource-action-menu";
+import { parseWebviewCapabilityParams } from "./webview-capability-params";
 import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
 
 const setup = async () => {
@@ -161,4 +163,93 @@ test("two publishers in one workbench cannot collide using the same guest regist
   await result;
   await other({ operation: "unregister", registrationId: f.registrationId });
   expect(f.w.commands.getCommand(firstId)).toBeDefined();
+});
+
+test("one scoped choice lease exposes checked rows and validates its choice before dispatch", async () => {
+  const f = await setup();
+  const choices = Array.from({ length: 40 }, (_, index) => ({
+    id: String(index),
+    label: `Version ${index}`,
+    selected: index === 3,
+    disabled: index === 4,
+  }));
+  await f.request({ ...f.action, label: "Versions", choices });
+  const menu = resolveResourceActionMenu(f.w, viewerResource("x"))!;
+  const rows = resolveMenuEntries({ ...menu, context: f.context });
+  expect(rows).toHaveLength(40);
+  expect(rows[3]).toMatchObject({
+    label: "Version 3",
+    selected: true,
+    group: { label: "Versions", selectionMode: "single" },
+  });
+  expect(rows[4]?.disabled).toBe(true);
+  await expect(f.w.commands.executeCommand(f.commandId(), { choiceId: "foreign" }, f.context)).rejects.toThrow(
+    "disabled",
+  );
+  await expect(f.w.commands.executeCommand(f.commandId(), { choiceId: "4" }, f.context)).rejects.toThrow("disabled");
+  const result = rows[3]!.run!();
+  const event = f.messages.at(-1)!.payload as { requestId: string };
+  expect(event).toMatchObject({ choiceId: "3", registrationId: f.registrationId });
+  // A preference refresh may change the checked row before the accepted callback completes.
+  await f.request({
+    operation: "update-choices",
+    registrationId: f.registrationId,
+    choices: choices.map((choice) => ({ ...choice, selected: choice.id === "5" })),
+  });
+  expect(resolveMenuEntries({ ...menu, context: f.context })[5]?.selected).toBe(true);
+  const pendingMenu = f.w.layout.menuStore.getState();
+  await f.request({ operation: "complete", requestId: event.requestId });
+  await result;
+  expect(f.w.layout.menuStore.getState()).not.toBe(pendingMenu);
+  expect(resolveMenuEntries({ ...menu, context: f.context })[5]?.disabled).toBe(false);
+  await f.request({ operation: "unregister", registrationId: f.registrationId });
+  expect(resolveMenuEntries({ ...menu, context: f.context })).toEqual([]);
+});
+
+test("native choice input is bounded and cannot contain ambiguous identities or selection", async () => {
+  const f = await setup();
+  const parse = (choices: WebviewResourceActionChoice[]) =>
+    parseWebviewCapabilityParams("resources.actions.register", { ...f.action, choices });
+  expect(() =>
+    parse([
+      { id: "same", label: "One" },
+      { id: "same", label: "Two" },
+    ]),
+  ).toThrow();
+  expect(() =>
+    parse([
+      { id: "one", label: "One", selected: true },
+      { id: "two", label: "Two", selected: true },
+    ]),
+  ).toThrow();
+  expect(() => parse(Array.from({ length: 1025 }, (_, id) => ({ id: String(id), label: "Version" })))).toThrow();
+  expect(() => parse([{ id: "page", label: "Next", kind: "action", selected: true }])).toThrow();
+});
+
+test("live choice updates preserve row identity and leave paging rows as ordinary actions", async () => {
+  const f = await setup();
+  const choices: WebviewResourceActionChoice[] = [
+    { id: "saved", label: "Saved", selected: true },
+    { id: "page", label: "Older versions", kind: "action", closeOnSelect: false },
+  ];
+  await f.request({ ...f.action, label: "Versions", choices });
+  const menu = resolveResourceActionMenu(f.w, viewerResource("x"))!;
+  const before = resolveMenuEntries({ ...menu, context: f.context });
+  expect(before[1]).toMatchObject({ group: { label: "Versions" }, closeOnSelect: false });
+  expect(before[1]?.group?.selectionMode).toBeUndefined();
+  expect(before[1]?.selected).toBeUndefined();
+  const other = await setup();
+  await expect(
+    other.request({ operation: "update-choices", registrationId: f.registrationId, choices }),
+  ).rejects.toThrow("no longer available");
+  await f.request({
+    operation: "update-choices",
+    registrationId: f.registrationId,
+    label: "Revisions",
+    choices: [{ id: "new", label: "Latest" }, ...choices],
+  });
+  const after = resolveMenuEntries({ ...menu, context: f.context });
+  expect(after[1]?.id).toBe(before[0]?.id);
+  expect(after[2]?.id).toBe(before[1]?.id);
+  expect(after[1]?.group?.label).toBe("Revisions");
 });

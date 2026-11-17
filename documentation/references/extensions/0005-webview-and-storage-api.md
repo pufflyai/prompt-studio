@@ -200,6 +200,20 @@ await action.ready;
 await action.dispose();
 ```
 
+A reader can supply `choices: [{ id, label, selected?, disabled? }]` on the same
+registration to contribute a mutually exclusive group to that resource dropdown.
+The callback receives `(signal, choiceId)`. A group counts as one of the view's
+32 leases and accepts up to 1024 choices with unique IDs and at most one selected
+value. The host validates the selected ID and renders checked radio menu items.
+Use `await action.updateChoices(nextChoices, { label? })` when the available or selected
+values change. This updates the menu without cancelling an accepted callback;
+replacing or disconnecting the owning view still cancels it normally.
+Choice IDs retain their native menu identity across updates. An optional
+`kind: "action"` row renders as an ordinary action in the same group and cannot
+be selected. Set `closeOnSelect: false` for paging controls that keep the menu
+open. Page large collections before registering them and keep labels within
+1000 characters.
+
 ### Cloud account and sync status
 
 On `main`, extension API 0.2.1 also adds `account.read` and `account.manage`. `client.account` has the same methods as [`ctx.account`](0003-command-and-process-api.md#cloud-account-and-sync-status). Declare `account.read` for `client.account.status`, `loginStatus`, `devices`, and `projectSyncStatus`. Declare `account.manage` for `client.account.login`, `cancelLogin`, `logout`, `renameDevice`, `removeDevice`, `syncProject`, `stopProjectSync`, and `resolveReturnedChanges`. Without a project ID, a call uses the webview's project.
