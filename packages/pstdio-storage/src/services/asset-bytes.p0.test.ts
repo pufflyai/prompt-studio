@@ -57,6 +57,34 @@ test("integrity failure keeps staged bytes without publishing a readable version
   expect(await storage.progress(scope, "upload")).toBe(7);
 });
 
+test("renamed owners can read existing versions and resume uploads under the former identity", async () => {
+  const root = await mkdtemp(join(tmpdir(), "pstdio-assets-"));
+  roots.push(root);
+  const legacy = { ...scope, extensionId: "example.previous" };
+  const renamed = { ...scope, extensionId: "example.current" };
+  const stored = reference("saved attachment");
+  const pending = reference("in progress");
+  const before = createAssetBytesStorage(root);
+  await before.append(legacy, "saved", 0, stream("saved attachment"));
+  await before.publish(legacy, "saved", stored);
+  await before.append(legacy, "pending", 0, stream("in "));
+  await before.append(legacy, "cancel", 0, stream("discard"));
+
+  const upgraded = createAssetBytesStorage(root, (id: string) =>
+    id === renamed.extensionId ? legacy.extensionId : id,
+  );
+  await upgraded.verify(renamed, stored);
+  expect(await new Response(await upgraded.open(renamed, stored)).text()).toBe("saved attachment");
+  expect(await upgraded.progress(renamed, "pending")).toBe(3);
+  await upgraded.append(renamed, "pending", 3, stream("progress"));
+  await upgraded.publish(renamed, "pending", pending);
+  expect(await new Response(await before.open(renamed, pending)).text()).toBe("in progress");
+  expect(await before.progress(legacy, "pending")).toBe(0);
+  await upgraded.removeTransfer(renamed, "cancel");
+  expect(await before.progress(legacy, "cancel")).toBe(0);
+  await expect(upgraded.open({ ...renamed, workbenchId: "unrelated" }, stored)).rejects.toThrow();
+});
+
 test("publication storage failures retain recoverable staged bytes without exposing a version", async () => {
   const root = await mkdtemp(join(tmpdir(), "pstdio-assets-"));
   roots.push(root);
