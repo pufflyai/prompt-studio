@@ -1,7 +1,7 @@
-name: PS146 final startup CPU diagnostic
+name: PS243 real graph cache footprint
 on:
   push:
-    branches: [test/ps146-final-startup-cpu]
+    branches: [test/ps243-cache-footprint]
 permissions:
   contents: read
   actions: read
@@ -26,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: 3b69179c4173dc8fd6b0ad97eb7fce5f81f91763
+          ref: 2665d3224f7e3b06ce796ed94e27644441ce50ce
           fetch-depth: 0
       - uses: actions/setup-node@v5
         with:
@@ -43,15 +43,15 @@ jobs:
       - name: Download original immutable plan
         uses: actions/download-artifact@v4
         with:
-          artifact-ids: "14339052857"
+          artifact-ids: "14341031846"
           merge-multiple: true
-          run-id: "44106857357"
+          run-id: "44110802536"
           github-token: ${{ github.token }}
           path: .
       - name: Record exact source and add worker-only CPU instrumentation
         shell: bash
         run: |
-          mkdir -p test-results/ci/final-startup-cpu/processes test-results/ci/final-startup-cpu/workers
+          mkdir -p test-results/ci/final-startup-cpu/processes test-results/ci/final-startup-cpu/workers test-results/ci/final-startup-cpu/cache
           cp test-results/ci/plan.json test-results/ci/final-startup-cpu/original-plan.json
           git rev-parse HEAD HEAD^{tree} > test-results/ci/final-startup-cpu/source-before.txt
           git diff --exit-code
@@ -64,9 +64,10 @@ jobs:
           from pathlib import Path
           p = Path('packages/pstdio-api/src/features/extensions/extension-preparation-worker.ts')
           p.write_text('import { startSamplingProfiler, samplingProfilerStackTraces } from "bun:jsc";\nimport { appendFileSync } from "node:fs";\nconst cpuProfileRoot = process.env.PS146_WORKER_PROFILE_DIR!;\nconst cpuProfileFile = `${cpuProfileRoot}/${process.pid}-${crypto.randomUUID()}.jsonl`;\nstartSamplingProfiler(cpuProfileRoot);\nsetInterval(() => appendFileSync(cpuProfileFile, JSON.stringify({ time: Date.now(), ...samplingProfilerStackTraces() }) + "\\n"), 2000).unref();\n' + p.read_text())
+          exec(__import__("base64").b64decode("ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCgpwID0gUGF0aCgncGFja2FnZXMvcHN0ZGlvLWV4dGVuc2lvbnMvc3JjL3J1bnRpbWUvcnVudGltZS1zb3VyY2Utc25hcHNob3QudHMnKQpzID0gcC5yZWFkX3RleHQoKQphc3NlcnQgcy5jb3VudCgnaW1wb3J0c0J5Q29udGVudC5zaXplID49IDEyXzI4OCcpID09IDEKcyA9ICdpbXBvcnQgeyBhcHBlbmRGaWxlU3luYyB9IGZyb20gIm5vZGU6ZnMiO1xuJyArIHMKb2xkID0gJ2NvbnN0IGltcG9ydHNCeUNvbnRlbnQgPSBuZXcgTWFwPHN0cmluZywgc3RyaW5nW10+KCk7JwpuZXcgPSBvbGQgKyAnJycKY29uc3QgcHJvZmlsZVJvb3QgPSBwcm9jZXNzLmVudi5QUzI0M19DQUNIRV9QUk9GSUxFX0RJUjsKY29uc3QgcHJvZmlsZUZpbGUgPSBwcm9maWxlUm9vdCA/IGAke3Byb2ZpbGVSb290fS8ke3Byb2Nlc3MucGlkfS0ke2NyeXB0by5yYW5kb21VVUlEKCl9Lmpzb25sYCA6IG51bGw7CmNvbnN0IGNhY2hlU2l6ZXMgPSBuZXcgTWFwPHN0cmluZywgeyBqc29uOiBudW1iZXI7IHN0cmluZ3M6IG51bWJlcjsgcmVmZXJlbmNlczogbnVtYmVyIH0+KCk7CmNvbnN0IGNhY2hlUHJvZmlsZSA9IHsgcmVxdWVzdHM6IDAsIHdlYWtIaXRzOiAwLCBjb250ZW50SGl0czogMCwgbWlzc2VzOiAwLCBkaWdlc3RNczogMCwgcGFyc2VNczogMCwganNvbkJ5dGVzOiAwLCBzdHJpbmdVdGY4Qnl0ZXM6IDAsIHN0cmluZ1JlZmVyZW5jZXM6IDAsIHBlYWtFbnRyaWVzOiAwLCBwZWFrSnNvbkJ5dGVzOiAwIH07CmNvbnN0IGZsdXNoQ2FjaGVQcm9maWxlID0gKCkgPT4gewogIGlmIChwcm9maWxlRmlsZSkgYXBwZW5kRmlsZVN5bmMocHJvZmlsZUZpbGUsIEpTT04uc3RyaW5naWZ5KHsgdGltZTogRGF0ZS5ub3coKSwgcGlkOiBwcm9jZXNzLnBpZCwgY2FwYWNpdHk6IDEyMjg4LCBlbnRyaWVzOiBpbXBvcnRzQnlDb250ZW50LnNpemUsIC4uLmNhY2hlUHJvZmlsZSwgbWVtb3J5OiBwcm9jZXNzLm1lbW9yeVVzYWdlKCkgfSkgKyAiXFxuIik7Cn07CmlmIChwcm9maWxlRmlsZSkgewogIHNldEludGVydmFsKGZsdXNoQ2FjaGVQcm9maWxlLCAyMDAwKS51bnJlZigpOwogIHByb2Nlc3Mub24oImV4aXQiLCBmbHVzaENhY2hlUHJvZmlsZSk7Cn0KJycnCmFzc2VydCBzLmNvdW50KG9sZCkgPT0gMQpzID0gcy5yZXBsYWNlKG9sZCwgbmV3KQpvbGQgPSAnICBsZXQgYnl0ZXMgPSBpbXBvcnRzQnlCeXRlcy5nZXQoY29udGVudHMpOycKbmV3ID0gJyAgY29uc3QgcmVxdWVzdFN0YXJ0ZWQgPSBwZXJmb3JtYW5jZS5ub3coKTtcbiAgaWYgKHByb2ZpbGVGaWxlKSBjYWNoZVByb2ZpbGUucmVxdWVzdHMrKztcbicgKyBvbGQKYXNzZXJ0IHMuY291bnQob2xkKSA9PSAxCnMgPSBzLnJlcGxhY2Uob2xkLCBuZXcpCm9sZCA9ICcgICAgYnl0ZXMgPSB7IGRpZ2VzdDogY3JlYXRlSGFzaCgic2hhMjU2IikudXBkYXRlKGNvbnRlbnRzKS5kaWdlc3QoImhleCIpLCBpbXBvcnRzOiBuZXcgTWFwKCkgfTsnCm5ldyA9ICcgICAgY29uc3QgZGlnZXN0U3RhcnRlZCA9IHBlcmZvcm1hbmNlLm5vdygpO1xuJyArIG9sZCArICdcbiAgICBpZiAocHJvZmlsZUZpbGUpIGNhY2hlUHJvZmlsZS5kaWdlc3RNcyArPSBwZXJmb3JtYW5jZS5ub3coKSAtIGRpZ2VzdFN0YXJ0ZWQ7Jwphc3NlcnQgcy5jb3VudChvbGQpID09IDEKcyA9IHMucmVwbGFjZShvbGQsIG5ldykKcyA9IHMucmVwbGFjZSgnICBpZiAoaW5zcGVjdGVkKSByZXR1cm4gaW5zcGVjdGVkOycsICcgIGlmIChpbnNwZWN0ZWQpIHsgaWYgKHByb2ZpbGVGaWxlKSBjYWNoZVByb2ZpbGUud2Vha0hpdHMrKzsgcmV0dXJuIGluc3BlY3RlZDsgfScpCnMgPSBzLnJlcGxhY2UoJyAgICBieXRlcy5pbXBvcnRzLnNldChtb2RlLCBjYWNoZWQpO1xuICAgIHJldHVybiBjYWNoZWQ7JywgJyAgICBieXRlcy5pbXBvcnRzLnNldChtb2RlLCBjYWNoZWQpO1xuICAgIGlmIChwcm9maWxlRmlsZSkgY2FjaGVQcm9maWxlLmNvbnRlbnRIaXRzKys7XG4gICAgcmV0dXJuIGNhY2hlZDsnKQpvbGQgPSAnICBpZiAoaW1wb3J0c0J5Q29udGVudC5zaXplID49IDEyXzI4OCkgaW1wb3J0c0J5Q29udGVudC5kZWxldGUoaW1wb3J0c0J5Q29udGVudC5rZXlzKCkubmV4dCgpLnZhbHVlISk7JwpuZXcgPSAnJycgIGlmIChpbXBvcnRzQnlDb250ZW50LnNpemUgPj0gMTJfMjg4KSB7CiAgICBjb25zdCBvbGRlc3QgPSBpbXBvcnRzQnlDb250ZW50LmtleXMoKS5uZXh0KCkudmFsdWUhOwogICAgaW1wb3J0c0J5Q29udGVudC5kZWxldGUob2xkZXN0KTsKICAgIGlmIChwcm9maWxlRmlsZSkgewogICAgICBjb25zdCBzaXplID0gY2FjaGVTaXplcy5nZXQob2xkZXN0KSE7CiAgICAgIGNhY2hlUHJvZmlsZS5qc29uQnl0ZXMgLT0gc2l6ZS5qc29uOwogICAgICBjYWNoZVByb2ZpbGUuc3RyaW5nVXRmOEJ5dGVzIC09IHNpemUuc3RyaW5nczsKICAgICAgY2FjaGVQcm9maWxlLnN0cmluZ1JlZmVyZW5jZXMgLT0gc2l6ZS5yZWZlcmVuY2VzOwogICAgICBjYWNoZVNpemVzLmRlbGV0ZShvbGRlc3QpOwogICAgfQogIH0nJycKYXNzZXJ0IHMuY291bnQob2xkKSA9PSAxCnMgPSBzLnJlcGxhY2Uob2xkLCBuZXcpCm9sZCA9ICcgIGltcG9ydHNCeUNvbnRlbnQuc2V0KGNhY2hlS2V5LCBpbXBvcnRzKTsnCm5ldyA9IG9sZCArICcnJwogIGlmIChwcm9maWxlRmlsZSkgewogICAgY2FjaGVQcm9maWxlLm1pc3NlcysrOwogICAgY2FjaGVQcm9maWxlLnBhcnNlTXMgKz0gcGVyZm9ybWFuY2Uubm93KCkgLSByZXF1ZXN0U3RhcnRlZDsKICAgIGNvbnN0IHNpemUgPSB7CiAgICAgIGpzb246IEJ1ZmZlci5ieXRlTGVuZ3RoKEpTT04uc3RyaW5naWZ5KFtjYWNoZUtleSwgaW1wb3J0c10pKSwKICAgICAgc3RyaW5nczogQnVmZmVyLmJ5dGVMZW5ndGgoY2FjaGVLZXkpICsgaW1wb3J0cy5yZWR1Y2UoKHN1bSwgdmFsdWUpID0+IHN1bSArIEJ1ZmZlci5ieXRlTGVuZ3RoKHZhbHVlKSwgMCksCiAgICAgIHJlZmVyZW5jZXM6IDEgKyBpbXBvcnRzLmxlbmd0aCwKICAgIH07CiAgICBjYWNoZVNpemVzLnNldChjYWNoZUtleSwgc2l6ZSk7CiAgICBjYWNoZVByb2ZpbGUuanNvbkJ5dGVzICs9IHNpemUuanNvbjsKICAgIGNhY2hlUHJvZmlsZS5zdHJpbmdVdGY4Qnl0ZXMgKz0gc2l6ZS5zdHJpbmdzOwogICAgY2FjaGVQcm9maWxlLnN0cmluZ1JlZmVyZW5jZXMgKz0gc2l6ZS5yZWZlcmVuY2VzOwogICAgY2FjaGVQcm9maWxlLnBlYWtFbnRyaWVzID0gTWF0aC5tYXgoY2FjaGVQcm9maWxlLnBlYWtFbnRyaWVzLCBpbXBvcnRzQnlDb250ZW50LnNpemUpOwogICAgY2FjaGVQcm9maWxlLnBlYWtKc29uQnl0ZXMgPSBNYXRoLm1heChjYWNoZVByb2ZpbGUucGVha0pzb25CeXRlcywgY2FjaGVQcm9maWxlLmpzb25CeXRlcyk7CiAgfQonJycKYXNzZXJ0IHMuY291bnQob2xkKSA9PSAxCnMgPSBzLnJlcGxhY2Uob2xkLCBuZXcpCnAud3JpdGVfdGV4dChzKQo="))
           PY
           git diff --binary > test-results/ci/final-startup-cpu/instrumentation.patch
-          bun -e 'import { readFileSync, writeFileSync } from "node:fs"; import { sealTestPlan, validateTestPlan } from "./scripts/ci/test-plan"; import { testPlanSource } from "./scripts/ci/test-plan-source"; const original = JSON.parse(readFileSync("test-results/ci/final-startup-cpu/original-plan.json", "utf8")); validateTestPlan(original); const { digest, ...body } = original; const next = sealTestPlan({ ...body, source: testPlanSource(process.cwd()) }); if (JSON.stringify(next.setup) !== JSON.stringify(original.setup) || JSON.stringify(next.runs) !== JSON.stringify(original.runs)) throw new Error("Diagnostic changed selection"); validateTestPlan(next, testPlanSource(process.cwd())); writeFileSync("test-results/ci/plan.json", JSON.stringify(next, null, 2)); writeFileSync("test-results/ci/final-startup-cpu/provenance.json", JSON.stringify({originalSource: original.source, diagnosticSource: next.source, originalDigest: digest, diagnosticDigest: next.digest, setupAndRunsByteIdentical: true, instrumentation: "Six profiler lines in actual configured API worker, with2s raw sample drains; no deadline or workload change.", acceptanceQualification: false}, null, 2));'
+          bun -e 'import { readFileSync, writeFileSync } from "node:fs"; import { sealTestPlan, validateTestPlan } from "./scripts/ci/test-plan"; import { testPlanSource } from "./scripts/ci/test-plan-source"; const original = JSON.parse(readFileSync("test-results/ci/final-startup-cpu/original-plan.json", "utf8")); validateTestPlan(original); const { digest, ...body } = original; const next = sealTestPlan({ ...body, source: testPlanSource(process.cwd()) }); if (JSON.stringify(next.setup) !== JSON.stringify(original.setup) || JSON.stringify(next.runs) !== JSON.stringify(original.runs)) throw new Error("Diagnostic changed selection"); validateTestPlan(next, testPlanSource(process.cwd())); writeFileSync("test-results/ci/plan.json", JSON.stringify(next, null, 2)); writeFileSync("test-results/ci/final-startup-cpu/provenance.json", JSON.stringify({originalSource: original.source, diagnosticSource: next.source, originalDigest: digest, diagnosticDigest: next.digest, setupAndRunsByteIdentical: true, instrumentation: "Actual API worker sampling plus bounded-cache entry/string/serialized-byte gauges; no added hash pass, deadline or workload change; diagnostic overhead excludes acceptance.", acceptanceQualification: false}, null, 2));'
       - name: Execute unchanged selected cold-start jobs with CPU profiles
         shell: bash
         env:
@@ -77,6 +78,7 @@ jobs:
         run: |
           export BUN_OPTIONS="--cpu-prof --cpu-prof-dir=$GITHUB_WORKSPACE/test-results/ci/final-startup-cpu/processes"
           export PS146_WORKER_PROFILE_DIR="$GITHUB_WORKSPACE/test-results/ci/final-startup-cpu/workers"
+          export PS243_CACHE_PROFILE_DIR="$GITHUB_WORKSPACE/test-results/ci/final-startup-cpu/cache"
           python3 - <<'PY'
           import json, os, pathlib, subprocess, time
           root = pathlib.Path('test-results/ci/final-startup-cpu')
@@ -110,7 +112,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ps146-final-startup-cpu-${{ matrix.job }}-attempt-${{ github.run_attempt }}
+          name: ps243-cache-footprint-${{ matrix.job }}-attempt-${{ github.run_attempt }}
           path: |
             test-results/ci
             packages/e2e/test-results
