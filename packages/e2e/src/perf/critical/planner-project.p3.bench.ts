@@ -91,7 +91,10 @@ await runScenario("B6", async (capture) => {
       capture.record("actionable", performance.now() - cold);
       const pages = () =>
         requests.filter(
-          (request) => request.path.endsWith("pstdio.pstdio-planner.view.tickets.kanban.query/execute") && request.page,
+          (request) =>
+            ["pstdio.planner", "pstdio.pstdio-planner"].some((owner) =>
+              request.path.endsWith(`${owner}.view.tickets.kanban.query/execute`),
+            ) && request.page,
         );
       await Promise.all([...pending]);
       const paged = pages().length > 0;

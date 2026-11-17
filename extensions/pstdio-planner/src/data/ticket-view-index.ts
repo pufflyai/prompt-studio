@@ -35,6 +35,7 @@ export const ticketViewIndex: StorageRecordIndex = {
     draft: projected("draft", "boolean"),
     position: projected("position", "string"),
     createdAt: projected("createdAt", "string"),
+    createdInstant: { path: ["createdAt"], type: "number", derive: { kind: "timestamp" } },
     updatedAt: projected("updatedAt", "string"),
     updatedInstant: { path: ["updatedAt"], type: "number", derive: { kind: "timestamp" } },
     parentId: projected("parentId", "string"),
