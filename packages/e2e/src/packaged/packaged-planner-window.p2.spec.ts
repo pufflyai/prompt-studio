@@ -18,6 +18,9 @@ test.beforeAll(() => {
 });
 
 test("Planner keeps long dependency chains usable with a bounded card window", async () => {
+  // Linux CI's 120 s elapsed during the 80-ticket seed (~1.8 s per create).
+  // PS-1232: user-authorized whole-case allowance; keep the full seed and scroll assertions.
+  test.setTimeout(300_000);
   const home = mkdtempSync(join(tmpdir(), "pstdio-packaged-planner-window-"));
   let child: ChildProcess | undefined;
   let browser: Browser | undefined;
