@@ -431,14 +431,13 @@ test("a supervisor changing models does not reuse the previous model's cooldown"
       resetsAt: new Date(Date.now() + 60_000).toISOString(),
     },
   });
-  let readModel = false;
+  const quotaRequests: unknown[] = [];
   ctx.commands.execute = async (_ref, options) => {
-    expect(options?.params).toEqual({ harnessId: supervisor.agent, modelId: "opus" });
-    readModel = true;
+    quotaRequests.push(options?.params);
     return { ok: true, status: "success", value: { limited: false } } as never;
   };
   expect((await autoBuildCommand.run(ctx, {})).prompted).toBe(true);
-  expect(readModel).toBe(true);
+  expect(quotaRequests).toEqual([{ harnessId: supervisor.agent, modelId: "opus" }]);
 });
 
 test("a legacy cooldown still blocks a selected model when no fresh reset is known", async () => {
