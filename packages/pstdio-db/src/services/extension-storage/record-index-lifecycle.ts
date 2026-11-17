@@ -46,7 +46,7 @@ export const installRecordIndex = async (
     const orderKeys = recordIndexKeys({ ...index, equality: [] });
     // Equality prefixes cannot serve an unfiltered ordered page. Retain
     // point lookups and give LIMIT a separate path through the sort keys.
-    if (localEqualityCount && orderKeys.length > 1)
+    if (localEqualityCount && orderKeys.length)
       await tx.execute(
         sql`CREATE INDEX ${sql.identifier(`${name}_o`)} ON storage_current_records (${sql.join(orderKeys, sql`, `)}) WHERE ${recordScopeSql(owner, { ...index, identity: undefined })}`,
       );
