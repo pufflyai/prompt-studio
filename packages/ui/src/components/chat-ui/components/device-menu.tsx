@@ -52,14 +52,14 @@ export const ChatDeviceMenu = (props: ChatDeviceMenuProps) => {
   return (
     <SearchableMenu
       trigger={
-        <Box minW="0">
-          <Tooltip content="Select device">
+        <Tooltip content="Select device">
+          <Box minW="0">
             <Button variant="ghost" size="xs" px="2xs" gap="2xs" minW="0" aria-label="Select device">
               <DeviceLabel label={label} />
               <Icon as={ChevronDown} boxSize="14px" color="fg.muted" />
             </Button>
-          </Tooltip>
-        </Box>
+          </Box>
+        </Tooltip>
       }
       items={devices.map(
         (device): SearchableMenuItem => ({

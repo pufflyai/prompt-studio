@@ -1,8 +1,9 @@
-import { Button, Icon, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Icon, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Check, GitBranch, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { Tooltip } from "../primitives/tooltip";
 import { ResourceActionMenu } from "./resource-context-menu";
 import { SearchableMenu } from "./searchable-menu";
 
@@ -10,17 +11,29 @@ const SelectionMenus = () => {
   const [branch, setBranch] = useState("main");
   const [pinned, setPinned] = useState(true);
   const [longLabel, setLongLabel] = useState(false);
+  const [explicitTooltip, setExplicitTooltip] = useState(false);
   const label = longLabel
     ? "Layout options — a long selected value whose full text remains available in a tooltip"
     : "Layout options";
   return (
     <Stack align="start">
       <Button onClick={() => setLongLabel((value) => !value)}>Toggle long dropdown label</Button>
+      <Button onClick={() => setExplicitTooltip((value) => !value)}>Toggle explicit dropdown tooltip</Button>
       <Menu.Root closeOnSelect={false}>
         <Menu.Trigger asChild>
-          <Button maxWidth="64" minWidth="0">
-            <Text truncate>{label}</Text>
-          </Button>
+          {explicitTooltip ? (
+            <Tooltip content="Explicit dropdown explanation">
+              <Box maxWidth="64" minWidth="0">
+                <Button maxWidth="64" minWidth="0">
+                  <Text truncate>{label}</Text>
+                </Button>
+              </Box>
+            </Tooltip>
+          ) : (
+            <Button maxWidth="64" minWidth="0">
+              <Text truncate>{label}</Text>
+            </Button>
+          )}
         </Menu.Trigger>
         <Menu.Positioner>
           <Menu.Content>

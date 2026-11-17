@@ -111,24 +111,21 @@ const buildModelMenuItems = (
 interface MenuTriggerButtonProps {
   label: string;
   ariaLabel: string;
-  tooltip: string;
   disabled: boolean;
   icon?: WorkspacePanelMenuOption["icon"];
   size: NonNullable<HarnessModelMenuProps["size"]>;
 }
 
 const MenuTriggerButton = (props: MenuTriggerButtonProps) => {
-  const { label, ariaLabel, tooltip, disabled, icon, size } = props;
+  const { label, ariaLabel, disabled, icon, size } = props;
   return (
-    <Tooltip content={tooltip}>
-      <Button variant="ghost" size={size} px="2" aria-label={ariaLabel} disabled={disabled}>
-        {icon ? <Icon as={icon} boxSize="14px" color="fg.muted" flexShrink={0} /> : null}
-        <Text textStyle="label/XS/medium" color="fg">
-          {label}
-        </Text>
-        <ChevronDown size={14} />
-      </Button>
-    </Tooltip>
+    <Button variant="ghost" size={size} px="2" aria-label={ariaLabel} disabled={disabled}>
+      {icon ? <Icon as={icon} boxSize="14px" color="fg.muted" flexShrink={0} /> : null}
+      <Text textStyle="label/XS/medium" color="fg">
+        {label}
+      </Text>
+      <ChevronDown size={14} />
+    </Button>
   );
 };
 
@@ -200,17 +197,17 @@ export const HarnessModelMenu = (props: HarnessModelMenuProps) => {
       <SearchableMenu
         fixedHeight
         trigger={
-          // Menu.Trigger passes its props to this direct child, so it must stay a DOM element.
-          <Box>
-            <MenuTriggerButton
-              label={selectedAgentLabel}
-              ariaLabel={resolvedLabels.agentSelect}
-              tooltip={resolvedLabels.agentSelect}
-              disabled={isSwitchDisabled}
-              icon={selectedAgentIcon}
-              size={size}
-            />
-          </Box>
+          <Tooltip content={resolvedLabels.agentSelect}>
+            <Box>
+              <MenuTriggerButton
+                label={selectedAgentLabel}
+                ariaLabel={resolvedLabels.agentSelect}
+                disabled={isSwitchDisabled}
+                icon={selectedAgentIcon}
+                size={size}
+              />
+            </Box>
+          </Tooltip>
         }
         items={agentMenuItems.map((item) => ({
           ...item,
@@ -233,16 +230,17 @@ export const HarnessModelMenu = (props: HarnessModelMenuProps) => {
     <SearchableMenu
       fixedHeight
       trigger={
-        <Box>
-          <MenuTriggerButton
-            label={selectedModelLabel}
-            ariaLabel={resolvedLabels.modelSelect}
-            tooltip={isMenuDisabled ? resolvedLabels.modelNoneAvailable : resolvedLabels.modelSelect}
-            disabled={isMenuDisabled}
-            icon={selectedAgentIcon}
-            size={size}
-          />
-        </Box>
+        <Tooltip content={isMenuDisabled ? resolvedLabels.modelNoneAvailable : resolvedLabels.modelSelect}>
+          <Box>
+            <MenuTriggerButton
+              label={selectedModelLabel}
+              ariaLabel={resolvedLabels.modelSelect}
+              disabled={isMenuDisabled}
+              icon={selectedAgentIcon}
+              size={size}
+            />
+          </Box>
+        </Tooltip>
       }
       items={modelMenuItems}
       showSearch={modelOptions.length > 5}

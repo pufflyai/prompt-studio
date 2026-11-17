@@ -104,4 +104,11 @@ test("clipped dropdown captions reveal their full value and keep the menu usable
   await preview.getByRole("button", { name: "Toggle long dropdown label", exact: true }).click();
   await trigger.hover();
   await expect(preview.getByRole("tooltip")).toBeHidden();
+  await preview.getByRole("button", { name: "Toggle explicit dropdown tooltip", exact: true }).click();
+  await preview.getByRole("button", { name: "Toggle long dropdown label", exact: true }).click();
+  await clipped.hover();
+  await expect(preview.getByRole("tooltip")).toHaveText("Explicit dropdown explanation");
+  await clipped.click();
+  await expect(preview.getByRole("tooltip")).toBeHidden();
+  await expect(preview.getByRole("menu").first()).toBeVisible();
 });

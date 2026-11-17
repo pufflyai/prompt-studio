@@ -1,7 +1,17 @@
 import { mergeRefs } from "@chakra-ui/react";
-import { cloneElement, type ReactElement, type Ref, useContext, useLayoutEffect, useMemo, useState } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+  type Ref,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react";
 import { TooltipPresence } from "@/utils/scoped-tooltip";
-import { Tooltip } from "../primitives/tooltip";
+import { Tooltip, type TooltipProps } from "../primitives/tooltip";
 
 const triggerCaption = (element: HTMLElement) => {
   const text = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_TEXT);
@@ -13,7 +23,10 @@ const triggerCaption = (element: HTMLElement) => {
 };
 
 /** Reveal clipped dropdown captions without replacing a caller's explicit tooltip. */
-export const TriggerTooltip = (props: { children: ReactElement<{ ref?: Ref<HTMLElement> }>; disabled: boolean }) => {
+export const TriggerTooltip = (props: {
+  children: ReactElement<{ ref?: Ref<HTMLElement>; children?: ReactNode }>;
+  disabled: boolean;
+}) => {
   const { children, disabled } = props;
   const explicitTooltip = useContext(TooltipPresence);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
@@ -42,6 +55,14 @@ export const TriggerTooltip = (props: { children: ReactElement<{ ref?: Ref<HTMLE
   }, [anchor, explicitTooltip]);
 
   if (explicitTooltip) return children;
+  const supplied = children.props.children;
+  if (isValidElement<TooltipProps>(supplied) && supplied.type === Tooltip) {
+    // The provider must surround the real trigger so both overlays receive its events and DOM ref.
+    return cloneElement(supplied, {
+      ids: { trigger: caption.id, ...supplied.props.ids },
+      children: cloneElement(children, { ref: mergedRef, children: supplied.props.children }),
+    });
+  }
   return (
     <Tooltip content={caption.text} overflowRef={overflowRef} disabled={disabled} ids={{ trigger: caption.id }}>
       {cloneElement(children, { ref: mergedRef })}
