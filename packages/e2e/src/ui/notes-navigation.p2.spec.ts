@@ -251,6 +251,7 @@ test("keeps typing in the same editor when the first line names a new note", asy
     await expect(editor).toHaveText("First line title and keep typing");
   } finally {
     releaseResolution.resolve();
+    await page.unrouteAll({ behavior: "wait" });
     rmSync(repoRoot, { recursive: true, force: true });
   }
 });
