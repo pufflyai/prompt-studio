@@ -261,6 +261,13 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     return records.filter(({ instance }) => instance.enabled);
   };
 
+  const hasEnabledProjectSource = async (sourcePath: string) => {
+    const source = await deps.installedExtensionSourcesService.getBySourcePath(sourcePath);
+    if (!source) return false;
+    const filters = { installed_extension_id: source.id, scope_type: "project" };
+    return (await deps.extensionInstancesService.list(filters)).some((instance) => instance.enabled);
+  };
+
   const listProjectInstances = async (projectId: string) => {
     const project = await deps.projectService.get(projectId);
     if (!project) throw new ProjectNotFoundError(projectId);
@@ -318,6 +325,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     getInstalledSource,
     getInstalledSourceById: deps.installedExtensionSourcesService.get,
     getProjectExtensionInstance,
+    hasEnabledProjectSource,
     listEnabledSourcesForProject,
     listProjectExtensionInstances: listProjectInstances,
     reloadInstalledSourceBySourcePath: (sourcePath: string) =>
