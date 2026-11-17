@@ -155,10 +155,14 @@ const run = async () => {
   const { apiPort, dashboardPort } = await getPortPair();
   const runId = process.env.E2E_RUN_ID ?? createRunId();
   const command = getPlaywrightCommand(forwardedArgs);
+  const env = buildPlaywrightEnv(process.env, { apiPort, dashboardPort }, runId);
+  // This focused spec installs its own extension after creating the project.
+  const downloadFixtureOnly =
+    forwardedArgs.length === 1 && forwardedArgs[0] === "src/ui/extension-file-download.p1.spec.ts";
 
   const { exitCode } = await runPlaywright(
     command,
-    buildPlaywrightEnv(process.env, { apiPort, dashboardPort }, runId),
+    { ...env, E2E_DOWNLOAD_FIXTURE_ONLY: downloadFixtureOnly ? "1" : "0" },
     { stdio: "inherit", prepare: prepareUiFixtures },
   );
   process.exit(exitCode);

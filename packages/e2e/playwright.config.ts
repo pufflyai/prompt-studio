@@ -1,5 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 import { playwrightQuarantineSelection } from "pstdio-scripts/testing";
+import { e2eExtensions } from "./src/default-extensions";
 import { e2eRunId, serveWebServer } from "./src/serve-web-server";
 import { uiOrigin } from "./src/ui-server";
 
@@ -35,5 +36,14 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: [{ ...serveWebServer, timeout: process.platform === "darwin" ? 45_000 : serveWebServer.timeout }],
+  webServer: [
+    {
+      ...serveWebServer,
+      timeout: process.platform === "darwin" ? 45_000 : serveWebServer.timeout,
+      env:
+        process.env.E2E_DOWNLOAD_FIXTURE_ONLY === "1"
+          ? { ...serveWebServer.env, PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions() }
+          : serveWebServer.env,
+    },
+  ],
 });
