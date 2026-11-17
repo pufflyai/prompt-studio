@@ -66,6 +66,12 @@ Omitting `idPrefix` preserves canonical UUID output. Invalid ID prefixes fail be
 allocating a shorthand number. The resource kind's declared uppercase shorthand
 prefix and this lowercase ID prefix are separate: `idPrefix` never changes `PS-123`.
 
+On `main`, `resources.allocateMany({ kind, count, idPrefix? })` allocates 1 to 100 IDs
+and consecutive shorthands for one kind in a single save and returns them in order.
+Later `allocate` calls continue after the batch. Use it when an extension creates many
+resources at once, such as an import, and save the resources themselves in
+`storage.records.commit` groups. It shares API 0.5.0.
+
 Treat IDs as exact, case-sensitive strings and retain owner fields in references.
 An ID prefix is a readable label, not a globally registered resource type. Existing
 UUIDs are not rewritten, and existing core extension callers keep UUID output until

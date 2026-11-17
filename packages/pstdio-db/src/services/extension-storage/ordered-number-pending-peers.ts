@@ -33,20 +33,24 @@ export const pendingOrderedNumberPeers = async (
   ];
   const peers = new Set<string>();
   for (const batch of jsonBatches(keys)) {
+    // Aliases are found by shorthand first, so the work stays bounded by the requested keys. Joining
+    // identities on kind alone first multiplies every requested key by every resource of that kind.
     const result = await tx.execute(sql`WITH requested AS (
       SELECT DISTINCT extension_id, kind, shorthand FROM jsonb_to_recordset(${batch}::jsonb)
         AS k(extension_id text, kind text, shorthand text)
+    ), alias_matches AS MATERIALIZED (
+      SELECT a.resource_id, r.extension_id, r.kind FROM requested r
+        INNER JOIN storage_resource_aliases a
+          ON a.workbench_id = ${owner.workbenchId} AND a.shorthand = r.shorthand
     ) SELECT candidate.resource_id FROM (
       SELECT i.resource_id FROM storage_resource_identities i
         INNER JOIN requested USING(extension_id, kind, shorthand)
         WHERE i.workbench_id = ${owner.workbenchId}
       UNION ALL
-      SELECT a.resource_id FROM storage_resource_aliases a
+      SELECT m.resource_id FROM alias_matches m
         INNER JOIN storage_resource_identities i
-          ON i.workbench_id = a.workbench_id AND i.resource_id = a.resource_id
-        INNER JOIN requested r
-          ON r.extension_id = i.extension_id AND r.kind = i.kind AND r.shorthand = a.shorthand
-        WHERE a.workbench_id = ${owner.workbenchId}
+          ON i.workbench_id = ${owner.workbenchId} AND i.resource_id = m.resource_id
+            AND i.extension_id = m.extension_id AND i.kind = m.kind
     ) candidate
     WHERE NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(${JSON.stringify(ids)}::jsonb) included(id)
       WHERE included.id = candidate.resource_id)
