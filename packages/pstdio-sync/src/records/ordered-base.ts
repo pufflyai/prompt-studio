@@ -109,6 +109,15 @@ const pathEdit = (record: OrderedRecord | undefined, edit: OrderedEditInput, bas
   return { edit: { ...edit, changes: kept }, skip };
 };
 
+const createdByRefused = (root: string | undefined, normalize: (stamp: string) => string) => {
+  if (!root) return false;
+  try {
+    return normalize(root).startsWith('["refused"');
+  } catch {
+    return false;
+  }
+};
+
 /**
  * In-sync devices win: a path applies only while its write stamps still match the author's base.
  * Every device evaluates this identically in relay order, so the blind relay needs no rule.
@@ -129,6 +138,9 @@ export const baseEdit = (
   if (record?.deleted && edit.deleted === undefined) return whole();
   const base = edit.base;
   if (!base) return { edit };
+  // The author saw a record whose creation relay order refused, so a later edit must not create it
+  // from a fragment. Saves that create the record themselves, folded or not, are unaffected.
+  if (base.exists && !record && createdByRefused(base.stamps[""], normalize)) return whole();
   const check: BaseCheck = {
     normalize,
     superseded: (stamp) => {
