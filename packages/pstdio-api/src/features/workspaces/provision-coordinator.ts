@@ -154,21 +154,38 @@ export const removeProjectAfterProvisioning = async <T>(
   }
 };
 
+const settleRefreshes = (queue: ProjectProvisionQueue, revision: number) => {
+  let completed = 0;
+  while (completed < queue.requests.length && queue.requests[completed]!.revision <= revision) {
+    queue.requests[completed++]!.resolve();
+  }
+  if (completed) queue.requests.splice(0, completed);
+};
+
 const maintainProjectRevision = async (
   queue: ProjectProvisionQueue,
   projectId: string,
   applied: Map<string, number>,
 ) => {
-  if (queue.interrupted) return false;
-  for (const workspace of await queue.deps.workspaceService.list(projectId)) {
-    if (queue.interrupted) return false;
-    if (!isReadyLocalWorkspace(workspace)) continue;
-    if ((applied.get(workspace.id) ?? 0) >= queue.revision) continue;
-    const revision = queue.revision;
-    await maintainWorkspace(queue.deps, projectId, workspace.id, queue.hooks);
-    applied.set(workspace.id, revision);
+  const pass = queue.revision;
+  const workspaces = (await queue.deps.workspaceService.list(projectId)).filter(isReadyLocalWorkspace);
+  // Each visited workspace receives at least this pass. The suffix minimum tells us which
+  // revisions the remaining workspaces already have, without rescanning the list after each copy.
+  const remainingRevision: number[] = [];
+  remainingRevision[workspaces.length] = pass;
+  for (let index = workspaces.length - 1; index >= 0; index--) {
+    remainingRevision[index] = Math.min(remainingRevision[index + 1]!, applied.get(workspaces[index]!.id) ?? 0);
   }
-  return true;
+  for (const [index, workspace] of workspaces.entries()) {
+    if (queue.interrupted) break;
+    if ((applied.get(workspace.id) ?? 0) < queue.revision) {
+      const revision = queue.revision;
+      await maintainWorkspace(queue.deps, projectId, workspace.id, queue.hooks);
+      applied.set(workspace.id, revision);
+    }
+    settleRefreshes(queue, remainingRevision[index + 1]!);
+  }
+  settleRefreshes(queue, queue.interrupted ? Infinity : pass);
 };
 
 export const provisionProjectWorkspaces = (
@@ -197,16 +214,7 @@ export const provisionProjectWorkspaces = (
   void inProjectWorkspaceQueue(deps, projectId, async () => {
     const applied = new Map<string, number>();
     try {
-      while (queue.requests.length) {
-        const pass = queue.revision;
-        const finished = await maintainProjectRevision(queue, projectId, applied);
-        // A later change can need another pass. Release workers whose own revision is already applied.
-        queue.requests = queue.requests.filter((request) => {
-          if (finished && request.revision > pass) return true;
-          request.resolve();
-          return false;
-        });
-      }
+      while (queue.requests.length) await maintainProjectRevision(queue, projectId, applied);
     } catch (error) {
       for (const request of queue.requests) request.reject(error);
     } finally {

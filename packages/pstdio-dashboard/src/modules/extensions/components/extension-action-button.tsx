@@ -56,7 +56,7 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
       <ProgressButton
         {...rest}
         status={action?.status}
-        disabled={running || queued || (final ? !failed || !onRetry : disabled)}
+        disabled={disabled || running || queued || (final && (!failed || !onRetry))}
         aria-busy={running || undefined}
         aria-label={failed && onRetry ? `${name} · ${retry}` : name}
         aria-live="polite"

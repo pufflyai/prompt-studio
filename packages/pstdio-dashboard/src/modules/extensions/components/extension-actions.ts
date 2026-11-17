@@ -8,13 +8,17 @@ export interface ExtensionUpgradeBatch {
   failed: number;
 }
 
+export const marketplaceActionKey = (name: string) => `marketplace:${name}`;
+
 interface ActionSnapshot {
+  installedIds: Record<string, string>;
+  replacement: { name: string; retry: () => Promise<void> } | null;
   actions: Record<string, ExtensionActionState>;
   batch?: ExtensionUpgradeBatch;
 }
 
 export const createExtensionActions = () => {
-  let snapshot: ActionSnapshot = { actions: {} };
+  let snapshot: ActionSnapshot = { actions: {}, installedIds: {}, replacement: null };
   const listeners = new Set<() => void>();
   const active = new Set<string>();
   const retries = new Map<string, () => Promise<boolean>>();
@@ -33,11 +37,11 @@ export const createExtensionActions = () => {
     delete actions[id];
     publish({ ...snapshot, actions });
   };
-  const run = async (
+  const run = async <T>(
     id: string,
     labels: { running: string; success: string; failed: string },
-    work: (started: () => void) => Promise<unknown>,
-    queuedLabel?: string,
+    work: (started: () => void) => Promise<T>,
+    options: { queuedLabel?: string; installedId?: (result: T) => string } = {},
   ) => {
     if (active.has(id)) return false;
     active.add(id);
@@ -47,14 +51,24 @@ export const createExtensionActions = () => {
       startedAt = Date.now();
       setAction(id, { status: "running", label: labels.running, startedAt });
     };
-    if (queuedLabel) setAction(id, { status: "queued", label: queuedLabel });
+    if (options.queuedLabel) setAction(id, { status: "queued", label: options.queuedLabel });
     else start();
     try {
-      await work(start);
-      setAction(id, { status: "success", label: labels.success, startedAt, finishedAt: Date.now() });
+      const result = await work(start);
+      const action = { status: "success", label: labels.success, startedAt, finishedAt: Date.now() } as const;
+      const instanceId = options.installedId?.(result);
+      if (instanceId) {
+        const actions = { ...snapshot.actions };
+        delete actions[id];
+        if (!active.has(instanceId)) {
+          retries.delete(instanceId);
+          actions[instanceId] = action;
+        }
+        publish({ ...snapshot, actions, installedIds: { ...snapshot.installedIds, [id]: instanceId } });
+      } else setAction(id, action);
       return true;
     } catch (error) {
-      retries.set(id, () => run(id, labels, work, queuedLabel));
+      retries.set(id, () => run(id, labels, work, options));
       setAction(id, {
         status: "error",
         label: labels.failed,
@@ -107,6 +121,7 @@ export const createExtensionActions = () => {
       };
     },
     dismiss,
+    setReplacement: (replacement: ActionSnapshot["replacement"]) => publish({ ...snapshot, replacement }),
     dismissBatch: (expected = snapshot.batch) => {
       if (batchRunning || snapshot.batch !== expected) return;
       publish({ ...snapshot, batch: undefined });
@@ -130,12 +145,7 @@ export const getExtensionActions = (inventory: object) => {
   return owner;
 };
 
-// Installs begin with a catalog name before an instance id exists. Every installed surface must
-// resolve that same owner until its result is dismissed; retry must use the resolved key too.
-export const resolveExtensionAction = (
-  actions: Record<string, ExtensionActionState>,
-  extension: { installName: string },
-) => {
-  const key = extension.installName;
-  return { key, action: actions[key] };
-};
+export const resolveExtensionAction = (actions: Record<string, ExtensionActionState>, extension: { id: string }) => ({
+  key: extension.id,
+  action: actions[extension.id],
+});

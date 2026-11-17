@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
-import { type ExtensionUpgradeBatch, resolveExtensionAction } from "./extension-actions";
+import { type ExtensionUpgradeBatch, marketplaceActionKey, resolveExtensionAction } from "./extension-actions";
 import { ExtensionFolderDropZone } from "./extension-folder-drop-zone";
 import { unavailableExtensionHarnesses } from "./extension-harness-availability";
 import { ExtensionListRow } from "./extension-list-row";
@@ -221,9 +221,9 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
         <MarketplaceExtensionRow
           key={extension.installName}
           extension={extension}
-          action={actionStates[extension.installName]}
-          onDismissAction={(expected) => onDismissAction?.(extension.installName, expected)}
-          onRetryAction={() => onRetryAction?.(extension.installName)}
+          action={actionStates[marketplaceActionKey(extension.installName)]}
+          onDismissAction={(expected) => onDismissAction?.(marketplaceActionKey(extension.installName), expected)}
+          onRetryAction={() => onRetryAction?.(marketplaceActionKey(extension.installName))}
           onInstall={() => onInstallMarketplace?.(extension)}
           onOpen={() => onOpenMarketplace?.(extension)}
         />

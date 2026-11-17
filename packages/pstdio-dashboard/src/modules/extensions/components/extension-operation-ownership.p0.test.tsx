@@ -23,8 +23,8 @@ const installed = (name: string): ProjectExtensionInstance => ({
   updateAvailable: false,
 });
 
-test("install, toggle and batch upgrades share catalog owners while only two upgrades are active", async () => {
-  const targets = [installed("one"), installed("two"), installed("three")];
+test("installs hand off to the exact instance and same-name upgrades respect host capacity", async () => {
+  const targets = [installed("one"), { ...installed("two"), installName: "one" }, installed("three")];
   const gates = targets.map(() => Promise.withResolvers<void>());
   const started: string[] = [];
   const server = Bun.serve({
@@ -75,8 +75,9 @@ test("install, toggle and batch upgrades share catalog owners while only two upg
     await controls.handleInstall(available);
     const installation = resolveExtensionAction(owner.getSnapshot().actions, targets[0]!);
     expect(installation.action?.status).toBe("success");
+    expect(resolveExtensionAction(owner.getSnapshot().actions, targets[1]!).action).toBeUndefined();
     await controls.handleToggle(targets[0]!, false);
-    expect(Object.keys(owner.getSnapshot().actions)).toEqual(["one"]);
+    expect(Object.keys(owner.getSnapshot().actions)).toEqual(["one-instance"]);
     const updated = resolveExtensionAction(owner.getSnapshot().actions, targets[0]!);
     owner.dismiss(installation.key, installation.action);
     expect(resolveExtensionAction(owner.getSnapshot().actions, targets[0]!).action).toBe(updated.action);
@@ -85,7 +86,7 @@ test("install, toggle and batch upgrades share catalog owners while only two upg
 
     const batch = controls.handleUpgradeAll(targets);
     await until(() => started.length === 2);
-    expect(owner.getSnapshot().batch?.ids).toEqual(["one", "two", "three"]);
+    expect(owner.getSnapshot().batch?.ids).toEqual(targets.map(({ id }) => id));
     expect(Object.values(owner.getSnapshot().actions).filter((entry) => entry.status === "running")).toHaveLength(2);
     expect(resolveExtensionAction(owner.getSnapshot().actions, targets[2]!).action?.status).toBe("queued");
     expect(await controls.handleUpgrade(targets[0]!)).toBe(false);
@@ -101,10 +102,11 @@ test("install, toggle and batch upgrades share catalog owners while only two upg
     await batch;
     expect(owner.getSnapshot().batch).toMatchObject({ completed: 3, failed: 0 });
     expect(owner.getSnapshot().actions[targets[0]!.id]).toBeUndefined();
-    // A batch excludes an already active individual operation under the same catalog key.
+    expect(owner.getSnapshot().actions[targets[1]!.id]?.status).toBe("success");
+    // A batch excludes an already active individual operation on the same instance.
     const individual = controls.handleUpgrade(targets[0]!);
     const overlapping = controls.handleUpgradeAll(targets);
-    expect(owner.getSnapshot().batch?.ids).toEqual(["two", "three"]);
+    expect(owner.getSnapshot().batch?.ids).toEqual(targets.slice(1).map(({ id }) => id));
     await Promise.all([individual, overlapping]);
     expect(owner.getSnapshot().batch).toMatchObject({ completed: 2, failed: 0 });
   } finally {

@@ -103,11 +103,17 @@ test("fresh installs retain the same result and retry owner after acquiring an i
   const { resolveExtensionAction } = await import("./extension-actions");
   const owner = createExtensionActions();
   let calls = 0;
-  await owner.run("pi", { running: "Installing", success: "Installed", failed: "Install failed" }, async () => {
-    if (++calls === 1) throw new Error("Registry unavailable");
-  });
+  await owner.run(
+    "marketplace:pi",
+    { running: "Installing", success: "Installed", failed: "Install failed" },
+    async () => {
+      if (++calls === 1) throw new Error("Registry unavailable");
+      return "new-installed-instance";
+    },
+    { installedId: (id) => id },
+  );
   const installed = { id: "new-installed-instance", installName: "pi" };
-  const failed = resolveExtensionAction(owner.getSnapshot().actions, installed);
+  const failed = { key: "marketplace:pi", action: owner.getSnapshot().actions["marketplace:pi"] };
   expect(failed.action?.status).toBe("error");
   owner.retry(failed.key);
   await new Promise<void>((resolve) => setImmediate(resolve));
@@ -115,12 +121,12 @@ test("fresh installs retain the same result and retry owner after acquiring an i
   expect(calls).toBe(2);
   expect(completed.action?.label).toBe("Installed");
   // A later upgrade owns this same catalog key, so old install dismissal cannot erase it.
-  await owner.run(installed.installName, labels, async () => {});
+  await owner.run(installed.id, labels, async () => {});
   owner.dismiss(completed.key, completed.action);
   const upgraded = resolveExtensionAction(owner.getSnapshot().actions, installed);
   expect(upgraded.action?.label).toBe("Upgraded");
   owner.dismiss(upgraded.key, upgraded.action);
   expect(resolveExtensionAction(owner.getSnapshot().actions, installed).action).toBeUndefined();
-  owner.retry(installed.installName);
+  owner.retry(installed.id);
   expect(calls).toBe(2);
 });

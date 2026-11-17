@@ -168,3 +168,37 @@ test("an earlier upgrade returns as soon as every workspace has seen its revisio
     await Promise.all([first, second]);
   }
 });
+
+test("a middle revision returns during catch-up once the last stale workspace receives it", async () => {
+  const f = maintenanceFixture(3);
+  const gates = Array.from({ length: 5 }, () => ({
+    started: Promise.withResolvers<void>(),
+    done: Promise.withResolvers<void>(),
+  }));
+  f.hooks.ensureConfig = async () => {
+    const gate = gates[f.calls.length];
+    gate?.started.resolve();
+    await gate?.done.promise;
+  };
+  const first = provisionProjectWorkspaces(f.deps, "project", f.hooks);
+  await gates[0]!.started.promise;
+  let secondFinished = false;
+  const second = provisionProjectWorkspaces(f.deps, "project", f.hooks).then(() => {
+    secondFinished = true;
+  });
+  gates[0]!.done.resolve();
+  await gates[1]!.started.promise;
+  gates[1]!.done.resolve();
+  await gates[2]!.started.promise;
+  const third = provisionProjectWorkspaces(f.deps, "project", f.hooks);
+  gates[2]!.done.resolve();
+  await gates[3]!.started.promise;
+  gates[3]!.done.resolve();
+  try {
+    await gates[4]!.started.promise;
+    expect(secondFinished).toBe(true);
+  } finally {
+    gates[4]!.done.resolve();
+    await Promise.all([first, second, third]);
+  }
+});

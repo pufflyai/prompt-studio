@@ -12,7 +12,6 @@ import {
   useProjectExtensionSettings,
   useReloadProjectExtension,
   useSetExtensionAutomationEnabled,
-  useSetProjectExtensionEnabled,
   useUninstallProjectExtension,
   useUpdateProjectExtensionSetting,
 } from "@/shared/extensions/use-project-extensions";
@@ -25,6 +24,7 @@ interface ExtensionDetailContainerProps {
   projectId: string | undefined;
   upgradeAction?: ExtensionActionState;
   onUpgrade: () => void;
+  onToggle: (enabled: boolean) => void;
   onDismissUpgrade: (action: ExtensionActionState) => void;
   onRetryAction: () => void;
   extension: ProjectExtensionInstance;
@@ -54,7 +54,6 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
       (panel) => panel.extensionId === extension.extensionId && panel.slot.id === "extension.settings",
     ) ?? [];
   const { t } = useTranslation("projects");
-  const setEnabled = useSetProjectExtensionEnabled(projectId);
   const setAutomationEnabled = useSetExtensionAutomationEnabled(projectId);
   const settingsQuery = useProjectExtensionSettings(projectId, extension.id);
   // The per-extension endpoint documents contributions even while the extension
@@ -125,7 +124,6 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
             <ExtensionSettingsViews input={settingsInput} panels={settingsPanels} />
           ) : undefined
         }
-        toggling={setEnabled.isPending}
         reloading={reload.isPending}
         upgrading={upgradeAction?.status === "running" || upgradeAction?.status === "queued"}
         actionFeedback={!confirmingUninstall && errorNotice}
@@ -136,13 +134,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         togglingAutomationId={
           setAutomationEnabled.isPending ? (setAutomationEnabled.variables?.automationId ?? undefined) : undefined
         }
-        onToggle={(enabled) => {
-          clearError();
-          setEnabled.mutate(
-            { instanceId: extension.id, enabled },
-            { onError: (error) => showError({ title: error.message }) },
-          );
-        }}
+        onToggle={props.onToggle}
         onToggleAutomation={(automation, enabled) =>
           setAutomationEnabled.mutate(
             { instanceId: extension.id, automationId: automation.id, enabled },

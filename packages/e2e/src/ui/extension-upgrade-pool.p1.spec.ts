@@ -177,9 +177,16 @@ test("retains fresh-install retry and dismiss ownership from marketplace through
   await availableButton.click();
   await expect.poll(() => installs.length).toBe(2);
   await expect(availableButton).toHaveAttribute("aria-busy", "true");
+  await installs[1]!.fulfill({
+    status: 409,
+    json: { error: "Already installed", code: "extension_already_installed" },
+  });
+  await page.getByRole("button", { name: "Replace", exact: true }).click();
+  await expect.poll(() => installs.length).toBe(3);
+  expect(installs[2]!.request().postDataJSON().force).toBe(true);
   const detail = page.getByTestId("extension-detail").filter({ visible: true });
   installed = true;
-  await installs[1]!.fulfill({ json: { extension: instance } });
+  await installs[2]!.fulfill({ json: { extension: instance } });
   await expect(detail).toBeVisible();
   await expect(detail.getByTestId("extension-upgrade")).toHaveAttribute("aria-label", "Installed");
   await page.goBack();
@@ -190,8 +197,16 @@ test("retains fresh-install retry and dismiss ownership from marketplace through
   await detail.getByTestId("extension-action-dismiss").click();
   await expect(detail.getByTestId("extension-upgrade")).toHaveCount(0);
   await expect(detail).toBeVisible();
-  expect(installs).toHaveLength(2);
+  expect(installs).toHaveLength(3);
+  const toggle = Promise.withResolvers<Route>();
+  await page.route(`**/v1/projects/${project.id}/extensions/${instance.id}`, (route) => toggle.resolve(route));
+  await detail.getByRole("checkbox", { name: new RegExp(catalog.displayName) }).click();
+  const toggling = await toggle.promise;
   await page.goBack();
+  await expect(installedRow.getByTestId("extension-row-upgrade")).toBeDisabled();
+  await toggling.fulfill({ json: { ...instance, enabled: !instance.enabled } });
+  await expect(installedRow.getByTestId("extension-row-upgrade")).toHaveAttribute("aria-label", /updated/i);
+  await installedRow.getByTestId("extension-action-dismiss").click();
   await expect(installedRow.getByTestId("extension-row-upgrade")).toHaveCount(0);
   await page.unrouteAll({ behavior: "ignoreErrors" });
 });

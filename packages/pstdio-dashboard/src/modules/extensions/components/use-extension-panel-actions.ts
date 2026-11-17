@@ -1,7 +1,6 @@
 import type { MarketplaceExtension, ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { PstdioApiError } from "@pstdio/sdk/client";
 import { createExtensionUpgradePool } from "pstdio-api-contracts/extension-host";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import {
@@ -10,6 +9,7 @@ import {
   useSetProjectExtensionEnabled,
   useUpgradeProjectExtension,
 } from "@/shared/extensions/use-project-extensions";
+import { marketplaceActionKey } from "./extension-actions";
 import { useExtensionActions } from "./use-extension-actions";
 
 export const useExtensionPanelActions = (projectId: string | undefined, capacity?: number) => {
@@ -19,10 +19,9 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
   const install = useInstallMarketplaceExtension(projectId);
   const addFolder = useAddLocalExtensionFolder(projectId);
   const toggle = useSetProjectExtensionEnabled(projectId);
-  const [replacement, setReplacement] = useState<{ name: string; retry: () => Promise<void> } | null>(null);
   const handleUpgrade = (extension: ProjectExtensionInstance, pool?: ReturnType<typeof createExtensionUpgradePool>) =>
     feedback.run(
-      extension.installName,
+      extension.id,
       {
         running: t("projectSettings.extensionsPanel.feedback.upgradingButton"),
         success: t("projectSettings.extensionsPanel.upgrade.succeeded"),
@@ -39,18 +38,15 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
                 return send();
               })),
         }),
-      pool && t("projectSettings.extensionsPanel.feedback.queued"),
+      { queuedLabel: pool && t("projectSettings.extensionsPanel.feedback.queued") },
     );
   const handleUpgradeAll = (extensions: ProjectExtensionInstance[]) => {
     const pool = createExtensionUpgradePool(capacity);
-    return feedback.runBatch(
-      extensions.map((extension) => ({ id: extension.installName, extension })),
-      ({ extension }) => handleUpgrade(extension, pool),
-    );
+    return feedback.runBatch(extensions, (extension) => handleUpgrade(extension, pool));
   };
   const handleToggle = (extension: ProjectExtensionInstance, enabled: boolean) =>
     feedback.run(
-      extension.installName,
+      extension.id,
       {
         running: t("projectSettings.extensionsPanel.feedback.updating", { name: extension.displayName }),
         success: t("projectSettings.extensionsPanel.feedback.updated"),
@@ -60,7 +56,7 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
     );
   const handleInstall = async (extension: MarketplaceExtension, force = false) => {
     await feedback.run(
-      extension.installName,
+      marketplaceActionKey(extension.installName),
       {
         running: t("projectSettings.extensionsPanel.feedback.installingButton"),
         success: t("projectSettings.extensionsPanel.feedback.installedButton"),
@@ -68,14 +64,15 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
       },
       async () => {
         try {
-          await install.mutateAsync({ installName: extension.installName, force });
+          return await install.mutateAsync({ installName: extension.installName, force });
         } catch (error) {
           if (error instanceof PstdioApiError && error.code === "extension_already_installed" && !force) {
-            setReplacement({ name: extension.displayName, retry: () => handleInstall(extension, true) });
+            feedback.setReplacement({ name: extension.displayName, retry: () => handleInstall(extension, true) });
           }
           throw error;
         }
       },
+      { installedId: (result) => result.extension.id },
     );
   };
   const handleDrop = async (folder: DroppedExtensionFolder) => {
@@ -91,7 +88,7 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
           await addFolder.mutateAsync(folder);
         } catch (error) {
           if (error instanceof PstdioApiError && error.code === "extension_already_installed" && !folder.force) {
-            setReplacement({ name: folder.name, retry: () => handleDrop({ ...folder, force: true }) });
+            feedback.setReplacement({ name: folder.name, retry: () => handleDrop({ ...folder, force: true }) });
           }
           throw error;
         }
@@ -105,8 +102,6 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
     handleToggle,
     handleInstall,
     handleDrop,
-    replacement,
-    setReplacement,
     addingFolderName: addFolder.isPending ? addFolder.variables?.name : undefined,
   };
 };

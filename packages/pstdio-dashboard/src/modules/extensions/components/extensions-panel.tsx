@@ -10,7 +10,7 @@ import {
   useSetExtensionAutomationEnabled,
 } from "@/shared/extensions/use-project-extensions";
 import { AvailableExtensionDetail } from "./available-extension-detail";
-import { resolveExtensionAction } from "./extension-actions";
+import { marketplaceActionKey, resolveExtensionAction } from "./extension-actions";
 import { ExtensionDetailContainer } from "./extension-detail-container";
 import { ExtensionReplacementConfirmation } from "./extension-replacement-confirmation";
 import { ExtensionsPanelView } from "./extensions-panel-view";
@@ -44,7 +44,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       resource: { type: "extension", extensionId: "pstdio", id, label: displayName },
     });
   const actions = useExtensionPanelActions(projectId, extensionsQuery.data?.upgradeConcurrency);
-  const replacementDialog = (
+  const replacementDialog = settingsInput.visible !== false && (
     <ExtensionReplacementConfirmation replacement={actions.replacement} onClose={() => actions.setReplacement(null)} />
   );
   const marketplaceContributions = useMarketplaceExtensionContributions(
@@ -74,9 +74,9 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
 
   const extensions = extensionsQuery.data?.extensions ?? [];
   const marketplace = extensionsQuery.data?.marketplace ?? [];
-  const selected = extensions.find(
-    (extension) => extension.id === selectedInstanceId || extension.installName === selectedMarketplaceName,
-  );
+  const catalogKey = selectedMarketplaceName ? marketplaceActionKey(selectedMarketplaceName) : undefined;
+  const detailId = selectedInstanceId ?? (catalogKey && actions.installedIds[catalogKey]);
+  const selected = extensions.find((extension) => extension.id === detailId);
   const selectedMarketplace = marketplace.find(
     (extension) => extension.installName === selectedMarketplaceName && !extension.installed,
   );
@@ -84,18 +84,22 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   if (selected) {
     const owned = resolveExtensionAction(actions.actions, selected);
     return (
-      <ExtensionDetailContainer
-        projectId={projectId}
-        extension={selected}
-        metadata={metadataQuery.data}
-        agents={agents}
-        settingsInput={settingsInput}
-        onBack={() => openList()}
-        upgradeAction={owned.action}
-        onUpgrade={() => void actions.handleUpgrade(selected)}
-        onDismissUpgrade={(expected) => actions.dismiss(owned.key, expected)}
-        onRetryAction={() => actions.retry(owned.key)}
-      />
+      <>
+        {replacementDialog}
+        <ExtensionDetailContainer
+          projectId={projectId}
+          extension={selected}
+          metadata={metadataQuery.data}
+          agents={agents}
+          settingsInput={settingsInput}
+          onBack={() => openList()}
+          upgradeAction={owned.action}
+          onUpgrade={() => void actions.handleUpgrade(selected)}
+          onToggle={(enabled) => void actions.handleToggle(selected, enabled)}
+          onDismissUpgrade={(expected) => actions.dismiss(owned.key, expected)}
+          onRetryAction={() => actions.retry(owned.key)}
+        />
+      </>
     );
   }
 
@@ -110,9 +114,11 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
             marketplaceContributions.error instanceof Error ? marketplaceContributions.error.message : undefined
           }
           loadingContributions={marketplaceContributions.isLoading}
-          action={actions.actions[selectedMarketplace.installName]}
-          onDismissAction={(expected) => actions.dismiss(selectedMarketplace.installName, expected)}
-          onRetryAction={() => actions.retry(selectedMarketplace.installName)}
+          action={actions.actions[marketplaceActionKey(selectedMarketplace.installName)]}
+          onDismissAction={(expected) =>
+            actions.dismiss(marketplaceActionKey(selectedMarketplace.installName), expected)
+          }
+          onRetryAction={() => actions.retry(marketplaceActionKey(selectedMarketplace.installName))}
           onInstall={() => void actions.handleInstall(selectedMarketplace)}
         />
       </>
