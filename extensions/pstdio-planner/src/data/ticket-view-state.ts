@@ -11,21 +11,28 @@ import { independentBlocker } from "./ticket-independent-blocker";
 import type { WorkflowStatusSelections } from "./workflow-statuses";
 
 export const activeTicket: StoragePredicate = { field: "archived", op: "ne", value: true };
-export const ticketViewState = async (storage: ExtensionStorageApi, workflow: WorkflowStatusSelections) => {
+export const ticketViewState = async (
+  storage: ExtensionStorageApi,
+  workflow: WorkflowStatusSelections,
+  deadlineId?: string | null,
+) => {
   const metadata = await readPlanMetadata(storage);
   const done: StoragePredicate = { field: "statusId", op: "in", value: workflow.completedStatusIds };
   const unfinished: StoragePredicate = { all: [activeTicket, { not: done }] };
   const today = new Intl.DateTimeFormat("en-CA").format(new Date());
-  const progress = metadata.deadlines.length
-    ? await storage.records.aggregate({
-        index: "ticket-view",
-        where: activeTicket,
-        groupBy: "deadlineId",
-        groupLimit: 500,
-        computed: { completedMilestoneTicket: { type: "number", cases: [{ when: done, value: 1 }], otherwise: 0 } },
-        metrics: { done: { operation: "sum", field: "completedMilestoneTicket" } },
-      })
-    : undefined;
+  const progress =
+    metadata.deadlines.length && deadlineId !== null
+      ? await storage.records.aggregate({
+          index: "ticket-view",
+          where: deadlineId
+            ? { all: [activeTicket, { field: "deadlineId", op: "eq", value: deadlineId }] }
+            : activeTicket,
+          groupBy: "deadlineId",
+          groupLimit: 500,
+          computed: { completedMilestoneTicket: { type: "number", cases: [{ when: done, value: 1 }], otherwise: 0 } },
+          metrics: { done: { operation: "sum", field: "completedMilestoneTicket" } },
+        })
+      : undefined;
   const counts = new Map(progress?.groups.map(({ value, count }) => [String(value), count]));
   const doneCounts = new Map(progress?.groups.map(({ value, metrics }) => [String(value), metrics?.done ?? 0]));
   const dates = Object.fromEntries(metadata.deadlines.map((deadline) => [deadline.id, deadline.date]));

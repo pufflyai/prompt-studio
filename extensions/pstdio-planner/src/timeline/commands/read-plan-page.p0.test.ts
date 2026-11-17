@@ -27,6 +27,35 @@ test("Timeline retains linked-resource badges with its title and ID search proje
   expect(result.ticketRows[0].attributes.linkedResourceItems).toMatchObject([{ label: "Prototype" }]);
 });
 
+test("looking up an off-window Timeline ticket skips project-wide pace and grouping", async () => {
+  const storage = createMemoryStorage();
+  await putTicket(storage, {
+    id: "selected",
+    shorthand: "T-1",
+    title: "Selected",
+    content: "# Selected",
+    statusId: "ready",
+    archived: false,
+    createdAt: "2026-01-01",
+    updatedAt: "2026-01-01",
+  });
+  const ctx = makeCommandContext({ storage, params: {} });
+  await readPlanCommand.run(ctx, {});
+  const aggregate = storage.records.aggregate.bind(storage.records);
+  storage.records.aggregate = async (query) => {
+    if (query.index === "ticket-view") {
+      expect(query.groupBy).toBeUndefined();
+      expect(query.metrics?.completedComplexity).toBeUndefined();
+    }
+    return aggregate(query);
+  };
+
+  const result = await readPlanCommand.run(ctx, { ticketId: "selected" });
+
+  expect(result.sections.flatMap(({ rows }) => rows.map(({ id }) => id))).toEqual(["selected"]);
+  expect(result.pace).toBeNull();
+});
+
 test("Timeline filters before paging and counts unloaded work without listing resources", async () => {
   const storage = createMemoryStorage();
   let previous: string | undefined;

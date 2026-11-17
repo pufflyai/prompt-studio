@@ -28,6 +28,7 @@ export interface TicketViewSelection {
   select?: string[];
   owner?: string;
   attentionPage?: string;
+  pointTicketId?: string;
 }
 const filterFields = (filter?: ViewFilterGroup): string[] =>
   filter ? [...filter.rules.map(({ attributeId }) => attributeId), ...(filter.groups ?? []).flatMap(filterFields)] : [];
@@ -42,7 +43,19 @@ export const prepareTicketViewQuery = async (
   const [tags, statuses] = await Promise.all([seedDefaultTags(ctx.storage), seedDefaultStatuses(ctx.storage)]);
   const [workflow] = await Promise.all([readWorkflowStatuses(ctx, statuses), readPlanMetadata(ctx.storage)]);
   const before = await ctx.storage.records.query({ index: "ticket-view", fields: [], limit: 0, orderBy: [] });
-  const state = await ticketViewState(ctx.storage, usableWorkflowStatuses(workflow));
+  const point = selection.pointTicketId
+    ? await ctx.storage.records.query({
+        index: "ticket-view",
+        fields: ["deadlineId"],
+        limit: 1,
+        orderBy: [],
+        revision: before.revision,
+        where: { field: "id", op: "eq", value: selection.pointTicketId },
+      })
+    : undefined;
+  const deadlineId = point?.records[0]?.fields.deadlineId;
+  const pointDeadline = typeof deadlineId === "string" ? deadlineId : null;
+  const state = await ticketViewState(ctx.storage, usableWorkflowStatuses(workflow), point ? pointDeadline : undefined);
   const { computed, metadata } = state;
   const attributes = [...buildTicketAttributes(statuses, tags), ...timelineTicketAttributes(metadata.deadlines)];
   const groups = [input.settings?.columnGrouping ?? "status", input.settings?.rowGrouping ?? "none"];

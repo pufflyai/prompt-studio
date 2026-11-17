@@ -9,6 +9,7 @@ import { activeTicket } from "../../data/ticket-view-state";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
 import { daysBetween } from "../model/days";
 import type { MilestoneDisplay } from "../model/milestone-visibility";
+import { summarizeSection } from "../model/section-summary";
 import { initializePlanPlacements } from "./initialize-placements";
 import { readPlanMetadata } from "./placement-store";
 import { planPageRows } from "./plan-page-rows";
@@ -88,6 +89,7 @@ export const readPlanCommand = defineCommand({
       groups: [],
       owner: ctx.extensionId,
       attentionPage: "timeline",
+      pointTicketId: input.ticketId || undefined,
       orderBy: [
         { field: "deadlineRank", direction: "asc" },
         { field: "planPosition", direction: "asc" },
@@ -129,7 +131,13 @@ export const readPlanCommand = defineCommand({
         ? (input.page?.offset ?? 0)
         : undefined;
     const page = await planPageRows(ctx, view, executionOffset);
-    const summary = await planQuerySummary(ctx.storage, view, executionOffset !== undefined);
+    // Selection outside the visible window needs only its row and section.
+    const summary = input.ticketId
+      ? undefined
+      : await planQuerySummary(ctx.storage, view, executionOffset !== undefined);
+    const deadlines = [...view.metadata.deadlines, null].filter(
+      (deadline) => !input.ticketId || page.rows.some((row) => row.deadlineId === (deadline?.id ?? null)),
+    );
     await ctx.storage.records.query({
       index: "ticket-view",
       fields: [],
@@ -138,18 +146,22 @@ export const readPlanCommand = defineCommand({
       revision: view.result.page.revision,
     });
     return {
-      pace: summary.pace,
+      pace: summary?.pace ?? null,
       statuses: view.statuses,
       today: page.today,
       tags: view.tags,
       trackProperty: page.track,
-      sections: [...view.metadata.deadlines, null].map((deadline) => ({
-        deadline: deadline ? { ...deadline, daysLeft: daysBetween(page.today, deadline.date) } : null,
-        rows: page.rows.filter((row) => row.deadlineId === (deadline?.id ?? null)),
-        ...summary.section(deadline?.id ?? null),
-      })),
+      sections: deadlines.map((deadline) => {
+        const section = {
+          deadline: deadline ? { ...deadline, daysLeft: daysBetween(page.today, deadline.date) } : null,
+          rows: page.rows.filter((row) => row.deadlineId === (deadline?.id ?? null)),
+        };
+        return summary
+          ? { ...section, ...summary.section(deadline?.id ?? null) }
+          : { ...summarizeSection(section, view.tags, null), globalCounts: undefined };
+      }),
       projectId: ctx.projectId,
-      savedViews: await ctx.views.list(timelineBoard),
+      savedViews: input.ticketId ? [] : await ctx.views.list(timelineBoard),
       ticketRows: view.result.rows,
       ticketAttributes: view.result.attributes,
       page: view.result.page,
