@@ -68,7 +68,6 @@ const navButtonProps = {
   size: "xs",
   variant: "solid",
   colorPalette: "gray",
-  borderRadius: "full",
   bg: "blackAlpha.600",
   color: "white",
   _hover: { bg: "blackAlpha.800" },
@@ -112,7 +111,7 @@ const ImageViewerCarousel = (props: { images: ImageViewerImage[]; initialIndex: 
         top="xs"
         insetInlineEnd="xs"
         paddingX="xs"
-        borderRadius="full"
+        borderRadius="xs"
         bg="blackAlpha.600"
         color="white"
         textStyle="label/XS/medium"
