@@ -2,7 +2,6 @@ import { Box, Button, Heading, HStack, Spinner, Stack, Text } from "@chakra-ui/r
 import { AlertMessage, SimpleCard, SimpleCardBody, WindowTitleBar } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
-import { CopyStartupLogsButton } from "./copy-startup-logs-button";
 import { DesktopStartingState } from "./desktop-starting-state";
 
 interface DesktopLifecycleActions {
@@ -60,14 +59,7 @@ const RecoveryState = (props: {
             status="error"
             role="alert"
             title="Something is wrong"
-            endElement={
-              <>
-                {availableActions.has("copy_diagnostics") && (
-                  <CopyStartupLogsButton copyStartupLogs={actions.copyDiagnostics} />
-                )}
-                {availableActions.has("retry") && <Button onClick={actions.retryRuntime}>Retry</Button>}
-              </>
-            }
+            endElement={availableActions.has("retry") && <Button onClick={actions.retryRuntime}>Retry</Button>}
           >
             {state.error.message}
           </AlertMessage>

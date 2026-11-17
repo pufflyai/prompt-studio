@@ -51,7 +51,7 @@ export const DesktopStartingState = (props: Pick<DesktopStartupProgressProps, "p
   const [takingLonger, setTakingLonger] = useState(false);
   const [waitingPhase, setWaitingPhase] = useState<DesktopStartupPhase | null>(null);
   useEffect(() => {
-    const timer = setTimeout(() => setTakingLonger(true), 15_000);
+    const timer = setTimeout(() => setTakingLonger(true), 10_000);
     return () => clearTimeout(timer);
   }, []);
   useEffect(() => {
