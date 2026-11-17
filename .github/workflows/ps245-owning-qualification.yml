@@ -1,0 +1,58 @@
+name: PS245 complete owning qualification
+on:
+  push:
+    branches: [test/ps245-owning-qualification-20261117]
+permissions:
+  contents: read
+env:
+  NX_DAEMON: "false"
+jobs:
+  owning:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        owner: [original-api, mixed-resource-http1]
+    env:
+      GH_TOKEN: ${{ github.token }}
+      UI_PERF_ASSERT_BUDGETS: "1"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: 5fa1fa15f4ccca96e06a439d69334c914bbfd269
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - name: Set up pinned Bun in the Playwright image
+        run: |
+          echo "BUN_INSTALL_CACHE_DIR=/tmp/pstdio-ci-bun-cache" >> "$GITHUB_ENV"
+          echo "E2E_BUN_CACHE_DIR=/tmp/pstdio-ci-bun-cache" >> "$GITHUB_ENV"
+          node scripts/ci/setup-container-bun.ts
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          profile: playwright
+      - name: Bind exact clean candidate
+        run: |
+          git diff --exit-code
+          git rev-parse HEAD HEAD^{tree}
+      - name: Run both unchanged original API owning files
+        if: matrix.owner == 'original-api'
+        run: bun scripts/test.ts --file packages/pstdio-api/src/services/relay/personal-key-renewal.p1.test.ts --file packages/pstdio-api/src/services/relay/personal-subscription-drain.p1.test.ts --out test-results/ci/owning-plan.json
+      - name: Run complete existing mixed-resource HTTP/1.1 owning file
+        if: matrix.owner == 'mixed-resource-http1'
+        run: bun scripts/test.ts --file packages/e2e/src/ui/resource-stream-budget.p1.spec.ts --out test-results/ci/owning-plan.json
+      - name: Retain exact owning outcomes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps245-${{ matrix.owner }}-attempt-${{ github.run_attempt }}
+          path: |
+            test-results/ci
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+          if-no-files-found: error
