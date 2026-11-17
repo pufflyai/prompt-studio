@@ -66,3 +66,74 @@ test("an extension declares a native resource list through the public SDK", () =
     attributes: [{ type: { options: [{ note: "Online", canCreate: true }] } }],
   });
 });
+
+test("a resource list keeps its declared sub-groupings in default and saved views", () => {
+  const enumType = (value: string) => ({ kind: "enum" as const, options: [{ value, label: value }] });
+  const view = defineView({
+    id: "rules",
+    title: "Rules",
+    body: {
+      kind: "resourceList",
+      attributes: [
+        { id: "region", label: "Region", groupable: true, type: enumType("eu") },
+        { id: "channel", label: "Channel", groupable: true, type: enumType("web") },
+        { id: "severity", label: "Severity", groupable: true, type: enumType("required") },
+      ],
+      defaultSettings: { columnGrouping: "region", subGroupings: ["channel", "severity"] },
+      defaultViews: [
+        {
+          id: "by-channel",
+          title: "By channel",
+          settings: { columnGrouping: "region", subGroupings: ["channel"], displayProperties: [] },
+        },
+        { id: "flat", title: "Flat", settings: { columnGrouping: "region", displayProperties: [] } },
+      ],
+      query: async () => ({
+        rows: [
+          {
+            id: "rule",
+            title: "Title starts with brand",
+            attributes: { region: "eu", channel: "web" },
+            children: [
+              {
+                id: "check",
+                title: "Title length",
+                attributes: {},
+                children: [{ id: "example", title: "Example", attributes: {} }],
+              },
+            ],
+          },
+        ],
+      }),
+    },
+  });
+  const source: LoadedExtensionSource = {
+    packagePath: "/fake/rules",
+    sourcePath: "/fake/rules/extension.ts",
+    sourceKind: "local_path",
+    manifest: {
+      id: "example.rules",
+      name: "rules",
+      publisher: "example",
+      version: "1.0.0",
+      main: "./extension.ts",
+      enginesPstdio: "^0.1.6",
+    },
+    definition: defineExtension({ views: [view] }),
+  };
+  const metadata = workbenchExtensionMetadataSchema.parse(
+    createWorkbenchExtensionMetadata({ runtime: normalizeExtensionSources([source]) }),
+  );
+  expect(metadata.views[0].body).toMatchObject({
+    defaultSettings: {
+      viewMode: "list",
+      columnGrouping: "region",
+      rowGrouping: "none",
+      subGroupings: ["channel", "severity"],
+    },
+    defaultViews: [
+      { settings: { rowGrouping: "none", subGroupings: ["channel"] } },
+      { settings: { rowGrouping: "none" } },
+    ],
+  });
+});

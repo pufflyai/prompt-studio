@@ -4,6 +4,7 @@ import { makeCommandContext } from "../commands/command-context.fixture";
 import { reorderTicket } from "../commands/reorder-ticket";
 import { migratePlannerStorage } from "./migrate-storage";
 import { readMigratedTickets } from "./read-migrated-tickets";
+import { ticketIdOfRecord } from "./storage-reads.fixture";
 import { seedTicketIdentity } from "./ticket-context.fixture";
 
 const legacyTicket = (id: string, sortOrder: number) => ({
@@ -32,7 +33,9 @@ test("offline Planner migrations and moves preserve every card in one movable or
     for (const id of ["a", "b", "c", "d", "e"]) seedTicketIdentity(storage, { id, shorthand: `T-${id}` });
   }
   for (const ctx of contexts) await migratePlannerStorage(ctx);
-  await pair.merge();
+  // Both devices moved the tickets offline; the losing device forwards its order writes and the
+  // winner's catch-up moves its cards, so convergence takes a few sync rounds.
+  for (let round = 0; round < 3; round++) await pair.merge();
   const ordered = async (storage: typeof first) => {
     const rows = await storage.collection<ReturnType<typeof legacyTicket> & { position?: string }>("tickets").list();
     for (const row of rows) {
@@ -110,23 +113,22 @@ test("an order import keeps a remote edit received after its observed read", asy
   await first.collection("tickets").put("a", legacyTicket("a", 0));
   await pair.merge();
   let edited = false;
+  // Tickets are records since storage version 5, so the import observes each ticket record.
   const storage: typeof first = {
     ...first,
-    collection<T>(name: string) {
-      const collection = first.collection<T>(name);
-      return {
-        ...collection,
-        async read(id: string) {
-          const observed = await collection.read(id);
-          if (name === "tickets" && !edited) {
-            edited = true;
-            const remote = second.collection<ReturnType<typeof legacyTicket>>("tickets");
-            await remote.update(id, { ...(await remote.get(id))!, title: "Remote edit" });
-            await pair.merge();
-          }
-          return observed;
-        },
-      };
+    records: {
+      ...first.records,
+      async read(recordId, ...rest) {
+        const observed = await first.records.read(recordId, ...rest);
+        const id = ticketIdOfRecord(recordId);
+        if (id && !edited) {
+          edited = true;
+          const remote = second.collection<ReturnType<typeof legacyTicket>>("tickets");
+          await remote.update(id, { ...(await remote.get(id))!, title: "Remote edit" });
+          await pair.merge();
+        }
+        return observed;
+      },
     },
   };
   await migratePlannerStorage(makeCommandContext({ storage, params: {} }));
@@ -142,7 +144,6 @@ test("an order import keeps a remote edit received after its observed read", asy
 
 test("a content edit during an interrupted import keeps negative legacy ranks until cleanup", async () => {
   const { createMemoryStorage } = await import("@pstdio/sdk/testing");
-  const { updateTicket } = await import("./collections");
   const storage = createMemoryStorage();
   await storage.migrate(3, async () => {});
   const records = storage.collection<ReturnType<typeof legacyTicket> & { position?: string }>("tickets");
@@ -151,21 +152,21 @@ test("a content edit during an interrupted import keeps negative legacy ranks un
   for (const id of ["z", "a"]) seedTicketIdentity(storage, { id, shorthand: `T-${id}` });
   const ctx = makeCommandContext({ storage, params: {} });
   let interrupted = false;
+  // Tickets are records since storage version 5, so the import observes each ticket record.
   const pausing: typeof storage = {
     ...storage,
-    collection<T>(name: string) {
-      const collection = storage.collection<T>(name);
-      return {
-        ...collection,
-        async read(id: string) {
-          if (name === "tickets" && id === "a" && !interrupted) {
-            interrupted = true;
-            await updateTicket(ctx, { ...(await records.get("z"))!, title: "User edit" });
-            throw new Error("Interrupted before the second position");
-          }
-          return collection.read(id);
-        },
-      };
+    records: {
+      ...storage.records,
+      async read(recordId, ...rest) {
+        if (ticketIdOfRecord(recordId) === "a" && !interrupted) {
+          interrupted = true;
+          // Planner writes wait for the import, so the edit comes from a writer that read the
+          // imported ticket mid-import, such as an older Planner on another device.
+          await records.update("z", { ...(await records.get("z"))!, title: "User edit" });
+          throw new Error("Interrupted before the second position");
+        }
+        return storage.records.read(recordId, ...rest);
+      },
     },
   };
   await expect(migratePlannerStorage(makeCommandContext({ storage: pausing, params: {} }))).rejects.toThrow(
