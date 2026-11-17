@@ -95,9 +95,9 @@ jobs:
           tar -xzf release-build.tar.gz
       - name: Install browser engines
         if: matrix.family == 'planner'
-        # Approved 2026-11-11 (PS-1164): hosted installs take up to 91 s; an unreachable Ubuntu
-        # archive otherwise stalls apt for the whole job.
-        timeout-minutes: 3
+        # PS-1232: native Windows browser installation exceeded 3 min before measurements.
+        # The user authorized setup allowances on 2026-11-17; keep product limits unchanged.
+        timeout-minutes: 8
         run: bunx playwright@1.60.0 install --with-deps
       - name: "[phase:test] Collect every fixed workload with existing budgets"
         run: bun scripts/test.ts --performance-family ${{ matrix.family }} --prebuilt

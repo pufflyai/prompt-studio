@@ -5,7 +5,7 @@ describe.if(process.env.INSTALLED_CLI_TESTS === "1")("installed Pi CLI", () => {
   let fixture: Awaited<ReturnType<typeof piFixture>>;
   afterEach(async () => {
     await fixture?.close();
-  });
+  }, 30_000);
 
   test("runs a tool and resumes its native session without an account", async () => {
     fixture = await piFixture(true);
