@@ -3,14 +3,14 @@ import type { ArtifactContent } from "../artifacts";
 import { useArtifactTranslations } from "../translations";
 import { HtmlPreview } from "./html-preview";
 
-export const ArtifactReader = (props: { content: ArtifactContent }) => {
+export const ArtifactReader = (props: { content: ArtifactContent; title?: string }) => {
   const { t } = useArtifactTranslations();
   return (
     <Stack height="full" minHeight="0" gap="0">
       <HtmlPreview
         key={props.content.id}
         html={props.content.html}
-        title={t("reader.preview", "Preview: {{title}}", { title: props.content.title })}
+        title={t("reader.preview", "Preview: {{title}}", { title: props.title ?? props.content.title })}
       />
     </Stack>
   );

@@ -73,7 +73,8 @@ const ArtifactsApp = (props: AppProps) => {
 
   const exportLabel = context.t("reader.export", "Export HTML");
   useEffect(() => {
-    if (!id || !content) return;
+    if (!visible || !id || !content) return;
+    let active = true;
     const action = registerWebviewResourceAction(
       host,
       {
@@ -102,11 +103,14 @@ const ArtifactsApp = (props: AppProps) => {
         }
       },
     );
-    void action.ready.catch((error) => setActionError(String(error)));
+    void action.ready.catch((error) => {
+      if (active) setActionError(String(error));
+    });
     return () => {
+      active = false;
       void action.dispose().catch(() => {});
     };
-  }, [client, content, exportLabel, host, id]);
+  }, [client, content, exportLabel, host, id, visible]);
 
   const choices = useRef<ReturnType<typeof registerWebviewResourceAction> | null>(null);
   const [choicePage, setChoicePage] = useState(0);
@@ -135,16 +139,17 @@ const ArtifactsApp = (props: AppProps) => {
     }
   });
   // A content read can change while an accepted preference write is still completing.
-  // The App key binds this lifetime to its project and resource.
+  // The App key binds the resource; visibility binds the host's current view authority.
   useEffect(() => {
+    if (!visible) return;
     return () => {
       const registration = choices.current;
       choices.current = null;
       void registration?.dispose().catch(() => {});
     };
-  }, []);
+  }, [visible]);
   useEffect(() => {
-    if (!id || !items?.length || preference.data === undefined) return;
+    if (!visible || !id || !items?.length || preference.data === undefined) return;
     const values = artifactRevisionChoices(
       items,
       selected ?? content?.id ?? items[0]?.id,
@@ -173,7 +178,19 @@ const ArtifactsApp = (props: AppProps) => {
     return () => {
       cancelled = true;
     };
-  }, [host, hostProps.projectId, id, content, items, selected, preference.data, choicePage, versionsLabel, context.t]);
+  }, [
+    host,
+    hostProps.projectId,
+    id,
+    content,
+    items,
+    selected,
+    preference.data,
+    choicePage,
+    versionsLabel,
+    context.t,
+    visible,
+  ]);
 
   let body = (
     <Center flex="1">
@@ -181,7 +198,7 @@ const ArtifactsApp = (props: AppProps) => {
     </Center>
   );
   if (id && content && items) {
-    body = <ArtifactReader content={content} />;
+    body = <ArtifactReader content={content} title={items[0]?.title} />;
   } else if (!id && items) {
     body = (
       <ArtifactLibrary
