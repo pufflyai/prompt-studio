@@ -45,6 +45,7 @@ export interface ChatInputProps {
   isDisabled?: boolean;
   /** Blocks ordinary messages while the editor stays usable. Pending questions and decisions stay available. */
   submitDisabled?: boolean;
+  questionSubmitDisabled?: boolean;
   onChange?: (text: string) => void;
   attachmentList?: ReactNode;
   actions?: ReactNode;
@@ -91,6 +92,7 @@ export const ChatInput = (props: ChatInputProps) => {
     onClearAttachments,
     isDisabled = false,
     submitDisabled = false,
+    questionSubmitDisabled = false,
     onChange,
     placeholder,
     attachmentList,
@@ -200,6 +202,7 @@ export const ChatInput = (props: ChatInputProps) => {
           decision={decision}
           actions={actions}
           disabled={isDisabled}
+          questionSubmitDisabled={questionSubmitDisabled}
           onSubmit={(answer, response) =>
             submitComposerResponse({
               text: answer,

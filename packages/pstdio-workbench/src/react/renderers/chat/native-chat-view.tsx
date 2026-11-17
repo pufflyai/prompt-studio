@@ -163,6 +163,7 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
             streaming={conversation.streaming}
             streamingStartedAt={conversation.streamingStartedAt}
             inputDisabled={sending || conversation.readOnly || uploading > 0 || Boolean(host.account?.progress)}
+            agentQuestionSubmitDisabled={host.account?.blocked}
             submitDisabled={
               conversation.submitDisabled ||
               Boolean(selected && conversation.queueReadOnly) ||

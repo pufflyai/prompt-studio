@@ -29,6 +29,7 @@ export interface ChatPanelComposerProps {
   chatInputAutoFocus: boolean;
   chatInputPlaceholder: string;
   chatInputQuestionPrompt?: ChatInputQuestionPrompt;
+  questionSubmitDisabled?: boolean;
   composerDecision?: ComposerDecision;
   chatInputCommands: PromptCommand[];
   hasWorkspaceHub: boolean;

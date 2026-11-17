@@ -77,6 +77,8 @@ export interface ChatPanelProps extends ChatLinkProps {
   inputDisabled?: boolean;
   /** Blocks ordinary messages while the editor stays usable. Pending questions and decisions stay available. */
   submitDisabled?: boolean;
+  /** Blocks replies to questions from conversation history while choices remain editable. */
+  agentQuestionSubmitDisabled?: boolean;
   chatInputQuestionPrompt?: ChatInputQuestionPrompt;
   composerDecision?: ComposerDecision;
   chatInputAutoFocus?: boolean;
@@ -141,6 +143,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     workspaceInitializing = false,
     inputDisabled = false,
     submitDisabled = false,
+    agentQuestionSubmitDisabled = false,
     chatInputQuestionPrompt,
     composerDecision,
     chatInputAutoFocus = false,
@@ -262,6 +265,9 @@ export const ChatPanel = (props: ChatPanelProps) => {
                   chatInputAutoFocus={chatInputAutoFocus}
                   chatInputPlaceholder={chatInputPlaceholder}
                   chatInputQuestionPrompt={activeQuestionPrompt}
+                  questionSubmitDisabled={
+                    agentQuestionSubmitDisabled && activeQuestionPrompt !== chatInputQuestionPrompt
+                  }
                   composerDecision={questionNavigation.prompt ? undefined : composerDecision}
                   chatInputCommands={chatInputCommands}
                   hasWorkspaceHub={hasWorkspaceHub}

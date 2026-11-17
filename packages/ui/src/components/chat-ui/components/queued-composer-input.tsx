@@ -18,6 +18,7 @@ export const QueuedComposerInput = (props: QueuedComposerInputProps) => {
     chatInputAutoFocus,
     chatInputPlaceholder,
     chatInputQuestionPrompt,
+    questionSubmitDisabled,
     composerDecision,
     chatInputCommands,
     inputDisabled,
@@ -87,6 +88,7 @@ export const QueuedComposerInput = (props: QueuedComposerInputProps) => {
         submitDisabled={submitDisabled || (streaming && readOnlyQueue) || (editing && queuedComposer.stale)}
         attachedToTop={!editing && hasQueuedFollowUps}
         questionPrompt={chatInputQuestionPrompt}
+        questionSubmitDisabled={questionSubmitDisabled}
         decision={composerDecision}
         autoFocus={chatInputAutoFocus}
         focusSignal={queuedComposer.focusSignal}
