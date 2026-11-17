@@ -1,4 +1,4 @@
-import { defineExtension, defineHarness } from "@pstdio/sdk/extensions";
+import { defineExtension, defineHarness, l10n } from "@pstdio/sdk/extensions";
 import { createCodexHarness } from "./src/harness";
 import { provisionSkills } from "./src/hooks";
 import { quotasCommand } from "./src/quotas";

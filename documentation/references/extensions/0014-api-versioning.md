@@ -500,4 +500,4 @@ Optional resource Activity declarations, `ctx.activity` discussion/outcome metho
 
 `NavigationTreeContribution.optionalView` lets a tool attach a tree supplied by an independently installed view provider. An absent foreign provider keeps the tree inactive; missing local views, missing views in a present provider, and non-tree views still fail validation. Publish a compatible SDK and host before consumers adopt this additive contract. The published 0.47.0 SDK does not include it. See [navigation trees](0004-contribution-api.md#dashboard-ui-contributions).
 
-*Updated at: 2026-11-14*
+*Updated at: 2026-11-17*
