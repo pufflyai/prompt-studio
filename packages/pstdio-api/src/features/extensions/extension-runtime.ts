@@ -21,6 +21,7 @@ import {
   remapPackageAssets,
 } from "pstdio-extensions";
 import { createWorkbenchExtensionMetadata } from "pstdio-extensions/workbench";
+import { loadAcceptedExtensionSource } from "./accepted-extension-source";
 import {
   toCheckArtifactMounts,
   toCheckFileIconThemes,
@@ -96,21 +97,25 @@ export const loadExtensionSource = async (
   sourcePath: string,
   options: { accepted?: boolean; preparedRevision?: PreparedExtensionRevision } = {},
 ) => {
-  const diagnostics: RuntimeExtensionDiagnostic[] = [];
-  const accepted = options.accepted ? await readAcceptedRevision(sourcePath) : null;
-  const loaded = await loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics, {
-    preparedRevision: options.preparedRevision ?? accepted ?? undefined,
-    immutableAssets: true,
-  });
-  if (options.accepted && loaded?.preparedRevision && !diagnostics.some((d) => d.severity === "error") && !accepted)
-    await acceptPreparedRevision(sourcePath, loaded.preparedRevision, { expectedId: null });
+  const load = async (accepted: PreparedExtensionRevision | null) => {
+    const diagnostics: RuntimeExtensionDiagnostic[] = [];
+    const loaded = await loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics, {
+      preparedRevision: options.preparedRevision ?? accepted ?? undefined,
+      immutableAssets: true,
+    });
+    if (options.accepted && loaded?.preparedRevision && !diagnostics.some((d) => d.severity === "error") && !accepted)
+      await acceptPreparedRevision(sourcePath, loaded.preparedRevision, { expectedId: null });
 
-  if (!loaded) {
-    const first = diagnostics[0];
-    throw new Error(first?.message ?? `Failed to load extension at ${sourcePath}`);
-  }
+    if (!loaded) {
+      const first = diagnostics[0];
+      throw new Error(first?.message ?? `Failed to load extension at ${sourcePath}`);
+    }
 
-  return toLoadedExtension(loaded, diagnostics);
+    return toLoadedExtension(loaded, diagnostics);
+  };
+  if (!options.accepted) return load(null);
+  if (options.preparedRevision) return load(await readAcceptedRevision(sourcePath));
+  return loadAcceptedExtensionSource(sourcePath, load);
 };
 
 export const loadExtensionSourceRuntime = async (sourcePath: string) => {
