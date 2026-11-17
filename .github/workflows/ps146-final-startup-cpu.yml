@@ -1,0 +1,117 @@
+name: PS146 final startup CPU diagnostic
+on:
+  push:
+    branches: [test/ps146-final-startup-cpu]
+permissions:
+  contents: read
+  actions: read
+env:
+  NX_DAEMON: "false"
+jobs:
+  startup:
+    name: Final startup CPU (${{ matrix.job }})
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        job: [edited-1]
+    env:
+      GH_TOKEN: ${{ github.token }}
+      UI_PERF_ASSERT_BUDGETS: "1"
+      PLAYWRIGHT_TRACE: "off"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: 3b69179c4173dc8fd6b0ad97eb7fce5f81f91763
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - name: Set up Bun in the Playwright image
+        run: |
+          echo "BUN_INSTALL_CACHE_DIR=/tmp/pstdio-ci-bun-cache" >> "$GITHUB_ENV"
+          echo "E2E_BUN_CACHE_DIR=/tmp/pstdio-ci-bun-cache" >> "$GITHUB_ENV"
+          node scripts/ci/setup-container-bun.ts
+      - name: Install dependencies and restore the original Playwright build-cache profile
+        uses: ./.github/actions/setup-ci-cache
+        with:
+          profile: playwright
+      - name: Download original immutable plan
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: "14339052857"
+          merge-multiple: true
+          run-id: "44106857357"
+          github-token: ${{ github.token }}
+          path: test-results/ci
+      - name: Record exact source and add worker-only CPU instrumentation
+        shell: bash
+        run: |
+          mkdir -p test-results/ci/final-startup-cpu/processes test-results/ci/final-startup-cpu/workers
+          cp test-results/ci/plan.json test-results/ci/final-startup-cpu/original-plan.json
+          git rev-parse HEAD HEAD^{tree} > test-results/ci/final-startup-cpu/source-before.txt
+          git diff --exit-code
+          uname -a > test-results/ci/final-startup-cpu/uname.txt
+          cat /proc/cpuinfo > test-results/ci/final-startup-cpu/cpuinfo.txt
+          cat /proc/meminfo > test-results/ci/final-startup-cpu/meminfo.txt
+          cat /sys/fs/cgroup/cpu.max > test-results/ci/final-startup-cpu/cpu-max.txt
+          bun --help > test-results/ci/final-startup-cpu/bun-help.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('packages/pstdio-api/src/features/extensions/extension-preparation-worker.ts')
+          p.write_text('import { startSamplingProfiler, samplingProfilerStackTraces } from "bun:jsc";\nimport { appendFileSync } from "node:fs";\nconst cpuProfileRoot = process.env.PS146_WORKER_PROFILE_DIR!;\nconst cpuProfileFile = `${cpuProfileRoot}/${process.pid}-${crypto.randomUUID()}.jsonl`;\nstartSamplingProfiler(cpuProfileRoot);\nsetInterval(() => appendFileSync(cpuProfileFile, JSON.stringify({ time: Date.now(), ...samplingProfilerStackTraces() }) + "\\n"), 2000).unref();\n' + p.read_text())
+          PY
+          git diff --binary > test-results/ci/final-startup-cpu/instrumentation.patch
+          bun -e 'import { readFileSync, writeFileSync } from "node:fs"; import { sealTestPlan, validateTestPlan } from "./scripts/ci/test-plan"; import { testPlanSource } from "./scripts/ci/test-plan-source"; const original = JSON.parse(readFileSync("test-results/ci/final-startup-cpu/original-plan.json", "utf8")); validateTestPlan(original); const { digest, ...body } = original; const next = sealTestPlan({ ...body, source: testPlanSource(process.cwd()) }); if (JSON.stringify(next.setup) !== JSON.stringify(original.setup) || JSON.stringify(next.runs) !== JSON.stringify(original.runs)) throw new Error("Diagnostic changed selection"); validateTestPlan(next, testPlanSource(process.cwd())); writeFileSync("test-results/ci/plan.json", JSON.stringify(next, null, 2)); writeFileSync("test-results/ci/final-startup-cpu/provenance.json", JSON.stringify({originalSource: original.source, diagnosticSource: next.source, originalDigest: digest, diagnosticDigest: next.digest, setupAndRunsByteIdentical: true, instrumentation: "Six profiler lines in actual configured API worker, with2s raw sample drains; no deadline or workload change.", acceptanceQualification: false}, null, 2));'
+      - name: Execute unchanged selected cold-start jobs with CPU profiles
+        shell: bash
+        env:
+          PLAN_JOB: ${{ matrix.job }}
+          PLAN_PREBUILT: "false"
+          PLAN_DISPLAY: "true"
+          CI_PLAN_OUTPUT_DIR: test-results/ci/final-startup-cpu/execution-${{ matrix.job }}
+        run: |
+          export BUN_OPTIONS="--cpu-prof --cpu-prof-dir=$GITHUB_WORKSPACE/test-results/ci/final-startup-cpu/processes"
+          export PS146_WORKER_PROFILE_DIR="$GITHUB_WORKSPACE/test-results/ci/final-startup-cpu/workers"
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess, time
+          root = pathlib.Path('test-results/ci/final-startup-cpu')
+          child = subprocess.Popen(['bun', 'scripts/ci/run-ci-test-job.ts'])
+          try:
+            with (root / 'linux-process-cpu.jsonl').open('w') as out:
+              while child.poll() is None:
+                rows = []
+                for directory in pathlib.Path('/proc').iterdir():
+                  if not directory.name.isdigit(): continue
+                  try:
+                    stat = (directory / 'stat').read_text()
+                    suffix = stat[stat.rfind(')') + 2:].split()
+                    rows.append({'pid': int(directory.name), 'comm': stat[stat.find('(')+1:stat.rfind(')')], 'ppid': int(suffix[1]), 'utimeTicks': int(suffix[11]), 'stimeTicks': int(suffix[12]), 'threads': int(suffix[17]), 'io': (directory / 'io').read_text()})
+                  except (OSError, ValueError): pass
+                out.write(json.dumps({'time': time.time(), 'clockTicksPerSecond': os.sysconf('SC_CLK_TCK'), 'processes': rows}) + '\n')
+                out.flush()
+                time.sleep(1)
+            raise SystemExit(child.wait())
+          finally:
+            if child.poll() is None:
+              child.terminate()
+              child.wait()
+          PY
+      - name: Hash diagnostic evidence
+        if: always()
+        shell: bash
+        run: |
+          find test-results/ci/final-startup-cpu -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > test-results/ci/final-startup-cpu/SHA256SUMS
+      - name: Preserve profiles, original plan, phase inputs and native outcomes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps146-final-startup-cpu-${{ matrix.job }}-attempt-${{ github.run_attempt }}
+          path: |
+            test-results/ci
+            packages/e2e/test-results
+          if-no-files-found: error
