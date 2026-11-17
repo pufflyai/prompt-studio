@@ -131,7 +131,7 @@ People and agents read the same snapshot. While monitoring is on, main listens o
 
 The workbench registers file rendering without loading its editor implementation. Code and diff editor components initialize the bundled Monaco runtime when first rendered. Opening a desktop window with no file open does not download or initialize Monaco.
 
-Desktop keeps waiting while startup is in progress. After 20 seconds, the startup screen shows a non-blocking notice that this is taking longer than usual. The notice stays visible across startup steps, and the workbench opens automatically when ready. Quitting cancels the pending startup. Recovery handles actual failures, including a missing sidecar, port bind failure, PGlite ownership conflict, PGlite recovery failure, uncertain runtime ownership, and unexpected exit. Recovery never recommends deleting the database.
+Desktop keeps waiting while startup is in progress. After 10 seconds, the startup screen adds “This is taking longer than usual” and a Copy logs action below the current step. Both stay visible across startup steps, and the workbench opens automatically when ready. Stale-data cleanup runs in the background after startup. After five minutes without a phase change, the startup screen says it may be stuck. Quitting cancels the pending startup. Recovery shows an error alert for confirmed failures, including a missing sidecar, port bind failure, PGlite ownership conflict, PGlite recovery failure, uncertain runtime ownership, and unexpected exit. The alert offers Retry when a restart is possible.
 
 The runtime records each startup step as a `runtime.startup.phase` entry in the shared log file and in its output, which desktop keeps in `desktop-runtime.log`. The steps are `database_locked`, `database_engine_loaded`, `database_retiring` and `database_retired` (only when the data folder comes from a release before 0.46), `database_image_restored` (first start only), `database_opened`, `database_migrated`, `extensions_ready`, and `app_ready`. Each entry has `elapsedMs`, the time since the runtime process started. Desktop reads these entries to show progress while it prepares local data, applies updates, and loads tools. These entries are written at every log level. The runtime publishes its descriptor at `database_locked`, before the database opens; `/runtime/ready` waits for `app_ready`.
 
@@ -143,7 +143,7 @@ The runtime's `db.open.failed` event identifies database startup failures even w
 
 The main thread stays available during sidecar verification. It streams the executable checksum and awaits the version subprocess with startup cancellation. The lifecycle protocol reads packaged files directly with their content types. It does not route local asset reads through Electron's networking service.
 
-Open logs reveals the shared Prompt Studio log file. Copy diagnostics contains only application/runtime versions, platform and architecture, lifecycle state, safe loopback origin, owner PID/type, log path, and bounded process output. Runtime tokens, bearer headers, URL credentials, and named secrets are redacted.
+Open logs reveals the shared Prompt Studio log file. Copy logs includes application and runtime metadata, lifecycle state and startup phase or error code, safe loopback origin, owner PID and type, log path, and bounded process output. Runtime tokens, bearer headers, URL credentials, and named secrets are redacted.
 
 ## Packaged layout
 
