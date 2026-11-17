@@ -6,21 +6,26 @@ interface ContainerMonitor {
   readContainerLogs: () => string;
 }
 
+export const readRuntimeToken = (pstdioHome: string) => {
+  const path = join(pstdioHome, "runtime.json");
+  if (!existsSync(path)) return undefined;
+  try {
+    const descriptor = JSON.parse(readFileSync(path, "utf8")) as { token?: unknown };
+    return typeof descriptor.token === "string" && descriptor.token ? descriptor.token : undefined;
+  } catch {
+    // The runtime may still be replacing the descriptor atomically.
+    return undefined;
+  }
+};
+
 export const waitForRuntimeDescriptor = async (
   pstdioHome: string,
   monitor: ContainerMonitor,
   sleep = (milliseconds: number) => Bun.sleep(milliseconds),
 ) => {
-  const path = join(pstdioHome, "runtime.json");
   while (monitor.isContainerRunning()) {
-    if (existsSync(path)) {
-      try {
-        const descriptor = JSON.parse(readFileSync(path, "utf8")) as { token?: unknown };
-        if (typeof descriptor.token === "string" && descriptor.token) return descriptor.token;
-      } catch {
-        // The runtime may still be replacing the descriptor atomically.
-      }
-    }
+    const token = readRuntimeToken(pstdioHome);
+    if (token) return token;
     await sleep(1_000);
   }
   const logs = monitor.readContainerLogs();
