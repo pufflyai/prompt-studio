@@ -124,11 +124,18 @@ export const seedHome = async (home: string) => {
     if (seeded.status !== 0) throw new Error("Seeding tickets failed.");
     const fixture = JSON.parse(seeded.stdout.trim()) as Fixture;
     await saveFilteredView(runtime, fixture.projectId);
-    const tickets = await runtime.execute<{ id: string; title: string; content: string }[]>(
-      fixture.projectId,
-      "read-tickets",
-      {},
-    );
+    const tickets: { id: string; title: string; content: string }[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await runtime.execute<{ tickets: typeof tickets; cursor: string | null }>(
+        fixture.projectId,
+        "read-tickets",
+        { limit: 100, cursor },
+      );
+      tickets.push(...page.tickets);
+      cursor = page.cursor ?? undefined;
+    } while (cursor);
+    assert.equal(tickets.length, fixture.tickets, "Every frozen ticket must receive its complete edit history");
     for (const [index, ticket] of tickets.entries()) {
       const completed =
         Array.from({ length: 3 }, (_, index) => index + 1).findLast(
