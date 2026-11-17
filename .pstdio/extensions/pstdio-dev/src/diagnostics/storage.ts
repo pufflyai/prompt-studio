@@ -1,5 +1,5 @@
 import type { Dirent } from "node:fs";
-import { lstat, readdir, stat } from "node:fs/promises";
+import { lstat, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import {
   type DocumentGroup,
@@ -61,10 +61,10 @@ const measure = async (path: string) => {
     );
     for (const entry of entries) if (entry.isDirectory()) await walk(join(dir, entry.name));
   };
-  const info = await stat(path).catch(() => null);
+  const info = await lstat(path).catch(() => null);
   if (!info) return { bytes, files };
   if (info.isFile()) return { bytes: info.size, files: 1 };
-  await walk(path);
+  if (info.isDirectory()) await walk(path);
   return { bytes, files };
 };
 
@@ -107,7 +107,7 @@ const measureAreas = async (home: string, projectRoot: string | null) => {
 export const buildStorageReport = async (projectRoot: string | null): Promise<StorageReport> => {
   const started = performance.now();
   const home = pstdioHome();
-  const dataDir = join(home, "pstdio.db");
+  const dataDir = process.env.PSTDIO_DB_PATH?.trim() || join(home, "pstdio.db");
   const databaseDir = await findDatabaseDirectory(dataDir);
   const { tables, byOid } = await readTableSizes(databaseDir);
   const documents = await readDocumentGroups(dataDir, databaseDir, byOid);

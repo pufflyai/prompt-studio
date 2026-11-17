@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { buildTimeline } from "./timeline";
 
-const PROJECT = "1257196a-9972-47ba-be62-7e60e51a3840";
+const PROJECT = "timeline-fixture-project";
 const startup = (time: string, phase: string, elapsedMs: number) =>
   JSON.stringify({ time, event: "runtime.startup.phase", phase, elapsedMs });
 const setup = (time: string, phase: string, state: string, span: string, extra: Record<string, unknown> = {}) =>
@@ -10,6 +10,21 @@ const quit = (time: string) =>
   JSON.stringify({ time, event: "runtime.shutdown.phase", phase: "database", state: "settled" });
 
 describe("startup timeline", () => {
+  test("keeps interleaved startup events with their own launch", () => {
+    const entry = (time: string, phase: string, elapsedMs: number, autostartId: string) =>
+      JSON.stringify({ time, event: "runtime.startup.phase", phase, elapsedMs, autostartId });
+    const [later, earlier] = buildTimeline([
+      entry("2026-11-15T08:00:00.100Z", "database_locked", 100, "earlier"),
+      entry("2026-11-15T08:00:00.200Z", "database_locked", 50, "later"),
+      entry("2026-11-15T08:00:00.300Z", "app_ready", 300, "earlier"),
+      entry("2026-11-15T08:00:00.400Z", "app_ready", 250, "later"),
+    ]);
+
+    expect([later?.readyMs, earlier?.readyMs]).toEqual([250, 300]);
+    expect(new Set([later?.id, earlier?.id]).size).toBe(2);
+    expect([later?.startup.length, earlier?.startup.length]).toEqual([2, 2]);
+  });
+
   test("groups startup steps and a completed project setup into one launch", () => {
     const [launch] = buildTimeline([
       startup("2026-11-15T08:09:32.321Z", "database_locked", 116),

@@ -38,6 +38,7 @@ export interface Launch {
 
 interface LogLine {
   time: string;
+  autostartId?: string;
   event?: string;
   phase?: string;
   state?: string;
@@ -183,14 +184,21 @@ const record = (launches: OpenLaunch[], line: LogLine & { phase: string }, at: n
 
 /** Groups runtime phase logs into launches, each with its startup steps and project setups. */
 export const buildTimeline = (lines: Iterable<string>, limit = 60) => {
-  const launches: OpenLaunch[] = [];
+  const launchesByProcess = new Map<string | undefined, OpenLaunch[]>();
   for (const text of lines) {
     const parsed = parseLine(text);
-    if (parsed) record(launches, parsed.line, parsed.at);
+    if (!parsed) continue;
+    const processId = parsed.line.autostartId;
+    const launches = launchesByProcess.get(processId) ?? [];
+    record(launches, parsed.line, parsed.at);
+    launchesByProcess.set(processId, launches);
   }
-  return launches
-    .slice(-limit)
-    .reverse()
+  return [...launchesByProcess]
+    .flatMap(([processId, launches]) =>
+      launches.map((launch) => ({ ...launch, id: processId ? `${processId}:${launch.id}` : launch.id })),
+    )
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt))
+    .slice(0, limit)
     .map(
       ({ open: _open, lastElapsed: _lastElapsed, setups, ...launch }): Launch => ({
         ...launch,
@@ -200,7 +208,9 @@ export const buildTimeline = (lines: Iterable<string>, limit = 60) => {
 };
 
 /** Reads the newest part of the runtime log; the log is append-only and never rotated. */
-export const readTimeline = async (logPath = join(pstdioHome(), "logs.jsonl")) => {
+export const readTimeline = async (
+  logPath = process.env.PSTDIO_LOG_PATH?.trim() || join(pstdioHome(), "logs.jsonl"),
+) => {
   const file = Bun.file(logPath);
   if (!(await file.exists())) return { logPath, launches: [] as Launch[] };
   const text = await file.slice(Math.max(0, file.size - READ_LIMIT_BYTES)).text();

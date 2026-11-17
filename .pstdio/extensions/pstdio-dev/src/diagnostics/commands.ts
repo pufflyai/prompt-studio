@@ -3,6 +3,8 @@ import { storageReportChanged } from "./events";
 import { buildStorageReport, STORAGE_REPORT_FILE, STORAGE_RUN_FILE, type StorageReport } from "./storage";
 import { readTimeline } from "./timeline";
 
+let pendingRefresh = Promise.resolve();
+
 const readStorageRun = async (ctx: Pick<ExtensionContextBase, "extensionFiles" | "automation">) => {
   if (!ctx.extensionFiles || !(await ctx.extensionFiles.exists(STORAGE_RUN_FILE))) return null;
   const id = JSON.parse(await ctx.extensionFiles.readText(STORAGE_RUN_FILE)) as string;
@@ -15,14 +17,10 @@ const storageWorker = defineCommand({
   automation: true,
   async run(ctx) {
     if (!ctx.extensionFiles) throw new Error("The storage report needs a project.");
-    try {
-      const folder = await ctx.workspaces.getDefault();
-      const report = await buildStorageReport(folder?.root_path ?? null);
-      await ctx.extensionFiles.writeText(STORAGE_REPORT_FILE, JSON.stringify(report));
-      return { generatedAt: report.generatedAt, durationMs: report.durationMs };
-    } finally {
-      await ctx.events.emit(storageReportChanged, {});
-    }
+    const folder = await ctx.workspaces.getDefault();
+    const report = await buildStorageReport(folder?.root_path ?? null);
+    await ctx.extensionFiles.writeText(STORAGE_REPORT_FILE, JSON.stringify(report));
+    return { generatedAt: report.generatedAt, durationMs: report.durationMs };
   },
 });
 
@@ -33,7 +31,11 @@ export const diagnosticsCommands = {
     cli: true,
     async run(ctx) {
       const timeline = await readTimeline();
-      return { ...timeline, projectNames: { [ctx.project.id]: ctx.project.name } as Record<string, string> };
+      const launches = timeline.launches.map((launch) => ({
+        ...launch,
+        setups: launch.setups.filter((setup) => setup.projectId === ctx.project.id),
+      }));
+      return { ...timeline, launches, projectNames: { [ctx.project.id]: ctx.project.name } as Record<string, string> };
     },
   }),
   "diagnostics.storage-report": defineCommand({
@@ -58,18 +60,25 @@ export const diagnosticsCommands = {
     id: "diagnostics.storage-refresh",
     title: "Measure database and file storage",
     cli: true,
-    async run(ctx) {
-      if (!ctx.extensionFiles) throw new Error("The storage report needs a project.");
-      const current = await readStorageRun(ctx);
-      if (current && (current.status === "queued" || current.status === "running")) return current;
-      const run = await ctx.automation.enqueue({
-        command: storageWorker.ref,
-        input: { workspaceId: ctx.workspaceId },
-        key: `storage:${Date.now()}`,
+    run(ctx) {
+      const refresh = pendingRefresh.then(async () => {
+        if (!ctx.extensionFiles) throw new Error("The storage report needs a project.");
+        const current = await readStorageRun(ctx);
+        if (current && (current.status === "queued" || current.status === "running")) return current;
+        const run = await ctx.automation.enqueue({
+          command: storageWorker.ref,
+          input: { workspaceId: ctx.workspaceId },
+          key: `storage:${Date.now()}`,
+        });
+        await ctx.extensionFiles.writeText(STORAGE_RUN_FILE, JSON.stringify(run.id));
+        await ctx.events.emit(storageReportChanged, {});
+        return run;
       });
-      await ctx.extensionFiles.writeText(STORAGE_RUN_FILE, JSON.stringify(run.id));
-      await ctx.events.emit(storageReportChanged, {});
-      return run;
+      pendingRefresh = refresh.then(
+        () => undefined,
+        () => undefined,
+      );
+      return refresh;
     },
   }),
   "diagnostics.storage-worker": storageWorker,

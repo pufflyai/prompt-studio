@@ -101,7 +101,7 @@ const Report = (props: { report: StorageReport }) => {
       </Section>
       <Section
         title="Stored documents by owner"
-        description="State bytes in storage_documents per extension and document kind. Dead bytes belong to replaced rows that only a VACUUM reclaims."
+        description="Estimated state bytes by extension and document kind, sampled from a running database. Unknown bytes have no confirmed transaction state."
       >
         <DataTable
           data={database.documents.map((group) => ({
@@ -111,12 +111,20 @@ const Report = (props: { report: StorageReport }) => {
             rows: group.rows,
             live: megabytes(group.liveBytes),
             dead: megabytes(group.deadBytes),
+            unknown: megabytes(group.unknownBytes ?? 0),
           }))}
           hiddenColumns={["id"]}
           getRowId={(row) => String(row.id)}
           initialPageSize={10}
           defaultSettings={{ rowNumbers: false }}
-          compactHeaders={{ owner: "Owner", kind: "Kind", rows: "Rows", live: "Live (MB)", dead: "Dead (MB)" }}
+          compactHeaders={{
+            owner: "Owner",
+            kind: "Kind",
+            rows: "Rows",
+            live: "Live (MB)",
+            dead: "Dead (MB)",
+            unknown: "Unknown (MB)",
+          }}
           filterableColumns={["owner", "kind"]}
           toolbarStorageKey="storage-report-documents"
           itemLabel="group"

@@ -4,6 +4,7 @@ import { join } from "node:path";
 // Reads PGlite's Postgres data directory without opening the database, so a running
 // runtime keeps its exclusive lock. Offsets follow the Postgres 17 on-disk catalog layout.
 const PAGE = 8192;
+const CHUNK = 128 * PAGE;
 const PG_CLASS_OID = 1259;
 const CLASS = { relname: 4, relfilenode: 88, reltoastrelid: 108, relkind: 115 };
 const XMIN_COMMITTED = 0x0100;
@@ -35,6 +36,7 @@ export interface DocumentGroup {
   rows: number;
   liveBytes: number;
   deadBytes: number;
+  unknownBytes?: number;
 }
 
 const yieldToRuntime = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -51,20 +53,23 @@ const scanTuples = async (
   files: string[],
   visit: (page: DataView, bytes: Uint8Array, offset: number, length: number) => void,
 ) => {
-  let pages = 0;
   for (const file of files) {
-    const bytes = new Uint8Array(await Bun.file(file).arrayBuffer());
-    for (let start = 0; start + PAGE <= bytes.length; start += PAGE) {
-      const page = new DataView(bytes.buffer, start, PAGE);
-      const lower = page.getUint16(12, true);
-      for (let pointer = 24; pointer + 4 <= lower && pointer < PAGE; pointer += 4) {
-        const value = page.getUint32(pointer, true);
-        const offset = value & 0x7fff;
-        const flags = (value >>> 15) & 3;
-        const length = value >>> 17;
-        if (flags === 1 && offset + length <= PAGE) visit(page, bytes.subarray(start, start + PAGE), offset, length);
+    const relation = Bun.file(file);
+    const size = relation.size;
+    for (let chunk = 0; chunk < size; chunk += CHUNK) {
+      const bytes = new Uint8Array(await relation.slice(chunk, Math.min(size, chunk + CHUNK)).arrayBuffer());
+      for (let start = 0; start + PAGE <= bytes.length; start += PAGE) {
+        const page = new DataView(bytes.buffer, start, PAGE);
+        const lower = page.getUint16(12, true);
+        for (let pointer = 24; pointer + 4 <= lower && pointer < PAGE; pointer += 4) {
+          const value = page.getUint32(pointer, true);
+          const offset = value & 0x7fff;
+          const flags = (value >>> 15) & 3;
+          const length = value >>> 17;
+          if (flags === 1 && offset + length <= PAGE) visit(page, bytes.subarray(start, start + PAGE), offset, length);
+        }
       }
-      if (++pages % 2048 === 0) await yieldToRuntime();
+      await yieldToRuntime();
     }
   }
 };
@@ -75,6 +80,8 @@ const cString = (bytes: Uint8Array, from: number, to: number) => {
 };
 
 export const findDatabaseDirectory = async (dataDir: string) => {
+  const version = await Bun.file(join(dataDir, "PG_VERSION")).text();
+  if (version.trim() !== "17") throw new Error("Storage diagnostics support PostgreSQL 17 data files.");
   const base = join(dataDir, "base");
   let best: { dir: string; bytes: number } | null = null;
   for (const name of await readdir(base)) {
@@ -235,6 +242,7 @@ export const readDocumentGroups = async (dataDir: string, dir: string, byOid: Ma
   }
   const groups = new Map<string, DocumentGroup>();
   for (const tuple of tuples) {
+    const inserted = Boolean(tuple.mask & XMIN_COMMITTED) || tuple.xmin === 2 || commits.committed(tuple.xmin);
     const insertFailed = !(tuple.mask & XMIN_COMMITTED) && (tuple.mask & XMIN_INVALID || commits.aborted(tuple.xmin));
     const removed =
       !(tuple.mask & (XMAX_INVALID | XMAX_LOCK_ONLY | XMAX_IS_MULTI)) &&
@@ -244,8 +252,10 @@ export const readDocumentGroups = async (dataDir: string, dir: string, byOid: Ma
     const group = groups.get(key) ?? { owner: tuple.owner, kind: tuple.kind, rows: 0, liveBytes: 0, deadBytes: 0 };
     group.rows++;
     if (insertFailed || removed) group.deadBytes += tuple.size;
-    else group.liveBytes += tuple.size;
+    else if (inserted) group.liveBytes += tuple.size;
+    else group.unknownBytes = (group.unknownBytes ?? 0) + tuple.size;
     groups.set(key, group);
   }
-  return [...groups.values()].sort((a, b) => b.liveBytes + b.deadBytes - (a.liveBytes + a.deadBytes));
+  const total = (group: DocumentGroup) => group.liveBytes + group.deadBytes + (group.unknownBytes ?? 0);
+  return [...groups.values()].sort((a, b) => total(b) - total(a));
 };
