@@ -44,6 +44,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           artifact-ids: "14331646075"
+          merge-multiple: true
           run-id: "44089825358"
           github-token: ${{ github.token }}
           path: test-results/ci
