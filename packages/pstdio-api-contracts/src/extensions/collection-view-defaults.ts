@@ -13,7 +13,7 @@ export const normalizeKanbanViewDefaults = (
   })),
 });
 
-/** Resource lists share the collection view model, with one fixed display. */
+/** Resource lists share the collection view model, with one fixed display; extra levels use `subGroupings`. */
 export const normalizeResourceListViewDefaults = (
   body: Pick<
     import("../extension-kernel/types").ResourceListRendererContribution,

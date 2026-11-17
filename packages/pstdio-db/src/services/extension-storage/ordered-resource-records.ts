@@ -1,5 +1,11 @@
 import { type StorageObserver, type StorageOwner, StorageRevisionChangedError } from "pstdio-sync";
-import { commitCurrentBatch, observeOrderedRecord, orderedBody, projectOrderedOperation } from "pstdio-sync/records";
+import {
+  commitCurrentBatch,
+  type OrderedMoveInput,
+  observeOrderedRecord,
+  orderedBody,
+  projectOrderedOperation,
+} from "pstdio-sync/records";
 import type { StorageCurrentGroup } from "pstdio-sync-contracts";
 import {
   assertStorageLimits,
@@ -22,6 +28,7 @@ import { bindOrderedNativeSource, type OrderedSourceInput } from "./ordered-nati
 import { combineNumberEvents } from "./ordered-number-projection";
 import { knownDependencies, rebaseOrderedProjection } from "./ordered-rebase";
 import { compileOrderedGroup } from "./ordered-record-compiler";
+import { moveOrderedRecordsIn } from "./ordered-record-move";
 import type { OrderedTransaction } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
 import { writeOrderedTextAsset } from "./ordered-text-asset";
@@ -257,6 +264,9 @@ export const createOrderedResourceRecords = (
       }
       return { documentKey: result.documentKey, lifetime: result.lifetime, changed: result.changed };
     },
+    /** Host-only: move live records to new IDs with their text history and native sources. */
+    move: (input: OrderedMoveInput) =>
+      ready().then(() => moveOrderedRecordsIn(db, owner, deps, input, () => commitCache.committed(undefined))),
     writeTextAsset: async (input: {
       recordId: string;
       content: string;

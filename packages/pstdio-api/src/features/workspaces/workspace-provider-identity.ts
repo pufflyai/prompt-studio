@@ -2,6 +2,10 @@ import type { WorkspaceCapabilities } from "pstdio-api-contracts/extension-kerne
 
 export const rootProviderId = "pstdio.root";
 export const worktreeProviderId = "pstdio.worktree";
+export const restoredFolderSetupPending = "restoredFolderSetupPending";
+export const hasPendingRestoredFolderSetup = (
+  workspace: { provider_id: string; provider_params_json?: Record<string, unknown> } | null,
+) => workspace?.provider_id === rootProviderId && workspace.provider_params_json?.[restoredFolderSetupPending] === true;
 const gitExtensionProviderId = "pstdio.git-workspaces.workspace-type.git";
 
 export const isBuiltInProviderId = (providerId: string) => providerId === rootProviderId;

@@ -1,8 +1,12 @@
 # Share state and retain project data
 
-The retained finite-command query contract is published for extension API **0.4.0**, after 0.46. Additional retained service and controlled presentation contracts are candidate API **0.4.2** additions in [support PR #2036](https://github.com/pufflyai/prompt-studio/pull/2036). Publish the matching host, SDK and UI before releasing an extension that uses them. A local packed-package test proves the candidate contract; it does not make the dependency available to installed users.
+Share one query owner across views and project switches. Release optional observation while accepted data and required saves keep their owners.
 
-The retained account, Performance and preference service additions described below are candidate API 0.4.2 contracts. Their source and local checks do not establish published compatibility.
+## Published support
+
+Retained finite-command queries were added in extension API **0.4.0**; retained account, Performance and preference queries and controlled presentation were added in **0.4.2**. These contracts are included in the published API **0.5.0** SDK/UI preview `0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77` ([publication](https://github.com/pufflyai/prompt-studio/actions/runs/43662124895)). Compatible host support was published in `0.48.0-nightly.20261117030256` ([host publication](https://github.com/pufflyai/prompt-studio/actions/runs/44007226995/job/133789772069)); follow the [Nightly channel](../getting-started/0001-install.md#choose-an-update-channel) for current desktop builds.
+
+Use a host, SDK and UI that support the APIs your extension declares. Installing an SDK/UI preview alone does not add host behavior, and a local packed-package check does not establish publication.
 
 ## Choose the owner
 
@@ -175,8 +179,43 @@ Harnesses can supply optional `watchCommandState`. Install it before reading and
 
 `createQueryLifecycleFixture` from `@pstdio/sdk/testing` provides a finite source with real subscribe/read separation, read counts, observed signals and a held child. Connect its `descriptor` to a scoped query or a native adapter. `holdNext()` exposes `entered` and `release()`; the held child deliberately remains entered after abort. Always release/close it during cleanup.
 
-Use it to check duplicate readers, loaded-empty values, a 100-hint burst during a held read, stale completion, final release and authority retirement. Project return should separately cover a root-routed fresh source and a detached custom source requiring catch-up. The maintained SDK and native renderer tests run those actual owners. Public editing and two/ten-project fixtures under `packages/e2e/src/scripts/marmalade-*` cover five-view shared document ownership; packaged sync fixtures add independent authenticated hosts.
+Use it to check duplicate readers, loaded-empty values, a 100-hint burst during a held read, stale completion, final release and authority retirement. The [SDK query contracts](../../../packages/sdk/src/extensions/scoped-query.p0.test.ts) cover scoped lifecycle behavior. The [native adapter contract](../../../packages/pstdio-workbench/src/core/registries/views/query-lifecycle-contract.p0.test.ts) exercises its actual owner with this public fixture.
 
-Record topology and actual counts in qualification evidence. Two iframes are not two users, a page reload is not an app restart, and JavaScript heap is not process physical footprint.
+### Reuse the fixture across projects
 
-*Updated at: 2026-11-10*
+Create one source per project and choose its query through the same root. Keep the resource key equal so the check would expose missing project identity:
+
+```ts
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
+import { createQueryLifecycleFixture } from "@pstdio/sdk/testing";
+
+const scope = {
+  runtimeId: "runtime",
+  accountId: "account",
+  accountOrigin: "https://account.example",
+  extensionId: "example.tool",
+};
+const root = createScopedQueryClient(scope, { maxInactive: 128 });
+const projects = Array.from({ length: 2 }, (_, index) => {
+  const projectId = `project-${index}`;
+  const source = createQueryLifecycleFixture({ projectId, value: 0 }, {
+    id: "document",
+    resourceKey: "same-document",
+  });
+  const query = root.forScope({ projectId }).query(source.descriptor);
+  return { projectId, source, query };
+});
+```
+
+Use this setup first with two projects, then with ten. Subscribe only the selected project's view and release its subscription when selecting another project; keep the root. Wait for the admitted read through `query.read()` or the consuming view's readiness, then inspect the snapshot, source read count and subscriber count. Release every subscription, close every source and dispose the root in cleanup, including after a failed assertion.
+
+- For a custom source using `descriptor.subscribe`, load A and B, release A, change A while detached, then return to A. Accepted A content stays available while one necessary catch-up runs; B keeps its own value. After final release, each source has zero subscribers.
+- Separately cover a fresh source with root-routed hints: omit the descriptor's `subscribe`, give it a declared `dependsOn` event ID, and route changes through `root.invalidate` with that ID and the changed project. An unchanged A → B → A return adds zero reads. A hint while A is inactive marks only A stale; returning reconciles it once without clearing accepted content.
+- Use `holdNext()` before a change to delay an actual child, then switch projects or retire the account. Release the held child and verify its old result cannot publish into the new identity. Keep accepted writes with the document's real command/editing owner; a query fixture does not simulate durable save acknowledgement.
+- In the ten-project run, record `root.inspect()` alongside each source's read/subscriber counts. Retained owner count follows the configured inactive bound; only selected observations stay active. Lower the bound in a separate eviction check, reacquire disposed handles from their descriptors and verify the evicted project performs an initial read.
+
+Connect the same fixture pattern to the extension's own view or native adapter. For document previews, commit/cancel, pending saves and shared history, use the supported editing owner; [command-editing contracts](../../../packages/pstdio-workbench/src/extensions/bridge/webview-command-editing.p0.test.ts) show the shared five-view boundary without depending on an example application's test suite. An actual offline/restart or cross-user check still needs the host and authenticated participants that the feature supports.
+
+Record topology and actual counts in qualification evidence. Two iframes are not two users, a page reload is not an app restart, and JavaScript heap is not process physical footprint. Query owner counts do not establish whole-app native memory or idle-work budgets.
+
+*Updated at: 2026-11-17*

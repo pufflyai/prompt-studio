@@ -1,9 +1,10 @@
-import { Badge, Box, Spinner } from "@chakra-ui/react";
+import { Box, Spinner } from "@chakra-ui/react";
 import {
   resolveFileIconElement,
   Tooltip,
   type TreeListActionMenuItem,
   type TreeListNode,
+  TreeRowTags,
   useFileIconThemePreference,
 } from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
@@ -96,13 +97,7 @@ const resolveTreeNodeResource = (node: TreeNode): ResourceRef | undefined => {
 };
 const resolveTreeNodeEndContent = (node: TreeNode, resource: ResourceRef | undefined) => {
   if (node.endContent !== undefined) return node.endContent as ReactNode;
-  if (node.badge) {
-    return (
-      <Badge size="sm" variant="subtle" colorPalette={node.badge.color ?? "gray"} flexShrink={0}>
-        {node.badge.label}
-      </Badge>
-    );
-  }
+  if (node.badge || node.tags?.length) return <TreeRowTags tags={node.tags} badge={node.badge} />;
   const additions = resource?.metadata?.diffAdditions;
   const deletions = resource?.metadata?.diffDeletions;
   if (resource?.type !== "workspace" || typeof additions !== "number" || typeof deletions !== "number") {

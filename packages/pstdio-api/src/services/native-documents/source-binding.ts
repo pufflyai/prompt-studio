@@ -102,6 +102,7 @@ export const resolveNativeSource = async (
     await deps.extensionStorageService.resolveNativeRecordAddress(owner, {
       recordId: address.recordId,
       documentKey: address.documentKey,
+      ...("field" in address && address.field ? { field: address.field } : {}),
     });
   return { ...address, ...resolved, backingRecordId: address.recordId, sourceKey: address.documentKey };
 };
