@@ -30,6 +30,7 @@ export const readDarwinTerminalForeground = (pid: number) => {
   const mib = new Int32Array([1, 49, group]);
   if (symbols.sysctl(ptr(mib), mib.length, ptr(args), ptr(size), null, 0) !== 0) return null;
   const length = Number(size[0]);
+  if (length < 4 || new DataView(args.buffer).getInt32(0, true) <= 0) return null;
   const pathEnd = args.indexOf(0, 4);
   if (pathEnd < 4 || pathEnd >= length) return null;
   let start = pathEnd + 1;
@@ -46,5 +47,5 @@ export const readDarwinTerminalForeground = (pid: number) => {
     after.getBigUint64(128, true) !== before.getBigUint64(128, true)
   )
     return null;
-  return { group, name: basename(new TextDecoder().decode(args.subarray(start, end))) };
+  return { group, name: basename(new TextDecoder().decode(args.subarray(start, end)).trim()) };
 };

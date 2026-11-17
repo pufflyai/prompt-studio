@@ -16,7 +16,10 @@ describe("terminal foreground probe", () => {
   // The probe runs every second for each open terminal, so it must never block the API event loop.
   posixOnlyTest.each([
     { command: ["/bin/sleep", "5"], name: "sleep" },
-    { command: ["/bin/bash", "-c", "exec -a foreground-alias /bin/sleep 5"], name: "foreground-alias" },
+    {
+      command: ["/bin/bash", "-c", "exec -a foreground-alias /bin/sleep 5"],
+      name: process.platform === "darwin" ? "foreground-alias" : "sleep",
+    },
   ])("reads the PTY foreground $name without blocking the event loop", async ({ command, name }) => {
     child = Bun.spawn([...command], { terminal: { cols: 80, rows: 24 } });
     const spawnSync = spyOn(Bun, "spawnSync");
