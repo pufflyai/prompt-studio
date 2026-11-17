@@ -1,5 +1,5 @@
 import { strict as assert } from "node:assert";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect } from "@playwright/test";
 import { desktopBudgets } from "pstdio-benchmarks";
@@ -41,5 +41,33 @@ await runScenario("B1", (capture) =>
     await expect(app.page.frameLocator('iframe[title="Home"]').getByTestId("start-page")).toBeVisible();
     capture.record("first-interaction", (await afterPaint(app.page)) - before);
     capture.record("usable", Date.now() - app.startedAt);
+    // Harvest existing phase logs after timing the complete cold journey.
+    // Keep only timings and public phase/extension names, never request payloads.
+    try {
+      let invalidLines = 0;
+      const phases = readFileSync(join(context.home, "logs.jsonl"), "utf8")
+        .split("\n")
+        .filter(Boolean)
+        .flatMap((line) => {
+          try {
+            return [JSON.parse(line) as Record<string, unknown>];
+          } catch {
+            invalidLines++;
+            return [];
+          }
+        })
+        .filter((event) => ["runtime.startup.phase", "runtime.setup.phase"].includes(String(event.event)))
+        .map((event) =>
+          Object.fromEntries(
+            ["time", "event", "phase", "state", "elapsedMs", "duration_ms", "task", "extension"]
+              .filter((key) => event[key] !== undefined)
+              .map((key) => [key, event[key]]),
+          ),
+        );
+      capture.detail("startup-phases", phases);
+      if (invalidLines) capture.detail("startup-phase-log-errors", { invalidLines });
+    } catch (error) {
+      capture.detail("startup-phases-unavailable", String(error));
+    }
   }),
 );
