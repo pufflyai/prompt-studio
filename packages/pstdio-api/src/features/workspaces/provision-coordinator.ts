@@ -20,83 +20,186 @@ const defaultHooks = (): WorkspaceProvisioningHooks => ({
   ensureConfig: ensureWorkspaceConfig,
 });
 
-export const runWorkspaceProvisioning = async <
-  W extends { id: string; root_path: string | null; execution_kind: string; provider_id: string },
->(
+type ProvisionWorkspace = { id: string; root_path: string | null; execution_kind: string; provider_id: string };
+type ProvisionInput<W extends ProvisionWorkspace> = { projectId: string; workspace: W; repoPath: string };
+const isReadyLocalWorkspace = (workspace: ProvisionWorkspace & { provider_state: string }) =>
+  workspace.provider_state === "ready" && workspace.execution_kind === "local" && Boolean(workspace.root_path);
+
+const provisionWorkspaceFiles = async <W extends ProvisionWorkspace>(
   deps: ProvisionCoordinatorDeps,
-  input: { projectId: string; workspace: W; repoPath: string },
+  input: ProvisionInput<W>,
+  hooks: WorkspaceProvisioningHooks,
+) => {
+  const { projectId, workspace } = input;
+  const home = await deps.workspaceService.getDefault(projectId);
+  const projectDir = home?.execution_kind === "local" ? (home.root_path ?? undefined) : undefined;
+  const payload = {
+    projectId,
+    workspaceId: workspace.id,
+    workspace: workspace as unknown as ExtensionWorkspace,
+    workspaceDir: workspace.root_path!,
+    projectDir,
+    providerId: workspace.provider_id,
+  } satisfies WorkspaceProvisionPayload;
+  await hooks.ensureConfig(workspace.root_path!, projectDir ?? workspace.root_path!, workspace.id, projectId, deps);
+  const outcome = await hooks.fireProvision(deps, projectId, workspaceEvents.provision, payload);
+  return { payload, error: outcome.diagnostics?.[0]?.message ?? null };
+};
+
+// Creation still publishes its real lifecycle transitions. The same gate serializes it with any
+// catalog maintenance that arrives while a provider is finishing the workspace.
+export const runWorkspaceProvisioning = async <W extends ProvisionWorkspace>(
+  deps: ProvisionCoordinatorDeps,
+  input: ProvisionInput<W>,
   hooks: WorkspaceProvisioningHooks = defaultHooks(),
 ) => {
   const { projectId, workspace } = input;
   if (workspace.execution_kind !== "local" || !workspace.root_path) return workspace;
-  await deps.workspaceService.setInitializing(workspace.id, true);
-  try {
-    const home = await deps.workspaceService.getDefault(projectId);
-    const projectDir = home?.execution_kind === "local" ? (home.root_path ?? undefined) : undefined;
-    const payload = {
-      projectId,
-      workspaceId: workspace.id,
-      workspace: workspace as unknown as ExtensionWorkspace,
-      workspaceDir: workspace.root_path,
-      projectDir,
-      providerId: workspace.provider_id,
-    } satisfies WorkspaceProvisionPayload;
-    await hooks.ensureConfig(workspace.root_path, projectDir ?? workspace.root_path, workspace.id, projectId, deps);
-    const outcome = await hooks.fireProvision(deps, projectId, workspaceEvents.provision, payload);
-    const failure = outcome.diagnostics?.[0];
-    const result = await deps.workspaceService.setSetupError(workspace.id, failure?.message ?? null);
-    if (!failure) hooks.fireReadyAsync(deps, projectId, workspaceEvents.ready, payload);
-    return (result ?? workspace) as W;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return ((await deps.workspaceService.setSetupError(workspace.id, message)) ?? workspace) as W;
-  }
-};
-
-const projectQueues = new Map<string, Promise<unknown>>();
-const pendingRemovals = new Map<string, number>();
-// Runs one project's provisioning and removal in order, so removal never interleaves with a config write.
-const inProjectWorkspaceQueue = <T>(projectId: string, task: () => Promise<T>) => {
-  const queued = (projectQueues.get(projectId) ?? Promise.resolve()).catch(() => undefined).then(task);
-  projectQueues.set(projectId, queued);
-  return queued.finally(() => {
-    if (projectQueues.get(projectId) === queued) projectQueues.delete(projectId);
+  return deps.workspaceService.maintenance.run(workspace.id, async () => {
+    await deps.workspaceService.setInitializing(workspace.id, true);
+    try {
+      const { payload, error } = await provisionWorkspaceFiles(deps, input, hooks);
+      const result = await deps.workspaceService.setSetupError(workspace.id, error);
+      if (!error) hooks.fireReadyAsync(deps, projectId, workspaceEvents.ready, payload);
+      return (result ?? workspace) as W;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return ((await deps.workspaceService.setSetupError(workspace.id, message)) ?? workspace) as W;
+    }
   });
 };
 
-/**
- * Removes a project after its queued provisioning. Provisioning writes the folder config, so a removal
- * running beside it could see the config written back. A pass that is already running skips its
- * remaining workspaces, so removal waits for at most one workspace's provisioning.
- */
-export const removeProjectAfterProvisioning = async <T>(projectId: string, task: () => Promise<T>) => {
-  pendingRemovals.set(projectId, (pendingRemovals.get(projectId) ?? 0) + 1);
-  try {
-    return await inProjectWorkspaceQueue(projectId, task);
-  } finally {
-    const remaining = (pendingRemovals.get(projectId) ?? 1) - 1;
-    if (remaining > 0) pendingRemovals.set(projectId, remaining);
-    else pendingRemovals.delete(projectId);
+const maintainWorkspace = (
+  deps: ProvisionCoordinatorDeps,
+  projectId: string,
+  id: string,
+  hooks: WorkspaceProvisioningHooks,
+) =>
+  deps.workspaceService.maintenance.run(id, async () => {
+    const workspace = await deps.workspaceService.get(id);
+    if (
+      !workspace ||
+      workspace.project_id !== projectId ||
+      workspace.provider_state !== "ready" ||
+      workspace.execution_kind !== "local" ||
+      !workspace.root_path
+    )
+      return;
+    let message: string | null;
+    try {
+      ({ error: message } = await provisionWorkspaceFiles(
+        deps,
+        { projectId, workspace, repoPath: workspace.root_path },
+        hooks,
+      ));
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+    // A healthy ready workspace never left its lifecycle state. Publish actual failures and
+    // recoveries, while keeping the transient file-copy gate private to session admission.
+    if (workspace.setup_error !== message || workspace.initializing)
+      await deps.workspaceService.setSetupError(id, message);
+  });
+
+interface ProjectProvisionQueue {
+  revision: number;
+  deps: ProvisionCoordinatorDeps;
+  hooks: WorkspaceProvisioningHooks;
+  completion: Promise<void>;
+}
+const projectProvisionQueues = new WeakMap<
+  ProvisionCoordinatorDeps["workspaceService"],
+  Map<string, ProjectProvisionQueue>
+>();
+const projectQueues = new WeakMap<ProvisionCoordinatorDeps["workspaceService"], Map<string, Promise<unknown>>>();
+const pendingRemovals = new WeakMap<ProvisionCoordinatorDeps["workspaceService"], Map<string, number>>();
+const hostMap = <T>(
+  owners: WeakMap<ProvisionCoordinatorDeps["workspaceService"], Map<string, T>>,
+  deps: ProvisionCoordinatorDeps,
+) => {
+  let projects = owners.get(deps.workspaceService);
+  if (!projects) {
+    projects = new Map();
+    owners.set(deps.workspaceService, projects);
   }
+  return projects;
+};
+// Provisioning and removal share one per-host/project queue; independent hosts never block each other.
+const inProjectWorkspaceQueue = <T>(deps: ProvisionCoordinatorDeps, projectId: string, task: () => Promise<T>) => {
+  const projects = hostMap(projectQueues, deps);
+  const queued = (projects.get(projectId) ?? Promise.resolve()).catch(() => undefined).then(task);
+  projects.set(projectId, queued);
+  return queued.finally(() => {
+    if (projects.get(projectId) === queued) projects.delete(projectId);
+  });
+};
+export const removeProjectAfterProvisioning = async <T>(
+  deps: ProvisionCoordinatorDeps,
+  projectId: string,
+  task: () => Promise<T>,
+) => {
+  const removals = hostMap(pendingRemovals, deps);
+  removals.set(projectId, (removals.get(projectId) ?? 0) + 1);
+  try {
+    return await inProjectWorkspaceQueue(deps, projectId, task);
+  } finally {
+    const remaining = (removals.get(projectId) ?? 1) - 1;
+    if (remaining > 0) removals.set(projectId, remaining);
+    else removals.delete(projectId);
+  }
+};
+
+const maintainProjectRevision = async (
+  queue: ProjectProvisionQueue,
+  projectId: string,
+  applied: Map<string, number>,
+) => {
+  const removals = hostMap(pendingRemovals, queue.deps);
+  if (removals.has(projectId)) return false;
+  for (const workspace of await queue.deps.workspaceService.list(projectId)) {
+    if (removals.has(projectId)) return false;
+    if (!isReadyLocalWorkspace(workspace)) continue;
+    if ((applied.get(workspace.id) ?? 0) >= queue.revision) continue;
+    const revision = queue.revision;
+    await maintainWorkspace(queue.deps, projectId, workspace.id, queue.hooks);
+    applied.set(workspace.id, revision);
+  }
+  return true;
 };
 
 export const provisionProjectWorkspaces = (
   deps: ProvisionCoordinatorDeps,
   projectId: string,
   hooks: WorkspaceProvisioningHooks = defaultHooks(),
-) =>
-  inProjectWorkspaceQueue(projectId, async () => {
-    for (const workspace of await deps.workspaceService.list(projectId)) {
-      if (pendingRemovals.has(projectId)) return;
-      if (workspace.provider_state !== "ready" || workspace.execution_kind !== "local" || !workspace.root_path)
-        continue;
-      await runWorkspaceProvisioning(
-        deps,
-        { projectId, workspace, repoPath: workspace.root_path },
-        { ...hooks, fireReadyAsync: () => {} },
-      );
+) => {
+  let projects = projectProvisionQueues.get(deps.workspaceService);
+  if (!projects) {
+    projects = new Map();
+    projectProvisionQueues.set(deps.workspaceService, projects);
+  }
+  const current = projects.get(projectId);
+  if (current) {
+    current.revision++;
+    current.deps = deps;
+    current.hooks = hooks;
+    return current.completion;
+  }
+  const queue: ProjectProvisionQueue = { revision: 1, deps, hooks, completion: Promise.resolve() };
+  projects.set(projectId, queue);
+  queue.completion = inProjectWorkspaceQueue(deps, projectId, async () => {
+    const applied = new Map<string, number>();
+    try {
+      let pass: number;
+      do {
+        pass = queue.revision;
+        if (!(await maintainProjectRevision(queue, projectId, applied))) return;
+      } while (pass !== queue.revision);
+    } finally {
+      projects.delete(projectId);
     }
   });
+  return queue.completion;
+};
 
 export const scheduleProjectWorkspaceProvisioning = (
   deps: ProvisionCoordinatorDeps,

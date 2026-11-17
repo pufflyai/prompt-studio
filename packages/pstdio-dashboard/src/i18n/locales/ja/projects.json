@@ -156,6 +156,20 @@
         "title": "{{name}} を置き換えますか？",
         "message": "インストール済みのファイルを置き換えます。この拡張機能を使用する他のプロジェクトも新しいファイルを使用します。",
         "action": "置き換える"
+      },
+      "feedback": {
+        "queued": "待機中",
+        "upgrading": "{{name}} をアップグレード中",
+        "updating": "{{name}} を更新中",
+        "updated": "拡張機能を更新しました",
+        "installing": "{{name}} をインストール中",
+        "batch": "{{total}} 件中 {{count}} 件のアップグレードが完了",
+        "retry": "再試行",
+        "dismiss": "閉じる",
+        "upgradingButton": "更新中",
+        "batchFailed": "{{total}} 件中 {{count}} 件の更新に失敗しました",
+        "installingButton": "インストール中",
+        "installedButton": "インストール済み"
       }
     }
   },

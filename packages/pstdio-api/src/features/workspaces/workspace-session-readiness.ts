@@ -7,7 +7,7 @@ type ReadinessWorkspace = Pick<
 
 // The one rule for whether a session may start in its workspace. The queue drain and the spawn
 // gate both read it, so the drain never dispatches work that the spawn gate would send back.
-// `wait` clears on its own (the workspace `set` event drains the queue again); `fail` does not.
+// `wait` clears on its own (workspace changes or maintenance settlement drain the queue again); `fail` does not.
 export const workspaceSessionReadiness = (workspace: ReadinessWorkspace | null | undefined) => {
   if (!workspace) return { kind: "ready" } as const;
   if (workspace.initializing) {
