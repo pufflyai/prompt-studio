@@ -5,6 +5,7 @@ import {
   type ResourceResolution,
   resourceKey,
 } from "@pstdio/sdk/extensions";
+import { ticketPageTarget } from "./ticket-page-target";
 
 // Keep the saved display preference identity while broadening it to every resource kind.
 export const TICKET_LINKED_RESOURCES_ATTRIBUTE = "workspace";
@@ -30,35 +31,27 @@ const badgeItem = (saved: ResourceRef, resolved: ResourceResolution | undefined)
   } satisfies CollectionBadgeItem;
 };
 
-const addRelatedReference = (
-  lookup: Map<string, Map<string, ResourceRef>>,
-  source: ResourceRef,
-  target: ResourceRef,
-) => {
-  const linked = lookup.get(resourceKey(source));
-  const key = resourceKey(target);
-  if (!linked || resourceKey(source) === key) return;
-  const previous = linked.get(key);
-  linked.set(key, { ...previous, ...target, label: target.label ?? previous?.label });
-};
-
 export const loadTicketLinkedResources = async (
   resources: ExtensionResourcesApi,
   tickets: ResourceRef[],
 ): Promise<TicketLinkedResourceLookup> => {
   const byIdentity = new Map(tickets.map((ticket) => [resourceKey(ticket), new Map<string, ResourceRef>()]));
-  // Keep both directions on the same path. A workspace's ticket anchor is an incoming link.
-  for (let offset = 0; offset < tickets.length; offset += 100) {
-    const batch = tickets.slice(offset, offset + 100);
-    let cursor: string | undefined;
-    do {
-      const page = await resources.queryAnchorsMany({ resources: batch, direction: "both", limit: 100, cursor });
-      for (const edge of page.items) {
-        addRelatedReference(byIdentity, edge.source, edge.target);
-        addRelatedReference(byIdentity, edge.target, edge.source);
-      }
-      cursor = page.nextCursor ?? undefined;
-    } while (cursor);
+  const more = new Set<string>();
+  for (let start = 0; start < tickets.length; start += 100) {
+    const batch = tickets.slice(start, start + 100);
+    // A bounded existence query avoids one empty host round trip for every card.
+    if (!(await resources.queryRelated({ resources: batch, direction: "both", limit: 1 })).items.length) continue;
+    // Each linked card retains its own bounded preview, including hub continuations.
+    for (let offset = 0; offset < batch.length; offset += 8)
+      await Promise.all(
+        batch.slice(offset, offset + 8).map(async (ticket) => {
+          const page = await resources.queryRelated({ resources: [ticket], direction: "both", limit: 8 });
+          const key = resourceKey(ticket),
+            related = byIdentity.get(key)!;
+          for (const ref of page.items) if (resourceKey(ref) !== key) related.set(resourceKey(ref), ref);
+          if (page.nextCursor) more.add(key);
+        }),
+      );
   }
   const unique = new Map([...byIdentity.values()].flatMap((refs) => [...refs]));
   const refs = [...unique.values()];
@@ -76,7 +69,20 @@ export const loadTicketLinkedResources = async (
       ticket.id,
       [...byIdentity.get(resourceKey(ticket))!.values()]
         .map((ref) => badgeItem(ref, resolved.get(resourceKey(ref))))
-        .filter((item): item is CollectionBadgeItem => item !== undefined),
+        .filter((item): item is CollectionBadgeItem => item !== undefined)
+        .concat(
+          more.has(resourceKey(ticket))
+            ? [
+                {
+                  id: "linked-resources-more",
+                  label: "…",
+                  icon: "ellipsis",
+                  tooltip: "More linked resources",
+                  action: ticketPageTarget(ticket),
+                },
+              ]
+            : [],
+        ),
     ]),
   );
 };

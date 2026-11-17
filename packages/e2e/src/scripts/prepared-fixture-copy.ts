@@ -4,10 +4,16 @@ import { basename, join } from "node:path";
 // Tarballs remain immutable inputs owned by the enclosing executor. Every writable
 // source belongs to this invocation, including symlink targets. Runtime installation
 // owns dependencies; copying prepared node_modules repeats gigabytes of disposable work.
-export const copyPreparedFixtures = (prepared: string, home: string, names: string[]) => {
+export const copyPreparedFixtures = (
+  prepared: string,
+  home: string,
+  names: string[],
+  dependencies: Record<string, string>,
+) => {
   const catalog = JSON.parse(readFileSync(join(prepared, "sources.json"), "utf8")) as {
     sources: Record<string, string>;
     packageCache: string;
+    dependencies?: Record<string, string>;
   };
   if (!catalog.packageCache || !statSync(catalog.packageCache, { throwIfNoEntry: false })?.isDirectory())
     throw new Error("Completed fixture package cache missing");
@@ -15,7 +21,8 @@ export const copyPreparedFixtures = (prepared: string, home: string, names: stri
   let bytesCopied = 0;
   const sources: Record<string, string> = {};
   for (const name of names) {
-    if (!catalog.sources[name]) throw new Error(`Prepared fixture missing: ${name}`);
+    // Candidate-rewritten manifests cannot stand in for declared dependencies.
+    if (!catalog.sources[name] || catalog.dependencies?.[name] !== dependencies[name]) continue;
     const destination = join(home, "fixtures", name, "extension-source");
     mkdirSync(join(home, "fixtures", name), { recursive: true });
     cpSync(catalog.sources[name]!, destination, {
@@ -35,6 +42,6 @@ export const copyPreparedFixtures = (prepared: string, home: string, names: stri
     packageCache: catalog.packageCache,
     bytesCopied,
     copyMs: performance.now() - started,
-    reuseHits: names.length,
+    reuseHits: Object.keys(sources).length,
   };
 };

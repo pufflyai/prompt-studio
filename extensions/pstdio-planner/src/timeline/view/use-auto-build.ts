@@ -15,7 +15,8 @@ const modeEvents = [
 
 export function useAutoBuild(client: PlanClient) {
   useWebviewScope(client.queries);
-  const query = client.commands["auto-build.read"].query(undefined, { events: modeEvents });
+  const [requestOffset, setRequestOffset] = useState(0);
+  const query = client.commands["auto-build.read"].query({ requestOffset }, { events: modeEvents });
   const visible = useWebviewVisibility();
   const [current, setCurrent] = useState(() => ({ query, projection: createAutoBuildProjection(query) }));
   let owner = current;
@@ -104,5 +105,15 @@ export function useAutoBuild(client: PlanClient) {
     );
   const transition = (action: "pause" | "resume" | "stop") => run(() => client.commands[`auto-build.${action}`]());
   // Saved run failures belong to the activity popover, not a new configuration attempt.
-  return { mode, saving, error, readError, retry, configure, transition };
+  return {
+    mode,
+    saving,
+    error,
+    readError,
+    retry,
+    configure,
+    transition,
+    setRequestOffset,
+    requestLoading: mode?.requestPage?.offset !== requestOffset,
+  };
 }

@@ -10,6 +10,48 @@ const attemptFields: StorageRecordIndex["fields"] = {
   ticketId: { path: ["ticketId"], type: "string" },
   implementationSessionId: { path: ["implementationSessionId"], type: "string" },
   schemaVersion: { path: ["schemaVersion"], type: "number" },
+  reviewSessions: {
+    path: ["revisions"],
+    type: "array",
+    derive: {
+      kind: "expression",
+      expression: {
+        each: {
+          op: "flatten",
+          args: [
+            {
+              each: { variable: "value" },
+              as: "revision",
+              mode: "map",
+              where: {
+                each: { get: { variable: "revision" }, key: "reviews" },
+                as: "review",
+                mode: "map",
+                where: { get: { variable: "review" }, key: "sessionId" },
+              },
+            },
+          ],
+        },
+        as: "session",
+        mode: "filter",
+        where: { op: "isString", args: [{ variable: "session" }] },
+      },
+    },
+  },
+  revisionHeads: {
+    path: ["revisions"],
+    type: "array",
+    derive: {
+      kind: "expression",
+      expression: {
+        each: { variable: "value" },
+        as: "revision",
+        mode: "map",
+        where: { get: { variable: "revision" }, key: "headSha" },
+      },
+    },
+  },
+  startedAt: { path: ["createdAt"], type: "number", derive: { kind: "timestamp" } },
 };
 export const attemptQueryIndexes: StorageRecordIndex[] = [
   ...[
@@ -46,11 +88,39 @@ export const attemptQueryIndexes: StorageRecordIndex[] = [
       workspaceId: { path: ["workspaceId"], type: "string" },
       id: { path: ["id"], type: "string" },
       evidenceKey: { path: ["metadata", "evidenceKey"], type: "string" },
+      reviewRequestId: { path: ["metadata", "reviewRequestId"], type: "string" },
+      sessionId: { path: ["sessionId"], type: "string" },
       type: { path: ["type"], type: "string" },
     },
     equality: ["workspaceId", "type"],
+    orderBy: [{ field: "id", direction: "asc" }],
   },
 ];
+
+export async function* workspaceEventSessionPages(storage: ExtensionStorageApi, workspaceIds: string[]) {
+  await preparePlannerIndexes(storage);
+  for (let offset = 0; offset < workspaceIds.length; offset += 100) {
+    let after: string | undefined;
+    do {
+      const page = await storage.records.query({
+        index: "attempt-events-workspace",
+        where: {
+          all: [
+            { field: "workspaceId", op: "in", value: workspaceIds.slice(offset, offset + 100) },
+            { field: "sessionId", op: "notEmpty" },
+            { field: "id", op: "notEmpty" },
+            ...(after ? [{ field: "id", op: "gt" as const, value: after }] : []),
+          ],
+        },
+        fields: ["id", "sessionId"],
+        limit: 100,
+      });
+      yield page.records.map(({ fields }) => String(fields.sessionId));
+      if (page.records.length < 100) break;
+      after = String(page.records.at(-1)!.fields.id);
+    } while (after);
+  }
+}
 
 export async function* attemptQueryPages<T>(storage: ExtensionStorageApi, index: string, where?: StoragePredicate) {
   await preparePlannerIndexes(storage);

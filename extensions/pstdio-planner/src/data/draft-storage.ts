@@ -1,7 +1,8 @@
 import { resolve } from "node:path";
 import { createDraftLayout, requireRepoFiles } from "@pstdio/sdk/data";
 import type { ArtifactMount, ExtensionContextBase, ExtensionStorageApi } from "@pstdio/sdk/extensions";
-import { tagsCollection, ticketsCollection } from "./collections";
+import { ticketsCollection } from "./collections";
+import { readTagDefinitions } from "./definition-query";
 import { applyFrontmatter, buildTicketFrontmatter, withTicketCheckoutIdentity } from "./frontmatter";
 import { normalizeTicketDependencies } from "./ticket-dependencies";
 import type { TicketContext } from "./ticket-identity";
@@ -36,7 +37,7 @@ export const fileNameFromPath = (shorthand: string, path: string) => path.slice(
 
 const tagNamesForIds = async (storage: ExtensionStorageApi, tagIds: string[]) => {
   if (tagIds.length === 0) return [];
-  const options = (await tagsCollection(storage).list()).flatMap((tag) => tag.options);
+  const options = (await readTagDefinitions(storage)).flatMap((tag) => tag.options);
   return tagIds.map((id) => options.find((option) => option.id === id)?.name).filter((name): name is string => !!name);
 };
 

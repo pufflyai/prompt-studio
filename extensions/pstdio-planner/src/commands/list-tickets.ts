@@ -1,13 +1,8 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { readTicketsWithReviewState, statusesCollection, tagsCollection } from "../data/collections";
-import { readMigratedTickets } from "../data/read-migrated-tickets";
-import { requireTickets, resolveStatusId, resolveTagOptionIds } from "../data/resolve";
+import { readStatusDefinitions, readTagDefinitions } from "../data/definition-query";
+import { ticketCommandPage } from "../data/ticket-command-page";
 import { ticketTagIds } from "../data/ticket-tags";
-import { sortedByTicketOrder } from "../utils/sort";
 
-// Backs `pst pstdio.planner list-tickets`. Status/tag/parent filters accept display names
-// (Decision 3); the result is curated display rows so the router renders a tidy
-// table. `--parent` doubles as the "sub-tickets of X" query.
 export const listTicketsCommand = defineCommand({
   id: "list-tickets",
   title: "List tickets",
@@ -20,43 +15,22 @@ export const listTicketsCommand = defineCommand({
     archived: params.boolean(),
     draft: params.boolean(),
     parent: params.text(),
+    limit: params.number(),
+    cursor: params.text(),
   },
-  async run(ctx, commandParams) {
-    const migrated = await readMigratedTickets(ctx);
-    const [tickets, statuses, tags] = await Promise.all([
-      readTicketsWithReviewState(ctx, migrated),
-      statusesCollection(ctx.storage).list(),
-      tagsCollection(ctx.storage).list(),
-    ]);
-
-    const statusNameById = new Map(statuses.map((status) => [status.id, status.name]));
-    const optionNameById = new Map(tags.flatMap((tag) => tag.options).map((option) => [option.id, option.name]));
-
-    const statusId = commandParams.status ? await resolveStatusId(ctx.storage, commandParams.status) : undefined;
-    const tagIds = commandParams.tags?.length ? await resolveTagOptionIds(ctx.storage, commandParams.tags) : undefined;
-    const parentIds = commandParams.parent
-      ? new Set((await requireTickets(ctx, commandParams.parent)).map(({ id }) => id))
-      : undefined;
-
-    // Drafts and archived tickets are hidden by default, matching the legacy
-    // `tickets list`; --draft / --archived select that subset instead.
-    const archivedFilter = commandParams.archived ?? false;
-    const draftFilter = commandParams.draft ?? false;
-
-    return sortedByTicketOrder(
-      tickets.filter((ticket) => {
-        if (statusId !== undefined && ticket.statusId !== statusId) return false;
-        if (tagIds && !tagIds.every((id) => ticketTagIds(ticket).includes(id))) return false;
-        if (parentIds !== undefined && !parentIds.has(ticket.parentId ?? "")) return false;
-        if (Boolean(ticket.archived) !== archivedFilter) return false;
-        if (Boolean(ticket.draft) !== draftFilter) return false;
-        return true;
-      }),
-    ).map((ticket) => ({
-      shorthand: ticket.shorthand,
-      title: ticket.title,
-      status: ticket.statusId ? (statusNameById.get(ticket.statusId) ?? "") : "",
-      tags: ticketTagIds(ticket).map((id) => optionNameById.get(id) ?? id),
-    }));
+  async run(ctx, input) {
+    const page = await ticketCommandPage(ctx, input);
+    const [statuses, tags] = await Promise.all([readStatusDefinitions(ctx.storage), readTagDefinitions(ctx.storage)]);
+    const statusNames = new Map(statuses.map(({ id, name }) => [id, name]));
+    const optionNames = new Map(tags.flatMap(({ options }) => options).map(({ id, name }) => [id, name]));
+    return {
+      ...page,
+      tickets: page.tickets.map((ticket) => ({
+        shorthand: ticket.shorthand,
+        title: ticket.title,
+        status: statusNames.get(ticket.statusId ?? "") ?? "",
+        tags: ticketTagIds(ticket).map((id) => optionNames.get(id) ?? id),
+      })),
+    };
   },
 });

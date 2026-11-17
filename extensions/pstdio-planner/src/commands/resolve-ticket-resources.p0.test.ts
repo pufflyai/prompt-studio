@@ -37,7 +37,7 @@ test("resolves a saved document identity to its current name, body parent, and t
       },
     },
   ]);
-  expect(observed.reads).toEqual([`tickets/${ticket.id}`, `tickets/${parent.id}`]);
+  expect(observed.reads).toEqual([`tickets/${ticket.id}`]);
   await renameTicketFileCommand.run(
     ...makeCommandArgs({ storage, params: { ticketId: ticket.id, fileId: file.id, name: "renamed" } }),
   );
@@ -130,5 +130,5 @@ test("batch resolution reads a missing ancestor once across different branch dep
 
   expect(resolved.map(({ resource }) => resource.id)).toEqual(["a", "b", "a"]);
   expect(resolved[0].resource.metadata?.archived).toBe(true);
-  expect(observed.reads).toEqual(["tickets/a", "tickets/b", "tickets/missing", "tickets/c"]);
+  expect(observed.reads).toEqual(["tickets/a", "tickets/b", "tickets/missing"]);
 });
