@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import { createMemoryStorage, makeCommandArgs } from "@pstdio/sdk/testing";
 import { BOOK_PATH, serializeBook } from "./model";
 import { bookFixture } from "./model.fixture";
+import { readBook } from "./read";
 import { readRecord, type Suggestion, suggestionDigest } from "./records";
 import { readRepository, writeRepository } from "./repository";
 import { suggestionCommands as commands } from "./suggestions";
@@ -58,6 +59,7 @@ test("removal recovers after a post-write storage failure and protects its appli
         workspaces: {
           get: async () => workspace,
           getDefault: async () => ({ id: "default", rootPath: home, isDefault: true }),
+          list: async () => [workspace],
         } as never,
         settings: { get: async (key: string) => (key === "targetBranch" ? target : "working") } as never,
         extensionFiles: {
@@ -89,6 +91,8 @@ test("removal recovers after a post-write storage failure and protects its appli
     await expect(commands["suggestions.apply"].run(ctx, apply)).rejects.toThrow("Final marker unavailable");
     expect((await readRepository(ctx, "working")).book?.retired).toContain(book.rules[0].ref);
     expect((await readRecord<Suggestion>(storage, "suggestion", suggestion.id)).value?.appliedRevision).toBeNull();
+    const pending = (await readBook(ctx, { workspaceId: "working" })).suggestions[0];
+    expect(pending).toMatchObject({ id: suggestion.id, issues: [], appliedRevision: null });
     await expect(commands.suggest.run(ctx, { ...input, id: suggestion.id })).rejects.toThrow("pending");
     await expect(commands["suggestions.reconcile"].run(ctx, apply)).rejects.toThrow("pending");
     await expect(commands["suggestions.discard"].run(ctx, { id: suggestion.id })).rejects.toThrow("pending");

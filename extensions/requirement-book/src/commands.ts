@@ -20,7 +20,7 @@ export const commands = {
   }),
   "workspace.select": defineCommand({
     id: "workspace.select",
-    title: "Choose a book workspace",
+    title: l10n("book.workspace.select", "Choose a book workspace"),
     cli: true,
     mutating: true,
     params: { workspaceId: params.text({ required: true }) },
@@ -33,7 +33,7 @@ export const commands = {
   }),
   initialize: defineCommand({
     id: "initialize",
-    title: "Initialize a canonical book",
+    title: l10n("book.initialize", "Initialize a canonical book"),
     cli: true,
     mutating: true,
     params: { workspaceId: params.text(), title: params.text({ required: true }) },
@@ -53,7 +53,7 @@ export const commands = {
   }),
   "chapters.create": defineCommand({
     id: "chapters.create",
-    title: "Add a book chapter",
+    title: l10n("book.chapter.add", "Add a book chapter"),
     cli: true,
     mutating: true,
     params: {
@@ -76,7 +76,7 @@ export const commands = {
   }),
   get: defineCommand({
     id: "get",
-    title: "Retrieve a requirement",
+    title: l10n("book.rule.get", "Retrieve a requirement"),
     cli: true,
     params: { workspaceId: params.text(), reference: params.text({ required: true }), revision: params.text() },
     async run(ctx, input) {
@@ -93,7 +93,7 @@ export const commands = {
   }),
   "drafts.save": defineCommand({
     id: "drafts.save",
-    title: "Save an authoring draft",
+    title: l10n("book.draft.save", "Save an authoring draft"),
     cli: true,
     mutating: true,
     params: {
@@ -116,7 +116,7 @@ export const commands = {
   }),
   "drafts.discard": defineCommand({
     id: "drafts.discard",
-    title: "Discard an authoring draft",
+    title: l10n("book.draft.discard", "Discard an authoring draft"),
     cli: true,
     mutating: true,
     params: { workspaceId: params.text(), chapter: params.number({ required: true }) },
@@ -129,7 +129,7 @@ export const commands = {
   }),
   "rules.validate": defineCommand({
     id: "rules.validate",
-    title: "Validate a requirement",
+    title: l10n("book.rule.validate", "Validate a requirement"),
     cli: true,
     params: { rule: params.json({ required: true }) },
     run: (_ctx, input) => ruleSchema.parse(input.rule),

@@ -50,7 +50,7 @@ export function ReviewList(props: Props) {
             <BookSuggestion
               key={item.id}
               suggestion={item}
-              branch={{ version: 1, chapters: data.chapters, rules: data.rules, retired: data.retired }}
+              rules={data.rules}
               unread={item.unread}
               onRead={markRead}
               onOpen={onOpen}

@@ -2,24 +2,23 @@ import { Badge, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { AlertMessage, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
-import { findRule } from "./book-model";
+import { findRule, type Rule } from "./book-model";
 import { BookOperation } from "./book-operation";
-import { type Book, operationIssues } from "./model";
-import type { Suggestion } from "./records";
+import type { BookData } from "./read";
 
 export type SuggestionAction = "review" | "apply" | "reconcile" | "discard";
 interface SuggestionProps {
-  suggestion: Suggestion & { reviewed: boolean };
-  branch: Book;
+  suggestion: BookData["suggestions"][number];
+  rules: Rule[];
   unread: boolean;
   onRead: (id: string) => void;
   onOpen: (ref: string) => void;
   onAction: (id: string, action: SuggestionAction) => void;
 }
 export function BookSuggestion(props: SuggestionProps) {
-  const { suggestion, branch, unread, onRead, onOpen, onAction } = props;
+  const { suggestion, rules, unread, onRead, onOpen, onAction } = props;
   const [expanded, setExpanded] = useState(false);
-  const issues = suggestion.appliedRevision ? [] : operationIssues(branch, suggestion.operations);
+  const { issues } = suggestion;
   const status = suggestion.appliedRevision ? "Applied to working branch" : "Local draft";
   return (
     <SimpleCard>
@@ -75,7 +74,7 @@ export function BookSuggestion(props: SuggestionProps) {
                 <BookOperation
                   key={operation.after?.ref ?? operation.before!.ref}
                   operation={operation}
-                  current={findRule(branch.rules, operation.before?.ref ?? "")}
+                  current={findRule(rules, operation.before?.ref ?? "")}
                   onOpen={onOpen}
                 />
               ))}

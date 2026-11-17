@@ -65,7 +65,7 @@ export const suggestionCommands = {
   }),
   "suggestions.review": defineCommand({
     id: "suggestions.review",
-    title: "Review a suggestion",
+    title: l10n("book.suggestion.review", "Review a suggestion"),
     cli: true,
     mutating: true,
     params: { id: params.text({ required: true }), expectedDigest: params.text({ required: true }) },
@@ -87,7 +87,7 @@ export const suggestionCommands = {
   }),
   "suggestions.reconcile": defineCommand({
     id: "suggestions.reconcile",
-    title: "Reconcile a suggestion",
+    title: l10n("book.suggestion.reconcile", "Reconcile a suggestion"),
     cli: true,
     mutating: true,
     params: { id: params.text({ required: true }), expectedDigest: params.text({ required: true }) },
@@ -116,7 +116,7 @@ export const suggestionCommands = {
   }),
   "suggestions.apply": defineCommand({
     id: "suggestions.apply",
-    title: "Apply suggestion to a working branch",
+    title: l10n("book.suggestion.apply", "Apply suggestion to a working branch"),
     cli: true,
     mutating: true,
     params: { id: params.text({ required: true }), expectedDigest: params.text({ required: true }) },
@@ -152,7 +152,7 @@ export const suggestionCommands = {
   }),
   "suggestions.cancel-application": defineCommand({
     id: "suggestions.cancel-application",
-    title: "Cancel an unapplied application",
+    title: l10n("book.suggestion.cancel-application", "Cancel an unapplied application"),
     cli: true,
     mutating: true,
     params: { id: params.text({ required: true }) },
@@ -172,7 +172,7 @@ export const suggestionCommands = {
   }),
   "suggestions.discard": defineCommand({
     id: "suggestions.discard",
-    title: "Discard a local suggestion",
+    title: l10n("book.suggestion.discard", "Discard a local suggestion"),
     cli: true,
     mutating: true,
     params: { id: params.text({ required: true }) },

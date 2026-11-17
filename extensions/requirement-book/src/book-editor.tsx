@@ -39,7 +39,7 @@ export function RuleEditor(props: EditorProps) {
               ...rule,
               title: title.trim(),
               statement: statement.trim(),
-              acceptance: acceptanceConditions(acceptance),
+              acceptance: acceptanceConditions(acceptance, rule.acceptance),
               related: references,
             },
             reason.trim(),

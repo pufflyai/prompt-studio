@@ -1,3 +1,5 @@
+import type { Rule } from "./book-model";
+
 export const ruleFields = () => [
   { id: "title", label: "Title", type: "text" as const, required: true },
   { id: "statement", label: "Requirement", type: "longtext" as const, required: true },
@@ -54,8 +56,15 @@ export const chapterFields = [
   },
 ];
 
-export const acceptanceConditions = (value: unknown) =>
-  splitLines(value).map((statement) => ({ statement: statement.replace(/^[-*]\s+/, ""), tests: [] as string[] }));
+export const acceptanceConditions = (value: unknown, previous: Rule["acceptance"] = []) => {
+  if (value === previous.map(({ statement }) => statement).join("\n")) return previous;
+  const remaining = [...previous];
+  return splitLines(value).map((line) => {
+    const statement = line.replace(/^[-*]\s+/, "");
+    const index = remaining.findIndex((condition) => condition.statement === statement);
+    return index === -1 ? { statement, tests: [] } : remaining.splice(index, 1)[0]!;
+  });
+};
 
 export const draftChapterFor = (mode: "rule" | "finding" | "chapter", chapter: number) =>
   ({ rule: chapter, finding: -2, chapter: -3 })[mode];

@@ -13,8 +13,18 @@ import { resourceContributions } from "./src/resources";
 export default defineExtension({
   settings: {
     properties: {
-      workspaceId: { type: "string", scope: "project", default: "", title: "Book workspace" },
-      targetBranch: { type: "string", scope: "project", default: "main", title: "Accepted target branch" },
+      workspaceId: {
+        type: "string",
+        scope: "project",
+        default: "",
+        title: l10n("book.settings.workspace", "Book workspace"),
+      },
+      targetBranch: {
+        type: "string",
+        scope: "project",
+        default: "main",
+        title: l10n("book.settings.target-branch", "Accepted target branch"),
+      },
     },
   },
   defaultLocale: "en",

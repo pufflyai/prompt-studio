@@ -1,4 +1,4 @@
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { z } from "zod";
 import { findRule } from "./model";
 import { requireBook } from "./read";
@@ -9,7 +9,7 @@ import { readRepository } from "./repository";
 export const reviewCommands = {
   "findings.save": defineCommand({
     id: "findings.save",
-    title: "Record a finding",
+    title: l10n("book.finding.save", "Record a finding"),
     cli: true,
     mutating: true,
     params: {
@@ -47,7 +47,7 @@ export const reviewCommands = {
   }),
   "review.mark-read": defineCommand({
     id: "review.mark-read",
-    title: "Mark review items read",
+    title: l10n("book.review.mark-read", "Mark review items read"),
     cli: true,
     mutating: true,
     params: { workspaceId: params.text(), ids: params.list({ required: true }) },
