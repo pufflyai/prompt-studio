@@ -44,6 +44,14 @@ const continuePreparation =
       continuations.retain(preparationPriority.getStore());
       return work();
     }, options.priority);
+const cancelIdleRetirement = (
+  timers: Map<PreparationWorkerSlot, ReturnType<typeof setTimeout>>,
+  slot: PreparationWorkerSlot,
+) => {
+  clearTimeout(timers.get(slot));
+  timers.delete(slot);
+};
+
 export const createPreparationClient = (
   createWorker: () => Worker,
   cleanup?: (homes: PreparationHome[]) => Promise<void>,
@@ -51,6 +59,7 @@ export const createPreparationClient = (
 ) => {
   let nextId = 0;
   let backgroundPump: ReturnType<typeof setTimeout> | undefined;
+  const idleRetirements = new Map<PreparationWorkerSlot, ReturnType<typeof setTimeout>>();
   let stopping: Promise<void> | undefined;
   const homes = new Map<string, PreparationHome>();
   const queued: Job[] = [];
@@ -130,8 +139,19 @@ export const createPreparationClient = (
     const job = nextFor(slot);
     if (!job) {
       slot.worker?.unref();
+      // Stateful watches stay on slot zero. The overflow slot owns only completed
+      // resource-scoped work, so release its heap after a short quiet period.
+      if (slot.index && slot.worker && slot.ready && !slot.active && !idleRetirements.has(slot)) {
+        const timer = setTimeout(() => {
+          idleRetirements.delete(slot);
+          if (!stopping && !slot.active && !queued.length && !continuations.size) pool.replace(slot);
+        }, 5_000);
+        timer.unref();
+        idleRetirements.set(slot, timer);
+      }
       return;
     }
+    cancelIdleRetirement(idleRetirements, slot);
     if (queuedPriority(job) > 0 && !backgroundReady) {
       backgroundPump ??= setTimeout(() => {
         backgroundPump = undefined;
@@ -237,6 +257,7 @@ export const createPreparationClient = (
     stop: (finalCleanup = true) => {
       if (stopping) return stopping;
       continuations.clear();
+      for (const slot of idleRetirements.keys()) cancelIdleRetirement(idleRetirements, slot);
       if (backgroundPump) clearTimeout(backgroundPump);
       backgroundPump = undefined;
       const error = new PreparationUnavailableError("Extension preparation stopped.");
