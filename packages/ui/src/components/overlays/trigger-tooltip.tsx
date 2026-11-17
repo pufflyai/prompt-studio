@@ -16,9 +16,10 @@ import { Tooltip, type TooltipProps } from "../primitives/tooltip";
 const triggerCaption = (element: HTMLElement) => {
   const text = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_TEXT);
   const parts: string[] = [];
-  while (text.nextNode())
-    if (!text.currentNode.parentElement?.closest('[aria-hidden="true"], [hidden], svg, style, script'))
-      parts.push(text.currentNode.textContent ?? "");
+  while (text.nextNode()) {
+    const excluded = text.currentNode.parentElement?.closest('[aria-hidden="true"], [hidden], svg, style, script');
+    if (!excluded || !element.contains(excluded)) parts.push(text.currentNode.textContent ?? "");
+  }
   return parts.join(" ").replace(/\s+/g, " ").trim();
 };
 

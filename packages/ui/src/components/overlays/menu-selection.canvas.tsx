@@ -1,4 +1,4 @@
-import { Box, Button, Icon, Stack, Text } from "@chakra-ui/react";
+import { Button, Icon, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Check, GitBranch, RotateCcw } from "lucide-react";
 import { useState } from "react";
@@ -26,11 +26,9 @@ const SelectionMenus = () => {
         <Menu.Trigger asChild>
           {explicitTooltip ? (
             <Tooltip content="Explicit dropdown explanation">
-              <Box maxWidth="64" minWidth="0">
-                <Button maxWidth="64" minWidth="0">
-                  <Text truncate>{label}</Text>
-                </Button>
-              </Box>
+              <Button maxWidth="64" minWidth="0">
+                <Text truncate>{label}</Text>
+              </Button>
             </Tooltip>
           ) : (
             <Button maxWidth="64" minWidth="0">

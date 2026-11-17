@@ -57,6 +57,26 @@ test("native resource menus dispatch only to their live captured view and await 
   await retry;
 });
 
+test("disconnect during the first menu notification removes the complete registration", async () => {
+  const f = await setup();
+  let publishedCommand = "";
+  const stop = f.w.layout.menuStore.subscribe(() => {
+    if (publishedCommand) return;
+    publishedCommand = f.commandId();
+    f.events.unbind();
+  });
+  try {
+    await f.request(f.action);
+    expect(publishedCommand).toBeTruthy();
+    expect(f.w.commands.getCommand(publishedCommand)).toBeUndefined();
+    expect(Object.values(f.w.layout.menuStore.getState().itemsByPath).flat()).not.toContainEqual(
+      expect.objectContaining({ commandId: publishedCommand }),
+    );
+  } finally {
+    stop();
+  }
+});
+
 test("disconnect removes the menu and rejects pending work without replay on reconnect", async () => {
   const f = await setup();
   await f.request(f.action);
@@ -129,6 +149,7 @@ test("old unregister leases cannot remove a new action and other frames cannot c
   });
   await other.request({ operation: "complete", requestId: event.requestId });
   expect(settled).toBe(false);
+  expect(f.w.commands.isCommandEnabled(f.commandId(newer), undefined, f.context)).toBe(false);
   await f.request({ operation: "complete", requestId: event.requestId });
   await result;
 });
@@ -159,6 +180,7 @@ test("two publishers in one workbench cannot collide using the same guest regist
   });
   await other({ operation: "complete", requestId: event.requestId });
   expect(settled).toBe(false);
+  expect(f.w.commands.isCommandEnabled(firstId, undefined, f.context)).toBe(false);
   await f.request({ operation: "complete", requestId: event.requestId });
   await result;
   await other({ operation: "unregister", registrationId: f.registrationId });

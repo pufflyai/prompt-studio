@@ -69,7 +69,8 @@ export const createWebviewResourceActionRegistrations = (
       return false;
     }
   };
-  return async (request: WebviewHostCapabilityParams["resources.actions.register"]) => {
+  type Request = WebviewHostCapabilityParams["resources.actions.register"];
+  const applyRequest = (request: Request) => {
     if (request.operation === "complete") {
       owners.get(hostEvents)?.pending.get(request.requestId)?.finish(request.error);
       return;
@@ -204,4 +205,7 @@ export const createWebviewResourceActionRegistrations = (
       },
     });
   };
+
+  // Publish command and menu changes after their lease is available to disconnect handlers.
+  return async (request: Request) => batchWorkbenchChanges(() => applyRequest(request));
 };

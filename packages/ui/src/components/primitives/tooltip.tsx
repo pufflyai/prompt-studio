@@ -59,7 +59,12 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(function T
     };
     observeLabels();
     const textObserver = new MutationObserver(observeLabels);
-    textObserver.observe(label, { childList: true, characterData: true, subtree: true });
+    textObserver.observe(label, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+      attributeFilter: ["aria-hidden", "hidden"],
+    });
     return () => {
       observer.disconnect();
       textObserver.disconnect();

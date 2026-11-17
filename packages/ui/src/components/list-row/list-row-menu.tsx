@@ -74,6 +74,7 @@ export const ListRowMenu = (props: ListRowMenuProps) => {
                   {item.separatorBefore ? <Menu.Separator /> : null}
                   <Menu.Item
                     value={item.id}
+                    closeOnSelect={item.closeOnSelect}
                     disabled={item.disabled || item.readOnly}
                     _disabled={item.readOnly ? { opacity: 1, cursor: "default" } : undefined}
                     onClick={() => {

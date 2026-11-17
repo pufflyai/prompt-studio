@@ -1,4 +1,5 @@
 ---
+"pstdio": minor
 "@pstdio/ui": minor
 ---
 
