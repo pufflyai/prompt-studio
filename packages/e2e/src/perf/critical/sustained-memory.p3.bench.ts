@@ -44,7 +44,7 @@ await runScenario("B5", (capture) =>
         const remaining = deadline - performance.now();
         assert(remaining > 0, `Fixed memory cycle ${cycle} overran its 15-second slot`);
         // Timers can wake before a fractional deadline. Keep the fixed window complete.
-        while (performance.now() < deadline) await Bun.sleep(Math.ceil(deadline - performance.now()));
+        while (performance.now() < deadline) await Bun.sleep(Math.max(1, Math.ceil(deadline - performance.now())));
       }
       assert(performance.now() - started >= workload.durationMs);
       sampler.phase("after");
