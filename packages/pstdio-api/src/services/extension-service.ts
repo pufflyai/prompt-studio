@@ -211,6 +211,10 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
       const candidate = existing ?? (await createProjectInstance(input, installedSource));
       const instance = await claimExtensionId(candidate, installedSource);
       if (!instance) throw new Error(`Failed to enable extension: ${input.name}`);
+      // Registration precedes the first enabled owner, so its execution-gated
+      // notification cannot finish this source's frontend until the claim exists.
+      if (!existing?.enabled)
+        await withRequestedPreparation(() => notifyInstalledSourcesChanged(installedSource.source_path));
 
       return { installedSource, instance };
     } catch (error) {
