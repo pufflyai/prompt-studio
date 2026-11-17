@@ -16,10 +16,8 @@ type WatchUpdate = {
 export const updatePreparationWatcher = async (input: WatchUpdate) => {
   const existing = watchers.get(input.id);
   const previousSources = new Set(existing?.sources.map((row) => row.source_path));
-  const previousRoots = new Set(existing?.roots.map((row) => row.path));
   const addedSources =
     input.kind === "sources" ? input.rows.filter((row) => !previousSources.has(row.source_path)) : [];
-  const addedRoots = input.kind === "roots" ? input.rows.filter((row) => !previousRoots.has(row.path)) : [];
   const report = (event: object) => publishPreparationEvent({ watchId: input.id, ...event });
   const sourceHash = (sourcePath: string) => {
     try {
@@ -29,9 +27,6 @@ export const updatePreparationWatcher = async (input: WatchUpdate) => {
     }
   };
   const reconcileAttachments = async () => {
-    // Installs can finish while registration is queued or the worker is absent.
-    // Scan after watching so both existing tools and subsequent installs are discovered.
-    for (const row of addedRoots) report({ sourcePath: row.path, attachment: true });
     // An edit can precede detached registration or land while its worker is absent.
     // Reconcile after watching so a later edit is covered by ordinary notifications.
     for (const row of addedSources) {
@@ -76,6 +71,8 @@ export const updatePreparationWatcher = async (input: WatchUpdate) => {
     state.watcher = await createExtensionRootWatcher({
       listExtensionRoots: async () =>
         state.roots.map((row) => ({ ...row, sync: async () => report({ sourcePath: row.path }) })),
+      // Reconcile every native attachment, including recovery after a watcher error.
+      onAttach: (row) => report({ sourcePath: row.path, attachment: true }),
       onError: (error) => report({ error: error instanceof Error ? error.message : String(error) }),
     });
   watchers.set(input.id, state);
