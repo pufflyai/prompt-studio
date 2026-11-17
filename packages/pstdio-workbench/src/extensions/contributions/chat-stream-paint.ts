@@ -1,23 +1,26 @@
 import { createWorkbenchStore } from "../../core/shared/store/workbench-store";
+import { runWorkbenchEffect } from "../../core/shared/workbench-effect";
 
 // Every patch updates the model in order. Views can skip intermediate transcripts before
 // paint, while an edit, approval, or other non-transcript change wakes them immediately.
 export const createChatProjection = <State extends object>(initialState: State) => {
   const store = createWorkbenchStore({ name: "workbench.chat", initialState });
   const views = new Set<() => void>();
-  let transcriptUpdate: State | undefined;
+  let immediate = false;
   let frame: number | undefined;
   const paint = () => {
     frame = undefined;
-    for (const notify of views) notify();
+    for (const notify of views) runWorkbenchEffect("chat view subscriber", notify);
   };
   const cancel = () => {
     if (frame !== undefined) cancelAnimationFrame(frame);
     frame = undefined;
   };
-  store.subscribe((snapshot) => {
+  store.subscribe(() => {
+    const transcriptOnly = !immediate;
+    immediate = false;
     if (!views.size) return;
-    if (snapshot === transcriptUpdate && typeof requestAnimationFrame === "function") {
+    if (transcriptOnly && typeof requestAnimationFrame === "function") {
       frame ??= requestAnimationFrame(paint);
       return;
     }
@@ -36,10 +39,14 @@ export const createChatProjection = <State extends object>(initialState: State) 
       },
     },
     publish(snapshot: State, transcriptOnly = false) {
-      transcriptUpdate = transcriptOnly ? snapshot : undefined;
+      // A later patch in the same workbench batch must not defer an earlier control or draft edit.
+      immediate ||= !transcriptOnly;
       store.setState(snapshot, true, "projectChat");
     },
-    retire: (snapshot: State) => store.setState(snapshot, true, "retireChat"),
+    retire(snapshot: State) {
+      immediate = true;
+      store.setState(snapshot, true, "retireChat");
+    },
     dispose() {
       cancel();
       views.clear();
