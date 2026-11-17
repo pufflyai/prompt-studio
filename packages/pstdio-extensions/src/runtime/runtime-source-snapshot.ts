@@ -83,7 +83,7 @@ export const readRuntimeModuleImports = (
   // Staged and installed copies share parsing, not filesystem identities. Fresh bytes
   // still validate every read, and graph/package resolution below remains uncached.
   // Bound retained parse results without retaining their source buffers.
-  if (importsByContent.size >= 4096) importsByContent.delete(importsByContent.keys().next().value!);
+  if (importsByContent.size >= 12_288) importsByContent.delete(importsByContent.keys().next().value!);
   importsByContent.set(cacheKey, imports);
   bytes.imports.set(mode, imports);
   return imports;
