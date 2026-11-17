@@ -27,7 +27,7 @@ export const ReadErrorRecovery = ({ title, error, retry, retryLabel = "Retry" }:
       </Button>
       <Box position="relative" w="full" minH="5rem">
         <ActionErrorSlot edge="top">
-          <AlertMessage key={attempt} compact status="error" title={title}>
+          <AlertMessage key={attempt} compact status="error" maxH="4rem" title={title}>
             {error}
           </AlertMessage>
         </ActionErrorSlot>

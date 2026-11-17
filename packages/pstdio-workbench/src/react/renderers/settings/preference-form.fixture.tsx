@@ -275,6 +275,44 @@ const buttonRetry = async (mode: "apply" | "live") => {
   }
 };
 
+const retryWhileAnotherFieldSaves = async () => {
+  const { usePreferenceFormDraft } = await import("./preference-form-draft");
+  const retry = Promise.withResolvers<void>();
+  let firstAttempt = true;
+  let draft!: ReturnType<typeof usePreferenceFormDraft>;
+  const Form = () => {
+    draft = usePreferenceFormDraft(async (name) => {
+      if (name !== "first") return;
+      if (firstAttempt) throw new Error("first failed");
+      await retry.promise;
+    }, "live");
+    return null;
+  };
+  let tree!: ReactTestRenderer;
+  await act(async () => {
+    tree = create(<Form />);
+  });
+  try {
+    await act(async () => draft.change("first", "one"));
+    assert.equal(draft.errors.first, "first failed");
+    firstAttempt = false;
+    let pending!: Promise<void>;
+    await act(async () => {
+      pending = draft.save();
+    });
+    await act(async () => draft.change("second", "two"));
+    await act(async () => {
+      retry.resolve();
+      await pending;
+    });
+    assert.deepEqual(draft.errors, {});
+    assert.deepEqual(draft.staged, {});
+  } finally {
+    retry.resolve();
+    await act(async () => tree.unmount());
+  }
+};
+
 await failedSave();
 await ownerSwitch();
 await externalChange();
@@ -282,4 +320,5 @@ await pendingLeave();
 await pendingOwnerSwitch();
 await buttonRetry("apply");
 await buttonRetry("live");
+await retryWhileAnotherFieldSaves();
 process.stdout.write("preference form scenarios passed\n");

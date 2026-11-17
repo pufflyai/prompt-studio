@@ -43,7 +43,12 @@ export const operationForDraft = (
 ) => {
   const intent = commandIntent(values);
   if (!intent && !/^\/[^\s/]+(?:\s|$)/.test(text)) return undefined;
-  if (state && "unavailableReason" in state && typeof state.unavailableReason === "string")
+  if (
+    (intent || state?.slashCommands) &&
+    state &&
+    "unavailableReason" in state &&
+    typeof state.unavailableReason === "string"
+  )
     throw new Error(state.unavailableReason);
   if (intent) return taggedCommandOperation(intent, text, harnessId, state, attachments);
   if (!state) throw new Error("Native commands are unavailable. Reload the session and try again.");

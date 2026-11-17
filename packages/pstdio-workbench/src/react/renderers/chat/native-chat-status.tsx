@@ -46,7 +46,8 @@ export const NativeChatErrors = ({ state, session }: Omit<NativeChatNoticesProps
             compact
             status="error"
             title="Message not sent"
-            onClose={() => session.restoreSubmission(item.message.id)}
+            onClose={() => session.dismissSubmission(item.message.id)}
+            endElement={<Button onClick={() => session.restoreSubmission(item.message.id)}>Restore draft</Button>}
           >
             {item.failure}
           </AlertMessage>

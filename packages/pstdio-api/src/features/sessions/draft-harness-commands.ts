@@ -21,7 +21,8 @@ export const getDraftHarnessCommands = async (
   const resolved = await resolveCreateWorkspace(deps, input.project_id, input.workspace_id);
   if (resolved.error) throw new HarnessOperationError(resolved.error, resolved.status);
   const record = resolved.workspace!;
-  if (workspaceSessionReadiness(record).kind !== "ready") return unavailableWorkspaceCommands(selected.id);
+  if (workspaceSessionReadiness(record).kind !== "ready")
+    return unavailableWorkspaceCommands(selected.id, selected.supportsCommandState);
   const workspace = toHarnessWorkspaceContext(record, selected.cwdRequirement);
   const cwd = workspace?.executionTarget.kind === "local" ? workspace.executionTarget.rootPath : undefined;
   const model = await resolveCreateSessionModel(input.model, project, input.agent, deps.harnessRegistry, {

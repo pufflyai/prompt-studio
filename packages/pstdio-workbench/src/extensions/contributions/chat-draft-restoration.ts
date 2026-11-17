@@ -11,6 +11,12 @@ export const createChatDraftRestoration = (input: {
   changeDraft: (draft: Partial<ChatDraft>) => void;
   publish: (update: { pending?: ChatPendingSubmission[] }) => void;
 }) => ({
+  dismissSubmission(id: string) {
+    if (!input.active()) return;
+    const pending = input.read().pending;
+    const failed = pending?.find((item) => item.message.id === id && item.failure);
+    if (failed) input.publish({ pending: pending?.filter((item) => item !== failed) });
+  },
   restoreSubmission(id: string) {
     if (!input.active()) return;
     const restored = restoreFailedChatSubmission(input.read().draft, input.read().pending, id);

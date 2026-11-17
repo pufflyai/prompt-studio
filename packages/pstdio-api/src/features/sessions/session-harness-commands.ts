@@ -66,7 +66,7 @@ export const getSessionHarnessCommands = async (
   id: string,
 ): Promise<HarnessCommandDiscovery> => {
   const { harness, input, options, readiness } = await resolve(deps, id);
-  if (readiness.kind !== "ready") return unavailableWorkspaceCommands(harness.id);
+  if (readiness.kind !== "ready") return unavailableWorkspaceCommands(harness.id, harness.supportsCommandState);
   try {
     const state = await readCurrentHarness(deps.harnessRegistry, harness.id, options, async (current) => {
       if (input.workspace?.executionTarget.kind === "remote" && current.cwdRequirement === "required")
@@ -248,12 +248,20 @@ export const invokeSessionHarnessOperation = async (
 
 export const createSessionHarnessOperation = async (
   deps: SessionsRouteDeps,
-  input: Parameters<SessionsRouteDeps["sessionService"]["create"]>[0],
+  input: Parameters<SessionsRouteDeps["sessionService"]["create"]>[0] & {
+    operationWorkspace?: Parameters<typeof workspaceSessionReadiness>[0];
+  },
   operation: HarnessOperation,
   onCreated: (session: { id: string; title: string; status: string }) => Promise<void>,
   signal?: AbortSignal,
 ) => {
-  const session = await deps.sessionService.create({ ...input, status: "completed" }, { emitStartedHook: false });
+  const { operationWorkspace, ...sessionInput } = input;
+  const readiness = workspaceSessionReadiness(operationWorkspace);
+  if (readiness.kind !== "ready") throw new HarnessOperationError(readiness.message, 409);
+  const session = await deps.sessionService.create(
+    { ...sessionInput, status: "completed" },
+    { emitStartedHook: false },
+  );
   try {
     await onCreated(session);
   } catch (error) {

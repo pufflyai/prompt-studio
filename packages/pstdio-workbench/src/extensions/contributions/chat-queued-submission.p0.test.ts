@@ -289,3 +289,20 @@ test("identical failed inputs share recovery until their last acknowledgement wi
     expect(session.getSnapshot().draft.recovered ?? []).toHaveLength(preexisting ? 1 : 0);
   }
 });
+
+test("dismissing an unsent message preserves both the current draft and the failed input", async () => {
+  const session = createChatSession({
+    initial: { streaming: true },
+    query: async () => ({}),
+    action: async () => {
+      throw new Error("Could not send");
+    },
+  });
+  await expect(session.run(action)).rejects.toThrow("Could not send");
+  session.changeDraft({ text: "Keep typing" });
+  const draft = session.getSnapshot().draft;
+  session.dismissSubmission(session.getSnapshot().pending![0]!.message.id);
+  expect(session.getSnapshot().pending).toBeUndefined();
+  expect(session.getSnapshot().draft).toEqual(draft);
+  expect(draft.recovered).toContainEqual({ text: action.text, attachments: action.attachments, values: action.values });
+});

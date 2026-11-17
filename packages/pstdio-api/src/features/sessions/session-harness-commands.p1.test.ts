@@ -29,3 +29,37 @@ test("a failed first-operation workspace link leaves a failed session", async ()
     await app.close();
   }
 });
+
+test("an unavailable workspace rejects a native operation before creating a session", async () => {
+  const app = await createTestApp();
+  try {
+    const response = await app.app.request("/v1/projects", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(folderProjectInput({ name: "Workspace provisioning" })),
+    });
+    const project = await response.json();
+    await expect(
+      createSessionHarnessOperation(
+        app.deps,
+        {
+          project_id: project.id,
+          title: "Native operation",
+          agent: "native-test",
+          operationWorkspace: {
+            id: "provisioning-workspace",
+            initializing: true,
+            setup_error: null,
+            provider_state: "provisioning",
+            provider_error_json: null,
+          },
+        },
+        { kind: "command", text: "/compact" },
+        async () => {},
+      ),
+    ).rejects.toThrow("still provisioning");
+    expect(await app.deps.sessionService.list(project.id)).toEqual([]);
+  } finally {
+    await app.close();
+  }
+});

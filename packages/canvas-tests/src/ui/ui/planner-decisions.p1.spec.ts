@@ -129,3 +129,18 @@ test("a pending card becomes an editable resolved decision after submission", as
   await resolved.press("Enter");
   await expect(modal.getByRole("button", { name: "Update answer", exact: true })).toHaveCount(2);
 });
+
+// Critical: Auto Build recovery is reachable and repeated failures remain visible.
+test("Auto Build can dismiss and show the same failure again", async ({ page }) => {
+  const preview = await openCanvasPreview(page, `${canvas}#AutoBuildPauseFailure`);
+  await preview.getByRole("button", { name: "Auto Build", exact: true }).click();
+  const activity = preview.getByRole("dialog", { name: "Auto Build activity" });
+  const pause = activity.getByRole("button", { name: "Pause", exact: true });
+  await pause.click();
+  const alert = activity.getByRole("alert");
+  await expect(alert).toContainText("Could not pause");
+  await alert.getByRole("button", { name: "Dismiss" }).click();
+  await expect(alert).toHaveCount(0);
+  await pause.click();
+  await expect(alert).toBeVisible();
+});

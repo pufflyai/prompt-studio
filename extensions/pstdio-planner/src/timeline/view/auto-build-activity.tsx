@@ -102,7 +102,6 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
             <Popover.Body display="flex" flexDirection="column" minH="0" flex="1" p="0">
               <ScrollArea flex="1" minH="0" h="0" viewportProps={{ minH: "0", flex: "1" }}>
                 <Stack gap="md" p="sm">
-                  <AutoBuildWarnings {...sessions} enabled={enabled} actionError={actionError} t={t} />
                   {reviewRequests.some(({ state }) => state === "open") || requestErrors.length ? (
                     <AutoBuildRequests onOpen={onOpenRequests} t={t} />
                   ) : null}
@@ -126,6 +125,7 @@ export function AutoBuildActivity(props: AutoBuildActivityProps) {
             </Popover.Body>
             <Popover.Footer flexShrink="0" p="sm">
               <Stack w="full" alignItems="end">
+                <AutoBuildWarnings {...sessions} enabled={enabled} actionError={actionError} t={t} />
                 {enabled ? (
                   <Button size="sm" variant="outline" disabled={disabled} onClick={() => void onPause?.()}>
                     <Pause />

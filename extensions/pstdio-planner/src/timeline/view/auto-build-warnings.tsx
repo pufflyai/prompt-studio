@@ -32,7 +32,7 @@ export function AutoBuildWarnings(props: AutoBuildWarningsProps) {
   if (dismissed && dismissed !== alert) setDismissed(undefined);
   if (!alert && !noMatches && !needsHelp) return null;
   return (
-    <Stack gap="sm" position="relative">
+    <Stack gap="sm" position="relative" w="full">
       {alert && (dismissAction || alert !== dismissed) ? (
         <AlertMessage
           size="sm"
@@ -41,7 +41,8 @@ export function AutoBuildWarnings(props: AutoBuildWarningsProps) {
           title={alert}
           position="absolute"
           bottom="100%"
-          insetInline="xs"
+          insetInline="0"
+          maxH="8rem"
           zIndex="docked"
           onClose={dismissAction ?? (() => setDismissed(alert))}
         />

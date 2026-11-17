@@ -10,10 +10,11 @@ const unavailableWorkspace = {
   provider_state: "provisioning",
 };
 
-const setup = () => {
+const setup = (supportsCommandState = true) => {
   let calls = 0;
   const harness = {
     id: "harness",
+    supportsCommandState,
     cwdRequirement: "optional",
     getCommandState: () => {
       calls++;
@@ -52,4 +53,12 @@ test("background command discovery for an existing conversation tolerates an una
     harnessId: "harness",
   });
   expect(calls()).toBe(0);
+});
+
+test("workspace setup does not advertise native slash input for a harness with no command state", async () => {
+  const { deps } = setup(false);
+  expect(await getDraftHarnessCommands(deps, { project_id: "project", agent: "harness" })).toMatchObject({
+    slashCommands: false,
+  });
+  expect(await getSessionHarnessCommands(deps, "session")).toMatchObject({ slashCommands: false });
 });
