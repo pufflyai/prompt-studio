@@ -1,6 +1,7 @@
 import { Dialog, Menu, Popover, useMenu, useMenuContext, usePopoverContext } from "@chakra-ui/react";
 import { forwardRef } from "react";
 import { TriggerTooltip } from "../components/overlays/trigger-tooltip";
+import { MenuContent } from "./menu-content";
 import { OverlayTriggerContext, useOverlayTriggerId, useOverlayTriggerRef } from "./overlay-trigger";
 import { useUiScope } from "./ui-scope";
 import { useScopedOpen } from "./use-scoped-open";
@@ -60,6 +61,7 @@ export const ScopedDialog: typeof Dialog = { ...Dialog, Root: DialogRoot };
 export const ScopedMenu: typeof Menu = {
   ...Menu,
   Root: MenuRoot,
+  Content: MenuContent,
   RootProvider: MenuRootProvider,
   Trigger: MenuTrigger,
 };

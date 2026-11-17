@@ -129,3 +129,41 @@ test("native resource choices announce their selection and restore focus on keyb
   await page.keyboard.press("Escape");
   await expect(trigger).toBeFocused();
 });
+
+// Critical: keyboard users must see the highlighted row inside a bounded menu's ScrollArea.
+test("keyboard navigation keeps menu choices in their nested scroll viewport", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/ui/src/components/overlays/menu-selection.canvas.tsx#CheckmarksAndAlignment",
+  );
+  const trigger = preview.getByRole("button", { name: "Saved versions", exact: true });
+  await trigger.press("ArrowDown");
+  const menu = preview.getByRole("menu");
+  await menu.press("End");
+  const last = preview.getByRole("menuitemradio", { name: "Saved revision 60", exact: true });
+  await expect(last).toHaveAttribute("data-highlighted", "");
+  await expect
+    .poll(() =>
+      last.evaluate((row) => {
+        const viewport = row.closest('[data-scope="scroll-area"][data-part="viewport"]')!;
+        const bounds = viewport.getBoundingClientRect();
+        const item = row.getBoundingClientRect();
+        return item.top >= bounds.top && item.bottom <= bounds.bottom;
+      }),
+    )
+    .toBe(true);
+  await menu.press("Enter");
+  await expect(trigger).toBeFocused();
+  await trigger.press("ArrowDown");
+  await expect(last).toBeChecked();
+  await menu.press("Home");
+  const first = preview.getByRole("menuitemradio", { name: "Saved revision 1", exact: true });
+  await expect
+    .poll(() =>
+      first.evaluate((row) => {
+        const viewport = row.closest('[data-scope="scroll-area"][data-part="viewport"]')!;
+        return row.getBoundingClientRect().top >= viewport.getBoundingClientRect().top;
+      }),
+    )
+    .toBe(true);
+});

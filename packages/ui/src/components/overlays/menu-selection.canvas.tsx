@@ -3,6 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { Check, GitBranch, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
+import { ScrollArea } from "../primitives/scroll-area";
 import { Tooltip } from "../primitives/tooltip";
 import { ResourceActionMenu } from "./resource-context-menu";
 import { SearchableMenu } from "./searchable-menu";
@@ -13,6 +14,7 @@ const SelectionMenus = () => {
   const [longLabel, setLongLabel] = useState(false);
   const [explicitTooltip, setExplicitTooltip] = useState(false);
   const [revision, setRevision] = useState("first");
+  const [savedVersion, setSavedVersion] = useState("version-1");
   const label = longLabel
     ? "Layout options — a long selected value whose full text remains available in a tooltip"
     : "Layout options";
@@ -86,6 +88,27 @@ const SelectionMenus = () => {
           onSelect: () => setBranch(id),
         }))}
       />
+      <Menu.Root lazyMount unmountOnExit>
+        <Menu.Trigger asChild>
+          <Button>Saved versions</Button>
+        </Menu.Trigger>
+        <Menu.Positioner>
+          <Menu.Content maxHeight="64">
+            <ScrollArea flex="1" minHeight="0" viewportProps={{ tabIndex: -1 }}>
+              <Menu.RadioItemGroup value={savedVersion} onValueChange={(event) => setSavedVersion(event.value)}>
+                {Array.from({ length: 60 }, (_, index) => (
+                  <Menu.RadioItem key={index} value={`version-${index + 1}`}>
+                    <Menu.ItemText>Saved revision {index + 1}</Menu.ItemText>
+                    <Menu.ItemIndicator>
+                      <Check />
+                    </Menu.ItemIndicator>
+                  </Menu.RadioItem>
+                ))}
+              </Menu.RadioItemGroup>
+            </ScrollArea>
+          </Menu.Content>
+        </Menu.Positioner>
+      </Menu.Root>
       <ResourceActionMenu
         actions={[
           { key: "main", label: "Main panel", icon: <GitBranch />, isSelected: true },
@@ -108,7 +131,7 @@ const meta = {
   title: "Design system/Components/Overlays/Menu selection",
   component: SelectionMenus,
   description:
-    "Clipped dropdown labels reveal their complete text on hover or keyboard focus. Short labels need no tooltip; opening the menu dismisses its label tooltip.",
+    "Clipped dropdown labels reveal their complete text on hover or keyboard focus. Short labels need no tooltip; opening the menu dismisses its label tooltip. Saved versions demonstrates bounded scrolling and Home/End keyboard navigation with focused rows kept in view.",
 } satisfies CanvasMeta<typeof SelectionMenus>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;
