@@ -37,7 +37,7 @@ export const DesktopStartupProgress = (props: DesktopStartupProgressProps) => {
           <Text color="fg.muted" textStyle="paragraph/S/regular">
             {waitingWithoutProgress
               ? "Startup hasn’t reported progress for a while. Something may be wrong."
-              : "It’s taking longer than expected."}
+              : "This is taking longer than usual"}
           </Text>
           <CopyStartupLogsButton copyStartupLogs={copyStartupLogs} />
         </Stack>
