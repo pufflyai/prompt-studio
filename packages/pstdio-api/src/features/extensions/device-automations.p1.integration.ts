@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestCronDriver } from "pstdio-scheduler/testing";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { provisionProjectWorkspaces } from "../workspaces/provision-coordinator";
 import { assignDeviceAutomation, openDeviceAutomations, setDeviceAutomationEnabled } from "./device-automations";
 import { replicateRecords } from "./device-automations.fixture";
 import { loadExtensionSource } from "./extension-runtime";
@@ -93,19 +94,9 @@ try {
   await other.cron.fireAll();
   assert.equal(calls.length, 1);
   a = await startApp("a");
-  // Startup provisions restored workspaces asynchronously. Begin clock assertions after
-  // its ready event, so a provisioning change cannot deliberately close final admission.
-  while (
-    !a.deps.eventBus
-      .getSince(0)
-      .some(
-        (event) =>
-          event.table === "workspaces" &&
-          (event.data as { project_id?: string; initializing?: boolean }).project_id === projectId &&
-          (event.data as { initializing?: boolean }).initializing === false,
-      )
-  )
-    await Bun.sleep(10);
+  // Healthy maintenance no longer emits a workspace lifecycle change. Join the
+  // restored workspace's maintenance before asserting final schedule admission.
+  await provisionProjectWorkspaces(a.deps, projectId);
   const restarted = await clockFor(a, "a");
   assert.equal(restarted.cron.size(), 1);
   await restarted.cron.fireAll();

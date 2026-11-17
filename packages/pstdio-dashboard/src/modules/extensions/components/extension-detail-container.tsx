@@ -16,24 +16,38 @@ import {
   useUninstallProjectExtension,
   useUpdateProjectExtensionSetting,
 } from "@/shared/extensions/use-project-extensions";
+import type { ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionDetail } from "./extension-detail";
 import { unavailableExtensionHarnesses } from "./extension-harness-availability";
 import { ExtensionSettingsViews } from "./extension-settings-views";
 
 interface ExtensionDetailContainerProps {
   projectId: string | undefined;
+  upgradeAction?: ExtensionActionState;
+  onUpgrade: () => void;
+  onDismissUpgrade: (action: ExtensionActionState) => void;
+  onRetryAction: () => void;
   extension: ProjectExtensionInstance;
   metadata: DashboardExtensionMetadata | undefined;
   agents?: AgentInfo[];
   onBack: () => void;
-  upgrading: boolean;
-  onUpgrade: () => void;
   settingsInput?: WorkbenchPanelRenderInput;
 }
 
 export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) => {
+  const {
+    projectId,
+    extension,
+    metadata,
+    agents,
+    onBack,
+    settingsInput,
+    upgradeAction,
+    onUpgrade,
+    onDismissUpgrade,
+    onRetryAction,
+  } = props;
   const toaster = useToaster();
-  const { projectId, extension, metadata, agents, onBack, settingsInput } = props;
   const { showError, errorNotice, clearError } = useActionError();
   const settingsPanels =
     metadata?.settingsPanels.filter(
@@ -93,7 +107,6 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
 
   return (
     <>
-      {!confirmingUninstall && errorNotice}
       <ExtensionDetail
         workbench={settingsInput?.workbench}
         projectId={projectId}
@@ -114,7 +127,11 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         }
         toggling={setEnabled.isPending}
         reloading={reload.isPending}
-        upgrading={props.upgrading}
+        upgrading={upgradeAction?.status === "running" || upgradeAction?.status === "queued"}
+        actionFeedback={!confirmingUninstall && errorNotice}
+        upgradeAction={upgradeAction}
+        onDismissUpgrade={onDismissUpgrade}
+        onRetryUpgrade={upgradeAction?.status === "error" ? onRetryAction : undefined}
         uninstalling={uninstall.isPending}
         togglingAutomationId={
           setAutomationEnabled.isPending ? (setAutomationEnabled.variables?.automationId ?? undefined) : undefined
@@ -144,7 +161,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
           );
         }}
         onReload={handleReload}
-        onUpgrade={props.onUpgrade}
+        onUpgrade={onUpgrade}
         onUninstall={() => {
           clearError();
           setConfirmingUninstall(true);
