@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createWorkspaceMaintenance } from "../../services/workspace-maintenance";
 import { createWorkspacesApi } from "../extensions/command-environment/workspaces";
 import { deleteWorkspaceHandler } from "./endpoints/delete-workspace";
 import { deleteWorkspace } from "./workspace-deletion";
@@ -17,6 +18,7 @@ test("forgetting an orphan stops active sessions and archives its history withou
   const events: string[] = [];
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
       get: async () => workspace,
       softDelete: async () => {
         events.push("delete record");
@@ -50,6 +52,7 @@ test("forgetting rechecks the latest workspace and preserves a recovered provide
   let deleted = false;
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
       get: async () => current,
       softDelete: async () => {
         deleted = true;
@@ -74,6 +77,7 @@ test.each(["cancel", "archive"])("forget retries unfinished session cleanup afte
   let failed = false;
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
       get: async () => workspace,
       softDelete: async () => {
         deleted++;
@@ -120,6 +124,7 @@ test.each([
   let providerCalls = 0;
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
       get: async () => workspace,
       softDelete: async () => true,
     },
@@ -169,6 +174,7 @@ test("HTTP and extension deletions across projects share two slots through sessi
   let peak = 0;
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
       get: async (id: string) => workspaces.find((workspace) => workspace.id === id),
       beginProviderOperation: async (id: string, operation: { operationId: string; kind: string }) => ({
         ...workspaces.find((workspace) => workspace.id === id),
@@ -233,6 +239,7 @@ test("duplicate deletions share cleanup and publish the removed event once", asy
   let events = 0;
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
       softDelete: async () => {
         finalizations++;
       },
@@ -268,6 +275,7 @@ test("failed deletions release both slots, preserve rows, and allow retry", asyn
   const deleted: string[] = [];
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
       softDelete: async (id: string) => {
         deleted.push(id);
       },

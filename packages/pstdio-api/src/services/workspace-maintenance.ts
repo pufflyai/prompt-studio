@@ -1,9 +1,11 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { access, mkdir, open, unlink } from "node:fs/promises";
 import { join } from "node:path";
 
 /** File maintenance gates admission without inventing a workspace lifecycle transition. */
 export const createWorkspaceMaintenance = (directory?: string) => {
   const pending = new Map<string, Promise<unknown>>();
+  const owners = new AsyncLocalStorage<{ id: string; active: boolean }[]>();
   const listeners = new Set<() => void>();
   const marker = (id: string) => (directory ? join(directory, encodeURIComponent(id)) : undefined);
   const begin = async (path: string | undefined) => {
@@ -17,6 +19,10 @@ export const createWorkspaceMaintenance = (directory?: string) => {
     }
   };
   return {
+    assertCanDelete: (id: string) => {
+      if (owners.getStore()?.some((owner) => owner.id === id && owner.active))
+        throw new Error("Workspace deletion cannot be nested in its own file maintenance.");
+    },
     isRunning: async (id: string) => {
       if (pending.has(id)) return true;
       const path = marker(id);
@@ -37,16 +43,24 @@ export const createWorkspaceMaintenance = (directory?: string) => {
       };
     },
     run: async <T>(id: string, work: () => Promise<T>) => {
+      const inherited = owners.getStore() ?? [];
       const path = marker(id);
       const task = (pending.get(id) ?? Promise.resolve())
         .catch(() => {})
         .then(async () => {
-          // Intent reaches disk before hooks touch skill files. An interrupted host leaves it for
-          // startup's normal project maintenance, while session recovery still sees a closed gate.
-          await begin(path);
-          const result = await work();
-          if (path) await unlink(path);
-          return result;
+          const owner = { id, active: true };
+          return owners.run([...inherited, owner], async () => {
+            try {
+              // Intent reaches disk before hooks touch skill files. An interrupted host leaves it for
+              // startup's normal project maintenance, while session recovery still sees a closed gate.
+              await begin(path);
+              const result = await work();
+              if (path) await unlink(path);
+              return result;
+            } finally {
+              owner.active = false;
+            }
+          });
         });
       pending.set(id, task);
       try {

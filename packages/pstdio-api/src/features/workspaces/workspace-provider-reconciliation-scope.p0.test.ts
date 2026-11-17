@@ -1,4 +1,6 @@
 import { expect, test } from "bun:test";
+import { createWorkspaceMaintenance } from "../../services/workspace-maintenance";
+import type { WorkspacesRouteDeps } from "./deps";
 import { makeWorkspace, remoteWorkspaceCapabilities } from "./workspace-provider.test-fixture";
 import { removeProviderWorkspaceBacking } from "./workspace-provider-lifecycle";
 import { reconcileProviderWorkspaces } from "./workspace-provider-reconciliation";
@@ -27,6 +29,8 @@ test("targeted recovery skips pending siblings while background recovery still i
   };
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
+      get: async (id: string) => workspaces.find((workspace) => workspace.id === id) ?? null,
       listForProviderReconciliation: async () => workspaces,
       updateProviderOperationProjection: async (id: string, input: ReconciledInput) => {
         const workspace = workspaces.find((candidate) => candidate.id === id)!;
@@ -65,6 +69,8 @@ test("a ready local provider becomes unavailable without losing its target and r
   let enabled = false;
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
+      get: async () => workspace,
       listForProviderReconciliation: async () => [{ ...workspace }],
       updateProviderOperationProjection: async (_id: string, input: ReconciledInput) => {
         if (
@@ -130,6 +136,8 @@ test("a late ready resolution cannot overwrite a provider disabled during the ca
   };
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
+      get: async () => workspace,
       listForProviderReconciliation: async () => [{ ...workspace }],
       updateProviderOperationProjection: async (_id: string, input: ReconciledInput) => {
         if (
@@ -147,9 +155,9 @@ test("a late ready resolution cannot overwrite a provider disabled during the ca
   const initial = reconcileProviderWorkspaces(deps, "project-1");
   await started.promise;
   enabled = false;
-  await reconcileProviderWorkspaces(deps, "project-1");
+  const disabled = reconcileProviderWorkspaces(deps, "project-1");
   release.resolve();
-  await initial;
+  await Promise.all([initial, disabled]);
   expect(workspace).toMatchObject({ provider_state: "provider_missing", root_path: "/owned/workspace" });
 });
 
@@ -192,4 +200,51 @@ test("a late ready resolution cannot restore backing removed by a newer lifecycl
     branch: null,
     provider_operation_kind: null,
   });
+});
+
+test("queued restart recovery preserves a workspace cancelled while it waits for maintenance", async () => {
+  const workspace = makeWorkspace({ execution_kind: "local", root_path: "/owned/workspace" });
+  let resolutions = 0;
+  const { deps, getWorkspace } = makeDeps(
+    {
+      resolve: async () => {
+        resolutions++;
+        return {
+          state: "ready",
+          executionKind: "local",
+          providerRef: workspace.provider_ref_json,
+          executionTarget: { kind: "local", rootPath: "/owned/workspace" },
+          capabilities: remoteWorkspaceCapabilities,
+        };
+      },
+      delete: async () => {},
+    },
+    workspace,
+  );
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const discovered = Promise.withResolvers<void>();
+  const service = (deps as WorkspacesRouteDeps).workspaceService;
+  const maintenance = service.maintenance.run(workspace.id, async () => {
+    entered.resolve();
+    await release.promise;
+  });
+  await entered.promise;
+  const run = service.maintenance.run;
+  service.maintenance.run = (id, work) => {
+    discovered.resolve();
+    return run(id, work);
+  };
+  const recovery = reconcileProviderWorkspaces(deps, "project-1");
+  try {
+    await discovered.promise;
+    await removeProviderWorkspaceBacking(deps, workspace);
+    release.resolve();
+    await Promise.all([maintenance, recovery]);
+    expect(resolutions).toBe(0);
+    expect(await getWorkspace()).toMatchObject({ provider_state: "cancelled", root_path: null, branch: null });
+  } finally {
+    release.resolve();
+    await Promise.allSettled([maintenance, recovery]);
+  }
 });

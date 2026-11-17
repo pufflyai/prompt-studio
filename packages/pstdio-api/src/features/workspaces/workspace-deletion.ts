@@ -54,12 +54,18 @@ export const deleteWorkspace = (
     fireExtensionEventAsync?: typeof fireExtensionEventAsync;
   } = {},
 ) => {
+  // Reject a hook deleting its own target before it can join an already queued deletion.
+  try {
+    deps.workspaceService.maintenance.assertCanDelete(workspace.id);
+  } catch (error) {
+    return Promise.reject(error);
+  }
   let queue = queues.get(deps.workspaceService);
   if (!queue) {
     queue = createDeletionQueue();
     queues.set(deps.workspaceService, queue);
   }
-  return queue(workspace.id, overrides.forget === true, async () => {
+  const removeOwnedWorkspace = async () => {
     // Recheck after waiting for a slot: a provider may have recovered its reference.
     if (overrides.forget) {
       const current = await deps.workspaceService.get(workspace.id);
@@ -94,5 +100,8 @@ export const deleteWorkspace = (
         workspaceId: workspace.id,
       });
     }
-  });
+  };
+  return queue(workspace.id, overrides.forget === true, () =>
+    deps.workspaceService.maintenance.run(workspace.id, removeOwnedWorkspace),
+  );
 };
