@@ -1,11 +1,12 @@
 import type { DraftHarnessCommandInput } from "pstdio-api-contracts";
 import { HarnessDisposedError } from "pstdio-api-runtime-host";
 import { readCurrentHarness } from "../harnesses/read-current-harness";
+import { workspaceSessionReadiness } from "../workspaces/workspace-session-readiness";
 import type { SessionsRouteDeps } from "./deps";
 import { resolveCreateSessionModel } from "./endpoints/resolve-create-session";
 import { resolveCreateWorkspace } from "./endpoints/resolve-create-workspace";
 import { resolveHarnessRunParams } from "./harness-params";
-import { HarnessOperationError } from "./session-harness-commands";
+import { emptyHarnessCommands, HarnessOperationError } from "./session-harness-commands";
 import { toHarnessWorkspaceContext } from "./session-workspace-context";
 
 export const getDraftHarnessCommands = async (deps: SessionsRouteDeps, input: DraftHarnessCommandInput) => {
@@ -16,8 +17,7 @@ export const getDraftHarnessCommands = async (deps: SessionsRouteDeps, input: Dr
   const resolved = await resolveCreateWorkspace(deps, input.project_id, input.workspace_id);
   if (resolved.error) throw new HarnessOperationError(resolved.error, resolved.status);
   const record = resolved.workspace!;
-  if (record.initializing || record.setup_error || record.provider_state !== "ready")
-    throw new HarnessOperationError("The workspace is not ready.", 409);
+  if (workspaceSessionReadiness(record).kind !== "ready") return emptyHarnessCommands(selected.id);
   const workspace = toHarnessWorkspaceContext(record, selected.cwdRequirement);
   const cwd = workspace?.executionTarget.kind === "local" ? workspace.executionTarget.rootPath : undefined;
   const model = await resolveCreateSessionModel(input.model, project, input.agent, deps.harnessRegistry, {

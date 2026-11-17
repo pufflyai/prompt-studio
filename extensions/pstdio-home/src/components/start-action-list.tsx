@@ -13,17 +13,18 @@ interface StartActionListProps {
   actions: StartAction[];
   pending?: string;
   error?: { id: string; message: string };
+  onDismissError?: () => void;
 }
 
 export const StartActionList = (props: StartActionListProps) => {
-  const { actions, pending, error } = props;
+  const { actions, pending, error, onDismissError } = props;
 
   return (
     <Stack gap="sm" minW="0">
       <Text textStyle="label/L/regular">Start</Text>
       <Stack gap="sm" minW="0" align="flex-start">
         {actions.map((action) => (
-          <Stack key={action.id} gap="xs">
+          <Stack key={action.id} gap="xs" position="relative">
             <Link
               aria-disabled={pending === action.id}
               role="link"
@@ -43,7 +44,18 @@ export const StartActionList = (props: StartActionListProps) => {
               {pending === action.id ? <Spinner size="xs" /> : <WorkbenchIcon name={action.icon} size={14} />}
               {action.label}
             </Link>
-            {error?.id === action.id && <AlertMessage status="error" title={error.message} />}
+            {error?.id === action.id && (
+              <AlertMessage
+                size="sm"
+                status="error"
+                title={error.message}
+                position="absolute"
+                top="full"
+                minW="2xs"
+                zIndex="docked"
+                onClose={onDismissError}
+              />
+            )}
           </Stack>
         ))}
       </Stack>

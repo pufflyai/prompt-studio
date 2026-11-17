@@ -8,7 +8,7 @@ import type {
 } from "pstdio-api-contracts";
 import { HarnessDisposedError } from "pstdio-api-runtime-host";
 import { readCurrentHarness } from "../harnesses/read-current-harness";
-import { waitForWorkspaceReady } from "../workspaces/wait-for-ready";
+import { workspaceSessionReadiness } from "../workspaces/workspace-session-readiness";
 import type { SessionsRouteDeps } from "./deps";
 import { getSessionHarness } from "./get-session-harness";
 import { initializeConversation } from "./initialize-conversation";
@@ -31,15 +31,22 @@ export class HarnessOperationError extends Error {
     super(message);
   }
 }
-const resolve = async (deps: SessionsRouteDeps, id: string) => {
+export const emptyHarnessCommands = (harnessId: string) => ({
+  harnessId,
+  commands: [],
+  modes: [],
+  slashCommands: false,
+});
+
+const resolve = async (deps: SessionsRouteDeps, id: string, operation = false) => {
   const session = await deps.sessionService.get(id);
   if (!session) throw new HarnessOperationError("Session not found.", 404);
-  const record = await waitForWorkspaceReady({ workspaceSessionService: deps.workspaceSessionService }, id);
-  if (record?.initializing || record?.setup_error || (record?.provider_state && record.provider_state !== "ready"))
-    throw new HarnessOperationError("The workspace is not ready.", 409);
+  const record = await deps.workspaceSessionService.getWorkspaceBySessionId(id);
+  const readiness = workspaceSessionReadiness(record);
+  if (operation && readiness.kind !== "ready") throw new HarnessOperationError(readiness.message, 409);
   const harness = await getSessionHarness(deps.harnessRegistry, session);
   if (!harness) throw new HarnessOperationError("The selected harness is not enabled for this project.", 400);
-  const workspace = toHarnessWorkspaceContext(record, harness.cwdRequirement);
+  const workspace = readiness.kind === "ready" ? toHarnessWorkspaceContext(record, harness.cwdRequirement) : undefined;
   if (workspace?.executionTarget.kind === "remote" && harness.cwdRequirement === "required")
     throw new HarnessOperationError("This harness requires a local workspace.", 400);
   const input: HarnessCommandContext = {
@@ -50,17 +57,19 @@ const resolve = async (deps: SessionsRouteDeps, id: string) => {
     model: session.last_selected_model,
     params: session.params_json ?? undefined,
   };
-  return { session, harness, input, options: { projectId: session.project_id ?? undefined } };
+  return { session, harness, input, readiness, options: { projectId: session.project_id ?? undefined } };
 };
 export const observeSessionHarnessCommands = async (deps: SessionsRouteDeps, id: string, changed: () => void) => {
-  const { harness, input, options } = await resolve(deps, id);
+  const { harness, input, options, readiness } = await resolve(deps, id);
+  if (readiness.kind !== "ready") return () => {};
   if (harness.watchCommandState) return harness.watchCommandState(input, changed, options);
   // Providers without complete notifications get command-only discovery, never a full session read.
   const timer = harness.supportsCommandState ? setInterval(changed, 30_000) : undefined;
   return () => clearInterval(timer);
 };
 export const getSessionHarnessCommands = async (deps: SessionsRouteDeps, id: string) => {
-  const { harness, input, options } = await resolve(deps, id);
+  const { harness, input, options, readiness } = await resolve(deps, id);
+  if (readiness.kind !== "ready") return emptyHarnessCommands(harness.id);
   try {
     const state = await readCurrentHarness(deps.harnessRegistry, harness.id, options, async (current) => {
       if (input.workspace?.executionTarget.kind === "remote" && current.cwdRequirement === "required")
@@ -130,7 +139,7 @@ export const invokeSessionHarnessOperation = async (
   lifecycle: "started" | "resumed" = "resumed",
 ) => {
   const context = await withSchedulingLock(async () => {
-    const { session, harness, input, options } = await resolve(deps, id);
+    const { session, harness, input, options } = await resolve(deps, id, true);
     if (expectedHarnessId && harness.id !== expectedHarnessId)
       throw new HarnessOperationError("The harness changed. Reload its commands before trying again.", 409);
     let prepared: PreparedHarnessOperation;

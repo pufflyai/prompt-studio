@@ -1,6 +1,6 @@
 import { Center, Text } from "@chakra-ui/react";
 import type { ResourceRef } from "@pstdio/sdk/extensions";
-import { getThemePreferenceMode, useThemePreference, useToaster } from "@pstdio/ui";
+import { getThemePreferenceMode, useThemePreference } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "@pstdio/workbench";
 import {
   createExtensionWebviewHostCapabilities,
@@ -70,16 +70,23 @@ const webviewOwnerKey = (props: ExtensionWebviewFrameProps, installedExtensionId
 
 const currentLocale = () => i18n.resolvedLanguage ?? i18n.language ?? "en";
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
-  const toaster = useToaster();
   const owner = getRuntimeCollections();
   const queryScope = useDashboardQueryScope();
   const { extensionId, extensionInstanceId, installName, projectId, resource, terminal, title, webview, webviewId } =
     props;
   const { themePreference, themePreferences } = useThemePreference();
   const { showError, errorNotice, clearError } = useActionError();
+  const showNotice = (notice: { type?: "info" | "success" | "warning"; title?: string; description?: string }) => {
+    if (!notice.title && !notice.description) return;
+    props.workbench?.notifications.show({
+      level: notice.type ?? "info",
+      title: notice.title ?? notice.description!,
+      message: notice.title ? notice.description : undefined,
+    });
+  };
   const executeCommand = useExecuteExtensionCommand(projectId, (notice) => {
-    if (notice.type === "error" || notice.type === "warning") showError(notice);
-    else toaster.create(notice);
+    if (notice.type === "error") showError(notice);
+    else showNotice({ ...notice, type: notice.type });
   });
   const [fallbackHostEvents] = useState(createHostEventPublisher);
   const hostEvents =
@@ -183,7 +190,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
         projectId,
         extensionId,
         showError,
-        showNotice: (notice) => toaster.create(notice),
+        showNotice,
       }),
     },
     queryAuthority: { id: JSON.stringify(queryScope), assertCurrent: serviceQueries.requireCurrent },

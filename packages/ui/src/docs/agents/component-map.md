@@ -41,7 +41,7 @@ For isolated native documents outside the React tree, `@pstdio/ui/scrollbars` ex
 
 ## Feedback and overlays
 
-- `AlertMessage`, `EmptyState`, `SessionIndicator`, and `Toaster` cover status and feedback.
+- `AlertMessage` provides dismissible errors. Use `ActionErrorSlot` within the affected control or view to keep the layout stable. Use `EmptyState` and `SessionIndicator` to communicate application state.
 - `DeleteConfirmationModal`, `Palette`, and `RepoPickerDialog` cover overlay interactions.
 - `PopoverHeader` gives titled popovers a shared icon, title, and optional actions. Pass `Popover.Title` as its title inside a Chakra popover. Keep dismissal on Escape and outside clicks; do not add a close icon.
 

@@ -1,5 +1,5 @@
 import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
-import { Checkbox, DeleteConfirmationModal, useToaster } from "@pstdio/ui";
+import { Checkbox, DeleteConfirmationModal } from "@pstdio/ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useState } from "react";
@@ -47,7 +47,6 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
     onDismissUpgrade,
     onRetryAction,
   } = props;
-  const toaster = useToaster();
   const { showError, errorNotice, clearError } = useActionError();
   const settingsPanels =
     metadata?.settingsPanels.filter(
@@ -80,9 +79,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
       { instanceId: extension.id },
       {
         onSuccess: (updated) => {
-          if (updated.status === "loaded")
-            toaster.create({ type: "success", title: t("projectSettings.extensionsPanel.reload.succeeded") });
-          else showError({ title: t("projectSettings.extensionsPanel.reload.failed") });
+          if (updated.status !== "loaded") showError({ title: t("projectSettings.extensionsPanel.reload.failed") });
         },
         onError: (error) =>
           showError({ title: t("projectSettings.extensionsPanel.reload.failed"), description: error.message }),

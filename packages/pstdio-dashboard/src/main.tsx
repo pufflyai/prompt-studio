@@ -11,6 +11,7 @@ import { storeBrowserSession, takeBrowserLoginCode, waitForBrowserLoginLink } fr
 import { connectDesktopCommands } from "@/lib/desktop-commands";
 import { resolveDesktopLifecycleBridge } from "@/lib/desktop-lifecycle-bridge";
 import { createDesktopProjectTabs } from "@/lib/desktop-project-tabs-bridge";
+import { connectDesktopUpdateNotices } from "@/lib/desktop-update-notices";
 import { createDesktopWorkbenchStorage } from "@/lib/desktop-workbench-storage";
 import { SyncProvider } from "@/lib/sync/sync-provider";
 import { DesktopQuitConfirmation } from "@/modules/desktop/desktop-quit-confirmation";
@@ -86,7 +87,9 @@ const renderDashboard = async () => {
     ? startDesktopProjectWorkbenches(projectTabs.controller, storage)
     : startBrowserWorkbench(storage);
   const stopDesktopCommands = connectDesktopCommands(window.promptStudioDesktop, workbenches.getActive);
+  const stopDesktopUpdateNotices = connectDesktopUpdateNotices(window.promptStudioDesktop, workbenches.getActive);
   if (stopDesktopCommands) window.addEventListener("pagehide", stopDesktopCommands, { once: true });
+  if (stopDesktopUpdateNotices) window.addEventListener("pagehide", stopDesktopUpdateNotices, { once: true });
   // E2E specs and the packaged launch benchmark drive the visible workbench.
   Object.defineProperty(window, "__pstdioDashboardWorkbench", { configurable: true, get: workbenches.getActive });
 

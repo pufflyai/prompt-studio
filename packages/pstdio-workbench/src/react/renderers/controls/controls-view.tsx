@@ -1,7 +1,7 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import type { ControlsQueryResult, ControlValueMap } from "@pstdio/sdk/extensions";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { ScrollArea, SettingsContentSkeleton } from "@pstdio/ui";
+import { ActionErrorSlot, AlertMessage, ScrollArea, SettingsContentSkeleton } from "@pstdio/ui";
 import {
   type InputGroup,
   type Param,
@@ -180,13 +180,8 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
   );
   if (settingsPage)
     return (
-      <Stack gap="md">
+      <Stack gap="md" position="relative">
         {read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
-        {state.error ? (
-          <Text role="alert" color="fg.error">
-            {state.error}
-          </Text>
-        ) : null}
         <SettingsControlsReset contribution={contribution} pending={pending} submit={submit} />
         <ControlsContent
           state={read.value ? state : initialState}
@@ -198,14 +193,17 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
       </Stack>
     );
   return (
-    <Stack h={layout.height} minH="0" gap="0" bg="bg" overflow="hidden">
+    <Stack position="relative" h={layout.height} minH="0" gap="0" bg="bg" overflow="hidden">
       {read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
       {state.error ? (
-        <Box p="sm">
-          <Text role="alert" textStyle="paragraph/S/regular" color="fg">
-            {state.error}
-          </Text>
-        </Box>
+        <ActionErrorSlot>
+          <AlertMessage
+            compact
+            status="error"
+            title={state.error}
+            onClose={() => setState((previous) => ({ ...previous, error: undefined }))}
+          />
+        </ActionErrorSlot>
       ) : null}
       <ScrollArea flex="1" minH="0" minW="0" w="full" size="xs" contentProps={layout.contentProps}>
         {read.value || read.loading ? (

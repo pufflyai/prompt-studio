@@ -62,6 +62,7 @@ const initialChatState = (initial?: ChatRendererSnapshot) => ({
   initializing: true,
   sending: false,
   error: undefined as string | undefined,
+  canRefreshError: false,
 });
 
 const assertChatActionAvailable = (conversation: ChatRendererSnapshot, action: ChatRendererAction) => {
@@ -76,7 +77,7 @@ const projectChatState = (
   update: Partial<ReturnType<typeof initialChatState>>,
   present: ReturnType<typeof createChatSubmissionPresentation>,
 ) => {
-  const next = { ...state, ...update };
+  const next = { ...state, ...(Object.hasOwn(update, "error") ? { canRefreshError: false } : {}), ...update };
   const unchanged =
     next.conversation.messages === state.conversation.messages &&
     next.conversation.queuedFollowUps === state.conversation.queuedFollowUps &&
@@ -113,6 +114,29 @@ const isTranscriptUpdate = (loaded: boolean, incoming: ChatRendererSnapshot) =>
 
 const chatErrorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
+const refreshFailure = (error: unknown) => ({ error: chatErrorMessage(error), canRefreshError: true });
+
+const chatReadUpdate = <T extends { error?: string }>(update: T, draftError?: string) => {
+  const error = draftError ?? update.error;
+  return error ? { ...update, ...refreshFailure(error) } : update;
+};
+
+const captureChatWatchError =
+  (
+    read: () => Pick<ReturnType<typeof initialChatState>, "error" | "canRefreshError">,
+    revision: () => number,
+    publish: (update: Pick<ReturnType<typeof initialChatState>, "error" | "canRefreshError">) => void,
+  ) =>
+  (error: unknown) => {
+    const { error: previous, canRefreshError } = read();
+    publish(refreshFailure(error));
+    const issued = revision();
+    return (cause?: unknown) => {
+      if (revision() === issued)
+        publish(cause === undefined ? { error: previous, canRefreshError } : refreshFailure(cause));
+    };
+  };
+
 /** One owner per project/view/resource, shared across page/panel changes. */
 export const createChatSession = (input: ChatSessionInput) => {
   let state = initialChatState(input.initial);
@@ -125,14 +149,11 @@ export const createChatSession = (input: ChatSessionInput) => {
     if (!retired) projection.publish(state, transcriptOnly);
   };
   const fail = (error: unknown) => publish({ error: chatErrorMessage(error) });
-  const failWatch = (error: unknown) => {
-    const previous = state.error;
-    fail(error);
-    const revision = errorRevision;
-    return (cause?: unknown) => {
-      if (errorRevision === revision) publish({ error: cause === undefined ? previous : chatErrorMessage(cause) });
-    };
-  };
+  const failWatch = captureChatWatchError(
+    () => state,
+    () => errorRevision,
+    publish,
+  );
   let holds = 0;
   let observing = false;
   let controller: AbortController | undefined;
@@ -187,7 +208,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     read: () => state.draft,
     publish: (draft) => publish({ draft }),
     values: snapshots.values,
-    fail,
+    fail: (error) => publish(refreshFailure(error)),
     clearError: (error) => {
       if (state.error === error) publish({ error: undefined });
     },
@@ -201,7 +222,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     issue: () => ++clock,
     merge,
     loaded: () => hasLoaded,
-    publish: (update) => publish({ ...update, ...(drafts.error() ? { error: drafts.error() } : {}) }),
+    publish: (update) => publish(chatReadUpdate(update, drafts.error())),
   });
   const start = () => {
     observing = true;
@@ -211,7 +232,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     const current = ++generation;
     const signal = controller.signal;
     const active = () => current === generation && !signal.aborted;
-    publish({ loading: !hasLoaded, error: drafts.error() });
+    publish({ loading: !hasLoaded, error: drafts.error(), canRefreshError: Boolean(drafts.error()) });
     const query = finite.observe();
     const hydration = drafts.hydrate();
     // Control defaults can commit local ownership. Settle initial values before allowing
@@ -300,6 +321,7 @@ export const createChatSession = (input: ChatSessionInput) => {
       if (holds && observing) start();
     },
     reportError: fail,
+    dismissError: () => publish({ error: undefined }),
     flushDraft: drafts.flush,
     retain() {
       if (retired) throw new Error("Chat authority is closed");

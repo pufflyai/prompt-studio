@@ -13,26 +13,34 @@ export interface AlertProps extends Omit<ChakraAlert.RootProps, "title"> {
   // Shows a close button that dismisses the alert.
   onClose?: () => void;
   closeLabel?: string;
+  /** Compact feedback beside an action or field. */
+  compact?: boolean;
 }
 
 export const AlertMessage = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(props, ref) {
-  const { title, children, icon, startElement, endElement, onClose, closeLabel = "Dismiss", ...rest } = props;
+  const { title, children, icon, startElement, endElement, onClose, closeLabel = "Dismiss", compact, ...rest } = props;
   const contentRef = React.useRef<HTMLDivElement>(null);
-  const copyable = rest.status === "error";
+  const isError = rest.status === "error";
+  const message = typeof children === "string" ? children : undefined;
+  const [dismissed, setDismissed] = React.useState<{ title: React.ReactNode; message?: string }>();
+  if (dismissed && (dismissed.title !== title || dismissed.message !== message)) setDismissed(undefined);
+  if (dismissed && dismissed.title === title && dismissed.message === message && isError && !onClose) return null;
+  const close = onClose ?? (isError ? () => setDismissed({ title, message }) : undefined);
+  const copyable = isError && !compact;
   return (
-    <ChakraAlert.Root ref={ref} {...rest}>
+    <ChakraAlert.Root ref={ref} size={compact ? "sm" : undefined} role={isError ? "alert" : undefined} {...rest}>
       {startElement || <ChakraAlert.Indicator>{icon}</ChakraAlert.Indicator>}
       <ButtonPropsProvider value={{ variant: "ghost", size: "2xs" }}>
         <ChakraAlert.Content>
           <Box position="relative" minW="0" minH="0" flex="1">
             <ScrollArea contentRef={contentRef}>
-              <Box paddingEnd={onClose ? "xl" : undefined}>
+              <Box paddingEnd={close ? "xl" : undefined}>
                 <ChakraAlert.Title>{title}</ChakraAlert.Title>
                 {children ? <ChakraAlert.Description>{children}</ChakraAlert.Description> : null}
               </Box>
             </ScrollArea>
-            {onClose ? (
-              <IconButton aria-label={closeLabel} position="absolute" top="0" right="xs" onClick={onClose}>
+            {close ? (
+              <IconButton aria-label={closeLabel} position="absolute" top="0" insetInlineEnd="0" onClick={close}>
                 <X />
               </IconButton>
             ) : null}

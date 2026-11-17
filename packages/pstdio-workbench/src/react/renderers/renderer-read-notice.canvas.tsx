@@ -15,7 +15,7 @@ export const InitialFailure: Story = {
 export const RetainedContent: Story = {
   id: "renderers-read-failure--retained-content",
   render: (args) => (
-    <Stack gap="md">
+    <Stack position="relative" gap="md">
       <RendererReadNotice {...args} />
       <Text>Previously loaded content remains visible.</Text>
     </Stack>

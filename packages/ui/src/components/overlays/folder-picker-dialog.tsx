@@ -1,8 +1,10 @@
-import { Box, Button, Input, InputGroup, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Box, Button, Input, InputGroup, useSlotRecipe } from "@chakra-ui/react";
 import { ArrowUp, FolderPlus, Home, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ScopedDialog as Dialog } from "@/utils/scoped-overlays";
 import { useUiScope } from "@/utils/ui-scope";
+import { ActionErrorSlot } from "../primitives/action-error-slot";
+import { AlertMessage } from "../primitives/alert";
 import { type FolderPickerDrive, FolderPickerDriveMenu } from "./folder-picker-drive-menu";
 import { FolderPickerList } from "./folder-picker-list";
 
@@ -93,7 +95,7 @@ export const FolderPicker = (props: FolderPickerProps) => {
       <Dialog.Header css={styles.header}>
         <Dialog.Title>Open project folder</Dialog.Title>
       </Dialog.Header>
-      <Dialog.Body css={styles.body} aria-keyshortcuts="Meta+Shift+. Control+Shift+.">
+      <Dialog.Body position="relative" css={styles.body} aria-keyshortcuts="Meta+Shift+. Control+Shift+.">
         <Box css={styles.navigation}>
           <Button
             size="sm"
@@ -180,9 +182,9 @@ export const FolderPicker = (props: FolderPickerProps) => {
           </Box>
         )}
         {error && (
-          <Text role="alert" color="fg.error" textStyle="paragraph/S/regular">
-            {error}
-          </Text>
+          <ActionErrorSlot>
+            <AlertMessage compact status="error" title={error} />
+          </ActionErrorSlot>
         )}
         <FolderPickerList
           entries={entries.filter((entry) => showHidden || !entry.name.startsWith("."))}

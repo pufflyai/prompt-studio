@@ -1,5 +1,6 @@
 import { Stack, Text } from "@chakra-ui/react";
 import { AlertMessage } from "@pstdio/ui";
+import { useState } from "react";
 import type { AutoBuildButtonProps } from "./auto-build-button";
 
 interface AutoBuildWarningsProps
@@ -22,24 +23,30 @@ export function AutoBuildWarnings(props: AutoBuildWarningsProps) {
   const { enabled, completed, supervisor, error, actionError, stuck, matchingTicketCount, starting, failed, t } = props;
   const noMatches = enabled && !completed && !starting && matchingTicketCount === 0;
   const needsHelp = failed || (!completed && (stuck || supervisor?.status === "awaiting_input"));
-  if (!actionError && !noMatches && !needsHelp) return null;
+  const [dismissed, setDismissed] = useState<string>();
+  const problem =
+    error ?? t("timeline.autoBuild.failed", "The supervisor failed. Open its session to inspect the error.");
+  const alert = actionError ?? (needsHelp && failed ? problem : undefined);
+  if (!alert && !noMatches && !needsHelp) return null;
   return (
-    <Stack gap="sm">
-      {actionError ? <AlertMessage role="alert" status="error" title={actionError} /> : null}
-      {needsHelp ? (
+    <Stack gap="sm" position="relative">
+      {alert && alert !== dismissed ? (
         <AlertMessage
+          size="sm"
           role="alert"
-          status={failed ? "error" : "warning"}
-          title={
-            error ??
-            (failed
-              ? t("timeline.autoBuild.failed", "The supervisor failed. Open its session to inspect the error.")
-              : t(
-                  "timeline.autoBuild.stuck",
-                  "Auto Build is stuck. Check dependencies, blockers, and review requests.",
-                ))
-          }
+          status="error"
+          title={alert}
+          position="absolute"
+          bottom="full"
+          insetInline="xs"
+          zIndex="docked"
+          onClose={() => setDismissed(alert)}
         />
+      ) : null}
+      {needsHelp && !failed ? (
+        <Text textStyle="paragraph/S/regular" title={error}>
+          {t("timeline.autoBuild.stuck", "Auto Build is stuck. Check dependencies, blockers, and review requests.")}
+        </Text>
       ) : null}
       {noMatches ? (
         <Text textStyle="paragraph/S/regular">

@@ -1,3 +1,4 @@
+export { ActionErrorSlot } from "./action-error-slot";
 export type { AlertProps } from "./alert";
 export { AlertMessage } from "./alert";
 export type { BreadcrumbItem } from "./breadcrumb";
@@ -45,7 +46,6 @@ export type { SwitchProps } from "./switch";
 export { Switch } from "./switch";
 export type { TagSwatchProps } from "./tag-swatch";
 export { TagSwatch } from "./tag-swatch";
-export { Toaster, toaster, useToaster } from "./toaster";
 export { Tooltip } from "./tooltip";
 export type { WorkspaceBadgeProps } from "./workspace-badge";
 export { WorkspaceBadge } from "./workspace-badge";

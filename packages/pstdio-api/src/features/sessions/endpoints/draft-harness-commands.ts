@@ -12,7 +12,7 @@ const errorResponse = {
   content: { "application/json": { schema: z.object({ error: z.string() }) } },
 };
 const conflictResponse = {
-  description: "The workspace is not ready, or the project's folder is not on this device.",
+  description: "The project folder is not on this device, or command discovery was interrupted.",
   content: { "application/json": { schema: z.object({ error: z.string(), code: z.string().optional() }) } },
 };
 export const draftHarnessCommandsRoute = createRoute({

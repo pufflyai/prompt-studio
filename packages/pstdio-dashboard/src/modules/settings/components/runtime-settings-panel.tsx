@@ -1,5 +1,12 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import { NumberInputField, NumberInputRoot, SettingsContentSkeleton, Switch } from "@pstdio/ui";
+import {
+  ActionErrorSlot,
+  AlertMessage,
+  NumberInputField,
+  NumberInputRoot,
+  SettingsContentSkeleton,
+  Switch,
+} from "@pstdio/ui";
 import { ParamEditorRow } from "@pstdio/ui/param-editor";
 import { useSettingsChanges } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
@@ -37,16 +44,16 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
   });
   if (isLoading) return <SettingsContentSkeleton />;
   return (
-    <Stack gap="lg">
-      {(update.error ?? error) ? (
-        <Text role="alert" color="fg.error">
-          {(update.error ?? error)?.message}
-        </Text>
-      ) : null}
+    <Stack gap="lg" position="relative">
       {error ? (
-        <Button alignSelf="start" variant="outline" onClick={() => void refetch()}>
-          {t("runtimeSettings.retry")}
-        </Button>
+        <ActionErrorSlot>
+          <AlertMessage
+            compact
+            status="error"
+            title={error.message}
+            endElement={<Button onClick={() => void refetch()}>{t("runtimeSettings.retry")}</Button>}
+          />
+        </ActionErrorSlot>
       ) : null}
       {settings ? (
         <ParamEditorRow
@@ -82,14 +89,18 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
                 disabled={update.isPending}
                 onValueChange={({ value }) => setValue(value)}
               >
-                <NumberInputField aria-label={t("runtimeSettings.maxConcurrentSessions.label")} />
+                <NumberInputField
+                  aria-label={t("runtimeSettings.maxConcurrentSessions.label")}
+                  aria-invalid={parsed === undefined}
+                  aria-describedby={parsed === undefined ? "concurrency-validation" : undefined}
+                />
               </NumberInputRoot>
             ),
           }}
         />
       ) : null}
       {parsed === undefined ? (
-        <Text role="alert" color="fg.error">
+        <Text id="concurrency-validation" color="fg.error" textStyle="label/S/regular">
           {t("runtimeSettings.maxConcurrentSessions.invalid")}
         </Text>
       ) : null}

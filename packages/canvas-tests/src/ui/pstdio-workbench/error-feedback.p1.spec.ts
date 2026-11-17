@@ -1,0 +1,42 @@
+import { expect, test } from "@playwright/test";
+import { openCanvasPreview } from "../preview";
+
+const canvas = "packages/pstdio-workbench/src/react/notifications/error-feedback.canvas.tsx";
+
+test("dismissing an action error leaves its controls in place", async ({ page }) => {
+  const preview = await openCanvasPreview(page, `${canvas}#SystemAndActionErrors`);
+  const action = preview.getByRole("button", { name: "Save file" });
+  await expect(action).toBeVisible();
+  const before = await action.boundingBox();
+  await action.click();
+  const alert = preview.getByRole("alert");
+  await expect(alert).toBeVisible();
+  expect(await action.boundingBox()).toEqual(before);
+  const dismiss = alert.getByRole("button", { name: "Dismiss" });
+  const rightInset = await dismiss.evaluate((button) => {
+    const alert = button.closest('[role="alert"]')!;
+    return {
+      actual: alert.getBoundingClientRect().right - button.getBoundingClientRect().right,
+      expected: Number.parseFloat(getComputedStyle(alert).paddingInlineEnd),
+    };
+  });
+  expect(rightInset.actual).toBeCloseTo(rightInset.expected, 0);
+  await dismiss.press("Enter");
+  await expect(alert).toHaveCount(0);
+  expect(await action.boundingBox()).toEqual(before);
+});
+
+test("system information can be opened and dismissed in the status bar", async ({ page }) => {
+  const preview = await openCanvasPreview(page, `${canvas}#HiddenStatusBar`);
+  const action = preview.getByRole("button", { name: "Report system information" });
+  await expect(action).toBeVisible();
+  const before = await action.boundingBox();
+  await action.click();
+  const status = preview.locator('[data-workbench-region="status"]');
+  await status.getByRole("button", { name: "System notices: Update ready" }).press("Enter");
+  const details = preview.getByRole("region", { name: "System notice list" });
+  await expect(details.getByText("Update ready", { exact: true })).toBeVisible();
+  await details.getByRole("button", { name: "Dismiss Update ready" }).press("Enter");
+  await expect(status).toBeHidden();
+  expect(await action.boundingBox()).toEqual(before);
+});

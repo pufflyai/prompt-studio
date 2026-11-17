@@ -27,13 +27,14 @@ export const RuntimeDiagnostics = (props: RuntimeDiagnosticsProps) => {
   const { captures, loading, error, onStart, onCancel, onExport } = props;
   const { t } = useTranslations();
   const [seconds, setSeconds] = useState("15");
+  const [dismissed, setDismissed] = useState<string>();
   const durationId = useId();
   const valid = Number.isInteger(Number(seconds)) && Number(seconds) >= 1 && Number(seconds) <= 60;
   const active = captures.some(diagnosticRunning);
   const disabled = Boolean(loading) || active || !valid;
   const latest = captures.find((capture) => capture.summary);
   return (
-    <Stack gap="sm" data-testid="runtime-diagnostics">
+    <Stack gap="sm" position="relative" data-testid="runtime-diagnostics">
       <HStack justifyContent="space-between">
         <Text textStyle="label/S/medium">{t("diagnostics.title", "Backend diagnostics")}</Text>
         <HStack gap="xs">
@@ -67,7 +68,18 @@ export const RuntimeDiagnostics = (props: RuntimeDiagnosticsProps) => {
       <Text textStyle="label/XS" color="fg.muted">
         {t("diagnostics.scope", "Captures run on the backend. Results stay on that machine.")}
       </Text>
-      {error ? <AlertMessage status="error" title={error} /> : null}
+      {error && error !== dismissed ? (
+        <AlertMessage
+          size="sm"
+          status="error"
+          title={error}
+          position="absolute"
+          bottom="xs"
+          insetInline="sm"
+          zIndex="docked"
+          onClose={() => setDismissed(error)}
+        />
+      ) : null}
       {!captures.length ? (
         <Text textStyle="label/XS" color="fg.muted">
           {loading ? t("diagnostics.reading", "Reading captures…") : t("diagnostics.empty", "No backend captures yet.")}
@@ -82,7 +94,7 @@ export const RuntimeDiagnostics = (props: RuntimeDiagnosticsProps) => {
           <Stack key={capture.id} gap="2xs">
             <HStack align="start" gap="xs">
               <Stack gap="0" minW="0" flex="1">
-                <Text textStyle="label/XS">
+                <Text textStyle="label/XS" title={capture.error ?? undefined}>
                   {t(`diagnostics.kind.${capture.kind}`, diagnosticLabels[capture.kind])} ·{" "}
                   {t(`diagnostics.status.${capture.status}`, statuses[capture.status])} ·{" "}
                   {running || capture.finishedAt
@@ -109,7 +121,6 @@ export const RuntimeDiagnostics = (props: RuntimeDiagnosticsProps) => {
                 </Button>
               ) : null}
             </HStack>
-            {capture.error ? <AlertMessage status="error" title={capture.error} /> : null}
           </Stack>
         );
       })}

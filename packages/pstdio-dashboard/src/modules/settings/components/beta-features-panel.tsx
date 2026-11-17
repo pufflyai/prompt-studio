@@ -1,6 +1,6 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
 import type { Settings, UpdateSettingsInput } from "@pstdio/sdk/api";
-import { SettingsContentSkeleton, Switch } from "@pstdio/ui";
+import { ActionErrorSlot, AlertMessage, SettingsContentSkeleton, Switch } from "@pstdio/ui";
 import { ParamEditorRow } from "@pstdio/ui/param-editor";
 import { useTranslation } from "react-i18next";
 import { useSettings, useUpdateSettings } from "../data/use-settings";
@@ -31,7 +31,7 @@ export const BetaFeaturesContent = (props: BetaFeaturesContentProps) => {
     },
   ] as const;
   return (
-    <Stack gap="md">
+    <Stack gap="md" position="relative">
       {settings
         ? features.map((feature) => {
             const checked = settings[feature.key] === true;
@@ -61,12 +61,14 @@ export const BetaFeaturesContent = (props: BetaFeaturesContentProps) => {
         : null}
       {!settings && !error ? <SettingsContentSkeleton /> : null}
       {error ? (
-        <Stack gap="sm" role="alert">
-          <Text color="fg.error">{error}</Text>
-          <Button variant="outline" alignSelf="start" onClick={onRetry}>
-            {t("runtimeSettings.retry")}
-          </Button>
-        </Stack>
+        <ActionErrorSlot>
+          <AlertMessage
+            compact
+            status="error"
+            title={error}
+            endElement={<Button onClick={onRetry}>{t("runtimeSettings.retry")}</Button>}
+          />
+        </ActionErrorSlot>
       ) : null}
     </Stack>
   );

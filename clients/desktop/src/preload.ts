@@ -88,6 +88,14 @@ const desktopApi: PromptStudioDesktopApi = Object.freeze({
   revealInFinder: (path: string) => ipcRenderer.invoke(DESKTOP_CHANNELS.revealInFinder, path),
   copyDiagnostics: () => ipcRenderer.invoke(DESKTOP_CHANNELS.copyDiagnostics),
   checkForUpdates: () => ipcRenderer.invoke(DESKTOP_CHANNELS.checkForUpdates),
+  takeUpdateNotice: () => ipcRenderer.invoke(DESKTOP_CHANNELS.takeUpdateNotice),
+  onUpdateNotice: (listener: () => void) => {
+    const receive = () => listener();
+    ipcRenderer.on(DESKTOP_CHANNELS.updateNotice, receive);
+    return () => {
+      ipcRenderer.removeListener(DESKTOP_CHANNELS.updateNotice, receive);
+    };
+  },
   getUpdateChannel: () => ipcRenderer.invoke(DESKTOP_CHANNELS.getUpdateChannel),
   setUpdateChannel: (channel: UpdateChannel) => ipcRenderer.invoke(DESKTOP_CHANNELS.setUpdateChannel, channel),
   quitApp: () => ipcRenderer.invoke(DESKTOP_CHANNELS.quitApp),

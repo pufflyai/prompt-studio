@@ -1,5 +1,5 @@
-import { Stack, Text } from "@chakra-ui/react";
-import { SettingsActions } from "@pstdio/ui";
+import { Stack } from "@chakra-ui/react";
+import { ActionErrorSlot, AlertMessage, SettingsActions } from "@pstdio/ui";
 import { ParamEditor } from "@pstdio/ui/param-editor";
 import { useContext, useState } from "react";
 import type { PreferenceRegistry, PreferenceScope } from "../../../core";
@@ -46,7 +46,8 @@ const PreferenceFormBody = ({
     if (entry) return preferences.setValue(name, paramValueToPreference(entry.schema, value), entry.scope);
   }, mode);
   const dirty = Object.keys(draft.staged).length > 0;
-  const errors = Object.values(draft.errors);
+  const error = Object.values(draft.errors).join("\n");
+  const [dismissed, setDismissed] = useState<string>();
   const changes = {
     dirty,
     saving: draft.saving,
@@ -58,23 +59,24 @@ const PreferenceFormBody = ({
   };
   useSettingsChanges(mode === "apply" || dirty || draft.saving ? changes : undefined);
   return (
-    <Stack gap="md">
+    <Stack gap="md" position="relative">
       <ParamEditor
         changeDelay={0}
         key={formKey}
         params={preferenceSchemaToParams(entries)}
         defaultValues={draft.staged}
         onChange={(name, value) => {
+          setDismissed(undefined);
           if (byName.has(name)) draft.change(name, value);
         }}
         fullWidth
       />
-      {errors.length ? (
-        <Text role="alert" color="fg.error">
-          {errors.join("; ")}
-        </Text>
+      {error && error !== dismissed ? (
+        <ActionErrorSlot>
+          <AlertMessage compact status="error" title={error} onClose={() => setDismissed(error)} />
+        </ActionErrorSlot>
       ) : null}
-      {!settingsPage && (mode === "apply" || errors.length > 0) ? <SettingsActions {...changes} /> : null}
+      {!settingsPage && (mode === "apply" || Boolean(error)) ? <SettingsActions {...changes} /> : null}
     </Stack>
   );
 };
