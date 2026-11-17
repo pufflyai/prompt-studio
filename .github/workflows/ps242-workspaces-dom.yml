@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        source: [78c6f104302e80ab689d013e0b016d6a7304795d, 0f12554fc]
+        source: [0f12554fc3f20f84a6f6e223d31cbc77e1b21b9f]
     env:
       GH_TOKEN: ${{ github.token }}
       UI_PERF_ASSERT_BUDGETS: "1"
