@@ -1,5 +1,6 @@
 import { isAbsolute } from "node:path";
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
+import { nativeScrollbarDefaults } from "@pstdio/ui/scrollbars";
 import { serviceFor } from "./artifact-context";
 import { artifactPreviewPolicy } from "./components/html-preview-document";
 import { previewThemeDocument } from "./components/html-preview-theme";
@@ -10,6 +11,7 @@ export interface ArtifactExportTheme {
 }
 
 const defaults = {
+  ...nativeScrollbarDefaults,
   "--artifact-bg": "Canvas",
   "--artifact-surface": "color-mix(in srgb, CanvasText 5%, Canvas)",
   "--artifact-fg": "CanvasText",

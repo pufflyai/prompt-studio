@@ -76,7 +76,7 @@ file has been removed. External assets are not fetched or bundled.
 
 ## Pages that follow the theme
 
-Previews and thumbnails follow the dashboard's light or dark theme. When you switch themes, the page does not reload and keeps its state. The page body takes the dashboard's background, text color, and font. Use these CSS variables for the rest of the page:
+Previews and thumbnails follow the dashboard's light or dark theme. Scrollbars in previews and exported HTML use the shared scroll-area thickness and theme colors, including nested scrolling content. When you switch themes, the page does not reload and keeps its state. The page body takes the dashboard's background, text color, and font. Use these CSS variables for the rest of the page:
 
 | Variable             | Use it for                    |
 | -------------------- | ----------------------------- |

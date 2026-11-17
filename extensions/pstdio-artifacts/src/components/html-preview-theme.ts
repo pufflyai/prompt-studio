@@ -1,3 +1,5 @@
+import { nativeScrollbarCss, nativeScrollbarThemeTokens } from "@pstdio/ui/scrollbars";
+
 const themeTokens = {
   bg: "colors-bg",
   surface: "colors-bg-muted",
@@ -12,10 +14,10 @@ export const readPreviewTheme = () => {
   const computed = getComputedStyle(document.documentElement);
   const mode = computed.colorScheme === "dark" ? ("dark" as const) : ("light" as const);
   const variables = Object.fromEntries(
-    Object.entries(themeTokens).map(([name, token]) => [
-      `--artifact-${name}`,
-      computed.getPropertyValue(`--chakra-${token}`).trim(),
-    ]),
+    Object.entries({
+      ...Object.fromEntries(Object.entries(themeTokens).map(([name, token]) => [`--artifact-${name}`, token])),
+      ...nativeScrollbarThemeTokens,
+    }).map(([name, token]) => [name, computed.getPropertyValue(`--chakra-${token}`).trim()]),
   );
   return { mode, variables };
 };
@@ -56,6 +58,7 @@ body {
   color: var(--artifact-fg, CanvasText);
   font-family: var(--artifact-font, system-ui, sans-serif);
 }
+${nativeScrollbarCss}
 </style><script>(${receivePreviewTheme.toString()})()</script>`;
 
 export const previewThemeRelayDocument = `<script>(${receivePreviewTheme.toString()})(true)</script>`;
