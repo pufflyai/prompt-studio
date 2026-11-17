@@ -14,9 +14,8 @@ export default defineConfig({
     process.env.TEST_PRIORITIES?.split(",").map((priority) => `packaged-*.${priority.toLowerCase()}.spec.ts`) ??
     "packaged-*.spec.ts",
   ...playwrightQuarantineSelection("packaged-desktop", "clients/desktop/src/e2e", quarantine),
-  // Real launches, cold tool preparation and cleanup exceeded 30 s on Apple Silicon.
-  // PS-1232: setup/test allowance authorized 2026-11-17; benchmarks retain their budgets.
-  timeout: 120_000,
+  // Windows and hosted Intel macOS runners need longer for real launches and setup (approved 2026-10-10).
+  timeout: process.platform === "win32" || (process.platform === "darwin" && process.arch === "x64") ? 60_000 : 30_000,
   workers: 1,
   forbidOnly: !!process.env.CI,
   fullyParallel: false,
