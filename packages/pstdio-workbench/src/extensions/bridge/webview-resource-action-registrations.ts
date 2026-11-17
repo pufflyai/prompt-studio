@@ -27,6 +27,9 @@ const choiceMenuItem = (commandId: string, label: string, choice: WebviewResourc
   };
 };
 
+const indexChoices = (choices: readonly WebviewResourceActionChoice[]) =>
+  new Map(choices.map((choice) => [choice.id, { ...choice }]));
+
 // A live guest owns these actions. Disconnect drops the commands and pending work;
 // nothing is buffered for an eventual replacement frame to execute.
 const ownerFor = (events: HostEventPublisher) => {
@@ -92,11 +95,11 @@ export const createWebviewResourceActionRegistrations = (
     if (owner.actions.size >= 32) throw new Error("A view can register at most 32 resource actions.");
     const commandId = `webview.resource-action.${owner.id}.${request.registrationId}`;
     let groupLabel = request.label;
-    let choices = request.choices?.map((choice) => ({ ...choice }));
+    let choices = request.choices && indexChoices(request.choices);
     const choiceFor = (args: unknown) =>
-      choices?.find(
-        (choice) => typeof args === "object" && args !== null && "choiceId" in args && args.choiceId === choice.id,
-      );
+      typeof args === "object" && args !== null && "choiceId" in args && typeof args.choiceId === "string"
+        ? choices?.get(args.choiceId)
+        : undefined;
     let active: string | undefined;
     const refreshChoices = () => {
       if (choices && owner.actions.has(request.registrationId)) batchWorkbenchChanges(renderMenu);
@@ -113,8 +116,11 @@ export const createWebviewResourceActionRegistrations = (
         { id: commandId, label: request.label },
         {
           isVisible: (_args, context) => matches(context),
-          isEnabled: (args, context) =>
-            matches(context) && !active && (!choices || (!!choiceFor(args) && !choiceFor(args)?.disabled)),
+          isEnabled: (args, context) => {
+            if (!matches(context) || active) return false;
+            const choice = choiceFor(args);
+            return !choices || (!!choice && !choice.disabled);
+          },
           execute: (args, context) => {
             if (!matches(context) || active) throw new Error("This resource action is no longer available.");
             const choice = choiceFor(args);
@@ -169,7 +175,7 @@ export const createWebviewResourceActionRegistrations = (
     const renderMenu = () => {
       for (const item of menuDisposables) item.dispose();
       menuDisposables = [];
-      for (const choice of choices ?? [undefined]) {
+      for (const choice of choices?.values() ?? [undefined]) {
         menuDisposables.push(
           workbench.layout.registerMenuItem(
             menu.menuPath,
@@ -193,7 +199,7 @@ export const createWebviewResourceActionRegistrations = (
         assertCurrent();
         if (!choices) throw new Error("Only a choice group can update its choices.");
         if (label !== undefined) groupLabel = label;
-        choices = next.map((choice) => ({ ...choice }));
+        choices = indexChoices(next);
         renderMenu();
       },
     });
