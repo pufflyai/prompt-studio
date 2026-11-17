@@ -1,6 +1,18 @@
-import { relative, sep } from "node:path";
+import { existsSync, realpathSync } from "node:fs";
+import { dirname, join, relative, sep } from "node:path";
 import { createDirectoryTreeWatcher, type WatchDirectory } from "pstdio-extensions";
 import { watchWorkspaceDiffFiles } from "./workspace-diff-filesystem";
+
+const hasGitDiscoveryContext = (root: string) => {
+  // Explicit Git environments can name administration outside the working folder.
+  if (["GIT_DIR", "GIT_COMMON_DIR", "GIT_WORK_TREE", "GIT_OBJECT_DIRECTORY"].some((name) => process.env[name]))
+    return true;
+  for (let directory = realpathSync(root); ; directory = dirname(directory)) {
+    // Linked worktrees use a .git file; bare repositories keep HEAD in their root.
+    if (existsSync(join(directory, ".git")) || existsSync(join(directory, "HEAD"))) return true;
+    if (dirname(directory) === directory) return false;
+  }
+};
 
 /** Change hints only; finite tree reads remain the authority. Coverage recovery follows ADR 0140. */
 export const watchWorkspaceFiles = async (
@@ -13,7 +25,7 @@ export const watchWorkspaceFiles = async (
   signal?.throwIfAborted();
   try {
     // Ignore decorations depend on the index and excludes, including linked-worktree metadata.
-    return await watchWorkspaceDiffFiles(root, changed, watch, startupGap, signal);
+    if (hasGitDiscoveryContext(root)) return await watchWorkspaceDiffFiles(root, changed, watch, startupGap, signal);
   } catch {
     signal?.throwIfAborted();
     // Plain folders and machines without Git still observe working files.
