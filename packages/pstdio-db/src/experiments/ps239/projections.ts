@@ -49,10 +49,10 @@ export const installProjection = async (f: Fixture, kind: "compact" | "typed") =
   if (kind === "compact") {
     await db.execute(sql`CREATE TABLE ps239_compact (
       workbench_id text NOT NULL, extension_id text NOT NULL, record_id text NOT NULL, deleted boolean NOT NULL,
-      value jsonb, query_values jsonb NOT NULL DEFAULT '{}', revision text NOT NULL,
+      value jsonb,
       PRIMARY KEY(workbench_id, extension_id, record_id))`);
     await db.execute(
-      sql`INSERT INTO ps239_compact SELECT workbench_id, extension_id, record_id, deleted, ${compactValue("r")}, '{}', revision FROM storage_current_records r WHERE ${recordScopeSql(f.owner, definition, "r")}`,
+      sql`INSERT INTO ps239_compact SELECT workbench_id, extension_id, record_id, deleted, ${compactValue("r")} FROM storage_current_records r WHERE ${recordScopeSql(f.owner, definition, "r")}`,
     );
     for (const index of definitions) {
       const keys = recordIndexKeys(index);
@@ -68,8 +68,8 @@ export const installProjection = async (f: Fixture, kind: "compact" | "typed") =
       literalStatement(sql`CREATE FUNCTION ps239_update() RETURNS trigger LANGUAGE plpgsql AS $body$
       BEGIN
         IF NEW.workbench_id <> ${sql.raw(`'${f.owner.workbenchId}'`)} OR NEW.extension_id <> 'ext.example' THEN RETURN NEW; END IF;
-        INSERT INTO ps239_compact SELECT NEW.workbench_id, NEW.extension_id, NEW.record_id, NEW.deleted, ${compactValue("new")}, '{}', NEW.revision
-        ON CONFLICT (workbench_id, extension_id, record_id) DO UPDATE SET deleted=excluded.deleted, value=excluded.value, revision=excluded.revision
+        INSERT INTO ps239_compact SELECT NEW.workbench_id, NEW.extension_id, NEW.record_id, NEW.deleted, ${compactValue("new")}
+        ON CONFLICT (workbench_id, extension_id, record_id) DO UPDATE SET deleted=excluded.deleted, value=excluded.value
         WHERE ps239_compact.deleted IS DISTINCT FROM excluded.deleted OR ps239_compact.value IS DISTINCT FROM excluded.value;
         RETURN NEW;
       END $body$`),

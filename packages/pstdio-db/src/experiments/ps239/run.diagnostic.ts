@@ -59,14 +59,21 @@ const record = async (entry: unknown) => {
 };
 
 const board = async (bounded: boolean) => {
+  let returnedRecords = 0;
   const result = bounded
     ? await Promise.all([
-        f.records.query({ index: definition.name, where: active, fields, limit: 100 }),
+        f.records.query({ index: definition.name, where: active, fields, limit: 100 }).then((page) => {
+          returnedRecords = page.records.length;
+          return page;
+        }),
         f.records.aggregate({ index: definition.name, where: active, groupBy: ["statusId"] }),
       ])
-    : await f.records.list();
+    : await f.records.list().then((records) => {
+        returnedRecords = records.length;
+        return records;
+      });
   const encoded = JSON.stringify(result);
-  return { result, bytes: Buffer.byteLength(encoded) };
+  return { result, bytes: Buffer.byteLength(encoded), returnedRecords };
 };
 
 const writes = async (kind: Representation, pass: number) => {
@@ -146,7 +153,7 @@ try {
         pass,
         ms: timed.ms,
         bytes: timed.value.bytes,
-        materialized: bounded ? Math.min(100, count - Math.floor(count / 20)) : count,
+        returnedRecords: timed.value.returnedRecords,
         rss: process.memoryUsage().rss,
       });
     }
@@ -182,6 +189,7 @@ try {
           experiment: "E5",
           kind,
           phase: scenario,
+          temperature: "warm-after-parity-check",
           pass,
           ms: timed.ms,
           rows: timed.value.rows.length,
