@@ -21,7 +21,8 @@ const sizes = () => ({
   projects: count("PSTDIO_LARGE_PROJECTS", 3),
   tickets: count("PSTDIO_LARGE_TICKETS", 3000),
   files: count("PSTDIO_LARGE_FILES", 5000),
-  workspaces: count("PSTDIO_LARGE_WORKSPACES", 100),
+  // Each worktree workspace is a full checkout, so they are opt-in.
+  workspaces: count("PSTDIO_LARGE_WORKSPACES", 0),
   sessions: count("PSTDIO_LARGE_SESSIONS", 1000),
 });
 const log = (message: string) => process.stderr.write(`[large] ${message}\n`);

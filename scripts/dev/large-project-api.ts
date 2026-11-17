@@ -11,9 +11,13 @@ const BUSY = /Another Planner write is running|Retry when it finishes/;
 export const createStackApi = (connection: StackConnection) => {
   const base = `http://127.0.0.1:${connection.apiPort}/v1`;
   const headers = { authorization: `Bearer ${connection.apiToken}`, "content-type": "application/json" };
+  // An import of 1,000 tickets can wait behind other projects' imports; Bun's default fetch timeout
+  // would abort it, so these long-running local calls opt out.
+  const noTimeout = { timeout: false } as RequestInit;
 
   const request = async <T>(method: string, path: string, body?: unknown) => {
     const response = await fetch(`${base}${path}`, {
+      ...noTimeout,
       method,
       headers,
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
@@ -28,6 +32,7 @@ export const createStackApi = (connection: StackConnection) => {
     const deadline = Date.now() + 5 * 60_000;
     for (;;) {
       const response = await fetch(`${base}/projects/${projectId}/extensions/commands/${commandId}/execute`, {
+        ...noTimeout,
         method: "POST",
         headers,
         body: JSON.stringify({ params }),

@@ -128,9 +128,9 @@ After the stack starts, the seeder goes through product APIs only:
 
 - **Projects:** 3 folder projects, each a Git repository with 5,000 committed files. The folders are under the stack's `__test-tmp__/dev-isolated/<name>/large-projects/` folder, so they survive restarts.
 - **Tickets:** 3,000 Planner tickets per project through Planner's `import-tickets`, up to 1,000 per call, in epics of ten (a parent and nine children), with dependency chains across five tracks and mixed statuses.
-- **Workspaces:** 100 worktree workspaces per project through `POST /v1/workspaces`, after enabling the Git workspaces extension for the project.
+- **Workspaces:** none by default, because each worktree workspace is a full checkout and takes minutes to create. Set `PSTDIO_LARGE_WORKSPACES=100` to create that many per project through `POST /v1/workspaces`, after enabling the Git workspaces extension for the project.
 - **Sessions:** 1,000 sessions per project with short transcripts, imported in one `POST /v1/session-imports` job. Imported sessions belong to each project's main workspace.
-- **Links:** each workspace and every second session is linked to a ticket in the same `import-tickets` calls.
+- **Links:** every second session, and each workspace if any, is linked to a ticket in the same `import-tickets` calls.
 
 It prints each project's URL and counts, and how many milliseconds a ticket took in each import call, so a slowdown as projects grow is visible. Seeding takes tens of minutes. Rerunning resumes without duplicates. Change the counts with `PSTDIO_LARGE_PROJECTS`, `PSTDIO_LARGE_TICKETS`, `PSTDIO_LARGE_FILES`, `PSTDIO_LARGE_WORKSPACES` and `PSTDIO_LARGE_SESSIONS`. To seed a stack that is already running, pass its `connection.json`:
 
