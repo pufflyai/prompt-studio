@@ -133,6 +133,7 @@ const conversation = defineView({
       if (action.type === "operation" && action.id === "queue")
         return {
           snapshot: {
+            nativeLinks: true,
             nativeHarnessAccount: { controlId: "provider" },
             controls: [
               {
