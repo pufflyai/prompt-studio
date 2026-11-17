@@ -67,7 +67,7 @@ test("a revision-only query does not backfill date formats", async () => {
   try {
     let backfillReads = 0;
     const service = createDocumentStorageDBService(fixture.db, undefined, (event) => {
-      if (event.phase === "format-index-records-read") backfillReads += event.records;
+      if (event.phase === "format-index-records-read") backfillReads += event.records ?? 0;
     });
     const records = service.open({ owner: { workbenchId: fixture.projectAId, extensionId: "dates" } }).records;
     await records.defineIndexes([{ name: "dates", fields: { date: { path: ["date"], type: "string" } } }]);
