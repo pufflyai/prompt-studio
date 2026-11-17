@@ -60,6 +60,7 @@ export const decorateIgnoredWorkspaceFiles = async (
   // Run one batch per repository sequentially, without unbounded Git process fan-out.
   for (const [repository, group] of groups) {
     try {
+      signal?.throwIfAborted();
       if (!hasGitDiscoveryContext(join(root, repository))) continue;
       const paths = group.map((entry) => (repository ? posix.relative(repository, entry.path) : entry.path));
       const output = await checkIgnored(join(root, repository), paths, signal);
