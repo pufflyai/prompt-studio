@@ -19,6 +19,7 @@
 4. Do not use custom CSS, styled wrappers, inline design styles, or hardcoded visual values.
 5. Use `ScrollArea` for scrollable surfaces.
 6. Keep page headings, search, filters, tabs, and primary header controls above the vertical scroll area. Expanding lists and page content own vertical scrolling; scrolling content must not move those controls.
+7. Default to the `xs` radius, including labels, counters, and chips, which are rounded squares. The `full` radius is `100%`: use it only on square elements such as dots, avatars, and square icon buttons, because it turns anything wider into an oval. `pill` is the capsule radius.
 
 ## 4. Navigation and tabs
 
