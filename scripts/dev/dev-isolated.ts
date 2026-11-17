@@ -338,7 +338,7 @@ const main = async () => {
   if (hasFlag(args, "--large")) {
     for (const project of await seedLargeProject(resolve(pstdioHome, "..", "connection.json")))
       process.stdout.write(
-        `Large:     ${project.project}: ${project.tickets} tickets, ${project.workspaces} workspaces, ${project.sessions} sessions, ${project.links} links (${project.failedLinks} failed) ${project.url}\n`,
+        `Large:     ${project.project}: ${project.tickets} tickets, ${project.workspaces} workspaces, ${project.sessions} sessions, ${project.links} links ${project.url}\n`,
       );
   }
 };

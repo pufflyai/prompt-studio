@@ -65,8 +65,18 @@ const enableWorktrees = async (api: StackApi, repoRoot: string, project: Project
   });
 };
 
-// Tickets form epics of ten (parent and children) and five interleaved dependency tracks.
-const seedTickets = async (api: StackApi, project: Project, label: string, total: number) => {
+type Link = { workspace: string } | { session: string };
+const IMPORT_BATCH = 1000;
+
+// Tickets form epics of ten (parent and children) and five interleaved dependency tracks. They are
+// created with Planner's import-tickets, up to 1,000 per call, together with their links.
+const seedTickets = async (
+  api: StackApi,
+  project: Project,
+  label: string,
+  total: number,
+  linksFor: (index: number) => Link[],
+) => {
   const prefix = `${label}-`;
   const existing = await api.command<{ id: string; title: string }[]>(project.id, `${PLANNER}.read-tickets`);
   const ids: string[] = [];
@@ -74,32 +84,43 @@ const seedTickets = async (api: StackApi, project: Project, label: string, total
     const match = ticket.title.match(new RegExp(`^${prefix}(\\d+):`));
     if (match) ids[Number(match[1]) - 1] = ticket.id;
   }
-  const start = ids.findIndex((id) => id === undefined);
-  const from = start === -1 ? ids.length : start;
-  const buckets: number[] = [];
-  let bucketStart = performance.now();
-  let bucketCount = 0;
-  for (let index = from; index < total; index++) {
-    if (ids[index]) continue;
-    const isEpic = index % 10 === 0;
-    const title = `${prefix}${index + 1}: ${TOPICS[index % TOPICS.length]} the ${AREAS[index % AREAS.length]}`;
-    const created = await api.command<{ id: string }>(project.id, `${PLANNER}.create-ticket`, {
-      content: `# ${title}\n\n${"Describe the expected behaviour, the evidence and the checks that prove it. ".repeat(isEpic ? 12 : 4)}`,
-      status: STATUSES[index % STATUSES.length],
-      ...(isEpic ? {} : { parent: ids[index - (index % 10)] }),
-      ...(index >= 5 && !isEpic ? { dependsOn: [ids[index - 5]!] } : {}),
+  const missing = Array.from({ length: total }, (_, index) => index).filter((index) => !ids[index]);
+  const msPerTicketByImport: number[] = [];
+  for (let offset = 0; offset < missing.length; offset += IMPORT_BATCH) {
+    const batch = missing.slice(offset, offset + IMPORT_BATCH);
+    const keys = new Set(batch.map((index) => `${prefix}${index + 1}`));
+    // A parent or prerequisite is a key in this batch or an already created ticket.
+    const ref = (index: number) => (keys.has(`${prefix}${index + 1}`) ? `${prefix}${index + 1}` : ids[index]!);
+    const tickets = batch.map((index) => {
+      const isEpic = index % 10 === 0;
+      const title = `${prefix}${index + 1}: ${TOPICS[index % TOPICS.length]} the ${AREAS[index % AREAS.length]}`;
+      const links = linksFor(index);
+      return {
+        key: `${prefix}${index + 1}`,
+        content: `# ${title}\n\n${"Describe the expected behaviour, the evidence and the checks that prove it. ".repeat(isEpic ? 12 : 4)}`,
+        status: STATUSES[index % STATUSES.length],
+        ...(isEpic ? {} : { parent: ref(index - (index % 10)) }),
+        ...(index >= 5 && !isEpic ? { dependsOn: [ref(index - 5)] } : {}),
+        ...(links.length ? { links } : {}),
+      };
     });
-    ids[index] = created.id;
-    bucketCount++;
-    if ((index + 1) % 500 === 0) {
-      // A resumed run starts mid-block, so divide by the tickets this run created.
-      buckets.push(Math.round((performance.now() - bucketStart) / bucketCount));
-      bucketStart = performance.now();
-      bucketCount = 0;
-      log(`${project.name}: ${index + 1}/${total} tickets (${buckets.at(-1)} ms each for the last 500)`);
-    }
+    const started = performance.now();
+    const result = await api.command<{ tickets: Record<string, { id: string }> }>(
+      project.id,
+      `${PLANNER}.import-tickets`,
+      { tickets },
+    );
+    msPerTicketByImport.push(Math.round(((performance.now() - started) / batch.length) * 10) / 10);
+    for (const index of batch) ids[index] = result.tickets[`${prefix}${index + 1}`]!.id;
+    log(
+      `${project.name}: ${offset + batch.length}/${missing.length} tickets imported (${msPerTicketByImport.at(-1)} ms each)`,
+    );
   }
-  return { ids, msPerTicketBy500: buckets };
+  const links = Array.from({ length: total }, (_, index) => linksFor(index).length).reduce(
+    (sum, count) => sum + count,
+    0,
+  );
+  return { ids, msPerTicketByImport, links };
 };
 
 const seedWorkspaces = async (api: StackApi, repoRoot: string, project: Project, total: number) => {
@@ -168,29 +189,14 @@ const importSessions = async (api: StackApi, folder: string, projects: Project[]
   );
 };
 
-const linkResources = async (
-  api: StackApi,
-  project: Project,
-  tickets: string[],
-  workspaces: string[],
-  sessions: string[],
-) => {
-  const links = [
-    ...workspaces.map((workspace, index) => ({ id: tickets[(index * 7) % tickets.length]!, workspace })),
-    ...sessions
-      .filter((_, index) => index % 2 === 1)
-      .map((session, index) => ({ id: tickets[(index * 13) % tickets.length]!, session })),
-  ];
-  let failed = 0;
-  let firstError: string | undefined;
-  await inParallel(links, 4, async (link) => {
-    await api.command(project.id, `${PLANNER}.link`, link).catch((error) => {
-      failed++;
-      firstError ??= String(error);
-    });
-  });
-  if (firstError) log(`${project.name}: ${failed} links failed, first: ${firstError}`);
-  return { links: links.length - failed, failedLinks: failed };
+// Each workspace links to one ticket and every second session to another, spread across the project.
+const linkPlan = (total: number, workspaces: string[], sessions: string[]) => {
+  const links = new Map<number, Link[]>();
+  const add = (index: number, link: Link) => links.set(index, [...(links.get(index) ?? []), link]);
+  for (const [index, workspace] of workspaces.entries()) add((index * 7) % total, { workspace });
+  for (const [index, session] of sessions.filter((_, position) => position % 2 === 1).entries())
+    add((index * 13) % total, { session });
+  return (index: number) => links.get(index) ?? [];
 };
 
 export const seedLargeProject = async (connectionPath: string) => {
@@ -208,33 +214,32 @@ export const seedLargeProject = async (connectionPath: string) => {
       await ensureProject(api, `Large ${index}`, join(stackDirectory, "large-projects", `large-${index}`), size.files),
     );
 
-  log(`seeding ${size.tickets} tickets and ${size.workspaces} workspaces per project`);
-  const seeded = await Promise.all(
-    projects.map(async (project, index) => {
-      const tickets = await seedTickets(api, project, `L${index + 1}`, size.tickets);
-      const workspaces = await seedWorkspaces(api, repoRoot, project, size.workspaces);
-      return { project, tickets, workspaces };
-    }),
+  log(`seeding ${size.workspaces} workspaces per project`);
+  const workspaces = await Promise.all(
+    projects.map((project) => seedWorkspaces(api, repoRoot, project, size.workspaces)),
   );
 
   log(`importing ${size.sessions} sessions per project`);
   const sessions = await importSessions(api, join(stackDirectory, "large-session-export"), projects, size.sessions);
 
-  log("linking tickets to workspaces and sessions");
-  const report = [];
-  for (const { project, tickets, workspaces } of seeded) {
-    const linked = await linkResources(api, project, tickets.ids, workspaces, sessions.get(project.id) ?? []);
-    report.push({
-      project: project.name,
-      projectId: project.id,
-      url: `${connection.dashboardUrl.replace(/\/$/, "")}/projects/${project.id}/`,
-      tickets: tickets.ids.length,
-      msPerTicketBy500: tickets.msPerTicketBy500,
-      workspaces: workspaces.length,
-      sessions: sessions.get(project.id)?.length ?? 0,
-      ...linked,
-    });
-  }
+  log(`importing ${size.tickets} tickets per project with their links`);
+  const report = await Promise.all(
+    projects.map(async (project, index) => {
+      const projectSessions = sessions.get(project.id) ?? [];
+      const linksFor = linkPlan(size.tickets, workspaces[index]!, projectSessions);
+      const tickets = await seedTickets(api, project, `L${index + 1}`, size.tickets, linksFor);
+      return {
+        project: project.name,
+        projectId: project.id,
+        url: `${connection.dashboardUrl.replace(/\/$/, "")}/projects/${project.id}/`,
+        tickets: tickets.ids.filter(Boolean).length,
+        msPerTicketByImport: tickets.msPerTicketByImport,
+        workspaces: workspaces[index]!.length,
+        sessions: projectSessions.length,
+        links: tickets.links,
+      };
+    }),
+  );
   log(`done in ${seconds(started)}`);
   return report;
 };
