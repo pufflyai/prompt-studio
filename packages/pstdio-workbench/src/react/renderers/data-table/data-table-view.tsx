@@ -24,12 +24,13 @@ import { runUserAction } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
-import { tablePageFields } from "../renderer-page-fields";
+import { rendererPagePresentation, tablePageFields, tableSearchFields } from "../renderer-page-fields";
 import { rendererQueryKey } from "../renderer-query-key";
 import { RendererReadNotice } from "../renderer-read-notice";
 import { usePageParams } from "../use-page-params";
 import { useRendererPages } from "../use-renderer-pages";
 import { useRendererRead } from "../use-renderer-read";
+import { useRendererViews } from "../use-renderer-views";
 import { ViewToolbarActions } from "../view-toolbar-actions";
 import {
   buildDataTableRendererData,
@@ -103,6 +104,16 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const filter = useDataTableViewStore(storageKey, (state) => state.filter, contribution);
   const sorts = useDataTableViewStore(storageKey, (state) => state.sorts, contribution);
   const settings = useDataTableViewStore(storageKey, (state) => state.settings, contribution);
+  const views = useRendererViews(
+    {
+      storageKey,
+      initialState: { settings, filter: contribution.defaultFilter, sorts: contribution.defaultSorts },
+      viewsSource,
+      defaultViews: contribution.defaultViews,
+      defaultActiveViewId: contribution.defaultActiveViewId,
+    },
+    provider,
+  );
   const paged = contribution.queryMode === "paged";
   const queryKey = resolveDataTableRendererQueryKey(contribution, placement.resource, modeId, contextValues);
   const pageColumns = useTablePageColumns(queryKey, contribution.columns);
@@ -110,9 +121,12 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
     identity: rendererQueryKey([queryKey, filter, sorts, settings, pageParams]),
     scope: JSON.stringify([storageKey, settings.grouping]),
     fields: tablePageFields(pageColumns.columns, settings),
+    searchFields: tableSearchFields(pageColumns.columns, settings),
+    presentation: rendererPagePresentation(pageColumns.columns.map(({ id, label }) => ({ id, label }))),
     initialPageSize: contribution.initialPageSize,
   });
   const read = useRendererRead({
+    enabled: views.ready,
     workbench,
     ownerKey: rendererReadKey(placement),
     sourceId: contribution.id,

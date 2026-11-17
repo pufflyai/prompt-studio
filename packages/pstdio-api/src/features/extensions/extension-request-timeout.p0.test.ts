@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import { disableExtensionMutationTimeout } from "./extension-request-timeout";
+import { disableExtensionPreparationTimeout } from "./extension-request-timeout";
 
 const projectId = "project-1";
 
@@ -11,7 +11,7 @@ describe("extension request timeout", () => {
     const request = new Request(`http://localhost:19840${pathname}`, { method: "POST" });
     const timeout = mock(() => {});
 
-    disableExtensionMutationTimeout(request, { timeout });
+    disableExtensionPreparationTimeout(request, { timeout });
 
     expect(timeout).toHaveBeenCalledWith(request, 0);
   });
@@ -20,7 +20,7 @@ describe("extension request timeout", () => {
     const request = new Request(`http://localhost:19840/v1/projects/${projectId}/extensions`, { method: "GET" });
     const timeout = mock(() => {});
 
-    disableExtensionMutationTimeout(request, { timeout });
+    disableExtensionPreparationTimeout(request, { timeout });
 
     expect(timeout).not.toHaveBeenCalled();
   });

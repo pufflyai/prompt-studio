@@ -14,6 +14,7 @@ const handler = (input: {
   kind: "chat" | "controls" | "dataTable" | "file" | "kanban" | "resourceList" | "terminal" | "tree";
   operation: string;
   value: unknown;
+  body?: ViewBody;
 }) =>
   registerPrivateHandler({
     ext: input.ext,
@@ -24,6 +25,10 @@ const handler = (input: {
     rendererKind: input.kind,
     rendererLocalId: input.localId,
     operation: input.operation,
+    collectionQuery:
+      input.operation === "query" && input.body && "queryMode" in input.body && input.body.queryMode
+        ? { mode: input.body.queryMode, maxRows: input.body.maxRows }
+        : undefined,
     handler: input.value,
   });
 

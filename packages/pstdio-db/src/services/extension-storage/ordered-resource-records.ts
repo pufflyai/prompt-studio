@@ -13,6 +13,7 @@ import {
 } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { createCommitQueue } from "./commit-queue";
+import { createOrderedCommitJournal } from "./ordered-canonical-batch";
 import { createOrderedCommitCache } from "./ordered-commit-cache";
 import { publishCommittedOrderedGroup } from "./ordered-commit-projection";
 import { ensureOrderedOwner } from "./ordered-conversion";
@@ -25,7 +26,12 @@ import { compileOrderedGroup } from "./ordered-record-compiler";
 import type { OrderedTransaction } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
 import { writeOrderedTextAsset } from "./ordered-text-asset";
-import { createRecordQueries, listProjectedRecords, readProjectedRecords } from "./record-queries";
+import {
+  createRecordQueries,
+  listProjectedRecords,
+  readProjectedRecords,
+  readProjectedRevisions,
+} from "./record-queries";
 import type { createResourceRecords as createLegacyResourceRecords } from "./resource-records";
 
 const savedOutcome = async (journal: OrderedJournal, operationId: string) => {
@@ -100,6 +106,8 @@ export const createOrderedResourceRecords = (
     input: StorageGroup,
     ownRevisions?: Map<string, string>,
   ) => {
+    // Retain only this group's canonical reads. Text and core-number policy keep their SQL-visible path.
+    journal = createOrderedCommitJournal(journal, owner);
     // Capture before the first asynchronous boundary; retries bind the entire authored request.
     const group = structuredClone(input);
     const identity = await fingerprint(group as unknown as Json);
@@ -187,6 +195,7 @@ export const createOrderedResourceRecords = (
       records: {
         read: (id: string) => ReturnType<LegacyRecords["read"]>;
         readMany: (ids: string[]) => ReturnType<LegacyRecords["readMany"]>;
+        readCurrentMany: (ids: string[]) => ReturnType<typeof readProjectedRevisions>;
         commit: (group: StorageGroup) => Promise<StorageSaveOutcome>;
         outcome: (id: string) => Promise<StorageSaveOutcome | undefined>;
       },
@@ -202,6 +211,7 @@ export const createOrderedResourceRecords = (
           {
             read: async (id) => (await readIn(tx, [id], deps.observer))[0]!,
             readMany: (ids) => readIn(tx, ids, deps.observer),
+            readCurrentMany: (ids) => readProjectedRevisions(tx, owner, ids),
             outcome: async (id) => ((await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined),
             commit: (group) =>
               queue.run(async () => {
