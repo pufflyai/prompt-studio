@@ -55,7 +55,7 @@ export const validateQueryField = (name: string, field: StorageIndexField) => {
       throw new Error("Related projection needs an index and field without a local path");
     return;
   }
-  if (!Array.isArray(field.path) || !field.path.length || field.path.some((part) => typeof part !== "string" || !part))
+  if (!Array.isArray(field.path) || field.path.some((part) => typeof part !== "string" || !part))
     throw new Error("Invalid field path");
   validateDerivedField(field);
 };
