@@ -193,6 +193,12 @@ test("keeps a workspace terminal in its worktree and alive when the workspace is
     await terminalInput.press("Enter");
 
     await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__ps296_state__kept__");
+    await page.reload();
+    await showSecondaryPanel(page);
+    await page.locator(".xterm:visible").click();
+    await terminalInput.pressSequentially("printf '__ps296_reload__%s__\\n' \"$PSTDIO_TERMINAL_RETURN_STATE\"");
+    await terminalInput.press("Enter");
+    await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__ps296_reload__kept__");
   } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
     rmSync(repoRoot, { recursive: true, force: true });

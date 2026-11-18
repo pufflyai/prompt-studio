@@ -2,6 +2,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { extension_instances, installed_extension_sources } from "../../db/schemas.pg";
 import { type ActivationInput, activateProjectSources as activateProjectSourcesImpl } from "./activate-project-sources";
+import { adoptProjectDefault, hasProjectDefaultChoice, recordProjectDefaultChoice } from "./project-defaults";
 
 type InstanceRow = typeof extension_instances.$inferSelect;
 type InstanceInsert = typeof extension_instances.$inferInsert;
@@ -127,6 +128,11 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
     update,
     claimProjectExtensionProvider,
     activateProjectSources,
+    adoptProjectDefault: (input: Parameters<typeof adoptProjectDefault>[1]) => adoptProjectDefault(db, input),
+    hasProjectDefaultChoice: (projectId: string, extensionId: string) =>
+      hasProjectDefaultChoice(db, projectId, extensionId),
+    recordProjectDefaultChoice: (projectId: string, extensionId: string) =>
+      recordProjectDefaultChoice(db, projectId, extensionId),
     remove,
   };
 };

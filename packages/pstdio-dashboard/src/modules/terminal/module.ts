@@ -8,12 +8,13 @@ export const createTerminalModule = () =>
   ({
     id: "dashboard.terminal",
     activate(ctx) {
-      ctx.terminal.setSessionOpener((request, view, signal, binding) => {
-        if (view) return openDashboardTerminalSession(request, view, signal);
+      ctx.terminal.setSessionOpener((request, view, signal, binding, placement) => {
         const projectId = getDashboardSelectedProjectId(ctx);
         // A placement's terminal keeps running when its workbench closes, so reopening the
         // project, its desktop tab, or the page resumes the same shell.
-        const attachKey = binding && projectId ? `${projectId}/${binding}` : undefined;
+        const attachment = view ? placement : binding;
+        const attachKey = attachment && projectId ? `${projectId}/${attachment}` : undefined;
+        if (view) return openDashboardTerminalSession(request, view, signal, attachKey);
         if (request.cwd) return openDashboardTerminalSession(request, undefined, signal, attachKey);
         // The host process may run from any folder (`/` for the desktop app), so a
         // terminal that names no workspace starts in the project's root checkout.
