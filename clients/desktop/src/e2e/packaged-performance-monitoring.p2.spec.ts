@@ -80,8 +80,9 @@ test("a local extension control highlights workbench renders and releases the ca
     await expect(canvas).toHaveCount(0);
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-pressed", "true");
-    // Opening the details commits a visible update in the workbench React tree.
-    await performanceMeter(app.page).click();
+    // Opening search commits a visible update in the workbench React tree.
+    await app.page.getByRole("option", { name: "Search", exact: true }).click();
+    await expect(app.page.getByRole("dialog")).toBeVisible();
     await expect
       .poll(() =>
         canvas.evaluate((element: HTMLCanvasElement) => {
@@ -91,7 +92,7 @@ test("a local extension control highlights workbench renders and releases the ca
         }),
       )
       .toBe(true);
-    await performanceMeter(app.page).click();
+    await app.page.keyboard.press("Escape");
     await toggle.click();
     await expect(toggle).toHaveAttribute("aria-pressed", "false");
     await expect(canvas).toHaveCount(0);
