@@ -94,6 +94,7 @@ test("Session menus share resource actions and switch through the full history",
   await expect(search).toHaveValue("");
   await expect.poll(() => options.count()).toBeGreaterThan(1);
   await search.fill("History 00");
+  await expect(picker.getByRole("option", { name: "History 00", exact: true })).toBeVisible();
   await search.press("Enter");
   await expect(picker).toBeHidden();
   await expect(side.getByRole("tab", { name: "History 00", exact: true })).toBeVisible();
@@ -103,6 +104,7 @@ test("Session menus share resource actions and switch through the full history",
   await expect(page.getByRole("menuitem", { name: "Copy link", exact: true })).toBeVisible();
   await page.getByRole("menuitem", { name: "Switch session", exact: true }).click();
   await picker.getByRole("textbox").fill("History 01");
+  await expect(picker.getByRole("option", { name: "History 01", exact: true })).toBeVisible();
   await picker.getByRole("textbox").press("Enter");
   await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("History 01");
   await expect(side.getByRole("tab", { name: "History 00", exact: true })).toBeVisible();

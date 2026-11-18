@@ -33,7 +33,13 @@ const createTablessWorkbench = (withMenu: boolean) => {
     path: "board",
     modeId: "board",
     slots: [],
-    main: { kind: "view", presentation: "page", view: { kind: "view", id: "board" }, cardinality: "one" },
+    main: {
+      kind: "view",
+      presentation: "page",
+      view: { kind: "view", id: "board" },
+      cardinality: "one",
+      tab: { getSnapshot: () => ({ label: "Current board" }) },
+    },
   });
   workbench.pageLocations.switchProject("page-menu-header-stories");
   const menu = workbench.layout.getLayout().regions["main-right-menu"].widgets[0];
@@ -62,7 +68,7 @@ const meta = {
 } satisfies CanvasMeta<typeof PageMenuHeaderStory>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;
-/** A tabless page keeps a minimal header that holds only the openers of its closed view menus. */
+/** The breadcrumb shows the page title and the Main header holds the view-menu controls. */
 export const WithClosedViewMenu: Story = {
   id: "pstdio-workbench-reference-core-api-page-menu-header--with-closed-view-menu",
   args: { withMenu: true },
