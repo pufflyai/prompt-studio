@@ -96,14 +96,21 @@ function ResetOnlySettingsPreview() {
   const [fixture] = useState(() => {
     const workbench = createWorkbench();
     const renderers = getWorkbenchRenderers(workbench);
+    let saved = "Desk";
+    let attempts = 0;
     renderers.registerControlsRenderer({
       id: "reset-only",
       title: "Device settings",
       executeQuery: () => ({
         params: [{ id: "name", type: "text", name: "Device name", singleLine: true, defaultValue: "Desk" }],
+        values: { name: saved },
       }),
+      updateValue: ({ value }) => {
+        saved = String(value);
+      },
       reset: () => {
-        throw new Error("Could not reset device settings. Try again.");
+        if (++attempts < 3) throw new Error("Could not reset device settings. Try again.");
+        saved = "Desk";
       },
     });
     return { workbench, contribution: renderers.getControlsRenderer("reset-only")! };

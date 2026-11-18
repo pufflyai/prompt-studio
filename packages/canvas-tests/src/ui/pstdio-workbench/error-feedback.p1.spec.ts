@@ -26,7 +26,8 @@ test("dismissing an action error leaves its controls in place", async ({ page })
   expect(await action.boundingBox()).toEqual(before);
 });
 
-test("reset-only settings keep the reset action available after an error", async ({ page }) => {
+// Critical: reset failures must stay visible without losing editable values or blocking recovery.
+test("reset-only settings keep values and the reset action available after an error", async ({ page }) => {
   const preview = await openCanvasPreview(
     page,
     "packages/pstdio-workbench/src/react/renderers/controls/controls-view.canvas.tsx#ResetFailure",
@@ -35,6 +36,9 @@ test("reset-only settings keep the reset action available after an error", async
   const field = preview.getByText("Device name", { exact: true });
   await expect(reset).toBeVisible();
   await expect(field).toBeVisible();
+  const input = preview.getByRole("textbox");
+  await input.fill("Keep this value");
+  await input.blur();
   const resetPosition = await reset.boundingBox();
   const fieldPosition = await field.boundingBox();
 
@@ -45,8 +49,14 @@ test("reset-only settings keep the reset action available after an error", async
   expect(await reset.boundingBox()).toEqual(resetPosition);
   await alert.getByRole("button", { name: "Dismiss" }).press("Enter");
   await expect(alert).toHaveCount(0);
+  await expect(input).toHaveValue("Keep this value");
   await reset.click();
   await expect(alert).toBeVisible();
+  await alert.getByRole("button", { name: "Dismiss" }).press("Enter");
+  await expect(input).toHaveValue("Keep this value");
+  await reset.click();
+  await expect(input).toHaveValue("Desk");
+  await expect(alert).toHaveCount(0);
 });
 
 test("system information can be opened and dismissed in the status bar", async ({ page }) => {
