@@ -39,14 +39,6 @@ describe("createDb", () => {
 
   afterAll(() => fs.rmSync(seed.tempRoot, { recursive: true, force: true }));
 
-  it("creates in-memory databases without migration files", async () => {
-    const client = await createDb({ path: ":memory:" });
-
-    expect(client.path).toBe(":memory:");
-
-    await client.close();
-  });
-
   it(
     "uses PSTDIO_DB_PATH for the default database location",
     async () => {

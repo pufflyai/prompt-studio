@@ -19,8 +19,7 @@
     "packages/pstdio-api/src/features/extensions/repo-extensions.ts": ["types"],
     "packages/pstdio-api/src/services/extension-asset-catalog.ts": ["types"],
     "packages/sdk/src/api/workspaces.ts": ["types"],
-    "packages/pstdio-api-contracts/src/workspaces.ts": ["duplicates"],
-    "packages/pstdio-db/src/db/schemas.zod.ts": ["duplicates"]
+    "packages/pstdio-api-contracts/src/workspaces.ts": ["duplicates"]
   },
   "workspaces": {
     "design": {
