@@ -21,7 +21,7 @@
     "format": "biome check --write ."
   },
   "dependencies": {
-    "@openai/codex": "0.162.0",
+    "@openai/codex": "0.169.0",
     "@pstdio/sdk": "0.47.0-nightly.20261112030231"
   },
   "devDependencies": {

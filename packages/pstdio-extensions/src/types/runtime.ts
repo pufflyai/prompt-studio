@@ -193,6 +193,8 @@ export interface RuntimeHarnessRecord {
   extensionId: string;
   name: string;
   sourcePath: string;
+  /** Installed package folder that owns the harness, also when it runs from a prepared copy. */
+  packagePath?: string;
   provider: HarnessProvider;
 }
 

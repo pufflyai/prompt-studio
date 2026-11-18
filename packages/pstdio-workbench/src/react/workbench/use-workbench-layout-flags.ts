@@ -1,19 +1,12 @@
 import type { WorkbenchCore } from "../../core";
-import { useHasSystemErrors } from "../notifications/system-error-state";
+import { useHasSystemNotices } from "../notifications/system-error-state";
 import { useWorkbenchPanelMenusPresent } from "../panel-menu/use-panel-menu";
 import { useModeChrome } from "../region/mode-chrome";
-import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useWorkbenchRegionContent } from "./use-workbench-region-content";
 
 export const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
-  const statusChrome = useModeChrome(workbench, "status");
-  const statusBarItems = useWorkbenchStore(workbench.statusBar.store, (state) => state.items);
-  const hasSystemErrors = useHasSystemErrors(workbench);
-  const hasVisibleStatusItems = useWorkbenchStore(
-    workbench.context.store,
-    () => workbench.statusBar.listVisibleItems().length > 0,
-  );
-  const activeModeId = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
+  const hasDockedStatusBar = useModeChrome(workbench, "status") !== false;
+  const hasSystemNotices = useHasSystemNotices(workbench);
   return {
     hasNavWidgets: useWorkbenchRegionContent(workbench, "nav"),
     hasActivityBarWidgets: useWorkbenchRegionContent(workbench, "activity"),
@@ -24,12 +17,7 @@ export const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
     hasSideHeaderWidgets: useWorkbenchRegionContent(workbench, "side-header"),
     hasSideWidgets: useWorkbenchRegionContent(workbench, "side", { locationScoped: true }),
     hasSideMenus: useWorkbenchPanelMenusPresent(workbench, "side"),
-    hasStatusWidgets:
-      hasSystemErrors ||
-      (statusChrome !== undefined
-        ? statusChrome !== false
-        : activeModeId === workbench.modes.getActiveModeId() &&
-          Object.keys(statusBarItems).length > 0 &&
-          hasVisibleStatusItems),
+    hasDockedStatusBar,
+    hasStatusContent: hasDockedStatusBar || hasSystemNotices,
   };
 };

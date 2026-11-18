@@ -196,7 +196,7 @@ test(
       ]);
       expect(stderr).toBe("");
       expect(exitCode).toBe(0);
-      const { digest }: { digest: unknown } = JSON.parse(stdout);
+      const digest: unknown = JSON.parse(stdout);
       expect(digest).toMatch(/^[a-f0-9]{64}$/);
       return digest;
     };

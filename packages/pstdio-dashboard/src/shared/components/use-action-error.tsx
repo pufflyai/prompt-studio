@@ -1,4 +1,4 @@
-import { AlertMessage } from "@pstdio/ui";
+import { ActionErrorSlot, AlertMessage } from "@pstdio/ui";
 import { useState } from "react";
 
 interface ActionError {
@@ -6,16 +6,18 @@ interface ActionError {
   description?: string;
 }
 
-export const useActionError = () => {
+export const useActionError = (edge: "top" | "bottom" | "above" = "bottom") => {
   const [error, setError] = useState<ActionError>();
   const clearError = () => setError(undefined);
   return {
     showError: setError,
     clearError,
     errorNotice: error ? (
-      <AlertMessage status="error" role="alert" title={error.title} onClose={clearError}>
-        {error.description}
-      </AlertMessage>
+      <ActionErrorSlot edge={edge}>
+        <AlertMessage compact status="error" role="alert" title={error.title} onClose={clearError}>
+          {error.description}
+        </AlertMessage>
+      </ActionErrorSlot>
     ) : null,
   };
 };

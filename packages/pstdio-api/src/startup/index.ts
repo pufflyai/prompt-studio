@@ -6,6 +6,7 @@ import {
 } from "../features/extensions/default-extensions";
 import { refreshProjectSkillsInRepos } from "../features/extensions/extension-skill-cleanup";
 import { syncRepoExtensionsForProjectFolder } from "../features/extensions/repo-extensions";
+import { resumeRestoredFolderSetup } from "../features/projects/project-folder";
 import { resolveOrphanedSessions } from "../features/sessions/startup";
 import { provisionProjectWorkspaces } from "../features/workspaces/provision-coordinator";
 import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-provider-reconciliation";
@@ -53,7 +54,9 @@ const provisionRecoveredWorkspaces = (deps: RouteDeps, projectIds: string[], sig
   Promise.allSettled(
     projectIds.map(async (projectId) => {
       if (signal?.aborted) return;
-      await provisionProjectWorkspaces(deps, projectId);
+      const restored = await resumeRestoredFolderSetup(deps, projectId);
+      if (signal?.aborted) return;
+      await provisionProjectWorkspaces(deps, projectId, undefined, { skipWorkspaceId: restored?.id });
     }),
   ).then(() => undefined);
 

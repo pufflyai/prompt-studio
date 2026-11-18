@@ -3,7 +3,6 @@ import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSyn
 import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 import { cssModuleInputs } from "./css-module-inputs";
 import { mirrorPackageChild } from "./mirror-package-child";
-import { cachedRuntimeModuleImports, retainRuntimeModuleImports } from "./runtime-module-import-cache";
 
 const moduleExtensions = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json", ".css", ".mts", ".cts"];
 const executableExtensions = new Set(moduleExtensions.filter((extension) => extension !== ".json"));
@@ -16,16 +15,27 @@ const isInside = (root: string, path: string) => {
   return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
 };
 
-const resolveLocalImport = (importerPath: string, importPath: string) => {
-  if (!importPath.startsWith(".") && extname(importerPath) !== ".css") return null;
-
-  const unresolvedPath = resolve(dirname(importerPath), importPath);
-  const candidates = [
-    unresolvedPath,
-    ...moduleExtensions.map((extension) => `${unresolvedPath}${extension}`),
-    ...moduleExtensions.map((extension) => join(unresolvedPath, `index${extension}`)),
-  ];
-  return candidates.find((candidate) => statSync(candidate, { throwIfNoEntry: false })?.isFile()) ?? null;
+// Importers in one graph commonly resolve the same relative module. Each inspection
+// owns its lookups so the post-build guard sees new files and changed links.
+export const createLocalImportResolver = () => {
+  const paths = new Map<string, string | null>();
+  const isFile = (path: string) => statSync(path, { throwIfNoEntry: false })?.isFile();
+  const find = (path: string) => {
+    if (isFile(path)) return path;
+    for (const extension of moduleExtensions) if (isFile(path + extension)) return path + extension;
+    const index = join(path, "index");
+    for (const extension of moduleExtensions) if (isFile(index + extension)) return index + extension;
+    return null;
+  };
+  return (importer: string, specifier: string) => {
+    if (!specifier.startsWith(".") && extname(importer) !== ".css") return null;
+    const path = resolve(dirname(importer), specifier);
+    const previous = paths.get(path);
+    if (previous !== undefined) return previous;
+    const file = find(path);
+    paths.set(path, file);
+    return file;
+  };
 };
 
 const transpilerLoader = (filePath: string) => {
@@ -37,6 +47,7 @@ const transpilerLoader = (filePath: string) => {
 };
 
 const transpilers = new Map<Bun.JavaScriptLoader, Bun.Transpiler>();
+const importsByContent = new Map<string, string[]>();
 const importsByBytes = new WeakMap<Buffer, { digest: string; imports: Map<string, string[]> }>();
 
 export const readRuntimeModuleImports = (
@@ -55,7 +66,7 @@ export const readRuntimeModuleImports = (
   const inspected = bytes.imports.get(mode);
   if (inspected) return inspected;
   const cacheKey = `${mode}\0${bytes.digest}`;
-  const cached = cachedRuntimeModuleImports(cacheKey);
+  const cached = importsByContent.get(cacheKey);
   if (cached) {
     bytes.imports.set(mode, cached);
     return cached;
@@ -67,9 +78,10 @@ export const readRuntimeModuleImports = (
     transpilers.set(loader, transpiler);
   }
 
+  // CSS regex captures can retain the whole stylesheet. Copy their UTF-16 code units before caching.
   const imports =
     extname(filePath) === ".css"
-      ? cssModuleInputs(contents.toString())
+      ? cssModuleInputs(contents.toString()).map((path) => Buffer.from(path, "utf16le").toString("utf16le"))
       : [
           ...new Set([
             ...(foldConstants
@@ -83,7 +95,8 @@ export const readRuntimeModuleImports = (
   // Staged and installed copies share parsing, not filesystem identities. Fresh bytes
   // still validate every read, and graph/package resolution below remains uncached.
   // Bound retained parse results without retaining their source buffers.
-  retainRuntimeModuleImports(cacheKey, imports);
+  if (importsByContent.size >= 12_288) importsByContent.delete(importsByContent.keys().next().value!);
+  importsByContent.set(cacheKey, imports);
   bytes.imports.set(mode, imports);
   return imports;
 };
@@ -93,6 +106,7 @@ export const collectRuntimeModulePaths = (
   entryPath: string,
   readSource: (path: string) => Buffer = (path) => readFileSync(path),
   knownPaths: ReadonlySet<string> = new Set(),
+  resolveLocalImport = createLocalImportResolver(),
 ) => {
   const pending = [entryPath];
   const modulePaths = new Set<string>();

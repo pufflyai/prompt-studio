@@ -3,7 +3,10 @@ import { isPackagedRuntime, resolvePstdioHome } from "pstdio-paths";
 import { PreparationUnavailableError } from "./preparation-error";
 import { createPreparationWorkerSlots, type PreparationWorkerSlot } from "./preparation-worker-slot";
 
+import { extensionUpgradeConcurrency } from "./upgrade-concurrency";
+
 export { PreparationUnavailableError } from "./preparation-error";
+export { extensionUpgradeConcurrency };
 
 import {
   activePreparationPriority,
@@ -47,7 +50,7 @@ const continuePreparation =
 export const createPreparationClient = (
   createWorker: () => Worker,
   cleanup?: (homes: PreparationHome[]) => Promise<void>,
-  options: { workers?: 1 | 2 } = {},
+  options: { workers?: 1 | 2 | 3 | 4 } = {},
 ) => {
   let nextId = 0;
   let backgroundPump: ReturnType<typeof setTimeout> | undefined;
@@ -183,7 +186,17 @@ export const createPreparationClient = (
         !slot.active!.resources ||
         next.resources.some((key) => slot.active!.resources!.some((other) => preparationResourcesOverlap(key, other))),
     );
-    const targets = blockers.length ? blockers : [...running].reverse().slice(0, 1);
+    // A disjoint foreground job can use any slot. Retire the least urgent owner.
+    const targets = blockers.length
+      ? blockers
+      : running
+          .reverse()
+          .sort(
+            (a, b) =>
+              activePreparationPriority(b.active!, queuedPriority) -
+              activePreparationPriority(a.active!, queuedPriority),
+          )
+          .slice(0, 1);
     for (const slot of targets)
       if (queuedPriority(next) < activePreparationPriority(slot.active!, queuedPriority))
         pool.replace(slot, slot.active);
@@ -224,15 +237,12 @@ export const createPreparationClient = (
       };
       const result = waitForPreparation(owned, options, scope, request, () => {
         cancelQueuedPreparation(jobs, queued, owned);
-        const slot = pool.slots.find((slot) => slot.active === owned || slot.retiring === owned);
-        if (slot?.active === owned) {
+        const slot = pool.slots.find((slot) => slot.active === owned);
+        if (slot) {
           if (slot.dispatched && slot.worker) pool.replace(slot);
           else slot.active = undefined;
         }
         schedule();
-        // A closed caller must not outlive its worker, including an evaluation
-        // already retiring after preemption. Unrelated slot work stays admitted.
-        return slot?.retiring === owned ? slot.restarting : undefined;
       });
       schedule();
       return result as Promise<T>;
@@ -274,7 +284,9 @@ const defaultWorker = () =>
     ),
   );
 let cleanup: ((homes: PreparationHome[]) => Promise<void>) | undefined;
-const shared = createPreparationClient(defaultWorker, (homes) => cleanup?.(homes) ?? Promise.resolve(), { workers: 2 });
+const shared = createPreparationClient(defaultWorker, (homes) => cleanup?.(homes) ?? Promise.resolve(), {
+  workers: extensionUpgradeConcurrency,
+});
 export const configureExtensionPreparationWorker = (createWorker: () => Worker, dispose?: typeof cleanup) => {
   cleanup = dispose;
   shared.configureWorker(createWorker);

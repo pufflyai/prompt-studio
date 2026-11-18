@@ -130,6 +130,11 @@ export class DesktopWindowController {
     this.window.webContents.send(DESKTOP_CHANNELS.startupAppearanceChanged, appearance);
   }
 
+  notifyUpdate() {
+    const contents = this.#workbench?.webContents;
+    if (contents && !contents.isDestroyed()) contents.send(DESKTOP_CHANNELS.updateNotice);
+  }
+
   executeCommand(commandId: string) {
     this.#workbench?.webContents.send(DESKTOP_CHANNELS.command, commandId);
   }

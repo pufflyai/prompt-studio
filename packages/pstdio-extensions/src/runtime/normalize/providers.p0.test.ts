@@ -206,3 +206,20 @@ describe("registerProviders", () => {
     );
   });
 });
+
+test("a harness running from a prepared copy names the installed package that owns it", () => {
+  const prepared: LoadedExtensionSource = {
+    ...wrap("agent", defineExtension({ harnesses: [provider] })),
+    packagePath: "/revisions/abc/fs/2f/staging/agent",
+    sourcePath: "/revisions/abc/fs/2f/staging/agent/extension.ts",
+    originalPackagePath: "/home/.pstdio/extensions/agent",
+  };
+  const installed = wrap("local", defineExtension({ harnesses: [provider] }));
+
+  const runtime = normalizeExtensionSources([prepared, installed], []);
+
+  expect(runtime.harnesses.map((harness) => [harness.extensionId, harness.packagePath])).toEqual([
+    ["pstdio.agent", "/home/.pstdio/extensions/agent"],
+    ["pstdio.local", "/fake/local"],
+  ]);
+});

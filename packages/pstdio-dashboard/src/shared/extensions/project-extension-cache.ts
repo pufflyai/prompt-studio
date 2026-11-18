@@ -73,6 +73,20 @@ export const createProjectExtensionCache = (
     invalidateSettings(instanceId: string) {
       if (valid()) (instanceId === input.instanceId ? settings : catalog.settings(instanceId))?.invalidate();
     },
+    acceptUpgrade(extension: ProjectExtensionInstance) {
+      if (!valid()) return;
+      extensionsQuery.cancel();
+      const current = extensionsQuery.getSnapshot().data;
+      if (current)
+        extensionsQuery.accept({
+          ...current,
+          // Uninstall, enablement and settings have their own mutation owners.
+          extensions: current.extensions.map((row) =>
+            row.id === extension.id ? { ...extension, enabled: row.enabled, config: row.config } : row,
+          ),
+        });
+      refresh();
+    },
     async storeExtension(extension: ProjectExtensionInstance) {
       if (!valid()) return;
       await cancelWorkspaceReads();

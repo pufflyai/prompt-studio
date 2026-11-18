@@ -1,18 +1,22 @@
-import { Button, Flex, HStack, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, HStack, Stack, Text } from "@chakra-ui/react";
 import type { MarketplaceExtension } from "@pstdio/sdk/api";
 import { Download } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { ExtensionActionButton } from "./extension-action-button";
+import type { ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionIcon } from "./extension-icon";
 
 interface MarketplaceExtensionRowProps {
   extension: MarketplaceExtension;
-  installing: boolean;
+  action?: ExtensionActionState;
+  onDismissAction?: (action: ExtensionActionState) => void;
+  onRetryAction?: () => void;
   onInstall: () => void;
   onOpen: () => void;
 }
 
 export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => {
-  const { extension, installing, onInstall, onOpen } = props;
+  const { extension, action, onDismissAction, onRetryAction, onInstall, onOpen } = props;
   const { t } = useTranslation("projects");
 
   return (
@@ -58,19 +62,20 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
           {extension.origin.url}@{extension.origin.ref}#{extension.origin.path}
         </Text>
       </Stack>
-      <Button
-        variant="outline"
-        size="2xs"
-        loading={installing}
-        onClick={(event) => {
-          event.stopPropagation();
-          onInstall();
-        }}
-        data-testid="marketplace-extension-install"
-      >
-        <Download size={12} />
-        {t("projectSettings.extensionsPanel.marketplace.install")}
-      </Button>
+      <Box onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+        <ExtensionActionButton
+          variant="outline"
+          size="2xs"
+          icon={<Download />}
+          action={action}
+          onAction={onInstall}
+          onDismiss={onDismissAction}
+          onRetry={onRetryAction}
+          data-testid="marketplace-extension-install"
+        >
+          {t("projectSettings.extensionsPanel.marketplace.install")}
+        </ExtensionActionButton>
+      </Box>
     </HStack>
   );
 };

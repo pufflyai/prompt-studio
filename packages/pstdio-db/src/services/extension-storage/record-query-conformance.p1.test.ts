@@ -294,6 +294,8 @@ test("selective in-list pages probe the declared equality index after ordinary w
     ["ordinal"],
     sql`${recordScopeSql(owner, index)} AND ${predicateSql(index, where)}`,
     5,
+    0,
+    where,
   );
   const evidence = JSON.stringify((await f.db.execute(sql`EXPLAIN (ANALYZE, FORMAT JSON) ${statement}`)).rows);
   expect(evidence).toContain("storage_query_");
@@ -305,6 +307,79 @@ test("selective in-list pages probe the declared equality index after ordinary w
   );
   const rows = Math.max(...estimate.rows.map((row) => Number(/rows=(\d+)/.exec(row["QUERY PLAN"])?.[1] ?? 0)));
   expect(rows).toBeLessThan(500);
+});
+
+test("ordered pages accept an in-list that fits the database parameter limit", async () => {
+  const { records } = await fixture();
+  await records.defineIndexes([
+    {
+      name: "groups",
+      fields: { group: { path: ["group"], type: "string" }, rank: { path: ["rank"], type: "number" } },
+      equality: ["group"],
+      orderBy: [{ field: "rank", direction: "asc" }],
+    },
+  ]);
+  await records.commit({ operationId: "seed", edits: [{ recordId: "match", replace: { group: "visible", rank: 1 } }] });
+  const page = await records.query({
+    index: "groups",
+    where: { field: "group", op: "in", value: [...Array<string>(22_000).fill("other"), "visible"] },
+    limit: 2,
+  });
+  expect(page.records.map((row) => row.recordId)).toEqual(["match"]);
+});
+
+test("in-list pages merge duplicate and null selections with filters, offsets and cursors", async () => {
+  const f = await fixture();
+  const memory = createMemoryStorage({ workbenchId: f.owner.workbenchId, extensionId: f.owner.extensionId }).records;
+  for (const equality of [["group"], ["group", "category"]]) {
+    for (const records of [f.records, memory]) {
+      await records.defineIndexes([
+        {
+          name: "groups",
+          fields: {
+            group: { path: ["group"], type: "string" },
+            category: { path: ["category"], type: "string" },
+            rank: { path: ["rank"], type: "number" },
+          },
+          equality,
+          orderBy: [{ field: "rank", direction: "desc" }],
+        },
+      ]);
+      await records.commit({
+        operationId: `seed-groups-${equality.length}`,
+        edits: Array.from({ length: 30 }, (_, n) => ({
+          recordId: `item-${n}`,
+          replace: { group: ["a", "b", null][n % 3], category: n % 2 ? "visible" : "other", rank: n % 5 },
+        })),
+      });
+    }
+    const where: StoragePredicate = {
+      all: [
+        { field: "group", op: "in", value: ["a", null, "b", "a", "missing"] },
+        { field: "category", op: "eq", value: "visible" },
+      ],
+    };
+    const query = { index: "groups", where, limit: 3 };
+    const ids = (page: Awaited<ReturnType<typeof memory.query>>) => page.records.map((row) => row.recordId);
+    expect(ids(await f.records.query({ ...query, offset: 4 }))).toEqual(
+      ids(await memory.query({ ...query, offset: 4 })),
+    );
+    const expected: string[] = [];
+    const actual: string[] = [];
+    for (const [records, result] of [
+      [memory, expected],
+      [f.records, actual],
+    ] as const) {
+      let cursor: string | undefined;
+      do {
+        const page = await records.query({ ...query, cursor });
+        result.push(...ids(page));
+        cursor = page.cursor ?? undefined;
+      } while (cursor);
+    }
+    expect(actual).toEqual(expected);
+    expect(new Set(actual).size).toBe(15);
+  }
 });
 
 test("database and memory agree on null groups and object-only field paths", async () => {

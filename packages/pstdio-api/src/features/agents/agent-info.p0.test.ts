@@ -27,6 +27,22 @@ test("agent metadata uses the exact registered owner and installed package SVG, 
     expect(info.icon).toBe(
       `data:image/svg+xml;base64,${Buffer.from('<svg viewBox="0 0 16 16"><path d="M1 1h10v10z"/></svg>').toString("base64")}`,
     );
+    // Installed extensions run from a prepared copy outside their install folder.
+    const preparedRecord = createTestHarnessRecord("custom");
+    preparedRecord.extensionId = record.extensionId;
+    preparedRecord.sourcePath = join(root, "revisions/abc/fs/2f/staging/custom/extension.ts");
+    preparedRecord.packagePath = projectSource;
+    const preparedRegistry = createTestHarnessRegistry([preparedRecord]);
+    try {
+      const prepared = await toAgentInfo(
+        (await preparedRegistry.list())[0]!,
+        undefined,
+        await agentExtensionIcons(deps),
+      );
+      expect(prepared.icon).toBe(info.icon);
+    } finally {
+      await preparedRegistry.dispose();
+    }
     rmSync(join(projectSource, "assets/custom.svg"));
     const missing = await toAgentInfo(harness, undefined, await agentExtensionIcons(deps));
     expect(missing.icon).toBeUndefined();

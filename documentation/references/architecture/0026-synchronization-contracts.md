@@ -4,7 +4,7 @@ Each extension record is its own Yjs document ([ADR 0100](../../adrs/0100-one-do
 A declared text file uses its own document. An extension's records sync together through one
 encrypted record stream ([ADR 0102](../../adrs/0102-record-stream-sync.md)). The runtime owns merging and persistence. Extensions keep
 using `storage.records`, the deprecated KV and collection methods, and the file APIs.
-[PRD 0014](../../requirements/platform/0014-local-first-sync.md) defines the requirements.
+[0014 · RB 9.A.1](../../requirement-book/book.json) defines the requirements.
 
 ## Ownership
 
@@ -248,7 +248,7 @@ point. A restore that would change nothing keeps every point. Purging an extensi
 [Folder recovery](../../../packages/pstdio-api/src/services/relay/folder-recovery.ts) is a core relay owner
 per cloud project. It captures this device's project folder and keeps every completed copy of the
 account's devices in a local recovery store, so another computer can restore a folder without a Git
-host or the source device online ([PRD 0015](../../requirements/platform/0015-project-data-recovery.md)).
+host or the source device online ([PRD 0015](../../requirement-book/book.json)).
 The code lives in `packages/pstdio-api/src/services/project-recovery/`.
 
 | Part | Rule |
