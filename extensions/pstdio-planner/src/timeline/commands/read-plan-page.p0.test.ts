@@ -50,10 +50,14 @@ test("looking up an off-window Timeline ticket skips project-wide pace and group
     return aggregate(query);
   };
 
+  ctx.views.list = async () => {
+    throw new Error("A point read should skip the saved views list");
+  };
   const result = await readPlanCommand.run(ctx, { ticketId: "selected" });
 
   expect(result.sections.flatMap(({ rows }) => rows.map(({ id }) => id))).toEqual(["selected"]);
   expect(result.pace).toBeNull();
+  expect(result.savedViews).toEqual({ views: [], defaultViewId: null });
 });
 
 test("Timeline filters before paging and counts unloaded work without listing resources", async () => {

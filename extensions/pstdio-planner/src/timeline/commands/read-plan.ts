@@ -161,7 +161,7 @@ export const readPlanCommand = defineCommand({
           : { ...summarizeSection(section, view.tags, null), globalCounts: undefined };
       }),
       projectId: ctx.projectId,
-      savedViews: input.ticketId ? [] : await ctx.views.list(timelineBoard),
+      savedViews: input.ticketId ? { views: [], defaultViewId: null } : await ctx.views.list(timelineBoard),
       ticketRows: view.result.rows,
       ticketAttributes: view.result.attributes,
       page: view.result.page,
