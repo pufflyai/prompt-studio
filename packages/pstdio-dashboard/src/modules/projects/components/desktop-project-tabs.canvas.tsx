@@ -1,5 +1,6 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Button, Center, Flex } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { EmptyState, WindowTabs, WindowTitleBar } from "@pstdio/ui";
 import { createWorkbench } from "@pstdio/workbench";
 import { WorkbenchThemeProvider } from "@pstdio/workbench/react";
 import { useState } from "react";
@@ -75,4 +76,42 @@ export const OpenProjectFocus: Story = {
 export const WindowControlsOverlay: Story = {
   name: "Window controls overlay",
   render: () => <WindowControlsOverlayStory />,
+};
+
+const ProjectRecoveryPreview = () => {
+  const [project, setProject] = useState("lab");
+  const [failed, setFailed] = useState(true);
+  return (
+    <Flex direction="column" h="100dvh" minW="0" bg="bg">
+      <WindowTitleBar platform="darwin">
+        <WindowTabs
+          aria-label="Project tabs"
+          tabs={[
+            { id: "lab", label: "Lab", closable: false },
+            { id: "notes", label: "Notes", closable: false },
+          ]}
+          selectedId={project}
+          onSelect={setProject}
+          onClose={() => {}}
+        />
+      </WindowTitleBar>
+      <Center flex="1" p="md">
+        {project === "lab" && failed ? (
+          <EmptyState
+            title="This project couldn’t open"
+            description="Try opening it again or switch to another project."
+          >
+            <Button onClick={() => setFailed(false)}>Retry project</Button>
+          </EmptyState>
+        ) : (
+          <EmptyState title={project === "lab" ? "Lab" : "Notes"} />
+        )}
+      </Center>
+    </Flex>
+  );
+};
+
+export const ProjectRecovery: Story = {
+  name: "Project recovery",
+  render: () => <ProjectRecoveryPreview />,
 };
