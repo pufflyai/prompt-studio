@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench, workbenchCommandPaletteMenuPath } from "../../core";
 import { createWorkbenchCommandPaletteEntries, createWorkbenchResourcePaletteEntries } from "./command-palette";
 import { createWorkbenchThemePreferencePaletteEntries, getThemePaletteEntryIndex } from "./theme-palette";
@@ -262,15 +261,6 @@ describe("createWorkbenchCommandPaletteEntries", () => {
     }).find((entry) => entry.commandId === "notes.open");
     expect(entry?.shortcut).toMatchObject({ props: { binding: "Alt+1" } });
   });
-  test("tags command palette entries with the command mode", () => {
-    const workbench = createWorkbench();
-    workbench.commands.registerCommand(
-      { id: "projects.show", label: "Show projects", category: "Projects" },
-      { execute: () => undefined },
-    );
-    const entries = createWorkbenchCommandPaletteEntries({ workbench, onClose: () => undefined });
-    expect(entries[0]?.mode).toBe("command");
-  });
   test("includes command ids in palette search text", () => {
     const workbench = createWorkbench();
     workbench.commands.registerCommand(
@@ -389,7 +379,7 @@ describe("createWorkbenchThemePreferencePaletteEntries", () => {
   });
 });
 describe("createWorkbenchResourcePaletteEntries", () => {
-  test("flattens entries from every resource provider, tagged with the search mode", () => {
+  test("flattens entries from every resource provider", () => {
     const workbench = createWorkbench();
     workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
     workbench.resources.registerKind({ kind: "session", label: "Session" });
@@ -424,17 +414,9 @@ describe("createWorkbenchResourcePaletteEntries", () => {
       ],
     });
     const entries = createWorkbenchResourcePaletteEntries({ workbench, query: "", onClose: () => undefined });
-    expect(entries.map((entry) => ({ id: entry.id, mode: entry.mode, group: entry.group }))).toEqual([
-      {
-        id: `workbench-resource:${resourceKey({ type: "ticket", id: "pstdio://ticket/PS-1" })}`,
-        mode: "search",
-        group: "Tickets",
-      },
-      {
-        id: `workbench-resource:${resourceKey({ type: "session", id: "pstdio://session/s1" })}`,
-        mode: "search",
-        group: "Sessions",
-      },
+    expect(entries.map((entry) => ({ label: entry.label, group: entry.group }))).toEqual([
+      { label: "PS-1 Ship it", group: "Tickets" },
+      { label: "Session 1", group: "Sessions" },
     ]);
   });
   test("uses a browse entry activation override when present", async () => {

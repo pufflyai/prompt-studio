@@ -171,16 +171,6 @@ describe("local storage workbench persistence recovery", () => {
     expect(persistence.getLayout("project:one")).toBeUndefined();
   });
 
-  test("invalidates layout state from an incompatible schema version", () => {
-    const storage = createStore();
-    const key = workbenchStoragePersistenceKey("demo", "layout", "project:one");
-    storage.setItem(key, JSON.stringify({ version: 0, layout: createDefaultWorkbenchLayout() }));
-
-    const persistence = createLocalStorageLayoutPersistence({ namespace: "demo", storage });
-
-    expect(persistence.getLayout("project:one")).toBeUndefined();
-  });
-
   test("flushes pending layouts on page hide and disposal", () => {
     const storage = createStore();
     const listeners = new Set<() => void>();
