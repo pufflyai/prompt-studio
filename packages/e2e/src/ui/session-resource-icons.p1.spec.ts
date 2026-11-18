@@ -22,14 +22,25 @@ test("a session's state updates its resource icon across navigation, breadcrumb,
   await row.click();
   const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
   await expect(breadcrumb).toContainText(title);
+  for (const status of ["in_progress", "failed"]) {
+    expect((await request.patch(`/v1/sessions/${session.id}/status`, { data: { status } })).ok()).toBe(true);
+    const label = `Session status: ${status}`;
+    await expect(breadcrumb.locator(`[aria-label="${label}"]`)).toBeVisible();
+    await expect(row.locator(`[aria-label="${label}"]`)).toBeVisible();
+  }
+  // Switching to an already displayed resource focuses its existing viewer. Leave Main
+  // before selecting this session in Side so the test exercises a real Side placement.
+  await page.getByRole("option", { name: "Home", exact: true }).click();
+  await expect(breadcrumb).toHaveText("Home");
   await openSessionSidePanel(page, title);
   await page.keyboard.press("Escape");
+  await page.getByRole("option", { name: "Sessions", exact: true }).click();
+  await expect(row).toBeVisible();
   const tab = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: title, exact: true });
 
   for (const status of ["in_progress", "failed"]) {
     expect((await request.patch(`/v1/sessions/${session.id}/status`, { data: { status } })).ok()).toBe(true);
     const label = `Session status: ${status}`;
-    await expect(breadcrumb.locator(`[aria-label="${label}"]`)).toBeVisible();
     await expect(row.locator(`[aria-label="${label}"]`)).toBeVisible();
     await expect(tab.locator(`[aria-label="${label}"]`)).toBeVisible();
   }
