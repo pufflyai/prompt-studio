@@ -296,3 +296,29 @@ export const IncompatibleLocalSource: Story = {
     },
   },
 };
+
+export const RestartAfterQuotaReset: Story = {
+  args: {
+    extension: {
+      ...extension,
+      displayName: "Claude Code",
+      extensionId: "pstdio.harness-claude-code",
+      name: "harness-claude-code",
+    },
+    automations: [],
+    settings: [
+      {
+        key: "restartAfterQuotaReset",
+        extensionId: "pstdio.harness-claude-code",
+        type: "boolean",
+        scope: "device",
+        default: false,
+        title: "Restart after quota reset",
+        description:
+          "Resume conversations stopped by quota limits 15 seconds after the limits reset. Manual stops stay stopped.",
+        value: false,
+        source: "default",
+      },
+    ],
+  },
+};

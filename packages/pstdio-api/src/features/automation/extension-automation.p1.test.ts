@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, jest, test } from "bun:test";
 import { createAutomationDBService, createDb, createProjectsDBService } from "pstdio-db";
 import { normalizeExtensionSources } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../extensions/deps";
@@ -14,6 +14,7 @@ let observedAbort: boolean;
 let eventBus: EventBus;
 let workerAvailable: boolean;
 let workerAutomation: boolean;
+let executionCount: number;
 const extensionId = "example.worker";
 const commandId = "example.worker.command.run";
 
@@ -26,6 +27,7 @@ beforeEach(async () => {
     signalStarted = resolve;
   });
   observedAbort = false;
+  executionCount = 0;
   workerAvailable = true;
   workerAutomation = true;
   eventBus = new EventBus();
@@ -50,6 +52,7 @@ beforeEach(async () => {
         activityEventsService: { create: async () => {} },
       }) as unknown as ExtensionsRouteDeps,
     executeCommand: async (_deps, input) => {
+      executionCount++;
       expect(input.body.source).toBe("automation");
       signalStarted();
       await new Promise<void>((resolve) =>
@@ -184,3 +187,47 @@ for (const change of ["removed", "disabled"]) {
     await expect(enqueue("new")).rejects.toMatchObject({ code: "automation_scope_denied" });
   });
 }
+
+test("a cancelled delayed extension run never claims or executes its command", async () => {
+  jest.useFakeTimers();
+  try {
+    const notBefore = new Date(Date.now() + 100).toISOString();
+    const run = await service.enqueueForExtension({
+      projectId,
+      extensionId,
+      commandId,
+      input: {},
+      key: "delayed",
+      notBefore,
+    });
+    expect((await db.getRun(projectId, run.id))?.input_json).toMatchObject({ notBefore });
+    expect((await db.getRun(projectId, run.id))?.status).toBe("queued");
+    expect(executionCount).toBe(0);
+    expect((await service.cancelForExtension({ projectId, extensionId }, run.id)).status).toBe("cancelled");
+    jest.advanceTimersByTime(120);
+    expect((await db.getRun(projectId, run.id))?.status).toBe("cancelled");
+    expect(executionCount).toBe(0);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+test("the delayed deadline participates in admission validation and idempotency", async () => {
+  await expect(
+    service.enqueueForExtension({
+      projectId,
+      extensionId,
+      commandId,
+      input: {},
+      key: "invalid-date",
+      notBefore: "tomorrow",
+    }),
+  ).rejects.toMatchObject({ code: "invalid_automation_input" });
+  const notBefore = new Date(Date.now() + 60_000).toISOString();
+  const input = { projectId, extensionId, commandId, input: {}, key: "same-time", notBefore };
+  const run = await service.enqueueForExtension(input);
+  expect((await service.enqueueForExtension(input)).id).toBe(run.id);
+  await expect(
+    service.enqueueForExtension({ ...input, notBefore: new Date(Date.parse(notBefore) + 1).toISOString() }),
+  ).rejects.toMatchObject({ code: "idempotency_conflict" });
+  expect(executionCount).toBe(0);
+});

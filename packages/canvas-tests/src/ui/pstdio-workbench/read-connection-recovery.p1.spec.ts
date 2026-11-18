@@ -59,3 +59,20 @@ test("catalog pages retry quietly only while displayed", async ({ page }) => {
   await page.clock.runFor(1_000);
   await expect(preview.getByText("Loaded extensions", { exact: true })).toBeVisible();
 });
+
+// Critical: dismissing the details of an initial read failure leaves the only recovery action available.
+test("an empty view can retry after dismissing its error details", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/pstdio-workbench/src/react/renderers/renderer-read-notice.canvas.tsx#InitialFailure",
+  );
+  const retry = preview.getByRole("button", { name: "Retry", exact: true });
+  const alert = preview.getByRole("alert");
+  await expect(alert).toBeVisible();
+  await expect(retry).toBeVisible();
+  await alert.getByRole("button", { name: "Dismiss", exact: true }).click();
+  await expect(alert).toHaveCount(0);
+  await expect(retry).toBeVisible();
+  await retry.click();
+  await expect(alert).toBeVisible();
+});

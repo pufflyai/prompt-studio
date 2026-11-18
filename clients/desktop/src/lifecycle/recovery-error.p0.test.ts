@@ -10,7 +10,7 @@ test("a crashed runtime shows a concise recovery explanation while its output st
   expect(recoveryError(new Error(output))).toMatchObject({
     code: "unexpected_exit",
     message: "The Prompt Studio runtime stopped unexpectedly.",
-    actions: ["retry", "open_logs", "copy_diagnostics", "quit"],
+    actions: ["retry", "open_logs", "quit"],
   });
 });
 
