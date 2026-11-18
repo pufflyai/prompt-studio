@@ -1,5 +1,5 @@
 import type { PGlite } from "@electric-sql/pglite";
-import { analyzeRecordProjection } from "./record-projection-statistics";
+import { analyzeMissingRecordStatistics, analyzeRecordProjection } from "./record-projection-statistics";
 
 const FIRST_PASS_DELAY_MS = 60_000;
 const CHECK_INTERVAL_MS = 5 * 60_000;
@@ -67,6 +67,9 @@ export const startDeadRowCleanup = (
     running ??= cleanupRetiredRows(() => stopped)
       .then(() => {
         if (!stopped) return vacuumDeadRows(db, { all, stopped: () => stopped, onError });
+      })
+      .then(async () => {
+        if (!all && !stopped) await analyzeMissingRecordStatistics(db);
       })
       .catch((error) => onError(error))
       .finally(() => {

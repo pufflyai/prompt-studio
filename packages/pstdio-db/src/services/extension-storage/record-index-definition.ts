@@ -1,9 +1,10 @@
-import { and, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { compareQueryValues, validateIndexes } from "pstdio-sync/records";
 import type { Json, StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_record_indexes as indexes } from "../../db/schemas.pg";
+import { analyzeRecordProjection } from "../../db/record-projection-statistics";
+import { storage_current_records as current, storage_record_indexes as indexes } from "../../db/schemas.pg";
 import { traceStorageQuery } from "./query-trace";
 import { retainDateFormatIndexes } from "./record-date-format";
 import { derivedQueryChanges, rebuildDerivedQueryValues } from "./record-derived-fields";
@@ -25,10 +26,11 @@ const matchesRecordCatalog = (
 export const defineRecordIndexes = async (
   db: DbClient,
   owner: StorageOwner,
-  scope: NonNullable<ReturnType<typeof and>>,
   definitions: StorageRecordIndex[],
+  statistics: "immediate" | "maintenance",
   diagnostics?: StorageDiagnostics,
 ) => {
+  const scope = and(eq(indexes.workbench_id, owner.workbenchId), eq(indexes.extension_id, owner.extensionId))!;
   traceStorageQuery("indexes-start", definitions.map(({ name }) => name).join(","));
   validateIndexes(definitions);
   const publicDesired = orderDefinitions(structuredClone(definitions));
@@ -75,7 +77,15 @@ export const defineRecordIndexes = async (
     const saved = new Map(previous.map((row) => [row.name, row.database_name]));
     for (const index of publicDesired)
       if (saved.get(index.name) !== names.get(index.name)) await installRecordIndex(tx, owner, index);
-    // Projection maintenance collects statistics for all owners together. An ANALYZE here
-    // would scan the shared projection for every extension admitted during startup.
+    // Commands can immediately query a new index on existing data. Catalog activation
+    // admits many owners at once and leaves their shared statistics to maintenance.
+    if (statistics === "immediate" && publicDesired.some((index) => saved.get(index.name) !== names.get(index.name))) {
+      const [row] = await tx
+        .select({ id: current.record_id })
+        .from(current)
+        .where(and(eq(current.workbench_id, owner.workbenchId), eq(current.extension_id, owner.extensionId)))
+        .limit(1);
+      if (row) await analyzeRecordProjection((statement) => tx.execute(sql.raw(statement)));
+    }
   });
 };
