@@ -25,7 +25,11 @@ const bump = defineCommand({
 const view = defineView({
   id: "page",
   title: "Host page",
-  body: { kind: "webview", entry: packageAsset("./view.ts", import.meta.url), capabilities: ["commands.execute"] },
+  body: {
+    kind: "webview",
+    entry: packageAsset("./view.ts", import.meta.url),
+    capabilities: ["commands.execute", "performance.control"],
+  },
 });
 const page = definePage({
   id: "host",

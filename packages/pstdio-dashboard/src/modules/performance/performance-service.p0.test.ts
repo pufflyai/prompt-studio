@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import type { PerformanceHost } from "./performance-host";
 import { createPerformanceMonitoringController } from "./performance-monitoring-controller";
 import { createPerformanceDiagnosticsAdapter } from "./performance-service";
@@ -18,7 +19,7 @@ test("render highlighting needs local activation and ends with its monitoring ow
   };
   const controller = createPerformanceMonitoringController(host, {
     state: () => ({ supported: true, enabled, scope: "workbench" }),
-    setEnabled: (next) => {
+    setEnabled: async (next) => {
       enabled = next;
     },
   });
@@ -35,12 +36,14 @@ test("render highlighting needs local activation and ends with its monitoring ow
     expect(enabled).toBe(false);
     activation.isActive = true;
     const secondRelease = await controller.retainCapture();
-    const owner = {};
+    const owner = createHostEventPublisher();
+    const other = createHostEventPublisher();
+    await adapter.control({ operation: "set-render-overlay", enabled: true }, other);
     await adapter.control({ operation: "set-render-overlay", enabled: true }, owner);
     expect((await adapter.state()).renderOverlay?.enabled).toBe(true);
-    adapter.releaseControlOwner({});
+    other.unbind();
     expect(enabled).toBe(true);
-    adapter.releaseControlOwner(owner);
+    owner.unbind();
     expect(enabled).toBe(false);
     expect(monitoring).toBe(true);
     await adapter.control({ operation: "set-render-overlay", enabled: true }, owner);

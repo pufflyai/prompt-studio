@@ -32,6 +32,11 @@ export type PerformanceReadResult =
   | null
   | undefined;
 
+/** The calling view removes its resources when its live connection closes. */
+export interface PerformanceControlOwner {
+  onDisconnect(listener: () => void): () => void;
+}
+
 /** Host-only adapter. The bridge enforces manifest permissions before invoking it. */
 export interface PerformanceDiagnosticsAdapter {
   state(): Promise<PerformanceMonitoringState>;
@@ -41,7 +46,5 @@ export interface PerformanceDiagnosticsAdapter {
   /** Host owns the single poller; consumers add listeners only. */
   subscribe(listener: (snapshot: PerformanceSnapshot | null) => void): () => void;
   /** Requires an active local user interaction. Runtime commands cannot invoke this device control. */
-  control(request: PerformanceControlRequest, owner?: object): Promise<void>;
-  /** Host-supplied view identity; disconnect releases only controls owned by that view. */
-  releaseControlOwner?(owner: object): void;
+  control(request: PerformanceControlRequest, owner?: PerformanceControlOwner): Promise<void>;
 }

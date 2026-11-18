@@ -62,6 +62,38 @@ test("keeps performance measurements live when switching and closing project tab
   }
 });
 
+test("a local extension control highlights workbench renders and releases the canvas", async () => {
+  let app: PackagedApp | null = null;
+  try {
+    ({ app } = await launchProject("Workbench highlights", { monitoring: true, webview: true }));
+    await openHostPreview(app.page);
+    const toggle = app.page.frameLocator('iframe[title="Host page"]').getByRole("button", {
+      name: "Highlight workbench renders",
+    });
+    const canvas = app.page.locator("canvas[data-react-scan]");
+    await expect(canvas).toHaveCount(0);
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    // Opening the details commits a visible update in the workbench React tree.
+    await performanceMeter(app.page).click();
+    await expect
+      .poll(() =>
+        canvas.evaluate((element: HTMLCanvasElement) => {
+          const context = element.getContext("2d")!;
+          const pixels = context.getImageData(0, 0, element.width, element.height).data;
+          return pixels.some((value, index) => index % 4 === 3 && value > 0);
+        }),
+      )
+      .toBe(true);
+    await performanceMeter(app.page).click();
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await expect(canvas).toHaveCount(0);
+  } finally {
+    await disposePackagedApp(app);
+  }
+});
+
 test("Windows diagnostics work independently of PATH", async () => {
   test.skip(process.platform !== "win32", "Windows permission tools");
   const home = createPackagedHome();

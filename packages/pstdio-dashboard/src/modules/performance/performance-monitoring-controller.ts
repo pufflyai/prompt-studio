@@ -1,5 +1,5 @@
 import { createScopedQueryClient } from "@pstdio/sdk/extensions";
-import type { PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
+import type { PerformanceControlOwner, PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
 import { pausedExtensions } from "@/shared/extensions/paused-extensions";
 import { createFrameRateCounter } from "./frame-rate";
 import type { PerformanceHost } from "./performance-host";
@@ -11,10 +11,11 @@ import { observeSlowFrames } from "./slow-frame-observer";
 export const createPerformanceMonitoringController = (host: PerformanceHost, renderOverlay?: ReactRenderOverlay) => {
   const frameRate = createFrameRateCounter();
   let enabled: boolean | undefined;
-  let overlayOwner: object | undefined;
+  let releaseOverlayOwner: (() => void) | undefined;
   const stopOverlay = () => {
-    overlayOwner = undefined;
-    renderOverlay?.setEnabled(false);
+    releaseOverlayOwner?.();
+    releaseOverlayOwner = undefined;
+    void renderOverlay?.setEnabled(false);
   };
   let stopObserver: (() => void) | undefined;
   let stopStateReports: (() => void) | undefined;
@@ -104,14 +105,21 @@ export const createPerformanceMonitoringController = (host: PerformanceHost, ren
   return {
     host,
     getRenderOverlay: () => renderOverlay?.state(),
-    setRenderOverlayEnabled: (next: boolean, owner?: object) => {
+    setRenderOverlayEnabled: async (next: boolean, owner?: PerformanceControlOwner) => {
       if (!renderOverlay) throw new Error("React Scan is unavailable in this build");
       if (next && !enabled) throw new Error("Enable performance monitoring before highlighting renders");
-      renderOverlay.setEnabled(next);
-      overlayOwner = next ? owner : undefined;
-    },
-    releaseControlOwner: (owner: object) => {
-      if (owner === overlayOwner) stopOverlay();
+      releaseOverlayOwner?.();
+      const release = next ? owner?.onDisconnect(stopOverlay) : undefined;
+      releaseOverlayOwner = release;
+      try {
+        await renderOverlay.setEnabled(next);
+      } catch (error) {
+        if (releaseOverlayOwner === release) {
+          release?.();
+          releaseOverlayOwner = undefined;
+        }
+        throw error;
+      }
     },
     snapshotQuery,
     // A loaded monitoring extension is the person's choice to measure, so monitoring runs exactly

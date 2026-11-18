@@ -4,7 +4,7 @@ import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
 import { parseWebviewCapabilityParams } from "./webview-capability-params";
 
-test("disconnect releases the overlay only for the view that enabled it", async () => {
+test("performance controls pass the live calling view to its host", async () => {
   let owner: object | undefined;
   const adapter = {
     state: async () => ({ enabled: true, host: "browser" as const }),
@@ -14,9 +14,6 @@ test("disconnect releases the overlay only for the view that enabled it", async 
     subscribe: () => () => {},
     control: async (_request: unknown, caller?: object) => {
       owner = caller;
-    },
-    releaseControlOwner: (caller: object) => {
-      if (owner === caller) owner = undefined;
     },
   };
   const first = createHostEventPublisher();
@@ -30,10 +27,7 @@ test("disconnect releases the overlay only for the view that enabled it", async 
   await firstControl({ operation: "set-render-overlay", enabled: true });
   expect(owner).toBe(first);
   await secondControl({ operation: "set-render-overlay", enabled: true });
-  first.unbind();
   expect(owner).toBe(second);
-  second.unbind();
-  expect(owner).toBeUndefined();
 });
 
 test("render overlay controls validate a boolean and require a manifest grant", async () => {
