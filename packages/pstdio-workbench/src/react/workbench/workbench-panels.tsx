@@ -2,7 +2,7 @@ import { Box } from "@chakra-ui/react";
 import { type ResourceContextAction, ResourceContextMenu } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
-import { WorkbenchSystemNotices } from "../notifications/system-errors";
+import { systemActivityItemId, useSystemActivityStatusItem } from "../notifications/system-errors";
 import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
 import { usePanelDragSurface, usePanelPositionActions } from "../region/panel-position-controls";
 import { WorkbenchRegion } from "../region/region";
@@ -92,6 +92,7 @@ export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
 export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps & { floating?: boolean }) => {
   const { workbench } = props;
   const chrome = useModeChrome(workbench, "status");
+  useSystemActivityStatusItem(workbench, props.visible !== false);
 
   return (
     <WorkbenchFocusRegion
@@ -112,18 +113,17 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps & { floating
       overflow="hidden"
     >
       <Box display="flex" alignItems="stretch" justifyContent="space-between" px="sm" h="full" minW="0" w="full">
-        <Box display="flex" alignItems="center" minW="0" pointerEvents="auto" bg={props.floating ? "bg" : undefined}>
-          <WorkbenchSystemNotices workbench={workbench} />
-        </Box>
-        <Box flex="1" minW="0" h="full" display={chrome ? "block" : "none"}>
-          <ModeChromeView workbench={workbench} region="status" viewId={chrome || undefined} />
-        </Box>
-        <Box display={chrome === undefined ? "flex" : "none"} alignItems="stretch" minW="0" h="full">
+        <Box display="flex" alignItems="stretch" minW="0" h="full" pointerEvents="auto">
           <WorkbenchStatusBarItems
             workbench={workbench}
             slot="leading"
-            visible={props.visible !== false && chrome === undefined}
+            visible={props.visible !== false}
+            onlyItemId={chrome === undefined ? undefined : systemActivityItemId}
+            floating={props.floating}
           />
+        </Box>
+        <Box flex="1" minW="0" h="full" display={chrome ? "block" : "none"}>
+          <ModeChromeView workbench={workbench} region="status" viewId={chrome || undefined} />
         </Box>
         <Box display={chrome === undefined ? "flex" : "none"} alignItems="stretch" minW="0" h="full" marginLeft="auto">
           <WorkbenchStatusBarItems

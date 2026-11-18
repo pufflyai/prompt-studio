@@ -1,6 +1,12 @@
 import { type SQL, sql } from "drizzle-orm";
 import { queryField } from "pstdio-sync/records";
-import type { Json, StoragePredicate, StorageRecordIndex, StorageRelatedSelection } from "pstdio-sync-contracts";
+import {
+  canonicalJson,
+  type Json,
+  type StoragePredicate,
+  type StorageRecordIndex,
+  type StorageRelatedSelection,
+} from "pstdio-sync-contracts";
 import { recordNumberTextSql } from "./record-number-text";
 import {
   encodeProjectionValue,
@@ -113,6 +119,14 @@ export const predicateSql = (
   return fieldPredicateSql(index, predicate, alias);
 };
 
+const fieldEqualitySql = (index: StorageRecordIndex, field: string, comparable: SQL, value: SQL) => {
+  // Typed booleans have only three index keys (true, false, and null), with distinct hashes.
+  // A second equality check makes Postgres underestimate common values and sort a full page source.
+  if (queryField(index, field).type === "boolean" && index.equality?.includes(field))
+    return sql`${equalityKey(comparable)} = ${equalityKey(value)}`;
+  return recordEqualitySql(index, field, comparable, value);
+};
+
 const fieldPredicateSql = (
   index: StorageRecordIndex,
   predicate: Extract<StoragePredicate, { field: string }>,
@@ -132,20 +146,22 @@ const fieldPredicateSql = (
       return empty;
     case "notEmpty":
       return sql`NOT ${empty}`;
-    case "eq": {
-      const value = json(predicate.value);
-      // Typed booleans have only three index keys (true, false, and null), with distinct hashes.
-      // A second equality check makes Postgres underestimate common values and sort a full page source.
-      if (queryField(index, predicate.field).type === "boolean" && index.equality?.includes(predicate.field))
-        return sql`${equalityKey(comparable)} = ${equalityKey(value)}`;
-      return recordEqualitySql(index, predicate.field, comparable, value);
-    }
+    case "eq":
+      return fieldEqualitySql(index, predicate.field, comparable, json(predicate.value));
     case "ne":
       return sql`${comparable} <> ${json(predicate.value)}`;
     case "equalsIgnoreCase":
       return sql`${stringBytesSql(field, true)} = decode(${projectionSubstringBytes(String(predicate.value).toLowerCase())}, 'hex')`;
     case "in": {
       if (!predicate.value.length) return sql`false`;
+      // Keep literal arrays for selective estimates without binding a large array member by member.
+      if (predicate.value.length > 1_000) {
+        const input = sql`jsonb_array_elements(${json(predicate.value)}) AS wanted(item)`;
+        const values = sql`${comparable} = ANY(ARRAY(SELECT item FROM ${input}))`;
+        if (!index.equality?.includes(predicate.field)) return values;
+        const keys = sql`ARRAY(SELECT ${equalityKey(sql`item`)} FROM ${input})`;
+        return sql`(${equalityKey(comparable)} = ANY(${keys}) AND ${values})`;
+      }
       // One hashed array comparison per row; an OR chain re-evaluates the field for every value.
       const values = sql`ARRAY[${sql.join(predicate.value.map(json), sql`, `)}]::jsonb[]`;
       if (!index.equality?.includes(predicate.field)) return sql`${comparable} = ANY(${values})`;
@@ -190,39 +206,53 @@ export const pageOrderSql = (index: StorageRecordIndex) =>
     sql`, `,
   );
 
-// An order-first LIMIT plan can walk the entire collection to prove two keys are
-// absent. Seek to each hash in the leading equality index and inspect its next
-// entry. A hit still goes through the ordinary exact predicate, including collisions.
-export const pageMembershipGuard = (index: StorageRecordIndex, scope: SQL, predicate?: StoragePredicate) => {
-  if (
-    !predicate ||
-    !("op" in predicate) ||
-    predicate.op !== "in" ||
-    index.equality?.[0] !== predicate.field ||
-    predicate.value.length < 2 ||
-    predicate.value.length > 4
-  )
-    return sql`true`;
-  const key = equalityKey(sql`coalesce(${recordFieldSql(index, predicate.field)},'null'::jsonb)`);
-  const probes = predicate.value.map((value) => sql`(${equalityKey(json(value))})`);
-  return sql`EXISTS (SELECT 1 FROM (VALUES ${sql.join(probes, sql`, `)}) AS wanted(probe_key)
-    CROSS JOIN LATERAL (SELECT ${key} AS matched_key FROM storage_current_records
-      WHERE ${scope} AND ${key} >= wanted.probe_key ORDER BY ${key} LIMIT 1) AS found
-    WHERE found.matched_key = wanted.probe_key)`;
+const leadingInList = (index: StorageRecordIndex, predicate?: StoragePredicate) => {
+  const pending = predicate ? [predicate] : [];
+  while (pending.length) {
+    const child = pending.pop()!;
+    if ("all" in child) pending.push(...child.all);
+    else if ("field" in child && child.field === index.equality?.[0] && child.op === "in" && child.value.length > 1)
+      return child;
+  }
 };
 
-export const recordPageSql = (index: StorageRecordIndex, fields: string[], where: SQL, limit: number, offset = 0) => {
+export const recordPageSql = (
+  index: StorageRecordIndex,
+  fields: string[],
+  where: SQL,
+  limit: number,
+  offset = 0,
+  predicate?: StoragePredicate,
+) => {
   const selected = fields.flatMap((name) => [
     sqlLiteral(projectionKey(name)),
     sql`coalesce(${recordFieldSql(index, name)}, 'null'::jsonb)`,
   ]);
   const sort = (index.orderBy ?? []).map((sort) => sql`coalesce(${recordFieldSql(index, sort.field)}, 'null'::jsonb)`);
+  // Each equality value supplies an ordered prefix. Merge only those prefixes,
+  // rather than scanning unrelated ordered rows or sorting every matching record.
+  const leading = leadingInList(index, predicate);
+  const values = leading ? [...new Map(leading.value.map((value) => [canonicalJson(value), value])).values()] : [];
+  // Large lists and deep offsets use the ordinary indexed query to keep the intermediate merge bounded.
+  const selection = values.length * (limit + offset) <= 100_000 ? leading : undefined;
+  const candidates = selection
+    ? sql`WITH candidates AS MATERIALIZED (
+        SELECT page.* FROM (
+          SELECT value FROM jsonb_array_elements(${json(values)}) AS input(value)
+        ) AS selected_values CROSS JOIN LATERAL (
+          SELECT record_id, revision, value, query_values FROM storage_current_records
+          WHERE ${where} AND ${recordEqualitySql(index, selection.field, sql`coalesce(${recordFieldSql(index, selection.field)}, 'null'::jsonb)`, sql`selected_values.value`)}
+          ORDER BY ${pageOrderSql(index)} LIMIT ${limit + offset}
+        ) AS page
+      )`
+    : sql``;
   return sql`
+    ${candidates}
     SELECT record_id, revision,
       jsonb_build_object(${sql.join(selected, sql`, `)}) AS fields,
       jsonb_build_array(${sql.join(sort, sql`, `)}) AS sort_values
-    FROM storage_current_records
-    WHERE ${where}
+    FROM ${sql.raw(selection ? "candidates" : "storage_current_records")}
+    ${selection ? sql`` : sql`WHERE ${where}`}
     ORDER BY ${pageOrderSql(index)} LIMIT ${limit} OFFSET ${offset}`;
 };
 

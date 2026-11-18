@@ -3,7 +3,7 @@ import type { MarketplaceExtension, ProjectExtensionInstance } from "@pstdio/sdk
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
 import { getProjectExtensionQueries } from "@/shared/extensions/project-extension-queries";
-import { getExtensionActions, resolveExtensionAction } from "./extension-actions";
+import { getExtensionActions } from "./extension-actions";
 import { useExtensionPanelActions } from "./use-extension-panel-actions";
 
 const installed = (name: string): ProjectExtensionInstance => ({
@@ -73,42 +73,44 @@ test("installs hand off to the exact instance and same-name upgrades respect hos
       origin: { kind: "git", url: "https://example.com/tools", ref: "main", path: "one" },
     };
     await controls.handleInstall(available);
-    const installation = resolveExtensionAction(owner.getSnapshot().actions, targets[0]!);
-    expect(installation.action?.status).toBe("success");
-    expect(resolveExtensionAction(owner.getSnapshot().actions, targets[1]!).action).toBeUndefined();
-    await controls.handleToggle(targets[0]!, false);
-    expect(Object.keys(owner.getSnapshot().actions)).toEqual(["one-instance"]);
-    const updated = resolveExtensionAction(owner.getSnapshot().actions, targets[0]!);
-    owner.dismiss(installation.key, installation.action);
-    expect(resolveExtensionAction(owner.getSnapshot().actions, targets[0]!).action).toBe(updated.action);
-    owner.dismiss(updated.key, updated.action);
-    expect(resolveExtensionAction(owner.getSnapshot().actions, targets[0]!).action).toBeUndefined();
+    expect(owner.getSnapshot().installedIds["marketplace:one"]).toBe(targets[0]!.id);
+    expect(owner.getSnapshot().actions).toEqual({});
+    const toggle = controls.handleToggle(targets[0]!, false);
+    expect(owner.getSnapshot().actions[targets[0]!.id]).toMatchObject({ operation: "toggle", status: "running" });
+    expect(await controls.handleUpgrade(targets[0]!)).toBe(false);
+    await toggle;
+    expect(owner.getSnapshot().actions).toEqual({});
+
+    await owner.run(targets[0]!.id, { running: "Updating", failed: "Update failed" }, async () => {
+      throw new Error("Earlier attempt");
+    });
+    await controls.handleDrop({ name: "one", files: [] });
+    expect(owner.getSnapshot().actions).toEqual({});
+    expect(owner.getSnapshot().installedIds).toEqual({ "marketplace:one": targets[0]!.id });
 
     const batch = controls.handleUpgradeAll(targets);
     await until(() => started.length === 2);
     expect(owner.getSnapshot().batch?.ids).toEqual(targets.map(({ id }) => id));
     expect(Object.values(owner.getSnapshot().actions).filter((entry) => entry.status === "running")).toHaveLength(2);
-    expect(resolveExtensionAction(owner.getSnapshot().actions, targets[2]!).action?.status).toBe("queued");
+    expect(owner.getSnapshot().actions[targets[2]!.id]?.status).toBe("queued");
     expect(await controls.handleUpgrade(targets[0]!)).toBe(false);
     expect(await controls.handleUpgrade(targets[2]!)).toBe(false);
     expect(started).toHaveLength(2);
     gates[0]!.resolve();
     await until(() => started.length === 3);
-    const completed = resolveExtensionAction(owner.getSnapshot().actions, targets[0]!);
-    owner.dismiss(completed.key, completed.action);
+    expect(owner.getSnapshot().actions[targets[0]!.id]).toBeUndefined();
     expect(owner.getSnapshot().batch?.completed).toBe(1);
     gates[1]!.resolve();
     gates[2]!.resolve();
     await batch;
-    expect(owner.getSnapshot().batch).toMatchObject({ completed: 3, failed: 0 });
-    expect(owner.getSnapshot().actions[targets[0]!.id]).toBeUndefined();
-    expect(owner.getSnapshot().actions[targets[1]!.id]?.status).toBe("success");
+    expect(owner.getSnapshot().batch).toBeUndefined();
+    expect(owner.getSnapshot().actions).toEqual({});
     // A batch excludes an already active individual operation on the same instance.
     const individual = controls.handleUpgrade(targets[0]!);
     const overlapping = controls.handleUpgradeAll(targets);
     expect(owner.getSnapshot().batch?.ids).toEqual(targets.slice(1).map(({ id }) => id));
     await Promise.all([individual, overlapping]);
-    expect(owner.getSnapshot().batch).toMatchObject({ completed: 2, failed: 0 });
+    expect(owner.getSnapshot().batch).toBeUndefined();
   } finally {
     for (const gate of gates) gate.resolve();
     globals.__PSTDIO_CONFIG__ = previous;

@@ -62,7 +62,6 @@
       "upgrade": {
         "waiting": "업그레이드 대기 중",
         "action": "업그레이드",
-        "succeeded": "확장을 업그레이드했습니다",
         "current": "확장이 이미 최신입니다",
         "failed": "확장을 업그레이드하지 못했습니다"
       },
@@ -81,7 +80,6 @@
         "title": "확장 폴더를 여기에 놓으세요",
         "hint": "호스트가 확장에 선언된 범위에 설치합니다.",
         "uploading": "{{name}} 추가 중…",
-        "succeeded": "{{name}}이(가) 추가되었습니다",
         "failed": "확장 폴더를 추가할 수 없습니다",
         "notFolder": "파일이 아닌 폴더를 놓으세요."
       },
@@ -162,15 +160,13 @@
         "queued": "대기 중",
         "upgrading": "{{name}} 업그레이드 중",
         "updating": "{{name}} 업데이트 중",
-        "updated": "확장 기능 업데이트 완료",
         "installing": "{{name}} 설치 중",
         "batch": "업그레이드 {{total}}개 중 {{count}}개 완료",
         "retry": "다시 시도",
         "dismiss": "닫기",
         "upgradingButton": "업그레이드 중",
         "batchFailed": "업그레이드 {{total}}개 중 {{count}}개 실패",
-        "installingButton": "설치 중",
-        "installedButton": "설치됨"
+        "installingButton": "설치 중"
       }
     }
   },
