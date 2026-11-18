@@ -19,7 +19,11 @@ const schema = z
     origin,
     audience: origin,
     secret: z.string().min(32),
-    projectDeletionRelayToken: z.string().min(32).regex(/^\S+$/).optional(),
+    projectDeletionRelayToken: z
+      .string()
+      .min(32)
+      .regex(/^[A-Za-z0-9._~+/-]+=*$/)
+      .optional(),
     googleClientId: z.string().min(1),
     googleClientSecret: z.string().min(1),
     sessionLifetimeSeconds: seconds,

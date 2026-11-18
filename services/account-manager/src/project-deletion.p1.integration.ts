@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
+import { parseManagerAuthConfig } from "./auth-config";
 import { connectDevice, createAuthorityFixture, deviceProfile, provisionAccount } from "./authority.fixture";
 import * as implementation from "./index";
 import { authenticationConfig } from "./manager-authentication.fixture";
@@ -30,6 +31,27 @@ const request = (
 
 const servicePath = "/internal/v1/project-deletions";
 const projectPath = (id: string) => `/v1/workbenches/${id}/deletion`;
+
+test("deletion uses credentials accepted by the HTTP Bearer scheme", () => {
+  expect(() => parseManagerAuthConfig({ ...config(), projectDeletionRelayToken: `${relayToken}🔑` })).toThrow(
+    "Invalid authentication configuration",
+  );
+  expect(parseManagerAuthConfig(config()).projectDeletionRelayToken).toBe(relayToken);
+});
+
+test("a malformed project deletion path returns a bad request", async () => {
+  const owner = fixture.owner();
+  const manager = implementation.createManagerAuthentication(config());
+  try {
+    const device = await connectDevice(owner, await provisionAccount(owner));
+    for (const malformed of ["%FF", "%00"].map(projectPath)) {
+      expect((await request(manager, malformed, device.token)).status).toBe(400);
+      expect((await request(manager, malformed, device.token, "POST")).status).toBe(400);
+    }
+  } finally {
+    await Promise.all([owner.close(), manager.close()]);
+  }
+});
 
 test("permanent deletion retires authority at acceptance and completes only after the relay purge", async () => {
   const owner = fixture.owner();
@@ -135,7 +157,7 @@ test("permanent deletion retires authority at acceptance and completes only afte
   }
 });
 
-test("restoring a deletion receipt retires membership and keys in the recovered manager", async () => {
+test("fresh restore retires membership and retains project keys until relay verification", async () => {
   const owner = fixture.owner();
   const target = createAuthorityFixture(implementation);
   const manager = implementation.createManagerAuthentication(config());
@@ -150,9 +172,13 @@ test("restoring a deletion receipt retires membership and keys in the recovered 
       const before = await owner.snapshot();
       const operation = await (await request(manager, path, device.token, "POST")).json();
       const pending = await owner.snapshot();
-      await restored.restore("backup-before-deletion", before);
       await restored.restore("backup-after-acceptance", pending);
-      expect((await restored.snapshot()).deletions).toContainEqual({ accountId, ...operation, delivery: 1 });
+      const pendingRestore = await restored.snapshot();
+      const projectKeys = pending.keys.filter((row) => row.accountId === accountId);
+      expect(projectKeys.length).toBeGreaterThan(0);
+      expect(pendingRestore.keys.filter((row) => row.accountId === accountId)).toEqual(projectKeys);
+      expect(pendingRestore.deletions).toContainEqual({ accountId, ...operation, delivery: 1 });
+      await restored.restore("backup-before-deletion", before);
       expect(await restored.workbenches(accountId)).toEqual([]);
       expect((await restored.snapshot()).workbenches).not.toContainEqual({ accountId, id: device.workbenchId });
       await expect(restored.addWorkbench({ accountId, workbenchId: device.workbenchId })).rejects.toThrow("retired");
@@ -172,5 +198,49 @@ test("restoring a deletion receipt retires membership and keys in the recovered 
     }
   } finally {
     await Promise.all([target.close(), owner.close(), manager.close()]);
+  }
+});
+
+test("restore keeps the latest deletion delivery and honors failure within the same delivery", async () => {
+  const owner = fixture.owner();
+  const target = createAuthorityFixture(implementation);
+  const manager = implementation.createManagerAuthentication(config());
+  const restoredManager = implementation.createManagerAuthentication({
+    ...config(),
+    databaseUrl: target.databaseUrl,
+  });
+  const restored = target.owner();
+  try {
+    await target.initialize();
+    const accountId = await provisionAccount(owner);
+    const device = await connectDevice(owner, accountId, "restored-delivery");
+    const path = projectPath(device.workbenchId);
+    const operation = await (await request(manager, path, device.token, "POST")).json();
+    const job = { accountId, workbenchId: device.workbenchId, operationId: operation.operationId };
+    const receipt = async () => (await restored.snapshot()).deletions?.find((row) => row.accountId === accountId);
+    const failure = { ...job, result: "needs-attention", delivery: 1 };
+    const failed = await request(manager, servicePath, relayToken, "POST", failure);
+    expect(failed.status).toBe(200);
+    const older = await owner.snapshot();
+    await restored.restore("first-delivery-failed", older);
+    expect(await receipt()).toMatchObject({ state: "needs-attention", delivery: 1 });
+
+    expect((await request(manager, path, device.token, "POST")).status).toBe(202);
+    const retrying = await owner.snapshot();
+    await restored.restore("retry-delivery", retrying);
+    await restored.restore("older-delivery-replayed", older);
+    expect(await (await request(restoredManager, servicePath, relayToken)).json()).toContainEqual({
+      ...job,
+      delivery: 2,
+    });
+    await request(restoredManager, servicePath, relayToken, "POST", failure);
+    expect(await receipt()).toMatchObject({ state: "deleting", delivery: 2 });
+
+    await request(manager, servicePath, relayToken, "POST", { ...failure, delivery: 2 });
+    await restored.restore("second-delivery-failed", await owner.snapshot());
+    await restored.restore("second-delivery-before-failure", retrying);
+    expect(await receipt()).toMatchObject({ state: "needs-attention", delivery: 2 });
+  } finally {
+    await Promise.all([restored.close(), restoredManager.close(), target.close(), owner.close(), manager.close()]);
   }
 });
