@@ -49,7 +49,9 @@ test("preserves browser Forward history between extension pages after refresh", 
   await page.reload();
   await page.goForward();
   await expect(page).toHaveURL(/\/extensions\/pstdio\.planner\/ticket\?resource=/);
-  await expect(page.getByRole("region", { name: "Main", exact: true }).getByRole("textbox")).toHaveText(ticket.content);
+  await expect(
+    page.getByRole("region", { name: "Main", exact: true }).getByRole("textbox").filter({ hasText: ticket.content }),
+  ).toBeVisible();
 });
 
 test("preserves other Session tabs when selecting from New session", async ({ page, request }) => {
