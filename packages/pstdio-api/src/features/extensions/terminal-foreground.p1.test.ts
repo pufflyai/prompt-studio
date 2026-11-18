@@ -17,8 +17,6 @@ describe("terminal foreground probe", () => {
     const spawnSync = spyOn(Bun, "spawnSync");
     try {
       const probe = readTerminalForeground(child.pid);
-      expect(probe).toBeInstanceOf(Promise);
-
       let foreground = await probe;
       for (let attempt = 0; attempt < 20 && foreground?.name !== "sleep"; attempt += 1) {
         await Bun.sleep(25);

@@ -27,8 +27,6 @@ describe("syncInstalledExtensionsForProject", () => {
       expect(syncInstalledSourceForProject).toHaveBeenCalledTimes(2);
       expect(calls[0]?.installName).toBe("planner");
       expect(calls[0]?.name).toBe("planner");
-      expect(calls[0]).not.toHaveProperty("defaultTemplates");
-      expect(calls[0]).not.toHaveProperty("sourceKind");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

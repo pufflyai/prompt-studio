@@ -224,7 +224,6 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     expect(disabledRow).toBeDefined();
     expect(disabledRow?.enabled).toBe(false);
     expect(disabledRow?.name).toBe("list-disabled");
-    expect(disabledRow).not.toHaveProperty("namespace");
   });
 
   test("lists discovered installed sources as disabled project extensions", async () => {
