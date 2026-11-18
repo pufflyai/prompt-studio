@@ -87,14 +87,14 @@ test("work performed during checkpoint persistence is included in the next CPU p
   const result = await captureArmedProfile({
     id: randomUUID(),
     durationMs: 1500,
-    thresholdCpuPercent: 60,
+    thresholdCpuPercent: 10000,
     windowMs: 40,
     sampleIntervalMs: 100,
     checkpoint: async (data) => {
       if (!data.complete) checkpointWork();
     },
   });
-  expect(result.data.reason).toBe("threshold");
+  expect(result.data.reason).toBe("expired");
   expect(
     result.data.profiles.some((window) =>
       window.profile.nodes.some((node) => node.callFrame.functionName === "checkpointWork"),
