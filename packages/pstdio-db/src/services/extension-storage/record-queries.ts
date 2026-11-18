@@ -31,7 +31,7 @@ import { prepareDateFormatIndexes, pruneDateFormatIndexes } from "./record-date-
 import { dependencyOrderedPageSql } from "./record-dependency-order";
 import { formatDatabasePrefix } from "./record-format-key";
 import { defineRecordIndexes } from "./record-index-definition";
-
+import { recordIndexName } from "./record-index-lifecycle";
 import { decodeProjectionValue } from "./record-projection-codec";
 import { pageAfterSql, recordPageSql, recordScopeSql } from "./record-query-sql";
 import { loadRelatedQueryIndexes, relatedRecordPredicateSql } from "./record-related-query";
@@ -291,8 +291,11 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
         }
         const predicate = relatedRecordPredicateSql(owner, index, query.where, related);
         const name = physicalNames.get(declared);
+        // An owner rename moves declarations before the new owner installs its count tables.
         const counted =
-          name?.startsWith("storage_query_v4_") && declared.countBy?.length
+          name?.startsWith("storage_query_v4_") &&
+          declared.countBy?.length &&
+          name === (await recordIndexName(owner, declared))
             ? await countIndexSource(tx, index, query, name, predicate)
             : undefined;
         return aggregateRecordQuery(
