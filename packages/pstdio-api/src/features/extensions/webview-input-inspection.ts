@@ -4,17 +4,19 @@ import { isPackagedRuntime } from "pstdio-paths";
 import { setupLogger } from "../../lib/logger";
 import { withExtensionWebviewBuildSlot } from "./extension-webview-builder";
 import { runCommand } from "./install-extension-dependencies";
-import { hashWebviewDependencyInputsAsync } from "./webview-dependency-inputs";
+import { inspectWebviewDependencyInputsAsync, type WebviewInspectionReadAhead } from "./webview-dependency-inputs";
+import { isWebviewReadHints } from "./webview-input-read-ahead";
 
 // Each guard needs a fresh resolver. Running inspection in a bounded child also keeps
 // independent frontend graphs from monopolizing the orchestration worker.
-export const inspectWebviewDependencyInputs = async (
+export const inspectWebviewDependencyInputsWithReads = async (
   packagePath: string,
   entryPaths: string[],
   signal?: AbortSignal,
+  readAhead?: WebviewInspectionReadAhead,
 ) => {
   signal?.throwIfAborted();
-  if (isMainThread) return hashWebviewDependencyInputsAsync(packagePath, entryPaths);
+  if (isMainThread) return inspectWebviewDependencyInputsAsync(packagePath, entryPaths, readAhead, signal);
   const queuedAt = performance.now();
   return withExtensionWebviewBuildSlot(async () => {
     signal?.throwIfAborted();
@@ -26,7 +28,18 @@ export const inspectWebviewDependencyInputs = async (
       isPackagedRuntime()
         ? ["extension-input-inspector"]
         : [fileURLToPath(new URL("./webview-input-inspector.entry.ts", import.meta.url))],
-      { cwd: packagePath, env, signal, stdin: JSON.stringify({ packagePath, entryPaths, timings: true }) },
+      {
+        cwd: packagePath,
+        env,
+        signal,
+        stdin: JSON.stringify({
+          packagePath,
+          entryPaths,
+          timings: true,
+          captureReads: readAhead?.capture,
+          readHints: readAhead?.hints,
+        }),
+      },
     );
     signal?.throwIfAborted();
     if (result.exitCode !== 0) throw new Error(result.stderr.trim() || "Extension frontend input inspection failed.");
@@ -40,10 +53,15 @@ export const inspectWebviewDependencyInputs = async (
       !("collectMs" in payload) ||
       typeof payload.collectMs !== "number" ||
       !("hashMs" in payload) ||
-      typeof payload.hashMs !== "number"
+      typeof payload.hashMs !== "number" ||
+      !("readAheadMs" in payload) ||
+      typeof payload.readAheadMs !== "number"
     ) {
       throw new Error("Invalid extension frontend input digest.");
     }
+    const reads = "reads" in payload ? payload.reads : undefined;
+    if (reads !== undefined && !isWebviewReadHints(reads))
+      throw new Error("Invalid extension frontend input read hints.");
     setupLogger.info(
       {
         event: "extension.webview.dependency_timing",
@@ -52,9 +70,19 @@ export const inspectWebviewDependencyInputs = async (
         commandMs: Math.round(performance.now() - started),
         collectMs: payload.collectMs,
         hashMs: payload.hashMs,
+        readAheadMs: payload.readAheadMs,
       },
       "Measured webview dependency inspection",
     );
-    return payload.digest;
+    return {
+      digest: payload.digest,
+      collectMs: payload.collectMs,
+      hashMs: payload.hashMs,
+      readAheadMs: payload.readAheadMs,
+      reads,
+    };
   });
 };
+
+export const inspectWebviewDependencyInputs = async (packagePath: string, entryPaths: string[], signal?: AbortSignal) =>
+  (await inspectWebviewDependencyInputsWithReads(packagePath, entryPaths, signal)).digest;
