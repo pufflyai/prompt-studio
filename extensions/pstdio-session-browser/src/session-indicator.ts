@@ -26,7 +26,6 @@ export const sessionDisplayStatus = (
     ? "pending"
     : session.status;
 };
-/** Palette/tab presentation matches the host session indicator, distinct from navigation-tree colors. */
 export const sessionIndicator = (status: string) => ({
   icon: icons[status] ?? "circle-dashed",
   color: colors[status] ?? "fg.muted",
