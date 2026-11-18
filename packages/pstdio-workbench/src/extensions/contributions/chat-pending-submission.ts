@@ -7,11 +7,12 @@ import { chatMessageIdentity, claimSubmittedChatMessages } from "./chat-submissi
 export const createChatPendingSubmission = (
   action: Extract<ChatRendererAction, { type: "submit" }>,
   messages: SessionMessage[],
-  queued?: ChatQueuedRequest[],
+  queued: ChatQueuedRequest[],
+  queue: boolean,
   sequence = 0,
 ) => ({
   sequence,
-  queue: queued !== undefined,
+  queue,
   failure: undefined as string | undefined,
   failureDismissed: false,
   recoveryAdded: false,
@@ -21,7 +22,7 @@ export const createChatPendingSubmission = (
   accepted: false,
   text: action.text,
   attachments: action.attachments,
-  known: new Set((queued ?? messages).map((item) => item.id)),
+  knownQueued: new Set(queued.map((item) => item.id)),
   message: {
     id: `pending-${crypto.randomUUID()}`,
     role: "user" as const,
@@ -50,7 +51,11 @@ export const createChatSubmissionPresentation = () => {
   const history = createChatSubmissionHistory();
   const claimed = new Map<string, string>();
   const queuePresentation = createPendingChatQueuePresentation(claimed);
-  return (messages: SessionMessage[], pending: ChatPendingSubmission[] = [], queued: ChatQueuedRequest[] = []) => {
+  const present = (
+    messages: SessionMessage[],
+    pending: ChatPendingSubmission[] = [],
+    queued: ChatQueuedRequest[] = [],
+  ) => {
     const canonical = applySessionMessagePatch(previous, { op: "replace", path: "/messages", value: messages }).map(
       (message, index) => {
         // An upstream normalizer may retain its optimistic ID when the harness confirms it.
@@ -85,7 +90,7 @@ export const createChatSubmissionPresentation = () => {
     const present = [...canonical];
     const claimedNow = new Set<string>();
     const waiting: ChatPendingSubmission[] = [...queue.pending];
-    for (const item of [...pending.filter((item) => !item.queue), ...queue.pending.filter((item) => item.failure)]) {
+    for (const item of [...queue.transcript, ...queue.pending.filter((item) => item.failure)]) {
       if (item.failure) {
         present.push({ ...item.message, delivery: "unsent" });
         continue;
@@ -136,6 +141,23 @@ export const createChatSubmissionPresentation = () => {
       pending: ordered.length ? ordered : undefined,
     };
   };
+  const captureQueuedRemoval = (action: ChatRendererAction, pending: ChatPendingSubmission[] = []) => {
+    const stopping = action.type === "stop";
+    const removing = action.type === "queue" && action.operation === "remove";
+    const canceled = new Set(
+      stopping ? pending.filter((item) => item.queue && !item.failure).map((item) => item.message.id) : [],
+    );
+    const release =
+      stopping || removing
+        ? queuePresentation.captureRemoval(removing ? action.item.id : undefined, canceled)
+        : () => false;
+    return (current: ChatPendingSubmission[] = []) => {
+      const released = release();
+      const remaining = current.filter((item) => !canceled.has(item.message.id) || item.failure);
+      return released || remaining.length !== current.length ? remaining : undefined;
+    };
+  };
+  return Object.assign(present, { captureQueuedRemoval });
 };
 
 export const visibleChatDraftAttachments = (

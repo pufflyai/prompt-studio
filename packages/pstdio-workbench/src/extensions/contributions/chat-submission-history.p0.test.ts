@@ -10,6 +10,26 @@ const prompts = (session: ReturnType<typeof createChatSession>) => {
     .map((message) => message.parts[0]);
 };
 
+test("removing a queued message releases its receipt before another send with the same text", async () => {
+  const queued = { id: "removed", prompt: action.text };
+  const session = createChatSession({
+    initial: { streaming: true },
+    query: async () => ({}),
+    action: async (command) => (command.type === "queue" ? { snapshot: { queuedFollowUps: [] } } : {}),
+  });
+  await session.run(action);
+  session.accept({ revision: 1, snapshot: { queuedFollowUps: [queued] } });
+  await session.run({ type: "queue", operation: "remove", item: queued, values: {}, attachments: [] });
+  expect(prompts(session)).toEqual([]);
+  await session.run({ type: "stop" });
+  session.accept({ revision: 2, snapshot: { streaming: false } });
+  await session.run(action);
+  const delivered = user("delivered", action.text);
+  session.accept({ revision: 3, snapshot: { messages: [delivered] } });
+  expect(session.getSnapshot().messages).toMatchObject([delivered]);
+  expect(session.getSnapshot().pending).toBeUndefined();
+});
+
 test("an accepted follow-up is recallable before queue or canonical echo when the visible run is still streaming", async () => {
   const first = user("first", "First prompt");
   const session = createChatSession({
@@ -128,4 +148,63 @@ test("unaccepted and rejected queued input does not become recalled history", as
   reject(new Error("Not accepted"));
   await expect(sending).rejects.toThrow("Not accepted");
   expect(prompts(session)).toEqual([]);
+});
+
+for (const acknowledged of [true, false]) {
+  test(`Stop releases canceled queued input before an identical resend (acknowledged=${acknowledged})`, async () => {
+    const session = createChatSession({
+      initial: { streaming: true },
+      query: async () => ({}),
+      action: async (command) =>
+        command.type === "stop" ? { snapshot: { streaming: false, queuedFollowUps: [] } } : {},
+    });
+    await session.run(action);
+    if (acknowledged)
+      session.accept({ revision: 1, snapshot: { queuedFollowUps: [{ id: "old", prompt: action.text }] } });
+    await session.run({ type: "stop" });
+    await session.run(action);
+    const delivered = user("new", action.text);
+    session.accept({ revision: 2, snapshot: { messages: [delivered] } });
+    expect(session.getSnapshot().messages).toMatchObject([delivered]);
+    expect(session.getSnapshot().pending).toBeUndefined();
+  });
+}
+
+test("a delayed Stop acknowledgement preserves follow-ups sent after it started", async () => {
+  const stopped = Promise.withResolvers<unknown>();
+  const session = createChatSession({
+    initial: { streaming: true },
+    query: async () => ({}),
+    action: async (command) => (command.type === "stop" ? stopped.promise : {}),
+  });
+  await session.run(action);
+  session.accept({ revision: 1, snapshot: { queuedFollowUps: [{ id: "old", prompt: action.text }] } });
+  const stop = session.run({ type: "stop" });
+  await session.run({ ...action, text: "Newer follow-up" });
+  session.accept({ revision: 2, snapshot: { queuedFollowUps: [{ id: "new", prompt: "Newer follow-up" }] } });
+  stopped.resolve({});
+  await stop;
+  expect(prompts(session)).toEqual([{ type: "text", text: "Newer follow-up" }]);
+});
+
+test("Stop also removes an old queued receipt arriving during its acknowledgement", async () => {
+  const action = { type: "submit" as const, text: "Repeat", attachments: [], values: {} };
+  const stopped = Promise.withResolvers<unknown>();
+  const session = createChatSession({
+    initial: { streaming: true },
+    query: async () => ({}),
+    action: async (command) => (command.type === "stop" ? stopped.promise : {}),
+  });
+  await session.run(action);
+  const stopping = session.run({ type: "stop" });
+  session.accept({ revision: 1, snapshot: { queuedFollowUps: [{ id: "old", prompt: action.text }] } });
+  stopped.resolve({ snapshot: { streaming: false, queuedFollowUps: [] } });
+  await stopping;
+  await session.run(action);
+  session.accept({
+    revision: 2,
+    snapshot: { messages: [{ id: "new", role: "user", parts: [{ type: "text", text: action.text }] }] },
+  });
+  expect(session.getSnapshot().messages).toHaveLength(1);
+  expect(session.getSnapshot().pending).toBeUndefined();
 });
