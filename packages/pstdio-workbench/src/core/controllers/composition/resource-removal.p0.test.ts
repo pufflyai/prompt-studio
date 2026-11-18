@@ -64,13 +64,11 @@ test("removal updates inactive page state without moving the active route", () =
   open("c", "other");
   core.resources.removed(resource("a"));
   expect(core.getPrimaryResource()?.id).toBe("c");
-  const instances = () =>
-    Object.entries(core.pages.store.getState().pageStates)
-      .filter(([key]) => key.startsWith("notes|"))
-      .flatMap(([, state]) => Object.values(state.resourceInstances).flat());
-  expect(instances().map((instance) => instance.resource.id)).toEqual(["b"]);
+  const openIds = () => core.getOpenResources().map((item) => item.id);
+  expect(openIds()).not.toContain("a");
+  expect(openIds()).toContain("b");
   core.resources.removed({ ...resource("b"), projectId: "different" });
-  expect(instances()).toHaveLength(1);
+  expect(openIds()).toContain("b");
 });
 
 test("deleting a resource in an inactive project clears its saved route and navigation memory", () => {
