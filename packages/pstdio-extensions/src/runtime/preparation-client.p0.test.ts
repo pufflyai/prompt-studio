@@ -171,6 +171,39 @@ test("preparation failures settle their caller and release the queue", async () 
   expect(await client.run("value", { name: "next" })).toMatchObject({ name: "next" });
 });
 
+test.each([
+  "active",
+  "retiring",
+] as const)("a cancelled %s evaluation settles after its worker exits", async (phase) => {
+  let ownerExited = false;
+  let ownerStarted = false;
+  const client = createPreparationClient(() => {
+    const worker = new Worker(new URL("./preparation-worker.fixture.ts", import.meta.url));
+    if (!ownerStarted) {
+      ownerStarted = true;
+      worker.once("exit", () => {
+        ownerExited = true;
+      });
+    }
+    return worker;
+  });
+  clients.push(client);
+  const entered = Promise.withResolvers<void>();
+  const controller = new AbortController();
+  const reason = new Error("Evaluation owner closed.");
+  client.subscribe((event) => {
+    if (event.entered === "hang") entered.resolve();
+    if (phase === "retiring" && event.kind === "worker-lost") controller.abort(reason);
+  });
+  const work = client.run("hang", {}, { priority: "background", signal: controller.signal }).catch((error) => error);
+  await entered.promise;
+  if (phase === "active") controller.abort(reason);
+  const next = client.run("value", { name: "next tool" }).catch((error) => error);
+  expect(await work).toBe(reason);
+  expect(ownerExited).toBe(true);
+  expect(await next).toMatchObject({ name: "next tool" });
+});
+
 test("cancelling uninterruptible evaluation lets the next requested tool prepare", async () => {
   const client = fixture();
   const entered = Promise.withResolvers<void>();
