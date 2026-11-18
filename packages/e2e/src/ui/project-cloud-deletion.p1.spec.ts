@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import type { CloudProjectCatalog } from "@pstdio/sdk/client";
+import type { CloudProjectCatalog, CloudProjectDeletion } from "@pstdio/sdk/client";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 
@@ -120,4 +120,86 @@ test("a removed local copy stays Cloud only until the user explicitly downloads 
   expect(downloadCalls).toBe(1);
   expect(cloudDeleteCalls).toBe(0);
   await expect(page).toHaveURL(new RegExp(`/projects/${id}`));
+});
+
+test("Cloud deletion recovers from a lost request and resumes the same operation after reload", async ({
+  page,
+  request,
+}) => {
+  const id = crypto.randomUUID();
+  const name = "Interrupted cloud deletion";
+  const { environmentId } = await (await request.get(`${uiOrigin}/v1/environment`)).json();
+  const account = { accountId: "cloud-deletion-test", managerOrigin: "https://accounts.example.test" };
+  const endpoint = `/v1/account/projects/${id}`;
+  let posts = 0;
+  let receipt: CloudProjectDeletion | undefined;
+
+  await page.route("**/v1/account", (route) =>
+    route.fulfill({
+      json: {
+        login: { ...account, deviceId: environmentId, relayOrigin: "https://relay.example.test" },
+        cloudProjects: receipt ? [] : [id],
+        cloudProjectsLoaded: true,
+        features: { relay: true },
+      },
+    }),
+  );
+  await page.route("**/v1/account/projects", (route) => {
+    const result: CloudProjectCatalog = {
+      account,
+      projects: receipt
+        ? []
+        : [
+            {
+              id,
+              name,
+              presence: "cloud-only",
+              online: true,
+              actions: { download: true, removeLocal: false, deleteCloud: true },
+            },
+          ],
+      deletions: receipt && receipt.state !== "completed" ? [{ ...receipt, name }] : [],
+    };
+    return route.fulfill({ json: result });
+  });
+  await page.route(`**${endpoint}/deletion?*`, (route) =>
+    receipt
+      ? route.fulfill({ json: receipt })
+      : route.fulfill({ status: 404, json: { error: "No deletion for this cloud project" } }),
+  );
+  await page.route(`**${endpoint}/delete-cloud`, (route) => {
+    expect(route.request().postDataJSON()).toEqual({ confirm: true, expectedAccount: account });
+    posts += 1;
+    if (posts === 1) return route.abort();
+    if (!receipt) {
+      receipt = {
+        operationId: crypto.randomUUID(),
+        projectId: id,
+        state: "needs-attention",
+        startedAt: new Date().toISOString(),
+        completedAt: null,
+      };
+      return route.abort();
+    }
+    receipt = { ...receipt, state: "completed", completedAt: new Date().toISOString() };
+    return route.fulfill({ json: receipt });
+  });
+  await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+  await page.goto(`/projects/${id}/`);
+  const choice = page.getByRole("dialog", { name, exact: true });
+  await choice.getByRole("button", { name: "Delete cloud project", exact: true }).click();
+  const confirmation = page.getByRole("dialog", { name: /Delete cloud project/ });
+  await confirmation.getByRole("button", { name: "Delete cloud project", exact: true }).click();
+  await expect(choice.getByText("Checking whether Cloud deletion started")).toBeVisible();
+  await choice.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(choice.getByText("Cloud deletion needs attention")).toBeVisible();
+  expect(posts).toBe(2);
+
+  await page.reload();
+  await expect(choice.getByText("Cloud deletion needs attention")).toBeVisible();
+  await choice.getByRole("button", { name: "Retry", exact: true }).click();
+  const picker = page.getByRole("dialog", { name: "Projects", exact: true });
+  await expect(picker).toBeVisible();
+  await expect(picker.getByRole("option", { name, exact: true })).toHaveCount(0);
+  expect(posts).toBe(3);
 });

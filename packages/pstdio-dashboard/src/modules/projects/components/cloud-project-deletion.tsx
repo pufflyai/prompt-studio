@@ -1,5 +1,5 @@
 import { Button, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
-import type { CloudProjectDeletion, ProjectCopyAccount } from "@pstdio/sdk/client";
+import { type CloudProjectDeletion, type ProjectCopyAccount, PstdioApiError } from "@pstdio/sdk/client";
 import { AlertMessage, DeleteConfirmationModal } from "@pstdio/ui";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -147,18 +147,21 @@ export const CloudProjectDeletionAction = ({
 
   if (accountMatches && (current || uncertain)) {
     const state = current?.state;
+    const canResubmit =
+      state === "needs-attention" ||
+      (!state && uncertain && canDelete && operation.error instanceof PstdioApiError && operation.error.status === 404);
     const failure =
-      error ??
       operation.error?.message ??
+      (current ? undefined : error) ??
       (state === "needs-attention" ? "Cloud cleanup has paused. Retry to resume the same operation." : undefined);
     return (
       <DeletionProgress
         state={state}
         error={state === "completed" ? undefined : failure}
-        canRetry={accountMatches && (state === "needs-attention" || operation.isError)}
+        canRetry={canResubmit || operation.isError}
         retrying={retrying}
         onRetry={
-          state === "needs-attention"
+          canResubmit
             ? retry
             : () => {
                 void operation.refetch();
