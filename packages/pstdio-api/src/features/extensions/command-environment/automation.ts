@@ -6,13 +6,14 @@ export const createAutomationApi = (
   owner: { projectId: string; extensionId: string },
 ) =>
   ({
-    enqueue: ({ command, input, key }) =>
+    enqueue: ({ command, input, key, notBefore }) =>
       getService().enqueueForExtension({
         ...owner,
         commandId:
           typeof command === "string" ? command : `${command.extensionId ?? owner.extensionId}.command.${command.id}`,
         input,
         key,
+        notBefore,
       }),
     get: (runId) => getService().getForExtension(owner, runId),
     list: (filter) => getService().listForExtension(owner, filter),

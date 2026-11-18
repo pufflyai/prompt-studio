@@ -1,21 +1,31 @@
 import { Box, Button, HStack, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
-import { Toaster } from "@pstdio/ui";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { Workbench } from "../workbench/workbench";
 import { WorkbenchStatusBar } from "../workbench/workbench-panels";
 import { WorkbenchActionErrors } from "./action-errors";
-import { WorkbenchNotificationHost } from "./notification-host";
 
-const ErrorFeedback = (props: { errorCount?: number; longMessages?: boolean; statusHidden?: boolean }) => {
-  const { errorCount = 0, longMessages = false, statusHidden = false } = props;
+const ErrorFeedback = (props: {
+  errorCount?: number;
+  longMessages?: boolean;
+  statusHidden?: boolean;
+  showLocalFailure?: boolean;
+}) => {
+  const { errorCount = 0, longMessages = false, statusHidden = false, showLocalFailure = false } = props;
   const [workbench] = useState(() => {
     const workbench = createWorkbench();
     if (statusHidden) {
       workbench.modes.registerMode({ id: "hidden-status", chrome: { status: false }, activate: () => undefined });
       workbench.modes.setActiveMode("hidden-status");
+    }
+    for (const [id, title] of [
+      ["first-tool", "First tool"],
+      ["second-tool", "Second tool"],
+    ] as const) {
+      workbench.views.registerView({ id, title, body: { kind: "react", render: () => <span>{title}</span> } });
+      workbench.statusBar.registerItem({ id, viewId: id, slot: "leading" });
     }
     workbench.commands.registerCommand(
       { id: "restart-service", label: "Restart service" },
@@ -38,10 +48,15 @@ const ErrorFeedback = (props: { errorCount?: number; longMessages?: boolean; sta
           : [{ title: "Restart service", commandId: "restart-service" }],
       });
     }
+    if (showLocalFailure)
+      workbench.notifications.captureActionError(
+        "Save",
+        "example-view",
+      )(new Error("Choose a writable folder and save again."));
     return workbench;
   });
   const controls = (
-    <Box flex="1">
+    <Box flex="1" position="relative">
       <HStack flexWrap="wrap">
         <Button
           size="sm"
@@ -49,7 +64,7 @@ const ErrorFeedback = (props: { errorCount?: number; longMessages?: boolean; sta
             workbench.notifications.captureActionError(
               "Save",
               "example-view",
-            )(new Error("You do not have permission to save this file."))
+            )(new Error("Choose a writable folder and save again."))
           }
         >
           Save file
@@ -66,6 +81,12 @@ const ErrorFeedback = (props: { errorCount?: number; longMessages?: boolean; sta
           }
         >
           Report system error
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => workbench.notifications.show({ id: "update", level: "info", title: "Update ready" })}
+        >
+          Report system information
         </Button>
         <Button size="sm" onClick={() => workbench.notifications.dismiss("extension-crash")}>
           Recover system
@@ -89,14 +110,14 @@ const ErrorFeedback = (props: { errorCount?: number; longMessages?: boolean; sta
         {controls}
         <WorkbenchStatusBar workbench={workbench} />
       </Stack>
-      <WorkbenchNotificationHost workbench={workbench} />
-      <Toaster />
     </WorkbenchThemeProvider>
   );
 };
 const meta = {
   title: "Product/Workbench/Feedback/Error feedback",
   component: ErrorFeedback,
+  description:
+    "Local failures stay near their action without moving content. System activity stays visible in the status bar and lists dismissible notices.",
   fullscreen: true,
 } satisfies CanvasMeta<typeof ErrorFeedback>;
 export default meta;
@@ -110,7 +131,7 @@ export const TwelveSystemErrors: Story = {
 };
 export const RecoveryActions: Story = {
   id: "pstdio-workbench-reference-core-api-error-feedback--recovery-actions",
-  args: { errorCount: 1 },
+  args: { errorCount: 1, showLocalFailure: true },
 };
 export const LongSystemErrors: Story = {
   id: "pstdio-workbench-reference-core-api-error-feedback--long-system-errors",

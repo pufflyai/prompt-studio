@@ -9,7 +9,7 @@ import { isPreparationHost, type PreparationOptions, runExtensionPreparation } f
 import { runtimeHostKey } from "./runtime-cache";
 
 // Bump when snapshotting, runtime bundling, or revision/webview formats change.
-export const PREPARATION_FORMAT = 2;
+export const PREPARATION_FORMAT = 3;
 export const preparationHostIdentity = () =>
   `${PREPARATION_FORMAT}:${EXTENSION_API_VERSION}:${runtimeHostKey}:${process.platform}:${process.arch}`;
 export const revisionDigest = (value: string) => createHash("sha256").update(value).digest("hex");
