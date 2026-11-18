@@ -63,3 +63,5 @@ enabled provider. Conflicting providers produce a contribution diagnostic. The
 resolve command receives `ctx.resource` and returns its current reference. The
 host preserves resource identity and refreshes open resources after the declared
 events. The owning extension computes the presentation from its current data.
+
+*Updated at: 2026-11-18*
