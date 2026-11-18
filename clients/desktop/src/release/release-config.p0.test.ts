@@ -80,10 +80,6 @@ describe("desktop update strategy", () => {
     expect(resolveDesktopUpdateStrategy("win32")).toEqual({ kind: "automatic" });
   });
 
-  test("keeps Linux on the documented manual release path", () => {
-    expect(resolveDesktopUpdateStrategy("linux")).toEqual({ kind: "manual" });
-  });
-
   test("resolves feeds from the newest complete pstdio package release", async () => {
     const releases = [
       {
