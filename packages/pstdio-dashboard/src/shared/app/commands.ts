@@ -29,6 +29,7 @@ export const dashboardCommandIds = {
 } as const;
 
 export interface SelectProjectInput {
+  cloudCopyChoice?: boolean;
   project: {
     id: string;
     name: string;

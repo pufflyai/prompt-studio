@@ -1,3 +1,4 @@
+import type { CloudProjectCatalog, CloudProjectCatalogEntry } from "@pstdio/sdk/client";
 import { type ResourceRef, standardResourceIcons } from "@pstdio/workbench";
 import { getCollection, type SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
@@ -11,6 +12,32 @@ export interface DashboardProject {
   folderPath: string | null;
   resource: ResourceRef;
 }
+
+export interface DashboardProjectChoice extends DashboardProject {
+  catalog?: CloudProjectCatalogEntry;
+  deletion?: CloudProjectCatalog["deletions"][number];
+}
+
+const catalogProject = (id: string, name: string) => toDashboardProject({ id, name }, new Map());
+
+export const mergeCloudProjectCatalog = (
+  projects: DashboardProject[],
+  cloud?: CloudProjectCatalog,
+): DashboardProjectChoice[] => {
+  const merged = new Map<string, DashboardProjectChoice>(projects.map((project) => [project.id, project]));
+  for (const entry of cloud?.projects ?? []) {
+    const local = merged.get(entry.id);
+    merged.set(entry.id, { ...(local ?? catalogProject(entry.id, entry.name)), catalog: entry });
+  }
+  for (const deletion of cloud?.deletions ?? []) {
+    const local = merged.get(deletion.projectId);
+    merged.set(deletion.projectId, {
+      ...(local ?? catalogProject(deletion.projectId, deletion.name)),
+      deletion,
+    });
+  }
+  return [...merged.values()];
+};
 
 export interface DashboardProjectRows {
   projects: SyncedRow[];
