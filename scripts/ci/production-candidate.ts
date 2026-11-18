@@ -3,7 +3,6 @@ import {
   productionBenchmarkPlatforms,
   productionDesktopPlatforms,
   productionPerformanceWorkloads,
-  projectUpgradePlatforms,
 } from "./production-platforms";
 
 export interface ProductionCandidate {
@@ -76,6 +75,9 @@ export const certifyProduction = (
   }
   return errors;
 };
+
+export const projectUpgradePlatforms = () =>
+  productionDesktopPlatforms("stable").filter(({ target }) => target === "linux-x64" || target === "darwin-arm64");
 
 export const requiredProductionChecks = (channel: string) => {
   const targets = productionDesktopPlatforms(channel).map((row) => row.target);

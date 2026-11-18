@@ -14,25 +14,28 @@ export const createStackApi = (connection: Pick<StackConnection, "apiPort" | "ap
   // An import of 1,000 tickets can wait behind other projects' imports, so commands get far more time
   // than Bun's default; a runtime that stops answering still ends the call.
   const within = (minutes: number) => ({ signal: AbortSignal.timeout(minutes * 60_000) });
-  const raw = async (path: string, init?: RequestInit) => {
+  const raw = async (path: string, init: RequestInit = {}) => {
+    const requestHeaders = new Headers(init.headers);
+    requestHeaders.set("authorization", headers.authorization);
     const response = await fetch(base + path, {
       ...within(2),
       ...init,
-      headers: { authorization: headers.authorization, ...init?.headers },
+      headers: requestHeaders,
     });
-    if (!response.ok) throw new Error(`${init?.method ?? "GET"} ${path}: HTTP ${response.status}`);
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`${init.method ?? "GET"} ${path}: HTTP ${response.status} ${text.slice(0, 300)}`);
+    }
     return response;
   };
 
   const request = async <T>(method: string, path: string, body?: unknown) => {
-    const response = await fetch(`${base}${path}`, {
-      ...within(2),
+    const response = await raw(path, {
       method,
-      headers,
+      headers: { "content-type": headers["content-type"] },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
     const text = await response.text();
-    if (!response.ok) throw new Error(`${method} ${path}: HTTP ${response.status} ${text.slice(0, 300)}`);
     return (text ? JSON.parse(text) : undefined) as T;
   };
 

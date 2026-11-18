@@ -7,8 +7,9 @@
     "gh",
     "wait",
     "version",
-    // Candidate workflows sparsely check out these installer files at runtime; see ADR 0028.
-    "__test-tmp__/native-installer/scripts/ci/install-native-dependencies.ts"
+    // Candidate workflows sparsely check out the installer (ADR 0028) and the active certification policy.
+    "__test-tmp__/native-installer/scripts/ci/install-native-dependencies.ts",
+    "__test-tmp__/certification-policy/scripts/ci/production-candidate.ts"
   ],
   "ignoreIssues": {
     "packages/pstdio/src/adapters/cli/commands/{close,inbox,login,logout,logs,performance,update-channel}.ts": [

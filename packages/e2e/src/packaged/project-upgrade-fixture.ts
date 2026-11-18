@@ -60,7 +60,10 @@ export const upgradeCoreProjectTools = async (api: StackApi, project: string) =>
   const { extensions } = await api.get<{ extensions: ProjectExtension[] }>(path);
   const changes: { extension: string; version: string | null; next: string | null }[] = [];
   for (const tool of extensions) {
-    if (!/^pstdio\.((pstdio-)?(planner|session-browser)|harness-codex)$/.test(tool.extensionId) || !tool.enabled)
+    if (
+      !/^pstdio\.((pstdio-)?(planner|session-browser)|harness-codex|git-workspaces)$/.test(tool.extensionId) ||
+      !tool.enabled
+    )
       continue;
     if (tool.lastError?.code !== "extension_manifest_unsupported_api_version") continue;
     assert(tool.canUpgrade, `${tool.extensionId} is incompatible and has no supported upgrade`);
@@ -145,6 +148,7 @@ interface Seed {
   linkedSession: string;
   linkedWorkspace: string;
   sessionIds: string[];
+  worktreeIds: string[];
   viewId: string;
 }
 
@@ -170,14 +174,19 @@ const plannerViewsPath = async (api: StackApi, project: string) => {
 const readyWorktrees = async (api: StackApi, project: string, ids: string[]) => {
   const deadline = Date.now() + PACKAGED_TEST_TIMEOUT;
   for (;;) {
-    const rows = (await workspaces(api, project)).filter(({ id }) => ids.includes(id));
-    assert(rows.length === ids.length, "Workspace creation did not retain every worktree");
+    const rows = await workspaces(api, project);
+    const saved = rows.filter(({ id }) => ids.includes(id));
+    assert.equal(saved.length, ids.length, "The project did not retain every Git worktree");
+    // Runtime readiness can precede reconciliation of the stored workspace projections.
+    const providers = await api.get<{ id: string }[]>(`/projects/${project}/workspace-providers`);
+    const providerAvailable = providers.some(({ id }) => id === "pstdio.worktree");
+    if (providerAvailable && saved.every(({ provider_state }) => provider_state === "ready")) return rows;
     assert(
-      rows.every(({ provider_state }) => provider_state === "ready" || provider_state === "provisioning"),
-      `Worktree provisioning failed: ${JSON.stringify(rows)}`,
+      Date.now() < deadline,
+      `Existing Git worktrees must stay ready (provider available: ${providerAvailable}): ${saved
+        .map(({ shorthand, provider_state }) => `${shorthand}=${provider_state}`)
+        .join(", ")}`,
     );
-    if (rows.every(({ provider_state }) => provider_state === "ready")) return rows;
-    assert(Date.now() < deadline, "Seed worktrees are still provisioning");
     await Bun.sleep(250);
   }
 };
@@ -248,7 +257,7 @@ export const seedUpgradeProject = async (api: StackApi, input: ProjectUpgradeInp
     await Bun.write(join(folder, "handoff.txt"), "Historical handoff · 修正\n".repeat(6000));
   const project = await api.post<{ id: string; name: string }>("/projects", folderProjectInput({ name }, folder));
   const prefix = `/projects/${project.id}`;
-  console.log("[upgrade fixture] Installing Planner and the conversation harness");
+  console.log("[upgrade fixture] Preparing Planner, Git Workspaces, and the conversation harness");
   const { marketplace, extensions } = await api.get<{
     marketplace: { installName: string }[];
     extensions: ProjectExtension[];
@@ -257,9 +266,12 @@ export const seedUpgradeProject = async (api: StackApi, input: ProjectUpgradeInp
   assert(plannerEntry, "The published baseline must offer Planner");
   await api.post(`${prefix}/extensions/install`, { source: { kind: "catalog", name: plannerEntry.installName } });
   // The generated history belongs to the Codex harness. The reader needs its declaration to open it.
-  if (!extensions.some((extension) => extension.extensionId === "pstdio.harness-codex" && extension.enabled)) {
+  const enabled = new Set(extensions.filter(({ enabled }) => enabled).map(({ extensionId }) => extensionId));
+  if (!enabled.has("pstdio.harness-codex"))
     await api.post(`${prefix}/extensions/install`, { source: { kind: "catalog", name: "harness-codex" } });
-  }
+  // Older releases supply the Git provider directly.
+  if (!enabled.has("pstdio.git-workspaces") && marketplace.some(({ installName }) => installName === "git-workspaces"))
+    await api.post(`${prefix}/extensions/install`, { source: { kind: "catalog", name: "git-workspaces" } });
   const commands = await planner(api, project.id);
   console.log("[upgrade fixture] Creating worktrees and conversations");
   const worktreeIds: string[] = [];
@@ -306,6 +318,7 @@ export const seedUpgradeProject = async (api: StackApi, input: ProjectUpgradeInp
     linkedSession,
     linkedWorkspace,
     sessionIds,
+    worktreeIds,
     viewId: view.id,
   } satisfies Seed;
 };
@@ -365,7 +378,7 @@ export const readUpgradeProject = async (api: StackApi, seed: Seed) => {
   });
   const attachmentBytes = Buffer.from(dataUrl.split(",")[1]!, "base64");
   assert(attachmentBytes.length > 0, "The attached file is empty");
-  const workspaceRows = sortById(await workspaces(api, seed.id)).map(
+  const workspaceRows = sortById(await readyWorktrees(api, seed.id, seed.worktreeIds)).map(
     ({ id, shorthand, root_path, branch, is_default, provider_state }) => ({
       id,
       shorthand,
@@ -374,11 +387,6 @@ export const readUpgradeProject = async (api: StackApi, seed: Seed) => {
       is_default,
       provider_state,
     }),
-  );
-  assert.equal(
-    workspaceRows.filter(({ is_default, provider_state }) => !is_default && provider_state === "ready").length,
-    sizes.worktrees,
-    "Existing Git worktrees must stay ready",
   );
   const worktreeRoot = workspaceRows.find(({ id }) => id === seed.linkedWorkspace)?.root_path;
   assert(worktreeRoot, "The linked Git worktree must keep its file root");

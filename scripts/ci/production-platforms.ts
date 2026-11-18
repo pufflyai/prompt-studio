@@ -20,9 +20,6 @@ export const productionDesktopPlatforms = (channel: string) =>
 export const publishedDesktopTargets = (channel: string) =>
   productionDesktopPlatforms(channel).map((row) => row.target);
 
-export const projectUpgradePlatforms = () =>
-  productionDesktopPlatforms("stable").filter(({ target }) => target === "linux-x64" || target === "darwin-arm64");
-
 export const productionDesktopCheckPlatforms = (channel: string) =>
   [
     ...productionDesktopPlatforms(channel),
