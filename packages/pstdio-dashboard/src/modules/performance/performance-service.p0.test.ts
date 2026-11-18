@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createExtensionWebviewHostCapabilities } from "@pstdio/workbench/extensions";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import type { PerformanceHost } from "./performance-host";
 import { createPerformanceMonitoringController } from "./performance-monitoring-controller";
@@ -36,17 +37,29 @@ test("render highlighting needs local activation and ends with its monitoring ow
     expect(enabled).toBe(false);
     activation.isActive = true;
     const secondRelease = await controller.retainCapture();
-    const owner = createHostEventPublisher();
+    const publisher = createHostEventPublisher();
+    let disconnectCalls = 0;
+    const owner = {
+      ...publisher,
+      onDisconnect: (listener: () => void) =>
+        publisher.onDisconnect(() => {
+          disconnectCalls++;
+          listener();
+        }),
+    };
+    const buildCapabilities = () => createExtensionWebviewHostCapabilities({ performance: adapter, hostEvents: owner });
     const other = createHostEventPublisher();
     await adapter.control({ operation: "set-render-overlay", enabled: true }, other);
-    await adapter.control({ operation: "set-render-overlay", enabled: true }, owner);
+    await buildCapabilities()["performance.control"]({ operation: "set-render-overlay", enabled: true });
+    const refreshed = buildCapabilities();
     expect((await adapter.state()).renderOverlay?.enabled).toBe(true);
     other.unbind();
     expect(enabled).toBe(true);
     owner.unbind();
+    expect(disconnectCalls).toBe(1);
     expect(enabled).toBe(false);
     expect(monitoring).toBe(true);
-    await adapter.control({ operation: "set-render-overlay", enabled: true }, owner);
+    await refreshed["performance.control"]({ operation: "set-render-overlay", enabled: true });
     await release();
     expect(enabled).toBe(true);
     await secondRelease();
