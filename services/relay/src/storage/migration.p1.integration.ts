@@ -3,6 +3,9 @@ import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { Client } from "pg";
+import { fingerprint } from "pstdio-sync-contracts";
+import { createAssetObjects } from "../assets/objects";
+import { multipartSize } from "../assets/streams";
 import { blobAsset, blobOwner } from "./blobs";
 import { migrateRelayStorage } from "./database";
 import { documentObjectPrefix } from "./payloads";
@@ -15,6 +18,7 @@ test("relay migration preserves blind documents, blobs and resumable uploads", a
   const directory = await mkdtemp(join(tmpdir(), "relay-upgrade-"));
   const fixture = createSyncFixture();
   const client = new Client({ connectionString: databaseUrl });
+  const objects = createAssetObjects(fixture);
   try {
     const journal = JSON.parse(await readFile(join(migrations, "meta/_journal.json"), "utf8"));
     const removal = journal.entries.findIndex((entry: { tag: string }) => entry.tag === "0004_jazzy_nomad");
@@ -27,7 +31,7 @@ test("relay migration preserves blind documents, blobs and resumable uploads", a
     await migrateRelayStorage(databaseUrl, directory);
     // Fixture initialization runs the same prior migrations and creates this test's object bucket.
     await fixture.initialize(directory);
-    const { sync, assets } = fixture.open();
+    const { sync } = fixture.open();
     const address = { projectKey: randomId("project"), spaceOwner: null, documentId: randomId("doc") };
     const caller = { accountId: randomId("account"), deviceId: randomId("device") };
     const bytes = new Uint8Array([9, 4, 2]);
@@ -50,10 +54,30 @@ test("relay migration preserves blind documents, blobs and resumable uploads", a
       [blob, "completed"],
       [pending, "open"],
     ] as const) {
-      const owner = blobOwner(upload);
-      await assets.begin(owner, upload.blobId, blobAsset(descriptor));
-      await assets.writePart(owner, upload.blobId, 1, { ...descriptor, body: body(bytes) });
-      if (status === "completed") await assets.finish(owner, upload.blobId);
+      // Seed the prior schema and its original object addresses without starting the new asset owner.
+      const ownerId = await fingerprint(blobOwner(upload));
+      const objectKey = `assets/${ownerId}/${await fingerprint(upload.blobId)}`;
+      const asset = blobAsset(descriptor);
+      const multipartId = await objects.begin(objectKey, asset);
+      const signal = new AbortController().signal;
+      const etag = await objects.write(objectKey, multipartId, 1, { ...descriptor, body: body(bytes) }, signal);
+      await client.query(
+        `INSERT INTO relay_asset_uploads ("ownerId", id, asset, "objectKey", "partSize", "multipartId", status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [ownerId, upload.blobId, asset, objectKey, multipartSize(bytes.length), multipartId, status],
+      );
+      await client.query(
+        `INSERT INTO relay_asset_parts ("ownerId", "uploadId", number, sha256, "byteLength", etag)
+        VALUES ($1, $2, 1, $3, $4, $5)`,
+        [ownerId, upload.blobId, descriptor.sha256, descriptor.byteLength, etag],
+      );
+      if (status === "completed") {
+        await objects.finish(objectKey, multipartId, [{ number: 1, etag, sha256: descriptor.sha256 }], signal);
+        await client.query(
+          `INSERT INTO relay_verified_assets ("ownerId", reference, asset, "objectKey", etag) VALUES ($1, $2, $3, $4, $5)`,
+          [ownerId, await fingerprint(asset), asset, objectKey, await objects.verify(objectKey, asset, signal)],
+        );
+      }
       await client.query(
         `INSERT INTO relay_sync_blobs ("projectKey", "blobId", sha256, "byteLength", status, "createdAt", "completedAt")
         VALUES ($1, $2, $3, $4, $5, now(), CASE WHEN $5 = 'completed' THEN now() END)`,
@@ -111,6 +135,7 @@ test("relay migration preserves blind documents, blobs and resumable uploads", a
     const tables = await client.query("SELECT tablename FROM pg_tables WHERE schemaname = 'public'");
     expect(tables.rows.map((row) => row.tablename)).not.toContain("relay_scopes");
   } finally {
+    objects.close();
     await client.end();
     await fixture.close();
     await rm(directory, { recursive: true, force: true });

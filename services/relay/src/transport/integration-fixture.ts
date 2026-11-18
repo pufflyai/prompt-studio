@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   CreateBucketCommand,
+  CreateMultipartUploadCommand,
   ListMultipartUploadsCommand,
   ListObjectsV2Command,
   PutObjectCommand,
@@ -45,11 +46,42 @@ export const createTransportFixture = () => {
     credentials: { accessKeyId: "conformance-access", secretAccessKey: "conformance-secret-only" },
   };
   const objects = new S3Client({ ...s3, maxAttempts: 1 });
+  const initiateMultipart = (key: string) =>
+    objects.send(new CreateMultipartUploadCommand({ Bucket: bucket, Key: key }));
   return {
     relayDatabaseUrl: relayDatabase.url,
     managerDatabaseUrl: managerDatabase.url,
     putLegacyObject: (key: string, bytes: Uint8Array) =>
       objects.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: bytes })),
+    initiateMultipart,
+    deferMultipartCreation() {
+      const captured = Promise.withResolvers<string>();
+      const proxy = Bun.serve({
+        hostname: "127.0.0.1",
+        port: 0,
+        async fetch(request) {
+          const url = new URL(request.url);
+          if (request.method === "POST" && url.searchParams.has("uploads")) {
+            captured.resolve(decodeURIComponent(url.pathname.slice(bucket.length + 2)));
+            return new Response("The initiating process lost the request", { status: 502 });
+          }
+          return fetch(`${endpoint}${url.pathname}${url.search}`, {
+            method: request.method,
+            headers: request.headers,
+            body: request.body,
+          });
+        },
+      });
+      return {
+        endpoint: proxy.url.href,
+        async finish() {
+          const key = await captured.promise;
+          await initiateMultipart(key);
+          return key;
+        },
+        close: () => proxy.stop(true),
+      };
+    },
     async objectKeys() {
       const objectsPage = await objects.send(new ListObjectsV2Command({ Bucket: bucket }));
       return (objectsPage.Contents ?? []).map(({ Key }) => Key!).sort();
@@ -107,14 +139,16 @@ export const createTransportFixture = () => {
         accessLifetimeSeconds?: number;
         limits?: RelayLimits;
         projectDeletionRelayToken?: string;
+        objectEndpoint?: string;
       } = {},
     ) {
       const manager = createAccountManager(managerDatabase.url);
-      const assets = createRelayAssets({ databaseUrl: relayDatabase.url, bucket, s3 });
+      const storage = options.objectEndpoint ? { ...s3, endpoint: options.objectEndpoint } : s3;
+      const assets = createRelayAssets({ databaseUrl: relayDatabase.url, bucket, s3: storage });
       const sync = createSyncOwners({
         databaseUrl: relayDatabase.url,
         bucket,
-        s3,
+        s3: storage,
         assets,
         limits: options.limits ?? defaultRelayLimits,
       });

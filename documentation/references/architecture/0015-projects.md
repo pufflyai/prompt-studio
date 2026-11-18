@@ -59,6 +59,9 @@ Deleting a project or workspace preserves user-selected folders and user files. 
 Permanent Cloud deletion uses a durable retirement receipt in the account manager.
 The relay drains admitted work, then fences the scope at storage across all replicas.
 Its cleanup removes scoped content and bytes before acknowledging the operation.
+A multipart reservation joins the scope when the relay commits its upload ID
+and ownership in PostgreSQL. Object storage receives project bytes only after
+that commit. The relay reclaims unassigned reservations separately.
 A surviving receipt rejects an old access token even after the normal project
 storage has been removed. See [relay deletion and diagnostics](../../guides/development/0006-relay.md#permanent-project-deletion).
 

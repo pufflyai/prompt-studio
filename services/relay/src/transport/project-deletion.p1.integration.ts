@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { Client } from "pg";
 import {
+  fingerprint,
   liveProtocolHeader,
   liveProtocolVersion,
   projectDeletionServicePath,
@@ -10,6 +11,8 @@ import {
   syncProtocolHeader,
   syncProtocolVersion,
 } from "pstdio-sync-contracts";
+import { reservationPrefix } from "../assets/object-reservations";
+import { multipartSize } from "../assets/streams";
 import { createProjectDeletionWorker } from "../project-deletion-worker";
 import { startRelay } from "../service";
 import { projectKey } from "../storage/accounts";
@@ -160,8 +163,12 @@ test("permanent deletion drains a second relay replica, retries purge, and rejec
     ).toBe(200);
     expect((await outside({ kind: "blob", ...outsideBlob, operation: "finish" })).status).toBe(200);
     const outsideObjects = await fixture.objectKeys();
-    const outsideDocument = outsideObjects.find((key) => key.startsWith("payloads/"));
+    const outsideDocument = outsideObjects.find((key) => key.startsWith(reservationPrefix));
     expect(outsideDocument).toBeDefined();
+    expect(outsideObjects).toEqual([outsideDocument!]);
+    const empty = await outside({ kind: "blob", ...outsideBlob, operation: "read" }, { offset: 0 });
+    expect(empty.status).toBe(200);
+    expect((await empty.arrayBuffer()).byteLength).toBe(0);
     expect((await relay({ ...doc, operation: "updates" }, update)).status).toBe(200);
     expect(
       (await relay({ ...doc, spaceOwner: accountId, documentId: randomId("private"), operation: "updates" }, update))
@@ -321,5 +328,114 @@ test("permanent deletion drains a second relay replica, retries purge, and rejec
     await publication?.catch(() => {});
     await Promise.all([first.stop(true), second.stop(true)]);
     await Promise.all([primary.close(), secondary.close(), pg.end()]);
+  }
+});
+
+test.each(["document", "blob"] as const)("late multipart creation cannot leave a retired %s upload", async (kind) => {
+  const proxy = fixture.deferMultipartCreation();
+  const primary = await fixture.context({ objectEndpoint: proxy.endpoint, projectDeletionRelayToken: serviceToken });
+  const replacement = await fixture.context({ workbenchId: primary.scope.workbenchId });
+  const server = startRelay({ hostname: "127.0.0.1", port: 0 }, primary);
+  try {
+    const { workbenchId: projectId } = primary.scope;
+    const request = client(server.url, primary.token);
+    const bytes = new Uint8Array([1, 2]);
+    const pending = await (kind === "document"
+      ? request(
+          { kind, projectId, spaceOwner: null, documentId: randomId("doc"), operation: "updates" },
+          { updateId: randomId("update"), payload: encode(bytes), blobIds: [] },
+        )
+      : request(
+          { kind, projectId, spaceOwner: null, blobId: randomId("blob"), operation: "begin" },
+          { sha256: sha256(bytes), byteLength: bytes.byteLength },
+        ));
+    expect(pending.ok).toBe(false);
+
+    const managerUrl = "https://manager.fixture.test";
+    const deviceRequest = (method: "GET" | "POST") =>
+      primary.managerHandler(
+        new Request(`${managerUrl}/v1/workbenches/${projectId}/deletion`, {
+          method,
+          headers: { authorization: `Bearer ${primary.device.token}` },
+          ...(method === "POST" ? { body: JSON.stringify({ confirm: true }) } : {}),
+        }),
+      );
+    expect((await deviceRequest("POST")).status).toBe(202);
+    await createProjectDeletionWorker({
+      managerUrl,
+      token: serviceToken,
+      deleteProject: replacement.sync.deleteProject,
+      request: primary.managerHandler,
+    })(AbortSignal.timeout(5_000));
+    expect(await (await deviceRequest("GET")).json()).toMatchObject({ state: "completed" });
+    const other = replacement.scope;
+    const owned = { projectKey: projectKey(other.accountId, other.workbenchId), blobId: randomId("unrelated") };
+    await replacement.assets.begin(owned, owned.blobId, {
+      sha256: sha256(bytes),
+      byteLength: bytes.byteLength,
+      mediaType: "application/octet-stream",
+    });
+    const before = await fixture.multipartKeys();
+    const late = await proxy.finish();
+    expect(await fixture.multipartKeys()).toContain(late);
+    expect(late).toMatch(new RegExp(`^${reservationPrefix}[a-f0-9-]+$`));
+    await replacement.sync.cleanup();
+    expect(await fixture.multipartKeys()).toEqual(before);
+    await replacement.assets.remove(owned, owned.blobId);
+  } finally {
+    await server.stop(true);
+    await Promise.all([replacement.close(), primary.close(), proxy.close()]);
+  }
+});
+
+test("resuming an empty legacy blob keeps the cleanup address without writing an object", async () => {
+  const context = await fixture.context();
+  const pg = new Client({ connectionString: fixture.relayDatabaseUrl });
+  const blobId = randomId("legacy-empty");
+  const owner = { projectKey: projectKey(context.scope.accountId, context.scope.workbenchId), blobId };
+  const asset = { sha256: sha256(new Uint8Array()), byteLength: 0, mediaType: "application/octet-stream" };
+  const objectKey = `assets/legacy/${blobId}`;
+  try {
+    await pg.connect();
+    await context.assets.begin(owner, blobId, asset);
+    await pg.query('UPDATE relay_asset_uploads SET "objectKey" = $1 WHERE id = $2', [objectKey, blobId]);
+    await context.assets.finish(owner, blobId);
+    expect(await fixture.objectKeys()).not.toContain(objectKey);
+    const stored = await context.assets.read(owner, asset);
+    expect(stored).not.toBeNull();
+    expect((await new Response(stored!.body).arrayBuffer()).byteLength).toBe(0);
+    await context.assets.remove(owner, blobId);
+    expect((await pg.query('SELECT * FROM relay_verified_assets WHERE "objectKey" = $1', [objectKey])).rowCount).toBe(
+      0,
+    );
+  } finally {
+    await Promise.all([context.close(), pg.end()]);
+  }
+});
+
+test("purging a resumed blob removes a multipart upload that later appeared at its old address", async () => {
+  const context = await fixture.context();
+  const pg = new Client({ connectionString: fixture.relayDatabaseUrl });
+  const blobId = randomId("legacy-reservation");
+  const owner = { projectKey: projectKey(context.scope.accountId, context.scope.workbenchId), blobId };
+  const bytes = new Uint8Array([1, 2]);
+  const asset = { sha256: sha256(bytes), byteLength: bytes.byteLength, mediaType: "application/octet-stream" };
+  const oldKey = `assets/legacy/${blobId}`;
+  try {
+    await pg.connect();
+    await pg.query(
+      'INSERT INTO relay_asset_uploads ("ownerId", id, asset, "objectKey", "partSize", status) VALUES ($1, $2, $3, $4, $5, $6)',
+      [await fingerprint(owner), blobId, asset, oldKey, multipartSize(bytes.byteLength), "open"],
+    );
+    const before = await fixture.multipartKeys();
+    await context.assets.begin(owner, blobId, asset);
+    await fixture.initiateMultipart(oldKey);
+    const active = await fixture.multipartKeys();
+    expect(active).toContain(oldKey);
+    expect(active).toHaveLength(before.length + 2);
+    await context.assets.remove(owner, blobId);
+    expect(await fixture.multipartKeys()).toEqual(before);
+  } finally {
+    await Promise.all([context.close(), pg.end()]);
   }
 });

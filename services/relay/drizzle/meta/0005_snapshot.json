@@ -1,5 +1,5 @@
 {
-  "id": "d418b6b7-8bce-4bad-bb46-19462e3d20ad",
+  "id": "bbdd56ec-d267-4f54-9717-618914d787c6",
   "prevId": "d5c38b0e-88ce-4a97-b176-2a818ed13e98",
   "version": "7",
   "dialect": "postgresql",
@@ -692,6 +692,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "legacyObjectKey": {
+          "name": "legacyObjectKey",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "partSize": {
           "name": "partSize",
           "type": "bigint",
@@ -711,7 +717,23 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "relay_asset_uploads_object_key": {
+          "name": "relay_asset_uploads_object_key",
+          "columns": [
+            {
+              "expression": "objectKey",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "relay_asset_uploads_ownerId_id_pk": {

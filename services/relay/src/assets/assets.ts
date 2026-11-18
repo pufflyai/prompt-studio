@@ -14,6 +14,24 @@ export interface AssetConfig extends ObjectConfig {
   databaseUrl: string;
 }
 
+const removeUploadObjects = async (
+  objects: ReturnType<typeof createAssetObjects>,
+  row: typeof assetUploads.$inferSelect,
+  signal: AbortSignal,
+  verify: boolean,
+) => {
+  for (const [key, multipartId] of [
+    [row.objectKey, row.multipartId],
+    [row.legacyObjectKey, null],
+  ] as const) {
+    if (!key) continue;
+    await objects.discard(key, multipartId, signal);
+    await objects.remove(key, signal);
+    if (verify && (await objects.head(key, undefined, signal)))
+      throw new Error("Object storage retained a deleted asset");
+  }
+};
+
 export const createRelayAssets = (config: AssetConfig) => {
   const objects = createAssetObjects(config);
   const active = new Map<string, AbortController>();
@@ -74,6 +92,7 @@ export const createRelayAssets = (config: AssetConfig) => {
         .where(and(eq(verifiedAssets.ownerId, ownerId), eq(verifiedAssets.reference, reference)))
     )[0];
     if (!row) return null;
+    if (!row.etag) return asset.byteLength === 0 ? row : null;
     const metadata = await objects.head(row.objectKey, row.etag, signal);
     return metadata?.ContentLength === asset.byteLength && metadata.ContentType === asset.mediaType ? row : null;
   };
@@ -82,6 +101,7 @@ export const createRelayAssets = (config: AssetConfig) => {
       return operations.run(async (controller) => {
         const asset = assetSchema.parse(input);
         const key = await identity(owner, id);
+        const blind = "projectKey" in owner;
         await database.run(
           async (db) =>
             db
@@ -89,7 +109,9 @@ export const createRelayAssets = (config: AssetConfig) => {
               .values({
                 ...key,
                 asset,
-                objectKey: `assets/${key.ownerId}/${await fingerprint(key.id)}`,
+                // A blind upload has no provider key until a reservation is claimed. Empty blobs
+                // need only a verified record and never send a deferred object write.
+                objectKey: blind ? "" : `assets/${key.ownerId}/${await fingerprint(key.id)}`,
                 partSize: multipartSize(asset.byteLength),
                 status: "open",
               })
@@ -99,10 +121,12 @@ export const createRelayAssets = (config: AssetConfig) => {
         return withUpload(owner, id, controller, async ({ db, row, signal }) => {
           if (canonicalJson(row.asset) !== canonicalJson(asset))
             throw new Error("Upload identity reused with changed asset");
-          let multipartId = row.multipartId;
-          if (row.status === "open" && asset.byteLength > 0 && !multipartId) {
-            multipartId = await objects.begin(row.objectKey, asset, signal);
-            await db.update(assetUploads).set({ multipartId }).where(uploadWhere(key));
+          if (row.status === "open" && asset.byteLength > 0 && !row.multipartId) {
+            if (blind) await reserveBlobUpload(db, row, objects, signal);
+            else {
+              const multipartId = await objects.begin(row.objectKey, asset, signal);
+              await db.update(assetUploads).set({ multipartId }).where(uploadWhere(key));
+            }
           }
           const parts = await db.select().from(assetParts).where(partWhere(key)).orderBy(asc(assetParts.number));
           return { asset: row.asset, partSize: row.partSize, completed: row.status === "completed", parts };
@@ -126,7 +150,7 @@ export const createRelayAssets = (config: AssetConfig) => {
             if (!(await verified(owner, row.asset, db, signal))) throw new Error("Verified asset bytes are incomplete");
             return row.asset;
           }
-          return completeUpload(db, row, objects, signal);
+          return completeUpload(db, row, objects, signal, "projectKey" in owner);
         }),
       );
     },
@@ -143,7 +167,7 @@ export const createRelayAssets = (config: AssetConfig) => {
         const combined = requestSignal ? AbortSignal.any([signal, requestSignal]) : signal;
         const row = await database.run((db) => verified(owner, asset, db, combined), combined);
         if (!row) return null;
-        if (offset === asset.byteLength && offset > 0)
+        if (offset === asset.byteLength)
           return {
             asset: row.asset,
             body: new ReadableStream<Uint8Array>({
@@ -187,8 +211,7 @@ export const createRelayAssets = (config: AssetConfig) => {
         await database.lock(lockKey(key), signal, async (db) => {
           const row = (await db.select().from(assetUploads).where(uploadWhere(key)))[0];
           if (row?.status !== "cancelled") return;
-          await objects.discard(row.objectKey, row.multipartId, signal);
-          await objects.remove(row.objectKey, signal);
+          await removeUploadObjects(objects, row, signal, false);
           await db.delete(assetParts).where(partWhere(key));
         });
       });
@@ -200,10 +223,7 @@ export const createRelayAssets = (config: AssetConfig) => {
         await database.lock(lockKey(key), signal, async (db) => {
           const row = (await db.select().from(assetUploads).where(uploadWhere(key)))[0];
           if (!row) return;
-          await objects.discard(row.objectKey, row.multipartId, signal);
-          await objects.remove(row.objectKey, signal);
-          if (await objects.head(row.objectKey, undefined, signal))
-            throw new Error("Object storage retained a deleted asset");
+          await removeUploadObjects(objects, row, signal, true);
           await db.transaction(async (transaction) => {
             await transaction.delete(assetParts).where(partWhere(key));
             await transaction
@@ -217,3 +237,5 @@ export const createRelayAssets = (config: AssetConfig) => {
     close: operations.close,
   };
 };
+
+import { reserveBlobUpload } from "./blob-reservation";

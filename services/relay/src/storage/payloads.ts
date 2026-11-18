@@ -23,17 +23,14 @@ export const createPayloadObjects = (config: ObjectConfig) => {
   const shutdown = new AbortController();
   const target = (key: string) => ({ Bucket: config.bucket, Key: key });
   return {
-    // Each write gets its own key, so a retry or a lost race never overwrites stored bytes.
-    key: (projectId: string, documentId: string, kind: "updates" | "states") =>
-      `payloads/${projectId}/${hash(documentId)}/${kind}/${crypto.randomUUID()}`,
-    async put(key: string, bytes: Uint8Array, staged: (uploadId: string) => Promise<void>) {
+    multipartPages: uploads.multipartPages,
+    reserve: (key: string) => uploads.initiate(key, "application/octet-stream", shutdown.signal),
+    async put(key: string, uploadId: string, bytes: Uint8Array) {
       // A multipart upload is a revocable write capability. If its completion reply
       // is lost, cleanup fences that upload before verifying the key is absent.
       const signal = shutdown.signal;
       const sha256 = new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
       const asset = { sha256, byteLength: bytes.byteLength, mediaType: "application/octet-stream" };
-      const uploadId = await uploads.begin(key, asset, signal);
-      await staged(uploadId);
       const body = new ReadableStream<Uint8Array>({
         start(controller) {
           controller.enqueue(bytes);
