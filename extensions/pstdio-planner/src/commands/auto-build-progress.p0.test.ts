@@ -471,3 +471,26 @@ test.each(["paused", "stopped"])("%s during a capacity read suppresses scheduled
   await checkAutoBuildCommand.run(ctx, {});
   expect(followups).toEqual([]);
 });
+
+test("scheduled supervisor checks do not contact a supervisor before its quota reset", async () => {
+  const { ctx, storage, supervisor, followups } = await monitorFixture();
+  supervisor.status = "failed";
+  supervisor.agent = "pstdio.harness-codex.harness.codex";
+  await storage.set("auto-build-supervisor", {
+    sessionId: supervisor.id,
+    quotaCooldown: { harnessId: supervisor.agent, resetsAt: new Date(Date.now() + 60_000).toISOString() },
+  });
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toHaveLength(0);
+  expect(await storage.get("auto-build")).toMatchObject({ enabled: true });
+});
+
+test("an exhausted supervisor with no reset timestamp waits without pausing Auto Build", async () => {
+  const { ctx, storage, supervisor, followups } = await monitorFixture();
+  supervisor.status = "failed";
+  supervisor.agent = "pstdio.harness-codex.harness.codex";
+  ctx.commands.execute = async () => ({ ok: true, status: "success", value: { limited: true } }) as never;
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toEqual([]);
+  expect(await storage.get("auto-build")).toMatchObject({ enabled: true });
+});

@@ -142,6 +142,60 @@ test("opening an on-disk database moves its node rows into the folder beside it 
   expect(await createIndexNodeFiles(`${path}-index-nodes`).list(records, "receipts")).toEqual([]);
 });
 
+test("runtime startup preserves receipt files and defers stale rows until its maintenance pass", async () => {
+  const folder = await mkdtemp(join(tmpdir(), "index-node-background-cleanup-"));
+  folders.push(folder);
+  const path = join(folder, "pstdio.db");
+  const original = await createDb({ path });
+  const { records, logs, workbenchId } = await seed(original.db);
+  const retired = JSON.stringify(["pstdio.personal-history", "account"]);
+  await original.db.insert(storage_documents).values({
+    workbench_id: workbenchId,
+    extension_id: retired,
+    document_id: "transcript",
+    state: new Uint8Array([0, 0]),
+  });
+  await original.db.insert(storage_documents).values(
+    Array.from({ length: 64 }, (_, index) => ({
+      workbench_id: workbenchId,
+      extension_id: logs.extensionId,
+      document_id: orderedIndexBlobDocumentId(id(`stale-${index}`)),
+      state: new Uint8Array([0, 0]),
+    })),
+  );
+  await original.close();
+
+  const phases: string[] = [];
+  const firstRuntime = await createDb({ path, deferCleanup: true, onPhase: (phase) => phases.push(phase) });
+  try {
+    const files = createIndexNodeFiles(`${path}-index-nodes`);
+    expect((await files.list(records, "receipts")).sort()).toEqual(["C", "b", "published", "root"].map(id));
+    expect(
+      await firstRuntime.db.select({ id: storage_documents.document_id }).from(storage_documents).where(nodeRows),
+    ).toHaveLength(71);
+    expect(phases).not.toContain("database_compacting");
+    let checks = 0;
+    await firstRuntime.cleanupRetiredRows(() => ++checks > 3);
+    expect(
+      await firstRuntime.db.select({ id: storage_documents.document_id }).from(storage_documents).where(nodeRows),
+    ).toHaveLength(39);
+  } finally {
+    await firstRuntime.close();
+  }
+
+  const reopened = await createDb({ path, deferCleanup: true });
+  try {
+    await reopened.cleanupRetiredRows(() => false);
+    expect(await reopened.db.select().from(storage_documents).where(nodeRows)).toEqual([]);
+    expect(
+      await reopened.pglite.query("SELECT extension_id FROM storage_documents WHERE extension_id = $1", [retired]),
+    ).toMatchObject({ rows: [] });
+    expect(await createIndexNodeFiles(`${path}-index-nodes`).read(records, "receipts", id("root"))).toBeDefined();
+  } finally {
+    await reopened.close();
+  }
+});
+
 test("a retried upgrade follows file edges to descendants that still only have rows, and records owed compaction first", async () => {
   const { db, close } = await createDb({ path: ":memory:" });
   try {

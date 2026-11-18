@@ -20,7 +20,9 @@ Encrypted transport names and opaque persisted derivations continue to use histo
 
 The host support ships first in the coordinated extension API 0.5.0 release. Renamed extension packages follow in a separate release-dependent PR with `engines.pstdio` requiring 0.5.0. Old published coordinates retain their release history; catalog installation resolves their canonical replacement without a registry redirect.
 
-POSIX migrations flush the destination tree and parent directory entries before removing the historical source. Windows retains the verified original under `.extension-identity-original` inside the canonical allocation, using a same-volume rename and native journal semantics. The host excludes this evidence from artifact discovery and ordinary file operations; it does not claim a stronger hardware power-loss guarantee. Cleanup of retained Windows evidence is a separate explicit action.
+POSIX migrations flush the verified destination and its parent directories before retiring the historical source with a same-volume rename. The host tries to remove the retired tree after flushing the rename. Any remainder stays under `.extension-identity-original` inside the canonical allocation. Windows retains the verified original at the same location using native journal semantics. The host excludes retained files from artifact discovery and ordinary file operations.
+
+Asset bytes remain readable at their historical owner paths. The host checks the canonical path first and uses the historical path for missing versions or in-progress uploads. New transfers and newly published versions use canonical paths.
 
 ## Consequences
 

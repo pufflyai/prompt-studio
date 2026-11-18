@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandDiagnostic } from "pstdio-api-contracts/extension-kernel";
+import { createWorkspaceMaintenance } from "../../services/workspace-maintenance";
 import {
   type ProvisionCoordinatorDeps,
   provisionProjectWorkspaces,
@@ -23,6 +24,8 @@ const makeDeps = (row: Row) => {
   const calls: string[] = [];
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
+      get: async () => ({ ...row, project_id: "p1" }),
       getDefault: async () => ({
         id: "home",
         project_id: "project-1",
@@ -298,7 +301,7 @@ describe("provisionProjectWorkspaces", () => {
 
     await provisionProjectWorkspaces(deps, "p1", hooks);
 
-    expect(calls).toEqual(["initializing:true", "setup_error:config write failed"]);
+    expect(calls).toEqual(["setup_error:config write failed"]);
     expect(row.initializing).toBe(false);
     expect(row.setup_error).toBe("config write failed");
     expect(readyFired).toEqual([]);
@@ -324,7 +327,7 @@ describe("removeProjectAfterProvisioning", () => {
     const order: string[] = [];
     const entered = Promise.withResolvers<void>();
     const release = Promise.withResolvers<void>();
-    const provisioning = provisionProjectWorkspaces(deps, "project-1", {
+    const provisioning = provisionProjectWorkspaces(deps, "p1", {
       ...makeHooks(undefined, []),
       ensureConfig: async (dir) => {
         order.push(`config:${dir}`);
@@ -334,7 +337,7 @@ describe("removeProjectAfterProvisioning", () => {
     });
     await entered.promise;
 
-    const removal = removeProjectAfterProvisioning("project-1", async () => {
+    const removal = removeProjectAfterProvisioning(deps, "p1", async () => {
       order.push("removed");
     });
     release.resolve();

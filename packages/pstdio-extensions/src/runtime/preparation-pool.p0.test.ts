@@ -8,11 +8,11 @@ afterEach(async () => {
   for (const client of clients.splice(0)) await client.stop();
   for (const server of servers.splice(0)) await server.stop(true);
 });
-const fixture = () => {
+const fixture = (workers: 1 | 2 | 3 | 4 = 2) => {
   const client = createPreparationClient(
     () => new Worker(new URL("./preparation-worker.fixture.ts", import.meta.url)),
     undefined,
-    { workers: 2 },
+    { workers },
   );
   clients.push(client);
   return client;
@@ -45,6 +45,33 @@ test("two independent preparations enter before either is released, and a third 
     );
     gates[0]!.release.resolve();
     await gates[2]!.entered.promise;
+  } finally {
+    for (const g of gates) g.release.resolve();
+    await Promise.allSettled(jobs);
+  }
+});
+
+test("an individual requested job can preempt a background slot in a full four-worker pool", async () => {
+  const client = fixture(4);
+  const gates = Array.from({ length: 4 }, gate);
+  const jobs: Promise<unknown>[] = [];
+  try {
+    for (const [index, g] of gates.entries()) {
+      jobs.push(
+        client.run(
+          "wait",
+          { name: String(index), url: g.url },
+          {
+            resources: [String(index)],
+            priority: index === 0 ? "background" : "requested",
+          },
+        ),
+      );
+      await g.entered.promise;
+    }
+    expect(await client.run("value", { name: "interactive" }, { resources: ["interactive"] })).toMatchObject({
+      name: "interactive",
+    });
   } finally {
     for (const g of gates) g.release.resolve();
     await Promise.allSettled(jobs);

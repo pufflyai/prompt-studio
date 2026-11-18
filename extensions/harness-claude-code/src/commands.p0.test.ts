@@ -8,7 +8,7 @@ test("literal slash input preserves its text without invoking CLI commands", () 
   expect(visibleClaudePrompt(literal)).toBe("/goal is an example");
   expect(claudePrompt("/goal task", true)).toBe("/goal task");
 });
-test("compaction shows one terminal outcome instead of replaying an earlier reply", async () => {
+test("compaction retains usage without replaying an earlier reply", async () => {
   async function* events() {
     yield {
       type: "stdout" as const,
@@ -21,8 +21,7 @@ test("compaction shows one terminal outcome instead of replaying an earlier repl
   }
   const messages = [];
   for await (const m of normalizeClaudeCodeStream(events(), { compact: true })) messages.push(m);
-  expect(messages.flatMap((m) => m.parts).filter((p) => p.type === "text")).toHaveLength(1);
-  expect(messages.flatMap((m) => m.parts).some((p) => p.type === "text" && p.text === "earlier reply")).toBe(false);
+  expect(messages.flatMap((m) => m.parts)).toEqual([{ type: "token_usage", inputTokens: 0, outputTokens: 0 }]);
 });
 
 import { buildStartSessionArgs } from "./spawn";
@@ -40,5 +39,6 @@ test("local native command outcomes appear in the conversation without invented 
   }
   const messages = [];
   for await (const message of normalizeClaudeCodeStream(events())) messages.push(message);
+  expect(messages[0].role).toBe("tool");
   expect(messages.flatMap((m) => m.parts).some((p) => p.type === "text" && p.text === "No goal set")).toBe(true);
 });

@@ -4,7 +4,6 @@ import { useSyncExternalStore } from "react";
 import { useApiFileParts, useApiFileUrls } from "@/lib/api-file-url";
 import { useNativeHarnessAccount } from "@/shared/agents/use-native-harness-account";
 import { nativeChatFileAllowed } from "./native-chat-files";
-import { composeNativeChatLinks } from "./native-chat-links";
 import { useSessionLinks } from "./use-session-links";
 
 interface DashboardChatHostProps extends NativeChatHostProps {
@@ -27,14 +26,14 @@ const DashboardChatHost = ({
     conversation,
     messages: presented,
     initializing,
-  } = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
+  } = useSyncExternalStore(session.subscribeToView, session.getSnapshot, session.getSnapshot);
   const messages = useApiFileParts(presented, (url) => nativeChatFileAllowed(url, projectId, extensionId));
   const attachmentUrls = useApiFileUrls([
     ...new Set(
       attachments.flatMap(({ url }) => (url && nativeChatFileAllowed(url, projectId, extensionId) ? [url] : [])),
     ),
   ]);
-  const links = useSessionLinks(workbench, projectId, conversation.workspaceId);
+  const links = useSessionLinks(workbench, projectId, conversation.workspaceId, linkHandler);
   const account = useNativeHarnessAccount({
     workbench,
     projectId,
@@ -50,7 +49,7 @@ const DashboardChatHost = ({
       ...attachment,
       ...(attachment.url && attachmentUrls.has(attachment.url) ? { url: attachmentUrls.get(attachment.url) } : {}),
     })),
-    linkHandler: conversation.nativeLinks ? composeNativeChatLinks(linkHandler, links.handler) : linkHandler,
+    linkHandler: conversation.nativeLinks ? links.handler : linkHandler,
     linkNotice: conversation.nativeLinks ? links.notice : undefined,
     account,
   });

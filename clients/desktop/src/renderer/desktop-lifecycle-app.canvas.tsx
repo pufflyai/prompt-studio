@@ -67,7 +67,7 @@ export const Recovery: Story = {
       error: {
         code: "pglite_recovery_failure",
         message: "Prompt Studio could not open its database safely.",
-        actions: ["retry", "open_logs", "copy_diagnostics", "quit"],
+        actions: ["retry", "open_logs", "quit"],
       },
     },
   },
@@ -88,7 +88,7 @@ export const LongRecoveryDetails: Story = {
           (_, index) =>
             `Startup log ${index}: ENOENT: /project/.pstdio/extensions/example/src/workbench/src/views/notebook.tsx`,
         ).join("\n"),
-        actions: ["retry", "open_logs", "copy_diagnostics", "quit"],
+        actions: ["retry", "open_logs", "quit"],
       },
     },
   },

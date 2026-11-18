@@ -1,5 +1,6 @@
 import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionResourcesApi } from "pstdio-api-contracts/extension-kernel";
+import { createReadBoundary } from "pstdio-extensions";
 import { resolveResourceOpenings } from "../../projects/resource-openers";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createResourceLinksApi } from "./resource-links";
@@ -22,6 +23,19 @@ const allocationPrefix = async (
   if (!/^[A-Z][A-Z0-9]{0,15}$/.test(resolved) || resolved === "WS")
     throw new Error(`Resource prefix "${resolved}" is invalid or reserved.`);
   return resolved;
+};
+
+const readOwnedKind = async <T>(
+  deps: ExtensionsRouteDeps,
+  input: { projectId: string; extensionId: string; signal?: AbortSignal },
+  kind: string,
+  load: () => Promise<T>,
+) => {
+  const read = createReadBoundary(input.signal);
+  const { runtime } = await read(() => deps.extensionRuntimeCatalog.get(input.projectId));
+  if (!runtime.resourceKinds.some((record) => record.extensionId === input.extensionId && record.localId === kind))
+    throw new Error(`Resource kind "${kind}" is not owned by ${input.extensionId}.`);
+  return read(load);
 };
 
 export const createResourcesApi = (
@@ -51,24 +65,16 @@ export const createResourcesApi = (
       resource: { ...resource, extensionId: input.extensionId, projectId: input.projectId },
     });
   },
-  identity: async ({ kind, id }) => {
-    const { runtime } = await deps.extensionRuntimeCatalog.get(input.projectId);
-    if (!runtime.resourceKinds.some((record) => record.extensionId === input.extensionId && record.localId === kind))
-      throw new Error(`Resource kind "${kind}" is not owned by ${input.extensionId}.`);
-    return deps.extensionResourceSequencesService.identity({ ...input, kind, id });
-  },
-  identityMany: async ({ kind, ids }) => {
-    const { runtime } = await deps.extensionRuntimeCatalog.get(input.projectId);
-    if (!runtime.resourceKinds.some((record) => record.extensionId === input.extensionId && record.localId === kind))
-      throw new Error(`Resource kind "${kind}" is not owned by ${input.extensionId}.`);
-    return deps.extensionResourceSequencesService.identityMany({ ...input, kind, ids });
-  },
-  findByShorthand: async ({ kind, shorthand }) => {
-    const { runtime } = await deps.extensionRuntimeCatalog.get(input.projectId);
-    if (!runtime.resourceKinds.some((record) => record.extensionId === input.extensionId && record.localId === kind))
-      throw new Error(`Resource kind "${kind}" is not owned by ${input.extensionId}.`);
-    return deps.extensionResourceSequencesService.findByShorthand({ ...input, kind, shorthand });
-  },
+  identity: ({ kind, id }) =>
+    readOwnedKind(deps, input, kind, () => deps.extensionResourceSequencesService.identity({ ...input, kind, id })),
+  identityMany: ({ kind, ids }) =>
+    readOwnedKind(deps, input, kind, () =>
+      deps.extensionResourceSequencesService.identityMany({ ...input, kind, ids }),
+    ),
+  findByShorthand: ({ kind, shorthand }) =>
+    readOwnedKind(deps, input, kind, () =>
+      deps.extensionResourceSequencesService.findByShorthand({ ...input, kind, shorthand }),
+    ),
   allocate: async ({ kind, idPrefix }) =>
     deps.extensionResourceSequencesService.allocate({
       ...input,

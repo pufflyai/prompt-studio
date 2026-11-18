@@ -1,21 +1,26 @@
-import type { MessageBoxOptions } from "electron";
+import type { DesktopUpdateNotice } from "../desktop-api";
 import type { DesktopUpdateReceipt } from "./desktop-update-receipt";
 
 interface DesktopUpdateNotificationsOptions {
   currentVersion: string;
-  receipt: DesktopUpdateReceipt;
-  showMessageBox: (options: MessageBoxOptions) => Promise<unknown>;
+  receipt: Pick<DesktopUpdateReceipt, "recordDownload" | "consumeInstalled">;
+  onNotice: () => void;
   logError: (error: Error) => void;
 }
 
 export const createDesktopUpdateNotifications = (options: DesktopUpdateNotificationsOptions) => {
-  const show = (message: string, detail?: string, type: "info" | "error" = "info") => {
-    void options
-      .showMessageBox({ type, title: "Prompt Studio Update", message, detail, buttons: ["OK"] })
-      .catch(options.logError);
+  let pending: DesktopUpdateNotice | undefined;
+  const show = (title: string, message?: string, level: DesktopUpdateNotice["level"] = "info") => {
+    pending = { level, title, message };
+    options.onNotice();
   };
 
   return {
+    take() {
+      const notice = pending;
+      pending = undefined;
+      return notice;
+    },
     notAvailable: () =>
       show(
         "You're up to date.",
