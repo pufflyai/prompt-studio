@@ -138,10 +138,10 @@ test("dependency membership probes only referenced targets including empty sourc
 });
 
 test("breadcrumbs skip absent parents and probe the parent key for the one child", async () => {
-  const targets = (await explain(recordFieldSql(indexes[0], "breadcrumb", undefined, resolve, owner))).filter(
-    (node) => node.Alias === "hierarchy_ancestor",
+  const targets = (await explain(recordFieldSql(indexes[0], "breadcrumb", undefined, resolve, owner))).filter((node) =>
+    String(node.Alias).startsWith("hierarchy_ancestor"),
   );
-  expect(visits(targets)).toBeLessThanOrEqual(600);
+  expect(visits(targets)).toBeLessThanOrEqual(1);
   expect(
     (
       await records.query({
