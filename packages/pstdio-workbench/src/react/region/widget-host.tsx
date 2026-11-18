@@ -119,6 +119,7 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
       minW="0"
       minH="0"
       w="full"
+      position="relative"
       overflow="hidden"
       // A tree owns its scrollbar. Its virtual spacer must not size the region
       // to the full file list and turn every row into a visible row.

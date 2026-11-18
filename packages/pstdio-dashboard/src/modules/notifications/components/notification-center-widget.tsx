@@ -98,7 +98,7 @@ export const surfaceNotificationCommandResponse = (
 export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) => {
   const owner = getRuntimeCollections();
   const { input } = props;
-  const { showError, errorNotice, clearError } = useActionError();
+  const { showError, errorNotice, clearError } = useActionError("above");
   const projectId = useWorkbenchStore(input.workbench.context.store, (state) => {
     const value = state.values[dashboardSelectedProjectIdContextKey];
     return typeof value === "string" ? value : undefined;
@@ -180,7 +180,7 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
       onEscape={close}
       onRunAction={handleRunAction}
       footerStart={
-        <Stack gap="xs">
+        <Stack gap="xs" position="relative">
           {errorNotice}
           <Text textStyle="label/XS" color="fg.muted">
             {items.length === 1 ? "1 pending notification" : `${items.length} pending notifications`}

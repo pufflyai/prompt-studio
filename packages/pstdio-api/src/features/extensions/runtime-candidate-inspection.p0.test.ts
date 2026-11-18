@@ -34,6 +34,7 @@ test("a later edit supersedes stalled candidate evaluation and completed content
   });
   const inspector = createRuntimeCandidateInspection({
     acceptedId: async () => accepted.preparedRevision!.id,
+    isEligible: async () => true,
     onError: (error) => errors.push(error),
   });
   const work: Promise<void>[] = [];
@@ -110,6 +111,7 @@ test("background inspection detects dependency-only replacement without adopting
   let evaluations = 0;
   const inspector = createRuntimeCandidateInspection({
     acceptedId: async () => accepted.preparedRevision!.id,
+    isEligible: async () => true,
     onError: (error) => errors.push(error),
   });
   let work: Promise<void> | undefined;

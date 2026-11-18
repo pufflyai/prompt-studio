@@ -6,6 +6,13 @@ import type {
 } from "@pstdio/sdk/extensions";
 import { workspacePages } from "@pstdio/sdk/extensions";
 
+export const workspaceUnavailableReason = (workspace?: ExtensionWorkspace) => {
+  if (workspace?.setupError) return "Workspace setup failed. Choose another workspace or check its setup.";
+  const state = workspace?.providerState;
+  if (workspace?.initializing || state === "provisioning") return "Workspace setup is in progress.";
+  if (state && state !== "ready") return "Workspace unavailable. Choose another workspace or check its status.";
+};
+
 type WorkspacePresentation = NonNullable<ChatRendererSnapshot["workspace"]>;
 type WorkspacePresentationInput = { id?: string; existingSession?: boolean; available?: boolean };
 

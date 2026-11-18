@@ -158,7 +158,7 @@ const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
         })
         .catch((error) => {
           if (owner.current() && error?.code !== "connection_reset")
-            workbench.notifications.captureActionError("Update text editor presence", placement.instanceId)(error);
+            console.warn("Could not update text editor presence", error);
         });
     }),
     events.onDisconnect(() => {
