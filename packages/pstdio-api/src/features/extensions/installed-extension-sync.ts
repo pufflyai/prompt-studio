@@ -146,17 +146,21 @@ export const syncInstalledExtensionsForProject = async (deps: SyncInstalledExten
 export const syncInstalledExtensionsForProjects = async (deps: SyncInstalledExtensionsForProjectsDeps) => {
   const snapshotStartedAt = new Date().toISOString();
   const snapshot = await discoverInstalledExtensions(deps);
-  const synced: Array<SyncedInstalledExtension & { projectId: string }> = [];
-
-  for (const project of await deps.projectService.list()) {
-    const projectSynced = await syncSnapshotForProject({
-      ...deps,
-      projectId: project.id,
-      snapshot,
-      snapshotStartedAt,
-    });
-    synced.push(...projectSynced.map((entry) => ({ ...entry, projectId: project.id })));
-  }
-
-  return synced;
+  const projects = await deps.projectService.list();
+  const synced: Array<Array<SyncedInstalledExtension & { projectId: string }>> = [];
+  let next = 0;
+  const sync = async () => {
+    while (next < projects.length) {
+      const index = next++;
+      const projectId = projects[index]!.id;
+      const projectSynced = await syncSnapshotForProject({ ...deps, projectId, snapshot, snapshotStartedAt });
+      synced[index] = projectSynced.map((entry) => ({ ...entry, projectId }));
+    }
+  };
+  // A project's frontend refresh must not hold every other project's disabled
+  // registration behind it. Bound admission and drain work before returning.
+  const results = await Promise.allSettled(Array.from({ length: Math.min(2, projects.length) }, sync));
+  const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+  if (failures.length) throw new AggregateError(failures, "Installed extension discovery failed");
+  return synced.flat();
 };

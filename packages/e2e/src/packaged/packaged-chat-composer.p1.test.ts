@@ -8,12 +8,7 @@ import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 setupPackagedSmokeTests();
-const composerDefaults = e2eExtensions(
-  "workbench-fixture",
-  "pstdio-session-browser",
-  "pstdio-home",
-  "pstdio-workspaces",
-);
+const composerDefaults = e2eExtensions("workbench-fixture", "pstdio-session-browser", "pstdio-workspaces");
 
 let fixture: ReturnType<typeof createComposerFixture> | undefined;
 afterEach(async () => {

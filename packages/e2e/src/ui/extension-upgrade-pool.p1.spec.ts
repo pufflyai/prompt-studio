@@ -78,11 +78,9 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
     const succeededRow = row(waiting[0]!.extension.id);
     const succeededButton = succeededRow.getByTestId("extension-row-upgrade");
     await expect(succeededRow).toContainText("v9.9.9");
-    await expect(succeededButton).toHaveAttribute("aria-label", "Extension upgraded");
-    await succeededRow.getByTestId("extension-action-dismiss").click();
+    await expect(succeededButton).toHaveCount(0);
     await expect(page.getByTestId("extensions-panel")).toBeVisible();
     expect(waiting).toHaveLength(3);
-    await expect(succeededButton).toHaveCount(0);
     await waiting[1]!.route.fulfill({ status: 400, json: { error: "Registry unavailable" } });
     const failedButton = row(waiting[1]!.extension.id).getByTestId("extension-row-upgrade");
     await expect(failedButton.getByRole("alert")).toContainText("Registry unavailable");
@@ -100,11 +98,11 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
     await expect.poll(() => waiting.length).toBe(4);
     await expect(failedButton).toHaveAttribute("aria-busy", "true");
     await succeed(waiting[3]!);
-    await expect(failedButton).toHaveAttribute("aria-label", "Extension upgraded");
+    await expect(failedButton).toHaveCount(0);
     await row(waiting[3]!.extension.id).click();
-    await expect(page.getByTestId("extension-upgrade")).toHaveAttribute("aria-label", "Extension upgraded");
-    await page.getByTestId("extension-detail").getByTestId("extension-action-dismiss").click();
-    await expect(page.getByTestId("extension-upgrade")).toHaveCount(0);
+    const detail = page.getByTestId("extension-detail").filter({ visible: true });
+    await expect(detail).toBeVisible();
+    await expect(detail.getByTestId("extension-upgrade")).toHaveCount(0);
     expect(waiting).toHaveLength(4);
   } finally {
     await Promise.all(heldReads.map((route) => route.abort()));
@@ -112,8 +110,8 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
   }
 });
 
-// Critical risk: the catalog name owns an install before an instance id exists; its result must follow it.
-test("retains fresh-install retry and dismiss ownership from marketplace through installed list and detail", async ({
+// Critical risk: catalog retries and instance toggles must stay usable across navigation.
+test("keeps install retries and toggle progress attached to their controls across navigation", async ({
   page,
   request,
 }) => {
@@ -140,6 +138,7 @@ test("retains fresh-install retry and dismiss ownership from marketplace through
     extensionId: catalog.extensionId,
     displayName: catalog.displayName,
     canUpgrade: false,
+    updateAvailable: true,
     version: "1.0.0",
   };
   let installed = false;
@@ -160,12 +159,18 @@ test("retains fresh-install retry and dismiss ownership from marketplace through
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("dashboard-wb2:selected-project:global", id);
   }, project.id);
+  await page.clock.install();
   await page.goto(`/projects/${project.id}`);
   await page.getByRole("option", { name: "Extensions", exact: true }).click();
   const availableRow = page.getByTestId("marketplace-extension-entry").filter({ hasText: catalog.displayName });
-  await availableRow.getByTestId("marketplace-extension-install").click();
+  const installButton = availableRow.getByTestId("marketplace-extension-install");
+  await installButton.click();
   await expect.poll(() => installs.length).toBe(1);
-  await expect(availableRow.getByTestId("marketplace-extension-install")).toContainText("Installing");
+  await expect(installButton).toHaveAttribute("aria-busy", "true");
+  const pendingLabel = await installButton.getAttribute("aria-label");
+  expect(pendingLabel).toBeTruthy();
+  await page.clock.fastForward(1_500);
+  await expect(installButton).toHaveAttribute("aria-label", pendingLabel!);
   await expect(availableRow.getByRole("progressbar")).toHaveCount(0);
   await availableRow.click();
   const availableButton = page.getByTestId("available-extension-install");
@@ -188,25 +193,62 @@ test("retains fresh-install retry and dismiss ownership from marketplace through
   installed = true;
   await installs[2]!.fulfill({ json: { extension: instance } });
   await expect(detail).toBeVisible();
-  await expect(detail.getByTestId("extension-upgrade")).toHaveAttribute("aria-label", "Installed");
+  await expect(detail.getByTestId("extension-upgrade")).toHaveCount(0);
   await page.goBack();
   const installedRow = page.getByTestId("extension-entry").filter({ hasText: catalog.displayName });
-  await expect(installedRow.getByTestId("extension-row-upgrade")).toHaveAttribute("aria-label", "Installed");
+  await expect(installedRow).toBeVisible();
+  await expect(installedRow.getByTestId("extension-row-upgrade")).toHaveCount(0);
   await installedRow.click();
-  await expect(detail.getByTestId("extension-upgrade")).toHaveAttribute("aria-label", "Installed");
-  await detail.getByTestId("extension-action-dismiss").click();
   await expect(detail.getByTestId("extension-upgrade")).toHaveCount(0);
   await expect(detail).toBeVisible();
   expect(installs).toHaveLength(3);
-  const toggle = Promise.withResolvers<Route>();
-  await page.route(`**/v1/projects/${project.id}/extensions/${instance.id}`, (route) => toggle.resolve(route));
-  await detail.getByRole("checkbox", { name: `Toggle ${catalog.displayName}`, exact: true }).press("Space");
-  const toggling = await toggle.promise;
+
+  const toggles: Route[] = [];
+  await page.route(`**/v1/projects/${project.id}/extensions/${instance.id}`, async (route) => {
+    if (route.request().method() === "PATCH") toggles.push(route);
+    else await route.fallback();
+  });
+  const toggleName = { name: `Toggle ${catalog.displayName}`, exact: true };
+  const detailToggle = detail.getByRole("checkbox", toggleName);
+  const rowToggle = installedRow.getByRole("checkbox", toggleName);
+  await detailToggle.press("Space");
+  await expect.poll(() => toggles.length).toBe(1);
+  const enabled = !instance.enabled;
+  expect(toggles[0]!.request().postDataJSON()).toEqual({ enabled });
+  await expect(detail.getByRole("status").filter({ hasText: catalog.displayName })).toHaveCount(1);
+  await expect(detailToggle).toHaveAttribute("aria-busy", "true");
+  await expect(detail.locator('[data-part="thumb"] [data-testid="extension-toggle-spinner"]')).toBeVisible();
   await page.goBack();
-  await expect(installedRow.getByTestId("extension-row-upgrade")).toBeDisabled();
-  await toggling.fulfill({ json: { ...instance, enabled: !instance.enabled } });
-  await expect(installedRow.getByTestId("extension-row-upgrade")).toHaveAttribute("aria-label", /updated/i);
-  await installedRow.getByTestId("extension-action-dismiss").click();
+  await expect(rowToggle).toBeDisabled();
+  await expect(rowToggle).toHaveAttribute("aria-busy", "true");
+  await expect(installedRow.locator('[data-part="thumb"] [data-testid="extension-toggle-spinner"]')).toBeVisible();
+  await expect(installedRow.getByTestId("extension-row-upgrade")).toHaveCount(0);
+  await toggles[0]!.fulfill({ status: 400, json: { error: "Could not change extension state" } });
+  const toggleError = installedRow.getByRole("alert");
+  await expect(toggleError).toContainText("Could not change extension state");
+
+  const reload = Promise.withResolvers<Route>();
+  await page.route(`**/v1/projects/${project.id}/extensions/${instance.id}/reload`, (route) => reload.resolve(route));
+  await installedRow.press("Enter");
+  await expect(detail).toBeVisible();
+  await detail.getByTestId("extension-reload").click();
+  const pendingReload = await reload.promise;
+  const rowRetry = toggleError.getByRole("button", { name: "Retry" });
+  await page.goBack();
+  await expect(rowToggle).toBeDisabled();
+  await expect(rowRetry).toBeDisabled();
+  instance.updateAvailable = false;
+  await pendingReload.fulfill({ json: instance });
+
+  await rowRetry.click();
+  await expect.poll(() => toggles.length).toBe(2);
+  expect(toggles[1]!.request().postDataJSON()).toEqual({ enabled });
+  instance.enabled = enabled;
+  await toggles[1]!.fulfill({ json: { ...instance } });
+  await expect(rowToggle).toBeEnabled();
+  await expect(rowToggle).toHaveJSProperty("checked", instance.enabled);
+  await expect(installedRow.locator('[data-part="thumb"] [data-testid="extension-toggle-spinner"]')).toHaveCount(0);
+  await expect(installedRow.getByRole("alert")).toHaveCount(0);
   await expect(installedRow.getByTestId("extension-row-upgrade")).toHaveCount(0);
   await page.unrouteAll({ behavior: "ignoreErrors" });
 });

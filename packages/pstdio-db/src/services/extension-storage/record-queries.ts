@@ -24,16 +24,9 @@ import {
 } from "../../db/schemas.pg";
 import { aggregateRecordQuery } from "./record-aggregate-query";
 import { derivedQueryChanges, rebuildDerivedQueryValues } from "./record-derived-fields";
-import { dropRecordIndexes } from "./record-index-lifecycle";
+import { createRecordIndex, dropRecordIndexes } from "./record-index-lifecycle";
 import { decodeProjectionValue, encodeProjectionValue } from "./record-projection-codec";
-import {
-  arrayIndexFields,
-  pageAfterSql,
-  recordFieldSql,
-  recordIndexKeys,
-  recordPageSql,
-  recordScopeSql,
-} from "./record-query-sql";
+import { pageAfterSql, recordPageSql, recordScopeSql } from "./record-query-sql";
 import { loadRelatedQueryIndexes, relatedRecordPredicateSql } from "./record-related-query";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
@@ -99,6 +92,12 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
   const ownerWhere = (table: typeof current | typeof indexes | typeof projections) =>
     and(eq(table.workbench_id, owner.workbenchId), eq(table.extension_id, owner.extensionId));
   const visible = (index: StorageRecordIndex) => recordScopeSql(owner, index);
+  const databaseName = async (index: StorageRecordIndex) => {
+    const identity = { owner: { ...owner }, definition: index as unknown as Json };
+    // Equality-prefixed indexes also need an ordered-page path. Version that
+    // physical layout so existing databases reconcile unchanged public definitions.
+    return `storage_query_${(await fingerprint(index.equality?.length ? { ...identity, layout: 2 } : identity)).slice(0, 32)}`;
+  };
   const getIndex = async (connection: Pick<DbClient, "select">, name: string) => {
     const [index] = await connection
       .select()
@@ -132,28 +131,21 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
             previous.map((row) => row.definition) as unknown as Json,
           ) as unknown as StorageRecordIndex[],
         );
+        const desiredNames = new Map(
+          await Promise.all(desired.map(async (index) => [index.name, await databaseName(index)] as const)),
+        );
         // Compare under the same lock as installation: concurrent reloads can change derived sources.
-        if ((await fingerprint(installed as unknown as Json)) === (await fingerprint(desired as unknown as Json)))
+        if (
+          (await fingerprint(installed as unknown as Json)) === (await fingerprint(desired as unknown as Json)) &&
+          previous.every((row) => row.database_name === desiredNames.get(row.name))
+        )
           return;
         await dropRecordIndexes(tx, ownerWhere(indexes)!);
         await tx.delete(indexes).where(ownerWhere(indexes));
         await rebuildDerivedQueryValues(tx, owner, derivedQueryChanges(installed, desired), diagnostics);
         for (const index of desired) {
-          const name = `storage_query_${(await fingerprint({ owner: { ...owner }, definition: index as unknown as Json })).slice(0, 32)}`;
-          const keys = recordIndexKeys(index);
-          await tx.execute(
-            sql`CREATE INDEX ${sql.identifier(name)} ON storage_current_records (${sql.join(keys, sql`, `)}) WHERE ${visible(index)}`,
-          );
-          // Postgres ignores partial-index statistics when estimating rows. Without these,
-          // an in-list looks like half the owner and the planner scans every row.
-          for (const [position, key] of keys.slice(0, index.equality?.length ?? 0).entries())
-            await tx.execute(
-              sql`CREATE STATISTICS ${sql.identifier(`${name}_s${position}`)} ON ${key} FROM storage_current_records`,
-            );
-          for (const [position, [field]] of arrayIndexFields(index).entries())
-            await tx.execute(
-              sql`CREATE INDEX ${sql.identifier(`${name}_g${position}`)} ON storage_current_records USING gin ((${recordFieldSql(index, field)})) WHERE ${visible(index)}`,
-            );
+          const name = desiredNames.get(index.name)!;
+          await createRecordIndex(tx, name, index, visible(index));
           await tx.insert(indexes).values({
             ...address,
             name: index.name,
@@ -180,6 +172,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
             // One extra row shows whether a next page exists without a second scan.
             page.limit + 1,
             page.offset,
+            query.where,
           ),
         );
         const rows = result.rows.slice(0, page.limit);
