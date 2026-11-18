@@ -1,7 +1,7 @@
 import { standardResourceIcons, type WorkbenchModuleContext, type WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import { getDashboardSelectedProjectId, getDashboardSelectedProjectName } from "@/shared/app/project-context";
+import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardEditableTemplatesContextKey } from "@/shared/extensions/workbench-extension-contributions";
 import { AppearanceSettingsPanel } from "./components/appearance-settings-panel";
 import { BetaFeaturesPanel } from "./components/beta-features-panel";
@@ -125,7 +125,6 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
       render: (input) => (
         <ProjectDangerZone
           projectId={getDashboardSelectedProjectId(ctx)}
-          projectName={getDashboardSelectedProjectName(ctx) ?? "Project"}
           onDeleted={() => void input.workbench.commands.executeCommand(dashboardCommandIds.clearSelectedProject)}
         />
       ),

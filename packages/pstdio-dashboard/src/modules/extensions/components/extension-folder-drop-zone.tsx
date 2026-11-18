@@ -59,6 +59,7 @@ export const ExtensionFolderDropZone = (props: ExtensionFolderDropZoneProps) => 
 
   return (
     <Stack
+      position="relative"
       layerStyle={dragging ? "dropZone.active" : "dropZone.idle"}
       alignItems="center"
       gap="2xs"

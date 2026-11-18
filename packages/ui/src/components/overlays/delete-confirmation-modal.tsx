@@ -55,7 +55,7 @@ export const DeleteConfirmationModal = (props: DeleteConfirmationModalProps) => 
                 <CloseButton size="sm" disabled={isDeleting} />
               </Dialog.CloseTrigger>
             </Dialog.Header>
-            <Dialog.Body>
+            <Dialog.Body position="relative">
               <Stack gap="3">
                 {notificationText ? <Text>{notificationText}</Text> : null}
                 {children}

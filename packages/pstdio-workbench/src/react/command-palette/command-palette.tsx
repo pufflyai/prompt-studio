@@ -1,3 +1,4 @@
+import { Box } from "@chakra-ui/react";
 import { Palette, type PaletteEntry, PaletteShortcut, useThemePreference } from "@pstdio/ui";
 import { type ReactNode, useEffect, useState } from "react";
 import {
@@ -301,7 +302,11 @@ const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
         inputIcon={({ mode }) => getPaletteInputIcon({ view, mode })}
         placeholder={({ mode }) => getPalettePlaceholder({ view, mode })}
         emptyLabel="No results found."
-        footerStart={<WorkbenchActionErrors workbench={workbench} target="command-palette" />}
+        footerStart={
+          <Box position="relative" width="full" minW="2xs">
+            <WorkbenchActionErrors workbench={workbench} target="command-palette" edge="above" />
+          </Box>
+        }
         onActiveEntryChange={(entry) => {
           if (!open || !isThemeView) return;
           const themeEntry = entry as WorkbenchThemePaletteEntry | null;

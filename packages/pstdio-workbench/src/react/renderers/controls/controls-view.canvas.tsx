@@ -3,6 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ControlValueMap } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { createWorkbench, getWorkbenchRenderers } from "../../../core";
+import { SettingsPageContext } from "../../settings/settings-page-context";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
 import { WorkbenchControlsView } from "./controls-view";
 
@@ -89,4 +90,43 @@ function ImmediateControlsPreview() {
 export const ImmediateChanges: Story = {
   id: "workbench-controls-apply-drafts--immediate-changes",
   render: () => <ImmediateControlsPreview />,
+};
+
+function ResetOnlySettingsPreview() {
+  const [fixture] = useState(() => {
+    const workbench = createWorkbench();
+    const renderers = getWorkbenchRenderers(workbench);
+    let saved = "Desk";
+    let attempts = 0;
+    renderers.registerControlsRenderer({
+      id: "reset-only",
+      title: "Device settings",
+      executeQuery: () => ({
+        params: [{ id: "name", type: "text", name: "Device name", singleLine: true, defaultValue: "Desk" }],
+        values: { name: saved },
+      }),
+      updateValue: ({ value }) => {
+        saved = String(value);
+      },
+      reset: () => {
+        if (++attempts < 3) throw new Error("Could not reset device settings. Try again.");
+        saved = "Desk";
+      },
+    });
+    return { workbench, contribution: renderers.getControlsRenderer("reset-only")! };
+  });
+  return (
+    <SettingsPageContext value={{ workbench: fixture.workbench, title: "Device settings" }}>
+      <WorkbenchControlsView
+        workbench={fixture.workbench}
+        contribution={fixture.contribution}
+        placement={{ instanceId: "reset-only", panelId: "reset-only", closable: false }}
+      />
+    </SettingsPageContext>
+  );
+}
+
+export const ResetFailure: Story = {
+  id: "workbench-controls-apply-drafts--reset-failure",
+  render: () => <ResetOnlySettingsPreview />,
 };

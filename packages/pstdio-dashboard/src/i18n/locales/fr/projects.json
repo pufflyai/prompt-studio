@@ -60,6 +60,7 @@
         "errorCopied": "Erreur copiée"
       },
       "upgrade": {
+        "waiting": "En attente de mise à niveau",
         "action": "Mettre à niveau",
         "succeeded": "Extension mise à niveau",
         "current": "L'extension est déjà à jour",
@@ -158,6 +159,20 @@
         "title": "Remplacer {{name}} ?",
         "message": "Les fichiers installés seront remplacés. Les autres projets qui utilisent cette extension utiliseront aussi les nouveaux fichiers.",
         "action": "Remplacer"
+      },
+      "feedback": {
+        "queued": "En attente",
+        "upgrading": "Mise à niveau de {{name}}",
+        "updating": "Mise à jour de {{name}}",
+        "updated": "Extension mise à jour",
+        "installing": "Installation de {{name}}",
+        "batch": "{{count}} mises à niveau terminées sur {{total}}",
+        "retry": "Réessayer",
+        "dismiss": "Fermer",
+        "upgradingButton": "Mise à niveau",
+        "batchFailed": "{{count}} mises à niveau sur {{total}} ont échoué",
+        "installingButton": "Installation",
+        "installedButton": "Installée"
       }
     }
   },
