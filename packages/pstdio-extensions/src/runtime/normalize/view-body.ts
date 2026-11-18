@@ -11,7 +11,7 @@ const handler = (input: {
   index: RegistryIndex;
   viewId: string;
   localId: string;
-  kind: "chat" | "controls" | "dataTable" | "file" | "kanban" | "resourceList" | "terminal" | "tree";
+  kind: "actionBar" | "chat" | "controls" | "dataTable" | "file" | "kanban" | "resourceList" | "terminal" | "tree";
   operation: string;
   value: unknown;
   body?: ViewBody;
@@ -43,6 +43,12 @@ export const normalizeViewBody = (input: {
 }) => {
   const body = input.body as ViewBody & Record<string, unknown>;
   if (body.kind === "webview") return body;
+  if (body.kind === "actionBar") {
+    return {
+      ...body,
+      queryHandlerId: handler({ ...input, kind: "actionBar", operation: "query", value: body.query }),
+    };
+  }
   if (body.kind === "terminal") {
     return {
       ...body,

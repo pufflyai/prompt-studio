@@ -2,6 +2,56 @@ import { describe, expect, test } from "bun:test";
 import { createStatusBarRegistry } from "./status-bar-registry";
 
 describe("createStatusBarRegistry", () => {
+  test("moves a single widget between empty alignment slots and orders it beside a destination widget", () => {
+    const registry = createStatusBarRegistry({ hasView: () => true });
+    registry.registerItem({ id: "cloud", viewId: "cloud", slot: "trailing" });
+    registry.moveItem("cloud", "center");
+    expect(registry.listVisibleItems("center").map((item) => item.id)).toEqual(["cloud"]);
+    expect(registry.listVisibleItems("trailing")).toEqual([]);
+    registry.registerItem({ id: "meter", viewId: "meter", slot: "leading" });
+    registry.moveItem("cloud", "leading", { beforeItemId: "meter" });
+    expect(registry.listVisibleItems("leading").map((item) => item.id)).toEqual(["cloud", "meter"]);
+    expect(registry.getItem("cloud")?.slot).toBe("leading");
+    registry.reorderItem("meter", { beforeItemId: "cloud" });
+    expect(registry.listVisibleItems("leading").map((item) => item.id)).toEqual(["meter", "cloud"]);
+  });
+
+  test("ignores a drop whose destination owner was removed", () => {
+    const registry = createStatusBarRegistry({ hasView: () => true });
+    registry.registerItem({ id: "cloud", viewId: "cloud", slot: "trailing" });
+    const destination = registry.registerItem({ id: "meter", viewId: "meter", slot: "center" });
+    destination.dispose();
+    registry.moveItem("cloud", "center", { beforeItemId: "meter" });
+    expect(registry.getItem("cloud")?.slot).toBe("trailing");
+  });
+
+  test("restores chosen alignment and order after reload and owner replacement", () => {
+    let order: string[] | undefined;
+    let slots: Record<string, "leading" | "center" | "trailing"> | undefined;
+    const persistence = {
+      getOrder: () => order,
+      setOrder: (value: string[]) => {
+        order = value;
+      },
+      getSlots: () => slots,
+      setSlots: (value: NonNullable<typeof slots>) => {
+        slots = value;
+      },
+    };
+    const first = createStatusBarRegistry({ hasView: () => true, persistence });
+    const owner = first.registerItem({ id: "cloud", viewId: "cloud", slot: "trailing" });
+    first.registerItem({ id: "meter", viewId: "meter", slot: "trailing" });
+    first.moveItem("cloud", "center");
+    first.moveItem("meter", "center", { beforeItemId: "cloud" });
+    owner.dispose();
+    first.registerItem({ id: "cloud", viewId: "cloud", slot: "leading" });
+    expect(first.getItem("cloud")?.slot).toBe("center");
+    const restored = createStatusBarRegistry({ hasView: () => true, persistence });
+    restored.registerItem({ id: "cloud", viewId: "cloud", slot: "trailing" });
+    restored.registerItem({ id: "meter", viewId: "meter", slot: "trailing" });
+    expect(restored.listVisibleItems("center").map((item) => item.id)).toEqual(["meter", "cloud"]);
+    expect(restored.listVisibleItems("leading")).toEqual([]);
+  });
   test("reorders within a slot and retains the chosen order when an item is registered again", () => {
     const registry = createStatusBarRegistry({ hasView: () => true });
     const connection = registry.registerItem({ id: "connection", viewId: "connection", slot: "trailing" });
