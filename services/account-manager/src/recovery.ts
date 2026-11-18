@@ -166,7 +166,7 @@ export const restoreManager = async (db: ManagerDatabase, requestId: string, inp
     await insertBatches(
       transaction,
       spaceKeys,
-      snapshot.keys.filter((row) => !retired.has(projectScope(row.accountId, row.workbenchId))),
+      snapshot.keys.filter((row) => retired.get(projectScope(row.accountId, row.workbenchId))?.state !== "completed"),
     );
     await insertBatches(transaction, requests, snapshot.requests);
     await transaction.insert(restoreRequests).values({ id, fingerprint: digest });

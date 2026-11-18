@@ -28,7 +28,13 @@ const deletionRoute = async (auth: Authentication, request: Request, path: strin
   const deletion = /^\/v1\/workbenches\/([^/]+)\/deletion$/.exec(path);
   if (!deletion || (method !== "GET" && method !== "POST")) return null;
   const token = bearer(request);
-  const id = decodeURIComponent(deletion[1]);
+  let id: string;
+  try {
+    id = decodeURIComponent(deletion[1]);
+  } catch {
+    return json({ error: "Invalid request" }, 400);
+  }
+  if (id.includes("\0")) return json({ error: "Invalid request" }, 400);
   if (method === "GET") {
     const found = await auth.devices.projectDeletion(token, id);
     return found ? json(found) : json({ error: "Unknown project deletion" }, 404);
