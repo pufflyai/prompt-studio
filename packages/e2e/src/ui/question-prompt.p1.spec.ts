@@ -169,7 +169,8 @@ test("async question replies preserve the draft and files until every request is
   await page.getByTestId("send-message-button").filter({ visible: true }).click();
   const errorAlert = page.getByRole("alert").filter({ visible: true });
   await expect(errorAlert.getByText("Provider unavailable", { exact: true })).toBeVisible();
-  await expect(errorAlert.getByRole("button", { name: "Retry", exact: true })).toBeEnabled();
+  await errorAlert.getByRole("button", { name: "Dismiss", exact: true }).click();
+  await expect(errorAlert.getByText("Provider unavailable", { exact: true })).toHaveCount(0);
   await expect(first).toBeChecked();
   await expect(page.getByTestId("send-message-button").filter({ visible: true })).toBeEnabled();
   await page.unroute(actionRoute, failReply);
