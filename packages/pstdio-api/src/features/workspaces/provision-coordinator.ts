@@ -62,9 +62,8 @@ export const runWorkspaceProvisioning = async <W extends ProvisionWorkspace>(
   if (workspace.execution_kind !== "local" || !workspace.root_path) return workspace;
   return deps.workspaceService.maintenance.run(workspace.id, async () => {
     const current = await deps.workspaceService.get(workspace.id);
-    if (!current || current.project_id !== projectId || !isReadyLocalWorkspace(current)) {
-      return (current ?? workspace) as W;
-    }
+    if (!current || current.project_id !== projectId) return workspace;
+    if (!isReadyLocalWorkspace(current)) return current as W;
     await deps.workspaceService.setInitializing(workspace.id, true);
     try {
       const { payload, error } = await provisionWorkspaceFiles(deps, { ...input, workspace: current }, hooks);
