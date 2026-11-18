@@ -3,7 +3,7 @@ import { removeWorkspaceConfig } from "../workspaces/workspace-config";
 import { cleanupProviderBackedWorkspace } from "../workspaces/workspace-provider-lifecycle";
 import { rootProviderId } from "../workspaces/workspace-provider-service";
 import type { ProjectsRouteDeps } from "./deps";
-import { ownsManagedProjectFolder, removeManagedProjectFolder } from "./managed-project-folder";
+import { inspectManagedProjectFolder, removeManagedProjectFolder } from "./managed-project-folder";
 import { withFolderCreation } from "./project-folder";
 
 export const cleanupProjectArtifacts = async (
@@ -38,7 +38,7 @@ export const summarizeProjectCopyCleanup = async (
   const workspaces = await deps.workspaceService.listForProviderReconciliation(projectId);
   const home = workspaces.find((workspace) => workspace.is_default);
   return {
-    removesManagedFolder: await ownsManagedProjectFolder(projectId, home?.root_path),
+    ...(await inspectManagedProjectFolder(projectId, home?.root_path)),
     providerWorkspaceCount: workspaces.filter(({ provider_id }) => provider_id !== rootProviderId).length,
   };
 };

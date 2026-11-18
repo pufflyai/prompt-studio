@@ -38,11 +38,7 @@ const installedOwnerKey = (snapshot: ProjectExtensionRuntimeSnapshot, sourcePath
 };
 
 /** Resolve executable settings on the host, then transfer PTY lifetime to the presentation's socket. */
-export const openNativeTerminalSession = async (
-  deps: ExtensionsRouteDeps,
-  request: TerminalViewOpenRequest,
-  signal: AbortSignal,
-) => {
+const open = async (deps: ExtensionsRouteDeps, request: TerminalViewOpenRequest, signal: AbortSignal) => {
   const { projectId, resource, cols, rows } = nativeTerminalOpenSchema.parse(request);
   if (resource?.projectId && resource.projectId !== projectId)
     throw new Error("Terminal resource belongs to another project");
@@ -67,7 +63,9 @@ export const openNativeTerminalSession = async (
   let session: TerminalSessionHandle | undefined;
   let closing: Promise<void> | undefined;
   let unsubscribe = () => {};
+  let disown = () => {};
   const release = () => {
+    disown();
     unsubscribe();
     lifetime.removeEventListener("abort", onAbort);
   };
@@ -118,6 +116,7 @@ export const openNativeTerminalSession = async (
     const target = await resolveLocalWorkspaceTarget(deps, { projectId, workspaceId: launch.workspaceId }, "process");
     await validateOwner();
     lifetime.throwIfAborted();
+    disown = deps.projectService?.work?.own(projectId, close) ?? disown;
     session = deps.terminal.openSession({ cols, rows, cwd: target.root, command: launch.command, env: launch.env });
     return {
       ...session,
@@ -135,3 +134,11 @@ export const openNativeTerminalSession = async (
     throw error;
   }
 };
+
+export const openNativeTerminalSession = (
+  deps: ExtensionsRouteDeps,
+  request: TerminalViewOpenRequest,
+  signal: AbortSignal,
+) =>
+  deps.projectService?.work?.run(request.projectId, (owned) => open(deps, request, owned), signal) ??
+  open(deps, request, signal);

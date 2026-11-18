@@ -122,7 +122,8 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
         if (!choice) {
           const project = await input.projects.get(id);
           if (project && (await input.syncStatus(id)).offlineReady) return { projectId: id, presence: "downloaded" };
-          throw new AccountRequestError("This project is already managed by Cloud discovery");
+          void input.refresh();
+          return { projectId: id, presence: "downloading" };
         }
         await requireCurrent(login);
         await copies.write({ ...choice, phase: "downloading" });

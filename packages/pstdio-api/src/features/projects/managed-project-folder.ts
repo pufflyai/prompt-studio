@@ -28,14 +28,18 @@ export const prepareManagedProjectFolder = async (id: string) => {
   return realpath(path);
 };
 
-export const ownsManagedProjectFolder = async (id: string, root: string | null | undefined) => {
-  if (!root) return false;
+export const inspectManagedProjectFolder = async (id: string, root: string | null | undefined) => {
   const path = folder(id);
+  if (!root || root !== (await realpath(path).catch(missing))) return { removesManagedFolder: false };
+  const found = await identity(path);
+  if (!found) return { removesManagedFolder: false };
   const recorded = await readFile(marker(id), "utf8").catch(missing);
-  return Boolean(recorded && recorded === (await identity(path)) && root === (await realpath(path).catch(missing)));
+  if (recorded === found) return { removesManagedFolder: true };
+  return { removesManagedFolder: false, retainsUnverifiedFolder: true as const };
 };
 
 export const removeManagedProjectFolder = async (id: string, root: string | null | undefined) => {
-  if (await ownsManagedProjectFolder(id, root)) await rm(folder(id), { recursive: true, force: true });
+  if ((await inspectManagedProjectFolder(id, root)).removesManagedFolder)
+    await rm(folder(id), { recursive: true, force: true });
   await rm(marker(id), { force: true });
 };

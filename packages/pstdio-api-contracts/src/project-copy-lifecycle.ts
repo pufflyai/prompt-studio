@@ -9,6 +9,7 @@ export const localRemovalPreflightSchema = z.strictObject({
   uploadState: z.enum(["verified", "pending", "unknown"]),
   requiresDiscard: z.boolean(),
   removesManagedFolder: z.boolean(),
+  retainsUnverifiedFolder: z.literal(true).optional(),
   providerWorkspaceCount: z.int().nonnegative(),
 });
 

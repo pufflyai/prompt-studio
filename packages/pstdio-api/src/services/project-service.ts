@@ -53,7 +53,7 @@ export const createProjectService = (deps: ProjectServiceDeps) => {
     return true;
   };
   return {
-    query: db.query,
+    query: (input?: Parameters<typeof db.query>[0]) => db.query(input, work.hiddenIds()),
     list: async () => (await db.list()).filter(({ id }) => !work.hidden(id)),
     get,
     create,

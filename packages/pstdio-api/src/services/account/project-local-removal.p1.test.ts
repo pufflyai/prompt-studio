@@ -111,15 +111,19 @@ test("removing a local copy preserves its source folder and stays removed after 
     expect(await host.deps.projectService.get(id)).not.toBeNull();
     expect(await data.records.read("note")).toMatchObject({ exists: true });
 
-    const running = Promise.withResolvers<void>();
     const stopped = Promise.withResolvers<void>();
-    const writer = host.deps.projectService.work.run(id, async (signal) => {
-      signal.addEventListener("abort", () => running.resolve(), { once: true });
+    let signal: AbortSignal | undefined;
+    const writer = host.deps.projectService.work.run(id, async (admitted) => {
+      signal = admitted;
       await stopped.promise;
     });
     const removing = request(host, `${projectPath}/remove-local`, { discardUnsynced: true });
     try {
-      await running.promise;
+      for (let attempt = 0; !host.deps.projectService.work.blocked(id); attempt++) {
+        if (attempt === 50) throw new Error("Local removal did not close write admission");
+        await Bun.sleep(10);
+      }
+      expect(signal?.aborted).toBe(false);
       await expect(
         data.records.commit({ operationId: "late-edit", edits: [{ recordId: "late", replace: "late" }] }),
       ).rejects.toThrow("This device is removing");
@@ -232,6 +236,13 @@ test("provider failure leaves removal resumable and keeps the managed folder unt
     expect((await request(host, `${path}/remove-local`, { discardUnsynced: true })).status).toBe(503);
     expect(await host.deps.projectService.get(id)).toBeNull();
     expect(await readFile(copy, "utf8")).toBe("The app owns this folder.");
+    expect(await (await request(host, "/projects/query")).json()).toMatchObject({ items: [] });
+    const write = await host.app.request(`/v1/workspaces/${home!.id}/file?path=late.txt`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ content: "Avoid a write during cleanup" }),
+    });
+    expect(write.status).toBe(409);
     expect(await (await request(host, "/account/projects")).json()).toMatchObject({
       projects: [{ id, presence: "removing" }],
     });

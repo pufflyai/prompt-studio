@@ -95,6 +95,7 @@ export const createAppAccount = (
           accountService.connectProjectCopies({
             inspect: (id) => summarizeProjectCopyCleanup(app.deps, id),
             prepareFolder: (id) => openProject(app.deps, id),
+            freeze: projects.work.freeze,
             suspend: projects.work.suspend,
             hide: (id) => {
               projects.work.hide(id);
@@ -111,6 +112,7 @@ export const createAppAccount = (
             cleanup: async (copy) => {
               const id = copy.projectId;
               await recovery.suspend(id);
+              await projects.work.closeResources(id);
               await app.deps.nativeDocuments.withdrawProject(id);
               await app.deps.automationService.cancelProjectRuns(id);
               const active = (await app.deps.sessionService.listActive()).filter(

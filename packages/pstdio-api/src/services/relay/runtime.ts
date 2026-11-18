@@ -66,6 +66,24 @@ const drainOwnerStarts = async (starts: Promise<void>[]) => {
   for (const result of results) if (result.status === "rejected") throw result.reason;
 };
 
+const createWorkbenchAccess = (input: RelayWorkbench, runtime: AbortSignal, denied?: () => void) => {
+  const owner = new AbortController();
+  const signal = AbortSignal.any([runtime, owner.signal]);
+  return Object.assign(createRelayAccess({ ...input, signal, denied }), { close: () => owner.abort() });
+};
+
+const closeWorkbenchOwners = (
+  id: string,
+  owners: { remove(id: string): Promise<void> }[],
+  live: Map<string, LiveConnection>,
+) => {
+  const pending = owners.map((owner) => owner.remove(id));
+  const channel = live.get(id);
+  channel?.close();
+  live.delete(id);
+  return drainOwnerStarts([...pending, Promise.resolve(channel?.done).then(() => {})]);
+};
+
 type ExtensionConnection = Awaited<ReturnType<typeof startRelayExtension>>;
 
 const stopRelayConnection = async (
@@ -73,9 +91,12 @@ const stopRelayConnection = async (
   key: string,
   connection: ExtensionConnection,
 ) => {
-  connection.close();
-  await connection.done;
-  if (connections.get(key) === connection) connections.delete(key);
+  try {
+    connection.close();
+    await connection.done;
+  } finally {
+    if (connections.get(key) === connection) connections.delete(key);
+  }
 };
 
 // `denied` runs when the manager rejects a device credential, for example after another device removed this one.
@@ -114,7 +135,7 @@ const createWorkbenchStatus =
 
 export const startRelayRuntime = async (input: RelayRuntimeInput) => {
   const workbenches = new Map<string, RelayWorkbench>();
-  const access = new Map<string, ReturnType<typeof createRelayAccess>>();
+  const access = new Map<string, ReturnType<typeof createWorkbenchAccess>>();
   const controller = new AbortController();
   const { deps } = input;
   const live = new Map<string, LiveConnection>();
@@ -258,19 +279,18 @@ export const startRelayRuntime = async (input: RelayRuntimeInput) => {
     // Events emitted while owners drain must not recreate them on the old shared connection.
     for (const id of changed) {
       workbenches.delete(id);
+      access.get(id)?.close();
       access.delete(id);
     }
-    for (const id of changed) {
-      for (const owners of lifecycleOwners) await owners.remove(id);
-      // Closing the project's connection also ends its extension owners' runs before they stop below.
-      live.get(id)?.close();
-      live.delete(id);
-    }
-    // Publish new owners before awaiting shutdown so an older in-flight start cannot take ownership.
+    const obsolete = [...connections].filter(([, active]) => changed.has(active.owner.workbenchId));
+    await drainOwnerStarts([
+      ...[...changed].map((id) => closeWorkbenchOwners(id, lifecycleOwners, live)),
+      ...obsolete.map(([key, active]) => stopConnection(key, active)),
+    ]);
     for (const [id, connection] of desired)
       if (!workbenches.has(id)) {
         workbenches.set(id, connection);
-        access.set(id, createRelayAccess({ ...connection, signal: controller.signal, denied: input.denied }));
+        access.set(id, createWorkbenchAccess(connection, controller.signal, input.denied));
         const channel = createLiveConnection({
           origin: connection.relayOrigin,
           projectId: id,
@@ -281,8 +301,6 @@ export const startRelayRuntime = async (input: RelayRuntimeInput) => {
         channel.discover(connection.accountId);
         live.set(id, channel);
       }
-    const obsolete = [...connections].filter(([, active]) => changed.has(active.owner.workbenchId));
-    await Promise.all(obsolete.map(([key, active]) => stopConnection(key, active)));
     for (const id of changed) statusChanged(id);
     await refresh();
   };

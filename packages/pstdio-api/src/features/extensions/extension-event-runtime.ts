@@ -96,10 +96,10 @@ export const fireExtensionEvent = <TPayload extends Struct>(
   workspaceSnapshot?: WorkspaceSnapshot,
   refresh?: Omit<QueryChangeEnvelope, "projectId">,
   options?: { broadcast?: boolean },
-) =>
-  deps.projectService.work.run(projectId, () =>
-    dispatchExtensionEvent(deps, projectId, event, payload, workspaceSnapshot, refresh, options),
-  );
+) => {
+  const dispatch = () => dispatchExtensionEvent(deps, projectId, event, payload, workspaceSnapshot, refresh, options);
+  return deps.projectService?.work?.run(projectId, dispatch) ?? dispatch();
+};
 
 export const fireExtensionEventAsync = <TPayload extends Struct>(
   deps: ExtensionEventDeps,

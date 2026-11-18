@@ -12,6 +12,7 @@ import type { createProjectCopyStore, ProjectCopy } from "./project-copy-store";
 export interface ProjectCopyHooks {
   inspect(id: string): Promise<LocalCleanupSummary>;
   prepareFolder(id: string): Promise<unknown>;
+  freeze?(id: string): void;
   suspend?(id: string): void;
   hide?(id: string): void;
   release?(id: string): void;
@@ -75,14 +76,15 @@ export const createLocalProjectRemoval = (input: {
   };
 
   const begin = async (id: string, options: RemoveLocalProjectInput): Promise<RemovalResult> => {
-    if (!hooks?.suspend || !hooks.cleanup) throw new AccountRequestError("Project removal is unavailable");
+    if (!hooks?.freeze || !hooks.suspend || !hooks.cleanup)
+      throw new AccountRequestError("Project removal is unavailable");
     const login = await input.login();
     const choice = (await input.copies.forAccount(login)).find((row) => row.projectId === id);
     if (choice?.phase === "removing") return finish(choice);
     if (choice?.phase === "cloud-only") return { removed: { projectId: id, presence: "cloud-only" } };
     const project = (await input.isCloudProject(login, id)) && (await input.project(id));
     if (!project) return null;
-    hooks.suspend(id);
+    hooks.freeze(id);
     let copy: ProjectCopy;
     try {
       await hooks.drain?.(id);
@@ -125,7 +127,8 @@ export const createLocalProjectRemoval = (input: {
       if (!project || !hooks) return null;
       const result = await inspect(project);
       await input.requireCurrent(login);
-      return result;
+      // An earlier request already persisted consent before any destructive work started.
+      return choice ? { ...result, requiresDiscard: false } : result;
     },
     remove: (id: string, options: RemoveLocalProjectInput) => serialize(id, () => begin(id, options)),
     async restoreBarrier(deviceId: string, suspend: (id: string) => void) {

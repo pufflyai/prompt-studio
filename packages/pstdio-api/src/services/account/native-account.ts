@@ -168,6 +168,8 @@ export const createNativeAccount = (input: {
     removed: () => new AccountRequestError("This device was removed from your account. Log in again with pst login"),
   });
 
+  const readProjectStatus = (id: string, login: DeviceLogin | null) =>
+    connectionSyncStatus(id, login, projectsFor, projectStatus, missing);
   const catalog = createProjectCloudCatalog({
     accountFile: input.file,
     login: readLogin,
@@ -297,7 +299,7 @@ export const createNativeAccount = (input: {
     projectSyncStatus: createNativeProjectSyncReader({
       login: readLogin,
       exists: (id) => input.projects.get(id),
-      read: (id, login) => connectionSyncStatus(id, login, projectsFor, projectStatus, missing),
+      read: readProjectStatus,
       away: (id) => away.status(id),
       changed: () => new AccountRequestError("The account changed before the project sync read completed"),
       unknown: () => new AccountRequestError("Unknown project"),
