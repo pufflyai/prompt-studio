@@ -4,8 +4,8 @@ import { createExtensionInstancesDBService } from "../extension-instances/extens
 import { createInstalledExtensionSourcesDBService } from "../installed-extension-sources/installed-extension-sources";
 import { createExtensionStorageDBService } from "./extension-storage";
 
-export const createExtensionStorageFixture = async () => {
-  const { db, close } = await createDb({ path: ":memory:" });
+export const createExtensionStorageFixture = async (path = ":memory:") => {
+  const { db, close } = await createDb({ path });
   const svc = createExtensionStorageDBService(db);
   const sources = createInstalledExtensionSourcesDBService(db);
   const instances = createExtensionInstancesDBService(db);

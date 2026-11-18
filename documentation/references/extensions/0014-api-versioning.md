@@ -43,6 +43,18 @@ field paths and the SDK `readCollectionRecords` helper. Extensions using these
 must require `^0.4.2` and pin a supporting published SDK. Index declarations are
 installed before commands become available. See [storage](../sdk/0004-storage.md).
 
+The unreleased API 0.5.0 step makes views using the new SDK collection-query
+helpers paged by default. Existing custom `defineView` callbacks retain their
+full-result contract, including when rebuilt with the new SDK. Custom bounded
+providers explicitly declare `queryMode: "paged"`; fixed collections explicitly
+declare `queryMode: "static"` and a row limit. The host rejects whole-collection reads from bounded view
+callbacks, including nested commands. Existing providers retain their legacy contract. This step also includes the indexed related-query,
+derived projection, column-statistics and collection-view helpers used by Planner.
+Record queries accept `limit: 0` for validated revision checks without selecting
+resource rows; empty collection pages use this path.
+Planner requires this host API. Its independent release must follow publication
+of the matching SDK and host; a local development link only proves the candidate.
+
 The [native terminal view body](0022-terminal-sessions.md#native-terminal-views)
 shares the coordinated API 0.4.0 step on `main`. It requires a published SDK exporting
 `TerminalViewBody` and a compatible host advertising `view.terminal.v1` (planned

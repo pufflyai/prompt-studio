@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { execSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { TEST_TIMEOUT } from "../cli/timeouts";
@@ -13,13 +13,21 @@ const BINARY_PATH = process.env.E2E_PACKAGED_BINARY_PATH ?? join(REPO_ROOT, "dis
 const BUILD_TIMEOUT = 180_000;
 
 let sandbox: string;
+let entrypoint: string;
 
 beforeAll(() => {
   buildBinary();
 
-  // Create a temp directory with a fake platform package that points to the real binary.
+  // Stage the real npm entrypoint beside its platform package, as npm installs them.
+  // Running the repository copy lets its optional dependencies shadow the fixture.
   // This simulates what npm installs when a user runs `npx pstdio`.
   sandbox = mkdtempSync(join(tmpdir(), "pstdio-npm-e2e-"));
+
+  const binDir = join(sandbox, "node_modules", "pstdio", "bin");
+  mkdirSync(binDir, { recursive: true });
+  entrypoint = join(binDir, "pstdio.cjs");
+  copyFileSync(BIN_ENTRYPOINT, entrypoint);
+  copyFileSync(join(REPO_ROOT, "packages/pstdio/bin/resolve-package.cjs"), join(binDir, "resolve-package.cjs"));
 
   const resolvePackageName = require(join(REPO_ROOT, "packages/pstdio/bin/resolve-package.cjs")).resolvePackageName;
   const platformPkg = resolvePackageName(process.platform, process.arch);
@@ -43,10 +51,9 @@ describe("npm entrypoint (bin/pstdio.cjs via node)", () => {
   test(
     "runs --version through the node entrypoint",
     () => {
-      const output = execSync(`node ${BIN_ENTRYPOINT} --version`, {
+      const output = execFileSync("node", [entrypoint, "--version"], {
         cwd: sandbox,
         encoding: "utf8",
-        env: { ...process.env, NODE_PATH: join(sandbox, "node_modules") },
         timeout: TEST_TIMEOUT,
       });
       expect(output.trim()).toMatch(/\d+\.\d+\.\d+/);

@@ -47,7 +47,7 @@ Historical source is preserved in Git at `bd56e2c399be208edcb64eef9f0e7f6ab17eb1
 | Relay R23 storage ratio1 | Existing real sync-bound integration retains the invariant. Timing benchmark retired; no timing target is claimed. |
 | PS-232 removed failing quarantine | 73 distinct failing cases/93 platform entries were deleted at the user's direction; original failure evidence remains in RP-744. Retirement does not restore those contracts or close PS-96. |
 
-B6 write amplification and B6/B7 scanned-entry ceilings are explicitly pending guards. Counters alone do not prove bounded access. No unapproved numeric ceiling has been invented; qualified evidence remains blocked until exact-workload baselines and human decisions resolve those guards.
+At consolidation, B6 write amplification and B6/B7 scanned-entry ceilings were pending. On 2026-11-17 the user approved B6 actionable/reopen <5,000ms, filter/page/move <250ms, longest stall <200ms, total scanned entries <2,000 and writes <2, plus B7 total scanned entries <1,000 (Planner decision `01a1e8d3-92c0-725d-8622-b831b57a51a7`). Counters alone do not prove bounded access. These limits require fresh qualification; earlier failed, incomplete and unqualified observations keep their original status.
 
 ## First-attempt evidence
 

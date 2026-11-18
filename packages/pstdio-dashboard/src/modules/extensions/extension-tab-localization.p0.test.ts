@@ -162,12 +162,16 @@ test("tab labels reconcile after delayed appearance translations and same-locale
   let next = appearance.promise;
   const harness = createHarness(() => next);
   let subscription: Disposable | (() => void) | undefined;
+  const removed = Promise.withResolvers<void>();
+  let removing = false;
   const owner = getRuntimeCollections();
   const writer = owner.getWriter("extension_instances")!;
   try {
     await flushMicrotasks();
     const tab = harness.tab();
-    subscription = tab.subscribe!(() => {}, harness.instance);
+    subscription = tab.subscribe!(() => {
+      if (removing && tab.getSnapshot(harness.instance).label === "Fallback") removed.resolve();
+    }, harness.instance);
     await flushMicrotasks();
     expect(tab.getSnapshot(harness.instance).label).toBe("Fallback");
     appearance.resolve(translatedAppearance());
@@ -183,10 +187,10 @@ test("tab labels reconcile after delayed appearance translations and same-locale
     await flushMicrotasks();
     await flushMicrotasks();
     expect(tab.getSnapshot(harness.instance).label).toBe("Updated action");
+    removing = true;
     next = Promise.resolve(emptyAppearance);
     writer.upsert({ id: harness.projectId, scope_type: "project", scope_id: harness.projectId, enabled: false });
-    await flushMicrotasks();
-    await flushMicrotasks();
+    await removed.promise;
     expect(tab.getSnapshot(harness.instance).label).toBe("Fallback");
   } finally {
     appearance.resolve(translatedAppearance());
@@ -250,17 +254,23 @@ test.each([
     expect(harness.signals[0].aborted).toBe(true);
     release(subscription);
     tab = harness.tab();
-    subscription = tab.subscribe!(() => {}, harness.instance);
+    const french = Promise.withResolvers<void>();
+    subscription = tab.subscribe!(() => {
+      if (tab.getSnapshot(harness.instance).label === "Nouvelle session") french.resolve();
+    }, harness.instance);
     appearance.resolve(translatedAppearance());
     held.resolve();
-    await flushMicrotasks();
-    await flushMicrotasks();
+    await french.promise;
     expect(tab.getSnapshot(harness.instance).label).toBe("Nouvelle session");
     await i18n.changeLanguage("en");
     release(subscription);
     tab = harness.tab();
-    subscription = tab.subscribe!(() => {}, harness.instance);
-    await flushMicrotasks();
+    const english = Promise.withResolvers<void>();
+    subscription = tab.subscribe!(() => {
+      if (tab.getSnapshot(harness.instance).label === "New session") english.resolve();
+    }, harness.instance);
+    if (tab.getSnapshot(harness.instance).label === "New session") english.resolve();
+    await english.promise;
     expect(tab.getSnapshot(harness.instance).label).toBe("New session");
   } finally {
     appearance.resolve(translatedAppearance());

@@ -44,9 +44,11 @@ Timing and average-memory targets use strict **<**, including equality as a fail
 | B3 | Runtime attachment <1,800ms; usable <5,000ms; first interaction <250ms |
 | B4 | Input/history/stream-to-paint <250ms; file <1,500ms; terminal <250ms; panel <500ms; project/session switch <2,000ms; longest stall <200ms; completion <10,000ms; cancellation <500ms |
 | B5 | Average native memory <2GB on Linux/macOS, <3GB on Windows; complete ten-minute coverage, no missing samples, maximum gap ≤1,000ms |
-| B6 | Timing, total scanned entries and write-amplification ceilings remain pending. Correctness requires bounded query pages and mounted rows ≤100, zero sequential projection scans, and persisted edits. |
-| B7 | Cold read <300ms; warm read <180ms; one-record edit <120ms; read during maintenance <120ms. Correct data, zero sequential scans for indexed cold/warm pages, advancing index counters and exactly 101 writes remain required. |
+| B6 | Actionable/reopen <5,000ms; filter/page/move <250ms; longest stall <200ms; total scanned entries <2,000; writes <2. Correctness requires bounded query pages and mounted rows ≤100, zero sequential projection scans, and persisted edits. |
+| B7 | Cold read <300ms; warm read <180ms; one-record edit <120ms; read during maintenance <120ms; total scanned entries <1,000. Correct data, zero sequential scans for indexed cold/warm pages, advancing index counters and exactly 101 writes remain required. |
 | B8 | Recovery feedback <480ms; restored usable state <6,000ms; first action <300ms |
+
+The nine B6/B7 ceilings were approved by the user on 2026-11-17 in Planner decision `01a1e8d3-92c0-725d-8622-b831b57a51a7`. Earlier failed or unqualified results retain their original limits and status.
 
 B4's chosen limits bound immediate foreground feedback, allow file/tool initialization separately, and keep the ten-second completion target above the fixed six-second replay schedule without extending that schedule. Retained renderer guards are idle script ≤2% and task ≤5%, streaming script ≤85% and task ≤120%. The last task-share guard alone does not constrain responsiveness; paint and stall targets do.
 
@@ -73,7 +75,7 @@ B5 workload version 2 uses `native-average`, `native-peak` and `resident-peak` m
 
 B5 measures all owned desktop/runtime descendants, validates process generations, clips the time-weighted average to the measured interval and retains raw process readings. Missing native memory samples, incomplete cycles, sampling gaps over one second or an incomplete ten-minute window fail. RSS, JS heap and physical footprint including compression remain distinct. Do not force GC.
 
-The user-approved timing and memory decisions do not turn earlier measurements into passing evidence. Preserve failed and unrun phases, incomplete samples and unresolved B6/scan/write guards in the ledger. Do not relax workloads or execution timeouts to meet a target.
+The user-approved timing and memory decisions do not turn earlier measurements into passing evidence. Preserve failed and unrun phases, incomplete samples and unresolved B6 paging/scan guards in the ledger. Do not relax workloads or execution timeouts to meet a target.
 
 B6 completes search, scrolling, move and reopen before evaluating scale guards. Its raw `finished` event lists missing metrics, failed limits and failed scale checks separately. When Planner returns an unbounded result, navigation is marked `unbounded-scroll`; the cursor guards still fail and the run remains unqualified. This allows a complete diagnostic result without treating already-loaded rows as a successful bounded page read. A broken action or missing measurement still fails execution.
 

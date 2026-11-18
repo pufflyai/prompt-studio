@@ -110,7 +110,7 @@ When a P1 job fails, the other P1 jobs stop themselves on purpose (see [Failure 
 
 1. Read the `validation_results` log. It lists each failed job.
 2. Sort the failures by time. The earliest failed job that is not `validation_results` or `ci_passed` is the cause.
-3. If the PR did not touch that code, the test is unreliable. Fix it in a separate PR. Remove a failing quarantined case and keep the evidence for restoring coverage after a fix. Do not queue the same commit again and hope it passes.
+3. If the PR did not touch that code, run a focused main control and track the cause in a separate PR. Quarantine only confirmed intermittent cases with evidence, ownership and removal criteria. Do not queue the same commit again and hope it passes.
 
 Causes of unreliable queue failures we have fixed before:
 
@@ -220,9 +220,9 @@ None of these replace the real queue run or release certification.
 
 ### Quarantine
 
-Remove failing quarantined cases and their matching entries from `scripts/ci/test-quarantine.json`. Preserve first-failure evidence in the ticket or report; restore product coverage after fixing the cause. Do not turn a failing quarantine into a stable test or a permanent skip.
+Keep confirmed intermittent cases in `scripts/ci/test-quarantine.json` with their exact title, file, affected platform, owner, failure/pass evidence and removal criteria. Preserve all assertions and workloads. Execute each once in quarantine and require complete native evidence. A known failure is reported separately as `quarantined-failure`; unexpected failures and missing coverage block. Restore the case to the stable lane after fixing its cause. See [ADR 0101](../../adrs/0101-temporary-flaky-test-quarantine.md).
 
-The registry is currently empty. Quarantine execution remains available for focused diagnosis. Registered diagnostic cases must run once in their separate lane with native evidence. Setup failures, missing cases or reports, cancellation, skipped cases, and retries fail verification. A stable pass does not establish that a diagnostic case passed.
+Quarantine retains confirmed intermittent cases for focused diagnosis. Registered cases must run once in their separate lane with native evidence. Setup failures, missing cases or reports, cancellation, skipped cases, and retries fail verification. A stable pass does not establish that a diagnostic case passed.
 
 ## Builds and caches
 
