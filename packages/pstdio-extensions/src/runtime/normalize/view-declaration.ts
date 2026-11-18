@@ -16,6 +16,14 @@ const native = {
   emptyDescription: localizableStringSchema.optional(),
 };
 const body = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("actionBar"),
+      orientation: z.enum(["vertical", "horizontal"]).optional(),
+      query: callbackSchema,
+      refreshEvents: native.refreshEvents,
+    })
+    .strict(),
   z.object({ kind: z.literal("terminal"), resourceKind: native.resourceKind, session: callbackSchema }).strict(),
   z
     .object({

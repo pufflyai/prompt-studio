@@ -29,7 +29,7 @@ test("ticket workspace totals stay live without rereading the tree command", asy
         project_id: projectId,
         provider_id: "pstdio.worktree",
         params: {},
-        anchors: [{ type: "ticket", id: ticket.id, projectId, extensionId: "pstdio.pstdio-planner" }],
+        anchors: [{ type: "ticket", id: ticket.id, projectId, extensionId: "pstdio.planner" }],
       },
     });
     expect(linked.ok(), await linked.text()).toBe(true);
@@ -45,7 +45,7 @@ test("ticket workspace totals stay live without rereading the tree command", asy
     await page.route(summaryRoute, (route) =>
       route.fulfill({ status: 503, json: { error: { message: "Unavailable" } } }),
     );
-    await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
+    await page.goto(`/projects/${projectId}/extensions/pstdio.planner/tickets`);
     await page.getByTestId("renderer-card").getByText("Live ticket totals", { exact: true }).click();
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     const row = sidenav.getByRole("option").filter({ hasText: workspace.workspace_shorthand });

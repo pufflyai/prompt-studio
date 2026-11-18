@@ -4,11 +4,13 @@ import { junitCases } from "./bun-test-evidence";
 interface ExpectedCase {
   file: string;
   name: string;
+  failureMessageIncludes?: string[];
 }
 interface ReportedCase {
   file: string;
   title: string;
   outcome: string;
+  errorMessages?: string[];
 }
 const matchesTitle = (title: string, name: string) => title === name || title.endsWith(` > ${name}`);
 const matchesCase = (actual: ReportedCase, expected: ExpectedCase) =>
@@ -20,7 +22,18 @@ export const verifyBunQuarantineCases = (reported: ReportedCase[], expected: Exp
     const found = reported.filter((actual) => matchesCase(actual, entry));
     if (found.length !== 1 || !["success", "failure"].includes(found[0]!.outcome))
       throw new Error(`Quarantine case must execute exactly once: ${entry.file}: ${entry.name}`);
-    if (found[0]!.outcome === "failure") failures++;
+    const actual = found[0]!;
+    if (actual.outcome === "failure") {
+      const signature = entry.failureMessageIncludes;
+      if (
+        signature &&
+        (!signature.length ||
+          !actual.errorMessages?.length ||
+          actual.errorMessages.some((message) => !signature.every((text) => message.includes(text))))
+      )
+        throw new Error(`Unexpected quarantine failure: ${entry.file}: ${entry.name}`);
+      failures++;
+    }
   }
   if (reported.some((actual) => actual.outcome !== "skipped" && !expected.some((entry) => matchesCase(actual, entry))))
     throw new Error("Unexpected quarantine execution");
@@ -38,17 +51,29 @@ export const verifyQuarantineReport = (xml: string, expected: ExpectedCase[], ro
   return verifyBunQuarantineCases(reported, expected);
 };
 
-export const assertStableQuarantineExclusions = (reported: ReportedCase[], expected: ExpectedCase[]) => {
+export const assertStableQuarantineExclusions = (
+  reported: ReportedCase[],
+  expected: ExpectedCase[],
+  requireReport = false,
+) => {
   for (const entry of expected) {
     const matches = reported.filter((actual) => matchesTitle(actual.title, entry.name));
-    if (matches.some((actual) => !matchesCase(actual, entry) || actual.outcome !== "skipped") || matches.length > 1)
+    if (
+      matches.some((actual) => !matchesCase(actual, entry) || actual.outcome !== "skipped") ||
+      matches.length > 1 ||
+      (requireReport && matches.length === 0)
+    )
       throw new Error(`Ambiguous or bypassed quarantine: ${entry.file}: ${entry.name}`);
   }
 };
 
 interface BrowserSuite {
   suites?: BrowserSuite[];
-  specs?: { title: string; file: string; tests: { results: { status: string }[] }[] }[];
+  specs?: {
+    title: string;
+    file: string;
+    tests: { results: { status: string; error?: { message?: string }; errors?: { message?: string }[] }[] }[];
+  }[];
 }
 export const verifyPlaywrightQuarantineReport = (
   report: { config: { rootDir: string }; suites: BrowserSuite[]; errors?: unknown[] },
@@ -64,10 +89,13 @@ export const verifyPlaywrightQuarantineReport = (
     const results = entry.tests.flatMap((test) => test.results);
     if (results.length !== 1 || !["passed", "failed", "timedOut"].includes(results[0]!.status))
       throw new Error(`Quarantine case must execute exactly once: ${entry.title}`);
+    const result = results[0]!;
+    const errors = result.errors?.length ? result.errors : [result.error];
     return {
       file: relative(root, resolve(report.config.rootDir, entry.file)).replaceAll("\\", "/"),
       title: entry.title,
       outcome: results[0]!.status === "passed" ? "success" : "failure",
+      errorMessages: errors.map((error) => error?.message ?? "Unknown Playwright case error"),
     };
   });
   return verifyBunQuarantineCases(records, expected);

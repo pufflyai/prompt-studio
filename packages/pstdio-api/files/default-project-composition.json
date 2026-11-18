@@ -44,6 +44,11 @@
         "kind": "command",
         "extensionId": "pstdio.planner",
         "id": "resolve-ticket-opening"
+      },
+      "relatedOpenings": {
+        "kind": "command",
+        "extensionId": "pstdio.planner",
+        "id": "ticket-related-openings"
       }
     },
     {

@@ -15,12 +15,16 @@ import {
   type PerformanceSnapshot,
   performanceDetails,
   performanceMeter,
+  performanceTrigger,
   readSnapshot,
   stopMonitoring,
 } from "./packaged-performance-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
 // Renderer CPU budgets are benchmarks in packaged-renderer.p3.bench.ts.
+
+// Whole-case allowance includes cold project/tool preparation and owned cleanup (PS-1232).
+test.setTimeout(120_000);
 
 test("keeps performance measurements live when switching and closing project tabs", async () => {
   let app: PackagedApp | null = null;
@@ -176,17 +180,17 @@ test("names the process that hosts an extension and ends its frames when paused"
     expect(fixtureProcess.pid).not.toBe(workbench?.pid);
 
     await expect(app.page.locator('iframe[title="Host page"]')).toHaveCount(1);
-    await performanceMeter(app.page).click();
+    await performanceTrigger(app.page).click();
     // Each extension has its own row, named from its webview ids, even in a shared process.
     const row = performanceDetails(app.page).getByTestId("performance-cpu-row").filter({ hasText: "webview-host" });
     await expect(row).toBeVisible();
     // Closing the popover must retain its loaded webview for the next opening.
     const detailsFrame = app.page.locator('iframe[title="Performance details"]');
     const loadedFrame = await detailsFrame.elementHandle();
-    await performanceMeter(app.page).click();
+    await performanceTrigger(app.page).click();
     await expect(detailsFrame).toBeHidden();
     expect(await loadedFrame!.evaluate((frame) => frame.isConnected)).toBe(true);
-    await performanceMeter(app.page).click();
+    await performanceTrigger(app.page).click();
     await expect(row).toBeVisible();
     expect(await detailsFrame.evaluate((frame, original) => frame === original, loadedFrame)).toBe(true);
     const pause = row.getByRole("button", { name: "Pause webview-host", exact: true });

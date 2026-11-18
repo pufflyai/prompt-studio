@@ -259,6 +259,8 @@ const SessionNavigation = ({ composer = false }: { composer?: boolean }) => {
               {
                 id: "linked-session",
                 label: "Linked session",
+                icon: "loader-circle",
+                iconColor: "fg.info",
                 resource: session,
                 canHide: true,
                 target: { kind: "panel", panel, resource: session },

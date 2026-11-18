@@ -31,6 +31,35 @@ describe("ticket files tree empty sections", () => {
 });
 
 describe("ticket files tree workspace metadata", () => {
+  test.each([
+    false,
+    true,
+  ])("shows only explicit workspace links when the default folder is linked: %s", async (linked) => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(...(await workspaceArgs({ storage, params: { title: "Ticket" } })));
+    const home = {
+      id: "project-folder",
+      name: "Project folder",
+      is_default: true,
+      provider_id: "pstdio.root",
+      root_path: "/tmp/project",
+      anchors_json: linked ? [{ type: "ticket", id: ticket.id }] : [],
+    };
+    const sections = await listTicketFilesTreeCommand.run(
+      ...(await workspaceArgs({
+        storage,
+        params: treeParams(ticket),
+        overrides: { workspaces: { list: async () => [home], getDefault: async () => home } },
+      })),
+    );
+    const section = sections.find(({ id }) => id === "workspaces");
+    if (linked) {
+      expect(section?.nodes.map(({ id }) => id)).toEqual(["workspace-project-folder"]);
+    } else {
+      expect(section).toBeUndefined();
+    }
+  });
+
   test("adds workspace metadata to ticket-linked workspace resource nodes", async () => {
     const storage = createMemoryStorage();
     const parent = await createTicketCommand.run(...(await workspaceArgs({ storage, params: { title: "Parent" } })));
@@ -44,6 +73,7 @@ describe("ticket files tree workspace metadata", () => {
         params: treeParams(ticket),
         overrides: {
           workspaces: {
+            getDefault: async () => ({ id: "unlinked-project-folder", is_default: true, provider_id: "pstdio.root" }),
             list: async () => [
               {
                 id: "ws-1",
@@ -60,7 +90,9 @@ describe("ticket files tree workspace metadata", () => {
       })),
     );
 
-    expect(sections.find((section) => section.id === "workspaces")?.nodes[0]).toMatchObject({
+    const workspaceNodes = sections.find((section) => section.id === "workspaces")?.nodes;
+    expect(workspaceNodes).toHaveLength(1);
+    expect(workspaceNodes?.[0]).toMatchObject({
       target: {
         kind: "page",
         page: { kind: "page", extensionId: "example.reader", id: "inspect" },

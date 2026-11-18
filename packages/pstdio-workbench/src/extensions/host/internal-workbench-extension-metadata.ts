@@ -118,7 +118,7 @@ export interface InternalWorkbenchExtensionMetadata {
     extensionId: string;
     viewId: string;
     popoverViewId?: string;
-    slot: "leading" | "trailing";
+    slot: "leading" | "center" | "trailing";
     order?: number;
     when?: {
       mode?: string | string[];
