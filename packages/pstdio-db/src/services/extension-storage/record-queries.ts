@@ -29,6 +29,7 @@ import { decodeProjectionValue, encodeProjectionValue } from "./record-projectio
 import {
   arrayIndexFields,
   pageAfterSql,
+  pageMembershipGuard,
   recordFieldSql,
   recordIndexKeys,
   recordPageSql,
@@ -172,11 +173,14 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
         const related = await loadRelatedQueryIndexes(query.where, (name) => getIndex(tx, name));
         const revision = await getRevision(tx);
         const page = await prepareRecordQuery(owner, index, query, revision, related);
+        const scope = visible(index);
+        const filter = relatedRecordPredicateSql(owner, index, query.where, related);
+        const guard = pageMembershipGuard(index, scope, query.where);
         const result = await tx.execute<QueryRow>(
           recordPageSql(
             index,
             page.fields,
-            sql`${visible(index)} AND ${relatedRecordPredicateSql(owner, index, query.where, related)} AND ${pageAfterSql(index, page.after)}`,
+            sql`${scope} AND ${filter} AND ${pageAfterSql(index, page.after)} AND ${guard}`,
             // One extra row shows whether a next page exists without a second scan.
             page.limit + 1,
             page.offset,

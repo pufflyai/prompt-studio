@@ -6,7 +6,7 @@ import type { Json, StoragePredicate, StorageRecordIndex } from "pstdio-sync-con
 import { createProjectsDBService } from "../projects/projects";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
-import { predicateSql, recordPageSql, recordScopeSql } from "./record-query-sql";
+import { pageMembershipGuard, predicateSql, recordPageSql, recordScopeSql } from "./record-query-sql";
 
 const cleanup: (() => Promise<unknown>)[] = [];
 afterEach(async () => {
@@ -475,4 +475,47 @@ test("memory and database queries select a 500-row page", async () => {
     const last = await records.query({ index: "bulk", limit: 500, fields: ["rank"], cursor: first.cursor! });
     expect(last.records.map((record) => record.fields.rank)).toEqual([500]);
   }
+});
+
+test("a small ordered page probes each leading equality value even with a competing sort index", async () => {
+  const f = await fixture();
+  const index: StorageRecordIndex = {
+    name: "byGroup",
+    prefix: "row-",
+    fields: { group: { path: ["group"], type: "string" }, rank: { path: ["rank"], type: "string" } },
+    equality: ["group"],
+    orderBy: [{ field: "rank", direction: "asc" }],
+  };
+  await f.records.defineIndexes([index, { ...index, name: "byRank", equality: [] }]);
+  await f.db.execute(sql`insert into storage_current_records (workbench_id,extension_id,record_id,deleted,value,revision)
+    select ${f.owner.workbenchId},${f.owner.extensionId},'row-'||n,false,jsonb_build_object('group',case n when 1999 then null when 2000 then '' else 'present' end,'rank',lpad(n::text,4,'0')),'1' from generate_series(1,2000) n`);
+  // Other collections in the same table make null look common to the planner.
+  await f.db.execute(sql`insert into storage_current_records (workbench_id,extension_id,record_id,deleted,value,revision)
+    select ${f.owner.workbenchId},${f.owner.extensionId},'other-'||n,false,'{}'::jsonb,'1' from generate_series(1,4000) n`);
+  await f.db.execute(sql`analyze storage_current_records`);
+  const where = { field: "group", op: "in" as const, value: [null, "", null] };
+  const first = await f.records.query({ index: index.name, where, limit: 1 });
+  expect(first.records.map((r) => r.recordId)).toEqual(["row-1999"]);
+  expect(
+    (await f.records.query({ index: index.name, where, limit: 1, cursor: first.cursor! })).records.map(
+      (r) => r.recordId,
+    ),
+  ).toEqual(["row-2000"]);
+  expect(
+    (await f.records.query({ index: index.name, where, limit: 1, offset: 1 })).records.map((r) => r.recordId),
+  ).toEqual(["row-2000"]);
+  const missing = { field: "group", op: "in" as const, value: ["absent", "unassigned"] };
+  const scope = recordScopeSql(f.owner, index);
+  const stmt = recordPageSql(
+    index,
+    ["rank"],
+    sql`${scope} AND ${predicateSql(index, missing)} AND ${pageMembershipGuard(index, scope, missing)}`,
+    2,
+  );
+  const plan = (await f.db.execute(sql`explain(analyze,format json) ${stmt}`)).rows;
+  const evidence = JSON.stringify(plan);
+  expect(evidence).toContain('"Node Type":"Nested Loop"');
+  expect(evidence).not.toContain('"Node Type":"Seq Scan"');
+  // Every index probe visits at most the next entry, even when the keys are absent.
+  expect([...evidence.matchAll(/"Rows Removed by Filter":(\d+)/g)].every(([, rows]) => Number(rows) <= 1)).toBe(true);
 });

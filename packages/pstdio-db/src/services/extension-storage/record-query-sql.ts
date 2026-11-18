@@ -184,6 +184,27 @@ export const pageOrderSql = (index: StorageRecordIndex) =>
     sql`, `,
   );
 
+// An order-first LIMIT plan can walk the entire collection to prove two keys are
+// absent. Seek to each hash in the leading equality index and inspect its next
+// entry. A hit still goes through the ordinary exact predicate, including collisions.
+export const pageMembershipGuard = (index: StorageRecordIndex, scope: SQL, predicate?: StoragePredicate) => {
+  if (
+    !predicate ||
+    !("op" in predicate) ||
+    predicate.op !== "in" ||
+    index.equality?.[0] !== predicate.field ||
+    predicate.value.length < 2 ||
+    predicate.value.length > 4
+  )
+    return sql`true`;
+  const key = equalityKey(sql`coalesce(${recordFieldSql(index, predicate.field)},'null'::jsonb)`);
+  const probes = predicate.value.map((value) => sql`(${equalityKey(json(value))})`);
+  return sql`EXISTS (SELECT 1 FROM (VALUES ${sql.join(probes, sql`, `)}) AS wanted(probe_key)
+    CROSS JOIN LATERAL (SELECT ${key} AS matched_key FROM storage_current_records
+      WHERE ${scope} AND ${key} >= wanted.probe_key ORDER BY ${key} LIMIT 1) AS found
+    WHERE found.matched_key = wanted.probe_key)`;
+};
+
 export const recordPageSql = (index: StorageRecordIndex, fields: string[], where: SQL, limit: number, offset = 0) => {
   const selected = fields.flatMap((name) => [
     sqlLiteral(projectionKey(name)),
