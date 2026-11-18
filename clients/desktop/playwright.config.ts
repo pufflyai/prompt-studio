@@ -1,9 +1,12 @@
 import { defineConfig } from "@playwright/test";
 
+const executionPath = [process.env.CI_TEST_EXECUTION_ID, process.env.CI_PLAN_RUN_ID].filter(Boolean).join("/");
+const outputDir = `test-results/electron${executionPath ? `/${executionPath}` : ""}`;
+
 export default defineConfig({
   globalSetup: "./src/testing/source-electron-setup.ts",
   maxFailures: process.env.CI_PRIORITY === "P1" && process.env.CI_PROFILE !== "production" ? 1 : 0,
-  outputDir: "test-results/electron",
+  outputDir,
   testDir: "src/e2e",
   testMatch:
     process.env.TEST_PRIORITIES?.split(",").map((priority) => `desktop-*.${priority.toLowerCase()}.spec.ts`) ??
@@ -16,6 +19,6 @@ export default defineConfig({
   reporter: [
     ...(process.env.CI_PLAN_REPORTER ? [[process.env.CI_PLAN_REPORTER] as [string]] : []),
     ["line"],
-    ["json", { outputFile: "test-results/electron-readiness.json" }],
+    ["json", { outputFile: executionPath ? `${outputDir}/readiness.json` : "test-results/electron-readiness.json" }],
   ],
 });

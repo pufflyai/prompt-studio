@@ -168,3 +168,12 @@ test("shares content parsing only for the same loader and constant-folding mode"
     transform.mockRestore();
   }
 });
+
+test("cached CSS imports release old stylesheets after repeated edits", () => {
+  // Measure in a fresh process so unrelated parsers and concurrently running tests cannot affect the result.
+  const probe = Bun.spawnSync([process.execPath, join(import.meta.dir, "css-import-retention.fixture.ts")]);
+  expect(probe.stderr.toString()).toBe("");
+  expect(probe.exitCode).toBe(0);
+  const { retained, sourceBytes } = JSON.parse(probe.stdout.toString());
+  expect(retained).toBeLessThan(sourceBytes / 2);
+});

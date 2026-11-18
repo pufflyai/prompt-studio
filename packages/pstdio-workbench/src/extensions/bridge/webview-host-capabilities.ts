@@ -6,6 +6,7 @@ import { updateOverlayPageParams } from "./overlay-page-params";
 import { createWorkbenchEditingSessionAdapter } from "./webview-editing-adapter";
 import { createWebviewPreferenceQueries } from "./webview-preference-queries";
 import { createWebviewPreferencesAdapter, type WebviewOwnedPreferences } from "./webview-preferences-capability";
+import { createWebviewResourceActionRegistrations } from "./webview-resource-action-registrations";
 import { createWebviewResourceActions } from "./webview-resource-actions";
 import { createWorkbenchTextEditingAdapter, type WorkbenchTextEditingInput } from "./webview-text-editing";
 
@@ -72,6 +73,7 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
       : undefined;
   return {
     preferenceQueries,
+    registerResourceAction: createWebviewResourceActionRegistrations(input, requireCurrentViewer),
     resourceActions: async (request) => {
       requireCurrentViewer();
       return resourceActions(request);

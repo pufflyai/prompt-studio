@@ -244,6 +244,10 @@ export const AutoBuildEmptySessions: Story = {
   name: "Empty sessions",
   render: () => <AutoBuildPreview requests={[proposalReview]} empty />,
 };
+export const AutoBuildPauseFailure: Story = {
+  name: "Pause failure",
+  render: () => <AutoBuildPreview requests={[]} failPause />,
+};
 export const AutoBuildWarning: Story = {
   name: "Warning",
   render: () => <AutoBuildPreview requests={[proposalReview, decision]} warning />,

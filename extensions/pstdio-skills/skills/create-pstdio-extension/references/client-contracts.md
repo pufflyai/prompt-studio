@@ -13,7 +13,7 @@ matching capability. A host without a backing service returns a typed unsupporte
 | --- | --- | --- |
 | Open a page, panel or link | `client.navigation.open(target)` | navigation.open |
 | Close the current placement | `client.placement.close()` | placement.close |
-| Show a notice | `client.notify.toast(notice)` | notification.show |
+| Publish system information to the status bar | `host.call("notification.show", notice)` | notification.show |
 | Read or write preferences | `client.preferences.get(name, scope)`, `client.preferences.set(name, value, scope)` | preferences.get, preferences.set |
 | Read/write/reset an extension setting | `client.settings.get(key)`, `client.settings.set(key, value)`, `client.settings.delete(key)` | extension.settings.get, extension.settings.set, extension.settings.delete |
 

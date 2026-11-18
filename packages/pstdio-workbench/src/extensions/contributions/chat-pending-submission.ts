@@ -13,6 +13,7 @@ export const createChatPendingSubmission = (
   sequence,
   queue: queued !== undefined,
   failure: undefined as string | undefined,
+  failureDismissed: false,
   recoveryAdded: false,
   echoed: false,
   values: action.values,

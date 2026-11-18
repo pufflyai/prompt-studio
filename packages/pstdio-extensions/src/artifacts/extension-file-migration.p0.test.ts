@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { migrateExtensionFiles } from "./extension-file-migration";
@@ -45,6 +45,28 @@ test("conflicting files preserve both trees, and symlinks cannot escape the work
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+  "verified files become active when permissions prevent deleting the original",
+  async () => {
+    const root = await mkdtemp(join(tmpdir(), "extension-cleanup-"));
+    const source = join(root, ".pstdio/extension-storage/pstdio.pstdio-artifacts");
+    const target = join(root, ".pstdio/extension-storage/pstdio.artifacts");
+    const backup = join(target, ".extension-identity-original");
+    try {
+      await mkdir(join(source, "drafts"), { recursive: true });
+      await writeFile(join(source, "drafts/draft.html"), "Unsaved draft");
+      await chmod(join(source, "drafts"), 0o555);
+      await migrateExtensionFiles(root);
+      expect(await readFile(join(target, "drafts/draft.html"), "utf8")).toBe("Unsaved draft");
+      expect(await readFile(join(backup, "drafts/draft.html"), "utf8")).toBe("Unsaved draft");
+      await migrateExtensionFiles(root);
+    } finally {
+      await Promise.all([source, backup].map((path) => chmod(join(path, "drafts"), 0o755).catch(() => {})));
+      await rm(root, { recursive: true, force: true });
+    }
+  },
+);
 
 test("retained originals stay inside their owner and cannot appear as live artifacts", async () => {
   const { retainExtensionMigrationSource } = await import("./extension-file-migration");

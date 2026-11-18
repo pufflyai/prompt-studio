@@ -1,6 +1,12 @@
 import { type SQL, sql } from "drizzle-orm";
 import { queryField } from "pstdio-sync/records";
-import type { Json, StoragePredicate, StorageRecordIndex, StorageRelatedSelection } from "pstdio-sync-contracts";
+import {
+  canonicalJson,
+  type Json,
+  type StoragePredicate,
+  type StorageRecordIndex,
+  type StorageRelatedSelection,
+} from "pstdio-sync-contracts";
 import { recordNumberTextSql } from "./record-number-text";
 import {
   encodeProjectionValue,
@@ -140,6 +146,14 @@ const fieldPredicateSql = (
       return sql`${stringBytesSql(field, true)} = decode(${projectionSubstringBytes(String(predicate.value).toLowerCase())}, 'hex')`;
     case "in": {
       if (!predicate.value.length) return sql`false`;
+      // Keep literal arrays for selective estimates without binding a large array member by member.
+      if (predicate.value.length > 1_000) {
+        const input = sql`jsonb_array_elements(${json(predicate.value)}) AS wanted(item)`;
+        const values = sql`${comparable} = ANY(ARRAY(SELECT item FROM ${input}))`;
+        if (!index.equality?.includes(predicate.field)) return values;
+        const keys = sql`ARRAY(SELECT ${equalityKey(sql`item`)} FROM ${input})`;
+        return sql`(${equalityKey(comparable)} = ANY(${keys}) AND ${values})`;
+      }
       // One hashed array comparison per row; an OR chain re-evaluates the field for every value.
       const values = sql`ARRAY[${sql.join(predicate.value.map(json), sql`, `)}]::jsonb[]`;
       if (!index.equality?.includes(predicate.field)) return sql`${comparable} = ANY(${values})`;
@@ -184,18 +198,53 @@ export const pageOrderSql = (index: StorageRecordIndex) =>
     sql`, `,
   );
 
-export const recordPageSql = (index: StorageRecordIndex, fields: string[], where: SQL, limit: number, offset = 0) => {
+const leadingInList = (index: StorageRecordIndex, predicate?: StoragePredicate) => {
+  const pending = predicate ? [predicate] : [];
+  while (pending.length) {
+    const child = pending.pop()!;
+    if ("all" in child) pending.push(...child.all);
+    else if ("field" in child && child.field === index.equality?.[0] && child.op === "in" && child.value.length > 1)
+      return child;
+  }
+};
+
+export const recordPageSql = (
+  index: StorageRecordIndex,
+  fields: string[],
+  where: SQL,
+  limit: number,
+  offset = 0,
+  predicate?: StoragePredicate,
+) => {
   const selected = fields.flatMap((name) => [
     sqlLiteral(projectionKey(name)),
     sql`coalesce(${recordFieldSql(index, name)}, 'null'::jsonb)`,
   ]);
   const sort = (index.orderBy ?? []).map((sort) => sql`coalesce(${recordFieldSql(index, sort.field)}, 'null'::jsonb)`);
+  // Each equality value supplies an ordered prefix. Merge only those prefixes,
+  // rather than scanning unrelated ordered rows or sorting every matching record.
+  const leading = leadingInList(index, predicate);
+  const values = leading ? [...new Map(leading.value.map((value) => [canonicalJson(value), value])).values()] : [];
+  // Large lists and deep offsets use the ordinary indexed query to keep the intermediate merge bounded.
+  const selection = values.length * (limit + offset) <= 100_000 ? leading : undefined;
+  const candidates = selection
+    ? sql`WITH candidates AS MATERIALIZED (
+        SELECT page.* FROM (
+          SELECT value FROM jsonb_array_elements(${json(values)}) AS input(value)
+        ) AS selected_values CROSS JOIN LATERAL (
+          SELECT record_id, revision, value, query_values FROM storage_current_records
+          WHERE ${where} AND ${recordEqualitySql(index, selection.field, sql`coalesce(${recordFieldSql(index, selection.field)}, 'null'::jsonb)`, sql`selected_values.value`)}
+          ORDER BY ${pageOrderSql(index)} LIMIT ${limit + offset}
+        ) AS page
+      )`
+    : sql``;
   return sql`
+    ${candidates}
     SELECT record_id, revision,
       jsonb_build_object(${sql.join(selected, sql`, `)}) AS fields,
       jsonb_build_array(${sql.join(sort, sql`, `)}) AS sort_values
-    FROM storage_current_records
-    WHERE ${where}
+    FROM ${sql.raw(selection ? "candidates" : "storage_current_records")}
+    ${selection ? sql`` : sql`WHERE ${where}`}
     ORDER BY ${pageOrderSql(index)} LIMIT ${limit} OFFSET ${offset}`;
 };
 

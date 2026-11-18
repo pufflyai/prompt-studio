@@ -6,8 +6,8 @@ Status: Accepted for PS-169; platform and performance qualification follows the 
 
 ## Decision
 
-A lazy pool of at most two worker threads owns expensive extension preparation. One shared queue admits at most
-128 pending jobs, with two execution owners and shared coalescing/cancellation. Individual installs with explicit portable
+A lazy pool of one to four worker threads owns expensive extension preparation. The API host allows one worker per two available CPUs and per 4 GB of available memory capacity, including process memory limits, with at least one worker. The API advertises the limit to dashboard and CLI batch updates. One shared preparation queue admits at most
+128 pending jobs, with the same number of execution owners and shared coalescing/cancellation. Individual installs with explicit portable
 names may overlap when their reserved source and possible target paths are disjoint. Both user and repo destinations,
 including conditional Windows escaping, are reserved before manifest scope is known. Lexical and nearest-existing-real
 paths protect symlink parents; conservative case/Unicode folding and ancestor conflicts cover filesystem aliases.
@@ -19,8 +19,8 @@ selects a replacement before returning interrupted work to the waiting queue, pr
 Worker failure/cancellation affects its own execution owner; queued owners and a healthy peer remain available. A
 synchronous factory failure settles its selected owner and schedules a finite drain of remaining owners. Only slot-zero
 lifecycle events restore watches. Actual restoration dependencies rank ahead of unrelated speculative peer work so a
-primary loss cannot strand watches or protected inventory; ordinary background continuations retain their prior rank. Pool shutdown retires both workers and all children before final process-owned cleanup.
-This two-worker revision was explicitly requested for PS-169 in the implementation conversation on 2026-11-10. One default-install job pipelines at most four active sources, filling each completed slot immediately and
+primary loss cannot strand watches or protected inventory; ordinary background continuations retain their prior rank. Pool shutdown retires all workers and all children before final process-owned cleanup.
+PS-149 supersedes the original two-worker limit for disjoint installs. One default-install job pipelines at most four active sources, filling each completed slot immediately and
 matching the existing four-child webview build cap while overlapping dependency I/O; both share one environment and
 cancellation owner. Requested work takes priority over background checks, including retiring a stalled background
 evaluation and resuming its request on a replacement worker. Filesystem callbacks retain their background priority. A

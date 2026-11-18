@@ -6,7 +6,7 @@ Status: Accepted
 
 ## Context
 
-[PRD 0014](../requirements/platform/0014-local-first-sync.md) moves merging to the clients. The
+[0014 · RB 9.A.1](../requirement-book/book.json) moves merging to the clients. The
 [blind relay](../references/architecture/0029-blind-relay.md) stores only ciphertext and routing
 metadata (R8 to R10). Clients need keys that:
 
