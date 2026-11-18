@@ -11,6 +11,7 @@ export const createProjectWork = () => {
   const suspended = new Set<string>();
   const hidden = new Set<string>();
   const cleanup = new AsyncLocalStorage<{ id: string; active: boolean }>();
+  const leaseContext = new AsyncLocalStorage<{ id: string; signal: AbortSignal; active: boolean }>();
   const resources = new Map<string, Set<() => Promise<void>>>();
   const active = new Map<string, Map<AbortController, Promise<unknown>>>();
   const assertAvailable = (id: string) => {
@@ -59,22 +60,29 @@ export const createProjectWork = () => {
       await Promise.all([...(resources.get(id) ?? [])].map((close) => close()));
     },
     async drain(id: string) {
-      await Promise.allSettled(active.get(id)?.values() ?? []);
+      while (active.has(id)) await Promise.allSettled(active.get(id)!.values());
     },
     async run<T>(id: string, task: (signal: AbortSignal) => Promise<T>, upstream?: AbortSignal) {
-      assertAvailable(id);
+      const parent = leaseContext.getStore();
+      const inherits = parent?.id === id && parent.active;
+      if (!inherits) assertAvailable(id);
       const controller = new AbortController();
-      const signal = upstream ? AbortSignal.any([upstream, controller.signal]) : controller.signal;
+      const signals = [controller.signal];
+      if (upstream) signals.push(upstream);
+      if (inherits) signals.push(parent.signal);
+      const signal = signals.length === 1 ? controller.signal : AbortSignal.any(signals);
+      const owner = { id, signal, active: true };
       const leases = active.get(id) ?? new Map<AbortController, Promise<unknown>>();
       active.set(id, leases);
       const running = Promise.resolve().then(() => {
         signal.throwIfAborted();
-        return task(signal);
+        return leaseContext.run(owner, () => task(signal));
       });
       leases.set(controller, running);
       try {
         return await running;
       } finally {
+        owner.active = false;
         leases.delete(controller);
         if (!leases.size) active.delete(id);
       }

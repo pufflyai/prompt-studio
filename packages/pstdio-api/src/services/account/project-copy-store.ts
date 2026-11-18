@@ -11,6 +11,7 @@ const copySchema = z.strictObject({
   projectId: identitySchema,
   name: z.string(),
   phase: z.enum(["removing", "cloud-only", "downloading"]),
+  automatic: z.literal(true).optional(),
 });
 const rosterSchema = z.strictObject({
   managerOrigin: z.string().transform(serviceAddress),
@@ -58,6 +59,15 @@ export const createProjectCopyStore = (accountFile: string) => {
         if (JSON.stringify(previous) === JSON.stringify(next)) return;
         const otherDevices = current.rosters.filter((row) => !matches(row, identity));
         await writePrivateFile(path, { ...current, rosters: [...otherDevices, next] });
+      }),
+    recordDiscovery: (record: ProjectCopy) =>
+      serializeNativeWrite(path, async () => {
+        const current = await read();
+        const copy = copySchema.parse(record);
+        const existing = current.copies.find((row) => isCopy(row, copy));
+        if (existing) return existing.phase === "downloading";
+        await writePrivateFile(path, { ...current, copies: [...current.copies, copy] });
+        return true;
       }),
     write: (record: ProjectCopy) =>
       serializeNativeWrite(path, async () => {

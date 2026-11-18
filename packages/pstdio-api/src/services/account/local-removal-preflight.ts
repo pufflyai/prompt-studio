@@ -3,7 +3,7 @@ import type { createNativeCloudReturn } from "./native-cloud-return";
 
 export type LocalCleanupSummary = Pick<
   LocalRemovalPreflight,
-  "removesManagedFolder" | "retainsUnverifiedFolder" | "providerWorkspaceCount"
+  "removesManagedFolder" | "retainsUnverifiedFolder" | "providerWorkspaceCount" | "providerWorkspaceNames"
 >;
 
 const uploadState = (

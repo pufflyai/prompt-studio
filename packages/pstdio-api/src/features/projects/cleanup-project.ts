@@ -37,9 +37,11 @@ export const summarizeProjectCopyCleanup = async (
 ) => {
   const workspaces = await deps.workspaceService.listForProviderReconciliation(projectId);
   const home = workspaces.find((workspace) => workspace.is_default);
+  const providers = workspaces.filter(({ provider_id }) => provider_id !== rootProviderId);
   return {
     ...(await inspectManagedProjectFolder(projectId, home?.root_path)),
-    providerWorkspaceCount: workspaces.filter(({ provider_id }) => provider_id !== rootProviderId).length,
+    providerWorkspaceCount: providers.length,
+    providerWorkspaceNames: providers.map(({ name }) => name),
   };
 };
 

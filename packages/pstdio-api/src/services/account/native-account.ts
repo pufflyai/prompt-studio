@@ -290,16 +290,15 @@ export const createNativeAccount = (input: {
     cancelLogin: logins.cancel,
     async status() {
       const { environmentId } = await input.environment.get();
+      const login = await readLogin(environmentId);
+      const status = await readAccountStatus(store, login, cloudProjects, environmentId, catalog.knownProjectIds);
       const loginAttempt = logins.attempt();
-      return {
-        ...(await readAccountStatus(store, await readLogin(environmentId), cloudProjects, environmentId)),
-        ...(loginAttempt ? { loginAttempt } : {}),
-      };
+      return { ...status, ...(loginAttempt && { loginAttempt }) };
     },
     projectSyncStatus: createNativeProjectSyncReader({
       login: readLogin,
       exists: (id) => input.projects.get(id),
-      read: readProjectStatus,
+      read: async (id, login) => catalog.fenceLocalStatus(id, login, await readProjectStatus(id, login)),
       away: (id) => away.status(id),
       changed: () => new AccountRequestError("The account changed before the project sync read completed"),
       unknown: () => new AccountRequestError("Unknown project"),

@@ -11,6 +11,7 @@ import { historyNamespace } from "../personal-history/log-files";
 import { projectRecoveryRoot } from "../project-recovery/project-paths";
 import { nativeAccountFile } from "./native-account";
 import { createNativeStore } from "./native-store";
+import { createProjectCopyStore } from "./project-copy-store";
 
 const openHost = (root: string) =>
   createTestApp({ databasePath: join(root, "db"), storageRoot: join(root, "storage") });
@@ -99,6 +100,12 @@ test("removing a local copy preserves its source folder and stays removed after 
     await secondDevice.deps.accountService.refresh();
 
     await store.save(login);
+    cloudAvailable = false;
+    await host.deps.accountService.refresh();
+    expect((await host.deps.accountService.status()).cloudProjectsLoaded).toBe(false);
+    expect((await host.app.request(`/v1/projects/${id}`, { method: "DELETE" })).status).toBe(409);
+
+    cloudAvailable = true;
     await host.deps.accountService.refresh();
     expect((await host.app.request(`/v1/projects/${id}`, { method: "DELETE" })).status).toBe(409);
 
@@ -254,6 +261,40 @@ test("provider failure leaves removal resumable and keeps the managed folder unt
     await manager.stop(true);
     if (previousHome === undefined) delete process.env.PSTDIO_HOME;
     else process.env.PSTDIO_HOME = previousHome;
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("restart resumes a device removal whose consent was saved before cleanup began", async () => {
+  const root = await mkdtemp(join(tmpdir(), "local-project-removal-interrupted-"));
+  const id = crypto.randomUUID();
+  const name = "Accepted removal";
+  const path = nativeAccountFile(join(root, "db"), join(root, "storage"));
+  const copies = createProjectCopyStore(path);
+  let host: Awaited<ReturnType<typeof openHost>> | undefined;
+  try {
+    host = await openHost(root);
+    const { environmentId: deviceId } = await host.deps.environmentService.get();
+    const account = { managerOrigin: "http://127.0.0.1:1", accountId: "account", deviceId };
+    await host.deps.projectService.create({ id, name });
+    const file = await host.deps.fileService.upload({
+      project_id: id,
+      file_name: "retained-before-restart",
+      file_kind: "attachment",
+      data: Buffer.from("previous local bytes"),
+    });
+    await copies.write({ ...account, projectId: id, name, phase: "removing" });
+    await host.close();
+    host = await openHost(root);
+
+    expect(await host.deps.projectService.get(id)).toBeNull();
+    for (let attempt = 0; (await copies.forAccount(account))[0]?.phase !== "cloud-only"; attempt++) {
+      if (attempt === 50) throw new Error("Startup did not finish the persisted project removal");
+      await Bun.sleep(10);
+    }
+    await expect(lstat(file.storage_path)).rejects.toMatchObject({ code: "ENOENT" });
+  } finally {
+    await host?.close();
     await rm(root, { recursive: true, force: true });
   }
 });

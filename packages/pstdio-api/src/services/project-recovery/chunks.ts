@@ -47,6 +47,14 @@ const readBounded = async (path: string, limit: number) => {
   }
 };
 
+export const hasRecoveryChunk = async (directory: string, input: RecoveryChunk) => {
+  const reference = referenceSchema.parse(input);
+  const bytes = await readBounded(join(directory, `${reference.blobId}.blob`), reference.encryptedByteLength).catch(
+    () => undefined,
+  );
+  return bytes?.length === reference.encryptedByteLength && hash(bytes) === reference.encryptedSha256;
+};
+
 /** Publish an immutable cache file without replacing another writer's completed copy. */
 const retain = async (path: string, bytes: Uint8Array) => {
   const temporary = `${path}.${crypto.randomUUID()}.pending`;

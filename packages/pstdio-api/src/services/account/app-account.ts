@@ -6,6 +6,7 @@ import { evictProjectCopy, summarizeProjectCopyCleanup } from "../../features/pr
 import { recoverCloudProject } from "../../features/projects/cloud-project-recovery";
 import { openProject } from "../../features/projects/open-project";
 import { apiLogger } from "../../lib/logger";
+import { collectLegacyProjectRecovery } from "../project-recovery/legacy-project-cache";
 import { removeProjectFolderRecovery } from "../project-recovery/project-paths";
 import { connectAppRelay } from "../relay/runtime";
 import { createNativeAccount, nativeAccountFile } from "./native-account";
@@ -120,6 +121,7 @@ export const createAppAccount = (
               );
               const queued = await app.deps.sessionService.list(id, { status: "queued", includeArchived: true });
               for (const session of [...active, ...queued]) await app.deps.sessionService.cancel(session.id);
+              await collectLegacyProjectRecovery(app.deps, copy);
               await removeProjectFolderRecovery(app.deps.projectRecovery.root, id);
               await app.deps.personalHistoryService.logs.removeProject(copy);
               await evictProjectCopy(app.deps, id);
@@ -131,7 +133,10 @@ export const createAppAccount = (
               await relay.update(connections);
               // Signing in or out, or a membership change, can change any project's state, including
               // projects that never synced: they move between local and offline.
-              for (const project of await projects.list()) void syncEvents.changed(project.id);
+              for (const project of await projects.list()) {
+                void syncEvents.changed(project.id);
+                void accountService.prepareDownloadedProject(project.id).catch(() => {});
+              }
             },
             relay.status,
             (connection, signal, created) => recoverCloudProject(app.deps, connection, signal, created),

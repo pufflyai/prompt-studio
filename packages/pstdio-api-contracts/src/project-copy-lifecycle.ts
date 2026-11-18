@@ -18,6 +18,7 @@ export const localRemovalPreflightSchema = z.strictObject({
   removesManagedFolder: z.boolean(),
   retainsUnverifiedFolder: z.literal(true).optional(),
   providerWorkspaceCount: z.int().nonnegative(),
+  providerWorkspaceNames: z.array(z.string()).optional(),
 });
 
 export const localRemovalConflictSchema = z.strictObject({
@@ -50,6 +51,7 @@ export const cloudProjectCatalogEntrySchema = z.strictObject({
   name: z.string(),
   presence: localCopyPresenceSchema,
   online: z.boolean(),
+  downloadError: z.string().optional(),
   actions: z.strictObject({
     removeLocal: z.boolean(),
     download: z.boolean(),
@@ -57,6 +59,7 @@ export const cloudProjectCatalogEntrySchema = z.strictObject({
   }),
 });
 export const cloudProjectCatalogSchema = z.strictObject({
+  membershipKnown: z.boolean().optional(),
   account: projectCopyAccountSchema.optional(),
   projects: z.array(cloudProjectCatalogEntrySchema),
   deletions: z.array(cloudProjectDeletionSchema.extend({ name: z.string() })),

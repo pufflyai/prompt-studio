@@ -6,6 +6,7 @@ export const readAccountStatus = async (
   login: DeviceLogin | null,
   cloudProjects: { credential: string; ids: string[]; features: { relay: boolean } } | undefined,
   deviceId: string,
+  cached?: (login: DeviceLogin) => Promise<string[] | undefined>,
 ) => {
   if (!login)
     return {
@@ -17,10 +18,11 @@ export const readAccountStatus = async (
     };
   const { token, ...device } = login;
   const known = cloudProjects?.credential === token ? cloudProjects : undefined;
+  const ids = known?.ids ?? (await cached?.(login));
   return {
     login: device,
-    cloudProjects: known?.ids ?? [],
-    cloudProjectsLoaded: known !== undefined,
+    cloudProjects: ids ?? [],
+    cloudProjectsLoaded: ids !== undefined,
     features: known?.features ?? null,
   };
 };

@@ -8,6 +8,6 @@ export const projectRecoveryRoot = (root: string, projectId: string) =>
 
 export const removeProjectFolderRecovery = async (root: string, projectId: string) => {
   const owned = projectRecoveryRoot(root, projectId);
-  await createRecoveryStagingJournal(owned).clean();
+  if (await createRecoveryStagingJournal(owned).clean()) throw new Error("A folder restore is still being cleaned up");
   await rm(owned, { recursive: true, force: true });
 };

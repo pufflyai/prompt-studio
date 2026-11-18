@@ -210,6 +210,20 @@ test("reconnecting after Cloud retirement keeps the project's offline edits on t
     await host.deps.accountService.refresh();
     expect((await host.deps.accountService.status()).cloudProjects).toContain(id);
 
+    const partialId = crypto.randomUUID();
+    await host.deps.accountService.recordCloudDiscovery(
+      {
+        workbenchId: partialId,
+        accountId: "owner",
+        environmentId,
+        managerOrigin: manager.url.origin,
+        relayOrigin: manager.url.origin,
+        renewalGrant: "device-token",
+      },
+      "A partial download",
+    );
+    await host.deps.projectService.create({ id: partialId, name: "A partial download" });
+
     connected = false;
     await host.deps.accountService.refresh();
     const records = (
@@ -226,6 +240,10 @@ test("reconnecting after Cloud retirement keeps the project's offline edits on t
     connected = true;
     await host.deps.accountService.refresh();
     expect(await host.deps.accountService.projectSyncStatus(id)).toMatchObject({ state: "local" });
+    expect(await host.deps.accountService.projectSyncStatus(partialId)).toEqual({
+      state: "first-download-incomplete",
+      offlineReady: false,
+    });
     expect(await host.deps.projectService.get(id)).toMatchObject({ id, name });
     expect(await records.read("note")).toMatchObject({ exists: true, value: "This was written offline." });
   } finally {

@@ -9,6 +9,7 @@ import type {
 import { identitySchema, projectDeletionStatusSchema } from "pstdio-sync-contracts";
 import type { RouteDeps } from "../../features/deps";
 import { apiLogger } from "../../lib/logger";
+import type { RelayWorkbench } from "../relay/runtime";
 import { createLocalProjectRemoval, type ProjectCopyHooks, requireProjectCopyAccount } from "./local-project-removal";
 import { readManagerAccount } from "./manager-account";
 import { ManagerRequestDenied } from "./manager-client";
@@ -42,12 +43,16 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
   const copies = createProjectCopyStore(input.accountFile);
   let projectCopies: ProjectCopyHooks | undefined;
   const preparingFolders = new Set<string>();
+  const folderErrors = new Map<string, string>();
+  const folderKey = (copy: ProjectCopy) =>
+    JSON.stringify([copy.managerOrigin, copy.accountId, copy.deviceId, copy.projectId]);
   const knownCloud = async (login: DeviceLogin) => input.cloud(login) ?? (await copies.roster(login));
 
   const entry = async (
     id: string,
     choice: ProjectCopy | undefined,
     online: boolean,
+    member: boolean,
     cloudDeletion: boolean,
   ): Promise<CloudProjectCatalogEntry | undefined> => {
     const project = await input.projects.get(id);
@@ -60,10 +65,11 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
       name,
       presence,
       online,
+      downloadError: choice?.phase === "downloading" ? folderErrors.get(folderKey(choice)) : undefined,
       actions: {
-        removeLocal: presence === "removing" || Boolean(project && !choice),
-        download: online && (presence === "cloud-only" || presence === "downloading"),
-        deleteCloud: online && cloudDeletion,
+        removeLocal: presence === "removing" || Boolean(member && project && !choice),
+        download: online && member && (presence === "cloud-only" || presence === "downloading"),
+        deleteCloud: online && member && cloudDeletion,
       },
     };
   };
@@ -91,6 +97,7 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
     changed: input.changed ?? (() => {}),
   });
   return {
+    knownProjectIds: async (login: DeviceLogin) => (await knownCloud(login))?.ids,
     async readCloud(login: DeviceLogin, signal: AbortSignal) {
       const { ids, deletions, projectDeletion, ...account } = await readManagerAccount(login, signal);
       await copies
@@ -112,6 +119,32 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
     restoreLocalRemovalBarrier: removal.restoreBarrier,
     resumeLocalRemovals: removal.resume,
     closeLocalRemovals: removal.close,
+    async recordCloudDiscovery(connection: RelayWorkbench, name: string) {
+      const login = await requireDevice();
+      const { workbenchId: projectId, accountId, managerOrigin, environmentId: deviceId } = connection;
+      requireProjectCopyAccount(login, { accountId, managerOrigin });
+      if (login.deviceId !== deviceId || login.token !== connection.renewalGrant)
+        throw new AccountRequestError("The active device changed during Cloud discovery");
+      const admitted = await copies.recordDiscovery({
+        accountId,
+        managerOrigin,
+        deviceId,
+        projectId,
+        name,
+        phase: "downloading",
+        automatic: true,
+      });
+      if (!admitted) throw new AccountRequestError("This device removed its copy of the project");
+    },
+    async fenceLocalStatus(
+      id: string,
+      login: DeviceLogin | null,
+      status: ProjectSyncStatus,
+    ): Promise<ProjectSyncStatus> {
+      if (!login || status.state !== "local") return status;
+      const choice = (await copies.forAccount(login)).find((row) => row.projectId === id);
+      return choice?.phase === "downloading" ? { state: "first-download-incomplete", offlineReady: false } : status;
+    },
     downloadCloudProject: (id: string): Promise<DownloadCloudProjectResult> =>
       removal.serialize(id, async () => {
         const login = await requireDevice();
@@ -127,7 +160,8 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
           return { projectId: id, presence: "downloading" };
         }
         await requireCurrent(login);
-        await copies.write({ ...choice, phase: "downloading" });
+        folderErrors.delete(folderKey(choice));
+        await copies.write({ ...choice, phase: "downloading", automatic: undefined });
         void input
           .refresh()
           .then(async () => {
@@ -146,7 +180,17 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
           const choice = (await copies.forAccount(login)).find((row) => row.projectId === id);
           if (choice?.phase !== "downloading" || !(await input.syncStatus(id)).offlineReady) return;
           await requireCurrent(login);
-          await projectCopies!.prepareFolder(id);
+          if (!choice.automatic) {
+            const key = folderKey(choice);
+            if (folderErrors.has(key)) return;
+            try {
+              await projectCopies!.prepareFolder(id);
+            } catch (error) {
+              folderErrors.set(key, "Prompt Studio could not prepare the project folder. Retry to finish opening it.");
+              input.changed?.();
+              throw error;
+            }
+          }
           await requireCurrent(login);
           await copies.forget(choice);
           void input.refresh();
@@ -166,15 +210,19 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
       const online = Boolean(cached && input.online());
       const remembered = await copies.forAccount(login);
       const choices = new Map(remembered.map((copy) => [copy.projectId, copy]));
-      const ids = cached
-        ? new Set([
-            ...cached.ids,
-            ...remembered.filter((copy) => copy.phase === "removing").map((copy) => copy.projectId),
-          ])
-        : choices.keys();
+      const members = new Set(cached?.ids);
+      const ids = new Set(members);
+      for (const copy of remembered) {
+        if (
+          !cached ||
+          copy.phase === "removing" ||
+          (copy.phase === "downloading" && (await input.projects.get(copy.projectId)))
+        )
+          ids.add(copy.projectId);
+      }
       const projects = [];
       for (const id of ids) {
-        const project = await entry(id, choices.get(id), online, Boolean(cached?.projectDeletion));
+        const project = await entry(id, choices.get(id), online, members.has(id), Boolean(cached?.projectDeletion));
         if (project) projects.push(project);
       }
       const deletions = [];
@@ -184,7 +232,7 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
         deletions.push({ ...deletionReceipt(operation), name });
       }
       await requireCurrent(login);
-      return { account: projectCopyAccount(login), projects, deletions };
+      return { account: projectCopyAccount(login), membershipKnown: Boolean(cached), projects, deletions };
     },
     async cloudProjectDeletion(id: string, signal?: AbortSignal, expected?: ProjectCopyAccount) {
       const login = await requireDevice();

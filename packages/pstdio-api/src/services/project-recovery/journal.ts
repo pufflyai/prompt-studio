@@ -34,11 +34,14 @@ const alive = (pid: number) => {
   }
 };
 
+export const recoveryJournalKey = (source: string[]) =>
+  createHash("sha256").update(JSON.stringify(source)).digest("hex").slice(0, 32);
+
 /** Durable per-source lifecycle state, kept in recovery working storage outside
  * every captured folder. It holds only opaque ciphertext references. */
 export const openRecoveryJournal = (input: { root: string; source: string[]; previousRoot?: string }) => {
   const directory = join(input.root, "sources");
-  const key = createHash("sha256").update(JSON.stringify(input.source)).digest("hex").slice(0, 32);
+  const key = recoveryJournalKey(input.source);
   const path = join(directory, `${key}.json`);
   const lockPath = join(directory, `${key}.lock`);
   const previous =

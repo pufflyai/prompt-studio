@@ -35,6 +35,9 @@ const sameCapture = (
   a.rootMode === b.rootMode &&
   JSON.stringify(a.git) === JSON.stringify(b.git);
 
+export const recoverySourceId = (workspaceId: string, folder: string) =>
+  `${workspaceId}:${createHash("sha256").update(folder).digest("hex").slice(0, 16)}`;
+
 /** This device's project folder: scheduled capture, the durable candidate
  * awaiting acknowledgement and local retention. It runs without a relay connection. */
 export const createLocalRecoverySource = (input: {
@@ -58,8 +61,6 @@ export const createLocalRecoverySource = (input: {
   // Local retention and capture never overlap: a capture may reuse cached ciphertext.
   let pruning: Promise<void> | undefined;
   let lastError: unknown = null;
-  const sourceId = (workspaceId: string, folder: string) =>
-    `${workspaceId}:${createHash("sha256").update(folder).digest("hex").slice(0, 16)}`;
   const journalFor = (id: string) =>
     openRecoveryJournal({
       root: input.root,
@@ -81,7 +82,7 @@ export const createLocalRecoverySource = (input: {
     if (!workspace?.root_path || workspace.execution_kind !== "local") return null;
     // A folder still being provisioned is not the project's folder yet; never read it.
     if (workspace.initializing || workspace.provider_state !== "ready") return null;
-    const id = sourceId(workspace.id, workspace.root_path);
+    const id = recoverySourceId(workspace.id, workspace.root_path);
     return { id, folder: workspace.root_path, journal: await journalFor(id) };
   };
   const gitRoots = async () =>
