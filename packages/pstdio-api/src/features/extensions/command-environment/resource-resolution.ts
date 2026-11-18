@@ -7,7 +7,6 @@ import {
   type ResourceResolution,
   resourceKey,
   workbenchPages,
-  workspacePages,
 } from "pstdio-api-contracts/extension-kernel";
 import {
   canonicalNavigationOwners,
@@ -43,11 +42,7 @@ const resolveHostResource = async (deps: ExtensionsRouteDeps, ref: ResourceRef, 
         workspaceError: record.setup_error,
       },
     };
-    let page = workspacePages.workspace;
-    if (record.execution_kind === "remote" || record.provider_capabilities_json?.files === "none")
-      page = workspacePages.overview;
-    else if (record.is_default || !record.provider_capabilities_json?.diff) page = workspacePages.files;
-    return { resource, target: { kind: "page" as const, page, resource } };
+    return { resource };
   }
   if (ref.type === "session") {
     const session = await read(() => deps.sessionService.get(ref.id));

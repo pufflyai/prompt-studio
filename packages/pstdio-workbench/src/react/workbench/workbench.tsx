@@ -127,6 +127,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasStatusContent,
   } = useWorkbenchLayoutFlags(workbench);
   const showActivity = !fullscreen.active && hasActivityBarWidgets;
+  const panelLeftInset = showActivity ? "0" : "panel-gap";
   const showStatus = !fullscreen.active && hasDockedStatusBar;
   const sidePolicy = usePanelPolicy(workbench, "side");
   const sidenavPolicy = usePanelPolicy(workbench, "sidenav");
@@ -224,7 +225,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
           // The status bar owns the space under the panels, so its items center in it.
           pb={showStatus ? "0" : "panel-gap"}
           pr="panel-gap"
-          pl={showActivity ? "0" : "panel-gap"}
+          pl={panelLeftInset}
         >
           {contentFrame}
         </Flex>
@@ -232,6 +233,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
           workbench={workbench}
           visible={!fullscreen.active && hasStatusContent}
           floating={!showStatus}
+          leftInset={panelLeftInset}
         />
         <WorkbenchFloatingSidePanel
           workbench={workbench}

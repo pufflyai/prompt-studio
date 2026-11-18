@@ -144,6 +144,23 @@ const metadata = {
   diagnostics: [],
 } satisfies WorkbenchExtensionMetadata;
 describe("registerWorkbenchExtensionContributions", () => {
+  test("registers an extension's center status-bar slot", () => {
+    const workbench = createWorkbench();
+    const registered = registerWorkbenchExtensionContributions({
+      projectId: "project",
+      workbench,
+      executeCommand: async () => undefined,
+      metadata: {
+        ...metadata,
+        statusBarItems: metadata.statusBarItems.map((item) => ({
+          ...item,
+          slot: { id: "workbench.statusBar.center" },
+        })),
+      },
+    });
+    expect(workbench.statusBar.getItem(`${extensionId}.status-bar-item.sync-status`)?.slot).toBe("center");
+    registered.dispose();
+  });
   test("groups extension settings by owner", async () => {
     const workbench = createWorkbench();
     for (const [id, title] of [

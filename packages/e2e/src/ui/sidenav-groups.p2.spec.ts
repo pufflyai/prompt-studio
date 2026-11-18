@@ -15,7 +15,7 @@ test.beforeEach(async ({ page, request }) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
-  await page.goto(`/projects/${project.id}/workspaces`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
 });
 
 test("creates and persists Sidenav groups and returns their rows when removed", async ({ page }) => {

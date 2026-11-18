@@ -18,7 +18,7 @@ Contributions are what an extension adds to Prompt Studio. This page lists every
 | `navigationItems`, `navigationTrees`              | Explicit actions and Sidenav trees owned by a mode or page.                                        |
 | `resourceKinds`                                   | Domain resource identity, labels, icons, menus, and hierarchy.                                     |
 | `resourceHierarchyProviders`                      | Domain parent lookup for resources. Page targets supply breadcrumb destinations.                                   |
-| `statusBarItems`                                  | Views in the host status bar; all visible items render without layout persistence.                 |
+| `statusBarItems`                                  | Views in the host status bar with device-local user order and alignment.                 |
 | `statuses`                                        | Deprecated workflow providers; use query-owned enums and an extension settings panel.                     |
 | `settings`, `settingsSections` | Extension setting definitions and grouped settings sections. |
 | `templateTypes` | Commands and metadata for extension-owned template editing. |
@@ -37,6 +37,55 @@ UI contributions attach to targets that the host owns. [Workbench composition](0
 [Native chat](0028-native-chat.md) provides immediate composers and canonical
 conversations with scoped callbacks to the existing session services.
 
+## Configure project composition
+
+Extension API 0.4 treats Home, Workspaces, and Cloud as ordinary optional tools.
+The project chooses a fully qualified, resource-free page as its default. Page
+names, paths, parents, panels, and navigation order belong to extensions.
+
+Read or replace the same public configuration from the CLI or SDK:
+
+```sh
+pst projects composition
+pst projects composition --value '{"defaultPage":{"kind":"page","extensionId":"example.space","id":"desk"},"resourceOpeners":[{"resourceKind":{"kind":"resource-kind","extensionId":"pstdio","id":"workspace"},"opener":{"kind":"command","extensionId":"example.reader","id":"inspect"}}]}'
+```
+
+The SDK client exposes `projects.composition(projectId)` and
+`projects.setComposition(projectId, value)`. The HTTP endpoints are
+`GET` and `PUT /v1/projects/{projectId}/composition`. Configuration is synced with
+the existing project information. An explicit empty configuration stays empty.
+Catalog defaults are editable distribution data; enabling an extension preserves
+an existing choice.
+
+The default opens when there is no explicit destination or valid saved location.
+A missing, disabled, or resource-bound default leaves the existing empty workbench.
+Extension management and other available navigation remain usable. The public
+`workbenchCommands.openDefaultPage` command opens the configured default explicitly.
+
+Each `resourceOpeners` entry binds a fully qualified resource kind to an ordinary
+page or command. An opener command reads `ctx.resource` and returns a normal page,
+panel, or compound navigation target. It can belong to another extension than the
+data owner. A missing opener or unavailable target makes the operation unavailable.
+Explicit navigation targets keep their declared destination.
+
+Use `ctx.resources.resolveOpenings(refs)` or the SDK client's
+`projects.resolveResourceOpenings(projectId, refs)` for bare resource links.
+`resolveMany` remains the data-owner metadata API. An opener can present an ordinary
+kind without a batch metadata resolver. Its command owns any further data lookup.
+
+A binding can also name a `relatedOpenings` command returning
+`RelatedResourceOpenings`. This selects automatic previews through the same saved
+workbench preferences. Workspaces owns its workspace page choices and related
+session selection. It declares scoped conversation navigation through the public
+Sessions renderer. Cloud uses normal status/settings slots and the public account
+API. Core keeps execution, records, account services, sync, and extension management
+independent of those presentation contributions.
+
+This alpha host change removes the old Start/Home/Workspaces presentation aliases,
+selectors and redirects. Update callers to configured openers or explicit ordinary
+targets. Existing presentation URLs and saved page references may become unavailable.
+Workspace and session data stay in their existing stores. Deprecated SDK reference
+exports remain available until their separate coordinated breaking removal.
 [Native terminal views](0022-terminal-sessions.md#native-terminal-views) bind an
 interactive PTY to a view through a serializable launch callback. The host owns
 the renderer, workspace validation, transport, and process lifetime.
@@ -316,6 +365,83 @@ reference. For a file inside another resource, return a file-labeled target with
 its parent. This keeps copied links and renamed files consistent with sidebar navigation.
 
 See [Workbench composition](0008-contextual-workbench-composition.md) and [Modes and layout](0009-modes-and-layout.md) for the full rules.
+
+## Status bar widgets
+
+Status widgets use `workbenchSlots.statusBarLeading`, `statusBarCenter` or
+`statusBarTrailing` as their initial alignment. People can drag the widget
+surface or use its alignment menu. Inline iframe controls keep their pointer
+input, so their surrounding padding is the drag surface. The host retains the
+chosen alignment and order when an extension reloads. An optional `popover` view
+makes the host own the indicator's click and keyboard activation. Inline controls
+remain available in status widgets without a popover. Keep the indicator's
+background transparent so the host can paint one surface across the widget,
+including its hover and focus states.
+
+## Native action bars
+
+A view can declare `body.kind: "actionBar"`. Use it for tool rails and
+compact command bars whose labels and menus must remain readable beside isolated
+webviews. The workbench renders the buttons, tooltips and menus in its document.
+Canvas, inspector and other custom content keep their iframe isolation.
+
+An action bar in the activity region follows its dock: top and bottom use a
+horizontal row and left and right use a vertical rail. Tooltips, menu placement
+and arrow-key navigation follow that axis. Other placements use the view body's
+optional `orientation`.
+
+```ts
+const tools = defineView({
+  id: "tools",
+  title: "Tools",
+  body: {
+    kind: "actionBar",
+    refreshEvents: [documentChanged],
+    query: async (ctx, { renderer }) => {
+      const state = await readDocument(ctx, renderer.resource);
+      const move = {
+        id: "move",
+        label: "Move tool",
+        icon: "Move",
+        selected: state.tool === "move",
+        action: { kind: "command" as const, target: {
+          command: selectTool.ref, params: { tool: "move" },
+        } },
+      };
+      return { items: [
+        move,
+        { id: "document", label: "Document actions", icon: "Ellipsis",
+          items: [{ ...move, selected: false }] },
+      ] };
+    },
+  },
+});
+```
+
+Set `mode.chrome.activity` to the view's ref for a native rail. The same view can
+be placed in a page or panel. Outside the activity region, orientation defaults
+to `vertical`; use `horizontal` for a command row. Snapshot order sets the
+default order. People can drag top-level buttons or reorder the focused button
+with Alt and the arrow keys along the bar. The host saves their order per
+project and view using the item IDs. Menu actions can declare `group` to separate
+related commands.
+
+Queries return actions with stable IDs, labels, icons, navigation targets and
+optional `selected` and `disabled` state. A menu has an `items` array of actions
+instead of an `action`. Return only actions available in the current context.
+The host resolves local command refs against the contributing extension and
+shows hints from the shared keybinding system. Bound command parameters stay
+the same for people and agents.
+
+Chrome follows the active page's primary resource. A resource-bound placement
+uses its own resource. Declared refresh events update the snapshot; changing the
+resource releases the old read and closes its menus. Disabling or removing the
+contribution disposes its view. Arrow keys, Home and End move through enabled
+buttons. Escape, outside click and clicking the open trigger dismiss a menu.
+
+This additive surface requires host capability `view.actionBar.v1` and a
+supporting published SDK. Publish platform support before releasing independent
+extensions that adopt it. Older view kinds and activity items stay supported.
 
 ## Native view toolbar actions
 
@@ -689,7 +815,7 @@ export default defineExtension({
 
 The header and footer keep the mode's sections, followed by the sections of every open level from the outermost inward. Header rows therefore stay visible in nested levels. Rows that users drag into the header or footer also stay there inside levels.
 
-Inside a level, the shared Sidenav adds a fixed left-arrow button labeled Back to followed by the current mode name, such as Back to project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or Start when no root-level page has been used. The breadcrumb and browser history also remain available.
+Inside a level, the shared Sidenav adds a fixed left-arrow button labeled Back to followed by the current mode name, such as Back to project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or the configured default when no root-level page has been used. The breadcrumb and browser history also remain available.
 
 The same action is available with **Alt+Shift+Up**, both outside and inside shortcut mode. Its shortcut hint appears on the return row in keyboard mode, and it is listed under the current mode's name in shortcut discovery and the command palette.
 
@@ -843,4 +969,4 @@ The old `workbenchPages.sessions`, `session`, `newSession`, `sessionComposer`, `
 
 Resource mutation commands can act on another provider's canonical resource. When the invoking resource matches the declared mutation type and resolved ID in the selected project, native optimistic previews and write serialization preserve that resource's identity. Without a matching subject, the command's own extension identity remains the default. This changes presentation ownership only; the command service still enforces its normal permissions and scope.
 
-*Updated at: 2026-11-14*
+*Updated at: 2026-11-17*

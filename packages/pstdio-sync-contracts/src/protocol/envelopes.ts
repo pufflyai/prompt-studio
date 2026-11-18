@@ -88,6 +88,7 @@ export const syncErrorSchema = z.discriminatedUnion("error", [
       "unauthorized",
       "forbidden",
       "not-found",
+      "project-retired",
       "method-not-allowed",
       "too-large",
       "quota-exceeded",

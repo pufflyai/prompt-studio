@@ -6,6 +6,7 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import type { AppBindings } from "../../../types";
+import * as rootWatcher from "../extension-root-watcher";
 import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
 
 type AppHandle = Awaited<ReturnType<typeof createTestApp>>;
@@ -24,10 +25,19 @@ beforeAll(async () => {
   pstdioHome = join(tempRoot, "pstdio-home");
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
   process.env.PSTDIO_HOME = pstdioHome;
-  handle = await createTestApp({
-    databasePath: ":memory:",
-    storageRoot: join(tempRoot, "storage"),
+  // Filesystem discovery runs independently of the UI metadata requests exercised here.
+  const createWatcher = spyOn(rootWatcher, "createExtensionRootWatcher").mockResolvedValue({
+    dispose: () => {},
+    refresh: async () => {},
   });
+  try {
+    handle = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(tempRoot, "storage"),
+    });
+  } finally {
+    createWatcher.mockRestore();
+  }
   app = handle.app;
 });
 
@@ -79,6 +89,7 @@ describe("GET /v1/projects/:projectId/extensions/ui", () => {
       sourcePath,
     });
 
+    await handle.deps.extensionRuntimeCatalog.get(project.id);
     rmSync(sourcePath, { recursive: true, force: true });
 
     const res = await app.request(`/v1/projects/${project.id}/extensions/ui`);

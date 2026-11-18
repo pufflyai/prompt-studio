@@ -56,7 +56,7 @@ const breadcrumbPages: readonly BreadcrumbPage[] = [
 ];
 
 export const createBreadcrumbWorkbench = () => {
-  const workbench = createWorkbench({ startPage: breadcrumbPages[0]!.ref });
+  const workbench = createWorkbench({ defaultPage: breadcrumbPages[0]!.ref });
   workbench.modes.registerMode({ id: "review", label: "Review", activate: () => undefined });
 
   for (const page of breadcrumbPages) {
