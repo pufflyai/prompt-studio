@@ -45,7 +45,6 @@ These are gaps in the published API, not choices of the Performance Monitoring e
 - `extensionFrames` identify an extension only by its install id and webview id. Consumers cannot show the extension's display name.
 - Extension contributions load with a project. With no project open, no extension control or meter exists, although the device switch may still be on.
 
-*Updated at: 2026-11-04*
 
 ## Backend operation instrumentation
 
@@ -58,3 +57,5 @@ The event has `kind`, `startedAt` in UTC, and `durationMs`. Host database events
 - `chat.encode` includes a stable `id`, a `complete` flag, `sessionId`, `revision`, `logicalBytes`, `wireBytes`, `fragments` and `failed`. Its duration measures the chat-event generator's synchronous work. It excludes awaited transport delivery. Cumulative progress is emitted before every fragment yield, and the final update marks completion or failure. Retain the latest update per ID to include encoding work still awaiting delivery. Conversation contents are excluded.
 
 Subscribers must bound their own retention and handle malformed events without throwing. The Performance extension's CPU captures retain the latest 60 seconds subject to a 1,000-event and 512 KiB limit and export the dropped-event count. Raw backend evidence can include source paths and runtime identifiers and stays in its protected local capture store. See the [armed recording commands](../../../extensions/pstdio-performance/README.md#for-agents) for collecting and exporting a spike.
+
+*Updated at: 2026-11-18*
