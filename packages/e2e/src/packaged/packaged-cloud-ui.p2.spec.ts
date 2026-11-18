@@ -115,6 +115,10 @@ test("Cloud settings respect early access and manage devices and project sync th
   await settings.getByRole("button", { name: "Cancel sign-in" }).click();
   await expect(settings.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
   await expect(fetch(cancelled)).rejects.toThrow();
+  const cancelledNotice = settings.getByRole("alert").filter({ hasText: "Sign-in did not complete." });
+  await expect(cancelledNotice).toBeVisible();
+  await cancelledNotice.getByRole("button", { name: "Dismiss", exact: true }).click();
+  await expect(cancelledNotice).toBeHidden();
   const callback = await startSignIn();
   await closeSettings();
   await openSettings();
