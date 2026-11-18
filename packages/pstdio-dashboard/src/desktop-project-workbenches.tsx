@@ -29,7 +29,12 @@ export const DesktopProjectWorkbenches = (props: DesktopProjectWorkbenchesProps)
 
   return workbenches.map((entry) => {
     const visible = entry === active;
-    const recovery = <DesktopProjectRecovery {...{ controller, entry, lifecycle, platform, storage, visible }} />;
+    const quitConfirmation = visible && lifecycle && <DesktopQuitConfirmation bridge={lifecycle} />;
+    const recovery = (
+      <DesktopProjectRecovery {...{ controller, entry, platform, storage, visible }}>
+        {quitConfirmation}
+      </DesktopProjectRecovery>
+    );
     return (
       <ErrorBoundary
         key={entry.key}
@@ -49,7 +54,7 @@ export const DesktopProjectWorkbenches = (props: DesktopProjectWorkbenchesProps)
                 <DesktopProjectTabs workbench={entry.workbench} controller={controller} platform={platform} />
                 {/* Window-wide parts follow the visible project: one startup theme, one quit dialog. */}
                 {visible && lifecycle && <DesktopStartupAppearance bridge={lifecycle} />}
-                {visible && lifecycle && <DesktopQuitConfirmation bridge={lifecycle} />}
+                {quitConfirmation}
               </>
             }
           />

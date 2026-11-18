@@ -3,16 +3,14 @@ import { EmptyState, WindowTabs, WindowTitleBar } from "@pstdio/ui";
 import { WorkbenchThemeProvider } from "@pstdio/workbench/react";
 import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { Folder } from "lucide-react";
-import { useEffect, useRef } from "react";
-import type { DesktopLifecycleBridge } from "@/lib/desktop-lifecycle-bridge";
-import { DesktopQuitConfirmation } from "@/modules/desktop/desktop-quit-confirmation";
+import { type ReactNode, useEffect, useRef } from "react";
 import { findDashboardProjectRow } from "../data/project-data";
 import type { DesktopProjectTabsController, DesktopProjectWorkbench } from "../desktop-project-tabs-controller";
 
 interface DesktopProjectRecoveryProps {
   controller: DesktopProjectTabsController;
   entry: DesktopProjectWorkbench;
-  lifecycle?: DesktopLifecycleBridge;
+  children?: ReactNode;
   platform: string;
   storage?: WorkbenchStorageLike;
   visible: boolean;
@@ -38,7 +36,7 @@ export const ProjectRecoveryMessage = (props: { canSwitch: boolean; retry: () =>
 };
 
 export const DesktopProjectRecovery = (props: DesktopProjectRecoveryProps) => {
-  const { controller, entry, lifecycle, platform, storage, visible } = props;
+  const { children, controller, entry, platform, storage, visible } = props;
   if (!visible) return null;
   // Recovery reads just the tab's plain text label. It can also render while its project row is unavailable.
   const tabs = controller.getProjectIds().map((id) => {
@@ -63,7 +61,7 @@ export const DesktopProjectRecovery = (props: DesktopProjectRecoveryProps) => {
           />
         </WindowTitleBar>
         <ProjectRecoveryMessage canSwitch={tabs.length > 1} retry={() => controller.retry(entry)} />
-        {lifecycle && <DesktopQuitConfirmation bridge={lifecycle} />}
+        {children}
       </Flex>
     </WorkbenchThemeProvider>
   );
