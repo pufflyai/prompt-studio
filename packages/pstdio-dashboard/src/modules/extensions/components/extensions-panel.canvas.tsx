@@ -325,7 +325,7 @@ export const AddingLocalFolder: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    addingFolderName: "my-extension",
+    actionStates: { $folder: { status: "running", label: "Adding my-extension…" } },
   },
 };
 

@@ -100,8 +100,9 @@ test("distinguishes waiting from active upgrades and dismisses grouped results w
     await succeed(waiting[3]!);
     await expect(failedButton).toHaveCount(0);
     await row(waiting[3]!.extension.id).click();
-    await expect(page.getByTestId("extension-detail")).toBeVisible();
-    await expect(page.getByTestId("extension-upgrade")).toHaveCount(0);
+    const detail = page.getByTestId("extension-detail").filter({ visible: true });
+    await expect(detail).toBeVisible();
+    await expect(detail.getByTestId("extension-upgrade")).toHaveCount(0);
     expect(waiting).toHaveLength(4);
   } finally {
     await Promise.all(heldReads.map((route) => route.abort()));
