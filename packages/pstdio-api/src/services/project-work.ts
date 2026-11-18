@@ -6,6 +6,11 @@ export class ProjectRemovalInProgress extends Error {
   }
 }
 
+interface WorkLease {
+  running: Promise<unknown>;
+  cancelOnFreeze: boolean;
+}
+
 /** A gate for work whose lifetime extends beyond a project lookup. */
 export const createProjectWork = () => {
   const suspended = new Set<string>();
@@ -13,7 +18,7 @@ export const createProjectWork = () => {
   const cleanup = new AsyncLocalStorage<{ id: string; active: boolean }>();
   const leaseContext = new AsyncLocalStorage<{ id: string; signal: AbortSignal; active: boolean }>();
   const resources = new Map<string, Set<() => Promise<void>>>();
-  const active = new Map<string, Map<AbortController, Promise<unknown>>>();
+  const active = new Map<string, Map<AbortController, WorkLease>>();
   const assertAvailable = (id: string) => {
     if (suspended.has(id)) throw new ProjectRemovalInProgress();
   };
@@ -35,8 +40,10 @@ export const createProjectWork = () => {
       }
     },
     assertAvailable,
-    freeze: (id: string) => {
+    freeze(id: string) {
       suspended.add(id);
+      for (const [controller, lease] of active.get(id) ?? [])
+        if (lease.cancelOnFreeze) controller.abort(new ProjectRemovalInProgress());
     },
     suspend(id: string) {
       suspended.add(id);
@@ -60,9 +67,14 @@ export const createProjectWork = () => {
       await Promise.all([...(resources.get(id) ?? [])].map((close) => close()));
     },
     async drain(id: string) {
-      while (active.has(id)) await Promise.allSettled(active.get(id)!.values());
+      while (active.has(id)) await Promise.allSettled([...active.get(id)!.values()].map((lease) => lease.running));
     },
-    async run<T>(id: string, task: (signal: AbortSignal) => Promise<T>, upstream?: AbortSignal) {
+    async run<T>(
+      id: string,
+      task: (signal: AbortSignal) => Promise<T>,
+      upstream?: AbortSignal,
+      options: { cancelOnFreeze?: boolean } = {},
+    ) {
       const parent = leaseContext.getStore();
       const inherits = parent?.id === id && parent.active;
       if (!inherits) assertAvailable(id);
@@ -72,13 +84,14 @@ export const createProjectWork = () => {
       if (inherits) signals.push(parent.signal);
       const signal = signals.length === 1 ? controller.signal : AbortSignal.any(signals);
       const owner = { id, signal, active: true };
-      const leases = active.get(id) ?? new Map<AbortController, Promise<unknown>>();
+      const leases = active.get(id) ?? new Map<AbortController, WorkLease>();
       active.set(id, leases);
+      if (options.cancelOnFreeze && suspended.has(id)) controller.abort(new ProjectRemovalInProgress());
       const running = Promise.resolve().then(() => {
         signal.throwIfAborted();
         return leaseContext.run(owner, () => task(signal));
       });
-      leases.set(controller, running);
+      leases.set(controller, { running, cancelOnFreeze: Boolean(options.cancelOnFreeze) });
       try {
         return await running;
       } finally {

@@ -59,8 +59,8 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
     cloudDeletion: boolean,
   ): Promise<CloudProjectCatalogEntry | undefined> => {
     const project = await input.projects.get(id);
-    if (!project && !choice) return;
-    const name = choice?.name ?? project!.name;
+    if (!project && !choice && !member) return;
+    const name = choice?.name ?? project?.name ?? id;
     const sync = project && !choice ? await input.syncStatus(id).catch(() => undefined) : undefined;
     const presence = choice?.phase ?? (sync?.offlineReady ? "downloaded" : "downloading");
     return {

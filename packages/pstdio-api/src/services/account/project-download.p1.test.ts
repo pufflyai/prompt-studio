@@ -105,6 +105,52 @@ test("a Cloud only project can be listed and deleted without starting a download
   }
 });
 
+test("known Cloud membership stays visible before its project metadata can be recovered", async () => {
+  const root = await mkdtemp(join(tmpdir(), "cloud-project-metadata-pending-"));
+  const host = await createAccountHostFixture(root);
+  const id = crypto.randomUUID();
+  const manager = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request) {
+      const path = new URL(request.url).pathname;
+      if (path === "/v1/account") return Response.json({ features: { relay: true }, projectDeletion: true });
+      if (path === "/v1/workbenches") return Response.json([{ workbenchId: id }]);
+      if (path === "/v1/project-deletions") return Response.json([]);
+      return Response.json({ error: "metadata unavailable" }, { status: 503 });
+    },
+  });
+  try {
+    const { environmentId } = await host.deps.environmentService.get();
+    await createNativeStore(host.file).save({
+      managerOrigin: manager.url.origin,
+      relayOrigin: manager.url.origin,
+      accountId: "fixture-account",
+      deviceId: environmentId,
+      token: "fixture-device",
+    });
+    await host.account.refresh();
+    expect(await host.projects.get(id)).toBeNull();
+    const catalog = async () => (await host.app.request("/v1/account/projects")).json();
+    expect(await catalog()).toMatchObject({
+      projects: [
+        {
+          id,
+          name: id,
+          presence: "downloading",
+          actions: { download: true, deleteCloud: true, removeLocal: false },
+        },
+      ],
+    });
+    await host.projects.create({ id, name: "Recovered project name" });
+    expect(await catalog()).toMatchObject({ projects: [{ id, name: "Recovered project name" }] });
+  } finally {
+    await host.close();
+    await manager.stop(true);
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("only explicit Download restores a cloud-only copy and prepares its local folder when ready", async () => {
   const root = await mkdtemp(join(tmpdir(), "explicit-cloud-download-"));
   const host = await createAccountHostFixture(root);
