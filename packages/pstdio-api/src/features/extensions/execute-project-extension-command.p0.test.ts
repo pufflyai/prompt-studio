@@ -105,6 +105,37 @@ test("streamed commands deliver chunks and still return the final outcome", asyn
   expect(response.outcome).toMatchObject({ ok: true, value: 2 });
 });
 
+test("closing project admission cancels a command stream before draining its work lease", async () => {
+  const snapshot = await fixture.deps.extensionRuntimeCatalog.get("project-1");
+  const command = snapshot.runtime.commands[0]!;
+  const entered = Promise.withResolvers<void>();
+  const controller = new AbortController();
+  let commandSignal: AbortSignal | undefined;
+  command.stream = { kind: "stream" };
+  command.run = async (ctx) => {
+    commandSignal = ctx.signal;
+    entered.resolve();
+    await new Promise<void>((resolve) => ctx.signal.addEventListener("abort", () => resolve(), { once: true }));
+  };
+  const streaming = executeProjectExtensionCommand(fixture.deps, {
+    projectId: "project-1",
+    commandId: command.id,
+    body: {},
+    signal: controller.signal,
+    onChunk: async () => {},
+  }).catch(() => undefined);
+  try {
+    await entered.promise;
+    fixture.deps.projectService.work.freeze("project-1");
+    expect(commandSignal?.aborted).toBe(true);
+    await fixture.deps.projectService.work.drain("project-1");
+  } finally {
+    controller.abort();
+    await streaming;
+    fixture.deps.projectService.work.release("project-1");
+  }
+});
+
 test("ordinary execution drops chunks from a streaming command", async () => {
   const snapshot = await fixture.deps.extensionRuntimeCatalog.get("project-1");
   const command = snapshot.runtime.commands[0]!;

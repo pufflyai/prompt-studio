@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createProjectWork } from "./project-work";
+import { createProjectWork, ProjectRemovalInProgress } from "./project-work";
 
 test("closing admission drains work already owned by that project", async () => {
   const work = createProjectWork();
@@ -16,4 +16,20 @@ test("closing admission drains work already owned by that project", async () => 
   mayContinue.resolve();
   expect(await admitted).toBe("saved");
   await drained;
+});
+
+test("an admitted writer cannot open a new command stream after project admission closes", async () => {
+  const work = createProjectWork();
+  const mayContinue = Promise.withResolvers<void>();
+  const admitted = work.run("project", async () => {
+    await mayContinue.promise;
+    await expect(
+      work.run("project", async () => "stream opened", undefined, { cancelOnFreeze: true }),
+    ).rejects.toBeInstanceOf(ProjectRemovalInProgress);
+  });
+  await Promise.resolve();
+  work.freeze("project");
+  mayContinue.resolve();
+  await admitted;
+  await work.drain("project");
 });

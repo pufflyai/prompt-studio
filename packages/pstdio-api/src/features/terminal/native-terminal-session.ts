@@ -62,6 +62,7 @@ const open = async (deps: ExtensionsRouteDeps, request: TerminalViewOpenRequest,
   const lifetime = AbortSignal.any([signal, owner.signal]);
   let session: TerminalSessionHandle | undefined;
   let closing: Promise<void> | undefined;
+  let stopping = false;
   let unsubscribe = () => {};
   let disown = () => {};
   const release = () => {
@@ -70,9 +71,17 @@ const open = async (deps: ExtensionsRouteDeps, request: TerminalViewOpenRequest,
     lifetime.removeEventListener("abort", onAbort);
   };
   const close = (stopSignal?: string) => {
+    stopping = true;
     if (!closing) {
-      release();
-      closing = session?.kill(stopSignal) ?? Promise.resolve();
+      closing = Promise.resolve()
+        .then(async () => {
+          await session?.kill(stopSignal);
+          release();
+        })
+        .catch((error) => {
+          closing = undefined;
+          throw error;
+        });
     }
     return closing;
   };
@@ -125,7 +134,7 @@ const open = async (deps: ExtensionsRouteDeps, request: TerminalViewOpenRequest,
         try {
           yield* session!.events();
         } finally {
-          release();
+          if (!stopping) release();
         }
       },
     } satisfies TerminalSessionHandle;
