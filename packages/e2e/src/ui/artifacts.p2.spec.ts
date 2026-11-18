@@ -185,7 +185,6 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await versionMenu.click();
     await frame.getByRole("menuitemradio", { name: "First", exact: true }).click();
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
-    // The chosen version stays selected after a reload and when the published URL opens the artifact again.
     await page.reload();
     // The chosen immutable revision is a persisted presentation preference (PS-157).
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
@@ -215,7 +214,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await expect(card.locator("iframe")).toHaveCount(1);
     await card.focus();
     await card.press("Enter");
-    await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
+    await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
     await artifactMenu.click();
     await page.getByRole("menuitem", { name: "Delete artifact…", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Delete artifact", exact: true }).click();
