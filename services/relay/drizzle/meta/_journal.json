@@ -36,6 +36,13 @@
       "when": 1793656844686,
       "tag": "0004_jazzy_nomad",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795008136206,
+      "tag": "0005_handy_susan_delgado",
+      "breakpoints": true
     }
   ]
 }

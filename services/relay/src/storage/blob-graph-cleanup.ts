@@ -4,7 +4,9 @@ import { lockAccount } from "./accounts";
 import { blobRetirementPage } from "./blob-retirement";
 import { blobOwner } from "./blobs";
 import type { connectRelay } from "./database";
-import { syncBlobs, syncProjects } from "./document-schema";
+import { projectRetirements, syncBlobs, syncProjects } from "./document-schema";
+
+import { tryLockProject } from "./project-access";
 
 const batchSize = 500;
 
@@ -22,6 +24,7 @@ const markProjectBlobs = async (
       const page = await connection.run(
         (db) =>
           db.transaction(async (transaction) => {
+            if (!(await tryLockProject(transaction, projectKey))) return;
             await lockAccount(transaction, accountId);
             const page = await transaction.execute<{ projectKey: string; blobId: string; retire: boolean }>(
               blobRetirementPage(accountId, cutoff, after),
@@ -36,6 +39,7 @@ const markProjectBlobs = async (
           }),
         signal,
       );
+      if (!page) return;
       progress += page.filter((row) => row.retire).length;
       if (page.length < batchSize) break;
       after = page.at(-1)!;
@@ -100,19 +104,56 @@ export const cleanupBlobGraph = async (
     }
     if (accounts.rows.length < batchSize) break;
   }
+  await dropRetiredBlobs(connection, assets, signal);
+};
+
+const dropRetiredBlobs = async (
+  connection: ReturnType<typeof connectRelay>,
+  assets: ReturnType<typeof createRelayAssets>,
+  signal?: AbortSignal,
+) => {
+  let projectKey = "";
+  let blobId = "";
   while (true) {
     const deleting = await connection.run(
-      (db) => db.select().from(syncBlobs).where(eq(syncBlobs.status, "deleting")).limit(batchSize),
+      (db) =>
+        db
+          .select()
+          .from(syncBlobs)
+          .where(
+            and(
+              eq(syncBlobs.status, "deleting"),
+              sql`(${syncBlobs.projectKey}, ${syncBlobs.blobId}) > (${projectKey}, ${blobId})`,
+            ),
+          )
+          .orderBy(syncBlobs.projectKey, syncBlobs.blobId)
+          .limit(batchSize),
       signal,
     );
     for (const blob of deleting) {
-      await assets.remove(blobOwner(blob), blob.blobId);
+      const identity = and(eq(syncBlobs.projectKey, blob.projectKey), eq(syncBlobs.blobId, blob.blobId));
       await connection.run(
         (db) =>
-          db.delete(syncBlobs).where(and(eq(syncBlobs.projectKey, blob.projectKey), eq(syncBlobs.blobId, blob.blobId))),
+          db.transaction(async (tx) => {
+            if (!(await tryLockProject(tx, blob.projectKey))) return;
+            const [retirement] = await tx
+              .select()
+              .from(projectRetirements)
+              .where(eq(projectRetirements.projectKey, blob.projectKey));
+            if (retirement) return;
+            const [pending] = await tx
+              .select()
+              .from(syncBlobs)
+              .where(and(identity, eq(syncBlobs.status, "deleting")));
+            if (!pending) return;
+            await assets.remove(blobOwner(pending), pending.blobId, signal);
+            await tx.delete(syncBlobs).where(identity);
+          }),
         signal,
       );
+      projectKey = blob.projectKey;
+      blobId = blob.blobId;
     }
-    if (deleting.length < batchSize) break;
+    if (deleting.length < batchSize) return;
   }
 };

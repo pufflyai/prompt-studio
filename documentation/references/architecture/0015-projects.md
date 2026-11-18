@@ -56,6 +56,12 @@ Host metadata must stay inside the workspace folder. Setup rejects symlinks at `
 
 Deleting a project or workspace preserves user-selected folders and user files. Providers can remove only the resources they created. Project deletion removes its saved host data and its own matching CLI config binding, so the folder can be opened again. Foreign and malformed config files are preserved.
 
+Permanent Cloud deletion uses a durable retirement receipt in the account manager.
+The relay drains admitted work, then fences the scope at storage across all replicas.
+Its cleanup removes scoped content and bytes before acknowledging the operation.
+A surviving receipt rejects an old access token even after the normal project
+storage has been removed. See [relay deletion and diagnostics](../../guides/development/0006-relay.md#permanent-project-deletion).
+
 ## Alpha upgrade
 
 The schema upgrade preserves project and workspace IDs and history. It preserves a recorded default workspace folder first, otherwise the earliest linked folder by link creation time and link ID. Other existing workspaces keep their own locations and Git provider references. Remote references stay remote. A project without a recoverable location retains its data and can attach an initial workspace from settings. The upgrade materializes locations before dropping repository tables.

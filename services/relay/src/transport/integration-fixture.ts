@@ -1,7 +1,13 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  CreateBucketCommand,
+  ListMultipartUploadsCommand,
+  ListObjectsV2Command,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { Client } from "pg";
 import {
   createAccountManager,
@@ -42,6 +48,16 @@ export const createTransportFixture = () => {
   return {
     relayDatabaseUrl: relayDatabase.url,
     managerDatabaseUrl: managerDatabase.url,
+    putLegacyObject: (key: string, bytes: Uint8Array) =>
+      objects.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: bytes })),
+    async objectKeys() {
+      const objectsPage = await objects.send(new ListObjectsV2Command({ Bucket: bucket }));
+      return (objectsPage.Contents ?? []).map(({ Key }) => Key!).sort();
+    },
+    async multipartKeys() {
+      const uploads = await objects.send(new ListMultipartUploadsCommand({ Bucket: bucket }));
+      return (uploads.Uploads ?? []).map(({ Key }) => Key!).sort();
+    },
     async initialize() {
       await admin.connect();
       for (const target of [managerDatabase, relayDatabase]) {
@@ -73,8 +89,9 @@ export const createTransportFixture = () => {
         await client.end();
       };
     },
-    async waitForBlockedData(count = 1) {
+    async waitForBlockedData(count = 1, signal?: AbortSignal) {
       while (true) {
+        signal?.throwIfAborted();
         const result = await admin.query(
           "SELECT count(*)::int AS count FROM pg_stat_activity WHERE datname = $1 AND wait_event_type = 'Lock'",
           [relayDatabase.role],
@@ -89,6 +106,7 @@ export const createTransportFixture = () => {
         environmentId?: string;
         accessLifetimeSeconds?: number;
         limits?: RelayLimits;
+        projectDeletionRelayToken?: string;
       } = {},
     ) {
       const manager = createAccountManager(managerDatabase.url);
@@ -105,6 +123,7 @@ export const createTransportFixture = () => {
         origin: "https://manager.fixture.test",
         audience: "https://relay.fixture.test",
         secret: "owned-transport-fixture-secret-0123456789",
+        projectDeletionRelayToken: options.projectDeletionRelayToken,
         googleClientId: "owned-fixture-client",
         googleClientSecret: "owned-fixture-secret",
         sessionLifetimeSeconds: 120,

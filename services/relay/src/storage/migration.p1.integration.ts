@@ -3,7 +3,9 @@ import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promi
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { Client } from "pg";
+import { blobAsset, blobOwner } from "./blobs";
 import { migrateRelayStorage } from "./database";
+import { documentObjectPrefix } from "./payloads";
 import { body, createSyncFixture, encode, randomId, sha256 } from "./sync-fixture";
 
 // The upgrade must preserve encrypted content and multipart progress while retiring grouped tables.
@@ -25,30 +27,73 @@ test("relay migration preserves blind documents, blobs and resumable uploads", a
     await migrateRelayStorage(databaseUrl, directory);
     // Fixture initialization runs the same prior migrations and creates this test's object bucket.
     await fixture.initialize(directory);
-    const { sync } = fixture.open();
+    const { sync, assets } = fixture.open();
     const address = { projectKey: randomId("project"), spaceOwner: null, documentId: randomId("doc") };
     const caller = { accountId: randomId("account"), deviceId: randomId("device") };
     const bytes = new Uint8Array([9, 4, 2]);
     const blob = { ...address, blobId: randomId("blob") };
-    const descriptor = { byteLength: bytes.length, sha256: sha256(bytes) };
-    await sync.blobs.begin(blob, caller, descriptor);
-    await sync.blobs.writePart(blob, 1, { ...descriptor, body: body(bytes) });
-    await sync.blobs.finish(blob);
-    const update = { updateId: randomId("update"), payload: encode(bytes), blobIds: [blob.blobId] };
-    await sync.documents.appendUpdate(address, caller, update);
-    const state = {
-      stateId: randomId("state"),
-      baseStateId: null,
-      through: 1,
-      payload: encode(bytes),
-      summary: encode(new Uint8Array([1])),
-      blobIds: [blob.blobId],
-    };
-    await sync.documents.replaceState(address, caller, state);
     const pending = { ...address, blobId: randomId("pending") };
-    await sync.blobs.begin(pending, caller, descriptor);
-    await sync.blobs.writePart(pending, 1, { ...descriptor, body: body(bytes) });
+    const descriptor = { byteLength: bytes.length, sha256: sha256(bytes) };
+    const update = { updateId: randomId("update"), payload: encode(bytes), blobIds: [blob.blobId] };
+    const stateId = randomId("state");
+    const prefix = documentObjectPrefix(address.projectKey, address.documentId);
+    const updateKey = `${prefix}updates/${crypto.randomUUID()}`;
+    const stateKey = `${prefix}states/${crypto.randomUUID()}`;
+    await fixture.putLegacyObject(updateKey, bytes);
+    await fixture.putLegacyObject(stateKey, bytes);
     await client.connect();
+    await client.query(
+      'INSERT INTO relay_sync_projects ("projectKey", "accountId", "createdAt") VALUES ($1, $2, now())',
+      [address.projectKey, caller.accountId],
+    );
+    for (const [upload, status] of [
+      [blob, "completed"],
+      [pending, "open"],
+    ] as const) {
+      const owner = blobOwner(upload);
+      await assets.begin(owner, upload.blobId, blobAsset(descriptor));
+      await assets.writePart(owner, upload.blobId, 1, { ...descriptor, body: body(bytes) });
+      if (status === "completed") await assets.finish(owner, upload.blobId);
+      await client.query(
+        `INSERT INTO relay_sync_blobs ("projectKey", "blobId", sha256, "byteLength", status, "createdAt", "completedAt")
+        VALUES ($1, $2, $3, $4, $5, now(), CASE WHEN $5 = 'completed' THEN now() END)`,
+        [address.projectKey, upload.blobId, descriptor.sha256, descriptor.byteLength, status],
+      );
+    }
+    await client.query(
+      `INSERT INTO relay_sync_documents ("projectKey", "documentId", "lastSequence", "stateId")
+      VALUES ($1, $2, 1, $3)`,
+      [address.projectKey, address.documentId, stateId],
+    );
+    await client.query(
+      `INSERT INTO relay_sync_updates
+      ("projectKey", "documentId", sequence, "updateId", "deviceId", "byteLength", "objectKey", "blobIds", "createdAt")
+      VALUES ($1, $2, 1, $3, $4, $5, $6, $7, now())`,
+      [
+        address.projectKey,
+        address.documentId,
+        update.updateId,
+        caller.deviceId,
+        bytes.length,
+        updateKey,
+        update.blobIds,
+      ],
+    );
+    await client.query(
+      `INSERT INTO relay_sync_states
+      ("projectKey", "documentId", "stateId", through, "byteLength", summary, "objectKey", "blobIds", "deviceId", "createdAt")
+      VALUES ($1, $2, $3, 1, $4, $5, $6, $7, $8, now())`,
+      [
+        address.projectKey,
+        address.documentId,
+        stateId,
+        bytes.length,
+        encode(new Uint8Array([1])),
+        stateKey,
+        update.blobIds,
+        caller.deviceId,
+      ],
+    );
     await client.query(`INSERT INTO relay_scopes
       (id, scope, epoch, "acceptedSequence", "journalSequence", "replayFrom", "publishedRevision")
       VALUES ('retired-owner', '{}', 'epoch', 0, 0, 0, 'old')`);
@@ -56,7 +101,7 @@ test("relay migration preserves blind documents, blobs and resumable uploads", a
     await migrateRelayStorage(databaseUrl, migrations);
 
     expect(await sync.documents.appendUpdate(address, caller, update)).toEqual({ sequence: 1, duplicate: true });
-    const stored = await sync.documents.readState(address, state.stateId);
+    const stored = await sync.documents.readState(address, stateId);
     expect(new Uint8Array(await new Response(stored!.body).arrayBuffer())).toEqual(bytes);
     expect(new Uint8Array(await new Response((await sync.blobs.read(blob, 0)).body).arrayBuffer())).toEqual(bytes);
     const resumed = await sync.blobs.begin(pending, caller, descriptor);

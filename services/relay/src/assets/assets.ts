@@ -194,7 +194,7 @@ export const createRelayAssets = (config: AssetConfig) => {
       });
     },
     /** Removes an upload, its bytes and its verified mapping. Removing a missing upload does nothing. */
-    async remove(owner: AssetOwner, id: string) {
+    async remove(owner: AssetOwner, id: string, requestSignal?: AbortSignal) {
       return operations.run(async ({ signal }) => {
         const key = await identity(owner, id);
         await database.lock(lockKey(key), signal, async (db) => {
@@ -202,6 +202,8 @@ export const createRelayAssets = (config: AssetConfig) => {
           if (!row) return;
           await objects.discard(row.objectKey, row.multipartId, signal);
           await objects.remove(row.objectKey, signal);
+          if (await objects.head(row.objectKey, undefined, signal))
+            throw new Error("Object storage retained a deleted asset");
           await db.transaction(async (transaction) => {
             await transaction.delete(assetParts).where(partWhere(key));
             await transaction
@@ -210,7 +212,7 @@ export const createRelayAssets = (config: AssetConfig) => {
             await transaction.delete(assetUploads).where(uploadWhere(key));
           });
         });
-      });
+      }, requestSignal);
     },
     close: operations.close,
   };
