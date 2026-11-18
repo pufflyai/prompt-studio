@@ -153,6 +153,18 @@ test("breadcrumbs skip absent parents and probe the parent key for the one child
   ).toBe("Resource 0 / Resource 299");
 });
 
+test("breadcrumb search walks each candidate lineage once", async () => {
+  const where = { field: "breadcrumb", op: "textContains", value: "resource 0 / resource 299" } as const;
+  const plan = await explain(relatedRecordPredicateSql(owner, indexes[0], where, resolve));
+  const ancestryWalks = plan
+    .filter((node) => node["Node Type"] === "Recursive Union")
+    .reduce((sum, node) => sum + Number(node["Actual Loops"]), 0);
+  expect(ancestryWalks).toBe(300);
+  expect(
+    (await records.query({ index: "resources", where, fields: ["id"] })).records.map((row) => row.fields.id),
+  ).toEqual(["299"]);
+});
+
 test("forward array lookups probe only referenced resources instead of every target", async () => {
   const targets = (await explain(recordFieldSql(indexes[0], "dependencyTitle", undefined, resolve, owner))).filter(
     (node) => node.Alias === "storage_current_records_lookup",

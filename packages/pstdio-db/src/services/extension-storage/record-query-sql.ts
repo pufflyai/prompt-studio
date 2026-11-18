@@ -9,6 +9,7 @@ import type {
 } from "pstdio-sync-contracts";
 import { queryExpressionSql } from "./query-expression-sql";
 import { expressionComparable } from "./query-expression-values";
+import { recordTextMatch, stringBytesSql } from "./query-string-codec";
 import { typedComputedFieldSql } from "./record-computed-field";
 import { formatCacheFields } from "./record-format-key";
 import { identityPredicateSql } from "./record-identity-predicate";
@@ -16,8 +17,6 @@ import { identityQueryText } from "./record-identity-query";
 import { recordNumberTextSql } from "./record-number-text";
 import {
   encodeProjectionValue,
-  projectionBytesTag,
-  projectionFoldedTag,
   projectionKey,
   projectionStringBytes,
   projectionStringTag,
@@ -32,16 +31,6 @@ import { identityQueryKey } from "./resource-query-values";
 export const sqlLiteral = (value: string) => sql.raw(`'${value.replaceAll("'", "''")}'`);
 export type QuerySqlOwner = { workbenchId: string | SQL; extensionId: string | SQL };
 const json = (value: Json) => sql`${JSON.stringify(encodeProjectionValue(value))}::jsonb`;
-const stringBytesSql = (value: SQL, folded = false) => {
-  const tag = folded ? projectionFoldedTag : projectionBytesTag;
-  const text = sql`(${value} #>> '{}')`;
-  const normalized = folded ? sql`lower(${text})` : text;
-  // decode is immutable for expression indexes; protect literal backslashes.
-  const bytes = sql`decode(replace(${normalized}, ${sqlLiteral("\\")}, ${sqlLiteral("\\\\")}), 'escape')`;
-  return sql`(CASE WHEN jsonb_typeof(${value}) = 'object' AND ${value} ? ${sqlLiteral(projectionStringTag)}
-    THEN decode(${value} ->> ${sqlLiteral(tag)}, 'hex')
-    ELSE ${bytes} END)`;
-};
 export const projectionStringSortSql = (value: SQL) => stringBytesSql(value);
 export const sortValueSql = (value: Json) =>
   typeof value === "string" ? sql`decode(${projectionStringBytes(value)}, 'hex')` : json(value);
@@ -312,11 +301,11 @@ const fieldPredicateSql = (
     case "textContains": {
       const value =
         queryField(index, predicate.field).type === "number" ? sql`to_jsonb(${recordNumberTextSql(field)})` : field;
-      return sql`position(decode(${projectionSubstringBytes(String(predicate.value).toLowerCase())}, 'hex') in ${stringBytesSql(value, true)}) > 0`;
+      return recordTextMatch(value, String(predicate.value), index.hierarchy?.breadcrumbField === predicate.field);
     }
     case "contains": {
       if (queryField(index, predicate.field).type === "array") return sql`${field} @> ${json([predicate.value])}`;
-      return sql`position(decode(${projectionSubstringBytes(String(predicate.value).toLowerCase())}, 'hex') in ${stringBytesSql(field, true)}) > 0`;
+      return recordTextMatch(field, String(predicate.value), index.hierarchy?.breadcrumbField === predicate.field);
     }
     default: {
       if (predicate.value === null) return sql`false`;
