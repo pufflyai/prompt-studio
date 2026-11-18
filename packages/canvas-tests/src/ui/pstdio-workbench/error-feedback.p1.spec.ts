@@ -77,9 +77,24 @@ test("system information can be opened and dismissed in the status bar", async (
 
 test("System activity stays pinned when other status widgets reorder", async ({ page }) => {
   const preview = await openCanvasPreview(page, `${canvas}#SystemAndActionErrors`);
-  await preview.getByRole("button", { name: "Report system information" }).click();
   const status = preview.locator('[data-workbench-region="status"]');
   const activity = status.getByRole("group", { name: "System activity" });
+  const idleActivity = activity.getByRole("button", { name: "System activity", exact: true });
+  await expect(idleActivity).toBeVisible();
+  await idleActivity.press("Enter");
+  const details = preview.getByRole("region", { name: "System notice list" });
+  await expect(details).toBeVisible();
+  await expect(details.getByRole("alert")).toHaveCount(0);
+  await idleActivity.press("Enter");
+  await expect(details).toBeHidden();
+
+  await preview.getByRole("button", { name: "Report system information" }).click();
+  await activity.getByRole("button", { name: "System notices: Update ready" }).press("Enter");
+  await details.getByRole("button", { name: "Dismiss Update ready" }).press("Enter");
+  await expect(idleActivity).toBeVisible();
+  await expect(details).toBeVisible();
+  await idleActivity.press("Enter");
+
   const first = status.getByRole("group", { name: "First tool" });
   const second = status.getByRole("group", { name: "Second tool" });
   await expect(activity).toBeVisible();

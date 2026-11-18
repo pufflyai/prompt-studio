@@ -117,7 +117,7 @@ const meta = {
   title: "Product/Workbench/Feedback/Error feedback",
   component: ErrorFeedback,
   description:
-    "Local failures stay near their action without moving content. System errors and information are dismissible from the status bar.",
+    "Local failures stay near their action without moving content. System activity stays visible in the status bar and lists dismissible notices.",
   fullscreen: true,
 } satisfies CanvasMeta<typeof ErrorFeedback>;
 export default meta;

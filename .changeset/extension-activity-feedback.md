@@ -3,4 +3,4 @@
 "@pstdio/workbench": patch
 ---
 
-Move system activity into a status bar widget and simplify extension install, upgrade, and switch feedback.
+Keep system activity available in the status bar and simplify extension install, upgrade, and switch feedback.

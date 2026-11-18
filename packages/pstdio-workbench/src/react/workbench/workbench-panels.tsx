@@ -92,7 +92,7 @@ export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
 export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps & { floating?: boolean }) => {
   const { workbench } = props;
   const chrome = useModeChrome(workbench, "status");
-  useSystemActivityStatusItem(workbench);
+  useSystemActivityStatusItem(workbench, props.visible !== false);
 
   return (
     <WorkbenchFocusRegion
