@@ -26,7 +26,7 @@ import {
   storage_record_projections as projections,
   storage_resource_projections,
 } from "../../db/schemas.pg";
-import { traceStorageQuery } from "./query-trace";
+import { traceStorageQuery, traceTicketQueryPlan } from "./query-trace";
 import { aggregateRecordQuery } from "./record-aggregate-query";
 import {
   installDateFormatIndex,
@@ -260,31 +260,31 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
         traceStorageQuery("query-execute", query.index);
         const page = await prepareRecordQuery(owner, index, query, revision, related);
         if (page.limit === 0) return emptyQueryResult(owner, revision, diagnostics);
-        const result = await tx.execute<QueryRow>(
-          query.dependencyOrder
-            ? dependencyOrderedPageSql(
-                owner,
-                index,
-                query.dependencyOrder,
-                page.fields,
-                sql`${visible(index)} AND ${relatedRecordPredicateSql(owner, index, query.where, related)}`,
-                page.limit,
-                related,
-              )
-            : recordPageSql(
-                index,
-                page.fields,
-                sql`${visible(index)} AND ${relatedRecordPredicateSql(owner, index, query.where, related)} AND ${pageAfterSql(index, page.after, related, owner)}`,
-                // One extra row shows whether a next page exists without a second scan.
-                page.limit + 1,
-                page.offset,
-                related,
-                owner,
-                query.orderBy === undefined || JSON.stringify(query.orderBy) === JSON.stringify(declared.orderBy)
-                  ? query.where
-                  : undefined,
-              ),
-        );
+        const statement = query.dependencyOrder
+          ? dependencyOrderedPageSql(
+              owner,
+              index,
+              query.dependencyOrder,
+              page.fields,
+              sql`${visible(index)} AND ${relatedRecordPredicateSql(owner, index, query.where, related)}`,
+              page.limit,
+              related,
+            )
+          : recordPageSql(
+              index,
+              page.fields,
+              sql`${visible(index)} AND ${relatedRecordPredicateSql(owner, index, query.where, related)} AND ${pageAfterSql(index, page.after, related, owner)}`,
+              // One extra row shows whether a next page exists without a second scan.
+              page.limit + 1,
+              page.offset,
+              related,
+              owner,
+              query.orderBy === undefined || JSON.stringify(query.orderBy) === JSON.stringify(declared.orderBy)
+                ? query.where
+                : undefined,
+            );
+        await traceTicketQueryPlan(tx, query.index, "page", statement);
+        const result = await tx.execute<QueryRow>(statement);
         const rows = result.rows.slice(0, page.limit);
         traceStorageQuery("query-complete", query.index);
         const last = rows.at(-1);
