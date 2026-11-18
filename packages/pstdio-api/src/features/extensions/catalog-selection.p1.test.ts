@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../test-utils/create-test-app";
@@ -47,12 +47,13 @@ test("catalog selection enables its configured identity while unrelated discover
     });
     expect(created.status).toBe(201);
     const project = await created.json();
-    const unrelated = join(root, "home/extensions/unrelated");
+    const unrelated = join(root, "unrelated");
     writeExtension(unrelated, "unrelated");
     await writeFile(
       join(unrelated, "extension.ts"),
       `await fetch(${JSON.stringify(gate.url.href)}); export default {};`,
     );
+    await rename(unrelated, join(root, "home/extensions/unrelated"));
     // The root watcher owns discovery independently of a catalog job.
     const discovery = await entered.promise;
     await enqueueCatalogExtensions(handle.deps.extensionInstallations, ["harness-codex"], project.id);
