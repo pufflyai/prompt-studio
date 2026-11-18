@@ -137,4 +137,6 @@ export const executeProjectExtensionCommand = (
   deps: ExtensionsRouteDeps,
   input: Parameters<typeof executeCommand>[1],
 ) =>
-  deps.projectService.work.run(input.projectId, (signal) => executeCommand(deps, { ...input, signal }), input.signal);
+  deps.projectService.work.run(input.projectId, (signal) => executeCommand(deps, { ...input, signal }), input.signal, {
+    cancelOnFreeze: Boolean(input.onChunk),
+  });

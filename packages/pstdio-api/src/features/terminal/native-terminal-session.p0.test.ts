@@ -137,3 +137,44 @@ test("replacing the enabled installed instance releases its existing terminal", 
   await session.kill();
   expect(kills).toBe(1);
 });
+
+test("copy removal waits for an already closing terminal to finish its process cleanup", async () => {
+  const stopped = Promise.withResolvers<void>();
+  const exiting = Promise.withResolvers<void>();
+  const exitObserved = Promise.withResolvers<void>();
+  fixture.deps.terminal!.openSession = () => ({
+    id: "closing-pty",
+    write() {},
+    resize() {},
+    async kill() {
+      kills++;
+      exiting.resolve();
+      await stopped.promise;
+    },
+    events: async function* () {
+      await exiting.promise;
+      yield { kind: "exit", code: 0, signal: null };
+      exitObserved.resolve();
+    },
+  });
+  const session = await openNativeTerminalSession(fixture.deps, binding, new AbortController().signal);
+  const events = (async () => {
+    for await (const event of session.events()) expect(event.kind).toBe("exit");
+  })();
+  const closing = session.kill();
+  await exitObserved.promise;
+  await events;
+  fixture.deps.projectService.work.suspend(binding.projectId);
+  let cleanupFinished = false;
+  const cleanup = fixture.deps.projectService.work.closeResources(binding.projectId).then(() => {
+    cleanupFinished = true;
+  });
+  try {
+    await Bun.sleep(0);
+    expect(cleanupFinished).toBe(false);
+  } finally {
+    stopped.resolve();
+    await Promise.all([closing, cleanup]);
+  }
+  expect(kills).toBe(1);
+});
