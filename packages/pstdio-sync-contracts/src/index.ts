@@ -3,6 +3,7 @@ export { devicePresenceIntervalMs, devicePresenceLeaseMs } from "./device-presen
 export * from "./fingerprint";
 export * from "./identity";
 export { deriveMarkdownTitle } from "./markdown-title";
+export * from "./project-deletion";
 export * from "./protocol";
 export type * from "./record-query";
 export { resolveSelectedValues, type StorageSelection } from "./selection";

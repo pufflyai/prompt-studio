@@ -1,9 +1,9 @@
-import { and, asc, eq, max } from "drizzle-orm";
+import { and, asc, eq, max, notExists } from "drizzle-orm";
 import type { SpaceKeys } from "pstdio-sync-contracts";
 import { readAccountFeatures } from "./account-features";
 import type { WorkbenchInput } from "./contracts";
 import type { ManagerTransaction } from "./database";
-import { spaceKeys, workbenches } from "./schema";
+import { projectDeletions, spaceKeys, workbenches } from "./schema";
 
 const spaces = ["project", "personal"] as const;
 const createSecret = () => Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
@@ -13,7 +13,22 @@ export const rotateSpaceKeysInTransaction = async (transaction: ManagerTransacti
   const latest = await transaction
     .select({ workbenchId: spaceKeys.workbenchId, space: spaceKeys.space, generation: max(spaceKeys.generation) })
     .from(spaceKeys)
-    .where(eq(spaceKeys.accountId, accountId))
+    .where(
+      and(
+        eq(spaceKeys.accountId, accountId),
+        notExists(
+          transaction
+            .select()
+            .from(projectDeletions)
+            .where(
+              and(
+                eq(projectDeletions.accountId, spaceKeys.accountId),
+                eq(projectDeletions.workbenchId, spaceKeys.workbenchId),
+              ),
+            ),
+        ),
+      ),
+    )
     .groupBy(spaceKeys.workbenchId, spaceKeys.space);
   if (!latest.length) return;
   await transaction.insert(spaceKeys).values(

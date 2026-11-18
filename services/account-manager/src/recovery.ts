@@ -5,6 +5,13 @@ import { z } from "zod";
 import { session, verification } from "./auth-schema";
 import { ownerSchema } from "./contracts";
 import type { ManagerDatabase, ManagerTransaction } from "./database";
+import {
+  captureProjectDeletionReceipts,
+  deletionReceiptSchema,
+  projectScope,
+  restoreProjectDeletionReceipts,
+  validateDeletionReceipts,
+} from "./project-deletion-recovery";
 import { accounts, devices, requests, restoreRequests, spaceKeys, workbenches } from "./schema";
 
 const spaceKeyIdentity = (row: { accountId: string; workbenchId: string; space: string; generation: number }) =>
@@ -22,6 +29,7 @@ const snapshotSchema = z
         state: z.enum(["active", "disabled"]),
       }),
     ),
+    deletions: z.array(deletionReceiptSchema).optional(),
     workbenches: z.array(z.strictObject({ accountId: identitySchema, id: identitySchema })),
     keys: z.array(
       spaceKeySchema.extend({
@@ -46,6 +54,7 @@ const snapshotSchema = z
     const invalid = (path: (string | number)[], message: string) => context.addIssue({ code: "custom", path, message });
     if (accountIds.size !== snapshot.accounts.length) invalid(["accounts"], "Duplicate account identity");
     if (memberships.size !== snapshot.workbenches.length) invalid(["workbenches"], "Duplicate workbench identity");
+    validateDeletionReceipts(snapshot.deletions ?? [], accountIds, invalid);
     for (const [index, row] of snapshot.workbenches.entries()) {
       if (!accountIds.has(row.accountId)) invalid(["workbenches", index], "Unknown workbench account");
     }
@@ -79,9 +88,11 @@ export const captureManager = (db: ManagerDatabase) =>
         .select()
         .from(spaceKeys)
         .orderBy(asc(spaceKeys.accountId), asc(spaceKeys.workbenchId), asc(spaceKeys.space), asc(spaceKeys.generation));
+      const deletions = await captureProjectDeletionReceipts(transaction);
       return snapshotSchema.parse({
         version: 3,
         accounts: accountRows,
+        ...(deletions.length ? { deletions } : {}),
         workbenches: workbenchRows,
         keys: keyRows,
         requests: requestRows,
@@ -146,8 +157,17 @@ export const restoreManager = async (db: ManagerDatabase, requestId: string, inp
       accounts,
       snapshot.accounts.map((account) => ({ ...account, state: "disabled" as const })),
     );
-    await insertBatches(transaction, workbenches, snapshot.workbenches);
-    await insertBatches(transaction, spaceKeys, snapshot.keys);
+    const retired = await restoreProjectDeletionReceipts(transaction, snapshot.deletions ?? []);
+    await insertBatches(
+      transaction,
+      workbenches,
+      snapshot.workbenches.filter((row) => !retired.has(projectScope(row.accountId, row.id))),
+    );
+    await insertBatches(
+      transaction,
+      spaceKeys,
+      snapshot.keys.filter((row) => !retired.has(projectScope(row.accountId, row.workbenchId))),
+    );
     await insertBatches(transaction, requests, snapshot.requests);
     await transaction.insert(restoreRequests).values({ id, fingerprint: digest });
   });

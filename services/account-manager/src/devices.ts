@@ -4,6 +4,7 @@ import { relayEnabled } from "./account-features";
 import type { DeviceInput, DeviceRegistrationInput, WorkbenchInput } from "./contracts";
 import { createCredential, digestCredential } from "./credential";
 import type { ManagerDatabase, ManagerTransaction } from "./database";
+import { assertProjectCanSync } from "./project-deletion";
 import { DeviceAccessDenied } from "./renewal-errors";
 import { accountFeatures, accounts, devices, workbenches } from "./schema";
 import { rotateSpaceKeysInTransaction } from "./space-keys";
@@ -80,8 +81,13 @@ export const listWorkbenches = (db: Reader, accountId: string) =>
     .where(and(eq(workbenches.accountId, accountId), relayEnabled(db, accountId)))
     .orderBy(asc(workbenches.id));
 
-export const addWorkbenchInTransaction = (transaction: ManagerTransaction, input: WorkbenchInput) =>
-  transaction.insert(workbenches).values({ accountId: input.accountId, id: input.workbenchId }).onConflictDoNothing();
+export const addWorkbenchInTransaction = async (transaction: ManagerTransaction, input: WorkbenchInput) => {
+  await assertProjectCanSync(transaction, input);
+  return transaction
+    .insert(workbenches)
+    .values({ accountId: input.accountId, id: input.workbenchId })
+    .onConflictDoNothing();
+};
 
 export const removeWorkbenchInTransaction = (transaction: ManagerTransaction, input: WorkbenchInput) =>
   transaction
