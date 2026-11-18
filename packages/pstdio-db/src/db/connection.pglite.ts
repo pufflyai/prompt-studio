@@ -7,7 +7,9 @@ import type { PGlite } from "@electric-sql/pglite";
 import { inArray } from "drizzle-orm";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
+import { extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
 import { normalizeEmbeddedFileName, relativeEmbeddedFileName } from "pstdio-paths";
+import type { StorageOwner } from "pstdio-sync";
 import { migrateExtensionIdentities } from "../services/extension-identity-migration";
 import {
   attachIndexNodeFiles,
@@ -20,6 +22,7 @@ import { canonicalDbPath, resolveDbPath } from "./paths";
 import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-current-home";
 import { pgliteIdentity } from "./pglite-identity";
 import { acquirePgliteLock } from "./pglite-lock";
+import { createRetiredStorageCleanup } from "./retired-storage-cleanup";
 import * as schema from "./schemas.pg";
 import { type DatabaseMaintenancePhase, invalidateMaintenance, maintainDatabase } from "./startup-maintenance";
 
@@ -169,6 +172,8 @@ export const createDb = async (options?: {
   signal?: AbortSignal;
   /** Folder for encrypted index nodes; defaults to a sibling of the database folder. */
   indexNodesPath?: string;
+  /** The runtime vacuums in the background and schedules deletion of retired rows. */
+  deferCleanup?: boolean;
 }) => {
   const onPhase = options?.onPhase ?? (() => {});
   const requestedPath = resolveDbPath(options?.path);
@@ -216,11 +221,24 @@ export const createDb = async (options?: {
       await migrate(db, { migrationsFolder });
       migrated = true;
     });
-    // Remove node rows before renames copy owners' rows, and compact once after both.
+    // Copy durable receipts before opening. Remove old rows for both sides of an identity
+    // rename now so the rename does not copy cache data or see a false conflict.
     onPhase("database_index_nodes");
-    // A run that stops after deleting rows must still compact on the next start.
+    // A run that stops after deleting rows must leave offline space reclamation pending.
     const owed = () => invalidateMaintenance(dbPath);
-    const movedNodes = await upgradeIndexNodesToFiles(db, indexNodes, undefined, owed);
+    const deferredOwners: StorageOwner[] = [];
+    const deferCleanup = options?.deferCleanup && dbPath !== ":memory:";
+    const renamedOwners = new Set(
+      extensionIdentityRenames.flatMap(({ from, to }) => [
+        `${from.publisher}.${from.name}`,
+        `${to.publisher}.${to.name}`,
+      ]),
+    );
+    const movedNodes = await upgradeIndexNodesToFiles(db, indexNodes, undefined, owed, (owner) => {
+      if (!deferCleanup || renamedOwners.has(owner.extensionId)) return false;
+      deferredOwners.push(owner);
+      return true;
+    });
     const renamed = await migrateExtensionIdentities(db, {
       beforeChange: owed,
       onConflict: async (error) => {
@@ -230,7 +248,7 @@ export const createDb = async (options?: {
           .where(inArray(schema.installed_extension_sources.extension_id, [error.from, error.to]));
       },
     });
-    if (migrated) await maintainDatabase(openedPglite, dbPath, fresh, onPhase, movedNodes || renamed);
+    if (migrated && !deferCleanup) await maintainDatabase(openedPglite, dbPath, fresh, onPhase, movedNodes || renamed);
     const projectIds = await db.select({ id: schema.projects.id }).from(schema.projects);
     await indexNodes.retainProjects(new Set(projectIds.map((project) => project.id)));
     onPhase("database_migrated");
@@ -254,6 +272,7 @@ export const createDb = async (options?: {
       db,
       path: dbPath,
       pglite: openedPglite,
+      cleanupRetiredRows: deferCleanup ? createRetiredStorageCleanup(db, dbPath, deferredOwners) : async () => {},
     };
   } catch (error) {
     await pglite?.close();

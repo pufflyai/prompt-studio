@@ -253,6 +253,8 @@ const bootstrap = async () => {
             platform: process.platform,
             arch: process.arch,
             state: state.kind,
+            startupPhase: state.kind === "starting" ? state.phase : undefined,
+            startupError: state.kind === "recovery" ? state.error.code : undefined,
             runtimeOrigin: runtime?.origin,
             runtimePid: runtime?.pid,
             ownerType: runtime?.ownerType,

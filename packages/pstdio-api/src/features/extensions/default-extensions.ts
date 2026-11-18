@@ -23,6 +23,7 @@ import { activatePreparedInstall, settlePreparedInstall } from "./extension-inst
 import { shouldInstallDependencies } from "./install-extension-dependencies";
 import {
   type createSharedNamedSourceCheckout,
+  ExtensionAlreadyInstalledError,
   type InstallExtensionSourceInput,
   type InstalledExtensionSource,
   installExtensionSource,
@@ -254,6 +255,19 @@ const isInstalledUserExtension = (entry: DefaultExtensionEntry, extensionsRoot: 
   return existsSync(join(defaultInstalledPath(entry, extensionsRoot, installName), "package.json"));
 };
 
+const materializeRepoDefault = async (input: InstallExtensionSourceInput) => {
+  let installed: InstalledExtensionSource | undefined;
+  try {
+    installed = await installExtensionSource(input);
+    if (installed.installation) await activatePreparedInstall(installed.installation);
+    return installed;
+  } catch (error) {
+    if (installed?.installation) await settlePreparedInstall(installed.installation, false);
+    // The installer also resolves historical directory names and checks for concurrent installs.
+    if (!(error instanceof Error) || error.name !== ExtensionAlreadyInstalledError.name) throw error;
+  }
+};
+
 export const installRepoDefaultExtensions = async (input: InstallRepoDefaultExtensionsInput) => {
   const materialized: string[] = [];
   const skipped: string[] = [];
@@ -296,7 +310,7 @@ export const installRepoDefaultExtensions = async (input: InstallRepoDefaultExte
           }
 
           const installInput = toInstallInput(resolved.entry, input.releaseRef);
-          const installed = await installExtensionSource({
+          const installed = await materializeRepoDefault({
             ...installInput,
             existsOk: false,
             force: false,
@@ -304,9 +318,12 @@ export const installRepoDefaultExtensions = async (input: InstallRepoDefaultExte
             repoPath: input.repoPath,
             retainBackup: Boolean(input.registerInstalledSources),
           });
-          prepared.push(installed);
-          if (installed.installation) await activatePreparedInstall(installed.installation);
-          materialized.push(resolved.installName);
+          if (installed) {
+            prepared.push(installed);
+            materialized.push(resolved.installName);
+          } else {
+            skipped.push(resolved.installName);
+          }
         }
       },
     );

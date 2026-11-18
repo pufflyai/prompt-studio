@@ -5,7 +5,6 @@ import {
   chatRendererActionSchema,
   chatRendererSnapshotSchema,
 } from "pstdio-api-contracts";
-import { createWorkbenchStore } from "../../core/shared/store/workbench-store";
 import {
   canReplaceRecoveredChatDraft,
   chatDraftContentKey,
@@ -21,6 +20,7 @@ import { type ChatPendingSubmission, createChatSubmissionPresentation } from "./
 import { createChatSessionDraft } from "./chat-session-draft";
 import { watchChatSession } from "./chat-session-watch";
 import { createChatSnapshot } from "./chat-snapshot";
+import { createChatProjection } from "./chat-stream-paint";
 import { createChatSubmissionRunner } from "./chat-submission";
 import { createChatSubmissionHandoff } from "./chat-submission-handoff";
 
@@ -108,18 +108,21 @@ const trackChatAction = <T>(
   return running;
 };
 
+const isTranscriptUpdate = (loaded: boolean, incoming: ChatRendererSnapshot) =>
+  loaded && incoming.messages !== undefined && Object.keys(incoming).length === 1;
+
 const chatErrorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /** One owner per project/view/resource, shared across page/panel changes. */
 export const createChatSession = (input: ChatSessionInput) => {
   let state = initialChatState(input.initial);
   let errorRevision = 0;
-  const projection = createWorkbenchStore({ name: "workbench.chat", initialState: state });
+  const projection = createChatProjection(state);
   const present = createChatSubmissionPresentation();
-  const publish = (update: Partial<typeof state>) => {
+  const publish = (update: Partial<typeof state>, transcriptOnly = false) => {
     if (Object.hasOwn(update, "error")) errorRevision++;
     state = projectChatState(state, update, present);
-    if (!retired) projection.setState(state, true, "projectChat");
+    if (!retired) projection.publish(state, transcriptOnly);
   };
   const fail = (error: unknown) => publish({ error: chatErrorMessage(error) });
   const failWatch = (error: unknown) => {
@@ -153,8 +156,9 @@ export const createChatSession = (input: ChatSessionInput) => {
     const merged = snapshots.merge(state, incoming, issued, expectedValues, action);
     // Host control defaults do not create a new composer draft; explicit user edits still fence recovery.
     recoverableDraft = rebaseChatRecoveryKey(recoverableDraft, state.draft, merged.state.draft);
+    const transcriptOnly = isTranscriptUpdate(hasLoaded, incoming);
     hasLoaded = true;
-    publish({ ...merged.state, loading: false });
+    publish({ ...merged.state, loading: false }, transcriptOnly);
     const recovery = clearDeliveredChatRecoveries(state.draft, pending ?? [], state.pending);
     if (recovery.pending !== state.pending) publish({ pending: recovery.pending });
     if (recovery.recovery) changeDraft(recovery.recovery);
@@ -177,7 +181,6 @@ export const createChatSession = (input: ChatSessionInput) => {
       recoverableDraft = undefined;
     },
   });
-  const accept = reader.accept;
   const pin = () => (finite.query.isDisposed() ? () => {} : finite.query.subscribe(() => {}, { automatic: false }));
   const drafts = createChatSessionDraft({
     ...input,
@@ -276,9 +279,9 @@ export const createChatSession = (input: ChatSessionInput) => {
       if (holds && observing) start();
     },
     active: () => holds > 0 || actions.size > 0 || drafts.saving(),
-    subscribe: projection.subscribe,
+    ...projection.subscriptions,
     accept: (event: unknown) => {
-      if (!retired) accept(event);
+      if (!retired) reader.accept(event);
     },
     changeDraft: (update: Partial<ChatDraft>) => {
       if (!retired) changeDraft(update);
@@ -314,7 +317,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     retire() {
       retired = true;
       stop();
-      projection.setState(retiredState, true, "retireChat");
+      projection.retire(retiredState);
       return Promise.allSettled([...actions]).then(() => (drafts.saving() ? drafts.flush() : undefined));
     },
     dispose() {

@@ -36,7 +36,7 @@ One application-owned catalog supplies project snapshots. Consumers do not indep
 
 Commands, UI metadata, templates, settings, schedules, and project harness handles use that same project snapshot. A mutation response updates the dashboard's extension cache before refetching; older reads must not restore pre-mutation state.
 
-See [snapshot architecture](0014-project-extension-runtime-snapshots.md) and its [requirements](../../requirements/extensions/0001-runtime-snapshots.md).
+See [snapshot architecture](0014-project-extension-runtime-snapshots.md) and its [requirements · RB 6.A.1](../../requirement-book/book.json).
 
 ## Imports and dependency resolution
 

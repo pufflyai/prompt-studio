@@ -3,6 +3,7 @@ import type {
   ProjectExtensionInstance,
   UpgradeProjectExtensionResponse,
 } from "@pstdio/sdk/api";
+import { createExtensionUpgradePool } from "pstdio-api-contracts/extension-host";
 import type { Arguments, Argv } from "yargs";
 import { apiClient } from "@/features/api-client";
 import {
@@ -51,23 +52,28 @@ const defaultDeps: Deps = {
 const formatUpdated = (extension: ProjectExtensionInstance) =>
   `Updated ${extension.installName}${extension.version ? ` to ${extension.version}` : ""}.`;
 
-const runUpdates = async (deps: Deps, projectId: string, extensions: ProjectExtensionInstance[]) => {
-  for (const extension of extensions) {
-    try {
-      const result = await deps.upgradeProjectExtension(projectId, extension.id);
-      deps.log(formatUpdated(result.extension));
-    } catch (error) {
-      deps.log(`ERROR: ${extension.installName}: ${error instanceof Error ? error.message : String(error)}`);
-      process.exitCode = 1;
-    }
-  }
+const runUpdates = async (deps: Deps, projectId: string, extensions: ProjectExtensionInstance[], capacity?: number) => {
+  const run = createExtensionUpgradePool(capacity);
+  await Promise.all(
+    extensions.map((extension) =>
+      run(async () => {
+        try {
+          const result = await deps.upgradeProjectExtension(projectId, extension.id);
+          deps.log(formatUpdated(result.extension));
+        } catch (error) {
+          deps.log(`ERROR: ${extension.installName}: ${error instanceof Error ? error.message : String(error)}`);
+          process.exitCode = 1;
+        }
+      }),
+    ),
+  );
 };
 
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ExtensionsUpdateArgs>) => {
     const { projectId } = deps.resolveProjectId(deps.cwd(), argv["project-id"]);
-    const { extensions } = await deps.listProjectExtensions(projectId);
+    const { extensions, upgradeConcurrency } = await deps.listProjectExtensions(projectId);
     const installed = argv.name ? selectProjectExtensions(extensions, argv.name) : extensions;
     if (argv.name && installed.length === 0) {
       throw new Error(`Extension "${argv.name}" is not installed in project ${projectId}.`);
@@ -85,7 +91,7 @@ export const createHandler =
       return;
     }
 
-    await runUpdates(deps, projectId, candidates);
+    await runUpdates(deps, projectId, candidates, upgradeConcurrency);
   };
 
 export const handler = createHandler();
