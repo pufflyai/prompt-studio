@@ -46,9 +46,6 @@ describe("pstdio projects create", () => {
       expect(output).toContain("Opened project");
       expect(output).toContain("my-project");
 
-      // Configuring an agent installs its skills into the registered repos
-      run("agents setup claude-code", repo);
-
       const config = JSON.parse(readFileSync(join(repo, ".pstdio", "config.json"), "utf8"));
       expect(config.project_id).toBeTruthy();
 
