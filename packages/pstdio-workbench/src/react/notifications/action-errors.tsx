@@ -1,11 +1,15 @@
-import { Box } from "@chakra-ui/react";
-import { AlertMessage } from "@pstdio/ui";
+import { ActionErrorSlot, AlertMessage } from "@pstdio/ui";
 import { useEffect } from "react";
 import type { WorkbenchCore } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
-export const WorkbenchActionErrors = (props: { workbench: WorkbenchCore; target: string }) => {
-  const { workbench, target } = props;
+export const WorkbenchActionErrors = (props: {
+  workbench: WorkbenchCore;
+  target: string;
+  edge?: "above";
+  anchored?: boolean;
+}) => {
+  const { workbench, target, edge, anchored = true } = props;
   const notifications = useWorkbenchStore(workbench.notifications.store, (state) => state.notifications);
   const errors = Object.values(notifications).filter((notice) => notice.inlineTarget === target);
 
@@ -19,19 +23,18 @@ export const WorkbenchActionErrors = (props: { workbench: WorkbenchCore; target:
   );
 
   if (!errors.length) return null;
-  return (
-    <Box flexShrink={0} p="xs" data-action-error-target={target}>
-      {errors.map((error) => (
-        <AlertMessage
-          key={error.id}
-          status="error"
-          role="alert"
-          title={error.title}
-          onClose={() => workbench.notifications.dismiss(error.id)}
-        >
-          {error.message}
-        </AlertMessage>
-      ))}
-    </Box>
-  );
+  const notices = errors.map((error) => (
+    <AlertMessage
+      key={error.id}
+      data-action-error-target={target}
+      compact
+      status="error"
+      role="alert"
+      title={error.title}
+      onClose={() => workbench.notifications.dismiss(error.id)}
+    >
+      {error.message}
+    </AlertMessage>
+  ));
+  return anchored ? <ActionErrorSlot edge={edge}>{notices}</ActionErrorSlot> : notices;
 };

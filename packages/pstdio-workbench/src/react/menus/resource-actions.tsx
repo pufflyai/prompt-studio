@@ -11,6 +11,8 @@ const toResourceContextAction = (item: TreeListActionMenuItem): ResourceContextA
   key: item.id,
   label: item.label,
   commandId: item.commandId,
+  isSelected: item.selected,
+  closeOnSelect: item.closeOnSelect,
   icon: typeof item.icon === "function" ? <Icon as={item.icon} boxSize="16px" /> : item.icon,
   endContent: item.endContent,
   isDisabled: item.disabled,

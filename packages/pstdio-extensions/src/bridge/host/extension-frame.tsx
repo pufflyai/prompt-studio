@@ -119,6 +119,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   // Panel floats). The bump remounts a fresh iframe so a single clean connection
   // owns the new browsing context.
   const [frameEpoch, setFrameEpoch] = useState(0);
+  const frameKey = `${frameEpoch}\n${view.webview.runtimeUrl}\n${view.webview.moduleUrl}`;
   const [contentWidth, setContentWidth] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
 
@@ -294,7 +295,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     // Register cleanup before the asynchronous handshake completes. A stable
     // publisher does not rerun this effect when the remote becomes available.
     return () => hostEvents?.unbind();
-  }, [hostEvents, frameEpoch]);
+  }, [hostEvents, frameKey]);
 
   useEffect(() => {
     if (!initializedRef.current) return;
@@ -317,7 +318,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     >
       <iframe
         // A new runtime or module needs its own browsing context and bridge handshake.
-        key={`${frameEpoch}\n${view.webview.runtimeUrl}\n${view.webview.moduleUrl}`}
+        key={frameKey}
         ref={iframeRef}
         title={title ?? view.label}
         allow={extensionIframeAllow(view.webview.capabilities)}

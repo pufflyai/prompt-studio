@@ -1,11 +1,4 @@
-import type {
-  HarnessContext,
-  HarnessExit,
-  HarnessProvider,
-  HarnessResumeInput,
-  HarnessSession,
-  QuestionResponse,
-} from "@pstdio/sdk/extensions";
+import type { HarnessContext, HarnessProvider } from "@pstdio/sdk/extensions";
 import { l10n, params } from "@pstdio/sdk/extensions";
 import { authenticateOpencode } from "./account-action";
 import { opencodeCommandState, prepareOpencodeOperation } from "./commands";
@@ -14,8 +7,9 @@ import { recoverOpencodeMessages } from "./history-reconciliation";
 import { parseOpencodeModels } from "./models";
 import { createOpencodeHarnessService } from "./opencode-harness-service";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
-import { pollOpencodeQuestionReply } from "./opencode-question-reply-poller";
+import { resumeOpencodeQuestion } from "./opencode-question-session";
 import type { createOpencodeService } from "./opencode-service";
+import { toHarnessSession } from "./opencode-session-handle";
 import { pollOpencodeMessages, pollOpencodeUntilIdle } from "./opencode-session-poller";
 
 // --- Detection ---
@@ -57,44 +51,6 @@ const opencodeParams = {
 };
 
 const MODEL_CACHE_TTL_MS = 5 * 60 * 1_000;
-
-// --- Session handle ---
-
-const toHarnessSession = (input: {
-  agentSessionId: string;
-  abortController: AbortController;
-  abortSession: () => Promise<void>;
-  done: Promise<HarnessExit>;
-}): HarnessSession => {
-  const { agentSessionId, abortController, abortSession, done } = input;
-  // Aborting the controller stops the poll loop; the server-side abort is best-effort.
-  let stopping: Promise<void> | undefined;
-  const stop = () =>
-    (stopping ??= (async () => {
-      abortController.abort();
-      await abortSession().catch((error) => {
-        console.error(`[opencode] failed to abort session ${agentSessionId}`, error);
-      });
-    })());
-
-  return {
-    agentSessionId,
-    // The host does not call stop when a turn ends, so a poll that gives up with an
-    // error must stop OpenCode itself, or it keeps changing the worktree.
-    done: done.then(
-      async (exit) => {
-        await stopping;
-        return exit;
-      },
-      async (error: unknown) => {
-        await stop();
-        throw error;
-      },
-    ),
-    stop,
-    timeoutStrategy: "provider",
-  };
-};
 
 // One diagnostic per running turn, even when the provider streams many snapshots.
 const historyRecoveryLogger = (ctx: HarnessContext, sessionId: string) => {
@@ -144,43 +100,6 @@ export const createOpencodeHarness = (
     } catch {
       return 0;
     }
-  };
-
-  const resumeQuestionReply = async (
-    ctx: HarnessContext,
-    input: HarnessResumeInput,
-    questionResponse: QuestionResponse,
-    signal: AbortSignal,
-  ) => {
-    const opencode = await serviceFor(ctx);
-    const pendingQuestions = await opencode.listPendingQuestions(input.agentSessionId, input.cwd);
-    const pendingQuestion = pendingQuestions.find((question) => question.sessionID === input.agentSessionId);
-    const messageComplete = pendingQuestion
-      ? opencode.replyQuestion(input.agentSessionId, pendingQuestion.id, questionResponse.answers, input.cwd, signal)
-      : Promise.reject(new Error("OpenCode pending question request not found."));
-    const abortController = new AbortController();
-    const done = pollOpencodeQuestionReply({
-      loadMessages: opencode.getSessionMessages,
-      sessionId: input.agentSessionId,
-      cwd: input.cwd,
-      events: input.events,
-      onHistoryRecovery: historyRecoveryLogger(ctx, input.agentSessionId),
-      questionTool: pendingQuestion?.tool,
-      questionResponse,
-      messageComplete,
-      abortSignal: abortController.signal,
-      pollIntervalMs: deps.pollIntervalMs,
-    });
-
-    return services.track(
-      ctx,
-      toHarnessSession({
-        agentSessionId: input.agentSessionId,
-        abortController,
-        abortSession: () => opencode.abortSession(input.agentSessionId, input.cwd),
-        done,
-      }),
-    );
   };
 
   return {
@@ -266,7 +185,17 @@ export const createOpencodeHarness = (
       services.run(ctx, async (signal) => {
         const opencode = await serviceFor(ctx);
         if (input.questionResponse) {
-          return resumeQuestionReply(ctx, input, input.questionResponse, signal);
+          return services.track(
+            ctx,
+            await resumeOpencodeQuestion({
+              opencode,
+              input,
+              questionResponse: input.questionResponse,
+              signal,
+              pollIntervalMs: deps.pollIntervalMs,
+              onHistoryRecovery: historyRecoveryLogger(ctx, input.agentSessionId),
+            }),
+          );
         }
 
         const baselineCount = await fetchBaselineCount(ctx, input.agentSessionId, input.cwd);

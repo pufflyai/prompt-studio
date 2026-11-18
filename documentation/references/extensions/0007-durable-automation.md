@@ -24,6 +24,23 @@ The host stores the run before returning. Closing a panel or reloading the dashb
 
 The required `key` is unique within the extension, project, and command. Repeating a key with the same input returns the existing run, including a finished run or a run whose worker is no longer available. Different input rejects with `idempotency_conflict`. Use a new key for new work or a retry of a finished run.
 
+## Delayed execution on main
+
+API 0.5.0 on `main` accepts an optional ISO timestamp `notBefore` on `ctx.automation.enqueue`, and on the machine-run request body. It belongs beside `command`, `input` and `key`:
+
+```ts
+await ctx.automation.enqueue({
+  command: executeRun.ref,
+  input: { params: { runId } },
+  key: runId,
+  notBefore: "2026-11-17T15:00:15.000Z",
+});
+```
+
+The host stores the deadline with the input and leaves the run `queued` until then. Repeating an idempotency key requires the same deadline. `get` and `list` expose `notBefore` when present. Cancellation removes the pending wake-up without executing the command. Host shutdown releases its timers and preserves waiting runs; startup restores their deadlines and dispatches overdue work once ready. A clock adjustment cannot dispatch a run before its deadline. Extensions must validate their own current domain state again when a delayed command runs.
+
+Publish the supporting host and SDK before adopting delayed enqueue in separately released extensions. An SDK update alone does not upgrade the host.
+
 ## Refreshing a view
 
 Add the event ID `${ctx.extensionId}.event.automation-run-changed` to the view's `refreshEvents`, using the extension's known ID in its declaration. For example:
@@ -48,4 +65,4 @@ Cancellation aborts `ctx.signal` and waits for command cleanup. A cancelled work
 
 Use `AutomationRun` and `AutomationRunStatus` from `@pstdio/sdk/extensions` for stored run handles. The host owns run supervision. Extensions own retry policies, checkpoints, progress, and their run tables. [Remote automation](../cli/0007-automation.md) describes machine tokens, which start runs from outside Prompt Studio. [Lifecycle automation](0006-lifecycle-automation.md) describes hooks and schedules, which are separate features.
 
-*Updated at: 2026-10-06*
+*Updated at: 2026-11-17*

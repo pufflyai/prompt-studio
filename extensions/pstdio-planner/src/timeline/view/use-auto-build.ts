@@ -104,5 +104,6 @@ export function useAutoBuild(client: PlanClient) {
     );
   const transition = (action: "pause" | "resume" | "stop") => run(() => client.commands[`auto-build.${action}`]());
   // Saved run failures belong to the activity popover, not a new configuration attempt.
-  return { mode, saving, error, readError, retry, configure, transition };
+  const dismissError = () => setOperation((current) => ({ ...current, error: undefined }));
+  return { mode, saving, error, readError, retry, configure, transition, dismissError };
 }
