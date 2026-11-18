@@ -37,6 +37,55 @@ UI contributions attach to targets that the host owns. [Workbench composition](0
 [Native chat](0028-native-chat.md) provides immediate composers and canonical
 conversations with scoped callbacks to the existing session services.
 
+## Configure project composition
+
+Extension API 0.4 treats Home, Workspaces, and Cloud as ordinary optional tools.
+The project chooses a fully qualified, resource-free page as its default. Page
+names, paths, parents, panels, and navigation order belong to extensions.
+
+Read or replace the same public configuration from the CLI or SDK:
+
+```sh
+pst projects composition
+pst projects composition --value '{"defaultPage":{"kind":"page","extensionId":"example.space","id":"desk"},"resourceOpeners":[{"resourceKind":{"kind":"resource-kind","extensionId":"pstdio","id":"workspace"},"opener":{"kind":"command","extensionId":"example.reader","id":"inspect"}}]}'
+```
+
+The SDK client exposes `projects.composition(projectId)` and
+`projects.setComposition(projectId, value)`. The HTTP endpoints are
+`GET` and `PUT /v1/projects/{projectId}/composition`. Configuration is synced with
+the existing project information. An explicit empty configuration stays empty.
+Catalog defaults are editable distribution data; enabling an extension preserves
+an existing choice.
+
+The default opens when there is no explicit destination or valid saved location.
+A missing, disabled, or resource-bound default leaves the existing empty workbench.
+Extension management and other available navigation remain usable. The public
+`workbenchCommands.openDefaultPage` command opens the configured default explicitly.
+
+Each `resourceOpeners` entry binds a fully qualified resource kind to an ordinary
+page or command. An opener command reads `ctx.resource` and returns a normal page,
+panel, or compound navigation target. It can belong to another extension than the
+data owner. A missing opener or unavailable target makes the operation unavailable.
+Explicit navigation targets keep their declared destination.
+
+Use `ctx.resources.resolveOpenings(refs)` or the SDK client's
+`projects.resolveResourceOpenings(projectId, refs)` for bare resource links.
+`resolveMany` remains the data-owner metadata API. An opener can present an ordinary
+kind without a batch metadata resolver. Its command owns any further data lookup.
+
+A binding can also name a `relatedOpenings` command returning
+`RelatedResourceOpenings`. This selects automatic previews through the same saved
+workbench preferences. Workspaces owns its workspace page choices and related
+session selection. It declares scoped conversation navigation through the public
+Sessions renderer. Cloud uses normal status/settings slots and the public account
+API. Core keeps execution, records, account services, sync, and extension management
+independent of those presentation contributions.
+
+This alpha host change removes the old Start/Home/Workspaces presentation aliases,
+selectors and redirects. Update callers to configured openers or explicit ordinary
+targets. Existing presentation URLs and saved page references may become unavailable.
+Workspace and session data stay in their existing stores. Deprecated SDK reference
+exports remain available until their separate coordinated breaking removal.
 [Native terminal views](0022-terminal-sessions.md#native-terminal-views) bind an
 interactive PTY to a view through a serializable launch callback. The host owns
 the renderer, workspace validation, transport, and process lifetime.
@@ -766,7 +815,7 @@ export default defineExtension({
 
 The header and footer keep the mode's sections, followed by the sections of every open level from the outermost inward. Header rows therefore stay visible in nested levels. Rows that users drag into the header or footer also stay there inside levels.
 
-Inside a level, the shared Sidenav adds a fixed left-arrow button labeled Back to followed by the current mode name, such as Back to project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or Start when no root-level page has been used. The breadcrumb and browser history also remain available.
+Inside a level, the shared Sidenav adds a fixed left-arrow button labeled Back to followed by the current mode name, such as Back to project. It is the first entry in the main navigation content, with the same padding and row spacing as other entries. It cannot be moved or hidden. Selecting it opens the last root-level page, or the configured default when no root-level page has been used. The breadcrumb and browser history also remain available.
 
 The same action is available with **Alt+Shift+Up**, both outside and inside shortcut mode. Its shortcut hint appears on the return row in keyboard mode, and it is listed under the current mode's name in shortcut discovery and the command palette.
 

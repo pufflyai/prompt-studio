@@ -25,7 +25,7 @@ const WindowControlsOverlayStory = () => {
     if (window.origin === "null") Object.defineProperty(window, "localStorage", { value: undefined });
     getWriter("projects")?.truncateAndWrite([{ id: "project", name: "Project" }]);
     const page = { kind: "page", extensionId: "preview", id: "project" } as const;
-    const workbench = createWorkbench({ startPage: page });
+    const workbench = createWorkbench({ defaultPage: page });
     workbench.presence.register({
       getParticipants: () => [{ id: "editor", label: "Alex" }],
       subscribe: () => () => {},

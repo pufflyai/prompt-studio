@@ -13,7 +13,7 @@ test("creates and persists Sidenav groups and returns their rows when removed", 
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
-  await page.goto(`/projects/${project.id}/workspaces`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   const search = sidenav.getByRole("option", { name: "Search", exact: true });
   await expect(search).toBeVisible();
