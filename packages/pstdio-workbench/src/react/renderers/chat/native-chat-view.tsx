@@ -58,6 +58,10 @@ const nativeChatComposerAvailability = (props: NativeChatComposerAvailability) =
   return {
     inputDisabled,
     composerRequestsDisabled,
+    showAgentQuestionAlongsideDraft: Boolean(
+      account?.progress && !conversation.readOnly && !editingQueue && !conversation.approval,
+    ),
+    agentQuestionSubmitDisabled: Boolean(account?.blocked || account?.progress),
     submitDisabled:
       composerRequestsDisabled ||
       conversation.submitDisabled ||

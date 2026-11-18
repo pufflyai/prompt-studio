@@ -38,7 +38,7 @@ describe("normalizeClaudeCodeMessages", () => {
     expect(result).toEqual([{ id: "u1", role: "user", parts: [{ type: "text", text: "hello" }], index: 0 }]);
   });
 
-  test("shows Claude's background task wake-up as a system notice, not a person's message", () => {
+  test("restores the person's submission and reply around provider task notifications", () => {
     const wakeUp = {
       ...entry(
         "u1",
@@ -48,11 +48,11 @@ describe("normalizeClaudeCodeMessages", () => {
       origin: { kind: "task-notification", producer: "session-task" },
     };
 
-    const result = normalizeClaudeCodeMessages([wakeUp]);
+    const submitted = entry("person", "user", "Watch the files.");
+    const reply = entry("reply", "assistant", "The watcher is ready.");
+    const result = normalizeClaudeCodeMessages([submitted, reply, wakeUp]);
 
-    expect(result).toEqual([
-      { id: "u1", role: "system", parts: [{ type: "text", text: "Background task finished." }], index: 0 },
-    ]);
+    expect(result).toEqual(normalizeClaudeCodeMessages([submitted, reply]));
   });
 
   test("skips empty string content", () => {

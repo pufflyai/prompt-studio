@@ -77,6 +77,17 @@ const normalizeFilePart = (part: OpencodeSessionMessagePart): SessionMessagePart
   };
 };
 
+const normalizeOpencodeQuestionInput = (input: unknown) => {
+  if (!input || typeof input !== "object" || !("questions" in input) || !Array.isArray(input.questions)) return input;
+  return {
+    ...input,
+    // OpenCode's native form defaults to custom answers even when its tool input omits the flag.
+    questions: input.questions.map((question) =>
+      question && typeof question === "object" ? { ...question, custom: question.custom ?? true } : question,
+    ),
+  };
+};
+
 const normalizePart = (part: OpencodeSessionMessagePart): SessionMessagePart | null => {
   switch (part.type) {
     case "text":
@@ -100,7 +111,10 @@ const normalizePart = (part: OpencodeSessionMessagePart): SessionMessagePart | n
         state: part.state
           ? {
               status: part.state.status,
-              input: part.state.input,
+              input:
+                part.tool?.toLowerCase() === "question"
+                  ? normalizeOpencodeQuestionInput(part.state.input)
+                  : part.state.input,
               output: part.state.output,
               errorText: part.state.errorText ?? part.state.error,
               metadata: part.state.metadata,

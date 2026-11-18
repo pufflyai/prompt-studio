@@ -76,6 +76,10 @@ export interface ChatPanelProps extends ChatLinkProps {
   inputDisabled?: boolean;
   /** Blocks ordinary messages while the editor stays usable. Pending questions and decisions stay available. */
   submitDisabled?: boolean;
+  /** Show a question from history alongside the draft while signing in. */
+  showAgentQuestionAlongsideDraft?: boolean;
+  /** Blocks replies to questions from conversation history while choices remain editable. */
+  agentQuestionSubmitDisabled?: boolean;
   /** Keep agent requests from taking over the draft when the execution target is unavailable. */
   composerRequestsDisabled?: boolean;
   chatInputQuestionPrompt?: ChatInputQuestionPrompt;
@@ -105,6 +109,19 @@ export interface ChatPanelProps extends ChatLinkProps {
   ) => void;
   chatInputCommands?: PromptCommand[];
 }
+
+const agentQuestionComposerProps = (
+  activePrompt: ChatInputQuestionPrompt | undefined,
+  hostPrompt: ChatInputQuestionPrompt | undefined,
+  showDraft: boolean,
+  blockSubmission: boolean,
+) => {
+  const isAgentQuestion = Boolean(activePrompt && activePrompt !== hostPrompt);
+  return {
+    keepDraftVisibleForQuestion: showDraft && isAgentQuestion,
+    questionSubmitDisabled: blockSubmission && isAgentQuestion,
+  };
+};
 
 export const ChatPanel = (props: ChatPanelProps) => {
   const {
@@ -142,6 +159,8 @@ export const ChatPanel = (props: ChatPanelProps) => {
     workspaceInitializing = false,
     inputDisabled = false,
     submitDisabled = false,
+    showAgentQuestionAlongsideDraft = false,
+    agentQuestionSubmitDisabled = false,
     composerRequestsDisabled,
     chatInputQuestionPrompt,
     composerDecision,
@@ -184,10 +203,16 @@ export const ChatPanel = (props: ChatPanelProps) => {
   const hasWorkspaceHub = Boolean(workspaceHub);
   const questionNavigation = useChatQuestionNavigation(messages, {
     conversationKey: conversationKey ?? messages[0]?.id,
-    disabled: composerRequestsDisabled,
-    hostPrompt: chatInputQuestionPrompt,
+    disabled: composerRequestsDisabled && !showAgentQuestionAlongsideDraft,
+    hostPrompt: composerRequestsDisabled ? undefined : chatInputQuestionPrompt,
   });
   const activeQuestionPrompt = questionNavigation.activePrompt;
+  const questionComposer = agentQuestionComposerProps(
+    activeQuestionPrompt,
+    chatInputQuestionPrompt,
+    showAgentQuestionAlongsideDraft,
+    agentQuestionSubmitDisabled,
+  );
   const hideActiveQuestionForms = Boolean(activeQuestionPrompt);
   const showThinkingIndicator = streaming && hasMessages && !workspaceInitializing && !activeQuestionPrompt;
   const isMessageViewportReady = !messageListIdentity || readyMessageListKey === messageListIdentity;
@@ -267,6 +292,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
                   chatInputAutoFocus={chatInputAutoFocus}
                   chatInputPlaceholder={chatInputPlaceholder}
                   chatInputQuestionPrompt={activeQuestionPrompt}
+                  {...questionComposer}
                   composerDecision={
                     composerRequestsDisabled || questionNavigation.prompt ? undefined : composerDecision
                   }

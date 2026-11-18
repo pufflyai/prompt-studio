@@ -590,3 +590,21 @@ describe("normalizeOpencodeMessage error parts", () => {
     expect(errorParts).toHaveLength(1);
   });
 });
+
+test("native question choices retain custom answers by default and honor fixed choices", () => {
+  const questions = [
+    { question: "Choose a color", options: [{ label: "Red" }, { label: "Blue" }] },
+    { question: "Choose a size", options: [{ label: "Small" }], custom: false },
+  ];
+  const result = normalizeOpencodeMessage(
+    contentMsg("assistant", [{ type: "tool", tool: "question", state: { status: "running", input: { questions } } }]),
+    0,
+  );
+  expect(result.parts[0]).toMatchObject({
+    type: "tool",
+    tool: "question",
+    status: "running",
+    state: { input: { questions: [{ ...questions[0], custom: true }, questions[1]] } },
+  });
+  expect(questions[0]).not.toHaveProperty("custom");
+});

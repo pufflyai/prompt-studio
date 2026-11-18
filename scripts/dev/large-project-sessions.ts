@@ -12,6 +12,7 @@ export interface ExportedProject {
   sourceId: string;
   name: string;
   sessions: number;
+  longTranscripts?: boolean;
 }
 
 /** The ID an imported session gets in its target project (mirrors importedSessionId in the API). */
@@ -64,7 +65,20 @@ export const writeSessionExport = (folder: string, projects: ExportedProject[]) 
       const startedAt = now - (index % 240) * (DAY_MS / 2) - (index % 17) * 60_000;
       const storagePath = join("files", project.sourceId, fileId);
       mkdirSync(join(folder, "files", project.sourceId), { recursive: true });
-      writeFileSync(join(folder, storagePath), JSON.stringify(transcript(index, title, startedAt)));
+      const messages = transcript(index, title, startedAt);
+      if (project.longTranscripts && index % 10 === 0) {
+        for (let turn = 0; turn < 20; turn++) {
+          messages.push({
+            id: `m-${index}-history-${turn}`,
+            role: turn % 2 === 0 ? "user" : "assistant",
+            createdAt: startedAt + 250_000 + turn * 1000,
+            parts: [
+              { type: "text", text: `Follow-up ${turn}. ${"Résumé · 修正 · notes from the review. ".repeat(80)}` },
+            ],
+          });
+        }
+      }
+      writeFileSync(join(folder, storagePath), JSON.stringify(messages));
       const at = (ms: number) => new Date(ms).toISOString();
       sessions.push(
         JSON.stringify({

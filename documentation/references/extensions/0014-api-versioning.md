@@ -128,6 +128,8 @@ replacing that reader removes its actions and cancels pending work.
 
 The optional `HarnessStartInput.approvals` channel also shares API 0.5.0. A supporting host passes the session's approval channel on a session's first turn as well as on resume. Hosts up to 0.47 pass it only on resume, so providers must treat it as optional on start.
 
+The optional durable-automation `notBefore` deadline also shares API 0.5.0 on `main`. Waiting runs remain queued across restart until the deadline. See [delayed execution](0007-durable-automation.md#delayed-execution-on-main).
+
 ### Which version each check uses
 
 | Check | Where it runs | Extension API version it compares with |
@@ -511,4 +513,4 @@ Optional resource Activity declarations, `ctx.activity` discussion/outcome metho
 
 `NavigationTreeContribution.optionalView` lets a tool attach a tree supplied by an independently installed view provider. An absent foreign provider keeps the tree inactive; missing local views, missing views in a present provider, and non-tree views still fail validation. Publish a compatible SDK and host before consumers adopt this additive contract. The published 0.47.0 SDK does not include it. See [navigation trees](0004-contribution-api.md#dashboard-ui-contributions).
 
-*Updated at: 2026-11-14*
+*Updated at: 2026-11-17*
