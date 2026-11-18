@@ -35,9 +35,12 @@ test("batched prepared views expose their entry stylesheet to native webview met
   });
   writeFileSync(join(packagePath, "icons.woff2"), "font fixture");
   const { prepareWebviewArtifacts } = await import("./prepared-webview");
+  const { readWebviewEntryStyles } = await import("./extension-webview-entry-styles");
   const prepared = await prepareWebviewArtifacts(inputs, new AbortController().signal);
   for (const [index, artifact] of prepared.entries()) {
-    const stylesheet = Bun.file(join(artifact.distDir, "module.css"));
+    const styles = readWebviewEntryStyles(artifact.distDir);
+    expect(styles).toHaveLength(1);
+    const stylesheet = Bun.file(join(artifact.distDir, styles[0]!));
     expect(await stylesheet.exists()).toBe(true);
     expect(await stylesheet.text()).toContain(`${index === 0 ? "first" : "second"}-icons`);
   }

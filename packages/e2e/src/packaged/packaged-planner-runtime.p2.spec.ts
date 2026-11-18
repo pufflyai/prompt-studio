@@ -230,7 +230,6 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
       seedTrackProject(conflicting.execute, "multi_select"),
       seedTrackProject(valid.execute, "single_select"),
     ]);
-    phase("seed complete");
     await valid.execute("auto-build.configure", { enabled: false, prompt: "Check equation \\( x^2 + y^2 \\)." });
     expect(await moduleStatus(host, valid.id, "ticket-tags-settings")).toEqual({ status: 200, body: "" });
 
