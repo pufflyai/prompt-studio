@@ -1,7 +1,7 @@
 import { instrument } from "bippy";
 import { createRenderOutlinePainter } from "react-scan";
 
-/** The painter draws React Scan's component labels and outlines. See ADR 0156. */
+/** The painter draws React Scan's component labels and outlines. See ADR 0157. */
 export const startRenderHighlights = () => {
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
