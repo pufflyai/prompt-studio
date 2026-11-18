@@ -37,6 +37,8 @@ export const listAutomationTokensResponseSchema = z.object({ tokens: z.array(aut
 export const createAutomationRunInputSchema = z
   .object({
     commandId: z.string().min(1),
+    /** Keep the run queued until this ISO timestamp. */
+    notBefore: z.iso.datetime({ offset: true }).optional(),
     input: z
       .object({
         workspaceId: z.string().optional(),
@@ -60,6 +62,7 @@ export const automationRunSchema = z.object({
   commandId: z.string(),
   status: automationRunStatusSchema,
   createdAt: z.string(),
+  notBefore: z.string().optional(),
   startedAt: z.string().nullable(),
   finishedAt: z.string().nullable(),
   result: z.unknown().nullable(),

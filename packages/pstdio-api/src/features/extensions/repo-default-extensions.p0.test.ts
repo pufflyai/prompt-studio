@@ -39,6 +39,31 @@ describe("installRepoDefaultExtensions", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  test("keeps a project default already installed under its historical name", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-repo-default-rename-"));
+    const source = join(root, "home");
+    const repo = join(root, "repo");
+    const existing = join(repo, ".pstdio", "extensions", "pstdio-home");
+    writeExtension(source, "home", "repo");
+    writeExtension(existing, "pstdio-home", "repo");
+    writeFileSync(join(existing, "custom.txt"), "keep");
+
+    try {
+      const result = await installRepoDefaultExtensions({
+        repoPath: repo,
+        env: { PSTDIO_HOME: join(root, "home-dir") },
+        defaultExtensions: [{ source, installName: "home", skipInstall: true }],
+        registerInstalledSources: async () => {},
+      });
+      expect(result).toMatchObject({ materialized: [], skipped: ["home"] });
+      await result.rollback();
+      expect(readFileSync(join(existing, "custom.txt"), "utf8")).toBe("keep");
+      expect(existsSync(join(repo, ".pstdio", "extensions", "home"))).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });
 
 test("does not fetch defaults that are already installed as user extensions", async () => {

@@ -15,6 +15,7 @@ const executeNotificationAction = (input: { action: WorkbenchNotificationAction;
   void runUserAction(workbench, action.title, () => workbench.commands.executeCommand(action.commandId, action.args));
 };
 
+/** @deprecated Use the workbench status bar for system notices. */
 export const WorkbenchNotificationHost = (props: WorkbenchNotificationHostProps) => {
   const { workbench } = props;
   const toaster = useToaster();

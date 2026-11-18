@@ -1,5 +1,11 @@
-import { Box, Button, CloseButton, HStack, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage, ScopedDialog as Dialog, handleDialogAcceptShortcut, ScrollArea } from "@pstdio/ui";
+import { Button, CloseButton, HStack, Stack, Text } from "@chakra-ui/react";
+import {
+  ActionErrorSlot,
+  AlertMessage,
+  ScopedDialog as Dialog,
+  handleDialogAcceptShortcut,
+  ScrollArea,
+} from "@pstdio/ui";
 import { Fragment, useRef, useState } from "react";
 import type { Command, RegisteredMenuItem, WorkbenchCommandExecutionContext } from "../../core";
 import type { ExecuteOptionCommand } from "./command-option-resolver";
@@ -225,13 +231,12 @@ const CommandParamsForm = (props: CommandParamsDialogProps & { request: CommandP
               </Stack>
             </ScrollArea>
           </Dialog.Body>
-          {/* Outside the scroll area, so the reason stays next to Run however long the form is. */}
-          {error ? (
-            <Box px="lg" pb="md">
-              <AlertMessage status="error" title={error} role="alert" />
-            </Box>
-          ) : null}
-          <Dialog.Footer>
+          <Dialog.Footer position="relative">
+            {error ? (
+              <ActionErrorSlot edge="above">
+                <AlertMessage compact status="error" title={error} onClose={() => setError(undefined)} />
+              </ActionErrorSlot>
+            ) : null}
             <HStack gap="2">
               <Button size="sm" variant="ghost" disabled={submitting} onClick={close}>
                 Cancel

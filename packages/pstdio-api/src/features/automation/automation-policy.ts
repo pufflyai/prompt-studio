@@ -91,6 +91,7 @@ export const toRunRecord = (
   commandId: run.command_id,
   status: run.status,
   createdAt: run.created_at,
+  ...(typeof run.input_json?.notBefore === "string" ? { notBefore: run.input_json.notBefore } : {}),
   startedAt: run.started_at,
   finishedAt: run.finished_at,
   result: run.result_json ?? null,

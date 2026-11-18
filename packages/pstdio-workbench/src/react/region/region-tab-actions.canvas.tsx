@@ -45,6 +45,14 @@ const NoteTabActions = () => {
           ),
       },
     );
+    instance.commands.registerCommand(
+      { id: "nextRevision", label: "Next revision" },
+      { execute: () => setResult((previous) => `${previous} → next`) },
+    );
+    instance.layout.registerMenuItem(resourceContextMenuPath("note"), {
+      commandId: "nextRevision",
+      closeOnSelect: false,
+    });
     instance.resources.registerKind({ kind: "note", label: "Note" });
     instance.layout.registerMenuItem(resourceContextMenuPath("note"), {
       commandId: "rename",

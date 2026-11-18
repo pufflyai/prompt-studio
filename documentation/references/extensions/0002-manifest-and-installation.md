@@ -111,7 +111,13 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
   Healthy local-path extensions stay under local control.
 - In the extension panel, every row that can take a newer release shows an upgrade button next to
   its switch. The button upgrades only that extension. **Upgrade all** in the panel header runs
-  Upgrade for every extension that offers it, and only appears when at least one does.
+  up to four upgrades at once, using the connected host's capacity. Its progress bar counts completed
+  attempts. Each row shows Waiting until a worker starts, then a spinner and elapsed time. Results
+  stay beside the extension through list and detail navigation. Failures can be retried in place.
+  Dismissing a row result preserves the batch count. Marketplace installs share these controls.
+- Overlapping catalog changes share one workspace refresh per project. Changes arriving during a
+  refresh revisit workspaces that already processed the older catalog. Healthy workspaces keep their
+  ready state while files update. Session launches wait for maintenance to finish.
 - `pst extensions update [name]` runs that same host-owned upgrade path for the project in the
   current folder, or the one named with `--project-id`. When `name` is omitted, it upgrades every
   instance the host marks as eligible. The command does not replace healthy local sources or change

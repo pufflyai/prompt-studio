@@ -1,7 +1,7 @@
-import { Box, Button, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
 import type { ControlsQueryResult, ControlValueMap } from "@pstdio/sdk/extensions";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { ScrollArea, SettingsContentSkeleton } from "@pstdio/ui";
+import { ActionErrorSlot, AlertMessage, ScrollArea, SettingsContentSkeleton } from "@pstdio/ui";
 import {
   type InputGroup,
   type Param,
@@ -10,7 +10,7 @@ import {
   resolveParamEditorValues,
 } from "@pstdio/ui/param-editor";
 import { controlValueSchema, controlValuesSchema } from "pstdio-api-contracts";
-import { useContext, useEffect, useRef, useState } from "react";
+import { type ReactNode, useContext, useEffect, useRef, useState } from "react";
 import {
   type RegisteredControlsRendererContribution,
   rendererReadKey,
@@ -178,16 +178,19 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
         }
       : undefined,
   );
+  const actionError = state.error ? (
+    <AlertMessage
+      compact
+      status="error"
+      title={state.error}
+      onClose={() => setState((previous) => ({ ...previous, error: undefined }))}
+    />
+  ) : null;
   if (settingsPage)
     return (
-      <Stack gap="md">
+      <Stack gap="md" position="relative">
         {read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
-        {state.error ? (
-          <Text role="alert" color="fg.error">
-            {state.error}
-          </Text>
-        ) : null}
-        <SettingsControlsReset contribution={contribution} pending={pending} submit={submit} />
+        <SettingsControlsReset contribution={contribution} pending={pending} submit={submit} error={actionError} />
         <ControlsContent
           state={read.value ? state : initialState}
           contribution={contribution}
@@ -198,15 +201,9 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
       </Stack>
     );
   return (
-    <Stack h={layout.height} minH="0" gap="0" bg="bg" overflow="hidden">
+    <Stack position="relative" h={layout.height} minH="0" gap="0" bg="bg" overflow="hidden">
       {read.error ? <RendererReadNotice error={read.error} retry={read.retry} /> : null}
-      {state.error ? (
-        <Box p="sm">
-          <Text role="alert" textStyle="paragraph/S/regular" color="fg">
-            {state.error}
-          </Text>
-        </Box>
-      ) : null}
+      {actionError && <ActionErrorSlot>{actionError}</ActionErrorSlot>}
       <ScrollArea flex="1" minH="0" minW="0" w="full" size="xs" contentProps={layout.contentProps}>
         {read.value || read.loading ? (
           <ControlsContent
@@ -230,18 +227,22 @@ const WorkbenchControlsForm = (props: WorkbenchControlsViewProps) => {
   );
 };
 
-const SettingsControlsReset = (props: Omit<ControlsFooterProps, "visible">) => {
+const SettingsControlsReset = (props: Omit<ControlsFooterProps, "visible"> & { error: ReactNode }) => {
   if (!props.contribution.reset || props.contribution.apply) return null;
   return (
-    <Button
-      size="sm"
-      variant="ghost"
-      alignSelf="end"
-      disabled={props.pending}
-      onClick={() => void props.submit(true).catch(() => undefined)}
-    >
-      Reset to defaults
-    </Button>
+    <Flex gap="xs">
+      <Box position="relative" flex="1" minW="0">
+        {props.error && <ActionErrorSlot edge="top">{props.error}</ActionErrorSlot>}
+      </Box>
+      <Button
+        size="sm"
+        variant="ghost"
+        disabled={props.pending}
+        onClick={() => void props.submit(true).catch(() => undefined)}
+      >
+        Reset to defaults
+      </Button>
+    </Flex>
   );
 };
 

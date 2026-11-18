@@ -6,7 +6,7 @@ it does not approve a release, deploy services, or complete the platform rollup.
 ## Candidate and delivery gate
 
 Read the full current PS-789, PS-735 and PS-736 tickets and
-[PRD 0014](../../requirements/platform/0014-local-first-sync.md) before selecting a
+[0014 · RB 9.A.1](../../requirement-book/book.json) before selecting a
 candidate. PS-789 waits for PS-735 and its listed product deliveries. PS-736 waits
 for PS-789; it is not an additional prerequisite. PS-1016 is separate proposed
 work, not the phase 1 baseline or a new dependency gate.
