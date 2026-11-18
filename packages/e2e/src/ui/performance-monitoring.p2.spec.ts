@@ -74,3 +74,35 @@ test("measures while the Performance Monitoring extension is loaded and shows it
     .toBe(true);
   expect(await detailFrame.evaluate((frame, original) => frame === original, loadedFrame)).toBe(true);
 });
+
+test("short status popovers keep fixed bottom actions reachable", async ({ page, request }) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "Short status popover" }),
+  });
+  const project = await response.json();
+  try {
+    await page.route("**/*.view.details/assets/module.js*", (route) =>
+      route.fulfill({
+        contentType: "text/javascript",
+        headers: { "access-control-allow-origin": "*" },
+        body: `export default {
+          mount(root) {
+            root.innerHTML = '<div style="height:96px">Short content</div><button style="position:fixed;bottom:0">Apply</button>';
+            const action = root.querySelector("button");
+            action.onclick = () => { action.textContent = "Applied"; };
+          }
+        };`,
+      }),
+    );
+    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    await page.goto(`/projects/${project.id}/`);
+    await page.locator("footer").getByRole("button", { name: "Performance", exact: true }).click();
+    const guest = page.frameLocator('iframe[title="Performance details"]');
+    await expect(guest.getByText("Short content")).toBeVisible();
+    await expect.poll(() => guest.locator("html").evaluate(() => innerHeight)).toBe(96);
+    await guest.getByRole("button", { name: "Apply", exact: true }).click();
+    await expect(guest.getByRole("button", { name: "Applied", exact: true })).toBeVisible();
+  } finally {
+    await request.delete(`${apiBase}/v1/projects/${project.id}`);
+  }
+});

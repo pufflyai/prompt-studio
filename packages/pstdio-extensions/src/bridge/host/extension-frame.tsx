@@ -64,10 +64,10 @@ const iframeStyle: CSSProperties = {
   width: "100%",
 };
 
-// The surface can bound this viewport without changing natural-height dialogs and embedded settings.
-const contentHeightIframeStyle: CSSProperties = { ...iframeStyle, flex: "none", minHeight: undefined };
-const frameViewportStyle = (sizing: ExtensionFrameProps["sizing"]) =>
-  sizing === "bounded-height" ? contentHeightIframeStyle : iframeStyle;
+// Before the first measurement a bounded guest needs room to lay out viewport-sized content.
+const measuringIframeStyle: CSSProperties = { ...iframeStyle, flex: "none", height: "100dvh" };
+const frameViewportStyle = (sizing: ExtensionFrameProps["sizing"], height: number) =>
+  sizing === "bounded-height" && height === 0 ? measuringIframeStyle : iframeStyle;
 
 const frameShellStyle: CSSProperties = {
   display: "flex",
@@ -332,7 +332,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
         sandbox={EXTENSION_IFRAME_SANDBOX}
         // Match the host theme so the empty/loading iframe paints the right canvas
         // instead of flashing the default light background while the guest connects.
-        style={{ ...frameViewportStyle(sizing), colorScheme: theme }}
+        style={{ ...frameViewportStyle(sizing, contentHeight), colorScheme: theme }}
         onError={() => {
           onErrorRef.current?.({ message: `Failed to load extension runtime at ${view.webview.runtimeUrl}` });
         }}

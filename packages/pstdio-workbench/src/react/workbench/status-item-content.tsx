@@ -45,13 +45,8 @@ export const StatusItemPopover = (props: StatusItemPopoverProps) => {
             maxH="70dvh"
             overflow="hidden"
           >
-            {/* Bound the guest viewport; its frame clips to the content height reported by the view. */}
-            <Popover.Body
-              minH="0"
-              display="flex"
-              flexDirection="column"
-              css={{ "& iframe": { minHeight: "70dvh", maxHeight: "70dvh" } }}
-            >
+            {/* Give the guest one bounded viewport to measure. The frame then uses its reported height. */}
+            <Popover.Body minH="0" display="flex" flexDirection="column" css={{ "& iframe": { maxHeight: "70dvh" } }}>
               <ViewActivityContext value={open}>
                 <WorkbenchWidgetHost workbench={workbench} region="main" placement={detail} sizing="bounded-height" />
               </ViewActivityContext>
