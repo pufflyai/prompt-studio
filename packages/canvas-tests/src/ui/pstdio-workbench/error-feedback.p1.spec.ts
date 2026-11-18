@@ -26,6 +26,29 @@ test("dismissing an action error leaves its controls in place", async ({ page })
   expect(await action.boundingBox()).toEqual(before);
 });
 
+test("reset-only settings keep the reset action available after an error", async ({ page }) => {
+  const preview = await openCanvasPreview(
+    page,
+    "packages/pstdio-workbench/src/react/renderers/controls/controls-view.canvas.tsx#ResetFailure",
+  );
+  const reset = preview.getByRole("button", { name: "Reset to defaults" });
+  const field = preview.getByText("Device name", { exact: true });
+  await expect(reset).toBeVisible();
+  await expect(field).toBeVisible();
+  const resetPosition = await reset.boundingBox();
+  const fieldPosition = await field.boundingBox();
+
+  await reset.click();
+  const alert = preview.getByRole("alert");
+  await expect(alert).toHaveText("Could not reset device settings. Try again.");
+  expect(await field.boundingBox()).toEqual(fieldPosition);
+  expect(await reset.boundingBox()).toEqual(resetPosition);
+  await alert.getByRole("button", { name: "Dismiss" }).press("Enter");
+  await expect(alert).toHaveCount(0);
+  await reset.click();
+  await expect(alert).toBeVisible();
+});
+
 test("system information can be opened and dismissed in the status bar", async ({ page }) => {
   const preview = await openCanvasPreview(page, `${canvas}#HiddenStatusBar`);
   const action = preview.getByRole("button", { name: "Report system information" });
