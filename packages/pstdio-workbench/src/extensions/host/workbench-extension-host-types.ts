@@ -39,6 +39,7 @@ export interface WorkbenchExtensionHostMenuRegistration
 
 export interface RegisterWorkbenchExtensionContributionsInput extends ChatCommandTransport {
   queries?: ScopedQueryClient;
+  resourceChanges?: import("@pstdio/sdk/client").PstdioClient["resourceChanges"];
   resourceActivity?: Omit<
     import("../../core/registries/resources/resource-activity").ResourceActivityBinding,
     "capabilities"

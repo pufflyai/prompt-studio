@@ -5,6 +5,7 @@ import { createWebviewDiagnostics, ExtensionFrame, type ExtensionFrameProps } fr
 import { useEffect, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import { useWebviewKeyboardShortcuts } from "../../react/keybindings/use-webview-keyboard-shortcuts";
+import { useWebviewObservation } from "../../react/resource-changes/webview-observation";
 import { resolveWebviewPageProps } from "./webview-page-props";
 
 type BridgeWebviewFrameProps = Omit<ExtensionFrameProps, "onDiagnostics" | "onError" | "onReady"> & {
@@ -21,6 +22,12 @@ export const BridgeWebviewFrame = (props: BridgeWebviewFrameProps) => {
   const host = frameProps.props as Partial<WebviewHostProps> | undefined;
   const pageProps = resolveWebviewPageProps(pageState, { ...host?.viewLocation, resource: host?.resource });
   const [error, setError] = useState<string | null>(null);
+  const observed = useWebviewObservation(
+    workbench,
+    host?.resource,
+    frameProps.capabilities,
+    props.visible !== false && !error,
+  );
   const diagnostics = createWebviewDiagnostics(view);
 
   return (
@@ -47,6 +54,7 @@ export const BridgeWebviewFrame = (props: BridgeWebviewFrameProps) => {
       <ExtensionFrame
         view={view}
         {...frameProps}
+        capabilities={observed}
         {...keyboard}
         themeRoot={() => surface?.root.current ?? null}
         onKeyboardEvent={(event) => {

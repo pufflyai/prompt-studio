@@ -8,7 +8,21 @@ type PersistDeps = {
   fileService: Pick<ReturnType<typeof createFileService>, "upload" | "update">;
 };
 
-export const persistSessionMessages = async (sessionId: string, messages: SessionMessage[], deps: PersistDeps) => {
+export const latestReplyId = (messages: SessionMessage[]) => {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i]!;
+    if (message.role === "assistant" && message.parts.some((part) => part.type === "text" && part.text.trim()))
+      return message.id;
+    if (message.role === "user") break;
+  }
+};
+
+export const persistSessionMessages = async (
+  sessionId: string,
+  messages: SessionMessage[],
+  deps: PersistDeps,
+  completedReplyId?: string,
+) => {
   const session = await deps.sessionService.get(sessionId);
   if (!session) return null;
   let usage: ExtensionSessionUsage | null = null;
@@ -21,10 +35,11 @@ export const persistSessionMessages = async (sessionId: string, messages: Sessio
       usage.cache_read_tokens += part.cacheReadTokens ?? 0;
       usage.cache_write_tokens += part.cacheWriteTokens ?? 0;
     }
+  const contentEvent = completedReplyId ? { kind: "reply" as const, id: completedReplyId } : undefined;
   const data = Buffer.from(JSON.stringify(messages));
   if (session.session_file_id) {
     await deps.fileService.update(session.session_file_id, { data });
-    await deps.sessionService.update(sessionId, { usage_json: usage });
+    await deps.sessionService.update(sessionId, { usage_json: usage, contentEvent });
   } else {
     const file = await deps.fileService.upload({
       project_id: session.project_id!,
@@ -33,7 +48,7 @@ export const persistSessionMessages = async (sessionId: string, messages: Sessio
       data,
       mime_type: "application/json",
     });
-    await deps.sessionService.update(sessionId, { session_file_id: file.id, usage_json: usage });
+    await deps.sessionService.update(sessionId, { session_file_id: file.id, usage_json: usage, contentEvent });
   }
   return messages;
 };

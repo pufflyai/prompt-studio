@@ -1,5 +1,6 @@
 import type { ExtensionKeybindingRecord, ExtensionMenuContribution, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { ContributionKind, ContributionRef, WhenExpression } from "@pstdio/sdk/extensions";
+import { resourceChangeProviders } from "../../resource-change-providers";
 import { toCommandPaletteContributions } from "../../runtime/command-palette-contributions";
 import { serializeWhenExpression } from "../../runtime/normalize/references";
 import { toSettingDefinitionRecord } from "../../runtime/normalize/settings";
@@ -195,6 +196,11 @@ export const createWorkbenchExtensionMetadata = (
     hostTreeFooter: menu.contribution.hostTreeFooter,
   })),
   placements: toPlacementRecords(input.runtime),
+  resourceChangeProviders: resourceChangeProviders(input.runtime).map(({ extensionId, type, refreshEvents }) => ({
+    extensionId,
+    type,
+    refreshEvents,
+  })),
   resourceKinds: input.runtime.resourceKinds.map((record) => ({
     activity: record.contribution.activity,
     activityHandoff: Boolean(record.contribution.activityContext),

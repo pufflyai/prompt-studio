@@ -1,6 +1,8 @@
 import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionResourcesApi } from "pstdio-api-contracts/extension-kernel";
-import { createReadBoundary } from "pstdio-extensions";
+import { createReadBoundary, resourceChangeProviders } from "pstdio-extensions";
+import { issueReceipt } from "../../activity/change-receipt";
+import { seenOwnerId } from "../../activity/resource-seen";
 import { resolveResourceOpenings } from "../../projects/resource-openers";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createResourceLinksApi } from "./resource-links";
@@ -42,6 +44,26 @@ export const createResourcesApi = (
   deps: ExtensionsRouteDeps,
   input: { projectId: string; extensionId: string; signal?: AbortSignal; resourceLinksReadOnly?: boolean },
 ): ExtensionResourcesApi => ({
+  observeChange: async (ref, stamp) => {
+    if (ref.projectId && ref.projectId !== input.projectId) throw new Error("Resource belongs to another project.");
+    const resource = {
+      extensionId: canonicalExtensionId(ref.extensionId ?? input.extensionId),
+      type: ref.type,
+      id: ref.id,
+      projectId: input.projectId,
+    };
+    const { runtime } = await deps.extensionRuntimeCatalog.get(input.projectId);
+    const registration = resourceChangeProviders(runtime).find(
+      (k) => k.extensionId === resource.extensionId && k.type === resource.type && k.provider === input.extensionId,
+    );
+    if (!registration) throw new Error("This extension does not provide changes for the resource.");
+    return issueReceipt({
+      resource,
+      stamp,
+      provider: registration.heads,
+      principal: seenOwnerId((await deps.accountService.status()).login),
+    });
+  },
   resolveMany: (resources) => resolveResources(deps, input, resources),
   resolveOpenings: (resources) => resolveResourceOpenings(deps, input, resources),
   ...createResourceLinksApi(deps, input),

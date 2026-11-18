@@ -5,6 +5,7 @@ import { type ComponentProps, type ComponentType, useState, useSyncExternalStore
 import { visibleChatDraftAttachments } from "../../../extensions/contributions/chat-pending-submission";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-param-field";
+import { useObservedResource } from "../../resource-changes/activity-dot";
 import { nativeChatInputHandler, submitWithNativeChatAccount } from "./native-chat-account-submit";
 import { runNativeChatAction } from "./native-chat-action";
 import {
@@ -27,6 +28,8 @@ import { NativeChatWorkspace } from "./native-chat-workspace";
 import { type NativeChatPresentation, useNativeChatPresentation } from "./use-native-chat-presentation";
 
 interface NativeChatViewProps extends NativeChatHostServices {
+  workbench?: import("../../../core").WorkbenchModuleContext;
+  resource?: import("@pstdio/sdk/extensions").ResourceRef;
   Host?: ComponentType<NativeChatHostProps>;
   extensionId?: string;
   session: ChatSession;
@@ -109,6 +112,12 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
   const { session, conversationKey, renderParamField } = props;
   const state = useSyncExternalStore(session.subscribeToView, session.getSnapshot, session.getSnapshot);
   const { conversation, draft, messages, queuedFollowUps, pending, loading, initializing, sending } = state;
+  useObservedResource(
+    props.workbench,
+    props.resource,
+    conversation.observedChange,
+    props.visible !== false && !loading && !initializing && !state.error,
+  );
   const run: ChatSession["run"] = (action) => runNativeChatAction(session, action, props.action, Boolean(selected));
   const [uploading, setUploading] = useState(0);
   const [selected, setSelected] = useState<ChatQueuedRequest | null>(null);

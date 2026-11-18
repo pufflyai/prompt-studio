@@ -3,6 +3,7 @@ import { matchesResourceWhen } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, WorkbenchCommandExecutionContext } from "../../core";
 import { workbenchCommandPaletteMenuPath } from "../../core";
+import { installResourceChanges } from "../../react/resource-changes/change-store";
 import { registerWorkbenchExtensionChatRenderers } from "../contributions/chat-renderer-contributions";
 import { registerWorkbenchExtensionCommandPaletteResources } from "../contributions/command-palette-resource-contributions";
 import { registerWorkbenchExtensionControlsRenderers } from "../contributions/controls-renderer-contributions";
@@ -197,6 +198,7 @@ const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInp
   );
 const registerModePlacements = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.placements.map((placement) => input.workbench.modePlacements.registerPlacement(placement));
+
 export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWorkbenchExtensionContributionsInput) => {
   const disposables: Disposable[] = registerWorkbenchIdentityAliases(sourceInput);
   const input: InternalRegisterWorkbenchExtensionContributionsInput = {
@@ -213,6 +215,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
   let terminals: ReturnType<typeof registerWorkbenchExtensionTerminalRenderers> | undefined;
   const context: WorkbenchExtensionCommandContext = input;
   try {
+    disposables.push(installResourceChanges(sourceInput));
     disposables.push(registerWorkbenchExtensionChatRenderers(sourceInput));
     terminals = registerWorkbenchExtensionTerminalRenderers(sourceInput);
     disposables.push(terminals);

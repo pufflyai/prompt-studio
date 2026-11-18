@@ -1,6 +1,7 @@
 import { Box, CloseButton, Tabs, Text, useTabsContext } from "@chakra-ui/react";
 import { DropIndicator, PaletteShortcut, Tooltip } from "@pstdio/ui";
 import { useRef } from "react";
+import { ActivityDot } from "../resource-changes/activity-dot";
 import { WorkbenchIcon } from "../shared/icon";
 import { RegionTabMenu } from "./region-tab-menu";
 import { resolveTabIconName } from "./region-tabs-visibility";
@@ -60,6 +61,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
             id={triggerId}
             value={placement.widgetId}
             aria-labelledby={labelId}
+            aria-describedby={placement.resource ? `${labelId}-activity` : undefined}
             disabled={disabled}
             aria-haspopup="menu"
             aria-expanded={behavior.menu.api.open}
@@ -88,6 +90,9 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
                 {label}
               </span>
             </Text>
+            {placement.resource ? (
+              <ActivityDot id={`${labelId}-activity`} workbench={workbench} resource={placement.resource} />
+            ) : null}
             {placement.closable ? (
               <CloseButton
                 as="span"

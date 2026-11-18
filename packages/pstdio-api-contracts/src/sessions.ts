@@ -46,6 +46,13 @@ export const sessionExitSchema: z.ZodType<SessionExit> = z.object({
   endedAt: z.string(),
 });
 
+const sessionPositionSchema = z.object({ id: z.string(), position: z.number().int().nonnegative() });
+export const sessionChangePositionsSchema = z.object({
+  reply: sessionPositionSchema.optional(),
+  input: sessionPositionSchema.optional(),
+});
+export type SessionChangePositions = z.infer<typeof sessionChangePositionsSchema>;
+
 export const extensionSessionSchema = z.object({
   device: z.object({ ownerId: z.string(), id: z.string(), name: z.string() }).optional(),
   id: z.string(),
@@ -61,6 +68,7 @@ export const extensionSessionSchema = z.object({
   updatedAt: z.string(),
   lastRequestStarted: z.string().nullable(),
   lastRequestEnded: z.string().nullable(),
+  changePositions: sessionChangePositionsSchema.optional(),
   lastExit: sessionExitSchema.nullable().optional(),
   usage: z
     .object({
@@ -76,6 +84,7 @@ export const sessionSchema = z.object({
   device: z.object({ ownerId: z.string(), id: z.string(), name: z.string() }).optional(),
   id: z.string(),
   project_id: z.string().nullable(),
+  change_positions: sessionChangePositionsSchema.nullable().optional(),
   title: z.string(),
   status: sessionStatusSchema,
   archived: z.boolean(),

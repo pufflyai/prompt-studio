@@ -79,7 +79,7 @@ type UpdateInput = Partial<
     | "usage_json"
     | "params_json"
   >
->;
+> & { contentEvent?: { kind: "reply" | "input"; id: string } };
 
 const nowTimestamp = () => new Date().toISOString();
 
@@ -99,6 +99,7 @@ const buildRecord = (input: CreateInput) => {
     agent_session_id: null,
     session_file_id: null,
     usage_json: null,
+    change_positions: null,
     original_session_id: input.original_session_id ?? null,
     cwd: input.cwd ?? null,
     params_json: input.params_json ?? null,
@@ -107,6 +108,43 @@ const buildRecord = (input: CreateInput) => {
   };
 
   return record;
+};
+
+const updateSession = async (db: DbClient, id: string, input: UpdateInput) => {
+  const { contentEvent, ...fields } = input;
+  if (contentEvent) {
+    return db.transaction(async (tx) => {
+      const [current] = await tx
+        .select({ positions: sessions.change_positions })
+        .from(sessions)
+        .where(eq(sessions.id, id))
+        .for("update");
+      if (!current) return null;
+      const previous = current.positions ?? {};
+      const positions =
+        previous[contentEvent.kind]?.id === contentEvent.id
+          ? previous
+          : {
+              ...previous,
+              [contentEvent.kind]: {
+                id: contentEvent.id,
+                position: 1 + Math.max(previous.reply?.position ?? 0, previous.input?.position ?? 0),
+              },
+            };
+      const [row] = await tx
+        .update(sessions)
+        .set({ ...fields, change_positions: positions, updated_at: nowTimestamp() })
+        .where(eq(sessions.id, id))
+        .returning(sessionColumns);
+      return row!;
+    });
+  }
+  const [updated] = await db
+    .update(sessions)
+    .set({ ...fields, updated_at: nowTimestamp() })
+    .where(eq(sessions.id, id))
+    .returning(sessionColumns);
+  return updated ?? null;
 };
 
 export const createSessionsDBService = (db: DbClient) => {
@@ -259,14 +297,7 @@ export const createSessionsDBService = (db: DbClient) => {
     return rows;
   };
 
-  const update = async (id: string, input: UpdateInput) => {
-    const [updated] = await db
-      .update(sessions)
-      .set({ ...input, updated_at: nowTimestamp() })
-      .where(eq(sessions.id, id))
-      .returning(sessionColumns);
-    return updated ?? null;
-  };
+  const update = (id: string, input: UpdateInput) => updateSession(db, id, input);
 
   const archive = async (id: string) => {
     const [updated] = await db

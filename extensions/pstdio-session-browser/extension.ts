@@ -18,6 +18,7 @@ import {
 import { sessionBrowser } from "./refs";
 import { act } from "./src/actions";
 import { browse, browsePage, search } from "./src/browse";
+import { changeHeads, readChange } from "./src/changes";
 import { connectionRefresh } from "./src/controls";
 import { copySessionId } from "./src/copy-session-id";
 import { readDraft, saveDraft } from "./src/drafts";
@@ -167,6 +168,8 @@ export default defineExtension({
   storageIndexes: [nativeSubmissionIndex, sessionPinsIndex],
   hooks: [quotaRestartHook],
   commands: [
+    changeHeads,
+    readChange,
     quotaRestart,
     quotaAvailability,
     pinSession,

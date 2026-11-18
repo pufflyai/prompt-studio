@@ -36,7 +36,14 @@ test("checkpoints save exact complete arrays, including empty slots and an inten
       { id: "reply", role: "assistant" as const, parts: [{ type: "text" as const, text: "complete" }] },
     ];
     await persistSessionMessages(session.id, complete, { sessionService, fileService });
+    expect((await sessionService.get(session.id))!.change_positions).toBeNull();
+    await persistSessionMessages(session.id, complete, { sessionService, fileService }, "reply");
     expect(await Bun.file(file!.storage_path).json()).toEqual(complete);
+    const reply = (await sessionService.get(session.id))!.change_positions?.reply;
+    expect(reply).toMatchObject({ id: "reply", position: 1 });
+    await persistSessionMessages(session.id, complete, { sessionService, fileService });
+    await sessionService.update(session.id, { title: "New title" });
+    expect((await sessionService.get(session.id))!.change_positions?.reply).toEqual(reply);
     const usage: SessionMessage[] = [
       {
         id: "usage1",

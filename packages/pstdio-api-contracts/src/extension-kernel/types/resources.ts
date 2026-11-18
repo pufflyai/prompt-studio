@@ -97,6 +97,8 @@ export interface ExtensionResourcesApi {
   /** One indexed page of distinct shared project links, deduplicated across directions and selected resources. Maximum 100. Use workspace/session queries for private history. */
   queryRelated(input: RelatedResourceQuery): Promise<Page<ResourceRef>>;
   /** Resolve up to 100 references through enabled owners. Missing resources are omitted. */
+  /** Seal the exact committed change represented by content this owner has authorized and read. */
+  observeChange?(resource: ResourceRef, stamp: import("../../resource-changes").ChangeStamp): Promise<string>;
   resolveMany(resources: ResourceRef[]): Promise<ResourceResolution[]>;
   /** Resolve bare-resource navigation through the project's configured public openers. */
   resolveOpenings(resources: ResourceRef[]): Promise<ResourceResolution[]>;
