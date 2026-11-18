@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { open, rm } from "node:fs/promises";
 import path from "node:path";
-import { ensureProjectStorageRoot, resolveFileStoragePath } from "../storage/paths";
+import { ensureProjectStorageRoot, projectStorageRoot, resolveFileStoragePath } from "../storage/paths";
 import { readableFileDirectory } from "../storage/readable-file";
 
 export const createFilesStorageService = (storageRoot: string) => {
@@ -67,5 +67,13 @@ export const createFilesStorageService = (storageRoot: string) => {
 
   const discardUpload = (projectId: string, fileId: string) =>
     deleteFile(resolveFileStoragePath(storageRoot, projectId, fileId));
-  return { writeFile, writeFileAtPath, writeStream, deleteFile, computeHash, discardUpload };
+  return {
+    writeFile,
+    writeFileAtPath,
+    writeStream,
+    deleteFile,
+    computeHash,
+    discardUpload,
+    removeProject: (id: string) => rm(projectStorageRoot(storageRoot, id), { recursive: true, force: true }),
+  };
 };

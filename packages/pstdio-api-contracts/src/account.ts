@@ -18,7 +18,7 @@ export interface AccountStatus {
   features: { relay: boolean } | null;
   /** Cloud projects of the account. This device syncs the ones that exist on it. */
   cloudProjects: string[];
-  /** False until this login's Cloud project list has been read from the account service. */
+  /** False until this device knows this account's Cloud membership from the manager or its local cache. */
   cloudProjectsLoaded: boolean;
 }
 

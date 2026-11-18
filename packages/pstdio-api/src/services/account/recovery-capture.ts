@@ -12,17 +12,25 @@ export const startRecoveryCapture = (input: {
 }) => {
   let running: Promise<void> | undefined;
   let closed = false;
+  const suspended = new Set<string>();
+  let capturing: string | undefined;
+  let inFlight: Promise<unknown> | undefined;
   const run = async () => {
     try {
       const projects = new Set([...(await input.recovery.projects()), ...(await input.projects())]);
       for (const projectId of projects) {
         if (closed) break;
-        await input.recovery.capture(projectId).catch((error) => {
+        if (suspended.has(projectId)) continue;
+        capturing = projectId;
+        inFlight = input.recovery.capture(projectId).catch((error) => {
           apiLogger.warn(
             { event: "recovery.capture.failed", projectId, error },
             "Recovery point not captured; saved project data is unchanged",
           );
         });
+        await inFlight;
+        capturing = undefined;
+        inFlight = undefined;
       }
     } catch (error) {
       apiLogger.warn(
@@ -42,6 +50,11 @@ export const startRecoveryCapture = (input: {
   timer.unref?.();
   return {
     capture,
+    async suspend(id: string) {
+      suspended.add(id);
+      if (capturing === id) await inFlight;
+    },
+    release: (id: string) => suspended.delete(id),
     async close() {
       closed = true;
       clearInterval(timer);

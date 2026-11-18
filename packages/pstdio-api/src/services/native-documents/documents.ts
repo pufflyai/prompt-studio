@@ -9,6 +9,7 @@ import {
 } from "pstdio-sync";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
+import type { createProjectWork } from "../project-work";
 import { createNativeFileProjector } from "./file-projection";
 import { type loadNativeMarkdownFile, NativeDocumentSourceError, type saveNativeMarkdownFile } from "./file-source";
 import { createNativeProjectionQueue } from "./projection-queue";
@@ -50,15 +51,19 @@ export const createNativeDocumentService = (deps: {
   save: (input: Parameters<typeof saveNativeMarkdownFile>[1]) => ReturnType<typeof saveNativeMarkdownFile>;
   initialize: (loaded: Awaited<ReturnType<typeof loadNativeMarkdownFile>>) => Promise<void>;
   deviceId: string;
+  projectWork?: ReturnType<typeof createProjectWork>;
   presenceIdentity: () => Promise<{ label: string; deviceName: string }>;
 }) => {
   const storage = deps.storage;
   const projection = createNativeFileProjector(deps);
+  const inProject = <T>(id: string, task: () => Promise<T>) =>
+    deps.projectWork ? deps.projectWork.run(id, task) : task();
   const files = createNativeProjectionQueue({
-    reconcile: async (address) => {
-      await projection.reconcile(address);
-      return (await storage.nativeFileProjections.read(address))?.completedRevision ?? 0;
-    },
+    reconcile: (address) =>
+      inProject(address.owner.workbenchId, async () => {
+        await projection.reconcile(address);
+        return (await storage.nativeFileProjections.read(address))?.completedRevision ?? 0;
+      }),
     failed: ({ documentKey }, error) =>
       apiLogger.warn(
         { event: "native_document.projection.pending", documentKey, error },
@@ -108,12 +113,14 @@ export const createNativeDocumentService = (deps: {
     return room;
   };
   const run = <T>(request: RoomRequest, action: (room: Room) => Promise<T>) =>
-    track(async () => {
-      const room = roomFor(request);
-      const result = room.queue.then(() => action(room));
-      room.queue = result.catch(() => {});
-      return result;
-    });
+    track(() =>
+      inProject(request.projectId, async () => {
+        const room = roomFor(request);
+        const result = room.queue.then(() => action(room));
+        room.queue = result.catch(() => {});
+        return result;
+      }),
+    );
   const release = async (room: Room, roomId: string) => {
     await storage.nativeRooms.remove({ owner: room.owner, roomId });
     presence.closeRoom(roomId);
@@ -143,25 +150,24 @@ export const createNativeDocumentService = (deps: {
     live: presence.live,
     presence: {
       join(input: RoomRequest & { seedId: string }) {
-        return track(() => presence.join(roomFor(input), input));
+        return run(input, (room) => presence.join(room, input));
       },
       update(input: RoomRequest & { participantId: string; seedId: string; selection: NativeDocumentSelection }) {
-        return track(async () => {
-          roomFor(input);
+        return run(input, async () => {
           presence.update(input);
         });
       },
     },
     resolveSource(input: NativeTextTarget & { projectId: string; signal?: AbortSignal }) {
-      return track(async () => {
-        const expectedSource = await deps.access(input);
-        return projection.read(expectedSource, () => loadNativeRoomSource(deps, { ...input, expectedSource }));
-      });
+      return track(() =>
+        inProject(input.projectId, async () => {
+          const expectedSource = await deps.access(input);
+          return projection.read(expectedSource, () => loadNativeRoomSource(deps, { ...input, expectedSource }));
+        }),
+      );
     },
     open(input: NativeRoomOpenInput) {
-      return track(async () => {
-        return openRoom(input);
-      });
+      return track(() => inProject(input.projectId, () => openRoom(input)));
     },
     submit(input: RoomRequest & { update: Uint8Array }) {
       return run(input, async (room) => {
@@ -236,10 +242,14 @@ export const createNativeDocumentService = (deps: {
         await release(room, input.roomId);
       });
     },
+    async withdrawProject(projectId: string) {
+      for (const [id, room] of rooms) if (room.owner.workbenchId === projectId) await release(room, id);
+    },
     recover() {
       return track(async () => {
         if (rooms.size) throw new Error("Editor room recovery must run before opening editors");
         for await (const { id, owner, documentKey } of storage.nativeRooms.pending()) {
+          if (deps.projectWork?.blocked(owner.workbenchId)) continue;
           await recoverSource(documentKey, async () => {
             await integrate(owner, id);
             if (await storage.nativeRooms.source({ owner, documentKey }))
@@ -248,7 +258,8 @@ export const createNativeDocumentService = (deps: {
           });
         }
         for await (const address of storage.nativeFileProjections.pending())
-          await recoverSource(address.documentKey, () => projection.reconcile(address));
+          if (!deps.projectWork?.blocked(address.owner.workbenchId))
+            await recoverSource(address.documentKey, () => projection.reconcile(address));
       });
     },
     async dispose() {

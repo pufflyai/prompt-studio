@@ -21,9 +21,12 @@ export type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } fro
 export const createExtensionStorageDBService = (
   db: DbClient,
   observer?: StorageObserver,
-  options: { freeBytes?: () => Promise<number> } = {},
+  options: {
+    freeBytes?: () => Promise<number>;
+    withProjectWork?: <T>(id: string, task: () => Promise<T>) => Promise<T>;
+  } = {},
 ) => {
-  const documents = createDocumentStorageDBService(db, observer);
+  const documents = createDocumentStorageDBService(db, observer, undefined, options.withProjectWork);
   const scopeFor = async (scope: KvScope) => {
     const owner = await getExtensionStorageOwner(db, scope.extension_instance_id);
     if (!owner) return null;
