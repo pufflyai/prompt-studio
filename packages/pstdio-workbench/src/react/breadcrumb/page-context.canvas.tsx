@@ -146,7 +146,7 @@ export const PageComposer: Story = {
 
 const createSessionWorkbench = () => {
   const page = { kind: "page" as const, extensionId: "preview", id: "conversation" };
-  const workbench = createWorkbench({ startPage: page });
+  const workbench = createWorkbench({ defaultPage: page });
   workbench.modes.registerMode({ id: "project", activate() {} });
   workbench.views.registerView({ id: page.id, title: "Conversation", body: { kind: "react", render: () => null } });
   workbench.pages.registerPage({
