@@ -13,13 +13,6 @@ const buildDeps = () => {
       project_id: "project_1",
       archived: true,
     })),
-    clearWorktree: mock(async (id: string) => ({
-      id,
-      project_id: "project_1",
-      branch: null,
-      display_path: null,
-      root_path: null,
-    })),
     softDelete: mock(async (_id: string) => ({ workspace: { id: "ws_1", project_id: "project_1" }, changes: [] })),
     rename: mock(async (id: string, name: string) => ({
       id,
@@ -30,21 +23,11 @@ const buildDeps = () => {
     getByShorthand: mock(async () => null),
     list: mock(async () => []),
     listForProviderReconciliation: mock(async () => []),
-    setInitializing: mock(async (id: string, initializing: boolean) => ({
-      id,
-      project_id: "project_1",
-      initializing,
-    })),
     setSetupError: mock(async (id: string, message: string) => ({
       id,
       project_id: "project_1",
       setup_status: "error",
       setup_error: message,
-    })),
-    setStartupLogFileId: mock(async (id: string, fileId: string) => ({
-      id,
-      project_id: "project_1",
-      startup_log_file_id: fileId,
     })),
   };
 
@@ -98,23 +81,6 @@ describe("WorkspaceService", () => {
       const result = await service.archive("missing");
       expect(result).toBeNull();
       expect(emitted).toHaveLength(0);
-    });
-  });
-
-  describe("clearWorktree", () => {
-    test("clears worktree fields and emits the updated workspace", async () => {
-      const { deps, workspacesDb, emitted } = buildDeps();
-      const service = createWorkspaceService(deps);
-
-      const result = await service.clearWorktree("ws_1");
-
-      expect(result).toMatchObject({ id: "ws_1", branch: null, display_path: null, root_path: null });
-      expect(workspacesDb.clearWorktree).toHaveBeenCalledWith("ws_1");
-      expect(emitted).toContainEqual([
-        "workspaces",
-        "set",
-        expect.objectContaining({ id: "ws_1", branch: null, root_path: null }),
-      ]);
     });
   });
 
@@ -180,62 +146,6 @@ describe("WorkspaceService", () => {
       const service = createWorkspaceService(deps);
 
       const result = await service.setSetupError("missing", "boom");
-
-      expect(result).toBeNull();
-      expect(emitted).toHaveLength(0);
-    });
-  });
-
-  describe("setInitializing", () => {
-    test("emits a sync event after the DB write succeeds", async () => {
-      const { deps, workspacesDb, emitted } = buildDeps();
-      const service = createWorkspaceService(deps);
-
-      const result = await service.setInitializing("ws_1", true);
-
-      expect(result).toMatchObject({ id: "ws_1", initializing: true });
-      expect(workspacesDb.setInitializing).toHaveBeenCalledWith("ws_1", true);
-      expect(emitted).toContainEqual([
-        "workspaces",
-        "set",
-        expect.objectContaining({ id: "ws_1", initializing: true }),
-      ]);
-    });
-
-    test("does not emit when no row is updated", async () => {
-      const { deps, workspacesDb, emitted } = buildDeps();
-      (workspacesDb.setInitializing as ReturnType<typeof mock>).mockImplementation(async () => null);
-      const service = createWorkspaceService(deps);
-
-      const result = await service.setInitializing("missing", true);
-
-      expect(result).toBeNull();
-      expect(emitted).toHaveLength(0);
-    });
-  });
-
-  describe("setStartupLogFileId", () => {
-    test("emits a sync event after the DB write succeeds", async () => {
-      const { deps, workspacesDb, emitted } = buildDeps();
-      const service = createWorkspaceService(deps);
-
-      const result = await service.setStartupLogFileId("ws_1", "file_42");
-
-      expect(result).toMatchObject({ id: "ws_1", startup_log_file_id: "file_42" });
-      expect(workspacesDb.setStartupLogFileId).toHaveBeenCalledWith("ws_1", "file_42");
-      expect(emitted).toContainEqual([
-        "workspaces",
-        "set",
-        expect.objectContaining({ id: "ws_1", startup_log_file_id: "file_42" }),
-      ]);
-    });
-
-    test("does not emit when no row is updated", async () => {
-      const { deps, workspacesDb, emitted } = buildDeps();
-      (workspacesDb.setStartupLogFileId as ReturnType<typeof mock>).mockImplementation(async () => null);
-      const service = createWorkspaceService(deps);
-
-      const result = await service.setStartupLogFileId("missing", "file_42");
 
       expect(result).toBeNull();
       expect(emitted).toHaveLength(0);
