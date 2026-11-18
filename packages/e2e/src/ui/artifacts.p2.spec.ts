@@ -185,11 +185,11 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await versionMenu.click();
     await frame.getByRole("menuitemradio", { name: "First", exact: true }).click();
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
+    // The chosen version stays selected after a reload and when the published URL opens the artifact again.
     await page.reload();
-    await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
-    // A published URL opens the same artifact tab from a fresh page location.
+    await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
     await page.goto(first.url);
-    await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
+    await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
     const selectedTitle = await page.getByRole("tab", { name: /^(First|Second) page$/ }).innerText();
     await expect(breadcrumbs.getByText(selectedTitle, { exact: true })).toBeVisible();
     await expect(referenceTab).toBeVisible();
@@ -210,7 +210,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await expect(card.locator("iframe")).toHaveCount(1);
     await card.focus();
     await card.press("Enter");
-    await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
+    await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
     await artifactMenu.click();
     await page.getByRole("menuitem", { name: "Delete artifact…", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Delete artifact", exact: true }).click();
