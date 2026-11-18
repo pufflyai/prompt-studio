@@ -25,7 +25,6 @@ export const timelineView = defineView({
       "files.upload",
       "preferences.get",
       "preferences.set",
-      "notification.show",
     ],
   },
 });

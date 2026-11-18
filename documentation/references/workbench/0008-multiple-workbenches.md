@@ -38,7 +38,7 @@ Without an enclosing provider, providers using the same theme storage adapter an
 
 Use the exported UI components. For a custom overlay, use `ScopedDialog`, `ScopedMenu`, `ScopedPopover`, and `Portal` from `@pstdio/ui`. Use `useScopedMenu` with a menu root provider. These roots release document listeners and focus traps while hidden, and retain their open state for activation. Standalone callers outside a workbench keep their usual behavior.
 
-Use `useToaster()` for surface-owned feedback. The module-level `toaster` remains the standalone queue. Workbench notifications use separate queues, so matching notification IDs in different workbenches cannot dismiss each other. System errors stay in their owner's status bar.
+Keep action feedback in its originating view. Each workbench owns its status-bar notices and dismissal state, so a matching ID in another workbench has an independent lifecycle.
 
 See [the workbench API](0002-api.md), [navigation](0004-navigation.md), and [webview hosts](0005-webview-hosts.md). The Prompt Studio desktop app keeps one workbench per open project tab.
 

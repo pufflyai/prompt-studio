@@ -67,6 +67,8 @@ export const marketplaceExtensionSchema = z.object({
 export const listProjectExtensionsResponseSchema = z.object({
   extensions: z.array(projectExtensionInstanceSchema),
   marketplace: z.array(marketplaceExtensionSchema),
+  /** Number of independent upgrades the API host can run concurrently. */
+  upgradeConcurrency: z.number().int().min(1).max(4).optional(),
 });
 
 export const setProjectExtensionEnabledRequestSchema = z.object({

@@ -55,7 +55,7 @@ export const removeProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
 
     const home = await deps.workspaceService.getDefault(id);
     return withFolderCreation(home?.root_path ?? null, async () => {
-      const removeConnectionSecrets = await removeProjectAfterProvisioning(id, async () => {
+      const removeConnectionSecrets = await removeProjectAfterProvisioning(deps, id, async () => {
         await cleanupProjectArtifacts(deps, id, {
           removeProjectStorage: deps.fileService.removeProjectStorage,
         });

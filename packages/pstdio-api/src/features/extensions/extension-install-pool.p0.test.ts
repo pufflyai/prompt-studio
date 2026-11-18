@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
 import { stopExtensionPreparation } from "pstdio-extensions";
-import { createPreparationClient } from "pstdio-extensions/preparation-client";
+import { createPreparationClient, extensionUpgradeConcurrency } from "pstdio-extensions/preparation-client";
 import { createExtensionInstallBatch } from "./extension-install-batch";
 import { extensionInstallResources } from "./extension-install-resources";
 import { installExtensionSource } from "./install-extension-source";
@@ -40,11 +40,10 @@ const gate = () => {
   return { entered, release, url: server.url.href };
 };
 
-test("independent catalog-style installs validate concurrently in the production pool", async () => {
-  const directory = root(),
-    a = gate(),
-    b = gate();
-  const inputs = [a, b].map((g, index) => {
+test("the production pool admits independent installs up to the host capacity", async () => {
+  const directory = root();
+  const gates = Array.from({ length: extensionUpgradeConcurrency + 1 }, gate);
+  const inputs = gates.map((g, index) => {
     const source = join(directory, `source-${index}`);
     makeExtension(source, { namespace: `tool-${index}` });
     const entry = join(source, "extension.ts");
@@ -56,16 +55,20 @@ test("independent catalog-style installs validate concurrently in the production
       env: { ...process.env, PSTDIO_HOME: join(directory, "home") },
     };
   });
-  const jobs = inputs.map((input) => installExtensionSource(input));
+  const jobs = inputs.slice(0, -1).map((input) => installExtensionSource(input));
   try {
-    await a.entered.promise;
-    await b.entered.promise;
-    a.release.resolve();
-    b.release.resolve();
-    expect((await Promise.all(jobs)).map((result) => result.installName)).toEqual(["tool-0", "tool-1"]);
+    await Promise.all(gates.slice(0, -1).map((g) => g.entered.promise));
+    jobs.push(installExtensionSource(inputs.at(-1)!));
+    const waiting = gates.at(-1)!;
+    expect(await Promise.race([waiting.entered.promise.then(() => true), Bun.sleep(50).then(() => false)])).toBe(false);
+    gates[0]!.release.resolve();
+    await waiting.entered.promise;
+    for (const g of gates) g.release.resolve();
+    expect((await Promise.all(jobs)).map((result) => result.installName)).toEqual(
+      inputs.map((input) => input.installName),
+    );
   } finally {
-    a.release.resolve();
-    b.release.resolve();
+    for (const g of gates) g.release.resolve();
     await Promise.allSettled(jobs);
   }
 });

@@ -170,6 +170,17 @@ const isActivityOnlyMessage = (message: SessionMessage) => {
   return message.parts.every(isActivityPart);
 };
 
+const isSettledToolPart = (part: ChatMessagePart) => {
+  if (part.type !== "tool" || part.tool.toLowerCase() === "question") return false;
+  const status = part.status ?? part.state?.status;
+  return status === "completed" || status === "failed" || status === "denied" || status === "error";
+};
+
+const settledToolActivity = (message: SessionMessage) => {
+  const parts = message.parts.filter(isSettledToolPart);
+  return parts.length ? [{ ...message, parts }] : [];
+};
+
 const mergeBufferedActivity = (messages: SessionMessage[]) => {
   if (messages.length === 0) return null;
 
@@ -213,14 +224,23 @@ export const normalizeChatMessagesForDisplay = (messages: SessionMessage[], opti
     activityBuffer = [];
   };
 
+  const flushTrailingActivity = (includeIncomplete: boolean) => {
+    const activity = includeIncomplete ? activityBuffer : activityBuffer.flatMap(settledToolActivity);
+    const trailing = mergeBufferedActivity(activity);
+    if (trailing) normalized.push(trailing);
+    clearActivityBuffer();
+  };
+
   for (const message of messages) {
-    const displayParts = (message.parts ?? []).filter(isDisplayRenderablePart);
+    const displayParts = (message.parts ?? []).filter(
+      (part) => !(message.role === "system" && part.type === "text") && isDisplayRenderablePart(part),
+    );
     if (displayParts.length === 0) continue;
 
     const displayMessage = displayParts.length === message.parts.length ? message : { ...message, parts: displayParts };
 
     if (displayMessage.role === "user") {
-      clearActivityBuffer();
+      flushTrailingActivity(false);
       normalized.push(displayMessage);
       continue;
     }
@@ -242,10 +262,7 @@ export const normalizeChatMessagesForDisplay = (messages: SessionMessage[], opti
     normalized.push(displayMessage);
   }
 
-  if (options.streaming && activityBuffer.length > 0) {
-    const trailingActivity = mergeBufferedActivity(activityBuffer);
-    if (trailingActivity) normalized.push(trailingActivity);
-  }
+  flushTrailingActivity(Boolean(options.streaming));
 
   return normalized;
 };
@@ -255,8 +272,13 @@ export interface MessageGroup {
   responses: SessionMessage[];
 }
 
-export const getAssistantMessageActionTargetId = (messages: SessionMessage[]) => {
-  const lastMessage = messages.at(-1);
+export const getAssistantMessageActionTargetId = (messages: SessionMessage[], streaming = false) => {
+  const lastMessage = streaming
+    ? messages.at(-1)
+    : messages.findLast(
+        (message) =>
+          message.role !== "assistant" || message.parts.length === 0 || !message.parts.every(isSettledToolPart),
+      );
   if (lastMessage?.role !== "assistant") return null;
 
   const hasVisibleText = lastMessage.parts.some((part) => part.type === "text" && isVisibleText(part));

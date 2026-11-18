@@ -1,6 +1,6 @@
 import { Button, Flex, Icon, IconButton } from "@chakra-ui/react";
 import { Check, ChevronDown } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ComponentProps, ComponentType, ReactNode } from "react";
 import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 import { Portal } from "@/utils/ui-scope";
 import { ListRow } from "../../list-row/list-row";
@@ -11,6 +11,7 @@ import type { SelectionGroup } from "../param-editor.types";
 export interface SelectionMenuOption {
   id: string;
   name: string;
+  /** An icon name, or a `data:image/` URL such as an extension's SVG icon. */
   icon?: string;
   /** Palette key (e.g. "blue") applied to the option's icon. */
   color?: string;
@@ -41,17 +42,31 @@ export interface SelectionMenuProps {
   onGroupChange?: (optionId: string) => void;
 }
 
+// One component per image keeps each icon's identity stable across renders.
+const imageIcons = new Map<string, ComponentType<ComponentProps<"img">>>();
+
+const iconComponent = (icon: string) => {
+  if (!icon.startsWith("data:image/")) return getIconComponent(icon);
+  let component = imageIcons.get(icon);
+  if (!component) {
+    // Extension SVGs pick their colors from the color scheme they are drawn in.
+    component = (props) => (
+      <Icon asChild colorScheme="light" _dark={{ colorScheme: "dark" }}>
+        <img {...props} src={icon} alt="" />
+      </Icon>
+    );
+    imageIcons.set(icon, component);
+  }
+  return component;
+};
+
 const selectionIconComponent = (option: SelectionMenuOption | undefined) =>
-  option?.icon ? getIconComponent(option.icon) : undefined;
+  option?.icon ? iconComponent(option.icon) : undefined;
 
 export const selectionOptionIcon = (option: SelectionMenuOption | undefined, boxSize: string) => {
   if (!option?.icon) return null;
   return (
-    <Icon
-      as={getIconComponent(option.icon)}
-      boxSize={boxSize}
-      color={option.color ? `${option.color}.500` : "fg.muted"}
-    />
+    <Icon as={iconComponent(option.icon)} boxSize={boxSize} color={option.color ? `${option.color}.500` : "fg.muted"} />
   );
 };
 

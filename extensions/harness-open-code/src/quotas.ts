@@ -68,5 +68,10 @@ export const quotasCommand = defineCommand({
   title: l10n("quotas.title", "Inspect account quotas"),
   description: l10n("quotas.description", "Read OpenCode Go quota windows and account budgets through the native API."),
   cli: true,
-  run: readOpencodeQuotas,
+  async run(ctx) {
+    return {
+      ...(await readOpencodeQuotas(ctx)),
+      restartAfterQuotaReset: (await ctx.settings.get("restartAfterQuotaReset")) === true,
+    };
+  },
 });

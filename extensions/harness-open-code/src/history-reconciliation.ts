@@ -1,5 +1,6 @@
 import type { HarnessEventSink, HarnessRecoveryInput, SessionMessage } from "@pstdio/sdk/extensions";
 import {
+  historyMessageKey,
   mergeHistoryMetadata,
   reconcileMessageHistory,
   splitHistoryTurns,
@@ -12,7 +13,60 @@ const isGenerated = (message: SessionMessage) =>
   message.parts.length === 1 &&
   message.parts[0].type === "error";
 
-export const recoverOpencodeMessages = (input: HarnessRecoveryInput) => reconcileMessageHistory(input, { isGenerated });
+const mergeOpencodeMessage = (known: SessionMessage, native: SessionMessage) => {
+  const merged = mergeHistoryMetadata(known, native);
+  return {
+    ...merged,
+    parts: merged.parts.map((part) => {
+      if (
+        part.type !== "tool" ||
+        part.tool.toLowerCase() !== "question" ||
+        !["queued", "pending", "running"].includes(part.state?.status ?? "")
+      )
+        return part;
+      const answered = known.parts.find(
+        (saved) =>
+          saved.type === "tool" &&
+          saved.tool.toLowerCase() === "question" &&
+          saved.callId === part.callId &&
+          saved.state?.status === "completed" &&
+          saved.state.metadata &&
+          typeof saved.state.metadata === "object" &&
+          "answers" in saved.state.metadata,
+      );
+      if (answered?.type !== "tool") return part;
+      // A successful reply can precede OpenCode's persisted tool-state update.
+      return {
+        ...part,
+        status: answered.status,
+        state: {
+          ...part.state,
+          status: answered.state?.status,
+          output: answered.state?.output,
+          metadata: answered.state?.metadata,
+        },
+      };
+    }),
+  };
+};
+
+export const recoverOpencodeMessages = (input: HarnessRecoveryInput) => {
+  const questions = new Set(
+    input.nativeMessages
+      .filter(
+        (message) =>
+          !synthetic(message) &&
+          message.parts.some((part) => part.type === "tool" && part.tool.toLowerCase() === "question"),
+      )
+      .map((message) => message.id),
+  );
+  return reconcileMessageHistory(input, {
+    isGenerated,
+    merge: mergeOpencodeMessage,
+    // A native question keeps its message ID while input, status and answers change.
+    key: (message) => (questions.has(message.id) ? `question:${message.id}` : historyMessageKey(message)),
+  });
+};
 
 // Ids made from a message's position say nothing about which turn it is.
 const synthetic = (message: SessionMessage) => /^(?:saved-)*opencode-msg-\d+$/.test(message.id);
@@ -26,7 +80,7 @@ const mergeTurn = (previous: SessionMessage[], turn: SessionMessage[]) => {
     // OpenCode saves a message before its parts, so earlier text may be incomplete.
     if (index === 0 && promptChanged) return message;
     const old = index === 0 ? previous[0] : oldMessages.get(message.id);
-    return old ? mergeHistoryMetadata(old, message) : message;
+    return old ? mergeOpencodeMessage(old, message) : message;
   });
   const ids = new Set(merged.map((message) => message.id));
   return [...merged, ...previous.filter((message) => isGenerated(message) && !ids.has(message.id))];

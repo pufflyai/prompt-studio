@@ -186,11 +186,11 @@ export const initializeProjectWorkspace = (
   options: WorkspaceSetupOptions = {},
 ) => {
   const initialize = () => initializeWorkspace(deps, projectId, initial, setupExtensions, options);
-  return initial.provider_id === rootProviderId ? inProjectWorkspaceQueue(projectId, initialize) : initialize();
+  return initial.provider_id === rootProviderId ? inProjectWorkspaceQueue(deps, projectId, initialize) : initialize();
 };
 
 export const resumeRestoredFolderSetup = (deps: ProjectsRouteDeps, projectId: string) =>
-  inProjectWorkspaceQueue(projectId, async () => {
+  inProjectWorkspaceQueue(deps, projectId, async () => {
     const home = await deps.workspaceService.getDefault(projectId);
     if (!home || !hasPendingRestoredFolderSetup(home)) return;
     const path = home.provider_params_json.path;
