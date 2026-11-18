@@ -1,13 +1,20 @@
 import type {
   LocalRemovalPreflight,
+  ProjectCopyAccount,
   ProjectSyncStatus,
   RemoveLocalProjectInput,
   RemoveLocalProjectResult,
 } from "pstdio-api-contracts";
 import { type LocalCleanupSummary, localRemovalPreflight } from "./local-removal-preflight";
 import { AccountRequestError } from "./native-account";
+import { matchesDeviceAccount } from "./native-device-read";
 import type { DeviceLogin } from "./native-store";
-import type { createProjectCopyStore, ProjectCopy } from "./project-copy-store";
+import { type createProjectCopyStore, type ProjectCopy, projectCopyAccount } from "./project-copy-store";
+
+export const requireProjectCopyAccount = (login: DeviceLogin, expected?: ProjectCopyAccount) => {
+  if (expected && !matchesDeviceAccount(login, expected))
+    throw new AccountRequestError("The active Cloud account changed. Reopen the project action to confirm again.");
+};
 
 export interface ProjectCopyHooks {
   inspect(id: string): Promise<LocalCleanupSummary>;
@@ -79,6 +86,7 @@ export const createLocalProjectRemoval = (input: {
     if (!hooks?.freeze || !hooks.suspend || !hooks.cleanup)
       throw new AccountRequestError("Project removal is unavailable");
     const login = await input.login();
+    requireProjectCopyAccount(login, options.expectedAccount);
     const choice = (await input.copies.forAccount(login)).find((row) => row.projectId === id);
     if (choice?.phase === "removing") return finish(choice);
     if (choice?.phase === "cloud-only") return { removed: { projectId: id, presence: "cloud-only" } };
@@ -88,7 +96,7 @@ export const createLocalProjectRemoval = (input: {
     let copy: ProjectCopy;
     try {
       await hooks.drain?.(id);
-      const preflight = await inspect(project);
+      const preflight = { ...(await inspect(project)), account: projectCopyAccount(login) };
       await input.requireCurrent(login);
       if (preflight.requiresDiscard && !options.discardUnsynced) {
         hooks.release!(id);
@@ -128,7 +136,7 @@ export const createLocalProjectRemoval = (input: {
       const result = await inspect(project);
       await input.requireCurrent(login);
       // An earlier request already persisted consent before any destructive work started.
-      return choice ? { ...result, requiresDiscard: false } : result;
+      return { ...result, account: projectCopyAccount(login), requiresDiscard: !choice && result.requiresDiscard };
     },
     remove: (id: string, options: RemoveLocalProjectInput) => serialize(id, () => begin(id, options)),
     async restoreBarrier(deviceId: string, suspend: (id: string) => void) {

@@ -119,7 +119,10 @@ export const registerCloudProjectRoutes = (
       method: "get",
       path: "/account/projects/{id}/deletion",
       tags,
-      request: { params },
+      request: {
+        params,
+        query: z.object({ accountId: z.string().min(1), managerOrigin: z.string().min(1) }).partial(),
+      },
       responses: {
         200: response("Authoritative deletion status.", cloudProjectDeletionSchema),
         400: unavailable,
@@ -127,7 +130,9 @@ export const registerCloudProjectRoutes = (
       },
     }),
     async (c) => {
-      const status = await account.cloudProjectDeletion(c.req.valid("param").id, c.req.raw.signal);
+      const { accountId, managerOrigin } = c.req.valid("query");
+      const expected = accountId && managerOrigin ? { accountId, managerOrigin } : undefined;
+      const status = await account.cloudProjectDeletion(c.req.valid("param").id, c.req.raw.signal, expected);
       return status ? c.json(status, 200) : c.json({ error: "No deletion for this cloud project" }, 404);
     },
   );

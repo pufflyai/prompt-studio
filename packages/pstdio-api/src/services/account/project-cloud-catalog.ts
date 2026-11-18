@@ -3,18 +3,19 @@ import type {
   CloudProjectCatalogEntry,
   DeleteCloudProjectInput,
   DownloadCloudProjectResult,
+  ProjectCopyAccount,
   ProjectSyncStatus,
 } from "pstdio-api-contracts";
 import { identitySchema, projectDeletionStatusSchema } from "pstdio-sync-contracts";
 import type { RouteDeps } from "../../features/deps";
 import { apiLogger } from "../../lib/logger";
-import { createLocalProjectRemoval, type ProjectCopyHooks } from "./local-project-removal";
+import { createLocalProjectRemoval, type ProjectCopyHooks, requireProjectCopyAccount } from "./local-project-removal";
 import { readManagerAccount } from "./manager-account";
 import { ManagerRequestDenied } from "./manager-client";
 import { AccountRequestError } from "./native-account";
 import type { createNativeManagerCall } from "./native-manager-call";
 import type { DeviceLogin } from "./native-store";
-import { createProjectCopyStore, type ProjectCopy } from "./project-copy-store";
+import { createProjectCopyStore, type ProjectCopy, projectCopyAccount } from "./project-copy-store";
 
 const projectDeletionPath = (id: string) => `/v1/workbenches/${encodeURIComponent(identitySchema.parse(id))}/deletion`;
 
@@ -183,10 +184,11 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
         deletions.push({ ...deletionReceipt(operation), name });
       }
       await requireCurrent(login);
-      return { projects, deletions };
+      return { account: projectCopyAccount(login), projects, deletions };
     },
-    async cloudProjectDeletion(id: string, signal?: AbortSignal) {
+    async cloudProjectDeletion(id: string, signal?: AbortSignal, expected?: ProjectCopyAccount) {
       const login = await requireDevice();
+      requireProjectCopyAccount(login, expected);
       try {
         const status = await input.call(projectDeletionPath(id), undefined, login.token, signal);
         await requireCurrent(login);
@@ -198,8 +200,9 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
     },
     async deleteCloudProject(id: string, body: DeleteCloudProjectInput, signal?: AbortSignal) {
       const login = await requireDevice();
+      requireProjectCopyAccount(login, body.expectedAccount);
       try {
-        const status = await input.call(projectDeletionPath(id), body, login.token, signal);
+        const status = await input.call(projectDeletionPath(id), { confirm: body.confirm }, login.token, signal);
         await requireCurrent(login);
         return deletionReceipt(status);
       } finally {

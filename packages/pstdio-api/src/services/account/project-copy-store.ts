@@ -30,6 +30,8 @@ export type ProjectCopy = z.infer<typeof copySchema>;
 type AccountDevice = Pick<DeviceLogin, "managerOrigin" | "accountId" | "deviceId">;
 type CopyIdentity = AccountDevice & Pick<ProjectCopy, "projectId">;
 
+export const projectCopyAccount = ({ managerOrigin, accountId }: AccountDevice) => ({ managerOrigin, accountId });
+
 const matches = (row: AccountDevice, identity: AccountDevice) =>
   row.managerOrigin === identity.managerOrigin &&
   row.accountId === identity.accountId &&

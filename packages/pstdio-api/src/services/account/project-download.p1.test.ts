@@ -56,7 +56,9 @@ test("a Cloud only project can be listed and deleted without starting a download
     const { environmentId } = await host.deps.environmentService.get();
     const account = { managerOrigin: manager.url.origin, accountId: "fixture-account", deviceId: environmentId };
     await createProjectCopyStore(file).write({ ...account, projectId: id, name, phase: "cloud-only" });
-    await createNativeStore(file).save({ ...account, relayOrigin: manager.url.origin, token: "fixture-device" });
+    const store = createNativeStore(file);
+    const login = { ...account, relayOrigin: manager.url.origin, token: "fixture-device" };
+    await store.save(login);
     await host.deps.accountService.refresh();
     const catalog = async () => (await host.app.request("/v1/account/projects")).json();
 
@@ -71,8 +73,13 @@ test("a Cloud only project can be listed and deleted without starting a download
         body: JSON.stringify(body),
       });
     expect((await start({})).status).toBe(400);
+    const { account: expectedAccount } = await catalog();
+    await store.save({ ...login, accountId: "other-account", token: "other-device-login" });
+    expect((await start({ confirm: true, expectedAccount })).status).toBe(400);
     expect(deletionStarted).toBe(false);
-    const lost = await start({ confirm: true });
+    await store.save(login);
+    await host.deps.accountService.refresh();
+    const lost = await start({ confirm: true, expectedAccount });
     expect(lost.status).toBe(400);
     expect(deletionStarted).toBe(true);
     const statusPath = `${path}/deletion`;
@@ -161,6 +168,67 @@ test("only explicit Download restores a cloud-only copy and prepares its local f
     expect(await copies.forAccount(device)).toEqual([]);
   } finally {
     complete.resolve();
+    await host.close();
+    await manager.stop(true);
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("reconnecting after Cloud retirement keeps the project's offline edits on the device", async () => {
+  const root = await mkdtemp(join(tmpdir(), "cloud-retirement-local-edits-"));
+  const databasePath = join(root, "db");
+  const storageRoot = join(root, "storage");
+  const id = crypto.randomUUID();
+  let connected = true;
+  let retired = false;
+  const manager = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request) {
+      if (!connected) return Response.json({ error: "Offline" }, { status: 503 });
+      const path = new URL(request.url).pathname;
+      if (path === "/v1/account") return Response.json({ features: { relay: true }, projectDeletion: true });
+      if (path === "/v1/workbenches") return Response.json(retired ? [] : [{ workbenchId: id }]);
+      if (path === "/v1/project-deletions") return Response.json([]);
+      if (path === "/v1/devices/presence") return Response.json({ ok: true });
+      return Response.json({ error: "Unavailable" }, { status: 503 });
+    },
+  });
+  const host = await createTestApp({ databasePath, storageRoot });
+  try {
+    const name = "Project edited offline";
+    await host.deps.projectService.create({ id, name });
+    const { environmentId } = await host.deps.environmentService.get();
+    const store = createNativeStore(nativeAccountFile(databasePath, storageRoot));
+    await store.save({
+      managerOrigin: manager.url.origin,
+      relayOrigin: manager.url.origin,
+      accountId: "owner",
+      deviceId: environmentId,
+      token: "device-token",
+    });
+    await host.deps.accountService.refresh();
+    expect((await host.deps.accountService.status()).cloudProjects).toContain(id);
+
+    connected = false;
+    await host.deps.accountService.refresh();
+    const records = (
+      await host.deps.extensionStorageService.open({
+        owner: { workbenchId: id, extensionId: "example.notes" },
+      })
+    ).records;
+    await records.commit({
+      operationId: "offline-edit",
+      edits: [{ recordId: "note", replace: "This was written offline." }],
+    });
+
+    retired = true;
+    connected = true;
+    await host.deps.accountService.refresh();
+    expect(await host.deps.accountService.projectSyncStatus(id)).toMatchObject({ state: "local" });
+    expect(await host.deps.projectService.get(id)).toMatchObject({ id, name });
+    expect(await records.read("note")).toMatchObject({ exists: true, value: "This was written offline." });
+  } finally {
     await host.close();
     await manager.stop(true);
     await rm(root, { recursive: true, force: true });

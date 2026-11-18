@@ -285,7 +285,7 @@ export const createNativeAccount = (input: {
     },
     refresh,
     watch: changes.watch,
-    login: (managerOrigin?: string) => logins.start(readManagerOrigin(managerOrigin)),
+    login: async (managerOrigin?: string) => logins.start(readManagerOrigin(managerOrigin)),
     loginStatus: (id: string) => ({ status: logins.status(id) }),
     cancelLogin: logins.cancel,
     async status() {

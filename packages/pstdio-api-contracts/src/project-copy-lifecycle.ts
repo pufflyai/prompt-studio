@@ -3,7 +3,14 @@ import { z } from "zod";
 
 export const localCopyPresenceSchema = z.enum(["downloaded", "cloud-only", "removing", "downloading"]);
 
+const projectCopyAccountSchema = z.strictObject({
+  accountId: identitySchema,
+  managerOrigin: z.string().min(1),
+});
+export type ProjectCopyAccount = z.infer<typeof projectCopyAccountSchema>;
+
 export const localRemovalPreflightSchema = z.strictObject({
+  account: projectCopyAccountSchema.optional(),
   projectId: identitySchema,
   name: z.string(),
   uploadState: z.enum(["verified", "pending", "unknown"]),
@@ -19,7 +26,10 @@ export const localRemovalConflictSchema = z.strictObject({
   details: localRemovalPreflightSchema,
 });
 
-export const removeLocalProjectInputSchema = z.strictObject({ discardUnsynced: z.boolean().default(false) });
+export const removeLocalProjectInputSchema = z.strictObject({
+  discardUnsynced: z.boolean().default(false),
+  expectedAccount: projectCopyAccountSchema.optional(),
+});
 export const removeLocalProjectResultSchema = z.strictObject({
   projectId: identitySchema,
   presence: z.literal("cloud-only"),
@@ -29,7 +39,9 @@ export const downloadCloudProjectResultSchema = z.strictObject({
   presence: z.enum(["downloading", "downloaded"]),
 });
 
-export const deleteCloudProjectInputSchema = startProjectDeletionSchema;
+export const deleteCloudProjectInputSchema = startProjectDeletionSchema.extend({
+  expectedAccount: projectCopyAccountSchema.optional(),
+});
 export const cloudProjectDeletionSchema = projectDeletionStatusSchema.omit({ workbenchId: true }).extend({
   projectId: identitySchema,
 });
@@ -45,6 +57,7 @@ export const cloudProjectCatalogEntrySchema = z.strictObject({
   }),
 });
 export const cloudProjectCatalogSchema = z.strictObject({
+  account: projectCopyAccountSchema.optional(),
   projects: z.array(cloudProjectCatalogEntrySchema),
   deletions: z.array(cloudProjectDeletionSchema.extend({ name: z.string() })),
 });
