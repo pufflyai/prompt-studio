@@ -108,6 +108,10 @@
     "./charts": {
       "import": "./dist/charts.js",
       "types": "./dist/charts.d.ts"
+    },
+    "./scrollbars": {
+      "import": "./dist/scrollbars.js",
+      "types": "./dist/scrollbars.d.ts"
     }
   },
   "scripts": {

@@ -14,6 +14,11 @@ test("chat model and harness parameters retain the compact toolbar", async ({ pa
   expect(modelBox).not.toBeNull();
   expect(effortBox).not.toBeNull();
   expect(Math.abs(modelBox!.y - effortBox!.y)).toBeLessThan(1);
+  await expect(model).toHaveAttribute("aria-haspopup", "menu");
+  await model.press("ArrowDown");
+  await expect(preview.getByRole("menu").first()).toBeVisible();
+  await preview.locator("body").press("Escape");
+  await expect(model).toBeFocused();
   await model.click();
   await preview.getByRole("menuitem", { name: "Opus", exact: true }).click();
   await expect(model).toContainText("Opus");
@@ -34,7 +39,9 @@ test("existing workspace selection and extension harness icon retain composer pa
     "packages/pstdio-dashboard/src/shared/command-params/workspace-param-field.canvas.tsx#ComposerWorkspace",
   );
   await expect(preview.getByRole("button", { name: "Select device", exact: true })).toHaveCount(0);
-  await preview.getByRole("button", { name: "Select workspace", exact: true }).click();
+  const workspace = preview.getByRole("button", { name: "Select workspace", exact: true });
+  await expect(workspace).toHaveAttribute("aria-haspopup", "menu");
+  await workspace.click();
   await preview.getByRole("menuitem", { name: "Documentation", exact: true }).click();
   await expect(preview.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
   await preview.getByRole("button", { name: "Select model", exact: true }).click();

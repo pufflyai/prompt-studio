@@ -73,7 +73,7 @@ const NativeChatContent = (props: NativeChatViewProps) => {
 
 const NativeChatConversation = (props: NativeChatViewProps) => {
   const { session, conversationKey, renderParamField } = props;
-  const state = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
+  const state = useSyncExternalStore(session.subscribeToView, session.getSnapshot, session.getSnapshot);
   const { conversation, draft, messages, queuedFollowUps, pending, loading, initializing, sending } = state;
   const run: ChatSession["run"] = (action) => runNativeChatAction(session, action, props.action, Boolean(selected));
   const [uploading, setUploading] = useState(0);

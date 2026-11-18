@@ -1,6 +1,6 @@
 # Folder recovery workload
 
-The [PRD 0015](../../requirements/platform/0015-project-data-recovery.md) large workload. One
+The [canonical recovery requirements](../../requirement-book/book.json) large workload. One
 account's laptop captures a fixed 5 GiB project folder, uploads it, and turns off. A second computer
 signs in, downloads every byte and restores the folder through `pst projects folder restore`. Record
 sync and a second account must keep progressing while the large files transfer. This is a
