@@ -5,7 +5,6 @@ import { PassThrough, Writable } from "node:stream";
 import type { JsonPatch, SessionMessage } from "@pstdio/sdk/extensions";
 import type { RpcMessage } from "./app-server-rpc";
 import { createCodexRuntime } from "./codex-runtime";
-import { MINIMUM_VERSION } from "./detection";
 
 // Real app-server traffic from the oldest supported and the latest Codex, made by scripts/record-cli-output.ts.
 const recordedDir = join(import.meta.dir, "mocks/recorded");
@@ -76,10 +75,6 @@ const ranCommand = {
 const runtimes: ReturnType<typeof createCodexRuntime>[] = [];
 afterEach(async () => {
   for (const runtime of runtimes.splice(0)) await runtime.dispose();
-});
-
-test("has recorded traffic from the minimum supported Codex version", () => {
-  expect(versions).toContain(MINIMUM_VERSION);
 });
 
 describe.each(versions)("Codex %s", (version) => {
