@@ -1,5 +1,14 @@
-import { existsSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { basename, dirname, join, relative } from "node:path";
 import { withFileMutationLock } from "pstdio-paths";
 import { hashExtensionSource } from "../authoring/hash-extension-source";
 import { bundleEntry } from "./bundle-entry";
@@ -63,11 +72,37 @@ export const inspectRevisionLoadKeyAsync = async (sourcePath: string) => {
     return `manifest-${JSON.stringify(error instanceof Error ? error.message : error)}`;
   }
 };
+
+const observePreparationPhase = async <T>(sourcePath: string, phase: string, run: () => Promise<T>) => {
+  const start = performance.now();
+  try {
+    return await run();
+  } finally {
+    const path = process.env.PSTDIO_LOG_PATH;
+    if (path) {
+      try {
+        appendFileSync(
+          path,
+          `${JSON.stringify({
+            time: new Date().toISOString(),
+            event: "extension.revision.preparation_timing",
+            extension: basename(sourcePath),
+            phase,
+            duration_ms: Math.round(performance.now() - start),
+          })}\n`,
+        );
+      } catch {}
+    }
+  }
+};
+
 export const prepareRevision = async (
   sourcePath: string,
   apiProvider?: ExtensionApiProvider,
 ): Promise<PreparedExtensionRevision> => {
-  const inputs = await inspectRevisionInputsAsync(sourcePath, apiProvider);
+  const inputs = await observePreparationPhase(sourcePath, "inspect_before", () =>
+    inspectRevisionInputsAsync(sourcePath, apiProvider),
+  );
   // The source identity is excluded: a staged install and its promoted folder must reuse
   // the very same artifacts rather than building again at the final path.
   const root = join(preparedCacheRoot(), "revisions", inputs.id);
@@ -84,16 +119,17 @@ export const prepareRevision = async (
   const generationRoot = join(root, crypto.randomUUID());
   const packagePath = revisionSnapshotPath(generationRoot, realpathSync(sourcePath));
   try {
-    await copyRevisionSource(sourcePath, packagePath);
-    await copyRevisionDependencies(inputs.dependencies, sourcePath, packagePath, generationRoot);
-    copyRevisionCompilerInputs(inputs.dependencies.compilerInputs, generationRoot);
-    const entryPath = await bundleEntry(
-      join(packagePath, relative(sourcePath, inputs.entryPath)),
-      packagePath,
-      packagePath,
-      generationRoot,
+    await observePreparationPhase(sourcePath, "copy_source", () => copyRevisionSource(sourcePath, packagePath));
+    await observePreparationPhase(sourcePath, "copy_dependencies", () =>
+      copyRevisionDependencies(inputs.dependencies, sourcePath, packagePath, generationRoot),
     );
-    const after = await inspectRevisionInputsAsync(sourcePath, apiProvider);
+    copyRevisionCompilerInputs(inputs.dependencies.compilerInputs, generationRoot);
+    const entryPath = await observePreparationPhase(sourcePath, "bundle", () =>
+      bundleEntry(join(packagePath, relative(sourcePath, inputs.entryPath)), packagePath, packagePath, generationRoot),
+    );
+    const after = await observePreparationPhase(sourcePath, "inspect_after", () =>
+      inspectRevisionInputsAsync(sourcePath, apiProvider),
+    );
     if (after.id !== inputs.id) throw new Error("Extension changed while preparing its revision.");
     const revision: PreparedExtensionRevision = {
       id: inputs.id,
