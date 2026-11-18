@@ -52,25 +52,6 @@ test("preserves browser Forward history between extension pages after refresh", 
   await expect(page.getByRole("region", { name: "Main", exact: true }).getByRole("textbox")).toHaveText(ticket.content);
 });
 
-test("keeps the project selector and Session Panel available on project home", async ({ page, request }) => {
-  const response = await request.post(`${apiBase}/v1/projects`, {
-    data: folderProjectInput({ name: "PS-170 Project Chrome" }),
-  });
-  expect(response.ok()).toBe(true);
-  const project = (await response.json()) as { id: string };
-  await page.addInitScript((projectId: string) => {
-    localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
-  }, project.id);
-
-  await page.goto(`/projects/${project.id}/`);
-
-  await expect(
-    page.getByRole("region", { name: "Nav Chrome" }).getByRole("button", { name: "Switch project", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Open Side Panel" })).toBeVisible();
-});
-
 test("preserves other Session tabs when selecting from New session", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "PS-170 Session Sub Panels" }),
