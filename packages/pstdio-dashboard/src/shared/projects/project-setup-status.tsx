@@ -15,6 +15,7 @@ export const ProjectSetupStatus = (props: ProjectSetupStatusProps) => {
   return (
     <ActionErrorSlot>
       <AlertMessage
+        key={JSON.stringify([error, Boolean(retrying)])}
         compact
         status="error"
         variant="subtle"
