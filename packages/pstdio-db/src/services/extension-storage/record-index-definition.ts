@@ -1,4 +1,4 @@
-import { and, inArray, sql } from "drizzle-orm";
+import { and, inArray } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { compareQueryValues, validateIndexes } from "pstdio-sync/records";
 import type { Json, StorageRecordIndex } from "pstdio-sync-contracts";
