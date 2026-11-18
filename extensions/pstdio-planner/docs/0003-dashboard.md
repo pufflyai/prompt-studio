@@ -61,7 +61,7 @@ The sidebar lists, from top to bottom:
 - **Needs attention** collects ticket actions that need a person. It currently shows review requests and their open count. Select it to answer them while the sidebar stays visible. See [Needs attention](0006-review-requests.md).
 - The **Files** section lists extra Markdown files that belong to the ticket, and its image attachments. Choose **New file** to add a file. Right-click a file to rename or delete it. Images open in a read-only preview.
 - The **Sub-tickets** section appears when the ticket has sub-tickets.
-- The **Workspaces** section lists the project workspace and every workspace linked to the ticket. Choose **Create workspace** to add one. See [Attempts](0002-attempts.md#workspaces-on-a-ticket).
+- The **Workspaces** section lists only workspaces explicitly linked to the ticket. The project folder appears only when linked. Tickets without linked workspaces hide this section. Choose **Create workspace** from the ticket menu to add one. See [Attempts](0002-attempts.md#workspaces-on-a-ticket).
 - The **Sessions** section lists the agent sessions linked to the ticket, including attempt, review, refine, and sub-ticket sessions.
 
 ### Editor

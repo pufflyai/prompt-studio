@@ -9,6 +9,7 @@ import { logTestPhase } from "../scripts/log-test-phase";
 import { installNativeProbeFixture } from "./harness-native-probe-fixture";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
+import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 
 beforeAll(buildBinary, 180_000);
 
@@ -59,7 +60,7 @@ beforeAll(async () => {
     PATH: `${prefix}${delimiter}${process.env.PATH}`,
     PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(...harnesses.map((harness) => harness.extension)),
   });
-}, 30_000);
+}, PACKAGED_TEST_TIMEOUT);
 
 afterAll(async () => {
   if (runtime) await stopProcess(runtime.child);
@@ -79,118 +80,129 @@ const expectProbeExited = async (command: string) => {
 };
 
 for (const broken of [false, true]) {
-  test(broken
-    ? "refreshes the same project and lists healthy harnesses beside failed and hanging npm probes"
-    : "detects all npm harnesses from a custom prefix", async () => {
-    logTestPhase("replace npm harness fixtures for discovery");
-    await installFixtures(prefix, broken ? "broken" : "healthy");
-    const started = runtime;
-    const headers = { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" };
-    const createProject = async (name: string, agents?: string[]) => {
-      const folder = join(root, name);
-      mkdirSync(folder);
-      const created = await fetch(`${started.baseUrl}/v1/projects`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(folderProjectInput({ name, ...(agents ? { agents } : {}) }, folder)),
-      });
-      expect(created.status).toBe(201);
-      return (await created.json()) as { id: string };
-    };
-    if (!broken) project = await createProject("harnesses");
-    // Reuse the same cache key and let the five-second availability TTL expire.
-    if (broken) await Bun.sleep(5_001);
-    logTestPhase("query harness availability");
-    const agents = await fetch(`${started.baseUrl}/v1/agents/info?project=${project.id}`, { headers });
-    expect(agents.status).toBe(200);
-    const result = (await agents.json()) as Array<{ id: string; availability: { type: string; reason?: string } }>;
-    expect(result).toHaveLength(harnesses.length);
-    for (const harness of harnesses) {
-      expect(result).toContainEqual(
-        expect.objectContaining({
-          id: harnessId(harness),
-          availability: expect.objectContaining({
-            type: broken && harness.command !== "claude" ? "NOT_FOUND" : "INSTALLED",
+  test(
+    broken
+      ? "refreshes the same project and lists healthy harnesses beside failed and hanging npm probes"
+      : "detects all npm harnesses from a custom prefix",
+    async () => {
+      logTestPhase("replace npm harness fixtures for discovery");
+      await installFixtures(prefix, broken ? "broken" : "healthy");
+      const started = runtime;
+      const headers = { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" };
+      const createProject = async (name: string, agents?: string[]) => {
+        const folder = join(root, name);
+        mkdirSync(folder);
+        const created = await fetch(`${started.baseUrl}/v1/projects`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(folderProjectInput({ name, ...(agents ? { agents } : {}) }, folder)),
+        });
+        expect(created.status).toBe(201);
+        return (await created.json()) as { id: string };
+      };
+      if (!broken) project = await createProject("harnesses");
+      // Reuse the same cache key and let the five-second availability TTL expire.
+      if (broken) await Bun.sleep(5_001);
+      logTestPhase("query harness availability");
+      const agents = await fetch(`${started.baseUrl}/v1/agents/info?project=${project.id}`, { headers });
+      expect(agents.status).toBe(200);
+      const result = (await agents.json()) as Array<{ id: string; availability: { type: string; reason?: string } }>;
+      expect(result).toHaveLength(harnesses.length);
+      for (const harness of harnesses) {
+        expect(result).toContainEqual(
+          expect.objectContaining({
+            id: harnessId(harness),
+            availability: expect.objectContaining({
+              type: broken && harness.command !== "claude" ? "NOT_FOUND" : "INSTALLED",
+            }),
           }),
+        );
+      }
+      if (broken) {
+        // The host stops the hanging probe and says why the harness is unavailable.
+        const opencode = result.find((agent) => agent.id === harnessId(harnesses[0]));
+        expect(opencode?.availability.reason).toMatch(/\S/);
+        logTestPhase("verify hanging opencode probe exited");
+        await expectProbeExited("opencode");
+      }
+      if (!broken) {
+        logTestPhase("query installed harness models");
+        const models = await fetch(
+          `${started.baseUrl}/v1/agents/${harnessId(harnesses[0])}/models?project=${project.id}`,
+          { headers },
+        );
+        expect(models.status).toBe(200);
+        expect(await models.json()).toEqual([expect.objectContaining({ id: "opencode/test-model" })]);
+        const selected = await createProject("selected", [harnessId(harnesses[0])]);
+        logTestPhase("query project-selected harnesses");
+        const scoped = await fetch(`${started.baseUrl}/v1/agents/info?project=${selected.id}`, { headers });
+        expect(((await scoped.json()) as Array<{ id: string }>).map(({ id }) => id)).toEqual([harnessId(harnesses[0])]);
+      }
+    },
+    PACKAGED_TEST_TIMEOUT,
+  );
+}
+
+test(
+  "stops every hanging probe and recovers healthy harness detection",
+  async () => {
+    for (const harness of harnesses) rmSync(join(prefix, `${harness.command}.pid`), { force: true });
+    logTestPhase("install all hanging npm harness fixtures");
+    await installFixtures(prefix, "hanging");
+    const headers = runtimeAuthorization(runtime.descriptor);
+    try {
+      const results = await Promise.allSettled(
+        harnesses.map(async (harness) => {
+          logTestPhase("query hanging harness models");
+          const response = await fetch(
+            `${runtime.baseUrl}/v1/agents/${harnessId(harness)}/models?project=${project.id}`,
+            { headers, signal: AbortSignal.timeout(4_000) },
+          );
+          expect(response.status).toBe(200);
+          expect(await response.json()).toEqual([]);
         }),
       );
-    }
-    if (broken) {
-      // The host stops the hanging probe and says why the harness is unavailable.
-      const opencode = result.find((agent) => agent.id === harnessId(harnesses[0]));
-      expect(opencode?.availability.reason).toMatch(/\S/);
-      logTestPhase("verify hanging opencode probe exited");
-      await expectProbeExited("opencode");
-    }
-    if (!broken) {
-      logTestPhase("query installed harness models");
+      for (const result of results)
+        expect(result.status, result.status === "rejected" ? String(result.reason) : undefined).toBe("fulfilled");
+      logTestPhase("verify every hanging probe exited");
+      await Promise.all(harnesses.map((harness) => expectProbeExited(harness.command)));
+      expect(() => process.kill(runtime.descriptor.pid, 0)).not.toThrow();
+
+      logTestPhase("repair all npm harness fixtures");
+      await installFixtures(prefix, "healthy");
+      // Repaired commands become visible after the existing availability cache expires.
+      logTestPhase("wait for harness availability cache expiry");
+      await Bun.sleep(5_001);
+      logTestPhase("verify repaired harness availability");
+      const recovered = await fetch(`${runtime.baseUrl}/v1/agents/info?project=${project.id}`, { headers });
+      expect(recovered.status).toBe(200);
+      const agents = (await recovered.json()) as Array<{ id: string; availability: { type: string } }>;
+      for (const harness of harnesses)
+        expect(agents).toContainEqual(
+          expect.objectContaining({
+            id: harnessId(harness),
+            availability: expect.objectContaining({ type: "INSTALLED" }),
+          }),
+        );
+      logTestPhase("verify repaired harness models");
       const models = await fetch(
-        `${started.baseUrl}/v1/agents/${harnessId(harnesses[0])}/models?project=${project.id}`,
-        { headers },
+        `${runtime.baseUrl}/v1/agents/${harnessId(harnesses[0])}/models?project=${project.id}`,
+        {
+          headers,
+        },
       );
       expect(models.status).toBe(200);
       expect(await models.json()).toEqual([expect.objectContaining({ id: "opencode/test-model" })]);
-      const selected = await createProject("selected", [harnessId(harnesses[0])]);
-      logTestPhase("query project-selected harnesses");
-      const scoped = await fetch(`${started.baseUrl}/v1/agents/info?project=${selected.id}`, { headers });
-      expect(((await scoped.json()) as Array<{ id: string }>).map(({ id }) => id)).toEqual([harnessId(harnesses[0])]);
+    } finally {
+      // A failing regression must not leave fixtures alive after the test runtime exits.
+      for (const harness of harnesses) {
+        const file = Bun.file(join(prefix, `${harness.command}.pid`));
+        if (!(await file.exists())) continue;
+        try {
+          process.kill(Number(await file.text()), "SIGKILL");
+        } catch {}
+      }
     }
-  }, 30_000);
-}
-
-test("stops every hanging probe and recovers healthy harness detection", async () => {
-  for (const harness of harnesses) rmSync(join(prefix, `${harness.command}.pid`), { force: true });
-  logTestPhase("install all hanging npm harness fixtures");
-  await installFixtures(prefix, "hanging");
-  const headers = runtimeAuthorization(runtime.descriptor);
-  try {
-    const results = await Promise.allSettled(
-      harnesses.map(async (harness) => {
-        logTestPhase("query hanging harness models");
-        const response = await fetch(
-          `${runtime.baseUrl}/v1/agents/${harnessId(harness)}/models?project=${project.id}`,
-          { headers, signal: AbortSignal.timeout(4_000) },
-        );
-        expect(response.status).toBe(200);
-        expect(await response.json()).toEqual([]);
-      }),
-    );
-    for (const result of results)
-      expect(result.status, result.status === "rejected" ? String(result.reason) : undefined).toBe("fulfilled");
-    logTestPhase("verify every hanging probe exited");
-    await Promise.all(harnesses.map((harness) => expectProbeExited(harness.command)));
-    expect(() => process.kill(runtime.descriptor.pid, 0)).not.toThrow();
-
-    logTestPhase("repair all npm harness fixtures");
-    await installFixtures(prefix, "healthy");
-    // Repaired commands become visible after the existing availability cache expires.
-    logTestPhase("wait for harness availability cache expiry");
-    await Bun.sleep(5_001);
-    logTestPhase("verify repaired harness availability");
-    const recovered = await fetch(`${runtime.baseUrl}/v1/agents/info?project=${project.id}`, { headers });
-    expect(recovered.status).toBe(200);
-    const agents = (await recovered.json()) as Array<{ id: string; availability: { type: string } }>;
-    for (const harness of harnesses)
-      expect(agents).toContainEqual(
-        expect.objectContaining({
-          id: harnessId(harness),
-          availability: expect.objectContaining({ type: "INSTALLED" }),
-        }),
-      );
-    logTestPhase("verify repaired harness models");
-    const models = await fetch(`${runtime.baseUrl}/v1/agents/${harnessId(harnesses[0])}/models?project=${project.id}`, {
-      headers,
-    });
-    expect(models.status).toBe(200);
-    expect(await models.json()).toEqual([expect.objectContaining({ id: "opencode/test-model" })]);
-  } finally {
-    // A failing regression must not leave fixtures alive after the test runtime exits.
-    for (const harness of harnesses) {
-      const file = Bun.file(join(prefix, `${harness.command}.pid`));
-      if (!(await file.exists())) continue;
-      try {
-        process.kill(Number(await file.text()), "SIGKILL");
-      } catch {}
-    }
-  }
-}, 30_000);
+  },
+  PACKAGED_TEST_TIMEOUT,
+);

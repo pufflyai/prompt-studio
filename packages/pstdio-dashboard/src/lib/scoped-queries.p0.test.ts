@@ -12,6 +12,39 @@ const status = (accountId: string, managerOrigin = "https://first.example"): Acc
   cloudProjectsLoaded: true,
 });
 
+test("historical storage resets refresh their canonical native owner without touching other tools", async () => {
+  const server = Bun.serve({ port: 0, fetch: () => Response.json(status("first")) });
+  const owner = createRuntimeCollections({ baseUrl: server.url.origin, token: "" });
+  try {
+    await getDashboardAccountStatusQuery(owner).read();
+    const root = getDashboardScopedQueries(owner);
+    let noteReads = 0;
+    let homeReads = 0;
+    const note = root.forScope({ projectId: "a", extensionId: "pstdio.notes" }).query({
+      id: "note",
+      read: () => ++noteReads,
+    });
+    const home = root.forScope({ projectId: "a", extensionId: "pstdio.home" }).query({
+      id: "home",
+      read: () => ++homeReads,
+    });
+    await Promise.all([note.read(), home.read()]);
+    publishExtensionEventReset({ projectId: "a", extensionId: "pstdio.pstdio-notes" }, owner);
+    expect(await note.read()).toBe(2);
+    expect(await home.read()).toBe(1);
+    publishExtensionEventReset({ projectId: "b", extensionId: "pstdio.notes" }, owner);
+    expect(await note.read()).toBe(2);
+    publishExtensionEventReset({ projectId: "a", extensionId: "pstdio.notes" }, owner);
+    expect(await note.read()).toBe(3);
+    publishExtensionEventReset({}, owner);
+    expect(await note.read()).toBe(4);
+    expect(await home.read()).toBe(2);
+  } finally {
+    await owner.dispose();
+    await server.stop(true);
+  }
+});
+
 test("one runtime account reader revokes active and retained data before publishing a new account", async () => {
   let current = status("first");
   let reads = 0;

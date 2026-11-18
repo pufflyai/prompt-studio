@@ -35,8 +35,9 @@ jobs:
   desktop:
     name: ${{ inputs.kind }} (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
-    # Preserve the existing desktop release allowance; operation budgets remain in benchmarks.
-    timeout-minutes: 30
+    # PS-1232: the Windows performance job exhausted 30 min during B5, leaving B8 unrun.
+    # Bound the complete matrix row, including the fixed ten-minute sample; budgets stay unchanged.
+    timeout-minutes: ${{ inputs.kind == 'performance' && matrix.platform == 'win32' && 60 || 30 }}
     env:
       CI_PROFILE: production
       PLAN_DISPLAY: ${{ matrix.platform == 'linux' && 'true' || 'false' }}

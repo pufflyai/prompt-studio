@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { contributionRefId, sessionBrowser } from "@pstdio/sdk/extensions";
+import { dashboardHomePage } from "@/home-page.fixture";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardHomePage } from "@/shared/app/resources";
 import { registerHomePage } from "./home-page.test-support";
 import { registerSessionProvider } from "./modules/sessions/session-provider.fixture";
 import { createDashboardWorkbench } from "./workbench";

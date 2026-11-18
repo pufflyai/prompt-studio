@@ -37,7 +37,7 @@ test("ticket resource navigation merges bidirectional session links without empt
   });
   const ticket = { type: "ticket", id: "ticket", extensionId: ctx.extensionId, projectId: ctx.projectId };
   const session = { type: "session", id: "session", extensionId: "pstdio", projectId: ctx.projectId, label: "Review" };
-  ctx.resources.resolveMany = async (refs) =>
+  ctx.resources.resolveOpenings = async (refs) =>
     refs.map((resource) => ({
       resource,
       target: {
@@ -81,7 +81,7 @@ test("ticket navigation queries canonical project-scoped links", async () => {
     projectId: ctx.projectId,
   };
   await ctx.resources.addAnchors(resource, [session]);
-  ctx.resources.resolveMany = async (refs) =>
+  ctx.resources.resolveOpenings = async (refs) =>
     refs.map((resource) => ({
       resource,
       target: {

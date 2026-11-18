@@ -1,4 +1,5 @@
 import type { Localizable } from "../l10n";
+import type { ActionBarViewBody } from "./action-bar";
 import type { ChatRendererContribution } from "./chat-renderer";
 import type { ExtensionPanelRegion } from "./composition";
 import type { RendererCallback } from "./context";
@@ -46,6 +47,7 @@ export interface TerminalViewBody {
 }
 
 export type ViewBody =
+  | ActionBarViewBody
   | TerminalViewBody
   | ChatViewBody
   | WebviewViewBody

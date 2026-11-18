@@ -4,7 +4,7 @@ import { WorkbenchStory } from "../../examples/workbench-story";
 
 const createPageContextWorkbench = (routed = false, contextView = false) => {
   const page = { kind: "page" as const, extensionId: "preview", id: "documents" };
-  const workbench = createWorkbench({ startPage: page, initialSidePanelMode: "attached" });
+  const workbench = createWorkbench({ defaultPage: page, initialSidePanelMode: "attached" });
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
   workbench.resources.registerKind({ kind: "note", label: "Note", icon: "file-text" });
   workbench.views.registerView({
@@ -142,4 +142,53 @@ const createComposerWorkbench = () => {
 export const PageComposer: Story = {
   id: "pstdio-workbench-guides-page-context--page-composer",
   args: { workbench: createComposerWorkbench() },
+};
+
+const createSessionWorkbench = () => {
+  const page = { kind: "page" as const, extensionId: "preview", id: "conversation" };
+  const workbench = createWorkbench({ defaultPage: page });
+  workbench.modes.registerMode({ id: "project", activate() {} });
+  workbench.views.registerView({ id: page.id, title: "Conversation", body: { kind: "react", render: () => null } });
+  workbench.pages.registerPage({
+    id: "sessions",
+    ref: { ...page, id: "sessions" },
+    title: "Sessions",
+    path: "sessions",
+    modeId: "project",
+    main: { kind: "group", default: page },
+    slots: [],
+  });
+  workbench.pages.registerPage({
+    id: page.id,
+    ref: page,
+    title: "Conversation",
+    path: "conversation",
+    modeId: "project",
+    parentId: "sessions",
+    resource: { kinds: [{ kind: "resource-kind", id: "session" }] },
+    main: {
+      kind: "view",
+      presentation: "page",
+      cardinality: "one",
+      view: { kind: "view", id: page.id },
+      tab: {
+        getSnapshot: () => ({
+          indicator: { icon: "loader-circle", color: "fg.info", label: "Session status: in_progress" },
+        }),
+      },
+    },
+    slots: [],
+  });
+  workbench.pageLocations.setProject("preview-session");
+  workbench.pageLocations.navigate({
+    kind: "page",
+    page,
+    resource: { type: "session", id: "logs", label: "Investigate logs", icon: "message-circle" },
+  });
+  return workbench;
+};
+
+export const SessionStatus: Story = {
+  id: "pstdio-workbench-guides-page-context--session-status",
+  args: { workbench: createSessionWorkbench() },
 };

@@ -110,6 +110,12 @@ const dataTableBodySchema = extensionDataTableRendererRecordSchema
 
 export const workbenchExtensionViewBodySchema = z.discriminatedUnion("kind", [
   z.object({
+    kind: z.literal("actionBar"),
+    orientation: z.enum(["vertical", "horizontal"]).optional(),
+    queryHandlerId: z.string(),
+    refreshEventIds: z.array(z.string()).optional(),
+  }),
+  z.object({
     kind: z.literal("terminal"),
     resourceKind: z.string().optional(),
     sessionHandlerId: z.string(),
