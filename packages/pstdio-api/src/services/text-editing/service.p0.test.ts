@@ -44,6 +44,23 @@ test("selected source grants admit a different publisher without exposing unsele
   ).rejects.toMatchObject({ code: "invalid_frame" });
 });
 
+test("first open checks access at the room, including a read-only change since selection", async () => {
+  let accessReads = 0;
+  const f = await textEditingFixture({
+    onGrantAccess: () => {
+      accessReads++;
+    },
+  });
+  fixtures.push(f);
+  const address = await connect(f);
+  const grant = await f.text.request(address, { operation: "current" });
+  await writeFile(join(f.root, "read-only"), "");
+  const beforeOpen = accessReads;
+  const opened = await open(f, address, { grant });
+  expect(opened).toMatchObject({ snapshot: { editable: false } });
+  expect(accessReads).toBe(beforeOpen);
+});
+
 test("a copied grant or handle cannot cross member placements or projects", async () => {
   const f = await setup();
   const first = await connect(f);

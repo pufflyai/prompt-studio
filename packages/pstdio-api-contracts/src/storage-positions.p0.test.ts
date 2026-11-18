@@ -43,3 +43,28 @@ test("positions remain dense at either end and between concurrent neighbours", (
   expect(() => device.between(right, left)).toThrow();
   expect(() => device.between("invalid")).toThrow();
 });
+
+test("a long sequence of appends or prepends stays distinguishable in a bounded sort key", () => {
+  const device = createStoragePositions("9daeb78d-4914-406b-8408-1f2abb678073");
+  const prefixes = [new Set<string>(), new Set<string>()];
+  let first = device.between();
+  let last = first;
+  for (let i = 0; i < 5000; i++) {
+    first = device.between(undefined, first);
+    last = device.between(last);
+    prefixes[0]!.add(first.slice(0, 512));
+    prefixes[1]!.add(last.slice(0, 512));
+  }
+  expect(prefixes.map((keys) => keys.size)).toEqual([5000, 5000]);
+});
+
+test("open bounds accept old positions at the ends of the alphabet", () => {
+  const positions = createStoragePositions("device");
+  for (const bound of ["1", "f", "f".repeat(1200), `${"0".repeat(1200)}1`, "efffffff", "100000001"]) {
+    const earlier = positions.between(undefined, bound);
+    const later = positions.between(bound);
+    expect(earlier < bound && bound < later).toBe(true);
+    expect(positions.between(earlier, bound) < bound).toBe(true);
+    expect(positions.between(bound, later) > bound).toBe(true);
+  }
+});
