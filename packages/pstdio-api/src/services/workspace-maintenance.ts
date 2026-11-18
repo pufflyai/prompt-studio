@@ -5,7 +5,7 @@ import { join } from "node:path";
 /** File maintenance gates admission without inventing a workspace lifecycle transition. */
 export const createWorkspaceMaintenance = (directory?: string) => {
   const pending = new Map<string, Promise<unknown>>();
-  const owners = new AsyncLocalStorage<{ id: string; active: boolean }[]>();
+  const owners = new AsyncLocalStorage<{ active: boolean }[]>();
   const listeners = new Set<() => void>();
   const marker = (id: string) => (directory ? join(directory, encodeURIComponent(id)) : undefined);
   const begin = async (path: string | undefined) => {
@@ -23,7 +23,7 @@ export const createWorkspaceMaintenance = (directory?: string) => {
     const task = (pending.get(id) ?? Promise.resolve())
       .catch(() => {})
       .then(async () => {
-        const owner = { id, active: true };
+        const owner = { active: true };
         return owners.run([...inherited, owner], async () => {
           try {
             return await work();
@@ -44,8 +44,10 @@ export const createWorkspaceMaintenance = (directory?: string) => {
   };
   return {
     assertCanDelete: (id: string) => {
-      if (owners.getStore()?.some((owner) => owner.id === id && owner.active))
-        throw new Error("Workspace deletion cannot be nested in its own file maintenance.");
+      // A hook still owns its gate until it returns. Waiting on another busy
+      // gate from this scope can make the two owners wait on each other.
+      if (pending.has(id) && owners.getStore()?.some((owner) => owner.active))
+        throw new Error("Workspace deletion cannot be nested while the target has pending maintenance.");
     },
     isRunning: async (id: string) => {
       if (pending.has(id)) return true;

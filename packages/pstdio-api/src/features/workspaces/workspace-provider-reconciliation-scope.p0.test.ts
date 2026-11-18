@@ -155,9 +155,8 @@ test("a late ready resolution cannot overwrite a provider disabled during the ca
   const initial = reconcileProviderWorkspaces(deps, "project-1");
   await started.promise;
   enabled = false;
-  const disabled = reconcileProviderWorkspaces(deps, "project-1");
   release.resolve();
-  await Promise.all([initial, disabled]);
+  await initial;
   expect(workspace).toMatchObject({ provider_state: "provider_missing", root_path: "/owned/workspace" });
 });
 
@@ -237,7 +236,12 @@ test("queued restart recovery preserves a workspace cancelled while it waits for
   };
   const recovery = reconcileProviderWorkspaces(deps, "project-1");
   try {
-    await discovered.promise;
+    await Promise.race([
+      discovered.promise,
+      recovery.then(() => {
+        throw new Error("Recovery finished before it queued the workspace.");
+      }),
+    ]);
     await removeProviderWorkspaceBacking(deps, workspace);
     release.resolve();
     await Promise.all([maintenance, recovery]);

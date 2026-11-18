@@ -146,12 +146,6 @@ const reconcileStoredOperation = async (
   const operationId = workspace.provider_operation_id;
   if (!kind || !operationId) return false;
 
-  if (!workspace.provider_ref_json) {
-    const recovered = await recoverProviderReference(deps, workspace, handle, options);
-    if (!recovered?.provider_ref_json) return true;
-    return reconcileStoredOperation(deps, recovered, handle, options);
-  }
-
   if (kind === "cancel") {
     await reconcileCancellation(deps, workspace, handle, operationId, options);
     return true;
@@ -176,23 +170,12 @@ const reconcileStoredOperation = async (
   return true;
 };
 
-const reconcileWorkspace = async (
+const resolveReadyWorkspace = async (
   deps: WorkspacesRouteDeps,
   workspace: WorkspaceRecord,
+  handle: WorkspaceProviderHandle,
   options: ReconciliationOptions,
 ) => {
-  const handle = await findWorkspaceProvider(deps, {
-    projectId: workspace.project_id,
-    providerId: workspace.provider_id,
-    workspaceId: workspace.id,
-    workspaceDir: workspace.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined,
-  });
-  if (!handle) {
-    await updateReconciledProjection(deps, workspace, missingProviderPatch(workspace));
-    return;
-  }
-
-  if (await reconcileStoredOperation(deps, workspace, handle, options)) return;
   if (!workspace.provider_ref_json) return;
   const result = await runWorkspaceProviderOperation(
     handle,
@@ -217,6 +200,37 @@ const reconcileWorkspace = async (
     return;
   }
   await updateResult(deps, workspace, result);
+};
+
+const reconcileWorkspace = async (
+  deps: WorkspacesRouteDeps,
+  initial: WorkspaceRecord,
+  options: ReconciliationOptions,
+) => {
+  let workspace = initial;
+  try {
+    const handle = await findWorkspaceProvider(deps, {
+      projectId: workspace.project_id,
+      providerId: workspace.provider_id,
+      workspaceId: workspace.id,
+      workspaceDir: workspace.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined,
+    });
+    if (!handle) {
+      await updateReconciledProjection(deps, workspace, missingProviderPatch(workspace));
+      return;
+    }
+    if (workspace.provider_operation_kind && workspace.provider_operation_id && !workspace.provider_ref_json) {
+      const recovered = await recoverProviderReference(deps, workspace, handle, options);
+      if (!recovered?.provider_ref_json) return;
+      // Capture only the operation this pass actually obtained. Recovery can
+      // rotate the ID, and unrelated lifecycle changes must remain fenced out.
+      workspace = recovered;
+    }
+    if (!(await reconcileStoredOperation(deps, workspace, handle, options)))
+      await resolveReadyWorkspace(deps, workspace, handle, options);
+  } catch (error) {
+    await recordProviderRecoveryFailure(deps, workspace, error);
+  }
 };
 
 const needsRecoveryRetry = (workspace: WorkspaceRecord) =>
@@ -260,11 +274,7 @@ const reconcileProviderWorkspacePass = async (
         // previously discovered ready target cannot allocate files after its deletion.
         const workspace = await getLiveProviderWorkspace(deps, { id: candidate.id, project_id: projectId });
         if (!workspace || !needsProviderReconciliation(workspace)) return;
-        try {
-          await reconcileWorkspace(deps, workspace, options);
-        } catch (error) {
-          await recordProviderRecoveryFailure(deps, workspace, error);
-        }
+        await reconcileWorkspace(deps, workspace, options);
       }),
     ),
   );

@@ -64,7 +64,7 @@ test("queued provisioning leaves a deleted workspace directory removed", async (
     await listed.promise;
     releaseDeletion.resolve();
     await Promise.all([deletion, refresh, initial]);
-    expect((await app.deps.workspaceService.get(workspace.id))?.deleted_at).not.toBeNull();
+    expect(Date.parse((await app.deps.workspaceService.get(workspace.id))?.deleted_at ?? "")).not.toBeNaN();
     expect(existsSync(directory)).toBe(false);
   } finally {
     releaseDeletion.resolve();
@@ -134,7 +134,7 @@ test("deletions waiting for file writes leave capacity to delete another workspa
     releaseWriters.resolve();
     await Promise.all(operations);
     expect(progressed).toBe(true);
-    expect((await app.deps.workspaceService.get(independent.id))?.deleted_at).not.toBeNull();
+    expect(Date.parse((await app.deps.workspaceService.get(independent.id))?.deleted_at ?? "")).not.toBeNaN();
   } finally {
     removeIndependent.resolve();
     releaseWriters.resolve();
@@ -210,7 +210,6 @@ test("deleting a workspace drains restart resolution before its owned directory 
   const root = await mkdtemp(join(tmpdir(), "workspace-delete-recovery-"));
   const previousHome = process.env.PSTDIO_HOME;
   process.env.PSTDIO_HOME = root;
-  const app = await createTestApp();
   const entered = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   const removed = Promise.withResolvers<void>();
@@ -219,7 +218,10 @@ test("deleting a workspace drains restart resolution before its owned directory 
   let directory: string | undefined;
   let released = false;
   let removedBeforeRecoveryFinished = false;
+  let closeApp: (() => Promise<void>) | undefined;
   try {
+    const app = await createTestApp();
+    closeApp = app.close;
     const project = await app.deps.projectService.create({ name: "Recovered local provider" });
     const created = await app.deps.workspaceService.create({
       project_id: project.id,
@@ -286,14 +288,17 @@ test("deleting a workspace drains restart resolution before its owned directory 
     await Promise.all([recovery, deletion]);
     expect(removedBeforeRecoveryFinished).toBe(false);
     expect(existsSync(directory)).toBe(false);
-    expect((await get(created.id))?.deleted_at).not.toBeNull();
+    expect(Date.parse((await get(created.id))?.deleted_at ?? "")).not.toBeNaN();
   } finally {
     release.resolve();
     await Promise.allSettled([recovery, deletion]);
-    await app.close();
-    if (previousHome === undefined) delete process.env.PSTDIO_HOME;
-    else process.env.PSTDIO_HOME = previousHome;
-    await rm(root, { recursive: true, force: true });
+    try {
+      await closeApp?.();
+    } finally {
+      if (previousHome === undefined) delete process.env.PSTDIO_HOME;
+      else process.env.PSTDIO_HOME = previousHome;
+      await rm(root, { recursive: true, force: true });
+    }
   }
 });
 

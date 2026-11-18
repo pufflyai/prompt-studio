@@ -54,7 +54,11 @@ export default { commands: [{ id: "ordinary", ref: { kind: "command", id: "ordin
     await ctx.projectFiles.readText("revision.txt");
     if (input.revision === "missing") throw new Error("Choose an existing revision.");
   },
-  async resolve(ctx) { return result(await ctx.localDirectory()); },
+  async resolve(ctx) {
+    const directory = await ctx.localDirectory();
+    await directory.files.writeText("resolved.txt", directory.path);
+    return result(directory);
+  },
   async delete(ctx) { await (await ctx.localDirectory()).remove(); },
 }] };
 `;
@@ -138,7 +142,20 @@ test("an installed local provider prepares its directory before readiness and re
     revision: "review",
   });
   await handle.close();
+  const resolved = join(directory, "resolved.txt");
+  await rm(resolved, { force: true });
   handle = await openApp();
+  const deadline = Date.now() + 2000;
+  const readResolvedDirectory = () =>
+    readFile(resolved, "utf8").catch((error: NodeJS.ErrnoException) => {
+      if (error.code !== "ENOENT") throw error;
+    });
+  let resolvedDirectory = await readResolvedDirectory();
+  while (resolvedDirectory !== directory && Date.now() < deadline) {
+    await Bun.sleep(10);
+    resolvedDirectory = await readResolvedDirectory();
+  }
+  expect(resolvedDirectory).toBe(directory);
   const runtime = await findWorkspaceProvider(handle.deps, { projectId, providerId, workspaceId: workspace.id });
   expect(runtime).toBeDefined();
   // Catalog reload schedules the normal project setup queue. Join it before
@@ -147,18 +164,9 @@ test("an installed local provider prepares its directory before readiness and re
   expect(await handle.deps.workspaceService.get(workspace.id)).toMatchObject({
     initializing: false,
     setup_error: null,
-  });
-  expect(
-    await runWorkspaceProviderOperation(runtime!, (ctx) =>
-      runtime!.provider.resolve(ctx, {
-        projectId,
-        workspaceId: workspace.id,
-        providerRef: workspace.provider_ref_json,
-      }),
-    ),
-  ).toMatchObject({
-    executionTarget: { kind: "local", rootPath: directory },
-    providerRef: workspace.provider_ref_json,
+    provider_state: "ready",
+    root_path: directory,
+    provider_ref_json: workspace.provider_ref_json,
   });
   expect(await runtime!.context.workspaces.get(workspace.id)).toMatchObject({
     id: workspace.id,

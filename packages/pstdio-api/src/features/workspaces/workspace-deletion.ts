@@ -59,7 +59,7 @@ export const deleteWorkspace = (
     fireExtensionEventAsync?: typeof fireExtensionEventAsync;
   } = {},
 ) => {
-  // Reject a hook deleting its own target before it can join an already queued deletion.
+  // A maintenance owner must not join an already busy target's deletion queue.
   try {
     deps.workspaceService.maintenance.assertCanDelete(workspace.id);
   } catch (error) {
@@ -71,10 +71,10 @@ export const deleteWorkspace = (
     queues.set(deps.workspaceService, queue);
   }
   const removeOwnedWorkspace = async () => {
-    // Recheck after waiting for a slot: a provider may have recovered its reference.
+    // Capabilities and backing fields can change while waiting for the gate or a slot.
+    const current = await deps.workspaceService.get(workspace.id);
+    if (!current || current.project_id !== workspace.project_id) return;
     if (overrides.forget) {
-      const current = await deps.workspaceService.get(workspace.id);
-      if (!current) return;
       if (!current.deleted_at) {
         assertWorkspaceDeleteAllowed(current);
         if (
@@ -91,18 +91,19 @@ export const deleteWorkspace = (
       await finalizeWorkspaceDelete(deps, current, { forget: true });
       return;
     }
-    assertWorkspaceDeleteAllowed(workspace);
+    if (current.deleted_at) return;
+    assertWorkspaceDeleteAllowed(current);
     const remove = overrides.deleteProviderBackedWorkspace ?? deleteProviderBackedWorkspace;
-    const removed = await remove(deps, workspace);
-    await finalizeWorkspaceDelete(deps, workspace);
-    if (removed && workspace.root_path) {
-      const { anchors_json: _anchors, ...eventWorkspace } = { ...workspace, ...toExtensionWorkspace(workspace) };
+    const removed = await remove(deps, current);
+    await finalizeWorkspaceDelete(deps, current);
+    if (removed && current.root_path) {
+      const { anchors_json: _anchors, ...eventWorkspace } = { ...current, ...toExtensionWorkspace(current) };
       const fireRemoved = overrides.fireExtensionEventAsync ?? fireExtensionEventAsync;
-      fireRemoved(deps, workspace.project_id, worktreeEvents.removed, {
-        projectId: workspace.project_id,
-        worktreePath: workspace.root_path,
+      fireRemoved(deps, current.project_id, worktreeEvents.removed, {
+        projectId: current.project_id,
+        worktreePath: current.root_path,
         workspace: eventWorkspace,
-        workspaceId: workspace.id,
+        workspaceId: current.id,
       });
     }
   };
