@@ -173,6 +173,16 @@ const resolveDataTableFields = async (
       filter: EMPTY_VIEW_FILTER,
       sorts: [],
       settings: board.settings,
+      ...(board.body.queryMode === "paged"
+        ? {
+            page: {
+              limit: 1,
+              offset: 0,
+              fields: (board.body.columns ?? []).map(({ id }) => id),
+              search: "",
+            },
+          }
+        : {}),
     } satisfies DataTableRendererQueryParams),
   );
   if (!parsed.success) throw new BoardViewError("Table fields could not be resolved", 503);

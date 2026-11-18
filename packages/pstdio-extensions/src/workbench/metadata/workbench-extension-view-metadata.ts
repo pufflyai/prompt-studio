@@ -44,12 +44,22 @@ const resolveWebview = (input: ViewMetadataInput, view: ExtensionRuntime["views"
 const commandActions = <T extends { command: CommandRef }>(actions: readonly T[] | undefined, extensionId: string) =>
   actions?.map((action) => ({ ...action, command: commandRef(action.command, extensionId) }));
 
+const workbenchQueryMode = (mode: "paged" | "static" | undefined) => (mode === "paged" ? mode : undefined);
+
 const toNativeViewBody = (
   view: ExtensionRuntime["views"][number],
 ): Exclude<WorkbenchExtensionViewBody, { kind: "webview" }> => {
   const body = view.contribution.body as Exclude<ViewBody, { kind: "webview" }>;
   const handlers = body as typeof body & Record<string, unknown>;
-  const resourceKind = body.resourceKind ? normalizedRef(body.resourceKind, view.extensionId) : undefined;
+  if (body.kind === "actionBar") {
+    return {
+      kind: "actionBar",
+      orientation: body.orientation,
+      queryHandlerId: String(handlers.queryHandlerId),
+      refreshEventIds: refreshEventIds(body.refreshEvents, view.extensionId),
+    };
+  }
+  const resourceKind = normalizedResourceKind(body, view.extensionId);
   if (body.kind === "terminal") {
     return {
       kind: "terminal",
@@ -120,7 +130,7 @@ const toNativeViewBody = (
   if (body.kind === "dataTable") {
     return {
       kind: "dataTable",
-      queryMode: body.queryMode,
+      queryMode: workbenchQueryMode(body.queryMode),
       ...common,
       columns: body.columns,
       queryHandlerId: String(handlers.queryHandlerId),
@@ -143,7 +153,7 @@ const toNativeViewBody = (
   }
   return {
     kind: body.kind,
-    queryMode: body.queryMode,
+    queryMode: workbenchQueryMode(body.queryMode),
     initialPageSize: body.initialPageSize,
     ...common,
     attributes: body.attributes?.map((attribute) => ({
@@ -210,3 +220,6 @@ export const toViewRecord = (
     body: webview ? { kind: "webview", webview } : toNativeViewBody(view),
   };
 };
+
+const normalizedResourceKind = (body: Exclude<ViewBody, { kind: "webview" | "actionBar" }>, extensionId: string) =>
+  body.resourceKind ? normalizedRef(body.resourceKind, extensionId) : undefined;

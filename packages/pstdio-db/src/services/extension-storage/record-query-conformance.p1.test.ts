@@ -295,6 +295,8 @@ test("selective in-list pages probe the declared equality index after ordinary w
     sql`${recordScopeSql(owner, index)} AND ${predicateSql(index, where)}`,
     5,
     0,
+    undefined,
+    owner,
     where,
   );
   const evidence = JSON.stringify((await f.db.execute(sql`EXPLAIN (ANALYZE, FORMAT JSON) ${statement}`)).rows);
@@ -550,4 +552,66 @@ test("memory and database queries select a 500-row page", async () => {
     const last = await records.query({ index: "bulk", limit: 500, fields: ["rank"], cursor: first.cursor! });
     expect(last.records.map((record) => record.fields.rank)).toEqual([500]);
   }
+});
+
+test("revision-only queries validate fields and cursors without selecting resource rows", async () => {
+  const f = await fixture();
+  const memory = createMemoryStorage({ workbenchId: f.owner.workbenchId, extensionId: f.owner.extensionId }).records;
+  for (const records of [f.records, memory]) {
+    await records.defineIndexes([{ name: "items", fields: { title: { path: ["title"], type: "string" } } }]);
+    await records.commit({
+      operationId: "seed",
+      edits: ["one", "two"].map((recordId) => ({ recordId, replace: { title: recordId } })),
+    });
+    const first = await records.query({ index: "items", fields: ["title"], limit: 1 });
+    const checked = await records.query({ index: "items", fields: ["title"], limit: 0, cursor: first.cursor! });
+    expect(checked).toEqual({ revision: first.revision, records: [], cursor: null });
+    await expect(records.query({ index: "items", fields: ["missing"], limit: 0 })).rejects.toThrow();
+    await expect(records.query({ index: "items", limit: 0, cursor: "invalid" })).rejects.toThrow("cursor");
+    await records.commit({ operationId: "change", edits: [{ recordId: "one", set: { "/title": "Changed" } }] });
+    await expect(records.query({ index: "items", limit: 0, revision: first.revision })).rejects.toThrow("stale");
+  }
+});
+
+test("unfiltered record-ID pages stay bounded within an equality-indexed prefix", async () => {
+  const f = await fixture();
+  const index: StorageRecordIndex = {
+    name: "prefixed-status",
+    prefix: "z/",
+    fields: { status: { path: ["status"], type: "string" } },
+    equality: ["status"],
+  };
+  await f.records.defineIndexes([index]);
+  await f.records.commit({
+    operationId: "seed-prefixed-id-page",
+    edits: [
+      ...Array.from({ length: 1_000 }, (_, n) => ({
+        recordId: `a/${String(n).padStart(4, "0")}`,
+        replace: { status: "other" },
+      })),
+      ...Array.from({ length: 30 }, (_, n) => ({
+        recordId: `z/${String(n).padStart(4, "0")}`,
+        replace: { status: n % 2 ? "open" : "closed" },
+      })),
+    ],
+  });
+  await f.db.execute(sql`ANALYZE storage_current_records`);
+  const page = await f.records.query({ index: index.name, limit: 3 });
+  expect(page.records.map(({ recordId }) => recordId)).toEqual(["z/0000", "z/0001", "z/0002"]);
+  const result = await f.db.execute(
+    sql`EXPLAIN (ANALYZE, FORMAT JSON) ${recordPageSql(index, ["status"], recordScopeSql(f.owner, index), 4)}`,
+  );
+  const plan = JSON.stringify(result.rows);
+  const scans: number[] = [];
+  const visit = (node: Record<string, unknown>) => {
+    if (String(node["Node Type"]).includes("Scan"))
+      scans.push(
+        Number(node["Actual Rows"]) * Number(node["Actual Loops"]) + Number(node["Rows Removed by Filter"] ?? 0),
+      );
+    for (const child of (node.Plans ?? []) as Record<string, unknown>[]) visit(child);
+  };
+  visit(JSON.parse(plan)[0]["QUERY PLAN"][0].Plan);
+  expect(scans.length).toBeGreaterThan(0);
+  expect(Math.max(...scans)).toBeLessThanOrEqual(4);
+  expect(plan).not.toContain("Seq Scan");
 });

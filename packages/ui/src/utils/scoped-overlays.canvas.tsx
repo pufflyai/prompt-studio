@@ -1,4 +1,4 @@
-import { Button, Stack } from "@chakra-ui/react";
+import { Button, Input, Stack } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ListRow } from "@/components/list-row/list-row";
@@ -77,6 +77,8 @@ const TriggerToggles = () => {
           </ResourceActionMenu>
           <ListRow id="row-menu" label="Row menu" menuItems={[{ id: "action", label: "Row action" }]} />
           <Button>Outside</Button>
+          <Input aria-label="Outside title" defaultValue="Document title" />
+          <iframe title="External editor" srcDoc='<label>Editor title <input aria-label="Editor title" /></label>' />
         </Stack>
       </UiScopeRoot>
     </UiScopeProvider>
@@ -86,7 +88,8 @@ const TriggerToggles = () => {
 export default {
   title: "Design system/Components/Overlays/Trigger toggles",
   component: TriggerToggles,
-  description: "Click a trigger to open its overlay. Click the same trigger again to close it.",
+  description:
+    "Click a trigger again to close its overlay. Clicking an outside input closes the menu and keeps input focus.",
 } satisfies CanvasMeta<typeof TriggerToggles>;
 
 export const Buttons: CanvasFrame<typeof TriggerToggles> = {};

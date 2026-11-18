@@ -109,7 +109,7 @@ export const createPlannerUi = (baseUrl: string) => {
     body: {
       kind: "webview",
       entry: packageAsset("./src/views/ticket-review-requests.tsx", baseUrl),
-      capabilities: ["commands.execute"],
+      capabilities: ["commands.execute", "commands.query"],
     },
   });
   const tickets = defineView({

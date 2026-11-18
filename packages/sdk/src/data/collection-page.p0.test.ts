@@ -178,3 +178,58 @@ test("rebinding an index between counts and rows rejects the mixed selection", a
   };
   await expect(readCollectionPage(storage, { index: "items" })).rejects.toThrow("stale");
 });
+
+test("grouped views count the same selection once when no search changes it", async () => {
+  const storage = await fixture();
+  let aggregates = 0;
+  const aggregate = storage.records.aggregate;
+  storage.records.aggregate = async (query) => {
+    aggregates++;
+    return aggregate(query);
+  };
+  const result = await readCollectionPage(storage, {
+    index: "foobar",
+    fields: ["rank"],
+    groups: [{ field: "status", indexField: "state" }],
+  });
+  expect(result.page.total).toBe(240);
+  expect(result.page.groups.map(({ count }) => count)).toEqual([120, 120]);
+  expect(aggregates).toBe(1);
+});
+
+test("empty collection selections validate the request without selecting resource rows", async () => {
+  const storage = await fixture();
+  const query = storage.records.query;
+  let limit: number | undefined;
+  storage.records.query = (input) => {
+    limit = input.limit;
+    return query(input);
+  };
+  const selection = {
+    index: "foobar",
+    fields: ["title"],
+    where: { field: "state", op: "eq" as const, value: "absent" },
+  };
+  expect((await readCollectionPage(storage, selection)).records).toEqual([]);
+  expect(limit).toBe(0);
+  await expect(readCollectionPage(storage, { ...selection, fields: ["unknown"] })).rejects.toThrow();
+  await expect(
+    readCollectionPage(storage, {
+      ...selection,
+      page: { limit: 100, offset: 0, fields: ["title"], search: "", cursor: "invalid" },
+    }),
+  ).rejects.toThrow("cursor");
+});
+
+test("empty collection selections still reject invalid page limits", async () => {
+  const storage = await fixture();
+  for (const limit of [501, -1, 1.5, Number.NaN]) {
+    await expect(
+      readCollectionPage(storage, {
+        index: "foobar",
+        where: { field: "state", op: "eq", value: "absent" },
+        page: { limit, offset: 0, fields: [], search: "" },
+      }),
+    ).rejects.toThrow("limit");
+  }
+});

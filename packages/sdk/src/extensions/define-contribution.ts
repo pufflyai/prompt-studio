@@ -34,6 +34,7 @@ import type {
   WorkspaceTypeProvider,
 } from "pstdio-api-contracts/extension-kernel";
 import { defineSlot, validatePageParamDefinitions } from "pstdio-api-contracts/extension-kernel";
+import { collectionQueryIndex } from "./collection-view";
 
 const defineContribution =
   <Kind extends ContributionKind>(_kind: Kind) =>
@@ -69,9 +70,22 @@ type NoExtraFields<Definition, Contract> = Definition & ExactOptions<Definition,
 
 type ViewDefinition = Omit<ViewContribution, "ref">;
 
-export const defineView = defineContribution("view") as <const Definition extends ViewDefinition>(
+const createView = (definition: ViewDefinition) => {
+  const body = definition.body;
+  if (body.kind !== "kanban" && body.kind !== "resourceList" && body.kind !== "dataTable")
+    return defineContribution("view")(definition);
+  if (body.queryMode === "static" && (!Number.isInteger(body.maxRows) || body.maxRows! < 1 || body.maxRows! > 500))
+    throw new Error("Static collection views require maxRows between 1 and 500");
+  const queryMode = body.queryMode ?? (collectionQueryIndex(body.query) ? "paged" : undefined);
+  return defineContribution("view")({ ...definition, body: { ...body, ...(queryMode ? { queryMode } : {}) } });
+};
+export const defineView = createView as <const Definition extends ViewDefinition>(
   definition: NoExtraFields<Definition, ViewDefinition>,
-) => Definition & ContributionDefinition<"view">;
+) => Definition &
+  ContributionDefinition<"view"> &
+  (Definition["body"] extends { kind: "kanban" | "resourceList" | "dataTable" }
+    ? { body: Definition["body"] & { queryMode?: "paged" | "static" } }
+    : unknown);
 
 type ViewMenuDefinition = Omit<ViewMenuContribution, "ref">;
 export const defineViewMenu = defineContribution("view-menu") as <const Definition extends ViewMenuDefinition>(

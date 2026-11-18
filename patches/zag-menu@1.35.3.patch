@@ -18,6 +18,14 @@ diff --git a/dist/menu.machine.mjs b/dist/menu.machine.mjs
        // whether the trigger item is the active item
        isTriggerItemHighlighted: ({ event, scope, computed }) => {
          const target = event.target ?? scope.getById(computed("highlightedId"));
+@@ -755,6 +756,6 @@
+       },
+       focusTrigger({ scope, context, event }) {
+-        if (context.get("isSubmenu") || context.get("anchorPoint") || event.restoreFocus === false) return;
++        if (context.get("isSubmenu") || context.get("anchorPoint") || (event.restoreFocus ?? event.previousEvent?.restoreFocus) === false) return;
+         queueMicrotask(() => dom.getTriggerEl(scope)?.focus({ preventScroll: true }));
+       },
+       highlightMatchedItem({ scope, context, event, refs }) {
 diff --git a/dist/menu.machine.js b/dist/menu.machine.js
 --- a/dist/menu.machine.js
 +++ b/dist/menu.machine.js
@@ -38,3 +46,11 @@ diff --git a/dist/menu.machine.js b/dist/menu.machine.js
        // whether the trigger item is the active item
        isTriggerItemHighlighted: ({ event, scope, computed }) => {
          const target = event.target ?? scope.getById(computed("highlightedId"));
+@@ -777,6 +778,6 @@
+       },
+       focusTrigger({ scope, context, event }) {
+-        if (context.get("isSubmenu") || context.get("anchorPoint") || event.restoreFocus === false) return;
++        if (context.get("isSubmenu") || context.get("anchorPoint") || (event.restoreFocus ?? event.previousEvent?.restoreFocus) === false) return;
+         queueMicrotask(() => dom.getTriggerEl(scope)?.focus({ preventScroll: true }));
+       },
+       highlightMatchedItem({ scope, context, event, refs }) {

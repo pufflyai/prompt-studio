@@ -19,12 +19,15 @@ export const getProjectExtensionQueries = (projectId: string | undefined, input:
   const root = input.queries ?? getDashboardScopedQueries(owner);
   const queries = root.forScope({ projectId, extensionId: "pstdio" });
   const dependsOn = [viewDataEvents.extensionCatalogChanged.id];
+  // Host catalogs aggregate every extension; individual file reads keep their own extension scope.
+  const dependency = { extensionId: undefined };
   return {
     get metadata() {
       return queries.query({
         id: "extensions.metadata",
         params: input.namespace ?? null,
         dependsOn,
+        dependency,
         read: (signal) => input.loadMetadata?.(projectId!) ?? client.metadata(projectId!, { signal }),
       });
     },
@@ -33,6 +36,7 @@ export const getProjectExtensionQueries = (projectId: string | undefined, input:
         id: "extensions.appearance",
         params: input.namespace ?? null,
         dependsOn,
+        dependency,
         read: (signal) => input.loadAppearance?.(projectId!) ?? client.listAppearance(projectId!, { signal }),
       });
     },
@@ -40,6 +44,7 @@ export const getProjectExtensionQueries = (projectId: string | undefined, input:
       return queries.query({
         id: "extensions.list",
         dependsOn,
+        dependency,
         read: (signal) => client.listProject(projectId!, { signal }),
       });
     },
@@ -48,6 +53,7 @@ export const getProjectExtensionQueries = (projectId: string | undefined, input:
         id: "extensions.contributions",
         params: instanceId ?? null,
         dependsOn,
+        dependency,
         read: (signal) => client.contributions(projectId!, instanceId!, { signal }),
       }),
     marketplace: (installName?: string) =>
@@ -55,6 +61,7 @@ export const getProjectExtensionQueries = (projectId: string | undefined, input:
         id: "extensions.marketplace",
         params: installName ?? null,
         dependsOn,
+        dependency,
         read: (signal) => client.marketplaceContributions(projectId!, installName!, { signal }),
       }),
     settings: (instanceId?: string) =>
@@ -62,6 +69,7 @@ export const getProjectExtensionQueries = (projectId: string | undefined, input:
         id: "extensions.settings",
         params: instanceId ?? null,
         dependsOn,
+        dependency,
         read: (signal) => client.projectSettings.all(projectId!, instanceId!, { signal }),
       }),
   };

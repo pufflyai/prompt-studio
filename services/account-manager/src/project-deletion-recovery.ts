@@ -41,17 +41,22 @@ export const captureProjectDeletionReceipts = async (tx: ManagerTransaction) => 
 };
 
 export const restoreProjectDeletionReceipts = async (tx: ManagerTransaction, receipts: Receipt[]) => {
-  const known = await captureProjectDeletionReceipts(tx);
-  const operations = new Map(known.map((row) => [projectScope(row.accountId, row.workbenchId), row.operationId]));
+  const fields = {
+    accountId: projectDeletions.accountId,
+    workbenchId: projectDeletions.workbenchId,
+    operationId: projectDeletions.operationId,
+    state: projectDeletions.state,
+  };
+  const known = await tx.select(fields).from(projectDeletions);
+  const retired = new Map(known.map((row) => [projectScope(row.accountId, row.workbenchId), row]));
   for (const row of receipts) {
-    const scope = projectScope(row.accountId, row.workbenchId);
-    const current = operations.get(scope);
-    if (current && current !== row.operationId) throw new Error("Manager snapshot conflicts with a deletion operation");
-    operations.set(scope, row.operationId);
+    const current = retired.get(projectScope(row.accountId, row.workbenchId));
+    if (current && current.operationId !== row.operationId)
+      throw new Error("Manager snapshot conflicts with a deletion operation");
   }
   const batchSize = 1_000;
   for (let offset = 0; offset < receipts.length; offset += batchSize) {
-    await tx
+    const changed = await tx
       .insert(projectDeletions)
       .values(
         receipts.slice(offset, offset + batchSize).map((row) => ({
@@ -63,15 +68,23 @@ export const restoreProjectDeletionReceipts = async (tx: ManagerTransaction, rec
       .onConflictDoUpdate({
         target: [projectDeletions.accountId, projectDeletions.workbenchId],
         set: {
-          state: "completed",
+          state: sql`excluded.state`,
           completedAt: sql`excluded."completedAt"`,
           delivery: sql`greatest(excluded.delivery, ${projectDeletions.delivery})`,
         },
-        setWhere: sql`excluded.state = 'completed' AND ${projectDeletions.state} <> 'completed'`,
-      });
+        // A failure closes its delivery until an explicit retry advances the number.
+        setWhere: sql`${projectDeletions.state} <> 'completed' AND (
+          excluded.state = 'completed'
+          OR excluded.delivery > ${projectDeletions.delivery}
+          OR (excluded.delivery = ${projectDeletions.delivery}
+            AND excluded.state = 'needs-attention' AND ${projectDeletions.state} = 'deleting')
+        )`,
+      })
+      .returning(fields);
+    for (const row of changed) retired.set(projectScope(row.accountId, row.workbenchId), row);
   }
   // An imported receipt is authoritative over both existing content authority and older snapshot rows.
-  if (operations.size > 0) {
+  if (retired.size > 0) {
     await tx.delete(workbenches).where(
       exists(
         tx
@@ -100,5 +113,5 @@ export const restoreProjectDeletionReceipts = async (tx: ManagerTransaction, rec
       ),
     );
   }
-  return operations;
+  return retired;
 };
