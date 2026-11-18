@@ -8,7 +8,7 @@ import { enqueueCatalogExtensions } from "./catalog-installation";
 import { writeExtension } from "./default-extensions-test-fixtures";
 import { packagedExtensionCatalog } from "./extension-catalog";
 
-test("catalog selection uses its configured catalog identity without evaluating unrelated installed code", async () => {
+test("catalog selection enables its configured identity while unrelated discovery is blocked", async () => {
   const root = await mkdtemp(join(tmpdir(), "onboarding-selected-tool-"));
   const previous = {
     home: process.env.PSTDIO_HOME,
@@ -28,12 +28,12 @@ test("catalog selection uses its configured catalog identity without evaluating 
       ),
     }),
   );
-  const entered = Promise.withResolvers<void>();
+  const entered = Promise.withResolvers<AbortSignal>();
   const release = Promise.withResolvers<void>();
   const gate = Bun.serve({
     port: 0,
-    async fetch() {
-      entered.resolve();
+    async fetch(request) {
+      entered.resolve(request.signal);
       await release.promise;
       return new Response("ready");
     },
@@ -53,13 +53,13 @@ test("catalog selection uses its configured catalog identity without evaluating 
       join(unrelated, "extension.ts"),
       `await fetch(${JSON.stringify(gate.url.href)}); export default {};`,
     );
+    // The root watcher owns discovery independently of a catalog job.
+    const discovery = await entered.promise;
     await enqueueCatalogExtensions(handle.deps.extensionInstallations, ["harness-codex"], project.id);
     const job = handle.deps.extensionInstallations.list().find((job) => job.projectId === project.id)!;
     expect(job.extensionId).toBe("pstdio.custom-codex");
-    const completed = handle.deps.extensionInstallations.wait(job.id);
-    expect(await Promise.race([completed.then(() => "enabled"), entered.promise.then(() => "unrelated")])).toBe(
-      "enabled",
-    );
+    await handle.deps.extensionInstallations.wait(job.id);
+    expect(discovery.aborted).toBe(false);
     const extensions = await handle.deps.extensionService.listProjectExtensionInstances(project.id);
     expect(
       extensions.find(({ installedSource }) => installedSource.extension_id === "pstdio.custom-codex")?.instance
