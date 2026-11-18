@@ -47,6 +47,7 @@ test("catalog selection enables its configured identity while unrelated discover
     });
     expect(created.status).toBe(201);
     const project = await created.json();
+    await handle.extensionsReady;
     const unrelated = join(root, "unrelated");
     writeExtension(unrelated, "unrelated");
     await writeFile(

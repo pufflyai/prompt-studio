@@ -1,5 +1,6 @@
-import { and, eq, isNotNull, isNull, lte } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import type { StateEnvelope, UpdateEnvelope } from "pstdio-sync-contracts";
+import { reservationKey, reservationLock } from "../assets/object-reservations";
 import type { RelayLimits } from "../limits";
 import {
   admitWrite,
@@ -15,6 +16,7 @@ import { type DocumentAddress, documentWhere, stateWhere, updateWhere } from "./
 import { createDocumentReads, stateInfo } from "./document-reads";
 import { syncDocuments, syncObjectDeletions, syncStates, syncUpdates } from "./document-schema";
 import type { PayloadObjects } from "./payloads";
+import type { createProjectAccess } from "./project-access";
 
 export type { DocumentAddress } from "./document-address";
 
@@ -28,6 +30,7 @@ export interface DocumentChange extends DocumentAddress {
 export interface SyncDocumentsOptions {
   connection: ReturnType<typeof connectRelay>;
   payloads: PayloadObjects;
+  access: ReturnType<typeof createProjectAccess>;
   limits: RelayLimits;
   changed: (change: DocumentChange) => void;
 }
@@ -96,28 +99,43 @@ const retire = async (
     .where(and(updateWhere(address), lte(syncUpdates.sequence, through), isNull(syncUpdates.coveredAt)));
 };
 
-export const createSyncDocuments = ({ connection, payloads, limits, changed }: SyncDocumentsOptions) => {
-  // Cleanup deletes queued bytes only when no row points at them, so a commit whose reply was lost is safe.
-  const forget = (objectKey: string) =>
-    connection.run((db) => db.insert(syncObjectDeletions).values({ objectKey }).onConflictDoNothing()).catch(() => {});
-  // Bytes go to object storage first, so a row only ever points at complete bytes.
-  const store = async <T extends { stored: boolean }>(
+export const createSyncDocuments = ({ connection, payloads, access, limits, changed }: SyncDocumentsOptions) => {
+  // Claim the provider reservation before uploading bytes. A lost Create leaves no
+  // document address in storage. The cleanup sweep shares the reservation lock.
+  const store = <T extends { stored: boolean }>(
+    projectKey: string,
     objectKey: string,
     bytes: Uint8Array,
     signal: AbortSignal | undefined,
     commit: (transaction: RelayTransaction) => Promise<T>,
-  ) => {
-    await payloads.put(objectKey, bytes, signal);
-    let result: T;
-    try {
-      result = await connection.run((db) => db.transaction(commit), signal);
-    } catch (error) {
-      await forget(objectKey);
-      throw error;
-    }
-    if (!result.stored) await forget(objectKey);
-    return result;
-  };
+  ) =>
+    access.write(
+      projectKey,
+      async () => {
+        const uploadId = await connection.run(
+          (db) =>
+            db.transaction(async (tx) => {
+              await tx.execute(sql`SELECT pg_advisory_xact_lock(${reservationLock(objectKey)})`);
+              const multipartId = await payloads.reserve(objectKey);
+              await tx.insert(syncObjectDeletions).values({ objectKey, projectKey, multipartId });
+              return multipartId;
+            }),
+          signal,
+        );
+        await payloads.put(objectKey, uploadId, bytes);
+        return connection.run(
+          (db) =>
+            db.transaction(async (tx) => {
+              const result = await commit(tx);
+              if (result.stored)
+                await tx.delete(syncObjectDeletions).where(eq(syncObjectDeletions.objectKey, objectKey));
+              return result;
+            }),
+          signal,
+        );
+      },
+      signal,
+    );
 
   return {
     ...createDocumentReads(connection, payloads, limits),
@@ -126,8 +144,8 @@ export const createSyncDocuments = ({ connection, payloads, limits, changed }: S
     async appendUpdate(address: DocumentAddress, caller: SyncCaller, envelope: UpdateEnvelope, signal?: AbortSignal) {
       const bytes = decode(envelope.payload, limits.maxUpdateBytes);
       const now = new Date();
-      const objectKey = payloads.key(address.projectKey, address.documentId, "updates");
-      const result = await store(objectKey, bytes, signal, async (transaction) => {
+      const objectKey = reservationKey();
+      const result = await store(address.projectKey, objectKey, bytes, signal, async (transaction) => {
         await admitWrite(transaction, address.projectKey, caller.accountId, now);
         const document = await lockDocument(transaction, address);
         const [duplicate] = await transaction
@@ -167,8 +185,8 @@ export const createSyncDocuments = ({ connection, payloads, limits, changed }: S
       const bytes = decode(envelope.payload, limits.maxStateBytes);
       decode(envelope.summary, limits.maxSummaryBytes);
       const now = new Date();
-      const objectKey = payloads.key(address.projectKey, address.documentId, "states");
-      const result = await store(objectKey, bytes, signal, async (transaction) => {
+      const objectKey = reservationKey();
+      const result = await store(address.projectKey, objectKey, bytes, signal, async (transaction) => {
         await admitWrite(transaction, address.projectKey, caller.accountId, now);
         const document = await lockDocument(transaction, address);
         const { current, retry } = await requireReplaceable(transaction, address, document, envelope);

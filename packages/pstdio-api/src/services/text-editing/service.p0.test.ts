@@ -27,6 +27,23 @@ const open = async (
   return f.text.request(connection, { operation: "open", memberId, input } as never);
 };
 
+test("a selected opening returns the admitted room and binds it to its project", async () => {
+  const f = await setup();
+  const scope = { kind: "placement", viewId: editorView, target: selected };
+  const memberId = crypto.randomUUID();
+  const { token, opened } = await f.text.connect("project-1", scope, { memberId, active: false });
+  expect(opened?.snapshot.editable).toBe(true);
+  const snapshot = { operation: "snapshot" as const, handle: opened!.handle };
+  await expect(f.text.request({ projectId: "other", token }, snapshot)).rejects.toMatchObject({
+    code: "grant_invalid",
+  });
+  expect((await f.text.request({ projectId: "project-1", token }, snapshot)).seedId).toBe(opened!.snapshot.seedId);
+  await f.text.disconnect({ projectId: "project-1", token });
+  await expect(
+    f.text.connect("project-1", { kind: "placement", viewId: editorView }, { memberId, active: true }),
+  ).rejects.toMatchObject({ code: "grant_invalid" });
+});
+
 test("selected source grants admit a different publisher without exposing unselected source ownership", async () => {
   const f = await setup();
   const connection = await connect(f);

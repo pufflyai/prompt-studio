@@ -164,6 +164,8 @@ const page = await ctx.storage.records.query({
 const values = await readCollectionRecords(ctx.storage, page.records.map(({ recordId }) => recordId));
 ```
 
+A storage index can declare `alternateOrders` for common nondefault page sorts, such as newest first with a stable position tie-breaker. The host maintains each order on writes. Use `countBy` for up to four low-cardinality derived scalar fields, such as archived state and status. Core maintains exact counts for their combinations, including changes to resource identity membership. Eligible count and group queries read those combinations at the same revision as the page. Other filters, metrics and oversized group values use the ordinary aggregate. Index installation builds this data once for existing records. Additional orders and count dimensions consume disk space and increase write work.
+
 `readCollectionPage(ctx.storage, selection)` from `@pstdio/sdk/data` combines a
 bounded indexed page with global view counts. Declare `index`, selected `fields`,
 the complete filter as `where`, optional `search` and collapsed-group exclusion

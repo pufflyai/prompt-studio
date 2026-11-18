@@ -45,10 +45,10 @@ export const StatusItemPopover = (props: StatusItemPopoverProps) => {
             maxH="70dvh"
             overflow="hidden"
           >
-            {/* The webview scrolls itself, so it can keep its own header in place and its scrollbar at the edge. */}
+            {/* Give the guest one bounded viewport to measure. The frame then uses its reported height. */}
             <Popover.Body minH="0" display="flex" flexDirection="column" css={{ "& iframe": { maxHeight: "70dvh" } }}>
               <ViewActivityContext value={open}>
-                <WorkbenchWidgetHost workbench={workbench} region="main" placement={detail} sizing="content-height" />
+                <WorkbenchWidgetHost workbench={workbench} region="main" placement={detail} sizing="bounded-height" />
               </ViewActivityContext>
             </Popover.Body>
           </Popover.Content>
