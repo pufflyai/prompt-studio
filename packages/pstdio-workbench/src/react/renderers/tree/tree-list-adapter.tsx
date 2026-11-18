@@ -23,6 +23,7 @@ import {
 import { WorkbenchShortcutHint } from "../../keybindings/shortcut-hint";
 import { createWorkbenchResourceActions } from "../../menus/resource-actions";
 import { ActivityDot } from "../../resource-changes/activity-dot";
+import { resourceChangesFor } from "../../resource-changes/change-store";
 import { WorkbenchIcon } from "../../shared/icon";
 import { createTreeActionItems, createTreeContextMenuItems, type TreeActionParamsRequest } from "./tree-actions";
 
@@ -206,14 +207,15 @@ const toTreeListNode = (
     }),
     get endContent() {
       const original = resolveTreeNodeEndContent(node, resource);
-      const existing = resource ? (
-        <>
-          {original}
-          <ActivityDot workbench={context.workbench} resource={resource} />
-        </>
-      ) : (
-        original
-      );
+      const existing =
+        resource && resourceChangesFor(context.workbench)?.tracks(resource) ? (
+          <>
+            {original}
+            <ActivityDot workbench={context.workbench} resource={resource} />
+          </>
+        ) : (
+          original
+        );
       const action =
         node.target ?? (node.commandId ? { kind: "command" as const, commandId: node.commandId } : undefined);
       return action ? (
