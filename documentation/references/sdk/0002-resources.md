@@ -200,7 +200,6 @@ remote workspace memberships. Session title `search` is a literal,
 case-insensitive substring applied before the limit. Each query defaults to 50
 rows and clamps its limit to 1–200. Resource-link pages default to 100 and cap at 100.
 
-*Updated at: 2026-11-14*
 
 ## Changed since last seen
 
@@ -218,3 +217,5 @@ For example, a publishing extension can use its publication sequence. Editing a 
 To integrate a content viewer, call `await ctx.resources.observeChange?.(resource, stamp)` from the owner command after the authorized read. Return the resulting receipt with the content. A chat renderer returns it in `observedChange`. A webview declares `resources.changes.observed` and calls `host.call("resources.changes.observed", { receipt })` after rendering the content, passing `null` when it clears the content. The host checks focus and resource identity. The receipt carries the observed revision even if a newer revision is already available.
 
 The first observation sets a quiet baseline. Later acknowledgements advance the reader’s position monotonically. Each account owns its baselines in its personal sync space. Signed-out use has a local baseline. Use `client.resourceChanges.query`, `read` and `acknowledge` for programmatic access. A read or a list query alone leaves the baseline untouched.
+
+*Updated at: 2026-11-18*
