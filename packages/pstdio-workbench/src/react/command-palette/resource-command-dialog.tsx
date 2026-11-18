@@ -1,4 +1,5 @@
-import { AlertMessage, Palette, type PaletteEntry } from "@pstdio/ui";
+import { Box } from "@chakra-ui/react";
+import { ActionErrorSlot, AlertMessage, Palette, type PaletteEntry } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchActionErrors } from "../notifications/action-errors";
@@ -90,10 +91,15 @@ const ResourceCommandForm = ({ workbench, request, param, onClose }: ResourceCom
         placeholder="Search resources"
         inputIcon={<WorkbenchIcon name="Search" />}
         footerStart={
-          <>
-            {error ? <AlertMessage status="error" title={error} role="alert" /> : null}
-            <WorkbenchActionErrors workbench={workbench} target="command-palette" />
-          </>
+          <Box position="relative" width="full" minW="2xs">
+            {error ? (
+              <ActionErrorSlot edge="above">
+                <AlertMessage compact status="error" title={error} onClose={() => setError(undefined)} />
+              </ActionErrorSlot>
+            ) : (
+              <WorkbenchActionErrors workbench={workbench} target="command-palette" edge="above" />
+            )}
+          </Box>
         }
         footerEnd={submitting ? <span role="status">Running…</span> : undefined}
         emptyLabel={loading ? "Loading resources…" : "No resources found."}

@@ -283,12 +283,12 @@ test.each([
     const pending = forkSession(handle.deps, source.id);
     const outcome = pending.then(
       () => "created",
-      (error: Error) => error.message,
+      (error: { status?: number }) => error.status,
     );
     await copying.promise;
     await handle.deps.workspaceService.softDelete(workspace.id);
     copied.resolve();
-    expect(await outcome).toBe("The workspace is not ready.");
+    expect(await outcome).toBe(409);
     expect(await handle.deps.sessionService.list(project.id)).toHaveLength(1);
   } finally {
     copied.resolve();

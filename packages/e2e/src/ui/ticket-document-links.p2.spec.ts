@@ -7,6 +7,9 @@ import { uiOrigin as apiBase } from "../ui-server";
 import { prepareDashboard } from "./helpers/workspace-files";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
+// Whole-case allowance includes cold project/tool preparation and owned cleanup (PS-1232).
+test.setTimeout(120_000);
+
 test("saved ticket document links survive copy, reload, history and rename", async ({
   page,
   request,

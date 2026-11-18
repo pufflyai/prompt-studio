@@ -160,7 +160,9 @@ export type DataTableRendererRowActivationHandler = RendererCallback<{ row: Data
 
 export interface DataTableRendererContribution extends RendererContributionBase {
   /** Opt in to bounded provider-owned filtering, sorting, search and paging. */
-  queryMode?: "paged";
+  queryMode?: "paged" | "static";
+  /** Required for static providers: an explicit maximum, at most 500 rows. */
+  maxRows?: number;
   toolbarActions?: ViewToolbarAction[];
   columns?: DataTableRendererColumn[];
   query: RendererCallback<DataTableRendererQueryParams, DataTableRendererQueryResult>;

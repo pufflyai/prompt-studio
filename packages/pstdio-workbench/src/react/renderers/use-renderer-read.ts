@@ -1,6 +1,6 @@
 import { PstdioConnectionError } from "@pstdio/sdk/client";
 import type { QueryDependency, QueryScope } from "@pstdio/sdk/extensions";
-import { startTransition, useEffect, useRef, useState } from "react";
+import { type RefObject, startTransition, useEffect, useRef, useState } from "react";
 import type { Disposable, RendererReadBinding, WorkbenchCore } from "../../core";
 import { createRendererMutationBinding } from "./renderer-mutations";
 import { useWorkbenchConnection } from "./workbench-connection-provider";
@@ -35,6 +35,27 @@ interface ReadState<T> {
   error?: Error;
 }
 
+// Navigation can settle as soon as its external store changes. Resume a visible
+// placement after React commits that change and disposes any departing binding.
+const useRefreshHold = (bindingRef: RefObject<RendererReadBinding | undefined>) => {
+  const releases = useRef<Array<() => void>>([]);
+  const [revision, setRevision] = useState(0);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: The revision commits completed holds.
+  useEffect(() => {
+    for (const release of releases.current.splice(0)) release();
+  }, [revision]);
+  return () => {
+    const binding = bindingRef.current;
+    if (!binding) return undefined;
+    const release = binding.hold();
+    return () => {
+      if (bindingRef.current !== binding) return release();
+      releases.current.push(release);
+      setRevision((current) => current + 1);
+    };
+  };
+};
+
 export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
   const { workbench, ownerKey, queryKey, refreshKey, enabled = true } = options;
   const connected = useWorkbenchConnection();
@@ -61,6 +82,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
   const mutations = useRef(initialMutations);
   const saveQueue = useRef(Promise.resolve());
   const readBinding = useRef<RendererReadBinding | undefined>(undefined);
+  const holdRefresh = useRefreshHold(readBinding);
   useEffect(() => {
     callbacks.current = options;
   });
@@ -110,15 +132,13 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     const refresh = (reason?: "retry" | "observe") => {
       clearReconnectTimer();
       if (owner.pending()) return Promise.resolve();
-      setState((previous) =>
-        previous.queryKey === identity
-          ? { ...previous, loading: true, error: undefined }
-          : {
-              queryKey: identity,
-              value: warm?.data,
-              loading: warm?.data === undefined,
-            },
-      );
+      setState((previous) => {
+        if (previous.queryKey !== identity)
+          return { queryKey: identity, value: warm?.data, loading: warm?.data === undefined };
+        // Event-driven refreshes retain the loaded view too. Reconciliation is not another page load.
+        if (reason === "observe" && previous.value !== undefined && !previous.error) return previous;
+        return { ...previous, loading: true, error: undefined };
+      });
       const current = callbacks.current;
       const revision = owner.revision();
       const request = Symbol();
@@ -209,6 +229,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
     error: connectionLost ? undefined : current.error?.message,
     loading: current.loading || (connectionLost && current.value === undefined),
     retry: () => retryRef.current?.() ?? Promise.resolve(),
+    holdRefresh,
     mutate: (update: (value: T) => T, save: () => Promise<void> | void) => {
       const owner = mutations.current;
       const finishRead = workbench.views.reads.holdForMutation({
@@ -219,7 +240,11 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
       });
       const resume = readBinding.current?.hold();
       const operation = owner.begin(update);
-      const publish = () => setState((previous) => ({ ...previous, value: owner.value() }));
+      const publish = () =>
+        setState((previous) => {
+          const value = owner.value();
+          return value === previous.value ? previous : { ...previous, value };
+        });
       publish();
       const pending = saveQueue.current.then(save);
       saveQueue.current = pending.catch(() => undefined);

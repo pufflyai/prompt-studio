@@ -171,7 +171,12 @@ describe("createInstalledExtensionRuntime", () => {
       extensionService: {} as never,
       installedExtensionSourcesService: { list: async () => [] } as never,
       projectService: { list: async () => [{ id: "project-a" }] } as never,
-      workspaceService: { getDefault: async () => (repos[0] ? { root_path: repos[0].path } : null) } as never,
+      workspaceService: {
+        getDefault: async () =>
+          repos[0]
+            ? { root_path: repos[0].path, execution_kind: "local", provider_state: "ready", provider_id: "pstdio.root" }
+            : null,
+      } as never,
       webviewBuilds: false,
       createRootWatcher: (config) =>
         createExtensionRootWatcher({

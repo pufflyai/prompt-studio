@@ -17,6 +17,32 @@ afterEach(async () => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
+test("batched prepared views expose their entry stylesheet to native webview metadata", async () => {
+  const root = mkdtempSync(join(tmpdir(), "webview-batch-styles-"));
+  roots.push(root);
+  process.env.PSTDIO_HOME = join(root, "home");
+  const packagePath = join(root, "source");
+  mkdirSync(packagePath);
+  writeFileSync(join(packagePath, "package.json"), JSON.stringify({ name: "styled-view" }));
+  const inputs = ["first", "second"].map((name) => {
+    const entryPath = join(packagePath, `${name}.ts`);
+    writeFileSync(entryPath, `import "./${name}.css"; export default true;`);
+    writeFileSync(
+      join(packagePath, `${name}.css`),
+      `@font-face { font-family: "${name}-icons"; src: url("./icons.woff2"); } .${name} { color: red; }`,
+    );
+    return { packagePath, entryPath, packageName: "styled-view", installName: "styled-view" };
+  });
+  writeFileSync(join(packagePath, "icons.woff2"), "font fixture");
+  const { prepareWebviewArtifacts } = await import("./prepared-webview");
+  const prepared = await prepareWebviewArtifacts(inputs, new AbortController().signal);
+  for (const [index, artifact] of prepared.entries()) {
+    const stylesheet = Bun.file(join(artifact.distDir, "module.css"));
+    expect(await stylesheet.exists()).toBe(true);
+    expect(await stylesheet.text()).toContain(`${index === 0 ? "first" : "second"}-icons`);
+  }
+});
+
 for (const batch of [false, true])
   test(`${batch ? "batch" : "single"} cached frontend preparation rejects cancellation during inspection`, async () => {
     const root = mkdtempSync(join(tmpdir(), "webview-inspection-cancellation-"));

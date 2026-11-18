@@ -1,6 +1,6 @@
 import { IconButton } from "@chakra-ui/react";
 import { ListRow, ScopedMenu as Menu, PANEL_HEADER_CONTROL_SIZE, Portal, Tooltip } from "@pstdio/ui";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import type { ResourceRef, WorkbenchCompositionAddablePanel, WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { WorkbenchIcon } from "../shared/icon";
 import { openPanelWidget } from "./panel-widget-open";
@@ -15,6 +15,30 @@ interface WorkbenchPanelAddMenuProps {
 export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
   const { panels, region, resource, workbench } = props;
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const pendingOpen = useRef<{
+    workbench: WorkbenchCore;
+    region: WorkbenchPanelRegion;
+    resource?: ResourceRef;
+    panelCount: number;
+    open: () => void;
+  } | null>(null);
+  useEffect(() => {
+    const pending = pendingOpen.current;
+    if (
+      pending &&
+      (pending.workbench !== workbench ||
+        pending.region !== region ||
+        pending.resource !== resource ||
+        pending.panelCount !== panels.length)
+    )
+      pendingOpen.current = null;
+  }, [workbench, region, resource, panels.length]);
+  useEffect(
+    () => () => {
+      pendingOpen.current = null;
+    },
+    [],
+  );
   const label = "Add panel";
   if (panels.length === 0) return null;
 
@@ -44,7 +68,25 @@ export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
   if (panels.length === 1) return <Tooltip content={label}>{trigger}</Tooltip>;
 
   return (
-    <Menu.Root positioning={{ placement: "bottom-start", getAnchorElement: () => triggerRef.current }}>
+    <Menu.Root
+      positioning={{ placement: "bottom-start", getAnchorElement: () => triggerRef.current }}
+      lazyMount
+      unmountOnExit
+      onOpenChange={({ open }) => {
+        if (open) {
+          // A second explicit choice must not discard the one whose exit is still animating.
+          const pending = pendingOpen.current;
+          pendingOpen.current = null;
+          pending?.open();
+        }
+      }}
+      onExitComplete={() => {
+        const open = pendingOpen.current;
+        pendingOpen.current = null;
+        // Let the menu finish returning focus before the selected panel requests it.
+        open?.open();
+      }}
+    >
       <Tooltip content={label}>
         <Menu.Trigger asChild>{trigger}</Menu.Trigger>
       </Tooltip>
@@ -60,7 +102,15 @@ export const WorkbenchPanelAddMenu = (props: WorkbenchPanelAddMenuProps) => {
                   icon={
                     panel.contribution.icon ? <WorkbenchIcon name={panel.contribution.icon} size={14} /> : undefined
                   }
-                  onActivate={() => openPanel(panel)}
+                  onActivate={() => {
+                    pendingOpen.current = {
+                      workbench,
+                      region,
+                      resource,
+                      panelCount: panels.length,
+                      open: () => openPanel(panel),
+                    };
+                  }}
                 />
               </Menu.Item>
             ))}

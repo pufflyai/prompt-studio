@@ -79,6 +79,10 @@
       "import": "./dist/collection-view.js",
       "types": "./dist/collection-view.d.ts"
     },
+    "./collection-view-model": {
+      "import": "./dist/collection-view-model.js",
+      "types": "./dist/collection-view-model.d.ts"
+    },
     "./mermaid": {
       "import": "./dist/mermaid.js",
       "types": "./dist/mermaid.d.ts"
@@ -108,6 +112,10 @@
     "./charts": {
       "import": "./dist/charts.js",
       "types": "./dist/charts.d.ts"
+    },
+    "./scrollbars": {
+      "import": "./dist/scrollbars.js",
+      "types": "./dist/scrollbars.d.ts"
     }
   },
   "scripts": {

@@ -24,7 +24,9 @@ export interface ListRowActionMenuItem {
   id: string;
   label: string;
   commandId?: string;
-  group?: { id: string; label?: string };
+  group?: { id: string; label?: string; selectionMode?: "single" };
+  selected?: boolean;
+  closeOnSelect?: boolean;
   description?: string;
   icon?: ReactNode | ComponentType<{ size?: number | string }>;
   disabled?: boolean;

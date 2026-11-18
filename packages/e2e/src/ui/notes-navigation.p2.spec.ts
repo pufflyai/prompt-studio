@@ -2,8 +2,12 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
+import { nativePublicTextEditor, verifyNativePublicTextEditor } from "../helpers/verify-public-text-editor";
 import { type APIRequestContext, expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
+
+// Project preparation, document projection and retained navigation share this allowance.
+test.setTimeout(120_000);
 
 const executeNoteCommand = async (
   request: APIRequestContext,
@@ -63,7 +67,7 @@ test("opens notes in the project Sidenav tree and follows the active note throug
     await firstRow.click();
     await expect(firstRow).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("tab", { name: first.title, exact: true })).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByTestId("content-editable").filter({ visible: true })).toHaveText(`${first.title} body`);
+    await verifyNativePublicTextEditor(page, `${first.title} body`);
     // Opening content must not queue another read of every note in the project.
     const noteListReads: string[] = [];
     page.on("request", (request) => {
@@ -71,7 +75,7 @@ test("opens notes in the project Sidenav tree and follows the active note throug
     });
     await secondRow.click();
     await expect(secondRow).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByTestId("content-editable").filter({ visible: true })).toHaveText(`${second.title} body`);
+    await verifyNativePublicTextEditor(page, `${second.title} body`);
     expect(noteListReads).toEqual([]);
     await page.getByRole("tab", { name: first.title, exact: true }).click();
     await expect(firstRow).toHaveAttribute("aria-selected", "true");
@@ -114,7 +118,7 @@ test("keeps note titles independent of the body and renames them through the con
     const row = sidebar.getByRole("option", { name: note.title, exact: true });
     await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
     await row.click();
-    const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
+    const editor = nativePublicTextEditor(page);
     await expect(editor).toBeEmpty();
     let mountedEditor = await editor.elementHandle();
     const documentReads: string[] = [];
@@ -124,8 +128,10 @@ test("keeps note titles independent of the body and renames them through the con
     let body = "Body text with a different name";
     await editor.fill(body);
     await expect
-      .poll(() =>
-        readFileSync(`${repoRoot}/.pstdio/extension-storage/pstdio.notes/documents/${note.id}/content.md`, "utf8"),
+      .poll(
+        () =>
+          readFileSync(`${repoRoot}/.pstdio/extension-storage/pstdio.notes/documents/${note.id}/content.md`, "utf8"),
+        { timeout: 15_000 },
       )
       .toContain(body);
     await expect(row).toHaveAttribute("aria-selected", "true");
@@ -144,8 +150,10 @@ test("keeps note titles independent of the body and renames them through the con
     body += " after returning";
     await editor.fill(body);
     await expect
-      .poll(() =>
-        readFileSync(`${repoRoot}/.pstdio/extension-storage/pstdio.notes/documents/${note.id}/content.md`, "utf8"),
+      .poll(
+        () =>
+          readFileSync(`${repoRoot}/.pstdio/extension-storage/pstdio.notes/documents/${note.id}/content.md`, "utf8"),
+        { timeout: 15_000 },
       )
       .toContain(body);
 
@@ -219,8 +227,8 @@ test("keeps typing in the same editor when the first line names a new note", asy
     const sidebar = page.locator('[data-workbench-region="sidenav"]');
     await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
     await sidebar.getByRole("button", { name: "New note", exact: true }).click();
-    const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
-    await expect(editor).toBeEmpty();
+    const editor = nativePublicTextEditor(page);
+    await expect(editor).toBeEmpty({ timeout: 15_000 });
     await resolutionReady.promise;
     const mountedEditor = await editor.elementHandle();
     const documentReads: string[] = [];
@@ -233,6 +241,7 @@ test("keeps typing in the same editor when the first line names a new note", asy
     await expect(page.getByRole("tab", { name: "First line title", exact: true })).toHaveAttribute(
       "aria-selected",
       "true",
+      { timeout: 15_000 },
     );
     await expect(sidebar.getByRole("option", { name: "First line title", exact: true })).toBeVisible();
     await expect(editor).toBeFocused();
@@ -243,6 +252,7 @@ test("keeps typing in the same editor when the first line names a new note", asy
     await expect(editor).toHaveText("First line title and keep typing");
   } finally {
     releaseResolution.resolve();
+    await page.unrouteAll({ behavior: "wait" });
     rmSync(repoRoot, { recursive: true, force: true });
   }
 });

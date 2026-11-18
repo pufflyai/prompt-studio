@@ -1,1 +1,31 @@
-[]
+[
+  {
+    "runner": "playwright",
+    "file": "packages/e2e/src/packaged/packaged-notes-page.p2.spec.ts",
+    "name": "Notes offers note creation and restores its Main tabs separately from Artifacts",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-1218",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/43872404304/job/133317092220",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/44049765383/job/133924730045",
+      "https://github.com/pufflyai/prompt-studio/pull/2096"
+    ],
+    "removalCriteria": "Fix the pending rename stall in PS-1218, then restore this unchanged case to the stable lane with passing native first-attempt evidence. Keep every assertion and reject missing, skipped, retried or incomplete quarantine execution.",
+    "failureMessageIncludes": ["toHaveAttribute", "Isolation first", "element(s) not found"]
+  },
+  {
+    "runner": "playwright",
+    "file": "packages/e2e/src/packaged/packaged-webview-browsers.p2.spec.ts",
+    "name": "persists documents, collections and preview through authenticated opaque webviews in Chromium",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-1232",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/44089584985/job/134061248055",
+      "https://github.com/pufflyai/prompt-studio/actions/runs/44089269597/job/134060173680"
+    ],
+    "removalCriteria": "Repair the tree group gesture fixture so late layout updates cannot move the hit-tested hover before native pointerdown; retain actual pointer target validation, group persistence/rename/removal and panel-drag assertions. Restore the unchanged case to the stable lane after first-attempt native proof. Until then execute once in quarantine and reject missing, skipped, retried, incomplete or differently failing coverage.",
+    "failureMessageIncludes": ["the gesture starts on the group header (target: null)"]
+  }
+]
