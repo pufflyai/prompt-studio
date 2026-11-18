@@ -106,7 +106,7 @@ describe("ticket work in shared folders", () => {
     ).rejects.toThrow("Planner attempts require a Git repository");
   });
 
-  test("shows the shared folder on a ticket without including other tickets' sessions", async () => {
+  test("keeps unlinked project folders and other tickets' sessions off a ticket", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...(await workspaceArgs({ storage, params: { title: "First" } })));
     const otherSession = {
@@ -131,16 +131,7 @@ describe("ticket work in shared folders", () => {
         },
       })),
     );
-    expect(sections.find((section) => section.id === "workspaces")?.nodes).toEqual([
-      expect.objectContaining({
-        id: "workspace-home",
-        icon: "Folder",
-        resource: expect.objectContaining({
-          id: "home",
-          metadata: expect.objectContaining({ workspaceType: "folder" }),
-        }),
-      }),
-    ]);
+    expect(sections.find((section) => section.id === "workspaces")).toBeUndefined();
     expect(sections.find((section) => section.id === "sessions")).toBeUndefined();
     expect(query).toHaveBeenCalled();
   });
