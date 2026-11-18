@@ -1,4 +1,4 @@
-import { Box, Button, Center, Flex } from "@chakra-ui/react";
+import { Box, Center, Flex } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { EmptyState, WindowTabs, WindowTitleBar } from "@pstdio/ui";
 import { createWorkbench } from "@pstdio/workbench";
@@ -8,6 +8,7 @@ import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { DashboardWorkbenchView } from "@/shared/workbench/dashboard-workbench-view";
 import { DesktopProjectTabsController } from "../desktop-project-tabs-controller";
+import { ProjectRecoveryMessage } from "./desktop-project-recovery";
 import { DesktopProjectTabs } from "./desktop-project-tabs";
 
 const ProjectTabsStory = () => {
@@ -95,18 +96,13 @@ const ProjectRecoveryPreview = () => {
           onClose={() => {}}
         />
       </WindowTitleBar>
-      <Center flex="1" p="md">
-        {project === "lab" && failed ? (
-          <EmptyState
-            title="This project couldn’t open"
-            description="Try opening it again or switch to another project."
-          >
-            <Button onClick={() => setFailed(false)}>Retry project</Button>
-          </EmptyState>
-        ) : (
+      {project === "lab" && failed ? (
+        <ProjectRecoveryMessage canSwitch retry={() => setFailed(false)} />
+      ) : (
+        <Center flex="1" p="md">
           <EmptyState title={project === "lab" ? "Lab" : "Notes"} />
-        )}
-      </Center>
+        </Center>
+      )}
     </Flex>
   );
 };

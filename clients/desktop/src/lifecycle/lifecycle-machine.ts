@@ -22,6 +22,7 @@ export type DesktopRecoveryCode =
   | "pglite_ownership_conflict"
   | "pglite_recovery_failure"
   | "runtime_ownership_uncertain"
+  | "workbench_unavailable"
   | "unexpected_exit";
 
 export type DesktopRecoveryError = {
