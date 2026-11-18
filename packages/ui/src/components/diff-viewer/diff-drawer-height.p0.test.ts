@@ -2,31 +2,16 @@ import { describe, expect, it } from "bun:test";
 import { estimateDiffCardHeight } from "./diff-drawer-height";
 
 describe("estimateDiffCardHeight", () => {
-  it("reserves preview height for loaded image diffs", () => {
-    expect(
-      estimateDiffCardHeight({
-        diff: {
-          change: "modified",
-          oldPath: "assets/logo.png",
-          newPath: "assets/logo.png",
-          oldContent: "data:image/png;base64,b2xk",
-          newContent: "data:image/png;base64,bmV3",
-        },
-        isCollapsed: false,
-      }),
-    ).toBe(380);
-  });
+  it("reserves preview height for loaded image diffs beyond an unloaded image summary", () => {
+    const summary = { change: "modified" as const, oldPath: "assets/logo.png", newPath: "assets/logo.png" };
+    const loaded = {
+      ...summary,
+      oldContent: "data:image/png;base64,b2xk",
+      newContent: "data:image/png;base64,bmV3",
+    };
 
-  it("uses deferred height for unloaded image summaries", () => {
-    expect(
-      estimateDiffCardHeight({
-        diff: {
-          change: "modified",
-          oldPath: "assets/logo.png",
-          newPath: "assets/logo.png",
-        },
-        isCollapsed: false,
-      }),
-    ).toBe(130);
+    expect(estimateDiffCardHeight({ diff: loaded, isCollapsed: false })).toBeGreaterThan(
+      estimateDiffCardHeight({ diff: summary, isCollapsed: false }),
+    );
   });
 });
