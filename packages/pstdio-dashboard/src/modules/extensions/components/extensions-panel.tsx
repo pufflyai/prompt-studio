@@ -3,6 +3,7 @@ import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { useTranslation } from "react-i18next";
 import { useAgents } from "@/shared/agents/use-agents";
 import { dashboardExtensionDetailPage, dashboardExtensionsPage } from "@/shared/app/resources";
+import { usePendingExtensionSourceChanges } from "@/shared/extensions/use-extension-mutation";
 import {
   useMarketplaceExtensionContributions,
   useProjectExtensionMetadata,
@@ -28,6 +29,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const { projectId, settingsInput } = props;
   const { t } = useTranslation("projects");
   const extensionsQuery = useProjectExtensions(projectId);
+  const sourceChangingIds = usePendingExtensionSourceChanges(projectId);
   const metadataQuery = useProjectExtensionMetadata(projectId);
   const agentsQuery = useAgents(projectId);
   const agents = projectId && agentsQuery.isSuccess ? agentsQuery.data : undefined;
@@ -94,6 +96,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
           settingsInput={settingsInput}
           onBack={() => openList()}
           action={action}
+          sourceChanging={sourceChangingIds.has(selected.id)}
           onUpgrade={() => void actions.handleUpgrade(selected)}
           onToggle={(enabled) => void actions.handleToggle(selected, enabled)}
           onDismissAction={(expected) => actions.dismiss(selected.id, expected)}
@@ -137,6 +140,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         harnesses={metadataQuery.isSuccess ? metadataQuery.data?.harnesses : undefined}
         agents={agents}
         actionStates={actions.actions}
+        sourceChangingIds={sourceChangingIds}
         onDismissAction={actions.dismiss}
         onDismissBatch={actions.dismissBatch}
         onRetryAction={actions.retry}

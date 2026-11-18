@@ -83,7 +83,9 @@ test("System activity stays pinned when other status widgets reorder", async ({ 
   const first = status.getByRole("group", { name: "First tool" });
   const second = status.getByRole("group", { name: "Second tool" });
   await expect(activity).toBeVisible();
+  await expect(activity).not.toHaveAttribute("data-sortable", "true");
   await second.press("Alt+ArrowLeft");
   await expect.poll(async () => (await second.boundingBox())!.x).toBeLessThan((await first.boundingBox())!.x);
+  await second.press("Alt+ArrowLeft");
   expect((await activity.boundingBox())!.x).toBeLessThan((await second.boundingBox())!.x);
 });

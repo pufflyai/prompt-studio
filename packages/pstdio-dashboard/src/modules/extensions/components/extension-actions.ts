@@ -7,7 +7,8 @@ export interface ExtensionUpgradeBatch {
   failed: number;
 }
 
-export const marketplaceActionKey = (name: string) => `marketplace:${name}`;
+const marketplaceActionPrefix = "marketplace:";
+export const marketplaceActionKey = (name: string) => `${marketplaceActionPrefix}${name}`;
 
 interface ActionSnapshot {
   installedIds: Record<string, string>;
@@ -64,7 +65,10 @@ export const createExtensionActions = () => {
       publish({
         ...snapshot,
         actions,
-        installedIds: instanceId ? { ...snapshot.installedIds, [id]: instanceId } : snapshot.installedIds,
+        installedIds:
+          instanceId && id.startsWith(marketplaceActionPrefix)
+            ? { ...snapshot.installedIds, [id]: instanceId }
+            : snapshot.installedIds,
       });
       return true;
     } catch (error) {

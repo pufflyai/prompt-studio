@@ -23,6 +23,7 @@ import { ExtensionSettingsViews } from "./extension-settings-views";
 interface ExtensionDetailContainerProps {
   projectId: string | undefined;
   action?: ExtensionActionState;
+  sourceChanging?: boolean;
   onUpgrade: () => void;
   onToggle: (enabled: boolean) => void;
   onDismissAction: (action: ExtensionActionState) => void;
@@ -124,6 +125,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
           ) : undefined
         }
         reloading={reload.isPending}
+        sourceChanging={props.sourceChanging}
         upgrading={upgradeAction?.status === "running" || upgradeAction?.status === "queued"}
         actionFeedback={!confirmingUninstall && errorNotice}
         upgradeAction={upgradeAction}

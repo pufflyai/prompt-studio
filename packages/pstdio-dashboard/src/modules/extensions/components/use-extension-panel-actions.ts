@@ -82,7 +82,7 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
       },
       async () => {
         try {
-          await addFolder.mutateAsync(folder);
+          return await addFolder.mutateAsync(folder);
         } catch (error) {
           if (error instanceof PstdioApiError && error.code === "extension_already_installed" && !folder.force) {
             feedback.setReplacement({ name: folder.name, retry: () => handleDrop({ ...folder, force: true }) });
@@ -90,6 +90,7 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
           throw error;
         }
       },
+      { installedId: (result) => result.extension.id },
     );
   };
   return {

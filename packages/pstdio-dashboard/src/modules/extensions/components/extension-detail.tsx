@@ -46,6 +46,7 @@ export interface ExtensionDetailProps {
   onDismissToggle?: () => void;
   onRetryToggle?: () => void;
   reloading?: boolean;
+  sourceChanging?: boolean;
   upgrading?: boolean;
   uninstalling?: boolean;
   togglingAutomationId?: string;
@@ -78,6 +79,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     onDismissToggle,
     onRetryToggle,
     reloading,
+    sourceChanging,
     upgrading,
     uninstalling,
     togglingAutomationId,
@@ -91,7 +93,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
   } = props;
   const { t } = useTranslation("projects");
   const toggling = toggleAction?.status === "running";
-  const changingSource = [toggling, reloading, uninstalling, upgrading].some(Boolean);
+  const changingSource = [toggling, reloading, uninstalling, upgrading, sourceChanging].some(Boolean);
   const resolveString = createExtensionStringResolver(getRuntimeCollections(), projectId);
   const failed = extension.status === "error";
   // Changed source on disk is adopted by reloading it. Upgrade is only for sources a release replaces.

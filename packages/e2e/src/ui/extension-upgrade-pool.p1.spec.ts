@@ -138,6 +138,7 @@ test("keeps install retries and toggle progress attached to their controls acros
     extensionId: catalog.extensionId,
     displayName: catalog.displayName,
     canUpgrade: false,
+    updateAvailable: true,
     version: "1.0.0",
   };
   let installed = false;
@@ -225,7 +226,21 @@ test("keeps install retries and toggle progress attached to their controls acros
   await toggles[0]!.fulfill({ status: 400, json: { error: "Could not change extension state" } });
   const toggleError = installedRow.getByRole("alert");
   await expect(toggleError).toContainText("Could not change extension state");
-  await toggleError.getByRole("button", { name: "Retry" }).click();
+
+  const reload = Promise.withResolvers<Route>();
+  await page.route(`**/v1/projects/${project.id}/extensions/${instance.id}/reload`, (route) => reload.resolve(route));
+  await installedRow.press("Enter");
+  await expect(detail).toBeVisible();
+  await detail.getByTestId("extension-reload").click();
+  const pendingReload = await reload.promise;
+  const rowRetry = toggleError.getByRole("button", { name: "Retry" });
+  await page.goBack();
+  await expect(rowToggle).toBeDisabled();
+  await expect(rowRetry).toBeDisabled();
+  instance.updateAvailable = false;
+  await pendingReload.fulfill({ json: instance });
+
+  await rowRetry.click();
   await expect.poll(() => toggles.length).toBe(2);
   expect(toggles[1]!.request().postDataJSON()).toEqual({ enabled });
   instance.enabled = enabled;

@@ -81,6 +81,13 @@ test("installs hand off to the exact instance and same-name upgrades respect hos
     await toggle;
     expect(owner.getSnapshot().actions).toEqual({});
 
+    await owner.run(targets[0]!.id, { running: "Updating", failed: "Update failed" }, async () => {
+      throw new Error("Earlier attempt");
+    });
+    await controls.handleDrop({ name: "one", files: [] });
+    expect(owner.getSnapshot().actions).toEqual({});
+    expect(owner.getSnapshot().installedIds).toEqual({ "marketplace:one": targets[0]!.id });
+
     const batch = controls.handleUpgradeAll(targets);
     await until(() => started.length === 2);
     expect(owner.getSnapshot().batch?.ids).toEqual(targets.map(({ id }) => id));

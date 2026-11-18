@@ -23,6 +23,7 @@ import { MarketplaceExtensionRow } from "./marketplace-extension-row";
 export interface ExtensionsPanelViewProps {
   projectId?: string;
   extensions: ProjectExtensionInstance[];
+  sourceChangingIds?: ReadonlySet<string>;
   actionStates?: Record<string, ExtensionActionState>;
   onDismissAction?: (id: string, expected?: ExtensionActionState) => void;
   onDismissBatch?: (batch: ExtensionUpgradeBatch) => void;
@@ -86,6 +87,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
   const {
     extensions,
     actionStates = {},
+    sourceChangingIds,
     onDismissAction,
     onRetryAction,
     onDismissBatch,
@@ -113,7 +115,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
   const visible = sortedExtensions.filter((extension) => matchesSearch(extension, search));
   const availableMarketplace = marketplace.filter((extension) => !extension.installed).sort(compareDisplayName);
   const visibleMarketplace = availableMarketplace.filter((extension) => matchesMarketplaceSearch(extension, search));
-  const upgradable = extensions.filter((extension) => extension.canUpgrade);
+  const upgradable = extensions.filter((extension) => extension.canUpgrade && !sourceChangingIds?.has(extension.id));
   const folderAction = actionStates.$folder;
 
   return (
@@ -186,6 +188,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
           unavailableHarnesses={unavailableExtensionHarnesses(extension, harnesses, agents)}
           togglingAutomation={togglingAutomation}
           action={actionStates[extension.id]}
+          sourceChanging={sourceChangingIds?.has(extension.id)}
           onDismissAction={(expected) => onDismissAction?.(extension.id, expected)}
           onRetryAction={() => onRetryAction?.(extension.id)}
           onToggle={(enabled) => onToggle?.(extension, enabled)}

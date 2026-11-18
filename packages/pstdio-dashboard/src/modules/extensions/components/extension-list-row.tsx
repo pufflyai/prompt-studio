@@ -22,6 +22,7 @@ export interface ExtensionListRowProps {
   automations: WorkbenchExtensionAutomationRecord[];
   unavailableHarnesses?: AgentInfo[];
   action?: ExtensionActionState;
+  sourceChanging?: boolean;
   onDismissAction?: (action: ExtensionActionState) => void;
   onRetryAction?: () => void;
   togglingAutomation?: boolean;
@@ -40,6 +41,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
     automations,
     unavailableHarnesses = [],
     action,
+    sourceChanging,
     onDismissAction,
     onRetryAction,
     togglingAutomation,
@@ -53,7 +55,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
   const upgradeAction = toggleAction ? undefined : action;
   const toggling = toggleAction?.status === "running";
   const upgrading = upgradeAction?.status === "queued" || upgradeAction?.status === "running";
-  const changing = toggling || upgrading;
+  const changing = toggling || upgrading || sourceChanging;
 
   return (
     <HStack
@@ -162,12 +164,13 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
           action={toggleAction}
           onDismiss={toggleAction && (() => onDismissAction?.(toggleAction))}
           onRetry={onRetryAction}
+          retryDisabled={changing}
         />
         <ExtensionToggle
           name={extension.displayName}
           enabled={extension.enabled}
           action={toggleAction}
-          disabled={upgrading}
+          disabled={changing}
           onToggle={onToggle}
         />
       </Box>
