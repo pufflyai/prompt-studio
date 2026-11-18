@@ -17,7 +17,6 @@ import { removeTestDirectory } from "./remove-test-directory";
 import { waitForForeignWorkspaceHistory } from "./workspace-history-readiness.fixture";
 
 type ResourceListRendererQueryResult = Omit<KanbanRendererQueryResult, "rows"> & { rows: ResourceListRendererRow[] };
-let root: string;
 let fixturesRoot: string;
 let extensionSource: string;
 let sessionsSource: string;
@@ -64,13 +63,14 @@ const waitFor = async (condition: () => Promise<boolean>) => {
 const connectDevice = async (
   host: Awaited<ReturnType<typeof startPackagedServe>>,
   name: string,
+  deviceRoot: string,
   projectId: string,
   peerOrigin: string,
   progress: (phase: string) => void,
 ) => {
   progress(`connect device ${name}`);
   const client = createClient({ baseUrl: host.baseUrl, token: host.descriptor.token });
-  const folder = join(root, name, "project");
+  const folder = join(deviceRoot, "project");
   await mkdir(folder);
   await Bun.write(join(folder, "private.txt"), `${name} device file`);
   const identity = await client.runtime.environment();
@@ -154,7 +154,7 @@ const connectDevice = async (
 test(
   "installed Workspaces groups two devices and opens foreign private history without local actions",
   async () => {
-    root = await mkdtemp(join(tmpdir(), "packaged-workspace-devices-"));
+    const root = await mkdtemp(join(tmpdir(), "packaged-workspace-devices-"));
     const started = performance.now();
     const progress = (phase: string) =>
       console.log(`Workspaces devices: ${phase} (${Math.round(performance.now() - started)}ms)`);
@@ -188,25 +188,22 @@ test(
       ).toBe(0);
       const peer = createDeviceCommandPeer({ key: Bun.file(key), cert: Bun.file(cert) });
       closePeer = () => peer.close();
-      const env = {
-        NODE_EXTRA_CA_CERTS: cert,
-        PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
-          { source: extensionSource, installName: "pstdio-workspaces", skipInstall: true },
-          { source: sessionsSource, installName: "pstdio-session-browser", skipInstall: true },
-          { source: harness, installName: "workspace-history-fixture", skipInstall: true },
-        ]),
-      };
-      await mkdir(join(root, "a"));
-      await mkdir(join(root, "b"));
+      // Each project enables the installed fixtures in connectDevice. A second
+      // startup installation would build the same views from a competing copy.
+      const env = { NODE_EXTRA_CA_CERTS: cert };
+      const deviceA = join(root, "workspaces-device-a");
+      const deviceB = join(root, "workspaces-device-b");
+      await mkdir(deviceA);
+      await mkdir(deviceB);
       // Both runtimes and the browser start cold inside this case and own separate state.
       const startingRuntimes = Promise.allSettled([
-        startPackagedServe(join(root, "a"), env)
+        startPackagedServe(deviceA, env)
           .then((runtime) => (a = runtime))
           .catch((error) => {
             console.error("Workspaces device A startup failed", error);
             throw error;
           }),
-        startPackagedServe(join(root, "b"), env)
+        startPackagedServe(deviceB, env)
           .then((runtime) => (b = runtime))
           .catch((error) => {
             console.error("Workspaces device B startup failed", error);
@@ -226,8 +223,8 @@ test(
         progress("both runtimes ready");
         const projectId = crypto.randomUUID();
         const [first, second] = await Promise.all([
-          connectDevice(firstRuntime.value, "a", projectId, peer.origin, progress),
-          connectDevice(secondRuntime.value, "b", projectId, peer.origin, progress),
+          connectDevice(firstRuntime.value, "a", deviceA, projectId, peer.origin, progress),
+          connectDevice(secondRuntime.value, "b", deviceB, projectId, peer.origin, progress),
         ]);
         progress("create private history");
         const session = await first.client.sessions.create(projectId, {

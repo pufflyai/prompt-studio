@@ -37,38 +37,45 @@ export function* revisionSourceFiles(sourcePath: string, targetPath: string, fil
   }
 }
 
-export const copyRevisionFiles = async (files: Iterable<{ source: string; target: string }>) => {
+type RevisionFileCopy = { source: string; target: string };
+
+export const copyRevisionFiles = async (files: Iterable<RevisionFileCopy>) => {
   const entries = files[Symbol.iterator]();
-  const directories = new Map<string, Promise<string | undefined>>();
+  const directories = new Map<string, ReturnType<typeof mkdir>>();
   const copies = new Map<string, string>();
-  const results = await Promise.allSettled(
+  const copy = ({ source, target }: RevisionFileCopy) => {
+    const key = process.platform === "win32" ? target.toLowerCase() : target;
+    const owner = process.platform === "win32" ? source.toLowerCase() : source;
+    const previous = copies.get(key);
+    if (previous === owner) return;
+    if (previous !== undefined) throw new Error("Snapshot file has conflicting source owners.");
+    // Ancestor and nested package roots can enumerate the same frozen file.
+    copies.set(key, owner);
+    const directory = dirname(target);
+    let ready = directories.get(directory);
+    if (!ready) {
+      ready = mkdir(directory, { recursive: true });
+      directories.set(directory, ready);
+    }
+    // Retain independent accepted bytes, using copy-on-write where available.
+    return ready.then(() => copyFile(source, target, constants.COPYFILE_FICLONE));
+  };
+  let failure: { reason: unknown } | undefined;
+  await Promise.all(
     Array.from({ length: 8 }, async () => {
-      while (true) {
-        const entry = entries.next();
-        if (entry.done) return;
-        const { source, target } = entry.value;
-        const key = process.platform === "win32" ? target.toLowerCase() : target;
-        const owner = process.platform === "win32" ? source.toLowerCase() : source;
-        const previous = copies.get(key);
-        if (previous === owner) continue;
-        if (previous !== undefined) throw new Error("Snapshot file has conflicting source owners.");
-        // Ancestor and nested package roots can enumerate the same frozen file.
-        copies.set(key, owner);
-        const directory = dirname(target);
-        let ready = directories.get(directory);
-        if (!ready) {
-          ready = mkdir(directory, { recursive: true });
-          directories.set(directory, ready);
+      try {
+        while (!failure) {
+          const entry = entries.next();
+          if (entry.done) return;
+          await copy(entry.value);
         }
-        await ready;
-        // Retain independent accepted bytes, using copy-on-write where available.
-        await copyFile(source, target, constants.COPYFILE_FICLONE);
+      } catch (reason) {
+        failure ??= { reason };
       }
     }),
   );
   // Every admitted write must finish before a failed preparation can remove its snapshot.
-  const failed = results.find((result) => result.status === "rejected");
-  if (failed?.status === "rejected") throw failed.reason;
+  if (failure) throw failure.reason;
 };
 
 export const copyRevisionSource = (sourcePath: string, targetPath: string, files?: Set<string>) =>

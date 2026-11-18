@@ -112,9 +112,10 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
 - In the extension panel, every row that can take a newer release shows an upgrade button next to
   its switch. The button upgrades only that extension. **Upgrade all** in the panel header runs
   up to four upgrades at once, using the connected host's capacity. Its progress bar counts completed
-  attempts. Each row shows Waiting until a worker starts, then a spinner and elapsed time. Results
-  stay beside the extension through list and detail navigation. Failures can be retried in place.
-  Dismissing a row result preserves the batch count. Marketplace installs share these controls.
+  attempts. Each row shows Waiting until a worker starts, then a spinner. A successful upgrade
+  updates the version and clears progress. A successful install moves the extension from Available
+  to Installed. Install and upgrade failures can be retried in place. Dismissing a row failure
+  preserves the batch count. The extension switch shows a spinner inside its thumb while it updates.
 - Overlapping catalog changes share one workspace refresh per project. Changes arriving during a
   refresh revisit workspaces that already processed the older catalog. Healthy workspaces keep their
   ready state while files update. Session launches wait for maintenance to finish.
