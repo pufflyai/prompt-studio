@@ -181,3 +181,31 @@ test("a completed idle native operation keeps its result through refresh until t
   requestStarted = "later-ordinary";
   expect((await present()).notice).toBe("");
 });
+
+test("an unavailable workspace keeps native slash input out of the ordinary message flow", async () => {
+  const ctx = context();
+  const reason = "Workspace commands are unavailable. Check its setup before retrying.";
+  ctx.sessions.getHarnessCommands = async () => ({
+    harnessId: "agent",
+    commands: [],
+    modes: [],
+    slashCommands: true,
+    unavailableReason: reason,
+  });
+  const sends: string[] = [];
+  ctx.sessions.followup = async () => {
+    sends.push("ordinary message");
+  };
+  ctx.sessions.invokeHarnessOperation = async () => {
+    sends.push("native operation");
+    return { status: "completed" };
+  };
+  await expect(
+    act(ctx, {
+      renderer,
+      draftKey: "s",
+      action: { type: "submit", text: "/compact", attachments: [], values },
+    }),
+  ).rejects.toThrow(reason);
+  expect(sends).toEqual([]);
+});

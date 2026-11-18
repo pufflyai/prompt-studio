@@ -251,7 +251,9 @@ test("offline runtime edits are inspected without replacing the accepted tool", 
     root: tempRoot,
   });
   const loaded = await loadExtensionSource(sourcePath, { accepted: true });
-  await handle.deps.extensionService.registerInstalledSource({
+  const project = await handle.deps.projectService.create({ name: "Background candidate owner" });
+  await handle.deps.extensionService.enableInstalledSourceForProject({
+    projectId: project.id,
     installName: "background-candidate",
     displayName: loaded.metadata.displayName,
     extensionId: loaded.metadata.id,

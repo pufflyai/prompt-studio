@@ -156,6 +156,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const notice = read.error ? (
     <RendererReadNotice
       error={read.error}
+      initial={!read.value}
       retry={() => {
         if (!paged || !pages.reset()) void read.retry();
       }}

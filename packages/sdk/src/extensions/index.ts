@@ -177,6 +177,7 @@ export type {
   WebviewEditingSession,
 } from "./webview-editing";
 export { EXTENSION_EVENTS_SCOPE, type WebviewEventsClient, type WebviewExtensionEvent } from "./webview-events";
+export { registerWebviewResourceAction } from "./webview-resource-action";
 export { matchesResourceWhen } from "./when";
 export const projectPrefix = () => ({ $prefix: "project" as const });
 

@@ -16,6 +16,8 @@ export interface ExtensionAutomationApi {
     input: CreateAutomationRunInput["input"];
     /** Required idempotency key, at most 200 characters. */
     key: string;
+    /** Earliest execution time. Waiting runs survive host restarts without claiming execution. */
+    notBefore?: string;
   }): Promise<AutomationRun>;
   get(runId: string): Promise<AutomationRun | undefined>;
   /** Use a limit and command filter for activity previews. */

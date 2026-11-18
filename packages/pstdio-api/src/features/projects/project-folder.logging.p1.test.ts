@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -110,26 +110,23 @@ test("background provisioning waits for restored folder setup", async () => {
   await started.promise;
   const provisioningStates: boolean[] = [];
   const service = handle.deps.workspaceService;
-  const background = provisionProjectWorkspaces(
-    {
-      ...handle.deps,
-      workspaceService: {
-        ...service,
-        list: async (projectId) => {
-          const workspaces = await service.list(projectId);
-          provisioningStates.push(workspaces.some((workspace) => workspace.initializing));
-          return workspaces;
-        },
-      },
-    },
-    project.id,
-  );
+  const list = service.list.bind(service);
+  const observed = spyOn(service, "list").mockImplementation(async (projectId) => {
+    const workspaces = await list(projectId);
+    provisioningStates.push(workspaces.some((workspace) => workspace.initializing));
+    return workspaces;
+  });
+  const background = provisionProjectWorkspaces(handle.deps, project.id);
 
   try {
     expect(await service.getDefault(project.id)).toMatchObject({ initializing: true, provider_state: "ready" });
   } finally {
     allowSetup.resolve([]);
-    await Promise.all([setup, background]);
+    try {
+      await Promise.all([setup, background]);
+    } finally {
+      observed.mockRestore();
+    }
   }
   expect(provisioningStates).toEqual([false]);
 });

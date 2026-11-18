@@ -20,7 +20,7 @@ export interface ResourceContextAction {
   key: string;
   label: string;
   commandId?: string;
-  group?: { id: string; label?: string };
+  group?: { id: string; label?: string; selectionMode?: "single" };
   isSelected?: boolean;
   /** Apply a state change at selection, before the closing animation or navigation. */
   onSelect?: () => void;

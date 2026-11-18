@@ -356,6 +356,7 @@ jobs:
       artifact_run_id: ${{ github.run_id }}
       artifact_attempt: ${{ needs.release_build.outputs.artifact_attempt }}
       channel: ${{ needs.plan.outputs.channel }}
+      stable_tag: ${{ needs.plan.outputs.previous_tag }}
 
   production_unchanged:
     needs: plan

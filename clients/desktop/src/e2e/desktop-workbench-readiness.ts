@@ -39,7 +39,9 @@ export const watchLifecycleRecovery = (page: Page) => {
           };
           const check = () => {
             const headings = document.querySelectorAll("h1,h2,h3,h4,h5,h6,[role=heading]");
-            const heading = Array.from(headings).find((node) => node.textContent === "Prompt Studio needs attention");
+            const heading = Array.from(headings).find(
+              (node) => node.textContent === "Prompt Studio encountered an error",
+            );
             if (
               heading instanceof HTMLElement &&
               heading.getClientRects().length > 0 &&

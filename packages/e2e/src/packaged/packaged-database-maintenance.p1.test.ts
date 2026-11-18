@@ -1,6 +1,6 @@
 import { beforeAll, expect, test } from "bun:test";
 import { randomBytes } from "node:crypto";
-import { mkdtemp, readdir, rm, stat } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createDb } from "pstdio-db";
@@ -12,18 +12,8 @@ beforeAll(() => {
   if (!process.env.E2E_PACKAGED_BINARY_PATH) buildBinary();
 }, 180_000);
 
-const directoryBytes = async (path: string): Promise<number> => {
-  const entries = await readdir(path, { withFileTypes: true });
-  const sizes = await Promise.all(
-    entries.map((entry) =>
-      entry.isDirectory() ? directoryBytes(join(path, entry.name)) : stat(join(path, entry.name)).then((s) => s.size),
-    ),
-  );
-  return sizes.reduce((sum, size) => sum + size, 0);
-};
-
 test(
-  "the compiled host removes legacy conversation sync data offline and returns its space",
+  "the compiled host opens while legacy conversation sync data waits for background cleanup",
   async () => {
     const root = await mkdtemp(join(tmpdir(), "packaged-db-maintenance-"));
     const path = join(root, "db.sqlite");
@@ -50,7 +40,6 @@ test(
       } finally {
         await seed.close();
       }
-      const before = await directoryBytes(join(path, "base"));
       const log = join(root, "startup.jsonl");
       host = await startPackagedServe(root, { PSTDIO_LOG_PATH: log });
       const projects = await fetch(`${host.baseUrl}/v1/projects`, {
@@ -66,15 +55,15 @@ test(
         .map((line) => JSON.parse(line) as { event?: string; phase?: string })
         .filter((entry) => entry.event === "runtime.startup.phase")
         .map((entry) => entry.phase);
-      expect(phases.filter((phase) => phase === "database_cleaning" || phase === "database_compacting")).toEqual([
-        "database_cleaning",
-        "database_compacting",
-      ]);
-      // Measure before opening a source connection so source cleanup cannot hide a broken binary.
-      expect(await directoryBytes(join(path, "base"))).toBeLessThan(before - 1024 * 1024);
-      const inspect = await createDb({ path });
+      expect(phases).toContain("app_ready");
+      expect(phases).not.toContain("database_cleaning");
+      expect(phases).not.toContain("database_compacting");
+      // Closing before the scheduled pass leaves its work pending for the next runtime.
+      const inspect = await createDb({ path, deferCleanup: true });
       try {
-        expect((await inspect.pglite.query("SELECT * FROM storage_document_updates")).rows).toEqual([]);
+        expect((await inspect.pglite.query("SELECT document_id FROM storage_document_updates")).rows).toEqual([
+          { document_id: "transcript" },
+        ]);
         expect((await inspect.pglite.query("SELECT title FROM sessions")).rows).toEqual([
           { title: "Keep this conversation" },
         ]);

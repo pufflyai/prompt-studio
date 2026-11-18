@@ -1,5 +1,6 @@
 import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
 import type { PreparedExtensionRevision } from "pstdio-extensions";
+import type { RegistryRelease } from "pstdio-extensions/distribution";
 import type { GitExtensionOrigin } from "./extension-catalog";
 import type { ExtensionInstallTransaction } from "./extension-install-transaction";
 import type { ExtensionMetadata } from "./extension-runtime";
@@ -41,7 +42,7 @@ export type InstallExtensionSourceInput = {
   signal?: AbortSignal;
   preparedSource?: { path: string; ref: string };
   originSource?: { kind: "git" | "release"; origin: GitExtensionOrigin };
-  registrySource?: { url: string; id: string };
+  registrySource?: { url: string; id: string; release?: RegistryRelease };
   source: string;
 };
 

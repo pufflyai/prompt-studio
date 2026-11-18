@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { extensionUpgradeConcurrency } from "pstdio-extensions/preparation-client";
 import { resolveCatalogIcon } from "./catalog-icon";
 import type { ExtensionsRouteDeps } from "./deps";
 import { getExtensionCatalog } from "./extension-catalog";
@@ -75,5 +76,5 @@ export const listProjectExtensionInventory = async (
           Boolean(extension.extensionId && installedIds.has(extension.extensionId)),
       })),
   );
-  return { extensions, marketplace };
+  return { extensions, marketplace, upgradeConcurrency: extensionUpgradeConcurrency };
 };

@@ -38,7 +38,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
     forkDisabledReason,
   } = props;
   const { scrollRef, state } = useStickToBottomContext();
-  const rows = buildChatMessageRows(leadingResponses, groups);
+  const rows = buildChatMessageRows(leadingResponses, groups, streaming);
   const animatedKeys = useMessageAnimationKeys(rows.map((row) => row.message.animationKey ?? row.key));
   const initialHeight = scrollRef.current?.clientHeight || 1;
   const gapCount = Math.max(leadingResponses.length + groups.length - 1, 0);

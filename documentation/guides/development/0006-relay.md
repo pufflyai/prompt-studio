@@ -1,7 +1,7 @@
 # Relay development
 
 The private `pstdio-relay` workspace under `services/relay/` serves the blind sync
-protocol from [PRD 0014](../../requirements/platform/0014-local-first-sync.md).
+protocol from [0014 · RB 9.A.1](../../requirement-book/book.json).
 It stores encrypted updates, latest states and blobs under `/sync/`, and forwards
 transient live messages. It cannot read their contents. The
 [blind relay reference](../../references/architecture/0029-blind-relay.md) describes
