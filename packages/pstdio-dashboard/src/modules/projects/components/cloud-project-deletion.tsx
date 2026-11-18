@@ -120,7 +120,12 @@ const useCloudDeletion = ({ id, account, receipt, onSubmitted, onCompleted }: De
     }
   };
 
-  return { current, uncertain, error, retrying, operation, accountMatches, retry, submit };
+  const retryStatus = () => {
+    void operation.refetch();
+    void refreshCatalog();
+  };
+
+  return { current, uncertain, error, retrying, operation, accountMatches, retryStatus, retry, submit };
 };
 
 export const CloudProjectDeletionAction = ({
@@ -134,16 +139,8 @@ export const CloudProjectDeletionAction = ({
   onCompleted,
 }: DeletionProps) => {
   const [confirmation, setConfirmation] = useState<ProjectCopyAccount>();
-  const { current, uncertain, error, retrying, operation, accountMatches, retry, submit } = useCloudDeletion({
-    id,
-    name,
-    account,
-    receipt,
-    canDelete,
-    cloudOnly,
-    onSubmitted,
-    onCompleted,
-  });
+  const { current, uncertain, error, retrying, operation, accountMatches, retryStatus, retry, submit } =
+    useCloudDeletion({ id, name, account, receipt, canDelete, cloudOnly, onSubmitted, onCompleted });
 
   if (accountMatches && (current || uncertain)) {
     const state = current?.state;
@@ -160,13 +157,7 @@ export const CloudProjectDeletionAction = ({
         error={state === "completed" ? undefined : failure}
         canRetry={canResubmit || operation.isError}
         retrying={retrying}
-        onRetry={
-          canResubmit
-            ? retry
-            : () => {
-                void operation.refetch();
-              }
-        }
+        onRetry={canResubmit ? retry : retryStatus}
       />
     );
   }

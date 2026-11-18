@@ -131,6 +131,7 @@ test("Cloud deletion recovers from a lost request and resumes the same operation
   const { environmentId } = await (await request.get(`${uiOrigin}/v1/environment`)).json();
   const account = { accountId: "cloud-deletion-test", managerOrigin: "https://accounts.example.test" };
   const endpoint = `/v1/account/projects/${id}`;
+  let online = true;
   let posts = 0;
   let receipt: CloudProjectDeletion | undefined;
 
@@ -154,23 +155,27 @@ test("Cloud deletion recovers from a lost request and resumes the same operation
               id,
               name,
               presence: "cloud-only",
-              online: true,
-              actions: { download: true, removeLocal: false, deleteCloud: true },
+              online,
+              actions: { download: online, removeLocal: false, deleteCloud: online },
             },
           ],
       deletions: receipt && receipt.state !== "completed" ? [{ ...receipt, name }] : [],
     };
     return route.fulfill({ json: result });
   });
-  await page.route(`**${endpoint}/deletion?*`, (route) =>
-    receipt
+  await page.route(`**${endpoint}/deletion?*`, (route) => {
+    if (!online) return route.fulfill({ status: 503, json: { error: "Connect to Cloud to check deletion" } });
+    return receipt
       ? route.fulfill({ json: receipt })
-      : route.fulfill({ status: 404, json: { error: "No deletion for this cloud project" } }),
-  );
+      : route.fulfill({ status: 404, json: { error: "No deletion for this cloud project" } });
+  });
   await page.route(`**${endpoint}/delete-cloud`, (route) => {
     expect(route.request().postDataJSON()).toEqual({ confirm: true, expectedAccount: account });
     posts += 1;
-    if (posts === 1) return route.abort();
+    if (posts === 1) {
+      online = false;
+      return route.abort();
+    }
     if (!receipt) {
       receipt = {
         operationId: crypto.randomUUID(),
@@ -191,6 +196,11 @@ test("Cloud deletion recovers from a lost request and resumes the same operation
   const confirmation = page.getByRole("dialog", { name: /Delete cloud project/ });
   await confirmation.getByRole("button", { name: "Delete cloud project", exact: true }).click();
   await expect(choice.getByText("Checking whether Cloud deletion started")).toBeVisible();
+  const offline = choice.getByText("Connect to Cloud to download or delete this project.");
+  await expect(offline).toBeVisible();
+  online = true;
+  await choice.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(offline).toBeHidden();
   await choice.getByRole("button", { name: "Retry", exact: true }).click();
   await expect(choice.getByText("Cloud deletion needs attention")).toBeVisible();
   expect(posts).toBe(2);
