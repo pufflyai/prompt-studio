@@ -144,6 +144,10 @@ test("closing project admission cancels a command stream before draining its wor
     expect(signal.aborted).toBe(true);
     await work.drain("project-1");
     expect((await executing).outcome).toMatchObject({ ok: false, code: "command_stream_cancelled" });
+    await expect(execute()).rejects.toThrow("removing");
+    work.release("project-1");
+    command.run = async () => "available again";
+    expect((await execute()).outcome.ok).toBe(true);
   } finally {
     controller.abort();
     await executing;
