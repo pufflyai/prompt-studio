@@ -172,8 +172,8 @@ const admitModuleInput = (
 export const collectRevisionDependencies = (
   packagePath: string,
   options: { entryPath?: string; entryPaths?: string[]; target?: "browser" } = {},
+  contents = new Map<string, Buffer>(),
 ) => {
-  const contents = new Map<string, Buffer>();
   const files = createRevisionFileLookup();
   const resolveLocalImport = createLocalImportResolver(files.isFile);
   const resolveRevisionModule = createRevisionModuleResolver(files);
@@ -193,7 +193,7 @@ export const collectRevisionDependencies = (
   );
   // Share bytes only within this inspection. Before/after preparation checks each create
   // a fresh reader, so filesystem edits never reuse an earlier operation's input snapshot.
-  let cachedBytes = 0;
+  let cachedBytes = [...contents.values()].reduce((size, value) => size + value.byteLength, 0);
   const readSource = (path: string) => {
     let value = contents.get(path);
     if (!value) {

@@ -101,7 +101,13 @@ export const prepareWebviewArtifacts = async (inputs: WebviewArtifactInput[], si
   const stage = trackPreparationStage([batch]);
   mkdirSync(batch, { recursive: true });
   try {
-    const { sources, signatures } = await inspectPreparedWebviewInputs(inputs, join(batch, "sources"), signal);
+    const { sources, signatures, reads } = await inspectPreparedWebviewInputs(
+      inputs,
+      join(batch, "sources"),
+      signal,
+      undefined,
+      { capture: true },
+    );
     const artifacts = signatures.map((signature) => artifactPaths(artifactId(signature.signature)));
     const missing = artifacts
       .map((artifact, index) => ({ artifact, index }))
@@ -127,7 +133,9 @@ export const prepareWebviewArtifacts = async (inputs: WebviewArtifactInput[], si
     );
     if (!outcome.success) throw new Error(outcome.details);
     signal.throwIfAborted();
-    const after = await inspectPreparedWebviewInputs(inputs, join(batch, "sources"), signal);
+    const after = await inspectPreparedWebviewInputs(inputs, join(batch, "sources"), signal, undefined, {
+      prior: reads,
+    });
     signal.throwIfAborted();
     if (after.signatures.some((signature, index) => signature.signature !== signatures[index]!.signature))
       throw new Error("Extension webview changed while preparing its bundle.");

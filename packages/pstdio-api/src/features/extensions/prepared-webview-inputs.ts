@@ -9,7 +9,8 @@ import {
   prepareManagedWebviewBuildSource,
 } from "./extension-webview-build-source";
 import { trackPreparationStage } from "./preparation-stages";
-import { inspectWebviewDependencyInputs } from "./webview-input-inspection";
+import { inspectWebviewDependencyInputs, inspectWebviewDependencyInputsWithReads } from "./webview-input-inspection";
+import type { WebviewReadHint } from "./webview-input-read-ahead";
 
 type Input = Parameters<typeof inspectManagedWebviewBuildInputs>[0];
 
@@ -21,6 +22,7 @@ export const inspectPreparedWebviewInputs = async (
   sourceRoot: string,
   signal?: AbortSignal,
   selections?: ReturnType<typeof inspectManagedWebviewBuildInputs>[],
+  readAhead?: { capture?: boolean; prior?: ReadonlyMap<string, WebviewReadHint[]> },
 ) => {
   const context = { extension: inputs[0]?.installName };
   const selectedInputs =
@@ -53,14 +55,20 @@ export const inspectPreparedWebviewInputs = async (
   }
   const inspected = await Promise.allSettled(
     [...groups].map(([path, entries]) =>
-      traceSetupPhase("webview.dependency_inputs", context, () => inspectWebviewDependencyInputs(path, entries, signal)),
+      traceSetupPhase("webview.dependency_inputs", context, () =>
+        inspectWebviewDependencyInputsWithReads(path, entries, signal, {
+          capture: readAhead?.capture,
+          hints: readAhead?.prior?.get(path),
+        }),
+      ),
     ),
   );
   signal?.throwIfAborted();
-  const digests = inspected.map((result) => {
+  const byGroup = inspected.map((result) => {
     if (result.status === "rejected") throw result.reason;
     return result.value;
   });
+  const digests = byGroup.map((value) => value.digest);
   const dependencyHash =
     digests.length === 1
       ? digests[0]!
@@ -70,6 +78,7 @@ export const inspectPreparedWebviewInputs = async (
           .digest("hex");
   return {
     sources,
+    reads: new Map([...groups.keys()].map((path, index) => [path, byGroup[index]!.reads ?? []])),
     signatures: await traceSetupPhase("webview.signatures", context, async () =>
       inputs.map((input) => inspectManagedWebviewBuildInputs(input, dependencyHash)),
     ),

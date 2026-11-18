@@ -7,6 +7,12 @@ import {
   hashRevisionDependenciesAsync,
   hashRevisionSource,
 } from "pstdio-extensions/revision-dependencies";
+import { captureWebviewReadHints, readWebviewHints, type WebviewReadHint } from "./webview-input-read-ahead";
+
+export interface WebviewInspectionReadAhead {
+  capture?: boolean;
+  hints?: WebviewReadHint[];
+}
 
 const lockfiles = new Set([
   "bun.lock",
@@ -41,16 +47,24 @@ export const hashWebviewDependencyInputs = (packagePath: string, entryPaths: str
   const packages = collectRevisionDependencies(packagePath, { entryPaths, target: "browser" });
   return hashInputs(packagePath, packages, hashRevisionDependencies(packages, packagePath));
 };
-export const inspectWebviewDependencyInputsAsync = async (packagePath: string, entryPaths: string[]) => {
+export const inspectWebviewDependencyInputsAsync = async (
+  packagePath: string,
+  entryPaths: string[],
+  readAhead?: WebviewInspectionReadAhead,
+  signal?: AbortSignal,
+) => {
   const started = performance.now();
-  const packages = collectRevisionDependencies(packagePath, { entryPaths, target: "browser" });
+  const contents = readAhead?.hints?.length ? await readWebviewHints(readAhead.hints, signal) : undefined;
+  const read = performance.now();
+  const packages = collectRevisionDependencies(packagePath, { entryPaths, target: "browser" }, contents);
   const collected = performance.now();
   const digest = hashInputs(packagePath, packages, await hashRevisionDependenciesAsync(packages, packagePath));
+  const hashed = performance.now();
   return {
     digest,
-    collectMs: Math.round(collected - started),
-    hashMs: Math.round(performance.now() - collected),
+    collectMs: Math.round(collected - read),
+    readAheadMs: Math.round(read - started),
+    ...(readAhead?.capture ? { reads: captureWebviewReadHints(packages.contents) } : {}),
+    hashMs: Math.round(hashed - collected),
   };
 };
-export const hashWebviewDependencyInputsAsync = async (packagePath: string, entryPaths: string[]) =>
-  (await inspectWebviewDependencyInputsAsync(packagePath, entryPaths)).digest;
