@@ -86,6 +86,7 @@ export {
 } from "pstdio-api-contracts/extension-kernel";
 export { deriveMarkdownTitle, resolveSelectedValues } from "pstdio-sync-contracts";
 export { SDK_VERSION } from "../version";
+export { collectionTableQuery, collectionViewQuery } from "./collection-view";
 export { CommandOutcomeError, type CommandResponse, getCommandValue, unwrapCommandOutcome } from "./command-outcome";
 export { commandRefId, contributionRefId } from "./contribution-reference";
 export { defineCommand, defineHook, defineMiddleware, streamOf } from "./define-command";

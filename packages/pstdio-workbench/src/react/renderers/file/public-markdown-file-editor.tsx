@@ -1,13 +1,12 @@
 import { Flex, Text } from "@chakra-ui/react";
-import type { TextEditingSession } from "@pstdio/sdk/extensions";
 import { LazyMarkdownEditor, preloadMarkdownEditor } from "@pstdio/ui/lazy-markdown-editor";
 import type { MarkdownEditorProps } from "@pstdio/ui/rich-text";
-import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { type ReactNode, useEffect, useSyncExternalStore } from "react";
 import type { NativeTextPresentation } from "../../../extensions/bridge/native-text-presentation";
-import { createRetainedTextPresentation } from "../../../extensions/bridge/retained-text-presentation";
 import { participantColor } from "../../shared/participant-color";
 import { FileRendererErrorNotice } from "./file-renderer-error-notice";
 import { FileRendererLoading } from "./file-renderer-loading";
+import { usePublicTextPresentation } from "./use-public-text-presentation";
 
 interface PublicMarkdownFileEditorProps {
   connect: () => NativeTextPresentation;
@@ -22,36 +21,11 @@ const empty = () => undefined;
 
 export const PublicMarkdownFileEditor = (props: PublicMarkdownFileEditorProps) => {
   const { connect, open, placeholder, sectionNavigation, onActiveSectionChange, errorNotice } = props;
-  const connectRef = useRef(connect);
-  connectRef.current = connect;
-  const [session, setSession] = useState<TextEditingSession>();
-  const [openingError, setOpeningError] = useState<string>();
-  const retryRef = useRef<() => Promise<void>>(async () => {});
-  const [presentation] = useState(() => createRetainedTextPresentation(() => connectRef.current()));
+  const { session, openingError, presentation, retry } = usePublicTextPresentation(connect, open);
   const state = useSyncExternalStore(session?.subscribe ?? subscribeEmpty, session?.getSnapshot ?? empty, empty);
   useEffect(() => {
-    // Retained views keep their document DOM while their public authority closes and reopens.
-    setOpeningError(undefined);
-    if (!open) return;
-    void preloadMarkdownEditor().catch(() => {});
-    let mounted = true;
-    const receive = async (operation: () => Promise<TextEditingSession | undefined>) => {
-      setOpeningError(undefined);
-      try {
-        const value = await operation();
-        if (mounted && value) setSession(value);
-      } catch (error) {
-        if (mounted) setOpeningError(error instanceof Error ? error.message : String(error));
-      }
-    };
-    retryRef.current = () => receive(presentation.retry);
-    void receive(presentation.open);
-    return () => {
-      mounted = false;
-      retryRef.current = async () => {};
-      void presentation.close().catch(() => {});
-    };
-  }, [open, presentation]);
+    if (open) void preloadMarkdownEditor().catch(() => {});
+  }, [open]);
   const error = openingError ?? state?.error?.message;
   const participants =
     open && session && presentation.owns(session) && !state?.closing && !openingError
@@ -88,7 +62,7 @@ export const PublicMarkdownFileEditor = (props: PublicMarkdownFileEditorProps) =
         <FileRendererErrorNotice
           message={error}
           onRetry={() => {
-            void retryRef.current();
+            void retry();
           }}
         />
       )}

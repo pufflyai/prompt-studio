@@ -6,6 +6,7 @@ import { jsonBatches } from "./json-batches";
 import { type NativeProjectedRecord, projectNativeRecordText } from "./native-record-projection";
 import { derivedQueryValues, readDerivedQueryIndexes } from "./record-derived-fields";
 import { encodeProjectionValue } from "./record-projection-codec";
+import { identityQueryKey } from "./resource-query-values";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
@@ -39,7 +40,9 @@ export const writeProjectedRecords = async (tx: Transaction, owner: StorageOwner
       FROM jsonb_to_recordset(${batch}::jsonb)
         AS input(record_id text, deleted boolean, value jsonb, query_values jsonb, asset jsonb, shared jsonb, revision text, native_sources jsonb, native_versions jsonb, record_lifetime text)
       ON CONFLICT (workbench_id, extension_id, record_id) DO UPDATE SET
-        deleted = excluded.deleted, value = excluded.value, query_values = excluded.query_values, asset = excluded.asset, shared = excluded.shared,
+        deleted = excluded.deleted, value = excluded.value,
+        query_values = excluded.query_values || ${owner.extensionId === "pstdio" ? sql`CASE WHEN storage_current_records.query_values ? ${identityQueryKey} THEN jsonb_build_object(${identityQueryKey}::text, storage_current_records.query_values -> ${identityQueryKey}) ELSE '{}'::jsonb END` : sql`'{}'::jsonb`},
+        asset = excluded.asset, shared = excluded.shared,
         revision = excluded.revision, native_sources = excluded.native_sources, native_versions = excluded.native_versions,
         record_lifetime = excluded.record_lifetime
       WHERE storage_current_records.revision <> excluded.revision OR storage_current_records.record_lifetime <> excluded.record_lifetime

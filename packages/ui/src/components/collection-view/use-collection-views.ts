@@ -11,7 +11,20 @@ import {
   EMPTY_VIEW_FILTER,
 } from "./collection-view-types";
 import { normalizeBooleanViewFilter } from "./normalize-boolean-view-filter";
-import { type CollectionViewStoreInitialState, getCollectionViewStore } from "./use-collection-view-store";
+import {
+  type CollectionViewStoreInitialState,
+  type CollectionViewStoreState,
+  getCollectionViewStore,
+} from "./use-collection-view-store";
+
+const normalizeStoredFilter = <TSettings>(
+  state: CollectionViewStoreState<TSettings>,
+  fields?: AttributeDescriptor[],
+) => {
+  if (!fields) return;
+  const normalized = normalizeBooleanViewFilter(state.filter, fields);
+  if (normalized !== state.filter) state.setFilter(normalized);
+};
 
 // The order of these lists does not change what the view shows.
 const UNORDERED_SETTINGS = new Set(["displayProperties", "hiddenColumns"]);
@@ -55,6 +68,8 @@ export const saveCollectionView = <TSettings>(
 ) => (view.builtIn ? createView({ title: `${view.title} copy`, ...state }) : source.onUpdateView(view.id, state));
 
 export interface CollectionViewsInput<TSettings> {
+  /** Defer initial selection while the host loads the available saved views. */
+  enabled?: boolean;
   storageKey: string;
   fields?: AttributeDescriptor[];
   initialState: CollectionViewStoreInitialState<TSettings>;
@@ -85,11 +100,9 @@ export const useCollectionViews = <TSettings>(input: CollectionViewsInput<TSetti
     undefined,
   );
   useEffect(() => {
+    if (input.enabled === false) return;
     const state = store.getState();
-    if (input.fields) {
-      const normalized = normalizeBooleanViewFilter(state.filter, input.fields);
-      if (normalized !== state.filter) state.setFilter(normalized);
-    }
+    normalizeStoredFilter(state, input.fields);
     const active = views.find((view) => view.id === activeViewId);
     const prior = previous.current;
     if (!active) {
@@ -108,6 +121,6 @@ export const useCollectionViews = <TSettings>(input: CollectionViewsInput<TSetti
       state.activateView(active);
     }
     previous.current = { views, active };
-  }, [store, views, defaultId, activeViewId, input.fields]);
-  return { views, defaultId };
+  }, [store, views, defaultId, activeViewId, input.fields, input.enabled]);
+  return { views, defaultId, ready: input.enabled !== false && views.some((view) => view.id === activeViewId) };
 };
