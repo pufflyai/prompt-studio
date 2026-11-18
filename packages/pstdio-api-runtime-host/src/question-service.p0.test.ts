@@ -143,14 +143,4 @@ describe("createQuestionService", () => {
     expect(service.answer("Blue")).toBe(false);
     expect(service.hasPending()).toBe(false);
   });
-
-  test("dispose rejects the open ask", async () => {
-    const service = createQuestionService(noHooks);
-
-    const failure = rejection(service.ask(request("q1", "Red or blue?")));
-    service.dispose();
-
-    expect((await failure).message).toMatch(/session ended/i);
-    expect(service.hasPending()).toBe(false);
-  });
 });

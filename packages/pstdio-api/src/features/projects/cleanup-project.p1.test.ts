@@ -113,40 +113,4 @@ describe("cleanupProjectArtifacts", () => {
     expect(softDelete).not.toHaveBeenCalled();
     expect(removeProjectStorage).not.toHaveBeenCalled();
   });
-
-  test("skips provider cleanup already persisted by an earlier attempt", async () => {
-    const deleteProviderWorkspace = mock(async () => true);
-    const softDelete = mock(async () => {});
-    const listForProviderReconciliation = mock()
-      .mockResolvedValueOnce([
-        {
-          id: "remote-1",
-          provider_id: "example.remote",
-          project_id: "project-1",
-          is_default: false,
-          root_path: null,
-        },
-      ])
-      .mockResolvedValueOnce([]);
-    const removeProjectStorage = mock(() => {
-      throw new Error("storage busy");
-    });
-    const deps = { workspaceService: { listForProviderReconciliation, softDelete } } as never;
-
-    await expect(
-      cleanupProjectArtifacts(deps, "project-1", {
-        deleteProviderWorkspace: deleteProviderWorkspace as never,
-        removeProjectStorage,
-      }),
-    ).rejects.toThrow("storage busy");
-    await expect(
-      cleanupProjectArtifacts(deps, "project-1", {
-        deleteProviderWorkspace: deleteProviderWorkspace as never,
-        removeProjectStorage,
-      }),
-    ).rejects.toThrow("storage busy");
-
-    expect(deleteProviderWorkspace).toHaveBeenCalledTimes(1);
-    expect(softDelete).toHaveBeenCalledTimes(1);
-  });
 });

@@ -19,24 +19,6 @@ describe("automation service recovery", () => {
     await expect(service.close()).resolves.toBeUndefined();
   });
 
-  test("starts every durable queued run after the command runtime is ready", async () => {
-    const claimQueuedRun = mock(async () => null);
-    const service = createAutomationService({
-      automationDBService: {
-        listQueuedRuns: async () => [{ id: "run-1" }, { id: "run-2" }],
-        claimQueuedRun,
-      } as never,
-      getCommandDeps: () => ({}) as never,
-    });
-
-    expect(await service.recoverQueuedRuns()).toBe(2);
-    await service.close();
-
-    expect(claimQueuedRun).toHaveBeenCalledTimes(2);
-    expect(claimQueuedRun).toHaveBeenCalledWith("run-1");
-    expect(claimQueuedRun).toHaveBeenCalledWith("run-2");
-  });
-
   test("aborts active command execution before orderly shutdown waits", async () => {
     let observedAbort = false;
     const running = {

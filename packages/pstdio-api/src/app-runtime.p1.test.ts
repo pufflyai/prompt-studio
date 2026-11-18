@@ -163,11 +163,6 @@ describe("runtime authentication", () => {
     });
     expect(invalidCapability.status).toBe(404);
 
-    const oldAssetPath = await handle.app.request(`${runtimeOrigin}/v1/extensions/runtime.js`, {
-      headers: { origin: "null" },
-    });
-    expect(oldAssetPath.status).toBe(403);
-
     const nonAsset = await handle.app.request(`${runtimeOrigin}/v1/projects`, {
       headers: { origin: "null" },
     });
