@@ -8,7 +8,6 @@ import {
   type ProjectFolderSource,
   projectFolderRecoveryStatusSchema,
 } from "pstdio-api-contracts";
-import { projectRecoveryRoot } from "../../../pstdio-api/src/services/project-recovery/project-paths";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { runTestCommand } from "../scripts/run-test-command";
@@ -183,12 +182,12 @@ test.skipIf(process.platform === "win32")(
       expect((await listedCopy(desktop, project.id, laptopDevice))?.available ?? false).toBe(false);
       // HTTP response delivery precedes client verification and atomic retention.
       // Retry may cancel that unfinished response; only retained chunks are finished work.
+      const cache = join(desktop.home, "storage/folder-recovery");
       const retained = new Set(
-        [
-          ...new Bun.Glob("**/*.blob").scanSync(
-            join(projectRecoveryRoot(join(desktop.home, "storage/folder-recovery"), project.id), "chunks"),
-          ),
-        ].map((path) => `~${path.split(/[\\/]/).at(-1)!.slice(0, -".blob".length)}`),
+        Array.from(
+          new Bun.Glob("**/chunks/**/*.blob").scanSync(cache),
+          (path) => `~${path.split(/[\\/]/).at(-1)!.slice(0, -".blob".length)}`,
+        ),
       );
       expect(retained.size).toBeGreaterThan(0);
       const resumedAt = desktopReads().length;
