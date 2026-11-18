@@ -35,19 +35,11 @@ const setup = async (page: Page, request: APIRequestContext, prompts = ["Session
   await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
   await page.getByRole("button", { name: "Reattach Side Panel", exact: true }).click();
   const header = page.locator('[data-workbench-panel-header="side"]');
-  const chooser = page.locator('[data-workbench-panel="side"]').getByRole("group", { name: "Available tabs" });
-  await expect(header.getByRole("tab", { selected: true }).or(chooser).filter({ visible: true }).first()).toBeVisible();
-  if (await chooser.isVisible()) await chooser.getByRole("button", { name: "New session", exact: true }).click();
   for (const session of sessions) {
     const draft = header.getByRole("tab", { name: "New session", exact: true });
     if ((await draft.count()) === 0) {
       await header.getByRole("button", { name: "Add panel", exact: true }).click();
-      const choice = page
-        .getByRole("menu", { name: "Add panel", exact: true })
-        .getByRole("menuitem", { name: "New session", exact: true });
-      await expect(draft.or(choice).filter({ visible: true }).first()).toBeVisible();
-      if (!(await draft.isVisible())) await choice.click();
-      else if (await choice.isVisible()) await page.keyboard.press("Escape");
+      await page.getByRole("menuitem", { name: "New session", exact: true }).click();
     }
     await draft.click({ button: "right" });
     await switchSession(page, session.title);

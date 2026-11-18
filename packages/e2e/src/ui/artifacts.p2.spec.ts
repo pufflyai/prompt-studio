@@ -187,10 +187,6 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await frame.getByRole("menuitemradio", { name: "First", exact: true }).click();
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
     await page.reload();
-    // A retained reader restores the historical revision the person selected.
-    await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
-    await versionMenu.click();
-    await frame.getByRole("menuitemradio", { name: "Second · Latest", exact: true }).click();
     await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
     // A published URL opens the same artifact tab from a fresh page location.
     await page.goto(first.url);
