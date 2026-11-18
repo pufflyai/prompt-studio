@@ -134,10 +134,7 @@ export const acceptRevision = (
   return withFileMutationLock(path, () => {
     let current: PreparedExtensionRevision | null = null;
     try {
-      const saved = JSON.parse(readFileSync(path, "utf8")) as PreparedExtensionRevision | null;
-      // Foreground discovery treats incompatible receipts as absent. Use the same
-      // rule under the lock so the first compatible build can replace the receipt.
-      if (saved?.host === revision.host) current = saved;
+      current = JSON.parse(readFileSync(path, "utf8"));
     } catch {}
     // Reads treat an earlier host/format as absent. Its replacement uses that same guard;
     // a compatible revision accepted in the meantime still participates in the CAS below.
