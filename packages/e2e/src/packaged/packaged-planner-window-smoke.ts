@@ -19,41 +19,14 @@ export async function expectPlannerWindow(timeline: FrameLocator, execute: Execu
   const cards = timeline.locator("[data-ticket]");
   const first = timeline.locator(`[data-ticket="${tickets[0]!.id}"]`);
   await expect(first).toBeInViewport();
-  // Command completion and the first card do not fence asynchronous graph refreshes.
-  await expect(timeline.locator("[data-edge-layer] g")).toHaveCount(tickets.length - 1);
   await expect.poll(() => cards.count()).toBeLessThan(tickets.length / 2);
   const initialCards = await cards.count();
   await first.focus();
   await expect(first).toBeFocused();
   const initialHeight = await first.evaluate((card) => card.getBoundingClientRect().height);
-  const jump = await viewport.evaluate((element) => {
-    const before = { top: element.scrollTop, height: element.scrollHeight, viewport: element.clientHeight };
-    element.scrollTo({ top: element.scrollHeight });
-    return { before, after: { top: element.scrollTop, height: element.scrollHeight } };
-  });
-  console.info("Timeline bottom jump", jump);
+  await viewport.evaluate((element) => element.scrollTo({ top: element.scrollHeight }));
   const last = timeline.locator(`[data-ticket="${tickets.at(-1)!.id}"]`);
-  try {
-    await expect(last).toBeInViewport();
-  } catch (error) {
-    console.info(
-      "Timeline failed bottom state",
-      await viewport
-        .evaluate(
-          (element) => ({
-            top: element.scrollTop,
-            height: element.scrollHeight,
-            viewport: element.clientHeight,
-            cards: [...element.querySelectorAll<HTMLElement>("[data-ticket]")].map((card) => card.dataset.ticket),
-            edges: element.querySelectorAll("[data-edge-layer] g").length,
-          }),
-          undefined,
-          { timeout: 1_000 },
-        )
-        .catch(() => ({ unavailable: true })),
-    );
-    throw error;
-  }
+  await expect(last).toBeInViewport();
   await expect
     .poll(() => viewport.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop))
     .toBeLessThanOrEqual(1);

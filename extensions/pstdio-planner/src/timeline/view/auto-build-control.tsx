@@ -25,9 +25,6 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
         paused={autoBuild.mode?.state === "paused"}
         reviewRequests={autoBuild.mode?.reviewRequests}
         requestErrors={autoBuild.mode?.requestErrors}
-        requestPage={autoBuild.mode?.requestPage}
-        requestLoading={autoBuild.requestLoading}
-        onRequestPage={autoBuild.setRequestOffset}
         onAnswerRequest={(requestId, response) => client.commands.review({ requestId, response })}
         onOpenRequestChat={(requestId) => client.commands["review-requests.open"]({ requestId })}
         onPause={() => autoBuild.transition("pause")}

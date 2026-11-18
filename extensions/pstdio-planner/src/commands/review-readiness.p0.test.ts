@@ -1,11 +1,14 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { runTicketsQuery } from "../data/query.fixture";
-import { reviewOutcomesCollection, reviewRequestsCollection } from "../data/review-request-storage";
-import { listTicketReviewRequests } from "../data/review-request-storage.fixture";
+
+import { runTicketsQuery } from "../data/query";
+import {
+  listTicketReviewRequests,
+  reviewOutcomesCollection,
+  reviewRequestsCollection,
+} from "../data/review-request-storage";
 import { ticketsCollection } from "../data/ticket-context.fixture";
 import { readPlanCommand } from "../timeline/commands/read-plan";
-import { requestPageCommand } from "../timeline/commands/request-page";
 import { loadAttemptReadiness } from "./attempt-readiness";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
@@ -84,20 +87,8 @@ test("an open request blocks the ticket and prerequisites without a stored tag",
   const plan = await readPlanCommand.run(ctx, {});
   expect(plan.sections.flatMap(({ rows }) => rows).find(({ id }) => id === ticket.id)).toMatchObject({
     state: "await-input",
-    reviewCounts: { total: 1, pending: 1 },
+    requests: [expect.objectContaining({ state: "open" })],
   });
-  expect(plan.ticketRows.find(({ id }) => id === ticket.id)?.attributes.reviewRequestItems).toMatchObject([
-    {
-      action: {
-        kind: "panel",
-        panel: { kind: "page-slot", page: { id: "timeline" }, id: "needs-attention" },
-        resource: { id: ticket.id },
-      },
-    },
-  ]);
-  expect((await requestPageCommand.run(ctx, { scope: { ticketId: ticket.id } })).requests).toEqual([
-    expect.objectContaining({ state: "open" }),
-  ]);
 });
 
 test("an unreadable outcome keeps a concrete error and pending input", async () => {
@@ -124,9 +115,8 @@ test("an unreadable outcome keeps a concrete error and pending input", async () 
   const plan = await readPlanCommand.run(ctx, {});
   expect(plan.sections.flatMap(({ rows }) => rows).find(({ id }) => id === ticket.id)).toMatchObject({
     state: "await-input",
-    reviewCounts: { total: 1, pending: 1 },
+    requestErrors: group.errors,
   });
-  expect((await requestPageCommand.run(ctx, { scope: { ticketId: ticket.id } })).errors).toEqual(group.errors);
 });
 
 test.each(["open", "unreadable"])("%s input on completed ancestors blocks dependent launch", async (state) => {

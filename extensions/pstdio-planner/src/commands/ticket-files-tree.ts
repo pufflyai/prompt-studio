@@ -10,7 +10,7 @@ import {
 import { ticketsCollection } from "../data/collections";
 import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../data/document-selection";
 import { TICKET_RESOURCE_ICON, ticketDisplayTitle } from "../data/mappers";
-import { REVIEW_REQUEST_ICON, reviewRequestCountSummary } from "../data/review-request-summary";
+import { REVIEW_REQUEST_ICON, reviewRequestSummary } from "../data/review-request-summary";
 import {
   REVIEW_REQUESTS_DOCUMENT,
   ticketFileTarget,
@@ -69,8 +69,7 @@ export const listTicketFilesTree = async (
     tickets,
     children,
     dependents,
-    dependencies,
-    reviewCounts,
+    reviewRequests,
     workspaces,
     linkedWorkspaces,
     workspaceCursor,
@@ -88,7 +87,7 @@ export const listTicketFilesTree = async (
 
   const ticketResource = ticketResourceReference(ticket, parentLookup, plannerOwnerFor(ctx));
 
-  const summary = reviewRequestCountSummary(reviewCounts.total, reviewCounts.pending);
+  const summary = reviewRequestSummary(reviewRequests);
   const reviewRequestsNode: TreeNode = {
     id: REVIEW_REQUESTS_DOCUMENT,
     label: l10n("requests.navigation.label", "Needs attention"),
@@ -189,14 +188,7 @@ export const listTicketFilesTree = async (
   const sections = mergeTicketLinkSections(
     [
       ticketSection,
-      ...ticketRelationshipSections(
-        ticket,
-        tickets,
-        plannerOwnerFor(ctx),
-        dependents.tickets,
-        dependents.nextCursor,
-        dependencies,
-      ),
+      ...ticketRelationshipSections(ticket, tickets, plannerOwnerFor(ctx), dependents.tickets, dependents.nextCursor),
       filesSection,
       ...(maybeSubTicketsSection ? [maybeSubTicketsSection] : []),
       linkedWorkspacesSection,

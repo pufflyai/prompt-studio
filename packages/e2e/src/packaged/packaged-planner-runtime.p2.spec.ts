@@ -215,8 +215,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     // A valid Track cannot hide a missing module behind a schema error.
     expect(await moduleStatus(host, valid.id, "timeline")).toEqual({ status: 200, body: "" });
     browser = await chromium.launch(PROVISIONED_CHROMIUM);
-    const context = await browser.newContext();
-    const page = await context.newPage();
+    const page = await (await browser.newContext()).newPage();
     await page.addInitScript(() => {
       if (window.top === window) localStorage.setItem("onboarding-complete", "true");
     });
@@ -325,8 +324,8 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
         }),
       ),
     );
-    // Error messages show a bounded conflict page. After repairing it, a later
-    // draft must still prevent conversion; unloaded conflicts cannot be lost.
+    // Conflict feedback is bounded. Once the active and archived examples are resolved,
+    // the remaining stored draft must still prevent conversion and name its own ticket.
     await expect(
       conflicting.execute("ticket-tag.update", { tagId: conflictData.track.id, type: "single_select" }),
     ).rejects.toThrow(new RegExp(`Track has more than one value on .*${conflictData.draft.shorthand}`));

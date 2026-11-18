@@ -5,7 +5,6 @@ import {
   params,
   type StorageQueryRecord,
 } from "@pstdio/sdk/extensions";
-import { linkedWorkspacePage } from "../data/linked-workspaces";
 import { findStoredTicket } from "../data/resolve";
 import { ticketWithCurrentTitle, withTicketIdentity } from "../data/ticket-identity";
 import { changeTicketRecord } from "../data/ticket-records";
@@ -99,67 +98,52 @@ const archiveSelectedTickets = (
     },
   );
 
-type ArchiveContext = Pick<
-  ExtensionContextBase,
-  "events" | "notify" | "storage" | "workspaces" | "settings" | "resources" | "automation"
->;
-
-const enqueueArchivedCleanup = async (ctx: ArchiveContext, archived: string[]) => {
-  try {
-    const linked = await linkedWorkspacePage(
-      ctx,
-      archived.map((id) => ({ id })),
-      undefined,
-      1,
-    ).catch(() => undefined);
-    if (!linked || linked.items.length)
-      await ctx.automation.enqueue({
-        command: cleanupTicketWorkspacesCommand.ref,
-        input: { params: { ticketIds: archived } },
-        key: `archive-cleanup:${ctx.storage.ids.create()}`,
-      });
-  } catch (error) {
-    await ctx.notify
-      .action({
-        title: "Workspace cleanup failed",
-        body: `Could not queue linked workspace cleanup: ${String(error)}`,
-        kind: "failed",
-        priority: "normal",
-      })
-      .catch(() => {});
-  }
-};
-
-export const archiveTicketColumnAction = async (ctx: ArchiveContext, input: { columnId: string; actionId: string }) => {
+export const archiveTicketColumnAction = async (
+  ctx: Pick<
+    ExtensionContextBase,
+    "events" | "notify" | "storage" | "workspaces" | "settings" | "resources" | "automation"
+  >,
+  input: { columnId: string; actionId: string },
+) => {
   if (input.actionId !== ARCHIVE_ALL_COLUMN_ACTION) return { archivedCount: 0 };
   let archivedCount = 0;
   let after: string | undefined;
-  let cleanup = Promise.resolve();
-  try {
-    for (;;) {
-      const page = await ticketSelectionPage(ctx.storage, {
-        index: "ticket-status",
-        after,
-        where: {
-          all: [
-            { field: "archived", op: "eq", value: false },
-            { field: "statusId", op: "eq", value: input.columnId },
-          ],
-        },
-      });
-      if (!page.records.length) break;
-      const archived: string[] = [];
-      archived.push(...(await archiveSelectedTickets(ctx, page.records, input.columnId)));
-      archivedCount += archived.length;
-      // Durable jobs retain bounded IDs, not detached closures holding every archived body.
-      // At most one preceding page discovers/queues cleanup while this page writes.
-      await cleanup;
-      cleanup = archived.length ? enqueueArchivedCleanup(ctx, archived) : Promise.resolve();
-      after = String(page.records.at(-1)!.fields.id);
-      if (page.records.length < 100) break;
+  for (;;) {
+    const page = await ticketSelectionPage(ctx.storage, {
+      index: "ticket-status",
+      after,
+      where: {
+        all: [
+          { field: "archived", op: "eq", value: false },
+          { field: "statusId", op: "eq", value: input.columnId },
+        ],
+      },
+    });
+    if (!page.records.length) break;
+    const archived: string[] = [];
+    archived.push(...(await archiveSelectedTickets(ctx, page.records, input.columnId)));
+    archivedCount += archived.length;
+    // Durable jobs retain bounded IDs, not detached closures holding every archived body.
+    if (archived.length) {
+      try {
+        await ctx.automation.enqueue({
+          command: cleanupTicketWorkspacesCommand.ref,
+          input: { params: { ticketIds: archived } },
+          key: `archive-cleanup:${ctx.storage.ids.create()}`,
+        });
+      } catch (error) {
+        await ctx.notify
+          .action({
+            title: "Workspace cleanup failed",
+            body: `Could not queue linked workspace cleanup: ${String(error)}`,
+            kind: "failed",
+            priority: "normal",
+          })
+          .catch(() => {});
+      }
     }
-  } finally {
-    await cleanup;
+    after = String(page.records.at(-1)!.fields.id);
+    if (page.records.length < 100) break;
   }
 
   // Tickets are durable and cleanup jobs are queued before the board refreshes.

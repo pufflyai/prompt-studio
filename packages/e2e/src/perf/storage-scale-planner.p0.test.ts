@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
-import { createTicketCommand, queryTicketPage } from "planner/testing";
+import { createTicketCommand, runTicketsQuery } from "planner/testing";
 import { compareRows, createRow, pageRows, workload } from "storage-scale-fixture";
 import { fixtureCommands, plannerStorageIndexes } from "./storage-scale-extension";
 
@@ -17,8 +17,10 @@ test("Planner shows tickets created through its command and adopted by the fixtu
   const command = fixtureCommands[0];
   const input = { action: "adopt" as const, planner: true, rows: edited, tickets, count };
   await command.run(makeCommandContext({ storage, params: { input } }), { input });
-  const board = await queryTicketPage(planner, {
-    page: { limit: 100, offset: 0, fields: ["title", "status"], search: "" },
+  const board = await runTicketsQuery({
+    storage: planner.storage,
+    resources: planner.resources,
+    projectId: ctx.projectId,
   });
   const ready = board.rows.filter((row) => row.attributes.status === "ready").map((row) => row.title);
   expect(ready).toEqual(

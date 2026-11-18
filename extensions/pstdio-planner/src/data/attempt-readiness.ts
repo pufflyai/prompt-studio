@@ -3,7 +3,6 @@ import type { DependencyDelivery } from "./dependency-deliveries";
 import { hasPendingImplementationInput } from "./implementation-input";
 import type { TicketReviewRequests } from "./review-request-types";
 import { normalizeTicketDependencies } from "./ticket-dependencies";
-import type { TicketInputState } from "./ticket-input-state";
 
 export interface AttemptReadinessTicket {
   id: string;
@@ -34,7 +33,7 @@ export type AttemptReadinessResult =
     };
 
 interface ResolveAttemptReadinessInput {
-  requests: Map<string, TicketReviewRequests | TicketInputState>;
+  requests: Map<string, TicketReviewRequests>;
   activeImplementationWorkspaceIds?: Set<string>;
   retiredWorkspaceIds?: Set<string>;
   requireMergedDependencies?: boolean;

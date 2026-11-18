@@ -22,11 +22,9 @@ const observeQueries = (page: Page) => {
   }[] = [];
   const pending = new Set<Promise<void>>();
   const responseErrors: unknown[] = [];
-  page.on("request", (request) => {
-    if (!request.url().includes("/commands/") || !request.url().endsWith("/execute")) return;
+  page.on("response", (response) => {
+    if (!response.url().includes("/commands/") || !response.url().endsWith("/execute")) return;
     const collecting = (async () => {
-      const response = await request.response();
-      assert(response, `Planner command has no response: ${request.url()}`);
       const body = await response.body();
       const result = JSON.parse(body.toString());
       assert(response.ok() && result.outcome?.status === "success", "Planner command failed");
@@ -38,16 +36,11 @@ const observeQueries = (page: Page) => {
         page: value?.page,
         request: response.request().postDataJSON()?.params?.page,
       });
-    })().catch((error) => {
-      responseErrors.push(error);
-    });
+    })();
     pending.add(collecting);
-    void collecting.finally(() => pending.delete(collecting));
+    void collecting.catch((error) => responseErrors.push(error)).finally(() => pending.delete(collecting));
   });
-  const drain = async () => {
-    while (pending.size) await Promise.all([...pending]);
-  };
-  return { requests, drain, responseErrors };
+  return { requests, pending, responseErrors };
 };
 
 const actionable = async (page: Page, rows: Locator) => {
@@ -81,7 +74,7 @@ await runScenario("B6", async (capture) => {
           Reflect.get(window, "plannerStalls").push(...list.getEntries().map((entry) => entry.duration)),
         ).observe({ type: "longtask", buffered: true });
       });
-      const { requests, drain, responseErrors } = observeQueries(page);
+      const { requests, pending, responseErrors } = observeQueries(page);
       const counters = async () => {
         const response = await fetch(`${runtime.baseUrl}/runtime/benchmark-counters`, { headers: runtime.headers });
         assert(response.ok, "Native Planner storage counters unavailable");
@@ -98,12 +91,9 @@ await runScenario("B6", async (capture) => {
       capture.record("actionable", performance.now() - cold);
       const pages = () =>
         requests.filter(
-          (request) =>
-            ["pstdio.planner", "pstdio.pstdio-planner"].some((owner) =>
-              request.path.endsWith(`${owner}.view.tickets.kanban.query/execute`),
-            ) && request.page,
+          (request) => request.path.endsWith("pstdio.pstdio-planner.view.tickets.kanban.query/execute") && request.page,
         );
-      await drain();
+      await Promise.all([...pending]);
       const paged = pages().length > 0;
       const filter = performance.now();
       await page.getByRole("button", { name: "Search this view" }).click();
@@ -112,7 +102,7 @@ await runScenario("B6", async (capture) => {
       // The first row already matches before search; wait for the actual narrowed result.
       await expect(page.getByTestId("view-search-field")).toContainText("975 of 1000");
       await afterPaint(page);
-      await drain();
+      await Promise.all([...pending]);
       capture.detail("first-pages", requests);
       const searched = () =>
         pages().findLast(
@@ -161,7 +151,7 @@ await runScenario("B6", async (capture) => {
       await expect
         .poll(async () => JSON.stringify(await rows.allTextContents()) !== JSON.stringify(firstIds))
         .toBe(true);
-      await drain();
+      await Promise.all([...pending]);
       const secondIds = await rows.allTextContents();
       capture.detail("page-navigation", {
         mode: paged ? "cursor" : "unbounded-scroll",
@@ -174,7 +164,7 @@ await runScenario("B6", async (capture) => {
         /Planner stress background \d{4}(?: with a longer title that wraps across several lines of the shared card)?/,
       )?.[0];
       assert(title, "Expected generated ticket title missing");
-      await drain();
+      await Promise.all([...pending]);
       const ticket = requests
         .flatMap((entry) => entry.rows)
         .find((entry) => (entry.title ?? entry.values?.title) === title);
@@ -183,8 +173,6 @@ await runScenario("B6", async (capture) => {
       await runtime.execute(fixture.projectId, "update-ticket", { id: ticket.id, status: "In Progress" });
       await expect(rows.filter({ hasText: title })).toContainText("In Progress");
       await afterPaint(page);
-      // Drain command bodies before navigation discards their CDP resource handles.
-      await drain();
       capture.record("move", performance.now() - moving);
       const firstStalls = await page.evaluate(() => Reflect.get(window, "plannerStalls") as number[]);
       const reopening = performance.now();
@@ -200,9 +188,8 @@ await runScenario("B6", async (capture) => {
       await expect(rows.filter({ hasText: title })).toContainText("In Progress");
       await afterPaint(page);
       capture.record("reopen", performance.now() - reopening);
-      await drain();
-      capture.detail("query-response-errors", responseErrors.map(String));
-      capture.check("complete-query-response-evidence", responseErrors.length === 0);
+      await Promise.all([...pending]);
+      assert.deepEqual(responseErrors, []);
       const after = await counters();
       const stalls = [...firstStalls, ...(await page.evaluate(() => Reflect.get(window, "plannerStalls") as number[]))];
       capture.detail("native-counters", { before, after, requests, firstIds, secondIds, stalls });

@@ -2,8 +2,9 @@ import { type CommandContext, defineCommand, params, type SessionRunSnapshot } f
 import { actorFromSource } from "../data/attempt-actors";
 import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
 import { appendAttemptEvent, readAttempt } from "../data/attempt-storage";
+import { hasPendingImplementationInput } from "../data/implementation-input";
+import { listTicketReviewRequests } from "../data/review-request-storage";
 import { preparePlannerIndexes } from "../data/storage-indexes";
-import { readTicketInputStates } from "../data/ticket-input-state";
 import { hasWorkspaceWriter } from "../data/workspace-writers";
 import { withWriteGuard } from "../data/write-guard";
 import { readImplementationCapacity } from "./attempt-readiness";
@@ -57,7 +58,7 @@ export const repairAttempt = async (
       throw new Error("Choose a current implementation variant.");
     if ((await workspaceHead(ctx, attempt.workspaceId)) !== input.expectedHeadSha)
       throw new Error("Workspace HEAD changed before repair.");
-    if ((await readTicketInputStates(ctx.storage, [attempt.ticketId])).get(attempt.ticketId)?.pendingImplementation)
+    if (hasPendingImplementationInput(await listTicketReviewRequests(ctx.storage, attempt.ticketId)))
       throw new Error("Resolve implementation input before repair.");
     const session = await ctx.sessions.get(attempt.implementationSessionId);
     if (!session)

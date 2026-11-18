@@ -7,7 +7,7 @@ const ticketView = (view: BoardView) => ({ ...view, settings: view.settings as K
 
 export function timelineViewsSource(
   client: PlanClient,
-  value: Awaited<ReturnType<PlanClient["commands"]["timeline.plan.schema"]>>["savedViews"],
+  value: Awaited<ReturnType<PlanClient["commands"]["timeline.plan.read"]>>["savedViews"],
 ) {
   const source: CollectionViewsSource<KanbanRendererSettings> = {
     views: value.views.map(ticketView),

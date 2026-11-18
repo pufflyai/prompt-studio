@@ -19,12 +19,7 @@ export const autoBuildScopeCommand = defineCommand({
       const mode = await readAutoBuildMode(ctx);
       if (!mode.enabled || mode.revision !== revision) throw new Error("Auto Build stopped. Read its mode again.");
       if (!Array.isArray(queries) || !queries.length) throw new Error("Provide at least one work query.");
-      const work = await readNextTickets(ctx, mode, {}, queries).catch(async (error: unknown) => {
-        const current = await readAutoBuildMode(ctx);
-        if (!current.enabled || current.revision !== revision)
-          throw new Error("Auto Build stopped. Read its mode again.");
-        throw error;
-      });
+      const work = await readNextTickets(ctx, mode, {}, queries);
       const current = await readAutoBuildMode(ctx);
       if (!current.enabled || current.revision !== revision)
         throw new Error("Auto Build stopped. Read its mode again.");

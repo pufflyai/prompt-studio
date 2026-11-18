@@ -62,7 +62,6 @@ export type PlannerVariant = Omit<PlannerAttempt, "state">;
 
 export interface WorkspaceActivity {
   active: boolean;
-  nextCursor: string | null;
   sessions: WorkspaceActivitySession[];
 }
 
@@ -80,10 +79,7 @@ const plannerCommand = commandRef.forExtension({ publisher: "pstdio", name: "pla
 // references instead of repeating the planner identity or command ids.
 export const planner = {
   automationPolicy: plannerCommand<Record<string, never>, { maxInProgress: number }>("automation-policy"),
-  readTickets: plannerCommand<
-    { limit?: number; cursor?: string },
-    { tickets: PlannerTicket[]; total: number; cursor: string | null; revision: string }
-  >("read-tickets"),
+  readTickets: plannerCommand<Record<string, never>, PlannerTicket[]>("read-tickets"),
   readStatuses: plannerCommand<Record<string, never>, { statuses: PlannerStatus[] }>("ticket-status.read"),
   readTags: plannerCommand<Record<string, never>, { tags: PlannerTag[] }>("ticket-tag.read"),
   // An old ticket number shared by several tickets after an offline merge returns every match.
@@ -100,20 +96,12 @@ export const planner = {
     { workspaceId: string; expectedRevision?: number },
     { review: { id: string }; session: { id: string } }
   >("run-review"),
-  listVariants: plannerCommand<
-    { limit?: number; cursor?: string },
-    { variants: PlannerVariant[]; total: number; cursor: string | null; revision: string }
-  >("list-variants"),
+  listVariants: plannerCommand<Record<string, never>, PlannerVariant[]>("list-variants"),
   /** @deprecated Use listVariants. */
-  listAttempts: plannerCommand<
-    { limit?: number; cursor?: string },
-    { attempts: PlannerAttempt[]; total: number; cursor: string | null; revision: string }
-  >("list-attempts"),
+  listAttempts: plannerCommand<Record<string, never>, PlannerAttempt[]>("list-attempts"),
   reconcileAttempt: plannerCommand<{ workspaceId: string }, { decision: string; attempt: PlannerAttempt }>(
     "reconcile-attempt",
   ),
   ticketWorkspaces: plannerCommand<{ id: string }, TicketWorkspaceRow[]>("ticket-workspaces"),
-  workspaceActivity: plannerCommand<{ workspaceId: string; limit?: number; cursor?: string }, WorkspaceActivity>(
-    "workspace-activity",
-  ),
+  workspaceActivity: plannerCommand<{ workspaceId: string }, WorkspaceActivity>("workspace-activity"),
 };

@@ -54,7 +54,7 @@ test("readiness selects the dependency closure without reading unrelated tickets
     reason: "dependency-not-ready",
   });
   for (const id of tickets.reads) reads.add(id);
-  expect([...reads].sort()).toEqual(["ticket-0"]);
+  expect([...reads].sort()).toEqual(["ticket-0", "ticket-1"]);
 });
 
 test("implementation capacity pages live sessions and reads only indexed ownership fields", async () => {

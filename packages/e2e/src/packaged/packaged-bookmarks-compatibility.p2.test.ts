@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { cpSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
-import { preparePackagedExtensionSource } from "./packaged-extension-source";
+import { installBuiltSdk } from "../helpers/installed-sdk";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { setupPackagedSmokeTests } from "./packaged-smoke-setup";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
@@ -18,14 +18,16 @@ interface Bookmark {
 }
 
 test(
-  "unchanged Bookmarks commands and table retain collection edits on the candidate API host",
+  "unchanged Bookmarks commands and table retain collection edits on the candidate API host and SDK",
   async () => {
     const root = mkdtempSync(join(tmpdir(), "packaged-bookmarks-compatibility-"));
-    const source = await preparePackagedExtensionSource(
-      join(root, "bookmarks"),
-      join(import.meta.dir, "../../../../infra/local/extensions/bookmarks"),
-      { install: true, dependencies: "declared" },
-    );
+    const source = join(root, "bookmarks");
+    cpSync(join(import.meta.dir, "../../../../infra/local/extensions/bookmarks"), source, {
+      recursive: true,
+      filter: (path) => basename(path) !== "node_modules",
+    });
+    // Only the copied dependency declaration changes. All production callers and view definitions stay intact.
+    installBuiltSdk(source);
     const sdk = await Bun.file(join(source, "node_modules/@pstdio/sdk/package.json")).json();
     console.log(JSON.stringify({ compatibility: "unchanged-bookmarks", sdk: sdk.version, api: EXTENSION_API_VERSION }));
     const env = {

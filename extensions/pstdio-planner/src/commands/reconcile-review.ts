@@ -2,6 +2,7 @@ import type { CommandContext, ResourceAnchor } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { appendAttemptEvent, putAttempt, reviewLaunchClaimsCollection } from "../data/attempt-storage";
 import type { AttemptRecord, AttemptReview } from "../data/attempt-types";
+import { readSessionHistory } from "../data/session-history";
 import { renderOwnedTemplate } from "../data/template-store";
 
 import { blockAttempt } from "./reconcile-blocker";
@@ -174,14 +175,9 @@ export const reconcileReview = async (ctx: CommandContext, attempt: AttemptRecor
   const review = attempt.revisions.at(-1)?.reviews.at(-1);
   if (!review) return { decision: "review-missing-session" as const, attempt };
   if (!review.sessionId) {
-    const session = (
-      await ctx.sessions.query({
-        workspaceId: attempt.workspaceId,
-        anchor: { type: "planner-review", id: review.id, extensionId: ctx.extensionId, projectId: ctx.projectId },
-        includeArchived: true,
-        limit: 1,
-      })
-    ).items[0];
+    const session = (await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId })).find((candidate) =>
+      candidate.anchors_json?.some((anchor) => anchor.type === "planner-review" && anchor.id === review.id),
+    );
     if (!session) {
       const next = await markReviewFailed(ctx, attempt, review);
       return { decision: "review-missing-session" as const, attempt: next };

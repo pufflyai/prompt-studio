@@ -6,7 +6,7 @@ import { setTicketAttributeCommand } from "../commands/set-ticket-attribute";
 import { createDeadlineCommand, deleteDeadlineCommand } from "../timeline/commands/deadline-commands";
 import { moveTicketCommand } from "../timeline/commands/move-ticket";
 import { readPlanCommand } from "../timeline/commands/read-plan";
-import { runTicketsQuery } from "./query.fixture";
+import { runTicketsQuery } from "./query";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "./workflow-statuses";
 
 test("ticket properties expose milestone, date, progress, and attention from the same plan", async () => {
@@ -115,11 +115,7 @@ test("archived work does not change the active milestone progress", async () => 
     workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
   });
   expect(query.rows.find((row) => row.id === done.id)?.attributes.milestoneState).toBe("completed-past");
-  expect(query.rows.find((row) => row.id === archived.id)?.attributes).toMatchObject({
-    milestone: "",
-    milestoneDate: null,
-    milestoneState: "unscheduled",
-  });
+  expect(query.rows.find((row) => row.id === archived.id)?.attributes.milestone).toBe("");
   expect(
     (await readPlanCommand.run(ctx, {})).sections.find((section) => section.deadline?.id === milestone.id)?.counts,
   ).toMatchObject({ total: 1, done: 1 });

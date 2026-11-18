@@ -134,7 +134,7 @@ test("Auto Build assigns recovery to the existing implementation owner without a
     const result = await autoBuildDispatchCommand.run(f.ctx, { ticket: "Child", revision: mode.revision });
     expect(result).toMatchObject({ decision: "started", sessionId: "owner", workspaceId: "child" });
     expect(calls).toEqual(["owner"]);
-    expect((await nextTicketsCommand.run(f.ctx, {})).tickets.filter(({ id }) => id === "Child")).toEqual([]);
+    expect((await nextTicketsCommand.run(f.ctx, {})).tickets).toHaveLength(0);
   } finally {
     await f.cleanup();
   }

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { createTicketFile, updateTicketFile } from "../data/file-operations";
-import { runTicketsQuery } from "../data/query.fixture";
+import { runTicketsQuery } from "../data/query";
 import { ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
 import { archiveTicketCommand } from "./archive-ticket";
 import { makeCommandArgs } from "./command-context.fixture";

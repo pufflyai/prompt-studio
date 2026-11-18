@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
-import { listAttempts } from "../data/attempt-storage.fixture";
-
+import { listAttempts } from "../data/attempt-storage";
 import { putTicket } from "../data/ticket-context.fixture";
 
 import { fixture } from "./auto-build.fixture";

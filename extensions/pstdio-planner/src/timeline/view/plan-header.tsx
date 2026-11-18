@@ -2,7 +2,7 @@ import {
   CollectionViewBar,
   type CollectionViewsSource,
   useCollectionViewStore,
-  type useCollectionViews,
+  useCollectionViews,
 } from "@pstdio/ui/collection-view";
 import {
   buildFilterCategories,
@@ -16,7 +16,6 @@ import { timelineInitialState, type timelineQueryData } from "./timeline-query";
 interface PlanHeaderProps {
   data: ReturnType<typeof timelineQueryData>;
   viewsSource?: CollectionViewsSource<KanbanRendererSettings>;
-  views?: ReturnType<typeof useCollectionViews<KanbanRendererSettings>>["views"];
   search: string;
   onSearchChange: (value: string) => void;
   resultLabel: string;
@@ -32,13 +31,19 @@ export function PlanHeader(props: PlanHeaderProps) {
     const displayProperties = settings.displayProperties.filter((id) => displayable.has(id));
     if (displayProperties.length !== settings.displayProperties.length) setSettings({ displayProperties });
   }, [data.attributes, settings.displayProperties, setSettings]);
+  const { views } = useCollectionViews({
+    storageKey: data.storageKey,
+    fields: data.attributes,
+    initialState: timelineInitialState,
+    viewsSource,
+  });
   const categories = buildFilterCategories(data.attributes, data.rows);
   return (
     <CollectionViewBar
       itemLabel="Ticket"
       storageKey={data.storageKey}
       initialState={timelineInitialState}
-      views={props.views ?? []}
+      views={views}
       viewsSource={viewsSource}
       fields={data.attributes}
       optionsFor={(field) => {

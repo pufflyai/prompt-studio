@@ -1,18 +1,17 @@
 import { resolveByIdOrName } from "@pstdio/sdk/data";
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
-import { ticketsCollection, withDerivedTicketState } from "./collections";
-import { readStatusDefinitions, readTagDefinitions } from "./definition-query";
+import { statusesCollection, tagsCollection, ticketsCollection, withDerivedTicketState } from "./collections";
 import { type TicketContext, ticketWithCurrentTitle, ticketWithIdentity } from "./ticket-identity";
 import { ticketRecords } from "./ticket-records";
 
 export const resolveStatusId = async (storage: ExtensionStorageApi, value: string) =>
-  resolveByIdOrName(await readStatusDefinitions(storage), value, (status) => status.name, "status");
+  resolveByIdOrName(await statusesCollection(storage).list(), value, (status) => status.name, "status");
 
 export const resolveTagId = async (storage: ExtensionStorageApi, value: string) =>
-  resolveByIdOrName(await readTagDefinitions(storage), value, (tag) => tag.name, "tag");
+  resolveByIdOrName(await tagsCollection(storage).list(), value, (tag) => tag.name, "tag");
 
 export const resolveTagOptionIds = async (storage: ExtensionStorageApi, values: string[]) => {
-  const options = (await readTagDefinitions(storage)).flatMap((tag) => tag.options);
+  const options = (await tagsCollection(storage).list()).flatMap((tag) => tag.options);
   return values.map((value) => resolveByIdOrName(options, value, (option) => option.name, "tag option"));
 };
 

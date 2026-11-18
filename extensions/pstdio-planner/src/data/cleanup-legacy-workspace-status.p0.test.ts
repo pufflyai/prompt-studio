@@ -1,32 +1,31 @@
 import { describe, expect, test } from "bun:test";
-import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { cleanupLegacyWorkspaceStatus } from "./cleanup-legacy-workspace-status";
 
 describe("cleanupLegacyWorkspaceStatus", () => {
   test("removes only legacy workspace status storage and is idempotent", async () => {
-    const storage = createMemoryStorage();
-    await storage.set("workspace-status-definitions-initialized", true);
-    await storage.set("unrelated", "keep");
-    for (let i = 0; i < 203; i++) {
-      await storage.collection("workspace-status-definitions").put(String(i), { id: String(i) });
-      await storage.collection("workspace-status-values").put(String(i), { workspaceId: String(i) });
-    }
-    await storage.collection("tickets").put("ticket-1", { id: "ticket-1" });
-    const collection = storage.collection.bind(storage);
-    storage.collection = <T>(name: string) => ({
-      ...collection<T>(name),
-      list: async () => {
-        throw Error("Unbounded read");
-      },
-    });
+    const keys = new Map<string, unknown>([
+      ["workspace-status-definitions-initialized", true],
+      ["unrelated", "keep"],
+    ]);
+    const collections = new Map<string, Map<string, unknown>>([
+      ["workspace-status-definitions", new Map([["wip", { id: "wip" }]])],
+      ["workspace-status-values", new Map([["workspace-1", { workspaceId: "workspace-1" }]])],
+      ["tickets", new Map([["ticket-1", { id: "ticket-1" }]])],
+    ]);
+    const storage = {
+      delete: async (key: string) => keys.delete(key),
+      collection: (name: string) => ({
+        list: async () => [...(collections.get(name)?.values() ?? [])],
+        delete: async (id: string) => collections.get(name)?.delete(id),
+      }),
+    } as never;
 
     await cleanupLegacyWorkspaceStatus(storage);
     await cleanupLegacyWorkspaceStatus(storage);
 
-    expect(await storage.get("unrelated")).toBe("keep");
-    expect(await storage.get("workspace-status-definitions-initialized")).toBeUndefined();
-    for (const name of ["workspace-status-definitions", "workspace-status-values"])
-      expect((await storage.records.aggregate({ index: `cleanup:${name}` })).count).toBe(0);
-    expect(await storage.collection("tickets").get("ticket-1")).toEqual({ id: "ticket-1" });
+    expect(keys).toEqual(new Map([["unrelated", "keep"]]));
+    expect(collections.get("workspace-status-definitions")?.size).toBe(0);
+    expect(collections.get("workspace-status-values")?.size).toBe(0);
+    expect(collections.get("tickets")?.size).toBe(1);
   });
 });

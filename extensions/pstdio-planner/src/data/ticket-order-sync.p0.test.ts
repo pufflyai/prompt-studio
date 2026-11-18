@@ -3,7 +3,7 @@ import { createMemoryStorageDevices } from "@pstdio/sdk/testing";
 import { makeCommandContext } from "../commands/command-context.fixture";
 import { reorderTicket } from "../commands/reorder-ticket";
 import { migratePlannerStorage } from "./migrate-storage";
-import { ensureTicketStorage } from "./read-migrated-tickets";
+import { readMigratedTickets } from "./read-migrated-tickets";
 import { ticketIdOfRecord } from "./storage-reads.fixture";
 import { seedTicketIdentity } from "./ticket-context.fixture";
 
@@ -79,7 +79,7 @@ test("a legacy card arriving after the shared migration remains movable", async 
   await reorderTicket(contexts[0]!, { rowId: "a" });
   await pair.devices[1].collection("tickets").put("late", legacyTicket("late", 1));
   await pair.merge();
-  for (const ctx of contexts) await ensureTicketStorage(ctx);
+  for (const ctx of contexts) await readMigratedTickets(ctx);
   await pair.merge();
   const imported = await pair.devices[0].collection<{ position: string }>("tickets").get("late");
   const moved = await pair.devices[0].collection<{ position: string }>("tickets").get("a");
@@ -187,7 +187,8 @@ test("a private override leaves arriving legacy order to the synced extension", 
   await storage.collection("tickets").put("a", legacyTicket("a", 0));
   const readonly = { ...storage, canMigrate: async () => false };
   seedTicketIdentity(readonly, { id: "a", shorthand: "T-a" });
-  await ensureTicketStorage(makeCommandContext({ storage: readonly, params: {} }));
-  expect(await storage.collection("tickets").get("a")).not.toHaveProperty("position");
+  const rows = await readMigratedTickets(makeCommandContext({ storage: readonly, params: {} }));
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).not.toHaveProperty("position");
   expect(await storage.collection("tickets").get("a")).toMatchObject({ sortOrder: 0 });
 });

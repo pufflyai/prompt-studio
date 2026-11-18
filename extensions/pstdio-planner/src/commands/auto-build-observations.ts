@@ -3,9 +3,8 @@ import type { AttemptRecord, AttemptTimelineEvent, TicketAttemptSelection } from
 import { hasPendingImplementationInput } from "../data/implementation-input";
 import type { GithubReads } from "../data/pull-request-resources";
 import type { TicketReviewRequests } from "../data/review-request-types";
-import type { TicketInputState } from "../data/ticket-input-state";
+import { readSessionHistory } from "../data/session-history";
 import type { Ticket } from "../data/types";
-import { hasWorkspaceWriter } from "../data/workspace-writers";
 import { isUnexpectedExit } from "./auto-build-resume";
 import { isLiveSession } from "./auto-build-sessions";
 import { WorkspaceUnavailableError, workspaceHead } from "./change-requests";
@@ -104,7 +103,7 @@ const observeSubmittedWork = async (
 };
 
 interface ObserveInput {
-  requests: Map<string, TicketReviewRequests | TicketInputState>;
+  requests: Map<string, TicketReviewRequests>;
   completedStatusIds: string[];
   events: AttemptTimelineEvent[];
   owned: boolean;
@@ -171,7 +170,9 @@ const observeVariant = async (ctx: CommandContext, ticket: Ticket, attempt: Atte
       "Implementation variants need an explicit selection.",
       "Select the variant to advance.",
     );
-  const competing = await hasWorkspaceWriter(ctx.sessions, attempt.workspaceId, session?.id);
+  const competing = (await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId })).some(
+    (other) => other.id !== session?.id && isLiveSession(other),
+  );
   if (competing)
     return observation(
       attempt,
@@ -195,7 +196,7 @@ export async function observeTicketWork(
   ctx: CommandContext,
   ticket: Ticket,
   input: {
-    requests: Map<string, TicketReviewRequests | TicketInputState>;
+    requests: Map<string, TicketReviewRequests>;
     completedStatusIds: string[];
     attempts: AttemptRecord[];
     retired: Set<string>;

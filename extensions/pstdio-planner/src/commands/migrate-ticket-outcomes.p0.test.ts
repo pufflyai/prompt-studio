@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import type { CommandInvocation, CommandRef, Struct } from "@pstdio/sdk/extensions";
 import { createMemoryActivity, createMemoryStorage } from "@pstdio/sdk/testing";
-import { putAttempt, readAttempt } from "../data/attempt-storage";
+import { ATTEMPTS_COLLECTION, putAttempt, readAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { withQueuedWriteGuard } from "../data/write-guard";
 import { makeCommandContext } from "./command-context.fixture";
@@ -14,18 +14,18 @@ test("migration re-reads queued attempts and preserves distinct outcomes when a 
   const listed = Promise.withResolvers<void>();
   const storage = {
     ...base,
-    records: {
-      ...base.records,
-      readMany: async (ids: string[]) => {
-        const rows = await base.records.readMany(ids);
-        if (
-          rows.some(
-            (record) => (record.value as { value?: { workspaceId?: string } })?.value?.workspaceId === "workspace",
-          )
-        )
-          listed.resolve();
-        return rows;
-      },
+    collection<T>(name: string) {
+      const collection = base.collection<T>(name);
+      return name !== ATTEMPTS_COLLECTION
+        ? collection
+        : {
+            ...collection,
+            list: async () => {
+              const rows = await collection.list();
+              listed.resolve();
+              return rows;
+            },
+          };
     },
   };
   const refs = new Set<string>();

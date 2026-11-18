@@ -101,7 +101,6 @@ test("submission refuses stale upstream ancestry and records the new base after 
 test("submission rejects an owner detached from the workspace", async () => {
   const f = await stackSubmissionFixture();
   try {
-    f.ctx.sessions.get = async () => null;
     f.ctx.sessions.query = sessionQuery(
       async () => [],
       async () => [],

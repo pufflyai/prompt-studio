@@ -3,6 +3,13 @@ import type { Deadline, StoredPlan } from "../contracts";
 import { isDay } from "./days";
 import { byDate } from "./resolve-plan";
 
+export interface TicketMove {
+  ticketId: string;
+  deadlineId: string | null;
+  // Place the ticket before this ticket in the same deadline, or at the end of the deadline when omitted.
+  beforeId?: string;
+}
+
 function requireDeadline(plan: StoredPlan, deadlineId: string) {
   const deadline = plan.deadlines.find(({ id }) => id === deadlineId);
   if (!deadline) {
@@ -18,6 +25,32 @@ function requireDate(date: string) {
   }
 
   return date;
+}
+
+export function moveTicket(plan: StoredPlan, move: TicketMove): StoredPlan {
+  if (move.deadlineId) {
+    requireDeadline(plan, move.deadlineId);
+  }
+
+  if (!plan.order.some(({ ticketId }) => ticketId === move.ticketId)) {
+    throw new Error(`Unknown ticket "${move.ticketId}".`);
+  }
+
+  const order = plan.order.filter(({ ticketId }) => ticketId !== move.ticketId);
+  order.splice(insertIndex(order, move), 0, { ticketId: move.ticketId, deadlineId: move.deadlineId });
+  return { ...plan, order };
+}
+
+function insertIndex(order: StoredPlan["order"], move: TicketMove) {
+  const before = order.findIndex(
+    ({ ticketId, deadlineId }) => ticketId === move.beforeId && deadlineId === move.deadlineId,
+  );
+  if (before >= 0) {
+    return before;
+  }
+
+  const last = order.findLastIndex(({ deadlineId }) => deadlineId === move.deadlineId);
+  return last >= 0 ? last + 1 : order.length;
 }
 
 const named = (deadline: Deadline): Deadline => {

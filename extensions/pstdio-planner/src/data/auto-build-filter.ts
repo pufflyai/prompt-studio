@@ -1,5 +1,6 @@
 import { VIEW_FILTER_CONDITIONS, type ViewFilterGroup } from "@pstdio/sdk/extensions";
-import type { AttributeDescriptor } from "@pstdio/ui/kanban-renderer";
+import { filterRowsByView } from "@pstdio/ui/collection-view";
+import type { AttributeDescriptor, KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 
 interface AutoBuildFilterResult {
   filter: ViewFilterGroup | undefined;
@@ -26,5 +27,19 @@ export function readAutoBuildFilter(filter: ViewFilterGroup, fields: AttributeDe
   return {
     filter: rules.length || groups.length ? { ...filter, rules, groups } : undefined,
     complete: rules.length === filter.rules.length && nested.every(({ complete }) => complete),
+  };
+}
+
+export function readAutoBuildEligibility(
+  eligible: ViewFilterGroup,
+  rows: KanbanRendererRow[],
+  fields: AttributeDescriptor[],
+) {
+  const eligibility = readAutoBuildFilter(eligible, fields);
+  return {
+    eligible: new Set(
+      (eligibility.filter ? filterRowsByView(rows, eligibility.filter, fields) : rows).map(({ id }) => id),
+    ),
+    configurationError: eligibility.complete ? null : "Complete or remove invalid eligible ticket filters.",
   };
 }

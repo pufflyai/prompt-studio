@@ -1,9 +1,8 @@
 import { type CommandContext, defineCommand, l10n } from "@pstdio/sdk/extensions";
-import { workspaceEventSessionPages } from "../data/attempt-queries";
-import { readAttempt } from "../data/attempt-storage";
-import { autoBuildDispatchPages } from "../data/auto-build-dispatches";
+import { attemptEventsCollection, readAttempt } from "../data/attempt-storage";
+import { autoBuildDispatches } from "../data/auto-build-dispatches";
 import { readAutoBuildMode, saveAutoBuildMode } from "../data/auto-build-mode";
-import { linkedAutoBuildRequestPages } from "../data/auto-build-request-links";
+import { linkedAutoBuildRequests } from "../data/auto-build-ownership";
 import { readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { withReviewRequestSession } from "../data/review-request-session";
 import { reviewRequestsCollection } from "../data/review-request-storage";
@@ -24,40 +23,39 @@ async function stopLinkedSessions(ctx: CommandContext, supervisorId: string | un
     }
   };
   await stop(supervisorId);
-  const workspaces = new Set<string>();
-  for await (const dispatches of autoBuildDispatchPages(ctx, supervisorId))
-    for (const { workspaceId } of dispatches) {
-      workspaces.add(workspaceId);
-      const attempt = await readAttempt(ctx.storage, workspaceId);
-      await stop(attempt?.implementationSessionId);
-      // An implementation can have requested a review just before it acknowledged cancellation.
-      await withQueuedWriteGuard(ctx, `attempt:${workspaceId}`, async () => {
-        const latest = await readAttempt(ctx.storage, workspaceId);
-        for (const revision of latest?.revisions ?? []) {
-          for (const review of revision.reviews) await stop(review.sessionId);
-        }
-        for await (const ids of workspaceEventSessionPages(ctx.storage, [workspaceId]))
-          for (const id of ids) await stop(id);
-      });
-    }
+  const dispatches = await autoBuildDispatches(ctx, supervisorId).list();
+  const workspaces = new Set(dispatches.map(({ workspaceId }) => workspaceId));
+  for (const { workspaceId } of dispatches) {
+    const attempt = await readAttempt(ctx.storage, workspaceId);
+    await stop(attempt?.implementationSessionId);
+    // An implementation can have requested a review just before it acknowledged cancellation.
+    await withQueuedWriteGuard(ctx, `attempt:${workspaceId}`, async () => {
+      const latest = await readAttempt(ctx.storage, workspaceId);
+      const events = await attemptEventsCollection(ctx.storage).list();
+      for (const revision of latest?.revisions ?? []) {
+        for (const review of revision.reviews) await stop(review.sessionId);
+      }
+      for (const event of events.filter((event) => event.workspaceId === workspaceId)) await stop(event.sessionId);
+    });
+  }
   // A supervisor or worker can ask for input before a workspace is attached to the request.
   const visited = new Set<string>();
   let found = true;
   while (found) {
     found = false;
-    for await (const requests of linkedAutoBuildRequestPages(ctx.storage, {
+    const requests = linkedAutoBuildRequests(await reviewRequestsCollection(ctx.storage).list(), {
       workspaceIds: workspaces,
       sessionIds: linked,
-    }))
-      for (const request of requests) {
-        if (visited.has(request.id)) continue;
-        visited.add(request.id);
-        found = true;
-        await withReviewRequestSession(ctx, request.id, async () => {
-          const current = await reviewRequestsCollection(ctx.storage).get(request.id);
-          await stop(current?.context.sessionId);
-        });
-      }
+    });
+    for (const request of requests) {
+      if (visited.has(request.id)) continue;
+      visited.add(request.id);
+      found = true;
+      await withReviewRequestSession(ctx, request.id, async () => {
+        const current = await reviewRequestsCollection(ctx.storage).get(request.id);
+        await stop(current?.context.sessionId);
+      });
+    }
   }
   if (failures.length) throw new Error(failures.map(String).join("\n"));
 }

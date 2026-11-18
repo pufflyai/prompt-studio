@@ -12,7 +12,6 @@ import { useWebviewScope } from "@pstdio/sdk/extensions/react";
 import { ChakraProvider, psTheme, ScrollArea } from "@pstdio/ui";
 import { useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
-import { RequestWindowControls } from "../timeline/view/request-window";
 import { RequestsPanel } from "../timeline/view/requests-panel";
 import { PlannerReadError } from "./planner-read-error";
 import {
@@ -27,7 +26,7 @@ interface HostProps {
 
 function TicketRequests(props: { client: TicketRequestsClient; resource: ResourceRef }) {
   const { client, resource } = props;
-  const { value, error, retry, answer, openChat, offset, setOffset } = useTicketRequests(client, resource);
+  const { value, error, retry, answer, openChat } = useTicketRequests(client, resource);
   return (
     <ScrollArea h="full">
       <Stack position="relative" p="md" gap="md" w="full" maxW="2xl" mx="auto">
@@ -41,7 +40,6 @@ function TicketRequests(props: { client: TicketRequestsClient; resource: Resourc
           />
         ) : null}
         {!value && !error ? <Text>Loading requests…</Text> : null}
-        <RequestWindowControls result={value} offset={offset} move={setOffset} loading={!value} />
       </Stack>
     </ScrollArea>
   );

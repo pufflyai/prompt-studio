@@ -3,7 +3,7 @@ import { migratePlannerStorage } from "../../data/migrate-storage";
 import { findTicket } from "../../data/resolve";
 import { readTicketStatuses } from "../../data/status-operations";
 import { readTicketTags } from "../../data/tag-operations";
-import { planPlacements, readPlanMetadata } from "../../timeline/commands/placement-store";
+import { readStoredPlan } from "../../timeline/commands/plan-store";
 import { buildTicketPropertiesControls } from "./params";
 
 export const queryTicketProperties = async (
@@ -17,18 +17,17 @@ export const queryTicketProperties = async (
   const ticket = await findTicket(ctx, ticketId);
   if (!ticket) return {};
 
-  const plan = await readPlanMetadata(ctx.storage);
-  const [{ statuses }, { tags }, placement] = await Promise.all([
+  const [{ statuses }, { tags }, plan] = await Promise.all([
     readTicketStatuses(ctx.storage),
     readTicketTags(ctx.storage),
-    planPlacements(ctx.storage).get(ticket.id),
+    readStoredPlan(ctx.storage),
   ]);
 
   return buildTicketPropertiesControls({
     ticket,
     statuses,
     tags,
-    plan: { ...plan, order: placement ? [placement] : [] },
+    plan: plan ?? { deadlines: [], order: [] },
   });
 };
 

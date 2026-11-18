@@ -43,12 +43,10 @@ Timing and average-memory targets use strict **<**, including equality as a fail
 | B2 | Usable <5,000ms; first interaction <250ms |
 | B3 | Runtime attachment <1,800ms; usable <5,000ms; first interaction <250ms |
 | B4 | Input/history/stream-to-paint <250ms; file <1,500ms; terminal <250ms; panel <500ms; project/session switch <2,000ms; longest stall <200ms; completion <10,000ms; cancellation <500ms |
-| B5 | Average native memory <2.5GB on Linux, <2GB on macOS, <3GB on Windows; complete ten-minute coverage, no missing samples, maximum gap ≤1,000ms |
+| B5 | Average native memory <2GB on Linux/macOS, <3GB on Windows; complete ten-minute coverage, no missing samples, maximum gap ≤1,000ms |
 | B6 | Actionable/reopen <5,000ms; filter/page/move <250ms; longest stall <200ms; total scanned entries <2,000; writes <2. Correctness requires bounded query pages and mounted rows ≤100, zero sequential projection scans, and persisted edits. |
 | B7 | Cold read <300ms; warm read <180ms; one-record edit <120ms; read during maintenance <120ms; total scanned entries <1,000. Correct data, zero sequential scans for indexed cold/warm pages, advancing index counters and exactly 101 writes remain required. |
 | B8 | Recovery feedback <480ms; restored usable state <6,000ms; first action <300ms |
-
-The user raised the Linux B5 average native-memory limit to 2.5GB on 2026-11-17. Earlier measurements retain their recorded limits and outcomes.
 
 The nine B6/B7 ceilings were approved by the user on 2026-11-17 in Planner decision `01a1e8d3-92c0-725d-8622-b831b57a51a7`. Earlier failed or unqualified results retain their original limits and status.
 
@@ -71,7 +69,7 @@ B2/B3/B4/B5/B8 share the same 100-message/file/idle-terminal fixture. Restore an
 
 ## Native memory sampling procedure
 
-The [numeric targets](../../guidance/0003-nonfunctional-requirements.md) apply to the three requested platforms without an M5 hardware condition. B1 must become fully usable in <5 seconds, and B5 average native memory must remain <2.5GB on Linux, <2GB on macOS or <3GB on Windows. Record actual CPU/cores/RAM and keep differing native memory semantics in separate series.
+The [numeric targets](../../guidance/0003-nonfunctional-requirements.md) apply to the three requested platforms without an M5 hardware condition. B1 must become fully usable in <5 seconds, and B5 average native memory must remain <2GB on Linux/macOS or <3GB on Windows. Record actual CPU/cores/RAM and keep differing native memory semantics in separate series.
 
 B5 workload version 2 uses `native-average`, `native-peak` and `resident-peak` metric IDs. It records physical footprint including compression on macOS, resident set bytes on Linux, and private committed bytes on Windows. These are separate platform series; they are not interchangeable physical-memory measurements. Older B5 physical-only results remain version 1 history.
 

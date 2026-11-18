@@ -2,15 +2,15 @@ import { expect, test } from "bun:test";
 import { ticketsCollection } from "../data/ticket-context.fixture";
 
 import { withWriteGuard } from "../data/write-guard";
-import { planPlacements } from "../timeline/commands/placement-store";
+import { readStoredPlan } from "../timeline/commands/plan-store";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { moveTicketOnBoard } from "./move-ticket-on-board";
 import { ticketMoveFixture } from "./ticket-move.fixture";
 
 const preview = { id: "preview", date: "2026-10-15", name: "Preview" };
-const milestoneOf = async (storage: Parameters<typeof planPlacements>[0], ticketId: string) =>
-  (await planPlacements(storage).get(ticketId))?.deadlineId ?? null;
+const milestoneOf = async (storage: Parameters<typeof readStoredPlan>[0], ticketId: string) =>
+  (await readStoredPlan(storage))?.order.find((entry) => entry.ticketId === ticketId)?.deadlineId ?? null;
 
 test("column, row group, and order save as one move and one completed event", async () => {
   const f = await ticketMoveFixture();
@@ -109,11 +109,11 @@ test("an unchanged milestone keeps the plan and saves only the other values", as
   const [first] = f.tickets;
   await f.storage.set("timeline.plan", { deadlines: [preview], order: [] });
   await moveTicketOnBoard(f.ctx, { rowId: first.id, attributes: { milestone: preview.id } });
-  const plan = await planPlacements(f.storage).get(first.id);
+  const plan = await readStoredPlan(f.storage);
   f.writes.length = 0;
   f.events.length = 0;
   await moveTicketOnBoard(f.ctx, { rowId: first.id, attributes: { status: "done", milestone: preview.id } });
-  expect(await planPlacements(f.storage).get(first.id)).toEqual(plan);
+  expect(await readStoredPlan(f.storage)).toEqual(plan);
   expect(f.writes).toEqual([first.id]);
   expect(f.events).toEqual(["tickets.changed"]);
 });

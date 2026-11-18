@@ -83,23 +83,11 @@ const seedTickets = async (
   // Read the created tickets again before every batch: an import from an earlier run can still be
   // finishing on the server, and resending a stale batch would duplicate its tickets.
   const refresh = async () => {
-    type Ticket = { id: string; title: string };
-    const seeded = new RegExp(`^${prefix}(\\d+):`);
-    let cursor: string | undefined;
-    do {
-      const page = await api.command<Ticket[] | { tickets: Ticket[]; cursor: string | null }>(
-        project.id,
-        `${PLANNER}.read-tickets`,
-        cursor ? { cursor } : {},
-      );
-      // Existing stacks can still have the earlier Planner command installed.
-      const tickets = Array.isArray(page) ? page : page.tickets;
-      for (const ticket of tickets) {
-        const match = ticket.title.match(seeded);
-        if (match) ids[Number(match[1]) - 1] = ticket.id;
-      }
-      cursor = Array.isArray(page) ? undefined : (page.cursor ?? undefined);
-    } while (cursor);
+    const existing = await api.command<{ id: string; title: string }[]>(project.id, `${PLANNER}.read-tickets`);
+    for (const ticket of existing) {
+      const match = ticket.title.match(new RegExp(`^${prefix}(\\d+):`));
+      if (match) ids[Number(match[1]) - 1] = ticket.id;
+    }
     return Array.from({ length: total }, (_, index) => index).filter((index) => !ids[index]);
   };
   const msPerTicketByImport: number[] = [];

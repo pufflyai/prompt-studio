@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
 import { prepareUiFixtures } from "../scripts/prepare-ui-fixtures";
 
-/** Packaged compatibility flows install production providers with their declared public dependencies. */
+/** CLI, browser and benchmark fixtures use the same fresh public dependency profile. */
 export const preparePackagedConsumers = async (signal: AbortSignal) => {
   // Forced process-tree termination can bypass this child's finally on Windows.
   // The executor must still own every prepared consumer's temporary files.
@@ -36,7 +36,7 @@ export const preparePackagedConsumers = async (signal: AbortSignal) => {
       E2E_BUN_CACHE_DIR: join(root, "bun-cache"),
       NPM_CONFIG_USERCONFIG: npmConfigPath,
     };
-    await prepareUiFixtures(env, signal, registry.packageArtifacts, "compatibility");
+    await prepareUiFixtures(env, signal, registry.packageArtifacts);
     signal.throwIfAborted();
     console.log(`Packaged consumer preparation completed (${Math.round(performance.now() - started)}ms)`);
     return { env, close };

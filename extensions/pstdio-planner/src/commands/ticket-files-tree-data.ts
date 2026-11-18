@@ -1,8 +1,8 @@
 import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
-import { readStatusDefinitions } from "../data/definition-query";
+import { statusesCollection } from "../data/collections";
 import { linkedWorkspacePage } from "../data/linked-workspaces";
 import { readTicketNavigation } from "../data/navigation-queries";
-import { readReviewCounts } from "../data/review-query-counts";
+import { listTicketReviewRequests } from "../data/review-request-storage";
 import { readTicketLinkedResourcePage } from "../data/ticket-linked-resources";
 import { plannerOwnerFor } from "../data/ticket-resource-hierarchy";
 import { readTicketSessionPage } from "../data/ticket-session-page";
@@ -21,10 +21,10 @@ export const readTicketTreeData = async (
       workspaceCursor: page.nextCursor,
     };
   })();
-  const [navigation, reviews, statuses, providers, sessions, linked, resourceLinks] = await Promise.all([
+  const [navigation, reviewRequests, statuses, providers, sessions, linked, resourceLinks] = await Promise.all([
     readTicketNavigation(ctx, ticket),
-    readReviewCounts(ctx.storage, [ticket.id]),
-    readStatusDefinitions(ctx.storage),
+    listTicketReviewRequests(ctx.storage, ticket.id),
+    statusesCollection(ctx.storage).list(),
     ctx.workspaces.listProviders(),
     readTicketSessionPage(ctx, ticket.id),
     workspaceData,
@@ -39,7 +39,7 @@ export const readTicketTreeData = async (
     ...navigation,
     resourceLinks: resourceLinks.items,
     resourceCursor: resourceLinks.nextCursor,
-    reviewCounts: reviews.get(ticket.id)!,
+    reviewRequests,
     statusesById: new Map(statuses.map((status) => [status.id, status])),
     providers,
     sessions: [],

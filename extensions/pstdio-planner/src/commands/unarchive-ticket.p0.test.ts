@@ -33,7 +33,7 @@ describe("unarchive ticket", () => {
       ...makeCommandArgs({ storage, params: {}, overrides: { resource: ticketResource(ticket.id) } }),
     );
 
-    const { tickets: listed } = await listTicketsCommand.run(...makeCommandArgs({ storage, params: {} }));
+    const listed = await listTicketsCommand.run(...makeCommandArgs({ storage, params: {} }));
     expect(listed.map((row) => row.shorthand)).toEqual([ticket.shorthand]);
     expect(listed[0]).toMatchObject({ status: "In Progress", tags: ["High"] });
   });

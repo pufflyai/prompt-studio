@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { withDerivedTicketState } from "../data/collections";
 import { migratePlannerStorage } from "../data/migrate-storage";
-import { readReviewRequestPage } from "../data/review-request-storage";
+import { listTicketReviewRequests, readTicketReviewRequests } from "../data/review-request-storage";
 import { observeTicketRecords } from "../data/storage-reads.fixture";
 import { createTicketRecordStorage, seedTicketIdentity } from "../data/ticket-context.fixture";
 import type { Ticket } from "../data/types";
@@ -31,9 +31,9 @@ test("unreadable requests retain attention and other collections never become re
       "planner-attempts": { attempt: { id: "attempt", ticketId: "selected" } },
     },
   });
-  const selected = await readReviewRequestPage(storage, { field: "ticketId", op: "eq", value: "selected" });
-  expect(selected.requests).toEqual([]);
-  expect(selected.errors).toHaveLength(1);
+  expect(await listTicketReviewRequests(storage, "selected")).toEqual(
+    (await readTicketReviewRequests(storage)).get("selected")!,
+  );
 });
 
 test("opening properties resolves only normalized linked dependencies for dependency-only blockers", async () => {
@@ -58,7 +58,7 @@ test("opening properties resolves only normalized linked dependencies for depend
   expect((await withDerivedTicketState(ctx, { ...selected, dependsOn: [" t-1 "] })).blockedReason).toBeNull();
 });
 
-test("related titles use current synced content and missing identities are excluded before paging", async () => {
+test("related titles come from current synced content and empty identity pages retain their cursor", async () => {
   const selected = ticket("parent");
   const children = Array.from({ length: 101 }, (_, index) =>
     ticket(`child-${String(index).padStart(3, "0")}`, {
@@ -75,9 +75,15 @@ test("related titles use current synced content and missing identities are exclu
   const ctx = makeCommandContext({ storage, params: {} });
   const renderer = { rendererId: "ticket-files", resource: { type: "ticket", id: selected.id } };
   const section = (await listTicketFilesTree(ctx, { renderer })).find(({ id }) => id === "sub-tickets")!;
-  expect(section.nodes).toHaveLength(1);
-  expect(section.nextCursor).toBeUndefined();
-  expect(section.nodes[0].label).toContain("Updated by another device");
+  expect(section.nodes).toEqual([]);
+  expect(section.nextCursor).toBeDefined();
+  const page = await listTicketFilesPage(ctx, {
+    renderer,
+    parent: { kind: "section", id: "sub-tickets" },
+    cursor: section.nextCursor!,
+  });
+  expect(page.nodes).toHaveLength(1);
+  expect(page.nodes[0].label).toContain("Updated by another device");
 });
 
 test("ticket relationship pages retain every child and dependent without duplicates", async () => {

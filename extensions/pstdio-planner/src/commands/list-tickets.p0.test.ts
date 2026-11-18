@@ -20,19 +20,19 @@ describe("listTicketsCommand", () => {
     );
 
     const all = await listTicketsCommand.run(...makeCommandArgs({ storage, params: {} }));
-    expect(all.tickets).toHaveLength(2);
+    expect(all).toHaveLength(2);
 
-    const childRow = all.tickets.find((row) => row.shorthand === child.shorthand)!;
+    const childRow = all.find((row) => row.shorthand === child.shorthand)!;
     expect(childRow.status).toBe("In Progress");
     expect(childRow.tags).toEqual(["High"]);
 
     const children = await listTicketsCommand.run(
       ...makeCommandArgs({ storage, params: { parent: parent.shorthand } }),
     );
-    expect(children.tickets.map((row) => row.shorthand)).toEqual([child.shorthand]);
+    expect(children.map((row) => row.shorthand)).toEqual([child.shorthand]);
 
     const inProgress = await listTicketsCommand.run(...makeCommandArgs({ storage, params: { status: "In Progress" } }));
-    expect(inProgress.tickets.map((row) => row.shorthand)).toEqual([child.shorthand]);
+    expect(inProgress.map((row) => row.shorthand)).toEqual([child.shorthand]);
   });
 
   test("hides archived and draft tickets by default; flags select that subset", async () => {
@@ -45,12 +45,12 @@ describe("listTicketsCommand", () => {
     await ticketsCollection(storage).put(draft.id, { ...draft, draft: true });
 
     const byDefault = await listTicketsCommand.run(...makeCommandArgs({ storage, params: {} }));
-    expect(byDefault.tickets.map((row) => row.shorthand)).toEqual([open.shorthand]);
+    expect(byDefault.map((row) => row.shorthand)).toEqual([open.shorthand]);
 
     const archived = await listTicketsCommand.run(...makeCommandArgs({ storage, params: { archived: true } }));
-    expect(archived.tickets.map((row) => row.shorthand)).toEqual([done.shorthand]);
+    expect(archived.map((row) => row.shorthand)).toEqual([done.shorthand]);
 
     const drafts = await listTicketsCommand.run(...makeCommandArgs({ storage, params: { draft: true } }));
-    expect(drafts.tickets.map((row) => row.shorthand)).toEqual([draft.shorthand]);
+    expect(drafts.map((row) => row.shorthand)).toEqual([draft.shorthand]);
   });
 });

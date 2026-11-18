@@ -16,7 +16,6 @@ export interface ViewSection {
 }
 
 export interface PlanViewProps {
-  paging?: { offset: number; loading: boolean; hasNext: boolean; move: (direction: "previous" | "next") => void };
   cardInteraction?: TicketCardInteraction;
   sections: ViewSection[];
   tracks: ReturnType<typeof trackLayout>;

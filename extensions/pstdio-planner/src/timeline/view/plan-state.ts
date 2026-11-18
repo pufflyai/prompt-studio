@@ -75,14 +75,13 @@ export function useDragAndDrop(client: PlanClient) {
   return { dragId, dropTarget: preview, setDragId, setDropTarget: target, drop };
 }
 
-export function useViewSections(plan: Plan | undefined, visibleTicketIds: ReadonlySet<string>, paged = false) {
+export function useViewSections(plan: Plan | undefined, visibleTicketIds: ReadonlySet<string>) {
   const { value, toggle: togglePresentation } = useTimelinePresentation();
   const collapsed = new Set(value.collapsedMilestones);
   const toggle = (id: string | null) => togglePresentation("collapsedMilestones", id ?? "none");
   // Test completion before ticket filters can turn a partially finished milestone into a finished one.
   const shown = plan?.sections.filter((section) => milestoneVisible(section, value)) ?? [];
-  const filtered = !paged && plan ? filterSections(plan, visibleTicketIds, value) : [];
-  const sections = (paged ? shown : filtered).map((section) => ({
+  const sections = (plan ? filterSections(plan, visibleTicketIds, value) : []).map((section) => ({
     section,
     rows: section.rows,
     collapsed: collapsed.has(section.deadline?.id ?? "none"),

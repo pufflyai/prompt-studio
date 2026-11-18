@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { runTicketsQuery } from "./query.fixture";
+import { runTicketsQuery } from "./query";
 import { seedDefaultStatuses } from "./seed";
 import { putTicket, ticketContext } from "./ticket-context.fixture";
 import type { Ticket } from "./types";
@@ -22,7 +22,7 @@ describe("runTicketsQuery archive filtering", () => {
   test.each([
     ["missing filters", undefined, ["Active", "Archived"]],
     ["empty filters", {}, ["Active", "Archived"]],
-    ["other property filters apply before paging", { priority: ["high"] }, []],
+    ["other fields only", { priority: ["high"] }, ["Active", "Archived"]],
     ["empty archive selection", { archived: [] }, ["Active", "Archived"]],
     ["active only", { archived: ["active"] }, ["Active"]],
     ["archived only", { archived: ["archived"] }, ["Archived"]],

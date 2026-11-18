@@ -25,7 +25,6 @@ export async function preparePackagedExtensionSource(
     env?: NodeJS.ProcessEnv;
     signal?: AbortSignal;
     packageArtifacts?: Readonly<Record<string, string>>;
-    dependencies?: "candidate" | "declared";
   } = {},
 ) {
   mkdirSync(root, { recursive: true });
@@ -38,26 +37,23 @@ export async function preparePackagedExtensionSource(
   });
   const path = join(source, "package.json");
   const manifest = JSON.parse(readFileSync(path, "utf8"));
-  if (options.dependencies !== "declared") {
-    manifest.overrides = {};
-    for (const name of ["sdk", "ui"]) {
-      if (!manifest.dependencies?.[`@pstdio/${name}`]) continue;
-      const artifact =
-        options.packageArtifacts?.[`@pstdio/${name}`] ??
-        packWorkspacePackageTarball(join(repoRoot, "packages", name), root);
-      const tarball = `file:${artifact}`;
-      manifest.dependencies[`@pstdio/${name}`] = tarball;
-      manifest.overrides[`@pstdio/${name}`] = tarball;
-    }
-    writeFileSync(path, JSON.stringify(manifest));
+  manifest.overrides = {};
+  for (const name of ["sdk", "ui"]) {
+    if (!manifest.dependencies?.[`@pstdio/${name}`]) continue;
+    const artifact =
+      options.packageArtifacts?.[`@pstdio/${name}`] ??
+      packWorkspacePackageTarball(join(repoRoot, "packages", name), root);
+    const tarball = `file:${artifact}`;
+    manifest.dependencies[`@pstdio/${name}`] = tarball;
+    manifest.overrides[`@pstdio/${name}`] = tarball;
   }
+  writeFileSync(path, JSON.stringify(manifest));
   await promisify(execFile)(
     "bun",
     [
       "install",
       ...(options.install ? [] : ["--lockfile-only"]),
       "--ignore-scripts",
-      ...(options.dependencies === "declared" ? ["--frozen-lockfile"] : []),
       ...(options.offline ? ["--offline"] : []),
     ],
     { cwd: source, env: options.env, signal: options.signal },

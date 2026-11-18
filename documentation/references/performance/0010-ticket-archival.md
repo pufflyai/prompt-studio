@@ -37,5 +37,5 @@ real automation queue transport, linked-workspace cleanup and rendering. Shared
 workspace safety has separate scale and concurrency regressions.
 
 Run the maintained `scripts/dev/ticket-archive-diagnostic.ts` with the same
-arguments as the [opening diagnostic](0011-ticket-opening.md#reproduce). Both
+arguments as the [opening diagnostic](0009-ticket-opening.md#reproduce). Both
 cases use the built matching host SDK. Do not run this against user storage.

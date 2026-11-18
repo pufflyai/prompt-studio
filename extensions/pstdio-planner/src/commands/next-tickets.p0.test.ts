@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
-import { putAttempt } from "../data/attempt-storage";
-import { listAttempts } from "../data/attempt-storage.fixture";
+import { listAttempts, putAttempt } from "../data/attempt-storage";
 import { tagsCollection } from "../data/collections";
 import { seedDefaultTags } from "../data/seed";
 import { putTicket, ticketsCollection } from "../data/ticket-context.fixture";

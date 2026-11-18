@@ -20,8 +20,7 @@ import { startAttempt } from "./run-attempt";
 async function dispatchWorkspaceId(ctx: CommandContext, candidate: NextTicket, draftWorkspaceId?: string) {
   if (candidate.action === "recover-workspace") return undefined;
   if (candidate.action === "start") return draftWorkspaceId;
-  if (candidate.action === "resume")
-    return (await readAutoBuildResumptions(ctx, [candidate.id])).get(candidate.id)?.workspaceId;
+  if (candidate.action === "resume") return (await readAutoBuildResumptions(ctx)).get(candidate.id)?.workspaceId;
   return candidate.workspaceId;
 }
 
@@ -116,11 +115,7 @@ export const autoBuildDispatchCommand = defineCommand({
       const mode = await readAutoBuildMode(ctx);
       if (!mode.enabled || mode.revision !== revision)
         return { decision: "wait" as const, reason: "auto-build-stopped" };
-      const {
-        tickets: candidates,
-        capacity,
-        snapshot,
-      } = await readNextTickets(ctx, mode, { base: input.base, ticket, limit: 1 });
+      const { tickets: candidates, capacity, snapshot } = await readNextTickets(ctx, mode, { base: input.base });
       const candidate = candidates.find((row) => row.id === ticket || row.ticket === ticket);
       if (!candidate)
         return {
@@ -136,7 +131,7 @@ export const autoBuildDispatchCommand = defineCommand({
         if (!current.enabled || current.revision !== revision) {
           throw new Error("Auto Build stopped or the ticket is no longer ready.");
         }
-        const next = await readNextTickets(ctx, current, { base: input.base, ticket, limit: 1 });
+        const next = await readNextTickets(ctx, current, { base: input.base });
         await requireDeviceWorkspaceCapacity(ctx, targetWorkspaceId);
         const latest = next.tickets.find(({ id }) => id === candidate.id);
         if (!latest || latest.action !== candidate.action || latest.workspaceId !== candidate.workspaceId)

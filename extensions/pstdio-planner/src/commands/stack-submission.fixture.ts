@@ -9,7 +9,6 @@ import { seedDefaultStatuses } from "../data/seed";
 import { putTicket } from "../data/ticket-context.fixture";
 import { makeCommandContext } from "./command-context.fixture";
 import { sessionQuery } from "./session-query.fixture";
-import { sessionRecord } from "./session-record.fixture";
 
 export async function stackSubmissionFixture(options: { trace?: boolean } = {}) {
   const started = performance.now();
@@ -106,8 +105,7 @@ export async function stackSubmissionFixture(options: { trace?: boolean } = {}) 
           async () => [],
           async () => [{ type: "session", id: "owner", title: "Owner", status: "completed" }],
         ),
-        get: async (id: string) =>
-          sessionRecord({ id, title: id, status: "completed", workspaceId: "child", workspace_id: "child" }),
+        get: async (id: string) => ({ type: "session", id, title: id, status: "completed" }),
       } as never,
     },
   });

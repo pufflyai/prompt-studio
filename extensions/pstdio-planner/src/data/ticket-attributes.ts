@@ -1,5 +1,5 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
-import { readTagDefinitions } from "./definition-query";
+import { tagsCollection } from "./collections";
 import { ticketTagAttributeId } from "./mappers";
 import { assertOneTagValue, sameTicketTags, tagValue, withTagValue } from "./ticket-tags";
 import type { Ticket } from "./types";
@@ -18,7 +18,9 @@ export const ticketWithAttributes = async (
 ) => {
   let statusId = ticket.statusId;
   let tags = ticket.tags ?? {};
-  const tagDefinitions = Object.keys(attributes).some((id) => id !== "status") ? await readTagDefinitions(storage) : [];
+  const tagDefinitions = Object.keys(attributes).some((id) => id !== "status")
+    ? await tagsCollection(storage).list()
+    : [];
   for (const [attributeId, value] of Object.entries(attributes)) {
     if (attributeId === "status") {
       statusId = typeof value === "string" && value ? value : null;

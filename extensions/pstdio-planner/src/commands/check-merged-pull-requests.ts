@@ -1,15 +1,12 @@
 import { type CommandContext, defineCommand, defineSchedule } from "@pstdio/sdk/extensions";
 import { recordSubmittedMerge } from "../data/attempt-merges";
-import { readTicketAttempts, readWorkspaceEvents } from "../data/attempt-queries";
 import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
+import { attemptEventsCollection, listAttempts } from "../data/attempt-storage";
 import type { AttemptRecord, AttemptTimelineEvent } from "../data/attempt-types";
-import { upgradeAttemptStorage } from "../data/attempt-upgrade";
 import { ticketsCollection } from "../data/collections";
 import { markTicketsDone } from "../data/mark-tickets-done";
-import { mergeTicketPages } from "../data/merge-ticket-query";
 import {
   findMergedGithubPrs,
-  type GithubReads,
   isPullRequest,
   linkedPullRequests,
   type PullRequestRead,
@@ -17,7 +14,6 @@ import {
   ticketReference,
 } from "../data/pull-request-resources";
 import { pullRequestTarget } from "../data/pull-request-target";
-import { preparePlannerIndexes } from "../data/storage-indexes";
 import type { Ticket } from "../data/types";
 import { readMergeDestination } from "../data/workflow-statuses";
 
@@ -55,11 +51,9 @@ const addWorkspacePullRequests = async (
   attempts: AttemptRecord[],
   links: Map<string, Set<string>>,
 ) => {
-  const workspaces = (
-    await Promise.all([...new Set(attempts.map(({ workspaceId }) => workspaceId))].map((id) => ctx.workspaces.get(id)))
-  )
-    .filter((workspace) => workspace !== null)
-    .filter((workspace) => Boolean(workspace.branch));
+  const workspaces = (await ctx.workspaces.list()).filter(
+    (workspace) => workspace.branch && attempts.some((attempt) => attempt.workspaceId === workspace.id),
+  );
   const references = new Map<string, Promise<Set<string>>>();
   for (let offset = 0; offset < workspaces.length; offset += 100) {
     const batch = workspaces.slice(offset, offset + 100);
@@ -142,26 +136,6 @@ const deliveredMerge = (pr: PullRequestRead, target: { branch: string; repositor
   return { headSha: pr.headRefOid, mergeSha: pr.mergeCommit.oid };
 };
 
-const recordDeliveredLinks = async (
-  ctx: CommandContext,
-  attempts: AttemptRecord[],
-  links: Map<string, Set<string>>,
-  target: NonNullable<Awaited<ReturnType<typeof pullRequestTarget>>>,
-  reads: GithubReads,
-) => {
-  const mergedIds = new Set<string>();
-  for (const pr of await readGithubResources(ctx, [...links.keys()], reads)) {
-    const merged = deliveredMerge(pr, target);
-    if (!merged) continue;
-    for (const attempt of attempts) {
-      if (!links.get(pr.id)?.has(attempt.ticketId) || attempt.revisions.at(-1)?.headSha !== merged.headSha) continue;
-      await recordSubmittedMerge(ctx, attempt, merged.mergeSha);
-      mergedIds.add(attempt.ticketId);
-    }
-  }
-  await markTicketsDone(ctx, [...mergedIds]);
-};
-
 export const checkMergedPullRequestsCommand = defineCommand({
   id: "check-merged-pull-requests",
   title: "Check merged pull requests",
@@ -169,45 +143,38 @@ export const checkMergedPullRequestsCommand = defineCommand({
   async run(ctx) {
     if ((await ctx.settings.get("tickets.markDoneOnMerge")) === false) return;
     const destination = await readMergeDestination(ctx);
-    // Only a submitted attempt can record a merge. Idle projects need no ticket scan.
-    await preparePlannerIndexes(ctx.storage);
-    await upgradeAttemptStorage(ctx.storage);
-    const attempts = await ctx.storage.records.query({ index: "attempt-ticket", fields: [], orderBy: [], limit: 1 });
-    if (!attempts.records.length) return destination.status ? undefined : { reason: destination.reason };
-    const reads: GithubReads = new Map();
-    for await (const metadata of mergeTicketPages(ctx.storage)) {
-      const allAttempts = await readTicketAttempts(
-        ctx.storage,
-        metadata.map(({ id }) => id),
-      );
-      const workspaceIds = allAttempts.map(({ workspaceId }) => workspaceId);
-      const [retired, events, selected] = await Promise.all([
-        readRetiredWorkspaceIds(ctx.storage, workspaceIds),
-        readWorkspaceEvents(ctx.storage, workspaceIds),
-        Promise.all(
-          metadata
-            .filter(({ id }) => allAttempts.some((attempt) => attempt.ticketId === id))
-            .map(({ id }) => ticketsCollection(ctx).get(id)),
-        ),
-      ]);
-      const tickets = selected.filter((ticket) => ticket !== undefined);
-      const attempts = pendingSubmissions(tickets, allAttempts, retired, events, destination.status?.id);
-      const activeIds = new Set(attempts.map((attempt) => attempt.ticketId));
-      const { links, unavailable } = await readSubmissionPullRequests(
-        ctx,
-        tickets.filter((ticket) => activeIds.has(ticket.id)),
-      );
-      // Implicit branch discovery never overrides a canonical reference choice or an incomplete migration.
-      await addWorkspacePullRequests(
-        ctx,
-        attempts.filter((attempt) => !unavailable.has(attempt.ticketId)),
-        links,
-      );
-      if (!links.size) continue;
-      const target = await pullRequestTarget(ctx);
-      if (!target) return { reason: "The Git delivery target is unavailable." };
-      await recordDeliveredLinks(ctx, attempts, links, target, reads);
+    const [tickets, allAttempts, retired, events] = await Promise.all([
+      ticketsCollection(ctx).list(),
+      listAttempts(ctx.storage),
+      readRetiredWorkspaceIds(ctx.storage),
+      attemptEventsCollection(ctx.storage).list(),
+    ]);
+    const attempts = pendingSubmissions(tickets, allAttempts, retired, events, destination.status?.id);
+    const activeIds = new Set(attempts.map((attempt) => attempt.ticketId));
+    const { links, unavailable } = await readSubmissionPullRequests(
+      ctx,
+      tickets.filter((ticket) => activeIds.has(ticket.id)),
+    );
+    // Implicit branch discovery never overrides a canonical reference choice or an incomplete migration.
+    await addWorkspacePullRequests(
+      ctx,
+      attempts.filter((attempt) => !unavailable.has(attempt.ticketId)),
+      links,
+    );
+    if (!links.size) return destination.status ? undefined : { reason: destination.reason };
+    const target = await pullRequestTarget(ctx);
+    if (!target) return { reason: "The Git delivery target is unavailable." };
+    const mergedIds = new Set<string>();
+    for (const pr of await readGithubResources(ctx, [...links.keys()])) {
+      const merged = deliveredMerge(pr, target);
+      if (!merged) continue;
+      for (const attempt of attempts) {
+        if (!links.get(pr.id)?.has(attempt.ticketId) || attempt.revisions.at(-1)?.headSha !== merged.headSha) continue;
+        await recordSubmittedMerge(ctx, attempt, merged.mergeSha);
+        mergedIds.add(attempt.ticketId);
+      }
     }
+    await markTicketsDone(ctx, [...mergedIds]);
     return destination.status ? undefined : { reason: destination.reason };
   },
 });

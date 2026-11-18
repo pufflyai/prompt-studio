@@ -129,19 +129,35 @@ describe("pstdio planner extension contributions", () => {
     expect(skill("create-pstdio-extension")).toBeUndefined();
     expect(skill("pstdio")).toBeUndefined();
   });
-  test("exposes review and manual planner settings commands through the CLI", () => {
+  test("registers the link review ticket command", () => {
+    expect(command("link-review")).toMatchObject({
+      title: "Link review",
+      params: { id: { required: true }, url: { required: true } },
+    });
+    expect(command("link-review")?.cli).toBeTruthy();
+  });
+  test("exposes manual planner settings commands through the CLI", () => {
+    expect(command("ticket-status.update")?.cli).toEqual({
+      examples: ["pstdio pstdio.planner ticket-status update --status-id backlog --label Backlog"],
+    });
+    expect(command("ticket-status.reorder")?.cli).toEqual({
+      examples: ['pstdio pstdio.planner ticket-status reorder --status-ids \'["backlog","ready"]\''],
+    });
+    expect(command("ticket-tag.update")).toMatchObject({
+      cli: {
+        examples: ["pstdio pstdio.planner ticket-tag update --tag-id default-priority --sort-order 0"],
+      },
+      params: { sortOrder: { type: "number" } },
+    });
     for (const id of [
-      "link-review",
-      "ticket-status.update",
-      "ticket-status.reorder",
-      "ticket-tag.update",
       "ticket-tag.create-option",
       "ticket-tag.update-option",
       "ticket-tag.delete-option",
       "ticket-tag.apply-draft",
-    ])
+    ]) {
       expect(command(id)?.cli).toBeTruthy();
-    expect(command("ticket-tag.update")?.params).toMatchObject({ sortOrder: { type: "number" } });
+      expect(command(id)?.params).toMatchObject({ tagId: { required: true } });
+    }
   });
   test("owns planner translation bundles and localizable contribution copy", () => {
     expect(extension.defaultLocale).toBe("en");

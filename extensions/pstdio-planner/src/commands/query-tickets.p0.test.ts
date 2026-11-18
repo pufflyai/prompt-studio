@@ -67,52 +67,6 @@ describe("queryTicketsCommand", () => {
     expect(result.rows.map((row) => row.title)).toEqual(["Archived"]);
   });
 
-  test("keeps a saved GitHub review link visible before the provider imports it", async () => {
-    const { storage, counter } = countStorageWrites(createMemoryStorage());
-    const url = "https://github.com/acme/tools/pull/12";
-    await putTicket(
-      storage,
-      makeTicket({
-        reviewLinks: [
-          {
-            id: "legacy-12",
-            url: "http://github.com/Acme/Tools/pull/0012/files?review=1",
-            provider: "github",
-            kind: "pull_request",
-            externalId: "12",
-            title: null,
-            createdAt: "2026-01-01T00:00:00.000Z",
-            updatedAt: "2026-01-01T00:00:00.000Z",
-          },
-        ],
-      }),
-    );
-    const ctx = makeCommandContext({ storage, params: {} });
-    await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
-    counter.writes = 0;
-
-    const result = await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
-
-    expect(result.rows[0]?.attributes.linkedResourceItems).toMatchObject([
-      { label: "#12", action: { kind: "href", href: url } },
-    ]);
-    expect(counter.writes).toBe(0);
-
-    const ticket = result.rows[0]!.resource;
-    const pullRequest = {
-      type: "pull-request",
-      id: url,
-      extensionId: "pstdio.github",
-      projectId: ctx.projectId,
-      label: "acme/tools #12",
-    };
-    await ctx.resources.addAnchors(ticket, [pullRequest]);
-    const linked = await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
-    expect(linked.rows[0]?.attributes.linkedResourceItems).toMatchObject([
-      { id: resourceKey(pullRequest), label: "acme/tools #12" },
-    ]);
-  });
-
   test.each([
     "pstdio.pstdio-planner",
     "pstdio.planner",

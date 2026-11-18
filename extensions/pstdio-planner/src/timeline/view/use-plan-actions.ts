@@ -7,8 +7,6 @@ import type { Editor } from "./plan-editor";
 import { relationsFor, useDragAndDrop, type useViewSections } from "./plan-state";
 import type { PlanViewProps } from "./plan-view";
 import type { PlanClient } from "./use-plan";
-import { planEvents } from "./use-plan";
-import { usePlannerQuery } from "./use-planner-query";
 
 export function usePlanActions({
   host,
@@ -31,18 +29,7 @@ export function usePlanActions({
   const [editor, setEditor] = useState<Editor>();
   const [context, setContext] = useState<BackgroundContext>();
   const dnd = useDragAndDrop(client);
-  const resident = plan?.sections.flatMap(({ rows }) => rows).find(({ id }) => id === selectedId);
-  const {
-    value: outsidePlan,
-    error: selectionError,
-    retry: retrySelection,
-  } = usePlannerQuery(
-    client,
-    client.commands["timeline.plan.read"].query({ ticketId: selectedId ?? "" }, { events: planEvents }),
-    Boolean(selectedId && !resident),
-  );
-  const outside = outsidePlan?.sections.flatMap(({ rows }) => rows).find(({ id }) => id === selectedId);
-  const selected = resident ?? (outside?.id === selectedId ? outside : undefined);
+  const selected = plan?.sections.flatMap(({ rows }) => rows).find(({ id }) => id === selectedId);
   const relations = relationsFor(selected, plan);
   const open = (target: NavigationTarget) => void host.call("navigation.open", { target });
   const viewProps: Omit<PlanViewProps, "today"> = {
@@ -77,8 +64,6 @@ export function usePlanActions({
     }
   };
   return {
-    selectionError: selectedId && !resident ? selectionError : undefined,
-    retrySelection,
     viewProps,
     selected: selected?.gate || selection?.presentation === "details" ? selected : undefined,
     open,

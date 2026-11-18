@@ -115,6 +115,15 @@ export const readAttempt = async (storage: ExtensionStorageApi, workspaceId: str
   return value;
 };
 
+export const listAttempts = async (storage: ExtensionStorageApi) => {
+  await upgradeAttemptStorage(storage);
+  const values = await attemptsCollection(storage).list();
+  for (const value of values) {
+    if (!isAttemptRecord(value)) throw new Error("Invalid Planner attempt record");
+  }
+  return values;
+};
+
 export const putAttempt = async (storage: ExtensionStorageApi, attempt: AttemptRecord) => {
   if (!isAttemptRecord(attempt)) throw new Error("Invalid Planner attempt record");
   const { state: _deprecatedState, ...variant } = attempt as AttemptRecord & { state?: string };

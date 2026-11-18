@@ -8,6 +8,9 @@ export interface MilestoneDisplay {
 export function milestoneVisible(section: PlanSection, display: MilestoneDisplay) {
   if (!section.deadline) return true;
   if (display.showPassedMilestones === false && section.deadline.daysLeft < 0) return false;
-  const counts = section.globalCounts ?? section.counts;
-  return display.showCompletedMilestones !== false || counts.total === 0 || counts.done !== counts.total;
+  return (
+    display.showCompletedMilestones !== false ||
+    section.counts.total === 0 ||
+    section.counts.done !== section.counts.total
+  );
 }

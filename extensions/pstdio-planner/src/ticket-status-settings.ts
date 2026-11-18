@@ -1,5 +1,4 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { readStatusDefinitions } from "./data/definition-query";
 
 export interface TicketStatusDraft {
   id: string;
@@ -70,7 +69,7 @@ export const saveStatusSettings = defineCommand({
   params: { statuses: { ...params.json<TicketStatusDraft[]>(), required: true } },
   async run(ctx, input) {
     if (!input.statuses) throw new Error("Statuses are required");
-    const stored = await readStatusDefinitions(ctx.storage);
+    const stored = await statusesCollection(ctx.storage).list();
     const storedById = new Map(stored.map((status) => [status.id, status]));
     const next = input.statuses.map((status) => toStoredStatus(status, storedById.get(status.id)));
     const nextIds = new Set(next.map((status) => status.id));

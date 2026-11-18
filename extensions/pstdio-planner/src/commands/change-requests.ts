@@ -5,10 +5,10 @@ import { legacyAttemptOutput } from "../data/attempt-compatibility";
 import { appendRevision } from "../data/attempt-state";
 import { appendAttemptEvent, putAttempt, readAttempt, reviewThreadsCollection } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
-import { openInlineThreadPages } from "../data/review-thread-page";
+import { hasPendingImplementationInput } from "../data/implementation-input";
+import { listTicketReviewRequests } from "../data/review-request-storage";
+import { readSessionHistory } from "../data/session-history";
 import { inlineThreadIsOutdated } from "../data/thread-mapping";
-import { readTicketInputStates } from "../data/ticket-input-state";
-import { sessionBelongsToWorkspace } from "../data/workspace-writers";
 import { withWriteGuard } from "../data/write-guard";
 import { validateImplementationEvidence } from "./activity-evidence";
 import { validateSubmittedStack } from "./stack-validation";
@@ -35,33 +35,40 @@ export const workspaceHead = async (ctx: CommandContext, workspaceId: string) =>
 
 const mapOpenThreads = async (ctx: CommandContext, attempt: AttemptRecord, nextHeadSha: string) => {
   const collection = reviewThreadsCollection(ctx.storage);
-  let path: string | undefined;
-  for await (const threads of openInlineThreadPages(ctx.storage, attempt.workspaceId, nextHeadSha)) {
-    if (!threads.length) continue;
-    path ??= await workspaceGitPath(ctx, attempt.workspaceId);
-    for (const thread of threads) {
-      const result = await ctx.process.run({
-        command: ["git", "-C", path, "diff", "--unified=0", thread.originalHeadSha, nextHeadSha, "--", thread.path!],
-      });
-      const outdated =
-        result.exitCode !== 0 ||
-        inlineThreadIsOutdated({ startLine: thread.startLine!, endLine: thread.endLine!, diff: result.stdout });
-      if (!outdated) continue;
-      const next = { ...thread, state: "outdated" as const };
-      await collection.put(next.id, next);
-      await appendAttemptEvent(ctx.storage, {
-        workspaceId: attempt.workspaceId,
-        revision: attempt.revisions.at(-1)?.revision ?? null,
-        type: "thread_outdated",
-        actor: actorFromSource(ctx.source, ctx.invocationId),
-        sessionId: attempt.implementationSessionId,
-        reportId: null,
-        reviewId: thread.reviewId,
-        threadId: thread.id,
-        commitSha: nextHeadSha,
-        metadata: { path: thread.path, startLine: thread.startLine, endLine: thread.endLine },
-      });
-    }
+  const threads = (await collection.list()).filter(
+    (thread) =>
+      thread.workspaceId === attempt.workspaceId &&
+      thread.state === "open" &&
+      thread.side === "head" &&
+      thread.path !== null &&
+      thread.startLine !== null &&
+      thread.endLine !== null &&
+      thread.originalHeadSha !== nextHeadSha,
+  );
+  if (threads.length === 0) return;
+  const path = await workspaceGitPath(ctx, attempt.workspaceId);
+  for (const thread of threads) {
+    const result = await ctx.process.run({
+      command: ["git", "-C", path, "diff", "--unified=0", thread.originalHeadSha, nextHeadSha, "--", thread.path!],
+    });
+    const outdated =
+      result.exitCode !== 0 ||
+      inlineThreadIsOutdated({ startLine: thread.startLine!, endLine: thread.endLine!, diff: result.stdout });
+    if (!outdated) continue;
+    const next = { ...thread, state: "outdated" as const };
+    await collection.put(next.id, next);
+    await appendAttemptEvent(ctx.storage, {
+      workspaceId: attempt.workspaceId,
+      revision: attempt.revisions.at(-1)?.revision ?? null,
+      type: "thread_outdated",
+      actor: actorFromSource(ctx.source, ctx.invocationId),
+      sessionId: attempt.implementationSessionId,
+      reportId: null,
+      reviewId: thread.reviewId,
+      threadId: thread.id,
+      commitSha: nextHeadSha,
+      metadata: { path: thread.path, startLine: thread.startLine, endLine: thread.endLine },
+    });
   }
 };
 
@@ -94,11 +101,15 @@ async function submitRevision(ctx: CommandContext, commandParams: ParamsOf<typeo
   if (!implementationSessionId || attempt.implementationSessionId !== implementationSessionId) {
     throw new Error("The implementation session does not own this attempt.");
   }
-  if (!sessionBelongsToWorkspace(await ctx.sessions.get(implementationSessionId), attempt.workspaceId))
+  if (
+    !(await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId })).some(
+      ({ id }) => id === implementationSessionId,
+    )
+  )
     throw new Error("The implementation session is not linked to this workspace.");
   const currentHead = await workspaceHead(ctx, attempt.workspaceId);
   if (currentHead !== commandParams.headSha) throw new Error("Workspace HEAD changed before submission.");
-  if ((await readTicketInputStates(ctx.storage, [attempt.ticketId])).get(attempt.ticketId)?.pendingImplementation)
+  if (hasPendingImplementationInput(await listTicketReviewRequests(ctx.storage, attempt.ticketId)))
     throw new Error("Resolve implementation input before submitting a handoff.");
   const previous = attempt.revisions.at(-1);
   const path = await workspaceGitPath(ctx, attempt.workspaceId);

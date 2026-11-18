@@ -3,7 +3,7 @@ import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensio
 import { actorFromSource } from "../data/attempt-actors";
 import { appendAttemptEvent, attemptEventsCollection, putAttempt, readAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
-import { hasWorkspaceWriter, sessionBelongsToWorkspace } from "../data/workspace-writers";
+import { readSessionHistory } from "../data/session-history";
 import { withWriteGuard } from "../data/write-guard";
 import { loadAttemptDependencies } from "./attempt-readiness";
 import { isUnexpectedExit } from "./auto-build-resume";
@@ -28,7 +28,10 @@ export async function readStackRepair(
   if (!session) return null;
   // A user stop stays stopped. The resume path owns the single recovery of a lost run.
   if (isUnexpectedExit(session)) return null;
-  if (!sessionBelongsToWorkspace(session, attempt.workspaceId)) return null;
+  if (
+    !(await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId })).some(({ id }) => id === session.id)
+  )
+    return null;
   const eventId = `stack-repair-resumed:${session.id}:${session.updated_at ?? attempt.updatedAt}`;
   if (await attemptEventsCollection(ctx.storage).get(eventId)) return null;
   const { readiness } = await loadAttemptDependencies(ctx, attempt.ticketId, {
@@ -71,9 +74,10 @@ async function updateStack(ctx: CommandContext, input: ParamsOf<typeof stackUpda
   if (!attempt || attempt.implementationSessionId !== input.implementationSessionId)
     throw new Error("The implementation session does not own this workspace.");
   const owner = await ctx.sessions.get(input.implementationSessionId);
-  if (!owner || !sessionBelongsToWorkspace(owner, attempt.workspaceId))
+  const sessions = await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId });
+  if (!owner || !sessions.some(({ id }) => id === owner.id))
     throw new Error("The implementation session is not linked to this workspace.");
-  if (await hasWorkspaceWriter(ctx.sessions, attempt.workspaceId, owner.id))
+  if (sessions.some((session) => session.id !== owner.id && isLiveSession(session)))
     throw new Error("Another session is using this workspace. Wait for its handoff before updating the stack.");
   const path = await workspaceGitPath(ctx, attempt.workspaceId);
   const before = await workspaceHead(ctx, attempt.workspaceId);
