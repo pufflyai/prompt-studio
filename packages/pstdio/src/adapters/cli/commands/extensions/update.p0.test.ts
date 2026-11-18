@@ -61,6 +61,33 @@ describe("extensions update", () => {
     expect(logs).toEqual(["Updated pstdio-planner to 1.0.0."]);
   });
 
+  test("fills the host's upgrade slots and starts a waiting extension as soon as a slot opens", async () => {
+    const targets = ["first", "second", "third"].map((name) => extension(name));
+    const { deps, upgradeProjectExtension } = makeDeps(targets);
+    const gates = targets.map(() => Promise.withResolvers<void>());
+    const thirdStarted = Promise.withResolvers<void>();
+    upgradeProjectExtension.mockImplementation(async (_project, id) => {
+      const index = targets.findIndex((target) => target.id === id);
+      if (index === 2) thirdStarted.resolve();
+      await gates[index]!.promise;
+      return { changed: true, extension: targets[index]! };
+    });
+    const run = createHandler({
+      ...deps,
+      listProjectExtensions: async () => ({ extensions: targets, marketplace: [], upgradeConcurrency: 2 }),
+    })(argv());
+    try {
+      await Bun.sleep(0);
+      expect(upgradeProjectExtension).toHaveBeenCalledTimes(2);
+      gates[1]!.resolve();
+      await thirdStarted.promise;
+      expect(upgradeProjectExtension).toHaveBeenCalledTimes(3);
+    } finally {
+      for (const gate of gates) gate.resolve();
+      await run;
+    }
+  });
+
   test("uses the host candidate list for repo-scoped and disabled extensions", async () => {
     const repoExtension = extension("repo-tools", {
       enabled: false,
@@ -143,4 +170,32 @@ describe("extensions update", () => {
   afterEach(() => {
     process.exitCode = 0;
   });
+});
+
+test.each([
+  "pstdio-notes",
+  "pstdio.pstdio-notes",
+  "notes",
+  "pstdio.notes",
+])("updates the canonical first-party instance selected by %s", async (name) => {
+  const notes = extension("notes");
+  const { deps, upgradeProjectExtension } = makeDeps([notes]);
+  await createHandler(deps)(argv({ name }));
+  expect(upgradeProjectExtension).toHaveBeenCalledWith("project-1", notes.id);
+});
+
+test("an explicit custom install name wins over a first-party legacy selector", async () => {
+  const custom = extension("pstdio-notes", { extensionId: "acme.notes" });
+  const { deps, upgradeProjectExtension } = makeDeps([extension("notes"), custom]);
+  await createHandler(deps)(argv({ name: "pstdio-notes" }));
+  expect(upgradeProjectExtension).toHaveBeenCalledTimes(1);
+  expect(upgradeProjectExtension).toHaveBeenCalledWith("project-1", custom.id);
+});
+
+test("an explicit custom install named like a qualified canonical ID wins alone", async () => {
+  const custom = extension("pstdio.notes", { extensionId: "acme.tools" });
+  const { deps, upgradeProjectExtension } = makeDeps([extension("notes"), custom]);
+  await createHandler(deps)(argv({ name: "pstdio.notes" }));
+  expect(upgradeProjectExtension).toHaveBeenCalledTimes(1);
+  expect(upgradeProjectExtension).toHaveBeenCalledWith("project-1", custom.id);
 });

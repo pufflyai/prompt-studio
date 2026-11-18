@@ -1,228 +1,136 @@
-import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
-import { type AttemptReadinessResult, findPendingPrerequisites } from "../data/attempt-readiness";
-import { retiredWorkspaceIds } from "../data/attempt-retirement";
-import { attemptEventsCollection, attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
-import type { AttemptRecord, TicketAttemptSelection } from "../data/attempt-types";
+import { type CommandContext, defineCommand, params, type StoragePredicate } from "@pstdio/sdk/extensions";
 import { type AutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
-import { ticketsCollection } from "../data/collections";
 import type { DependencyDeliveryReads } from "../data/dependency-deliveries";
-import { resolveImplementationBase } from "../data/implementation-targets";
-import { readTicketReviewRequests } from "../data/review-request-storage";
-import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
-import { readPlanCommand } from "../timeline/commands/read-plan";
-import { loadAttemptReadiness, readImplementationCapacity } from "./attempt-readiness";
-import { observeTicketWork, type WorkObservation } from "./auto-build-observations";
-import { readAutoBuildResumptions } from "./auto-build-resume";
-import { readAutoBuildAssignments } from "./auto-build-sessions";
-import { canOfferStackRepair, readSelectedStackRepair } from "./next-stack-repair";
+import type { GithubReads } from "../data/pull-request-resources";
+import { ticketSummaryFields } from "../data/ticket-query-summary";
+import { readImplementationCapacity } from "./attempt-readiness";
+import type { WorkObservation } from "./auto-build-observations";
+import { visitNextTicketPage } from "./next-ticket-evidence";
 import type { NextTicketQuery } from "./next-ticket-query";
-import { selectScopedWork } from "./next-ticket-scope";
+import { readNextTicketSelection } from "./next-ticket-selection";
 import type { NextTicket, WaitingTicket } from "./next-ticket-types";
-import { nextTicketWait } from "./next-ticket-wait";
-import { nextWorkSnapshot } from "./next-work-snapshot";
-import { readRecoveryBase, readRecoverySeed } from "./workspace-recovery";
-
-function appendCandidate(
-  summary: Pick<NextTicket, "id" | "ticket" | "title">,
-  readiness: AttemptReadinessResult,
-  resumable: boolean,
-  next: NextTicket[],
-  waiting: WaitingTicket[],
-) {
-  if (readiness.decision === "wait") {
-    waiting.push({ ...summary, reason: readiness.reason, dependencyIds: readiness.dependencyIds });
-  } else if (resumable) {
-    next.push({ ...summary, action: "resume" });
-  } else {
-    next.push({ ...summary, action: "start", baseHeadSha: readiness.baseHeadSha });
-  }
-}
-
-async function appendStackRepair(
-  ctx: CommandContext,
-  summary: Pick<NextTicket, "id" | "ticket" | "title">,
-  attempts: AttemptRecord[],
-  selections: TicketAttemptSelection[],
-  next: NextTicket[],
-  waiting: WaitingTicket[],
-  mode: AutoBuildMode,
-  deliveryReads: DependencyDeliveryReads,
-  retired: Set<string>,
-  base?: string,
-) {
-  const repair = await readSelectedStackRepair(ctx, summary.id, attempts, selections, retired, mode);
-  if (!repair) return false;
-  if ("unavailableWorkspaceId" in repair) {
-    const recoveryBase = await readRecoveryBase(ctx, repair.attempt, base);
-    const { readiness } = await loadAttemptReadiness(
-      ctx,
-      summary.id,
-      { base: recoveryBase, requireMergedDependencies: mode.requireMergedDependencies },
-      deliveryReads,
-    );
-    if (readiness.decision === "wait")
-      waiting.push({ ...summary, reason: readiness.reason, dependencyIds: readiness.dependencyIds });
-    else
-      next.push({
-        ...summary,
-        action: "recover-workspace",
-        recoveryBaseSha: recoveryBase,
-        workspaceId: repair.unavailableWorkspaceId,
-        baseHeadSha: readiness.baseHeadSha,
-        recoveryHeadSha: await readRecoverySeed(ctx, repair.attempt, readiness.baseHeadSha),
-        detail: repair.detail,
-      });
-  } else {
-    next.push({
-      ...summary,
-      action: "update-stack",
-      workspaceId: repair.workspaceId,
-      baseHeadSha: repair.base.headSha,
-    });
-  }
-  return true;
-}
-
-// A repair for submitted work runs when capacity allows; otherwise the observations explain the wait.
-function appendObservedWork(
-  work: Awaited<ReturnType<typeof observeTicketWork>>,
-  wait: WaitingTicket,
-  capacity: { running: number; limit: number },
-  next: NextTicket[],
-  waiting: WaitingTicket[],
-) {
-  const [repair] = work.candidates;
-  if (repair && capacity.running < capacity.limit) {
-    const { reason, ...action } = repair;
-    next.push({ ...action, id: wait.id, ticket: wait.ticket, title: wait.title, detail: reason });
-    return;
-  }
-  const detail = work.observations.map(({ reason, nextAction }) => `${reason} ${nextAction}`).join(" ");
-  waiting.push({ ...wait, ...(detail ? { detail } : {}) });
-}
+import { nextWorkDigest } from "./next-work-snapshot";
 
 export async function readNextTickets(
   ctx: CommandContext,
   mode: AutoBuildMode,
-  input: NextTicketQuery & { base?: string; limit?: number } = {},
-  scope?: NextTicketQuery[],
+  input: NextTicketQuery & {
+    base?: string;
+    limit?: number;
+    ticket?: string;
+    offset?: number;
+    revision?: string;
+    scan?: boolean;
+  } = {},
+  savedScope?: NextTicketQuery[],
 ) {
-  const [plan, attempts, tickets, resumptions, capacity, assignments, requests, events, selections, workflow] =
-    await Promise.all([
-      readPlanCommand.run(ctx, {}),
-      listAttempts(ctx.storage),
-      ticketsCollection(ctx).list(),
-      readAutoBuildResumptions(ctx),
-      readImplementationCapacity(ctx),
-      readAutoBuildAssignments(ctx),
-      readTicketReviewRequests(ctx.storage),
-      attemptEventsCollection(ctx.storage).list(),
-      attemptSelectionsCollection(ctx.storage).list(),
-      readWorkflowStatuses(ctx).then(usableWorkflowStatuses),
-    ]);
-  const retired = retiredWorkspaceIds(events);
-  const byRef = new Map(
-    tickets.flatMap((ticket) => [
-      [ticket.id, ticket],
-      [ticket.shorthand, ticket],
-    ]),
-  );
-  const byId = new Map(tickets.map((ticket) => [ticket.id, ticket]));
-  const started = new Set(
-    attempts.filter(({ workspaceId }) => !retired.has(workspaceId)).map(({ ticketId }) => ticketId),
-  );
-  const { selected, scoped, completed, configurationError } = await selectScopedWork(ctx, {
-    plan,
-    tickets,
-    mode,
-    query: input,
-    scope,
-    completedStatusIds: workflow.completedStatusIds,
-    started,
-  });
-  const next: NextTicket[] = [];
-  const waiting: WaitingTicket[] = [];
-  const observations: WorkObservation[] = [];
-  // Share GitHub reads within this query; dispatch rechecks create a fresh query.
+  const capacity = await readImplementationCapacity(ctx);
+  const selection = await readNextTicketSelection(ctx, mode, input, savedScope);
+  if (input.revision && input.revision !== selection.revision)
+    throw new Error("Work scope changed; restart its first page");
+  const {
+    workflow,
+    completed,
+    matchingTicketCount,
+    configurationError,
+    scoped,
+    fingerprint: scopeFingerprint,
+    ...query
+  } = selection;
+  const next: NextTicket[] = [],
+    waiting: WaitingTicket[] = [],
+    observations: WorkObservation[] = [];
   const deliveryReads: DependencyDeliveryReads = new Map();
-  let base = input.base;
-  const limit = input.limit ?? Infinity;
-  for (const row of selected) {
-    if (next.length >= limit) break;
-    const summary = { id: row.id, ticket: row.shorthand, title: row.title };
-    const pending = findPendingPrerequisites(byRef.get(row.id)!, byRef, requests, mode.requireMergedDependencies);
-    const wait = nextTicketWait(row, {
-      pending,
-      assigned: assignments.assigned.has(row.id),
-      attempts: attempts.filter(({ ticketId, workspaceId }) => ticketId === row.id && !retired.has(workspaceId)),
-      resumable: resumptions.has(row.id),
-      capacity,
+  const state = {
+    base: input.base,
+    offset: input.offset ?? 0,
+    examined: 0,
+    progressAt: selection.progressAt,
+    dependencies: "",
+    pullRequestReads: new Map() as GithubReads,
+    more: matchingTicketCount > (input.offset ?? 0),
+  };
+  const limit = Math.min(100, input.limit ?? 100);
+  if (!Number.isInteger(limit) || limit < 0) throw new Error("Choose a result limit from 0 to 100");
+  const selectionShape = (value: Pick<typeof query, "where" | "computed" | "formats" | "orderBy">) =>
+    JSON.stringify({ where: value.where, computed: value.computed, formats: value.formats, orderBy: value.orderBy });
+  const initialShape = selectionShape(query);
+  const reconcilePreparationWrites = async () => {
+    const current = await ctx.storage.records.query({
+      ...query,
+      revision: undefined,
+      fields: [],
+      limit: 0,
+      orderBy: [],
     });
+    if (current.revision === query.revision) return;
+    // Delivery reads can migrate legacy PR links to canonical resources. That changes
+    // storage's revision without changing this selection. Recheck its complete fingerprint
+    // and shape before adopting that revision; an actual scope change still fails.
+    const nextSelection = await readNextTicketSelection(ctx, mode, input, savedScope);
     if (
-      canOfferStackRepair(wait?.reason, resumptions.has(row.id), capacity) &&
-      (await appendStackRepair(
-        ctx,
-        summary,
-        attempts,
-        selections,
-        next,
-        waiting,
-        mode,
-        deliveryReads,
-        retired,
-        input.base,
-      ))
+      nextSelection.fingerprint !== scopeFingerprint ||
+      selectionShape(nextSelection) !== initialShape ||
+      nextSelection.matchingTicketCount !== matchingTicketCount
     )
-      continue;
-    if (wait?.reason === "existing-attempt") {
-      const work = await observeTicketWork(ctx, byId.get(row.id)!, {
-        requests,
-        completedStatusIds: workflow.completedStatusIds,
-        attempts,
-        retired,
-        selections,
-        events,
-      });
-      observations.push(...work.observations);
-      appendObservedWork(work, { ...summary, ...wait }, capacity, next, waiting);
-      continue;
-    }
-    if (wait) {
-      waiting.push({ ...summary, ...wait });
-      continue;
-    }
-    const resumption = resumptions.get(row.id);
-    const recordedBase =
-      resumption && attempts.find(({ workspaceId }) => workspaceId === resumption.workspaceId)?.base.headSha;
-    if (!recordedBase) base ??= await resolveImplementationBase(ctx, await ctx.settings.all());
-    const { readiness } = await loadAttemptReadiness(
-      ctx,
-      row.id,
-      { base: recordedBase ?? base, requireMergedDependencies: mode.requireMergedDependencies },
+      throw new Error("Work scope changed; query it again");
+    query.revision = nextSelection.revision;
+  };
+  while (limit > next.length && state.more) {
+    const page = await ctx.storage.records.query({
+      ...query,
+      fields: [...ticketSummaryFields, "gate"],
+      limit: 100,
+      offset: state.offset,
+    });
+    if (!page.records.length) break;
+    await visitNextTicketPage(ctx, page.records, state, {
+      mode,
+      workflow,
+      capacity,
+      next,
+      waiting,
+      observations,
       deliveryReads,
-    );
-    appendCandidate(summary, readiness, resumptions.has(row.id), next, waiting);
+      limit,
+      matchingTicketCount,
+      requestedBase: input.base,
+    });
+    await reconcilePreparationWrites();
+    if (!input.scan) break;
   }
-  const state = await nextWorkSnapshot(ctx, {
-    revision: mode.revision,
-    tickets,
-    rows: selected,
-    attempts,
+  const { offset, examined, more, dependencies, progressAt } = state;
+  const requestSelection = {
+    where: {
+      exists: { index: query.index, on: [{ sourceField: "ticketId", relatedField: "id" }], where: scoped },
+    } satisfies StoragePredicate,
+    related: { [query.index]: { computed: query.computed, formats: query.formats } },
+  };
+  await ctx.storage.records.query({ index: query.index, fields: [], limit: 0, orderBy: [], revision: query.revision });
+  const snapshot = await nextWorkDigest({
+    scopeFingerprint,
+    mode: mode.revision,
+    scoped,
+    capacity,
     next,
     waiting,
-    capacity,
+    dependencies,
   });
   return {
     tickets: next,
     waiting,
     capacity,
     completed,
-    matchingTicketCount: selected.length,
-    reviewRequests: scoped.flatMap((row) => row.requests.filter((request) => request.state === "open")),
-    requestErrors: scoped.flatMap((row) => row.requestErrors),
+    matchingTicketCount,
     observations,
     configurationError,
-    ...state,
+    requestSelection,
+    nextOffset: more ? offset : null,
+    revision: query.revision,
+    waitingTruncated: examined > waiting.length && waiting.length === 100,
+    snapshot,
+    progressAt,
+    active: capacity.running,
   };
 }
 
@@ -230,11 +138,10 @@ export const nextTicketsCommand = defineCommand({
   id: "next-tickets",
   title: "Read next tickets",
   cli: {
-    globalAliases: [["tickets", "next"]],
-    description: "Query launchable tickets and waiting reasons using current Auto Build rules.",
+    description: "Query a bounded page of launchable tickets and waiting reasons using current Auto Build rules.",
     examples: [
-      "pst pstdio.pstdio-planner next-tickets --track Workbench",
-      "pst pstdio.pstdio-planner next-tickets --status Todo --tags High",
+      "pst pstdio.planner next-tickets --track Workbench",
+      "pst pstdio.planner next-tickets --status Todo --tags High",
     ],
   },
   params: {
@@ -243,10 +150,26 @@ export const nextTicketsCommand = defineCommand({
     tags: params.list(),
     parent: params.text(),
     base: params.text({ label: "Root target branch" }),
+    limit: params.number(),
+    offset: params.number(),
+    revision: params.text(),
   },
   async run(ctx, input) {
     const mode = await readAutoBuildMode(ctx);
-    const { tickets, waiting, capacity } = await readNextTickets(ctx, mode, input);
-    return { enabled: mode.enabled, revision: mode.revision, tickets, waiting, capacity };
+    const { tickets, waiting, capacity, nextOffset, revision, matchingTicketCount } = await readNextTickets(
+      ctx,
+      mode,
+      input,
+    );
+    return {
+      enabled: mode.enabled,
+      revision: mode.revision,
+      tickets,
+      waiting,
+      capacity,
+      nextOffset,
+      queryRevision: revision,
+      matchingTicketCount,
+    };
   },
 });

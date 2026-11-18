@@ -38,12 +38,17 @@ test("a failed refresh cancels its live subscription and releases retained resou
   let reads = 0;
   let closed = 0;
   let subscriptionSignal: AbortSignal | undefined;
+  let changed: (() => void) | undefined;
   const ctx = makeCommandContext({
     storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }),
     params: {},
     overrides: {
       signal: controller.signal,
       sessions: {
+        observeMetadata: async (_id, notify) => {
+          changed = () => notify("session");
+          return { close() {} };
+        },
         get: async () => session,
         getQueuedMessages: async () => ({
           queue: { requests: [], activeRunStartedAt: null, steeringAvailable: false, steeringUnavailableReason: null },
@@ -61,6 +66,7 @@ test("a failed refresh cancels its live subscription and releases retained resou
         retainResources: async () => ({ close: () => closed++ }),
         stream: async (_id, _onEvent, options) => {
           subscriptionSignal = options?.signal;
+          changed!();
           await new Promise<void>((resolve) => {
             if (subscriptionSignal?.aborted) resolve();
             else subscriptionSignal?.addEventListener("abort", () => resolve(), { once: true });

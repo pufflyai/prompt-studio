@@ -3,12 +3,8 @@ import type { CommandSource } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putAttempt, readAttempt } from "../data/attempt-storage";
 import { hasPendingImplementationInput } from "../data/implementation-input";
-import {
-  hasPendingInput,
-  listTicketReviewRequests,
-  REVIEW_OUTCOMES_COLLECTION,
-  reviewRequestsCollection,
-} from "../data/review-request-storage";
+import { hasPendingInput, REVIEW_OUTCOMES_COLLECTION, reviewRequestsCollection } from "../data/review-request-storage";
+import { listTicketReviewRequests } from "../data/review-request-storage.fixture";
 import { putTicket, ticketsCollection } from "../data/ticket-context.fixture";
 import { reviewRequestCleanupHook } from "../hooks/review-request-cleanup";
 import { makeCommandContext } from "./command-context.fixture";
@@ -285,9 +281,9 @@ describe("review request conversations", () => {
       id: "session-1",
     });
     expect(created).toHaveLength(1);
-    expect(created[0]?.prompt).toContain(`pst pstdio.pstdio-planner review --request-id ${request.id}`);
+    expect(created[0]?.prompt).toContain(`pst pstdio.planner review --request-id ${request.id}`);
     expect(created[0]?.anchors).toContainEqual(
-      expect.objectContaining({ type: "planner-review-request", id: request.id, extensionId: "pstdio-planner" }),
+      expect.objectContaining({ type: "planner-review-request", id: request.id, extensionId: "planner" }),
     );
     await openReviewRequestCommand.run(context("dashboard"), { requestId: request.id });
     expect(created).toHaveLength(1);
@@ -490,4 +486,51 @@ test("persisted merge-only requests do not block implementation", async () => {
   expect(requests.requests[0]!.context.affectedAction).toBe("merge");
   expect(hasPendingImplementationInput(requests)).toBe(false);
   expect(hasPendingImplementationInput(requests, true)).toBe(true);
+});
+
+test("handoff deduplication selects one request and history pages only the requested bodies", async () => {
+  const { storage, context } = await setup();
+  const ctx = context();
+  const input = {
+    ticket: "PS-1",
+    title: "Decision",
+    instructions: "Choose",
+    request: { kind: "task" as const },
+    reason: "dependency-cycle" as const,
+  };
+  const target = await requestReviewCommand.run(ctx, input);
+  for (let i = 0; i < 103; i++)
+    await reviewRequestsCollection(storage).put(`history-${String(i).padStart(3, "0")}`, {
+      ...target,
+      id: `history-${String(i).padStart(3, "0")}`,
+      requestedAt: new Date(Date.UTC(2026, 0, 1, 0, i)).toISOString(),
+      context: { ...target.context, reason: "workspace-adoption-required" },
+    });
+  let bodies = 0;
+  const collection = storage.collection.bind(storage),
+    readMany = storage.records.readMany;
+  storage.collection = <T>(name: string) => {
+    const items = collection<T>(name);
+    return {
+      ...items,
+      get: async (id: string) => {
+        if (name === "planner-review-requests") bodies++;
+        return items.get(id);
+      },
+    };
+  };
+  storage.records.readMany = async (ids) => {
+    bodies += ids.filter((id) => id.includes('"planner-review-requests"')).length;
+    return readMany(ids);
+  };
+  expect((await requestReviewCommand.run(ctx, input)).id).toBe(target.id);
+  expect(bodies).toBeLessThanOrEqual(1);
+  bodies = 0;
+  const first = await listReviewRequestsCommand.run(ctx, { ticket: "PS-1" });
+  expect(first.requests).toHaveLength(25);
+  expect(first.total).toBe(104);
+  expect(bodies).toBe(25);
+  const last = await listReviewRequestsCommand.run(ctx, { ticket: "PS-1", offset: 100 });
+  expect(last.requests).toHaveLength(4);
+  expect(last.hasNext).toBe(false);
 });

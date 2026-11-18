@@ -35,6 +35,7 @@ import { toInternalWorkbenchExtensionMetadata } from "./workbench-extension-meta
 import { registerWorkbenchExtensionRendererRefreshEvents } from "./workbench-extension-refresh";
 import { registerSettings, registerViewMenus, registerWebviewPanels } from "./workbench-extension-surfaces";
 import { createWorkbenchExtensionTabPresentation } from "./workbench-extension-tab-presentation";
+import { registerWorkbenchIdentityAliases } from "./workbench-identity-aliases";
 
 const disposeAll = (disposables: Disposable[]) => {
   for (let index = disposables.length - 1; index >= 0; index -= 1) disposables[index]?.dispose();
@@ -197,7 +198,7 @@ const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInp
 const registerModePlacements = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.placements.map((placement) => input.workbench.modePlacements.registerPlacement(placement));
 export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWorkbenchExtensionContributionsInput) => {
-  const disposables: Disposable[] = [];
+  const disposables: Disposable[] = registerWorkbenchIdentityAliases(sourceInput);
   const input: InternalRegisterWorkbenchExtensionContributionsInput = {
     ...sourceInput,
     metadata: toInternalWorkbenchExtensionMetadata(sourceInput.metadata, {
@@ -227,7 +228,11 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     disposables.push(...registerMenus(input, context));
     disposables.push(...registerCommandPaletteContributions(input, context));
     disposables.push(
-      registerWorkbenchExtensionTreeRenderers({ ...input, resolveNodeResource: input.resolveTreeNodeResource }),
+      registerWorkbenchExtensionTreeRenderers({
+        ...input,
+        resolveNodeResource: input.resolveTreeNodeResource,
+        renderNodeEndContent: input.renderTreeNodeEndContent,
+      }),
     );
     disposables.push(registerWorkbenchExtensionFileRenderers(input));
     disposables.push(registerWorkbenchExtensionControlsRenderers(context, input.metadata.controlsRenderers ?? []));

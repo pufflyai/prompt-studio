@@ -11,6 +11,7 @@ import type {
 import { commandRefId } from "@pstdio/sdk/extensions";
 import { queryChangeEnvelopeSchema, resolveEventReferenceId } from "pstdio-api-contracts";
 import type { ExtensionRuntime, NormalizedExtension } from "../../types/runtime";
+import { canonicalRuntimeId } from "../contribution-aliases";
 import { createInvocationScope, type InvocationScope } from "./scope";
 import type { BuildEnvironmentInput, CommandRunnerHostDeps } from "./types";
 
@@ -56,6 +57,7 @@ export const createEventDispatcher = (input: DispatcherDeps): EventDispatcher =>
     origin: EventOrigin,
     refresh?: QueryChangeEnvelope,
   ): Promise<EventDeliveryResult> => {
+    eventId = canonicalRuntimeId(input.runtime, eventId);
     refresh = refresh ? queryChangeEnvelopeSchema.parse(refresh) : undefined;
     input.deps.onWillDispatchEvent?.(eventId, refresh);
     const subs = input.runtime.hooks.filter((h) => h.eventId === eventId);

@@ -80,6 +80,8 @@ export interface InternalWorkbenchExtensionMetadata {
   >;
   panels: InternalWorkbenchExtensionPanel[];
   resourceKinds: Array<{
+    activity?: import("@pstdio/sdk/extensions").ResourceActivityCapabilities;
+    activityHandoff?: boolean;
     id: string;
     relatedOpeningsCommand?: string;
     extensionId: string;

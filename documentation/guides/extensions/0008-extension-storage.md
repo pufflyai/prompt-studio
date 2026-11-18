@@ -41,9 +41,9 @@ This page describes `main`, which ships in the release after 0.43.x. Release 0.4
 
 A prototype is a working draft, often an HTML page with TypeScript build sources and
 screenshots. It has no separate storage system. Keep artifact drafts and prototypes in
-`.pstdio/extension-storage/pstdio.pstdio-artifacts/drafts/<name>/`.
+`.pstdio/extension-storage/pstdio.artifacts/drafts/<name>/`.
 
-Publishing through `pst pstdio-artifacts publish` saves a snapshot under the Artifacts
+Publishing through `pst pstdio.artifacts publish` saves a snapshot under the Artifacts
 extension's storage. The source draft can stay beside it for later edits. Keep the
 published URL and pass it when publishing a new revision.
 
@@ -61,11 +61,11 @@ overwriting either copy.
 | Old project path | New project path |
 | --- | --- |
 | `.pstdio/font-editor/config.json` | `.pstdio/extension-storage/pstdio.font-editor/config.json` |
-| `.pstdio/tickets/` | `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/` |
-| `.pstdio/reports/` | `.pstdio/extension-storage/pstdio.pstdio-reports/reports/` |
-| `.pstdio/ticket-identity-migration/` | `.pstdio/extension-storage/pstdio.pstdio-planner/ticket-identity-migration/` |
-| `.pstdio/artifacts/` | `.pstdio/extension-storage/pstdio.pstdio-artifacts/drafts/` |
-| `.pstdio/prototypes/` | `.pstdio/extension-storage/pstdio.pstdio-artifacts/prototypes/` |
+| `.pstdio/tickets/` | `.pstdio/extension-storage/pstdio.planner/tickets/` |
+| `.pstdio/reports/` | `.pstdio/extension-storage/pstdio.reports/reports/` |
+| `.pstdio/ticket-identity-migration/` | `.pstdio/extension-storage/pstdio.planner/ticket-identity-migration/` |
+| `.pstdio/artifacts/` | `.pstdio/extension-storage/pstdio.artifacts/drafts/` |
+| `.pstdio/prototypes/` | `.pstdio/extension-storage/pstdio.artifacts/prototypes/` |
 | `.pstdio/extension-storage/<name>/` | `.pstdio/extension-storage/<publisher>.<name>/` |
 
 The updated extensions no longer read the old project paths. Prompt Studio 0.46 does not
@@ -73,4 +73,4 @@ move them for you; each extension starts fresh in its full-ID folder. Update loc
 links that use an old path. Refresh installed agent skills from their updated sources.
 Published artifact URLs and saved ticket and report identities stay valid.
 
-*Updated at: 2026-10-25*
+*Updated at: 2026-11-12*

@@ -86,7 +86,8 @@ export const getInitialThemePreference = (
 };
 
 export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => {
-  const { children, storage = browserStorage, themePreferences = defaultThemePreferences } = props;
+  const { children, storage = browserStorage } = props;
+  const themePreferences: readonly ThemePreferenceOption[] = props.themePreferences ?? defaultThemePreferences;
   const storageKey = props.preferenceScope
     ? `${themePreferenceStorageKey}:${props.preferenceScope}`
     : themePreferenceStorageKey;
@@ -105,7 +106,11 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
       ? explicitSelection.store
       : sharedStore;
   const choice = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
-  const themePreference = choice ?? props.defaultPreference ?? getInitialThemePreference(themePreferences, storage);
+  const selected = choice ?? props.defaultPreference ?? getInitialThemePreference(themePreferences, storage);
+  const themePreference =
+    themePreferences.find((theme) => theme.id === selected)?.id ??
+    themePreferences.find((theme) => theme.aliases?.includes(selected))?.id ??
+    selected;
   const [preview, setPreview] = useState<ThemePreference | null>(null);
   const resolvedThemePreference = isThemePreference(themePreference, themePreferences)
     ? themePreference

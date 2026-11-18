@@ -114,7 +114,7 @@ The Prompt Studio Performance Monitoring extension (`extensions/pstdio-performan
 Measurement has one owner per process:
 
 - Electron main owns process sampling. `DesktopPerformanceMonitor` (`clients/desktop/src/performance/`) calls `app.getAppMetrics()` every 2 seconds, keeps 15 CPU samples per live process for a 30-second warning window, and drops history for exited processes. Electron divides each process's CPU by the number of logical CPUs; the monitor multiplies it back, so one busy core reads about 100%. The legacy process fields keep Electron memory in kibibytes; schema-2 capture fields convert them to bytes.
-- Main attributes renderer processes by walking the attached frames of the windows it owns. A process that hosts the workbench or startup main frame takes that role. Other renderers list the extension webviews they host, parsed with the shared `pstdio-api-contracts/extension-webview-path` grammar. Main accepts frames only on the exact runtime origin. Only the installed extension and webview IDs leave main; the URL and its capability do not. Main does not verify the capability, and a webview can navigate its own frame to an error page under another extension's path, so the names describe hosted frames, not proven owners. A sample that fails because a frame was disposed during a reload is skipped.
+- Main attributes renderer processes by walking the attached frames of the windows it owns. A process that hosts the workbench or startup main frame takes that role. Other renderers list the extension webviews they host, parsed with the shared `pstdio-api-contracts/extension-host` grammar. Main accepts frames only on the exact runtime origin. Only the installed extension and webview IDs leave main; the URL and its capability do not. Main does not verify the capability, and a webview can navigate its own frame to an error page under another extension's path, so the names describe hosted frames, not proven owners. A sample that fails because a frame was disposed during a reload is skipped.
 - Extension webviews are sandboxed frames on the runtime origin, so Chromium usually runs all of them in one renderer process, separate from the workbench. That process lists every extension it hosts, and its CPU and memory are shown once for all of them, never split or repeated. GPU work for every renderer stays in the shared GPU process.
 - The dashboard owns its slow-frame observer. It observes `long-animation-frame` entries, or `longtask` entries when that is all the renderer supports, sanitizes script attribution to file names, and sends at most one report per second. Main validates each report with the bounded `slowFrameReportSchema` and keeps the newest 50 frames.
 - The dashboard owns its frame counter and the list of paused extensions. The counter counts `requestAnimationFrame` callbacks in 1-second buckets, keeps 30 seconds, and stops while the window is hidden. The dashboard sends both values to main with `reportRendererState` when a second completes or a pause changes. Main validates each report with the bounded `rendererStateReportSchema` and keeps only the latest one. The snapshot returns them as `frameRate` and `pausedExtensionIds`.
@@ -131,7 +131,7 @@ People and agents read the same snapshot. While monitoring is on, main listens o
 
 The workbench registers file rendering without loading its editor implementation. Code and diff editor components initialize the bundled Monaco runtime when first rendered. Opening a desktop window with no file open does not download or initialize Monaco.
 
-Desktop keeps waiting while startup is in progress. After 20 seconds, the startup screen shows a non-blocking notice that this is taking longer than usual. The notice stays visible across startup steps, and the workbench opens automatically when ready. Quitting cancels the pending startup. Recovery handles actual failures, including a missing sidecar, port bind failure, PGlite ownership conflict, PGlite recovery failure, uncertain runtime ownership, and unexpected exit. Recovery never recommends deleting the database.
+Desktop keeps waiting while startup is in progress. After 10 seconds, the startup screen adds “This is taking longer than usual” and a Copy logs action below the current step. Both stay visible across startup steps, and the workbench opens automatically when ready. Stale-data cleanup runs in the background after startup. After five minutes without a phase change, the startup screen says it may be stuck. Quitting cancels the pending startup. Recovery shows an error alert for confirmed failures, including a missing sidecar, port bind failure, PGlite ownership conflict, PGlite recovery failure, uncertain runtime ownership, and unexpected exit. The alert offers Retry when a restart is possible.
 
 The runtime records each startup step as a `runtime.startup.phase` entry in the shared log file and in its output, which desktop keeps in `desktop-runtime.log`. The steps are `database_locked`, `database_engine_loaded`, `database_retiring` and `database_retired` (only when the data folder comes from a release before 0.46), `database_image_restored` (first start only), `database_opened`, `database_migrated`, `extensions_ready`, and `app_ready`. Each entry has `elapsedMs`, the time since the runtime process started. Desktop reads these entries to show progress while it prepares local data, applies updates, and loads tools. These entries are written at every log level. The runtime publishes its descriptor at `database_locked`, before the database opens; `/runtime/ready` waits for `app_ready`.
 
@@ -143,7 +143,7 @@ The runtime's `db.open.failed` event identifies database startup failures even w
 
 The main thread stays available during sidecar verification. It streams the executable checksum and awaits the version subprocess with startup cancellation. The lifecycle protocol reads packaged files directly with their content types. It does not route local asset reads through Electron's networking service.
 
-Open logs reveals the shared Prompt Studio log file. Copy diagnostics contains only application/runtime versions, platform and architecture, lifecycle state, safe loopback origin, owner PID/type, log path, and bounded process output. Runtime tokens, bearer headers, URL credentials, and named secrets are redacted.
+Open logs reveals the shared Prompt Studio log file. Copy logs includes application and runtime metadata, lifecycle state and startup phase or error code, safe loopback origin, owner PID and type, log path, and bounded process output. Runtime tokens, bearer headers, URL credentials, and named secrets are redacted.
 
 ## Packaged layout
 
@@ -214,7 +214,7 @@ Keep notarization and the complete four-target publish check enabled.
 The workflow builds and tests the planned release commit. Its Electron checks come
 from that same commit. To fix a failed release, merge the fix to `main`; the next
 release run builds the fixed commit, unless npm publishing already started. See
-[Versioning and releases](../../requirements/platform/0005-versioning-and-releases.md#done-marker-and-recovery).
+[Versioning and releases · RB 12.A.10](../../requirement-book/book.json).
 
 The native updater is configured in packaged macOS and Windows apps. It resolves
 the newest complete `pstdio@<version>` release on the device's update channel and
@@ -258,7 +258,7 @@ bun run --cwd clients/desktop make -- --skip-package
 bun run --cwd clients/desktop verify:fuses
 ```
 
-Use Node 24, the same version as CI, for Electron Forge packaging.
+Use Node 26.7.0, the same version as CI, for Electron Forge packaging.
 
 The desktop Playwright suites and benchmarks allow 60 seconds per test on Windows and hosted Intel macOS, and 30 seconds on other platforms. The user approved the Windows limit on 2026-09-26 after packaged tests took 20 to 24 seconds and first project creation varied from 8 to 18 seconds while cloning and installing default extensions. The user approved the Intel limit on 2026-10-10: the Intel project-tabs test passed in up to 29.2 seconds and timed out four times at about 31 seconds, while it takes 6.1 seconds on Apple Silicon. This changes the whole-test execution allowance; the startup and recovery budgets below still apply ([ADR 0067](../../adrs/0067-separate-performance-budgets-from-execution-allowances.md)).
 
@@ -294,7 +294,7 @@ uploaded.
 Windows signing trusts the `main` branch's GitHub identity and release tags, so
 desktop release builds run only from `release-packages.yml` on `main`. A failed
 release resumes by re-running the failed jobs or with the next push to `main`; see
-[Versioning and releases](../../requirements/platform/0005-versioning-and-releases.md#done-marker-and-recovery).
+[Versioning and releases · RB 12.A.10](../../requirement-book/book.json).
 
 The secured compiled-runtime webview suite runs Chromium and Firefox. Packaged native-settings checks also retain WebKit.
 `bun run --cwd packages/e2e test:packaged` runs the compiled CLI checks with Bun and the browser checks with the Playwright runner.
@@ -324,7 +324,7 @@ Rebuild with `bun run --cwd clients/desktop package`. If an installed package re
 Release-only failures are fail closed. Missing signing credentials, an invalid
 native signature, a failed notarization staple, an incomplete artifact matrix,
 or version/checksum drift stops the release before anything is published. See [Desktop
-distribution and updates](../../requirements/platform/0002-desktop-distribution.md) for credential
+distribution and updates · RB 12.A.4](../../requirement-book/book.json) for credential
 names, verification commands, and operator recovery.
 
 ### External runtime process capture

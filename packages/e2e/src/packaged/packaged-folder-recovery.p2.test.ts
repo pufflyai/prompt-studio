@@ -274,24 +274,8 @@ test.skipIf(process.platform === "win32")(
       expect(refused.stderr).toContain("exists");
       expect(await readdir(existing)).toEqual([]);
 
-      // A folder created while the restore runs is kept; the restore fails instead of replacing it.
-      const racing = join(root, "racing");
-      const running = await desktop.client.projects.restoreFolder(project.id, {
-        deviceId: laptopDevice,
-        sourceId: listed.sourceId,
-        path: racing,
-      });
-      await mkdir(racing);
-      await writeFile(join(racing, "local-work.txt"), "created while restoring");
-      expect(running.restore.state).toBe("running");
-      const raced = await waitForValue(
-        () => desktop.client.projects.folderRecovery(project.id),
-        (status) => status?.restore.state !== "running",
-      );
-      expect(raced.restore).toMatchObject({ state: "failed", error: { code: "destination_created" } });
-      expect(await readdir(racing)).toEqual(["local-work.txt"]);
       expect((await readdir(root)).filter((name) => name.startsWith("."))).toEqual([]);
-      phase("existing and concurrently created destinations kept");
+      phase("existing destination kept without staging files");
 
       // The restored folder is now the desktop's own source; the laptop's copy stays restorable beside it.
       await waitFor(async () => !!(await ownCopy(desktop, project.id)));

@@ -1,9 +1,16 @@
-import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
+import { readAcceptedRevision } from "pstdio-extensions";
 import type { createExtensionService, SyncInstalledSourceInput } from "../../services/extension-service";
 import { AlwaysEnabledExtensionError } from "./always-on-extensions";
-import { hashExtensionSource, loadExtensionSource, readExtensionSourceMetadata } from "./extension-runtime";
+import { listExtensionSources } from "./discover-extension-sources";
+import {
+  type hashExtensionSource,
+  hashExtensionSourceAsync,
+  loadExtensionSource,
+  readExtensionSourceMetadata,
+} from "./extension-runtime";
+import { type RepoExtensionWorkspace, readyRepoExtensionFolder } from "./repo-extension-roots";
 
 type ExtensionService = Pick<
   ReturnType<typeof createExtensionService>,
@@ -32,7 +39,7 @@ type SyncRepoExtensionsForProjectInput = {
 };
 
 type SyncRepoExtensionsForProjectFolderInput = Omit<SyncRepoExtensionsForProjectInput, "repoPath"> & {
-  workspaceService: { getDefault(projectId: string): Promise<{ root_path: string | null } | null> };
+  workspaceService: { getDefault(projectId: string): Promise<RepoExtensionWorkspace | null> };
 };
 
 export type SyncRepoExtensionsResult = {
@@ -46,14 +53,6 @@ export type SyncRepoExtensionsResult = {
 };
 
 const repoExtensionsRoot = (repoPath: string) => join(repoPath, ".pstdio", "extensions");
-
-const listExtensionDirs = (root: string) => {
-  if (!existsSync(root)) return [];
-  return readdirSync(root, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort((left, right) => left.localeCompare(right));
-};
 
 const markMissingSources = async (
   input: SyncRepoExtensionsForProjectInput,
@@ -93,7 +92,9 @@ const keepsOff = (input: Pick<SyncRepoExtensionsForProjectInput, "enable">, name
 /** A folder that stays off is read from its manifest only, so its code is never imported. */
 const readRepoExtension = async (sourcePath: string, manifestOnly: boolean, load: typeof loadExtensionSource) => {
   try {
-    return manifestOnly ? readExtensionSourceMetadata(sourcePath) : await load(sourcePath);
+    if (!manifestOnly) return await load(sourcePath);
+    const accepted = await readAcceptedRevision(sourcePath);
+    return readExtensionSourceMetadata(accepted?.packagePath ?? sourcePath);
   } catch {
     return null;
   }
@@ -102,12 +103,16 @@ const readRepoExtension = async (sourcePath: string, manifestOnly: boolean, load
 const sourceInputFor = (
   loaded: Awaited<ReturnType<typeof loadExtensionSource>>,
   source: { name: string; projectId: string; sourceHash: string; sourcePath: string },
+  existing?: Awaited<ReturnType<ExtensionService["listProjectExtensionInstances"]>>[number],
 ) =>
   ({
     displayName: loaded.metadata.displayName,
     extensionId: loaded.metadata.id,
     installName: source.name,
-    manifest: loaded.manifest,
+    manifest:
+      existing?.instance.enabled === false && existing.installedSource.source_hash === source.sourceHash
+        ? existing.installedSource.manifest_json
+        : loaded.manifest,
     name: loaded.metadata.name,
     projectId: source.projectId,
     sourceHash: source.sourceHash,
@@ -118,8 +123,8 @@ const sourceInputFor = (
 
 export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForProjectInput) => {
   const root = repoExtensionsRoot(input.repoPath);
-  const load = input.loadExtension ?? loadExtensionSource;
-  const hash = input.hashExtension ?? hashExtensionSource;
+  const load = input.loadExtension ?? ((path: string) => loadExtensionSource(path, { accepted: true }));
+  const hash = input.hashExtension ?? hashExtensionSourceAsync;
   const conflicting: string[] = [];
   const disabled: string[] = [];
   const enabled: string[] = [];
@@ -131,21 +136,23 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
     instances.filter((record) => record.instance.enabled).map((record) => record.installedSource.extension_id),
   );
 
-  for (const name of input.discover === false ? [] : listExtensionDirs(root)) {
+  const paths = input.discover === false ? [] : (await listExtensionSources(root)).paths;
+  for (const path of paths) {
+    const name = basename(path);
     const sourcePath = join(root, name);
     const existing = instancesBySourcePath.get(sourcePath);
     const register = keepsOff(input, name, existing);
 
-    const loaded = await readRepoExtension(sourcePath, register, load);
+    const loaded = await readRepoExtension(sourcePath, register || existing?.instance.enabled === false, load);
     if (!loaded) {
       skipped.push(name);
       continue;
     }
 
     presentSourcePaths.add(sourcePath);
-    const synced = await input.extensionService.syncInstalledSourceForProject(
-      sourceInputFor(loaded, { name, projectId: input.projectId, sourceHash: hash(sourcePath), sourcePath }),
-    );
+    const sourceHash = await hash(sourcePath);
+    const source = sourceInputFor(loaded, { name, projectId: input.projectId, sourceHash, sourcePath }, existing);
+    const synced = await input.extensionService.syncInstalledSourceForProject(source);
     if (!synced) continue;
     if (existing) {
       enabled.push(...(existing.instance.enabled ? [name] : []));
@@ -176,7 +183,6 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
 };
 
 export const syncRepoExtensionsForProjectFolder = async (input: SyncRepoExtensionsForProjectFolderInput) => {
-  const workspace = await input.workspaceService.getDefault(input.projectId);
-  if (!workspace?.root_path) return null;
-  return syncRepoExtensionsForProject({ ...input, repoPath: workspace.root_path });
+  const repoPath = readyRepoExtensionFolder(await input.workspaceService.getDefault(input.projectId));
+  return repoPath ? syncRepoExtensionsForProject({ ...input, repoPath }) : null;
 };

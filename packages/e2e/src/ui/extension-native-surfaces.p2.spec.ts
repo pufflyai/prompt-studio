@@ -52,7 +52,7 @@ const withExtension = async (
 // Critical: all destinations and the run form stay reachable through native project navigation and menus.
 test("Performance expands in project navigation and Runs retains its native menu draft", async ({ request, page }) => {
   await withExtension(request, page, "pstdio-dev", async (projectId) => {
-    const path = `/projects/${projectId}/extensions/pstdio.pstdio-dev`;
+    const path = `/projects/${projectId}/extensions/pstdio.dev`;
     await page.goto(`${path}/performance`);
     const nav = page.locator('[data-workbench-region="sidenav"]');
     const performance = nav.getByRole("option", { name: "Performance", exact: true });

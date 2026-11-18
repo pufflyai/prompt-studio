@@ -45,7 +45,7 @@ test("Upgrade installs an independently published Notes version while the packag
     expect(response.status).toBe(201);
     const project = (await response.json()) as { id: string };
     const env = { PSTDIO_HOME: home, PSTDIO_API_URL: host.baseUrl, PSTDIO_API_TOKEN: host.descriptor.token };
-    await runPackagedAsync(["extensions", "add", "pstdio.pstdio-notes"], repo, env);
+    await runPackagedAsync(["extensions", "add", "pstdio.notes"], repo, env);
     await publish("0.45.2");
     browser = await chromium.launch({ headless: true, ...PROVISIONED_CHROMIUM });
     const page = await browser.newPage();
@@ -61,11 +61,11 @@ test("Upgrade installs an independently published Notes version while the packag
     const detail = page.getByTestId("extension-detail").filter({ visible: true });
     await expect(detail).toHaveCount(1);
     await expect(detail.getByTestId("extension-upgrade")).toBeVisible();
-    await expect(detail.getByText(/pstdio\.pstdio-notes.*v0\.45\.1/)).toBeVisible();
+    await expect(detail.getByText(/pstdio\.notes.*v0\.45\.1/)).toBeVisible();
     await detail.getByTestId("extension-upgrade").click();
-    await expect(detail.getByText(/pstdio\.pstdio-notes.*v0\.45\.2/)).toBeVisible();
+    await expect(detail.getByText(/pstdio\.notes.*v0\.45\.2/)).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("independent-upgrade.png") });
-    expect(await runPackagedAsync(["pstdio.pstdio-notes", "version", "--project-id", project.id], repo, env)).toContain(
+    expect(await runPackagedAsync(["pstdio.notes", "version", "--project-id", project.id], repo, env)).toContain(
       "0.45.2",
     );
     expect(await runPackagedAsync(["--version"], root, { PSTDIO_HOME: home })).toBe(hostVersion);

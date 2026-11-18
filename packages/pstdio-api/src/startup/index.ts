@@ -6,6 +6,7 @@ import {
 } from "../features/extensions/default-extensions";
 import { refreshProjectSkillsInRepos } from "../features/extensions/extension-skill-cleanup";
 import { syncRepoExtensionsForProjectFolder } from "../features/extensions/repo-extensions";
+import { resumeRestoredFolderSetup } from "../features/projects/project-folder";
 import { resolveOrphanedSessions } from "../features/sessions/startup";
 import { provisionProjectWorkspaces } from "../features/workspaces/provision-coordinator";
 import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-provider-reconciliation";
@@ -53,7 +54,9 @@ const provisionRecoveredWorkspaces = (deps: RouteDeps, projectIds: string[], sig
   Promise.allSettled(
     projectIds.map(async (projectId) => {
       if (signal?.aborted) return;
-      await provisionProjectWorkspaces(deps, projectId);
+      const restored = await resumeRestoredFolderSetup(deps, projectId);
+      if (signal?.aborted) return;
+      await provisionProjectWorkspaces(deps, projectId, undefined, { skipWorkspaceId: restored?.id });
     }),
   ).then(() => undefined);
 
@@ -62,7 +65,11 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
   if (!sourceMode && (await deps.projectService.list()).length > 0) return;
 
   try {
-    const installed = await installDefaultExtensions({
+    await installDefaultExtensions({
+      registerInstalledSources: (installed) =>
+        traceSetupPhase("default_extensions.register", {}, () =>
+          registerInstalledExtensionSources(deps.extensionService, installed),
+        ),
       forceSourceDefaults: sourceMode,
       onInstallFailure: ({ error, installName, source }) => {
         if (signal?.aborted) return;
@@ -79,10 +86,6 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
       releaseRef: deps.extensionUpgradeService.releaseRef,
       signal,
     });
-    signal?.throwIfAborted();
-    await traceSetupPhase("default_extensions.register", {}, () =>
-      registerInstalledExtensionSources(deps.extensionService, installed),
-    );
   } catch (err) {
     if (signal?.aborted) return;
     apiLogger.warn(

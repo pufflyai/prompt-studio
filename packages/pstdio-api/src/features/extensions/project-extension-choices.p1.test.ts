@@ -45,12 +45,12 @@ test("new projects reuse installed tools without inheriting another project's ch
         .filter(({ instance }) => instance.enabled)
         .map(({ installedSource }) => installedSource.extension_id)
         .sort();
-    const foundation = ["pstdio.pstdio-base-themes", "pstdio.pstdio-skills"];
+    const foundation = ["pstdio.base-themes", "pstdio.skills"];
     expect(await enabled(first)).toEqual(foundation);
     expect(await enabled(second)).toEqual(foundation);
     const info = await listProjectExtensionInventory(handle.deps, first);
     expect(info.extensions.map((entry) => entry.extensionId)).toEqual(
-      expect.arrayContaining(["pstdio.harness-codex", "pstdio.pstdio-planner"]),
+      expect.arrayContaining(["pstdio.harness-codex", "pstdio.planner"]),
     );
     const choose = async (projectId: string, names: string[]) => {
       await enqueueCatalogExtensions(handle!.deps.extensionInstallations, names, projectId);
@@ -62,19 +62,19 @@ test("new projects reuse installed tools without inheriting another project's ch
       );
     };
     await choose(first, ["harness-codex"]);
-    expect(await enabled(first)).toEqual(["pstdio.harness-codex", ...foundation]);
+    expect(await enabled(first)).toEqual(["pstdio.harness-codex", ...foundation].sort());
     expect(await enabled(second)).toEqual(foundation);
     await choose(first, []);
-    expect(await enabled(first)).toEqual(["pstdio.harness-codex", ...foundation]);
+    expect(await enabled(first)).toEqual(["pstdio.harness-codex", ...foundation].sort());
     await choose(second, ["pstdio-planner", "pstdio-notes", "pstdio-reports"]);
     expect(await enabled(second)).toEqual([
-      "pstdio.pstdio-base-themes",
-      "pstdio.pstdio-notes",
-      "pstdio.pstdio-planner",
-      "pstdio.pstdio-reports",
-      "pstdio.pstdio-skills",
+      "pstdio.base-themes",
+      "pstdio.notes",
+      "pstdio.planner",
+      "pstdio.reports",
+      "pstdio.skills",
     ]);
-    expect(await enabled(first)).toEqual(["pstdio.harness-codex", ...foundation]);
+    expect(await enabled(first)).toEqual(["pstdio.harness-codex", ...foundation].sort());
   } finally {
     await handle?.close();
     if (previous.home === undefined) delete process.env.PSTDIO_HOME;

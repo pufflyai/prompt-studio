@@ -20,6 +20,11 @@ describe("deriveTitle", () => {
     expect(deriveTitle("```javascript\nconst value = true;\n```\n# Fix the login bug")).toBe("Fix the login bug");
   });
 
+  test("uses the same visible title for tilde and nested backtick examples", () => {
+    expect(deriveTitle("~~~typescript\nhidden\n~~~\n# Visible")).toBe("Visible");
+    expect(deriveTitle("````markdown\n```typescript\nhidden\n```\n````\n# Visible")).toBe("Visible");
+  });
+
   test("skips leading blank lines", () => {
     expect(deriveTitle("\n\n   \nFirst real line\nsecond")).toBe("First real line");
   });

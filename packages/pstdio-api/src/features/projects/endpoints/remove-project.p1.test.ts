@@ -7,10 +7,14 @@ import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
+import { enableGitWorkspaceProvider } from "../../../test-utils/git-workspace-provider.fixture";
 import type { AppBindings } from "../../../types";
+import { fireExtensionEvent, fireExtensionEventAsync } from "../../extensions/extension-event-runtime";
 import { hashExtensionSource, loadExtensionSource } from "../../extensions/extension-runtime";
 import { syncRepoExtensionsForProjectFolder } from "../../extensions/repo-extensions";
 import { createTestExtensionSource } from "../../extensions/test-utils/create-test-extension-source";
+import { provisionProjectWorkspaces } from "../../workspaces/provision-coordinator";
+import { ensureWorkspaceConfig } from "../../workspaces/workspace-config";
 import { removeProjectHandler, removeProjectRoute } from "./remove-project";
 
 let app: OpenAPIHono<AppBindings>;
@@ -66,7 +70,9 @@ const createProject = async (name: string, path?: string) => {
         : folderProjectInput({ name }),
     ),
   });
-  return res.json() as Promise<{ id: string; name: string; shorthand: string }>;
+  const project = (await res.json()) as { id: string; name: string; shorthand: string };
+  if (path) await enableGitWorkspaceProvider(appHandle, project.id);
+  return project;
 };
 
 describe("DELETE /v1/projects/:id", () => {
@@ -90,6 +96,34 @@ describe("DELETE /v1/projects/:id", () => {
 
     const getRes = await app.request(`/v1/projects/${project.id}`);
     expect(getRes.status).toBe(404);
+  });
+
+  test("removes the folder config even while provisioning for the project is still writing it", async () => {
+    const project = await createProject("provisioning-race");
+    const folder = (await appHandle.deps.workspaceService.getDefault(project.id))?.root_path;
+    if (!folder) throw new Error("The project has no folder.");
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    // Startup re-provisions every project in the background; hold that pass inside its config write.
+    const provisioning = provisionProjectWorkspaces(appHandle.deps, project.id, {
+      fireProvision: fireExtensionEvent,
+      fireReadyAsync: fireExtensionEventAsync,
+      ensureConfig: async (...args) => {
+        entered.resolve();
+        await release.promise;
+        return ensureWorkspaceConfig(...args);
+      },
+    });
+    await entered.promise;
+
+    const deleting = app.request(`/v1/projects/${project.id}`, { method: "DELETE" });
+    // A delete that does not wait for provisioning finishes in this time and is then overwritten.
+    await Bun.sleep(50);
+    release.resolve();
+
+    expect((await deleting).status).toBe(204);
+    await provisioning;
+    expect(existsSync(join(folder, ".pstdio", "config.json"))).toBe(false);
   });
 
   test("hard-deleted project is excluded from list", async () => {

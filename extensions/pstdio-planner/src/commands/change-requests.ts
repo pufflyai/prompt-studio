@@ -1,27 +1,17 @@
 import type { ParamsOf } from "@pstdio/sdk/extensions";
-import { type CommandContext, commandRef, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
+import { type CommandContext, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { legacyAttemptOutput } from "../data/attempt-compatibility";
 import { appendRevision } from "../data/attempt-state";
 import { appendAttemptEvent, putAttempt, readAttempt, reviewThreadsCollection } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
-import { hasPendingImplementationInput } from "../data/implementation-input";
-import { listTicketReviewRequests } from "../data/review-request-storage";
-import { readSessionHistory } from "../data/session-history";
+import { openInlineThreadPages } from "../data/review-thread-page";
 import { inlineThreadIsOutdated } from "../data/thread-mapping";
+import { readTicketInputStates } from "../data/ticket-input-state";
+import { sessionBelongsToWorkspace } from "../data/workspace-writers";
 import { withWriteGuard } from "../data/write-guard";
+import { validateImplementationEvidence } from "./activity-evidence";
 import { validateSubmittedStack } from "./stack-validation";
-
-const reportsCommand = commandRef.forExtension({ publisher: "pstdio", name: "pstdio-reports" });
-const readReportCommand = reportsCommand<{ id: string }, { id?: string; workspaceId?: string | null; draft?: boolean }>(
-  "reports.read",
-);
-
-export const readReport = async (ctx: Pick<CommandContext, "commands">, reportId: string) => {
-  const outcome = await ctx.commands.execute(readReportCommand, { params: { id: reportId } });
-  if (!outcome.ok) throw new Error(`Unknown report "${reportId}": ${outcome.reason}`);
-  return outcome.value;
-};
 
 export class WorkspaceUnavailableError extends Error {}
 
@@ -45,40 +35,33 @@ export const workspaceHead = async (ctx: CommandContext, workspaceId: string) =>
 
 const mapOpenThreads = async (ctx: CommandContext, attempt: AttemptRecord, nextHeadSha: string) => {
   const collection = reviewThreadsCollection(ctx.storage);
-  const threads = (await collection.list()).filter(
-    (thread) =>
-      thread.workspaceId === attempt.workspaceId &&
-      thread.state === "open" &&
-      thread.side === "head" &&
-      thread.path !== null &&
-      thread.startLine !== null &&
-      thread.endLine !== null &&
-      thread.originalHeadSha !== nextHeadSha,
-  );
-  if (threads.length === 0) return;
-  const path = await workspaceGitPath(ctx, attempt.workspaceId);
-  for (const thread of threads) {
-    const result = await ctx.process.run({
-      command: ["git", "-C", path, "diff", "--unified=0", thread.originalHeadSha, nextHeadSha, "--", thread.path!],
-    });
-    const outdated =
-      result.exitCode !== 0 ||
-      inlineThreadIsOutdated({ startLine: thread.startLine!, endLine: thread.endLine!, diff: result.stdout });
-    if (!outdated) continue;
-    const next = { ...thread, state: "outdated" as const };
-    await collection.put(next.id, next);
-    await appendAttemptEvent(ctx.storage, {
-      workspaceId: attempt.workspaceId,
-      revision: attempt.revisions.at(-1)?.revision ?? null,
-      type: "thread_outdated",
-      actor: actorFromSource(ctx.source, ctx.invocationId),
-      sessionId: attempt.implementationSessionId,
-      reportId: null,
-      reviewId: thread.reviewId,
-      threadId: thread.id,
-      commitSha: nextHeadSha,
-      metadata: { path: thread.path, startLine: thread.startLine, endLine: thread.endLine },
-    });
+  let path: string | undefined;
+  for await (const threads of openInlineThreadPages(ctx.storage, attempt.workspaceId, nextHeadSha)) {
+    if (!threads.length) continue;
+    path ??= await workspaceGitPath(ctx, attempt.workspaceId);
+    for (const thread of threads) {
+      const result = await ctx.process.run({
+        command: ["git", "-C", path, "diff", "--unified=0", thread.originalHeadSha, nextHeadSha, "--", thread.path!],
+      });
+      const outdated =
+        result.exitCode !== 0 ||
+        inlineThreadIsOutdated({ startLine: thread.startLine!, endLine: thread.endLine!, diff: result.stdout });
+      if (!outdated) continue;
+      const next = { ...thread, state: "outdated" as const };
+      await collection.put(next.id, next);
+      await appendAttemptEvent(ctx.storage, {
+        workspaceId: attempt.workspaceId,
+        revision: attempt.revisions.at(-1)?.revision ?? null,
+        type: "thread_outdated",
+        actor: actorFromSource(ctx.source, ctx.invocationId),
+        sessionId: attempt.implementationSessionId,
+        reportId: null,
+        reviewId: thread.reviewId,
+        threadId: thread.id,
+        commitSha: nextHeadSha,
+        metadata: { path: thread.path, startLine: thread.startLine, endLine: thread.endLine },
+      });
+    }
   }
 };
 
@@ -87,7 +70,9 @@ const submissionParams = {
   implementationSessionId: params.text(),
   sessionId: params.text(),
   headSha: params.text({ required: true }),
-  changeRequestReportId: params.text({ required: true }),
+  changeRequestActivityId: params.text(),
+  /** @deprecated Publish an implementation Activity entry and pass changeRequestActivityId. */
+  changeRequestReportId: params.text(),
   /** @deprecated Ownership and expectedRevision replace the attempt-state gate. */
   expectedAttemptState: params.select({
     description: l10n(
@@ -109,15 +94,11 @@ async function submitRevision(ctx: CommandContext, commandParams: ParamsOf<typeo
   if (!implementationSessionId || attempt.implementationSessionId !== implementationSessionId) {
     throw new Error("The implementation session does not own this attempt.");
   }
-  if (
-    !(await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId })).some(
-      ({ id }) => id === implementationSessionId,
-    )
-  )
+  if (!sessionBelongsToWorkspace(await ctx.sessions.get(implementationSessionId), attempt.workspaceId))
     throw new Error("The implementation session is not linked to this workspace.");
   const currentHead = await workspaceHead(ctx, attempt.workspaceId);
   if (currentHead !== commandParams.headSha) throw new Error("Workspace HEAD changed before submission.");
-  if (hasPendingImplementationInput(await listTicketReviewRequests(ctx.storage, attempt.ticketId)))
+  if ((await readTicketInputStates(ctx.storage, [attempt.ticketId])).get(attempt.ticketId)?.pendingImplementation)
     throw new Error("Resolve implementation input before submitting a handoff.");
   const previous = attempt.revisions.at(-1);
   const path = await workspaceGitPath(ctx, attempt.workspaceId);
@@ -125,21 +106,25 @@ async function submitRevision(ctx: CommandContext, commandParams: ParamsOf<typeo
   if (
     previous?.headSha === currentHead &&
     previous.baseSha === base.headSha &&
-    previous.changeRequestReportId === commandParams.changeRequestReportId
+    previous.changeRequestActivityId === commandParams.changeRequestActivityId &&
+    (previous.changeRequestReportId ?? null) === (commandParams.changeRequestReportId ?? null)
   )
     return attempt;
   if (commandParams.expectedRevision !== undefined && commandParams.expectedRevision !== (previous?.revision ?? 0))
     throw new Error("Attempt revision changed before submission.");
-  const report = await readReport(ctx, commandParams.changeRequestReportId);
-  if (report.id !== commandParams.changeRequestReportId || report.workspaceId !== attempt.workspaceId || report.draft) {
-    throw new Error("The saved change request report does not belong to this workspace.");
-  }
+  await validateImplementationEvidence(ctx, attempt, commandParams, {
+    sessionId: implementationSessionId,
+    headSha: currentHead,
+    baseSha: base.headSha,
+    revision: (previous?.revision ?? 0) + 1,
+  });
 
   const timestamp = new Date().toISOString();
   const revisions = appendRevision(attempt.revisions, {
     baseSha: base.headSha,
     headSha: currentHead,
-    changeRequestReportId: commandParams.changeRequestReportId,
+    changeRequestReportId: commandParams.changeRequestReportId ?? null,
+    changeRequestActivityId: commandParams.changeRequestActivityId,
     submittedAt: timestamp,
     submittedBy: actorFromSource(ctx.source, ctx.invocationId),
   });
@@ -165,6 +150,7 @@ async function submitRevision(ctx: CommandContext, commandParams: ParamsOf<typeo
     actor: revision.submittedBy,
     sessionId: attempt.implementationSessionId,
     reportId: revision.changeRequestReportId,
+    activityId: revision.changeRequestActivityId,
     reviewId: null,
     threadId: null,
     commitSha: revision.headSha,

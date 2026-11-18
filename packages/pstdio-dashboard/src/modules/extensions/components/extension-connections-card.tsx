@@ -1,8 +1,8 @@
 import { Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import type { ExtensionConnectionRecord, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { useToaster } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import { useActionError } from "@/shared/components/use-action-error";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import {
@@ -21,7 +21,6 @@ interface ExtensionConnectionRowProps {
 }
 
 const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
-  const toaster = useToaster();
   const { projectId, definition, configured } = props;
   const { showError, errorNotice, clearError } = useActionError();
   const { t } = useTranslation("projects");
@@ -46,20 +45,25 @@ const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
     configure.mutate(
       { ...connectionInput, baseUrl, secret: secret || undefined },
       {
-        onSuccess: () => {
-          setSecret("");
-          toaster.create({ type: "success", title: t("projectSettings.extensionsPanel.connections.saved") });
-        },
+        onSuccess: () => setSecret(""),
         onError: notifyError,
       },
     );
   };
 
   return (
-    <Stack gap="sm" borderWidth="1px" borderColor="border.subtle" borderRadius="md" padding="md">
+    <Stack position="relative" gap="sm" borderWidth="1px" borderColor="border.subtle" borderRadius="md" padding="md">
       {errorNotice}
       <Stack gap="0">
-        <Text textStyle="label/S/medium">{resolveLocalizableString(definition.label, definition.extensionId)}</Text>
+        <Text textStyle="label/S/medium">
+          {resolveLocalizableString(
+            definition.label,
+            definition.extensionId,
+            undefined,
+            getRuntimeCollections(),
+            projectId,
+          )}
+        </Text>
         <Text textStyle="label/XS" color={configured?.configured ? "fg.success" : "fg.muted"}>
           {configured?.configured
             ? t("projectSettings.extensionsPanel.connections.connected")

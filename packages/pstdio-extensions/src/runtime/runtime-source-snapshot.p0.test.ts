@@ -2,7 +2,11 @@ import { expect, spyOn, test } from "bun:test";
 import { lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { collectRuntimeModulePaths, mirrorRuntimeSourceSnapshot } from "./runtime-source-snapshot";
+import {
+  collectRuntimeModulePaths,
+  mirrorRuntimeSourceSnapshot,
+  readRuntimeModuleImports,
+} from "./runtime-source-snapshot";
 
 test("snapshots the runtime import graph and symlinks unrelated artifacts", () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-runtime-source-snapshot-test-"));
@@ -112,4 +116,64 @@ test("scans mixed source loaders and refreshes higher-priority import resolution
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("reuses parsing across staged copies while resolving each copy's local graph", () => {
+  const root = mkdtempSync(join(tmpdir(), "pstdio-runtime-source-copies-"));
+  const staged = join(root, "staged");
+  const installed = join(root, "installed");
+  const specifier = `./shared-${crypto.randomUUID()}`;
+  const source = `export { title } from ${JSON.stringify(specifier)};`;
+  mkdirSync(staged);
+  mkdirSync(installed);
+  writeFileSync(join(staged, "extension.ts"), source);
+  writeFileSync(join(installed, "extension.ts"), source);
+  writeFileSync(join(staged, `${specifier}.ts`), 'export const title = "Staged";');
+  const scan = spyOn(Bun.Transpiler.prototype, "scanImports");
+
+  try {
+    expect(collectRuntimeModulePaths(staged, join(staged, "extension.ts"))).toContain(`${specifier.slice(2)}.ts`);
+    expect(collectRuntimeModulePaths(installed, join(installed, "extension.ts"))).toEqual(new Set(["extension.ts"]));
+    expect(scan).toHaveBeenCalledTimes(2);
+    writeFileSync(join(installed, `${specifier}.tsx`), "export const title = <div>Installed</div>;");
+    expect(collectRuntimeModulePaths(installed, join(installed, "extension.ts"))).toContain(
+      `${specifier.slice(2)}.tsx`,
+    );
+    expect(scan).toHaveBeenCalledTimes(3);
+  } finally {
+    scan.mockRestore();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("shares content parsing only for the same loader and constant-folding mode", () => {
+  const name = crypto.randomUUID();
+  const bytes = Buffer.from(`export const unique${name.replaceAll("-", "")} = () => import("./" + "child");`);
+  const read = () => Buffer.from(bytes);
+  const scan = spyOn(Bun.Transpiler.prototype, "scanImports");
+  const transform = spyOn(Bun.Transpiler.prototype, "transformSync");
+
+  try {
+    expect(readRuntimeModuleImports(`${name}.ts`, read)).toEqual([]);
+    expect(readRuntimeModuleImports(`${name}.mts`, read)).toEqual([]);
+    expect(scan).toHaveBeenCalledTimes(1);
+    expect(readRuntimeModuleImports(`${name}.ts`, read, true)).toContain("./child");
+    expect(readRuntimeModuleImports(`${name}-copy.ts`, read, true)).toContain("./child");
+    expect(transform).toHaveBeenCalledTimes(1);
+    expect(scan).toHaveBeenCalledTimes(2);
+    expect(readRuntimeModuleImports(`${name}.js`, read)).toEqual([]);
+    expect(scan).toHaveBeenCalledTimes(3);
+  } finally {
+    scan.mockRestore();
+    transform.mockRestore();
+  }
+});
+
+test("cached CSS imports release old stylesheets after repeated edits", () => {
+  // Measure in a fresh process so unrelated parsers and concurrently running tests cannot affect the result.
+  const probe = Bun.spawnSync([process.execPath, join(import.meta.dir, "css-import-retention.fixture.ts")]);
+  expect(probe.stderr.toString()).toBe("");
+  expect(probe.exitCode).toBe(0);
+  const { retained, sourceBytes } = JSON.parse(probe.stdout.toString());
+  expect(retained).toBeLessThan(sourceBytes / 2);
 });

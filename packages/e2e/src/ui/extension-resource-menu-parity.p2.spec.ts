@@ -46,7 +46,7 @@ test("Note actions share identity and rename the inactive subject across navigat
     const a = await execute(request, project.id, "notes", "notes.create", { title: "Keep this note selected" });
     const b = await execute(request, project.id, "notes", "notes.create", { title: "Rename this note" });
     await prepareResourceActionsDashboard(page, project.id);
-    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-notes/notes`);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.notes/notes`);
     const nav = page.locator('[data-workbench-region="sidenav"]');
     const firstRow = nav.getByRole("option", { name: a.title, exact: true });
     if (!(await firstRow.isVisible())) await nav.getByRole("option", { name: "Notes", exact: true }).click();
@@ -90,7 +90,7 @@ test("Artifact actions keep rename defaults, target inactive tabs, and refresh t
     const b = await execute(request, project.id, "artifacts", "publish", { file_path: "b.html" });
     await prepareResourceActionsDashboard(page, project.id);
     // Library cards pin their viewers; a bare URL load opens a preview that the next preview replaces.
-    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-artifacts/artifacts`);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.artifacts/artifacts`);
     const library = page.frameLocator('iframe[title="Artifacts"]:visible').last();
     await library.getByRole("button", { name: "Artifact A", exact: true }).click();
     const firstTab = page.getByRole("tab", { name: "Artifact A", exact: true });

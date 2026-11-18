@@ -1,6 +1,7 @@
 import { defineCommandGroup } from "../../command-group";
 import * as bindCommand from "./bind";
 import * as cloudCommand from "./cloud";
+import * as compositionCommand from "./composition";
 import * as createCommand from "./create";
 import * as deleteCommand from "./delete";
 import * as environmentCommand from "./environment";
@@ -17,13 +18,14 @@ export const { command, describe, subcommands, builder, handler } = defineComman
   createCommand,
   bindCommand,
   cloudCommand,
+  compositionCommand,
   localCommand,
-  returnedChangesCommand,
   environmentCommand,
   deleteCommand,
   listCommand,
   viewCommand,
   recoveryPointsCommand,
   restoreCommand,
+  returnedChangesCommand,
   folderCommand,
 );

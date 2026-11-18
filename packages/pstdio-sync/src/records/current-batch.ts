@@ -4,6 +4,7 @@ import type { GroupCommit } from "./types";
 type CurrentRecords = {
   read(id: string): Promise<StorageRecord>;
   readMany?: (ids: string[]) => Promise<StorageRecord[]>;
+  readCurrentMany?: (ids: string[]) => Promise<Pick<StorageRecord, "exists" | "deleted" | "revision">[]>;
   outcome(id: string): Promise<StorageSaveOutcome | undefined>;
   commit(group: GroupCommit): Promise<StorageSaveOutcome>;
 };
@@ -30,9 +31,8 @@ export const commitCurrentBatch = async (
   return storage.transaction(async (records) => {
     // Replaying an accepted request still checks operation identity through commit.
     if (await records.outcome(group.operationId)) return records.commit(save);
-    const current = records.readMany
-      ? await records.readMany(ids)
-      : await Promise.all(ids.map((id) => records.read(id)));
+    const readMany = records.readCurrentMany ?? records.readMany;
+    const current = readMany ? await readMany.call(records, ids) : await Promise.all(ids.map((id) => records.read(id)));
     if (
       current.some((row, index) => !row.exists || row.deleted || row.revision !== group.edits[index]!.expectedRevision)
     )

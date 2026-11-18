@@ -5,6 +5,8 @@ export {
   makeCommandArgs,
   makeCommandContext,
 } from "./command-context";
+export { createMemoryActivity } from "./memory-activity";
+export { connectMemoryQueryResources } from "./memory-query-resources";
 export { createMemoryRepoFiles } from "./memory-repo-files";
 export { createMemoryResources } from "./memory-resources";
 export { createMemoryStorage, type MemoryStorageOptions, type MemoryStorageSeed } from "./memory-storage";

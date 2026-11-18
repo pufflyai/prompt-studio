@@ -1,10 +1,10 @@
 # Sessions
 
-`pstdio.pstdio-session-browser` installs once in the host user scope and can be enabled per project. It owns session browsing and composition. Native chat renders in the workbench document in a full page or shared Side panel. Core owns session identity, execution, transcript, queue, attachments, permissions, workspace links and sync.
+`pstdio.session-browser` installs once in the host user scope and can be enabled per project. It owns session browsing and composition. Native chat renders in the workbench document in a full page or shared Side panel. Core owns session identity, execution, transcript, queue, attachments, permissions, workspace links and sync.
 
 New conversations show **Pending** until their first turn starts. Empty saved conversations use the same indicator; completed turns keep their completed status.
 
-Choose **Copy session ID** from a saved session's menu to share its full Prompt Studio ID with another agent. This includes failed sessions. `pst pstdio.pstdio-session-browser copy-id --session-id <id>` returns the same reference for agent callers. The pinned SDK `0.47.0-nightly.20261111030243` includes `copyResultToClipboard`; the running host must also include PS-189's clipboard support.
+Choose **Copy session ID** from a saved session's menu to share its full Prompt Studio ID with another agent. This includes failed sessions. `pst pstdio.session-browser copy-id --session-id <id>` returns the same reference for agent callers. The pinned SDK `0.47.0-nightly.20261111030243` includes `copyResultToClipboard`; the running host must also include PS-189's clipboard support.
 
 Other tools use `sessionBrowser` from `@pstdio/sdk/extensions`. This package re-exports the same implementation-free contract from `pstdio-session-browser/refs`. Session and draft resources retain `extensionId: "pstdio"`; navigation refs belong to this provider. New navigation uses provider refs. The host retains deprecated page/panel/command definitions that target the provider renderer, without another chat implementation or persistence owner. Missing or disabled providers use normal unavailable-target feedback.
 
@@ -35,3 +35,9 @@ This provider has an independent version/changelog and its own changeset. It sta
 ## Current implementation checkpoint
 
 Default catalog, provider refs, production native view/list/commands, contextual workspace previews and thin legacy definitions are wired. The implementation is unfinished. Clean installed browser acceptance, complete harness/draft/stream lifetime and performance qualification, and release checks remain. The superseded dashboard chat/list implementation has been removed; retained caller tests load the production provider declarations. Existing unit checks do not establish installed parity. The consumer PR stacks on prerequisite #1762.
+
+## Quota recovery
+
+The CLI-ready `quota-availability` command accepts `harnessId` and queries that harness owner's public `quotas` command. Quota commands return `status`, `limits` with `remainingPercent` and optional ISO `resetsAt`, and optional `restartAfterQuotaReset`. Unknown or unsupported snapshots return `known: false`. Exhausted windows return `limited: true`; `resetsAt` is the latest reset only when every exhausted window has a known timestamp and the latest is in the future. Planner uses this public command before waking its supervisor.
+
+A failed conversation with a current-turn quota error can enqueue one idempotent `restart-after-quota-reset` worker when its harness enables the device setting. Durable automation waits until the reset plus 15 seconds. The worker checks current run identity, local ownership, archive state, the native quota and opt-in before sending a guarded continuation. Manual stops, completed turns and unrelated errors stay stopped; a later quota reset schedules a later worker. No application timer or transcript scan runs while the worker is waiting. This requires the host's delayed-automation support in API 0.5.0 on main.

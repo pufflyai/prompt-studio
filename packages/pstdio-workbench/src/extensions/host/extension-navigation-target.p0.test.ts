@@ -78,3 +78,26 @@ describe("isNavigationTarget", () => {
     ).toBe(true);
   });
 });
+
+test("historical tree targets expose canonical typed owners before selection comparison", () => {
+  const target = toWorkbenchNavigationTarget(
+    {
+      kind: "page",
+      page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },
+      resource: {
+        type: "ticket",
+        id: "pstdio.pstdio-planner",
+        extensionId: "pstdio.pstdio-planner",
+        metadata: { documentId: "stable-document" },
+      },
+    },
+    { extensionId: "pstdio.planner", projectId: "project" },
+  );
+  if (target.kind !== "page") throw new Error("Expected page target");
+  expect(target.page.extensionId).toBe("pstdio.planner");
+  expect(target.resource).toMatchObject({
+    id: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
+    metadata: { documentId: "stable-document" },
+  });
+});

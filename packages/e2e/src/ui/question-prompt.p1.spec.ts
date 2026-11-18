@@ -3,7 +3,7 @@ import { expect, type Request, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const questionPrompt = "Question follow-up test __fake_question_prompt__";
-const actionCommand = "pstdio.pstdio-session-browser.view.conversation.chat.onAction";
+const actionCommand = "pstdio.session-browser.view.conversation.chat.onAction";
 const actionRoute = `**/extensions/commands/${actionCommand}/execute`;
 const isQuestionReply = (request: Request, sessionId: string) => {
   if (request.method() !== "POST" || !request.url().endsWith(`/extensions/commands/${actionCommand}/execute`))
@@ -11,6 +11,9 @@ const isQuestionReply = (request: Request, sessionId: string) => {
   const { renderer, action } = request.postDataJSON().params;
   return renderer.resource.id === sessionId && action.type === "submit" && Boolean(action.questionResponse);
 };
+
+// Whole-case allowance includes cold project/tool preparation and owned cleanup (PS-1232).
+test.setTimeout(120_000);
 
 test("answers a hydrated question tool call from the session composer", async ({ page, request }) => {
   const project = process.env.E2E_COMMAND_PROJECT_ID
@@ -56,13 +59,28 @@ test("answers a hydrated question tool call from the session composer", async ({
   );
   await expect(page.getByRole("radio", { name: "TypeScript" })).toBeVisible();
 
-  await page.reload();
-
-  const answerOption = page.getByRole("radio", { name: "TypeScript" });
-  const sendButton = page.getByTestId("send-message-button");
-  await expect(answerOption).toBeEnabled();
-  await expect(sendButton).toBeDisabled();
-  await page.getByRole("form", { name: "Question form" }).getByText("TypeScript", { exact: true }).click();
+  const authRoute = "**/v1/agents/pstdio.workbench-fixture.harness.fake/authentication?*";
+  const authStarted = Promise.withResolvers<void>();
+  const auth = Promise.withResolvers<void>();
+  await page.route(authRoute, async (route) => {
+    authStarted.resolve();
+    await auth.promise;
+    await route.continue();
+  });
+  const sendButton = page.getByRole("button", { name: "Send answer", exact: true });
+  try {
+    await page.reload();
+    await authStarted.promise;
+    const answer = page.getByRole("radio", { name: "TypeScript" });
+    await expect(answer).toBeEnabled();
+    await expect(sendButton).toBeDisabled();
+    await page.getByRole("form", { name: "Question form" }).getByText("TypeScript", { exact: true }).click();
+    await expect(answer).toBeChecked();
+    await expect(sendButton).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Skip", exact: true })).toBeDisabled();
+  } finally {
+    auth.resolve();
+  }
   await expect(sendButton).toBeEnabled();
 
   const followUpRequestPromise = page.waitForRequest((request) => isQuestionReply(request, session.id));
@@ -154,7 +172,8 @@ test("async question replies preserve the draft and files until every request is
   await page.getByTestId("send-message-button").filter({ visible: true }).click();
   const errorAlert = page.getByRole("alert").filter({ visible: true });
   await expect(errorAlert.getByText("Provider unavailable", { exact: true })).toBeVisible();
-  await expect(errorAlert.getByRole("button", { name: "Retry", exact: true })).toBeEnabled();
+  await errorAlert.getByRole("button", { name: "Dismiss", exact: true }).click();
+  await expect(errorAlert.getByText("Provider unavailable", { exact: true })).toHaveCount(0);
   await expect(first).toBeChecked();
   await expect(page.getByTestId("send-message-button").filter({ visible: true })).toBeEnabled();
   await page.unroute(actionRoute, failReply);

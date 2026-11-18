@@ -5,7 +5,10 @@ import { createDeadlineCommand, deleteDeadlineCommand, updateDeadlineCommand } f
 import { createGateCommand } from "./gate-commands";
 import { launchGateCommand } from "./launch-gate";
 import { moveTicketCommand } from "./move-ticket";
+import { planSchemaCommand } from "./plan-schema";
 import { readPlanCommand } from "./read-plan";
+import { relationPageCommand } from "./relation-page";
+import { requestPageCommand } from "./request-page";
 import { assignTrackCommand, createTrackCommand, renameTrackCommand } from "./track-commands";
 import {
   createViewCommand,
@@ -22,6 +25,9 @@ export const commands = {
   "timeline.views.delete": deleteViewCommand,
   "timeline.views.default": defaultViewCommand,
   "timeline.plan.read": readPlanCommand,
+  "timeline.plan.schema": planSchemaCommand,
+  "timeline.requests.read": requestPageCommand,
+  "timeline.relations.read": relationPageCommand,
   "timeline.plan.move": moveTicketCommand,
   "timeline.track.create": createTrackCommand,
   "timeline.track.assign": assignTrackCommand,

@@ -257,7 +257,7 @@ describe("createDashboardWorkbench restoration", () => {
     await flushMicrotasks();
     expect(second.pages.store.getState().location?.page).toEqual({
       kind: "page",
-      extensionId: "pstdio.pstdio-workspaces",
+      extensionId: "pstdio.workspaces",
       id: "workspaces",
     });
     expect(sidePanelSessionUris(second)).toEqual([resourceKey(sessionResource)]);

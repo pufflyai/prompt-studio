@@ -4,12 +4,14 @@ import { autoBuildDispatches, autoBuildPullRequestNotifications } from "../data/
 import { pauseAutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
 import { acknowledgeAutoBuildWake, readAutoBuildSupervisor } from "../data/auto-build-supervisor";
 import { ticketsCollection } from "../data/collections";
+import type { GithubReads } from "../data/pull-request-resources";
 import { withWriteGuard } from "../data/write-guard";
 import { readImplementationCapacity } from "./attempt-readiness";
 import { supervisorWakePrompt } from "./auto-build-prompts";
 import { acknowledgePullRequestNotifications, readPendingPullRequestRepair } from "./auto-build-pull-request-progress";
+import { waitForSupervisorQuota } from "./auto-build-quota";
 import { isUnexpectedExit } from "./auto-build-resume";
-import { isLiveSession } from "./auto-build-sessions";
+import { isLiveSession, isSupervisorStalled } from "./auto-build-sessions";
 
 const implementationCapacityFull = async (ctx: CommandContext) => {
   const { running, limit } = await readImplementationCapacity(ctx);
@@ -39,6 +41,7 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
       if (!supervisor.sessionId) return;
       const session = await ctx.sessions.get(supervisor.sessionId);
       if (!session || isLiveSession(session)) return;
+      if (await waitForSupervisorQuota(ctx, supervisor, session, mode.supervisorModel)) return;
       const expectedRun = {
         status: session.status,
         startedAt: session.lastRequestStarted,
@@ -46,6 +49,7 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
       };
       const lastPromptAt = timestamp(session.lastRequestStarted);
       const dispatches = await autoBuildDispatches(ctx, session.id).list();
+      const pullRequestReads: GithubReads = new Map();
       const progress = await Promise.all(
         dispatches.map(async ({ workspaceId, dispatchedAt }) => {
           // Only workspace recovery retires an attempt, and it dispatches the replacement for the same ticket.
@@ -67,7 +71,7 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
             worker.status !== "failed" &&
             !isUnexpectedExit(worker) &&
             worker.last_exit?.cause !== "user_stop"
-              ? await readPendingPullRequestRepair(ctx, ticket, attempt)
+              ? await readPendingPullRequestRepair(ctx, ticket, attempt, pullRequestReads)
               : undefined;
           const notified = pendingRepair
             ? await autoBuildPullRequestNotifications(ctx, session.id).get(workspaceId)
@@ -84,7 +88,10 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
         }),
       );
       const progressAt = Math.max(lastPromptAt, ...progress.map((work) => work?.updatedAt ?? 0));
-      const stalled = progress.some((work) => work?.active) && Date.now() - progressAt >= 60 * 60 * 1000;
+      const stalled = isSupervisorStalled(
+        progress.some((work) => work?.active),
+        progressAt,
+      );
       const pendingWake = supervisor.pendingWakeRevision === mode.revision;
       if (!pendingWake && !stalled && session.status !== "failed" && !progress.some((work) => work?.changed)) return;
       if (await implementationCapacityFull(ctx)) return;

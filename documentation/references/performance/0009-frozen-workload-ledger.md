@@ -2,7 +2,7 @@
 
 Proposed: 2026-11-14. Status: implementation candidate; **not qualified**.
 
-PS-233 is the user's one-time authorization for the exact eight scenarios. [Manifest](../../../packages/benchmarks/src/catalog/scenarios.ts), [lock](../../../packages/benchmarks/catalog.lock.json), [guidance](../../guides/development/0016-writing-benchmarks.md). Benchmark changes carry the `benchmark` PR label and are left for human review and merge. On 2026-11-14 the user approved the [aligned timing and memory targets](../../guides/development/0016-writing-benchmarks.md#approved-acceptance-limits) and delegated B4 foreground limits. The user explicitly selected B1–B8 on Linux x64, Apple Silicon Mac and Windows x64, with Intel Mac removed entirely from benchmarks. Nightly and stable each require all 24 combinations. B5 version 2 labels native memory by platform; its limits are now <2GB on Linux/macOS and <3GB on Windows. Older host mappings and measurements below are historical evidence.
+PS-233 is the user's one-time authorization for the exact eight scenarios. [Manifest](../../../packages/benchmarks/src/catalog/scenarios.ts), [lock](../../../packages/benchmarks/catalog.lock.json), [guidance](../../guides/development/0016-writing-benchmarks.md). Benchmark changes carry the `benchmark` PR label and are left for human review and merge. On 2026-11-14 the user approved the [aligned timing and memory targets](../../guides/development/0016-writing-benchmarks.md#approved-acceptance-limits) and delegated B4 foreground limits. The user explicitly selected B1–B8 on Linux x64, Apple Silicon Mac and Windows x64, with Intel Mac removed entirely from benchmarks. Nightly and stable each require all 24 combinations. B5 version 2 labels native memory by platform; its limits are now <2.5GB on Linux, <2GB on macOS and <3GB on Windows. Older host mappings and measurements below are historical evidence.
 
 ## Previous catalog
 
@@ -33,7 +33,7 @@ Historical source is preserved in Git at `bd56e2c399be208edcb64eef9f0e7f6ab17eb1
 | Guard | Disposition and evidence needed |
 | --- | --- |
 | Empty-home interactive/API/default-tools cold start | B1; the user replaced the M5-specific target with <5,000ms on all three hosts, plus window <1,200ms, shell <3,000ms and first interaction <1,200ms. Record actual hosts; no reference machine is required. |
-| Average whole-app memory | B5; fixed 30s settle/10min/100 messages/file/terminal, ≥1Hz whole owned tree. User-approved <2GB Linux RSS/macOS physical footprint, <3GB Windows private committed bytes. Native measures stay distinct; complete sampling remains required. |
+| Average whole-app memory | B5; fixed 30s settle/10min/100 messages/file/terminal, ≥1Hz whole owned tree. User-approved <2.5GB Linux RSS, <2GB macOS physical footprint, <3GB Windows private committed bytes. Native measures stay distinct; complete sampling remains required. |
 | Idle renderer 2% script / 5% task; settle2s/sample10s | B4 retains the exact idle phase and numeric guards. Per-renderer coverage still needs actual-host review; one captured renderer cannot certify every live renderer. |
 | Startup and recovery deadlines | B1/B8 apply the new cross-platform targets, including restored usable state <6,000ms and recovery feedback <480ms. B1 retains OS first-launch checks. Older per-host limits are superseded by this explicit decision. |
 | Streaming renderer script85% / task120% | B4 retains counters/limits; task120% provides no independent responsiveness guarantee. Foreground/paint/stall/completion/cancel targets now follow the user-authorized B4 limits. |
@@ -47,7 +47,7 @@ Historical source is preserved in Git at `bd56e2c399be208edcb64eef9f0e7f6ab17eb1
 | Relay R23 storage ratio1 | Existing real sync-bound integration retains the invariant. Timing benchmark retired; no timing target is claimed. |
 | PS-232 removed failing quarantine | 73 distinct failing cases/93 platform entries were deleted at the user's direction; original failure evidence remains in RP-744. Retirement does not restore those contracts or close PS-96. |
 
-B6 write amplification and B6/B7 scanned-entry ceilings are explicitly pending guards. Counters alone do not prove bounded access. No unapproved numeric ceiling has been invented; qualified evidence remains blocked until exact-workload baselines and human decisions resolve those guards.
+At consolidation, B6 write amplification and B6/B7 scanned-entry ceilings were pending. On 2026-11-17 the user approved B6 actionable/reopen <5,000ms, filter/page/move <250ms, longest stall <200ms, total scanned entries <2,000 and writes <2, plus B7 total scanned entries <1,000 (Planner decision `01a1e8d3-92c0-725d-8622-b831b57a51a7`). Counters alone do not prove bounded access. These limits require fresh qualification; earlier failed, incomplete and unqualified observations keep their original status.
 
 ## First-attempt evidence
 

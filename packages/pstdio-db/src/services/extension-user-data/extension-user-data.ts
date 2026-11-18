@@ -3,6 +3,7 @@ import type { DbClient } from "../../db/connection.pglite";
 import { board_default_views, board_views, extension_files, extension_skill_preferences } from "../../db/schemas.pg";
 import { clearOwnerDocuments } from "../extension-storage/clear-documents";
 import { createDocumentStorageDBService } from "../extension-storage/document-storage";
+import { indexNodeFilesFor } from "../extension-storage/index-node-files";
 import { getExtensionStorageOwner, hasOtherStorageProvider } from "../extension-storage/storage-owner";
 
 // Every table that anchors user-owned data to an extension instance. The instance row is a
@@ -26,11 +27,14 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
     return false;
   };
 
-  const deleteForInstance = (extensionInstanceId: string) =>
-    db.transaction(async (tx) => {
+  const deleteForInstance = async (extensionInstanceId: string) => {
+    let cleared: Awaited<ReturnType<typeof getExtensionStorageOwner>> = null;
+    const result = await db.transaction(async (tx) => {
       const owner = await getExtensionStorageOwner(tx, extensionInstanceId);
-      if (owner && !(await hasOtherStorageProvider(tx, owner, extensionInstanceId)))
+      if (owner && !(await hasOtherStorageProvider(tx, owner, extensionInstanceId))) {
         await clearOwnerDocuments(tx, owner);
+        cleared = owner;
+      }
       const boardDefaults = await tx
         .delete(board_default_views)
         .where(eq(board_default_views.extension_instance_id, extensionInstanceId))
@@ -45,6 +49,10 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
       }
       return { boardViews, boardDefaults };
     });
+    // Index node files leave only after the rows naming them are gone.
+    if (cleared) await indexNodeFilesFor(db).removeOwner(cleared);
+    return result;
+  };
 
   return { hasUserData, deleteForInstance };
 };

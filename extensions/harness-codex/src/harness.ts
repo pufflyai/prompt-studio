@@ -85,6 +85,10 @@ export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<Har
       }),
     },
 
+    watchCommandState: (ctx, input, changed) =>
+      input.sessionId
+        ? deps.runtime.observeCommands({ ...input, env: sessionEnv(ctx, input.sessionId) }, changed)
+        : () => {},
     getCommandState: async (ctx, input) => {
       if (!input.sessionId || !input.agentSessionId) return codexCommandState(input, null);
       const worker = deps.runtime.worker({

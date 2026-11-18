@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
+import { seedWorkspaceLinks } from "./archive-context.fixture";
 import { makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { getTicketCommand } from "./get-ticket";
@@ -78,7 +79,7 @@ test("read commands show every ticket matched by a shared alias", async () => {
     { id: first.id, shorthand: "T-1", files: [] },
     { id: second.id, shorthand: "T-2", files: [] },
   ]);
-  expect((await listTicketsCommand.run(ctx, { parent: "T-1" })).map(({ title }) => title)).toEqual([
+  expect((await listTicketsCommand.run(ctx, { parent: "T-1" })).tickets.map(({ title }) => title)).toEqual([
     "First child",
     "Second child",
   ]);
@@ -88,7 +89,8 @@ test("read commands show every ticket matched by a shared alias", async () => {
       id: `workspace-${index}`,
       anchors_json: [{ type: "ticket", id: ticket.id }],
     }));
-  expect(await ticketWorkspacesCommand.run(ctx, { id: "T-1" })).toHaveLength(2);
+  await seedWorkspaceLinks(ctx, await ctx.workspaces.list());
+  expect((await ticketWorkspacesCommand.run(ctx, { id: "T-1" })).items).toHaveLength(2);
   const search = await queryTicketResources(ctx, {
     query: "T-1",
     providerId: "tickets",
@@ -170,6 +172,6 @@ test("a synced ticket whose core number has not arrived yet stays hidden instead
   ctx.resources.identity = (input) => (input.id === waiting.id ? Promise.resolve(null) : identity(input));
   ctx.resources.identityMany = async (input) =>
     (await identityMany(input)).map((entry, index) => (input.ids[index] === waiting.id ? null : entry));
-  expect((await listTicketsCommand.run(ctx, {})).map(({ title }) => title)).toEqual([shown.title]);
+  expect((await listTicketsCommand.run(ctx, {})).tickets.map(({ title }) => title)).toEqual([shown.title]);
   expect(await getTicketCommand.run(ctx, { id: waiting.id })).toBeNull();
 });

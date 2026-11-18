@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createSyncSpace } from "pstdio-sync/encryption";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import { loadExtensionSource } from "../../features/extensions/extension-runtime";
 import { documentPeer } from "../../features/extensions/publication/document-peer.fixture";
@@ -15,8 +16,22 @@ test("finishing views keeps downloaded Cloud documents subscribed without downlo
   const root = await mkdtemp(join(tmpdir(), "cloud-view-refresh-"));
   const app = await createTestApp({ storageRoot: join(root, "home") });
   const reads: string[] = [];
-  const peer = documentPeer([], { onRead: (id) => reads.push(id) });
   const owner = { workbenchId: crypto.randomUUID(), extensionId: "test.notes" };
+  const space = await createSyncSpace({
+    projectId: owner.workbenchId,
+    spaceOwner: null,
+    keys: [{ generation: 1, secret: "A".repeat(43) }],
+  });
+  const documents = new Set(
+    await Promise.all(
+      ["owner", "record-stream-v2"].map((name) => space.documentId(JSON.stringify([owner.extensionId, name]))),
+    ),
+  );
+  const peer = documentPeer([], {
+    onRead: (id) => {
+      if (documents.has(id)) reads.push(id);
+    },
+  });
   let runtime: Awaited<ReturnType<typeof startRelayRuntime>> | undefined;
   const synced = async () => {
     const end = Date.now() + 3000;

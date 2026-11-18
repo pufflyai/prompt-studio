@@ -9,10 +9,9 @@ import {
   sessionBrowser,
   type TemplateParam,
 } from "@pstdio/sdk/extensions";
-import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { renderOwnedTemplate } from "../data/template-store";
-import { plannerOwnerFor, ticketResourceIdentity } from "../data/ticket-resource-hierarchy";
+import { plannerOwnerFor, readTicketParentLookup, ticketResourceIdentity } from "../data/ticket-resource-hierarchy";
 import { withTicketTagIds } from "../data/ticket-tags";
 import type { Ticket } from "../data/types";
 import { notifyProposalRefined, resolveProposalRefinedNotification } from "../planner-notifications";
@@ -81,8 +80,7 @@ const ticketHierarchyMetadata = async (
   ticket: Ticket | undefined,
 ) => {
   if (!ticket) return undefined;
-  const tickets = await ticketsCollection(ctx).list();
-  const parentLookup = new Map(tickets.map((candidate) => [candidate.id, candidate]));
+  const parentLookup = await readTicketParentLookup(ctx, new Map([[ticket.id, ticket]]));
   return ticketResourceIdentity(ticket, parentLookup, plannerOwnerFor(ctx)).metadata;
 };
 
@@ -122,7 +120,10 @@ export const requireReadyWorkspace = async (ctx: Pick<CommandContext, "workspace
   if (workspace.setup_error) throw new Error(workspace.setup_error);
   if (workspace.provider_state && workspace.provider_state !== "ready") {
     const result = await ctx.workspaces.resolve(workspace.id);
-    throw new Error(result.error?.message ?? "The workspace is not ready. Check its setup status.");
+    if (result.state === "ready") return;
+    if (result.state === "provisioning")
+      throw new Error("Wait for workspace setup to finish, then open ticket work again.");
+    throw new Error(result.error?.message ?? "Check the workspace status before opening ticket work.");
   }
   if (workspace.initializing) throw new Error("Workspace setup is still running. Try again when it finishes.");
   if (workspace.execution_kind === "local" && !workspace.root_path) {
@@ -227,8 +228,7 @@ export const proposalRefinedCommand = defineCommand({
   id: "proposal-refined",
   title: "Mark proposal refined",
   cli: {
-    globalAliases: [["tickets", "proposal-refined"]],
-    examples: ["pstdio pstdio.pstdio-planner proposal-refined --id PS-1"],
+    examples: ["pstdio pstdio.planner proposal-refined --id PS-1"],
   },
   params: {
     id: params.text({ label: "Ticket", required: true }),

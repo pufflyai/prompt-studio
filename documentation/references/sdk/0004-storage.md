@@ -119,7 +119,7 @@ If a newer source arrives after acceptance, the accepted candidate owns those
 definitions while the host retries the newer load; a failed retry falls back to
 that matching candidate rather than the earlier handlers.
 
-Each definition names fields by paths within `record.value`, optional leading
+Each definition names fields by paths within `record.value` (`path: []` selects the complete value), optional leading
 `equality` fields and a default `orderBy`. Field types are `string`, `number`,
 `boolean`, `array` (strings only), and `object` (JSON objects only). Timestamps use consistently formatted strings.
 Selectable fields are not implicitly equality keys. Omitted `equality` means none.
@@ -133,6 +133,13 @@ selected storage scope, keeping other collections and scopes out of the index.
 Declare these in `storageIndexes` to install them before commands become available;
 the first action must not build indexes. Do not parse opaque record addresses.
 This addition requires extension API 0.4.2 and a matching SDK build.
+
+For records saved at `records.id(keyPrefix + key)`, such as a collection moved with
+`migration.moveCollection`, set `keyPrefix` instead. Field paths are relative to the
+record value, and the host resolves the prefix in the selected storage scope, so a
+manifest can declare it without knowing the project ID. `keyPrefix` cannot be combined
+with `collection` or `prefix`. It requires extension API 0.5.0.
+
 `readCollectionRecords` reads up to 100 opaque addresses from a query page and
 returns collection values in request order, with `undefined` for missing or
 deleted rows. It requires an SDK build that exports this helper.
@@ -211,6 +218,32 @@ floating-point representation. This is scalar text, not a cell formatter: date
 labels, custom display labels, and diff summaries need their provider's matching
 rules. `contains` keeps its existing string and string-array behavior.
 
+On unreleased API 0.5.0, `overlaps` tests whether a string-array field contains any
+requested member, and `containsAll` tests every requested member. Duplicates do
+not change membership. Missing and null arrays fail both predicates; negation
+includes those records. Both predicates accept one string array, so a large
+selection does not need a separate predicate branch per option.
+
+`query.textOrder: { field, locale }` applies numeric, case- and accent-insensitive
+viewer ordering to one sorted string projection. Other keys and record IDs keep
+their stable order. It is query-local and participates in cursor identity.
+Strings containing NUL or unpaired UTF-16 surrogates retain their original value
+and use a separate binary-ordered partition after valid text in ascending order
+(before it in descending order). Missing values remain last. Top-value label ties
+use the same fallback, so these strings cannot break a whole view.
+
+`query.dependencyOrder: { idField, dependenciesField }` selects at most 100 rows
+in stable first-ready order within the query's `where` selection. Dependencies
+outside that selection are satisfied; cycles select the next sorted row. This
+mode accepts neither cursors nor offsets. Consume a bounded batch, then query the
+remaining records after saving it. Graph metadata stays inside the database.
+
+`aggregate.statistics` requests up to 16 named scalar summaries: `unique`,
+`histogram` (1–100 bins), or `top-values` (1–100 values, plus an Other remainder).
+Results share the aggregate revision. Empty values are excluded. Histograms use
+equal-width decimal intervals, with the maximum in the last bin. Only bounded
+summaries cross the database boundary; resource bodies are not selected.
+
 `hasKey` matches a key in a declared `object` field, including keys whose value is
 false or null. Arrays and strings do not match. It accepts one string key and
 uses the index's object membership projection.
@@ -220,9 +253,11 @@ content `revision`, and a `fields` object; it does not include the complete body
 asset or shared content. Unset selected fields are null. Omit `fields` to select
 all declared fields. Use `readMany` when complete selected records are needed.
 
-The page limit is 1–500 and defaults to 100. The host exposes these bounds as
-`storageLimits.queryLimit` and `storageLimits.queryDefaultLimit`. SQL filters
-and sorts before the
+The page limit defaults to 100 and accepts up to 500. The host exposes these
+bounds as `storageLimits.queryLimit` and `storageLimits.queryDefaultLimit`.
+Unreleased API 0.5.0 also accepts `limit: 0` for a revision-only check: it validates
+the index, fields, predicate, revision and cursor, then returns no records and a
+null cursor without selecting resource rows. SQL filters and sorts before the
 limit and field materialization. Sorting uses the definition's order, with nulls
 last in either direction and a final ascending complete-record-ID tie breaker.
 Strings use Unicode code point order, independent of locale. Equality keys use
@@ -266,6 +301,12 @@ Join fields use equality by default. `op: "contains"` joins a source string-arra
 field to a related string; `op: "containedBy"` joins a source string to a related
 string-array field. These select prerequisites or dependents without reading each
 candidate. Missing/null endpoints never match, including membership joins.
+
+Declarative expressions also provide `flatten` with one array argument. It flattens
+one level in source order, preserves scalar members, and returns missing for a
+non-array source. Combine nested `map` expressions with `flatten` and a string
+filter to maintain a relationship-ID projection from nested revision or history
+data. Membership checks can then use that projection without loading the history.
 
 ```ts
 const page = await ctx.storage.records.query({
@@ -510,8 +551,9 @@ when incidental timestamps overlap. They still require the observed record
 lifetime: a save from before deletion cannot modify a recreated record. Explicit
 `records.commit` conditions keep their written-path and lifetime checks.
 
-Legacy collections retain their own names and ordering. Continue their supported
-access while planning an explicit extension data migration to domain record IDs.
+Legacy collections retain their own names and ordering until the extension moves
+them. Move a collection to domain record IDs with `migration.moveCollection` inside
+`storage.migrate`; see [data migrations](../extensions/0018-data-migrations.md#move-a-collection-to-records).
 Do not change stored data formats merely by renaming method calls. Blob files and
 collection attachments also keep their existing contract; asset references are a
 separate contract.

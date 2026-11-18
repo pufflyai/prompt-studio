@@ -1,6 +1,6 @@
 # Notifications
 
-Extensions can report events as activity, toasts, or inbox notifications. This page explains when to use each and how notifications work.
+Extensions can report events as activity, contextual feedback, or inbox notifications. This page explains when to use each and how notifications work.
 
 The dashboard's notification center starts off. Users enable it in **Settings → Experimental → Beta features → Notifications**. Producers and CLI commands still work while it is off.
 
@@ -9,10 +9,10 @@ The dashboard's notification center starts off. Users enable it in **Settings �
 | Surface | API | Use it for |
 | --- | --- | --- |
 | Activity | `ctx.activity.record(...)` | Durable history of what happened. |
-| Toast | `ctx.notify.toast(...)` | Ephemeral feedback the user does not need to revisit. |
+| System notice | `notification.show` | App-wide information available from the status bar. |
 | Notifications | `ctx.notify.action(...)` | Durable pending work the user or an agent still needs to resolve. |
 
-Use notifications only for actionable items such as review, approval, merge, unblock, retry, or failure recovery. Routine progress belongs in activity, and short success feedback belongs in toasts. Show failed actions in the UI where the user tried the action. Errors never use toasts. The host's status-bar error widget is for system errors only.
+Use inbox notifications for actionable requests such as review, approval, merge, unblock, and failure recovery. Show routine progress and success through the affected resource or control. Keep actionable errors dismissible and beside the affected action. Put app-wide errors and information in the status bar.
 
 ## Creating Action Items
 
@@ -21,7 +21,7 @@ Use notifications only for actionable items such as review, approval, merge, unb
 ```ts
 import { qualifyRef } from "@pstdio/sdk/extensions";
 
-const ticketPage = qualifyRef("pstdio.pstdio-planner", { kind: "page", id: "ticket" });
+const ticketPage = qualifyRef("pstdio.planner", { kind: "page", id: "ticket" });
 
 await ctx.notify.action({
   title: "Review PRD: PS-42",
@@ -38,7 +38,7 @@ await ctx.notify.action({
       target: { kind: "page", page: ticketPage, resource: { type: "ticket", id: "ticket-42" } },
       primary: true,
     },
-    { id: "approve", label: "Approve", kind: "command", command: "pstdio.pstdio-planner.command.approve-proposal", params: { ticket: "PS-42" } },
+    { id: "approve", label: "Approve", kind: "command", command: "pstdio.planner.command.approve-proposal", params: { ticket: "PS-42" } },
   ],
 });
 ```
@@ -73,7 +73,7 @@ You can change `done` to `dismissed` and back. Reading or snoozing does not reop
 and host-expired items stay expired. Authors cannot set `expired`.
 
 Webviews invoke a command that uses these methods. The `notification.action`, `.resolve` and
-`.dismiss` bridge capabilities are deprecated. Toasts still use `notification.show`.
+`.dismiss` bridge capabilities are deprecated. The `notification.show` capability places system notices in the status bar and actionable errors in the originating view.
 
 External clients use `client.notifications.setStatus(projectId, id, { status: "done" })` or
 `setStatusByKey(projectId, key, { status: "dismissed" })`. HTTP accepts `read`, `done`, `dismissed`
@@ -86,4 +86,4 @@ Snoozing requires a timestamp; other statuses reject a snooze timestamp.
 remain available but deprecated in 0.44. Use the methods above before their 0.45 removal.
 Notification types come from `@pstdio/sdk/resources`.
 
-*Updated at: 2026-10-24*
+*Updated at: 2026-11-12*

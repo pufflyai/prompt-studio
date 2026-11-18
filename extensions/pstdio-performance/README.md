@@ -6,7 +6,7 @@ The host owns continuous sampling, recordings and `pst performance`. The extensi
 
 ## Install
 
-Prompt Studio Performance Monitoring is installed by default. Its install name is `pstdio-performance`. To add it again:
+Prompt Studio Performance Monitoring is installed by default. Its install name is `performance`. To add it again:
 
 ```sh
 pst extensions add pstdio-performance
@@ -36,19 +36,19 @@ pst performance recordings /absolute/path/to/performance-recordings
 Backend diagnostics have the same actions and capture IDs in the panel and CLI. Use a linked project with this extension enabled:
 
 ```sh
-pst pstdio.pstdio-performance diagnostics start --kind cpu --seconds 15
-pst pstdio.pstdio-performance diagnostics start --kind coverage --seconds 10
-pst pstdio.pstdio-performance diagnostics list
-pst pstdio.pstdio-performance diagnostics read --id <capture-id>
-pst pstdio.pstdio-performance diagnostics cancel --id <capture-id>
-pst pstdio.pstdio-performance diagnostics export --id <capture-id> > capture.json
+pst pstdio.performance diagnostics start --kind cpu --seconds 15
+pst pstdio.performance diagnostics start --kind coverage --seconds 10
+pst pstdio.performance diagnostics list
+pst pstdio.performance diagnostics read --id <capture-id>
+pst pstdio.performance diagnostics cancel --id <capture-id>
+pst pstdio.performance diagnostics export --id <capture-id> > capture.json
 ```
 
 Start returns immediately with a capture ID and host-managed automation ID. Read/list return status, timing, errors, backend identity and summary. Export returns `{ capture, data }`, including before/after process memory in bytes and either `data.profile` (CPU profile) or `data.coverage` (function-call coverage). Extract `data.profile` into a `.cpuprofile` file to inspect it in a compatible profiler. Calls count function entries, not all branches; CPU summaries count sampled stacks, not exact calls.
 
 Only one diagnostic profiler runs per backend process, across projects and extension reloads. Another simultaneous capture fails with an inspectable error. The host cancels work on cancellation or runtime shutdown. A lost/expired automation record is reported as unavailable unless saved evidence proves completion. Saved evidence remains exportable after job history expires.
 
-Captures live under `$PSTDIO_HOME/extension-storage/pstdio.pstdio-performance/diagnostics/<project-id>/` (default `~/.pstdio`). Directories and files use owner-only access; Windows directories use a current-user ACL. Retention keeps the ten newest inactive captures, including interrupted or unavailable admissions, while preserving genuinely queued or running work. Known completion times come from the host; unavailable jobs never receive invented completion times. A result may be at most 16 MiB; an oversized capture fails without publishing partial evidence. Use a shorter capture if needed. Profiles include function names and source paths; export or copy them deliberately. Raw profiles never enter device snapshots or JSONL recordings.
+Captures live under `$PSTDIO_HOME/extension-storage/pstdio.pstdio-performance/diagnostics/<project-id>/` (default `~/.pstdio`). This private store keeps its historical directory name across the extension rename so saved captures and exports remain available. Directories and files use owner-only access; Windows directories use a current-user ACL. Retention keeps the ten newest inactive captures, including interrupted or unavailable admissions, while preserving genuinely queued or running work. Known completion times come from the host; unavailable jobs never receive invented completion times. A result may be at most 16 MiB; an oversized capture fails without publishing partial evidence. Use a shorter capture if needed. Profiles include function names and source paths; export or copy them deliberately. Raw profiles never enter device snapshots or JSONL recordings.
 
 These commands replace the repository's temporary `runtime-diagnostic` CPU and coverage commands. Existing diagnostic files are preserved. Its investigation-specific global byte-decoding hook and transcript heuristic are retired.
 

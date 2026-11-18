@@ -1,12 +1,12 @@
 {
-  "name": "pstdio-dev",
+  "name": "dev",
   "version": "0.1.0",
   "displayName": "Prompt Studio Dev",
   "description": "Prepare Prompt Studio worktrees, control isolated development stacks, discover high-impact issues, and track benchmark performance.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.3.0 || ^0.4.0 || ^0.5.0"
+    "pstdio": "^0.5.0"
   },
   "pstdio": {
     "scope": "repo"

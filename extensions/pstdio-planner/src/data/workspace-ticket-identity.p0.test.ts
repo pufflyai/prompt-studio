@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandContext } from "../commands/command-context.fixture";
 import { createTicketCommand } from "../commands/create-ticket";
-import { runTicketsQuery } from "./query";
+import { runTicketsQuery } from "./query.fixture";
 
 test("workspace badges follow stable ticket IDs even when an anchor has a shared old number", async () => {
   const storage = createMemoryStorage();
@@ -21,7 +21,7 @@ test("workspace badges follow stable ticket IDs even when an anchor has a shared
         type: "ticket",
         id: second.id,
         shorthand: "T-1",
-        extensionId: "pstdio.pstdio-planner",
+        extensionId: "pstdio.planner",
         projectId: ctx.projectId,
       },
     ],

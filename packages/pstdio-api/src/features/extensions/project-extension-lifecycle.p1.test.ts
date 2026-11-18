@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { normalizeExtensionSources } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestDocumentStorage } from "../../test-utils/create-test-document-storage";
 import { loadExtensionSource } from "./extension-runtime";
@@ -41,12 +42,17 @@ const createDeps = (input: { skills?: unknown[] } = {}) => {
   return {
     deps: {
       eventBus: { emit: mock(() => {}) },
-      extensionAutomationPreferencesService: { set: mock(async (row: unknown) => row) },
+      extensionAutomationPreferencesService: { list: mock(async () => []), set: mock(async (row: unknown) => row) },
       extensionConnectionService: { removeExtension: mock(async () => {}) },
       extensionStorageService: createTestDocumentStorage(),
       extensionRuntimeCatalog: {
         get: mock(async () => ({ runtime: { schedules: [] as Array<Record<string, unknown>> } })),
-        getSourcesRuntime: mock(async () => ({ hooks: [], skills: input.skills ?? [] })),
+        getSourcesRuntime: mock(async () => ({
+          extensions: [installedSource],
+          diagnostics: [],
+          hooks: [],
+          skills: input.skills ?? [],
+        })),
       },
       extensionService: {
         enableInstalledSourceForProject: async () => ({ instance: extensionInstance(true), installedSource }),
@@ -133,6 +139,7 @@ describe("project extension lifecycle", () => {
     const { deps } = createDeps();
     deps.extensionRuntimeCatalog.get.mockResolvedValue({
       runtime: {
+        ...normalizeExtensionSources([]),
         schedules: [
           {
             id: "test.example.schedule.refine",

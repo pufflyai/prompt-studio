@@ -1,0 +1,8 @@
+{
+  "defaultPage": {
+    "kind": "page",
+    "extensionId": "pstdio.pstdio-home",
+    "id": "home"
+  },
+  "resourceOpeners": []
+}

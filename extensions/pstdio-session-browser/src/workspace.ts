@@ -6,14 +6,17 @@ import type {
 } from "@pstdio/sdk/extensions";
 import { workspacePages } from "@pstdio/sdk/extensions";
 
+export const workspaceUnavailableReason = (workspace?: ExtensionWorkspace) => {
+  if (workspace?.setupError) return "Workspace setup failed. Choose another workspace or check its setup.";
+  const state = workspace?.providerState;
+  if (workspace?.initializing || state === "provisioning") return "Workspace setup is in progress.";
+  if (state && state !== "ready") return "Workspace unavailable. Choose another workspace or check its status.";
+};
+
 type WorkspacePresentation = NonNullable<ChatRendererSnapshot["workspace"]>;
 type WorkspacePresentationInput = { id?: string; existingSession?: boolean; available?: boolean };
 
-export const workspaceSnapshot = async (
-  ctx: ExtensionContextBase,
-  controls: NonNullable<ChatRendererSnapshot["controls"]>,
-  input: WorkspacePresentationInput = {},
-) => {
+export const readWorkspacePresentation = async (ctx: ExtensionContextBase, input: WorkspacePresentationInput = {}) => {
   // Workspaces owns this optional presentation. Missing or failed tools must not stop the conversation.
   let outcome: CommandOutcome<WorkspacePresentation> | undefined;
   try {
@@ -25,10 +28,24 @@ export const workspaceSnapshot = async (
     // The optional tool may be unavailable while its runtime is loading or shutting down.
   }
   return {
-    controls: outcome?.ok ? controls : controls.filter((control) => control.id !== "workspace"),
+    available: Boolean(outcome?.ok),
     workspace: outcome?.ok ? outcome.value : { controlId: "workspace", deviceControlId: "device" },
   };
 };
+
+export const withWorkspaceControls = (
+  controls: NonNullable<ChatRendererSnapshot["controls"]>,
+  presentation: Awaited<ReturnType<typeof readWorkspacePresentation>>,
+) => ({
+  controls: presentation.available ? controls : controls.filter((control) => control.id !== "workspace"),
+  workspace: presentation.workspace,
+});
+
+export const workspaceSnapshot = async (
+  ctx: ExtensionContextBase,
+  controls: NonNullable<ChatRendererSnapshot["controls"]>,
+  input: WorkspacePresentationInput = {},
+) => withWorkspaceControls(controls, await readWorkspacePresentation(ctx, input));
 
 export const savedWorkspaceControls = (
   id: string | undefined,

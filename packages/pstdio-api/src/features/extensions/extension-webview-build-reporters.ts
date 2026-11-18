@@ -12,7 +12,15 @@ export type CreateExtensionWebviewBuildManagerInput = {
   /** Reads one installed source. Without it, each lookup scans the list. */
   getInstalledSource?: (installedExtensionId: string) => Promise<InstalledSourceWithManifest | null>;
   loadSource?: (sourcePath: string) => Promise<LoadedExtension>;
+  /** Production inspection can decline after executable source ownership is revoked. */
+  inspectSource?: (sourcePath: string) => Promise<LoadedExtension | null>;
   onError?: (error: unknown) => void;
+  /** Notify clients after a complete accepted frontend set is actually published. */
+  reportPublication?: (
+    installedExtensionId: string,
+    publicationId: string,
+    expectedSource: ExpectedWebviewBuildSource,
+  ) => Promise<WebviewBuildReport>;
   reportBuildFailure: (
     installedExtensionId: string,
     webviewId: string,

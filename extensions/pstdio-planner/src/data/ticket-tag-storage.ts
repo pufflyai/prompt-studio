@@ -1,12 +1,8 @@
+import { resolveSelectedValues, type StorageSelection } from "@pstdio/sdk/extensions";
 import { tagValueIds } from "./ticket-tags";
 import type { StoredTicket, StoredTicketTags } from "./types";
 
-type TagSelection = (
-  | { type: "single"; value: string | null; replacedOptions?: Record<string, boolean> }
-  | { type: "multi"; value?: string | null; replacedValue?: string | null }
-) & {
-  options?: Record<string, boolean>;
-};
+type TagSelection = StorageSelection;
 
 export interface StoredTicketRecord extends StoredTicket {
   tagSelections?: Record<string, TagSelection>;
@@ -19,23 +15,7 @@ export const readTicketTags = (stored: StoredTicketRecord) => {
   if (!tagSelections) return ticket;
   const tags: StoredTicketTags = { ...stored.tags };
   for (const [tagId, selection] of Object.entries(tagSelections)) {
-    const options = selection.options ?? {};
-    const previous =
-      selection.type === "single" ? tagValueIds(selection.value ?? undefined) : tagValueIds(stored.tags?.[tagId]);
-    const visibleOptions =
-      selection.type === "single" && selection.replacedOptions
-        ? Object.fromEntries(Object.entries(options).filter(([id, value]) => selection.replacedOptions![id] !== value))
-        : options;
-    const selected = [...new Set([...previous, ...Object.keys(visibleOptions)])].filter(
-      (id) => visibleOptions[id] ?? previous.includes(id),
-    );
-    if (
-      selection.type === "multi" &&
-      selection.value != null &&
-      selection.value !== selection.replacedValue &&
-      !selected.includes(selection.value)
-    )
-      selected.push(selection.value);
+    const selected = resolveSelectedValues(stored.tags?.[tagId], selection);
     // A later offline option write can follow a concurrent scalar conversion. Expose
     // that list so the user can resolve it, as with existing tag-definition changes.
     if (selection.type === "single" && selected.length < 2) {

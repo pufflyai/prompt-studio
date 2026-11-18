@@ -1,6 +1,7 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { dependencyBlockerRefs, withIndependentBlockers } from "./dependency-blockers";
-import { readTicketReviewRequests } from "./review-request-storage";
+import { publishTicketChanges } from "./ticket-activity";
+import { normalizeTicketDependencies } from "./ticket-dependencies";
 import { deleteTicketBlobs, deleteTicketFileContent, deleteTicketScopedBlobs } from "./ticket-file-content";
 import { queueTicketWrite } from "./ticket-write-queue";
 import type { StoredStatus, StoredTag, StoredTicket, Ticket } from "./types";
@@ -47,21 +48,38 @@ export const ticketsCollection = (ctx: TicketContext) => {
       const byId = new Map(tickets.map((ticket) => [ticket.id, ticket]));
       return ids.map((id) => byId.get(id));
     },
-    list: async () => withTicketIdentities(ctx, await records.list()),
     put: (id: string, ticket: StoredTicket) =>
       queueTicketWrite(id, async () => {
         if (await records.createIfAbsent(id, ticketRecord(ticket))) return;
-        const saved = await changeTicketRecord(ctx.storage, id, (current) => withStoredBlobRefs(current, ticket));
+        let before: StoredTicket | undefined;
+        const saved = await changeTicketRecord(ctx.storage, id, (current) => {
+          before = current;
+          return withStoredBlobRefs(current, ticket);
+        });
+        if (saved && before) await publishTicketChanges(ctx, before, saved);
         if (!saved) throw new Error(`Item not found: ${id}`);
       }),
     update: (id: string, ticket: StoredTicket) =>
       queueTicketWrite(id, async () => {
-        const saved = await changeTicketRecord(ctx.storage, id, (current) => withStoredBlobRefs(current, ticket));
+        let before: StoredTicket | undefined;
+        const saved = await changeTicketRecord(ctx.storage, id, (current) => {
+          before = current;
+          return withStoredBlobRefs(current, ticket);
+        });
+        if (saved && before) await publishTicketChanges(ctx, before, saved);
         if (!saved) throw new Error(`Item not found: ${id}`);
       }),
     change: (id: string, change: (current: Ticket) => Promise<StoredTicket>) =>
       queueTicketWrite(id, () =>
-        changeTicketRecord(ctx.storage, id, async (current) => change(await withTicketIdentity(ctx, current))),
+        (async () => {
+          let before: StoredTicket | undefined;
+          const saved = await changeTicketRecord(ctx.storage, id, async (current) => {
+            before = current;
+            return change(await withTicketIdentity(ctx, current));
+          });
+          if (saved && before) await publishTicketChanges(ctx, before, saved);
+          return saved;
+        })(),
       ),
     // The ticket's blobs, file bodies and images alike, have no other owner.
     delete: (id: string) =>
@@ -124,24 +142,25 @@ export const putTag = async (storage: ExtensionStorageApi, tag: StoredTag) => {
   return tag;
 };
 
-export const readTicketSnapshot = async (ctx: TicketContext, snapshot?: Ticket[]) => {
-  const [tickets, requests] = await Promise.all([
-    snapshot ?? ticketsCollection(ctx).list(),
-    readTicketReviewRequests(ctx.storage),
-  ]);
-  return {
-    tickets: withIndependentBlockers(tickets),
-    requests,
-  };
-};
-
-export const readTicketsWithReviewState = async (ctx: TicketContext, snapshot?: Ticket[]) =>
-  (await readTicketSnapshot(ctx, snapshot)).tickets;
-
 export const withDerivedTicketState = async (ctx: TicketContext, ticket: Ticket) => withIndependentBlocker(ctx, ticket);
 
 const withIndependentBlocker = async (ctx: TicketContext, ticket: Ticket) => {
   if (!dependencyBlockerRefs(ticket.blockedReason)) return ticket;
-  const tickets = (await ticketsCollection(ctx).list()).filter(({ id }) => id !== ticket.id);
+  const ids = normalizeTicketDependencies(ticket.dependsOn);
+  const tickets: Ticket[] = [];
+  for (const id of ids) {
+    if (id === ticket.id) continue;
+    const records = ticketsCollection(ctx);
+    const stored =
+      (await records.get(id)) ?? (id !== id.toLowerCase() ? await records.get(id.toLowerCase()) : undefined);
+    if (stored) tickets.push(stored);
+    else {
+      const matches = await ctx.resources.findByShorthand({ kind: "ticket", shorthand: id.trim().toUpperCase() });
+      for (const match of matches) {
+        const dependency = await ticketsCollection(ctx).get(match.id);
+        if (dependency) tickets.push(dependency);
+      }
+    }
+  }
   return withIndependentBlockers([...tickets, ticket]).at(-1)!;
 };

@@ -18,6 +18,14 @@ Stable app and SDK releases share the same number. SDK and UI previews can be pu
 
 The host decides what loads. It compares its own extension API version with `engines.pstdio`. Updating `@pstdio/sdk` in your extension does not update the app. A newer SDK can compile code that calls APIs your app does not have yet.
 
+An installed extension outside the host's supported API range keeps its identity
+and compatibility diagnostic, but contributes no commands, views, hooks, or other
+runtime capabilities. The host does not import its entry module or build its
+webviews. Other compatible extensions continue running. The host preserves the
+user's enabled choice, configuration, and stored data. Installing or reloading a
+compatible extension release makes its contributions available again. Authoring
+checks and new installs still reject unsupported API ranges.
+
 ### Versions in current releases
 
 | Release | Extension API | Notes |
@@ -34,6 +42,18 @@ API 0.4.2, after 0.47.0, adds collection-scoped index declarations with item-rel
 field paths and the SDK `readCollectionRecords` helper. Extensions using these
 must require `^0.4.2` and pin a supporting published SDK. Index declarations are
 installed before commands become available. See [storage](../sdk/0004-storage.md).
+
+The unreleased API 0.5.0 step makes views using the new SDK collection-query
+helpers paged by default. Existing custom `defineView` callbacks retain their
+full-result contract, including when rebuilt with the new SDK. Custom bounded
+providers explicitly declare `queryMode: "paged"`; fixed collections explicitly
+declare `queryMode: "static"` and a row limit. The host rejects whole-collection reads from bounded view
+callbacks, including nested commands. Existing providers retain their legacy contract. This step also includes the indexed related-query,
+derived projection, column-statistics and collection-view helpers used by Planner.
+Record queries accept `limit: 0` for validated revision checks without selecting
+resource rows; empty collection pages use this path.
+Planner requires this host API. Its independent release must follow publication
+of the matching SDK and host; a local development link only proves the candidate.
 
 The [native terminal view body](0022-terminal-sessions.md#native-terminal-views)
 shares the coordinated API 0.4.0 step on `main`. It requires a published SDK exporting
@@ -94,6 +114,33 @@ Paged table and board bodies on `main`, after 0.46.0, accept optional `initialPa
 Inline data-table sparkline and bar-chart renderers and the optional saved
 `rowHeight` setting also share the coordinated API 0.4.0 step. Existing columns
 and saved views keep their behavior. See [inline charts and row height](0004-contribution-api.md#inline-charts-and-row-height-on-main).
+
+Command, settings panel, settings section and appearance records on `main` include optional `localId` metadata so clients can resolve historical references from structured identity without parsing runtime IDs. Registered UI theme options can supply historical choices through optional `aliases`; pickers still expose one canonical option. These additions share API 0.5.0.
+
+The CLI `globalAliases` declaration is removed in API 0.5.0. Root shortcuts such as `pst tickets write` and `pst reports write` are replaced by `pst pstdio.planner write-ticket` and `pst pstdio.reports reports write`. Deprecated namespace migration paths are separate and remain available.
+
+The shorter first-party extension identities also share API 0.5.0. Canonical discovery and output use names such as `pstdio.notes`; historical invocations remain deprecated aliases. Ship the migration-capable host before renamed packages. See [identity upgrades](../../guides/extensions/0011-identity-upgrades.md).
+
+Data-table image columns, resource list `subGroupings` (any number of levels) with children nested to any depth, and tree row `tags` are additive and share API 0.5.0. Existing columns, saved views and tree rows keep their behavior. Publish the supporting host, SDK and UI before independent extensions adopt them. See [image columns](0004-contribution-api.md#image-columns-on-main) and [resource lists](0004-contribution-api.md#resource-lists).
+
+`ctx.resources.allocateMany` also shares API 0.5.0. It numbers 1 to 100 resources of one kind in one save, so imports do not allocate one number per call.
+
+The optional `files.download` webview capability and typed `client.files.download`
+also share API 0.5.0 on `main`. They deliver bytes the extension already holds to
+the user's browser download UI, without adding sandbox permissions or file read
+access. Publish the host and SDK before independent extensions adopt it. See
+[webview files](0005-webview-and-storage-api.md#webview-files).
+
+The optional `resources.actions.register` capability and `registerWebviewResourceAction`
+also share API 0.5.0. They attach live reader actions to native resource menus,
+bound to the calling extension, project, placement and resource. Closing or
+replacing that reader removes its actions and cancels pending work.
+
+`migration.moveCollection` and the `keyPrefix` option of storage index declarations also share API 0.5.0. Older hosts do not provide either; see [move a collection to records](0018-data-migrations.md#move-a-collection-to-records).
+
+The optional `HarnessStartInput.approvals` channel also shares API 0.5.0. A supporting host passes the session's approval channel on a session's first turn as well as on resume. Hosts up to 0.47 pass it only on resume, so providers must treat it as optional on start.
+
+The optional durable-automation `notBefore` deadline also shares API 0.5.0 on `main`. Waiting runs remain queued across restart until the deadline. See [delayed execution](0007-durable-automation.md#delayed-execution-on-main).
 
 ### Which version each check uses
 
@@ -289,7 +336,7 @@ the same. 0.46 starts with an empty database and does not move or read earlier
 `<package-name>/` folders, so each extension starts fresh. Extensions that build
 storage paths themselves must use the full-ID folder. Name-only CLI namespaces
 and resource-kind references remain deprecated aliases when unambiguous;
-full-ID forms replace them. Declared global aliases keep their short form.
+full-ID forms replace them. API 0.5.0 removes extension-defined global shortcuts. Replace `globalAliases` with qualified command examples and use `cli.path` only for paths inside the owning extension namespace.
 
 ## Storage size limits in API 0.3
 
@@ -432,11 +479,12 @@ Counts and progress use verified sync documents, including their files; unknown 
 leave the count absent and the download total null. Publish the SDK and matching host before
 extensions consume these fields. See [Cloud account and sync status](0003-command-and-process-api.md#cloud-account-and-sync-status).
 
-On `main`, after 0.47.0, API 0.4.1 adds optional source/file activity in `ProjectSyncStatus.sources`,
-the source/file types, and `retryProjectSyncSource` through `ctx.account`, the typed webview
-client and `/client`. Existing methods and aggregate state values remain supported.
-These additive changes use the post-0.47.0 patch step. Publish a matching SDK and
-host before Cloud or other separately released extensions consume these additions.
+After 0.47.0, optional source/file activity in `ProjectSyncStatus.sources`, the source/file
+types, and `retryProjectSyncSource` through `ctx.account`, the typed webview client and
+`/client` were prepared as API 0.4.1. They share the coordinated API 0.5.0 release with
+the breaking identity change above; the version advances once for that release. Existing
+methods and aggregate state values remain supported. Publish a matching SDK and host
+before Cloud or other separately released extensions consume these additions.
 
 ## App-wide and device settings in API 0.3.0
 
@@ -468,4 +516,13 @@ CLI and API invocations remain unchanged: commands must keep their explicit cons
 validation or existing presentation path when that parameter is absent. Older hosts
 omit this optional declaration and never synthesize consent.
 
-*Updated at: 2026-11-14*
+
+## Resource Activity in API 0.4.2
+
+Optional resource Activity declarations, `ctx.activity` discussion/outcome methods, owner-only historical import and `client.activity` are additive in API 0.4.2. The current `pstdio@0.47.0` API-report baseline contains API 0.4.1. Existing `ctx.activity.record` remains supported. Publish the supporting host, SDK, UI and workbench before releasing independent consumers. See [resource Activity](../cli/0012-resource-activity.md).
+
+## Optional navigation views in API 0.4.2
+
+`NavigationTreeContribution.optionalView` lets a tool attach a tree supplied by an independently installed view provider. An absent foreign provider keeps the tree inactive; missing local views, missing views in a present provider, and non-tree views still fail validation. Publish a compatible SDK and host before consumers adopt this additive contract. The published 0.47.0 SDK does not include it. See [navigation trees](0004-contribution-api.md#dashboard-ui-contributions).
+
+*Updated at: 2026-11-17*

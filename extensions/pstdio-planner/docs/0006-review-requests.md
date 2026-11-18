@@ -44,7 +44,7 @@ Answering or cancelling the last open request resolves pending input when no unr
 This example assumes the ticket has an attached `files/release-plan.md` and no agreed first-release audience.
 
 ```sh
-pst pstdio.pstdio-planner request-review --ticket PS-32 \
+pst pstdio.planner request-review --ticket PS-32 \
   --title 'PS-32 · Choose the first release audience' \
   --instructions '**Problem:** The export is ready, but its first release audience is undecided.
 
@@ -54,16 +54,16 @@ pst pstdio.pstdio-planner request-review --ticket PS-32 \
 
 **Details:** [Release plan](files/release-plan.md).' \
   --request '{"kind":"decision","questions":[{"id":"audience","label":"Who should receive the first release?","required":true,"input":{"kind":"single-choice","options":[{"id":"internal","label":"Internal project first (recommended)"},{"id":"everyone","label":"Everyone now"}]}}]}'
-pst pstdio.pstdio-planner review --request-id <id> --response '{"answers":{"audience":"internal"}}'
+pst pstdio.planner review --request-id <id> --response '{"answers":{"audience":"internal"}}'
 ```
 
 Read, cancel, or open requests:
 
 ```sh
-pst pstdio.pstdio-planner review-requests list --ticket PS-32 --open-only
-pst pstdio.pstdio-planner review-requests read --request-id <id>
-pst pstdio.pstdio-planner review-requests cancel --request-id <id> --reason 'The release scope changed.'
-pst pstdio.pstdio-planner review-requests open --request-id <id>
+pst pstdio.planner review-requests list --ticket PS-32 --open-only
+pst pstdio.planner review-requests read --request-id <id>
+pst pstdio.planner review-requests cancel --request-id <id> --reason 'The release scope changed.'
+pst pstdio.planner review-requests open --request-id <id>
 ```
 
 Each read returns the request with its derived `state` (`open`, `answered`, or `cancelled`), its `outcome`, and an `outcomeText` summary.

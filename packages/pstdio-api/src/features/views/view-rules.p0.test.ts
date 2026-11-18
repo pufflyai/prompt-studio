@@ -150,3 +150,36 @@ test("retained saved ordering is single on unrelated edits while explicit multi-
   expect(validateBoardView("kanban", stored, fields, {}).sorts).toEqual([stored.sorts[0]!]);
   expect(() => validateBoardView("kanban", stored, fields, { sorts: stored.sorts })).toThrow("only one sort");
 });
+
+test("resource list views accept any number of sub-groupings, normalized like the list shows them", () => {
+  const groupFields = [
+    ...fields,
+    field("channel", "enum", { groupable: true, options: [{ value: "web", label: "Web" }] }),
+    field("severity", "enum", { groupable: true, options: [{ value: "high", label: "High" }] }),
+  ];
+  const list = { ...board, viewMode: "list" as const, subGroupings: ["channel", "severity"], showChildren: true };
+  const sent = { filter: undefined, sorts: undefined };
+  const validate = (settings: object, kind: "resourceList" | "kanban" = "resourceList") =>
+    validateBoardView(kind, { ...draft(and()), settings: settings as typeof list }, groupFields, sent);
+  expect(validate(list).settings).toMatchObject({ columnGrouping: "status", subGroupings: ["channel", "severity"] });
+  // A grouping change keeps the view valid: repeated or orphaned levels drop out instead of failing.
+  expect(validate({ ...list, columnGrouping: "channel" }).settings).toMatchObject({ subGroupings: ["severity"] });
+  expect(validate({ ...list, columnGrouping: "none" }).settings).toMatchObject({ subGroupings: [] });
+  expect(validate({ ...list, subGroupings: ["channel", "channel"] }).settings).toMatchObject({
+    subGroupings: ["channel"],
+  });
+  expect(() => validate({ ...list, viewMode: "board" })).toThrow("Resource lists require list display");
+  expect(() => validate({ ...list, rowGrouping: "channel" })).toThrow("use subGroupings");
+  expect(() => validate({ ...list, subGroupings: ["score"] })).toThrow('Invalid groupable field "score"');
+  expect(() => validate({ ...board, subGroupings: ["channel"] }, "kanban")).toThrow("resource lists only");
+});
+
+test("cleanup drops sub-groupings that no longer fit the list", () => {
+  const list = { ...board, viewMode: "list" as const, columnGrouping: "status", subGroupings: ["gone", "status"] };
+  const result = cleanBoardView(
+    { kind: "resourceList", settings: { ...board, viewMode: "list" } },
+    { settings: list, filter: and(), sorts: [] },
+    fields,
+  );
+  expect(result.settings).toMatchObject({ columnGrouping: "status", subGroupings: [] });
+});

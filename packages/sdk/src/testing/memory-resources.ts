@@ -21,17 +21,23 @@ export const createMemoryResources = (
     identitiesBySequence.set(sequences, identities);
   }
   const resources = identities;
+  const allocate = ({ kind, idPrefix }: { kind: string; idPrefix?: string }) => {
+    const prefix = prefixes[kind];
+    if (!prefix) throw new Error(`Undeclared resource kind: ${kind}`);
+    const id = createStorageId(idPrefix);
+    const next = (sequences.get(kind) ?? 0) + 1;
+    sequences.set(kind, next);
+    const identity = { id, kind, shorthand: `${prefix}-${next}`, aliases: [] };
+    resources.set(identity.id, { identity, scope });
+    return { id: identity.id, shorthand: identity.shorthand };
+  };
   return {
     ...links,
-    allocate: async ({ kind, idPrefix }) => {
-      const prefix = prefixes[kind];
-      if (!prefix) throw new Error(`Undeclared resource kind: ${kind}`);
-      const id = createStorageId(idPrefix);
-      const next = (sequences.get(kind) ?? 0) + 1;
-      sequences.set(kind, next);
-      const identity = { id, kind, shorthand: `${prefix}-${next}`, aliases: [] };
-      resources.set(identity.id, { identity, scope });
-      return { id: identity.id, shorthand: identity.shorthand };
+    allocate: async (input) => allocate(input),
+    allocateMany: async ({ count, ...input }) => {
+      if (!Number.isInteger(count) || count < 1 || count > 100)
+        throw new Error("Allocate 1 to 100 resource numbers at a time.");
+      return Array.from({ length: count }, () => allocate(input));
     },
     identity: async ({ kind, id }) => {
       const found = resources.get(id);

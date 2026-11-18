@@ -79,7 +79,7 @@ test("workspace creation commits links atomically and deletion removes incoming 
       anchors: [{ type: "ticket", id: "one", role: "primary" }],
     });
     const ref = { type: "workspace", id: first.id, projectId: project.id, extensionId: "pstdio" };
-    const ticket = { type: "ticket", id: "one", projectId: project.id, extensionId: "pstdio.pstdio-planner" };
+    const ticket = { type: "ticket", id: "one", projectId: project.id, extensionId: "pstdio.planner" };
     await links.add(ticket, [ref]);
     await workspaces.softDelete(first.id);
     expect((await links.list({ resource: ticket, direction: "both" })).items).toEqual([]);
@@ -161,6 +161,34 @@ test("host link mutations require a project source and update its timestamp only
     expect((await workspaces.get(workspace.id))!.updated_at).not.toBe(added.updated_at);
     await workspaces.softDelete(workspace.id);
     await expect(links.add(source, [target])).rejects.toThrow("not found");
+  } finally {
+    await connection.close();
+  }
+});
+
+test("batch anchor reads keep each ID paired with its owner and kind across pages", async () => {
+  const connection = await createDb({ path: ":memory:" });
+  try {
+    const project = await createProjectsDBService(connection.db).create({ name: "Mixed collections" });
+    const links = createResourceLinksDBService(connection.db);
+    const source = { projectId: project.id, extensionId: "example.notes", type: "item", id: "one" };
+    const sources = [
+      source,
+      { ...source, id: "two" },
+      { ...source, extensionId: "example.art", id: "three" },
+      { ...source, type: "group", id: "four" },
+    ];
+    const target = { ...source, extensionId: "example.other", id: "target" };
+    for (const ref of [...sources, { ...source, id: "three" }, { ...source, type: "group" }]) {
+      await links.add(ref, [target]);
+    }
+    const first = await links.listMany({ resources: sources, direction: "both", limit: 2 });
+    const second = await links.listMany({ resources: sources, direction: "both", limit: 2, cursor: first.nextCursor });
+    expect(first.nextCursor).toBeDefined();
+    expect(second.nextCursor).toBeUndefined();
+    expect([...first.items, ...second.items].map((edge) => edge.source)).toEqual(expect.arrayContaining(sources));
+    expect(first.items.length + second.items.length).toBe(sources.length);
+    expect((await links.listMany({ resources: sources, direction: "incoming" })).items).toEqual([]);
   } finally {
     await connection.close();
   }

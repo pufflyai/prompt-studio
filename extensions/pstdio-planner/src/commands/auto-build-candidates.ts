@@ -16,15 +16,13 @@ export async function readAutoBuildCandidates(
     matchingTicketCount,
     observations,
     configurationError,
-    reviewRequests,
-    requestErrors,
+    requestSelection,
   } = await readNextTickets(ctx, mode, input);
   const blockedTickets = waiting
     .filter(({ reason }) => reason !== "assigned" && reason !== "existing-attempt" && reason !== "capacity-full")
     .map(({ ticket }) => ticket);
   return {
-    reviewRequests,
-    requestErrors,
+    requestSelection,
     candidates: tickets.filter(({ action }) => action !== "update-stack"),
     readyTicketCount: tickets.length,
     capacity,
@@ -38,13 +36,13 @@ export async function readAutoBuildCandidates(
   };
 }
 
-/** @deprecated Use next-tickets (`pst pstdio.pstdio-planner next-tickets`) for scoped work and waiting reasons. */
+/** @deprecated Use next-tickets (`pst pstdio.planner next-tickets`) for scoped work and waiting reasons. */
 export const autoBuildCandidatesCommand = defineCommand({
   id: "auto-build.candidates",
   title: "Read Auto Build candidates",
   description: l10n(
     "autoBuild.candidates.deprecated",
-    "Deprecated in 0.44. Use pst pstdio.pstdio-planner next-tickets for scoped work and waiting reasons. Removed in 0.45.",
+    "Deprecated in 0.44. Use pst pstdio.planner next-tickets for scoped work and waiting reasons. Removed in 0.45.",
   ),
   cli: true,
   async run(ctx) {

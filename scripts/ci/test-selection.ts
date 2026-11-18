@@ -1,4 +1,5 @@
 import { relative } from "node:path";
+import { canvasTestOwner } from "./canvas-test-owner";
 import { selectIntegrationFiles } from "./coverage-ownership";
 import { partitionPackageChecks } from "./package-check-matrix";
 import { productionDesktopPlatforms, productionToolchainPlatforms } from "./production-platforms";
@@ -39,15 +40,15 @@ const componentRows = (files: string[], packages: WorkspacePackage[], owners: st
   );
   const selected = files.filter((file) => {
     if (testRunner(file) !== "component") return false;
-    const owner = file.split("/")[4];
-    if (sourceOwners.length) return sourceOwners.some((pkg) => pkg.dir === `packages/${owner}`);
+    const sourceOwner = canvasTestOwner(packages, file.split("/")[4]!);
+    if (sourceOwners.length) return sourceOwner !== undefined && sourceOwners.includes(sourceOwner);
     return owners.includes("canvas-tests");
   });
   return priorities.flatMap((priority) => {
     const matching = selected.filter((file) => priorityFromFile(file) === priority);
     return [...new Set(matching.map((file) => file.split("/")[4]!))].sort().map((owner) => ({
       package: owner,
-      project: packages.find((pkg) => pkg.dir === `packages/${owner}`)!.name,
+      project: canvasTestOwner(packages, owner)!.name,
       priority,
       files: JSON.stringify(
         matching

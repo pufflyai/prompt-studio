@@ -3,7 +3,7 @@ import { workbenchModes, workbenchResourceKinds } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension } from "../../types/runtime";
 import { resolveCommandRef, serializeWhenExpression } from "./references";
 
-const ext = { id: "pstdio.pstdio-planner", name: "pstdio-planner" } as NormalizedExtension;
+const ext = { id: "pstdio.planner", name: "pstdio-planner" } as NormalizedExtension;
 
 describe("contribution ref resolution", () => {
   test("keeps resource condition ownership when publishers use the same local kind", () => {
@@ -19,7 +19,7 @@ describe("contribution ref resolution", () => {
   });
   test("prefixes extension-owned command refs with owner and kind", () => {
     expect(resolveCommandRef(ext, { kind: "command", id: "ticket-status.read" })).toBe(
-      "pstdio.pstdio-planner.command.ticket-status.read",
+      "pstdio.planner.command.ticket-status.read",
     );
   });
 

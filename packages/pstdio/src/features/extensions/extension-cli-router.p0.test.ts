@@ -12,35 +12,34 @@ import {
 const labCommands: ExtensionCommandRecord[] = [
   {
     id: "lab.counter.bump",
-    extensionId: "pstdio.extension-lab",
+    extensionId: "pstdio.lab",
     title: "Bump lab counter",
     description: "Increment the lab counter.",
-    cliPath: "lab counter bump",
+    cliPath: "pstdio.lab counter bump",
     params: { amount: { type: "number", defaultValue: 1 } },
-    examples: ["pstdio lab counter bump --amount 2"],
+    examples: ["pstdio pstdio.lab counter bump --amount 2"],
     mutating: true,
   },
   {
     id: "lab.counter.read",
-    extensionId: "pstdio.extension-lab",
+    extensionId: "pstdio.lab",
     title: "Read lab counter",
-    cliPath: "lab counter read",
+    cliPath: "pstdio.lab counter read",
   },
 ];
 
 const successResponse: CommandExecutionResult = {
   commandId: "lab.counter.bump",
-  extensionId: "pstdio.extension-lab",
+  extensionId: "pstdio.lab",
   outcome: { ok: true, status: "success", value: { counter: 2 } },
 };
 
-const aliasedCommands = [
+const workspaceCommands = [
   {
     id: "acme-tools.workspaceNote.set",
     extensionId: "acme.acme-tools",
     title: "Set workspace note",
-    cliPath: "acme-tools workspaceNote set",
-    cliAliases: ["workspaces set-note"],
+    cliPath: "acme.acme-tools workspaceNote set",
     params: {
       workspace: { type: "text" },
       note: { type: "text" },
@@ -59,21 +58,21 @@ describe("extension CLI router", () => {
 
     try {
       const exitCode = await dispatchExtensionCliCommand({
-        rawArgs: ["lab", "--help"],
+        rawArgs: ["pstdio.lab", "--help"],
         deps: {
           execute: mock(async () => successResponse),
           listCommands: mock(async () => ({
             commands: [
               {
                 id: "lab.counter.bump",
-                extensionId: "pstdio.extension-lab",
+                extensionId: "pstdio.lab",
                 title: { $l10n: "commands.counter.bump.title", default: "Bump lab counter" },
-                cliPath: "lab counter bump",
+                cliPath: "pstdio.lab counter bump",
               },
             ],
             translations: [
               {
-                extensionId: "pstdio.extension-lab",
+                extensionId: "pstdio.lab",
                 defaultLocale: "en",
                 bundles: {
                   en: { "commands.counter.bump.title": "Bump lab counter" },
@@ -106,13 +105,13 @@ describe("extension CLI router", () => {
 
   test("builds namespace and command help from command metadata", () => {
     const table = buildExtensionCommandTable(labCommands);
-    const namespaceHelp = renderNamespaceHelp("lab", table);
+    const namespaceHelp = renderNamespaceHelp("pstdio.lab", table);
 
     expect(table.collisions).toEqual([]);
     // Mirrors the yargs command-group layout: scriptName-prefixed paths, a
     // Commands section, and an Options section.
     expect(namespaceHelp).toContain("Commands:");
-    expect(namespaceHelp).toContain("pstdio lab counter bump");
+    expect(namespaceHelp).toContain("pstdio pstdio.lab counter bump");
     expect(namespaceHelp).toContain("Options:");
     expect(namespaceHelp).toContain("--help");
     expect(renderCommandHelp(labCommands[0]!)).toContain("--amount");
@@ -126,7 +125,7 @@ describe("extension CLI router", () => {
         id: "other.counter.bump",
         extensionId: "pstdio.other",
         title: "Other bump",
-        cliPath: "lab counter bump",
+        cliPath: "pstdio.lab counter bump",
       },
     ]);
 
@@ -147,9 +146,9 @@ describe("extension CLI router", () => {
   test("accumulates repeated list flags into an array", () => {
     const command: ExtensionCommandRecord = {
       id: "lab.tag",
-      extensionId: "pstdio.extension-lab",
+      extensionId: "pstdio.lab",
       title: "Tag",
-      cliPath: "lab tag",
+      cliPath: "pstdio.lab tag",
       params: { tag: { type: "list" }, status: { type: "text" } },
     };
 
@@ -163,7 +162,7 @@ describe("extension CLI router", () => {
   test("parses structured params from JSON flags", () => {
     const command: ExtensionCommandRecord = {
       id: "planner.run",
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       title: "Run attempt",
       cliPath: "planner run",
       params: { workspace: { type: "workspace" }, agent: { type: "harness" } },
@@ -186,9 +185,9 @@ describe("extension CLI router", () => {
   test("reads true or false after a boolean flag as its value", () => {
     const command: ExtensionCommandRecord = {
       id: "lab.reset",
-      extensionId: "pstdio.extension-lab",
+      extensionId: "pstdio.lab",
       title: "Reset",
-      cliPath: "lab reset",
+      cliPath: "pstdio.lab reset",
       params: { force: { type: "boolean" }, note: { type: "text" } },
     };
 
@@ -216,12 +215,12 @@ describe("extension CLI router dispatch", () => {
     const log = mock();
 
     const exitCode = await dispatchExtensionCliCommand({
-      rawArgs: ["lab", "counter", "read"],
+      rawArgs: ["pstdio.lab", "counter", "read"],
       deps: {
         execute: mock(
           async (): Promise<CommandExecutionResult> => ({
             commandId: "lab.counter.read",
-            extensionId: "pstdio.extension-lab",
+            extensionId: "pstdio.lab",
             outcome: { ok: true, status: "success", value: [{ shorthand: "T-1", title: "First" }] },
           }),
         ),
@@ -243,7 +242,7 @@ describe("extension CLI router dispatch", () => {
     const onCommandResolved = mock();
 
     const exitCode = await dispatchExtensionCliCommand({
-      rawArgs: ["lab", "counter", "bump", "--amount", "2"],
+      rawArgs: ["pstdio.lab", "counter", "bump", "--amount", "2"],
       onCommandResolved,
       deps: {
         cwd: () => "/repo",
@@ -265,7 +264,7 @@ describe("extension CLI router dispatch", () => {
     expect(log).toHaveBeenCalledWith(JSON.stringify({ counter: 2 }));
   });
 
-  test("dispatches extension commands through global CLI aliases", async () => {
+  test("dispatches a qualified command outside core command groups", async () => {
     const execute = mock(
       async (_commandId: string, _request: unknown): Promise<CommandExecutionResult> => ({
         commandId: "acme-tools.workspaceNote.set",
@@ -276,10 +275,10 @@ describe("extension CLI router dispatch", () => {
     const log = mock();
 
     const exitCode = await dispatchExtensionCliCommand({
-      rawArgs: ["workspaces", "set-note", "--workspace", "PS-1_A1", "--note", "checked"],
+      rawArgs: ["acme.acme-tools", "workspaceNote", "set", "--workspace", "PS-1_A1", "--note", "checked"],
       deps: {
         execute,
-        listCommands: mock(async () => ({ commands: aliasedCommands, diagnostics: [] })),
+        listCommands: mock(async () => ({ commands: workspaceCommands, diagnostics: [] })),
         log,
         resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
       },
@@ -308,10 +307,10 @@ describe("extension CLI router dispatch", () => {
 
     try {
       const exitCode = await dispatchExtensionCliCommand({
-        rawArgs: ["workspaces", "set-note", "--workspace", "PS-1_A1", "--note", "checked"],
+        rawArgs: ["acme.acme-tools", "workspaceNote", "set", "--workspace", "PS-1_A1", "--note", "checked"],
         deps: {
           execute,
-          listCommands: mock(async () => ({ commands: aliasedCommands, diagnostics: [] })),
+          listCommands: mock(async () => ({ commands: workspaceCommands, diagnostics: [] })),
           log: mock(),
           resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
         },
@@ -338,7 +337,7 @@ describe("extension CLI router dispatch", () => {
     const error = mock();
 
     const exitCode = await dispatchExtensionCliCommand({
-      rawArgs: ["lab"],
+      rawArgs: ["pstdio.lab"],
       deps: {
         error,
         execute: mock(async () => successResponse),
@@ -350,14 +349,14 @@ describe("extension CLI router dispatch", () => {
 
     expect(exitCode).toBe(0);
     expect(error).not.toHaveBeenCalled();
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("pstdio lab counter bump"));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("pstdio pstdio.lab counter bump"));
   });
 
   test("lists namespace commands for a command group", async () => {
     const log = mock();
 
     const exitCode = await dispatchExtensionCliCommand({
-      rawArgs: ["lab", "counter", "--help"],
+      rawArgs: ["pstdio.lab", "counter", "--help"],
       deps: {
         execute: mock(async () => successResponse),
         listCommands: mock(async () => ({ commands: labCommands, diagnostics: [] })),
@@ -367,7 +366,7 @@ describe("extension CLI router dispatch", () => {
     });
 
     expect(exitCode).toBe(0);
-    expect(log).toHaveBeenCalledWith(expect.stringContaining("pstdio lab counter bump"));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining("pstdio pstdio.lab counter bump"));
   });
 
   test("fails a mistyped subcommand without executing anything", async () => {
@@ -376,7 +375,7 @@ describe("extension CLI router dispatch", () => {
     const execute = mock(async () => successResponse);
 
     const exitCode = await dispatchExtensionCliCommand({
-      rawArgs: ["lab", "counter", "bmup", "--amount", "2"],
+      rawArgs: ["pstdio.lab", "counter", "bmup", "--amount", "2"],
       deps: {
         error,
         execute,
@@ -388,8 +387,8 @@ describe("extension CLI router dispatch", () => {
 
     expect(exitCode).toBe(1);
     expect(execute).not.toHaveBeenCalled();
-    expect(error).toHaveBeenCalledWith(expect.stringContaining('Unknown command "pstdio lab counter bmup"'));
-    expect(error).toHaveBeenCalledWith(expect.stringContaining("pstdio lab counter bump"));
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('Unknown command "pstdio pstdio.lab counter bmup"'));
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("pstdio pstdio.lab counter bump"));
   });
 
   test("ignores unknown root commands outside extension namespaces", async () => {
@@ -416,16 +415,15 @@ describe("extension CLI router dispatch", () => {
     const requiredCommands = [
       {
         id: "pstdio-planner.ticketStatus.create",
-        extensionId: "pstdio.pstdio-planner",
+        extensionId: "pstdio.planner",
         title: "Create ticket status",
-        cliPath: "pstdio-planner ticketStatus create",
-        cliAliases: ["statuses create"],
+        cliPath: "pstdio.planner ticket-status create",
         params: { label: { type: "text", required: true }, color: { type: "text" } },
       },
     ] satisfies Array<ExtensionCommandRecord & { cliAliases?: string[] }>;
 
     const exitCode = await dispatchExtensionCliCommand({
-      rawArgs: ["statuses", "create", "--color", "gray"],
+      rawArgs: ["pstdio.planner", "ticket-status", "create", "--color", "gray"],
       deps: {
         error,
         execute,
@@ -446,7 +444,7 @@ describe("extension CLI router workspace context", () => {
     const worktree = "/repo/.pstdio/workspaces/PS-1_A1";
 
     const exitCode = await dispatchExtensionCliCommand({
-      rawArgs: ["lab", "counter", "bump", "--amount", "2"],
+      rawArgs: ["pstdio.lab", "counter", "bump", "--amount", "2"],
       deps: {
         cwd: () => worktree,
         execute,

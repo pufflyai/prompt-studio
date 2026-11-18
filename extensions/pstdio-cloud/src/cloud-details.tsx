@@ -1,9 +1,10 @@
 import { HStack, Stack, Text } from "@chakra-ui/react";
 import { commandRef } from "@pstdio/sdk/extensions";
-import { AlertMessage, PopoverHeader } from "@pstdio/ui";
+import { PopoverHeader } from "@pstdio/ui";
 import { useState } from "react";
 import { Button } from "./button";
 import { useCloudContext } from "./cloud-context";
+import { CloudError } from "./cloud-error";
 import { CloudIcon, CloudLabel } from "./cloud-label";
 import { CloudProjectRecovery } from "./cloud-project-recovery";
 import { SyncActivity } from "./sync-activity";
@@ -22,7 +23,7 @@ export const CloudDetails = (props: { projectId?: string }) => {
     try {
       await client.navigation.open({
         kind: "command",
-        target: { command: openSettings, params: { panelId: "pstdio.pstdio-cloud.settings-panel.cloud" } },
+        target: { command: openSettings, params: { panelId: "pstdio.cloud.settings-panel.cloud" } },
       });
     } catch (cause) {
       setNavigationError(String(cause));
@@ -34,10 +35,8 @@ export const CloudDetails = (props: { projectId?: string }) => {
   return (
     <Stack gap="0">
       <PopoverHeader icon={<CloudIcon name="cloud" />} title={t("popover.title", "Prompt Studio Cloud")} />
-      <Stack gap="md" px="md" pb="sm">
-        <CloudLabel data={data} online={online} error={error} />
-        {data?.project?.error && <AlertMessage status="error">{data.project.error}</AlertMessage>}
-        {error && <AlertMessage status="error">{error}</AlertMessage>}
+      <Stack gap="md" px="md" pb="sm" position="relative">
+        <CloudLabel data={data} online={online} error={error ?? data?.project?.error} />
         {data && <SyncActivity sync={data.sync} projectId={projectId} />}
         {projectId && data && earlyAccess && <CloudProjectRecovery data={data} refresh={refresh} />}
         {connected && (
@@ -76,7 +75,7 @@ export const CloudDetails = (props: { projectId?: string }) => {
           <CloudIcon name="settings" />
           {t("settings.open", "Cloud settings")}
         </Button>
-        {navigationError && <AlertMessage status="error">{navigationError}</AlertMessage>}
+        {navigationError && <CloudError message={navigationError} onClose={() => setNavigationError(undefined)} />}
       </Stack>
     </Stack>
   );

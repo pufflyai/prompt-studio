@@ -2,6 +2,8 @@ import { expect, test } from "bun:test";
 import type { ExtensionWorkspace, ResourceAnchor } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putAttempt } from "../data/attempt-storage";
+import type { AttemptRecord } from "../data/attempt-types";
+import { seedWorkspaceLinks } from "./archive-context.fixture";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { sessionQuery } from "./session-query.fixture";
@@ -32,6 +34,7 @@ const setup = async () => {
     },
   });
   const overrides = {
+    extensionId: "pstdio.pstdio-planner",
     workspaces: {
       ...anchorsApi(workspace),
       list: async () => [workspace],
@@ -65,7 +68,9 @@ for (const target of ["workspace", "session"] as const) {
     );
     if (target === "workspace") {
       for (const ticket of env.tickets) {
-        expect(await ticketWorkspacesCommand.run(...env.args({ id: ticket.id }))).toHaveLength(1);
+        const args = env.args({ id: ticket.id });
+        await seedWorkspaceLinks(args[0], [env.workspace]);
+        expect((await ticketWorkspacesCommand.run(...args)).items).toHaveLength(1);
       }
       await linkTicketCommand.run(...env.args({ id: one.id, workspace: "WS-1" }));
     }
@@ -155,8 +160,16 @@ for (const target of ["workspace", "implementation", "review"] as const) {
       ],
     });
     const linkTarget = target === "workspace" ? { workspace: "workspace" } : { session: "session" };
+    const attempt = (await env.storage.collection<AttemptRecord>("planner-attempts").get("workspace"))!;
+    attempt.revisions[0].reviews.push({ ...attempt.revisions[0].reviews[0], id: "manual", sessionId: null });
+    await putAttempt(env.storage, attempt);
     await linkTicketCommand.run(...env.args({ id: one.id, ...linkTarget }));
     await linkTicketCommand.run(...env.args({ id: two.id, ...linkTarget }));
+    const readMany = env.storage.records.readMany.bind(env.storage.records);
+    env.storage.records.readMany = (ids) => {
+      if (ids.some((id) => id.includes("planner-attempts"))) throw new Error("Unlink hydrated attempt histories");
+      return readMany(ids);
+    };
     await expect(unlinkTicketCommand.run(...env.args({ id: one.id, ...linkTarget }))).rejects.toThrow(
       `belongs to the managed attempt for ${one.shorthand}`,
     );

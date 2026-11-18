@@ -21,20 +21,23 @@ const chakra = await import("@chakra-ui/react");
 mock.module("@chakra-ui/react", () => ({
   ...chakra,
   ...Object.fromEntries(
-    ["Button", "HStack", "Stack", "Text"].map((name) => [
+    ["Button", "HStack", "IconButton", "Stack", "Text"].map((name) => [
       name,
-      (props: Record<string, unknown>) => createElement(name === "Button" ? "button" : "div", props),
+      (props: Record<string, unknown>) => createElement(name.endsWith("Button") ? "button" : "div", props),
     ]),
   ),
+  ScrollArea: Object.fromEntries(["Root", "Viewport", "Content", "Scrollbar", "Corner"].map((name) => [name, "div"])),
 }));
 let editor: ReturnType<typeof useParamEditorValues>;
+const paramEditor = await import("@pstdio/ui/param-editor");
 mock.module("@pstdio/ui/param-editor", () => ({
+  ...paramEditor,
   ParamEditor: (props: ParamEditorProps) => {
     editor = useParamEditorValues(props.params ?? [], props.groups ?? [], props.defaultValues ?? {}, props.onChange);
     return null;
   },
 }));
-const { SettingsActions } = await import("@pstdio/ui");
+const { ChakraProvider, psTheme, SettingsActions } = await import("@pstdio/ui");
 const { WorkbenchPreferencesForm } = await import("./preferences-form");
 const { createPreferenceRegistry } = await import("../../../core/registries/preferences/preference-registry");
 const { SettingsPageContext } = await import("../../settings/settings-page-context");
@@ -44,7 +47,9 @@ const { createWorkbench } = await import("../../../core");
 
 const schema = { properties: { size: { type: "number", scope: "user", default: 0 } } } as const;
 const render = (preferences: PreferenceRegistry, mode: "apply" | "live" = "apply") => (
-  <WorkbenchPreferencesForm preferences={preferences} names={["size"]} mode={mode} />
+  <ChakraProvider value={psTheme}>
+    <WorkbenchPreferencesForm preferences={preferences} names={["size"]} mode={mode} />
+  </ChakraProvider>
 );
 const save = (tree: ReactTestRenderer): ComponentProps<typeof SettingsActions> => {
   return tree.root.findByType(SettingsActions).props as ComponentProps<typeof SettingsActions>;
@@ -240,6 +245,23 @@ const buttonRetry = async (mode: "apply" | "live") => {
     assert.equal(editor.values.size, 7);
     assert.equal(accepted, 0);
     assert.equal(tree.root.findAllByProps({ role: "alert" }).filter((node) => typeof node.type === "string").length, 1);
+    await act(async () => {
+      tree.root
+        .findAllByType("button")
+        .find((node) => node.props["aria-label"] === "Dismiss")!
+        .props.onClick();
+    });
+    assert.equal(editor.values.size, 7);
+    assert.equal(tree.root.findAllByProps({ role: "alert" }).filter((node) => typeof node.type === "string").length, 0);
+    await act(async () => {
+      clickSave();
+      await Bun.sleep(0);
+    });
+    assert.equal(
+      tree.root.findAllByProps({ role: "alert" }).filter((node) => typeof node.type === "string").length,
+      1,
+      mode,
+    );
     fail = false;
     await act(async () => {
       clickSave();
@@ -253,6 +275,44 @@ const buttonRetry = async (mode: "apply" | "live") => {
   }
 };
 
+const retryWhileAnotherFieldSaves = async () => {
+  const { usePreferenceFormDraft } = await import("./preference-form-draft");
+  const retry = Promise.withResolvers<void>();
+  let firstAttempt = true;
+  let draft!: ReturnType<typeof usePreferenceFormDraft>;
+  const Form = () => {
+    draft = usePreferenceFormDraft(async (name) => {
+      if (name !== "first") return;
+      if (firstAttempt) throw new Error("first failed");
+      await retry.promise;
+    }, "live");
+    return null;
+  };
+  let tree!: ReactTestRenderer;
+  await act(async () => {
+    tree = create(<Form />);
+  });
+  try {
+    await act(async () => draft.change("first", "one"));
+    assert.equal(draft.errors.first, "first failed");
+    firstAttempt = false;
+    let pending!: Promise<void>;
+    await act(async () => {
+      pending = draft.save();
+    });
+    await act(async () => draft.change("second", "two"));
+    await act(async () => {
+      retry.resolve();
+      await pending;
+    });
+    assert.deepEqual(draft.errors, {});
+    assert.deepEqual(draft.staged, {});
+  } finally {
+    retry.resolve();
+    await act(async () => tree.unmount());
+  }
+};
+
 await failedSave();
 await ownerSwitch();
 await externalChange();
@@ -260,4 +320,5 @@ await pendingLeave();
 await pendingOwnerSwitch();
 await buttonRetry("apply");
 await buttonRetry("live");
+await retryWhileAnotherFieldSaves();
 process.stdout.write("preference form scenarios passed\n");

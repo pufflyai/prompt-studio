@@ -4,7 +4,6 @@ import { planChanged } from "../contracts";
 
 type GateContext = Pick<ExtensionContextBase, "storage" | "resources">;
 export const gates = (ctx: GateContext) => ctx.storage.collection<{ ticketId: string }>("timeline.agent-gates");
-export const readGates = async (ctx: GateContext) => new Set((await gates(ctx).list()).map(({ ticketId }) => ticketId));
 
 export async function registerGate(ctx: CommandContext, ticketId: string) {
   await gates(ctx).createIfAbsent(ticketId, { ticketId });

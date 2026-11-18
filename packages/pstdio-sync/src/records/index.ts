@@ -1,3 +1,4 @@
+export { type MovableRecords, moveCollection } from "./collection-move";
 export { commitCurrentBatch } from "./current-batch";
 export { recordTypeName } from "./document-edits";
 export { documentRecordTypes, type RecordType, readDocumentRecord } from "./document-record";
@@ -5,7 +6,14 @@ export { type DocumentSnapshot, findDocumentReplacements, snapshotDocumentRecord
 export { createDocumentStorage, type LockedRecords } from "./document-storage";
 export { createLegacyRecordStorage } from "./legacy";
 export { createMemoryRecordQueries } from "./memory-record-queries";
-export { initialRecordRevision, scopeRecordStorage, storageRecordId } from "./namespaces";
+export {
+  collectionMoveMarkerId,
+  collectionRecordPrefix,
+  initialRecordRevision,
+  recordKeyPrefix,
+  scopeRecordStorage,
+  storageRecordId,
+} from "./namespaces";
 export { nativeAssetBaseline, nativeAssetBindingBaseline } from "./native-asset-source";
 export {
   bindRecordText,
@@ -29,6 +37,14 @@ export {
   replacementChanges,
 } from "./ordered-json";
 export { prepareOrderedLocalAdoption } from "./ordered-local-adoption";
+export {
+  OrderedMoveGuardError,
+  type OrderedMoveInput,
+  OrderedMoveTargetExistsError,
+  type OrderedRecordMove,
+  prepareOrderedMove,
+} from "./ordered-move";
+export { forwardDisplacedSave, planCatchUpMoves, prepareCatchUpMoves } from "./ordered-move-forward";
 export {
   applyOrderedNativeOperation,
   orderedNativeDependenciesReady,
@@ -87,15 +103,21 @@ export {
   prepareRecordQuery,
   queryField,
   typedFieldValue,
+  validateComputedConditions,
   validateIndexes,
   validatePredicate,
 } from "./record-query";
+export { loadQueryIndexDependencies } from "./record-query-dependencies";
 export {
   aggregateOptions,
   compareAggregateGroups,
   relatedQueryIndexes,
   requestedRecordIndex,
+  validateRelatedQueryFields,
 } from "./record-query-options";
+export { isLocaleQueryText } from "./record-query-string-order";
+export { recordQueryTextOrders } from "./record-query-text-order";
+export { histogramResult, statisticOptions, topValuesResult } from "./record-statistics";
 export {
   adoptResourceDocument,
   editResourceDocument,

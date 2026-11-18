@@ -45,6 +45,7 @@ export const DEFAULT_MAX_COMMAND_DEPTH = 10;
 export type ScopedHostApis = Pick<
   CommandRunnerEnvironment,
   | "sessions"
+  | "resources"
   | "workspaces"
   | "connections"
   | "process"
@@ -80,6 +81,8 @@ export interface CommandRunnerEnvironment {
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
   activity: ExtensionActivityApi;
+  /** Attribute command-generated Activity to the invocation rather than its resource owner. */
+  activityForInvocation?: (source?: CommandSource) => ExtensionActivityApi;
   notify: ExtensionNotifyApi;
   automation: ExtensionAutomationApi;
   process: ExtensionProcessApi;
@@ -158,6 +161,7 @@ export interface CommandRunner {
 }
 
 export interface InternalExecuteInput extends CommandExecuteInput {
+  collectionQuery?: import("./collection-query").CollectionQueryPolicy;
   navigationScope?: NavigationScope;
   depth: number;
 }

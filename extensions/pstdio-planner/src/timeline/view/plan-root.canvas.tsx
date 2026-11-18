@@ -18,6 +18,7 @@ const plan = {
   ticketRows: [],
   ticketAttributes: [],
   savedViews: { views: [], defaultViewId: null },
+  page: { revision: "fixture", cursor: null, total: 0, filteredTotal: 0, groups: [] },
 };
 function TimelineStory(props: { failConfigure?: boolean; loading?: "tickets" | "preferences" }) {
   const { failConfigure, loading } = props;
@@ -33,6 +34,9 @@ function TimelineStory(props: { failConfigure?: boolean; loading?: "tickets" | "
     if (method !== "commands.execute") throw new Error(`Unexpected capability: ${method}`);
     let value: unknown;
     switch (input?.commandId?.split(".command.")[1]) {
+      case "timeline.plan.schema":
+        value = plan;
+        break;
       case "timeline.plan.read":
         if (loading === "tickets") return new Promise(() => {});
         value = plan;
@@ -58,7 +62,7 @@ function TimelineStory(props: { failConfigure?: boolean; loading?: "tickets" | "
     return { outcome: { ok: true, status: "success", value } };
   };
   const host: GuestHost = {
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     call: respond as GuestHost["call"],
     onEvent: () => () => {},
   };

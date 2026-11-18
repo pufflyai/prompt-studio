@@ -3,7 +3,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { expect, type Request, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
-const actionPath = "/extensions/commands/pstdio.pstdio-session-browser.view.conversation.chat.onAction/execute";
+const actionPath = "/extensions/commands/pstdio.session-browser.view.conversation.chat.onAction/execute";
 const isSubmit = (request: Request) =>
   request.method() === "POST" &&
   request.url().endsWith(actionPath) &&
@@ -74,7 +74,6 @@ test.describe("Session attachments", () => {
   let projectId: string;
 
   test.beforeEach(async ({ request }) => {
-    test.setTimeout(20_000);
     await deleteAllProjects(request);
     const project = await createProjectViaApi(request, "Session Attachment Test Project");
     projectId = project.id;

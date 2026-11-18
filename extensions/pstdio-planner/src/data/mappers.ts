@@ -118,7 +118,7 @@ export const ticketToRow = (
   tags: StoredTag[] = [],
   linkedResources: TicketLinkedResourceLookup = new Map(),
   parentLookup: TicketParentLookup = new Map(),
-  extensionId = "pstdio.pstdio-planner",
+  extensionId = "pstdio.planner",
 ) => ticketToRowWithTags(ticket, projectId, createTagOptionsLookup(tags), linkedResources, parentLookup, extensionId);
 
 export const createTicketRowMapper = (
@@ -126,7 +126,7 @@ export const createTicketRowMapper = (
   tags: StoredTag[] = [],
   linkedResources: TicketLinkedResourceLookup = new Map(),
   parentLookup: TicketParentLookup = new Map(),
-  extensionId = "pstdio.pstdio-planner",
+  extensionId = "pstdio.planner",
 ) => {
   const tagOptions = createTagOptionsLookup(tags);
   return (ticket: TicketSummary) =>

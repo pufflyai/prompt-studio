@@ -14,7 +14,7 @@ export const recoveryError = (error: unknown): DesktopRecoveryError => {
     return {
       code: error.code === "missing_sidecar" ? "sidecar_missing" : error.code,
       message: error.message.slice(error.message.indexOf(": ") + 2),
-      actions: ["open_logs", "copy_diagnostics", "quit"],
+      actions: ["open_logs", "quit"],
     };
   }
   const detail = error instanceof Error ? error.message : String(error);
@@ -22,14 +22,14 @@ export const recoveryError = (error: unknown): DesktopRecoveryError => {
     return {
       code: "sidecar_missing",
       message: "The packaged Prompt Studio runtime could not be found.",
-      actions: ["open_logs", "copy_diagnostics", "quit"],
+      actions: ["open_logs", "quit"],
     };
   }
   if (detail.includes("invalid_descriptor") || detail.includes("ownership is unsafe")) {
     return {
       code: "runtime_ownership_uncertain",
       message: "Prompt Studio found a runtime whose ownership could not be verified safely.",
-      actions: ["retry", "open_logs", "copy_diagnostics", "quit"],
+      actions: ["retry", "open_logs", "quit"],
     };
   }
   // Unexpected exits supply the bounded runtime log tail, not a display message.
@@ -41,6 +41,6 @@ export const recoveryError = (error: unknown): DesktopRecoveryError => {
     ...(classified
       ? { code: recoveryCode(detail), message: detail.slice(detail.indexOf(": ") + 2) }
       : classifyRuntimeFailure(detail)),
-    actions: ["retry", "open_logs", "copy_diagnostics", "quit"],
+    actions: ["retry", "open_logs", "quit"],
   };
 };

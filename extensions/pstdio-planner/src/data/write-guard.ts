@@ -3,6 +3,7 @@ import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 
 type WriteGuardContext = Pick<ExtensionContextBase, "projectId" | "extensionId">;
 
+// Keep the historical internal domain so pre-rename handlers and current owners share admission.
 // Runtime reloads import new source snapshots while old handlers may still be running.
 const registryKey = Symbol.for("pstdio.pstdio-planner.write-guards");
 const waitersKey = Symbol.for("pstdio.pstdio-planner.write-waiters");
@@ -21,7 +22,11 @@ export async function withWriteGuard<T>(
   write: () => Promise<T>,
   onBusy?: () => T,
 ) {
-  const owner = JSON.stringify([ctx.projectId, ctx.extensionId, key]);
+  const owner = JSON.stringify([
+    ctx.projectId,
+    ctx.extensionId === "pstdio.planner" ? "pstdio.pstdio-planner" : ctx.extensionId,
+    key,
+  ]);
   if (active.has(owner)) {
     if (onBusy) return onBusy();
     throw new Error("Another Planner write is running. Retry when it finishes.");
@@ -39,7 +44,11 @@ export async function withWriteGuard<T>(
 
 // Stop must observe the records a session launch is still writing before it cancels their owners.
 export async function withQueuedWriteGuard<T>(ctx: WriteGuardContext, key: string, write: () => Promise<T>) {
-  const owner = JSON.stringify([ctx.projectId, ctx.extensionId, key]);
+  const owner = JSON.stringify([
+    ctx.projectId,
+    ctx.extensionId === "pstdio.planner" ? "pstdio.pstdio-planner" : ctx.extensionId,
+    key,
+  ]);
   while (active.has(owner)) {
     await new Promise<void>((resolve) => {
       const waiting = waiters.get(owner) ?? new Set();

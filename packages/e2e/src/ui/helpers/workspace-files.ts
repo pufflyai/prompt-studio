@@ -101,7 +101,7 @@ export const exerciseWorkspaceFileOperations = async (input: {
   const moved = filesTree.locator('[data-tree-list-node-id="generated/zzz-folder"]');
   await moved.focus();
   await moved.press("ArrowRight");
-  const selectedTreeRead = "**/pstdio.pstdio-workspaces.view.file-tree.tree.body/execute";
+  const selectedTreeRead = "**/pstdio.workspaces.view.file-tree.tree.body/execute";
   const readPending = Promise.withResolvers<void>();
   const releaseRead = Promise.withResolvers<void>();
   const holdSelectedRead = async (route: import("@playwright/test").Route) => {
@@ -123,7 +123,7 @@ export const exerciseWorkspaceFileOperations = async (input: {
     const renameFolder = filesTree.getByRole("textbox", { name: "Folder name", exact: true });
     await expect(renameFolder).toBeFocused();
     await renameFolder.fill("generated-renamed");
-    const renamed = page.waitForRequest("**/pstdio.pstdio-workspaces.command.rename-entry/execute");
+    const renamed = page.waitForRequest("**/pstdio.workspaces.command.rename-entry/execute");
     await renameFolder.press("Enter");
     await renamed;
     releaseRead.resolve();
@@ -151,7 +151,8 @@ export const exerciseWorkspaceFileOperations = async (input: {
   await renameFile.fill("renamed.md");
   await renameFile.press("Enter");
   await expectWorkspaceDocument(page, "renamed.md");
-  const action = page.frameLocator('iframe[title="Workspace action"]');
+  // Deletion asks through the host's native command confirmation.
+  const action = page.getByRole("dialog").filter({ hasText: "Delete entry:" });
   const remove = async (row: Locator, label: string) => {
     await row.click({ button: "right" });
     await page.getByRole("menuitem", { name: label, exact: true }).click();
@@ -159,7 +160,7 @@ export const exerciseWorkspaceFileOperations = async (input: {
   };
   const renamed = filesTree.getByRole("option", { name: "renamed.md", exact: true });
   await remove(renamed, "Delete file");
-  await action.getByRole("button", { name: "Cancel", exact: true }).click();
+  await action.getByRole("button", { name: "Close", exact: true }).filter({ hasText: "Close" }).click();
   await expectWorkspaceDocument(page, "renamed.md");
   expect(existsSync(join(worktreePath, "renamed.md"))).toBe(true);
   await remove(renamed, "Delete file");

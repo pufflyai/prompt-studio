@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { listAttempts, putAttempt } from "../data/attempt-storage";
+import { putAttempt } from "../data/attempt-storage";
+import { listAttempts } from "../data/attempt-storage.fixture";
 import { readAutoBuildMode } from "../data/auto-build-mode";
 import { putTicket } from "../data/ticket-context.fixture";
 
@@ -108,6 +109,12 @@ test("ordinary workspace writers and full capacity prevent automatic recovery", 
   ctx.sessions.get = async (id) =>
     ({ id, title: id, status: id === started.session.id ? "disconnected" : "in_progress" }) as never;
   await runAttemptCommand.run(ctx, { ticket: other.id });
+  ctx.sessions.query = sessionQuery(async () => {
+    const attempts = await listAttempts(storage);
+    return (await Promise.all(attempts.map((attempt) => ctx.sessions.get(attempt.implementationSessionId)))).filter(
+      (row) => row !== null,
+    );
+  });
   expect(await autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: mode.revision })).toMatchObject({
     decision: "wait",
     reason: "capacity-full",

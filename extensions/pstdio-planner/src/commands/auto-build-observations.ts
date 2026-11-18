@@ -1,9 +1,11 @@
 import type { CommandContext, SessionRunSnapshot } from "@pstdio/sdk/extensions";
 import type { AttemptRecord, AttemptTimelineEvent, TicketAttemptSelection } from "../data/attempt-types";
 import { hasPendingImplementationInput } from "../data/implementation-input";
+import type { GithubReads } from "../data/pull-request-resources";
 import type { TicketReviewRequests } from "../data/review-request-types";
-import { readSessionHistory } from "../data/session-history";
+import type { TicketInputState } from "../data/ticket-input-state";
 import type { Ticket } from "../data/types";
+import { hasWorkspaceWriter } from "../data/workspace-writers";
 import { isUnexpectedExit } from "./auto-build-resume";
 import { isLiveSession } from "./auto-build-sessions";
 import { WorkspaceUnavailableError, workspaceHead } from "./change-requests";
@@ -63,6 +65,7 @@ const observeSubmittedWork = async (
   ticket: Ticket,
   attempt: AttemptRecord,
   events: AttemptTimelineEvent[],
+  reads?: GithubReads,
 ) => {
   const revision = attempt.revisions.at(-1)!;
   const [head, pr] = await Promise.all([
@@ -70,7 +73,7 @@ const observeSubmittedWork = async (
       if (error instanceof WorkspaceUnavailableError) return error;
       throw error;
     }),
-    readPullRequestEvidence(ctx, ticket, revision.headSha),
+    readPullRequestEvidence(ctx, ticket, revision.headSha, reads),
   ]);
   if (head instanceof WorkspaceUnavailableError)
     return observation(
@@ -101,10 +104,11 @@ const observeSubmittedWork = async (
 };
 
 interface ObserveInput {
-  requests: Map<string, TicketReviewRequests>;
+  requests: Map<string, TicketReviewRequests | TicketInputState>;
   completedStatusIds: string[];
   events: AttemptTimelineEvent[];
   owned: boolean;
+  pullRequestReads?: GithubReads;
 }
 
 type Session = NonNullable<Awaited<ReturnType<CommandContext["sessions"]["get"]>>>;
@@ -152,7 +156,7 @@ const observeStoppedWork = async (
       "The session stopped before recording a committed handoff.",
       "Auto Build asks the owner to continue the task and record a revision.",
     );
-  const result = await observeSubmittedWork(ctx, ticket, attempt, input.events);
+  const result = await observeSubmittedWork(ctx, ticket, attempt, input.events, input.pullRequestReads);
   if (result.candidate) result.candidate.expectedRun = runSnapshot(session);
   return result;
 };
@@ -167,9 +171,7 @@ const observeVariant = async (ctx: CommandContext, ticket: Ticket, attempt: Atte
       "Implementation variants need an explicit selection.",
       "Select the variant to advance.",
     );
-  const competing = (await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId })).some(
-    (other) => other.id !== session?.id && isLiveSession(other),
-  );
+  const competing = await hasWorkspaceWriter(ctx.sessions, attempt.workspaceId, session?.id);
   if (competing)
     return observation(
       attempt,
@@ -193,12 +195,13 @@ export async function observeTicketWork(
   ctx: CommandContext,
   ticket: Ticket,
   input: {
-    requests: Map<string, TicketReviewRequests>;
+    requests: Map<string, TicketReviewRequests | TicketInputState>;
     completedStatusIds: string[];
     attempts: AttemptRecord[];
     retired: Set<string>;
     selections: TicketAttemptSelection[];
     events: AttemptTimelineEvent[];
+    pullRequestReads?: GithubReads;
   },
 ) {
   const { attempts, retired, selections, ...shared } = input;

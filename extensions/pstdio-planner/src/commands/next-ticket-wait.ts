@@ -10,7 +10,7 @@ interface NextTicketWaitInput {
   capacity: { running: number; limit: number };
 }
 
-export function nextTicketWait(row: PlanRow, input: NextTicketWaitInput) {
+export function nextTicketWait(row: Pick<PlanRow, "gate">, input: NextTicketWaitInput) {
   const wait = (reason: WaitingTicket["reason"], dependencyIds: string[] = [], detail?: string) => ({
     reason,
     dependencyIds,

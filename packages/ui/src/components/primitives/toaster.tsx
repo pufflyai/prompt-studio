@@ -3,10 +3,13 @@ import { ScrollArea } from "@/components/primitives/scroll-area";
 import { createUiToaster } from "@/utils/create-ui-toaster";
 import { Portal, useUiScope } from "@/utils/ui-scope";
 
+/** @deprecated Use contextual feedback or the workbench status bar. */
 export const toaster: ReturnType<typeof createToaster> = createUiToaster();
 
+/** @deprecated Use contextual feedback or the workbench status bar. */
 export const useToaster: () => ReturnType<typeof createToaster> = () => useUiScope()?.toaster ?? toaster;
 
+/** @deprecated Use contextual feedback or the workbench status bar. */
 export const Toaster = () => {
   const scopedToaster = useToaster();
   return (

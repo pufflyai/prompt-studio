@@ -1,7 +1,7 @@
 import type { CommandRef } from "./types/commands";
 import type { PageRef, ViewRef } from "./types/contribution-identity";
 
-const extensionId = "pstdio.pstdio-workspaces";
+const extensionId = "pstdio.workspaces";
 const page = (id: string): PageRef => ({ kind: "page", extensionId, id });
 const view = (id: string): ViewRef => ({ kind: "view", extensionId, id });
 const command = (id: string): CommandRef => ({ kind: "command", extensionId, id });

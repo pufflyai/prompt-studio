@@ -111,7 +111,14 @@ Explicit Git refs and other repository sources use the system Git executable. Wh
   Healthy local-path extensions stay under local control.
 - In the extension panel, every row that can take a newer release shows an upgrade button next to
   its switch. The button upgrades only that extension. **Upgrade all** in the panel header runs
-  Upgrade for every extension that offers it, and only appears when at least one does.
+  up to four upgrades at once, using the connected host's capacity. Its progress bar counts completed
+  attempts. Each row shows Waiting until a worker starts, then a spinner. A successful upgrade
+  updates the version and clears progress. A successful install moves the extension from Available
+  to Installed. Install and upgrade failures can be retried in place. Dismissing a row failure
+  preserves the batch count. The extension switch shows a spinner inside its thumb while it updates.
+- Overlapping catalog changes share one workspace refresh per project. Changes arriving during a
+  refresh revisit workspaces that already processed the older catalog. Healthy workspaces keep their
+  ready state while files update. Session launches wait for maintenance to finish.
 - `pst extensions update [name]` runs that same host-owned upgrade path for the project in the
   current folder, or the one named with `--project-id`. When `name` is omitted, it upgrades every
   instance the host marks as eligible. The command does not replace healthy local sources or change
@@ -320,8 +327,8 @@ host's registered id without owner prefixing, for every contribution kind; runti
 are the one implementation of this rule; a ref without `extensionId` belongs to the owner, or to the host when there is none.
 
 This manifest is illustrative. The built-in Planner package is named `pstdio-planner`,
-so its extension ID is `pstdio.pstdio-planner`. Its `list-tickets` command resolves
-to `pstdio.pstdio-planner.command.list-tickets`.
+so its extension ID is `pstdio.planner`. Its `list-tickets` command resolves
+to `pstdio.planner.command.list-tickets`.
 
 When another extension needs a public command, the provider owns and exports that contract from one module:
 
@@ -422,4 +429,4 @@ Agents and clients use the same API: `GET` and `POST
 `kind: "rollback"` with `extensionId`, package `revision` and `expectedRevision`;
 or `kind: "enabled"` with `extensionId`, `enabled` and `expectedRevision`.
 
-*Updated at: 2026-11-03*
+*Updated at: 2026-11-12*

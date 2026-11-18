@@ -5,16 +5,19 @@ import type {
   ProjectExtensionInstance,
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
-import { AlertMessage, Switch, type SwitchProps } from "@pstdio/ui";
+import { AlertMessage, Switch } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import type { ExecuteOptionCommand } from "@pstdio/workbench/react";
-import { ArrowUpCircle, Blocks, RotateCw, SlidersHorizontal, Timer } from "lucide-react";
+import { Blocks, RotateCw, SlidersHorizontal, Timer } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { type ReactNode, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
-import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
+import { createExtensionStringResolver } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
+import { ExtensionActionButton } from "./extension-action-button";
+import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionConnectionsCard } from "./extension-connections-card";
 import { ExtensionContributions } from "./extension-contributions";
 import { ExtensionDeleteSection } from "./extension-delete-section";
@@ -23,6 +26,7 @@ import { ExtensionHealthPopover } from "./extension-health-popover";
 import { ExtensionIcon } from "./extension-icon";
 import { ExtensionSettingsForm } from "./extension-settings-form";
 import { settingsToParams } from "./extension-settings-params";
+import { ExtensionToggle } from "./extension-toggle";
 
 export interface ExtensionDetailProps {
   projectId?: string;
@@ -34,8 +38,15 @@ export interface ExtensionDetailProps {
   unavailableHarnesses?: AgentInfo[];
   settings: ExtensionSettingValueRecord[];
   settingsViews?: ReactNode;
-  toggling?: boolean;
+  actionFeedback?: ReactNode;
+  upgradeAction?: ExtensionActionState;
+  onDismissUpgrade?: (action: ExtensionActionState) => void;
+  onRetryUpgrade?: () => void;
+  toggleAction?: ExtensionActionState;
+  onDismissToggle?: () => void;
+  onRetryToggle?: () => void;
   reloading?: boolean;
+  sourceChanging?: boolean;
   upgrading?: boolean;
   uninstalling?: boolean;
   togglingAutomationId?: string;
@@ -60,8 +71,15 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     unavailableHarnesses = [],
     settings,
     settingsViews,
-    toggling,
+    actionFeedback,
+    upgradeAction,
+    onDismissUpgrade,
+    onRetryUpgrade,
+    toggleAction,
+    onDismissToggle,
+    onRetryToggle,
     reloading,
+    sourceChanging,
     upgrading,
     uninstalling,
     togglingAutomationId,
@@ -74,18 +92,18 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     onUninstall,
   } = props;
   const { t } = useTranslation("projects");
+  const toggling = toggleAction?.status === "running";
+  const changingSource = [toggling, reloading, uninstalling, upgrading, sourceChanging].some(Boolean);
+  const resolveString = createExtensionStringResolver(getRuntimeCollections(), projectId);
   const failed = extension.status === "error";
   // Changed source on disk is adopted by reloading it. Upgrade is only for sources a release replaces.
   const showReload = !extension.canUpgrade && extension.updateAvailable;
   const hasErrorDiagnostics = diagnostics.some((diagnostic) => diagnostic.severity === "error");
-  const hasSettings = settingsToParams(settings).length > 0;
+  const hasSettings = settingsToParams(settings, {}, resolveString).length > 0;
   const connections = metadata?.connections ?? [];
   const hasConnections = !!projectId && connections.length > 0;
   const hasSettingsContent = hasSettings || Boolean(settingsViews) || hasConnections || automations.length > 0;
   const [tab, setTab] = useState("settings");
-  const handleCheckedChange: NonNullable<SwitchProps["onCheckedChange"]> = (details) => {
-    onToggle(details.checked);
-  };
 
   return (
     <Tabs.Root
@@ -127,22 +145,23 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                     extension={extension}
                     diagnostics={diagnostics}
                     unavailableHarnesses={unavailableHarnesses}
-                    upgrading={upgrading}
+                    upgrading={changingSource}
                     onUpgrade={onUpgrade}
                   />
                 )}
-                {extension.canUpgrade && (
-                  <Button
+                {(extension.canUpgrade || upgradeAction) && (
+                  <ExtensionActionButton
                     variant="primary"
                     size="2xs"
-                    onClick={onUpgrade}
-                    loading={upgrading}
+                    onAction={onUpgrade}
+                    action={upgradeAction}
+                    onDismiss={onDismissUpgrade}
+                    onRetry={onRetryUpgrade}
+                    disabled={changingSource}
                     data-testid="extension-upgrade"
-                    flexShrink="0"
                   >
-                    <ArrowUpCircle size={12} />
                     {t("projectSettings.extensionsPanel.upgrade.action")}
-                  </Button>
+                  </ExtensionActionButton>
                 )}
                 {showReload && (
                   <Button
@@ -150,6 +169,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                     size="2xs"
                     onClick={onReload}
                     loading={reloading}
+                    disabled={changingSource}
                     data-testid="extension-reload"
                     flexShrink="0"
                   >
@@ -157,15 +177,22 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                     {t("projectSettings.extensionsPanel.reload.action")}
                   </Button>
                 )}
-                <Switch
-                  size="sm"
-                  checked={extension.enabled}
-                  onCheckedChange={handleCheckedChange}
-                  disabled={toggling || uninstalling}
-                  aria-label={t("projectSettings.extensionsPanel.toggleAriaLabel", { name: extension.displayName })}
+                <ExtensionToggle
+                  name={extension.displayName}
+                  enabled={extension.enabled}
+                  action={toggleAction}
+                  disabled={changingSource}
+                  onToggle={onToggle}
                 />
               </HStack>
 
+              <ExtensionActionFeedback
+                action={toggleAction}
+                onDismiss={onDismissToggle}
+                onRetry={onRetryToggle}
+                retryDisabled={changingSource}
+              />
+              {actionFeedback}
               {extension.description && (
                 <Text textStyle="paragraph/S/regular" color="fg.muted">
                   {extension.description}
@@ -193,7 +220,9 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                 </Text>
               </Stack>
 
-              {failed && <ExtensionDetailHealth extension={extension} upgrading={upgrading} onUpgrade={onUpgrade} />}
+              {failed && (
+                <ExtensionDetailHealth extension={extension} upgrading={changingSource} onUpgrade={onUpgrade} />
+              )}
 
               {!failed && diagnostics.length > 0 && (
                 <AlertMessage
@@ -230,6 +259,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
               <Stack gap="lg" paddingX="lg">
                 {hasSettings ? (
                   <ExtensionSettingsForm
+                    resolveString={resolveString}
                     settings={settings}
                     executeOptionCommand={executeOptionCommand}
                     onChangeSetting={onChangeSetting}
@@ -258,7 +288,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                       <HStack key={automation.id} gap="md" minH="7" data-testid="extension-automation-row">
                         <Stack gap="0" flex="1" minW="0">
                           <Text textStyle="label/S/regular" truncate>
-                            {resolveLocalizableString(automation.title, automation.extensionId)}
+                            {resolveString(automation.title, automation.extensionId)}
                           </Text>
                           <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle" truncate>
                             {automation.commandId} ·{" "}
@@ -268,10 +298,10 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                         <Switch
                           size="sm"
                           checked={automation.enabled}
-                          disabled={togglingAutomationId === automation.id}
+                          disabled={togglingAutomationId === automation.id || changingSource}
                           onCheckedChange={(details) => onToggleAutomation(automation, details.checked)}
                           aria-label={t("projectSettings.extensionsPanel.automations.toggleAriaLabel", {
-                            name: resolveLocalizableString(automation.title, automation.extensionId),
+                            name: resolveString(automation.title, automation.extensionId),
                           })}
                         />
                       </HStack>
@@ -285,6 +315,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
           <Tabs.Content value="contributions">
             <Stack paddingX="lg">
               <ExtensionContributions
+                resolveString={resolveString}
                 workbench={props.workbench}
                 metadata={metadata}
                 extensionId={extension.extensionId}
@@ -292,7 +323,12 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
               />
             </Stack>
           </Tabs.Content>
-          <ExtensionDeleteSection scope={extension.scope} uninstalling={uninstalling} onUninstall={onUninstall} />
+          <ExtensionDeleteSection
+            scope={extension.scope}
+            uninstalling={uninstalling}
+            disabled={changingSource}
+            onUninstall={onUninstall}
+          />
         </Stack>
       </PageContentLayout>
     </Tabs.Root>

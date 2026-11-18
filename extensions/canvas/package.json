@@ -18,11 +18,12 @@
     "@chakra-ui/react": "3.32.0",
     "@emotion/react": "^11.0.0",
     "@pstdio/canvas": "0.46.0-nightly.20261031030226",
-    "@pstdio/sdk": "0.47.0-preview.sha-ce1af652bbf51fce0b29b5e74f4e7f0a16d60ab4",
-    "@pstdio/ui": "0.47.0-preview.sha-ce1af652bbf51fce0b29b5e74f4e7f0a16d60ab4",
+    "@pstdio/sdk": "0.47.0-nightly.20261112030231",
+    "@pstdio/ui": "0.47.0-nightly.20261112030231",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "zod": "^4.1.12"
+    "zod": "^4.1.12",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@types/bun": "1.4.2",

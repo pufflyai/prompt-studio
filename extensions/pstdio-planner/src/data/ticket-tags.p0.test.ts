@@ -6,6 +6,7 @@ import { TAGS_COLLECTION, TICKETS_COLLECTION } from "./collections";
 import { DEFAULT_TAGS } from "./seed";
 import { seedTicketIdentity } from "./ticket-context.fixture";
 import { ticketRecords } from "./ticket-records";
+import { readTicketTags } from "./ticket-tag-storage";
 import type { StoredTag, StoredTicket } from "./types";
 
 const option = (id: string, sortOrder: number) => ({
@@ -43,6 +44,13 @@ const ticket: StoredTicket = {
   createdAt: "2026-10-01T00:00:00.000Z",
   updatedAt: "2026-10-01T00:00:00.000Z",
 };
+
+test("concurrent option choices have the same resolved order before and after serialization", () => {
+  const read = (options: Record<string, boolean>) =>
+    readTicketTags({ ...ticket, tags: {}, tagSelections: { flags: { type: "multi", options } } }).tags?.flags;
+  expect(read({ risky: true, "needs-docs": true })).toEqual(["needs-docs", "risky"]);
+  expect(read({ "needs-docs": true, risky: true })).toEqual(["needs-docs", "risky"]);
+});
 
 const offlineDevices = async () => {
   const definitions = [...DEFAULT_TAGS.map((seed) => seed()), track, flags];

@@ -3,7 +3,7 @@ import { ticketPageTarget } from "../data/ticket-page-target";
 import type { StoredStatus, Ticket } from "../data/types";
 
 export { plannerTicketsChanged } from "../events";
-export const plannerExtensionId = "pstdio.pstdio-planner";
+export const plannerExtensionId = "pstdio.planner";
 export type PlannerTicket = Pick<
   Ticket,
   "id" | "shorthand" | "title" | "content" | "statusId" | "tags" | "parentId" | "dependsOn" | "blockedReason"

@@ -7,7 +7,6 @@ const command = (publisher: string): ExtensionCommandRecord => ({
   extensionId: `${publisher}.notes`,
   title: "List notes",
   cliPath: `${publisher}.notes list`,
-  cliAliases: [`${publisher}-notes`],
 });
 test("routes identical names by full ID and rejects an ambiguous deprecated name", () => {
   const alice = command("alice");
@@ -17,7 +16,6 @@ test("routes identical names by full ID and rejects an ambiguous deprecated name
   expect(table.byPath.get("bob.notes list")).toBe(bob);
   expect(table.byPath.get("notes list")).toBeUndefined();
   expect(table.collisions).toContainEqual({ path: "notes list", commands: [alice, bob] });
-  expect(table.byPath.get("alice-notes")).toBe(alice);
 });
 test("keeps an unambiguous deprecated namespace available", () => {
   const alice = command("alice");

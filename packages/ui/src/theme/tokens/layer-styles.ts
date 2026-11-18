@@ -1,6 +1,10 @@
 import { defineLayerStyles } from "@chakra-ui/react";
 
 export const layerStyles = defineLayerStyles({
+  documentContent: { value: { width: "full", minWidth: "0", maxWidth: "document-content", marginInline: "auto" } },
+  resourceActivityNotice: {
+    value: { minWidth: "0", color: "fg.muted", bg: "bg.muted", padding: "xs", borderRadius: "xs" },
+  },
   documentNotice: {
     value: {
       position: "sticky",

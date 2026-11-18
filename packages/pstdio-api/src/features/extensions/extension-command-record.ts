@@ -3,11 +3,12 @@ import type { RuntimeCommandRecord } from "pstdio-extensions";
 
 export const toCommandRecord = (command: RuntimeCommandRecord): ExtensionCommandRecord => ({
   id: command.id,
+  localId: command.localId,
   extensionId: command.extensionId,
   title: command.title,
   description: command.description,
   cliPath: command.cli?.pathKey,
-  cliAliases: command.cli?.globalAliases?.map((alias) => alias.join(" ")),
+  cliAliases: command.cli?.deprecatedPaths?.map((alias) => alias.join(" ")),
   examples: command.cli?.examples,
   automation: command.automation,
   mutating: command.mutating,

@@ -83,6 +83,33 @@ removal. Four independent tasks keep ownership bounded while reducing this last
 serial I/O phase; native qualification remains required. POSIX retains
 its qualified single traversal.
 
+## Update: bounded independent fixture trees (2026-11-12)
+
+Fresh [ARM native evidence](https://github.com/pufflyai/prompt-studio/actions/runs/43263528704/job/131342738303)
+at bf7e913c5 completes every board assertion at 27.152 seconds and closes the
+runtime at 27.833 seconds, then exhausts the unchanged 30-second allowance in
+removal. The offline-move case closes its runtimes at 26.352 seconds and also
+expires in removal. Detailed phase logs identify the remaining-root traversal;
+they do not establish which subtree dominates or exonerate setup cost.
+
+Supersede the earlier POSIX single-traversal and Windows extensions-only
+scheduling boundaries: partition real immediate directories of the owned root
+into one queue, with at most four case-owned native utilities. Windows keeps its
+existing immediate installed-package partition in that same queue. Inspect only
+real directories; never enumerate symbolic links or junction targets. Fixtures
+still stop their runtimes first. Await all sibling outcomes, propagate any error,
+and only then remove the remaining files, links and empty parent. Cancellation
+never starts a fallback traversal. Keep Node's existing ordinary-error recovery
+and retry values unchanged.
+
+This changes deletion scheduling only. It moves no cleanup outside the case,
+shares no mutable homes, and changes no functional assertion, workload, worker
+count or execution allowance. Real filesystem checks cover multiple sibling
+trees, external directory links and hardlinks, a linked extensions root, readonly
+and long Unicode paths, and the existing transient-handle behavior. Fresh native
+qualification must still demonstrate completion; local passes alone do not prove
+a hosted timing improvement.
+
 The command-discovery fixture uses the same asynchronous removal policy after
 [Windows run 40010409328](https://github.com/pufflyai/prompt-studio/actions/runs/40010409328/job/120620966481)
 completed its real Node shim assertions but failed synchronous cleanup with `EBUSY`

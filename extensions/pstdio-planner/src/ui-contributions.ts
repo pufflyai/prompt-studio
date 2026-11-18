@@ -19,6 +19,7 @@ import { queryTickets } from "./commands/query-tickets";
 import { saveTicketContent } from "./commands/save-ticket-content";
 import { setTicketAttribute } from "./commands/set-ticket-attribute";
 import { listTicketFilesTree } from "./commands/ticket-files";
+import { listTicketFilesPage } from "./commands/ticket-files-page";
 import { queryTicketProperties } from "./commands/ticket-properties/query";
 import { updateTicketProperty } from "./commands/ticket-properties/update";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
@@ -56,6 +57,7 @@ const createTicketFilesView = () =>
       kind: "tree",
       structure: ticketNavigationStructure,
       body: listTicketFilesTree,
+      page: listTicketFilesPage,
       refreshEvents: [
         plannerTicketsChanged,
         viewDataEvents.sessionsChanged,
@@ -107,7 +109,7 @@ export const createPlannerUi = (baseUrl: string) => {
     body: {
       kind: "webview",
       entry: packageAsset("./src/views/ticket-review-requests.tsx", baseUrl),
-      capabilities: ["commands.execute"],
+      capabilities: ["commands.execute", "commands.query"],
     },
   });
   const tickets = defineView({
@@ -116,6 +118,7 @@ export const createPlannerUi = (baseUrl: string) => {
     icon: "square-kanban",
     body: {
       kind: "kanban",
+      queryMode: "paged",
       attributes: buildTicketAttributes([]),
       query: queryTickets,
       schemaRefreshEvents: [plannerSchemaChanged],
@@ -175,6 +178,8 @@ export const createPlannerUi = (baseUrl: string) => {
     icon: "chart-no-axes-gantt",
     body: {
       ...tickets.body,
+      queryMode: "static",
+      maxRows: 1,
       query: timelineViewSchema,
       defaultSettings: { ...tickets.body.defaultSettings, displayProperties: DEFAULT_TIMELINE_DISPLAY_PROPERTIES },
     },

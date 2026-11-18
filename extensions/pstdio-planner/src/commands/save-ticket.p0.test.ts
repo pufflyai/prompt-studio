@@ -33,7 +33,7 @@ test("save racing a file edit from the editor leaves every file readable", async
   await save();
   const [ticket] = await ticketsCollection(storage).list();
 
-  // The editor saves the file after `pst pstdio.pstdio-planner save-ticket` has read the ticket. The save must not
+  // The editor saves the file after `pst pstdio.planner save-ticket` has read the ticket. The save must not
   // compare against or keep the body the editor replaced.
   let edit: Promise<unknown> | undefined;
   const readText = projectFiles.readText.bind(projectFiles);

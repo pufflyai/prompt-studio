@@ -8,7 +8,7 @@ import { formatBytes, formatCpu } from "../format";
 import { useTranslations } from "../translations";
 import { SectionLabel } from "./section-label";
 
-const OWN_EXTENSION_ID = "pstdio.pstdio-performance";
+const OWN_EXTENSION_ID = "pstdio.performance";
 
 // A row turns amber when its 30-second average reaches a quarter of one core.
 const BUSY_CPU_PERCENT = 25;
@@ -133,6 +133,8 @@ export const CpuSection = (props: CpuSectionProps) => {
     return source.memoryKiB === null ? views : `${views} · ${formatBytes(source.memoryKiB * 1024)}`;
   };
 
+  let sectionDetail = processMetrics ? t("popover.window", "last 30 s") : undefined;
+  if (error) sectionDetail = t("popover.cpuUnavailableTitle", "Could not read CPU.");
   return (
     <Stack
       gap="0"
@@ -143,15 +145,7 @@ export const CpuSection = (props: CpuSectionProps) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setFrozenOrder(null);
       }}
     >
-      <SectionLabel
-        title={t("popover.cpu", "CPU")}
-        detail={processMetrics ? t("popover.window", "last 30 s") : undefined}
-      />
-      {error ? (
-        <AlertMessage status="error" title={t("popover.cpuUnavailableTitle", "Could not read CPU.")}>
-          {t("popover.cpuUnavailableBody", "Frame rate still updates.")}
-        </AlertMessage>
-      ) : null}
+      <SectionLabel title={t("popover.cpu", "CPU")} detail={sectionDetail} />
       {snapshot && !processMetrics ? (
         <AlertMessage status="info" title={t("popover.browserTitle", "CPU is measured in the desktop app")}>
           {t("popover.browserBody", "A browser tab cannot read CPU.")}

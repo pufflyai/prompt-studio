@@ -75,12 +75,12 @@ Tools can expose their actions as CLI commands. That lets an agent use a tool di
 
 ```sh
 pst --help
-pst pstdio-notes --help
-pst pstdio-notes notes create --help
-pst pstdio-notes notes create --title "Reading list"
+pst pstdio.notes --help
+pst pstdio.notes create --help
+pst pstdio.notes create --title "Reading list"
 ```
 
-With Notes installed and enabled, the last command creates the same empty note as **New note** in the sidebar. Open it in Notes to check the result. Planner adds shorter aliases such as `pst tickets list`; an extension's help shows its own paths and aliases.
+With Notes installed and enabled, the last command creates the same empty note as **New note** in the sidebar. Open it in Notes to check the result. Planner exposes commands such as `pst pstdio.planner list-tickets`. Each extension's help lists its commands under its full namespace.
 
 For extension commands, `--json` returns the execution response, including its success or failure outcome. Agents can read that response and pass returned IDs to later commands. Use `--help` before guessing an action's flags.
 

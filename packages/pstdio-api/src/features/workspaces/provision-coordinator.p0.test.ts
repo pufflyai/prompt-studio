@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandDiagnostic } from "pstdio-api-contracts/extension-kernel";
+import { createWorkspaceMaintenance } from "../../services/workspace-maintenance";
 import {
   type ProvisionCoordinatorDeps,
   provisionProjectWorkspaces,
+  removeProjectAfterProvisioning,
   runWorkspaceProvisioning,
   scheduleProjectWorkspaceProvisioning,
   type WorkspaceProvisioningHooks,
@@ -22,6 +24,8 @@ const makeDeps = (row: Row) => {
   const calls: string[] = [];
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
+      get: async () => ({ ...row, project_id: "p1" }),
       getDefault: async () => ({
         id: "home",
         project_id: "project-1",
@@ -297,9 +301,48 @@ describe("provisionProjectWorkspaces", () => {
 
     await provisionProjectWorkspaces(deps, "p1", hooks);
 
-    expect(calls).toEqual(["initializing:true", "setup_error:config write failed"]);
+    expect(calls).toEqual(["setup_error:config write failed"]);
     expect(row.initializing).toBe(false);
     expect(row.setup_error).toBe("config write failed");
     expect(readyFired).toEqual([]);
+  });
+});
+
+describe("removeProjectAfterProvisioning", () => {
+  test("runs after the provisioning in flight and stops that pass before its remaining workspaces", async () => {
+    const workspace = (id: string): Row => ({
+      id,
+      initializing: false,
+      setup_error: null,
+      root_path: `/repo/${id}`,
+      provider_id: "pstdio.worktree",
+      provider_state: "ready",
+      execution_kind: "local",
+    });
+    const { deps } = makeDeps(workspace("first"));
+    (deps.workspaceService as unknown as { list: () => Promise<Row[]> }).list = async () => [
+      workspace("first"),
+      workspace("second"),
+    ];
+    const order: string[] = [];
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const provisioning = provisionProjectWorkspaces(deps, "p1", {
+      ...makeHooks(undefined, []),
+      ensureConfig: async (dir) => {
+        order.push(`config:${dir}`);
+        entered.resolve();
+        await release.promise;
+      },
+    });
+    await entered.promise;
+
+    const removal = removeProjectAfterProvisioning(deps, "p1", async () => {
+      order.push("removed");
+    });
+    release.resolve();
+    await Promise.all([provisioning, removal]);
+
+    expect(order).toEqual(["config:/repo/first", "removed"]);
   });
 });

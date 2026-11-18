@@ -23,7 +23,7 @@ Run these commands inside a linked project. A workspace shorthand is the short n
 
 A workspace provider creates each additional workspace. Providers declare their own parameters. The dashboard lists the providers that can create workspaces and shows their parameters. The project's own workspace is listed separately. A plain folder has no creation choices until an extension supplies a provider.
 
-In the dashboard's creation dialog, choose **Workspace type**, then fill in the provider's fields. For **Git worktree**, choose **Base branch** from the project's branches. The current branch is selected first. A detached checkout also offers **Current checkout (no branch)**. Select **Create workspace** to submit, or **Cancel** to close.
+In the dashboard's creation dialog, choose **Workspace type**, then fill in the provider's fields. For **Git worktree**, choose **Base branch** from the project's branches. The current branch is selected first. A detached checkout also offers **HEAD**, the current checkout without a branch. Select **Create workspace** to submit, or **Cancel** to close.
 
 On the CLI, pass the provider ID and its parameters as JSON:
 
@@ -38,6 +38,10 @@ The provider must be available on the current host. Unknown or unavailable provi
 ## Git worktrees
 
 The Git provider needs a repository with at least one commit. For a project in a repository subfolder, sessions run in the matching subfolder of the worktree. Files stay within that folder, but Git diff and merge include every changed path in the repository.
+
+Git Workspaces (`pstdio.git-workspaces`) is installed through the default extension catalog. It supplies discovery, revision validation, creation and cleanup through the public workspace-provider API. Git is needed to use this provider; opening an ordinary folder and installing Prompt Studio do not require Git.
+
+The existing `pstdio.worktree` provider ID routes to this installed extension. Existing workspace IDs, folders, branches and session links survive upgrade and restart without recreating checkouts. Disabling the provider preserves those files and records while making provider operations unavailable. Re-enabling it restores operations. A missing ready checkout is reported for recovery rather than recreated from the base commit.
 
 `merge` works only for Git workspaces. It squash-merges the provider-created branch into the current branch. `--delete-workspace` removes the workspace after a successful merge.
 

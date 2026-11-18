@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import {
   linkedResourceParentMetadata,
+  readTicketParentLookup,
   resolveTicketHierarchy,
   ticketResourceIdentity,
   ticketResourceReference,
@@ -18,6 +20,25 @@ const storedTicket = (overrides: Partial<Ticket>): Ticket => ({
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
   ...overrides,
+});
+
+test("parent lookup uses resident ancestry without preparing or querying storage", async () => {
+  const storage = createMemoryStorage();
+  storage.records.defineIndexes = async () => {
+    throw new Error("Resident ancestry needs no index preparation");
+  };
+  const ctx = makeCommandContext({ storage, params: {} });
+  const root = storedTicket({ id: "root" });
+  const child = storedTicket({ id: "child", parentId: root.id });
+  const lookup = await readTicketParentLookup(
+    ctx,
+    new Map([
+      [root.id, root],
+      [child.id, child],
+    ]),
+  );
+  expect(lookup.size).toBe(2);
+  expect(resolveTicketHierarchy(lookup.get(child.id)!, lookup).lineage.map(({ id }) => id)).toEqual(["root", "child"]);
 });
 
 describe("ticket resource hierarchy", () => {
@@ -87,7 +108,7 @@ describe("ticket resource hierarchy", () => {
             label: "PS-1 Root",
             shorthand: "PS-1",
             metadata: {
-              resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+              resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
             },
           },
         },
@@ -116,7 +137,7 @@ describe("ticket resource hierarchy", () => {
           label: "PS-1 Ticket",
           shorthand: "PS-1",
           metadata: {
-            resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+            resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
           },
         },
       },
@@ -142,7 +163,7 @@ describe("ticket resource hierarchy", () => {
     const ticket = storedTicket({ id: "archived", shorthand: "PS-4", archived: true });
 
     expect(ticketResourceIdentity(ticket).metadata).toEqual({
-      resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+      resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
     });
   });
 
@@ -158,7 +179,7 @@ describe("ticket resource hierarchy", () => {
         label: "PS-2 Child",
         shorthand: "PS-2",
         metadata: {
-          resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+          resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
         },
       },
     });
@@ -179,7 +200,7 @@ describe("tickets browse root", () => {
 
     expect(rootReference.metadata.resourceParent).toEqual({
       type: "view",
-      viewId: "pstdio.pstdio-planner.view.tickets",
+      viewId: "pstdio.planner.view.tickets",
     });
   });
 
@@ -188,7 +209,7 @@ describe("tickets browse root", () => {
 
     expect(ticketResourceReference(ticket).metadata.resourceParent).toEqual({
       type: "view",
-      viewId: "pstdio.pstdio-planner.view.tickets",
+      viewId: "pstdio.planner.view.tickets",
     });
   });
 });

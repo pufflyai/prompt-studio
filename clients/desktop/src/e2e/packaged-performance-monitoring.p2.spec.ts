@@ -1,5 +1,5 @@
 import { expect, type Page } from "@playwright/test";
-import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webview-path";
+import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-host";
 import { test } from "../testing/packaged-fixture";
 import {
   createPackagedHome,
@@ -21,6 +21,9 @@ import {
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
 // Renderer CPU budgets are benchmarks in packaged-renderer.p3.bench.ts.
+
+// Whole-case allowance includes cold project/tool preparation and owned cleanup (PS-1232).
+test.setTimeout(120_000);
 
 test("keeps performance measurements live when switching and closing project tabs", async () => {
   let app: PackagedApp | null = null;
@@ -150,6 +153,7 @@ test("keeps reporting slow frames after the workbench reloads", async () => {
 });
 
 test("names the process that hosts an extension and ends its frames when paused", async () => {
+  if (process.platform === "linux") test.setTimeout(40_000);
   let app: PackagedApp | null = null;
   try {
     ({ app } = await launchProject("Extension processes", { monitoring: true, webview: true }));

@@ -1,4 +1,7 @@
-import { watch as fsWatch, mkdirSync } from "node:fs";
+import { watch as fsWatch, mkdirSync, statSync } from "node:fs";
+import { isAbsolute, join, relative, sep } from "node:path";
+import { isPreparationHost } from "pstdio-extensions";
+import { createRootWatcherClient } from "./extension-root-watcher-client";
 
 type SourceWatcher = {
   close: () => void;
@@ -9,6 +12,7 @@ type WatchSource = (path: string, listener: WatchListener, onError: (error: Erro
 
 type ExtensionRootRegistration = {
   path: string;
+  ownerRoot: string;
   sync: () => Promise<unknown>;
 };
 
@@ -26,13 +30,31 @@ export type ExtensionRootWatcher = {
 
 export type CreateExtensionRootWatcherInput = {
   debounceMs?: number;
-  ensureRoot?: (path: string) => void;
+  ensureRoot?: (path: string, ownerRoot: string) => void;
   listExtensionRoots: () => Promise<ExtensionRootRegistration[]>;
+  onAttach?: (root: ExtensionRootRegistration) => void;
   onError?: (error: unknown) => void;
   watch?: WatchSource;
 };
 
-const defaultEnsureRoot = (path: string) => mkdirSync(path, { recursive: true });
+const defaultEnsureRoot = (path: string, ownerRoot: string) => {
+  const child = relative(ownerRoot, path);
+  if (isAbsolute(child) || child === ".." || child.startsWith(`..${sep}`))
+    throw new Error("Extension watch root must belong to its owner directory.");
+  if (!statSync(ownerRoot).isDirectory())
+    throw Object.assign(new Error("Extension watch owner is not a directory."), { code: "ENOTDIR" });
+  let directory = ownerRoot;
+  // Never recreate a removed project while a registration/restoration was queued.
+  // Each mkdir requires its existing parent, even if deletion races the owner check.
+  for (const name of child.split(sep).filter(Boolean)) {
+    directory = join(directory, name);
+    try {
+      mkdirSync(directory);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST" || !statSync(directory).isDirectory()) throw error;
+    }
+  }
+};
 // An FSWatcher error with no listener is thrown as an uncaught exception, which stops serve.
 const defaultWatch: WatchSource = (path, listener, onError) => {
   const watcher = fsWatch(path, listener);
@@ -43,6 +65,7 @@ const defaultWatch: WatchSource = (path, listener, onError) => {
 export const createExtensionRootWatcher = async (
   input: CreateExtensionRootWatcherInput,
 ): Promise<ExtensionRootWatcher> => {
+  if (isPreparationHost && !input.watch && !input.ensureRoot) return createRootWatcherClient(input);
   const debounceMs = input.debounceMs ?? 150;
   const ensureRoot = input.ensureRoot ?? defaultEnsureRoot;
   const registrations = new Map<string, WatchedRootRegistration>();
@@ -99,7 +122,7 @@ export const createExtensionRootWatcher = async (
 
   const addRegistration = (root: ExtensionRootRegistration) => {
     try {
-      ensureRoot(root.path);
+      ensureRoot(root.path, root.ownerRoot);
       const watcher: SourceWatcher = watch(
         root.path,
         () => {
@@ -109,6 +132,7 @@ export const createExtensionRootWatcher = async (
         (error) => handleWatchError(root.path, watcher, error),
       );
       registrations.set(root.path, { ...root, queued: false, running: false, timer: null, watcher });
+      input.onAttach?.(root);
     } catch (error) {
       input.onError?.(error);
     }

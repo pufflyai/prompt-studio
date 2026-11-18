@@ -77,15 +77,17 @@ const isolateRuntimeCache = () => {
   const home = join(createTempDir(), "pstdio-home");
   previousPstdioHome = process.env.PSTDIO_HOME;
   process.env.PSTDIO_HOME = home;
-  return join(home, "cache", "extension-runtime");
+  return join(home, "cache", "extension-revisions", "revisions");
 };
 
 const listCachedRuntimePackages = (cacheRoot: string) => {
   if (!existsSync(cacheRoot)) return [];
 
-  return readdirSync(cacheRoot, { recursive: true, withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && entry.name === "package")
-    .map((entry) => join(entry.parentPath, entry.name))
+  return readdirSync(cacheRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && existsSync(join(cacheRoot, entry.name, "revision.json")))
+    .map(
+      (entry) => JSON.parse(readFileSync(join(cacheRoot, entry.name, "revision.json"), "utf8")).packagePath as string,
+    )
     .sort();
 };
 
@@ -216,7 +218,7 @@ test("keeps runtime imports in a deterministic managed cache", async () => {
   expect(existsSync(join(firstCachedPackages[0]!, "extension.ts"))).toBe(true);
 });
 
-test("replaces the runtime cache package when extension source changes", async () => {
+test("uses a new runtime cache package when extension source changes", async () => {
   const cacheRoot = isolateRuntimeCache();
   const dir = createTempDir();
   writePackage(dir);
@@ -251,8 +253,7 @@ test("replaces the runtime cache package when extension source changes", async (
   expect(secondDiagnostics).toEqual([]);
   expect(commands?.check.title).toBe("second");
   expect(firstCachedPackages).toHaveLength(1);
-  expect(secondCachedPackages).toHaveLength(1);
-  expect(secondCachedPackages).not.toEqual(firstCachedPackages);
+  expect(secondCachedPackages).toHaveLength(2);
 });
 
 test("loads fresh transitive modules when extension source changes", async () => {
@@ -289,7 +290,7 @@ test("loads fresh transitive modules when extension source changes", async () =>
   expect(commands?.check.title).toBe("second");
 });
 
-test("uses a runtime cache package with dependencies when node_modules appears", async () => {
+test("adds dependencies to an existing runtime cache package when node_modules appears", async () => {
   const cacheRoot = isolateRuntimeCache();
   const dir = createTempDir();
   writePackage(dir);
@@ -320,11 +321,11 @@ test("uses a runtime cache package with dependencies when node_modules appears",
   const updatedCachedPackages = listCachedRuntimePackages(cacheRoot);
 
   expect(firstDiagnostics).toContainEqual(expect.objectContaining({ code: "extension_import_failed" }));
-  expect(cachedPackages).toHaveLength(1);
+  expect(cachedPackages).toHaveLength(0);
   expect(secondDiagnostics).toEqual([]);
   expect(commands?.check.title).toBe("extension-owned-sdk");
   expect(updatedCachedPackages).toHaveLength(1);
-  expect(existsSync(join(updatedCachedPackages[0]!, "node_modules"))).toBe(true);
+  expect(updatedCachedPackages.some((cachedPackage) => existsSync(join(cachedPackage, "node_modules")))).toBe(true);
 });
 
 test("uses a new runtime cache package when node_modules contents change", async () => {
@@ -359,9 +360,8 @@ test("uses a new runtime cache package when node_modules contents change", async
   const secondCachedPackages = listCachedRuntimePackages(cacheRoot);
 
   expect(firstDiagnostics).toContainEqual(expect.objectContaining({ code: "extension_import_failed" }));
-  expect(firstCachedPackages).toHaveLength(1);
+  expect(firstCachedPackages).toHaveLength(0);
   expect(secondDiagnostics).toEqual([]);
   expect(commands?.check.title).toBe("extension-owned-sdk");
   expect(secondCachedPackages).toHaveLength(1);
-  expect(secondCachedPackages).not.toEqual(firstCachedPackages);
 });

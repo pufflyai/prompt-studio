@@ -1,5 +1,8 @@
 // Own the request and outcome collections and join them into one read model with derived state.
-import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+
+import { readCollectionRecords } from "@pstdio/sdk/data";
+import type { ExtensionStorageApi, StoragePredicate } from "@pstdio/sdk/extensions";
+import { prepareNavigationQueries } from "./navigation-queries";
 import type {
   ReviewOutcome,
   ReviewRequest,
@@ -8,6 +11,7 @@ import type {
   TicketReviewRequests,
 } from "./review-request-types";
 import { parseStoredOutcome, parseStoredRequest } from "./review-request-validation";
+import { inBatches } from "./ticket-selection";
 
 // New collection names: records from the old free-text request format are not read or migrated.
 export const REVIEW_REQUESTS_COLLECTION = "planner-review-requests";
@@ -54,40 +58,71 @@ export const readReviewRequest = async (storage: ExtensionStorageApi, requestId:
   return toView(request, outcome === undefined ? null : parseStoredOutcome(request, outcome));
 };
 
-export const readTicketReviewRequests = async (storage: ExtensionStorageApi) => {
-  const [requests, outcomes] = await Promise.all([
-    reviewRequestsCollection(storage).list(),
-    reviewOutcomesCollection(storage).list(),
-  ]);
-  const outcomesById = new Map(outcomes.map((outcome) => [outcome.requestId, outcome]));
-  const result = new Map<string, TicketReviewRequests>();
-  for (const stored of requests) {
-    const ticketId = String((stored as Partial<ReviewRequest>).ticketId);
-    const group = result.get(ticketId) ?? { requests: [], errors: [] };
-    result.set(ticketId, group);
+/** Read one request window. Overview rows use aggregate counts instead of these bodies. */
+export const readReviewRequestPage = async (
+  storage: ExtensionStorageApi,
+  where: StoragePredicate,
+  offset = 0,
+  limit = 25,
+) => {
+  await prepareNavigationQueries(storage);
+  const total = await storage.records.aggregate({ index: "review-request-state", where });
+  const page = await storage.records.query({
+    index: "review-request-state",
+    where,
+    fields: [],
+    offset,
+    limit,
+    orderBy: [
+      { field: "requestedAt", direction: "asc" },
+      { field: "id", direction: "asc" },
+    ],
+    revision: total.revision,
+  });
+  const result: TicketReviewRequests = { requests: [], errors: [] };
+  const values = await readCollectionRecords<ReviewRequest>(
+    storage,
+    page.records.map(({ recordId }) => recordId),
+  );
+  for (const stored of values) {
+    if (!stored) continue;
     try {
       const request = parseStoredRequest(stored);
-      const outcome = outcomesById.get(request.id);
-      group.requests.push(toView(request, outcome ? parseStoredOutcome(request, outcome) : null));
+      const outcome = await reviewOutcomesCollection(storage).get(request.id);
+      result.requests.push(toView(request, outcome === undefined ? null : parseStoredOutcome(request, outcome)));
     } catch (reason) {
-      group.errors.push(`Request ${String((stored as Partial<ReviewRequest>).id)}: ${String(reason)}`);
+      result.errors.push(`Request ${String(stored.id)}: ${String(reason)}`);
     }
   }
-  for (const group of result.values()) group.requests.sort((a, b) => a.requestedAt.localeCompare(b.requestedAt));
-  return result;
+  await storage.records.query({ index: "review-request-state", where, fields: [], limit: 1, revision: total.revision });
+  return { ...result, total: total.count, hasNext: Boolean(page.cursor), offset };
 };
-
-export const listTicketReviewRequests = async (storage: ExtensionStorageApi, ticketId: string) =>
-  (await readTicketReviewRequests(storage)).get(ticketId) ?? { requests: [], errors: [] };
 
 // Pending input comes from every open request; answers to other requests never hide it.
 export const hasPendingInput = (group: TicketReviewRequests) =>
   group.errors.length > 0 || group.requests.some((request) => request.state === "open");
 
 export const deleteTicketReviewRequests = async (storage: ExtensionStorageApi, ticketId: string) => {
-  const requests = await reviewRequestsCollection(storage).list();
-  for (const request of requests.filter((entry) => entry.ticketId === ticketId)) {
-    await reviewRequestsCollection(storage).delete(request.id);
-    await reviewOutcomesCollection(storage).delete(request.id);
+  await prepareNavigationQueries(storage);
+  for (;;) {
+    // Each deletion changes the revision, so select the next remaining page without a stale cursor.
+    const page = await storage.records.query({
+      index: "ticket-review-requests",
+      where: { field: "ticketId", op: "eq", value: ticketId },
+      fields: [],
+      limit: 100,
+    });
+    if (!page.records.length) return;
+    const requests = await readCollectionRecords<Partial<ReviewRequest>>(
+      storage,
+      page.records.map(({ recordId }) => recordId),
+    );
+    await inBatches(requests, async (request) => {
+      if (typeof request?.id === "string") await reviewOutcomesCollection(storage).delete(request.id);
+    });
+    await storage.records.commit({
+      operationId: storage.ids.create(),
+      edits: page.records.map(({ recordId }) => ({ recordId, deleted: true })),
+    });
   }
 };

@@ -1,13 +1,13 @@
 import { Center, Text } from "@chakra-ui/react";
 import type { ResourceRef } from "@pstdio/sdk/extensions";
-import { getThemePreferenceMode, useThemePreference, useToaster } from "@pstdio/ui";
+import { getThemePreferenceMode, useThemePreference } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "@pstdio/workbench";
 import {
   createExtensionWebviewHostCapabilities,
   getBridgeWebviewHostEventPublisher,
 } from "@pstdio/workbench/extensions";
 import type { NativeDocumentTarget } from "pstdio-api-contracts";
-import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webview-path";
+import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-host";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import i18n from "@/i18n";
@@ -70,16 +70,23 @@ const webviewOwnerKey = (props: ExtensionWebviewFrameProps, installedExtensionId
 
 const currentLocale = () => i18n.resolvedLanguage ?? i18n.language ?? "en";
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
-  const toaster = useToaster();
   const owner = getRuntimeCollections();
   const queryScope = useDashboardQueryScope();
   const { extensionId, extensionInstanceId, installName, projectId, resource, terminal, title, webview, webviewId } =
     props;
   const { themePreference, themePreferences } = useThemePreference();
   const { showError, errorNotice, clearError } = useActionError();
+  const showNotice = (notice: { type?: "info" | "success" | "warning"; title?: string; description?: string }) => {
+    if (!notice.title && !notice.description) return;
+    props.workbench?.notifications.show({
+      level: notice.type ?? "info",
+      title: notice.title ?? notice.description!,
+      message: notice.title ? notice.description : undefined,
+    });
+  };
   const executeCommand = useExecuteExtensionCommand(projectId, (notice) => {
-    if (notice.type === "error" || notice.type === "warning") showError(notice);
-    else toaster.create(notice);
+    if (notice.type === "error") showError(notice);
+    else showNotice({ ...notice, type: notice.type });
   });
   const [fallbackHostEvents] = useState(createHostEventPublisher);
   const hostEvents =
@@ -106,8 +113,10 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   if (!webview) return null;
 
   const colorScheme = getThemePreferenceMode(themePreference, themePreferences);
-  const frameTitle = webview.title ? resolveLocalizableString(webview.title, extensionId) : (title ?? "Extension view");
-  const translations = getExtensionTranslationContext(extensionId, locale);
+  const frameTitle = webview.title
+    ? resolveLocalizableString(webview.title, extensionId, undefined, owner, projectId)
+    : (title ?? "Extension view");
+  const translations = getExtensionTranslationContext(extensionId, locale, owner, projectId);
   const commandQueries = projectId
     ? createDashboardWebviewCommandQueries({
         runtime: owner,
@@ -181,7 +190,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
         projectId,
         extensionId,
         showError,
-        showNotice: (notice) => toaster.create(notice),
+        showNotice,
       }),
     },
     queryAuthority: { id: JSON.stringify(queryScope), assertCurrent: serviceQueries.requireCurrent },

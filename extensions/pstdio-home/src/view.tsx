@@ -27,7 +27,7 @@ interface AppProps {
   context: ExtensionViewRenderContext<HostProps>;
 }
 
-const HomeApp = (props: AppProps) => {
+export const HomeApp = (props: AppProps) => {
   const { context } = props;
   const [client] = useState(() => createWebviewClient<typeof commands>(context.host));
   useWebviewScope(client.queries);
@@ -38,8 +38,11 @@ const HomeApp = (props: AppProps) => {
   const data = home.data;
   const [navigationError, setNavigationError] = useState<string>();
   const loadError = home.error || recent.error || navigationError;
+  const [dismissedLoadError, setDismissedLoadError] = useState<unknown>();
+  const showLoadError = Boolean(loadError && loadError !== dismissedLoadError);
   const refresh = () => {
     setNavigationError(undefined);
+    setDismissedLoadError(undefined);
     home.refresh();
     recent.refresh();
   };
@@ -98,6 +101,7 @@ const HomeApp = (props: AppProps) => {
         pt="4xl"
         pb="3xl"
         gap="3xl"
+        position="relative"
         data-testid="start-page"
       >
         <Stack gap="xs" minW="0">
@@ -106,15 +110,24 @@ const HomeApp = (props: AppProps) => {
             Project home
           </Text>
         </Stack>
-        {loadError && (
-          <AlertMessage status="error" title="Could not load project home">
+        {showLoadError && (
+          <AlertMessage
+            size="sm"
+            status="error"
+            title="Could not load project home"
+            position="absolute"
+            bottom="xs"
+            insetInline="sm"
+            zIndex="docked"
+            onClose={() => setDismissedLoadError(loadError)}
+          >
             <Stack>
               <Text>{String(loadError)}</Text>
               <Button onClick={() => refresh()}>Retry</Button>
             </Stack>
           </AlertMessage>
         )}
-        {(data?.setupError || actionError?.id === "retry") && (
+        {!showLoadError && (data?.setupError || actionError?.id === "retry") && (
           <ProjectSetupStatus
             error={actionError?.id === "retry" ? actionError.message : (data?.setupError ?? "")}
             retrying={pending === "retry"}
@@ -127,7 +140,12 @@ const HomeApp = (props: AppProps) => {
         <HomeQuotas client={client} />
         <Stack direction={{ base: "column", md: "row" }} gap={{ base: "3xl", md: "4xl" }} align="flex-start" minW="0">
           <Box flex="1" minW="0" w="full">
-            <StartActionList actions={actions} pending={pending} error={actionError} />
+            <StartActionList
+              actions={actions}
+              pending={pending}
+              error={actionError}
+              onDismissError={() => setActionError(undefined)}
+            />
           </Box>
           <Box flex="1" minW="0" w="full">
             <StartRecentList

@@ -186,10 +186,10 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     };
     expect(extensions.extensions).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ installName: "pstdio-planner", version: "0.10.0" }),
+        expect.objectContaining({ installName: "planner", version: "0.10.0" }),
         expect.objectContaining({
           canUpgrade: true,
-          installName: "pstdio-skills",
+          installName: "skills",
           scope: "global",
           status: "error",
           version: "0.3.0",

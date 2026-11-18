@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
+import { readTestPriorities } from "../ci/test-discovery";
 
 interface PackagedRuntimeTestInput {
   cwd: string;
@@ -22,6 +23,7 @@ export const runPackagedRuntimeTests = (input: PackagedRuntimeTestInput) => {
         "--artifact",
         "compiled-cli",
         "--prebuilt",
+        ...(process.env.TEST_PRIORITIES === undefined ? [] : ["--priority", readTestPriorities().join(",")]),
         ...(input.shard === undefined ? [] : ["--shard", input.shard]),
       ];
   const result = spawnSync("bun", args, {

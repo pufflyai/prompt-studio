@@ -64,7 +64,7 @@ test("starts the requested editor download while its document opens", async ({ p
   page.on("request", (request) => {
     if (/markdown-editor[^/]*\.(?:js|tsx?)(?:\?|$)/.test(request.url())) editorRequested = true;
   });
-  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.planner/tickets`);
   const card = page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first();
   await expect(card).toBeVisible();
   expect(editorRequested).toBe(false);
@@ -94,7 +94,7 @@ test("loads ticket content independently of editor downloads", async ({ page, re
     content: "# First ticket load\n\nContent loads alongside the editor.",
   });
   await bypassOnboarding(page, project.id);
-  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.planner/tickets`);
   const card = page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first();
   await expect(card).toBeVisible();
   let release = () => {};
@@ -137,7 +137,7 @@ test("recovers ticket editing after an editor download fails", async ({ page, re
     content: "# Editor download recovery\n\nThe saved ticket is still available.",
   });
   await bypassOnboarding(page, project.id);
-  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.planner/tickets`);
   const editorModule = /markdown-editor[^/]*\.(?:js|tsx?)(?:\?|$)/;
   await page.route(editorModule, (route) => route.abort("failed"));
   await page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first().click();
@@ -159,7 +159,7 @@ test("keeps ticket editor focus and selection across debounce and save", async (
     statusId: status!.id,
   });
   await bypassOnboarding(page, project.id);
-  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.planner/tickets`);
   const card = page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first();
   await expect(card).toBeVisible({ timeout: 15_000 });
   await card.click();

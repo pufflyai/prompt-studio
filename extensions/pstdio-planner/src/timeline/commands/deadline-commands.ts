@@ -3,7 +3,8 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { withWriteGuard } from "../../data/write-guard";
 import { addDeadline, removeDeadline, updateDeadline } from "../model/edit-plan";
-import { findDeadlineId, loadPlan, savePlan } from "./plan-store";
+import { clearDeadlinePlacements, readPlanMetadata, savePlanMetadata } from "./placement-store";
+import { findDeadlineId } from "./plan-store";
 
 const deadlineParam = params.text({ label: "Deadline", description: "Deadline id or date.", required: true });
 
@@ -13,7 +14,7 @@ export const createDeadlineCommand = defineCommand({
   title: "Create deadline",
   cli: {
     description: "Add a deadline. Move tickets into it to make them due by its date.",
-    examples: ['pst pstdio.pstdio-planner timeline deadline create --date 2026-10-15 --name "Staging acceptance"'],
+    examples: ['pst pstdio.planner timeline deadline create --date 2026-10-15 --name "Staging acceptance"'],
   },
   params: {
     date: params.text({ label: "Date", description: "YYYY-MM-DD.", required: true }),
@@ -21,10 +22,10 @@ export const createDeadlineCommand = defineCommand({
   },
   async run(ctx, { date, name }) {
     return withWriteGuard(ctx, "plan", async () => {
-      const { plan } = await loadPlan(ctx);
+      const plan = { ...(await readPlanMetadata(ctx.storage)), order: [] };
       const deadline = { id: ctx.storage.ids.create(), date, ...(name ? { name } : {}) };
       const next = addDeadline(plan, deadline);
-      await savePlan(ctx, next, "deadline");
+      await savePlanMetadata(ctx, next);
       return next.deadlines.find(({ id }) => id === deadline.id);
     });
   },
@@ -36,7 +37,7 @@ export const updateDeadlineCommand = defineCommand({
   title: "Change deadline",
   cli: {
     description: "Change a deadline's date or name. Its tickets stay with it.",
-    examples: ["pst pstdio.pstdio-planner timeline deadline update --deadline 2026-10-15 --date 2026-10-17"],
+    examples: ["pst pstdio.planner timeline deadline update --deadline 2026-10-15 --date 2026-10-17"],
   },
   params: {
     deadline: deadlineParam,
@@ -45,13 +46,13 @@ export const updateDeadlineCommand = defineCommand({
   },
   async run(ctx, { deadline, date, name }) {
     return withWriteGuard(ctx, "plan", async () => {
-      const { plan } = await loadPlan(ctx);
+      const plan = { ...(await readPlanMetadata(ctx.storage)), order: [] };
       const deadlineId = findDeadlineId(plan, deadline);
       const next = updateDeadline(plan, deadlineId, {
         ...(date ? { date } : {}),
         ...(name === undefined ? {} : { name: name === "none" ? "" : name }),
       });
-      await savePlan(ctx, next, "deadline");
+      await savePlanMetadata(ctx, next);
       return next.deadlines.find(({ id }) => id === deadlineId);
     });
   },
@@ -65,9 +66,10 @@ export const deleteDeadlineCommand = defineCommand({
   params: { deadline: deadlineParam },
   async run(ctx, { deadline }) {
     return withWriteGuard(ctx, "plan", async () => {
-      const { plan } = await loadPlan(ctx);
+      const plan = { ...(await readPlanMetadata(ctx.storage)), order: [] };
       const deadlineId = findDeadlineId(plan, deadline);
-      await savePlan(ctx, removeDeadline(plan, deadlineId), "deadline");
+      await clearDeadlinePlacements(ctx.storage, deadlineId);
+      await savePlanMetadata(ctx, removeDeadline(plan, deadlineId));
       return { deleted: deadlineId };
     });
   },

@@ -3,8 +3,8 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putTicket, ticketsCollection } from "../data/ticket-context.fixture";
 
 import type { Ticket } from "../data/types";
+import { archiveArgs, queuedRun } from "./archive-context.fixture";
 import { archiveTicketColumnActionCommand, archiveTicketCommand } from "./archive-ticket";
-import { makeCommandArgs } from "./command-context.fixture";
 
 const now = "2026-06-08T10:00:00.000Z";
 
@@ -48,6 +48,38 @@ const deferred = () => {
   return { promise, resolve };
 };
 
+test("archive all queues cleanup only when the selected tickets have linked workspaces", async () => {
+  const storage = createMemoryStorage();
+  await putTicket(storage, makeTicket({ statusId: "done" }));
+  const [ctx, input] = await archiveArgs({ storage, params: { columnId: "done", actionId: "archive_all" } });
+  let jobs = 0;
+  ctx.automation.enqueue = async () => {
+    jobs++;
+    return queuedRun();
+  };
+  const result = await archiveTicketColumnActionCommand.run(ctx, input);
+  expect(result.archivedCount).toBe(1);
+  expect((await ticketsCollection(storage).get("ticket-1"))?.archived).toBe(true);
+  expect(jobs).toBe(0);
+});
+
+test("archive all preserves durable cleanup when workspace discovery fails", async () => {
+  const storage = createMemoryStorage();
+  await putTicket(storage, makeTicket({ statusId: "done" }));
+  const [ctx, input] = await archiveArgs({ storage, params: { columnId: "done", actionId: "archive_all" } });
+  ctx.workspaces.query = async () => {
+    throw new Error("Private workspace history is temporarily unavailable");
+  };
+  let jobs = 0;
+  ctx.automation.enqueue = async () => {
+    jobs++;
+    return queuedRun();
+  };
+  const result = await archiveTicketColumnActionCommand.run(ctx, input);
+  expect(result.archivedCount).toBe(1);
+  expect(jobs).toBe(1);
+});
+
 describe("archive ticket", () => {
   test("archives the ticket and cascades to its linked workspaces only", async () => {
     const storage = createMemoryStorage();
@@ -61,7 +93,7 @@ describe("archive ticket", () => {
     ];
 
     const result = (await archiveTicketCommand.run(
-      ...makeCommandArgs({
+      ...(await archiveArgs({
         storage,
         params: {},
         overrides: {
@@ -73,7 +105,7 @@ describe("archive ticket", () => {
             },
           },
         },
-      }),
+      })),
     )) as Ticket | null;
 
     expect(result?.archived).toBe(true);
@@ -93,7 +125,7 @@ describe("archive ticket", () => {
     let commandResolved = false;
     const command = Promise.resolve(
       archiveTicketCommand.run!(
-        ...makeCommandArgs({
+        ...(await archiveArgs({
           storage,
           params: {},
           overrides: {
@@ -107,7 +139,7 @@ describe("archive ticket", () => {
               },
             },
           },
-        }),
+        })),
       ),
     ).then((result) => {
       commandResolved = true;
@@ -141,7 +173,7 @@ describe("archive ticket", () => {
     ];
 
     const result = (await archiveTicketColumnActionCommand.run(
-      ...makeCommandArgs({
+      ...(await archiveArgs({
         storage,
         params: { columnId: "done", actionId: "archive_all" },
         overrides: {
@@ -152,10 +184,10 @@ describe("archive ticket", () => {
             },
           },
         },
-      }),
-    )) as { archived: Ticket[] };
+      })),
+    )) as { archivedCount: number };
 
-    expect(result.archived.map((ticket) => ticket.id).sort()).toEqual(["ticket-1", "ticket-2"]);
+    expect(result.archivedCount).toBe(2);
     expect((await ticketsCollection(storage).get("ticket-1"))?.archived).toBe(true);
     expect((await ticketsCollection(storage).get("ticket-2"))?.archived).toBe(true);
     expect((await ticketsCollection(storage).get("ticket-3"))?.archived).toBe(false);
@@ -173,7 +205,7 @@ describe("archive ticket", () => {
     let commandResolved = false;
     const command = Promise.resolve(
       archiveTicketColumnActionCommand.run(
-        ...makeCommandArgs({
+        ...(await archiveArgs({
           storage,
           params: { columnId: "default-done", actionId: "archive_all" },
           overrides: {
@@ -185,11 +217,11 @@ describe("archive ticket", () => {
               },
             },
           },
-        }),
+        })),
       ),
     ).then((result) => {
       commandResolved = true;
-      return result as { archived: Ticket[] };
+      return result as { archivedCount: number };
     });
 
     await archiveStarted.promise;
@@ -200,7 +232,7 @@ describe("archive ticket", () => {
     const result = await command;
 
     expect(resolvedBeforeCascade).toBe(true);
-    expect(result.archived.map((ticket) => ticket.id)).toEqual(["ticket-1"]);
+    expect(result.archivedCount).toBe(1);
     expect((await ticketsCollection(storage).get("ticket-1"))?.archived).toBe(true);
   });
 
@@ -213,7 +245,7 @@ describe("archive ticket", () => {
     const workspaces = [{ id: "ws-1", workspace_shorthand: "T-1_A1", anchors_json: [ticketAnchor("T-1", "ticket-1")] }];
 
     const result = (await archiveTicketColumnActionCommand.run(
-      ...makeCommandArgs({
+      ...(await archiveArgs({
         storage,
         params: { columnId: "default-done", actionId: "archive_all" },
         overrides: {
@@ -231,17 +263,17 @@ describe("archive ticket", () => {
             },
           } as never,
         },
-      }),
-    )) as { archived: Ticket[] };
+      })),
+    )) as { archivedCount: number };
 
     await notificationPosted.promise;
 
-    expect(result.archived.map((ticket) => ticket.id)).toEqual(["ticket-1"]);
+    expect(result.archivedCount).toBe(1);
     expect((await ticketsCollection(storage).get("ticket-1"))?.archived).toBe(true);
     expect(notifications).toEqual([
       {
         title: "Workspace cleanup failed",
-        body: "Linked workspace cleanup failed after changing the ticket: cascade failed",
+        body: expect.stringContaining("cascade failed"),
         kind: "failed",
         priority: "normal",
       },
@@ -256,7 +288,7 @@ describe("archive ticket", () => {
     const workspaces = [{ id: "ws-1", workspace_shorthand: "T-1_A1", anchors_json: [ticketAnchor("T-1", "ticket-1")] }];
 
     const result = (await archiveTicketCommand.run(
-      ...makeCommandArgs({
+      ...(await archiveArgs({
         storage,
         params: {},
         overrides: {
@@ -274,7 +306,7 @@ describe("archive ticket", () => {
             },
           } as never,
         },
-      }),
+      })),
     )) as Ticket | null;
 
     expect(result?.archived).toBe(true);
@@ -282,7 +314,7 @@ describe("archive ticket", () => {
     expect(notifications).toEqual([
       {
         title: "Workspace cleanup failed",
-        body: "Linked workspace cleanup failed after changing the ticket: cascade failed",
+        body: expect.stringContaining("cascade failed"),
         kind: "failed",
         priority: "normal",
       },
@@ -298,7 +330,7 @@ test("keeps a shared workspace until every linked ticket is archived", async () 
   const archived: string[] = [];
   for (const id of ["ticket-1", "ticket-2"]) {
     await archiveTicketCommand.run(
-      ...makeCommandArgs({
+      ...(await archiveArgs({
         storage,
         params: {},
         overrides: {
@@ -310,7 +342,7 @@ test("keeps a shared workspace until every linked ticket is archived", async () 
             },
           },
         },
-      }),
+      })),
     );
     expect(archived).toEqual(id === "ticket-1" ? [] : ["shared"]);
   }

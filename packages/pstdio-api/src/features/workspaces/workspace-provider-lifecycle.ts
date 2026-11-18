@@ -21,7 +21,6 @@ import {
   type WorkspaceProviderHandle,
 } from "./workspace-provider-runtime";
 import { isBuiltInProviderId, normalizeResult } from "./workspace-provider-service";
-import { cleanupWorkspaceWorktree } from "./worktree-cleanup";
 
 export type WorkspaceProviderLifecycleDeps = WorkspacesRouteDeps;
 
@@ -236,11 +235,13 @@ export const cancelProviderBackedWorkspace = async (
 export const cleanupProviderBackedWorkspace = async (
   deps: WorkspaceProviderLifecycleDeps,
   workspace: WorkspaceRecord,
+  kind: "delete" | "cancel" = "delete",
 ) => {
   await cancelWorkspaceSessions(deps, workspace.id);
-  if (isBuiltInProviderId(workspace.provider_id)) return cleanupWorkspaceWorktree(deps, workspace);
+  if (isBuiltInProviderId(workspace.provider_id)) return false;
 
-  const pending = await persistOperation(deps, workspace, "delete", "deleting");
+  const state = kind === "delete" ? "deleting" : "provisioning";
+  const pending = await persistOperation(deps, workspace, kind, state);
   const operationId = pending.provider_operation_id!;
   const handle = await providerHandle(deps, pending);
   if (!handle) {
@@ -265,12 +266,12 @@ export const cleanupProviderBackedWorkspace = async (
       }
     }
     const error = new Error(`Workspace provider create reference is not available yet: ${workspace.provider_id}`);
-    await updateFailedOperation(deps, pending, { kind: "delete", operationId, state: "deleting", error });
+    await updateFailedOperation(deps, pending, { kind, operationId, state, error });
     throw error;
   }
   if (!handle.provider.delete) {
     const error = new Error(`Workspace provider cannot delete its remote resource: ${workspace.provider_id}`);
-    await updateFailedOperation(deps, pending, { kind: "delete", operationId, state: "deleting", error });
+    await updateFailedOperation(deps, pending, { kind, operationId, state, error });
     throw error;
   }
   try {
@@ -282,9 +283,16 @@ export const cleanupProviderBackedWorkspace = async (
         providerRef: pending.provider_ref_json as WorkspaceProviderRef,
       }),
     );
-    return false;
+    if (kind === "cancel")
+      await deps.workspaceService.updateProviderProjection(workspace.id, {
+        ...cancelledProviderPatch(pending),
+        branch: null,
+        root_path: null,
+        display_path: null,
+      });
+    return true;
   } catch (error) {
-    await updateFailedOperation(deps, pending, { kind: "delete", operationId, state: "deleting", error });
+    await updateFailedOperation(deps, pending, { kind, operationId, state, error });
     throw error;
   }
 };
@@ -295,4 +303,14 @@ export const deleteProviderBackedWorkspace = async (
 ) => {
   assertWorkspaceDeleteAllowed(workspace);
   return cleanupProviderBackedWorkspace(deps, workspace);
+};
+
+// Backing-only removal retains the workspace, including during crash recovery.
+// The existing cancel operation has that intent; delete recovery removes records.
+export const removeProviderWorkspaceBacking = async (
+  deps: WorkspaceProviderLifecycleDeps,
+  workspace: WorkspaceRecord,
+) => {
+  assertWorkspaceDeleteAllowed(workspace);
+  return cleanupProviderBackedWorkspace(deps, workspace, "cancel");
 };

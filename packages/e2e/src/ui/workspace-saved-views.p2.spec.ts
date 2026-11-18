@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const board = "pstdio.pstdio-workspaces.view.workspaces";
+const board = "pstdio.workspaces.view.workspaces";
 
 import { folderProjectInput } from "../helpers/folder-project";
 

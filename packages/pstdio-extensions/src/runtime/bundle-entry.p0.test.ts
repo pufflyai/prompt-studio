@@ -1,5 +1,5 @@
 import { expect, spyOn, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { bundleEntry } from "./bundle-entry";
@@ -116,5 +116,39 @@ test("extension commands can import a public package with incidental CSS", async
     expect(loaded.default.run()).toBe(42);
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("a prepared copy imports dependencies that find their own file through __filename", async () => {
+  const snapshotRoot = mkdtempSync(join(tmpdir(), "extension-bundle-snapshot-"));
+  // Prepared revisions nest the package below the snapshot root.
+  const packagePath = join(snapshotRoot, "fs", "2f", "staging", "harness");
+  const dependency = join(packagePath, "node_modules", "runtime-artifacts");
+  mkdirSync(dependency, { recursive: true });
+  writeFileSync(join(dependency, "package.json"), '{"name":"runtime-artifacts","type":"module","main":"index.js"}');
+  writeFileSync(
+    join(dependency, "index.js"),
+    [
+      'import { createRequire } from "node:module";',
+      'const require2 = createRequire(typeof __filename === "string" ? __filename : import.meta.url);',
+      'export const dependencyFile = [typeof require2.resolve, typeof __filename === "string" ? __filename : ""];',
+    ].join("\n"),
+  );
+  const entry = join(packagePath, "extension.ts");
+  writeFileSync(
+    entry,
+    [
+      'import { dependencyFile } from "runtime-artifacts";',
+      'const ownFile = typeof __filename === "string" ? __filename : import.meta.url;',
+      "export default { dependencyFile, ownFile };",
+    ].join("\n"),
+  );
+  try {
+    const bundlePath = await bundleEntry(entry, packagePath, join(snapshotRoot, "out"), snapshotRoot);
+    const loaded = await import(bundlePath);
+    // Each file keeps its own location, so a dependency can find files next to it.
+    expect(loaded.default).toEqual({ dependencyFile: ["function", join(dependency, "index.js")], ownFile: entry });
+  } finally {
+    rmSync(snapshotRoot, { recursive: true, force: true });
   }
 });

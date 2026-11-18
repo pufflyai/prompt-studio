@@ -10,6 +10,7 @@ import type { AutoBuildFormProps } from "./auto-build-form";
 import { AutoBuildHelp } from "./auto-build-help";
 import { AutoBuildIndicator, resolveAutoBuildIndicatorStatus } from "./auto-build-indicator";
 import type { AutoBuildSession } from "./auto-build-session-row";
+import { RequestWindowControls } from "./request-window";
 import { RequestsDialog } from "./ticket-requests-dialog";
 
 const AutoBuildForm = lazy(async () => {
@@ -22,6 +23,9 @@ export interface AutoBuildButtonProps {
   paused?: boolean;
   reviewRequests?: ReviewRequestView[];
   requestErrors?: string[];
+  requestPage?: { offset: number; total: number; hasNext: boolean };
+  requestLoading?: boolean;
+  onRequestPage?: (offset: number) => void;
   onAnswerRequest?: (requestId: string, response: ReviewResponse) => Promise<unknown>;
   onOpenRequestChat?: (requestId: string) => Promise<unknown>;
   onPause?: () => Promise<boolean>;
@@ -37,6 +41,7 @@ export interface AutoBuildButtonProps {
   starting?: boolean;
   error?: string;
   actionError?: string;
+  onDismissActionError?: () => void;
   stuck?: boolean;
   disabled?: boolean;
   configuration?: Omit<AutoBuildFormProps, "onClose" | "t">;
@@ -123,6 +128,18 @@ export function AutoBuildButton(props: AutoBuildButtonProps) {
       <RequestsDialog
         title={t("timeline.autoBuild.requests", "Needs attention")}
         row={{ requests: reviewRequests, requestErrors }}
+        total={props.requestPage?.total}
+        loading={props.requestLoading}
+        footer={
+          props.requestPage && props.onRequestPage ? (
+            <RequestWindowControls
+              result={props.requestPage}
+              offset={props.requestPage.offset}
+              move={props.onRequestPage}
+              loading={props.requestLoading}
+            />
+          ) : undefined
+        }
         open={content === "requests"}
         pendingOnly
         trigger={trigger.current}
