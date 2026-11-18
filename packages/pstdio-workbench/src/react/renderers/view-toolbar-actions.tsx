@@ -1,4 +1,5 @@
-import { Button, HStack, Separator, Text } from "@chakra-ui/react";
+import { Button, HStack, Separator } from "@chakra-ui/react";
+import { ActionErrorSlot, AlertMessage } from "@pstdio/ui";
 import { type ReactNode, useState } from "react";
 import type { WorkbenchCommandExecutionContext, WorkbenchCore } from "../../core";
 import type { ViewToolbarAction } from "../../core/registries/renderers/view-toolbar-action";
@@ -29,7 +30,7 @@ export const ViewToolbarActions = (props: ViewToolbarActionsProps) => {
   });
   return (
     <>
-      <HStack gap="xs">
+      <HStack gap="xs" position="relative">
         {items.length > 0 ? <Separator orientation="vertical" height="{spacing.lg}" /> : null}
         {items.map((item) => (
           <Button
@@ -49,9 +50,9 @@ export const ViewToolbarActions = (props: ViewToolbarActionsProps) => {
           </Button>
         ))}
         {error ? (
-          <Text role="alert" textStyle="paragraph/XS/regular" color="fg.error">
-            {error}
-          </Text>
+          <ActionErrorSlot edge="below">
+            <AlertMessage compact status="error" title={error} onClose={() => setError(undefined)} />
+          </ActionErrorSlot>
         ) : null}
       </HStack>
       <TreeParamsDialog

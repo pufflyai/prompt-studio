@@ -30,7 +30,7 @@ function TicketRequests(props: { client: TicketRequestsClient; resource: Resourc
   const { value, error, retry, answer, openChat, offset, setOffset } = useTicketRequests(client, resource);
   return (
     <ScrollArea h="full">
-      <Stack p="md" gap="md" w="full" maxW="2xl" mx="auto">
+      <Stack position="relative" p="md" gap="md" w="full" maxW="2xl" mx="auto">
         <PlannerReadError error={error} retry={retry} />
         <Text textStyle="label/L/medium">{resource.label ?? resource.shorthand}</Text>
         {value ? (

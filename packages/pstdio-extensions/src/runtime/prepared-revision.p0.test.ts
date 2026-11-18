@@ -7,6 +7,7 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { extensionLoadKey, loadExtensionPackage } from "./loader";
 import { stopExtensionPreparation } from "./preparation-client";
 import {
+  acceptedRevisionPath,
   acceptPreparedRevision,
   inspectExtensionLoadKey,
   prepareExtensionRevision,
@@ -44,6 +45,25 @@ const fixture = () => {
   );
   return source;
 };
+
+test("a host upgrade can replace incompatible acceptance while guarding compatible concurrent revisions", async () => {
+  const source = fixture();
+  const prepared = await prepareExtensionRevision(source);
+  await acceptPreparedRevision(source, prepared);
+  writeFileSync(acceptedRevisionPath(source), JSON.stringify({ ...prepared, id: "legacy", host: "previous-format" }));
+  expect(await readAcceptedRevision(source)).toBeNull();
+  await acceptPreparedRevision(source, prepared, { expectedId: null, expectedState: null });
+  expect((await readAcceptedRevision(source))?.id).toBe(prepared.id);
+  writeFileSync(join(source, "extension.ts"), "export default { commands: [] };");
+  const concurrent = await prepareExtensionRevision(source);
+  await acceptPreparedRevision(source, concurrent);
+  const error = await acceptPreparedRevision(source, prepared, { expectedId: null, expectedState: null }).then(
+    () => undefined,
+    (cause: unknown) => cause,
+  );
+  expect(String(error)).toContain("changed before activation");
+  expect((await readAcceptedRevision(source))?.id).toBe(concurrent.id);
+});
 
 test("accepted artifacts survive worker restart and offline source edits", async () => {
   const source = fixture();

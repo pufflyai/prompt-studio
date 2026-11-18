@@ -36,6 +36,8 @@ import {
   stop,
   switchConversation,
 } from "./src/navigation";
+import { quotaAvailability } from "./src/quota-availability";
+import { quotaRestart, quotaRestartHook } from "./src/quota-restart";
 import { sessionId } from "./src/resource";
 import { pinSession, sessionPinsChanged, sessionPinsIndex } from "./src/session-pins";
 import { composerControls, readSnapshot } from "./src/snapshot";
@@ -163,7 +165,10 @@ export default defineExtension({
   defaultLocale: "en",
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   storageIndexes: [nativeSubmissionIndex, sessionPinsIndex],
+  hooks: [quotaRestartHook],
   commands: [
+    quotaRestart,
+    quotaAvailability,
     pinSession,
     create,
     newInViewer,

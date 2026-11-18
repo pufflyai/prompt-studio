@@ -366,3 +366,98 @@ test.each(["paused", "stopped"])("%s during a capacity read suppresses discovery
   expect(await autoBuildCommand.run(ctx, {})).toMatchObject({ prompted: false });
   expect(prompts).toHaveLength(1);
 });
+
+test("event-driven supervisor wakes wait for the saved quota reset without pausing Auto Build", async () => {
+  const { ctx, ticket, storage, sessions, prompts } = await supervisorFixture();
+  await ticket("Waiting work");
+  await autoBuildCommand.run(ctx, {});
+  const supervisor = sessions.get(prompts[0]!.sessionId)!;
+  supervisor.status = "failed";
+  supervisor.agent = "pstdio.harness-claude-code.harness.claude-code";
+  const resetsAt = new Date(Date.now() + 60_000).toISOString();
+  await storage.set("auto-build-supervisor", {
+    sessionId: supervisor.id,
+    quotaCooldown: { harnessId: supervisor.agent, resetsAt },
+  });
+  const result = await autoBuildCommand.run(ctx, {});
+  expect(result.prompted).toBe(false);
+  expect(prompts).toHaveLength(1);
+  expect(await storage.get("auto-build")).toMatchObject({ enabled: true });
+});
+
+test("fresh quota discovery is saved once and reconsidered after the reset", async () => {
+  const { ctx, ticket, storage, sessions, prompts } = await supervisorFixture();
+  await ticket("Quota work");
+  await autoBuildCommand.run(ctx, {});
+  const supervisor = sessions.get(prompts[0]!.sessionId)!;
+  supervisor.status = "failed";
+  supervisor.agent = "pstdio.harness-codex.harness.codex";
+  const now = Date.now();
+  const resetsAt = new Date(now + 60_000).toISOString();
+  let reads = 0;
+  ctx.commands.execute = async (ref) => {
+    expect(ref).toMatchObject({ extensionId: "pstdio.session-browser", id: "quota-availability" });
+    reads++;
+    return { ok: true, status: "success", value: { limited: reads === 1, resetsAt } } as never;
+  };
+  try {
+    expect((await autoBuildCommand.run(ctx, {})).prompted).toBe(false);
+    expect(await storage.get("auto-build-supervisor")).toMatchObject({
+      quotaCooldown: { harnessId: supervisor.agent, resetsAt },
+    });
+    expect((await autoBuildCommand.run(ctx, {})).prompted).toBe(false);
+    expect(reads).toBe(1);
+    setSystemTime(now + 60_000);
+    expect((await autoBuildCommand.run(ctx, {})).prompted).toBe(true);
+    expect(reads).toBe(2);
+    expect(prompts).toHaveLength(2);
+  } finally {
+    setSystemTime();
+  }
+});
+
+test("a supervisor changing models does not reuse the previous model's cooldown", async () => {
+  const { ctx, ticket, storage, sessions, prompts } = await supervisorFixture();
+  await ticket("Waiting work");
+  await autoBuildCommand.run(ctx, {});
+  const supervisor = sessions.get(prompts[0]!.sessionId)!;
+  supervisor.status = "failed";
+  supervisor.agent = "pstdio.harness-claude-code.harness.claude-code";
+  supervisor.lastSelectedModel = "opus";
+  await storage.set("auto-build-supervisor", {
+    sessionId: supervisor.id,
+    quotaCooldown: {
+      harnessId: supervisor.agent,
+      modelId: "sonnet",
+      resetsAt: new Date(Date.now() + 60_000).toISOString(),
+    },
+  });
+  const quotaRequests: unknown[] = [];
+  ctx.commands.execute = async (_ref, options) => {
+    quotaRequests.push(options?.params);
+    return { ok: true, status: "success", value: { limited: false } } as never;
+  };
+  expect((await autoBuildCommand.run(ctx, {})).prompted).toBe(true);
+  expect(quotaRequests).toEqual([{ harnessId: supervisor.agent, modelId: "opus" }]);
+});
+
+test("a legacy cooldown still blocks a selected model when no fresh reset is known", async () => {
+  const { ctx, ticket, storage, sessions, prompts } = await supervisorFixture();
+  await ticket("Waiting work");
+  await autoBuildCommand.run(ctx, {});
+  const supervisor = sessions.get(prompts[0]!.sessionId)!;
+  supervisor.status = "failed";
+  supervisor.agent = "pstdio.harness-claude-code.harness.claude-code";
+  supervisor.lastSelectedModel = "opus";
+  const quotaCooldown = { harnessId: supervisor.agent, resetsAt: new Date(Date.now() + 60_000).toISOString() };
+  await storage.set("auto-build-supervisor", { sessionId: supervisor.id, quotaCooldown });
+  let reportsExhaustion = true;
+  ctx.commands.execute = async () =>
+    ({ ok: true, status: "success", value: { known: reportsExhaustion, limited: reportsExhaustion } }) as never;
+
+  expect((await autoBuildCommand.run(ctx, {})).prompted).toBe(false);
+  reportsExhaustion = false;
+  expect((await autoBuildCommand.run(ctx, {})).prompted).toBe(false);
+  expect(prompts).toHaveLength(1);
+  expect(await storage.get("auto-build-supervisor")).toMatchObject({ quotaCooldown });
+});

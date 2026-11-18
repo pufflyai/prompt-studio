@@ -15,7 +15,6 @@ import { PlanHeader } from "./plan-header";
 import { PlanLoading, PlanLoadingBody } from "./plan-loading";
 import { useViewSections } from "./plan-state";
 import { TicketRequestsDialog } from "./ticket-requests-dialog";
-import { reportPlannerError } from "./timeline-notice";
 import { TimelinePresentationProvider } from "./timeline-presentation";
 import { timelineInitialState, timelineQueryData } from "./timeline-query";
 import { createTimelineStorage } from "./timeline-storage";
@@ -50,24 +49,30 @@ function ProjectPlanRoot(props: PlanRootProps) {
   const { client, plan, error, retry } = usePlan(host);
   // Restore project presentation before mounting controls or applying collapsed geometry.
   const [storage, setStorage] = useState<HostStorage>();
+  const [storageError, setStorageError] = useState<Error>();
+  const [storageAttempt, retryStorage] = useState(0);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Retry reloads storage on the same host.
   useEffect(() => {
     let active = true;
-    const reportError = (reason: unknown) => {
-      if (active) void reportPlannerError(client, reason);
-    };
-    void createTimelineStorage(host, reportError)
+    setStorageError(undefined);
+    void createTimelineStorage(host, (error) => console.warn("Could not save Timeline preferences", error))
       .then((next) => {
         if (active) setStorage(next);
       })
-      .catch(reportError);
+      .catch((reason: unknown) => {
+        if (active) setStorageError(reason instanceof Error ? reason : new Error(String(reason)));
+      });
     return () => {
       active = false;
     };
-  }, [client, host]);
+  }, [host, storageAttempt]);
   const viewsSource = plan ? timelineViewsSource(client, plan.savedViews) : undefined;
   return (
-    <Stack h="full" minH="0" gap="0">
-      <PlannerReadError error={error} retry={retry} />
+    <Stack h="full" minH="0" gap="0" position="relative">
+      <PlannerReadError
+        error={error ?? storageError}
+        retry={error ? retry : () => retryStorage((attempt) => attempt + 1)}
+      />
       <Box flex="1" minH="0">
         {plan && storage && viewsSource ? (
           <HostStorageProvider storage={storage}>
@@ -76,7 +81,7 @@ function ProjectPlanRoot(props: PlanRootProps) {
             </TimelinePresentationProvider>
           </HostStorageProvider>
         ) : null}
-        {(!plan || !storage) && !error ? <PlanLoading t={t} /> : null}
+        {(!plan || !storage) && !error && !storageError ? <PlanLoading t={t} /> : null}
       </Box>
     </Stack>
   );

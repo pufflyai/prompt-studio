@@ -18,18 +18,20 @@ interface ChatInputQuestionFormProps {
   prompt: ChatInputQuestionPrompt;
   actions?: ReactNode;
   disabled: boolean;
+  submitDisabled: boolean;
   onSubmit: (text: string, response: ChatInputQuestionResponse) => Promise<void>;
 }
 
 /** Key this form by request identity so async requests never share answer state. */
 export const ChatInputQuestionForm = (props: ChatInputQuestionFormProps) => {
-  const { prompt, actions, disabled, onSubmit } = props;
+  const { prompt, actions, disabled, submitDisabled, onSubmit } = props;
   const question = useQuestionPromptState(prompt);
   const navigation = useQuestionNavigation();
   const [submitting, setSubmitting] = useState(false);
   const inFlight = useRef(false);
+  const canRespond = !disabled && !submitDisabled && !submitting;
   const submit = async (skip = false) => {
-    if (inFlight.current || disabled || (!skip && question.hasMissingRequiredAnswer)) return;
+    if (inFlight.current || !canRespond || (!skip && question.hasMissingRequiredAnswer)) return;
     inFlight.current = true;
     setSubmitting(true);
     const sent = {
@@ -71,12 +73,10 @@ export const ChatInputQuestionForm = (props: ChatInputQuestionFormProps) => {
           </>
         }
         questionPrompt
-        skipDisabled={disabled || submitting}
+        skipDisabled={!canRespond}
         skipTitle="Skip this question and let the agent continue"
         onSkip={() => void submit(true)}
-        buttonAction={
-          disabled || submitting || question.hasMissingRequiredAnswer || !question.responseText ? "none" : "submit"
-        }
+        buttonAction={!canRespond || question.hasMissingRequiredAnswer || !question.responseText ? "none" : "submit"}
         messageTitle="Send answer"
         runAction={(action: ChatInputAction) => {
           if (action === "submit") void submit();

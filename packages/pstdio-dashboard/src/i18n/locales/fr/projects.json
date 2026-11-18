@@ -60,8 +60,8 @@
         "errorCopied": "Erreur copiée"
       },
       "upgrade": {
+        "waiting": "En attente de mise à niveau",
         "action": "Mettre à niveau",
-        "succeeded": "Extension mise à niveau",
         "current": "L'extension est déjà à jour",
         "failed": "Échec de la mise à niveau de l'extension"
       },
@@ -82,7 +82,6 @@
         "title": "Déposez un dossier d'extension ici",
         "hint": "Le serveur installe l’extension dans la portée qu’elle déclare.",
         "uploading": "Ajout de {{name}}…",
-        "succeeded": "{{name}} ajoutée",
         "failed": "Impossible d'ajouter le dossier de l'extension",
         "notFolder": "Déposez un dossier, pas un fichier."
       },
@@ -158,6 +157,18 @@
         "title": "Remplacer {{name}} ?",
         "message": "Les fichiers installés seront remplacés. Les autres projets qui utilisent cette extension utiliseront aussi les nouveaux fichiers.",
         "action": "Remplacer"
+      },
+      "feedback": {
+        "queued": "En attente",
+        "upgrading": "Mise à niveau de {{name}}",
+        "updating": "Mise à jour de {{name}}",
+        "installing": "Installation de {{name}}",
+        "batch": "{{count}} mises à niveau terminées sur {{total}}",
+        "retry": "Réessayer",
+        "dismiss": "Fermer",
+        "upgradingButton": "Mise à niveau",
+        "batchFailed": "{{count}} mises à niveau sur {{total}} ont échoué",
+        "installingButton": "Installation"
       }
     }
   },

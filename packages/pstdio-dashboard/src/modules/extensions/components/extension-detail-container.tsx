@@ -1,5 +1,5 @@
 import type { ProjectExtensionInstance } from "@pstdio/sdk/api";
-import { Checkbox, DeleteConfirmationModal, useToaster } from "@pstdio/ui";
+import { Checkbox, DeleteConfirmationModal } from "@pstdio/ui";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useState } from "react";
@@ -12,17 +12,22 @@ import {
   useProjectExtensionSettings,
   useReloadProjectExtension,
   useSetExtensionAutomationEnabled,
-  useSetProjectExtensionEnabled,
   useUninstallProjectExtension,
   useUpdateProjectExtensionSetting,
-  useUpgradeProjectExtension,
 } from "@/shared/extensions/use-project-extensions";
+import type { ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionDetail } from "./extension-detail";
 import { unavailableExtensionHarnesses } from "./extension-harness-availability";
 import { ExtensionSettingsViews } from "./extension-settings-views";
 
 interface ExtensionDetailContainerProps {
   projectId: string | undefined;
+  action?: ExtensionActionState;
+  sourceChanging?: boolean;
+  onUpgrade: () => void;
+  onToggle: (enabled: boolean) => void;
+  onDismissAction: (action: ExtensionActionState) => void;
+  onRetryAction: () => void;
   extension: ProjectExtensionInstance;
   metadata: DashboardExtensionMetadata | undefined;
   agents?: AgentInfo[];
@@ -31,15 +36,26 @@ interface ExtensionDetailContainerProps {
 }
 
 export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) => {
-  const toaster = useToaster();
-  const { projectId, extension, metadata, agents, onBack, settingsInput } = props;
+  const {
+    projectId,
+    extension,
+    metadata,
+    agents,
+    onBack,
+    settingsInput,
+    action,
+    onUpgrade,
+    onDismissAction,
+    onRetryAction,
+  } = props;
+  const toggleAction = action?.operation === "toggle" ? action : undefined;
+  const upgradeAction = toggleAction ? undefined : action;
   const { showError, errorNotice, clearError } = useActionError();
   const settingsPanels =
     metadata?.settingsPanels.filter(
       (panel) => panel.extensionId === extension.extensionId && panel.slot.id === "extension.settings",
     ) ?? [];
   const { t } = useTranslation("projects");
-  const setEnabled = useSetProjectExtensionEnabled(projectId);
   const setAutomationEnabled = useSetExtensionAutomationEnabled(projectId);
   const settingsQuery = useProjectExtensionSettings(projectId, extension.id);
   // The per-extension endpoint documents contributions even while the extension
@@ -47,7 +63,6 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
   const contributionsQuery = useExtensionContributions(projectId, extension.id);
   const updateSetting = useUpdateProjectExtensionSetting(projectId);
   const reload = useReloadProjectExtension(projectId);
-  const upgrade = useUpgradeProjectExtension(projectId);
   const uninstall = useUninstallProjectExtension(projectId);
   const [confirmingUninstall, setConfirmingUninstall] = useState(false);
   const [deleteUserData, setDeleteUserData] = useState(false);
@@ -67,27 +82,10 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
       { instanceId: extension.id },
       {
         onSuccess: (updated) => {
-          if (updated.status === "loaded")
-            toaster.create({ type: "success", title: t("projectSettings.extensionsPanel.reload.succeeded") });
-          else showError({ title: t("projectSettings.extensionsPanel.reload.failed") });
+          if (updated.status !== "loaded") showError({ title: t("projectSettings.extensionsPanel.reload.failed") });
         },
         onError: (error) =>
           showError({ title: t("projectSettings.extensionsPanel.reload.failed"), description: error.message }),
-      },
-    );
-  };
-
-  const handleUpgrade = () => {
-    clearError();
-    upgrade.mutate(
-      { instanceId: extension.id },
-      {
-        onError: (error) => {
-          showError({
-            title: t("projectSettings.extensionsPanel.upgrade.failed"),
-            description: error instanceof Error ? error.message : undefined,
-          });
-        },
       },
     );
   };
@@ -108,7 +106,6 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
 
   return (
     <>
-      {!confirmingUninstall && errorNotice}
       <ExtensionDetail
         workbench={settingsInput?.workbench}
         projectId={projectId}
@@ -127,20 +124,21 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
             <ExtensionSettingsViews input={settingsInput} panels={settingsPanels} />
           ) : undefined
         }
-        toggling={setEnabled.isPending}
         reloading={reload.isPending}
-        upgrading={upgrade.isPending}
+        sourceChanging={props.sourceChanging}
+        upgrading={upgradeAction?.status === "running" || upgradeAction?.status === "queued"}
+        actionFeedback={!confirmingUninstall && errorNotice}
+        upgradeAction={upgradeAction}
+        onDismissUpgrade={onDismissAction}
+        toggleAction={toggleAction}
+        onDismissToggle={toggleAction && (() => onDismissAction(toggleAction))}
+        onRetryToggle={onRetryAction}
+        onRetryUpgrade={upgradeAction?.status === "error" ? onRetryAction : undefined}
         uninstalling={uninstall.isPending}
         togglingAutomationId={
           setAutomationEnabled.isPending ? (setAutomationEnabled.variables?.automationId ?? undefined) : undefined
         }
-        onToggle={(enabled) => {
-          clearError();
-          setEnabled.mutate(
-            { instanceId: extension.id, enabled },
-            { onError: (error) => showError({ title: error.message }) },
-          );
-        }}
+        onToggle={props.onToggle}
         onToggleAutomation={(automation, enabled) =>
           setAutomationEnabled.mutate(
             { instanceId: extension.id, automationId: automation.id, enabled },
@@ -159,7 +157,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
           );
         }}
         onReload={handleReload}
-        onUpgrade={handleUpgrade}
+        onUpgrade={onUpgrade}
         onUninstall={() => {
           clearError();
           setConfirmingUninstall(true);

@@ -8,8 +8,8 @@ export type ChatMessageRow = {
   | { type: "response"; userIndex: number | null; showAssistantActions: boolean; isActiveTurn: boolean }
 );
 
-export const buildChatMessageRows = (leadingResponses: SessionMessage[], groups: MessageGroup[]) => {
-  const leadingActionId = getAssistantMessageActionTargetId(leadingResponses);
+export const buildChatMessageRows = (leadingResponses: SessionMessage[], groups: MessageGroup[], streaming = false) => {
+  const leadingActionId = getAssistantMessageActionTargetId(leadingResponses, streaming && groups.length === 0);
   const rows: ChatMessageRow[] = leadingResponses.map((message) => ({
     type: "response",
     key: message.id,
@@ -20,7 +20,8 @@ export const buildChatMessageRows = (leadingResponses: SessionMessage[], groups:
   }));
   for (const [groupIndex, group] of groups.entries()) {
     const userIndex = rows.length;
-    const actionId = getAssistantMessageActionTargetId(group.responses);
+    const isActiveTurn = groupIndex === groups.length - 1;
+    const actionId = getAssistantMessageActionTargetId(group.responses, streaming && isActiveTurn);
     rows.push({
       type: "user",
       key: group.userMessage.id,
@@ -34,7 +35,7 @@ export const buildChatMessageRows = (leadingResponses: SessionMessage[], groups:
         message,
         userIndex,
         showAssistantActions: message.id === actionId,
-        isActiveTurn: groupIndex === groups.length - 1,
+        isActiveTurn,
       });
     }
   }

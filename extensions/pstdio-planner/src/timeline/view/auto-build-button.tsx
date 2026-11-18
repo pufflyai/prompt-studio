@@ -41,6 +41,7 @@ export interface AutoBuildButtonProps {
   starting?: boolean;
   error?: string;
   actionError?: string;
+  onDismissActionError?: () => void;
   stuck?: boolean;
   disabled?: boolean;
   configuration?: Omit<AutoBuildFormProps, "onClose" | "t">;

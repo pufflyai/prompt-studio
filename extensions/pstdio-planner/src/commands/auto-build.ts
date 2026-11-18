@@ -4,7 +4,8 @@ import { readAutoBuildSupervisor, saveAutoBuildSupervisor } from "../data/auto-b
 import { withWriteGuard } from "../data/write-guard";
 import { readImplementationCapacity } from "./attempt-readiness";
 import { initialSupervisorPrompt, supervisorWakePrompt } from "./auto-build-prompts";
-import { isLiveSession } from "./auto-build-sessions";
+import { waitForSupervisorQuota } from "./auto-build-quota";
+import { isLiveSession, isSupervisorStalled } from "./auto-build-sessions";
 import { readNextTickets } from "./next-tickets";
 
 export const autoBuildCommand = defineCommand({
@@ -33,6 +34,7 @@ async function wakeSupervisor(ctx: CommandContext) {
         "The Auto Build supervisor was removed. Inspect the paused run and its linked sessions before resetting its configuration.",
       );
     if (isLiveSession(session)) return { prompted: false, sessionId: session!.id };
+    if (await waitForSupervisorQuota(ctx, supervisor, session, mode.supervisorModel)) return { prompted: false };
     // A first wake needs one viable ticket. The supervisor queries the full scope before dispatching.
     const work = await readNextTickets(ctx, mode, { limit: 1, scan: true }).catch(async (error: unknown) => {
       const current = await readAutoBuildMode(ctx);
@@ -45,7 +47,7 @@ async function wakeSupervisor(ctx: CommandContext) {
       Date.parse(session?.lastRequestStarted ?? "1970-01-01T00:00:00Z"),
       Date.parse(session?.last_request_started ?? "1970-01-01T00:00:00Z"),
     );
-    const stalled = Boolean(session && Date.now() - Math.max(progressAt, lastPromptAt) >= 60 * 60 * 1000);
+    const stalled = isSupervisorStalled(Boolean(session), Math.max(progressAt, lastPromptAt));
     if (
       (!candidates.length && !(stalled && active > 0)) ||
       capacity.running >= capacity.limit ||
