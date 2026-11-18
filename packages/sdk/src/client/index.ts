@@ -1,15 +1,29 @@
 export type {
+  CloudProjectCatalog,
+  CloudProjectCatalogEntry,
+  CloudProjectDeletion,
+  DeleteCloudProjectInput,
+  DownloadCloudProjectResult,
   HarnessAuthentication,
   HarnessAuthenticationInput,
   HarnessAuthenticationPrompt,
   HarnessAuthenticationQuestion,
+  LocalRemovalPreflight,
   ProjectSyncFile,
   ProjectSyncSource,
   ProjectSyncState,
   ProjectSyncStatus,
+  RemoveLocalProjectInput,
+  RemoveLocalProjectResult,
   TextEditingConnectionInput,
 } from "pstdio-api-contracts";
-export type { AccountClient, AccountDevice, AccountStatus, DeviceLogin } from "./account";
+export {
+  type AccountClient,
+  type AccountDevice,
+  type AccountStatus,
+  type DeviceLogin,
+  LocalRemovalConflictError,
+} from "./account";
 export type { AgentAuthenticationOptions } from "./agent-authentication";
 export type { AgentClient } from "./agents";
 export type { AssetClientOwner, AssetsClient, AssetUploadInput } from "./assets";
