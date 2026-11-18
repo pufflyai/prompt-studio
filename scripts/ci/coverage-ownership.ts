@@ -4,13 +4,7 @@ import type { Target } from "./test-plan";
 
 const primary = ["linux-x64", "darwin-arm64", "win32-x64"];
 const all = [...primary, "linux-arm64", "darwin-x64", "win32-arm64"];
-const artifactCli = new Set([
-  "npm-entrypoint",
-  "packaged-assets-smoke",
-  "extension-dependency-loading",
-  "packaged-native-terminal",
-  "packaged-artifact-lifecycle",
-]);
+const artifactCli = new Set(["npm-entrypoint", "packaged-assets-smoke", "packaged-native-terminal"]);
 // Mixed lifecycle, extraction, filesystem sync and install cases retain native execution.
 // Narrowing these files requires extracting and qualifying the native replacement first.
 const nativeCli = new Set([

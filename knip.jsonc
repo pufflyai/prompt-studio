@@ -351,8 +351,6 @@
       "entry": [
         "extension.ts",
         "src/view/main.tsx",
-        // The packaged host compatibility test bundles this entry by path.
-        "src/legacy-layout.fixture.ts",
         "src/**/*.test.ts",
         "src/**/*.canvas.tsx",
         "scripts/**/*.{ts,tsx}"
