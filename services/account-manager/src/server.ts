@@ -9,6 +9,7 @@ const auth = createManagerAuthentication({
   origin: process.env.MANAGER_ORIGIN ?? "",
   audience: process.env.RELAY_AUDIENCE ?? "",
   secret: process.env.BETTER_AUTH_SECRET ?? "",
+  projectDeletionRelayToken: process.env.PROJECT_DELETION_RELAY_TOKEN,
   googleClientId: process.env.GOOGLE_CLIENT_ID ?? "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
   sessionLifetimeSeconds: number("SESSION_LIFETIME_SECONDS"),
