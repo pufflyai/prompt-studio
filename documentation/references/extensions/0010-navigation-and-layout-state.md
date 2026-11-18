@@ -49,8 +49,6 @@ Params describe view state and stay out of layout cache and breadcrumb identity.
 
 Resource-list enum options can declare `contextMenuActions` with an `id`, localized `label`, `action` navigation target and optional `disabled` state. These actions belong to the group header and retain the declaring extension and project when invoked. Page dialogs use the standard dialog header and content sizing; embedded webviews report their content height. Workspace creation pages belong to their provider; use the reference exported by that tool.
 
-*Updated at: 2026-11-11*
-
 Resource references can supply `iconColor` and `iconLabel` with `icon`. Workbench
 uses that presentation in resource breadcrumbs, tabs, tree rows, and resource
 search. The color is a semantic theme token and the label describes the state for
