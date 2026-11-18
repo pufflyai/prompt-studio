@@ -64,11 +64,6 @@ const iframeStyle: CSSProperties = {
   width: "100%",
 };
 
-// The surface can bound this viewport without changing natural-height dialogs and embedded settings.
-const contentHeightIframeStyle: CSSProperties = { ...iframeStyle, flex: "none", minHeight: undefined };
-const frameViewportStyle = (sizing: ExtensionFrameProps["sizing"]) =>
-  sizing === "content-height" ? contentHeightIframeStyle : iframeStyle;
-
 const frameShellStyle: CSSProperties = {
   display: "flex",
   height: "100%",
@@ -104,7 +99,6 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const initializedRef = useRef(false);
   const visibleRef = useRef(visible);
   visibleRef.current = visible;
-  const isVisible = () => visibleRef.current;
   // The connection belongs to one browsing context. Navigation keeps the iframe's
   // WindowProxy, so a different contentWindow means the runtime document is gone.
   const connectedWindowRef = useRef<Window | null>(null);
@@ -216,8 +210,8 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
           }),
         );
       },
-      contentHeightChanged: frameDimensionChanged(sizing === "content-height", setContentHeight, isVisible),
-      contentWidthChanged: frameDimensionChanged(sizing === "content-width", setContentWidth, isVisible),
+      contentHeightChanged: frameDimensionChanged(sizing === "content-height", setContentHeight),
+      contentWidthChanged: frameDimensionChanged(sizing === "content-width", setContentWidth),
       dispatchKeyboardEvent: async (event: import("pstdio-api-contracts").WebviewKeyboardEventParams) => {
         if (onKeyboardEventRef.current) return onKeyboardEventRef.current(event);
         document.dispatchEvent(new KeyboardEvent("keydown", { ...event, bubbles: true, cancelable: true }));
@@ -319,7 +313,6 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
         ...frameShellStyle,
         width: sizing === "content-width" ? contentWidth : "100%",
         height: sizing === "content-height" ? contentHeight : "100%",
-        overflow: sizing === "content-height" ? "hidden" : undefined,
       }}
     >
       <iframe
@@ -331,7 +324,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
         sandbox={EXTENSION_IFRAME_SANDBOX}
         // Match the host theme so the empty/loading iframe paints the right canvas
         // instead of flashing the default light background while the guest connects.
-        style={{ ...frameViewportStyle(sizing), colorScheme: theme }}
+        style={{ ...iframeStyle, colorScheme: theme }}
         onError={() => {
           onErrorRef.current?.({ message: `Failed to load extension runtime at ${view.webview.runtimeUrl}` });
         }}

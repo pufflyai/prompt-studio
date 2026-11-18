@@ -4,4 +4,4 @@
 "@pstdio/workbench": minor
 ---
 
-Add React render highlighting and bounded status popovers with shared scrolling.
+Allow performance tools to highlight React renders in the current workbench window.
