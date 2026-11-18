@@ -238,19 +238,27 @@ test("arming uses the durable capture lifecycle and preserves interrupted checkp
 test("an armed command captures a CPU spike and exports its correlated operation evidence", async () => {
   const app = await setup();
   const capture = await app.commands["diagnostics.arm"].run(app.context, { cpuPercent: 0.01, minutes: 1 });
-  const collecting = app.collect();
-  await Bun.sleep(20);
-  channel("pstdio.diagnostics.operation").publish({
-    kind: "chat.encode",
-    startedAt: new Date().toISOString(),
-    durationMs: 1,
-    logicalBytes: 100_000,
-    wireBytes: 134_000,
-    fragments: 3,
-  });
-  const until = performance.now() + 10;
-  while (performance.now() < until) Math.sqrt(Math.random());
-  await collecting;
+  const source = channel("pstdio.diagnostics.operation");
+  // Command admission performs asynchronous metadata writes before the recorder subscribes.
+  const publishing = setInterval(() => {
+    if (!source.hasSubscribers) return;
+    clearInterval(publishing);
+    source.publish({
+      kind: "chat.encode",
+      startedAt: new Date().toISOString(),
+      durationMs: 1,
+      logicalBytes: 100_000,
+      wireBytes: 134_000,
+      fragments: 3,
+    });
+    const until = performance.now() + 10;
+    while (performance.now() < until) Math.sqrt(Math.random());
+  }, 1);
+  try {
+    await app.collect();
+  } finally {
+    clearInterval(publishing);
+  }
   const exported = await app.commands["diagnostics.export"].run(app.context, { id: capture.id });
   expect(exported.capture.status).toBe("succeeded");
   expect(exported.data).toMatchObject({ complete: true, mode: "armed", reason: "threshold" });
