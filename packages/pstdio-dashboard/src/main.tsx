@@ -1,4 +1,3 @@
-import "./react-scan-bootstrap";
 import "@pstdio/ui/style.css";
 
 import { PstdioApiError } from "@pstdio/sdk/client";

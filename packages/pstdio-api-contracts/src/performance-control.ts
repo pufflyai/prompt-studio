@@ -7,8 +7,6 @@ import type { PerformanceSnapshot } from "./performance-diagnostics";
 export interface PerformanceMonitoringState {
   enabled: boolean;
   host: "desktop" | "browser";
-  /** Absent on older hosts. Scans this window's workbench, not extension frames. */
-  renderOverlay?: { supported: boolean; enabled: boolean; scope: "workbench" };
 }
 
 export interface PerformanceRecordingExport {
@@ -23,7 +21,6 @@ export type PerformanceReadRequest =
     };
 export type PerformanceControlRequest =
   | { operation: "set-enabled"; enabled: boolean }
-  | { operation: "set-render-overlay"; enabled: boolean }
   | { operation: "pause-extension" | "resume-extension"; installedExtensionId: string };
 export type PerformanceReadResult =
   | PerformanceMonitoringState
@@ -41,7 +38,5 @@ export interface PerformanceDiagnosticsAdapter {
   /** Host owns the single poller; consumers add listeners only. */
   subscribe(listener: (snapshot: PerformanceSnapshot | null) => void): () => void;
   /** Requires an active local user interaction. Runtime commands cannot invoke this device control. */
-  control(request: PerformanceControlRequest, owner?: object): Promise<void>;
-  /** Host-supplied view identity; disconnect releases only controls owned by that view. */
-  releaseControlOwner?(owner: object): void;
+  control(request: PerformanceControlRequest): Promise<void>;
 }

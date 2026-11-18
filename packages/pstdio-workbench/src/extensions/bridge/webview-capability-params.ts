@@ -125,7 +125,6 @@ const schemas = {
   ]),
   "performance.control": z.discriminatedUnion("operation", [
     z.strictObject({ operation: z.literal("set-enabled"), enabled: z.boolean() }),
-    z.strictObject({ operation: z.literal("set-render-overlay"), enabled: z.boolean() }),
     z.strictObject({ operation: z.enum(["pause-extension", "resume-extension"]), installedExtensionId: identifier }),
   ]),
   "harnesses.read": z.object({ harnessId: identifier.optional(), model: z.string().optional() }),

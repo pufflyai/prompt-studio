@@ -1,6 +1,7 @@
 import { Box, Center, Stack, Text } from "@chakra-ui/react";
 import type { WebviewHostProps } from "@pstdio/sdk/extensions";
 import { useUiScope } from "@pstdio/ui";
+import { sizesToContentHeight } from "pstdio-extensions/bridge/contract";
 import { createWebviewDiagnostics, ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import type { WorkbenchCore } from "../../core";
@@ -27,7 +28,7 @@ export const BridgeWebviewFrame = (props: BridgeWebviewFrameProps) => {
     <Box
       position="relative"
       width={props.sizing === "content-width" ? "max-content" : "full"}
-      height={props.sizing === "content-height" ? "auto" : "full"}
+      height={sizesToContentHeight(props.sizing) ? "auto" : "full"}
       minH="0"
       display="flex"
       flexDirection="column"

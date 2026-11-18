@@ -42,6 +42,15 @@ test("measures while the Performance Monitoring extension is loaded and shows it
   expect(await operations()).not.toContain("observe");
   await meter(page).click();
   await expect(preparedFrame).toHaveCount(1);
+  // The guest scrolls within a bounded viewport even as readings grow.
+  await expect
+    .poll(() =>
+      preparedFrame.evaluate((frame) => {
+        const height = frame.getBoundingClientRect().height;
+        return height > 0 && height <= Math.ceil(window.innerHeight * 0.7);
+      }),
+    )
+    .toBe(true);
   await expect.poll(() => details.evaluate(() => document.visibilityState)).toBe("visible");
   await expect.poll(operations).toContain("observe");
   await expect(details.getByText("CPU is measured in the desktop app", { exact: true })).toBeVisible();

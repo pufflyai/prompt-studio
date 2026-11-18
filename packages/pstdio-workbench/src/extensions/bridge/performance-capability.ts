@@ -1,5 +1,4 @@
 import type {
-  PerformanceControlRequest,
   PerformanceDiagnosticsAdapter,
   PerformanceReadRequest,
 } from "pstdio-api-contracts/performance-diagnostics";
@@ -7,17 +6,6 @@ import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
 
 const captures = new WeakMap<HostEventPublisher, () => Promise<void>>();
 const subscriptions = new WeakMap<HostEventPublisher, () => void>();
-
-export const createPerformanceControlCapability = (
-  adapter: PerformanceDiagnosticsAdapter | undefined,
-  events?: HostEventPublisher,
-) => {
-  if (!adapter) return undefined;
-  if (events && adapter.releaseControlOwner) {
-    events.onDisconnect(() => adapter.releaseControlOwner?.(events));
-  }
-  return (request: PerformanceControlRequest) => adapter.control(request, events);
-};
 
 const retainCapture = async (adapter: PerformanceDiagnosticsAdapter, events: HostEventPublisher) => {
   if (captures.has(events)) return;

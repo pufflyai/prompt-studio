@@ -59,10 +59,15 @@ export const StatusItemContent = (props: {
             maxH="70dvh"
             overflow="hidden"
           >
-            {/* The webview scrolls itself, so it can keep its own header in place and its scrollbar at the edge. */}
-            <Popover.Body minH="0" display="flex" flexDirection="column" css={{ "& iframe": { maxHeight: "70dvh" } }}>
+            {/* Bound the guest viewport; its frame clips to the content height reported by the view. */}
+            <Popover.Body
+              minH="0"
+              display="flex"
+              flexDirection="column"
+              css={{ "& iframe": { minHeight: "70dvh", maxHeight: "70dvh" } }}
+            >
               <ViewActivityContext value={visible && open}>
-                <WorkbenchWidgetHost workbench={workbench} region="main" placement={detail} sizing="content-height" />
+                <WorkbenchWidgetHost workbench={workbench} region="main" placement={detail} sizing="bounded-height" />
               </ViewActivityContext>
             </Popover.Body>
           </Popover.Content>

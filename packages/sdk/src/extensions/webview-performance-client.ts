@@ -14,8 +14,6 @@ export interface WebviewPerformanceClient {
   retain(): Promise<() => Promise<void>>;
   snapshot(): Promise<PerformanceSnapshot | null>;
   setEnabled(enabled: boolean): Promise<void>;
-  /** Requires a local user action. Read state().renderOverlay before using this on older hosts. */
-  setRenderOverlayEnabled(enabled: boolean): Promise<void>;
   pauseExtension(installedExtensionId: string): Promise<void>;
   resumeExtension(installedExtensionId: string): Promise<void>;
   /** Listener lifetime belongs to this view. Does not start a collector. */
@@ -33,8 +31,6 @@ export const createWebviewPerformanceClient = (host: GuestHost) =>
       host.call("performance.read", { operation: "recordings" }) as Promise<PerformanceRecordingExport | null>,
     snapshot: () => host.call("performance.read", { operation: "snapshot" }) as Promise<PerformanceSnapshot | null>,
     setEnabled: (enabled) => host.call("performance.control", { operation: "set-enabled", enabled }),
-    setRenderOverlayEnabled: (enabled) =>
-      host.call("performance.control", { operation: "set-render-overlay", enabled }),
     pauseExtension: (installedExtensionId) =>
       host.call("performance.control", { operation: "pause-extension", installedExtensionId }),
     resumeExtension: (installedExtensionId) =>
