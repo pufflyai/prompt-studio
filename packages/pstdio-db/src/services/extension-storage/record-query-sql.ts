@@ -132,8 +132,14 @@ const fieldPredicateSql = (
       return empty;
     case "notEmpty":
       return sql`NOT ${empty}`;
-    case "eq":
-      return recordEqualitySql(index, predicate.field, comparable, json(predicate.value));
+    case "eq": {
+      const value = json(predicate.value);
+      // Typed booleans have only three index keys (true, false, and null), with distinct hashes.
+      // A second equality check makes Postgres underestimate common values and sort a full page source.
+      if (queryField(index, predicate.field).type === "boolean" && index.equality?.includes(predicate.field))
+        return sql`${equalityKey(comparable)} = ${equalityKey(value)}`;
+      return recordEqualitySql(index, predicate.field, comparable, value);
+    }
     case "ne":
       return sql`${comparable} <> ${json(predicate.value)}`;
     case "equalsIgnoreCase":

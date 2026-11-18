@@ -519,3 +519,52 @@ test("a small ordered page probes each leading equality value even with a compet
   // Every index probe visits at most the next entry, even when the keys are absent.
   expect([...evidence.matchAll(/"Rows Removed by Filter":(\d+)/g)].every(([, rows]) => Number(rows) <= 1)).toBe(true);
 });
+
+test("an indexed boolean keeps a small ordered page bounded with a competing equality index", async () => {
+  const f = await fixture();
+  const index: StorageRecordIndex = {
+    name: "published-order",
+    prefix: "item-",
+    fields: {
+      published: { path: ["published"], type: "boolean" },
+      rank: { path: ["rank"], type: "string" },
+      id: { path: ["id"], type: "string" },
+    },
+    equality: ["published"],
+    orderBy: [
+      { field: "rank", direction: "desc" },
+      { field: "id", direction: "desc" },
+    ],
+  };
+  await f.records.defineIndexes([index, { ...index, name: "published", orderBy: [] }]);
+  await f.records.commit({
+    operationId: "boolean-pages",
+    edits: [
+      ...Array.from({ length: 2000 }, (_, i) => ({
+        recordId: `item-${i}`,
+        replace: { published: i >= 100, rank: `${i.toString().padStart(5, "0")}${"x".repeat(120)}`, id: i.toString() },
+      })),
+      ...Array.from({ length: 6000 }, (_, i) => ({ recordId: `other-${i}`, replace: { kind: "other" } })),
+      { recordId: "item-null", replace: { published: null, rank: "empty" } },
+      { recordId: "item-missing", replace: { rank: "absent" } },
+      { recordId: "item-invalid", replace: { published: "true", rank: "invalid" } },
+    ],
+  });
+  await f.db.execute(sql`ANALYZE storage_current_records`);
+  const where = { field: "published", op: "eq", value: true } as const;
+  const page = (value: boolean | null) => f.records.query({ index: index.name, where: { ...where, value }, limit: 3 });
+  expect((await page(true)).records.map((r) => r.recordId)).toEqual(["item-1999", "item-1998", "item-1997"]);
+  expect((await page(false)).records.map((r) => r.recordId)).toEqual(["item-99", "item-98", "item-97"]);
+  expect((await page(null)).records.map((r) => r.recordId)).toEqual(["item-invalid", "item-null", "item-missing"]);
+  const query = recordPageSql(
+    index,
+    ["rank"],
+    sql`${recordScopeSql(f.owner, index)} AND ${predicateSql(index, where)}`,
+    2,
+  );
+  const plan = await f.db.execute(sql`EXPLAIN (ANALYZE, FORMAT JSON) ${query}`);
+  const json = JSON.stringify(plan.rows);
+  expect(json).toContain('"Node Type":"Index Scan"');
+  const rows = [...json.matchAll(/"(?:Actual Rows|Rows Removed by Filter)":(\d+)/g)].map((match) => Number(match[1]));
+  expect(Math.max(...rows)).toBeLessThan(10);
+});
