@@ -124,7 +124,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasSideMenus,
     hasSidenavWidgets,
     hasStatusWidgets,
-    hasSystemNotices,
+    hasStatusContent,
   } = useWorkbenchLayoutFlags(workbench);
   const showActivity = !fullscreen.active && hasActivityBarWidgets;
   const showStatus = !fullscreen.active && hasStatusWidgets;
@@ -230,7 +230,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
         </Flex>
         <WorkbenchStatusBar
           workbench={workbench}
-          visible={showStatus || (!fullscreen.active && hasSystemNotices)}
+          visible={!fullscreen.active && hasStatusContent}
           floating={!showStatus}
         />
         <WorkbenchFloatingSidePanel

@@ -14,6 +14,12 @@ export const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
     () => workbench.statusBar.listVisibleItems().length > 0,
   );
   const activeModeId = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
+  const hasStatusWidgets =
+    statusChrome !== undefined
+      ? statusChrome !== false
+      : activeModeId === workbench.modes.getActiveModeId() &&
+        Object.keys(statusBarItems).length > 0 &&
+        hasVisibleStatusItems;
   return {
     hasNavWidgets: useWorkbenchRegionContent(workbench, "nav"),
     hasActivityBarWidgets: useWorkbenchRegionContent(workbench, "activity"),
@@ -24,12 +30,7 @@ export const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
     hasSideHeaderWidgets: useWorkbenchRegionContent(workbench, "side-header"),
     hasSideWidgets: useWorkbenchRegionContent(workbench, "side", { locationScoped: true }),
     hasSideMenus: useWorkbenchPanelMenusPresent(workbench, "side"),
-    hasSystemNotices,
-    hasStatusWidgets:
-      statusChrome !== undefined
-        ? statusChrome !== false
-        : activeModeId === workbench.modes.getActiveModeId() &&
-          Object.keys(statusBarItems).length > 0 &&
-          hasVisibleStatusItems,
+    hasStatusWidgets,
+    hasStatusContent: hasStatusWidgets || hasSystemNotices,
   };
 };
