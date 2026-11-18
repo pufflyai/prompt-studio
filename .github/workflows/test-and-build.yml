@@ -106,10 +106,19 @@ jobs:
         with:
           install-strategy: native
           windows-dev-drive: "true"
+      # Use the owning plan for prerequisites as well as execution. Packaged CLI
+      # files can exercise Chromium UI, even though Bun owns their test process.
+      - name: Prepare the selected native file plan
+        id: native_plan
+        run: >-
+          bun -e 'const child = Bun.spawnSync(["bun", "scripts/test.ts", "--file", process.env.DIAGNOSTIC_FILE, "--list", "--out", "test-results/ci/native-file-plan.json"], { stdio: ["inherit", "inherit", "inherit"] }); if (child.exitCode) process.exit(child.exitCode); const plan = await Bun.file("test-results/ci/native-file-plan.json").json(); await Bun.write(process.env.GITHUB_OUTPUT, "chromium=" + plan.runs.some((run) => run.runner === "packaged-cli") + String.fromCharCode(10));'
+      - name: Install native Chromium for packaged CLI UI
+        if: steps.native_plan.outputs.chromium == 'true'
+        run: bunx playwright@1.60.0 install chromium
       # Direct argv preserves the native shell's signal behavior and keeps the input out of shell syntax.
       - name: Run the selected native file with its owning runner
         run: >-
-          bun -e 'const child = Bun.spawnSync(["bun", "scripts/test.ts", "--file", process.env.DIAGNOSTIC_FILE, "--out", "test-results/ci/native-file-plan.json"], { stdio: ["inherit", "inherit", "inherit"] }); process.exit(child.exitCode);'
+          bun -e 'const child = Bun.spawnSync(["bun", "scripts/test.ts", "--plan", "test-results/ci/native-file-plan.json"], { stdio: ["inherit", "inherit", "inherit"] }); process.exit(child.exitCode);'
       - name: Preserve native file execution
         if: always()
         uses: actions/upload-artifact@v4
