@@ -95,6 +95,8 @@ const recordFiles = (input: RecordStreamInput) =>
     progress: input.fileProgress,
   });
 
+const isCompleteCopy = (cursor: RecordStreamCursor, incomplete: boolean) => !incomplete && !cursor.skipped;
+
 /**
  * Syncs every record of one owner through one encrypted relay document (ADR 0102). Each relay
  * update is one local save. Every changed latest state is merged once, so retained local records
@@ -281,8 +283,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
   const join = async (cursor: RecordStreamCursor) => {
     let first = await relay.read(0);
     if (!first.state && first.lastSequence === 0) {
-      if (incomplete || cursor.skipped) return null;
-      if (!(await store.hasRecords())) return null;
+      if (!isCompleteCopy(cursor, incomplete) || !(await store.hasRecords())) return null;
       const founded = await publish(cursor, true);
       if (founded) return founded;
       // The winning founding state was published after our empty read.
@@ -329,10 +330,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
   /** One pass after reading: restart a lost stream, send saved changes, then compact. Null when done. */
   const send = async (cursor: RecordStreamCursor | null, previous: RecordStreamCursor) => {
     // The relay lost this stream. Any device with a full copy uploads it again (R3).
-    if (!cursor) {
-      if (incomplete || previous.skipped) return null;
-      return (await publish(previous, true)) ?? previous;
-    }
+    if (!cursor) return isCompleteCopy(previous, incomplete) ? ((await publish(previous, true)) ?? previous) : null;
     if (await push()) return cursor;
     // A device that set data aside never claims to cover it, even to republish its receipts.
     if (incomplete || cursor.skipped) return null;
