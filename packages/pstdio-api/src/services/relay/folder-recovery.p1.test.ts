@@ -168,7 +168,8 @@ test("a source this device cannot publish still downloads every other completed 
       "desktop",
       `${workspace.id}:${createHash("sha256").update(folder).digest("hex").slice(0, 16)}`,
     ];
-    const journal = await openRecoveryJournal({ root: destination.deps.projectRecovery.root, source: sourceKey });
+    const recoveryRoot = projectRecoveryRoot(destination.deps.projectRecovery.root, project.id);
+    const journal = openRecoveryJournal({ root: recoveryRoot, source: sourceKey });
     await journal.update({
       candidate: {
         blobId: "AAAAAAAAAAAAAAAAAAAAAA",
@@ -180,7 +181,7 @@ test("a source this device cannot publish still downloads every other completed 
     });
     const lockName = `${createHash("sha256").update(JSON.stringify(sourceKey)).digest("hex").slice(0, 32)}.lock`;
     await writeFile(
-      join(destination.deps.projectRecovery.root, "sources", lockName),
+      join(recoveryRoot, "sources", lockName),
       JSON.stringify({ pid: foreign.pid, token: "other-process" }),
     );
     const config = {
