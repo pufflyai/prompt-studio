@@ -40,14 +40,7 @@ test("an unavailable workspace rejects a native operation before creating a sess
     });
     const project = await response.json();
     const workspace = (await app.deps.workspaceService.getDefault(project.id))!;
-    await app.deps.workspaceService.updateProviderProjection(workspace.id, {
-      provider_state: "provisioning",
-      execution_kind: workspace.execution_kind,
-      root_path: workspace.root_path,
-      provider_capabilities_json: workspace.provider_capabilities_json,
-      provider_error_json: null,
-    });
-    await expect(
+    const run = () =>
       createSessionHarnessOperation(
         app.deps,
         {
@@ -58,8 +51,24 @@ test("an unavailable workspace rejects a native operation before creating a sess
         },
         { kind: "command", text: "/compact" },
         async () => {},
-      ),
-    ).rejects.toThrow("provider state is provisioning");
+      );
+    const finishMaintenance = Promise.withResolvers<void>();
+    const maintenance = app.deps.workspaceService.maintenance.run(workspace.id, () => finishMaintenance.promise);
+    try {
+      await expect(run()).rejects.toThrow("Workspace files are being updated");
+      expect(await app.deps.sessionService.list(project.id)).toEqual([]);
+    } finally {
+      finishMaintenance.resolve();
+      await maintenance;
+    }
+    await app.deps.workspaceService.updateProviderProjection(workspace.id, {
+      provider_state: "provisioning",
+      execution_kind: workspace.execution_kind,
+      root_path: workspace.root_path,
+      provider_capabilities_json: workspace.provider_capabilities_json,
+      provider_error_json: null,
+    });
+    await expect(run()).rejects.toThrow("provider state is provisioning");
     expect(await app.deps.sessionService.list(project.id)).toEqual([]);
   } finally {
     await app.close();

@@ -35,7 +35,10 @@ export class HarnessOperationError extends Error {
 const resolve = async (deps: SessionsRouteDeps, id: string, operation = false) => {
   const session = await deps.sessionService.get(id);
   if (!session) throw new HarnessOperationError("Session not found.", 404);
-  const record = await deps.workspaceSessionService.getWorkspaceBySessionId(id);
+  const record = await deps.workspaceSessionService.getWorkspaceBySessionId(
+    id,
+    operation ? { forLaunch: true } : undefined,
+  );
   const readiness = workspaceSessionReadiness(record);
   if (operation && readiness.kind !== "ready") throw new HarnessOperationError(readiness.message, 409);
   const harness = await getSessionHarness(deps.harnessRegistry, session);
@@ -261,6 +264,8 @@ export const createSessionHarnessOperation = async (
     throw new HarnessOperationError("Choose an active workspace before running this command.", 409);
   const readiness = workspaceSessionReadiness(workspace);
   if (readiness.kind !== "ready") throw new HarnessOperationError(readiness.message, 409);
+  if (workspace && (await deps.workspaceService.maintenance.isRunning(workspace.id)))
+    throw new HarnessOperationError("Workspace files are being updated. Try the command again shortly.", 409);
   const session = await deps.sessionService.create(
     { ...sessionInput, status: "completed" },
     { emitStartedHook: false },

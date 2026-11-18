@@ -1,5 +1,5 @@
 import { Button, HStack, Progress, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage } from "@pstdio/ui";
+import { ActionErrorSlot, AlertMessage } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -34,16 +34,19 @@ export const ExtensionActionFeedback = (props: ExtensionActionFeedbackProps) => 
   const label = elapsed === undefined ? action.label : `${action.label} · ${elapsed}s`;
   if (action.status === "error")
     return (
-      <AlertMessage status="error" role="alert" title={label} onClose={onDismiss}>
-        <Stack gap="xs">
-          <Text>{action.error}</Text>
-          {onRetry && (
-            <Button size="2xs" variant="outline" onClick={onRetry}>
-              {t("projectSettings.extensionsPanel.feedback.retry", "Retry")}
-            </Button>
-          )}
-        </Stack>
-      </AlertMessage>
+      <ActionErrorSlot edge="top">
+        <AlertMessage
+          compact
+          status="error"
+          title={label}
+          onClose={onDismiss}
+          endElement={
+            onRetry && <Button onClick={onRetry}>{t("projectSettings.extensionsPanel.feedback.retry", "Retry")}</Button>
+          }
+        >
+          {action.error}
+        </AlertMessage>
+      </ActionErrorSlot>
     );
   return (
     <Stack gap="xs" role="status" aria-live="polite" aria-atomic="true">
