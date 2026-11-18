@@ -55,10 +55,7 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   await expect(firstRow).toHaveAccessibleName("Tickets");
   await sidenav.getByText("Notes", { exact: true }).hover();
   await sidenav.getByRole("button", { name: "New note", exact: true }).click();
-  const editor = page
-    .getByRole("region", { name: "Main", exact: true })
-    .getByRole("textbox", { name: "", exact: true })
-    .filter({ visible: true });
+  const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
   await editor.fill("Level note");
   await expect(row("Level note")).toBeVisible();
   // Individual notes are data; the Notes collection can be hidden from the customize menu.
