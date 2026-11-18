@@ -74,6 +74,7 @@ export const RendererCreateDialog = (props: RendererCreateDialogProps) => {
             {read.error ? (
               <RendererReadNotice
                 error={read.error}
+                initial
                 retry={() => {
                   setRead({ ready: false });
                   setRevision(revision + 1);

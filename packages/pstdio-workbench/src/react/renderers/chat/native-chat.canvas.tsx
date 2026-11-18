@@ -27,7 +27,7 @@ export const Streaming = () => (
 export const OtherDevice = () => (
   <ChatPanel
     {...composer}
-    inputDisabled
+    submitDisabled
     readOnlyQueue
     messages={[{ id: "history", role: "assistant", parts: [{ type: "text", text: "History from another device." }] }]}
   />
@@ -125,10 +125,16 @@ export const ConversationFailure = () => {
     return createChatSession({
       initial: {
         messages: [{ id: "saved", role: "assistant", parts: [{ type: "text", text: "Earlier saved reply." }] }],
+        readOnly: true,
+        approval: {
+          id: "pending",
+          title: "Open the project folder?",
+          choices: [{ id: "allow", label: "Allow" }],
+        },
       },
       query: async () => {
         if (attempts++ === 0) throw new Error("The conversation connection was lost. Retry to reconnect.");
-        return {};
+        return { readOnly: false, approval: null };
       },
       action: async () => ({}),
     });

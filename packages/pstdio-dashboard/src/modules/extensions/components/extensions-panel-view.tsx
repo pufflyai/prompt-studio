@@ -229,7 +229,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
         />
       ))}
 
-      <Stack padding="lg">
+      <Stack padding="lg" position="relative">
         <ExtensionActionFeedback
           action={actionStates.$folder}
           onDismiss={() => onDismissAction?.("$folder")}

@@ -3,7 +3,6 @@ import {
   HostStorageScope,
   ResizableSplitLayout,
   type ThemePreferenceStorage,
-  Toaster,
   UiScopeProvider,
   UiScopeRoot,
 } from "@pstdio/ui";
@@ -13,7 +12,6 @@ import { WorkbenchCommandPalette } from "../command-palette/command-palette";
 import type { CommandParamFieldRenderer } from "../command-palette/command-params-dialog";
 import { WorkbenchKeyboardLayer } from "../keybindings/keyboard-layer";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
-import { WorkbenchNotificationHost } from "../notifications/notification-host";
 import { WorkbenchPanelMenuHosts } from "../panel-menu/panel-menu-hosts";
 import { movePanelHost } from "../region/move-panel-host";
 import { WorkbenchPanelDropFrame } from "../region/panel-drop-frame";
@@ -126,6 +124,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasSideMenus,
     hasSidenavWidgets,
     hasStatusWidgets,
+    hasStatusContent,
   } = useWorkbenchLayoutFlags(workbench);
   const showActivity = !fullscreen.active && hasActivityBarWidgets;
   const showStatus = !fullscreen.active && hasStatusWidgets;
@@ -229,7 +228,11 @@ const WorkbenchContent = (props: WorkbenchProps) => {
         >
           {contentFrame}
         </Flex>
-        <WorkbenchStatusBar workbench={workbench} visible={showStatus} />
+        <WorkbenchStatusBar
+          workbench={workbench}
+          visible={!fullscreen.active && hasStatusContent}
+          floating={!showStatus}
+        />
         <WorkbenchFloatingSidePanel
           workbench={workbench}
           available={hasSidePanel}
@@ -249,7 +252,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
         <WorkbenchKeybindingDispatcher workbench={workbench} />
         <WorkbenchKeyboardLayer workbench={workbench} />
         <FullscreenKeyboard workbench={workbench} />
-        <WorkbenchNotificationHost workbench={workbench} />
       </Flex>
       <WorkbenchSidePanelRegionPortal workbench={workbench} sidePanelHost={sidePanelHost} />
     </WorkbenchThemeScope>
@@ -283,7 +285,6 @@ export const Workbench = (props: WorkbenchProps) => {
                   </WorkbenchPanelMenuHosts>
                 </WorkbenchPanelViewHosts>
               </WorkbenchTabDragProvider>
-              <Toaster />
             </UiScopeRoot>
           </WorkbenchThemeProvider>
         </HostStorageScope>

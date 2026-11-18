@@ -107,7 +107,7 @@ export const ProjectDefaultsCard = (props: ProjectDefaultsCardProps) => {
   };
 
   return (
-    <Stack gap="sm" data-testid="project-defaults-card">
+    <Stack position="relative" gap="sm" data-testid="project-defaults-card">
       {errorNotice}
       <ParamEditorRow
         param={{

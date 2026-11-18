@@ -330,8 +330,9 @@ their separate `CommandOutcomeError.outcome` contract.
 
 Declare bare capability names. Versioned declarations such as `"clipboard.write@1"` remain
 accepted but are deprecated through 0.44. Typed clients still require the declarations they use.
-`client.placement.close()` needs `placement.close`; `client.notify.toast({ type, title?, message })`
-needs `notification.show`. The old `{ level, title, message? }` toast shape is deprecated.
+`client.placement.close()` needs `placement.close`. Use `notification.show` for system notices in the status bar.
+The compatibility method `client.notify.toast({ type, title?, message })` uses the same host routing.
+The older `{ level, title, message? }` input shape is deprecated.
 
 ## Terminal sessions
 
