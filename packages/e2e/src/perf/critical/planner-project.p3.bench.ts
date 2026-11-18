@@ -26,10 +26,7 @@ const observeQueries = (page: Page) => {
     if (!request.url().includes("/commands/") || !request.url().endsWith("/execute")) return;
     const collecting = (async () => {
       const response = await request.response();
-      assert(
-        response,
-        `Planner command has no response (${request.failure()?.errorText ?? "no failure reason"}): ${request.url()}`,
-      );
+      assert(response, `Planner command has no response: ${request.url()}`);
       const body = await response.body();
       const result = JSON.parse(body.toString());
       assert(response.ok() && result.outcome?.status === "success", "Planner command failed");
@@ -88,14 +85,8 @@ await runScenario("B6", async (capture) => {
       const counters = async () => {
         const response = await fetch(`${runtime.baseUrl}/runtime/benchmark-counters`, { headers: runtime.headers });
         assert(response.ok, "Native Planner storage counters unavailable");
-        const value = (await response.json()) as {
-          sequentialRows: number;
-          indexEntries: number;
-          writes: number;
-          indexReads: { index: string; definition: string | null; scanned: number }[];
-        };
-        assert([value.sequentialRows, value.indexEntries, value.writes].every(Number.isFinite));
-        assert(value.indexReads.every((entry) => Number.isFinite(entry.scanned)));
+        const value = (await response.json()) as { sequentialRows: number; indexEntries: number; writes: number };
+        assert(Object.values(value).every(Number.isFinite));
         return value;
       };
       const before = await counters();

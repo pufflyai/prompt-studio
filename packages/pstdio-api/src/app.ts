@@ -20,6 +20,7 @@ import {
   startNotificationWakeTimer,
 } from "./app-runtime";
 import { registerBenchmarkCounters } from "./benchmark-counters";
+import { registerBenchmarkIndexTrace } from "./benchmark-index-trace";
 import { createAutomationService } from "./features/automation/automation-service";
 import type { RouteDeps } from "./features/deps";
 import { createArtifactMountWriteLedger } from "./features/extensions/artifact-mount-watch/write-ledger";
@@ -314,6 +315,7 @@ const buildApp = async (
         );
 
   try {
+    registerBenchmarkIndexTrace(app, db);
     registerBenchmarkCounters(app, db, runtimeHost);
     registerAppRuntime(app, deps, input, {
       extensionScheduler,

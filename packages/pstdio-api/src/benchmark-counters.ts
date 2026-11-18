@@ -15,25 +15,13 @@ export const registerBenchmarkCounters = (app: OpenAPIHono<AppBindings>, db: DbC
     const table = await db.execute<{ scanned: string; returned: string; writes: string }>(sql`
       select seq_tup_read as scanned, idx_tup_fetch as returned, n_tup_ins+n_tup_upd+n_tup_del as writes
       from pg_stat_user_tables where relname='storage_current_records'`);
-    const index = await db.execute<{ physical_name: string; logical_name: string | null; scanned: string }>(sql`
-      select stats.indexrelname as physical_name, declared.name as logical_name, stats.idx_tup_read as scanned
-      from pg_stat_user_indexes stats
-      left join storage_record_indexes declared
-        on stats.indexrelname = declared.database_name
-        or starts_with(stats.indexrelname, declared.database_name || '_')
-      where stats.relname = 'storage_current_records'
-      order by stats.indexrelname`);
-    const indexReads = index.rows.map(({ physical_name, logical_name, scanned }) => ({
-      index: physical_name,
-      definition: logical_name,
-      scanned: Number(scanned),
-    }));
+    const index = await db.execute<{ scanned: string }>(sql`
+      select coalesce(sum(idx_tup_read),0) as scanned from pg_stat_user_indexes where relname='storage_current_records'`);
     if (table.rows.length !== 1) throw new Error("Missing record projection counters");
     c.header("cache-control", "no-store");
     return c.json({
       sequentialRows: Number(table.rows[0]!.scanned),
-      indexEntries: indexReads.reduce((total, entry) => total + entry.scanned, 0),
-      indexReads,
+      indexEntries: Number(index.rows[0]!.scanned),
       writes: Number(table.rows[0]!.writes),
     });
   });
