@@ -129,6 +129,10 @@ test("closing project admission cancels a command stream before draining its wor
     fixture.deps.projectService.work.freeze("project-1");
     expect(commandSignal?.aborted).toBe(true);
     await fixture.deps.projectService.work.drain("project-1");
+    await expect(execute()).rejects.toThrow("removing");
+    fixture.deps.projectService.work.release("project-1");
+    command.run = async () => "available again";
+    expect((await execute()).outcome.ok).toBe(true);
   } finally {
     controller.abort();
     await streaming;
