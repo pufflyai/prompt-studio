@@ -18,7 +18,7 @@ Contributions are what an extension adds to Prompt Studio. This page lists every
 | `navigationItems`, `navigationTrees`              | Explicit actions and Sidenav trees owned by a mode or page.                                        |
 | `resourceKinds`                                   | Domain resource identity, labels, icons, menus, and hierarchy.                                     |
 | `resourceHierarchyProviders`                      | Domain parent lookup for resources. Page targets supply breadcrumb destinations.                                   |
-| `statusBarItems`                                  | Views in the host status bar; all visible items render without layout persistence.                 |
+| `statusBarItems`                                  | Views in the host status bar with device-local user order and alignment.                 |
 | `statuses`                                        | Deprecated workflow providers; use query-owned enums and an extension settings panel.                     |
 | `settings`, `settingsSections` | Extension setting definitions and grouped settings sections. |
 | `templateTypes` | Commands and metadata for extension-owned template editing. |
@@ -316,6 +316,83 @@ reference. For a file inside another resource, return a file-labeled target with
 its parent. This keeps copied links and renamed files consistent with sidebar navigation.
 
 See [Workbench composition](0008-contextual-workbench-composition.md) and [Modes and layout](0009-modes-and-layout.md) for the full rules.
+
+## Status bar widgets
+
+Status widgets use `workbenchSlots.statusBarLeading`, `statusBarCenter` or
+`statusBarTrailing` as their initial alignment. People can drag the widget
+surface or use its alignment menu. Inline iframe controls keep their pointer
+input, so their surrounding padding is the drag surface. The host retains the
+chosen alignment and order when an extension reloads. An optional `popover` view
+makes the host own the indicator's click and keyboard activation. Inline controls
+remain available in status widgets without a popover. Keep the indicator's
+background transparent so the host can paint one surface across the widget,
+including its hover and focus states.
+
+## Native action bars
+
+A view can declare `body.kind: "actionBar"`. Use it for tool rails and
+compact command bars whose labels and menus must remain readable beside isolated
+webviews. The workbench renders the buttons, tooltips and menus in its document.
+Canvas, inspector and other custom content keep their iframe isolation.
+
+An action bar in the activity region follows its dock: top and bottom use a
+horizontal row and left and right use a vertical rail. Tooltips, menu placement
+and arrow-key navigation follow that axis. Other placements use the view body's
+optional `orientation`.
+
+```ts
+const tools = defineView({
+  id: "tools",
+  title: "Tools",
+  body: {
+    kind: "actionBar",
+    refreshEvents: [documentChanged],
+    query: async (ctx, { renderer }) => {
+      const state = await readDocument(ctx, renderer.resource);
+      const move = {
+        id: "move",
+        label: "Move tool",
+        icon: "Move",
+        selected: state.tool === "move",
+        action: { kind: "command" as const, target: {
+          command: selectTool.ref, params: { tool: "move" },
+        } },
+      };
+      return { items: [
+        move,
+        { id: "document", label: "Document actions", icon: "Ellipsis",
+          items: [{ ...move, selected: false }] },
+      ] };
+    },
+  },
+});
+```
+
+Set `mode.chrome.activity` to the view's ref for a native rail. The same view can
+be placed in a page or panel. Outside the activity region, orientation defaults
+to `vertical`; use `horizontal` for a command row. Snapshot order sets the
+default order. People can drag top-level buttons or reorder the focused button
+with Alt and the arrow keys along the bar. The host saves their order per
+project and view using the item IDs. Menu actions can declare `group` to separate
+related commands.
+
+Queries return actions with stable IDs, labels, icons, navigation targets and
+optional `selected` and `disabled` state. A menu has an `items` array of actions
+instead of an `action`. Return only actions available in the current context.
+The host resolves local command refs against the contributing extension and
+shows hints from the shared keybinding system. Bound command parameters stay
+the same for people and agents.
+
+Chrome follows the active page's primary resource. A resource-bound placement
+uses its own resource. Declared refresh events update the snapshot; changing the
+resource releases the old read and closes its menus. Disabling or removing the
+contribution disposes its view. Arrow keys, Home and End move through enabled
+buttons. Escape, outside click and clicking the open trigger dismiss a menu.
+
+This additive surface requires host capability `view.actionBar.v1` and a
+supporting published SDK. Publish platform support before releasing independent
+extensions that adopt it. Older view kinds and activity items stay supported.
 
 ## Native view toolbar actions
 
@@ -843,4 +920,4 @@ The old `workbenchPages.sessions`, `session`, `newSession`, `sessionComposer`, `
 
 Resource mutation commands can act on another provider's canonical resource. When the invoking resource matches the declared mutation type and resolved ID in the selected project, native optimistic previews and write serialization preserve that resource's identity. Without a matching subject, the command's own extension identity remains the default. This changes presentation ownership only; the command service still enforces its normal permissions and scope.
 
-*Updated at: 2026-11-14*
+*Updated at: 2026-11-17*

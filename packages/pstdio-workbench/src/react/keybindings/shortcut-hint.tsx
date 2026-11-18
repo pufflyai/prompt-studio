@@ -10,11 +10,12 @@ interface ShortcutHintProps {
   action?: NavigationTarget;
   children?: ReactNode;
   modeOnly?: boolean;
+  includeLayers?: boolean;
 }
 
 const ResolvedShortcutHint = (props: ShortcutHintProps) => {
-  const { workbench, action, children } = props;
-  const hint = useActionShortcutHint(workbench, action);
+  const { workbench, action, children, includeLayers } = props;
+  const hint = useActionShortcutHint(workbench, action, includeLayers);
   if (!hint) return children;
   return (
     <HStack gap="xs">

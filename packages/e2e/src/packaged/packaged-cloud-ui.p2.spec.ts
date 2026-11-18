@@ -75,7 +75,8 @@ test("Cloud settings respect early access and manage devices and project sync th
   const openSettings = async () => {
     const button = details.getByRole("button", { name: "Cloud settings" });
     // Closing settings can reveal the still-open status popover. Its trigger toggles it closed.
-    if (!(await button.isVisible())) await status.click();
+    if (!(await button.isVisible()))
+      await page.locator("footer").getByRole("button", { name: "Prompt Studio Cloud", exact: true }).click();
     await expect(button).toBeVisible();
     await button.click();
     await expect(settingsFrame).toBeVisible();
@@ -131,7 +132,8 @@ test("Cloud settings respect early access and manage devices and project sync th
   await expect(status).toHaveText("Signed in");
   await closeSettings();
   const detailsButton = details.getByRole("button", { name: "Cloud settings" });
-  if (!(await detailsButton.isVisible())) await status.click();
+  if (!(await detailsButton.isVisible()))
+    await page.locator("footer").getByRole("button", { name: "Prompt Studio Cloud", exact: true }).click();
   await expect(details.getByText("Devices", { exact: true })).toHaveCount(0);
   await details.getByRole("button", { name: "Cloud settings" }).click();
   await expect(settings.getByText("Coming soon", { exact: true })).toBeVisible();

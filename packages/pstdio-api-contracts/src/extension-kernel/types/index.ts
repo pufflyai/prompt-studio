@@ -1,5 +1,6 @@
 export type * from "../../resource-activity";
 export type * from "./account";
+export type * from "./action-bar";
 export type * from "./assets";
 export type * from "./automation";
 export type * from "./chat-renderer";
