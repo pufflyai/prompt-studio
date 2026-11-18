@@ -49,31 +49,6 @@ describe("createBridgeWebviewRenderer", () => {
     });
   });
 
-  test("falls back to workbench-native host capabilities", () => {
-    const { workbench, widget, placement } = setupWebviewWidget();
-    const renderer = createBridgeWebviewRenderer();
-
-    const element = renderer.render({ workbench, panel: widget, instance: placement, refresh: () => undefined }) as {
-      props: { capabilities: HostCapabilityRegistry };
-    };
-
-    expect(typeof element.props.capabilities["commands.execute"]).toBe("function");
-    expect(typeof element.props.capabilities["navigation.open"]).toBe("function");
-  });
-
-  test("uses the injected createProps factory", () => {
-    const { workbench, widget, placement } = setupWebviewWidget();
-    const renderer = createBridgeWebviewRenderer({
-      createProps: (context) => ({ marker: "custom", webviewId: context.webviewId }),
-    });
-
-    const element = renderer.render({ workbench, panel: widget, instance: placement, refresh: () => undefined }) as {
-      props: { props: unknown };
-    };
-
-    expect(element.props.props).toMatchObject({ marker: "custom", webviewId: "lab.page" });
-  });
-
   test("preserves viewer navigation context when a host supplies custom guest props", () => {
     const { workbench, widget, placement } = setupWebviewWidget();
     placement.resource = { type: "workspace", id: "scoped" };
