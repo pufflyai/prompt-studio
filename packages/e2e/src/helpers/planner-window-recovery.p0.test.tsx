@@ -42,7 +42,7 @@ test("an unloaded dependency exposes a failed selection and can retry the same t
   let latest: ReturnType<typeof usePlanActions>;
   const Probe = () => {
     latest = usePlanActions({
-      host: frame.host,
+      host: frame.host as Parameters<typeof usePlanActions>[0]["host"],
       client,
       plan: undefined,
       sections: [],

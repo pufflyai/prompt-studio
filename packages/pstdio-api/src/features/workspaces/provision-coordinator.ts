@@ -23,8 +23,13 @@ const defaultHooks = (): WorkspaceProvisioningHooks => ({
 
 type ProvisionWorkspace = { id: string; root_path: string | null; execution_kind: string; provider_id: string };
 type ProvisionInput<W extends ProvisionWorkspace> = { projectId: string; workspace: W; repoPath: string };
-const isReadyLocalWorkspace = (workspace: ProvisionWorkspace & { provider_state: string }) =>
-  workspace.provider_state === "ready" && workspace.execution_kind === "local" && Boolean(workspace.root_path);
+const isReadyLocalWorkspace = (
+  workspace: ProvisionWorkspace & { provider_state: string; deleted_at?: string | null },
+) =>
+  !workspace.deleted_at &&
+  workspace.provider_state === "ready" &&
+  workspace.execution_kind === "local" &&
+  Boolean(workspace.root_path);
 
 const provisionWorkspaceFiles = async <W extends ProvisionWorkspace>(
   deps: ProvisionCoordinatorDeps,
@@ -57,15 +62,18 @@ export const runWorkspaceProvisioning = async <W extends ProvisionWorkspace>(
   const { projectId, workspace } = input;
   if (workspace.execution_kind !== "local" || !workspace.root_path) return workspace;
   return deps.workspaceService.maintenance.run(workspace.id, async () => {
+    const current = await deps.workspaceService.get(workspace.id);
+    if (!current || current.project_id !== projectId) return workspace;
+    if (!isReadyLocalWorkspace(current)) return current as W;
     await deps.workspaceService.setInitializing(workspace.id, true);
     try {
-      const { payload, error } = await provisionWorkspaceFiles(deps, input, hooks);
+      const { payload, error } = await provisionWorkspaceFiles(deps, { ...input, workspace: current }, hooks);
       const result = await deps.workspaceService.setSetupError(workspace.id, error);
       if (!error) hooks.fireReadyAsync(deps, projectId, workspaceEvents.ready, payload);
-      return (result ?? workspace) as W;
+      return (result ?? current) as W;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return ((await deps.workspaceService.setSetupError(workspace.id, message)) ?? workspace) as W;
+      return ((await deps.workspaceService.setSetupError(workspace.id, message)) ?? current) as W;
     }
   });
 };
@@ -82,16 +90,14 @@ const maintainWorkspace = (
       !workspace ||
       workspace.project_id !== projectId ||
       hasPendingRestoredFolderSetup(workspace) ||
-      workspace.provider_state !== "ready" ||
-      workspace.execution_kind !== "local" ||
-      !workspace.root_path
+      !isReadyLocalWorkspace(workspace)
     )
       return;
     let message: string | null;
     try {
       ({ error: message } = await provisionWorkspaceFiles(
         deps,
-        { projectId, workspace, repoPath: workspace.root_path },
+        { projectId, workspace, repoPath: workspace.root_path! },
         hooks,
       ));
     } catch (error) {
