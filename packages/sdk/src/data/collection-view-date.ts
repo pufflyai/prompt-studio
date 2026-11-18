@@ -94,10 +94,8 @@ export const collectionDateFields = (input: CollectionViewSelection) => {
     if (!field) continue;
     Object.assign(field, presentation);
     if (!options) continue;
-    // The first renderer request can precede dynamic choices. Only labels come from the viewer.
-    const labels = new Map(options.map(({ value, label }) => [value, label]));
-    field.options =
-      field.options?.map((choice) => ({ ...choice, label: labels.get(choice.value) ?? choice.label })) ?? options;
+    // Until dynamic renderer choices arrive, the provider can already group its records.
+    field.options = options.length ? options : (field.options ?? options);
   }
   const formats: NonNullable<StorageRecordQuery["formats"]> = { ...input.formats };
   const computed = { ...input.computed };

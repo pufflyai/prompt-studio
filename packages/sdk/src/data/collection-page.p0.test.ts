@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { createMemoryStorage } from "../testing/memory-storage";
 import { readCollectionPage } from "./collection-page";
 import { collectionViewSelection } from "./collection-view";
+import { collectionDateFields } from "./collection-view-date";
 
 const fixture = async () => {
   const storage = createMemoryStorage();
@@ -257,4 +258,23 @@ test("the first page counts provider choices while the renderer still has no opt
     { field: "status", value: "done", count: 120 },
     { field: "status", value: "ready", count: 120 },
   ]);
+});
+
+test("populated renderer choices preserve viewer-only values, labels and ordering", () => {
+  const options = [
+    { value: "new", label: "Newly created" },
+    { value: "open", label: "Open" },
+  ];
+  const result = collectionDateFields({
+    index: "foobar",
+    fields: { status: { field: "state", kind: "enum", options: [{ value: "open", label: "Original" }] } },
+    page: {
+      limit: 50,
+      offset: 0,
+      fields: ["status"],
+      search: "",
+      presentation: { status: { emptyGroup: "None", options } },
+    },
+  });
+  expect(result.fields.status.options).toEqual(options);
 });
