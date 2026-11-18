@@ -12,7 +12,7 @@ const createBrowser = () => {
     { path: "SKILL.md", content: "# Create a ticket\n\nTurn a request into an actionable ticket." },
     { path: "references/examples.md", content: "# Examples\n\nDescribe the problem and expected behavior." },
   ];
-  const workbench = createWorkbench({ startPage: page });
+  const workbench = createWorkbench({ defaultPage: page });
   workbench.modes.registerMode({ id: "project", activate() {} });
   workbench.resources.registerKind({ kind: "skill", label: "Skill", icon: "sparkles", extensionId: "preview" });
   workbench.views.registerView({

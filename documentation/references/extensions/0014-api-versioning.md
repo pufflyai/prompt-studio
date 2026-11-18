@@ -534,4 +534,18 @@ They share the coordinated unreleased API step on main. Hosts advertise
 Publish the supporting SDK and host before independent extension adoption.
 See [native action bars](0004-contribution-api.md#native-action-bars).
 
-*Updated at: 2026-11-17*
+## Project composition adoption in API 0.4.2
+
+The host retires its fixed Start/Home/Workspaces presentation aliases. Projects choose
+an ordinary default page and public resource openers. Paths, parents, navigation order,
+and workspace presentation decisions belong to extensions. Existing presentation links
+may become unavailable; shared workspace and session records keep their identity and
+storage. Deprecated SDK reference exports remain available during consumer migration;
+their removal belongs to a separate coordinated breaking release.
+
+`ctx.resources.resolveOpenings` and the SDK project composition client require the
+matching published SDK and host. Validate consumer PRs against that SDK and declare
+their published dependency ranges before release. See
+[project composition](0004-contribution-api.md#configure-project-composition).
+
+*Updated at: 2026-11-18*

@@ -6,7 +6,7 @@ import { Workbench, WorkbenchThemeProvider } from "../index";
 
 const createTablessWorkbench = (withMenu: boolean) => {
   const page = { extensionId: "preview", kind: "page" as const, id: "board" };
-  const workbench = createWorkbench({ startPage: page });
+  const workbench = createWorkbench({ defaultPage: page });
   workbench.modes.registerMode({ id: "board", activate: () => undefined });
   workbench.views.registerView({
     id: "board",

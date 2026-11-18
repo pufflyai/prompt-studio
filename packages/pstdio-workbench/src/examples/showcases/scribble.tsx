@@ -94,7 +94,7 @@ export const createScribbleWorkbench = () => {
     favoriteIds: ["north-star"],
     contentById: Object.fromEntries(scribbleDocuments.map((document) => [document.id, documentMarkdown(document)])),
   });
-  const workbench = createWorkbench({ startPage: homePage });
+  const workbench = createWorkbench({ defaultPage: homePage });
   workbench.themes.register([scribbleTheme]);
   workbench.modes.registerMode({
     id: "scribble",
