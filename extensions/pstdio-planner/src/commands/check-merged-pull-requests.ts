@@ -3,6 +3,7 @@ import { recordSubmittedMerge } from "../data/attempt-merges";
 import { readTicketAttempts, readWorkspaceEvents } from "../data/attempt-queries";
 import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
 import type { AttemptRecord, AttemptTimelineEvent } from "../data/attempt-types";
+import { upgradeAttemptStorage } from "../data/attempt-upgrade";
 import { ticketsCollection } from "../data/collections";
 import { markTicketsDone } from "../data/mark-tickets-done";
 import { mergeTicketPages } from "../data/merge-ticket-query";
@@ -16,6 +17,7 @@ import {
   ticketReference,
 } from "../data/pull-request-resources";
 import { pullRequestTarget } from "../data/pull-request-target";
+import { preparePlannerIndexes } from "../data/storage-indexes";
 import type { Ticket } from "../data/types";
 import { readMergeDestination } from "../data/workflow-statuses";
 
@@ -140,6 +142,26 @@ const deliveredMerge = (pr: PullRequestRead, target: { branch: string; repositor
   return { headSha: pr.headRefOid, mergeSha: pr.mergeCommit.oid };
 };
 
+const recordDeliveredLinks = async (
+  ctx: CommandContext,
+  attempts: AttemptRecord[],
+  links: Map<string, Set<string>>,
+  target: NonNullable<Awaited<ReturnType<typeof pullRequestTarget>>>,
+  reads: GithubReads,
+) => {
+  const mergedIds = new Set<string>();
+  for (const pr of await readGithubResources(ctx, [...links.keys()], reads)) {
+    const merged = deliveredMerge(pr, target);
+    if (!merged) continue;
+    for (const attempt of attempts) {
+      if (!links.get(pr.id)?.has(attempt.ticketId) || attempt.revisions.at(-1)?.headSha !== merged.headSha) continue;
+      await recordSubmittedMerge(ctx, attempt, merged.mergeSha);
+      mergedIds.add(attempt.ticketId);
+    }
+  }
+  await markTicketsDone(ctx, [...mergedIds]);
+};
+
 export const checkMergedPullRequestsCommand = defineCommand({
   id: "check-merged-pull-requests",
   title: "Check merged pull requests",
@@ -147,6 +169,11 @@ export const checkMergedPullRequestsCommand = defineCommand({
   async run(ctx) {
     if ((await ctx.settings.get("tickets.markDoneOnMerge")) === false) return;
     const destination = await readMergeDestination(ctx);
+    // Only a submitted attempt can record a merge. Idle projects need no ticket scan.
+    await preparePlannerIndexes(ctx.storage);
+    await upgradeAttemptStorage(ctx.storage);
+    const attempts = await ctx.storage.records.query({ index: "attempt-ticket", fields: [], orderBy: [], limit: 1 });
+    if (!attempts.records.length) return destination.status ? undefined : { reason: destination.reason };
     const reads: GithubReads = new Map();
     for await (const metadata of mergeTicketPages(ctx.storage)) {
       const allAttempts = await readTicketAttempts(
@@ -179,18 +206,7 @@ export const checkMergedPullRequestsCommand = defineCommand({
       if (!links.size) continue;
       const target = await pullRequestTarget(ctx);
       if (!target) return { reason: "The Git delivery target is unavailable." };
-      const mergedIds = new Set<string>();
-      for (const pr of await readGithubResources(ctx, [...links.keys()], reads)) {
-        const merged = deliveredMerge(pr, target);
-        if (!merged) continue;
-        for (const attempt of attempts) {
-          if (!links.get(pr.id)?.has(attempt.ticketId) || attempt.revisions.at(-1)?.headSha !== merged.headSha)
-            continue;
-          await recordSubmittedMerge(ctx, attempt, merged.mergeSha);
-          mergedIds.add(attempt.ticketId);
-        }
-      }
-      await markTicketsDone(ctx, [...mergedIds]);
+      await recordDeliveredLinks(ctx, attempts, links, target, reads);
     }
     return destination.status ? undefined : { reason: destination.reason };
   },
