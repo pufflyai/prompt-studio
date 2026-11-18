@@ -226,6 +226,5 @@ export const expectPackagedChatComposer = async (
     throw error;
   } finally {
     releaseDestinationRead();
-    await browser.close();
   }
 };

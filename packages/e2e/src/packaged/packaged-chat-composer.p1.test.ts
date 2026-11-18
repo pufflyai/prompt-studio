@@ -51,7 +51,7 @@ test(
       });
       expect(projectsRes.status).toBe(200);
       expect(await projectsRes.json()).toEqual([]);
-      await expectPackagedDriveDiscovery(started.baseUrl, runtimeAuthorization(started.descriptor));
+      await expectPackagedDriveDiscovery(started.baseUrl, runtimeAuthorization(started.descriptor), owned.signal);
       const renameRes = await fetch(`${started.baseUrl}/v1/sessions/missing/title`, {
         method: "PATCH",
         signal: owned.signal,

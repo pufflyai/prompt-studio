@@ -74,7 +74,10 @@ export const createComposerFixture = (allowance: number, began: number) => {
     launchBrowser: async () => {
       controller.signal.throwIfAborted();
       if (closing) throw new Error("Composer fixture is closing");
-      browser = chromium.launch(PACKAGED_DASHBOARD_BROWSER);
+      browser = chromium.launch({
+        ...PACKAGED_DASHBOARD_BROWSER,
+        timeout: Math.max(1, endsAt - performance.now()),
+      });
       const owned = await browser;
       // A launch already in flight remains owned when the deadline closes admission.
       controller.signal.throwIfAborted();
