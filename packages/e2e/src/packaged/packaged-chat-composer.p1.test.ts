@@ -31,9 +31,11 @@ test(
     fixture = owned;
 
     try {
-      const started = await owned.start({
-        PSTDIO_DEFAULT_EXTENSIONS: composerDefaults,
-      });
+      // The browser process and packaged host are independent until dashboard navigation.
+      const [started, browser] = await Promise.all([
+        owned.start({ PSTDIO_DEFAULT_EXTENSIONS: composerDefaults }),
+        owned.launchBrowser(),
+      ]);
 
       const dashboardRes = await fetch(started.baseUrl, { signal: owned.signal });
       expect(dashboardRes.status).toBe(200);
@@ -59,7 +61,7 @@ test(
         body: JSON.stringify({ title: " " }),
       });
       expect(renameRes.status).toBe(400);
-      await expectPackagedChatComposer(started.baseUrl, runtimeAuthorization(started.descriptor), owned);
+      await expectPackagedChatComposer(started.baseUrl, runtimeAuthorization(started.descriptor), owned, browser);
     } finally {
       await owned.close();
     }

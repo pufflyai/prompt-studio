@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, type Page } from "@playwright/test";
+import { type Browser, expect, type Page } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { isSessionChatAction, sessionChatActionRoute } from "../helpers/session-chat-actions";
 import { logTestPhase } from "../scripts/log-test-phase";
@@ -22,6 +22,7 @@ export const expectPackagedChatComposer = async (
   baseUrl: string,
   headers: Record<string, string>,
   fixture: ComposerFixture,
+  browser: Browser,
 ) => {
   const { root, signal } = fixture;
   signal.throwIfAborted();
@@ -42,7 +43,6 @@ export const expectPackagedChatComposer = async (
   });
   expect(response.ok).toBe(true);
   const project = (await response.json()) as { id: string };
-  const browser = await fixture.launchBrowser();
   let page: Page | undefined;
   let releaseDestinationRead = () => {};
   try {
