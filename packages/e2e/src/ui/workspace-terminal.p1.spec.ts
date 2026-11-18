@@ -317,7 +317,7 @@ test("disabling the installed Terminal removes its action and re-enabling opens 
   const project = await created.json();
   try {
     await prepareDashboard(page, project.id);
-    await page.goto(`/projects/${project.id}/workspaces`);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
     await openWorkspaceTerminal(page, "Project folder");
     const listing = await (await request.get(`${apiBase}/v1/projects/${project.id}/extensions`)).json();
     const owner = listing.extensions.find(
