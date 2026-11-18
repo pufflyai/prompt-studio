@@ -1,9 +1,11 @@
 import type { createWorkspaceSessionsDBService } from "pstdio-db";
 import type { EventBus } from "../features/sync/event-bus";
+import type { createWorkspaceMaintenance } from "./workspace-maintenance";
 
 export type WorkspaceSessionServiceDeps = {
   workspaceSessionsDBService: ReturnType<typeof createWorkspaceSessionsDBService>;
   eventBus: EventBus;
+  maintenance: ReturnType<typeof createWorkspaceMaintenance>;
 };
 
 export const createWorkspaceSessionService = (deps: WorkspaceSessionServiceDeps) => {
@@ -17,7 +19,12 @@ export const createWorkspaceSessionService = (deps: WorkspaceSessionServiceDeps)
 
   return {
     link,
-    getWorkspaceBySessionId: raw.getWorkspaceBySessionId,
+    getWorkspaceBySessionId: async (sessionId: string, options?: { forLaunch: true }) => {
+      const workspace = await raw.getWorkspaceBySessionId(sessionId);
+      return options?.forLaunch && workspace && (await deps.maintenance.isRunning(workspace.id))
+        ? { ...workspace, initializing: true }
+        : workspace;
+    },
     listByWorkspace: raw.listByWorkspace,
     listLinks: raw.listLinks,
     listSessionLinks: raw.listSessionLinks,
