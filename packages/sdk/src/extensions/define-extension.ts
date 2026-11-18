@@ -1,4 +1,5 @@
 import type { ExtensionDefinition, ExtensionSettingProperty } from "pstdio-api-contracts/extension-kernel";
+import { collectionQueryIndex } from "./collection-view";
 
 type SettingValue<TProperty> = TProperty extends { type: "boolean" }
   ? boolean
@@ -27,4 +28,16 @@ type NoExtraFields<Definition, Contract> = Definition & Record<Exclude<keyof Def
  */
 export const defineExtension = <const TDefinition extends ExtensionDefinition>(
   extension: NoExtraFields<TDefinition, ExtensionDefinition>,
-) => extension;
+) => {
+  const installed = [...(extension.storageIndexes ?? [])];
+  for (const view of extension.views ?? []) {
+    const index = collectionQueryIndex("query" in view.body ? view.body.query : undefined);
+    if (!index) continue;
+    const existing = installed.find(({ name }) => name === index.name);
+    if (existing && JSON.stringify(existing) !== JSON.stringify(index))
+      throw new Error(`Different collection projections share index ${index.name}`);
+    if (!existing) installed.push(index);
+  }
+  return (installed.length ? { ...extension, storageIndexes: installed } : extension) as TDefinition &
+    Pick<ExtensionDefinition, "storageIndexes">;
+};

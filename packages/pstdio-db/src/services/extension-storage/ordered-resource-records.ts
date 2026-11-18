@@ -19,6 +19,7 @@ import {
 } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { createCommitQueue } from "./commit-queue";
+import { createOrderedCommitJournal } from "./ordered-canonical-batch";
 import { createOrderedCommitCache } from "./ordered-commit-cache";
 import { publishCommittedOrderedGroup } from "./ordered-commit-projection";
 import { ensureOrderedOwner } from "./ordered-conversion";
@@ -32,7 +33,12 @@ import { moveOrderedRecordsIn } from "./ordered-record-move";
 import type { OrderedTransaction } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
 import { writeOrderedTextAsset } from "./ordered-text-asset";
-import { createRecordQueries, listProjectedRecords, readProjectedRecords } from "./record-queries";
+import {
+  createRecordQueries,
+  listProjectedRecords,
+  readProjectedRecords,
+  readProjectedRevisions,
+} from "./record-queries";
 import type { createResourceRecords as createLegacyResourceRecords } from "./resource-records";
 
 const savedOutcome = async (journal: OrderedJournal, operationId: string) => {
@@ -95,6 +101,20 @@ const bindText = async (
   return { documentKey: result.documentKey, lifetime: result.lifetime, changed: result.changed };
 };
 
+const readOrderedRecords = async (
+  tx: Pick<DbClient, "select">,
+  owner: StorageOwner,
+  ids: string[],
+  observer?: StorageObserver,
+) => {
+  const records = await readProjectedRecords(tx, owner, ids);
+  for (const record of records) {
+    if (!record.exists) record.revision = await observeOrderedRecord(undefined);
+    observer?.read(owner, record);
+  }
+  return records;
+};
+
 /** The public record facade owns immutable saves independently of a live connection. */
 export const createOrderedResourceRecords = (
   db: DbClient,
@@ -114,20 +134,14 @@ export const createOrderedResourceRecords = (
       initialized = undefined;
       throw error;
     }));
-  const readIn = async (tx: Pick<DbClient, "select">, ids: string[], observer?: StorageObserver) => {
-    const records = await readProjectedRecords(tx, owner, ids);
-    for (const record of records) {
-      if (!record.exists) record.revision = await observeOrderedRecord(undefined);
-      observer?.read(owner, record);
-    }
-    return records;
-  };
   const commitIn = async (
     journal: OrderedJournal,
     tx: OrderedTransaction,
     input: StorageGroup,
     ownRevisions?: Map<string, string>,
   ) => {
+    // Retain only this group's canonical reads. Text and core-number policy keep their SQL-visible path.
+    journal = createOrderedCommitJournal(journal, owner);
     // Capture before the first asynchronous boundary; retries bind the entire authored request.
     const group = structuredClone(input);
     const identity = await fingerprint(group as unknown as Json);
@@ -152,7 +166,7 @@ export const createOrderedResourceRecords = (
         return revision === undefined ? [] : [[id, ownRevisions?.get(id) ?? revision] as const];
       }),
     );
-    for (const record of expected.size ? await readIn(tx, [...expected.keys()]) : []) {
+    for (const record of expected.size ? await readOrderedRecords(tx, owner, [...expected.keys()]) : []) {
       if (expected.get(record.recordId) !== record.revision) throw new StorageRevisionChangedError();
     }
     const { views } = prepared;
@@ -215,6 +229,7 @@ export const createOrderedResourceRecords = (
       records: {
         read: (id: string) => ReturnType<LegacyRecords["read"]>;
         readMany: (ids: string[]) => ReturnType<LegacyRecords["readMany"]>;
+        readCurrentMany: (ids: string[]) => ReturnType<typeof readProjectedRevisions>;
         commit: (group: StorageGroup) => Promise<StorageSaveOutcome>;
         outcome: (id: string) => Promise<StorageSaveOutcome | undefined>;
       },
@@ -229,8 +244,9 @@ export const createOrderedResourceRecords = (
         try {
           return await run(
             {
-              read: async (id) => (await readIn(tx, [id], deps.observer))[0]!,
-              readMany: (ids) => readIn(tx, ids, deps.observer),
+              read: async (id) => (await readOrderedRecords(tx, owner, [id], deps.observer))[0]!,
+              readMany: (ids) => readOrderedRecords(tx, owner, ids, deps.observer),
+              readCurrentMany: (ids) => readProjectedRevisions(tx, owner, ids),
               outcome: async (id) => ((await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined),
               commit: (group) =>
                 queue.run(async () => {
@@ -302,12 +318,12 @@ export const createOrderedResourceRecords = (
       }),
     read: async (id: string, _branch?: { operationId: string }) => {
       await ready();
-      return (await readIn(db, [id], deps.observer))[0]!;
+      return (await readOrderedRecords(db, owner, [id], deps.observer))[0]!;
     },
     readMany: async (ids: string[]) => {
       if (ids.length > 100) throw new Error("A batch can read at most 100 records");
       await ready();
-      return readIn(db, ids, deps.observer);
+      return readOrderedRecords(db, owner, ids, deps.observer);
     },
     list: async (prefix = "") => {
       await ready();

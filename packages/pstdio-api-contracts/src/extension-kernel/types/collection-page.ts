@@ -1,3 +1,4 @@
+import type { StorageStatisticResult } from "pstdio-sync-contracts";
 import type { JsonValue } from "./json";
 
 /** Largest page the host requests from a paged table or board provider. */
@@ -17,9 +18,15 @@ export interface CollectionPageRequest {
   revision?: string;
   /** Visible field IDs, plus fields needed for grouping and row actions. */
   fields: string[];
+  /** Displayed fields searched by the native view; excludes hidden grouping and companion data. */
+  searchFields?: string[];
+  /** Resolved viewer labels keep query search and collapsed groups consistent with native controls. */
+  presentation?: Record<string, { emptyGroup: string; options?: { value: string; label: string }[] }>;
   search: string;
   /** Collapsed table groups are excluded before paging, not removed from a returned page. */
   collapsedGroups?: string[];
+  /** Browser calendar and date text semantics. CLI providers can use process defaults. */
+  viewer?: { locale: string; timeZone: string; now: string };
 }
 
 export interface CollectionPageGroup {
@@ -32,13 +39,7 @@ export interface CollectionPageGroup {
 }
 
 /** Bounded column summaries computed before pagination. */
-export type CollectionPageStatistic =
-  | { type: "unique"; count: number }
-  | {
-      type: "histogram";
-      histogram: { min: number; max: number; bins: { start: number; end: number; count: number }[] } | null;
-    }
-  | { type: "top-values"; values: { label: string; count: number; percentage: number }[] };
+export type CollectionPageStatistic = StorageStatisticResult;
 
 /** Counts and rows must describe the same committed revision and owner scope. */
 export interface CollectionPage {
