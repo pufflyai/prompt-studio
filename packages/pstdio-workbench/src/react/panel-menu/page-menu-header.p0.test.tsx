@@ -8,7 +8,7 @@ import { WorkbenchPageMenuHeader } from "./page-menu-header";
 test("shows the title of a tabless page in its breadcrumb once", () => {
   const page = { kind: "page", id: "conversation", extensionId: "test" } as const;
   const view = { kind: "view", id: "conversation" } as const;
-  const workbench = createWorkbench({ startPage: page });
+  const workbench = createWorkbench({ defaultPage: page });
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
   workbench.views.registerView({ id: view.id, title: "Conversation", body: { kind: "react", render: () => null } });
   workbench.pages.registerPage({

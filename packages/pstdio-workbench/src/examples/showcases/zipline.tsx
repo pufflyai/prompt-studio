@@ -216,7 +216,7 @@ const IssueCount = () => {
   );
 };
 export const createZiplineWorkbench = () => {
-  const workbench = createWorkbench({ startPage: homePage, initialSidePanelMode: "floating" });
+  const workbench = createWorkbench({ defaultPage: homePage, initialSidePanelMode: "floating" });
   workbench.themes.register([ziplineTheme]);
   workbench.modes.registerMode({
     id: "zipline",

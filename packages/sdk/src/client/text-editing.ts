@@ -1,4 +1,8 @@
-import type { TextEditingConnectionInfo, TextEditingConnectionInput } from "pstdio-api-contracts";
+import type {
+  TextEditingConnectionInfo,
+  TextEditingConnectionInput,
+  TextEditingInitialMember,
+} from "pstdio-api-contracts";
 import type {
   TextEditingError,
   TextEditingEvent,
@@ -28,16 +32,30 @@ export const createTextTransportClient = (
   request: RequestFn,
   transport: ReturnType<typeof createSessionStreamTransport>,
 ) => ({
-  async connect(input: { projectId: string; scope: TextEditingConnectionInput }): Promise<TextEditingConnection> {
+  async connect(input: {
+    projectId: string;
+    scope: TextEditingConnectionInput;
+    initial?: TextEditingInitialMember;
+  }): Promise<TextEditingConnection> {
     const projectId = input.projectId;
     const base = `/v1/projects/${encodeURIComponent(projectId)}/text-editing`;
     const connect = async () =>
       value(await request<Reply<TextEditingConnectionInfo>>(base, { method: "POST", body: input.scope }))!;
-    let info = await connect();
+    let info = input.initial
+      ? value(
+          await request<Reply<TextEditingConnectionInfo>>(`${base}/open`, {
+            method: "POST",
+            body: { scope: input.scope, initial: input.initial },
+          }),
+        )!
+      : await connect();
+    let firstOpen = info.opened;
+    delete info.opened;
+    const firstToken = info.token;
     let generation = 0;
     let candidate: TextEditingConnectionInfo | undefined;
-    let active = true;
-    let acknowledged: { token: string; active: boolean } | undefined;
+    let active = input.initial?.active ?? true;
+    let acknowledged = input.initial ? { token: info.token, active } : undefined;
     let participation = Promise.resolve();
     let renewal: Promise<void> | undefined;
     let release: { work?: Promise<void> } | undefined;
@@ -64,6 +82,7 @@ export const createTextTransportClient = (
           if ((error as TextEditingError)?.code === "connection_expired" && candidate === next) candidate = undefined;
           throw error;
         }
+        firstOpen = undefined;
         info = next;
         acknowledged = { token: next.token, active: applied };
         candidate = undefined;
@@ -118,7 +137,26 @@ export const createTextTransportClient = (
       return participation;
     };
     const connection: TextEditingConnection = {
-      request: async (input) => (await call("request", { request: input })) as never,
+      request: async (operation) => {
+        if (
+          !release &&
+          firstOpen &&
+          info.token === firstToken &&
+          operation.operation === "openSelected" &&
+          operation.memberId === input.initial?.memberId
+        ) {
+          const opened = firstOpen;
+          firstOpen = undefined;
+          return opened as never;
+        }
+        if (
+          firstOpen &&
+          (("memberId" in operation && operation.memberId === input.initial?.memberId) ||
+            ("handle" in operation && operation.handle === firstOpen.handle))
+        )
+          firstOpen = undefined;
+        return (await call("request", { request: operation })) as never;
+      },
       watch: async (input) => {
         const abort = new AbortController();
         const signal = AbortSignal.any([input.signal, abort.signal]);
@@ -158,6 +196,7 @@ export const createTextTransportClient = (
         }
       },
       disconnect: () => {
+        firstOpen = undefined;
         release ??= {};
         const ownership = release;
         ownership.work ??= (async () => {

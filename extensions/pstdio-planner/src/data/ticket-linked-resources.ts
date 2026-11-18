@@ -67,7 +67,7 @@ export const loadTicketLinkedResources = async (
     batches.push(refs.slice(offset, offset + 100));
   }
   const resolved = new Map<string, ResourceResolution>(
-    (await Promise.all(batches.map((batch) => resources.resolveMany(batch))))
+    (await Promise.all(batches.map((batch) => resources.resolveOpenings(batch))))
       .flat()
       .map((item) => [resourceKey(item.resource), item]),
   );
@@ -93,7 +93,9 @@ export const readTicketLinkedResourcePage = async (
     limit: 100,
     cursor,
   });
-  const resolved = new Map((await resources.resolveMany(page.items)).map((item) => [resourceKey(item.resource), item]));
+  const resolved = new Map(
+    (await resources.resolveOpenings(page.items)).map((item) => [resourceKey(item.resource), item]),
+  );
   return {
     items: page.items.map((ref) => badgeItem(ref, resolved.get(resourceKey(ref)))).filter((item) => item !== undefined),
     nextCursor: page.nextCursor ?? undefined,

@@ -36,6 +36,40 @@ const validateHierarchy = (index: StorageRecordIndex) => {
   }
 };
 
+const validateCountFields = (index: StorageRecordIndex) => {
+  const counts = index.countBy ?? [];
+  if (
+    counts.length > 4 ||
+    new Set(counts).size !== counts.length ||
+    counts.some((name) => {
+      const field = index.fields[name];
+      return (
+        !field?.derive ||
+        field.lookup ||
+        ["object", "array"].includes(field.type) ||
+        name === index.identity?.shorthandField ||
+        name === index.identity?.aliasesField ||
+        name === index.hierarchy?.breadcrumbField
+      );
+    })
+  )
+    throw new Error("Count indexes require up to four distinct local derived scalar fields");
+};
+const validateAlternateOrders = (index: StorageRecordIndex) => {
+  const alternate = index.alternateOrders ?? [];
+  if (alternate.length > 8 || alternate.some((order) => !order.length || order.length > 8))
+    throw new Error("An index supports up to eight alternate orders of one to eight local fields");
+  for (const order of alternate)
+    for (const { field } of order)
+      if (
+        index.fields[field]?.lookup ||
+        field === index.identity?.shorthandField ||
+        field === index.identity?.aliasesField ||
+        field === index.hierarchy?.breadcrumbField
+      )
+        throw new Error("Alternate orders require local fields");
+  return alternate;
+};
 const validateIndex = (index: StorageRecordIndex) => {
   if (!Object.keys(index.fields).length) throw new Error("An index needs fields");
   for (const [name, field] of Object.entries(index.fields)) validateQueryField(name, field);
@@ -43,12 +77,15 @@ const validateIndex = (index: StorageRecordIndex) => {
     throw new Error("Install derived fields; expressions and formatting belong to queries");
   validateIdentity(index);
   validateHierarchy(index);
-  for (const name of [...(index.equality ?? []), ...(index.orderBy ?? []).map((sort) => sort.field)]) {
+  validateCountFields(index);
+  const alternate = validateAlternateOrders(index);
+  const sorts = [...(index.orderBy ?? []), ...alternate.flat()];
+  for (const name of [...(index.equality ?? []), ...sorts.map((sort) => sort.field)]) {
     if (!Object.hasOwn(index.fields, name)) throw new Error(`Unknown index field: ${name}`);
     if (["array", "object"].includes(index.fields[name].type))
       throw new Error("Array and object fields cannot order a page");
   }
-  for (const sort of index.orderBy ?? [])
+  for (const sort of sorts)
     if (sort.direction !== "asc" && sort.direction !== "desc") throw new Error("Invalid sort direction");
 };
 

@@ -21,7 +21,7 @@ const NoteBreadcrumb = (props: { optimistic?: boolean }) => {
   const [result, setResult] = useState("No action run");
   const [workbench] = useState(() => {
     const page = { kind: "page" as const, extensionId: "preview", id: "notes" };
-    const instance = createWorkbench({ startPage: page });
+    const instance = createWorkbench({ defaultPage: page });
     const listeners = new Set<() => void>();
     let title = "Research note";
     const resource = {
