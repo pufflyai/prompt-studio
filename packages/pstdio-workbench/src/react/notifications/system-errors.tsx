@@ -1,27 +1,50 @@
 import { Button, Icon, Stack, Tag, Text } from "@chakra-ui/react";
 import { AlertMessage, ScopedPopover as Popover, PopoverHeader, Portal, ScrollArea } from "@pstdio/ui";
 import { Bell, TriangleAlert } from "lucide-react";
+import { useLayoutEffect } from "react";
 import type { WorkbenchCore } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchActionErrors } from "./action-errors";
 import { isSystemNotice } from "./system-error-state";
 
-export const WorkbenchSystemNotices = (props: { workbench: WorkbenchCore }) => {
+export const systemActivityItemId = "workbench.system-activity";
+const systemActivityTitle = "System activity";
+
+export const useSystemActivityStatusItem = (workbench: WorkbenchCore, visible: boolean) => {
+  useLayoutEffect(() => {
+    if (!visible) return;
+    const view = workbench.views.registerView({
+      id: systemActivityItemId,
+      title: systemActivityTitle,
+      body: { kind: "react", render: () => <WorkbenchSystemNotices workbench={workbench} /> },
+    });
+    const item = workbench.statusBar.registerItem({
+      id: systemActivityItemId,
+      viewId: systemActivityItemId,
+      slot: "leading",
+      order: -1,
+    });
+    return () => {
+      item.dispose();
+      view.dispose();
+    };
+  }, [workbench, visible]);
+};
+
+const WorkbenchSystemNotices = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   const notifications = useWorkbenchStore(workbench.notifications.store, (state) => state.notifications);
   const notices = Object.values(notifications)
     .filter(isSystemNotice)
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
-  if (!notices.length) return null;
-  const latest = notices[0]!;
   const error = notices.find((notice) => notice.level === "error");
-  const summary = error ?? latest;
-  const errorOnly = notices.every((notice) => notice.level === "error");
+  const summary = error ?? notices[0];
+  const errorOnly = Boolean(error) && notices.every((notice) => notice.level === "error");
   const label = errorOnly ? "System errors" : "System notices";
   const icon = error ? TriangleAlert : Bell;
 
   return (
-    <Popover.Root variant="widget" positioning={{ placement: "top-start", offset: { mainAxis: 4 } }}>
+    <Popover.Root variant="widget" lazyMount positioning={{ placement: "top-start", offset: { mainAxis: 4 } }}>
       <Popover.Trigger asChild>
         <Button
           size="2xs"
@@ -30,17 +53,18 @@ export const WorkbenchSystemNotices = (props: { workbench: WorkbenchCore }) => {
           minW="0"
           maxW="full"
           justifyContent="flex-start"
-          aria-label={`${label}: ${summary.title}`}
+          aria-label={summary ? `${label}: ${summary.title}` : systemActivityTitle}
         >
           <Icon as={icon} boxSize="4" />
           <Text as="span" textStyle="label/XS/medium" maxW="2xs" truncate role="status">
-            {summary.title}
+            {summary?.title ?? systemActivityTitle}
           </Text>
         </Button>
       </Popover.Trigger>
       <Portal>
         <Popover.Positioner>
           <Popover.Content
+            aria-label={label}
             width="performance-popover"
             maxW="calc(100vw - var(--chakra-spacing-md) * 2)"
             maxH="70dvh"
@@ -52,25 +76,27 @@ export const WorkbenchSystemNotices = (props: { workbench: WorkbenchCore }) => {
                 icon={<Icon as={icon} />}
                 title={<Popover.Title>{label}</Popover.Title>}
                 actions={
-                  <>
-                    <Tag.Root
-                      size="sm"
-                      variant="subtle"
-                      colorPalette={error ? "red" : "gray"}
-                      aria-label={`${notices.length} ${label.toLowerCase()}`}
-                    >
-                      <Tag.Label>{notices.length}</Tag.Label>
-                    </Tag.Root>
-                    <Button
-                      size="2xs"
-                      variant="ghost"
-                      onClick={() => {
-                        for (const error of notices) workbench.notifications.dismiss(error.id);
-                      }}
-                    >
-                      Clear all
-                    </Button>
-                  </>
+                  summary && (
+                    <>
+                      <Tag.Root
+                        size="sm"
+                        variant="subtle"
+                        colorPalette={error ? "red" : "gray"}
+                        aria-label={`${notices.length} ${label.toLowerCase()}`}
+                      >
+                        <Tag.Label>{notices.length}</Tag.Label>
+                      </Tag.Root>
+                      <Button
+                        size="2xs"
+                        variant="ghost"
+                        onClick={() => {
+                          for (const error of notices) workbench.notifications.dismiss(error.id);
+                        }}
+                      >
+                        Clear all
+                      </Button>
+                    </>
+                  )
                 }
               />
               <ScrollArea
@@ -83,6 +109,11 @@ export const WorkbenchSystemNotices = (props: { workbench: WorkbenchCore }) => {
                 }}
               >
                 <Stack gap="sm" minW="0">
+                  {!summary && (
+                    <Text color="fg.muted" textStyle="paragraph/S/regular">
+                      No system notices.
+                    </Text>
+                  )}
                   {notices.map((error) => (
                     <AlertMessage
                       key={error.id}

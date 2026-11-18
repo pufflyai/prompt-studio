@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts";
 import { createCommandRunner, normalizeExtensionSources } from "pstdio-extensions";
 import { createCommandEnvironment } from "./index";
+import { createResourcesApi } from "./resources";
 import { createSessionsApi } from "./sessions";
 import { createWorkspacesApi } from "./workspaces";
 
@@ -193,3 +194,26 @@ for (const target of ["default workspace", "original session"] as const) {
     }
   });
 }
+
+test("cancelling a batch of resource identities during ownership resolution skips its database read", async () => {
+  const controller = new AbortController();
+  const catalog = Promise.withResolvers<{ runtime: { resourceKinds: { extensionId: string; localId: string }[] } }>();
+  let reads = 0;
+  const api = createResourcesApi(
+    {
+      extensionRuntimeCatalog: { get: () => catalog.promise },
+      extensionResourceSequencesService: {
+        identityMany: async () => {
+          reads++;
+          return [];
+        },
+      },
+    } as never,
+    { projectId: "p", extensionId: "notes", signal: controller.signal },
+  );
+  const pending = api.identityMany({ kind: "note", ids: ["one"] });
+  controller.abort();
+  catalog.resolve({ runtime: { resourceKinds: [{ extensionId: "notes", localId: "note" }] } });
+  await expect(pending).rejects.toThrow();
+  expect(reads).toBe(0);
+});

@@ -10,6 +10,20 @@ test("coalesces ten simultaneous catalog changes into one 65-workspace pass with
   expect(f.eventBus.getSince(0).filter(({ table }) => table === "workspaces")).toHaveLength(0);
 });
 
+test("startup skips the workspace it just restored while a later catalog request can refresh it", async () => {
+  const startup = maintenanceFixture(2);
+  await provisionProjectWorkspaces(startup.deps, "project", startup.hooks, { skipWorkspaceId: "ws-0" });
+  expect(startup.calls).toEqual(["ws-1"]);
+
+  const concurrent = maintenanceFixture(2);
+  await Promise.all([
+    provisionProjectWorkspaces(concurrent.deps, "project", concurrent.hooks, { skipWorkspaceId: "ws-0" }),
+    provisionProjectWorkspaces(concurrent.deps, "project", concurrent.hooks),
+  ]);
+  expect(concurrent.calls).toEqual(["ws-0", "ws-1"]);
+  expect(concurrent.scans).toBe(1);
+});
+
 test("a catalog change during a pass revisits only workspaces that did not see it", async () => {
   const f = maintenanceFixture();
   const started = Promise.withResolvers<void>();

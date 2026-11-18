@@ -7,6 +7,7 @@ import {
   fireExtensionEventAsync,
 } from "../extensions/extension-event-runtime";
 import { ensureWorkspaceConfig } from "./workspace-config";
+import { hasPendingRestoredFolderSetup } from "./workspace-provider-identity";
 
 export type ProvisionCoordinatorDeps = ExtensionEventDeps;
 export type WorkspaceProvisioningHooks = {
@@ -85,7 +86,13 @@ const maintainWorkspace = (
 ) =>
   deps.workspaceService.maintenance.run(id, async () => {
     const workspace = await deps.workspaceService.get(id);
-    if (!workspace || workspace.project_id !== projectId || !isReadyLocalWorkspace(workspace)) return;
+    if (
+      !workspace ||
+      workspace.project_id !== projectId ||
+      hasPendingRestoredFolderSetup(workspace) ||
+      !isReadyLocalWorkspace(workspace)
+    )
+      return;
     let message: string | null;
     try {
       ({ error: message } = await provisionWorkspaceFiles(
@@ -126,7 +133,11 @@ const hostMap = <T>(
   return projects;
 };
 // Provisioning and removal share one per-host/project queue; independent hosts never block each other.
-const inProjectWorkspaceQueue = <T>(deps: ProvisionCoordinatorDeps, projectId: string, task: () => Promise<T>) => {
+export const inProjectWorkspaceQueue = <T>(
+  deps: ProvisionCoordinatorDeps,
+  projectId: string,
+  task: () => Promise<T>,
+) => {
   const projects = hostMap(projectQueues, deps);
   const queued = (projects.get(projectId) ?? Promise.resolve()).catch(() => undefined).then(task);
   projects.set(projectId, queued);
@@ -193,6 +204,7 @@ export const provisionProjectWorkspaces = (
   deps: ProvisionCoordinatorDeps,
   projectId: string,
   hooks: WorkspaceProvisioningHooks = defaultHooks(),
+  options: { skipWorkspaceId?: string } = {},
 ) => {
   const projects = hostMap(projectProvisionQueues, deps);
   const current = projects.get(projectId);
@@ -214,6 +226,8 @@ export const provisionProjectWorkspaces = (
   projects.set(projectId, queue);
   void inProjectWorkspaceQueue(deps, projectId, async () => {
     const applied = new Map<string, number>();
+    // Startup has already provisioned this workspace for the first request. A later refresh still visits it.
+    if (options.skipWorkspaceId) applied.set(options.skipWorkspaceId, 1);
     try {
       while (queue.requests.length) await maintainProjectRevision(queue, projectId, applied);
     } catch (error) {
