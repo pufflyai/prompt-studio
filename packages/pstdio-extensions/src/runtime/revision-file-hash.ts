@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { closeSync, createReadStream, openSync, readFileSync, readSync, statSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 
 export type RevisionHashInput = { value: string | Buffer } | { file: string };
 const wholeFileLimit = 8 * 1024 * 1024;
@@ -40,7 +40,7 @@ const readHashFile = async (file: string, contents: Map<string, Buffer>) => {
     if (cached) return { bytes: cached };
     // Large native assets stream only when consumed, so prefetch never allocates
     // several whole executables or opens streams that a failed read would abandon.
-    if (statSync(file).size > wholeFileLimit) return { file };
+    if ((await stat(file)).size > wholeFileLimit) return { file };
     return { bytes: await readFile(file) };
   } catch (error) {
     return { error };
