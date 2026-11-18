@@ -1,5 +1,5 @@
-import { Box, IconButton, Stack, Text } from "@chakra-ui/react";
-import { DeleteConfirmationModal, SettingsContentSkeleton, useToaster } from "@pstdio/ui";
+import { Box, IconButton, Stack } from "@chakra-ui/react";
+import { DeleteConfirmationModal, SettingsContentSkeleton } from "@pstdio/ui";
 import { CodeEditor } from "@pstdio/ui/diff";
 import { SettingsHeaderContent, useSettingsChanges } from "@pstdio/workbench/react";
 import { Trash2 } from "lucide-react";
@@ -16,7 +16,6 @@ interface TemplateSettingsEditorProps {
 // Per-template editor for the Templates collection. The component is keyed by
 // template id at the call site, so local edit state resets per template.
 export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
-  const toaster = useToaster();
   const { template, onDeleted } = props;
   const { data, isLoading } = useProjectTemplate(template);
   const updateTemplate = useUpdateProjectTemplate(template);
@@ -30,7 +29,6 @@ export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
 
   const save = async () => {
     await updateTemplate.mutateAsync(content);
-    toaster.create({ type: "success", title: "Template saved", description: template.title });
   };
 
   useSettingsChanges({
@@ -46,7 +44,7 @@ export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
   };
 
   return (
-    <Stack gap="0" h="full" minH="0">
+    <Stack gap="0" h="full" minH="0" position="relative">
       <SettingsHeaderContent>
         <IconButton
           size="sm"
@@ -58,11 +56,6 @@ export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
           <Trash2 />
         </IconButton>
       </SettingsHeaderContent>
-      {updateTemplate.error ? (
-        <Text role="alert" color="fg.error">
-          {updateTemplate.error.message}
-        </Text>
-      ) : null}
       {isLoading ? (
         <SettingsContentSkeleton />
       ) : (

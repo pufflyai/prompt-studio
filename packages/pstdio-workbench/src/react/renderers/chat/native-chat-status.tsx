@@ -1,6 +1,6 @@
-import { Button, Flex, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Text } from "@chakra-ui/react";
 import type { ChatRendererSnapshot } from "@pstdio/sdk/extensions";
-import { AlertMessage } from "@pstdio/ui";
+import { ActionErrorSlot, AlertMessage } from "@pstdio/ui";
 import { chatDraftContentKey } from "../../../extensions/contributions/chat-draft-recovery";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 import { NativeChatDraftRecovery } from "./native-chat-draft-recovery";
@@ -14,7 +14,6 @@ interface NativeChatNoticesProps {
 export const NativeChatNotices = ({ host, state, session }: NativeChatNoticesProps) => {
   const {
     draft,
-    error,
     pending,
     conversation: { notice },
   } = state;
@@ -26,32 +25,51 @@ export const NativeChatNotices = ({ host, state, session }: NativeChatNoticesPro
       <NativeChatDraftRecovery
         recovered={draft.recovered}
         hidden={(saved) =>
-          Boolean(pending?.some((item) => item.failure && chatDraftContentKey(item) === chatDraftContentKey(saved)))
+          Boolean(
+            pending?.some(
+              (item) =>
+                item.failure && !item.failureDismissed && chatDraftContentKey(item) === chatDraftContentKey(saved),
+            ),
+          )
         }
         onRestore={session.restoreDraft}
       />
-      {pending
-        ?.filter((item) => item.failure)
-        .map((item) => (
+      {notice ? <Text>{notice}</Text> : null}
+    </>
+  );
+};
+
+export const NativeChatErrors = ({ state, session }: Omit<NativeChatNoticesProps, "host">) => {
+  const failures = state.pending?.filter((item) => item.failure && !item.failureDismissed);
+  if (!state.error && !failures?.length) return null;
+  return (
+    <Box position="relative" h="0">
+      <ActionErrorSlot edge="above">
+        {failures?.map((item) => (
           <AlertMessage
             key={item.message.id}
+            compact
             status="error"
             title="Message not sent"
-            onClose={() => session.restoreSubmission(item.message.id)}
+            onClose={() => session.dismissSubmission(item.message.id)}
+            endElement={<Button onClick={() => session.restoreSubmission(item.message.id)}>Restore draft</Button>}
           >
             {item.failure}
           </AlertMessage>
         ))}
-      {notice ? <Text>{notice}</Text> : null}
-      {error ? (
-        <AlertMessage
-          role="alert"
-          status="error"
-          title={error}
-          endElement={<Button onClick={session.reconnect}>Retry</Button>}
-        />
-      ) : null}
-    </>
+        {state.error ? (
+          <AlertMessage
+            role="alert"
+            status="error"
+            title={state.canRefreshError ? "Could not refresh conversation" : "Conversation action failed"}
+            onClose={session.dismissError}
+            endElement={state.canRefreshError ? <Button onClick={session.reconnect}>Retry</Button> : undefined}
+          >
+            {state.error}
+          </AlertMessage>
+        ) : null}
+      </ActionErrorSlot>
+    </Box>
   );
 };
 interface NativeChatResourcesProps {

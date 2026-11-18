@@ -31,4 +31,4 @@ Per-resource arrays repeat storage and cleanup and require scans for backlinks. 
 
 The SDK/API contracts and extension sources must change in separate PRs. Alpha permits breaking cleanup without a deprecation window, as explicitly decided in PS-490 on 2026-10-06. This does not waive the ordered release.
 
-See the [resource-anchor contract](../references/architecture/0024-resource-anchors.md) and [PRD](../requirements/platform/0006-resource-linking.md).
+See the [resource-anchor contract](../references/architecture/0024-resource-anchors.md) and [ · RB 15.A.1](../requirement-book/book.json).

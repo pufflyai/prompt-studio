@@ -30,3 +30,6 @@ export async function readAutoBuildAssignments(ctx: CommandContext) {
   );
   return { assigned, sessions: [...ticketSessions.values()] };
 }
+
+export const isSupervisorStalled = (active: boolean, progressAt: number) =>
+  active && Date.now() - progressAt >= 60 * 60 * 1000;

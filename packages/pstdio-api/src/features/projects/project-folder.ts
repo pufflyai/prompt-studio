@@ -7,9 +7,10 @@ import {
   resolveDefaultExtensionsConfig,
 } from "../extensions/default-extensions";
 import { syncRepoExtensionsForProject } from "../extensions/repo-extensions";
-import { runWorkspaceProvisioning } from "../workspaces/provision-coordinator";
+import { inProjectWorkspaceQueue, runWorkspaceProvisioning } from "../workspaces/provision-coordinator";
 import { ensureWorkspaceConfig } from "../workspaces/workspace-config";
 import { PROVIDER_READY_TIMEOUT_MS } from "../workspaces/workspace-provider-creation";
+import { hasPendingRestoredFolderSetup, restoredFolderSetupPending } from "../workspaces/workspace-provider-identity";
 import { reconcileProviderWorkspaces } from "../workspaces/workspace-provider-reconciliation";
 import {
   canonicalFolder,
@@ -102,6 +103,10 @@ const initializeLocalProjectWorkspace = async (
         enable: options.restored ? (name) => installed.materialized.includes(name) : undefined,
       }),
     );
+    if (hasPendingRestoredFolderSetup(workspace)) {
+      const { [restoredFolderSetupPending]: _pending, ...params } = workspace.provider_params_json;
+      await deps.workspaceService.updateProviderProjection(workspace.id, { provider_params_json: params });
+    }
     deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "runtime_refresh" });
     await traceSetupPhase("project.files", context, () => restoreProjectArtifacts(deps, projectId, workspace.id));
     const provisioned = await traceSetupPhase("project.provision", context, () =>
@@ -119,7 +124,7 @@ const initializeLocalProjectWorkspace = async (
   }
 };
 
-export const initializeProjectWorkspace = async (
+const initializeWorkspace = async (
   deps: ProjectsRouteDeps,
   projectId: string,
   initial: CreateProjectInput["initial_workspace"],
@@ -127,6 +132,9 @@ export const initializeProjectWorkspace = async (
   options: WorkspaceSetupOptions = {},
 ) => {
   let existing = await deps.workspaceService.getDefault(projectId);
+  const restored =
+    initial.provider_id === rootProviderId && (options.restored || hasPendingRestoredFolderSetup(existing));
+  const { [restoredFolderSetupPending]: _pending, ...providerParams } = initial.params;
   const remoteSetupError = initial.provider_id !== rootProviderId ? await extensionSetupError(setupExtensions) : null;
   const hasProviderOperation =
     existing &&
@@ -147,8 +155,9 @@ export const initializeProjectWorkspace = async (
           createProviderBackedWorkspace(deps, {
             projectId,
             providerId: initial.provider_id,
-            params: initial.params,
+            params: restored ? providerParams : initial.params,
             isDefault: true,
+            restoredFolderSetup: restored,
             name: "Project folder",
           }),
         );
@@ -165,6 +174,26 @@ export const initializeProjectWorkspace = async (
     workspace,
     workspace.root_path,
     initial.provider_id === rootProviderId ? setupExtensions : undefined,
-    options,
+    { restored },
   );
 };
+
+export const initializeProjectWorkspace = (
+  deps: ProjectsRouteDeps,
+  projectId: string,
+  initial: CreateProjectInput["initial_workspace"],
+  setupExtensions?: () => Promise<ExtensionSetupWarning[]>,
+  options: WorkspaceSetupOptions = {},
+) => {
+  const initialize = () => initializeWorkspace(deps, projectId, initial, setupExtensions, options);
+  return initial.provider_id === rootProviderId ? inProjectWorkspaceQueue(deps, projectId, initialize) : initialize();
+};
+
+export const resumeRestoredFolderSetup = (deps: ProjectsRouteDeps, projectId: string) =>
+  inProjectWorkspaceQueue(deps, projectId, async () => {
+    const home = await deps.workspaceService.getDefault(projectId);
+    if (!home || !hasPendingRestoredFolderSetup(home)) return;
+    const path = home.provider_params_json.path;
+    if (typeof path !== "string") return;
+    return initializeWorkspace(deps, projectId, { provider_id: rootProviderId, params: { path } });
+  });

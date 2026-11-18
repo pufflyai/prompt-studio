@@ -27,7 +27,7 @@ test("maintenance keeps session launch gated and wakes a queued session without 
   let queued = true;
   let launches = 0;
   const stop = watchSessionQueueReadiness(f.deps, async () => {
-    const workspace = await f.workspaceSessionService.getWorkspaceBySessionId("session");
+    const workspace = await f.workspaceSessionService.getWorkspaceBySessionId("session", { forLaunch: true });
     if (queued && workspaceSessionReadiness(workspace).kind === "ready") {
       queued = false;
       launches++;
@@ -36,8 +36,10 @@ test("maintenance keeps session launch gated and wakes a queued session without 
   try {
     const maintenance = provisionProjectWorkspaces(f.deps, "project", f.hooks);
     await started.promise;
-    expect(f.rows[0]?.initializing).toBe(false);
-    expect((await f.workspaceSessionService.getWorkspaceBySessionId("session"))?.initializing).toBe(true);
+    expect((await f.workspaceSessionService.getWorkspaceBySessionId("session"))?.initializing).toBe(false);
+    expect(
+      (await f.workspaceSessionService.getWorkspaceBySessionId("session", { forLaunch: true }))?.initializing,
+    ).toBe(true);
     const launch = waitForWorkspaceReady(f, "session", { pollMs: 1 });
     expect(launches).toBe(0);
     release.resolve();
@@ -61,7 +63,7 @@ test("maintenance publishes real failures and recovery, retaining queued work un
     return { delivered: 1 };
   };
   const stop = watchSessionQueueReadiness(f.deps, async () => {
-    const workspace = await f.workspaceSessionService.getWorkspaceBySessionId("session");
+    const workspace = await f.workspaceSessionService.getWorkspaceBySessionId("session", { forLaunch: true });
     if (workspaceSessionReadiness(workspace).kind === "ready") launched = true;
   });
   try {
@@ -103,7 +105,7 @@ test("interrupted maintenance keeps restart session recovery gated until the rec
       workspaceSessionsDBService: { getWorkspaceBySessionId: async () => ({ ...f.rows[0]! }) } as never,
     });
     expect(f.rows[0]?.initializing).toBe(false);
-    expect((await sessions.getWorkspaceBySessionId("session"))?.initializing).toBe(true);
+    expect((await sessions.getWorkspaceBySessionId("session", { forLaunch: true }))?.initializing).toBe(true);
     const entered = Promise.withResolvers<void>();
     const release = Promise.withResolvers<void>();
     f.hooks.ensureConfig = async () => {

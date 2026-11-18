@@ -18,6 +18,7 @@ export const DashboardWorkbenchView = (props: DashboardWorkbenchViewProps) => {
   return (
     <Workbench
       panelControlsPlacement={panelControlsPlacement}
+      keepTitleBarInFullscreen={panelControlsPlacement === "host"}
       workbench={workbench}
       themeStorage={storage}
       titleBar={

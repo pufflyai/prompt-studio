@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
-import { type ExtensionUpgradeBatch, resolveExtensionAction } from "./extension-actions";
+import { type ExtensionUpgradeBatch, marketplaceActionKey } from "./extension-actions";
 import { ExtensionFolderDropZone } from "./extension-folder-drop-zone";
 import { unavailableExtensionHarnesses } from "./extension-harness-availability";
 import { ExtensionListRow } from "./extension-list-row";
@@ -23,6 +23,7 @@ import { MarketplaceExtensionRow } from "./marketplace-extension-row";
 export interface ExtensionsPanelViewProps {
   projectId?: string;
   extensions: ProjectExtensionInstance[];
+  sourceChangingIds?: ReadonlySet<string>;
   actionStates?: Record<string, ExtensionActionState>;
   onDismissAction?: (id: string, expected?: ExtensionActionState) => void;
   onDismissBatch?: (batch: ExtensionUpgradeBatch) => void;
@@ -33,9 +34,7 @@ export interface ExtensionsPanelViewProps {
   automations: WorkbenchExtensionAutomationRecord[];
   harnesses?: WorkbenchExtensionHarnessRecord[];
   agents?: AgentInfo[];
-  togglingInstanceId?: string;
   togglingAutomation?: boolean;
-  upgradingInstanceIds?: string[];
   onToggle?: (extension: ProjectExtensionInstance, enabled: boolean) => void;
   onToggleAutomation?: (
     extension: ProjectExtensionInstance,
@@ -46,9 +45,7 @@ export interface ExtensionsPanelViewProps {
   onOpen?: (extension: ProjectExtensionInstance) => void;
   onInstallMarketplace?: (extension: MarketplaceExtension) => void;
   onOpenMarketplace?: (extension: MarketplaceExtension) => void;
-  upgradingAll?: boolean;
   onUpgradeAll?: (extensions: ProjectExtensionInstance[]) => void;
-  addingFolderName?: string;
   onDropFolder?: (folder: DroppedExtensionFolder) => void;
 }
 
@@ -90,6 +87,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
   const {
     extensions,
     actionStates = {},
+    sourceChangingIds,
     onDismissAction,
     onRetryAction,
     onDismissBatch,
@@ -99,18 +97,14 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
     automations,
     harnesses,
     agents,
-    togglingInstanceId,
     togglingAutomation,
-    upgradingInstanceIds = [],
     onToggle,
     onToggleAutomation,
     onUpgrade,
     onOpen,
     onInstallMarketplace,
     onOpenMarketplace,
-    upgradingAll,
     onUpgradeAll,
-    addingFolderName,
     onDropFolder,
   } = props;
   const { t } = useTranslation("projects");
@@ -121,7 +115,8 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
   const visible = sortedExtensions.filter((extension) => matchesSearch(extension, search));
   const availableMarketplace = marketplace.filter((extension) => !extension.installed).sort(compareDisplayName);
   const visibleMarketplace = availableMarketplace.filter((extension) => matchesMarketplaceSearch(extension, search));
-  const upgradable = extensions.filter((extension) => extension.canUpgrade);
+  const upgradable = extensions.filter((extension) => extension.canUpgrade && !sourceChangingIds?.has(extension.id));
+  const folderAction = actionStates.$folder;
 
   return (
     <PageContentLayout
@@ -140,7 +135,7 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
             <Text textStyle="heading/M" flex="1" minW="0">
               {t("projectSettings.extensionsPanel.title")}
             </Text>
-            {(upgradable.length > 0 || batch || upgradingAll) && (
+            {(upgradable.length > 0 || batch) && (
               <ExtensionUpgradeProgress
                 batch={batch}
                 onUpgrade={() => onUpgradeAll?.(upgradable)}
@@ -191,17 +186,11 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
           diagnostics={diagnosticsByExtensionId.get(extension.extensionId) ?? []}
           automations={automations.filter((automation) => automation.extensionInstanceId === extension.id)}
           unavailableHarnesses={unavailableExtensionHarnesses(extension, harnesses, agents)}
-          toggling={togglingInstanceId === extension.id}
           togglingAutomation={togglingAutomation}
-          upgrading={
-            upgradingInstanceIds.includes(extension.id) ||
-            ["queued", "running"].includes(resolveExtensionAction(actionStates, extension).action?.status ?? "")
-          }
-          action={resolveExtensionAction(actionStates, extension).action}
-          onDismissAction={(expected) =>
-            onDismissAction?.(resolveExtensionAction(actionStates, extension).key, expected)
-          }
-          onRetryAction={() => onRetryAction?.(resolveExtensionAction(actionStates, extension).key)}
+          action={actionStates[extension.id]}
+          sourceChanging={sourceChangingIds?.has(extension.id)}
+          onDismissAction={(expected) => onDismissAction?.(extension.id, expected)}
+          onRetryAction={() => onRetryAction?.(extension.id)}
           onToggle={(enabled) => onToggle?.(extension, enabled)}
           onToggleAutomation={async (automation, enabled) => onToggleAutomation?.(extension, automation, enabled)}
           onUpgrade={() => onUpgrade?.(extension)}
@@ -226,21 +215,24 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
         <MarketplaceExtensionRow
           key={extension.installName}
           extension={extension}
-          action={actionStates[extension.installName]}
-          onDismissAction={(expected) => onDismissAction?.(extension.installName, expected)}
-          onRetryAction={() => onRetryAction?.(extension.installName)}
+          action={actionStates[marketplaceActionKey(extension.installName)]}
+          onDismissAction={(expected) => onDismissAction?.(marketplaceActionKey(extension.installName), expected)}
+          onRetryAction={() => onRetryAction?.(marketplaceActionKey(extension.installName))}
           onInstall={() => onInstallMarketplace?.(extension)}
           onOpen={() => onOpenMarketplace?.(extension)}
         />
       ))}
 
-      <Stack padding="lg">
+      <Stack padding="lg" position="relative">
         <ExtensionActionFeedback
-          action={actionStates.$folder}
-          onDismiss={() => onDismissAction?.("$folder")}
+          action={folderAction}
+          onDismiss={() => onDismissAction?.("$folder", folderAction)}
           onRetry={() => onRetryAction?.("$folder")}
         />
-        <ExtensionFolderDropZone addingName={addingFolderName} onDropFolder={(folder) => onDropFolder?.(folder)} />
+        <ExtensionFolderDropZone
+          addingLabel={folderAction?.status === "running" ? folderAction.label : undefined}
+          onDropFolder={(folder) => onDropFolder?.(folder)}
+        />
       </Stack>
     </PageContentLayout>
   );

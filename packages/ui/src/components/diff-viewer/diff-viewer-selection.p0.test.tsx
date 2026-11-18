@@ -8,10 +8,17 @@ import { FileListPanel } from "./file-list-panel";
 const originalDocument = Object.getOwnPropertyDescriptor(globalThis, "document");
 const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
 beforeEach(() => {
-  Object.defineProperty(globalThis, "window", { configurable: true, value: globalThis });
+  const window = Object.assign(new EventTarget(), {
+    HTMLElement: class {
+      focus() {}
+    },
+    setTimeout,
+    clearTimeout,
+  });
+  Object.defineProperty(globalThis, "window", { configurable: true, value: window });
   Object.defineProperty(globalThis, "document", {
     configurable: true,
-    value: Object.assign(new EventTarget(), { nodeType: 9, defaultView: globalThis, getElementById: () => null }),
+    value: Object.assign(new EventTarget(), { nodeType: 9, defaultView: window, getElementById: () => null }),
   });
 });
 afterEach(() => {

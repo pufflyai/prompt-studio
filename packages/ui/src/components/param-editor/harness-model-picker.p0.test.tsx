@@ -45,3 +45,21 @@ test("locking an existing harness keeps model selection enabled", () => {
   field.props.onChange("model", "B");
   expect(changes).toEqual(["model:B"]);
 });
+
+test("each harness shows its own icon and falls back to the terminal icon", () => {
+  const field = HarnessModelPicker({
+    label: "Model",
+    harnessId: "custom",
+    harnesses: [
+      { id: "custom", name: "Custom", icon: "data:image/svg+xml;base64,PHN2Zy8+" },
+      { id: "plain", name: "Plain" },
+    ],
+    models: [],
+    onHarnessChange: () => {},
+    onModelChange: () => {},
+  });
+  expect(field.props.param.group.options.map((option: { icon?: string }) => option.icon)).toEqual([
+    "data:image/svg+xml;base64,PHN2Zy8+",
+    "Terminal",
+  ]);
+});

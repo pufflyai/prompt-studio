@@ -21,17 +21,26 @@ export const createExtensionAutomationService = (options: {
   deps: AutomationPolicyDeps;
   withAdmissionLock: <T>(key: string, task: () => Promise<T>) => Promise<T>;
   maxRunsPerMinute: number;
-  startExecution: (runId: string) => void;
+  startExecution: (runId: string, notBefore?: string) => void;
   cancelOwnedRun: (runId: string) => Promise<AutomationRun>;
 }) => {
   const { deps } = options;
   const enqueueForExtension = async (
-    input: ExtensionOwner & { commandId: string; input: CreateAutomationRunInput["input"]; key: string },
+    input: ExtensionOwner & {
+      commandId: string;
+      input: CreateAutomationRunInput["input"];
+      key: string;
+      notBefore?: string;
+    },
   ) => {
     if (!input.key || input.key.length > MAX_IDEMPOTENCY_KEY_LENGTH) {
       throw new AutomationRequestError("invalid_idempotency_key", "A key of 1 to 200 characters is required.", 400);
     }
-    const parsed = createAutomationRunInputSchema.safeParse({ commandId: input.commandId, input: input.input });
+    const parsed = createAutomationRunInputSchema.safeParse({
+      commandId: input.commandId,
+      input: input.input,
+      ...(input.notBefore !== undefined ? { notBefore: input.notBefore } : {}),
+    });
     if (!parsed.success || automationTextEncoder.encode(canonicalJson(parsed.data)).byteLength > MAX_INPUT_BYTES) {
       throw new AutomationRequestError("invalid_automation_input", "Invalid automation input.", 400);
     }

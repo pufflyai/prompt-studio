@@ -101,7 +101,7 @@ export const RepositorySource: Story = {
 };
 export const Installing: Story = {
   id: "projectsettings-availableextensiondetail--installing",
-  args: { action: { status: "running", label: "Installing", startedAt: Date.now() - 12000 } },
+  args: { action: { status: "running", label: "Installing" } },
 };
 
 export const LongIdentity: Story = {

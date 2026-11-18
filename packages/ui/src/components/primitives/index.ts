@@ -1,3 +1,4 @@
+export { ActionErrorSlot } from "./action-error-slot";
 export type { AlertProps } from "./alert";
 export { AlertMessage } from "./alert";
 export type { BreadcrumbItem } from "./breadcrumb";
@@ -26,6 +27,7 @@ export { NumberInputField, NumberInputRoot } from "./number-input";
 export { ProgressButton, type ProgressButtonProps } from "./progress-button";
 export type { RadioProps } from "./radio";
 export { Radio, RadioGroup } from "./radio";
+export { ReadErrorRecovery } from "./read-error-recovery";
 export { ResourceBadge } from "./resource-badge";
 export { ScrollArea } from "./scroll-area";
 export type { SegmentedControlOption, SegmentedControlProps } from "./segmented-control";

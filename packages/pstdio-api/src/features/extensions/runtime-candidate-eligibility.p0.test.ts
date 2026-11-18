@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -14,12 +14,15 @@ import { createExtensionService } from "../../services/extension-service";
 import { createProjectService } from "../../services/project-service";
 import { createSyncService } from "../../services/sync-service";
 import { EventBus } from "../sync/event-bus";
+import { defaultWebviewCacheRoot } from "./extension-webview-build-paths";
+import { resolveManagedWebviewPaths } from "./extension-webviews";
 import { createInstalledExtensionRuntime } from "./installed-extension-runtime";
 import { syncRepoExtensionsForProject } from "./repo-extensions";
 import { createRuntimeCandidateInspection } from "./runtime-candidate-inspection";
 import { createTestExtensionSource } from "./test-utils/create-test-extension-source";
+import { writeExtension } from "./test-utils/webview-build-fixture";
 
-const createFixture = async () => {
+const createFixture = async (onInstalledSourcesChanged?: (path?: string) => Promise<void>) => {
   const root = mkdtempSync(join(tmpdir(), "candidate-eligibility-"));
   const previousHome = process.env.PSTDIO_HOME;
   process.env.PSTDIO_HOME = join(root, "home");
@@ -33,6 +36,7 @@ const createFixture = async () => {
     projectsDBService: createProjectsDBService(db),
   });
   const extensionService = createExtensionService({
+    onInstalledSourcesChanged,
     extensionInstancesService: instances,
     installedExtensionSourcesService: sources,
     extensionUserDataService: createExtensionUserDataDBService(db),
@@ -295,6 +299,46 @@ test("last-project disable retires executable webview inspection without discard
     await runtime.dispose();
     await work;
     await gate.stop(true);
+    await f.close();
+  }
+});
+
+test("first explicit enable completes its frontend after acquiring project execution ownership", async () => {
+  let runtime: ReturnType<typeof createInstalledExtensionRuntime> | undefined;
+  const f = await createFixture(async (path) => {
+    await runtime?.refresh(path);
+  });
+  const sourcePath = join(f.root, "newly-enabled");
+  writeExtension(sourcePath, { main: "src/main.ts" });
+  const entry = join(sourcePath, "extension.ts");
+  writeFileSync(
+    entry,
+    readFileSync(entry, "utf8").replace('id: "main",', 'id: "main", ref: { kind: "view", id: "main" },'),
+  );
+  runtime = createInstalledExtensionRuntime({ ...runtimeInput(f), webviewBuilds: true });
+  try {
+    await runtime.ready;
+    expect(existsSync(f.marker)).toBe(false);
+    const enabled = await f.extensionService.enableInstalledSourceForProject({
+      projectId: f.project.id,
+      installName: "lab",
+      name: "lab",
+      displayName: "Lab",
+      extensionId: "pstdio.lab",
+      sourcePath,
+      sourceKind: "local_path",
+      manifest: JSON.parse(readFileSync(join(sourcePath, "package.json"), "utf8")),
+    });
+    expect(enabled.instance.enabled).toBe(true);
+    const frontend = resolveManagedWebviewPaths({
+      installedExtensionId: enabled.installedSource.id,
+      webviewCacheRoot: defaultWebviewCacheRoot(process.env),
+      webviewId: "pstdio.lab.view.main",
+    });
+    expect(existsSync(join(frontend.distDir, "module.js"))).toBe(true);
+    expect(existsSync(f.marker)).toBe(false);
+  } finally {
+    await runtime.dispose();
     await f.close();
   }
 });

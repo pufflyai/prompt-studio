@@ -38,7 +38,7 @@ export const createSessionQueueDrain = (deps: SessionsRouteDeps) => {
         const hasCapacity = await withSchedulingLock(async () => {
           const session = await deps.sessionService.get(entry.session_id);
           if (session?.status !== "queued") return true;
-          const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id);
+          const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id, { forLaunch: true });
           if (!(await hasCreateCapacity(deps, workspace?.id))) return false;
           // Lifecycle changes and quiet maintenance settlement both wake the queue when it becomes ready.
           if (workspaceSessionReadiness(workspace).kind === "wait") return true;

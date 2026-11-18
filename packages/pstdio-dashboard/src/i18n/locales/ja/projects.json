@@ -60,8 +60,8 @@
         "errorCopied": "エラーをコピーしました"
       },
       "upgrade": {
+        "waiting": "アップグレード待ち",
         "action": "アップグレード",
-        "succeeded": "拡張機能をアップグレードしました",
         "current": "拡張機能はすでに最新です",
         "failed": "拡張機能をアップグレードできませんでした"
       },
@@ -80,7 +80,6 @@
         "title": "拡張機能のフォルダーをここにドロップ",
         "hint": "ホストが拡張機能で宣言された範囲にインストールします。",
         "uploading": "{{name}} を追加しています…",
-        "succeeded": "{{name}} を追加しました",
         "failed": "拡張機能のフォルダーを追加できませんでした",
         "notFolder": "ファイルではなくフォルダーをドロップしてください。"
       },
@@ -161,15 +160,13 @@
         "queued": "待機中",
         "upgrading": "{{name}} をアップグレード中",
         "updating": "{{name}} を更新中",
-        "updated": "拡張機能を更新しました",
         "installing": "{{name}} をインストール中",
         "batch": "{{total}} 件中 {{count}} 件のアップグレードが完了",
         "retry": "再試行",
         "dismiss": "閉じる",
         "upgradingButton": "更新中",
         "batchFailed": "{{total}} 件中 {{count}} 件の更新に失敗しました",
-        "installingButton": "インストール中",
-        "installedButton": "インストール済み"
+        "installingButton": "インストール中"
       }
     }
   },

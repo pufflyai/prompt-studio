@@ -236,8 +236,6 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     phase("planner upgrade response");
     await expectPage(detail).toContainText("v0.11.0");
     await expectPage(detail.getByTestId("extension-detail-health")).toHaveCount(0);
-    await expectPage(detail.getByTestId("extension-upgrade")).toBeDisabled();
-    await detail.getByTestId("extension-action-dismiss").click();
     await expectPage(detail.getByTestId("extension-upgrade")).toHaveCount(0);
 
     // Recovery must leave the breadcrumb return path available to pointer users.
@@ -263,8 +261,6 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     phase("adopted skills version displayed");
     await expectPage(detail.getByTestId("extension-detail-health")).toHaveCount(0);
     phase("adopted skills health cleared");
-    await expectPage(detail.getByTestId("extension-upgrade")).toBeDisabled();
-    await detail.getByTestId("extension-action-dismiss").click();
     await expectPage(detail.getByTestId("extension-upgrade")).toHaveCount(0);
     phase("adopted skills recovery controls cleared");
 

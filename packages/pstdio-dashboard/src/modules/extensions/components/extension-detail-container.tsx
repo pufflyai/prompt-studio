@@ -12,7 +12,6 @@ import {
   useProjectExtensionSettings,
   useReloadProjectExtension,
   useSetExtensionAutomationEnabled,
-  useSetProjectExtensionEnabled,
   useUninstallProjectExtension,
   useUpdateProjectExtensionSetting,
 } from "@/shared/extensions/use-project-extensions";
@@ -23,9 +22,11 @@ import { ExtensionSettingsViews } from "./extension-settings-views";
 
 interface ExtensionDetailContainerProps {
   projectId: string | undefined;
-  upgradeAction?: ExtensionActionState;
+  action?: ExtensionActionState;
+  sourceChanging?: boolean;
   onUpgrade: () => void;
-  onDismissUpgrade: (action: ExtensionActionState) => void;
+  onToggle: (enabled: boolean) => void;
+  onDismissAction: (action: ExtensionActionState) => void;
   onRetryAction: () => void;
   extension: ProjectExtensionInstance;
   metadata: DashboardExtensionMetadata | undefined;
@@ -42,18 +43,19 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
     agents,
     onBack,
     settingsInput,
-    upgradeAction,
+    action,
     onUpgrade,
-    onDismissUpgrade,
+    onDismissAction,
     onRetryAction,
   } = props;
+  const toggleAction = action?.operation === "toggle" ? action : undefined;
+  const upgradeAction = toggleAction ? undefined : action;
   const { showError, errorNotice, clearError } = useActionError();
   const settingsPanels =
     metadata?.settingsPanels.filter(
       (panel) => panel.extensionId === extension.extensionId && panel.slot.id === "extension.settings",
     ) ?? [];
   const { t } = useTranslation("projects");
-  const setEnabled = useSetProjectExtensionEnabled(projectId);
   const setAutomationEnabled = useSetExtensionAutomationEnabled(projectId);
   const settingsQuery = useProjectExtensionSettings(projectId, extension.id);
   // The per-extension endpoint documents contributions even while the extension
@@ -122,24 +124,21 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
             <ExtensionSettingsViews input={settingsInput} panels={settingsPanels} />
           ) : undefined
         }
-        toggling={setEnabled.isPending}
         reloading={reload.isPending}
+        sourceChanging={props.sourceChanging}
         upgrading={upgradeAction?.status === "running" || upgradeAction?.status === "queued"}
         actionFeedback={!confirmingUninstall && errorNotice}
         upgradeAction={upgradeAction}
-        onDismissUpgrade={onDismissUpgrade}
+        onDismissUpgrade={onDismissAction}
+        toggleAction={toggleAction}
+        onDismissToggle={toggleAction && (() => onDismissAction(toggleAction))}
+        onRetryToggle={onRetryAction}
         onRetryUpgrade={upgradeAction?.status === "error" ? onRetryAction : undefined}
         uninstalling={uninstall.isPending}
         togglingAutomationId={
           setAutomationEnabled.isPending ? (setAutomationEnabled.variables?.automationId ?? undefined) : undefined
         }
-        onToggle={(enabled) => {
-          clearError();
-          setEnabled.mutate(
-            { instanceId: extension.id, enabled },
-            { onError: (error) => showError({ title: error.message }) },
-          );
-        }}
+        onToggle={props.onToggle}
         onToggleAutomation={(automation, enabled) =>
           setAutomationEnabled.mutate(
             { instanceId: extension.id, automationId: automation.id, enabled },

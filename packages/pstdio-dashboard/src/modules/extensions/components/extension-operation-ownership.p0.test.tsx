@@ -2,7 +2,8 @@ import { expect, test } from "bun:test";
 import type { MarketplaceExtension, ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderToStaticMarkup } from "react-dom/server";
-import { getExtensionActions, resolveExtensionAction } from "./extension-actions";
+import { getProjectExtensionQueries } from "@/shared/extensions/project-extension-queries";
+import { getExtensionActions } from "./extension-actions";
 import { useExtensionPanelActions } from "./use-extension-panel-actions";
 
 const installed = (name: string): ProjectExtensionInstance => ({
@@ -22,8 +23,8 @@ const installed = (name: string): ProjectExtensionInstance => ({
   updateAvailable: false,
 });
 
-test("install, toggle and batch upgrades share catalog owners while only two upgrades are active", async () => {
-  const targets = [installed("one"), installed("two"), installed("three")];
+test("installs hand off to the exact instance and same-name upgrades respect host capacity", async () => {
+  const targets = [installed("one"), { ...installed("two"), installName: "one" }, installed("three")];
   const gates = targets.map(() => Promise.withResolvers<void>());
   const started: string[] = [];
   const server = Bun.serve({
@@ -51,10 +52,10 @@ test("install, toggle and batch upgrades share catalog owners while only two upg
   client.setQueryData(["project-extensions", "project"], { extensions: [], marketplace: [] });
   let controls!: ReturnType<typeof useExtensionPanelActions>;
   const Probe = () => {
-    controls = useExtensionPanelActions("project");
+    controls = useExtensionPanelActions("project", 2);
     return null;
   };
-  const owner = getExtensionActions(client, "project");
+  const owner = getExtensionActions(getProjectExtensionQueries("project").extensions);
   const until = async (ready: () => boolean) => {
     while (!ready()) await new Promise<void>((resolve) => setImmediate(resolve));
   };
@@ -72,39 +73,44 @@ test("install, toggle and batch upgrades share catalog owners while only two upg
       origin: { kind: "git", url: "https://example.com/tools", ref: "main", path: "one" },
     };
     await controls.handleInstall(available);
-    const installation = resolveExtensionAction(owner.getSnapshot().actions, targets[0]!);
-    expect(installation.action?.status).toBe("success");
-    await controls.handleToggle(targets[0]!, false);
-    expect(Object.keys(owner.getSnapshot().actions)).toEqual(["one"]);
-    const updated = resolveExtensionAction(owner.getSnapshot().actions, targets[0]!);
-    owner.dismiss(installation.key, installation.action);
-    expect(resolveExtensionAction(owner.getSnapshot().actions, targets[0]!).action).toBe(updated.action);
-    owner.dismiss(updated.key, updated.action);
-    expect(resolveExtensionAction(owner.getSnapshot().actions, targets[0]!).action).toBeUndefined();
+    expect(owner.getSnapshot().installedIds["marketplace:one"]).toBe(targets[0]!.id);
+    expect(owner.getSnapshot().actions).toEqual({});
+    const toggle = controls.handleToggle(targets[0]!, false);
+    expect(owner.getSnapshot().actions[targets[0]!.id]).toMatchObject({ operation: "toggle", status: "running" });
+    expect(await controls.handleUpgrade(targets[0]!)).toBe(false);
+    await toggle;
+    expect(owner.getSnapshot().actions).toEqual({});
+
+    await owner.run(targets[0]!.id, { running: "Updating", failed: "Update failed" }, async () => {
+      throw new Error("Earlier attempt");
+    });
+    await controls.handleDrop({ name: "one", files: [] });
+    expect(owner.getSnapshot().actions).toEqual({});
+    expect(owner.getSnapshot().installedIds).toEqual({ "marketplace:one": targets[0]!.id });
 
     const batch = controls.handleUpgradeAll(targets);
     await until(() => started.length === 2);
-    expect(owner.getSnapshot().batch?.ids).toEqual(["one", "two", "three"]);
+    expect(owner.getSnapshot().batch?.ids).toEqual(targets.map(({ id }) => id));
     expect(Object.values(owner.getSnapshot().actions).filter((entry) => entry.status === "running")).toHaveLength(2);
-    expect(resolveExtensionAction(owner.getSnapshot().actions, targets[2]!).action?.status).toBe("queued");
+    expect(owner.getSnapshot().actions[targets[2]!.id]?.status).toBe("queued");
     expect(await controls.handleUpgrade(targets[0]!)).toBe(false);
+    expect(await controls.handleUpgrade(targets[2]!)).toBe(false);
     expect(started).toHaveLength(2);
     gates[0]!.resolve();
     await until(() => started.length === 3);
-    const completed = resolveExtensionAction(owner.getSnapshot().actions, targets[0]!);
-    owner.dismiss(completed.key, completed.action);
+    expect(owner.getSnapshot().actions[targets[0]!.id]).toBeUndefined();
     expect(owner.getSnapshot().batch?.completed).toBe(1);
     gates[1]!.resolve();
     gates[2]!.resolve();
     await batch;
-    expect(owner.getSnapshot().batch).toMatchObject({ completed: 3, failed: 0 });
-    expect(owner.getSnapshot().actions[targets[0]!.id]).toBeUndefined();
-    // A batch excludes an already active individual operation under the same catalog key.
+    expect(owner.getSnapshot().batch).toBeUndefined();
+    expect(owner.getSnapshot().actions).toEqual({});
+    // A batch excludes an already active individual operation on the same instance.
     const individual = controls.handleUpgrade(targets[0]!);
     const overlapping = controls.handleUpgradeAll(targets);
-    expect(owner.getSnapshot().batch?.ids).toEqual(["two", "three"]);
+    expect(owner.getSnapshot().batch?.ids).toEqual(targets.slice(1).map(({ id }) => id));
     await Promise.all([individual, overlapping]);
-    expect(owner.getSnapshot().batch).toMatchObject({ completed: 2, failed: 0 });
+    expect(owner.getSnapshot().batch).toBeUndefined();
   } finally {
     for (const gate of gates) gate.resolve();
     globals.__PSTDIO_CONFIG__ = previous;

@@ -1,11 +1,18 @@
 import { AlertMessage } from "@pstdio/ui";
+import type { ChatLinkHandler } from "@pstdio/ui/chat-ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { useState } from "react";
 import { asSyncedRows, eq, getCollection, useLiveQuery } from "@/lib/sync/collections";
 import { buildDashboardWorkspaceOptionsFromRows } from "@/shared/workspaces/workspace-options";
+import { composeNativeChatLinks } from "./native-chat-links";
 import { createSessionLinkHandler } from "./session-link-handler";
 
-export const useSessionLinks = (workbench: WorkbenchCore, projectId?: string, workspaceId?: string | null) => {
+export const useSessionLinks = (
+  workbench: WorkbenchCore,
+  projectId: string | undefined,
+  workspaceId: string | null | undefined,
+  provider: ChatLinkHandler | undefined,
+) => {
   const [error, setError] = useState<string | null>(null);
   // Messages can render before the workspace syncs. A new row makes a new handler, so paths resolve again.
   const { data } = useLiveQuery(
@@ -19,14 +26,15 @@ export const useSessionLinks = (workbench: WorkbenchCore, projectId?: string, wo
     [workspaceId],
   );
   const [workspace] = buildDashboardWorkspaceOptionsFromRows({ workspaces: asSyncedRows(data) ?? [] }, projectId);
+  const host = createSessionLinkHandler({
+    workbench,
+    projectId,
+    workspace,
+    origin: window.location.origin,
+    onError: setError,
+  });
   return {
-    handler: createSessionLinkHandler({
-      workbench,
-      projectId,
-      workspace,
-      origin: window.location.origin,
-      onError: setError,
-    }),
+    handler: composeNativeChatLinks(provider, host),
     notice: error ? (
       <AlertMessage status="error" title="Could not open link" onClose={() => setError(null)}>
         {error}

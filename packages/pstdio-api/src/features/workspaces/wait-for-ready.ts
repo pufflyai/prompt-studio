@@ -19,12 +19,12 @@ export const waitForWorkspaceReady = async (deps: WaitForReadyDeps, sessionId: s
   const pollMs = options?.pollMs ?? WORKSPACE_READY_POLL_MS;
   options?.signal?.throwIfAborted();
 
-  let workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(sessionId);
+  let workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(sessionId, { forLaunch: true });
   const deadline = Date.now() + timeoutMs;
 
   while (workspace?.initializing && Date.now() < deadline) {
     await setTimeout(pollMs, undefined, { signal: options?.signal });
-    workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(sessionId);
+    workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(sessionId, { forLaunch: true });
   }
 
   options?.signal?.throwIfAborted();

@@ -51,6 +51,20 @@ pst pstdio.dev release-health history | jq '.runs | reverse | .[0]'
 
 `inspect` compares the latest GitHub release workflow run, or the requested run ID, with its cached evidence. It returns live run metadata and job statuses, the cached result (or `null`), sync state, collection limits, and an eligibility decision with its reason. If GitHub's job request fails, the command preserves run metadata, cached evidence and sync status, reports the error, and returns `null` for jobs and eligibility. Inspection uses the same eligibility rule as collection and does not download logs or change the cache. Eligibility does not imply a run is already cached: collection scans at most 100 workflow runs and processes the latest ten eligible candidates per refresh. The Runs table shows cached runs newest first; chart history stays oldest first.
 
+## Diagnostics
+
+Expand **Diagnostics** in the project navigation to open **Startup timeline** or **Storage**. Both read the files of the runtime they run in (`$PSTDIO_HOME`, by default `~/.pstdio`) and change nothing.
+
+**Startup timeline** groups the runtime's `runtime.startup.phase`, `runtime.setup.phase`, and shutdown log lines from `logs.jsonl` into launches, newest first. A chart shows each launch's time to a ready runtime and its slowest project setup. Select a launch to see its startup steps and every project setup as a waterfall, including nested steps, the wait between a ready runtime and the first setup, and setups cut short by quitting (`interrupted`) or by a failed step.
+
+**Storage** shows the latest report and measures a new one on demand in about 20 seconds as a background job. The database section reads the PGlite data directory without opening it: on-disk size per table split into rows, out-of-line large values (TOAST), and indexes, plus `storage_documents` bytes per owner and document kind, live versus dead. A warning appears when large values exceed a quarter of the database, because the database should hold references only ([0006.2.16](../../../documentation/guidance/0006-engineering.md#2-system-design)). The files section sizes every entry of the app data folder, each `storage/` area, and this project's extension storage folders. Worktrees under `workspaces/` are skipped.
+
+```sh
+pst pstdio.dev diagnostics startup-timeline
+pst pstdio.dev diagnostics storage-refresh
+pst pstdio.dev diagnostics storage-report
+```
+
 ## Merge queue repair
 
 Every five minutes, it repairs pull requests that GitHub removed from the merge queue. It lists open pull requests with the `removed-from-queue` label, which the Merge queue removals workflow manages. For each one, it creates a workspace from the pull request's branch and starts a session that reproduces and fixes the failure, then pushes to the same branch. A pull request gets one repair session per queue removal, identified by its latest removal event's timestamp. A repair's own push does not start another session. A later removal after requeueing can start a fresh repair. Session history includes older pages and archived sessions. If one pull request's repair cannot start, the command tries the others before reporting the failed pull requests and their errors. Pull requests from forks are skipped. The command needs an authenticated `gh` CLI.

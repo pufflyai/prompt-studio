@@ -19,9 +19,9 @@ export const createWorkspaceSessionService = (deps: WorkspaceSessionServiceDeps)
 
   return {
     link,
-    getWorkspaceBySessionId: async (sessionId: string) => {
+    getWorkspaceBySessionId: async (sessionId: string, options?: { forLaunch: true }) => {
       const workspace = await raw.getWorkspaceBySessionId(sessionId);
-      return workspace && (await deps.maintenance.isRunning(workspace.id))
+      return options?.forLaunch && workspace && (await deps.maintenance.isRunning(workspace.id))
         ? { ...workspace, initializing: true }
         : workspace;
     },

@@ -121,7 +121,8 @@ export const ExtensionHealthPopover = (props: ExtensionHealthPopoverProps) => {
                       </Button>
                     )}
                     <CopyButton
-                      text={loadErrorClipboardText(extension.lastError)}
+                      size="2xs"
+                      text={() => loadErrorClipboardText(extension.lastError)}
                       label={t("projectSettings.extensionsPanel.health.copyError")}
                       data-testid="extension-copy-error"
                     />

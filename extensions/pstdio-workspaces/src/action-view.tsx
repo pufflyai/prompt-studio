@@ -1,5 +1,5 @@
 import "@pstdio/ui/style.css";
-import { Box, Button, type ButtonProps, Stack, Text } from "@chakra-ui/react";
+import { Button, type ButtonProps, Stack, Text } from "@chakra-ui/react";
 import {
   createWebviewClient,
   defineExtensionView,
@@ -97,16 +97,18 @@ const Action = ({
   const [data, setData] = useState<FormData>();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [readFailed, setReadFailed] = useState(false);
   const operation = String(host.pageParams?.operation ?? "create");
   const workspaceId = String(host.pageParams?.["workspace-id"] ?? "");
   useEffect(() => {
     let disposed = false;
+    setReadFailed(false);
     void client.commands["read-form"]({ workspaceId: workspaceId || undefined })
       .then((value) => {
         if (!disposed) setData(value);
       })
-      .catch((error) => {
-        if (!disposed) setError(String(error));
+      .catch(() => {
+        if (!disposed) setReadFailed(true);
       });
     return () => {
       disposed = true;
@@ -145,18 +147,25 @@ const Action = ({
   };
   if (operation === "create" && data?.providers.length)
     return (
-      <Stack gap="0">
+      <Stack gap="0" position="relative">
         {host.presentation !== "dialog" ? (
           <Text textStyle="heading/M" px="lg" pt="lg">
             Create workspace
           </Text>
         ) : null}
         {error ? (
-          <Box px="lg" pt="md">
-            <AlertMessage status="error" title="Workspace action failed">
-              {error}
-            </AlertMessage>
-          </Box>
+          <AlertMessage
+            size="sm"
+            status="error"
+            title="Workspace action failed"
+            position="absolute"
+            insetInline="sm"
+            bottom="xs"
+            zIndex="docked"
+            onClose={() => setError("")}
+          >
+            {error}
+          </AlertMessage>
         ) : null}
         <ProviderForm
           providers={data.providers}
@@ -167,7 +176,7 @@ const Action = ({
         />
       </Stack>
     );
-  let content = <Text>Loading workspace…</Text>;
+  let content = <Text>{readFailed ? "Workspace details are unavailable." : "Loading workspace…"}</Text>;
   if (data)
     content =
       operation === "create" ? (
@@ -177,10 +186,19 @@ const Action = ({
       );
   return (
     <ScrollArea h="full" w="full">
-      <Stack maxW="xl" mx="auto" p="lg" gap="lg">
+      <Stack maxW="xl" mx="auto" p="lg" gap="lg" position="relative">
         {host.presentation !== "dialog" ? <Text textStyle="heading/M">{actionTitle(operation)}</Text> : null}
         {error && (
-          <AlertMessage status="error" title="Workspace action failed">
+          <AlertMessage
+            size="sm"
+            status="error"
+            title="Workspace action failed"
+            position="absolute"
+            insetInline="sm"
+            bottom="xs"
+            zIndex="docked"
+            onClose={() => setError("")}
+          >
             {error}
           </AlertMessage>
         )}

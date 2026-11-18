@@ -1,7 +1,7 @@
 import { ButtonGroup, IconButton, Spinner, Text } from "@chakra-ui/react";
 import { ProgressButton, type ProgressButtonProps } from "@pstdio/ui";
-import { ArrowUpCircle, Check, CircleAlert, Clock, X } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { ArrowUpCircle, CircleAlert, Clock, X } from "lucide-react";
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { ExtensionActionState } from "./extension-action-feedback";
 
@@ -28,20 +28,10 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
     ...rest
   } = props;
   const { t } = useTranslation("projects");
-  const [now, setNow] = useState(Date.now);
-  useEffect(() => {
-    if (action?.status !== "running") return;
-    setNow(Date.now());
-    const timer = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [action?.status]);
   const running = action?.status === "running";
   const queued = action?.status === "queued";
-  const final = action?.status === "success" || action?.status === "error";
   const failed = action?.status === "error";
-  const elapsed =
-    running && action.startedAt !== undefined ? Math.max(0, Math.floor((now - action.startedAt) / 1000)) : undefined;
-  const label = action ? `${action.label}${elapsed === undefined ? "" : ` · ${elapsed}s`}` : undefined;
+  const label = action?.label;
   const retry = retryLabel ?? t("projectSettings.extensionsPanel.feedback.retry", "Retry");
   const error = action?.error === action?.label ? undefined : action?.error;
   const name = error ? `${label}: ${error}` : label;
@@ -56,7 +46,7 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
       <ProgressButton
         {...rest}
         status={action?.status}
-        disabled={running || queued || (final ? !failed || !onRetry : disabled)}
+        disabled={disabled || running || queued || (failed && !onRetry)}
         aria-busy={running || undefined}
         aria-label={failed && onRetry ? `${name} · ${retry}` : name}
         aria-live="polite"
@@ -76,7 +66,7 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
           {failed && onRetry && ` · ${retry}`}
         </Text>
       </ProgressButton>
-      {final && onDismiss && (
+      {failed && onDismiss && (
         <IconButton
           height="auto"
           aria-label={`${t("projectSettings.extensionsPanel.feedback.dismiss", "Dismiss")} ${action.label}`}
@@ -93,7 +83,6 @@ export const ExtensionActionButton = (props: ExtensionActionButtonProps) => {
 const ActionIcon = ({ status, icon }: { status?: ExtensionActionState["status"]; icon: ReactNode }) => {
   if (status === "running") return <Spinner size="xs" />;
   if (status === "queued") return <Clock />;
-  if (status === "success") return <Check />;
   if (status === "error") return <CircleAlert />;
   return icon;
 };

@@ -1,4 +1,4 @@
-import type { CommandExecuteRequest } from "@pstdio/sdk/api";
+import type { CommandExecuteRequest, UpgradeProjectExtensionResponse } from "@pstdio/sdk/api";
 import type { ScopedQuery } from "@pstdio/sdk/extensions";
 import { useScopedQuery } from "@pstdio/sdk/extensions/react";
 import { addLocalExtensionFolder, type DroppedExtensionFolder } from "./api";
@@ -58,9 +58,23 @@ export const useReloadProjectExtension = (projectId: string | undefined) =>
   });
 export const useUpgradeProjectExtension = (projectId: string | undefined) =>
   useExtensionMutation(projectId, "upgrade", {
-    run: ({ instanceId }: { instanceId: string }, { api, projectId }) =>
-      api.extensions.upgradeProject(projectId, instanceId),
-    accept: (result, _value, cache) => cache.storeExtension(result.extension),
+    run: (
+      {
+        instanceId,
+        schedule,
+      }: {
+        instanceId: string;
+        schedule?: (send: () => Promise<UpgradeProjectExtensionResponse>) => Promise<UpgradeProjectExtensionResponse>;
+      },
+      { api, projectId, assertCurrent },
+    ) => {
+      const send = () => {
+        assertCurrent();
+        return api.extensions.upgradeProject(projectId, instanceId);
+      };
+      return schedule ? schedule(send) : send();
+    },
+    accept: (result, _value, cache) => cache.acceptUpgrade(result.extension),
   });
 export const useUpdateProjectExtensionSetting = (projectId: string | undefined) =>
   useExtensionMutation(projectId, "setting", {

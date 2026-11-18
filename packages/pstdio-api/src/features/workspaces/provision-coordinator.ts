@@ -7,6 +7,7 @@ import {
   fireExtensionEventAsync,
 } from "../extensions/extension-event-runtime";
 import { ensureWorkspaceConfig } from "./workspace-config";
+import { hasPendingRestoredFolderSetup } from "./workspace-provider-identity";
 
 export type ProvisionCoordinatorDeps = ExtensionEventDeps;
 export type WorkspaceProvisioningHooks = {
@@ -22,8 +23,13 @@ const defaultHooks = (): WorkspaceProvisioningHooks => ({
 
 type ProvisionWorkspace = { id: string; root_path: string | null; execution_kind: string; provider_id: string };
 type ProvisionInput<W extends ProvisionWorkspace> = { projectId: string; workspace: W; repoPath: string };
-const isReadyLocalWorkspace = (workspace: ProvisionWorkspace & { provider_state: string }) =>
-  workspace.provider_state === "ready" && workspace.execution_kind === "local" && Boolean(workspace.root_path);
+const isReadyLocalWorkspace = (
+  workspace: ProvisionWorkspace & { provider_state: string; deleted_at?: string | null },
+) =>
+  !workspace.deleted_at &&
+  workspace.provider_state === "ready" &&
+  workspace.execution_kind === "local" &&
+  Boolean(workspace.root_path);
 
 const provisionWorkspaceFiles = async <W extends ProvisionWorkspace>(
   deps: ProvisionCoordinatorDeps,
@@ -56,15 +62,18 @@ export const runWorkspaceProvisioning = async <W extends ProvisionWorkspace>(
   const { projectId, workspace } = input;
   if (workspace.execution_kind !== "local" || !workspace.root_path) return workspace;
   return deps.workspaceService.maintenance.run(workspace.id, async () => {
+    const current = await deps.workspaceService.get(workspace.id);
+    if (!current || current.project_id !== projectId) return workspace;
+    if (!isReadyLocalWorkspace(current)) return current as W;
     await deps.workspaceService.setInitializing(workspace.id, true);
     try {
-      const { payload, error } = await provisionWorkspaceFiles(deps, input, hooks);
+      const { payload, error } = await provisionWorkspaceFiles(deps, { ...input, workspace: current }, hooks);
       const result = await deps.workspaceService.setSetupError(workspace.id, error);
       if (!error) hooks.fireReadyAsync(deps, projectId, workspaceEvents.ready, payload);
-      return (result ?? workspace) as W;
+      return (result ?? current) as W;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return ((await deps.workspaceService.setSetupError(workspace.id, message)) ?? workspace) as W;
+      return ((await deps.workspaceService.setSetupError(workspace.id, message)) ?? current) as W;
     }
   });
 };
@@ -80,16 +89,15 @@ const maintainWorkspace = (
     if (
       !workspace ||
       workspace.project_id !== projectId ||
-      workspace.provider_state !== "ready" ||
-      workspace.execution_kind !== "local" ||
-      !workspace.root_path
+      hasPendingRestoredFolderSetup(workspace) ||
+      !isReadyLocalWorkspace(workspace)
     )
       return;
     let message: string | null;
     try {
       ({ error: message } = await provisionWorkspaceFiles(
         deps,
-        { projectId, workspace, repoPath: workspace.root_path },
+        { projectId, workspace, repoPath: workspace.root_path! },
         hooks,
       ));
     } catch (error) {
@@ -102,17 +110,17 @@ const maintainWorkspace = (
   });
 
 interface ProjectProvisionQueue {
+  interrupted: boolean;
   revision: number;
   deps: ProvisionCoordinatorDeps;
   hooks: WorkspaceProvisioningHooks;
-  completion: Promise<void>;
+  requests: { revision: number; resolve: () => void; reject: (error: unknown) => void }[];
 }
 const projectProvisionQueues = new WeakMap<
   ProvisionCoordinatorDeps["workspaceService"],
   Map<string, ProjectProvisionQueue>
 >();
 const projectQueues = new WeakMap<ProvisionCoordinatorDeps["workspaceService"], Map<string, Promise<unknown>>>();
-const pendingRemovals = new WeakMap<ProvisionCoordinatorDeps["workspaceService"], Map<string, number>>();
 const hostMap = <T>(
   owners: WeakMap<ProvisionCoordinatorDeps["workspaceService"], Map<string, T>>,
   deps: ProvisionCoordinatorDeps,
@@ -125,7 +133,11 @@ const hostMap = <T>(
   return projects;
 };
 // Provisioning and removal share one per-host/project queue; independent hosts never block each other.
-const inProjectWorkspaceQueue = <T>(deps: ProvisionCoordinatorDeps, projectId: string, task: () => Promise<T>) => {
+export const inProjectWorkspaceQueue = <T>(
+  deps: ProvisionCoordinatorDeps,
+  projectId: string,
+  task: () => Promise<T>,
+) => {
   const projects = hostMap(projectQueues, deps);
   const queued = (projects.get(projectId) ?? Promise.resolve()).catch(() => undefined).then(task);
   projects.set(projectId, queued);
@@ -138,15 +150,28 @@ export const removeProjectAfterProvisioning = async <T>(
   projectId: string,
   task: () => Promise<T>,
 ) => {
-  const removals = hostMap(pendingRemovals, deps);
-  removals.set(projectId, (removals.get(projectId) ?? 0) + 1);
+  const projects = hostMap(projectProvisionQueues, deps);
+  const interrupted = projects.get(projectId);
+  if (interrupted) {
+    interrupted.interrupted = true;
+    // Requests arriving after removal must queue behind it, even while the last file copy finishes.
+    projects.delete(projectId);
+  }
   try {
     return await inProjectWorkspaceQueue(deps, projectId, task);
-  } finally {
-    const remaining = (removals.get(projectId) ?? 1) - 1;
-    if (remaining > 0) removals.set(projectId, remaining);
-    else removals.delete(projectId);
+  } catch (error) {
+    if (interrupted && !projects.has(projectId))
+      await provisionProjectWorkspaces(interrupted.deps, projectId, interrupted.hooks);
+    throw error;
   }
+};
+
+const settleRefreshes = (queue: ProjectProvisionQueue, revision: number) => {
+  let completed = 0;
+  while (completed < queue.requests.length && queue.requests[completed]!.revision <= revision) {
+    queue.requests[completed++]!.resolve();
+  }
+  if (completed) queue.requests.splice(0, completed);
 };
 
 const maintainProjectRevision = async (
@@ -154,51 +179,64 @@ const maintainProjectRevision = async (
   projectId: string,
   applied: Map<string, number>,
 ) => {
-  const removals = hostMap(pendingRemovals, queue.deps);
-  if (removals.has(projectId)) return false;
-  for (const workspace of await queue.deps.workspaceService.list(projectId)) {
-    if (removals.has(projectId)) return false;
-    if (!isReadyLocalWorkspace(workspace)) continue;
-    if ((applied.get(workspace.id) ?? 0) >= queue.revision) continue;
-    const revision = queue.revision;
-    await maintainWorkspace(queue.deps, projectId, workspace.id, queue.hooks);
-    applied.set(workspace.id, revision);
+  const pass = queue.revision;
+  const workspaces = (await queue.deps.workspaceService.list(projectId)).filter(isReadyLocalWorkspace);
+  // Each visited workspace receives at least this pass. The suffix minimum tells us which
+  // revisions the remaining workspaces already have, without rescanning the list after each copy.
+  const remainingRevision: number[] = [];
+  remainingRevision[workspaces.length] = pass;
+  for (let index = workspaces.length - 1; index >= 0; index--) {
+    remainingRevision[index] = Math.min(remainingRevision[index + 1]!, applied.get(workspaces[index]!.id) ?? 0);
   }
-  return true;
+  for (const [index, workspace] of workspaces.entries()) {
+    if (queue.interrupted) break;
+    if ((applied.get(workspace.id) ?? 0) < queue.revision) {
+      const revision = queue.revision;
+      await maintainWorkspace(queue.deps, projectId, workspace.id, queue.hooks);
+      applied.set(workspace.id, revision);
+    }
+    settleRefreshes(queue, remainingRevision[index + 1]!);
+  }
+  settleRefreshes(queue, queue.interrupted ? Infinity : pass);
 };
 
 export const provisionProjectWorkspaces = (
   deps: ProvisionCoordinatorDeps,
   projectId: string,
   hooks: WorkspaceProvisioningHooks = defaultHooks(),
+  options: { skipWorkspaceId?: string } = {},
 ) => {
-  let projects = projectProvisionQueues.get(deps.workspaceService);
-  if (!projects) {
-    projects = new Map();
-    projectProvisionQueues.set(deps.workspaceService, projects);
-  }
+  const projects = hostMap(projectProvisionQueues, deps);
   const current = projects.get(projectId);
+  const completion = Promise.withResolvers<void>();
   if (current) {
     current.revision++;
     current.deps = deps;
     current.hooks = hooks;
-    return current.completion;
+    current.requests.push({ revision: current.revision, resolve: completion.resolve, reject: completion.reject });
+    return completion.promise;
   }
-  const queue: ProjectProvisionQueue = { revision: 1, deps, hooks, completion: Promise.resolve() };
+  const queue: ProjectProvisionQueue = {
+    interrupted: false,
+    revision: 1,
+    deps,
+    hooks,
+    requests: [{ revision: 1, resolve: completion.resolve, reject: completion.reject }],
+  };
   projects.set(projectId, queue);
-  queue.completion = inProjectWorkspaceQueue(deps, projectId, async () => {
+  void inProjectWorkspaceQueue(deps, projectId, async () => {
     const applied = new Map<string, number>();
+    // Startup has already provisioned this workspace for the first request. A later refresh still visits it.
+    if (options.skipWorkspaceId) applied.set(options.skipWorkspaceId, 1);
     try {
-      let pass: number;
-      do {
-        pass = queue.revision;
-        if (!(await maintainProjectRevision(queue, projectId, applied))) return;
-      } while (pass !== queue.revision);
+      while (queue.requests.length) await maintainProjectRevision(queue, projectId, applied);
+    } catch (error) {
+      for (const request of queue.requests) request.reject(error);
     } finally {
-      projects.delete(projectId);
+      if (projects.get(projectId) === queue) projects.delete(projectId);
     }
   });
-  return queue.completion;
+  return completion.promise;
 };
 
 export const scheduleProjectWorkspaceProvisioning = (

@@ -45,16 +45,14 @@ const ExtensionConnectionRow = (props: ExtensionConnectionRowProps) => {
     configure.mutate(
       { ...connectionInput, baseUrl, secret: secret || undefined },
       {
-        onSuccess: () => {
-          setSecret("");
-        },
+        onSuccess: () => setSecret(""),
         onError: notifyError,
       },
     );
   };
 
   return (
-    <Stack gap="sm" borderWidth="1px" borderColor="border.subtle" borderRadius="md" padding="md">
+    <Stack position="relative" gap="sm" borderWidth="1px" borderColor="border.subtle" borderRadius="md" padding="md">
       {errorNotice}
       <Stack gap="0">
         <Text textStyle="label/S/medium">

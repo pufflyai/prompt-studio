@@ -179,13 +179,13 @@ const handleUser = (parsed: Record<string, unknown>, ctx: StreamContext): Sessio
 
 const handleResult = (parsed: Record<string, unknown>, ctx: StreamContext): SessionMessage => {
   const usage = (parsed.usage ?? {}) as Record<string, number | undefined>;
+  const result = typeof parsed.result === "string" ? parsed.result : "";
+  const reply = parsed.local_command && !ctx.localReply && result.trim() ? result : undefined;
   return {
     id: `stream-result-${ctx.runId}-${ctx.index}`,
-    role: "system",
+    role: reply ? "tool" : "system",
     parts: [
-      ...(parsed.local_command && typeof parsed.result === "string" && !ctx.localReply
-        ? [{ type: "text" as const, text: parsed.result || "Native compaction completed." }]
-        : []),
+      ...(reply ? [{ type: "text" as const, text: reply }] : []),
       ...(parsed.is_error
         ? [normalizeErrorPart({ message: typeof parsed.result === "string" ? parsed.result : undefined })]
         : []),

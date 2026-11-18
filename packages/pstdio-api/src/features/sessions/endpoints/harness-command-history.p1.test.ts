@@ -138,6 +138,7 @@ test("started commands receive real approval and question answers", async () => 
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ status: "started" });
     await approving.promise;
+    const owner = app.deps.sessionService.store.get(session.id);
     expect((await post(`/sessions/${session.id}/approve`, { id: "approval", decision: "approve" })).status).toBe(200);
     await asking.promise;
     for (let i = 0; i < 100 && (await app.deps.sessionService.get(session.id))?.status !== "awaiting_input"; i++)
@@ -151,6 +152,7 @@ test("started commands receive real approval and question answers", async () => 
         })
       ).status,
     ).toBe(200);
+    expect(app.deps.sessionService.store.get(session.id)).toBe(owner);
     await complete.promise;
     expect(received).toEqual([
       { id: "approval", decision: "approve" },

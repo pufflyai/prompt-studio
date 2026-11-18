@@ -3,6 +3,7 @@ import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { useTranslation } from "react-i18next";
 import { useAgents } from "@/shared/agents/use-agents";
 import { dashboardExtensionDetailPage, dashboardExtensionsPage } from "@/shared/app/resources";
+import { usePendingExtensionSourceChanges } from "@/shared/extensions/use-extension-mutation";
 import {
   useMarketplaceExtensionContributions,
   useProjectExtensionMetadata,
@@ -10,7 +11,7 @@ import {
   useSetExtensionAutomationEnabled,
 } from "@/shared/extensions/use-project-extensions";
 import { AvailableExtensionDetail } from "./available-extension-detail";
-import { resolveExtensionAction } from "./extension-actions";
+import { marketplaceActionKey } from "./extension-actions";
 import { ExtensionDetailContainer } from "./extension-detail-container";
 import { ExtensionReplacementConfirmation } from "./extension-replacement-confirmation";
 import { ExtensionsPanelView } from "./extensions-panel-view";
@@ -28,6 +29,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const { projectId, settingsInput } = props;
   const { t } = useTranslation("projects");
   const extensionsQuery = useProjectExtensions(projectId);
+  const sourceChangingIds = usePendingExtensionSourceChanges(projectId);
   const metadataQuery = useProjectExtensionMetadata(projectId);
   const agentsQuery = useAgents(projectId);
   const agents = projectId && agentsQuery.isSuccess ? agentsQuery.data : undefined;
@@ -43,11 +45,8 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       page: dashboardExtensionDetailPage,
       resource: { type: "extension", extensionId: "pstdio", id, label: displayName },
     });
-  const actions = useExtensionPanelActions(projectId);
-  const upgradingInstanceIds = Object.keys(actions.actions).filter((id) =>
-    ["queued", "running"].includes(actions.actions[id]!.status),
-  );
-  const replacementDialog = (
+  const actions = useExtensionPanelActions(projectId, extensionsQuery.data?.upgradeConcurrency);
+  const replacementDialog = settingsInput.visible !== false && (
     <ExtensionReplacementConfirmation replacement={actions.replacement} onClose={() => actions.setReplacement(null)} />
   );
   const marketplaceContributions = useMarketplaceExtensionContributions(
@@ -77,28 +76,33 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
 
   const extensions = extensionsQuery.data?.extensions ?? [];
   const marketplace = extensionsQuery.data?.marketplace ?? [];
-  const selected = extensions.find(
-    (extension) => extension.id === selectedInstanceId || extension.installName === selectedMarketplaceName,
-  );
+  const catalogKey = selectedMarketplaceName ? marketplaceActionKey(selectedMarketplaceName) : undefined;
+  const detailId = selectedInstanceId ?? (catalogKey && actions.installedIds[catalogKey]);
+  const selected = extensions.find((extension) => extension.id === detailId);
   const selectedMarketplace = marketplace.find(
     (extension) => extension.installName === selectedMarketplaceName && !extension.installed,
   );
 
   if (selected) {
-    const owned = resolveExtensionAction(actions.actions, selected);
+    const action = actions.actions[selected.id];
     return (
-      <ExtensionDetailContainer
-        projectId={projectId}
-        extension={selected}
-        metadata={metadataQuery.data}
-        agents={agents}
-        settingsInput={settingsInput}
-        onBack={() => openList()}
-        upgradeAction={owned.action}
-        onUpgrade={() => void actions.handleUpgrade(selected)}
-        onDismissUpgrade={(expected) => actions.dismiss(owned.key, expected)}
-        onRetryAction={() => actions.retry(owned.key)}
-      />
+      <>
+        {replacementDialog}
+        <ExtensionDetailContainer
+          projectId={projectId}
+          extension={selected}
+          metadata={metadataQuery.data}
+          agents={agents}
+          settingsInput={settingsInput}
+          onBack={() => openList()}
+          action={action}
+          sourceChanging={sourceChangingIds.has(selected.id)}
+          onUpgrade={() => void actions.handleUpgrade(selected)}
+          onToggle={(enabled) => void actions.handleToggle(selected, enabled)}
+          onDismissAction={(expected) => actions.dismiss(selected.id, expected)}
+          onRetryAction={() => actions.retry(selected.id)}
+        />
+      </>
     );
   }
 
@@ -113,9 +117,11 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
             marketplaceContributions.error instanceof Error ? marketplaceContributions.error.message : undefined
           }
           loadingContributions={marketplaceContributions.isLoading}
-          action={actions.actions[selectedMarketplace.installName]}
-          onDismissAction={(expected) => actions.dismiss(selectedMarketplace.installName, expected)}
-          onRetryAction={() => actions.retry(selectedMarketplace.installName)}
+          action={actions.actions[marketplaceActionKey(selectedMarketplace.installName)]}
+          onDismissAction={(expected) =>
+            actions.dismiss(marketplaceActionKey(selectedMarketplace.installName), expected)
+          }
+          onRetryAction={() => actions.retry(marketplaceActionKey(selectedMarketplace.installName))}
           onInstall={() => void actions.handleInstall(selectedMarketplace)}
         />
       </>
@@ -134,12 +140,12 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         harnesses={metadataQuery.isSuccess ? metadataQuery.data?.harnesses : undefined}
         agents={agents}
         actionStates={actions.actions}
+        sourceChangingIds={sourceChangingIds}
         onDismissAction={actions.dismiss}
         onDismissBatch={actions.dismissBatch}
         onRetryAction={actions.retry}
         batch={actions.batch}
         togglingAutomation={setAutomationEnabled.isPending}
-        upgradingInstanceIds={upgradingInstanceIds}
         onToggle={(extension, enabled) => void actions.handleToggle(extension, enabled)}
         onToggleAutomation={(extension, automation, enabled) =>
           setAutomationEnabled.mutateAsync({ instanceId: extension.id, automationId: automation.id, enabled })
@@ -148,11 +154,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         onOpen={(extension) => openDetail(`installed:${extension.id}`, extension.displayName)}
         onInstallMarketplace={(extension) => void actions.handleInstall(extension)}
         onOpenMarketplace={(extension) => openDetail(`marketplace:${extension.installName}`, extension.displayName)}
-        upgradingAll={(actions.batch?.ids ?? []).some((id) =>
-          ["queued", "running"].includes(actions.actions[id]?.status ?? ""),
-        )}
         onUpgradeAll={(upgradable) => void actions.handleUpgradeAll(upgradable)}
-        addingFolderName={actions.addingFolderName}
         onDropFolder={(folder) => void actions.handleDrop(folder)}
       />
     </>

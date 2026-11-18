@@ -1,14 +1,13 @@
 import { expect, test } from "bun:test";
-import { QueryClient } from "@tanstack/react-query";
 import { createExtensionActions, getExtensionActions } from "./extension-actions";
 
-const labels = { running: "Upgrading", success: "Upgraded", failed: "Upgrade failed" };
+const labels = { running: "Upgrading", failed: "Upgrade failed" };
 test("list and detail hosts share running actions and cannot upgrade the same extension twice", async () => {
-  const client = new QueryClient();
-  const list = getExtensionActions(client, "project");
-  const detail = getExtensionActions(client, "project");
+  const inventory = {};
+  const list = getExtensionActions(inventory);
+  const detail = getExtensionActions(inventory);
   expect(list).toBe(detail);
-  expect(getExtensionActions(client, "another-project")).not.toBe(list);
+  expect(getExtensionActions({})).not.toBe(list);
   const gate = Promise.withResolvers<void>();
   const pending = list.run("notes", labels, () => gate.promise);
   expect(detail.getSnapshot().actions.notes?.status).toBe("running");
@@ -21,12 +20,12 @@ test("list and detail hosts share running actions and cannot upgrade the same ex
   expect(duplicate).toBe(false);
   gate.resolve();
   await pending;
-  expect(detail.getSnapshot().actions.notes?.status).toBe("success");
+  expect(detail.getSnapshot().actions.notes).toBeUndefined();
 });
-test("continues a batch after a failure and retains its elapsed time after row dismissal", async () => {
+test("continues a batch after a failure and retains its summary after row dismissal", async () => {
   const actions = createExtensionActions();
   let completed = 0;
-  await actions.runBatch([{ id: "one" }, { id: "two" }, { id: "three" }], "Queued", ({ id }) =>
+  await actions.runBatch([{ id: "one" }, { id: "two" }, { id: "three" }], ({ id }) =>
     actions.run(id, labels, async () => {
       if (id === "one") throw new Error("Registry unavailable");
       completed++;
@@ -34,7 +33,7 @@ test("continues a batch after a failure and retains its elapsed time after row d
   );
   expect(completed).toBe(2);
   const batch = actions.getSnapshot().batch;
-  expect(batch?.finishedAt).toBeNumber();
+  expect(batch).toMatchObject({ running: false, completed: 3, failed: 1 });
   expect(actions.getSnapshot().actions.one?.error).toBe("Registry unavailable");
   actions.dismiss("two");
   expect(actions.getSnapshot().batch).toEqual(batch);
@@ -48,7 +47,7 @@ test("retries failed work, but releases retry callbacks on success and dismissal
   actions.retry("upload");
   await new Promise<void>((resolve) => setImmediate(resolve));
   expect(calls).toBe(2);
-  expect(actions.getSnapshot().actions.upload?.status).toBe("success");
+  expect(actions.getSnapshot().actions.upload).toBeUndefined();
   actions.retry("upload");
   expect(calls).toBe(2);
   await actions.run("upload", labels, async () => {
@@ -62,7 +61,9 @@ test("retries failed work, but releases retry callbacks on success and dismissal
 
 test("dismissing an older result cannot clear a newer operation or its retry", async () => {
   const actions = createExtensionActions();
-  await actions.run("notes", labels, async () => {});
+  await actions.run("notes", labels, async () => {
+    throw new Error("Previous failure");
+  });
   const older = actions.getSnapshot().actions.notes!;
   await actions.run("notes", labels, async () => {
     throw new Error("New failure");
@@ -77,7 +78,7 @@ test("dismissing an older result cannot clear a newer operation or its retry", a
 test("batch counts and failure outcome survive individual dismissal and reject stale batch dismissal", async () => {
   const actions = createExtensionActions();
   const gate = Promise.withResolvers<void>();
-  const pending = actions.runBatch([{ id: "one" }, { id: "two" }], "Queued", ({ id }) =>
+  const pending = actions.runBatch([{ id: "one" }, { id: "two" }], ({ id }) =>
     actions.run(id, labels, async () => {
       if (id === "one") throw new Error("Offline");
       await gate.promise;
@@ -92,7 +93,11 @@ test("batch counts and failure outcome survive individual dismissal and reject s
   const older = actions.getSnapshot().batch!;
   expect(older.completed).toBe(2);
   expect(older.failed).toBe(1);
-  await actions.runBatch([{ id: "one" }], "Queued", ({ id }) => actions.run(id, labels, async () => {}));
+  await actions.runBatch([{ id: "one" }], ({ id }) =>
+    actions.run(id, labels, async () => {
+      throw new Error("Still offline");
+    }),
+  );
   const latest = actions.getSnapshot().batch!;
   actions.dismissBatch(older);
   expect(actions.getSnapshot().batch).toBe(latest);
@@ -100,28 +105,50 @@ test("batch counts and failure outcome survive individual dismissal and reject s
   expect(actions.getSnapshot().batch).toBeUndefined();
 });
 
-test("fresh installs retain the same result and retry owner after acquiring an installed instance id", async () => {
-  const { resolveExtensionAction } = await import("./extension-actions");
+test("a retried install retains its exact instance for navigation and clears its feedback", async () => {
   const owner = createExtensionActions();
+  const key = "marketplace:pi";
   let calls = 0;
-  await owner.run("pi", { running: "Installing", success: "Installed", failed: "Install failed" }, async () => {
-    if (++calls === 1) throw new Error("Registry unavailable");
-  });
-  const installed = { id: "new-installed-instance", installName: "pi" };
-  const failed = resolveExtensionAction(owner.getSnapshot().actions, installed);
-  expect(failed.action?.status).toBe("error");
-  owner.retry(failed.key);
+  await owner.run(
+    key,
+    { running: "Installing", failed: "Install failed" },
+    async () => {
+      if (++calls === 1) throw new Error("Registry unavailable");
+      return "new-installed-instance";
+    },
+    { installedId: (id) => id },
+  );
+  expect(owner.getSnapshot().actions[key]?.status).toBe("error");
+  owner.retry(key);
   await new Promise<void>((resolve) => setImmediate(resolve));
-  const completed = resolveExtensionAction(owner.getSnapshot().actions, installed);
   expect(calls).toBe(2);
-  expect(completed.action?.label).toBe("Installed");
-  // A later upgrade owns this same catalog key, so old install dismissal cannot erase it.
-  await owner.run(installed.installName, labels, async () => {});
-  owner.dismiss(completed.key, completed.action);
-  const upgraded = resolveExtensionAction(owner.getSnapshot().actions, installed);
-  expect(upgraded.action?.label).toBe("Upgraded");
-  owner.dismiss(upgraded.key, upgraded.action);
-  expect(resolveExtensionAction(owner.getSnapshot().actions, installed).action).toBeUndefined();
-  owner.retry(installed.installName);
+  expect(owner.getSnapshot().installedIds[key]).toBe("new-installed-instance");
+  expect(owner.getSnapshot().actions).toEqual({});
+  owner.retry(key);
   expect(calls).toBe(2);
+});
+
+test("reinstalling clears a stale failure and retry from the restored instance", async () => {
+  const owner = createExtensionActions();
+  let attempts = 0;
+  await owner.run("notes-instance", labels, async () => {
+    attempts++;
+    throw new Error("Original install could not upgrade");
+  });
+
+  const install = () =>
+    owner.run("marketplace:notes", { running: "Installing", failed: "Install failed" }, async () => "notes-instance", {
+      installedId: (id) => id,
+    });
+  await install();
+  expect(owner.getSnapshot().actions["notes-instance"]).toBeUndefined();
+  owner.retry("notes-instance");
+  expect(attempts).toBe(1);
+
+  const gate = Promise.withResolvers<void>();
+  const upgrade = owner.run("notes-instance", labels, () => gate.promise);
+  await install();
+  expect(owner.getSnapshot().actions["notes-instance"]?.status).toBe("running");
+  gate.resolve();
+  await upgrade;
 });

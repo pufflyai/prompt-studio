@@ -217,7 +217,7 @@ export const Mutating: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    togglingInstanceId: "planner-instance",
+    actionStates: { "planner-instance": { operation: "toggle", status: "running", label: "Updating Project Planner" } },
   },
 };
 export const InstallingMultipleAvailableExtensions: Story = {
@@ -228,8 +228,8 @@ export const InstallingMultipleAvailableExtensions: Story = {
     diagnostics: [],
     automations,
     actionStates: {
-      "pstdio-reports": { status: "running", label: "Installing", startedAt: Date.now() - 12000 },
-      "pstdio-planner": { status: "running", label: "Installing", startedAt: Date.now() - 12000 },
+      "marketplace:pstdio-reports": { status: "running", label: "Installing" },
+      "marketplace:pstdio-planner": { status: "running", label: "Installing" },
     },
   },
 };
@@ -288,9 +288,8 @@ export const UpgradingOneExtension: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    upgradingInstanceIds: ["planner-instance"],
     actionStates: {
-      "pstdio-planner": { status: "running", label: "Upgrading Project Planner", startedAt: Date.now() - 12000 },
+      "planner-instance": { status: "running", label: "Upgrading Project Planner" },
     },
   },
 };
@@ -302,15 +301,11 @@ export const UpgradingAll: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    upgradingAll: true,
-    batch: { ids: ["pstdio-planner", "extension-lab"], startedAt: Date.now() - 12000, completed: 0, failed: 0 },
+    batch: { ids: ["pstdio-planner", "extension-lab"], running: true, completed: 0, failed: 0 },
     actionStates: {
-      "pstdio-planner": { status: "running", label: "Upgrading Project Planner", startedAt: Date.now() - 12000 },
-      "extension-lab": { status: "running", label: "Upgrading Extension Lab", startedAt: Date.now() - 12000 },
+      "planner-instance": { status: "running", label: "Upgrading Project Planner" },
+      "lab-instance": { status: "running", label: "Upgrading Extension Lab" },
     },
-    upgradingInstanceIds: installedExtensions
-      .filter((extension) => extension.canUpgrade)
-      .map((extension) => extension.id),
   },
 };
 // No row can take a newer release, so there are no row upgrade buttons and no Upgrade all.
@@ -330,7 +325,7 @@ export const AddingLocalFolder: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    addingFolderName: "my-extension",
+    actionStates: { $folder: { status: "running", label: "Adding my-extension…" } },
   },
 };
 

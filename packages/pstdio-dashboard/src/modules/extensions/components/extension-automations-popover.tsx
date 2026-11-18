@@ -69,10 +69,9 @@ export const ExtensionAutomationsPopover = (props: ExtensionAutomationsPopoverPr
               icon={<Timer />}
               title={<Popover.Title>{t("projectSettings.extensionsPanel.automations.title")}</Popover.Title>}
             />
-            <Popover.Body display="flex" flexDirection="column" minH="0" flex="1" p="0">
+            <Popover.Body position="relative" display="flex" flexDirection="column" minH="0" flex="1" p="0">
               <ScrollArea flex="1" minH="0" h="0" viewportProps={{ minH: "0", flex: "1" }}>
                 <Stack padding="sm" gap="sm">
-                  {errorNotice}
                   {automations.map((automation) => (
                     <HStack key={automation.id} gap="md" paddingX="sm" paddingY="xs">
                       <Stack gap="0" flex="1" minW="0">
@@ -96,6 +95,7 @@ export const ExtensionAutomationsPopover = (props: ExtensionAutomationsPopoverPr
                   ))}
                 </Stack>
               </ScrollArea>
+              {errorNotice}
             </Popover.Body>
           </Popover.Content>
         </Popover.Positioner>
