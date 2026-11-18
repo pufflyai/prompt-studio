@@ -48,7 +48,7 @@ export const sessionExitSchema: z.ZodType<SessionExit> = z.object({
 
 const sessionPositionSchema = z.object({ id: z.string(), position: z.number().int().nonnegative() });
 export const sessionChangePositionsSchema = z.object({
-  reply: sessionPositionSchema.optional(),
+  reply: sessionPositionSchema.extend({ textDigest: z.string().regex(/^[a-f0-9]{64}$/) }).optional(),
   input: sessionPositionSchema.optional(),
 });
 export type SessionChangePositions = z.infer<typeof sessionChangePositionsSchema>;

@@ -9,12 +9,12 @@ import type {
 } from "pstdio-api-contracts";
 import { createApprovalService, createEventStore, createQuestionService } from "pstdio-api-runtime-host";
 import { createSessionConversation, type SessionConversation } from "./session-conversation";
-import { latestReplyId } from "./session-messages";
+import { latestReply } from "./session-messages";
 
 /** What the host does when a per-session channel signals. The store has no session service of its own. */
 export type SessionChannelHooks = {
   onApprovalRequest: (request: ApprovalRequest) => void;
-  onIdleReply?: (id: string) => void;
+  onIdleReply?: (reply: { id: string; textDigest: string }) => void;
   onQuestionAsked: (id: string) => unknown;
   onQuestionAnswered: () => unknown;
 };
@@ -94,8 +94,8 @@ export const createSessionStore = (options: { onIdleTurn?: (sessionId: string) =
       idleTurnSkipped: null,
       turns: {
         idle: ({ backgroundTasks }) => {
-          const id = entry.conversation && latestReplyId(entry.conversation.getMessages());
-          if (id && id !== entry.initialReplyId) hooks.onIdleReply?.(id);
+          const reply = entry.conversation && latestReply(entry.conversation.getMessages());
+          if (reply && reply.id !== entry.initialReplyId) hooks.onIdleReply?.(reply);
           entry.idleTurn = { backgroundTasks };
           entry.idleTurnSkipped = null;
           publishIdleTurn();
@@ -111,7 +111,7 @@ export const createSessionStore = (options: { onIdleTurn?: (sessionId: string) =
     // Only live streams show this state; it is not conversation content to sync.
     const publishIdleTurn = () => eventStore.push({ op: "replace", path: IDLE_TURN_PATH, value: entry.idleTurn });
     const initializeConversation = (messages: SessionMessage[]) => {
-      entry.initialReplyId = latestReplyId(messages);
+      entry.initialReplyId = latestReply(messages)?.id;
       entry.conversation = createSessionConversation(eventStore, messages, (patch) => changed(sessionId, patch));
       ready.resolve(entry.conversation);
     };

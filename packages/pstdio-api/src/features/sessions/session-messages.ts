@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { SessionMessage } from "pstdio-api-contracts";
 import type { ExtensionSessionUsage } from "pstdio-api-contracts/extension-kernel";
 import type { createFileService } from "../../services/file-service";
@@ -8,11 +9,16 @@ type PersistDeps = {
   fileService: Pick<ReturnType<typeof createFileService>, "upload" | "update">;
 };
 
-export const latestReplyId = (messages: SessionMessage[]) => {
+export const latestReply = (messages: SessionMessage[]) => {
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i]!;
     if (message.role === "assistant" && message.parts.some((part) => part.type === "text" && part.text.trim()))
-      return message.id;
+      return {
+        id: message.id,
+        textDigest: createHash("sha256")
+          .update(JSON.stringify(message.parts.filter((part) => part.type === "text").map((part) => part.text)))
+          .digest("hex"),
+      };
     if (message.role === "user") break;
   }
 };
@@ -21,7 +27,7 @@ export const persistSessionMessages = async (
   sessionId: string,
   messages: SessionMessage[],
   deps: PersistDeps,
-  completedReplyId?: string,
+  completedReply?: { id: string; textDigest: string },
 ) => {
   const session = await deps.sessionService.get(sessionId);
   if (!session) return null;
@@ -35,7 +41,7 @@ export const persistSessionMessages = async (
       usage.cache_read_tokens += part.cacheReadTokens ?? 0;
       usage.cache_write_tokens += part.cacheWriteTokens ?? 0;
     }
-  const contentEvent = completedReplyId ? { kind: "reply" as const, id: completedReplyId } : undefined;
+  const contentEvent = completedReply ? { kind: "reply" as const, ...completedReply } : undefined;
   const data = Buffer.from(JSON.stringify(messages));
   if (session.session_file_id) {
     await deps.fileService.update(session.session_file_id, { data });

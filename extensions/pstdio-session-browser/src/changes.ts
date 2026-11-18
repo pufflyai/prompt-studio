@@ -11,7 +11,7 @@ type Position = { id: string; position: number };
 export interface SessionChanges {
   createdAt: string;
   status: string;
-  changePositions?: { input?: Position; reply?: Position };
+  changePositions?: { input?: Position; reply?: Position & { textDigest: string } };
 }
 
 const stamp = (session: SessionChanges, position: number) => ({
@@ -19,9 +19,21 @@ const stamp = (session: SessionChanges, position: number) => ({
   revision: String(position),
 });
 
-export const observedSessionChange = (session: SessionChanges, messages: SessionMessage[], approvalId?: string) => {
+export const observedSessionChange = async (
+  session: SessionChanges,
+  messages: SessionMessage[],
+  approvalId?: string,
+) => {
   const { reply, input } = session.changePositions ?? {};
-  if (reply && !messages.some((m) => m.id === reply.id && m.role === "assistant")) return null;
+  if (reply) {
+    const rendered = messages.find((m) => m.id === reply.id && m.role === "assistant");
+    if (!rendered) return null;
+    // A stream may already contain the assistant's ID while the last text patch is still in flight.
+    const texts = rendered.parts.filter((part) => part.type === "text").map((part) => part.text);
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify(texts)));
+    if (Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("") !== reply.textDigest)
+      return null;
+  }
   if (
     input &&
     input.position > (reply?.position ?? 0) &&
@@ -37,7 +49,7 @@ export const observedSessionChange = (session: SessionChanges, messages: Session
 export const observeRenderedSession = (
   ctx: { resources: object; projectId: string },
   id: string,
-  stamp: ReturnType<typeof observedSessionChange>,
+  stamp: Awaited<ReturnType<typeof observedSessionChange>>,
 ) => {
   const owner = ctx.resources as {
     observeChange?: (resource: ResourceRef, position: NonNullable<typeof stamp>) => Promise<string>;
@@ -56,7 +68,7 @@ export const renderedObservation = async (
 ) => {
   if (!ctx.resources || !("observeChange" in ctx.resources)) return {};
   return {
-    observedChange: await observeRenderedSession(ctx, id, observedSessionChange(session, messages, approvalId)),
+    observedChange: await observeRenderedSession(ctx, id, await observedSessionChange(session, messages, approvalId)),
   };
 };
 
@@ -111,7 +123,7 @@ export const readChange = defineCommand({
     if (ctx.resource?.type !== "session") throw new Error("Choose a session.");
     const content = await ctx.sessions.getConversation(ctx.resource.id);
     const approvals = ("approvals" in content ? (content.approvals as { id: string }[] | undefined) : undefined) ?? [];
-    const observed = observedSessionChange(content.session, content.messages, approvals[0]?.id);
+    const observed = await observedSessionChange(content.session, content.messages, approvals[0]?.id);
     if (!observed) throw new Error("The displayed conversation is catching up.");
     return { content: { messages: content.messages, approvals }, stamp: observed };
   },

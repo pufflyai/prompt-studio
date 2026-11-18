@@ -1,5 +1,5 @@
 import type { SessionsRouteDeps } from "./deps";
-import { latestReplyId, persistSessionMessages } from "./session-messages";
+import { latestReply, persistSessionMessages } from "./session-messages";
 import type { ActiveSession } from "./session-store";
 
 type CheckpointDeps = Pick<SessionsRouteDeps, "sessionService" | "fileService">;
@@ -16,12 +16,12 @@ export const checkpointConversation = async (
   // The snapshot is taken after the last accepted patch, with no await in between.
   conversation.close();
   const messages = conversation.getMessages();
-  const replyId = completed ? latestReplyId(messages) : undefined;
+  const reply = completed ? latestReply(messages) : undefined;
   entry.checkpointPromise ??= persistSessionMessages(
     sessionId,
     messages,
     deps,
-    replyId !== entry.initialReplyId ? replyId : undefined,
+    reply?.id !== entry.initialReplyId ? reply : undefined,
   );
   const pending = entry.checkpointPromise;
   try {

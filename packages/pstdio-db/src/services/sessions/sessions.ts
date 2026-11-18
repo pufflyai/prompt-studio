@@ -79,7 +79,7 @@ type UpdateInput = Partial<
     | "usage_json"
     | "params_json"
   >
-> & { contentEvent?: { kind: "reply" | "input"; id: string } };
+> & { contentEvent?: { kind: "reply"; id: string; textDigest: string } | { kind: "input"; id: string } };
 
 const nowTimestamp = () => new Date().toISOString();
 
@@ -128,6 +128,7 @@ const updateSession = async (db: DbClient, id: string, input: UpdateInput) => {
               ...previous,
               [contentEvent.kind]: {
                 id: contentEvent.id,
+                ...(contentEvent.kind === "reply" && { textDigest: contentEvent.textDigest }),
                 position: 1 + Math.max(previous.reply?.position ?? 0, previous.input?.position ?? 0),
               },
             };

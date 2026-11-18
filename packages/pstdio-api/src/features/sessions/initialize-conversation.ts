@@ -16,10 +16,10 @@ export const initializeConversation = (
   const entry = deps.sessionService.store.create(
     sessionId,
     {
-      onIdleReply: (id) => {
+      onIdleReply: (reply) => {
         if (deps.sessionService.store.get(sessionId) !== entry) return;
         void deps.sessionService
-          .update(sessionId, { contentEvent: { kind: "reply", id } })
+          .update(sessionId, { contentEvent: { kind: "reply", ...reply } })
           .catch((err) =>
             sessionLogger.error({ err, session_id: sessionId }, "Could not persist completed turn position"),
           );

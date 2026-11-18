@@ -8,7 +8,7 @@ import { createFilesStorageService } from "pstdio-storage";
 import { createFileService } from "../../services/file-service";
 import { testHarnessId } from "../harnesses/test-harness-registry";
 import { EventBus } from "../sync/event-bus";
-import { persistSessionMessages } from "./session-messages";
+import { latestReply, persistSessionMessages } from "./session-messages";
 
 test("checkpoints save exact complete arrays, including empty slots and an intentional empty replacement", async () => {
   const root = await mkdtemp(join(tmpdir(), "session-checkpoints-"));
@@ -37,7 +37,7 @@ test("checkpoints save exact complete arrays, including empty slots and an inten
     ];
     await persistSessionMessages(session.id, complete, { sessionService, fileService });
     expect((await sessionService.get(session.id))!.change_positions).toBeNull();
-    await persistSessionMessages(session.id, complete, { sessionService, fileService }, "reply");
+    await persistSessionMessages(session.id, complete, { sessionService, fileService }, latestReply(complete));
     expect(await Bun.file(file!.storage_path).json()).toEqual(complete);
     const reply = (await sessionService.get(session.id))!.change_positions?.reply;
     expect(reply).toMatchObject({ id: "reply", position: 1 });
