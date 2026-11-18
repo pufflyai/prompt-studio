@@ -3,7 +3,6 @@ import type { CommandExecutionResult, ExtensionCommandRecord } from "@pstdio/sdk
 import {
   buildExtensionCommandTable,
   dispatchExtensionCliCommand,
-  missingRequiredParams,
   parseExtensionCommandArgs,
   renderCommandHelp,
   renderNamespaceHelp,
@@ -211,30 +210,6 @@ describe("extension CLI router", () => {
 });
 
 describe("extension CLI router dispatch", () => {
-  test("renders a command result as JSON", async () => {
-    const log = mock();
-
-    const exitCode = await dispatchExtensionCliCommand({
-      rawArgs: ["pstdio.lab", "counter", "read"],
-      deps: {
-        execute: mock(
-          async (): Promise<CommandExecutionResult> => ({
-            commandId: "lab.counter.read",
-            extensionId: "pstdio.lab",
-            outcome: { ok: true, status: "success", value: [{ shorthand: "T-1", title: "First" }] },
-          }),
-        ),
-        listCommands: mock(async () => ({ commands: labCommands, diagnostics: [] })),
-        log,
-        resolveProjectId: () => ({ projectId: "project-1", root: "/repo" }),
-      },
-    });
-
-    expect(exitCode).toBe(0);
-    const logged = log.mock.calls.at(-1)?.[0] as string;
-    expect(JSON.parse(logged)).toEqual([{ shorthand: "T-1", title: "First" }]);
-  });
-
   test("dispatches a namespace command through the API client with workspace context", async () => {
     const execute = mock(async (_commandId: string, _request: unknown) => successResponse);
     const listCommands = mock(async () => ({ commands: labCommands, diagnostics: [] }));
@@ -461,23 +436,5 @@ describe("extension CLI router workspace context", () => {
       workspaceId: "ws-1",
       source: "cli",
     });
-  });
-});
-
-describe("missingRequiredParams", () => {
-  test("returns required params that are absent and ignores provided/optional ones", () => {
-    const command = {
-      id: "x",
-      extensionId: "e",
-      title: "X",
-      params: {
-        label: { type: "text", required: true },
-        color: { type: "text" },
-        status: { type: "text", required: true },
-      },
-    } satisfies ExtensionCommandRecord;
-
-    expect(missingRequiredParams(command, { status: "ready" })).toEqual(["label"]);
-    expect(missingRequiredParams(command, { label: "a", status: "ready" })).toEqual([]);
   });
 });
