@@ -127,3 +127,28 @@ test("a retried install retains its exact instance for navigation and clears its
   owner.retry(key);
   expect(calls).toBe(2);
 });
+
+test("reinstalling clears a stale failure and retry from the restored instance", async () => {
+  const owner = createExtensionActions();
+  let attempts = 0;
+  await owner.run("notes-instance", labels, async () => {
+    attempts++;
+    throw new Error("Original install could not upgrade");
+  });
+
+  const install = () =>
+    owner.run("marketplace:notes", { running: "Installing", failed: "Install failed" }, async () => "notes-instance", {
+      installedId: (id) => id,
+    });
+  await install();
+  expect(owner.getSnapshot().actions["notes-instance"]).toBeUndefined();
+  owner.retry("notes-instance");
+  expect(attempts).toBe(1);
+
+  const gate = Promise.withResolvers<void>();
+  const upgrade = owner.run("notes-instance", labels, () => gate.promise);
+  await install();
+  expect(owner.getSnapshot().actions["notes-instance"]?.status).toBe("running");
+  gate.resolve();
+  await upgrade;
+});

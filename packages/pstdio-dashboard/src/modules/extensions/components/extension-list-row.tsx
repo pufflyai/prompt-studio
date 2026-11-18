@@ -111,7 +111,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         <ExtensionAutomationsPopover
           projectId={props.projectId}
           automations={automations}
-          togglingAutomation={togglingAutomation}
+          togglingAutomation={togglingAutomation || changing}
           onToggleAutomation={onToggleAutomation}
         />
       </Box>
@@ -166,7 +166,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         <ExtensionToggle
           name={extension.displayName}
           enabled={extension.enabled}
-          loading={toggling}
+          action={toggleAction}
           disabled={upgrading}
           onToggle={onToggle}
         />

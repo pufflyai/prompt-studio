@@ -178,13 +178,18 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                 <ExtensionToggle
                   name={extension.displayName}
                   enabled={extension.enabled}
-                  loading={toggling}
+                  action={toggleAction}
                   disabled={changingSource}
                   onToggle={onToggle}
                 />
               </HStack>
 
-              <ExtensionActionFeedback action={toggleAction} onDismiss={onDismissToggle} onRetry={onRetryToggle} />
+              <ExtensionActionFeedback
+                action={toggleAction}
+                onDismiss={onDismissToggle}
+                onRetry={onRetryToggle}
+                retryDisabled={changingSource}
+              />
               {actionFeedback}
               {extension.description && (
                 <Text textStyle="paragraph/S/regular" color="fg.muted">
@@ -291,7 +296,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                         <Switch
                           size="sm"
                           checked={automation.enabled}
-                          disabled={togglingAutomationId === automation.id || upgrading}
+                          disabled={togglingAutomationId === automation.id || changingSource}
                           onCheckedChange={(details) => onToggleAutomation(automation, details.checked)}
                           aria-label={t("projectSettings.extensionsPanel.automations.toggleAriaLabel", {
                             name: resolveString(automation.title, automation.extensionId),

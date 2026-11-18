@@ -13,10 +13,11 @@ interface ExtensionActionFeedbackProps {
   action?: ExtensionActionState;
   onDismiss?: () => void;
   onRetry?: () => void;
+  retryDisabled?: boolean;
 }
 
 export const ExtensionActionFeedback = (props: ExtensionActionFeedbackProps) => {
-  const { action, onDismiss, onRetry } = props;
+  const { action, onDismiss, onRetry, retryDisabled } = props;
   const { t } = useTranslation("projects");
   if (action?.status !== "error") return null;
 
@@ -28,7 +29,11 @@ export const ExtensionActionFeedback = (props: ExtensionActionFeedbackProps) => 
         title={action.label}
         onClose={onDismiss}
         endElement={
-          onRetry && <Button onClick={onRetry}>{t("projectSettings.extensionsPanel.feedback.retry", "Retry")}</Button>
+          onRetry && (
+            <Button onClick={onRetry} disabled={retryDisabled}>
+              {t("projectSettings.extensionsPanel.feedback.retry", "Retry")}
+            </Button>
+          )
         }
       >
         {action.error}

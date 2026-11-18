@@ -74,3 +74,16 @@ test("system information can be opened and dismissed in the status bar", async (
   await expect(status).toBeHidden();
   expect(await action.boundingBox()).toEqual(before);
 });
+
+test("System activity stays pinned when other status widgets reorder", async ({ page }) => {
+  const preview = await openCanvasPreview(page, `${canvas}#SystemAndActionErrors`);
+  await preview.getByRole("button", { name: "Report system information" }).click();
+  const status = preview.locator('[data-workbench-region="status"]');
+  const activity = status.getByRole("group", { name: "System activity" });
+  const first = status.getByRole("group", { name: "First tool" });
+  const second = status.getByRole("group", { name: "Second tool" });
+  await expect(activity).toBeVisible();
+  await second.press("Alt+ArrowLeft");
+  await expect.poll(async () => (await second.boundingBox())!.x).toBeLessThan((await first.boundingBox())!.x);
+  expect((await activity.boundingBox())!.x).toBeLessThan((await second.boundingBox())!.x);
+});

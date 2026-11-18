@@ -57,6 +57,10 @@ export const createExtensionActions = () => {
       const instanceId = options.installedId?.(result);
       const actions = { ...snapshot.actions };
       delete actions[id];
+      if (instanceId && !active.has(instanceId)) {
+        delete actions[instanceId];
+        retries.delete(instanceId);
+      }
       publish({
         ...snapshot,
         actions,

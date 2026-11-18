@@ -14,6 +14,7 @@ import {
 import { DropIndicator } from "@pstdio/ui";
 import { useState } from "react";
 import type { WorkbenchCore, WorkbenchStatusBarSlot, WorkbenchWidgetPlacement } from "../../core";
+import { systemActivityItemId } from "../notifications/system-errors";
 import { useRetainedViewPlacements } from "../region/use-retained-view-placements";
 import { useWorkbenchActiveModeId } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -40,6 +41,7 @@ interface WorkbenchStatusBarItemProps {
   workbench: WorkbenchCore;
   placement: WorkbenchWidgetPlacement;
   ids: string[];
+  reorderableIds: string[];
   visible: boolean;
   floating?: boolean;
   activeId?: string;
@@ -47,10 +49,11 @@ interface WorkbenchStatusBarItemProps {
 }
 
 const WorkbenchStatusBarItem = (props: WorkbenchStatusBarItemProps) => {
-  const { workbench, placement, ids, visible, floating, activeId, drop } = props;
+  const { workbench, placement, ids, reorderableIds, visible, floating, activeId, drop } = props;
   const id = placement.widgetId;
   const order = ids.indexOf(id);
-  const sortable = order >= 0 && ids.length > 1;
+  const reorderIndex = reorderableIds.indexOf(id);
+  const sortable = reorderIndex >= 0 && reorderableIds.length > 1;
   const drag = useDraggable({ id, disabled: !sortable });
   const target = useDroppable({ id, disabled: !sortable });
   const title = placement.title ?? id;
@@ -81,7 +84,7 @@ const WorkbenchStatusBarItem = (props: WorkbenchStatusBarItemProps) => {
         event.preventDefault();
         event.stopPropagation();
         const left = event.key === "ArrowLeft";
-        const neighbor = ids[order + (left ? -1 : 1)];
+        const neighbor = reorderableIds[reorderIndex + (left ? -1 : 1)];
         if (neighbor) {
           workbench.statusBar.reorderItem(id, left ? { beforeItemId: neighbor } : { afterItemId: neighbor });
         }
@@ -111,7 +114,10 @@ export const WorkbenchStatusBarItems = (props: {
     activeModeId === workbench.modes.getActiveModeId()
       ? workbench.statusBar.listVisibleItems(slot).filter((item) => !onlyItemId || item.id === onlyItemId)
       : [];
-  const ids = items.map((item) => item.id);
+  // System notices are pinned even when the preferences include a custom order.
+  const pinnedItem = items.find((item) => item.id === systemActivityItemId);
+  const reorderableIds = items.filter((item) => item !== pinnedItem).map((item) => item.id);
+  const ids = pinnedItem ? [pinnedItem.id, ...reorderableIds] : reorderableIds;
   const placements = useRetainedViewPlacements(
     workbench,
     items.map((item) => ({
@@ -155,7 +161,7 @@ export const WorkbenchStatusBarItems = (props: {
       {placements.map((placement) => (
         <WorkbenchStatusBarItem
           key={placement.widgetId}
-          {...{ workbench, placement, ids, visible, floating, activeId, drop }}
+          {...{ workbench, placement, ids, reorderableIds, visible, floating, activeId, drop }}
         />
       ))}
       <Box asChild pointerEvents="none">
