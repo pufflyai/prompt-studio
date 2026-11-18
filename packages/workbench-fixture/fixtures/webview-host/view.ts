@@ -16,15 +16,7 @@ export default defineExtensionView({
       output.textContent = String((response.outcome.value as { counter: number }).counter);
     };
     button.onclick = () => void run("bump");
-    const highlight = document.createElement("button");
-    highlight.textContent = "Highlight workbench renders";
-    highlight.setAttribute("aria-pressed", "false");
-    highlight.onclick = async () => {
-      const enabled = highlight.getAttribute("aria-pressed") !== "true";
-      await host.call("performance.control", { operation: "set-render-overlay", enabled });
-      highlight.setAttribute("aria-pressed", String(enabled));
-    };
-    mount.append(heading, output, button, highlight);
+    mount.append(heading, output, button);
     let projectId = propsStore.get().projectId;
     const unsubscribe = propsStore.subscribe((props) => {
       if (props.projectId !== projectId) {

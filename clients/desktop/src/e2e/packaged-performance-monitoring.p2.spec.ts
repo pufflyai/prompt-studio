@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { expect, type Page } from "@playwright/test";
 import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-host";
 import { test } from "../testing/packaged-fixture";
@@ -65,9 +66,14 @@ test("keeps performance measurements live when switching and closing project tab
 test("a local extension control highlights workbench renders and releases the canvas", async () => {
   let app: PackagedApp | null = null;
   try {
-    ({ app } = await launchProject("Workbench highlights", { monitoring: true, webview: true }));
-    await openHostPreview(app.page);
-    const toggle = app.page.frameLocator('iframe[title="Host page"]').getByRole("button", {
+    ({ app } = await launchProject("Workbench highlights", {
+      monitoring: true,
+      extraExtension: {
+        installName: "render-highlights",
+        source: fileURLToPath(new URL("../../../../packages/e2e/src/fixtures/render-highlights", import.meta.url)),
+      },
+    }));
+    const toggle = app.page.frameLocator('iframe[title="Render highlight control"]').getByRole("button", {
       name: "Highlight workbench renders",
     });
     const canvas = app.page.locator("canvas[data-react-scan]");
