@@ -1,13 +1,15 @@
-import { Box, Flex, HStack, Icon, IconButton, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import type {
   ExtensionDiagnostic,
   ProjectExtensionInstance,
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
-import { Switch, type SwitchProps, Tooltip } from "@pstdio/ui";
-import { ArrowUpCircle, Clock, Folder, Globe } from "lucide-react";
+import { Switch, type SwitchProps } from "@pstdio/ui";
+import { Folder, Globe } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useTranslation } from "react-i18next";
+import { ExtensionActionButton } from "./extension-action-button";
+import type { ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionAutomationsPopover } from "./extension-automations-popover";
 import { ExtensionHealthPopover } from "./extension-health-popover";
 import { ExtensionIcon } from "./extension-icon";
@@ -21,7 +23,9 @@ export interface ExtensionListRowProps {
   unavailableHarnesses?: AgentInfo[];
   toggling: boolean;
   upgrading: boolean;
-  queued?: boolean;
+  action?: ExtensionActionState;
+  onDismissAction?: (action: ExtensionActionState) => void;
+  onRetryAction?: () => void;
   togglingAutomation?: boolean;
   onToggle: (enabled: boolean) => void;
   onToggleAutomation: (automation: WorkbenchExtensionAutomationRecord, enabled: boolean) => Promise<unknown>;
@@ -39,7 +43,9 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
     unavailableHarnesses = [],
     toggling,
     upgrading,
-    queued = false,
+    action,
+    onDismissAction,
+    onRetryAction,
     togglingAutomation,
     onToggle,
     onToggleAutomation,
@@ -47,9 +53,6 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
     onOpen,
   } = props;
   const { t } = useTranslation("projects");
-  const upgradeLabel = t(
-    queued ? "projectSettings.extensionsPanel.upgrade.waiting" : "projectSettings.extensionsPanel.upgrade.action",
-  );
   const handleCheckedChange: NonNullable<SwitchProps["onCheckedChange"]> = (details) => {
     onToggle(details.checked);
   };
@@ -131,23 +134,20 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         />
       </Box>
 
-      {/* The slot stays when there is nothing to upgrade, so the switches line up across rows. The row
-          opens on Enter, so a key press on the button must not reach it either. */}
-      <Box boxSize="6" flexShrink="0" onClick={stopRowClick} onKeyDown={stopRowClick}>
-        {extension.canUpgrade && (
-          <Tooltip content={upgradeLabel}>
-            <IconButton
-              variant="ghost"
-              size="2xs"
-              loading={upgrading && !queued}
-              disabled={upgrading}
-              onClick={onUpgrade}
-              aria-label={upgradeLabel}
-              data-testid="extension-row-upgrade"
-            >
-              {queued ? <Clock /> : <ArrowUpCircle />}
-            </IconButton>
-          </Tooltip>
+      <Box flexShrink="0" onClick={stopRowClick} onKeyDown={stopRowClick}>
+        {(extension.canUpgrade || action) && (
+          <ExtensionActionButton
+            variant="outline"
+            size="2xs"
+            action={action}
+            onAction={onUpgrade}
+            onDismiss={onDismissAction}
+            onRetry={action?.status === "error" ? onRetryAction : undefined}
+            disabled={upgrading || toggling}
+            data-testid="extension-row-upgrade"
+          >
+            {t("projectSettings.extensionsPanel.upgrade.action")}
+          </ExtensionActionButton>
         )}
       </Box>
 
@@ -163,7 +163,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
           size="sm"
           checked={extension.enabled}
           onCheckedChange={handleCheckedChange}
-          disabled={toggling}
+          disabled={toggling || upgrading}
           aria-label={t("projectSettings.extensionsPanel.toggleAriaLabel", { name: extension.displayName })}
         />
       </Box>

@@ -23,7 +23,7 @@ const ConnectionRecovery = () => {
   });
   return (
     <WorkbenchThemeProvider>
-      <Stack gap="md" p="md">
+      <Stack position="relative" gap="md" p="md">
         <Text>Read attempts {attempts}</Text>
         <Button
           onClick={() => {

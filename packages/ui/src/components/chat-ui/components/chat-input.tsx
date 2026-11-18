@@ -45,7 +45,7 @@ export interface ChatInputProps {
   isDisabled?: boolean;
   /** Blocks ordinary messages while the editor stays usable. Pending questions and decisions stay available. */
   submitDisabled?: boolean;
-  questionInputDisabled?: boolean;
+  keepDraftVisibleForQuestion?: boolean;
   questionSubmitDisabled?: boolean;
   onChange?: (text: string) => void;
   attachmentList?: ReactNode;
@@ -93,7 +93,7 @@ export const ChatInput = (props: ChatInputProps) => {
     onClearAttachments,
     isDisabled = false,
     submitDisabled = false,
-    questionInputDisabled = isDisabled,
+    keepDraftVisibleForQuestion = false,
     questionSubmitDisabled = false,
     onChange,
     placeholder,
@@ -116,7 +116,8 @@ export const ChatInput = (props: ChatInputProps) => {
   } = props;
 
   const request = useComposerRequest(questionPrompt, decision);
-  const occupied = Boolean(request);
+  const showDraftWithQuestion = request?.kind === "question" && keepDraftVisibleForQuestion;
+  const occupied = Boolean(request) && !showDraftWithQuestion;
 
   const styles = useSlotRecipe({ recipe: chatComposerRecipe })({ attachedToTop });
   const [submitting, setSubmitting] = useState(false);
@@ -192,9 +193,7 @@ export const ChatInput = (props: ChatInputProps) => {
     <Box
       className="ps-chat-composer__input"
       css={styles.input}
-      onPasteCapture={occupied ? undefined : attachmentEventHandlers.onPasteCapture}
-      onDropCapture={occupied ? undefined : attachmentEventHandlers.onDropCapture}
-      onDragOver={occupied ? undefined : attachmentEventHandlers.onDragOver}
+      {...(!occupied && !showDraftWithQuestion ? attachmentEventHandlers : {})}
       onClick={handleContainerClick}
     >
       <Flex direction="column" color="fg" gap="xs">
@@ -202,9 +201,8 @@ export const ChatInput = (props: ChatInputProps) => {
           request={request}
           question={questionPrompt}
           decision={decision}
-          actions={actions}
+          actions={occupied ? actions : undefined}
           disabled={isDisabled}
-          questionInputDisabled={questionInputDisabled}
           questionSubmitDisabled={questionSubmitDisabled}
           onSubmit={(answer, response) =>
             submitComposerResponse({
@@ -217,7 +215,7 @@ export const ChatInput = (props: ChatInputProps) => {
           }
         />
         {/* Keep the editor mounted so a takeover preserves selection, composition and undo history. */}
-        <Box display={occupied ? "none" : undefined}>
+        <Box display={occupied ? "none" : undefined} {...(showDraftWithQuestion ? attachmentEventHandlers : {})}>
           {attachmentList ? <Box mb="xs">{attachmentList}</Box> : null}
           <ScrollArea maxH="10rem" showHorizontalScrollbar={false} contentProps={{ pr: "2xs" }}>
             <Flex minH={COMPOSER_CONTROL_HEIGHT} align="center">

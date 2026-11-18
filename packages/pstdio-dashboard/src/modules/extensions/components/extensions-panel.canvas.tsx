@@ -227,7 +227,10 @@ export const InstallingMultipleAvailableExtensions: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    installingMarketplaceNames: ["pstdio-reports", "pstdio-planner"],
+    actionStates: {
+      "marketplace:pstdio-reports": { status: "running", label: "Installing", startedAt: Date.now() - 12000 },
+      "marketplace:pstdio-planner": { status: "running", label: "Installing", startedAt: Date.now() - 12000 },
+    },
   },
 };
 export const HealthPopoverOpen: Story = {
@@ -285,10 +288,12 @@ export const UpgradingOneExtension: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    upgradingInstanceIds: ["planner-instance"],
+    actionStates: {
+      "planner-instance": { status: "running", label: "Upgrading Project Planner", startedAt: Date.now() - 12000 },
+    },
   },
 };
-// Waiting rows keep a static clock while an active upgrade shows progress.
+// Two installs can run at once; each active row identifies the extension and elapsed time.
 export const UpgradingAll: Story = {
   id: "projectsettings-extensionspanel--upgrading-all",
   args: {
@@ -296,11 +301,11 @@ export const UpgradingAll: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    upgradingAll: true,
-    queuedInstanceIds: [installedExtensions[2]!.id],
-    upgradingInstanceIds: installedExtensions
-      .filter((extension) => extension.canUpgrade)
-      .map((extension) => extension.id),
+    batch: { ids: ["pstdio-planner", "extension-lab"], startedAt: Date.now() - 12000, completed: 0, failed: 0 },
+    actionStates: {
+      "planner-instance": { status: "running", label: "Upgrading Project Planner", startedAt: Date.now() - 12000 },
+      "lab-instance": { status: "running", label: "Upgrading Extension Lab", startedAt: Date.now() - 12000 },
+    },
   },
 };
 // No row can take a newer release, so there are no row upgrade buttons and no Upgrade all.

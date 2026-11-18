@@ -202,6 +202,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const readNotice = read.error ? (
     <RendererReadNotice
       error={read.error}
+      initial={!read.value}
       retry={() => {
         if (!paged || !pages.reset()) void read.retry();
       }}

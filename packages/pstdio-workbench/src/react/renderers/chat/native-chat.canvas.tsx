@@ -28,7 +28,7 @@ export const Streaming = () => (
 export const OtherDevice = () => (
   <ChatPanel
     {...composer}
-    inputDisabled
+    submitDisabled
     readOnlyQueue
     messages={[{ id: "history", role: "assistant", parts: [{ type: "text", text: "History from another device." }] }]}
   />
@@ -52,6 +52,7 @@ type AccountPreviewState =
   | "signed-out"
   | "checking"
   | "checking-question"
+  | "checking-approval"
   | "error"
   | "history"
   | "fork"
@@ -98,7 +99,8 @@ const PreviewAccountSetup = ({ state }: { state: AccountPreviewState }) => {
 const NativeAccountPreview = (props: { state: AccountPreviewState }) => {
   const [forkedId, setForkedId] = useState("");
   const forkable = props.state === "fork" || props.state === "fork-failure" || props.state === "read-only";
-  const authenticatingQuestion = props.state === "checking-question";
+  const awaitingApproval = props.state === "checking-approval";
+  const authenticatingQuestion = props.state === "checking-question" || awaitingApproval;
   const checking = props.state === "checking" || authenticatingQuestion;
   const messages: SessionMessage[] = [];
   if (authenticatingQuestion) messages.push(savedQuestion);
@@ -112,6 +114,10 @@ const NativeAccountPreview = (props: { state: AccountPreviewState }) => {
     createChatSession({
       initial: {
         messages,
+        approval: awaitingApproval
+          ? { id: "pending", title: "Open the project folder?", choices: [{ id: "allow", label: "Allow" }] }
+          : undefined,
+        queuedFollowUps: authenticatingQuestion ? [{ id: "queued-draft", prompt: "Queued follow-up" }] : undefined,
         readOnly: props.state === "read-only",
         fork: forkable ? { disabledReason: null } : undefined,
       },
@@ -125,19 +131,28 @@ const NativeAccountPreview = (props: { state: AccountPreviewState }) => {
       },
     }),
   );
-  const Host = ({ children }: NativeChatHostProps) =>
-    children({
+  const Host = ({ children }: NativeChatHostProps) => {
+    const [signingIn, setSigningIn] = useState(authenticatingQuestion);
+    return children({
       account: {
         blocked: !forkable && !authenticatingQuestion,
         commands: [],
         assertReady() {},
         isCommand: () => false,
         submit: () => undefined,
-        progress: authenticatingQuestion ? <Text>Finishing sign-in…</Text> : null,
+        progress: signingIn ? (
+          <>
+            <Text>Finishing sign-in…</Text>
+            <Button size="xs" onClick={() => setSigningIn(false)}>
+              Finish sign-in
+            </Button>
+          </>
+        ) : null,
         notice: null,
         setup: forkable || checking ? undefined : <PreviewAccountSetup state={props.state} />,
       },
     });
+  };
   return (
     <>
       <NativeChatView session={session} conversationKey={props.state} action={undefined} Host={Host} />
@@ -148,9 +163,11 @@ const NativeAccountPreview = (props: { state: AccountPreviewState }) => {
 export const SignInRequired = () => <NativeAccountPreview state="signed-out" />;
 export const AuthenticationChecking = () => <NativeAccountPreview state="checking" />;
 export const QuestionWhileAuthenticationLoads = {
-  description: "Choices stay editable. Send answer and Skip are disabled until the harness is ready.",
+  description:
+    "The draft and question choices stay editable. Send answer and Skip are disabled until the harness is ready.",
   render: () => <NativeAccountPreview state="checking-question" />,
 };
+export const ApprovalWhileAuthenticationLoads = () => <NativeAccountPreview state="checking-approval" />;
 export const AuthenticationFailure = () => <NativeAccountPreview state="error" />;
 export const SignedOutHistory = () => <NativeAccountPreview state="history" />;
 export const ForkableReply = () => <NativeAccountPreview state="fork" />;
@@ -163,10 +180,16 @@ export const ConversationFailure = () => {
     return createChatSession({
       initial: {
         messages: [{ id: "saved", role: "assistant", parts: [{ type: "text", text: "Earlier saved reply." }] }],
+        readOnly: true,
+        approval: {
+          id: "pending",
+          title: "Open the project folder?",
+          choices: [{ id: "allow", label: "Allow" }],
+        },
       },
       query: async () => {
         if (attempts++ === 0) throw new Error("The conversation connection was lost. Retry to reconnect.");
-        return {};
+        return { readOnly: false, approval: null };
       },
       action: async () => ({}),
     });

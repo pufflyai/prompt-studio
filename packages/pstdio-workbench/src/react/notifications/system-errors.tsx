@@ -1,19 +1,24 @@
 import { Button, Icon, Stack, Tag, Text } from "@chakra-ui/react";
 import { AlertMessage, ScopedPopover as Popover, PopoverHeader, Portal, ScrollArea } from "@pstdio/ui";
-import { TriangleAlert } from "lucide-react";
+import { Bell, TriangleAlert } from "lucide-react";
 import type { WorkbenchCore } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchActionErrors } from "./action-errors";
-import { isSystemError } from "./system-error-state";
+import { isSystemNotice } from "./system-error-state";
 
-export const WorkbenchSystemErrors = (props: { workbench: WorkbenchCore }) => {
+export const WorkbenchSystemNotices = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   const notifications = useWorkbenchStore(workbench.notifications.store, (state) => state.notifications);
-  const errors = Object.values(notifications)
-    .filter(isSystemError)
-    .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
-  if (!errors.length) return null;
-  const latest = errors.at(-1)!;
+  const notices = Object.values(notifications)
+    .filter(isSystemNotice)
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+  if (!notices.length) return null;
+  const latest = notices[0]!;
+  const error = notices.find((notice) => notice.level === "error");
+  const summary = error ?? latest;
+  const errorOnly = notices.every((notice) => notice.level === "error");
+  const label = errorOnly ? "System errors" : "System notices";
+  const icon = error ? TriangleAlert : Bell;
 
   return (
     <Popover.Root variant="widget" positioning={{ placement: "top-start", offset: { mainAxis: 4 } }}>
@@ -21,15 +26,15 @@ export const WorkbenchSystemErrors = (props: { workbench: WorkbenchCore }) => {
         <Button
           size="2xs"
           variant="ghost"
-          color="fg.error"
+          color={error ? "fg.error" : undefined}
           minW="0"
           maxW="full"
           justifyContent="flex-start"
-          aria-label={`System errors: ${latest.title}`}
+          aria-label={`${label}: ${summary.title}`}
         >
-          <Icon as={TriangleAlert} boxSize="4" />
+          <Icon as={icon} boxSize="4" />
           <Text as="span" textStyle="label/XS/medium" maxW="2xs" truncate role="status">
-            {latest.title}
+            {summary.title}
           </Text>
         </Button>
       </Popover.Trigger>
@@ -44,23 +49,23 @@ export const WorkbenchSystemErrors = (props: { workbench: WorkbenchCore }) => {
             <Popover.Body display="flex" flexDirection="column" minH="0">
               {/* The header stays put while the list scrolls, with its scrollbar at the popover edge. */}
               <PopoverHeader
-                icon={<TriangleAlert />}
-                title={<Popover.Title>System errors</Popover.Title>}
+                icon={<Icon as={icon} />}
+                title={<Popover.Title>{label}</Popover.Title>}
                 actions={
                   <>
                     <Tag.Root
                       size="sm"
                       variant="subtle"
-                      colorPalette="red"
-                      aria-label={`${errors.length} system errors`}
+                      colorPalette={error ? "red" : "gray"}
+                      aria-label={`${notices.length} ${label.toLowerCase()}`}
                     >
-                      <Tag.Label>{errors.length}</Tag.Label>
+                      <Tag.Label>{notices.length}</Tag.Label>
                     </Tag.Root>
                     <Button
                       size="2xs"
                       variant="ghost"
                       onClick={() => {
-                        for (const error of errors) workbench.notifications.dismiss(error.id);
+                        for (const error of notices) workbench.notifications.dismiss(error.id);
                       }}
                     >
                       Clear all
@@ -71,13 +76,17 @@ export const WorkbenchSystemErrors = (props: { workbench: WorkbenchCore }) => {
               <ScrollArea
                 minH="0"
                 contentProps={{ paddingX: "sm", paddingBottom: "xs" }}
-                viewportProps={{ role: "region", "aria-label": "System error list", overscrollBehavior: "contain" }}
+                viewportProps={{
+                  role: "region",
+                  "aria-label": errorOnly ? "System error list" : "System notice list",
+                  overscrollBehavior: "contain",
+                }}
               >
                 <Stack gap="sm" minW="0">
-                  {[...errors].reverse().map((error) => (
+                  {notices.map((error) => (
                     <AlertMessage
                       key={error.id}
-                      status="error"
+                      status={error.level}
                       title={error.title}
                       closeLabel={`Dismiss ${error.title}`}
                       onClose={() => workbench.notifications.dismiss(error.id)}
@@ -98,7 +107,11 @@ export const WorkbenchSystemErrors = (props: { workbench: WorkbenchCore }) => {
                     >
                       <Stack gap="xs" minW="0">
                         <Text>{error.message}</Text>
-                        <WorkbenchActionErrors workbench={workbench} target={`system-errors.${error.id}`} />
+                        <WorkbenchActionErrors
+                          workbench={workbench}
+                          target={`system-errors.${error.id}`}
+                          anchored={false}
+                        />
                       </Stack>
                     </AlertMessage>
                   ))}

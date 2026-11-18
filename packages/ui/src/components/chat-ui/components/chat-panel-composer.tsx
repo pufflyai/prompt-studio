@@ -29,7 +29,7 @@ export interface ChatPanelComposerProps {
   chatInputAutoFocus: boolean;
   chatInputPlaceholder: string;
   chatInputQuestionPrompt?: ChatInputQuestionPrompt;
-  questionInputDisabled?: boolean;
+  keepDraftVisibleForQuestion?: boolean;
   questionSubmitDisabled?: boolean;
   composerDecision?: ComposerDecision;
   chatInputCommands: PromptCommand[];
@@ -65,6 +65,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
     composerFallback,
     readOnlyQueue = false,
     chatInputQuestionPrompt,
+    keepDraftVisibleForQuestion,
     composerDecision,
     hasWorkspaceHub,
     onQueuedFollowUpMove,
@@ -119,7 +120,7 @@ export const ChatPanelComposer = (props: ChatPanelComposerProps) => {
               onSteer={onQueuedFollowUpSteer}
               onCombine={onQueuedFollowUpCombine}
               editingItemId={queuedComposer.editingItemId}
-              onEdit={onQueuedFollowUpUpdate ? queuedComposer.edit : undefined}
+              onEdit={onQueuedFollowUpUpdate && !keepDraftVisibleForQuestion ? queuedComposer.edit : undefined}
               onRemove={onQueuedFollowUpRemove}
               onMove={onQueuedFollowUpMove}
             />

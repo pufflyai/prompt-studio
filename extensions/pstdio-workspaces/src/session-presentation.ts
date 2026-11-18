@@ -6,26 +6,32 @@ export const sessionPresentation = defineCommand({
   params: { id: params.text(), existingSession: params.boolean(), available: params.boolean() },
   async run(ctx, input) {
     const selected = input.id ? await ctx.workspaces.get(input.id) : undefined;
+    const provisioning = selected?.initializing || selected?.providerState === "provisioning";
+    const unavailable = selected?.providerState && selected.providerState !== "ready";
     const summary =
       selected?.capabilities?.diff &&
       !selected.device &&
       selected.executionKind !== "remote" &&
-      !selected.initializing &&
+      !provisioning &&
+      !unavailable &&
       !selected.setupError
         ? await ctx.workspaces.diffSummary(selected.id, "current").catch(() => undefined)
         : undefined;
     return {
       controlId: "workspace",
       deviceControlId: "device",
-      ...(selected?.setupError ? { status: "error" as const, statusLabel: selected.setupError } : {}),
-      ...(selected?.initializing ? { status: "loading" as const } : {}),
+      ...(provisioning ? { status: "loading" as const } : {}),
+      ...(!provisioning && (selected?.setupError || unavailable)
+        ? { status: "error" as const, statusLabel: selected?.setupError ?? "Workspace unavailable" }
+        : {}),
       additions: summary?.additions ?? 0,
       deletions: summary?.deletions ?? 0,
       ...(input.existingSession &&
       input.id &&
       selected?.id === input.id &&
       input.available !== false &&
-      !selected.initializing &&
+      !provisioning &&
+      !unavailable &&
       !selected.setupError
         ? { openResourceId: input.id }
         : {}),

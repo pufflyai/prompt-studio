@@ -54,6 +54,7 @@ const desktopPublicMethods = [
   "onCommand",
   "onStartupAppearance",
   "onStartupState",
+  "onUpdateNotice",
   "openLogs",
   "quitApp",
   "releasePerformanceCapture",
@@ -67,6 +68,7 @@ const desktopPublicMethods = [
   "setStartupAppearance",
   "setUpdateChannel",
   "setWorkbenchItem",
+  "takeUpdateNotice",
 ];
 
 test("loads the existing runtime in a sandboxed window and detaches on quit", async () => {

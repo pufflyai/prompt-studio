@@ -136,6 +136,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
         const session = await createSessionHarnessOperation(
           deps,
           {
+            workspaceId: resolvedWorkspaceId,
             project_id: input.project_id,
             title: input.title,
             agent: agentId,

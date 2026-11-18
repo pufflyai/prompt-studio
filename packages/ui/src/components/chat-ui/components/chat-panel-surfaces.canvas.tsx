@@ -80,7 +80,7 @@ export const FocusedWithoutWorkspace: Story = {
 export const SettingUp: Story = {
   id: "patterns-chat-composer-surfaces--setting-up",
   args: {
-    inputDisabled: true,
+    submitDisabled: true,
     workspaceHub: (
       <ChatWorkspaceHub
         workspaceControl={workspaceControl}
@@ -95,6 +95,7 @@ export const SettingUp: Story = {
 export const SetupFailed: Story = {
   id: "patterns-chat-composer-surfaces--setup-failed",
   args: {
+    submitDisabled: true,
     workspaceHub: (
       <ChatWorkspaceHub
         workspaceControl={workspaceControl}

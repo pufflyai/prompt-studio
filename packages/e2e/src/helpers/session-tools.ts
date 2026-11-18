@@ -78,6 +78,8 @@ export const verifySessionTools = async (page: Page) => {
   await page.reload();
   await expect(sideSession).toBeVisible();
   await expect(terminal).toBeVisible();
+  // The restored terminal focuses its input after its engine loads. Wait before opening its menu.
+  await expect(side.getByRole("textbox", { name: "Terminal input" })).toBeVisible();
   expect(
     await side
       .locator("[data-workbench-tab]")
