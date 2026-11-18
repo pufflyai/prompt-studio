@@ -1,7 +1,11 @@
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative } from "node:path";
 import { inspectCompilerConfiguration, type RevisionCompilerInput } from "./revision-compiler-inputs";
-import { createBrowserEntryResolver, createRevisionModuleResolver } from "./revision-module-inputs";
+import {
+  createBrowserEntryResolver,
+  createRevisionFileLookup,
+  createRevisionModuleResolver,
+} from "./revision-module-inputs";
 import { inspectRevisionModule } from "./revision-module-inspection";
 
 export { copyRevisionSource, hashRevisionSource } from "./revision-file-inputs";
@@ -100,7 +104,6 @@ const inspectEntries = (
     }
   }
   for (const rel of modulePaths) {
-    files.add(rel);
     if (rel !== "package.json" && !/\.[cm]?[jt]sx?$/.test(rel)) includeAssets();
     const file = join(canonical, rel);
     if (inspected.has(`${context}:${file}`) || !/\.(?:[cm]?[jt]sx?|css)$/.test(rel)) continue;
@@ -171,8 +174,9 @@ export const collectRevisionDependencies = (
   options: { entryPath?: string; entryPaths?: string[]; target?: "browser" } = {},
 ) => {
   const contents = new Map<string, Buffer>();
-  const resolveLocalImport = createLocalImportResolver();
-  const resolveRevisionModule = createRevisionModuleResolver();
+  const files = createRevisionFileLookup();
+  const resolveLocalImport = createLocalImportResolver(files.isFile);
+  const resolveRevisionModule = createRevisionModuleResolver(files);
   const packages = Object.assign(
     new Map<
       string,

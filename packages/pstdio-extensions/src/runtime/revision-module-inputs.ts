@@ -1,5 +1,5 @@
-import { existsSync, realpathSync } from "node:fs";
-import { dirname, isAbsolute, join, relative } from "node:path";
+import { type Dirent, existsSync, readdirSync, realpathSync, statSync } from "node:fs";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const inside = (root: string, path: string) => {
@@ -23,7 +23,42 @@ export const createBrowserEntryResolver = () => {
   };
 };
 
-export const createRevisionModuleResolver = () => {
+export const createRevisionFileLookup = () => {
+  type Directory = { path: string; entries: Map<string, Dirent> };
+  const directories = new Map<string, Directory | null>();
+  const directoryFor = (directory: string) => {
+    const previous = directories.get(directory);
+    if (previous !== undefined) return previous;
+    let listed: Directory | null = null;
+    try {
+      const path = realpathSync(directory);
+      listed = {
+        path,
+        entries: new Map(readdirSync(path, { withFileTypes: true }).map((entry) => [entry.name, entry])),
+      };
+    } catch {
+      // A missing or unreadable listing leaves resolution to the existing filesystem calls.
+    }
+    directories.set(directory, listed);
+    return listed;
+  };
+  // Use exact names only. The filesystem handles case-insensitive names, junctions
+  // and other path forms when an exact directory entry is unavailable.
+  const knownFile = (path: string) => {
+    const directory = directoryFor(dirname(path));
+    const name = basename(path);
+    if (!directory) return;
+    const entry = directory.entries.get(name);
+    if (entry?.isFile()) return join(directory.path, name);
+    if (entry?.isSymbolicLink() && statSync(path, { throwIfNoEntry: false })?.isFile()) return realpathSync(path);
+  };
+  return {
+    knownFile,
+    isFile: (path: string) => Boolean(knownFile(path)) || Boolean(statSync(path, { throwIfNoEntry: false })?.isFile()),
+  };
+};
+
+export const createRevisionModuleResolver = (lookup: ReturnType<typeof createRevisionFileLookup>) => {
   const physicalPaths = new Map<string, string>();
   const resolvedFiles = new Map<string, string | null>();
   const packageRoots = new Map<string, string | null>();
@@ -40,7 +75,7 @@ export const createRevisionModuleResolver = () => {
   const physicalPath = (path: string) => {
     const previous = physicalPaths.get(path);
     if (previous !== undefined) return previous;
-    const canonical = realpathSync(path);
+    const canonical = lookup.knownFile(path) ?? realpathSync(path);
     physicalPaths.set(path, canonical);
     return canonical;
   };
@@ -50,7 +85,14 @@ export const createRevisionModuleResolver = () => {
     if (existing !== undefined) return existing;
     let file: string | null;
     try {
-      file = physicalPath(Bun.resolveSync(specifier, from));
+      // Bun can retain an earlier relative symlink target. An explicitly named
+      // file already present in the directory has a fresh physical owner.
+      const direct =
+        /\.(?:[cm]?[jt]sx?|json|css)$/i.test(specifier) &&
+        (specifier.startsWith("./") || specifier.startsWith("../") || isAbsolute(specifier))
+          ? lookup.knownFile(resolve(from, specifier))
+          : undefined;
+      file = direct ?? physicalPath(Bun.resolveSync(specifier, from));
     } catch {
       file = null;
     }
