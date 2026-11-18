@@ -8,7 +8,12 @@ setupPackagedSmokeTests();
 test(
   "GitHub PR resources can be imported, resolved and linked through the shared service",
   async () => {
-    await withPackagedPlanner(expectGithubResources, ["github"]);
+    await withPackagedPlanner(expectGithubResources, [
+      "github",
+      "pstdio-artifacts",
+      "pstdio-planner",
+      "pstdio-reports",
+    ]);
   },
   PACKAGED_TEST_TIMEOUT,
 );
