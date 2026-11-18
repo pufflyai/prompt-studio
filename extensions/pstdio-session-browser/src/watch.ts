@@ -5,7 +5,6 @@ import {
   type ChatRendererSnapshot,
   type ChatRendererStreamEvent,
   type CommandContext,
-  chatRendererStreamFrames,
   defineCommand,
   type ExtensionSessionStreamEvent,
   type JsonObject,
@@ -13,6 +12,7 @@ import {
   type ResourceRef,
   streamOf,
 } from "@pstdio/sdk/extensions";
+import { diagnosticChatFrames } from "./chat-stream-diagnostics";
 import { conversationOperations } from "./controls";
 import { conversationState } from "./conversation-state";
 import { recoverNativeInputs } from "./native-recovery";
@@ -100,7 +100,7 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
   const emittedRecovery = new Set<string>();
   const writeEvent = (event: ChatWatchUpdate) => {
     writes = writes.then(async () => {
-      for (const frame of chatRendererStreamFrames({ revision: revision++, ...event })) {
+      for (const frame of diagnosticChatFrames(id, { revision: revision++, ...event })) {
         if (ctx.signal.aborted) return;
         await ctx.stream.write(JSON.parse(JSON.stringify(frame)));
       }

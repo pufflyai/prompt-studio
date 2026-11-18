@@ -1,4 +1,5 @@
 import type { PGlite } from "@electric-sql/pglite";
+import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
 
 const FIRST_PASS_DELAY_MS = 60_000;
 const CHECK_INTERVAL_MS = 5 * 60_000;
@@ -57,10 +58,10 @@ export const startDeadRowCleanup = (
   let stopped = false;
   let running: Promise<unknown> | undefined;
   const pass = (all: boolean) => {
-    running ??= cleanupRetiredRows(() => stopped)
-      .then(() => {
-        if (!stopped) return vacuumDeadRows(db, { all, stopped: () => stopped, onError });
-      })
+    running ??= withRuntimeOperationOrigin({ kind: "background", name: "database.dead-row-cleanup" }, async () => {
+      await cleanupRetiredRows(() => stopped);
+      if (!stopped) return vacuumDeadRows(db, { all, stopped: () => stopped, onError });
+    })
       .catch((error) => onError(error))
       .finally(() => {
         running = undefined;

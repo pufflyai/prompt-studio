@@ -3,4 +3,11 @@ export { type KernelProcessReading, PerformanceCaptureCollector } from "./perfor
 export { summarizePerformanceEvidence } from "./performance-evidence";
 export { createPerformanceRecording, readPerformanceRecordings } from "./performance-recording";
 export { restoreRecordedCapture } from "./recorded-capture";
+export {
+  finishRuntimeOperation,
+  runRuntimeOperation,
+  runtimeOperationChannel,
+  startRuntimeOperation,
+  withRuntimeOperationOrigin,
+} from "./runtime-operation";
 export { securePerformanceDirectory } from "./secure-performance-directory";

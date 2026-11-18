@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
+import { channel } from "node:diagnostics_channel";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -217,4 +218,42 @@ test("invalid durations create no capture; admission failure remains inspectable
   const [failed] = await app.commands["diagnostics.list"].run(app.context, {});
   expect(failed?.status).toBe("failed");
   expect(failed?.error).toContain("admission failed");
+});
+
+test("arming uses the durable capture lifecycle and preserves interrupted checkpoints", async () => {
+  const app = await setup();
+  const capture = await app.commands["diagnostics.arm"].run(app.context, { cpuPercent: 75, minutes: 5 });
+  expect(capture.status).toBe("queued");
+  expect(capture.armed).toEqual({ cpuPercent: 75, minutes: 5 });
+  await app.files.writeResult(capture.id, { mode: "armed", complete: false, profiles: [{ profile: { nodes: [] } }] });
+  app.forgetRun();
+  const exported = await app.commands["diagnostics.export"].run(app.context, { id: capture.id });
+  expect(exported.capture.status).toBe("unavailable");
+  expect(exported.capture.hasResult).toBe(true);
+  expect(exported.data).toMatchObject({ complete: false });
+  await expect(app.commands["diagnostics.arm"].run(app.context, { cpuPercent: 0 })).rejects.toThrow();
+  await expect(app.commands["diagnostics.arm"].run(app.context, { minutes: 1441 })).rejects.toThrow();
+});
+
+test("an armed command captures a CPU spike and exports its correlated operation evidence", async () => {
+  const app = await setup();
+  const capture = await app.commands["diagnostics.arm"].run(app.context, { cpuPercent: 0.01, minutes: 1 });
+  const collecting = app.collect();
+  await Bun.sleep(20);
+  channel("pstdio.diagnostics.operation").publish({
+    kind: "chat.encode",
+    startedAt: new Date().toISOString(),
+    durationMs: 1,
+    logicalBytes: 100_000,
+    wireBytes: 134_000,
+    fragments: 3,
+  });
+  const until = performance.now() + 10;
+  while (performance.now() < until) Math.sqrt(Math.random());
+  await collecting;
+  const exported = await app.commands["diagnostics.export"].run(app.context, { id: capture.id });
+  expect(exported.capture.status).toBe("succeeded");
+  expect(exported.data).toMatchObject({ complete: true, mode: "armed", reason: "threshold" });
+  expect(exported.data).toHaveProperty("profiles.0.profile.nodes");
+  expect(exported.data).toHaveProperty("operations.events.0.kind", "chat.encode");
 });
