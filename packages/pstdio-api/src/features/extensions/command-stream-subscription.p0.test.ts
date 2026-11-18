@@ -142,6 +142,59 @@ test("a handler returning after cancellation still reports a cancelled outcome",
   expect(events).toMatchObject([{ event: "end", data: { outcome: { ok: false, code: "command_stream_cancelled" } } }]);
 });
 
+test("freezing a project closes command subscriptions while admitted mutations finish", async () => {
+  const snapshot = await fixture.deps.extensionRuntimeCatalog.get("project-1");
+  const command = snapshot.runtime.commands[0]!;
+  command.stream = { kind: "stream" };
+  const ready = Promise.withResolvers<void>();
+  let signal!: AbortSignal;
+  command.run = async (ctx) => {
+    signal = ctx.signal!;
+    ready.resolve();
+    await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+  };
+  const prepared = await prepareCommandSubscription(fixture.deps, input);
+  if ("error" in prepared) throw new Error(prepared.error);
+  let cancel = () => {};
+  const pending = prepared.run({
+    aborted: false,
+    onAbort: (listener) => {
+      cancel = listener;
+    },
+    sleep: async () => {},
+    write: async () => {},
+  });
+  const work = fixture.deps.projectService.work;
+  const finish = Promise.withResolvers<void>();
+  const mutationStarted = Promise.withResolvers<AbortSignal>();
+  const mutation = work.run("project-1", async (admitted) => {
+    mutationStarted.resolve(admitted);
+    await finish.promise;
+    return work.run("project-1", async () => "saved");
+  });
+  try {
+    await ready.promise;
+    const mutationSignal = await mutationStarted.promise;
+    work.freeze("project-1");
+    expect(signal.aborted).toBe(true);
+    expect(mutationSignal.aborted).toBe(false);
+    let drained = false;
+    const draining = work.drain("project-1").then(() => {
+      drained = true;
+    });
+    await pending;
+    expect(drained).toBe(false);
+    finish.resolve();
+    expect(await mutation).toBe("saved");
+    await draining;
+  } finally {
+    cancel();
+    finish.resolve();
+    await Promise.all([pending, mutation]);
+    work.release("project-1");
+  }
+});
+
 test("a historical stream command subscribes once through its canonical enabled provider", async () => {
   const legacy = await createWorkspaceContextFixture({ publisher: "pstdio", name: "pstdio-notes" });
   try {
