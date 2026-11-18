@@ -118,6 +118,20 @@ test("missing artifacts invalidate only their accepted revision", async () => {
   expect(readFileSync(repaired.entryPath, "utf8").length).toBeGreaterThan(0);
 });
 
+test("a cache format upgrade replaces an incompatible accepted revision", async () => {
+  const source = fixture();
+  const prepared = await prepareExtensionRevision(source);
+  await acceptPreparedRevision(source, prepared);
+  writeFileSync(
+    acceptedRevisionPath(source),
+    JSON.stringify({ ...prepared, host: "previous-format", id: "previous-revision" }),
+  );
+
+  expect(await readAcceptedRevision(source)).toBeNull();
+  await acceptPreparedRevision(source, prepared, { expectedId: null });
+  expect((await readAcceptedRevision(source))?.id).toBe(prepared.id);
+});
+
 test("dependencies selected by package exports keep their own dependency closure", async () => {
   const source = fixture();
   const parent = join(source, "node_modules", "parent-dependency");
