@@ -255,6 +255,14 @@ export const predicateSql = (
   return fieldPredicateSql(index, predicate, alias, resolve, owner);
 };
 
+const fieldEqualitySql = (index: StorageRecordIndex, field: string, comparable: SQL, value: SQL) => {
+  // Typed booleans have only three index keys (true, false, and null), with distinct hashes.
+  // A second equality check makes Postgres underestimate common values and sort a full page source.
+  if (queryField(index, field).type === "boolean" && localField(index, field) && index.equality?.includes(field))
+    return sql`${equalityKey(comparable)} = ${equalityKey(value)}`;
+  return recordEqualitySql(index, field, comparable, value);
+};
+
 const fieldPredicateSql = (
   index: StorageRecordIndex,
   predicate: Extract<StoragePredicate, { field: string }>,
@@ -293,7 +301,7 @@ const fieldPredicateSql = (
     case "notEmpty":
       return sql`NOT ${empty}`;
     case "eq":
-      return recordEqualitySql(index, predicate.field, comparable, valueJson(predicate.value));
+      return fieldEqualitySql(index, predicate.field, comparable, valueJson(predicate.value));
     case "ne":
       return sql`${comparable} <> ${valueJson(predicate.value)}`;
     case "equalsIgnoreCase":

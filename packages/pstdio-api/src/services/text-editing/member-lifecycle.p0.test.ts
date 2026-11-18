@@ -11,6 +11,12 @@ afterEach(async () => {
 const setup = async () => {
   const f = await textEditingFixture();
   let hold: (() => Promise<void>) | undefined;
+  const openRoom = f.documents.open;
+  f.documents.open = async (input) => {
+    const room = await openRoom(input);
+    await hold?.();
+    return room;
+  };
   const text = createTextEditingService({
     documents: f.documents,
     access: async (input) => {

@@ -70,7 +70,6 @@ export const listTicketFilesTree = async (
     children,
     dependents,
     reviewRequests,
-    workspaces,
     linkedWorkspaces,
     workspaceCursor,
     providers,
@@ -147,12 +146,6 @@ export const listTicketFilesTree = async (
     nodes: fileNodes.length === 0 ? [emptyFilesNode()] : fileNodes,
   };
 
-  // Linked workspaces open as native workspace tabs from the same sidenav.
-  const visibleWorkspaces = workspaces.filter(
-    (workspace) =>
-      workspace.is_default || workspace.isDefault || linkedWorkspaces.some(({ id }) => id === workspace.id),
-  );
-
   const maybeSubTicketsSection = buildSubTicketsSection({
     tickets,
     parentTicketId: ticket.id,
@@ -160,8 +153,9 @@ export const listTicketFilesTree = async (
     children: children.tickets,
     nextCursor: children.nextCursor,
   });
-  const linkedWorkspacesSection = buildWorkspacesSection(
-    visibleWorkspaces,
+  const linkedWorkspacesSection = await buildWorkspacesSection(
+    ctx,
+    linkedWorkspaces,
     ticketMeta,
     providers.length > 0
       ? {
