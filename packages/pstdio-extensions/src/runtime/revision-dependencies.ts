@@ -9,6 +9,12 @@ import {
 import { inspectRevisionModule } from "./revision-module-inspection";
 
 export { copyRevisionSource, hashRevisionSource } from "./revision-file-inputs";
+export {
+  captureRuntimeModuleImportHints,
+  isRuntimeModuleImportHints,
+  restoreRuntimeModuleImportHints,
+  type RuntimeModuleImportHint,
+} from "./runtime-source-snapshot";
 
 import { collectRuntimeModulePaths, createLocalImportResolver } from "./runtime-source-snapshot";
 

@@ -101,7 +101,7 @@ export const prepareWebviewArtifacts = async (inputs: WebviewArtifactInput[], si
   const stage = trackPreparationStage([batch]);
   mkdirSync(batch, { recursive: true });
   try {
-    const { sources, signatures, reads } = await inspectPreparedWebviewInputs(
+    const { sources, signatures, hints } = await inspectPreparedWebviewInputs(
       inputs,
       join(batch, "sources"),
       signal,
@@ -134,7 +134,7 @@ export const prepareWebviewArtifacts = async (inputs: WebviewArtifactInput[], si
     if (!outcome.success) throw new Error(outcome.details);
     signal.throwIfAborted();
     const after = await inspectPreparedWebviewInputs(inputs, join(batch, "sources"), signal, undefined, {
-      prior: reads,
+      prior: hints,
     });
     signal.throwIfAborted();
     if (after.signatures.some((signature, index) => signature.signature !== signatures[index]!.signature))

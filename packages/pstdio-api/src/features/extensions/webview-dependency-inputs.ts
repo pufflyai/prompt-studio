@@ -2,16 +2,18 @@ import { createHash } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import {
+  captureRuntimeModuleImportHints,
   collectRevisionDependencies,
   hashRevisionDependencies,
   hashRevisionDependenciesAsync,
   hashRevisionSource,
+  restoreRuntimeModuleImportHints,
 } from "pstdio-extensions/revision-dependencies";
-import { captureWebviewReadHints, readWebviewHints, type WebviewReadHint } from "./webview-input-read-ahead";
+import { captureWebviewReadHints, readWebviewHints, type WebviewInputHints } from "./webview-input-read-ahead";
 
 export interface WebviewInspectionReadAhead {
   capture?: boolean;
-  hints?: WebviewReadHint[];
+  prior?: WebviewInputHints;
 }
 
 const lockfiles = new Set([
@@ -54,7 +56,9 @@ export const inspectWebviewDependencyInputsAsync = async (
   signal?: AbortSignal,
 ) => {
   const started = performance.now();
-  const contents = readAhead?.hints?.length ? await readWebviewHints(readAhead.hints, signal) : undefined;
+  const prior = readAhead?.prior;
+  const contents = prior?.reads.length ? await readWebviewHints(prior.reads, signal) : undefined;
+  if (prior) restoreRuntimeModuleImportHints(prior.imports);
   const read = performance.now();
   const packages = collectRevisionDependencies(packagePath, { entryPaths, target: "browser" }, contents);
   const collected = performance.now();
@@ -64,7 +68,9 @@ export const inspectWebviewDependencyInputsAsync = async (
     digest,
     collectMs: Math.round(collected - read),
     readAheadMs: Math.round(read - started),
-    ...(readAhead?.capture ? { reads: captureWebviewReadHints(packages.contents) } : {}),
+    ...(readAhead?.capture
+      ? { hints: { reads: captureWebviewReadHints(packages.contents), imports: captureRuntimeModuleImportHints() } }
+      : {}),
     hashMs: Math.round(hashed - collected),
   };
 };

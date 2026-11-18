@@ -1,10 +1,15 @@
 import { isAbsolute } from "node:path";
+import { isRuntimeModuleImportHints, type RuntimeModuleImportHint } from "pstdio-extensions/revision-dependencies";
 
 const maxBytes = 64 * 1024 * 1024;
 const maxFileBytes = 2 * 1024 * 1024;
 const maxFiles = 12_288;
 const maxHintBytes = 2 * 1024 * 1024;
 export type WebviewReadHint = [path: string, size: number];
+export interface WebviewInputHints {
+  reads: WebviewReadHint[];
+  imports: RuntimeModuleImportHint[];
+}
 
 const encodedHintBytes = (value: WebviewReadHint) => Buffer.byteLength(JSON.stringify(value)) + 1;
 
@@ -32,7 +37,7 @@ const isBoundedHint = (value: unknown): value is WebviewReadHint =>
   value[1] >= 0 &&
   value[1] <= maxFileBytes;
 
-export const isWebviewReadHints = (value: unknown): value is WebviewReadHint[] => {
+const isWebviewReadHints = (value: unknown): value is WebviewReadHint[] => {
   if (!Array.isArray(value) || value.length > maxFiles) return false;
   let bytes = 2;
   for (const hint of value) {
@@ -42,6 +47,14 @@ export const isWebviewReadHints = (value: unknown): value is WebviewReadHint[] =
   }
   return true;
 };
+
+export const isWebviewInputHints = (value: unknown): value is WebviewInputHints =>
+  value !== null &&
+  typeof value === "object" &&
+  "reads" in value &&
+  isWebviewReadHints(value.reads) &&
+  "imports" in value &&
+  isRuntimeModuleImportHints(value.imports);
 
 export const readWebviewHints = async (hints: WebviewReadHint[], signal?: AbortSignal) => {
   const contents = new Map<string, Buffer>();

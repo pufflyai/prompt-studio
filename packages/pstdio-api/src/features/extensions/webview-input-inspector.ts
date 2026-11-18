@@ -1,5 +1,5 @@
 import { inspectWebviewDependencyInputsAsync } from "./webview-dependency-inputs";
-import { isWebviewReadHints } from "./webview-input-read-ahead";
+import { isWebviewInputHints } from "./webview-input-read-ahead";
 
 // Private compiled fast path: this module must never import the API or worker client.
 export const runExtensionInputInspector = async () => {
@@ -7,19 +7,19 @@ export const runExtensionInputInspector = async () => {
     packagePath?: unknown;
     entryPaths?: unknown;
     timings?: unknown;
-    captureReads?: unknown;
-    readHints?: unknown;
+    captureHints?: unknown;
+    inputHints?: unknown;
   };
   if (
     typeof input.packagePath !== "string" ||
     !Array.isArray(input.entryPaths) ||
     !input.entryPaths.every((path) => typeof path === "string") ||
-    (input.readHints !== undefined && !isWebviewReadHints(input.readHints))
+    (input.inputHints !== undefined && !isWebviewInputHints(input.inputHints))
   )
     throw new Error("Invalid extension input inspection request.");
   const result = await inspectWebviewDependencyInputsAsync(input.packagePath, input.entryPaths, {
-    capture: input.captureReads === true,
-    hints: input.readHints,
+    capture: input.captureHints === true,
+    prior: input.inputHints,
   });
   process.stdout.write(`${JSON.stringify(input.timings === true ? result : result.digest)}\n`);
 };

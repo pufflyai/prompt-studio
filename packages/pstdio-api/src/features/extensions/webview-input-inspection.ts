@@ -5,7 +5,7 @@ import { setupLogger } from "../../lib/logger";
 import { withExtensionWebviewBuildSlot } from "./extension-webview-builder";
 import { runCommand } from "./install-extension-dependencies";
 import { inspectWebviewDependencyInputsAsync, type WebviewInspectionReadAhead } from "./webview-dependency-inputs";
-import { isWebviewReadHints } from "./webview-input-read-ahead";
+import { isWebviewInputHints } from "./webview-input-read-ahead";
 
 // Each guard needs a fresh resolver. Running inspection in a bounded child also keeps
 // independent frontend graphs from monopolizing the orchestration worker.
@@ -36,8 +36,8 @@ export const inspectWebviewDependencyInputsWithReads = async (
           packagePath,
           entryPaths,
           timings: true,
-          captureReads: readAhead?.capture,
-          readHints: readAhead?.hints,
+          captureHints: readAhead?.capture,
+          inputHints: readAhead?.prior,
         }),
       },
     );
@@ -59,9 +59,8 @@ export const inspectWebviewDependencyInputsWithReads = async (
     ) {
       throw new Error("Invalid extension frontend input digest.");
     }
-    const reads = "reads" in payload ? payload.reads : undefined;
-    if (reads !== undefined && !isWebviewReadHints(reads))
-      throw new Error("Invalid extension frontend input read hints.");
+    const hints = "hints" in payload ? payload.hints : undefined;
+    if (hints !== undefined && !isWebviewInputHints(hints)) throw new Error("Invalid extension frontend input hints.");
     setupLogger.info(
       {
         event: "extension.webview.dependency_timing",
@@ -79,7 +78,7 @@ export const inspectWebviewDependencyInputsWithReads = async (
       collectMs: payload.collectMs,
       hashMs: payload.hashMs,
       readAheadMs: payload.readAheadMs,
-      reads,
+      hints,
     };
   });
 };

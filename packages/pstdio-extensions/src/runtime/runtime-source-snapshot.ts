@@ -50,6 +50,54 @@ const transpilerLoader = (filePath: string) => {
 const transpilers = new Map<Bun.JavaScriptLoader, Bun.Transpiler>();
 const importsByContent = new Map<string, string[]>();
 const importsByBytes = new WeakMap<Buffer, { digest: string; imports: Map<string, string[]> }>();
+const maxImportEntries = 12_288;
+const maxImportHintBytes = 2 * 1024 * 1024;
+export type RuntimeModuleImportHint = [key: string, imports: string[]];
+
+const storeModuleImports = (key: string, imports: string[]) => {
+  if (importsByContent.size >= maxImportEntries && !importsByContent.has(key))
+    importsByContent.delete(importsByContent.keys().next().value!);
+  importsByContent.set(key, imports);
+};
+
+const encodedImportHintBytes = (hint: RuntimeModuleImportHint) => Buffer.byteLength(JSON.stringify(hint)) + 1;
+
+export const captureRuntimeModuleImportHints = () => {
+  const hints: RuntimeModuleImportHint[] = [];
+  let bytes = 2;
+  for (const hint of importsByContent) {
+    const length = encodedImportHintBytes(hint);
+    if (bytes + length > maxImportHintBytes) break;
+    bytes += length;
+    hints.push(hint);
+  }
+  return hints;
+};
+
+const isImportHint = (hint: unknown): hint is RuntimeModuleImportHint =>
+  Array.isArray(hint) &&
+  hint.length === 2 &&
+  typeof hint[0] === "string" &&
+  /^(?:css|js|jsx|ts|tsx)\0(?:true|false)\0[0-9a-f]{64}$/.test(hint[0]) &&
+  Array.isArray(hint[1]) &&
+  hint[1].every((specifier) => typeof specifier === "string");
+
+export const isRuntimeModuleImportHints = (value: unknown): value is RuntimeModuleImportHint[] => {
+  if (!Array.isArray(value) || value.length > maxImportEntries) return false;
+  let bytes = 2;
+  for (const hint of value) {
+    if (!isImportHint(hint)) return false;
+    bytes += encodedImportHintBytes(hint);
+    if (bytes > maxImportHintBytes) return false;
+  }
+  return true;
+};
+
+// Only parse results are reusable. Their keys include the loader, folding mode,
+// and a digest of the fresh file bytes. Resolution remains local to the new guard.
+export const restoreRuntimeModuleImportHints = (hints: RuntimeModuleImportHint[]) => {
+  for (const [key, imports] of hints) storeModuleImports(key, imports);
+};
 
 export const readRuntimeModuleImports = (
   filePath: string,
@@ -96,8 +144,7 @@ export const readRuntimeModuleImports = (
   // Staged and installed copies share parsing, not filesystem identities. Fresh bytes
   // still validate every read, and graph/package resolution below remains uncached.
   // Bound retained parse results without retaining their source buffers.
-  if (importsByContent.size >= 12_288) importsByContent.delete(importsByContent.keys().next().value!);
-  importsByContent.set(cacheKey, imports);
+  storeModuleImports(cacheKey, imports);
   bytes.imports.set(mode, imports);
   return imports;
 };

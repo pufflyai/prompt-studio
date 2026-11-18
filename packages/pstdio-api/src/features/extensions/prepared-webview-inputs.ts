@@ -10,7 +10,7 @@ import {
 } from "./extension-webview-build-source";
 import { trackPreparationStage } from "./preparation-stages";
 import { inspectWebviewDependencyInputs, inspectWebviewDependencyInputsWithReads } from "./webview-input-inspection";
-import type { WebviewReadHint } from "./webview-input-read-ahead";
+import type { WebviewInputHints } from "./webview-input-read-ahead";
 
 type Input = Parameters<typeof inspectManagedWebviewBuildInputs>[0];
 
@@ -22,7 +22,7 @@ export const inspectPreparedWebviewInputs = async (
   sourceRoot: string,
   signal?: AbortSignal,
   selections?: ReturnType<typeof inspectManagedWebviewBuildInputs>[],
-  readAhead?: { capture?: boolean; prior?: ReadonlyMap<string, WebviewReadHint[]> },
+  readAhead?: { capture?: boolean; prior?: ReadonlyMap<string, WebviewInputHints | undefined> },
 ) => {
   const context = { extension: inputs[0]?.installName };
   const selectedInputs =
@@ -58,7 +58,7 @@ export const inspectPreparedWebviewInputs = async (
       traceSetupPhase("webview.dependency_inputs", context, () =>
         inspectWebviewDependencyInputsWithReads(path, entries, signal, {
           capture: readAhead?.capture,
-          hints: readAhead?.prior?.get(path),
+          prior: readAhead?.prior?.get(path),
         }),
       ),
     ),
@@ -78,7 +78,7 @@ export const inspectPreparedWebviewInputs = async (
           .digest("hex");
   return {
     sources,
-    reads: new Map([...groups.keys()].map((path, index) => [path, byGroup[index]!.reads ?? []])),
+    hints: new Map([...groups.keys()].map((path, index) => [path, byGroup[index]!.hints])),
     signatures: await traceSetupPhase("webview.signatures", context, async () =>
       inputs.map((input) => inspectManagedWebviewBuildInputs(input, dependencyHash)),
     ),
