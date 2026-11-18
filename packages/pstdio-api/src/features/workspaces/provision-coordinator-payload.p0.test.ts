@@ -44,7 +44,7 @@ const provision = async (workspace: ReturnType<typeof makeWorkspace>) => {
       configured.push(directory);
     },
   };
-  await runWorkspaceProvisioning(deps, { projectId: "p1", workspace, repoPath: "/other-repo" }, hooks);
+  await runWorkspaceProvisioning(deps, { projectId: workspace.project_id, workspace, repoPath: "/other-repo" }, hooks);
   return { payloads, configured };
 };
 

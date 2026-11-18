@@ -27,7 +27,12 @@ const createDeletionQueue = () => {
     }
   };
 
-  return (id: string, forget: boolean, remove: () => Promise<void>) => {
+  return (
+    id: string,
+    forget: boolean,
+    afterMaintenance: (remove: () => Promise<void>) => Promise<void>,
+    remove: () => Promise<void>,
+  ) => {
     const existing = pending.get(id);
     if (existing) {
       if (existing.forget !== forget) {
@@ -35,7 +40,7 @@ const createDeletionQueue = () => {
       }
       return existing.task;
     }
-    const task = run(remove).finally(() => pending.delete(id));
+    const task = afterMaintenance(() => run(remove)).finally(() => pending.delete(id));
     pending.set(id, { forget, task });
     return task;
   };
@@ -101,7 +106,10 @@ export const deleteWorkspace = (
       });
     }
   };
-  return queue(workspace.id, overrides.forget === true, () =>
-    deps.workspaceService.maintenance.run(workspace.id, removeOwnedWorkspace),
+  return queue(
+    workspace.id,
+    overrides.forget === true,
+    (remove) => deps.workspaceService.maintenance.runExclusive(workspace.id, remove),
+    removeOwnedWorkspace,
   );
 };

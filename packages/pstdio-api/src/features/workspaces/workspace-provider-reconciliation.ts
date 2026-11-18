@@ -254,7 +254,7 @@ const reconcileProviderWorkspacePass = async (
 
   await Promise.allSettled(
     pending.map((candidate) =>
-      deps.workspaceService.maintenance.run(candidate.id, async () => {
+      deps.workspaceService.maintenance.runExclusive(candidate.id, async () => {
         if (options.signal?.aborted) return;
         // Deletion and file provisioning own this same gate. Re-read after waiting so a
         // previously discovered ready target cannot allocate files after its deletion.

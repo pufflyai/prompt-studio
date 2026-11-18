@@ -3,12 +3,145 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createWorkspaceMaintenance } from "../../services/workspace-maintenance";
 import { createTestApp } from "../../test-utils/create-test-app";
 import type { WorkspacesRouteDeps } from "./deps";
-import { provisionProjectWorkspaces } from "./provision-coordinator";
+import { provisionProjectWorkspaces, runWorkspaceProvisioning } from "./provision-coordinator";
 import { deleteWorkspace } from "./workspace-deletion";
 import { createWorkspaceProviderDirectory } from "./workspace-provider-directory";
 import { reconcileProviderWorkspaces } from "./workspace-provider-reconciliation";
+
+test("queued provisioning leaves a deleted workspace directory removed", async () => {
+  const root = await mkdtemp(join(tmpdir(), "workspace-delete-first-"));
+  const directory = join(root, "workspace");
+  const app = await createTestApp();
+  const deleting = Promise.withResolvers<void>();
+  const releaseDeletion = Promise.withResolvers<void>();
+  const listed = Promise.withResolvers<void>();
+  let deletion: Promise<void> | undefined;
+  let refresh: Promise<void> | undefined;
+  let initial: Promise<unknown> | undefined;
+  const originalList = app.deps.workspaceService.list;
+  try {
+    const project = await app.deps.projectService.create({ name: "Delete before file provisioning" });
+    await app.deps.workspaceService.ensureDefault({ project_id: project.id, name: "Project folder", root_path: root });
+    const created = await app.deps.workspaceService.create({
+      project_id: project.id,
+      shorthand_base: "QUEUED",
+      provider_id: "fixture.local",
+      provider_state: "ready",
+    });
+    const workspace = (await app.deps.workspaceService.updateProviderProjection(created.id, {
+      execution_kind: "local",
+      root_path: directory,
+      provider_capabilities_json: { files: "write", diff: false, merge: false, rebase: false, delete: true },
+    }))!;
+    await mkdir(directory);
+    deletion = deleteWorkspace(app.deps, workspace, {
+      deleteProviderBackedWorkspace: async () => {
+        deleting.resolve();
+        await releaseDeletion.promise;
+        await rm(directory, { recursive: true });
+        return true;
+      },
+      fireExtensionEventAsync: () => {},
+    });
+    await deleting.promise;
+    app.deps.workspaceService.list = async (...args) => {
+      const rows = await originalList(...args);
+      if (args[0] === project.id) listed.resolve();
+      return rows;
+    };
+    const hooks = {
+      ensureConfig: async (path: string) => {
+        if (path === directory) await mkdir(directory, { recursive: true });
+      },
+      fireProvision: async () => ({ delivered: 0 }),
+      fireReadyAsync: () => {},
+    };
+    refresh = provisionProjectWorkspaces(app.deps, project.id, hooks);
+    initial = runWorkspaceProvisioning(app.deps, { projectId: project.id, workspace, repoPath: directory }, hooks);
+    await listed.promise;
+    releaseDeletion.resolve();
+    await Promise.all([deletion, refresh, initial]);
+    expect((await app.deps.workspaceService.get(workspace.id))?.deleted_at).not.toBeNull();
+    expect(existsSync(directory)).toBe(false);
+  } finally {
+    releaseDeletion.resolve();
+    await Promise.allSettled([deletion, refresh, initial]);
+    app.deps.workspaceService.list = originalList;
+    await app.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("refusing to delete the default workspace leaves it available for file maintenance", async () => {
+  const root = await mkdtemp(join(tmpdir(), "workspace-refused-delete-"));
+  const app = await createTestApp();
+  try {
+    const project = await app.deps.projectService.create({ name: "Keep the default workspace available" });
+    const workspace = await app.deps.workspaceService.ensureDefault({
+      project_id: project.id,
+      name: "Project folder",
+      root_path: root,
+    });
+    const maintenance = createWorkspaceMaintenance(join(root, "pending"));
+    app.deps.workspaceService.maintenance = maintenance;
+    await expect(deleteWorkspace(app.deps, workspace)).rejects.toThrow(/default workspace/i);
+    expect(await maintenance.isRunning(workspace.id)).toBe(false);
+  } finally {
+    await app.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("deletions waiting for file writes leave capacity to delete another workspace", async () => {
+  const app = await createTestApp();
+  const releaseWriters = Promise.withResolvers<void>();
+  const removeIndependent = Promise.withResolvers<void>();
+  const independentStarted = Promise.withResolvers<boolean>();
+  const operations: Promise<unknown>[] = [];
+  try {
+    const project = await app.deps.projectService.create({ name: "Independent workspace deletes" });
+    const create = (name: string) =>
+      app.deps.workspaceService.create({
+        project_id: project.id,
+        shorthand_base: name,
+        provider_id: "fixture.local",
+        provider_state: "ready",
+      });
+    const [first, second, independent] = [await create("FIRST"), await create("SECOND"), await create("OTHER")];
+    const remove = (workspace: typeof first) =>
+      deleteWorkspace(app.deps, workspace, {
+        deleteProviderBackedWorkspace: async () => {
+          if (workspace.id === independent.id) independentStarted.resolve(true);
+          return false;
+        },
+      });
+    const maintenance = app.deps.workspaceService.maintenance;
+    operations.push(
+      maintenance.run(first.id, async () => {
+        await removeIndependent.promise;
+        await remove(independent);
+        await releaseWriters.promise;
+      }),
+      maintenance.run(second.id, () => releaseWriters.promise),
+      remove(first),
+      remove(second),
+    );
+    removeIndependent.resolve();
+    const progressed = await Promise.race([independentStarted.promise, Bun.sleep(750).then(() => false)]);
+    releaseWriters.resolve();
+    await Promise.all(operations);
+    expect(progressed).toBe(true);
+    expect((await app.deps.workspaceService.get(independent.id))?.deleted_at).not.toBeNull();
+  } finally {
+    removeIndependent.resolve();
+    releaseWriters.resolve();
+    await Promise.allSettled(operations);
+    await app.close();
+  }
+});
 
 test("deleting a workspace drains its accepted skill writer before removing the directory", async () => {
   const root = await mkdtemp(join(tmpdir(), "workspace-delete-writer-"));

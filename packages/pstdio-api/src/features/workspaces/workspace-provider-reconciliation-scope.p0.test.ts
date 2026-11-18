@@ -230,8 +230,8 @@ test("queued restart recovery preserves a workspace cancelled while it waits for
     await release.promise;
   });
   await entered.promise;
-  const run = service.maintenance.run;
-  service.maintenance.run = (id, work) => {
+  const run = service.maintenance.runExclusive;
+  service.maintenance.runExclusive = (id, work) => {
     discovered.resolve();
     return run(id, work);
   };
