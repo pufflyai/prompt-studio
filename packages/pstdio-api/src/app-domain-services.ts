@@ -1,3 +1,4 @@
+import { historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import { resourceEvents, viewDataEvents, workspaceEvents } from "pstdio-api-contracts/extension-kernel";
 import { createAssetBytesStorage, createFilesStorageService } from "pstdio-storage";
 import type { createAppDatabaseServices } from "./app-database";
@@ -45,7 +46,7 @@ export const createCoreDomainServices = (input: {
   });
   const assetTransferService = createAssetTransferService({
     transfers: dbs.assetTransfersDBService,
-    bytes: createAssetBytesStorage(storageRoot),
+    bytes: createAssetBytesStorage(storageRoot, historicalExtensionId),
   });
 
   return {

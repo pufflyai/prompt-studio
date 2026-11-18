@@ -43,7 +43,7 @@ Collection follows the relay's rule ([blind relay](0029-blind-relay.md)): a node
 
 A damaged or truncated node file reads as missing and is deleted. Deleting a project removes its folder at the next start. Removing an extension's data removes the owner's folder. An extension identity rename moves the files right after it moves the rows, at startup or at runtime.
 
-Until PS-1195 these nodes were base64 JSON inside `storage_documents` rows (`["ordered-index-blob", id]`) and nothing removed them; one Mac reached 6.6 GB of them. `createDb` now runs, in order: migrations, the move of reachable receipt nodes into files (every node row is dropped), extension identity renames, then the existing startup compaction (`VACUUM (FULL, ANALYZE)`), forced when either step changed data. An owner whose rows cannot be read keeps them and is retried on the next start. On that Mac the first start took 87 s and the database went from 12 GB to 2.1 GB.
+Until PS-1195 these nodes were base64 JSON inside `storage_documents` rows (`["ordered-index-blob", id]`) and nothing removed them. One Mac reached 6.6 GB of those rows. Startup copies reachable receipt nodes to files and clears old index rows for owners involved in identity renames before changing their keys. It schedules the remaining stale rows for [background database maintenance](0025-database-upgrades.md#cleanup-and-disk-maintenance). An owner whose rows cannot be read keeps them and is retried on the next start.
 
 ## Known exceptions
 

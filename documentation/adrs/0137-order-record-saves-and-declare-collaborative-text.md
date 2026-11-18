@@ -6,7 +6,7 @@ Status: Accepted for PS-1016; the client implementation is local. Full qualifica
 
 ## Context
 
-[PRD 0014](../requirements/platform/0014-local-first-sync.md) currently gives every value CRDT history. A line break silently makes a string collaborative text, and arrays merge items. Authors cannot predict a whole title or list after offline changes. The relay already orders encrypted updates; it can provide that order without reading values or choosing merge rules.
+[0014 · RB 9.A.1](../requirement-book/book.json) currently gives every value CRDT history. A line break silently makes a string collaborative text, and arrays merge items. Authors cannot predict a whole title or list after offline changes. The relay already orders encrypted updates; it can provide that order without reading values or choosing merge rules.
 
 This changes record merging from [ADR 0102](0102-record-stream-sync.md), retaining its encrypted owner stream, assets, latest states and blind relay. Actual shared editable files retain [ADR 0132](0132-host-owned-shared-text-documents.md)'s native text owner.
 

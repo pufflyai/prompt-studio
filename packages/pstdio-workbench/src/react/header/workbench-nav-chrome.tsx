@@ -20,6 +20,7 @@ interface WorkbenchNavChromeProps {
   workbench: WorkbenchCore;
   hasNav: boolean;
   panelControls?: boolean;
+  fullscreenControlsInTitleBar?: boolean;
 }
 
 const WorkbenchNavigationControls = (props: { workbench: WorkbenchCore }) => {
@@ -55,10 +56,11 @@ const WorkbenchNavigationControls = (props: { workbench: WorkbenchCore }) => {
 };
 
 export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
-  const { workbench, hasNav, panelControls = true } = props;
+  const { workbench, hasNav, panelControls = true, fullscreenControlsInTitleBar = false } = props;
   const chrome = useModeChrome(workbench, "nav");
   const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
 
+  const hasParticipants = useWorkbenchStore(workbench.presence.store, (state) => state.participants.length > 0);
   const positionActions = usePanelPositionActions(workbench, "main");
 
   return (
@@ -67,7 +69,7 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
         workbench={workbench}
         region="main"
         data-workbench-region="nav"
-        display="flex"
+        display={fullscreenControlsInTitleBar && !hasParticipants ? "none" : "flex"}
         variant="main"
         padding={chrome ? "0" : undefined}
         bg={workbenchBackgrounds.main}
@@ -113,7 +115,9 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
         {fullscreen || chrome === false ? <Box flex="1" minW="0" /> : null}
         <WorkbenchPresence workbench={workbench} />
         {panelControls && !fullscreen ? <WorkbenchPanelToggles workbench={workbench} /> : null}
-        {panelControls || fullscreen ? <FullscreenControls workbench={workbench} /> : null}
+        {!fullscreenControlsInTitleBar && (panelControls || fullscreen) ? (
+          <FullscreenControls workbench={workbench} />
+        ) : null}
         <WorkbenchHeaderBorder workbench={workbench} region="nav" />
       </PanelDragHeader>
     </ResourceContextMenu>
