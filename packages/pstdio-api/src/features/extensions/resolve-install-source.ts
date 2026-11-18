@@ -25,7 +25,9 @@ export const resolveInstallSource = async (input: InstallExtensionSourceInput, t
     const { createRegistryClient } = await import("pstdio-extensions/distribution");
     const { EXTENSION_API_VERSION } = await import("pstdio-api-contracts/extension-kernel");
     const client = createRegistryClient(input.registrySource.url);
-    const release = await client.latest(input.registrySource.id, EXTENSION_API_VERSION, input.signal);
+    const release =
+      input.registrySource.release ??
+      (await client.latest(input.registrySource.id, EXTENSION_API_VERSION, input.signal));
     const prepared = await client.prepare(release, join(tempDir, "package"), input.signal);
     return { kind: "named" as const, name: input.source, ...prepared };
   }

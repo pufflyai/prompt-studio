@@ -2,7 +2,7 @@ import { Box } from "@chakra-ui/react";
 import { type ResourceContextAction, ResourceContextMenu } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
-import { WorkbenchSystemErrors } from "../notifications/system-errors";
+import { WorkbenchSystemNotices } from "../notifications/system-errors";
 import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
 import { usePanelDragSurface, usePanelPositionActions } from "../region/panel-position-controls";
 import { WorkbenchRegion } from "../region/region";
@@ -89,7 +89,7 @@ export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
   );
 };
 
-export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
+export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps & { floating?: boolean }) => {
   const { workbench } = props;
   const chrome = useModeChrome(workbench, "status");
 
@@ -100,6 +100,11 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
       data-workbench-region="status"
       display={props.visible === false ? "none" : "block"}
       as="footer"
+      position={props.floating ? "absolute" : "relative"}
+      bottom={props.floating ? "0" : undefined}
+      insetInline={props.floating ? "0" : undefined}
+      zIndex={props.floating ? "docked" : undefined}
+      pointerEvents={props.floating ? "none" : undefined}
       flexShrink={0}
       h={WORKBENCH_STATUS_BAR_HEIGHT}
       minH="0"
@@ -107,8 +112,8 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
       overflow="hidden"
     >
       <Box display="flex" alignItems="stretch" justifyContent="space-between" px="sm" h="full" minW="0" w="full">
-        <Box display="flex" alignItems="center" minW="0">
-          <WorkbenchSystemErrors workbench={workbench} />
+        <Box display="flex" alignItems="center" minW="0" pointerEvents="auto" bg={props.floating ? "bg" : undefined}>
+          <WorkbenchSystemNotices workbench={workbench} />
         </Box>
         <Box flex="1" minW="0" h="full" display={chrome ? "block" : "none"}>
           <ModeChromeView workbench={workbench} region="status" viewId={chrome || undefined} />

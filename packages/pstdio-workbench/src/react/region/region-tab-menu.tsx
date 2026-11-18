@@ -91,8 +91,9 @@ export const RegionTabMenu = (props: RegionTabMenuProps) => {
               <ResourceMenuItems
                 actions={actions}
                 onSelect={(action) => {
-                  pending.current = action;
                   void action.onSelect?.();
+                  if (action.closeOnSelect === false) void action.onClick?.();
+                  else pending.current = action;
                 }}
               />
             ) : null}

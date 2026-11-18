@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { installDefaultExtensions, syncInstalledExtensionsForProject } from "../../extensions/default-extensions";
+import { provisionProjectWorkspaces } from "../../workspaces/provision-coordinator";
 import { retryProjectExtensions, setupProjectExtensions } from "../project-extension-setup";
 import { initializeProjectWorkspace } from "../project-folder";
 
@@ -109,6 +110,11 @@ test("an interrupted restored folder still registers copied tools as disabled wh
     { restored: true },
   );
   expect(failed.setup_error).toBe("Interrupted before repo discovery");
+
+  await provisionProjectWorkspaces(handle.deps, project.id);
+  expect((await handle.deps.workspaceService.getDefault(project.id))?.setup_error).toBe(
+    "Interrupted before repo discovery",
+  );
 
   const retried = await initializeProjectWorkspace(handle.deps, project.id, initial);
   expect(retried.setup_error).toBeNull();

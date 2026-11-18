@@ -107,7 +107,7 @@ const syncTree = async (path: string) => {
   await syncDirectory(path);
 };
 
-/** Windows has no portable directory fsync. Keep the original tree as allocated, hidden evidence. */
+/** Retire the old tree with a same-volume rename into the protected backup directory. */
 export const retainExtensionMigrationSource = async (source: string, target: string) => {
   if (!(await stat(source))) return;
   const backup = join(target, extensionIdentityBackupName);
@@ -139,13 +139,17 @@ export const migrateExtensionFiles = (workspace: string, extensionId?: string) =
         if (!(await stat(source))) continue;
         await copy(source, target);
         await preflight(source, target);
+        // Windows has no portable directory fsync, so leave the original in place for recovery.
         if (process.platform === "win32") await retainExtensionMigrationSource(source, target);
         else {
           await syncTree(target);
           await syncDirectory(storage);
           await syncDirectory(pstdio);
-          await rm(source, { recursive: true });
+          await retainExtensionMigrationSource(source, target);
+          await syncDirectory(target);
           await syncDirectory(storage);
+          // The live tree is durable. Cleanup can leave a retained original without blocking activation.
+          await rm(join(target, extensionIdentityBackupName), { recursive: true, force: true }).catch(() => {});
         }
       }
       const ignore = join(pstdio, ".gitignore");

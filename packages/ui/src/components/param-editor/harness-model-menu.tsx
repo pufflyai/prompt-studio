@@ -1,5 +1,6 @@
-import { Box, Button, Icon, Menu, Text } from "@chakra-ui/react";
+import { Box, Button, Icon, Text } from "@chakra-ui/react";
 import { ChevronDown, Cpu, TerminalIcon } from "lucide-react";
+import { ScopedMenu as Menu } from "@/utils/scoped-overlays";
 import { ListRow } from "../list-row/list-row";
 import { SearchableMenu, type SearchableMenuItem } from "../overlays/searchable-menu";
 import { Tooltip } from "../primitives/tooltip";
@@ -110,25 +111,23 @@ const buildModelMenuItems = (
 interface MenuTriggerButtonProps {
   label: string;
   ariaLabel: string;
-  tooltip: string;
   disabled: boolean;
   icon?: WorkspacePanelMenuOption["icon"];
   size: NonNullable<HarnessModelMenuProps["size"]>;
 }
 
-const MenuTriggerButton = (props: MenuTriggerButtonProps) => {
-  const { label, ariaLabel, tooltip, disabled, icon, size } = props;
-  return (
-    <Tooltip content={tooltip}>
-      <Button variant="ghost" size={size} px="2" aria-label={ariaLabel} disabled={disabled}>
-        {icon ? <Icon as={icon} boxSize="14px" color="fg.muted" flexShrink={0} /> : null}
-        <Text textStyle="label/XS/medium" color="fg">
-          {label}
-        </Text>
-        <ChevronDown size={14} />
-      </Button>
-    </Tooltip>
+const renderMenuTriggerButton = (props: MenuTriggerButtonProps) => {
+  const { label, ariaLabel, disabled, icon, size } = props;
+  const button = (
+    <Button variant="ghost" size={size} px="2" aria-label={ariaLabel} disabled={disabled}>
+      {icon ? <Icon as={icon} boxSize="14px" color="fg.muted" flexShrink={0} /> : null}
+      <Text textStyle="label/XS/medium" color="fg">
+        {label}
+      </Text>
+      <ChevronDown size={14} />
+    </Button>
   );
+  return disabled ? <Box minW="0">{button}</Box> : button;
 };
 
 export const HarnessModelMenu = (props: HarnessModelMenuProps) => {
@@ -199,17 +198,15 @@ export const HarnessModelMenu = (props: HarnessModelMenuProps) => {
       <SearchableMenu
         fixedHeight
         trigger={
-          // Menu.Trigger passes its props to this direct child, so it must stay a DOM element.
-          <Box>
-            <MenuTriggerButton
-              label={selectedAgentLabel}
-              ariaLabel={resolvedLabels.agentSelect}
-              tooltip={resolvedLabels.agentSelect}
-              disabled={isSwitchDisabled}
-              icon={selectedAgentIcon}
-              size={size}
-            />
-          </Box>
+          <Tooltip content={resolvedLabels.agentSelect}>
+            {renderMenuTriggerButton({
+              label: selectedAgentLabel,
+              ariaLabel: resolvedLabels.agentSelect,
+              disabled: isSwitchDisabled,
+              icon: selectedAgentIcon,
+              size,
+            })}
+          </Tooltip>
         }
         items={agentMenuItems.map((item) => ({
           ...item,
@@ -232,16 +229,15 @@ export const HarnessModelMenu = (props: HarnessModelMenuProps) => {
     <SearchableMenu
       fixedHeight
       trigger={
-        <Box>
-          <MenuTriggerButton
-            label={selectedModelLabel}
-            ariaLabel={resolvedLabels.modelSelect}
-            tooltip={isMenuDisabled ? resolvedLabels.modelNoneAvailable : resolvedLabels.modelSelect}
-            disabled={isMenuDisabled}
-            icon={selectedAgentIcon}
-            size={size}
-          />
-        </Box>
+        <Tooltip content={isMenuDisabled ? resolvedLabels.modelNoneAvailable : resolvedLabels.modelSelect}>
+          {renderMenuTriggerButton({
+            label: selectedModelLabel,
+            ariaLabel: resolvedLabels.modelSelect,
+            disabled: isMenuDisabled,
+            icon: selectedAgentIcon,
+            size,
+          })}
+        </Tooltip>
       }
       items={modelMenuItems}
       showSearch={modelOptions.length > 5}

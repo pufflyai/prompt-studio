@@ -7,7 +7,6 @@ import { chatPanelRecipe } from "@/theme/recipes/chat-panel";
 import { ChatImageHistoryContext, indexChatImageSources } from "../links/chat-image-sources";
 import type { ChatLinkProps } from "../links/chat-link";
 import { ChatLinkProvider } from "../links/chat-link-context";
-import { resolveActiveQuestionPrompt } from "../tool-rendering/question-prompt";
 import { ChatPrimitives } from "./ai-conversation";
 import { AutoScroll } from "./auto-scroll";
 import { getRecentUserPrompts } from "./chat-input-history";
@@ -77,6 +76,8 @@ export interface ChatPanelProps extends ChatLinkProps {
   inputDisabled?: boolean;
   /** Blocks ordinary messages while the editor stays usable. Pending questions and decisions stay available. */
   submitDisabled?: boolean;
+  /** Keep agent requests from taking over the draft when the execution target is unavailable. */
+  composerRequestsDisabled?: boolean;
   chatInputQuestionPrompt?: ChatInputQuestionPrompt;
   composerDecision?: ComposerDecision;
   chatInputAutoFocus?: boolean;
@@ -141,6 +142,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     workspaceInitializing = false,
     inputDisabled = false,
     submitDisabled = false,
+    composerRequestsDisabled,
     chatInputQuestionPrompt,
     composerDecision,
     chatInputAutoFocus = false,
@@ -180,9 +182,12 @@ export const ChatPanel = (props: ChatPanelProps) => {
   );
   const emptyContent = showLoadingState ? loaderComponent : (emptyStateContent ?? defaultEmptyContent);
   const hasWorkspaceHub = Boolean(workspaceHub);
-  const questionNavigation = useChatQuestionNavigation(messages, conversationKey ?? messages[0]?.id);
-  const activeQuestionPrompt =
-    questionNavigation.prompt ?? chatInputQuestionPrompt ?? resolveActiveQuestionPrompt(messages);
+  const questionNavigation = useChatQuestionNavigation(messages, {
+    conversationKey: conversationKey ?? messages[0]?.id,
+    disabled: composerRequestsDisabled,
+    hostPrompt: chatInputQuestionPrompt,
+  });
+  const activeQuestionPrompt = questionNavigation.activePrompt;
   const hideActiveQuestionForms = Boolean(activeQuestionPrompt);
   const showThinkingIndicator = streaming && hasMessages && !workspaceInitializing && !activeQuestionPrompt;
   const isMessageViewportReady = !messageListIdentity || readyMessageListKey === messageListIdentity;
@@ -262,7 +267,9 @@ export const ChatPanel = (props: ChatPanelProps) => {
                   chatInputAutoFocus={chatInputAutoFocus}
                   chatInputPlaceholder={chatInputPlaceholder}
                   chatInputQuestionPrompt={activeQuestionPrompt}
-                  composerDecision={questionNavigation.prompt ? undefined : composerDecision}
+                  composerDecision={
+                    composerRequestsDisabled || questionNavigation.prompt ? undefined : composerDecision
+                  }
                   chatInputCommands={chatInputCommands}
                   hasWorkspaceHub={hasWorkspaceHub}
                   inputDisabled={inputDisabled}

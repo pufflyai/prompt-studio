@@ -6,7 +6,7 @@ import { readDraft } from "./drafts";
 import { nativePresentation } from "./native-presentation";
 import { sessionId } from "./resource";
 import { readSnapshotInputs, readSnapshotWorkspace, type SnapshotOptions, type SnapshotReads } from "./snapshot-reads";
-import { savedWorkspaceControls, withWorkspaceControls } from "./workspace";
+import { savedWorkspaceControls, withWorkspaceControls, workspaceUnavailableReason } from "./workspace";
 
 export { composerControls } from "./controls";
 
@@ -76,7 +76,7 @@ export const readSessionSnapshot = async (
       device: session.device?.id ?? "",
       ...values,
     },
-    fork: remote ? undefined : { disabledReason: null },
+    fork: remote ? undefined : { disabledReason: workspaceUnavailableReason(workspaceInfo) ?? null },
     resources: [],
     operations: conversationOperations(remote, Boolean(display.queueReadOnly)),
   };

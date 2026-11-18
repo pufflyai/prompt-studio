@@ -9,12 +9,14 @@ import { TicketRequestsDialog } from "./ticket-requests-dialog";
 interface AutoBuildPreviewProps {
   requests: ReviewRequestView[];
   failSave?: boolean;
+  failPause?: boolean;
   empty?: boolean;
   warning?: boolean;
 }
 
 export function AutoBuildPreview(props: AutoBuildPreviewProps) {
-  const { requests, failSave, empty, warning } = props;
+  const { requests, failSave, failPause, empty, warning } = props;
+  const [actionError, setActionError] = useState<string>();
   const [paused, setPaused] = useState(false);
   const [pending, setPending] = useState(requests);
   return (
@@ -28,7 +30,13 @@ export function AutoBuildPreview(props: AutoBuildPreviewProps) {
       running={empty ? 0 : 1}
       capacity={2}
       onStop={async () => true}
+      actionError={actionError}
+      onDismissActionError={() => setActionError(undefined)}
       onPause={async () => {
+        if (failPause) {
+          setActionError("Could not pause. Try again.");
+          return false;
+        }
         setPaused(true);
         return true;
       }}

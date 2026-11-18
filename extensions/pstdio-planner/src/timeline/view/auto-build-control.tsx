@@ -18,7 +18,7 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
   const { host, client, t, data } = props;
   const autoBuild = useAutoBuild(client);
   return (
-    <Stack gap="xs">
+    <Stack position="relative" gap="xs">
       <PlannerReadError error={autoBuild.readError} retry={autoBuild.retry} />
       <AutoBuildButton
         enabled={autoBuild.mode?.enabled ?? false}
@@ -51,6 +51,7 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
           })
         }
         actionError={autoBuild.error}
+        onDismissActionError={autoBuild.dismissError}
         disabled={!autoBuild.mode || autoBuild.saving}
         configuration={
           autoBuild.mode

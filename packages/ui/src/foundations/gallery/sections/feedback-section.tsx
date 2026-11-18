@@ -1,4 +1,4 @@
-import { Badge, Box, Button, HStack, Icon, Stack, Text } from "@chakra-ui/react";
+import { Badge, Button, HStack, Icon, Text } from "@chakra-ui/react";
 import { FileText } from "lucide-react";
 import { AlertMessage } from "@/components/primitives/alert";
 import { ContentPlaceholder } from "@/components/primitives/content-placeholder";
@@ -6,43 +6,7 @@ import { EmptyState } from "@/components/primitives/empty-state";
 import { InfoCard } from "@/components/primitives/info-card";
 import { SessionIndicator, sessionCompletionStatuses } from "@/components/primitives/session-indicator";
 import { SimpleCard, SimpleCardBody } from "@/components/primitives/simple-card";
-import { Toaster, toaster } from "@/components/primitives/toaster";
 import { GalleryCard, GallerySection } from "../gallery-frame";
-
-const ToasterDemo = () => {
-  return (
-    <Stack gap="sm">
-      <HStack gap="sm" flexWrap="wrap">
-        <Button
-          size="sm"
-          onClick={() =>
-            toaster.create({
-              type: "success",
-              title: "Pipeline saved",
-              description: "The latest version is ready to run.",
-            })
-          }
-        >
-          Success
-        </Button>
-        <Button
-          size="sm"
-          variant="destructive"
-          onClick={() =>
-            toaster.create({
-              type: "error",
-              title: "Upload failed",
-              description: "We could not reach the storage bucket.",
-            })
-          }
-        >
-          Error
-        </Button>
-      </HStack>
-      <Toaster />
-    </Stack>
-  );
-};
 
 export const FeedbackSection = () => {
   return (
@@ -122,12 +86,6 @@ export const FeedbackSection = () => {
             <Text textStyle="paragraph/M/medium">Simple card content</Text>
           </SimpleCardBody>
         </SimpleCard>
-      </GalleryCard>
-
-      <GalleryCard title="Toasts" names={["Toaster", "toaster"]}>
-        <Box>
-          <ToasterDemo />
-        </Box>
       </GalleryCard>
     </GallerySection>
   );

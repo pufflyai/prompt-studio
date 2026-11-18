@@ -14,7 +14,7 @@ interface StoredNode {
   children: OrderedIndexReference[] | null;
 }
 
-const NODE_ROWS = '["ordered-index-blob",%';
+export const legacyNodeRows = '["ordered-index-blob",%';
 // Rows hold up to a few hundred KiB of base64; reading a few at a time bounds memory by bytes, not count.
 const READ_BATCH = 16;
 
@@ -62,12 +62,10 @@ const copyRows = async (db: DbClient, files: IndexNodeFiles, owner: StorageOwner
 };
 
 /**
- * Moves one owner's receipt nodes that its saved roots reach into files, then drops every
- * index-node row of that owner. Unreachable rows are garbage receipt nodes or log and history
- * nodes, which are a cache of relay data. Files are written before rows are deleted, so an
- * interrupted run repeats the owner safely.
+ * Copies one owner's receipt nodes that its saved roots reach into files before any
+ * rows are deleted. Unreachable rows are garbage or a cache of relay data.
  */
-const upgradeOwner = async (db: DbClient, files: IndexNodeFiles, owner: StorageOwner) => {
+const copyOwnerReceipts = async (db: DbClient, files: IndexNodeFiles, owner: StorageOwner) => {
   const [row] = await db
     .select({ receipt_root: owners.receipt_root })
     .from(owners)
@@ -84,18 +82,20 @@ const upgradeOwner = async (db: DbClient, files: IndexNodeFiles, owner: StorageO
       pending.push(...(await copyRows(db, files, owner, page)));
     }
   }
-  const kept = (await files.list(owner, "receipts")).length;
+};
+
+const deleteOwnerNodes = async (db: DbClient, owner: StorageOwner) => {
   const removed = await db
     .delete(documents)
     .where(
       and(
         eq(documents.workbench_id, owner.workbenchId),
         eq(documents.extension_id, owner.extensionId),
-        like(documents.document_id, NODE_ROWS),
+        like(documents.document_id, legacyNodeRows),
       ),
     )
     .returning({ id: documents.document_id });
-  return { owner, kept, removed: removed.length };
+  return removed.length;
 };
 
 /**
@@ -109,9 +109,11 @@ export const upgradeIndexNodesToFiles = async (
   report: (progress: IndexNodeUpgradeProgress) => void = () => {},
   /** Runs once before the first row is deleted, so space reclamation is recorded as owed first. */
   beforeChange: () => Promise<void> = async () => {},
+  /** Only owners whose reachable receipts have been copied are eligible for deferred deletion. */
+  deferDeletion?: (owner: StorageOwner) => boolean,
 ) => {
   const result = await db.execute(
-    sql`SELECT DISTINCT workbench_id, extension_id FROM ${documents} WHERE document_id LIKE ${NODE_ROWS}
+    sql`SELECT DISTINCT workbench_id, extension_id FROM ${documents} WHERE document_id LIKE ${legacyNodeRows}
       ORDER BY workbench_id, extension_id`,
   );
   let removed = false;
@@ -119,9 +121,12 @@ export const upgradeIndexNodesToFiles = async (
   for (const row of result.rows) {
     const owner = { workbenchId: String(row.workbench_id), extensionId: String(row.extension_id) };
     try {
-      const progress = await upgradeOwner(db, files, owner);
-      removed ||= progress.removed > 0;
-      report(progress);
+      await copyOwnerReceipts(db, files, owner);
+      if (deferDeletion?.(owner)) continue;
+      const kept = (await files.list(owner, "receipts")).length;
+      const deleted = await deleteOwnerNodes(db, owner);
+      removed ||= deleted > 0;
+      report({ owner, kept, removed: deleted });
     } catch (error) {
       console.warn("Index nodes of one storage owner stay in the database until the next start.", owner, error);
     }
