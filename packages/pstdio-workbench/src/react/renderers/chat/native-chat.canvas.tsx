@@ -98,9 +98,10 @@ const PreviewAccountSetup = ({ state }: { state: AccountPreviewState }) => {
 const NativeAccountPreview = (props: { state: AccountPreviewState }) => {
   const [forkedId, setForkedId] = useState("");
   const forkable = props.state === "fork" || props.state === "fork-failure" || props.state === "read-only";
-  const checking = props.state === "checking" || props.state === "checking-question";
+  const authenticatingQuestion = props.state === "checking-question";
+  const checking = props.state === "checking" || authenticatingQuestion;
   const messages: SessionMessage[] = [];
-  if (props.state === "checking-question") messages.push(savedQuestion);
+  if (authenticatingQuestion) messages.push(savedQuestion);
   if (props.state === "history" || forkable)
     messages.push({
       id: "completed-reply",
@@ -127,12 +128,12 @@ const NativeAccountPreview = (props: { state: AccountPreviewState }) => {
   const Host = ({ children }: NativeChatHostProps) =>
     children({
       account: {
-        blocked: !forkable,
+        blocked: !forkable && !authenticatingQuestion,
         commands: [],
         assertReady() {},
         isCommand: () => false,
         submit: () => undefined,
-        progress: null,
+        progress: authenticatingQuestion ? <Text>Finishing sign-in…</Text> : null,
         notice: null,
         setup: forkable || checking ? undefined : <PreviewAccountSetup state={props.state} />,
       },

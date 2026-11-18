@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, jest, mock, test } from "bun:test";
 import { normalizeExtensionSources } from "pstdio-extensions";
 import { createAutomationService } from "./automation-service";
 
@@ -331,6 +331,7 @@ describe("automation service cancellation", () => {
 });
 
 test("delayed durable automation stays queued across shutdown and resumes only after its deadline", async () => {
+  jest.useFakeTimers();
   const claimQueuedRun = mock(async () => null);
   const notBefore = new Date(Date.now() + 150).toISOString();
   const options = {
@@ -341,18 +342,21 @@ test("delayed durable automation stays queued across shutdown and resumes only a
     getCommandDeps: () => ({}) as never,
   };
   const first = createAutomationService(options);
-  await first.recoverQueuedRuns();
-  await Bun.sleep(10);
-  expect(claimQueuedRun).not.toHaveBeenCalled();
-  await first.close();
   const recovered = createAutomationService(options);
   try {
+    await first.recoverQueuedRuns();
+    jest.advanceTimersByTime(149);
+    expect(claimQueuedRun).not.toHaveBeenCalled();
+    await first.close();
     await recovered.recoverQueuedRuns();
     await recovered.recoverQueuedRuns();
     expect(claimQueuedRun).not.toHaveBeenCalled();
-    await Bun.sleep(Math.max(0, Date.parse(notBefore) - Date.now()) + 15);
+    jest.advanceTimersByTime(1);
+    await Promise.resolve();
     expect(claimQueuedRun).toHaveBeenCalledTimes(1);
   } finally {
+    jest.useRealTimers();
+    await first.close();
     await recovered.close();
   }
 });

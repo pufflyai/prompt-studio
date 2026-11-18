@@ -77,6 +77,8 @@ export interface ChatPanelProps extends ChatLinkProps {
   inputDisabled?: boolean;
   /** Blocks ordinary messages while the editor stays usable. Pending questions and decisions stay available. */
   submitDisabled?: boolean;
+  /** Controls choice editing for questions from history. Defaults to inputDisabled. */
+  agentQuestionInputDisabled?: boolean;
   /** Blocks replies to questions from conversation history while choices remain editable. */
   agentQuestionSubmitDisabled?: boolean;
   chatInputQuestionPrompt?: ChatInputQuestionPrompt;
@@ -143,6 +145,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     workspaceInitializing = false,
     inputDisabled = false,
     submitDisabled = false,
+    agentQuestionInputDisabled = inputDisabled,
     agentQuestionSubmitDisabled = false,
     chatInputQuestionPrompt,
     composerDecision,
@@ -186,6 +189,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
   const questionNavigation = useChatQuestionNavigation(messages, conversationKey ?? messages[0]?.id);
   const activeQuestionPrompt =
     questionNavigation.prompt ?? chatInputQuestionPrompt ?? resolveActiveQuestionPrompt(messages);
+  const isAgentQuestion = activeQuestionPrompt !== chatInputQuestionPrompt;
   const hideActiveQuestionForms = Boolean(activeQuestionPrompt);
   const showThinkingIndicator = streaming && hasMessages && !workspaceInitializing && !activeQuestionPrompt;
   const isMessageViewportReady = !messageListIdentity || readyMessageListKey === messageListIdentity;
@@ -265,9 +269,8 @@ export const ChatPanel = (props: ChatPanelProps) => {
                   chatInputAutoFocus={chatInputAutoFocus}
                   chatInputPlaceholder={chatInputPlaceholder}
                   chatInputQuestionPrompt={activeQuestionPrompt}
-                  questionSubmitDisabled={
-                    agentQuestionSubmitDisabled && activeQuestionPrompt !== chatInputQuestionPrompt
-                  }
+                  questionInputDisabled={isAgentQuestion ? agentQuestionInputDisabled : inputDisabled}
+                  questionSubmitDisabled={agentQuestionSubmitDisabled && isAgentQuestion}
                   composerDecision={questionNavigation.prompt ? undefined : composerDecision}
                   chatInputCommands={chatInputCommands}
                   hasWorkspaceHub={hasWorkspaceHub}

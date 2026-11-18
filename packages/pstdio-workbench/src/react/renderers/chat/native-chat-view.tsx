@@ -45,6 +45,9 @@ interface NativeChatViewProps extends NativeChatHostServices {
 const accountBlocksSubmission = (account: NativeChatHostServices["account"], text: string) =>
   Boolean(account?.blocked && !account.isCommand(text));
 
+const accountBlocksQuestionResponse = (account: NativeChatHostServices["account"]) =>
+  Boolean(account?.blocked || account?.progress);
+
 const PassthroughChatHost = ({ children }: NativeChatHostProps) => children({});
 
 export const NativeChatView = (props: NativeChatViewProps) => (
@@ -121,6 +124,7 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
     : undefined;
   const Host = props.Host ?? PassthroughChatHost;
   const approval = nativeChatApproval(conversation, run, session.reportError);
+  const inputDisabled = sending || conversation.readOnly || uploading > 0;
   return (
     <Host
       session={session}
@@ -162,8 +166,9 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
             onChatInputChange={(text) => session.changeDraft({ text })}
             streaming={conversation.streaming}
             streamingStartedAt={conversation.streamingStartedAt}
-            inputDisabled={sending || conversation.readOnly || uploading > 0 || Boolean(host.account?.progress)}
-            agentQuestionSubmitDisabled={host.account?.blocked}
+            inputDisabled={inputDisabled || Boolean(host.account?.progress)}
+            agentQuestionInputDisabled={inputDisabled}
+            agentQuestionSubmitDisabled={accountBlocksQuestionResponse(host.account)}
             submitDisabled={
               conversation.submitDisabled ||
               Boolean(selected && conversation.queueReadOnly) ||

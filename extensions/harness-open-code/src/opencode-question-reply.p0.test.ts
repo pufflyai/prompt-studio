@@ -178,7 +178,10 @@ describe("OpenCode question replies", () => {
     setSystemTime();
   });
 
-  test("answers the selected native question when another form is pending first", async () => {
+  test.each([
+    "call-question",
+    undefined,
+  ])("routes replies with multiple pending forms and call ID %s", async (callId) => {
     const questionMessage = createRunningQuestionMessage();
     const posted: string[] = [];
     const fallback = createQuestionReplyFetcher({
@@ -203,16 +206,21 @@ describe("OpenCode question replies", () => {
     };
     const h = createOpencodeHarness(harnessDefaults(), { ...serviceOverrides(), fetcher });
     try {
-      const session = await h.resume(ctx, {
+      const reply = h.resume(ctx, {
         agentSessionId: "oc-1",
         sessionId: "host-1",
         prompt: "Nice",
         cwd: "/repo",
-        questionResponse: { callId: "call-question", answers: [["Nice"]] },
+        questionResponse: { ...(callId ? { callId } : {}), answers: [["Nice"]] },
         events: recordingSink().sink,
       });
-      expect(await session.done).toEqual({ status: "completed" });
-      expect(posted).toEqual(["/api/session/oc-1/form/frm_weather/reply"]);
+      if (callId) {
+        expect(await (await reply).done).toEqual({ status: "completed" });
+        expect(posted).toEqual(["/api/session/oc-1/form/frm_weather/reply"]);
+      } else {
+        await expect(reply).rejects.toMatchObject({ questionRejected: true });
+        expect(posted).toEqual([]);
+      }
     } finally {
       await h.dispose!(ctx);
     }

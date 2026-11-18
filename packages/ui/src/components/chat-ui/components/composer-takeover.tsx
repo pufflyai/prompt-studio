@@ -15,11 +15,21 @@ interface ComposerTakeoverProps {
   decision?: ComposerDecision;
   actions?: ReactNode;
   disabled: boolean;
+  questionInputDisabled?: boolean;
   questionSubmitDisabled: boolean;
   onSubmit: (answer: string, response: ChatInputQuestionResponse) => Promise<void>;
 }
 export const ComposerTakeover = (props: ComposerTakeoverProps) => {
-  const { request, question, decision, actions, disabled, questionSubmitDisabled, onSubmit } = props;
+  const {
+    request,
+    question,
+    decision,
+    actions,
+    disabled,
+    questionInputDisabled = disabled,
+    questionSubmitDisabled,
+    onSubmit,
+  } = props;
   if (request?.kind === "decision" && decision)
     return <ComposerDecisionToolbar key={decision.id} decision={decision} disabled={disabled} />;
   if (request?.kind === "question" && question)
@@ -28,7 +38,7 @@ export const ComposerTakeover = (props: ComposerTakeoverProps) => {
         key={getQuestionPromptSignature(question)}
         prompt={question}
         actions={actions}
-        disabled={disabled}
+        disabled={questionInputDisabled}
         submitDisabled={questionSubmitDisabled}
         onSubmit={onSubmit}
       />

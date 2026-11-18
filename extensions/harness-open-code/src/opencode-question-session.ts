@@ -13,11 +13,15 @@ export const resumeOpencodeQuestion = async (options: {
 }) => {
   const { opencode, input, questionResponse, signal } = options;
   const pendingQuestions = await opencode.listPendingQuestions(input.agentSessionId, input.cwd);
-  const pendingQuestion = pendingQuestions.find(
+  const [pendingQuestion, additionalMatch] = pendingQuestions.filter(
     (question) =>
       question.sessionID === input.agentSessionId &&
       (!questionResponse.callId || question.tool?.callID === questionResponse.callId),
   );
+  if (additionalMatch)
+    throw Object.assign(new Error("OpenCode question response matches multiple pending requests."), {
+      questionRejected: true,
+    });
   if (!pendingQuestion)
     throw Object.assign(new Error("OpenCode pending question request not found."), { questionRejected: true });
   const messageComplete = opencode.replyQuestion(

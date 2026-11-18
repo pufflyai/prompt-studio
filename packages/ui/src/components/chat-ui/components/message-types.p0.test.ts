@@ -74,6 +74,39 @@ describe("chat message types", () => {
     expect(after[1]).toBe(updated);
   });
 
+  test("saved tool output survives a filtered lifecycle notice before the next turn or at the end", () => {
+    const reply: SessionMessage = {
+      id: "reply",
+      role: "assistant",
+      parts: [{ type: "text", text: "Starting checks." }],
+    };
+    const completed: SessionMessage = {
+      id: "completed",
+      role: "tool",
+      parts: [{ type: "tool", tool: "run", state: { status: "completed", output: "Checks passed." } }],
+    };
+    const running: SessionMessage = {
+      id: "running",
+      role: "tool",
+      parts: [{ type: "tool", tool: "run", status: "running" }],
+    };
+    const notice: SessionMessage = {
+      id: "notice",
+      role: "system",
+      parts: [{ type: "text", text: "Background task finished." }],
+    };
+    const next: SessionMessage = { id: "next", role: "user", parts: [{ type: "text", text: "Continue." }] };
+    const input = [reply, completed, running, notice];
+    const shown = [reply, { ...completed, role: "assistant" }];
+
+    expect(normalizeChatMessagesForDisplay(input)).toEqual(shown);
+    expect(normalizeChatMessagesForDisplay([...input, next])).toEqual([...shown, next]);
+    expect(getAssistantMessageActionTargetId(normalizeChatMessagesForDisplay(input))).toBe("reply");
+    expect(
+      getAssistantMessageActionTargetId(normalizeChatMessagesForDisplay(input, { streaming: true }), true),
+    ).toBeNull();
+  });
+
   test("do not carry agent runtime contracts or node imports", async () => {
     const violations = await Promise.all(
       listUiSourceFiles().map(async (file) => {

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test } from "bun:test";
+import { afterEach, beforeEach, expect, jest, test } from "bun:test";
 import { createAutomationDBService, createDb, createProjectsDBService } from "pstdio-db";
 import { normalizeExtensionSources } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../extensions/deps";
@@ -189,22 +189,27 @@ for (const change of ["removed", "disabled"]) {
 }
 
 test("a cancelled delayed extension run never claims or executes its command", async () => {
-  const notBefore = new Date(Date.now() + 100).toISOString();
-  const run = await service.enqueueForExtension({
-    projectId,
-    extensionId,
-    commandId,
-    input: {},
-    key: "delayed",
-    notBefore,
-  });
-  expect((await db.getRun(projectId, run.id))?.input_json).toMatchObject({ notBefore });
-  expect((await db.getRun(projectId, run.id))?.status).toBe("queued");
-  expect(executionCount).toBe(0);
-  expect((await service.cancelForExtension({ projectId, extensionId }, run.id)).status).toBe("cancelled");
-  await Bun.sleep(120);
-  expect(executionCount).toBe(0);
-  expect((await db.getRun(projectId, run.id))?.status).toBe("cancelled");
+  jest.useFakeTimers();
+  try {
+    const notBefore = new Date(Date.now() + 100).toISOString();
+    const run = await service.enqueueForExtension({
+      projectId,
+      extensionId,
+      commandId,
+      input: {},
+      key: "delayed",
+      notBefore,
+    });
+    expect((await db.getRun(projectId, run.id))?.input_json).toMatchObject({ notBefore });
+    expect((await db.getRun(projectId, run.id))?.status).toBe("queued");
+    expect(executionCount).toBe(0);
+    expect((await service.cancelForExtension({ projectId, extensionId }, run.id)).status).toBe("cancelled");
+    jest.advanceTimersByTime(120);
+    expect((await db.getRun(projectId, run.id))?.status).toBe("cancelled");
+    expect(executionCount).toBe(0);
+  } finally {
+    jest.useRealTimers();
+  }
 });
 test("the delayed deadline participates in admission validation and idempotency", async () => {
   await expect(

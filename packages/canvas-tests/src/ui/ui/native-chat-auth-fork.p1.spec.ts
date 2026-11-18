@@ -3,6 +3,17 @@ import { openCanvasPreview } from "../preview";
 
 const canvas = "packages/pstdio-workbench/src/react/renderers/chat/native-chat.canvas.tsx";
 
+test("a saved question stays editable during active sign-in while submission waits", async ({ page }) => {
+  const preview = await openCanvasPreview(page, `${canvas}#QuestionWhileAuthenticationLoads`);
+  await expect(preview.getByText("Finishing sign-in…", { exact: true })).toBeVisible();
+  const choice = preview.getByRole("radio", { name: "TypeScript", exact: true });
+  await expect(choice).toBeEnabled();
+  await preview.getByRole("form", { name: "Question form" }).getByText("TypeScript", { exact: true }).click();
+  await expect(choice).toBeChecked();
+  await expect(preview.getByRole("button", { name: "Send answer", exact: true })).toBeDisabled();
+  await expect(preview.getByRole("button", { name: "Skip", exact: true })).toBeDisabled();
+});
+
 // Critical: auth setup must not duplicate empty content, and reply actions must remain reachable.
 test("native account setup and completed-reply fork retain their own surfaces", async ({ page }) => {
   let preview = await openCanvasPreview(page, `${canvas}#SignInRequired`);
