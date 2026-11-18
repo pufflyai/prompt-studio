@@ -277,10 +277,10 @@ test("keeps startup failures in an actionable recovery window", async () => {
   const finishTrace = await startElectronTrace(electronApp.context(), "startup-recovery");
   try {
     const window = await waitForLifecyclePage(electronApp.context());
-    await expect(window.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
+    await expect(window.getByRole("heading", { name: "Prompt Studio encountered an error" })).toBeVisible();
     expect(await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible())).toBe(true);
     await expect(window.getByRole("button", { name: "Open logs" })).toBeVisible();
-    await expect(window.getByRole("button", { name: "Copy diagnostics" })).toBeVisible();
+    await expect(window.getByRole("button", { name: "Copy logs", exact: true })).toHaveCount(0);
     await expect(window.getByRole("button", { name: "Quit" })).toBeVisible();
     expect(
       await electronApp.evaluate(

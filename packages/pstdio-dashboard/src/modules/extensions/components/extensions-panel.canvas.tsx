@@ -288,7 +288,7 @@ export const UpgradingOneExtension: Story = {
     upgradingInstanceIds: ["planner-instance"],
   },
 };
-// Upgrade all marks every row it will upgrade, so rows still waiting their turn show a spinner too.
+// Waiting rows keep a static clock while an active upgrade shows progress.
 export const UpgradingAll: Story = {
   id: "projectsettings-extensionspanel--upgrading-all",
   args: {
@@ -297,6 +297,7 @@ export const UpgradingAll: Story = {
     diagnostics: [],
     automations,
     upgradingAll: true,
+    queuedInstanceIds: [installedExtensions[2]!.id],
     upgradingInstanceIds: installedExtensions
       .filter((extension) => extension.canUpgrade)
       .map((extension) => extension.id),

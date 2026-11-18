@@ -15,7 +15,6 @@ import {
   useSetProjectExtensionEnabled,
   useUninstallProjectExtension,
   useUpdateProjectExtensionSetting,
-  useUpgradeProjectExtension,
 } from "@/shared/extensions/use-project-extensions";
 import { ExtensionDetail } from "./extension-detail";
 import { unavailableExtensionHarnesses } from "./extension-harness-availability";
@@ -27,6 +26,8 @@ interface ExtensionDetailContainerProps {
   metadata: DashboardExtensionMetadata | undefined;
   agents?: AgentInfo[];
   onBack: () => void;
+  upgrading: boolean;
+  onUpgrade: () => void;
   settingsInput?: WorkbenchPanelRenderInput;
 }
 
@@ -47,7 +48,6 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
   const contributionsQuery = useExtensionContributions(projectId, extension.id);
   const updateSetting = useUpdateProjectExtensionSetting(projectId);
   const reload = useReloadProjectExtension(projectId);
-  const upgrade = useUpgradeProjectExtension(projectId);
   const uninstall = useUninstallProjectExtension(projectId);
   const [confirmingUninstall, setConfirmingUninstall] = useState(false);
   const [deleteUserData, setDeleteUserData] = useState(false);
@@ -73,21 +73,6 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         },
         onError: (error) =>
           showError({ title: t("projectSettings.extensionsPanel.reload.failed"), description: error.message }),
-      },
-    );
-  };
-
-  const handleUpgrade = () => {
-    clearError();
-    upgrade.mutate(
-      { instanceId: extension.id },
-      {
-        onError: (error) => {
-          showError({
-            title: t("projectSettings.extensionsPanel.upgrade.failed"),
-            description: error instanceof Error ? error.message : undefined,
-          });
-        },
       },
     );
   };
@@ -129,7 +114,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         }
         toggling={setEnabled.isPending}
         reloading={reload.isPending}
-        upgrading={upgrade.isPending}
+        upgrading={props.upgrading}
         uninstalling={uninstall.isPending}
         togglingAutomationId={
           setAutomationEnabled.isPending ? (setAutomationEnabled.variables?.automationId ?? undefined) : undefined
@@ -159,7 +144,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
           );
         }}
         onReload={handleReload}
-        onUpgrade={handleUpgrade}
+        onUpgrade={props.onUpgrade}
         onUninstall={() => {
           clearError();
           setConfirmingUninstall(true);

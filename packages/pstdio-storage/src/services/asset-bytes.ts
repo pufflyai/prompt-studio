@@ -6,6 +6,15 @@ import { type AssetBytesOwner, assetBytePaths } from "../storage/asset-byte-path
 
 const hasCode = (error: unknown, code: string) => (error as NodeJS.ErrnoException).code === code;
 
+const locateBytes = async (file: string, previousFile?: string) => {
+  try {
+    return { file, stats: await stat(file) };
+  } catch (error) {
+    if (!previousFile || !hasCode(error, "ENOENT")) throw error;
+    return { file: previousFile, stats: await stat(previousFile) };
+  }
+};
+
 export class AssetIntegrityError extends Error {
   constructor() {
     super("Asset integrity mismatch");
@@ -49,10 +58,32 @@ const verifyFile = async (file: string, expected: Asset, signal?: AbortSignal) =
 };
 
 /** Local bytes only. The API owns transfer identities, metadata, and retention decisions. */
-export const createAssetBytesStorage = (root: string) => {
+export const createAssetBytesStorage = (root: string, historicalExtensionId?: (id: string) => string) => {
+  const historicalPaths = (owner: AssetBytesOwner) => {
+    const extensionId = historicalExtensionId?.(owner.extensionId);
+    if (extensionId && extensionId !== owner.extensionId) return assetBytePaths(root, { ...owner, extensionId });
+  };
+
+  const transferPath = async (owner: AssetBytesOwner, operationId: string) => {
+    const file = assetBytePaths(root, owner).transfer(operationId);
+    const previous = historicalPaths(owner)?.transfer(operationId);
+    if (!previous) return file;
+    try {
+      return (await locateBytes(file, previous)).file;
+    } catch (error) {
+      if (hasCode(error, "ENOENT")) return file;
+      throw error;
+    }
+  };
+
+  const locateVersion = (owner: AssetBytesOwner, sha256: string) =>
+    locateBytes(assetBytePaths(root, owner).version(sha256), historicalPaths(owner)?.version(sha256));
+
   const progress = async (owner: AssetBytesOwner, operationId: string) => {
     try {
-      return (await stat(assetBytePaths(root, owner).transfer(operationId))).size;
+      const file = assetBytePaths(root, owner).transfer(operationId);
+      const previous = historicalPaths(owner)?.transfer(operationId);
+      return (await locateBytes(file, previous)).stats.size;
     } catch (error) {
       if (hasCode(error, "ENOENT")) return 0;
       throw error;
@@ -67,7 +98,7 @@ export const createAssetBytesStorage = (root: string) => {
     signal?: AbortSignal,
   ) => {
     signal?.throwIfAborted();
-    const file = assetBytePaths(root, owner).transfer(operationId);
+    const file = await transferPath(owner, operationId);
     await mkdir(dirname(file), { recursive: true });
     const handle = await open(file, "a+");
     const reader = data.getReader();
@@ -103,9 +134,8 @@ export const createAssetBytesStorage = (root: string) => {
   };
 
   const publish = async (owner: AssetBytesOwner, operationId: string, asset: Asset, signal?: AbortSignal) => {
-    const paths = assetBytePaths(root, owner);
-    const transfer = paths.transfer(operationId);
-    const version = paths.version(asset.sha256);
+    const transfer = await transferPath(owner, operationId);
+    const version = assetBytePaths(root, owner).version(asset.sha256);
     await verifyFile(transfer, asset, signal);
     await mkdir(dirname(version), { recursive: true });
     signal?.throwIfAborted();
@@ -121,20 +151,21 @@ export const createAssetBytesStorage = (root: string) => {
   };
 
   const openVersion = async (owner: AssetBytesOwner, asset: Asset, signal?: AbortSignal) => {
-    const file = assetBytePaths(root, owner).version(asset.sha256);
-    const current = await stat(file);
-    if (current.size !== asset.byteLength) throw new AssetIntegrityError();
+    const { file, stats } = await locateVersion(owner, asset.sha256);
+    if (stats.size !== asset.byteLength) throw new AssetIntegrityError();
     return verifiedStream(file, asset, signal);
   };
 
   const verify = async (owner: AssetBytesOwner, asset: Asset, signal?: AbortSignal) => {
-    const file = assetBytePaths(root, owner).version(asset.sha256);
-    await stat(file);
+    const { file } = await locateVersion(owner, asset.sha256);
     await verifyFile(file, asset, signal);
   };
 
-  const removeTransfer = (owner: AssetBytesOwner, operationId: string) =>
-    rm(assetBytePaths(root, owner).transfer(operationId), { force: true });
+  const removeTransfer = async (owner: AssetBytesOwner, operationId: string) => {
+    await rm(assetBytePaths(root, owner).transfer(operationId), { force: true });
+    const previous = historicalPaths(owner)?.transfer(operationId);
+    if (previous) await rm(previous, { force: true });
+  };
 
   return { append, progress, publish, open: openVersion, verify, removeTransfer };
 };

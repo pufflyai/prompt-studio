@@ -97,6 +97,16 @@ describe("project extension cache", () => {
     expect(list.getSnapshot().data?.extensions[0]?.enabled).toBe(false);
   });
 
+  test("a late upgrade preserves concurrent enablement and an uninstalled row stays absent", async () => {
+    const { catalog, cache } = harness();
+    catalog.extensions.accept(response(false));
+    cache.acceptUpgrade({ ...extension(true), version: "2.0.0" });
+    expect(catalog.extensions.getSnapshot().data?.extensions[0]).toMatchObject({ enabled: false, version: "2.0.0" });
+    await cache.removeExtension("instance-1");
+    cache.acceptUpgrade(extension(true));
+    expect(catalog.extensions.getSnapshot().data?.extensions).toEqual([]);
+  });
+
   test("removes an extension and restores its Marketplace entry", async () => {
     const { catalog, cache } = harness();
     catalog.extensions.accept(response(true));

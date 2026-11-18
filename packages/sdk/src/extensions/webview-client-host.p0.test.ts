@@ -105,6 +105,20 @@ test("the unified files client retains upload, list and delete behavior", async 
   expect(await client.files.list()).toEqual([]);
 });
 
+test("generated file downloads pass exact bytes and names to the host", async () => {
+  const calls: { method: string; params: unknown }[] = [];
+  const host = {
+    extensionId: "test.export",
+    call: async (method: string, params: unknown) => {
+      calls.push({ method, params });
+    },
+  } as GuestHost;
+  const client = createWebviewClient<Record<string, never>>(host);
+  const input = { name: "résumé.html", mimeType: "text/html", data: new TextEncoder().encode("<h1>Résumé</h1>") };
+  await client.files.download(input);
+  expect(calls).toEqual([{ method: "files.download", params: input }]);
+});
+
 test("typed setting writes return the saved value from the host", async () => {
   const settings = { properties: { columns: { type: "number", scope: "project", default: 3 } } } as const;
   const host = {
