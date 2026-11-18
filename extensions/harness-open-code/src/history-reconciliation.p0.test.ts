@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { SessionMessage } from "@pstdio/sdk/extensions";
-import { composeOpencodeSnapshot } from "./history-reconciliation";
+import { composeOpencodeSnapshot, recoverOpencodeMessages } from "./history-reconciliation";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
 
 const user: SessionMessage = { id: "user-1", role: "user", parts: [{ type: "text", text: "hello" }] };
@@ -10,6 +10,99 @@ const failure: SessionMessage = {
   role: "system",
   parts: [{ type: "error", errorType: "other", message: "failed" }],
 };
+
+test("reopening a saved question restores native custom-answer behavior without duplicating the request", () => {
+  const question = { question: "Choose a color", options: [{ label: "Red" }, { label: "Blue" }] };
+  const native = normalizeOpencodeMessage(
+    {
+      info: { id: "question", role: "assistant" },
+      parts: [
+        {
+          type: "tool",
+          tool: "question",
+          callID: "call",
+          state: { status: "running", input: { questions: [question] } },
+        },
+      ],
+    },
+    1,
+  );
+  const known: SessionMessage = {
+    ...native,
+    parts: [
+      {
+        type: "tool",
+        tool: "question",
+        callId: "call",
+        actionType: "execute",
+        status: "running",
+        state: { status: "running", input: { questions: [question] } },
+      },
+    ],
+  };
+  expect(recoverOpencodeMessages({ knownMessages: [user, known], nativeMessages: [user, native] })).toEqual({
+    kind: "recovered",
+    messages: [user, native],
+  });
+});
+
+test("a recovered native question shows its accepted answer instead of reopening the saved form", () => {
+  const normalize = (answered: boolean) =>
+    normalizeOpencodeMessage(
+      {
+        info: { id: "question", role: "assistant" },
+        parts: [
+          {
+            type: "tool",
+            tool: "question",
+            callID: "call",
+            state: {
+              status: answered ? "completed" : "running",
+              input: { questions: [{ question: "Choose a color", options: [{ label: "Red" }] }] },
+              ...(answered && { output: "Answered", metadata: { answers: [["Red"]] } }),
+            },
+          },
+        ],
+      },
+      1,
+    );
+  const answered = normalize(true);
+  expect(
+    recoverOpencodeMessages({ knownMessages: [user, normalize(false)], nativeMessages: [user, answered] }),
+  ).toEqual({
+    kind: "recovered",
+    messages: [user, answered],
+  });
+});
+
+test("an accepted saved answer survives a native question that still reports queued", () => {
+  const question = (answered: boolean) =>
+    normalizeOpencodeMessage(
+      {
+        info: { id: "question", role: "assistant" },
+        parts: [
+          {
+            type: "tool",
+            tool: "question",
+            callID: "call",
+            state: {
+              status: answered ? "completed" : "queued",
+              input: { questions: [{ question: "Choose a color", options: [{ label: "Red" }] }] },
+              ...(answered && { output: "Answered", metadata: { answers: [["Red"]] } }),
+            },
+          },
+        ],
+      },
+      1,
+    );
+  const answered = question(true);
+  const pending = question(false);
+  expect(recoverOpencodeMessages({ knownMessages: [user, answered], nativeMessages: [user, pending] })).toEqual({
+    kind: "recovered",
+    messages: [user, answered],
+  });
+  expect(composeOpencodeSnapshot([user, answered], [user, pending])).toEqual([user, answered]);
+});
 
 test("an authoritative snapshot keeps generated errors on surviving turns", () => {
   expect(composeOpencodeSnapshot([user, reply, failure], [user, reply])).toEqual([user, reply, failure]);

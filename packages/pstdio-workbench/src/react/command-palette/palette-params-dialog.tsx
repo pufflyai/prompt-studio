@@ -1,4 +1,4 @@
-import { AlertMessage, DeleteConfirmationModal } from "@pstdio/ui";
+import { ActionErrorSlot, AlertMessage, DeleteConfirmationModal } from "@pstdio/ui";
 import { useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import { getWorkbenchRenderers } from "../../core";
@@ -86,7 +86,11 @@ export const CommandConfirmationDialog = (props: { confirmation: WorkbenchComman
         }
       }}
     >
-      {error ? <AlertMessage status="error" title={error} role="alert" /> : null}
+      {error ? (
+        <ActionErrorSlot>
+          <AlertMessage compact status="error" title={error} onClose={() => setError(undefined)} />
+        </ActionErrorSlot>
+      ) : null}
     </DeleteConfirmationModal>
   );
 };

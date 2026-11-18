@@ -113,7 +113,7 @@ export const QueuedFollowUpRow = (props: QueuedFollowUpRowProps) => {
             <Box asChild css={styles.content}>
               <button
                 type="button"
-                disabled={item.sending}
+                disabled={item.sending || !onEdit}
                 aria-label={`Edit queued message: ${item.prompt}`}
                 onClick={() => onEdit?.(item)}
               >

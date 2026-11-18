@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
@@ -243,6 +243,24 @@ describe("extension file endpoints", () => {
       `/v1/projects/${projectId}/extensions/${otherInstanceId}/files/${uploaded.id}/content`,
     );
     expect(contentResponse.status).toBe(404);
+  });
+
+  test("downloads a saved Sessions attachment after its database owner has been renamed", async () => {
+    const instance = await enableExtension("session-browser");
+    const upload = await uploadFile(instance);
+    expect(upload.status).toBe(201);
+    const uploaded = (await upload.json()) as { hash: string; url: string };
+    const segment = (value: string) => Buffer.from(value).toString("base64url");
+    const version = (id: string) =>
+      join(tempRoot, "storage", "asset-bytes", segment(projectId), segment(id), "versions", segment(uploaded.hash));
+    const historical = version("pstdio.pstdio-session-browser");
+    mkdirSync(dirname(historical), { recursive: true });
+    // Recreate the on-disk state left by the database identity upgrade.
+    renameSync(version("pstdio.session-browser"), historical);
+
+    const content = await app.request(uploaded.url);
+    expect(content.status).toBe(200);
+    expect(await content.text()).toBe("hello attachment");
   });
 
   test("rejects uploads for unknown extension instances", async () => {

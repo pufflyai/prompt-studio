@@ -80,7 +80,7 @@ export const CloudLabel = (props: { data: ReturnType<typeof useCloud>["data"]; o
   if (status?.success) color = "fg.success";
   if (warning) color = "fg.warning";
   return (
-    <HStack gap="xs" color={color}>
+    <HStack gap="xs" color={color} title={error}>
       <CloudStatusIcon status={status} active={data?.signingIn || status?.active} error={error} />
       <Text textStyle="label/XS/regular" whiteSpace="nowrap">
         {label}

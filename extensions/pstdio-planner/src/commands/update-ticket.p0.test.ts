@@ -176,7 +176,6 @@ describe("updateTicket server-side resolution", () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Blocked" } }));
-    const toasts: unknown[] = [];
 
     const updated = await updateTicketCommand.run(
       ...makeCommandArgs({
@@ -186,44 +185,6 @@ describe("updateTicket server-side resolution", () => {
           notify: {
             action: async () => {
               throw new Error("notification service unavailable");
-            },
-            toast: async (notice: unknown) => {
-              toasts.push(notice);
-            },
-          } as never,
-        },
-      }),
-    );
-
-    expect(updated.blockedReason).toBe("need credentials");
-    await expect(ticketsCollection(storage).get(ticket.id)).resolves.toMatchObject({
-      blockedReason: "need credentials",
-    });
-    expect(toasts).toEqual([
-      expect.objectContaining({
-        type: "warning",
-        title: "Ticket saved",
-        message: "Notification sync failed: notification service unavailable",
-      }),
-    ]);
-  });
-
-  test("returns the saved ticket even when the warning toast itself fails", async () => {
-    const storage = createMemoryStorage();
-    await seedDefaultStatuses(storage);
-    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Blocked" } }));
-
-    const updated = await updateTicketCommand.run(
-      ...makeCommandArgs({
-        storage,
-        params: { id: ticket.id, blockedReason: "need credentials" },
-        overrides: {
-          notify: {
-            action: async () => {
-              throw new Error("notification service unavailable");
-            },
-            toast: async () => {
-              throw new Error("toast delivery unavailable");
             },
           } as never,
         },

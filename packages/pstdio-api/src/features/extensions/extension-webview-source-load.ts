@@ -7,7 +7,7 @@ import type { InstalledSourceWithManifest } from "./extension-webview-build-runn
 // contributions, so only a clean load tells which webviews the extension has.
 interface SourceLoadInput {
   backoff: ReturnType<typeof createWebviewBuildBackoff>;
-  loadSource: (sourcePath: string) => Promise<LoadedExtension>;
+  loadSource: (sourcePath: string) => Promise<LoadedExtension | null>;
   onError?: (error: unknown) => void;
   row: InstalledSourceWithManifest;
   validatedSource?: LoadedExtensionSnapshot;
@@ -30,6 +30,7 @@ const loadWebviewSource = async (input: SourceLoadInput) => {
         return { ...input.validatedSource, loadKey: key };
       if (backoff.isBlocked(row.id, key)) return null;
       const loaded = await loadSource(row.source_path);
+      if (!loaded) return null;
       if (loaded.diagnostics.some((diagnostic) => diagnostic.severity === "error")) break;
       if (key !== (await inspectLoadKey(row.source_path))) continue;
       return { loaded, loadKey: key };

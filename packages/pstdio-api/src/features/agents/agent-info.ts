@@ -11,12 +11,13 @@ export const agentExtensionIcons = async (deps: AgentsRouteDeps, projectId?: str
   return (harness: Harness) => {
     // Repo overrides can share an extension ID with a global install. Match the registered entry,
     // never a marketplace identity or a different installed version of the same extension.
+    // Installed extensions run from prepared copies, so match the package that owns the copy.
+    const owner = (harness.packagePath ?? harness.sourcePath)?.replaceAll("\\", "/");
     const source = sources
-      .filter(
-        (source) =>
-          source.extension_id === harness.extensionId &&
-          harness.sourcePath?.replaceAll("\\", "/").startsWith(`${source.source_path.replaceAll("\\", "/")}/`),
-      )
+      .filter((source) => {
+        const root = source.source_path.replaceAll("\\", "/");
+        return source.extension_id === harness.extensionId && (owner === root || owner?.startsWith(`${root}/`));
+      })
       .sort((a, b) => b.source_path.length - a.source_path.length)[0];
     return source ? instanceIcon(source, (source.manifest_json as { icon?: string } | null)?.icon) : undefined;
   };

@@ -47,6 +47,7 @@ export const openAppDatabase = async (path: string, lifecycle: AppLifecycle = {}
   try {
     return await createDb({
       path,
+      deferCleanup: true,
       onPhase: (phase) => {
         logStartupPhase(phase);
         if (phase === "database_locked") lifecycle.onDatabaseLockAcquired?.();
