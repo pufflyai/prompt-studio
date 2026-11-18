@@ -2,6 +2,7 @@ import { createEnvironmentAccessVerifier } from "pstdio-account-manager/access";
 import type { ReportFailure } from "pstdio-service-telemetry";
 import { createRelayAssets } from "./assets/assets";
 import { readRelayLimits } from "./limits";
+import { createProjectDeletionWorker } from "./project-deletion-worker";
 import { readRuntimeSecrets } from "./runtime-secrets";
 import { scheduleSyncCleanup } from "./storage/cleanup";
 import { createSyncOwners } from "./transport/owners";
@@ -33,12 +34,24 @@ export const createRelayRuntime = (env: Record<string, string | undefined>, repo
       cleanupIntervalMs,
       () => report("sync_cleanup_failed"),
     );
+    const deletionToken = env.PROJECT_DELETION_RELAY_TOKEN;
+    const stopDeletion = deletionToken
+      ? scheduleSyncCleanup(
+          createProjectDeletionWorker({
+            managerUrl: secrets.trust.issuer,
+            token: deletionToken,
+            deleteProject: sync.sync.deleteProject,
+          }),
+          2_000,
+          () => report("project_deletion_handoff_failed"),
+        )
+      : undefined;
     return {
       verifyAccess,
       assets,
       ...sync,
       async close() {
-        await stopCleanup();
+        await Promise.all([stopCleanup(), stopDeletion?.()]);
         const results = await Promise.allSettled([sync.sync.close(), assets.close()]);
         if (results.some((result) => result.status === "rejected")) throw new Error("Relay storage shutdown failed");
       },

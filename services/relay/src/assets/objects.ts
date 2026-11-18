@@ -51,24 +51,44 @@ export const createAssetObjects = (config: ObjectConfig) => {
       if (!missing(error)) throw error;
     }
   };
-  const uploads = async (key: string, signal?: AbortSignal) => {
+  const multipartPages = async function* (prefix: string, signal?: AbortSignal) {
     let KeyMarker: string | undefined;
     let UploadIdMarker: string | undefined;
-    const ids: string[] = [];
     do {
       const result = await client.send(
-        new ListMultipartUploadsCommand({ Bucket: config.bucket, Prefix: key, KeyMarker, UploadIdMarker }),
+        new ListMultipartUploadsCommand({ Bucket: config.bucket, Prefix: prefix, KeyMarker, UploadIdMarker }),
         { abortSignal: signal },
       );
-      for (const upload of result.Uploads ?? []) if (upload.Key === key && upload.UploadId) ids.push(upload.UploadId);
+      yield result.Uploads ?? [];
       KeyMarker = result.IsTruncated ? result.NextKeyMarker : undefined;
       UploadIdMarker = result.NextUploadIdMarker;
     } while (KeyMarker);
+  };
+  const uploads = async (key: string, signal?: AbortSignal) => {
+    const ids: string[] = [];
+    for await (const page of multipartPages(key, signal))
+      for (const upload of page) if (upload.Key === key && upload.UploadId) ids.push(upload.UploadId);
     return ids;
+  };
+  const recover = async (key: string, signal?: AbortSignal) => {
+    const [recovered, ...duplicates] = await uploads(key, signal);
+    for (const duplicate of duplicates) await abort(key, duplicate, signal);
+    return recovered;
+  };
+  const initiate = async (key: string, mediaType: string, signal?: AbortSignal) => {
+    const result = await client.send(
+      new CreateMultipartUploadCommand({ ...target(key), ContentType: mediaType, ChecksumAlgorithm: "SHA256" }),
+      { abortSignal: signal },
+    );
+    if (!result.UploadId) throw new Error("Object storage returned no upload identity");
+    return result.UploadId;
   };
   return {
     head,
     get,
+    initiate,
+    recover,
+    multipartPages,
     async range(key: string, etag: string, asset: Asset, offset: number, signal?: AbortSignal) {
       const result = await client.send(
         new GetObjectCommand({ ...target(key), IfMatch: etag, Range: `bytes=${offset}-` }),
@@ -90,15 +110,7 @@ export const createAssetObjects = (config: ObjectConfig) => {
     },
     async begin(key: string, asset: Asset, signal?: AbortSignal) {
       // A lost Create response can leave an empty multipart upload before its ID is saved.
-      const [recovered, ...duplicates] = await uploads(key, signal);
-      for (const duplicate of duplicates) await abort(key, duplicate, signal);
-      if (recovered) return recovered;
-      const result = await client.send(
-        new CreateMultipartUploadCommand({ ...target(key), ContentType: asset.mediaType, ChecksumAlgorithm: "SHA256" }),
-        { abortSignal: signal },
-      );
-      if (!result.UploadId) throw new Error("Object storage returned no upload identity");
-      return result.UploadId;
+      return (await recover(key, signal)) ?? initiate(key, asset.mediaType, signal);
     },
     async write(key: string, uploadId: string, number: number, input: PartInput, signal: AbortSignal) {
       const controller = new AbortController();
