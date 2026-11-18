@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { createExtensionIgnoreMatcher } from "./extension-ignore";
 
@@ -16,9 +16,9 @@ export const hashExtensionSource = (sourcePath: string) => {
       if (entry.isDirectory()) {
         visit(path);
       } else if (entry.isFile()) {
-        const stat = statSync(path);
-        hash.update(`${rel}:${stat.size}\n`);
-        hash.update(readFileSync(path));
+        const contents = readFileSync(path);
+        hash.update(`${rel}:${contents.byteLength}\n`);
+        hash.update(contents);
       }
     }
   };

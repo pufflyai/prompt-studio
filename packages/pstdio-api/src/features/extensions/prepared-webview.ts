@@ -3,6 +3,7 @@ import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, renameSync, 
 import { join } from "node:path";
 import { retainPreparedArtifacts } from "pstdio-extensions/prepared-cache";
 import { resolvePstdioHome, withFileMutationLock } from "pstdio-paths";
+import { traceSetupPhase } from "../../lib/setup-phase";
 import {
   inspectManagedWebviewBuildInputsAsync,
   type ManagedWebviewBuildInputs,
@@ -121,7 +122,9 @@ export const prepareWebviewArtifacts = async (inputs: WebviewArtifactInput[], si
       );
       return entry;
     });
-    const outcome = await buildExtensionWebviewBatch({ entryPaths: entries, outdir: join(batch, "dist"), signal });
+    const outcome = await traceSetupPhase("webview.build", { extension: inputs[0]!.installName }, () =>
+      buildExtensionWebviewBatch({ entryPaths: entries, outdir: join(batch, "dist"), signal }),
+    );
     if (!outcome.success) throw new Error(outcome.details);
     signal.throwIfAborted();
     const after = await inspectPreparedWebviewInputs(inputs, join(batch, "sources"), signal);

@@ -1,7 +1,11 @@
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative } from "node:path";
 import { inspectCompilerConfiguration, type RevisionCompilerInput } from "./revision-compiler-inputs";
-import { createRevisionModuleResolver } from "./revision-module-inputs";
+import {
+  createBrowserEntryResolver,
+  createRevisionFileLookup,
+  createRevisionModuleResolver,
+} from "./revision-module-inputs";
 import { inspectRevisionModule } from "./revision-module-inspection";
 
 export { copyRevisionSource, hashRevisionSource } from "./revision-file-inputs";
@@ -100,7 +104,6 @@ const inspectEntries = (
     }
   }
   for (const rel of modulePaths) {
-    files.add(rel);
     if (rel !== "package.json" && !/\.[cm]?[jt]sx?$/.test(rel)) includeAssets();
     const file = join(canonical, rel);
     if (inspected.has(`${context}:${file}`) || !/\.(?:[cm]?[jt]sx?|css)$/.test(rel)) continue;
@@ -131,6 +134,7 @@ const browserEntries = (
   canonical: string,
   manifest: { browser?: string | Record<string, unknown> },
   entries: string[],
+  resolveBrowserEntry: ReturnType<typeof createBrowserEntryResolver>,
   addDependency: (specifier: string, conservative?: boolean) => void,
   includeOpaqueDependencies: () => void,
   conservative: boolean,
@@ -138,9 +142,9 @@ const browserEntries = (
   const browser = typeof manifest.browser === "string" ? [manifest.browser] : Object.values(manifest.browser ?? {});
   for (const target of browser) {
     if (typeof target !== "string") continue;
-    try {
-      entries = [...entries, Bun.resolveSync(join(canonical, target), canonical)];
-    } catch {
+    const file = resolveBrowserEntry(canonical, target);
+    if (file) entries = [...entries, file];
+    else {
       if (target.startsWith(".")) includeOpaqueDependencies();
       else addDependency(target, conservative);
     }
@@ -170,8 +174,9 @@ export const collectRevisionDependencies = (
   options: { entryPath?: string; entryPaths?: string[]; target?: "browser" } = {},
 ) => {
   const contents = new Map<string, Buffer>();
-  const resolveLocalImport = createLocalImportResolver();
-  const resolveRevisionModule = createRevisionModuleResolver();
+  const files = createRevisionFileLookup();
+  const resolveLocalImport = createLocalImportResolver(files.isFile);
+  const resolveRevisionModule = createRevisionModuleResolver(files);
   const packages = Object.assign(
     new Map<
       string,
@@ -228,6 +233,18 @@ export const collectRevisionDependencies = (
   const configuredDirectories = new Map<string, Set<string>>();
   const opaque = new Set<string>();
   const resolvedImports = new Set<string>();
+  // Revisiting a package from another entry still records that importer and
+  // context. Its selected entry paths need resolving only once in this inspection.
+  const selected = new Map<string, string[]>();
+  const resolveBrowserEntry = createBrowserEntryResolver();
+  const selectEntries = (path: string, specifier: string, resolvedFile?: string) => {
+    const key = `${path}\0${specifier}\0${resolvedFile ?? ""}`;
+    const previous = selected.get(key);
+    if (previous) return previous;
+    const entries = selectedEntries(path, specifier, resolvedFile, manifestFor(path));
+    selected.set(key, entries);
+    return entries;
+  };
   const root = realpathSync(packagePath);
   const visit = (path: string, entries: string[], conservative = false, macro = false) => {
     // Roots, physical bindings and additional owners already have canonical paths.
@@ -283,12 +300,7 @@ export const collectRevisionDependencies = (
       record.dependencies.set(`${relative(canonical, from)}:${name}`, resolved ?? "missing");
       if (binding) record.bindings.set(binding.link, binding.path);
       if (resolved)
-        visit(
-          resolved,
-          selectedEntries(resolved, specifier, additional?.file, manifestFor(resolved)),
-          conservativeImport,
-          macroContext,
-        );
+        visit(resolved, selectEntries(resolved, specifier, additional?.file), conservativeImport, macroContext);
     };
     const includeDeclaredDependencies = (all: boolean, from: string) => {
       const key = `${canonical}:${from}:${all}:${macro}`;
@@ -301,7 +313,15 @@ export const collectRevisionDependencies = (
     // Browser builds may replace a worker-resolved entry or one of its imports.
     // Trace every replacement and its graph alongside the ordinary resolution.
     const manifest = manifestFor(canonical);
-    entries = browserEntries(canonical, manifest, entries, addDependency, includeOpaqueDependencies, conservative);
+    entries = browserEntries(
+      canonical,
+      manifest,
+      entries,
+      resolveBrowserEntry,
+      addDependency,
+      includeOpaqueDependencies,
+      conservative,
+    );
     if (conservative || !entries.length) includeOpaqueDependencies();
     const browser = options.target === "browser" && !conservative && !macro;
     const context = `${browser}:${macro}`;

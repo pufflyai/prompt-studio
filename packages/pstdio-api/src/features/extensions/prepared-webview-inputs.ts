@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { rmSync } from "node:fs";
 import { join, relative } from "node:path";
 import { resolvePstdioHome } from "pstdio-paths";
+import { traceSetupPhase } from "../../lib/setup-phase";
 import {
   inspectManagedWebviewBuildInputs,
   missingWebviewDependenciesError,
@@ -19,12 +20,18 @@ export const inspectPreparedWebviewInputs = async (
   inputs: Input[],
   sourceRoot: string,
   signal?: AbortSignal,
-  selections = inputs.map((input) => inspectManagedWebviewBuildInputs(input, "")),
+  selections?: ReturnType<typeof inspectManagedWebviewBuildInputs>[],
 ) => {
+  const context = { extension: inputs[0]?.installName };
+  const selectedInputs =
+    selections ??
+    (await traceSetupPhase("webview.local_inputs", context, async () =>
+      inputs.map((input) => inspectManagedWebviewBuildInputs(input, "")),
+    ));
   const shells = new Map<string, string>();
   const sources = inputs.map((input, index) => {
     signal?.throwIfAborted();
-    const selected = selections[index]!;
+    const selected = selectedInputs[index]!;
     const error = missingWebviewDependenciesError(selected, input.packagePath);
     if (error) throw new Error(error);
     const dependencyRoot = selected.dependencyNodeModules;
@@ -45,7 +52,9 @@ export const inspectPreparedWebviewInputs = async (
     groups.set(source.packagePath, entries);
   }
   const inspected = await Promise.allSettled(
-    [...groups].map(([path, entries]) => inspectWebviewDependencyInputs(path, entries, signal)),
+    [...groups].map(([path, entries]) =>
+      traceSetupPhase("webview.dependency_inputs", context, () => inspectWebviewDependencyInputs(path, entries, signal)),
+    ),
   );
   signal?.throwIfAborted();
   const digests = inspected.map((result) => {
@@ -61,7 +70,9 @@ export const inspectPreparedWebviewInputs = async (
           .digest("hex");
   return {
     sources,
-    signatures: inputs.map((input) => inspectManagedWebviewBuildInputs(input, dependencyHash)),
+    signatures: await traceSetupPhase("webview.signatures", context, async () =>
+      inputs.map((input) => inspectManagedWebviewBuildInputs(input, dependencyHash)),
+    ),
   };
 };
 

@@ -17,9 +17,10 @@ const isInside = (root: string, path: string) => {
 
 // Importers in one graph commonly resolve the same relative module. Each inspection
 // owns its lookups so the post-build guard sees new files and changed links.
-export const createLocalImportResolver = () => {
+export const createLocalImportResolver = (
+  isFile = (path: string) => statSync(path, { throwIfNoEntry: false })?.isFile(),
+) => {
   const paths = new Map<string, string | null>();
-  const isFile = (path: string) => statSync(path, { throwIfNoEntry: false })?.isFile();
   const find = (path: string) => {
     if (isFile(path)) return path;
     for (const extension of moduleExtensions) if (isFile(path + extension)) return path + extension;

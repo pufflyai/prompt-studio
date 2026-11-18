@@ -41,7 +41,16 @@ export const hashWebviewDependencyInputs = (packagePath: string, entryPaths: str
   const packages = collectRevisionDependencies(packagePath, { entryPaths, target: "browser" });
   return hashInputs(packagePath, packages, hashRevisionDependencies(packages, packagePath));
 };
-export const hashWebviewDependencyInputsAsync = async (packagePath: string, entryPaths: string[]) => {
+export const inspectWebviewDependencyInputsAsync = async (packagePath: string, entryPaths: string[]) => {
+  const started = performance.now();
   const packages = collectRevisionDependencies(packagePath, { entryPaths, target: "browser" });
-  return hashInputs(packagePath, packages, await hashRevisionDependenciesAsync(packages, packagePath));
+  const collected = performance.now();
+  const digest = hashInputs(packagePath, packages, await hashRevisionDependenciesAsync(packages, packagePath));
+  return {
+    digest,
+    collectMs: Math.round(collected - started),
+    hashMs: Math.round(performance.now() - collected),
+  };
 };
+export const hashWebviewDependencyInputsAsync = async (packagePath: string, entryPaths: string[]) =>
+  (await inspectWebviewDependencyInputsAsync(packagePath, entryPaths)).digest;

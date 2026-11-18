@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { constants, mkdirSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { copyFile } from "node:fs/promises";
+import { copyFile, mkdir } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 
 export const visitRevisionFiles = (root: string, visit: (path: string, rel: string) => void) => {
@@ -39,7 +39,7 @@ export function* revisionSourceFiles(sourcePath: string, targetPath: string, fil
 
 export const copyRevisionFiles = async (files: Iterable<{ source: string; target: string }>) => {
   const entries = files[Symbol.iterator]();
-  const directories = new Set<string>();
+  const directories = new Map<string, Promise<string | undefined>>();
   const copies = new Map<string, string>();
   const results = await Promise.allSettled(
     Array.from({ length: 8 }, async () => {
@@ -55,10 +55,12 @@ export const copyRevisionFiles = async (files: Iterable<{ source: string; target
         // Ancestor and nested package roots can enumerate the same frozen file.
         copies.set(key, owner);
         const directory = dirname(target);
-        if (!directories.has(directory)) {
-          mkdirSync(directory, { recursive: true });
-          directories.add(directory);
+        let ready = directories.get(directory);
+        if (!ready) {
+          ready = mkdir(directory, { recursive: true });
+          directories.set(directory, ready);
         }
+        await ready;
         // Retain independent accepted bytes, using copy-on-write where available.
         await copyFile(source, target, constants.COPYFILE_FICLONE);
       }
