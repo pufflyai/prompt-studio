@@ -130,7 +130,7 @@ export const createOrderedResourceRecords = (
   const commitCache = createOrderedCommitCache(db, owner);
   let initialized: Promise<void> | undefined;
   const ready = () =>
-    (initialized ??= ensureOrderedOwner(db, owner).catch((error) => {
+    (initialized ??= write(() => ensureOrderedOwner(db, owner)).catch((error) => {
       initialized = undefined;
       throw error;
     }));
@@ -269,18 +269,21 @@ export const createOrderedResourceRecords = (
 
   return {
     ...queries,
-    defineIndexes: async (...input: Parameters<typeof queries.defineIndexes>) => {
-      await ready();
-      return queries.defineIndexes(...input);
-    },
-    query: async (...input: Parameters<typeof queries.query>) => {
-      await ready();
-      return queries.query(...input);
-    },
-    aggregate: async (...input: Parameters<typeof queries.aggregate>) => {
-      await ready();
-      return queries.aggregate(...input);
-    },
+    defineIndexes: (...input: Parameters<typeof queries.defineIndexes>) =>
+      write(async () => {
+        await ready();
+        return queries.defineIndexes(...input);
+      }),
+    query: (...input: Parameters<typeof queries.query>) =>
+      write(async () => {
+        await ready();
+        return queries.query(...input);
+      }),
+    aggregate: (...input: Parameters<typeof queries.aggregate>) =>
+      write(async () => {
+        await ready();
+        return queries.aggregate(...input);
+      }),
     conflicts: async () => [] as StorageConflict[],
     inspect: (_id: string) =>
       Promise.reject<StorageConflictInspection>(
@@ -332,9 +335,11 @@ export const createOrderedResourceRecords = (
       return records;
     },
     outcome: (id: string) =>
-      withOrderedOwner(db, owner, async (journal) => {
-        return (await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined;
-      }),
+      write(() =>
+        withOrderedOwner(db, owner, async (journal) => {
+          return (await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined;
+        }),
+      ),
     transaction,
     commitIfCurrent: (group: StorageCurrentGroup) => commitCurrentBatch({ transaction }, group),
   };

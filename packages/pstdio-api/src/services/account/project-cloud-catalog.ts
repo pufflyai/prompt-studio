@@ -3,6 +3,7 @@ import type {
   CloudProjectCatalogEntry,
   DeleteCloudProjectInput,
   DownloadCloudProjectResult,
+  LocalRemovalPreflight,
   ProjectCopyAccount,
   ProjectSyncStatus,
 } from "pstdio-api-contracts";
@@ -25,6 +26,9 @@ const deletionReceipt = (input: unknown) => {
   return { ...deletion, projectId: workbenchId };
 };
 
+const folderKey = (copy: ProjectCopy) =>
+  JSON.stringify([copy.managerOrigin, copy.accountId, copy.deviceId, copy.projectId]);
+
 interface CatalogInput {
   accountFile: string;
   login: () => Promise<DeviceLogin | null>;
@@ -32,6 +36,7 @@ interface CatalogInput {
   projects: Pick<RouteDeps["projectService"], "get">;
   online: () => boolean;
   syncStatus: (id: string) => Promise<ProjectSyncStatus>;
+  returnedUploadState: (id: string) => Promise<LocalRemovalPreflight["uploadState"]>;
   call: ReturnType<typeof createNativeManagerCall>;
   refresh: () => Promise<void>;
   retry: (id: string) => Promise<void>;
@@ -44,8 +49,6 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
   let projectCopies: ProjectCopyHooks | undefined;
   const preparingFolders = new Set<string>();
   const folderErrors = new Map<string, string>();
-  const folderKey = (copy: ProjectCopy) =>
-    JSON.stringify([copy.managerOrigin, copy.accountId, copy.deviceId, copy.projectId]);
   const knownCloud = async (login: DeviceLogin) => input.cloud(login) ?? (await copies.roster(login));
 
   const entry = async (
@@ -93,6 +96,7 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
     isCloudProject: async (login, id) => Boolean((await knownCloud(login))?.ids.includes(id)),
     online: input.online,
     syncStatus: input.syncStatus,
+    returnedUploadState: input.returnedUploadState,
     withdraw: input.withdraw ?? (async () => {}),
     changed: input.changed ?? (() => {}),
   });

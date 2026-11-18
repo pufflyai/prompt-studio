@@ -44,6 +44,7 @@ export const createLocalProjectRemoval = (input: {
   project(id: string): Promise<{ id: string; name: string } | null>;
   online(): boolean;
   syncStatus(id: string): Promise<ProjectSyncStatus>;
+  returnedUploadState(id: string): Promise<LocalRemovalPreflight["uploadState"]>;
   withdraw(id: string): Promise<void>;
   changed(): void;
 }) => {
@@ -58,11 +59,12 @@ export const createLocalProjectRemoval = (input: {
   };
 
   const inspect = async (project: { id: string; name: string }) => {
-    const [summary, status] = await Promise.all([
+    const [summary, status, returned] = await Promise.all([
       hooks!.inspect(project.id),
       input.syncStatus(project.id).catch(() => undefined),
+      input.returnedUploadState(project.id).catch(() => "unknown" as const),
     ]);
-    return localRemovalPreflight(project, summary, status, input.online());
+    return localRemovalPreflight(project, summary, status, input.online(), returned);
   };
 
   const finish = async (copy: ProjectCopy) => {

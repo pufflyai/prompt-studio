@@ -153,6 +153,7 @@ export const createDocumentStorageDBService = (
     },
   });
   const cloudReturn = createOrderedCloudReturn(db, {
+    withProjectWork,
     changed: (owner) => {
       notifyOwnerNative(owner);
       for (const listener of listeners) listener(owner);
@@ -160,7 +161,8 @@ export const createDocumentStorageDBService = (
   });
   return {
     transaction,
-    convertLegacyOwners: (options: Parameters<typeof convertLegacyOwners>[1]) => convertLegacyOwners(db, options),
+    convertLegacyOwners: (options: Omit<Parameters<typeof convertLegacyOwners>[1], "withProjectWork">) =>
+      convertLegacyOwners(db, { ...options, withProjectWork }),
     logs,
     cloudReturn,
     observer,

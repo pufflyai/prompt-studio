@@ -9,7 +9,6 @@ import type { RelayWorkbench } from "../relay/runtime";
 import { createAccountRefresh } from "./account-refresh";
 import { readAccountStatus } from "./account-status";
 import { createDeviceIdentity } from "./device-identity";
-import { catalogStatus } from "./local-removal-preflight";
 import type { readManagerAccount } from "./manager-account";
 import { ManagerRequestDenied, managerOriginSchema, managerRequest } from "./manager-client";
 import { createMissingProjectRecovery, partitionCloudProjects } from "./missing-project-recovery";
@@ -175,11 +174,9 @@ export const createNativeAccount = (input: {
     login: readLogin,
     cloud: (login) => (cloudProjects?.credential === login.token ? cloudProjects : undefined),
     projects: input.projects,
-    ...catalogStatus(
-      () => online,
-      (id) => projectStatus(id),
-      away,
-    ),
+    online: () => online,
+    syncStatus: (id) => projectStatus(id),
+    returnedUploadState: away.removalState,
     call,
     refresh: () => refresh(),
     retry: (id) => retryProject(id),

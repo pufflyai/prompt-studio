@@ -72,12 +72,16 @@ test("removing a local copy preserves its source folder and stays removed after 
     await host.deps.workspaceService.ensureDefault({ project_id: id, name: "Project folder", root_path: folder });
     const owner = { workbenchId: id, extensionId: "example.offline-notes" };
     const data = await host.deps.extensionStorageService.open({ owner });
+    const unopened = await host.deps.extensionStorageService.open({
+      owner: { ...owner, extensionId: "example.not-yet-open" },
+    });
     await data.records.commit({
       operationId: "local-save",
       edits: [
         { recordId: "note", expectedRevision: (await data.records.read("note")).revision, replace: "local edit" },
       ],
     });
+    await data.records.defineIndexes([{ name: "notes", fields: { title: { path: ["title"], type: "string" } } }]);
     const attachment = await host.deps.fileService.upload({
       project_id: id,
       file_name: "note.txt",
@@ -134,6 +138,11 @@ test("removing a local copy preserves its source folder and stays removed after 
       await expect(
         data.records.commit({ operationId: "late-edit", edits: [{ recordId: "late", replace: "late" }] }),
       ).rejects.toThrow("This device is removing");
+      await expect(unopened.records.read("note")).rejects.toThrow("This device is removing");
+      await expect(unopened.records.outcome("late-edit")).rejects.toThrow("This device is removing");
+      await expect(data.records.defineIndexes([])).rejects.toThrow("This device is removing");
+      await expect(data.records.query({ index: "notes" })).rejects.toThrow("This device is removing");
+      await expect(data.records.aggregate({ index: "notes" })).rejects.toThrow("This device is removing");
       expect(await lstat(attachment.storage_path)).toBeDefined();
     } finally {
       stopped.resolve();
