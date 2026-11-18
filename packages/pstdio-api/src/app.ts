@@ -306,12 +306,7 @@ const buildApp = async (
   const extensionScheduler = startAppExtensionScheduler(deps, projectService, storageRoot);
   const artifactMountWatch = startAppArtifactMountWatch(deps, projectService);
   const notificationWakeTimer = startNotificationWakeTimer(notificationService);
-  const stopDeadRowCleanup =
-    database.path === ":memory:"
-      ? async () => {}
-      : startDeadRowCleanup(database.pglite, (err, table) =>
-          apiLogger.warn({ err, table, event: "db.dead_row_cleanup.error" }, "Database cleanup failed; it will retry"),
-        );
+  let stopDeadRowCleanup = async () => {};
 
   try {
     registerBenchmarkCounters(app, db, runtimeHost);
@@ -329,7 +324,7 @@ const buildApp = async (
       deps,
       closeSessionHooks: sessionHooks.close,
       notificationWakeTimer,
-      stopDeadRowCleanup,
+      stopDeadRowCleanup: () => stopDeadRowCleanup(),
       unsubscribeExtensionEvents,
       extensionRuntime,
       extensionStartup,
@@ -339,7 +334,13 @@ const buildApp = async (
       terminalSupervisor,
       closeDb: () => closeAppDatabase(deps, closeDb),
     });
-    return await account.connectAccountRelay({ app, close, deps, eventBus });
+    const connected = await account.connectAccountRelay({ app, close, deps, eventBus });
+    if (database.path !== ":memory:") {
+      stopDeadRowCleanup = startDeadRowCleanup(database.pglite, database.cleanupRetiredRows, (err, table) =>
+        apiLogger.warn({ err, table, event: "db.dead_row_cleanup.error" }, "Database cleanup failed; it will retry"),
+      );
+    }
+    return connected;
   } catch (error) {
     // createApp closes the database on a failed startup; the cleanup must not outlive it.
     await stopDeadRowCleanup();

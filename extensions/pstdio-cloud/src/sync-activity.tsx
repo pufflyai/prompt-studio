@@ -1,9 +1,10 @@
 import { HStack, Stack, Text } from "@chakra-ui/react";
 import type { ProjectSyncStatus } from "@pstdio/sdk/extensions";
-import { AlertMessage, ScrollArea } from "@pstdio/ui";
+import { ScrollArea } from "@pstdio/ui";
 import { useState } from "react";
 import { Button } from "./button";
 import { useCloudContext } from "./cloud-context";
+import { CloudError } from "./cloud-error";
 import { syncPhaseLabel } from "./sync-phase";
 
 export const SyncActivity = (props: { sync: ProjectSyncStatus; projectId?: string }) => {
@@ -27,7 +28,7 @@ export const SyncActivity = (props: { sync: ProjectSyncStatus; projectId?: strin
   };
   if (!sync.sources) return null;
   return (
-    <Stack gap="sm">
+    <Stack gap="sm" position="relative">
       <HStack gap="xs">
         <Button size="sm" variant="outline" aria-pressed={tab === "files"} onClick={() => setTab("files")}>
           {t("activity.files", "Files")}
@@ -75,7 +76,7 @@ export const SyncActivity = (props: { sync: ProjectSyncStatus; projectId?: strin
               <Stack key={source.id} gap="xs">
                 <HStack justify="space-between">
                   <Text>{source.name ?? source.id}</Text>
-                  <Text>
+                  <Text title={source.error}>
                     {!source.connected
                       ? t("activity.offline", "Waiting for connection")
                       : t(`activity.phase.${source.phase}`, syncPhaseLabel(source.phase))}
@@ -103,7 +104,6 @@ export const SyncActivity = (props: { sync: ProjectSyncStatus; projectId?: strin
                     })}
                   </Text>
                 )}
-                {source.error && <AlertMessage status="warning">{source.error}</AlertMessage>}
                 {source.canRetry && (source.busy || source.error || !source.downloaded) && (
                   <Button
                     size="sm"
@@ -122,7 +122,7 @@ export const SyncActivity = (props: { sync: ProjectSyncStatus; projectId?: strin
           )}
         </Stack>
       </ScrollArea>
-      {error && <AlertMessage status="error">{error}</AlertMessage>}
+      {error && <CloudError message={error} onClose={() => setError(undefined)} />}
     </Stack>
   );
 };

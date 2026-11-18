@@ -41,36 +41,23 @@ Core has no import code. To restore old data, ask an agent to read the export an
 
 ### Cleanup and disk maintenance
 
-After schema migrations commit, startup removes documents belonging to the retired
-`pstdio.personal-history` owner across every project and account. Foreign keys also
-remove their update journals and retry identities. Cleanup uses document metadata;
-it never opens or decodes old transcripts, contacts the relay, or waits for sign-in.
-Local conversations and the current `logs-v1` and `logs-v2` history owners are preserved.
+Startup applies schema migrations, copies reachable receipt nodes into files, and
+applies extension identity renames before tools can open their data. The background
+maintenance pass then removes copied index-node rows and documents belonging to
+the retired `pstdio.personal-history` owner. Foreign keys remove the retired
+documents' update journals and retry identities. Cleanup uses document metadata
+and preserves local conversations and the current `logs-v1` and `logs-v2` owners.
+It yields to workbench queries between batches and rediscovers remaining rows on
+the next start if interrupted.
 
-PGlite has no autovacuum. Existing databases run `VACUUM (FULL, ANALYZE)` after an
-applied migration or legacy cleanup, before services start and while the database
-ownership lock is held. This returns unused table, index and large-value storage to
-disk and refreshes query statistics. It can delay an upgrade and needs temporary
-disk space to rewrite tables. It does not remove conversation files or reset WAL.
-
-`.pstdio-maintenance.json` records the last successfully maintained migration hash,
-timestamp and maintenance version. An existing database without this marker receives one
-initial maintenance pass. Startup invalidates completion before legacy deletion
-and writes the marker atomically after vacuum, so interrupted work retries on the
-next start. A vacuum failure is logged and leaves maintenance pending while the
-app continues opening; insufficient rewrite space must not lock people out.
-An unchanged startup skips vacuum. Fresh databases record completion
-without rewriting their newly created tables.
-
-Desktop shows “Updating Prompt Studio” during migrations, removal of previous-version
-data and space reclamation. The runtime emits `database_cleaning` before deleting
-retired documents and `database_compacting` before vacuum, so a long pass has a visible
-startup state rather than an unexplained wait.
-
-Full compaction stays before readiness. PostgreSQL `VACUUM FULL` takes exclusive
-table locks, and PGlite uses a single connection; scheduling the same command after
-readiness would still pause normal database work. Ordinary vacuum can make dead
-space reusable but usually does not return it to the operating system. See
+PGlite has no autovacuum. The first scheduled pass runs ordinary vacuum and
+refreshes statistics one table at a time. Ordinary vacuum makes freed space
+reusable within the database. A full rewrite can return more space to the
+operating system. It requires an offline database open because PGlite's single
+connection would block workbench queries for the duration of the rewrite.
+`.pstdio-maintenance.json` records the last successful offline compaction.
+Cleanup invalidates the marker before deleting rows so an offline pass can
+reclaim the space after an interruption. See
 [PostgreSQL vacuum](https://www.postgresql.org/docs/17/sql-vacuum.html) and
 [PGlite's single connection](https://pglite.dev/docs/).
 

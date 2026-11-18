@@ -1,4 +1,4 @@
-import { Box, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Box, useSlotRecipe } from "@chakra-ui/react";
 import {
   DndContext,
   KeyboardSensor,
@@ -9,6 +9,8 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { Fragment, type ReactNode, useState } from "react";
+import { ActionErrorSlot } from "@/components/primitives/action-error-slot";
+import { AlertMessage } from "@/components/primitives/alert";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { queuedFollowUpRecipe } from "@/theme/recipes/queued-follow-up";
 import type { QueuedFollowUp } from "./message-types";
@@ -149,6 +151,7 @@ export const QueuedFollowUpList = (props: QueuedFollowUpListProps) => {
       }}
     >
       <Box
+        position="relative"
         css={styles.root}
         data-send-now-visible={showSendNow}
         data-read-only={readOnly || undefined}
@@ -176,9 +179,9 @@ export const QueuedFollowUpList = (props: QueuedFollowUpListProps) => {
           {retainedEditor && retainedIndex === items.length ? <RetainedEditor>{retainedEditor}</RetainedEditor> : null}
         </ScrollArea>
         {error ? (
-          <Text css={styles.notice} role="alert">
-            {error}
-          </Text>
+          <ActionErrorSlot edge="above">
+            <AlertMessage compact status="error" title={error} onClose={() => setError(null)} />
+          </ActionErrorSlot>
         ) : null}
       </Box>
     </DndContext>
