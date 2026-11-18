@@ -47,6 +47,31 @@ const continuePreparation =
       continuations.retain(preparationPriority.getStore());
       return work();
     }, options.priority);
+const createIdleRetirements = () => {
+  const timers = new Map<PreparationWorkerSlot, ReturnType<typeof setTimeout>>();
+  return {
+    onIdle(slot: PreparationWorkerSlot, retire: () => void) {
+      slot.worker?.unref();
+      // Slot zero owns stateful watches. Release only an idle overflow slot.
+      if (!slot.index || !slot.worker || !slot.ready || slot.active || timers.has(slot)) return;
+      const timer = setTimeout(() => {
+        timers.delete(slot);
+        retire();
+      }, 5_000);
+      timer.unref();
+      timers.set(slot, timer);
+    },
+    cancel(slot: PreparationWorkerSlot) {
+      clearTimeout(timers.get(slot));
+      timers.delete(slot);
+    },
+    clear() {
+      for (const timer of timers.values()) clearTimeout(timer);
+      timers.clear();
+    },
+  };
+};
+
 export const createPreparationClient = (
   createWorker: () => Worker,
   cleanup?: (homes: PreparationHome[]) => Promise<void>,
@@ -54,6 +79,7 @@ export const createPreparationClient = (
 ) => {
   let nextId = 0;
   let backgroundPump: ReturnType<typeof setTimeout> | undefined;
+  const idleRetirements = createIdleRetirements();
   let stopping: Promise<void> | undefined;
   const homes = new Map<string, PreparationHome>();
   const queued: Job[] = [];
@@ -79,13 +105,11 @@ export const createPreparationClient = (
     },
     completed: settle,
   });
-  const runningOwner = (slot: PreparationWorkerSlot) =>
-    slot.dispatched || (slot.worker && !slot.ready) ? slot.active : slot.retiring;
   const compatible = (job: Job, slot: PreparationWorkerSlot) => {
     const others = pool.slots
       .filter((other) => other !== slot)
       .flatMap((other) => {
-        const owner = runningOwner(other);
+        const owner = other.dispatched || (other.worker && !other.ready) ? other.active : other.retiring;
         return owner ? [owner] : [];
       });
     if (!job.resources) return slot.index === 0 && !others.length;
@@ -131,10 +155,11 @@ export const createPreparationClient = (
     if (slot.dispatched || slot.restarting) return;
     if (slot.worker && slot.factory !== createWorker) return pool.replace(slot, slot.active);
     const job = nextFor(slot);
-    if (!job) {
-      slot.worker?.unref();
-      return;
-    }
+    if (!job)
+      return idleRetirements.onIdle(slot, () => {
+        if (!stopping && !slot.active && !queued.length && !continuations.size) pool.replace(slot);
+      });
+    idleRetirements.cancel(slot);
     if (queuedPriority(job) > 0 && !backgroundReady) {
       backgroundPump ??= setTimeout(() => {
         backgroundPump = undefined;
@@ -250,6 +275,7 @@ export const createPreparationClient = (
     stop: (finalCleanup = true) => {
       if (stopping) return stopping;
       continuations.clear();
+      idleRetirements.clear();
       if (backgroundPump) clearTimeout(backgroundPump);
       backgroundPump = undefined;
       const error = new PreparationUnavailableError("Extension preparation stopped.");
