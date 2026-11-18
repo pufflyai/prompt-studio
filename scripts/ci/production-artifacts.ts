@@ -59,6 +59,7 @@ export const productionPolicyFiles = () =>
     ".github/workflows/release-packages.yml",
     ".github/workflows/release-desktop.yml",
     ".github/workflows/verify-packaged-toolchain.yml",
+    ".github/workflows/verify-project-upgrade.yml",
     ".github/actions/build-release/action.yml",
     ".github/actions/publish-release/action.yml",
     "bun.lock",
