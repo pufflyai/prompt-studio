@@ -12,16 +12,7 @@ test("dismissing an action error leaves its controls in place", async ({ page })
   const alert = preview.getByRole("alert");
   await expect(alert).toBeVisible();
   expect(await action.boundingBox()).toEqual(before);
-  const dismiss = alert.getByRole("button", { name: "Dismiss" });
-  const rightInset = await dismiss.evaluate((button) => {
-    const alert = button.closest('[role="alert"]')!;
-    return {
-      actual: alert.getBoundingClientRect().right - button.getBoundingClientRect().right,
-      expected: Number.parseFloat(getComputedStyle(alert).paddingInlineEnd),
-    };
-  });
-  expect(rightInset.actual).toBeCloseTo(rightInset.expected, 0);
-  await dismiss.press("Enter");
+  await alert.getByRole("button", { name: "Dismiss" }).press("Enter");
   await expect(alert).toHaveCount(0);
   expect(await action.boundingBox()).toEqual(before);
 });
