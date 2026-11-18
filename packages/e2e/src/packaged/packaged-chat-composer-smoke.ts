@@ -18,6 +18,25 @@ const preserveComposerFailure = async (page: Page) => {
   console.error(`Packaged composer failure evidence: ${evidence}`);
 };
 
+const traceFileNavigation = (page: Page, phase: (name: string) => void) => {
+  // Record navigation as it happens, before the fixture can close the page at its deadline.
+  page.on("pageerror", (error) => phase(`file navigation page error: ${error.message}`));
+  page.on("requestfailed", (request) => {
+    phase(`file navigation request failed: ${new URL(request.url()).pathname} ${request.failure()?.errorText}`);
+  });
+  page.on("response", (response) => {
+    const request = response.request();
+    const path = new URL(response.url()).pathname;
+    if (
+      request.resourceType() === "script" ||
+      path.includes("/workspaces/") ||
+      path.includes(".file.") ||
+      response.status() >= 400
+    )
+      phase(`file navigation response: ${response.status()} ${path}`);
+  });
+};
+
 export const expectPackagedChatComposer = async (
   baseUrl: string,
   headers: Record<string, string>,
@@ -160,7 +179,10 @@ export const expectPackagedChatComposer = async (
     await expect(webReference).toHaveAttribute("target", "_blank");
     await expect(webReference.locator('[data-scope="tooltip"]')).toHaveCount(0);
 
+    traceFileNavigation(page, phase);
+    phase("opening the file editor");
     await plainPath.click();
+    phase("file link clicked");
     await expect(page.locator(".monaco-editor .view-lines")).toContainText("export");
     await page.reload();
     await expect(page.locator(".monaco-editor .view-lines")).toContainText("export");
