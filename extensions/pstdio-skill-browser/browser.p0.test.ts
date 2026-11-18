@@ -92,7 +92,12 @@ test("reads a supporting file through the native file view using the page route"
       pageParams: { file: "references/examples.md" },
     },
   });
-  expect(loaded).toMatchObject({ fileName: "references/examples.md", content: "# Examples", editable: false });
+  expect(loaded).toMatchObject({
+    fileName: "references/examples.md",
+    filePath: "references/examples.md",
+    content: "# Examples",
+    editable: false,
+  });
 });
 
 test("renders metadata as read-only parameters in a collapsible Info section", () => {

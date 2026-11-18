@@ -3,6 +3,7 @@ import type { TextEditingRequest } from "pstdio-api-contracts/extension-kernel";
 import { validateTextEditorFrame, validateTextEditorState } from "pstdio-sync/text";
 import {
   grantTextSource,
+  requireTextGrant,
   textSourceIdentity,
   validateTextGrant,
   validateTextPresentation,
@@ -138,6 +139,13 @@ export const openTextMember = (
     const grant = await memberGrant(deps, connection, member, request);
     if (request.sourceIdentity && request.sourceIdentity !== textSourceIdentity(connection, grant))
       throw textFailure("source_retired", "This source lifetime has changed since the session opened");
+    // A fresh room admits the selected grant against the current owner, lifetime,
+    // presentation and editable flag before it returns a snapshot.
+    if ("grant" in request.input && !member.room && !request.sourceState && !request.pendingUpdate) {
+      await validateTextPresentation(deps, connection);
+      requireTextGrant(connection, grant);
+      return reopen(deps, connection, member, grant, request);
+    }
     const loaded = await validateTextGrant(deps, connection, grant);
     requireCurrentMember(connection, member);
     await validateRecovery(request);

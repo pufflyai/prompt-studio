@@ -48,6 +48,7 @@ const WorkbenchSystemNotices = (props: { workbench: WorkbenchCore }) => {
       <Popover.Trigger asChild>
         <Button
           size="2xs"
+          alignSelf="center"
           variant="ghost"
           color={error ? "fg.error" : undefined}
           minW="0"
