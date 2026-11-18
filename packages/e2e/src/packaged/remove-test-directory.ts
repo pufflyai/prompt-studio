@@ -9,8 +9,13 @@ require("node:fs/promises").rm(process.env.PSTDIO_TEST_CLEANUP_ROOT, {
 }).catch((error) => { console.error(error); process.exitCode = 1; });
 `;
 
-const removeNativeDirectory = async (root: string) => {
+const removeNativeDirectory = async (root: string, installedExtension = false) => {
   const env = { ...process.env, PSTDIO_TEST_CLEANUP_ROOT: root };
+  if (installedExtension && process.platform === "win32") {
+    // Parallel filesystem operations help installed packages with many independent files.
+    await runTestCommand("node", ["-e", ASYNC_REMOVE], { env: { ...env, UV_THREADPOOL_SIZE: "8" } });
+    return;
+  }
   try {
     // Own the utility directly so cancellation also stops traversal. Paths stay
     // literal; Windows expands the quoted environment value only once.
@@ -39,13 +44,18 @@ export const removeTestDirectory = async (root: string) => {
   const began = performance.now();
   const entries = await readdir(root, { withFileTypes: true });
   const trees: string[] = [];
+  const installedExtensions = new Set<string>();
   for (const entry of entries) {
     if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
     const directory = join(root, entry.name);
     if (process.platform === "win32" && entry.name === "extensions") {
       // Installed packages are independent; never enumerate a linked directory.
-      for (const installed of await readdir(directory, { withFileTypes: true }))
-        if (installed.isDirectory() && !installed.isSymbolicLink()) trees.push(join(directory, installed.name));
+      for (const installed of await readdir(directory, { withFileTypes: true })) {
+        if (!installed.isDirectory() || installed.isSymbolicLink()) continue;
+        const path = join(directory, installed.name);
+        installedExtensions.add(path);
+        trees.push(path);
+      }
     } else trees.push(directory);
   }
   console.log(
@@ -56,7 +66,7 @@ export const removeTestDirectory = async (root: string) => {
     while (next < trees.length) {
       const directory = trees[next++]!;
       const started = performance.now();
-      await removeNativeDirectory(directory);
+      await removeNativeDirectory(directory, installedExtensions.has(directory));
       console.log(
         `Test directory cleanup: ${directory.slice(root.length + 1)} removed (${Math.round(performance.now() - started)}ms)`,
       );
