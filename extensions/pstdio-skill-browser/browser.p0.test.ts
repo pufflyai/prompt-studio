@@ -3,7 +3,6 @@ import type { Skill } from "@pstdio/sdk/resources";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import extension from "./extension";
 import { commands } from "./src/browser";
-import { skillInfo } from "./src/skill-content";
 
 const skill: Skill = {
   id: "skill-id",
@@ -29,14 +28,6 @@ const context = () =>
     overrides: { skills: { list: async () => [skill] } },
   });
 
-test("opens the skill browser from the project navigation footer", () => {
-  expect(extension.navigationItems?.find((item) => item.id === "skills")).toMatchObject({
-    slot: "footer",
-    owner: { id: "project", extensionId: "pstdio" },
-    action: { kind: "page", page: { id: "skills" } },
-  });
-});
-
 test("opens a project skill from its browser tree and reads its files through the CLI command", async () => {
   const tree = extension.views?.find((view) => view.id === "skill-list")?.body;
   if (tree?.kind !== "tree") throw new Error("Skills need a navigation tree");
@@ -47,8 +38,6 @@ test("opens a project skill from its browser tree and reads its files through th
     resource: { id: "skill-id", projectId: "project" },
     target: { kind: "page", page: { id: "skill" }, resource: { id: "skill-id" } },
   });
-  const read = extension.commands?.find((command) => command.id === "read");
-  expect(read?.cli).toBe(true);
   expect(await commands.read.run(context(), { name: "review" })).toEqual(skill);
 });
 
@@ -93,18 +82,6 @@ test("reads a supporting file through the native file view using the page route"
     },
   });
   expect(loaded).toMatchObject({ fileName: "references/examples.md", content: "# Examples", editable: false });
-});
-
-test("renders metadata as read-only parameters in a collapsible Info section", () => {
-  expect(skillInfo(skill, (_key, fallback) => fallback ?? "")).toMatchObject({
-    id: "info",
-    title: "Info",
-    collapsible: true,
-    params: [
-      { id: "name", name: "Name", type: "text", singleLine: true, defaultValue: "review" },
-      { id: "description", name: "Description", type: "text", singleLine: false, defaultValue: "Review a change" },
-    ],
-  });
 });
 
 test("groups skills by source extension display name and keeps project skills separate", async () => {

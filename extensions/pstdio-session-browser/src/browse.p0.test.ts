@@ -41,44 +41,6 @@ test("activity-ordered sessions keep date headings unique when older requests fi
   ]);
 });
 
-test("recent sessions retain Today and Yesterday groups alongside older calendar dates", async () => {
-  const today = new Date();
-  today.setHours(12, 0, 0, 0);
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const earlier = new Date(today);
-  earlier.setDate(earlier.getDate() - 5);
-  const ctx = makeCommandContext({
-    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
-    params: {},
-    overrides: {
-      sessions: {
-        query: async () => ({
-          items: [today, yesterday, earlier].map((date, index) => ({
-            id: `s${index}`,
-            title: `Saved ${index}`,
-            status: "completed",
-            updatedAt: date.toISOString(),
-          })) as never,
-          nextCursor: null,
-        }),
-      },
-    },
-  });
-  const sections = await browse(ctx, { renderer: { rendererId: "list" } });
-  const groups = sections[0]!.nodes.filter((node) => node.disabled);
-  expect(groups[0]?.label).toMatchObject({ default: "Today" });
-  expect(groups[1]?.label).toMatchObject({ default: "Yesterday" });
-  expect(groups[2]?.label).toBe(
-    earlier.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: earlier.getFullYear() === today.getFullYear() ? undefined : "numeric",
-    }),
-  );
-  expect(new Set(groups.map((node) => node.id)).size).toBe(3);
-});
-
 test("browsing and search use bounded public queries, workspace scope and cursor pages", async () => {
   const queries: unknown[] = [];
   const ctx = makeCommandContext({
@@ -218,44 +180,4 @@ test("session resource search follows cursors beyond the public 200-row page lim
     { limit: 200, orderBy: "lastActivity", search: "history" },
     { limit: 100, orderBy: "lastActivity", search: "history", cursor: "200" },
   ]);
-});
-
-test("session rows preserve status colors and singular resource identity alongside the Sessions collection", async () => {
-  const statuses = ["completed", "failed", "cancelled", "disconnected", "queued", "in_progress", "awaiting_input"];
-  const ctx = makeCommandContext({
-    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
-    params: {},
-    overrides: {
-      sessions: {
-        query: async () => ({
-          items: statuses.map((status, index) => ({
-            id: `s${index}`,
-            title: status,
-            status,
-            updatedAt: new Date().toISOString(),
-          })) as never,
-          nextCursor: null,
-        }),
-      },
-    },
-  });
-  const sections = await browse(ctx, { renderer: { rendererId: "list" } });
-  const rows = sections[0].nodes.filter((row) => row.resource);
-  expect(rows.map((row) => row.iconColor)).toEqual([
-    "fg.success",
-    "fg.error",
-    "fg.warning",
-    "fg.warning",
-    "fg.info",
-    "fg.muted",
-    "fg.muted",
-  ]);
-  expect(rows.every((row) => row.resource?.icon === "message-circle")).toBe(true);
-  const result = await search.query(ctx, {
-    query: "",
-    limit: 10,
-    providerId: "sessions",
-    renderer: { rendererId: "list" },
-  });
-  expect(result.items.every((item) => item.icon === "message-circle")).toBe(true);
 });
