@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type { DataTableRendererRow } from "../../../core";
 import {
   buildDataTableRendererData,
@@ -147,15 +148,20 @@ describe("data table renderer view model", () => {
     expect(key("one", "changed")).toBe(key("one"));
   });
   test("scopes persisted controls to the renderer, placement, and resource", () => {
-    const key = (renderer: string, instanceId: string, resourceId: string) =>
+    expect(
       resolveDataTableRendererStorageKey(
-        { id: renderer },
-        { instanceId, panelId: "health.view", closable: false, resource: { type: "project", id: resourceId } },
+        { id: "health" },
+        {
+          instanceId: "health:1",
+          panelId: "health.view",
+          closable: false,
+          resource: {
+            type: "project",
+            id: "one",
+          },
+        },
         {},
-      );
-    expect(key("health", "health:1", "one")).toBe(key("health", "health:1", "one"));
-    expect(key("health", "health:1", "one")).not.toBe(key("health", "health:1", "two"));
-    expect(key("health", "health:1", "one")).not.toBe(key("health", "health:2", "one"));
-    expect(key("health", "health:1", "one")).not.toBe(key("other", "health:1", "one"));
+      ),
+    ).toBe(`pstdio:workbench:dataTableRenderer:health:health:1:${resourceKey({ type: "project", id: "one" })}`);
   });
 });
