@@ -1,2 +1,2 @@
 export { startNativePerformanceCapture } from "./native-capture";
-export { requestPerformanceEndpoint } from "./performance-endpoint-client";
+export { readPerformanceEndpoint } from "./performance-endpoint-client";

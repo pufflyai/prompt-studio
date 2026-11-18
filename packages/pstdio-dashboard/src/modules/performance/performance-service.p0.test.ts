@@ -1,9 +1,7 @@
 import { expect, test } from "bun:test";
-import type { ReactRenderCapture } from "pstdio-api-contracts/performance-diagnostics";
 import type { PerformanceHost } from "./performance-host";
 import { createPerformanceMonitoringController } from "./performance-monitoring-controller";
 import { createPerformanceDiagnosticsAdapter } from "./performance-service";
-import { createReactRenderOverlay } from "./react-render-overlay";
 
 test("render highlighting needs local activation and ends with its monitoring owner", async () => {
   let enabled = false;
@@ -18,13 +16,12 @@ test("render highlighting needs local activation and ends with its monitoring ow
     reportFrames: () => {},
     reportState: () => {},
   };
-  const overlay = createReactRenderOverlay({
-    scanner: { isSupported: () => true, setOptions() {}, scan() {} },
-    setVisible: (next) => {
+  const controller = createPerformanceMonitoringController(host, {
+    state: () => ({ supported: true, enabled, scope: "workbench" }),
+    setEnabled: (next) => {
       enabled = next;
     },
   });
-  const controller = createPerformanceMonitoringController(host, overlay);
   const adapter = createPerformanceDiagnosticsAdapter(controller);
   const previous = Object.getOwnPropertyDescriptor(globalThis, "navigator");
   const activation = { isActive: false };
@@ -59,54 +56,4 @@ test("render highlighting needs local activation and ends with its monitoring ow
     if (previous) Object.defineProperty(globalThis, "navigator", previous);
     else Reflect.deleteProperty(globalThis, "navigator");
   }
-});
-
-test("a CLI capture waits for desktop publication and can retry a rejected start", async () => {
-  let start: (() => Promise<ReactRenderCapture>) | undefined;
-  let failPublication = true;
-  let pendingPublication: Promise<void> | undefined;
-  const overlay = createReactRenderOverlay({
-    scanner: { isSupported: () => true, scan() {}, setOptions() {} },
-    setVisible() {},
-  });
-  const controller = createPerformanceMonitoringController(
-    {
-      kind: "desktop",
-      isEnabled: async () => true,
-      setEnabled: async () => {},
-      snapshot: async () => null,
-      reportFrames() {},
-      async reportState(report) {
-        if (report.renderCapture && failPublication) throw new Error("Desktop rejected publication");
-        if (report.renderCapture) await pendingPublication;
-      },
-      onRenderCaptureRequest(listener) {
-        start = listener;
-        return () => {
-          start = undefined;
-        };
-      },
-    },
-    overlay,
-  );
-  try {
-    await controller.load();
-    await expect(start!()).rejects.toThrow("Desktop rejected publication");
-    expect(overlay.readCapture()).toBeUndefined();
-    failPublication = false;
-    const held = Promise.withResolvers<void>();
-    pendingPublication = held.promise;
-    const stopped = start!();
-    await controller.setEnabled(false);
-    await controller.setEnabled(true);
-    pendingPublication = undefined;
-    const replacement = await start!();
-    held.resolve();
-    await expect(stopped).rejects.toThrow("React render capture stopped");
-    expect(overlay.readCapture()).toBe(replacement);
-  } finally {
-    controller.dispose();
-  }
-  expect(start).toBeUndefined();
-  expect(overlay.readCapture()).toBeUndefined();
 });

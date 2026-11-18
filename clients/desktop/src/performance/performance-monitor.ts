@@ -6,7 +6,6 @@ import {
   type PerformanceProcessSample,
   type PerformanceRecordingExport,
   type PerformanceSnapshot,
-  type ReactRenderCapture,
   type RendererStateReport,
   rendererStateReportSchema,
   type SlowFrame,
@@ -38,10 +37,7 @@ export interface PerformanceMonitorOptions {
   platform: NodeJS.Platform;
   // Logical CPUs. Electron divides each process's CPU by this count.
   cpuCount: number;
-  openEndpoint: (
-    read: () => PerformanceSnapshot | null,
-    readRenders: () => ReactRenderCapture | null,
-  ) => Promise<{ close: () => Promise<void> }>;
+  openEndpoint: (read: () => PerformanceSnapshot | null) => Promise<{ close: () => Promise<void> }>;
   createCapture?: () => PerformanceCaptureOwner | Promise<PerformanceCaptureOwner>;
   recordings?: () => PerformanceRecordingExport;
   now?: () => number;
@@ -172,10 +168,7 @@ export class DesktopPerformanceMonitor {
 
   reportRendererState(report: unknown) {
     const state = rendererStateReportSchema.parse(report);
-    if (!this.#cancel) {
-      if (state.renderCapture?.status === "recording") throw new Error("Performance monitoring stopped");
-      return;
-    }
+    if (!this.#cancel) return;
     this.#rendererState = state;
   }
 
@@ -197,8 +190,7 @@ export class DesktopPerformanceMonitor {
       },
       processes: this.#latest?.processes ?? [],
       frames: this.#frames,
-      frameRate: this.#rendererState.frameRate,
-      pausedExtensionIds: this.#rendererState.pausedExtensionIds,
+      ...this.#rendererState,
     };
   }
 
@@ -222,10 +214,7 @@ export class DesktopPerformanceMonitor {
       // Prime Electron's CPU window after scheduling so a slow first read does not delay the capture cadence.
       this.#options.readMetrics();
       this.#lastSampleAt = this.#now();
-      this.#endpoint = await this.#options.openEndpoint(
-        () => this.snapshot(),
-        () => this.#rendererState.renderCapture ?? null,
-      );
+      this.#endpoint = await this.#options.openEndpoint(() => this.snapshot());
     } catch (error) {
       await this.#end();
       throw error;

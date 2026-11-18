@@ -59,7 +59,6 @@ export interface PromptStudioDesktopApi {
   getPerformanceRecordings: () => Promise<PerformanceRecordingExport | null>;
   reportSlowFrames: (report: unknown) => Promise<void>;
   reportRendererState: (report: unknown) => Promise<void>;
-  onRenderCaptureRequest: (start: () => Promise<unknown>) => () => void;
 }
 
 export const DESKTOP_CHANNELS = {
@@ -99,5 +98,4 @@ export const DESKTOP_CHANNELS = {
   getPerformanceRecordings: "pstdio:desktop:get-performance-recordings",
   reportSlowFrames: "pstdio:desktop:report-slow-frames",
   reportRendererState: "pstdio:desktop:report-renderer-state",
-  requestRenderCapture: "pstdio:desktop:request-render-capture",
 } as const;

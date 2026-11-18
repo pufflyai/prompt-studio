@@ -11,7 +11,7 @@ import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { expectPackagedNativeActions, writeNativeActionsExtension } from "./packaged-native-actions-smoke";
 import { expectPackagedNativeMarkdown, writeNativeMarkdownExtension } from "./packaged-native-markdown-smoke";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
-import { expectPackagedRenderCapture, expectPackagedSavedRecordings } from "./packaged-performance-smoke";
+import { expectPackagedSavedRecordings } from "./packaged-performance-smoke";
 import { expectPackagedProjectComposition } from "./packaged-project-composition-smoke";
 import { expectPackagedProjectChoices, writePackagedChoiceSources } from "./packaged-project-setup-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -61,12 +61,6 @@ test(
 test(
   "exports saved performance recordings with monitoring stopped",
   expectPackagedSavedRecordings,
-  PACKAGED_TEST_TIMEOUT,
-);
-
-test(
-  "reads a React render capture from the local desktop endpoint",
-  expectPackagedRenderCapture,
   PACKAGED_TEST_TIMEOUT,
 );
 

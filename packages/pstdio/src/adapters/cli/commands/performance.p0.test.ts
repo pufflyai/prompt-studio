@@ -18,11 +18,11 @@ const endpointPath = () => {
   return join(root, "endpoint.json");
 };
 
-const serve = async (path: string, body: string, operation?: string) => {
+const serve = async (path: string, body: string) => {
   const token = "a".repeat(64);
   const server: Server = createServer((socket) => {
     socket.once("data", (request) => {
-      expect(request.toString()).toBe(operation ? `${token} ${operation}\n` : `${token}\n`);
+      expect(request.toString()).toBe(`${token}\n`);
       socket.end(body);
     });
   });
@@ -86,31 +86,6 @@ test("reads saved recordings after the live endpoint is gone", async () => {
   const exported = JSON.parse(log.mock.calls[0]![0]);
   expect(exported.directory).toBe(directory);
   expect(JSON.parse(exported.files[0].content).captureId).toBe("saved-capture");
-});
-
-test("reads only an explicitly collected render capture from the local endpoint", async () => {
-  const path = endpointPath();
-  const renderCapture = {
-    status: "complete",
-    startedAt: "2026-11-17T12:00:00.000Z",
-    endedAt: "2026-11-17T12:00:10.000Z",
-    components: [{ name: "Sidebar", renders: 3, unchanged: 2, unknown: 0, renderMs: 12, unchangedRenderMs: 7 }],
-    unnamedRenders: 0,
-    truncated: false,
-  };
-  await serve(path, `${JSON.stringify({ capture: renderCapture })}\n`, "renders");
-  const log = mock();
-  await createHandler({ log, resolveEndpoint: () => path })({ action: "renders" });
-  expect(JSON.parse(log.mock.calls[0]?.[0])).toEqual(renderCapture);
-});
-
-test("asks the local desktop to start a render capture", async () => {
-  const path = endpointPath();
-  const capture = { status: "recording", startedAt: "2026-11-17T12:00:00.000Z" };
-  await serve(path, `${JSON.stringify({ capture })}\n`, "start-renders");
-  const log = mock();
-  await createHandler({ log, resolveEndpoint: () => path })({ action: "renders", start: true });
-  expect(JSON.parse(log.mock.calls[0]?.[0])).toEqual(capture);
 });
 
 test("requires the saved recording directory without starting monitoring", async () => {

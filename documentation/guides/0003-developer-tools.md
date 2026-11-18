@@ -87,8 +87,6 @@ pst performance
 
 The command talks to the desktop app directly. It does not start or call a runtime. When monitoring is off, nothing serves a snapshot and the command explains how to turn it on.
 
-Agents can explicitly start a ten-second React render capture with `pst performance renders --start`. Reproduce the interaction in the open desktop workbench, then read the result with `pst performance renders`. Monitoring must already be enabled. The capture ranks workbench component updates with no detected input changes and records unknown comparisons separately. Render reports remain local to the CLI.
-
 ## Turn it off
 
 Disable the extension. The meter and its details disappear. Sampling, the frame counter, the slow-frame observer, and the `pst performance` endpoint stop at once, and every kept sample is cleared. Nothing runs while no monitoring extension is loaded.
