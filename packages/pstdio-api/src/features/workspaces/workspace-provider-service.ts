@@ -5,6 +5,7 @@ import { provisionProviderWorkspace } from "./workspace-provider-creation";
 import {
   isBuiltInProviderId,
   remoteReadOnlyCapabilities,
+  restoredFolderSetupPending,
   rootProviderId,
   worktreeProviderId,
 } from "./workspace-provider-identity";
@@ -42,6 +43,7 @@ export const createProviderBackedWorkspace = async (
     providerId: string;
     params?: JsonObject;
     isDefault?: boolean;
+    restoredFolderSetup?: boolean;
     standalone?: boolean;
     provision?: (workspace: WorkspaceRecord, projectPath: string) => Promise<WorkspaceRecord>;
     signal?: AbortSignal;
@@ -60,13 +62,17 @@ export const createProviderBackedWorkspace = async (
   }
   let sourcePath: string | null = null;
   if (providerId === rootProviderId) sourcePath = await canonicalFolder(params.path);
+  const storedParams =
+    providerId === rootProviderId && input.restoredFolderSetup
+      ? { ...params, [restoredFolderSetupPending]: true }
+      : params;
   const operationId = crypto.randomUUID();
   const createInput = {
     project_id: input.projectId,
     anchors: input.anchors,
     name: input.name,
     provider_id: providerId,
-    provider_params_json: params,
+    provider_params_json: storedParams,
     provider_state: "provisioning" as const,
     provider_operation_id: operationId,
     provider_operation_kind: "create" as const,
@@ -75,7 +81,7 @@ export const createProviderBackedWorkspace = async (
     if (input.isDefault && home && !home.root_path && !home.provider_ref_json) {
       const attached = await deps.workspaceService.attachInitialProvider(home.id, {
         provider_id: providerId,
-        provider_params_json: params,
+        provider_params_json: storedParams,
         root_path: sourcePath ?? undefined,
         provider_operation_id: operationId,
       });

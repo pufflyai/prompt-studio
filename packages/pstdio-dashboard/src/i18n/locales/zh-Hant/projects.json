@@ -60,8 +60,8 @@
         "errorCopied": "錯誤已複製"
       },
       "upgrade": {
+        "waiting": "等待升級",
         "action": "升級",
-        "succeeded": "擴充功能已升級",
         "current": "擴充功能已是最新",
         "failed": "擴充功能升級失敗"
       },
@@ -80,7 +80,6 @@
         "title": "將擴充功能資料夾拖放到這裡",
         "hint": "主機會按擴充功能宣告的範圍安裝。",
         "uploading": "正在新增 {{name}}…",
-        "succeeded": "已新增 {{name}}",
         "failed": "無法新增擴充功能資料夾",
         "notFolder": "請拖放資料夾，而非檔案。"
       },
@@ -156,6 +155,18 @@
         "title": "取代 {{name}}？",
         "message": "這將取代已安裝的檔案。使用此擴充功能的其他專案也會使用新檔案。",
         "action": "取代"
+      },
+      "feedback": {
+        "queued": "等待中",
+        "upgrading": "正在升級 {{name}}",
+        "updating": "正在更新 {{name}}",
+        "installing": "正在安裝 {{name}}",
+        "batch": "已完成 {{count}} / {{total}} 個升級",
+        "retry": "重試",
+        "dismiss": "關閉",
+        "upgradingButton": "正在升級",
+        "batchFailed": "{{total}} 個升級中有 {{count}} 個失敗",
+        "installingButton": "正在安裝"
       }
     }
   },

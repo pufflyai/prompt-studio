@@ -523,7 +523,7 @@ columns: [
 
 Thumbnails fill the row, so Comfortable and Tall row heights show larger previews. A gallery shows three thumbnails and counts the rest. Clicking a thumbnail opens the shared image viewer without activating the row; a gallery opens as a carousel. An image that fails to load shows a placeholder, and an empty value shows a dash. `fit` is `cover` (default) or `contain`; `shape` is `square` (default) or `circle`; `showLabel` shows the first image's alt text beside it. Image columns are text fields for filters. This addition shares API 0.5.0 on `main`; publish the host, SDK and UI before an independent extension adopts it.
 
-The query receives `filter`, `sorts`, and the display `settings`. For default full-result providers, use them only to narrow what you load. The renderer applies the full filter and sorts to the returned rows, so returning more rows than the view shows is correct. Opt-in [paged providers](#paged-tables-and-boards) apply these controls before returning a bounded page.
+The query receives `filter`, `sorts`, and the display `settings`. The new indexed collection query helpers infer [paged providers](#paged-tables-and-boards), which apply these controls before returning a bounded page. Custom providers without an explicit query mode retain the full-result contract: the renderer applies filtering and sorting to their returned rows.
 
 API 0.2.0 removes the fields deprecated in published package version 0.43.1. Migrate declarations and query handlers to the replacements below.
 
@@ -716,15 +716,38 @@ Publish the additive SDK before harness extensions adopt it. Codex native accept
 
 ## Paged tables and boards
 
-Set `queryMode: "paged"` on a `dataTable` or `kanban` view body to opt in. This is
-an additive API 0.2.2 change. Existing providers keep their full-result query and
-local filtering, sorting, and search.
+On unreleased API 0.5.0, `defineView` defaults queries created by
+`collectionViewQuery` or `collectionTableQuery` to `queryMode: "paged"`. Existing
+custom callbacks retain their full-result contract when rebuilt with the new SDK;
+custom bounded providers explicitly set `queryMode: "paged"`. For a genuinely small fixed list,
+declare `queryMode: "static"` and `maxRows` between 1 and 500. The host checks
+the bound, including nested rows. Both modes reject complete collection reads
+through storage or workspace APIs, including nested command calls. Query only
+the required projections and use database aggregates for counts. Providers without an explicit bounded mode retain their existing full-result contract.
+
+For a new resource, use `collectionViewQuery({ index, attributes, resourceKind })`
+from `@pstdio/sdk/extensions`, or `collectionTableQuery({ index, columns,
+resourceKind })`. `defineExtension` installs their collection-scoped index before
+queries run. These helpers translate filters, search, the first supported sort,
+grouping and collapsed groups before selection. Table helpers also return
+requested statistics for scalar projections. Date controls use the viewer's
+calendar; option search uses resolved display labels and text sorting uses the
+viewer locale with numeric, case-insensitive ordering. Custom display values
+need explicit query projections and matching search predicates through `fields`.
+Dynamic computed or related date values must supply `date.dayField`,
+`date.textField`, and `orderField` projections for the controls they expose.
+Declared local dates and literal or conditional computed dates are formatted by
+the helper using the viewer's locale and time zone.
+Publish the supporting host and SDK before releasing independent consumers.
 
 The host passes `params.page` with a limit of at most 500, a zero-based offset,
 optional cursor and expected revision, search text, selected field IDs, and
-collapsed table group keys. Set `initialPageSize` on a paged table or board to
+collapsed table group keys. `page.presentation` supplies resolved option labels
+and empty-group keys so query search and collapse match the native controls.
+Set `initialPageSize` on a paged table or board to
 request a larger page; tables can also offer `pageSizeOptions`. Fields include
-visible columns/properties and active grouping fields. Badge-list displays also
+visible columns/properties and active grouping fields. `page.searchFields`
+separately names the displayed searchable fields. Badge-list displays also
 request their companion item field. Apply `params.filter`, `params.sorts`, and
 search to the complete indexed collection before selecting a page. Return the
 requested fields and only the bounded rows.
@@ -753,6 +776,7 @@ Return `{ rows, page }`, where `page` contains:
 - `filteredTotal`: rows matching filter and search, excluding collapsed table groups.
 - `groups`: complete grouping counts, each with `field`, `value`, and `count`.
   Subgroups also identify their parent field/value. Missing values use `null`.
+  At most 500 grouped combinations produce at most 1,000 parent/subgroup summaries.
 - `statistics`: requested table column summaries, keyed by field ID, when a
   visible statistics control requests them. Never calculate these from one page.
 

@@ -1,7 +1,8 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { harnessCommandStateSchema, harnessOperationSchema } from "pstdio-api-contracts";
+import { harnessOperationSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import type { SessionsRouteDeps } from "../deps";
+import { harnessCommandDiscoverySchema } from "../harness-command-discovery";
 import {
   getSessionHarnessCommands,
   HarnessOperationError,
@@ -31,7 +32,11 @@ export const getHarnessCommandsRoute = createRoute({
   responses: {
     200: {
       description: "Native commands and current harness modes.",
-      content: { "application/json": { schema: harnessCommandStateSchema.extend({ harnessId: z.string() }) } },
+      content: {
+        "application/json": {
+          schema: harnessCommandDiscoverySchema,
+        },
+      },
     },
     ...errors,
   },

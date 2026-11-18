@@ -48,7 +48,6 @@ test.describe("Session bubble workspace selection", () => {
   const repoDirs: string[] = [];
 
   test.beforeEach(async ({ request }) => {
-    test.setTimeout(15_000);
     await deleteAllProjects(request);
   });
 

@@ -11,6 +11,8 @@ export const extensionChangesWorkspaceProvisioning = async (
 ) => {
   try {
     const runtime = await deps.extensionRuntimeCatalog.getSourcesRuntime([installedSource]);
+    if (!runtime.extensions.length || runtime.diagnostics.some((diagnostic) => diagnostic.severity === "error"))
+      return true;
     return runtime.skills.length > 0 || runtime.hooks.some((hook) => hook.eventId === workspaceEvents.provision.id);
   } catch {
     // A broken extension must still be possible to disable. Keep the existing full

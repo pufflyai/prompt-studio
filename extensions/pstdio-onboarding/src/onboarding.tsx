@@ -17,6 +17,7 @@ export const OnboardingLoadError = (props: OnboardingLoadErrorProps) => {
   const { error, onRetry, onSkip } = props;
   const { t } = useTranslation("common");
   const retry = useMutation({ mutationFn: onRetry });
+  const [dismissed, setDismissed] = useState<Error>();
   return (
     <>
       <Box as="header" px="md" py="sm">
@@ -27,16 +28,21 @@ export const OnboardingLoadError = (props: OnboardingLoadErrorProps) => {
           </Button>
         </HStack>
       </Box>
-      <Box flex="1" p="md">
-        <AlertMessage
-          status="error"
-          title={error.message}
-          endElement={
-            <Button loading={retry.isPending} onClick={() => retry.mutate()}>
-              {t("retry")}
-            </Button>
-          }
-        />
+      <Box flex="1" p="md" position="relative">
+        <Button loading={retry.isPending} onClick={() => retry.mutate()}>
+          {t("retry")}
+        </Button>
+        {error !== dismissed ? (
+          <AlertMessage
+            size="sm"
+            status="error"
+            title={error.message}
+            position="absolute"
+            top="3xl"
+            insetInline="md"
+            onClose={() => setDismissed(error)}
+          />
+        ) : null}
       </Box>
     </>
   );
@@ -133,15 +139,24 @@ export const Onboarding = (props: OnboardingProps) => {
                 onChange={setWorkAreas}
               />
             )}
-            {error && (
-              <AlertMessage status="error" title={t("onboarding.saveError")}>
-                {error}
-              </AlertMessage>
-            )}
           </Stack>
         </ScrollArea>
       </Box>
-      <HStack justify="flex-end" as="footer" p="md" gap="md">
+      <HStack justify="flex-end" as="footer" p="md" gap="md" position="relative">
+        {error && (
+          <AlertMessage
+            size="sm"
+            status="error"
+            title={t("onboarding.saveError")}
+            position="absolute"
+            bottom="100%"
+            insetInline="sm"
+            zIndex="docked"
+            onClose={() => setError(undefined)}
+          >
+            {error}
+          </AlertMessage>
+        )}
         {step === "work" && (
           <Button size="sm" variant="ghost" disabled={saving} onClick={() => setStep("harnesses")}>
             <ArrowLeft />

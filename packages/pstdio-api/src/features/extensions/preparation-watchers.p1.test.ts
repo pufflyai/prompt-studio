@@ -13,6 +13,41 @@ afterEach(async () => {
 
 test.each([
   "initial attachment",
+  "new root attachment",
+  "reattachment",
+])("a folder watcher discovers tools installed before %s", async (phase) => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), "preparation-root-gap-")));
+  cleanups.push(() => rm(root, { recursive: true, force: true }));
+  const extensions = join(root, "extensions");
+  await mkdir(extensions);
+  const client = createPreparationClient(
+    () => new Worker(new URL("./extension-preparation-worker.ts", import.meta.url)),
+  );
+  cleanups.push(() => client.stop());
+  const options = { home: join(root, "home") };
+  const input = { id: "installed-tools", kind: "roots", rows: [{ path: extensions, ownerRoot: root }] };
+  if (phase === "new root attachment") await client.run("watch.update", { ...input, rows: [] }, options);
+  if (phase === "reattachment") {
+    await client.run("watch.update", input, options);
+    await client.run("watch.dispose", { id: input.id }, options);
+  }
+  // Installation can finish while a watcher is absent or its registration is queued.
+  await mkdir(join(extensions, "tool"));
+  await writeFile(join(extensions, "tool", "package.json"), JSON.stringify({ name: "tool" }));
+  const notifications: string[] = [];
+  client.subscribe((event) => {
+    if (event.watchId === input.id && typeof event.sourcePath === "string") notifications.push(event.sourcePath);
+  });
+  await client.run("watch.update", input, options);
+  expect(notifications).toContain(extensions);
+  const delivered = notifications.length;
+  await client.run("watch.update", input, options);
+  expect(notifications).toHaveLength(delivered);
+  await client.run("watch.dispose", { id: input.id }, options);
+});
+
+test.each([
+  "initial attachment",
   "new source attachment",
   "reattachment",
 ])("a delayed source watcher reconciles editable files after %s", async (phase) => {

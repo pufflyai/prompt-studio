@@ -127,6 +127,7 @@ export interface RuntimePrivateHandlerRecord {
     | "tree"
     | "textSource";
   operation: string;
+  collectionQuery?: { mode: "paged" | "static"; maxRows?: number };
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with renderer-specific input
   handler: RendererCallback<any, any>;
 }
@@ -193,6 +194,8 @@ export interface RuntimeHarnessRecord {
   extensionId: string;
   name: string;
   sourcePath: string;
+  /** Installed package folder that owns the harness, also when it runs from a prepared copy. */
+  packagePath?: string;
   provider: HarnessProvider;
 }
 

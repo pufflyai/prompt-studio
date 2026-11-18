@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { createWorkspaceMaintenance } from "../../../services/workspace-maintenance";
 import { createSessionsApi } from "./sessions";
 import { createWorkspacesApi } from "./workspaces";
 
@@ -23,6 +24,7 @@ describe("command environment project scope", () => {
         getWorkspaceByShorthand: async () => null,
       },
       workspaceService: {
+        maintenance: createWorkspaceMaintenance(),
         get: async () => otherWorkspace,
         getByShorthand: async () => null,
       },
@@ -80,6 +82,7 @@ describe("command environment project scope", () => {
     const deleteProviderBackedWorkspace = mock(async () => false);
     const deps = {
       workspaceService: {
+        maintenance: createWorkspaceMaintenance(),
         get: async () => workspace,
         getByShorthand: async () => null,
       },

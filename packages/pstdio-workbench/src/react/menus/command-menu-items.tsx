@@ -59,6 +59,8 @@ const toMenuItem = (
   id: entry.id,
   label: entry.label,
   group: entry.group,
+  selected: entry.selected,
+  closeOnSelect: entry.closeOnSelect,
   commandId: entry.commandId,
   description: entry.description,
   icon: createMenuIcon(entry),

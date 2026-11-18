@@ -1,5 +1,5 @@
 import { apiWebSocket, assertListenHostAllowed, closeBeforeFatalExit, createApp, resolveAppConfig } from "./app";
-import { disableExtensionMutationTimeout } from "./features/extensions/extension-request-timeout";
+import { disableExtensionPreparationTimeout } from "./features/extensions/extension-request-timeout";
 import { apiLogger } from "./lib/logger";
 
 const port = Number(process.env.PORT ?? "19840");
@@ -38,7 +38,7 @@ const startServer = async () => {
 
     Bun.serve({
       fetch: (request, server) => {
-        disableExtensionMutationTimeout(request, server);
+        disableExtensionPreparationTimeout(request, server);
         return app.fetch(request, server);
       },
       hostname,

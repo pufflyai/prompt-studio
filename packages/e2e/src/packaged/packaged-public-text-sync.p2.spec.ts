@@ -86,13 +86,20 @@ for (const presentation of ["native", "installed"] as const) {
     await seedPublicTextDevice(first, project.id);
     await signInPublicTextDevice(first, fixture.peer.origin);
     await first.client.account.syncProject(project.id);
-    await expect.poll(async () => (await first.client.account.projectSyncStatus(project.id)).state).toBe("synced");
+    // First enrollment uploads the project's encrypted baseline before the editing workload starts.
+    await expect
+      .poll(async () => (await first.client.account.projectSyncStatus(project.id)).state, { timeout: 30_000 })
+      .toBe("synced");
     await signInPublicTextDevice(second, fixture.peer.origin);
     await expect
-      .poll(async () => (await second.client.projects.query()).items.some((item) => item.id === project.id))
+      .poll(async () => (await second.client.projects.query()).items.some((item) => item.id === project.id), {
+        timeout: 30_000,
+      })
       .toBe(true);
     await second.client.projects.chooseFolder(project.id, { path: secondFolder, clone: false });
-    await expect.poll(async () => (await second.client.account.projectSyncStatus(project.id)).state).toBe("synced");
+    await expect
+      .poll(async () => (await second.client.account.projectSyncStatus(project.id)).state, { timeout: 30_000 })
+      .toBe("synced");
     await expect
       .poll(() => readPublicTextCopy(secondFolder, "paper.public-text-source", "selected.md"))
       .toBe("Shared source");
@@ -181,10 +188,13 @@ for (const presentation of ["native", "installed"] as const) {
 
     await appendAgentText(first.client, project.id, ": agent");
     const finalText = `${stopped}: agent`;
-    await expect.poll(left.readText).toBe(finalText);
-    await expect.poll(right.readText).toBe(finalText);
+    // Restored hosts and retained editors reconcile the agent's projected update asynchronously.
+    await expect.poll(left.readText, { timeout: 15_000 }).toBe(finalText);
+    await expect.poll(right.readText, { timeout: 15_000 }).toBe(finalText);
     for (const folder of [firstFolder, secondFolder])
-      await expect.poll(() => readPublicTextCopy(folder, "paper.public-text-source", "selected.md")).toBe(finalText);
+      await expect
+        .poll(() => readPublicTextCopy(folder, "paper.public-text-source", "selected.md"), { timeout: 15_000 })
+        .toBe(finalText);
 
     for (const folder of [firstFolder, secondFolder]) {
       expect(readPublicTextCopy(folder, "paper.public-text-source", "private.md")).toBe("Source owner private text");

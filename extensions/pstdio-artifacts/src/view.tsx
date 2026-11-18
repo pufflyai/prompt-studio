@@ -1,5 +1,5 @@
 import "@pstdio/ui/style.css";
-import { Center, Spinner, Stack } from "@chakra-ui/react";
+import { Center, Spinner, Stack, Text } from "@chakra-ui/react";
 import {
   createWebviewClient,
   defineExtensionView,
@@ -48,7 +48,7 @@ const ArtifactsApp = (props: AppProps) => {
   const reads = useScopedQueries(id && preference.data !== undefined ? [queries.content(id, selected)] : [], visible);
   const items = index.data;
   const content = reads[0]?.data;
-  const error = actionError ?? preference.error?.message ?? index.error?.message ?? reads[0]?.error?.message;
+  const readError = preference.error?.message ?? index.error?.message ?? reads[0]?.error?.message;
 
   const open = async (item: ArtifactSummary) => {
     await host.call("navigation.open", { target: item.target });
@@ -68,7 +68,13 @@ const ArtifactsApp = (props: AppProps) => {
 
   let body = (
     <Center flex="1">
-      <Spinner />
+      {readError ? (
+        <Text color="fg.muted" title={readError}>
+          Artifacts unavailable
+        </Text>
+      ) : (
+        <Spinner />
+      )}
     </Center>
   );
   if (id && content && items) {
@@ -89,8 +95,19 @@ const ArtifactsApp = (props: AppProps) => {
     );
   }
   return (
-    <Stack height="100dvh" minHeight="0" gap="0" bg="bg" color="fg">
-      {error ? <AlertMessage status="error" title={error} /> : null}
+    <Stack height="100dvh" minHeight="0" gap="0" bg="bg" color="fg" position="relative">
+      {actionError ? (
+        <AlertMessage
+          size="sm"
+          status="error"
+          title={actionError}
+          position="absolute"
+          bottom="xs"
+          insetInline="sm"
+          zIndex="docked"
+          onClose={() => setActionError(undefined)}
+        />
+      ) : null}
       {body}
     </Stack>
   );
