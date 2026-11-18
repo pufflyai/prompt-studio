@@ -217,7 +217,7 @@ export const Mutating: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    togglingInstanceId: "planner-instance",
+    actionStates: { "planner-instance": { operation: "toggle", status: "running", label: "Updating Project Planner" } },
   },
 };
 export const InstallingMultipleAvailableExtensions: Story = {
@@ -228,8 +228,8 @@ export const InstallingMultipleAvailableExtensions: Story = {
     diagnostics: [],
     automations,
     actionStates: {
-      "marketplace:pstdio-reports": { status: "running", label: "Installing", startedAt: Date.now() - 12000 },
-      "marketplace:pstdio-planner": { status: "running", label: "Installing", startedAt: Date.now() - 12000 },
+      "marketplace:pstdio-reports": { status: "running", label: "Installing" },
+      "marketplace:pstdio-planner": { status: "running", label: "Installing" },
     },
   },
 };
@@ -289,7 +289,7 @@ export const UpgradingOneExtension: Story = {
     diagnostics: [],
     automations,
     actionStates: {
-      "planner-instance": { status: "running", label: "Upgrading Project Planner", startedAt: Date.now() - 12000 },
+      "planner-instance": { status: "running", label: "Upgrading Project Planner" },
     },
   },
 };
@@ -301,10 +301,10 @@ export const UpgradingAll: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    batch: { ids: ["pstdio-planner", "extension-lab"], startedAt: Date.now() - 12000, completed: 0, failed: 0 },
+    batch: { ids: ["pstdio-planner", "extension-lab"], running: true, completed: 0, failed: 0 },
     actionStates: {
-      "planner-instance": { status: "running", label: "Upgrading Project Planner", startedAt: Date.now() - 12000 },
-      "lab-instance": { status: "running", label: "Upgrading Extension Lab", startedAt: Date.now() - 12000 },
+      "planner-instance": { status: "running", label: "Upgrading Project Planner" },
+      "lab-instance": { status: "running", label: "Upgrading Extension Lab" },
     },
   },
 };

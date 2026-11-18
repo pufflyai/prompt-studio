@@ -66,7 +66,8 @@ test("system information can be opened and dismissed in the status bar", async (
   const before = await action.boundingBox();
   await action.click();
   const status = preview.locator('[data-workbench-region="status"]');
-  await status.getByRole("button", { name: "System notices: Update ready" }).press("Enter");
+  const widget = status.locator('[data-status-bar-item="workbench.system-activity"]');
+  await widget.getByRole("button", { name: "System notices: Update ready" }).press("Enter");
   const details = preview.getByRole("region", { name: "System notice list" });
   await expect(details.getByText("Update ready", { exact: true })).toBeVisible();
   await details.getByRole("button", { name: "Dismiss Update ready" }).press("Enter");

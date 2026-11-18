@@ -14,17 +14,17 @@ export const UpgradeFeedback = () => {
   const labels = {
     queued: "Waiting",
     running: install ? "Installing" : "Upgrading",
-    success: install ? "Installed" : "Upgraded",
     error: install ? "Install failed" : "Upgrade failed",
   };
   return (
     <Stack padding="lg" gap="md">
       <HStack>
-        {(["queued", "running", "success", "error"] as const).map((value) => (
+        {(["queued", "running", "error"] as const).map((value) => (
           <Button key={value} onClick={() => setStatus(value)}>
             {value}
           </Button>
         ))}
+        <Button onClick={() => setStatus(undefined)}>Idle</Button>
         <Button onClick={() => setInstall((value) => !value)}>Toggle fresh install</Button>
         <Button
           onClick={() => {
@@ -39,13 +39,12 @@ export const UpgradeFeedback = () => {
         <Text textStyle="heading/M">Extensions</Text>
         <ExtensionUpgradeProgress
           batch={
-            showBatch
+            showBatch && (completed < 3 || status === "error")
               ? {
                   ids: ["planner", "notes", "tickets"],
-                  startedAt: Date.now() - 12000,
                   completed,
                   failed: status === "error" ? 1 : 0,
-                  finishedAt: completed === 3 ? Date.now() : undefined,
+                  running: completed < 3,
                 }
               : undefined
           }
@@ -72,8 +71,6 @@ export const UpgradeFeedback = () => {
               ? {
                   status,
                   label: labels[status],
-                  startedAt: status === "queued" ? undefined : Date.now() - 12000,
-                  finishedAt: status === "success" || status === "error" ? Date.now() : undefined,
                   error: status === "error" ? "Registry unavailable" : undefined,
                 }
               : undefined

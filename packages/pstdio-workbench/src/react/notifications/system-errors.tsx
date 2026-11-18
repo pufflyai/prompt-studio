@@ -1,12 +1,37 @@
 import { Button, Icon, Stack, Tag, Text } from "@chakra-ui/react";
 import { AlertMessage, ScopedPopover as Popover, PopoverHeader, Portal, ScrollArea } from "@pstdio/ui";
 import { Bell, TriangleAlert } from "lucide-react";
+import { useLayoutEffect } from "react";
 import type { WorkbenchCore } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchActionErrors } from "./action-errors";
-import { isSystemNotice } from "./system-error-state";
+import { isSystemNotice, useHasSystemNotices } from "./system-error-state";
 
-export const WorkbenchSystemNotices = (props: { workbench: WorkbenchCore }) => {
+export const systemActivityItemId = "workbench.system-activity";
+
+export const useSystemActivityStatusItem = (workbench: WorkbenchCore) => {
+  const hasNotices = useHasSystemNotices(workbench);
+  useLayoutEffect(() => {
+    if (!hasNotices) return;
+    const view = workbench.views.registerView({
+      id: systemActivityItemId,
+      title: "System activity",
+      body: { kind: "react", render: () => <WorkbenchSystemNotices workbench={workbench} /> },
+    });
+    const item = workbench.statusBar.registerItem({
+      id: systemActivityItemId,
+      viewId: systemActivityItemId,
+      slot: "leading",
+      order: -1,
+    });
+    return () => {
+      item.dispose();
+      view.dispose();
+    };
+  }, [workbench, hasNotices]);
+};
+
+const WorkbenchSystemNotices = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   const notifications = useWorkbenchStore(workbench.notifications.store, (state) => state.notifications);
   const notices = Object.values(notifications)

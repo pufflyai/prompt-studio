@@ -22,10 +22,10 @@ import { ExtensionSettingsViews } from "./extension-settings-views";
 
 interface ExtensionDetailContainerProps {
   projectId: string | undefined;
-  upgradeAction?: ExtensionActionState;
+  action?: ExtensionActionState;
   onUpgrade: () => void;
   onToggle: (enabled: boolean) => void;
-  onDismissUpgrade: (action: ExtensionActionState) => void;
+  onDismissAction: (action: ExtensionActionState) => void;
   onRetryAction: () => void;
   extension: ProjectExtensionInstance;
   metadata: DashboardExtensionMetadata | undefined;
@@ -42,11 +42,13 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
     agents,
     onBack,
     settingsInput,
-    upgradeAction,
+    action,
     onUpgrade,
-    onDismissUpgrade,
+    onDismissAction,
     onRetryAction,
   } = props;
+  const toggleAction = action?.operation === "toggle" ? action : undefined;
+  const upgradeAction = toggleAction ? undefined : action;
   const { showError, errorNotice, clearError } = useActionError();
   const settingsPanels =
     metadata?.settingsPanels.filter(
@@ -125,7 +127,10 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         upgrading={upgradeAction?.status === "running" || upgradeAction?.status === "queued"}
         actionFeedback={!confirmingUninstall && errorNotice}
         upgradeAction={upgradeAction}
-        onDismissUpgrade={onDismissUpgrade}
+        onDismissUpgrade={onDismissAction}
+        toggleAction={toggleAction}
+        onDismissToggle={toggleAction && (() => onDismissAction(toggleAction))}
+        onRetryToggle={onRetryAction}
         onRetryUpgrade={upgradeAction?.status === "error" ? onRetryAction : undefined}
         uninstalling={uninstall.isPending}
         togglingAutomationId={

@@ -1,5 +1,6 @@
 import type { WorkbenchCore } from "../../core";
 import { useHasSystemNotices } from "../notifications/system-error-state";
+import { systemActivityItemId } from "../notifications/system-errors";
 import { useWorkbenchPanelMenusPresent } from "../panel-menu/use-panel-menu";
 import { useModeChrome } from "../region/mode-chrome";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -9,16 +10,15 @@ export const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
   const statusChrome = useModeChrome(workbench, "status");
   const statusBarItems = useWorkbenchStore(workbench.statusBar.store, (state) => state.items);
   const hasSystemNotices = useHasSystemNotices(workbench);
-  const hasVisibleStatusItems = useWorkbenchStore(
-    workbench.context.store,
-    () => workbench.statusBar.listVisibleItems().length > 0,
+  const hasVisibleStatusItems = useWorkbenchStore(workbench.context.store, () =>
+    workbench.statusBar.listVisibleItems().some((item) => item.id !== systemActivityItemId),
   );
   const activeModeId = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
   const hasStatusWidgets =
     statusChrome !== undefined
       ? statusChrome !== false
       : activeModeId === workbench.modes.getActiveModeId() &&
-        Object.keys(statusBarItems).length > 0 &&
+        Object.keys(statusBarItems).some((id) => id !== systemActivityItemId) &&
         hasVisibleStatusItems;
   return {
     hasNavWidgets: useWorkbenchRegionContent(workbench, "nav"),

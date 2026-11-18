@@ -10,7 +10,7 @@ import {
   useSetExtensionAutomationEnabled,
 } from "@/shared/extensions/use-project-extensions";
 import { AvailableExtensionDetail } from "./available-extension-detail";
-import { marketplaceActionKey, resolveExtensionAction } from "./extension-actions";
+import { marketplaceActionKey } from "./extension-actions";
 import { ExtensionDetailContainer } from "./extension-detail-container";
 import { ExtensionReplacementConfirmation } from "./extension-replacement-confirmation";
 import { ExtensionsPanelView } from "./extensions-panel-view";
@@ -82,7 +82,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   );
 
   if (selected) {
-    const owned = resolveExtensionAction(actions.actions, selected);
+    const action = actions.actions[selected.id];
     return (
       <>
         {replacementDialog}
@@ -93,11 +93,11 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
           agents={agents}
           settingsInput={settingsInput}
           onBack={() => openList()}
-          upgradeAction={owned.action}
+          action={action}
           onUpgrade={() => void actions.handleUpgrade(selected)}
           onToggle={(enabled) => void actions.handleToggle(selected, enabled)}
-          onDismissUpgrade={(expected) => actions.dismiss(owned.key, expected)}
-          onRetryAction={() => actions.retry(owned.key)}
+          onDismissAction={(expected) => actions.dismiss(selected.id, expected)}
+          onRetryAction={() => actions.retry(selected.id)}
         />
       </>
     );
@@ -151,7 +151,6 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         onInstallMarketplace={(extension) => void actions.handleInstall(extension)}
         onOpenMarketplace={(extension) => openDetail(`marketplace:${extension.installName}`, extension.displayName)}
         onUpgradeAll={(upgradable) => void actions.handleUpgradeAll(upgradable)}
-        addingFolderName={actions.addingFolderName}
         onDropFolder={(folder) => void actions.handleDrop(folder)}
       />
     </>
