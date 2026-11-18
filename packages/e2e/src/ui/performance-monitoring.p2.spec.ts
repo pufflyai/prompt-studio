@@ -40,7 +40,7 @@ test("measures while the Performance Monitoring extension is loaded and shows it
   await expect(details).toHaveCount(0);
   const operations = () => page.evaluate(() => Reflect.get(window, "performanceDetailsOperations") as string[]);
   expect(await operations()).not.toContain("observe");
-  await meter(page).click();
+  await page.locator("footer").getByRole("button", { name: "Performance", exact: true }).click();
   await expect(preparedFrame).toHaveCount(1);
   await expect.poll(() => details.evaluate(() => document.visibilityState)).toBe("visible");
   await expect.poll(operations).toContain("observe");
@@ -50,12 +50,12 @@ test("measures while the Performance Monitoring extension is loaded and shows it
   // Critical: reopening must reuse the webview document instead of repeating its startup.
   const detailFrame = page.locator('iframe[title="Performance details"]');
   const loadedFrame = await detailFrame.elementHandle();
-  await meter(page).click();
+  await page.locator("footer").getByRole("button", { name: "Performance", exact: true }).click();
   await expect(detailFrame).toBeHidden();
   await expect.poll(() => details.evaluate(() => document.visibilityState)).toBe("hidden");
   await expect.poll(operations).toContain("close");
   expect(await loadedFrame!.evaluate((frame) => frame.isConnected)).toBe(true);
-  await meter(page).click();
+  await page.locator("footer").getByRole("button", { name: "Performance", exact: true }).click();
   await expect(details).toBeVisible();
   await expect
     .poll(async () => {
