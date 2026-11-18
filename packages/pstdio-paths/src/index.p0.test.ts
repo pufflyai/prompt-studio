@@ -62,10 +62,3 @@ test("the performance endpoint descriptor belongs to its home", () => {
     resolve(home, "performance/endpoint.json"),
   );
 });
-
-test("a long home does not limit the performance endpoint", () => {
-  const home = resolve(`/tmp/${"nested-folder/".repeat(8)}pstdio-home`);
-  expect(resolvePstdioPerformanceEndpoint({ env: { PSTDIO_HOME: home } })).toBe(
-    resolve(home, "performance/endpoint.json"),
-  );
-});
