@@ -1,4 +1,4 @@
-import type { ProjectSyncStatus } from "@pstdio/sdk/client";
+import type { CloudProjectCatalog, CloudProjectCatalogEntry, ProjectSyncStatus } from "@pstdio/sdk/client";
 import { useScopedQueries, useScopedQuery } from "@pstdio/sdk/extensions/react";
 import { getDashboardAccountStatusQuery } from "@/lib/scoped-queries";
 import { getRuntimeCollections } from "@/lib/sync/collections";
@@ -11,10 +11,12 @@ export interface ProjectCloudState {
   cloud: boolean;
   /** Its sync state on this device, once read. */
   sync?: ProjectSyncStatus;
+  presence?: CloudProjectCatalogEntry["presence"];
+  deleting?: boolean;
 }
 
 /** Which projects sync with the account, and how far each cloud project is on this device. */
-export const useCloudProjectStates = (projectIds: string[]) => {
+export const useCloudProjectStates = (projectIds: string[], catalog?: CloudProjectCatalog) => {
   const owner = getRuntimeCollections();
   const account = useScopedQuery(getDashboardAccountStatusQuery(owner));
   const cloudProjects = new Set(account.data?.cloudProjects ?? []);
@@ -23,8 +25,18 @@ export const useCloudProjectStates = (projectIds: string[]) => {
     cloudIds.map((projectId) => getAccountQuerySources(owner).source({ service: "projectSyncStatus", projectId })),
   );
   const signedIn = Boolean(account.data?.login);
+  const entries = new Map(catalog?.projects.map((entry) => [entry.id, entry.presence]));
+  const deletions = new Set(catalog?.deletions.map((entry) => entry.projectId));
   return (projectId: string) => {
     const index = cloudIds.indexOf(projectId);
-    return { signedIn, cloud: index !== -1, sync: statuses[index]?.data } satisfies ProjectCloudState;
+    const presence = entries.get(projectId);
+    const deleting = deletions.has(projectId);
+    return {
+      signedIn,
+      cloud: Boolean(presence || deleting || index !== -1),
+      sync: statuses[index]?.data,
+      presence,
+      deleting,
+    } satisfies ProjectCloudState;
   };
 };
