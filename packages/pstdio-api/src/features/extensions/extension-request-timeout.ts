@@ -20,9 +20,9 @@ const isLongRunningExtensionRequest = (request: Request) => {
   }
   if (request.method !== "POST") return false;
 
-  const isUpgrade = segments.length === 6 && segments[5] === "upgrade";
+  const preparesSource = segments.length === 6 && (segments[5] === "upgrade" || segments[5] === "reload");
   const isInstall = segments.length === 5 && segments[4] === "install";
-  return isUpgrade || isInstall;
+  return preparesSource || isInstall;
 };
 
 export const disableExtensionPreparationTimeout = (request: Request, server: object) => {

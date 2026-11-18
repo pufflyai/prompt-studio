@@ -23,6 +23,15 @@ describe("extension request timeout", () => {
     expect(timeout).toHaveBeenCalledWith(request, 0);
   });
 
+  test("keeps an explicit extension reload connected during source validation", () => {
+    const request = new Request(`http://localhost:19840/v1/projects/${projectId}/extensions/selected/reload`, {
+      method: "POST",
+    });
+    const timeout = mock(() => {});
+    disableExtensionPreparationTimeout(request, { timeout });
+    expect(timeout).toHaveBeenCalledWith(request, 0);
+  });
+
   test("keeps a saved view read connected while the extension resolves its board fields", () => {
     const request = new Request(`http://localhost:19840/v1/projects/${projectId}/boards/planner.tickets/views`);
     const timeout = mock(() => {});
