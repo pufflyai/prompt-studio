@@ -17,6 +17,7 @@ import { createFileService } from "./services/file-service";
 import { createNotificationService } from "./services/notification-service";
 import { createPersonalHistoryService } from "./services/personal-history/service";
 import { createProjectService } from "./services/project-service";
+import type { createProjectWork } from "./services/project-work";
 import { createSettingsService } from "./services/settings-service";
 import { createSyncService } from "./services/sync-service";
 import { createWorkspaceService } from "./services/workspace-service";
@@ -33,21 +34,35 @@ export const createCoreDomainServices = (input: {
   dbs: ReturnType<typeof createAppDatabaseServices>;
   eventBus: EventBus;
   storageRoot: string;
+  projectWork?: ReturnType<typeof createProjectWork>;
 }) => {
   const { db, dbs, eventBus, storageRoot } = input;
   dbs.extensionResourceSequencesDBService.watch(({ projectId, ...payload }) =>
     fireExtensionEventAsync(input.getCommandDeps(), projectId, resourceEvents.renumbered, payload),
   );
   const filesStorageService = createFilesStorageService(storageRoot);
-  const fileService = createFileService({ filesDBService: dbs.filesDBService, filesStorageService, eventBus });
 
   const syncService = createSyncService({
     db,
     personalState: () => input.getCommandDeps().personalHistoryService.fullState(),
   });
+  const projectService = createProjectService({
+    projectsDBService: dbs.projectsDBService,
+    syncService,
+    eventBus,
+    work: input.projectWork,
+  });
+  const fileService = createFileService({
+    filesDBService: dbs.filesDBService,
+    filesStorageService,
+    eventBus,
+    projectWork: projectService.work,
+    removeOwnedBytes: filesStorageService.removeProject,
+  });
   const assetTransferService = createAssetTransferService({
     transfers: dbs.assetTransfersDBService,
     bytes: createAssetBytesStorage(storageRoot, historicalExtensionId),
+    projectWork: projectService.work,
   });
 
   const workspaceService = createWorkspaceService({
@@ -80,7 +95,7 @@ export const createCoreDomainServices = (input: {
     }),
     fileService,
     assetTransferService,
-    projectService: createProjectService({ projectsDBService: dbs.projectsDBService, syncService, eventBus }),
+    projectService,
     extensionFileService: createExtensionFileService({
       beforeWrite: async (file) => {
         const deps = input.getCommandDeps();

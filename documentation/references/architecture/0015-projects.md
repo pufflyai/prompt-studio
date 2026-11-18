@@ -56,6 +56,10 @@ Host metadata must stay inside the workspace folder. Setup rejects symlinks at `
 
 Deleting a project or workspace preserves user-selected folders and user files. Providers can remove only the resources they created. Project deletion removes its saved host data and its own matching CLI config binding, so the folder can be opened again. Foreign and malformed config files are preserved.
 
+The native account catalog keeps Cloud membership, outstanding deletion receipts, and this device's copy choice in a private local file. The copy choice is keyed by manager, account, device, and project. A deliberately removed copy stays Cloud only through restart and sign-in. Explicit Download is the entry point that lifts the choice, brings the project to offline readiness, and prepares its folder. Browsing the catalog and reading a receipt leave the copy choice in place.
+
+Local removal closes admission to new project work, drains admitted mutations, and checks the current upload state. Pending or unknown upload state requires an explicit discard acknowledgement. The device records the removal before it disconnects the project's relay owners and removes its downloaded records, bytes, local recovery data and provider workspaces. The default source folder remains on disk. The device removes a managed folder when it can verify the folder identity it recorded at creation. Older folders without an ownership record stay on disk. An interrupted cleanup remains visible in the catalog and resumes with the same device choice.
+
 Permanent Cloud deletion uses a durable retirement receipt in the account manager.
 The relay drains admitted work, then fences the scope at storage across all replicas.
 Its cleanup removes scoped content and bytes before acknowledging the operation.

@@ -28,7 +28,7 @@ export class CommandWorkspaceNotFoundError extends Error {
 export const resolveCommandWorkspaceDir = (workspace: { root_path: string | null; execution_kind: string }) =>
   workspace.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined;
 
-export const executeProjectExtensionCommand = async (
+const executeCommand = async (
   deps: ExtensionsRouteDeps,
   input: {
     projectId: string;
@@ -132,3 +132,9 @@ export const executeProjectExtensionCommand = async (
   }
   return { commandId, extensionId: handler.extensionId, eventIds: [...eventIds], events, outcome };
 };
+
+export const executeProjectExtensionCommand = (
+  deps: ExtensionsRouteDeps,
+  input: Parameters<typeof executeCommand>[1],
+) =>
+  deps.projectService.work.run(input.projectId, (signal) => executeCommand(deps, { ...input, signal }), input.signal);

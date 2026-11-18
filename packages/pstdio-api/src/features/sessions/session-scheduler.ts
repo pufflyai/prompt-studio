@@ -308,9 +308,24 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     await recover();
   };
 
+  const work = deps.projectService?.work;
   return {
-    createSession,
-    startOrQueueExisting,
+    createSession: (input: CreateSessionInput) =>
+      work
+        ? work.run(
+            input.projectId,
+            (signal) => createSession(input.signal ? { ...input, signal } : input),
+            input.signal,
+          )
+        : createSession(input),
+    startOrQueueExisting: (input: StartExistingInput) =>
+      work && input.session.project_id
+        ? work.run(
+            input.session.project_id,
+            (signal) => startOrQueueExisting(input.signal ? { ...input, signal } : input),
+            input.signal,
+          )
+        : startOrQueueExisting(input),
     drainQueue,
     recoverQueuedSessions,
   };

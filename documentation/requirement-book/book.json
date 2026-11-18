@@ -1867,7 +1867,7 @@
       "chapter": 9,
       "title": "Every device keeps a full local copy of every cloud project it can access and of its user's private project",
       "level": 2,
-      "statement": "Every device keeps a full local copy of every cloud project it can access and of\n  its user's private project data, including file contents. It works fully offline.\n  Append-only logs load bounded pages on demand under RB 9.A.8; a partial reader cannot\n  publish a replacement that claims to contain history it has not downloaded.",
+      "statement": "By default a device downloads the cloud projects it can access, including the user's private project data and file contents for offline work. A person can explicitly remove a device's downloaded copy and leave a Cloud only catalog entry. This device choice survives restart and sign-in. Only explicit Download restores that copy. Before removal, the host checks upload completion while blocking new project writes. Pending or unknown completion requires explicit acknowledgement. Removal preserves user-selected folders and copies on other devices.\n  Append-only logs load bounded pages on demand under RB 9.A.8; a partial reader cannot\n  publish a replacement that claims to contain history it has not downloaded.",
       "rationale": "",
       "status": "proposed",
       "section": "Cloud requirements",

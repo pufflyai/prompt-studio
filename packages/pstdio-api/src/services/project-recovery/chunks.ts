@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { constants } from "node:fs";
-import { link, lstat, mkdir, open, unlink } from "node:fs/promises";
+import { link, lstat, mkdir, open, rename, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { openBlob, type SyncSpace, sealBlob } from "pstdio-sync/encryption";
 import { syncIdSchema } from "pstdio-sync-contracts";
@@ -67,10 +67,24 @@ const retain = async (path: string, bytes: Uint8Array) => {
 
 /** Device-local ciphertext cache. Plaintext lives only in one bounded in-memory chunk.
  * Naming and AEAD both use the account's private project space, never the shared project audience. */
-export const createRecoveryChunkStore = async ({ root, space }: { root: string; space: SyncSpace }) => {
+export const createRecoveryChunkStore = async ({
+  root,
+  space,
+  previousRoot,
+}: {
+  root: string;
+  space: SyncSpace;
+  previousRoot?: string;
+}) => {
   if (!space.spaceOwner) throw new Error("Folder recovery requires the account's private project space");
   const namespace = await space.documentId(JSON.stringify(["folder-recovery", space.projectId, space.spaceOwner]));
   const directory = join(root, namespace);
+  if (previousRoot && previousRoot !== root) {
+    await mkdir(root, { recursive: true, mode: 0o700 });
+    await rename(join(previousRoot, namespace), directory).catch((error: NodeJS.ErrnoException) => {
+      if (!["ENOENT", "EEXIST", "ENOTEMPTY"].includes(error.code ?? "")) throw error;
+    });
+  }
   await mkdir(directory, { recursive: true, mode: 0o700 });
   if (!(await lstat(directory)).isDirectory()) throw new Error("Invalid recovery cache directory");
   const active = new Map<string, Promise<RecoveryChunk>>();

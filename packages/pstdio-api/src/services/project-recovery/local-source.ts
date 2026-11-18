@@ -42,6 +42,7 @@ export const createLocalRecoverySource = (input: {
   accountId: string;
   deviceId: string;
   root: string;
+  previousRoot?: string;
   workspaces: {
     getDefault(projectId: string): Promise<LocalWorkspace | null | undefined>;
     list(projectId: string): Promise<Pick<LocalWorkspace, "root_path" | "execution_kind">[]>;
@@ -60,7 +61,11 @@ export const createLocalRecoverySource = (input: {
   const sourceId = (workspaceId: string, folder: string) =>
     `${workspaceId}:${createHash("sha256").update(folder).digest("hex").slice(0, 16)}`;
   const journalFor = (id: string) =>
-    openRecoveryJournal({ root: input.root, source: [input.workbenchId, input.accountId, input.deviceId, id] });
+    openRecoveryJournal({
+      root: input.root,
+      previousRoot: input.previousRoot,
+      source: [input.workbenchId, input.accountId, input.deviceId, id],
+    });
   // Only a folder with a root `.pstignore` is copied. Capture and publication each check it, so a copy
   // taken before the file was removed never uploads.
   const optedIn = async (folder: string) => {
@@ -255,6 +260,7 @@ export const createLocalRecoverySource = (input: {
     },
     async close() {
       await scheduler.close();
+      await pruning;
       await disown();
     },
   };

@@ -78,14 +78,35 @@ const notifyNativeFileSave = (
   deps.observer?.committed(owner, saved.records, { status: "saved-locally" });
 };
 
+const bindText = async (
+  db: DbClient,
+  owner: StorageOwner,
+  deps: Parameters<typeof createLegacyResourceRecords>[2],
+  input: OrderedSourceInput,
+) => {
+  const result = await withOrderedOwner(db, owner, (journal, tx) =>
+    bindOrderedNativeSource(journal, tx, owner, input, deps.observer),
+  );
+  if (result.projected) deps.statistics.record(result.projected);
+  if (result.changed) {
+    deps.changed([input.recordId]);
+    deps.nativeChanged?.([result.documentKey]);
+  }
+  return { documentKey: result.documentKey, lifetime: result.lifetime, changed: result.changed };
+};
+
 /** The public record facade owns immutable saves independently of a live connection. */
 export const createOrderedResourceRecords = (
   db: DbClient,
   owner: StorageOwner,
-  deps: Parameters<typeof createLegacyResourceRecords>[2] & { textFields?: StorageTextDeclaration[] },
+  deps: Parameters<typeof createLegacyResourceRecords>[2] & {
+    textFields?: StorageTextDeclaration[];
+    withProjectWork?: <T>(id: string, task: () => Promise<T>) => Promise<T>;
+  },
 ) => {
   type LegacyRecords = ReturnType<typeof createLegacyResourceRecords>;
   const queries = createRecordQueries(db, owner, deps.diagnostics);
+  const write = <T>(task: () => Promise<T>) => deps.withProjectWork?.(owner.workbenchId, task) ?? task();
   const commitCache = createOrderedCommitCache(db, owner);
   let initialized: Promise<void> | undefined;
   const ready = () =>
@@ -184,12 +205,12 @@ export const createOrderedResourceRecords = (
   };
   const commit = async (group: StorageGroup) => {
     const owned = structuredClone(group);
-    const result = await withOrderedOwner(db, owner, async (journal, tx) => {
-      return commitIn(journal, tx, owned);
+    return write(async () => {
+      const result = await withOrderedOwner(db, owner, (journal, tx) => commitIn(journal, tx, owned));
+      return notify(result);
     });
-    return notify(result);
   };
-  const transaction = async <T>(
+  const transaction = <T>(
     run: (
       records: {
         read: (id: string) => ReturnType<LegacyRecords["read"]>;
@@ -199,35 +220,36 @@ export const createOrderedResourceRecords = (
       },
       tx: OrderedTransaction,
     ) => Promise<T>,
-  ) => {
-    const results: Awaited<ReturnType<typeof commitIn>>[] = [];
-    const ownRevisions = new Map<string, string>();
-    const queue = createCommitQueue();
-    const value = await withOrderedOwner(db, owner, async (journal, tx) => {
-      try {
-        return await run(
-          {
-            read: async (id) => (await readIn(tx, [id], deps.observer))[0]!,
-            readMany: (ids) => readIn(tx, ids, deps.observer),
-            outcome: async (id) => ((await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined),
-            commit: (group) =>
-              queue.run(async () => {
-                const result = await commitIn(journal, tx, group, ownRevisions);
-                for (const record of result.records) ownRevisions.set(record.recordId, record.revision);
-                results.push(result);
-                return result.outcome;
-              }),
-          },
-          tx,
-        );
-      } finally {
-        // Promise.all can reject before another admitted save finishes. Drain before rollback.
-        await queue.settled();
-      }
+  ) =>
+    write(async () => {
+      const results: Awaited<ReturnType<typeof commitIn>>[] = [];
+      const ownRevisions = new Map<string, string>();
+      const queue = createCommitQueue();
+      const value = await withOrderedOwner(db, owner, async (journal, tx) => {
+        try {
+          return await run(
+            {
+              read: async (id) => (await readIn(tx, [id], deps.observer))[0]!,
+              readMany: (ids) => readIn(tx, ids, deps.observer),
+              outcome: async (id) => ((await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined),
+              commit: (group) =>
+                queue.run(async () => {
+                  const result = await commitIn(journal, tx, group, ownRevisions);
+                  for (const record of result.records) ownRevisions.set(record.recordId, record.revision);
+                  results.push(result);
+                  return result.outcome;
+                }),
+            },
+            tx,
+          );
+        } finally {
+          // Promise.all can reject before another admitted save finishes. Drain before rollback.
+          await queue.settled();
+        }
+      });
+      for (const result of results) notify(result);
+      return value;
     });
-    for (const result of results) notify(result);
-    return value;
-  };
 
   return {
     ...queries,
@@ -253,38 +275,31 @@ export const createOrderedResourceRecords = (
         new Error("Records resolve in relay order; there are no conflicts to resolve"),
       ),
     commit,
-    bindText: async (input: OrderedSourceInput) => {
-      const result = await withOrderedOwner(db, owner, async (journal, tx) => {
-        return bindOrderedNativeSource(journal, tx, owner, input, deps.observer);
-      });
-      if (result.projected) deps.statistics.record(result.projected);
-      if (result.changed) {
-        deps.changed([input.recordId]);
-        deps.nativeChanged?.([result.documentKey]);
-      }
-      return { documentKey: result.documentKey, lifetime: result.lifetime, changed: result.changed };
-    },
+    bindText: (input: OrderedSourceInput) => write(() => bindText(db, owner, deps, input)),
     /** Host-only: move live records to new IDs with their text history and native sources. */
     move: (input: OrderedMoveInput) =>
-      ready().then(() => moveOrderedRecordsIn(db, owner, deps, input, () => commitCache.committed(undefined))),
-    writeTextAsset: async (input: {
-      recordId: string;
-      content: string;
-      replace: StorageGroup["edits"][number]["replace"];
-    }) => {
-      const group = { operationId: crypto.randomUUID(), edits: [{ recordId: input.recordId, replace: input.replace }] };
-      const saved = await withOrderedOwner(db, owner, async (journal, tx) => {
-        return writeOrderedTextAsset({
-          ...input,
-          tx,
-          owner,
-          observer: deps.observer,
-          commit: () => commitIn(journal, tx, group),
+      write(async () => {
+        await ready();
+        return moveOrderedRecordsIn(db, owner, deps, input, () => commitCache.committed(undefined));
+      }),
+    writeTextAsset: (input: { recordId: string; content: string; replace: StorageGroup["edits"][number]["replace"] }) =>
+      write(async () => {
+        const group = {
+          operationId: crypto.randomUUID(),
+          edits: [{ recordId: input.recordId, replace: input.replace }],
+        };
+        const saved = await withOrderedOwner(db, owner, async (journal, tx) => {
+          return writeOrderedTextAsset({
+            ...input,
+            tx,
+            owner,
+            observer: deps.observer,
+            commit: () => commitIn(journal, tx, group),
+          });
         });
-      });
-      notifyNativeFileSave(saved, owner, deps, commitCache);
-      if (saved.result) return notify({ ...saved.result, records: saved.records });
-    },
+        notifyNativeFileSave(saved, owner, deps, commitCache);
+        if (saved.result) return notify({ ...saved.result, records: saved.records });
+      }),
     read: async (id: string, _branch?: { operationId: string }) => {
       await ready();
       return (await readIn(db, [id], deps.observer))[0]!;

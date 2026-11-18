@@ -95,6 +95,7 @@ export const createDocumentStorageDBService = (
   db: DbClient,
   observer?: StorageObserver,
   diagnostics?: StorageDiagnostics,
+  withProjectWork?: <T>(id: string, task: () => Promise<T>) => Promise<T>,
 ) => {
   const cache = createDocumentCache();
   const listeners = new Set<(owner: StorageChange, origin?: "relay") => void>();
@@ -230,6 +231,7 @@ export const createDocumentStorageDBService = (
           assets: input.assets,
           textFields: input.textFields,
           diagnostics,
+          withProjectWork,
           nativeChanged: (keys) => {
             notifyNativeRecords(documentListeners, input.owner, keys);
             for (const key of keys)

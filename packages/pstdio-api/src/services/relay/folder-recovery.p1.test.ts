@@ -11,6 +11,7 @@ import { createRecoveryChunkStore } from "../project-recovery/chunks";
 import { openRecoveryJournal } from "../project-recovery/journal";
 import { nativeRecoverySupported } from "../project-recovery/native-recovery.fixture";
 import { createRecoveryPages } from "../project-recovery/pages";
+import { projectRecoveryRoot } from "../project-recovery/project-paths";
 import { downloadRecoveryCapture } from "../project-recovery/transfer";
 import { startFolderRecovery } from "./folder-recovery";
 
@@ -79,7 +80,7 @@ test("each device captures its folder automatically and downloads every complete
       },
     };
     const local = await createRecoveryChunkStore({
-      root: join(destination.deps.projectRecovery.root, "chunks"),
+      root: join(projectRecoveryRoot(destination.deps.projectRecovery.root, project.id), "chunks"),
       space,
     });
     const downloaded = async () => {

@@ -2,7 +2,11 @@ import { accountEvents } from "pstdio-api-contracts/extension-kernel";
 import type { AppConfig } from "../../app-config";
 import type { RouteDeps } from "../../features/deps";
 import { fireExtensionEventAsync } from "../../features/extensions/extension-event-runtime";
+import { evictProjectCopy, summarizeProjectCopyCleanup } from "../../features/projects/cleanup-project";
 import { recoverCloudProject } from "../../features/projects/cloud-project-recovery";
+import { openProject } from "../../features/projects/open-project";
+import { apiLogger } from "../../lib/logger";
+import { removeProjectFolderRecovery } from "../project-recovery/project-paths";
 import { connectAppRelay } from "../relay/runtime";
 import { createNativeAccount, nativeAccountFile } from "./native-account";
 import { createProjectSyncEvents } from "./project-sync-events";
@@ -58,7 +62,17 @@ export const createAppAccount = (
       {
         // A rejected renewal means this device or project left the account; refreshing finds out which.
         denied: () => void accountService.refresh(),
-        statusChanged: (projectId) => void syncEvents.changed(projectId),
+        statusChanged: (projectId) => {
+          void syncEvents.changed(projectId);
+          void accountService
+            .prepareDownloadedProject(projectId)
+            .catch((error) =>
+              apiLogger.warn(
+                { event: "account.download.folder_failed", projectId, error },
+                "Cloud download finished but its local folder needs attention",
+              ),
+            );
+        },
         ready: async (relay) => {
           await accountEventsOwner.changed("account");
           stopAccount = accountService.watch(() => void accountEventsOwner.changed("account"));
@@ -78,6 +92,37 @@ export const createAppAccount = (
             },
           });
           stopRecovery = recovery.close;
+          accountService.connectProjectCopies({
+            inspect: (id) => summarizeProjectCopyCleanup(app.deps, id),
+            prepareFolder: (id) => openProject(app.deps, id),
+            suspend: projects.work.suspend,
+            hide: (id) => {
+              projects.work.hide(id);
+            },
+            release: (id) => {
+              recovery.release(id);
+              projects.work.release(id);
+            },
+            drain: async (id) => {
+              await recovery.suspend(id);
+              await projects.work.drain(id);
+            },
+            detach: (id) => relay.withdraw(id),
+            cleanup: async (copy) => {
+              const id = copy.projectId;
+              await recovery.suspend(id);
+              await app.deps.nativeDocuments.withdrawProject(id);
+              await app.deps.automationService.cancelProjectRuns(id);
+              const active = (await app.deps.sessionService.listActive()).filter(
+                (session) => session.project_id === id,
+              );
+              const queued = await app.deps.sessionService.list(id, { status: "queued", includeArchived: true });
+              for (const session of [...active, ...queued]) await app.deps.sessionService.cancel(session.id);
+              await removeProjectFolderRecovery(app.deps.projectRecovery.root, id);
+              await app.deps.personalHistoryService.logs.removeProject(copy);
+              await evictProjectCopy(app.deps, id);
+            },
+          });
           accountService.start(
             async (connections) => {
               cloudProjects = connections.map((connection) => connection.workbenchId);
@@ -92,6 +137,13 @@ export const createAppAccount = (
             relay.call,
             relay.folders,
             app.deps.extensionStorageService.cloudReturn,
+          );
+          const { environmentId } = await environment.get();
+          void accountService.resumeLocalRemovals(environmentId, (projectId, error) =>
+            apiLogger.warn(
+              { event: "account.local_removal.interrupted", projectId, error },
+              "Project removal needs a retry",
+            ),
           );
         },
       },
