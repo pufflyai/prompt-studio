@@ -123,11 +123,11 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasSideWidgets,
     hasSideMenus,
     hasSidenavWidgets,
-    hasStatusWidgets,
+    hasDockedStatusBar,
     hasStatusContent,
   } = useWorkbenchLayoutFlags(workbench);
   const showActivity = !fullscreen.active && hasActivityBarWidgets;
-  const showStatus = !fullscreen.active && hasStatusWidgets;
+  const showStatus = !fullscreen.active && hasDockedStatusBar;
   const sidePolicy = usePanelPolicy(workbench, "side");
   const sidenavPolicy = usePanelPolicy(workbench, "sidenav");
   const hasSidePanel =

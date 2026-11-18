@@ -20,6 +20,13 @@ const ErrorFeedback = (props: {
       workbench.modes.registerMode({ id: "hidden-status", chrome: { status: false }, activate: () => undefined });
       workbench.modes.setActiveMode("hidden-status");
     }
+    for (const [id, title] of [
+      ["first-tool", "First tool"],
+      ["second-tool", "Second tool"],
+    ] as const) {
+      workbench.views.registerView({ id, title, body: { kind: "react", render: () => <span>{title}</span> } });
+      workbench.statusBar.registerItem({ id, viewId: id, slot: "leading" });
+    }
     workbench.commands.registerCommand(
       { id: "restart-service", label: "Restart service" },
       {
@@ -110,7 +117,7 @@ const meta = {
   title: "Product/Workbench/Feedback/Error feedback",
   component: ErrorFeedback,
   description:
-    "Local failures stay near their action without moving content. System errors and information are dismissible from the status bar.",
+    "Local failures stay near their action without moving content. System activity stays visible in the status bar and lists dismissible notices.",
   fullscreen: true,
 } satisfies CanvasMeta<typeof ErrorFeedback>;
 export default meta;

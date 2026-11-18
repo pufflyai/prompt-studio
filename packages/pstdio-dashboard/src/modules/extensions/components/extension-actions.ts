@@ -2,13 +2,13 @@ import type { ExtensionActionState } from "./extension-action-feedback";
 
 export interface ExtensionUpgradeBatch {
   ids: string[];
-  startedAt: number;
-  finishedAt?: number;
+  running: boolean;
   completed: number;
   failed: number;
 }
 
-export const marketplaceActionKey = (name: string) => `marketplace:${name}`;
+const marketplaceActionPrefix = "marketplace:";
+export const marketplaceActionKey = (name: string) => `${marketplaceActionPrefix}${name}`;
 
 interface ActionSnapshot {
   installedIds: Record<string, string>;
@@ -30,8 +30,7 @@ export const createExtensionActions = () => {
   const setAction = (id: string, action: ExtensionActionState) =>
     publish({ ...snapshot, actions: { ...snapshot.actions, [id]: action } });
   const dismiss = (id: string, expected = snapshot.actions[id]) => {
-    if (snapshot.actions[id] !== expected) return;
-    if (active.has(id) || snapshot.actions[id]?.status === "queued") return;
+    if (expected?.status !== "error" || snapshot.actions[id] !== expected || active.has(id)) return;
     retries.delete(id);
     const actions = { ...snapshot.actions };
     delete actions[id];
@@ -39,42 +38,46 @@ export const createExtensionActions = () => {
   };
   const run = async <T>(
     id: string,
-    labels: { running: string; success: string; failed: string },
+    labels: { running: string; failed: string },
     work: (started: () => void) => Promise<T>,
-    options: { queuedLabel?: string; installedId?: (result: T) => string } = {},
+    options: {
+      operation?: ExtensionActionState["operation"];
+      queuedLabel?: string;
+      installedId?: (result: T) => string;
+    } = {},
   ) => {
     if (active.has(id)) return false;
     active.add(id);
     retries.delete(id);
-    let startedAt: number | undefined;
-    const start = () => {
-      startedAt = Date.now();
-      setAction(id, { status: "running", label: labels.running, startedAt });
-    };
-    if (options.queuedLabel) setAction(id, { status: "queued", label: options.queuedLabel });
+    const { operation, queuedLabel } = options;
+    const start = () => setAction(id, { operation, status: "running", label: labels.running });
+    if (queuedLabel) setAction(id, { operation, status: "queued", label: queuedLabel });
     else start();
     try {
       const result = await work(start);
-      const action = { status: "success", label: labels.success, startedAt, finishedAt: Date.now() } as const;
       const instanceId = options.installedId?.(result);
-      if (instanceId) {
-        const actions = { ...snapshot.actions };
-        delete actions[id];
-        if (!active.has(instanceId)) {
-          retries.delete(instanceId);
-          actions[instanceId] = action;
-        }
-        publish({ ...snapshot, actions, installedIds: { ...snapshot.installedIds, [id]: instanceId } });
-      } else setAction(id, action);
+      const actions = { ...snapshot.actions };
+      delete actions[id];
+      if (instanceId && !active.has(instanceId)) {
+        delete actions[instanceId];
+        retries.delete(instanceId);
+      }
+      publish({
+        ...snapshot,
+        actions,
+        installedIds:
+          instanceId && id.startsWith(marketplaceActionPrefix)
+            ? { ...snapshot.installedIds, [id]: instanceId }
+            : snapshot.installedIds,
+      });
       return true;
     } catch (error) {
       retries.set(id, () => run(id, labels, work, options));
       setAction(id, {
+        operation,
         status: "error",
         label: labels.failed,
         error: error instanceof Error ? error.message : String(error),
-        startedAt,
-        finishedAt: Date.now(),
       });
       return false;
     } finally {
@@ -88,7 +91,7 @@ export const createExtensionActions = () => {
     batchRunning = true;
     publish({
       ...snapshot,
-      batch: { ids: pending.map(({ id }) => id), startedAt: Date.now(), completed: 0, failed: 0 },
+      batch: { ids: pending.map(({ id }) => id), running: true, completed: 0, failed: 0 },
     });
     try {
       await Promise.all(
@@ -109,7 +112,8 @@ export const createExtensionActions = () => {
       );
     } finally {
       batchRunning = false;
-      publish({ ...snapshot, batch: { ...snapshot.batch!, finishedAt: Date.now() } });
+      const batch = snapshot.batch!;
+      publish({ ...snapshot, batch: batch.failed ? { ...batch, running: false } : undefined });
     }
   };
   return {
@@ -144,8 +148,3 @@ export const getExtensionActions = (inventory: object) => {
   }
   return owner;
 };
-
-export const resolveExtensionAction = (actions: Record<string, ExtensionActionState>, extension: { id: string }) => ({
-  key: extension.id,
-  action: actions[extension.id],
-});
