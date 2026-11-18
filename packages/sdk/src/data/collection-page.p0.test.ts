@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "../testing/memory-storage";
 import { readCollectionPage } from "./collection-page";
+import { collectionViewSelection } from "./collection-view";
 
 const fixture = async () => {
   const storage = createMemoryStorage();
@@ -232,4 +233,28 @@ test("empty collection selections still reject invalid page limits", async () =>
       }),
     ).rejects.toThrow("limit");
   }
+});
+
+test("the first page counts provider choices while the renderer still has no option labels", async () => {
+  const storage = await fixture();
+  const scope = collectionViewSelection({
+    index: "foobar",
+    fields: {
+      status: { field: "state", kind: "enum", options: ["ready", "done"].map((value) => ({ value, label: value })) },
+    },
+    groups: ["status"],
+    page: {
+      limit: 50,
+      offset: 0,
+      search: "",
+      fields: ["status"],
+      presentation: { status: { emptyGroup: "No status", options: [] } },
+    },
+  });
+  const result = await readCollectionPage(storage, scope);
+  expect(result.records).toHaveLength(50);
+  expect(result.page.groups).toEqual([
+    { field: "status", value: "done", count: 120 },
+    { field: "status", value: "ready", count: 120 },
+  ]);
 });

@@ -119,6 +119,7 @@ export const createPlannerUi = (baseUrl: string) => {
     body: {
       kind: "kanban",
       queryMode: "paged",
+      initialPageSize: 50,
       attributes: buildTicketAttributes([]),
       query: queryTickets,
       schemaRefreshEvents: [plannerSchemaChanged],

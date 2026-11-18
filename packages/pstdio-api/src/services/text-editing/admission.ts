@@ -61,6 +61,10 @@ export const grantTextSource = async (
   connection.grants.set(grant.token, grant);
   return grant;
 };
+export const requireTextGrant = (connection: TextConnection, grant: TextGrant) => {
+  if (connection.grants.get(grant.token) !== grant)
+    throw textFailure("grant_invalid", "This source grant belongs to another placement");
+};
 export const validateTextGrant = async (
   deps: TextEditingDeps,
   connection: TextConnection,
@@ -68,8 +72,7 @@ export const validateTextGrant = async (
   writable = false,
 ) => {
   await validateTextPresentation(deps, connection);
-  if (connection.grants.get(grant.token) !== grant)
-    throw textFailure("grant_invalid", "This source grant belongs to another placement");
+  requireTextGrant(connection, grant);
   const loaded = await deps.access({ ...grant.target, projectId: connection.projectId });
   if (
     loaded.documentKey !== grant.documentKey ||

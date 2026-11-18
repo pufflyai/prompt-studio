@@ -89,8 +89,16 @@ export const collectionDateFields = (input: CollectionViewSelection) => {
   // Preserve custom field callbacks, which are deliberately not serializable.
   for (const [key, field] of Object.entries(input.fields))
     Object.assign(fields[key], { filter: field.filter, search: field.search });
-  for (const [key, presentation] of Object.entries(input.page?.presentation ?? {}))
-    if (fields[key]) Object.assign(fields[key], presentation);
+  for (const [key, { options, ...presentation }] of Object.entries(input.page?.presentation ?? {})) {
+    const field = fields[key];
+    if (!field) continue;
+    Object.assign(field, presentation);
+    if (!options) continue;
+    // The first renderer request can precede dynamic choices. Only labels come from the viewer.
+    const labels = new Map(options.map(({ value, label }) => [value, label]));
+    field.options =
+      field.options?.map((choice) => ({ ...choice, label: labels.get(choice.value) ?? choice.label })) ?? options;
+  }
   const formats: NonNullable<StorageRecordQuery["formats"]> = { ...input.formats };
   const computed = { ...input.computed };
   const viewer = collectionViewer(input.page);

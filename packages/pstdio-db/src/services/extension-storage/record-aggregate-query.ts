@@ -15,6 +15,7 @@ export const aggregateRecordQuery = async (
   where: SQL,
   resolve?: (name: string) => StorageRecordIndex,
   owner?: QuerySqlOwner,
+  counted?: SQL,
 ) => {
   const options = aggregateOptions(index, query);
   const statistics = query.statistics
@@ -23,7 +24,9 @@ export const aggregateRecordQuery = async (
   const original = index;
   const cache = options.metrics.length > 1 ? createQueryFieldCache(index) : undefined;
   if (cache) index = cache.index;
+  const cardinality = counted ? sql`coalesce(sum(n), 0)` : sql`count(*)`;
   const source = () => {
+    if (counted) return counted;
     if (!cache?.fields.size) return sql`storage_current_records WHERE ${where}`;
     return queryFieldCacheSourceSql(cache, where, (name) => recordFieldSql(original, name, undefined, resolve, owner));
   };
@@ -62,7 +65,7 @@ export const aggregateRecordQuery = async (
   };
   const readTotals = async () =>
     (
-      await tx.execute<AggregateRow>(sql`SELECT count(*)::text AS count, ${metrics} AS metrics, ${digest} AS fingerprint
+      await tx.execute<AggregateRow>(sql`SELECT ${cardinality}::text AS count, ${metrics} AS metrics, ${digest} AS fingerprint
     FROM ${source()}`)
     ).rows[0];
   if (!options.groupBy.length) {
@@ -90,7 +93,7 @@ export const aggregateRecordQuery = async (
       )})`
     : sql`NULL::jsonb`;
   const grouped = await tx.execute<AggregateRow>(sql`WITH grouped AS (
-    SELECT ${group} AS value, count(*)::text AS count, ${metrics} AS metrics
+    SELECT ${group} AS value, ${cardinality}::text AS count, ${metrics} AS metrics
     FROM ${source()} GROUP BY 1
   ) SELECT *, sum(count::numeric) OVER ()::text AS total_count, ${totalMetrics} AS total_metrics FROM grouped
     ${options.groupLimit === undefined ? sql`` : sql`LIMIT ${options.groupLimit + 1}`}`);
