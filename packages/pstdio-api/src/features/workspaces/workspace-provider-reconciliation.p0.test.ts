@@ -246,6 +246,35 @@ describe("reconcileProviderWorkspaces lifecycle operations", () => {
       provider_error_json: { retryable: true },
     });
   });
+
+  test("records a delete failure on the operation created after recovering its reference", async () => {
+    const create = mock(async () => readyRemoteResult("ready"));
+    const del = mock(async (_ctx: unknown, _input: { operationId: string }) => {
+      throw new Error("Provider delete failed");
+    });
+    const { deps, getWorkspace, softDelete } = makeDeps(
+      { create, delete: del },
+      makeWorkspace({
+        provider_ref_json: null,
+        provider_state: "deleting",
+        provider_operation_id: "recover-create",
+        provider_operation_kind: "delete",
+      }),
+    );
+
+    await reconcileProviderWorkspaces(deps, "project-1");
+
+    const operationId = del.mock.calls[0]?.[1].operationId;
+    expect(operationId).toBeString();
+    expect(operationId).not.toBe("recover-create");
+    expect(await getWorkspace()).toMatchObject({
+      provider_operation_id: operationId,
+      provider_operation_kind: "delete",
+      provider_ref_json: readyRemoteResult("ready").providerRef,
+      provider_error_json: { code: "provider_delete_failed", retryable: true },
+    });
+    expect(softDelete).not.toHaveBeenCalled();
+  });
 });
 
 test("replays the defaults accepted before allocation without applying new defaults", async () => {

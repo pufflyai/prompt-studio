@@ -24,7 +24,6 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
       extension.id,
       {
         running: t("projectSettings.extensionsPanel.feedback.upgradingButton"),
-        success: t("projectSettings.extensionsPanel.upgrade.succeeded"),
         failed: t("projectSettings.extensionsPanel.upgrade.failed"),
       },
       (started) =>
@@ -49,17 +48,16 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
       extension.id,
       {
         running: t("projectSettings.extensionsPanel.feedback.updating", { name: extension.displayName }),
-        success: t("projectSettings.extensionsPanel.feedback.updated"),
         failed: t("projectSettings.extensionsPanel.toggleErrorTitle"),
       },
       () => toggle.mutateAsync({ instanceId: extension.id, enabled }),
+      { operation: "toggle" },
     );
   const handleInstall = async (extension: MarketplaceExtension, force = false) => {
     await feedback.run(
       marketplaceActionKey(extension.installName),
       {
         running: t("projectSettings.extensionsPanel.feedback.installingButton"),
-        success: t("projectSettings.extensionsPanel.feedback.installedButton"),
         failed: t("projectSettings.extensionsPanel.marketplace.installFailed"),
       },
       async () => {
@@ -80,12 +78,11 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
       "$folder",
       {
         running: t("projectSettings.extensionsPanel.dropZone.uploading", { name: folder.name }),
-        success: t("projectSettings.extensionsPanel.dropZone.succeeded", { name: folder.name }),
         failed: t("projectSettings.extensionsPanel.dropZone.failed"),
       },
       async () => {
         try {
-          await addFolder.mutateAsync(folder);
+          return await addFolder.mutateAsync(folder);
         } catch (error) {
           if (error instanceof PstdioApiError && error.code === "extension_already_installed" && !folder.force) {
             feedback.setReplacement({ name: folder.name, retry: () => handleDrop({ ...folder, force: true }) });
@@ -93,6 +90,7 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
           throw error;
         }
       },
+      { installedId: (result) => result.extension.id },
     );
   };
   return {
@@ -102,6 +100,5 @@ export const useExtensionPanelActions = (projectId: string | undefined, capacity
     handleToggle,
     handleInstall,
     handleDrop,
-    addingFolderName: addFolder.isPending ? addFolder.variables?.name : undefined,
   };
 };

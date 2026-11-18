@@ -187,9 +187,14 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
     // The chosen version stays selected after a reload and when the published URL opens the artifact again.
     await page.reload();
+    // The chosen immutable revision is a persisted presentation preference (PS-157).
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
+    // A published URL restores the same artifact and selected revision from a fresh location.
     await page.goto(first.url);
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
+    await versionMenu.click();
+    await frame.getByRole("menuitemradio", { name: "Second · Latest", exact: true }).click();
+    await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
     const selectedTitle = await page.getByRole("tab", { name: /^(First|Second) page$/ }).innerText();
     await expect(breadcrumbs.getByText(selectedTitle, { exact: true })).toBeVisible();
     await expect(referenceTab).toBeVisible();

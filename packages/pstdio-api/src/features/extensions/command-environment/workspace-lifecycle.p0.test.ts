@@ -1,4 +1,5 @@
 import { expect, mock, test } from "bun:test";
+import { createWorkspaceMaintenance } from "../../../services/workspace-maintenance";
 import { createCommandEnvironment } from "./index";
 
 const makeEnabledSources = () => [
@@ -35,6 +36,7 @@ test("deletion archives the workspace's active sessions", async () => {
       extensionStorageService: makeStorageService(),
 
       workspaceService: {
+        maintenance: createWorkspaceMaintenance(),
         setInitializing: async () => null,
         getDefault: async () => ({
           id: "home",
@@ -121,7 +123,12 @@ test("fires worktree.removed after extension-initiated deletion", async () => {
   const env = createCommandEnvironment(
     {
       extensionStorageService: makeStorageService(),
-      workspaceService: { setInitializing: async () => null, get: async () => workspace, softDelete },
+      workspaceService: {
+        maintenance: createWorkspaceMaintenance(),
+        setInitializing: async () => null,
+        get: async () => workspace,
+        softDelete,
+      },
       workspaceSessionService: { listByWorkspace: async () => [] },
     } as never,
     makeEnabledSources() as never,
@@ -170,7 +177,13 @@ test("removes a worktree without deleting its workspace", async () => {
   const env = createCommandEnvironment(
     {
       extensionStorageService: makeStorageService(),
-      workspaceService: { setInitializing: async () => null, clearWorktree, get: async () => workspace, softDelete },
+      workspaceService: {
+        maintenance: createWorkspaceMaintenance(),
+        setInitializing: async () => null,
+        clearWorktree,
+        get: async () => workspace,
+        softDelete,
+      },
     } as never,
     makeEnabledSources() as never,
     {
@@ -217,7 +230,12 @@ test("does not expose or mutate a workspace owned by another project", async () 
     {
       extensionStorageService: makeStorageService(),
       personalHistoryService: { getWorkspace: async () => null },
-      workspaceService: { setInitializing: async () => null, get: async () => workspace, softDelete },
+      workspaceService: {
+        maintenance: createWorkspaceMaintenance(),
+        setInitializing: async () => null,
+        get: async () => workspace,
+        softDelete,
+      },
     } as never,
     makeEnabledSources() as never,
     {

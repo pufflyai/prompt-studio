@@ -159,6 +159,36 @@ describe("syncInstalledExtensionsForProject", () => {
     }
   });
 
+  test("a slow project refresh does not hide installed tools from another project", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-installed-project-refresh-"));
+    writeExtension(join(root, "planner"), "planner");
+    const refreshing = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const attached = new Set<string>();
+    const syncing = syncInstalledExtensionsForProjects({
+      extensionsRoot: root,
+      extensionService: {
+        syncInstalledSourceForProject: async ({ projectId }) => {
+          attached.add(projectId);
+          if (projectId === "refreshing-project") {
+            refreshing.resolve();
+            await release.promise;
+          }
+          return {};
+        },
+      },
+      projectService: { list: async () => [{ id: "refreshing-project" }, { id: "other-project" }] },
+    });
+    try {
+      await refreshing.promise;
+      expect(attached.has("other-project")).toBe(true);
+    } finally {
+      release.resolve();
+      await syncing;
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("syncs installed extensions for every existing project", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-projects-"));
     writeExtension(join(root, "planner"), "planner");
@@ -182,6 +212,47 @@ describe("syncInstalledExtensionsForProject", () => {
       expect(calls.map((call) => call.projectId)).toEqual(["project-1", "project-2"]);
     } finally {
       rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("a failed project sync waits for another admitted project to finish", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-installed-project-drain-"));
+    writeExtension(join(root, "planner"), "planner");
+    const started = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const failure = new Error("Project refresh failed");
+    let settled = false;
+    const syncing = syncInstalledExtensionsForProjects({
+      extensionsRoot: root,
+      extensionService: {
+        syncInstalledSourceForProject: async ({ projectId }) => {
+          if (projectId === "failed-project") throw failure;
+          started.resolve();
+          await release.promise;
+          return {};
+        },
+      },
+      projectService: { list: async () => [{ id: "failed-project" }, { id: "running-project" }] },
+    }).then(
+      () => {
+        settled = true;
+        return null;
+      },
+      (error: unknown) => {
+        settled = true;
+        return error;
+      },
+    );
+    try {
+      await started.promise;
+      await Bun.sleep(0);
+      expect(settled).toBe(false);
+    } finally {
+      release.resolve();
+      const error = await syncing;
+      rmSync(root, { recursive: true, force: true });
+      expect(error).toBeInstanceOf(AggregateError);
+      expect((error as AggregateError).errors).toContain(failure);
     }
   });
 });

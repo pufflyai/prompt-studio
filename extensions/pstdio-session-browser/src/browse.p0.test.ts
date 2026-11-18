@@ -181,3 +181,53 @@ test("session resource search follows cursors beyond the public 200-row page lim
     { limit: 100, orderBy: "lastActivity", search: "history", cursor: "200" },
   ]);
 });
+
+test("session rows distinguish running sessions from drafts and preserve resource identity", async () => {
+  const sessions = [
+    { status: "completed" },
+    { status: "failed" },
+    { status: "cancelled" },
+    { status: "disconnected" },
+    { status: "queued" },
+    { status: "in_progress" },
+    { status: "awaiting_input" },
+    { status: "completed", lastRequestStarted: null, lastRequestEnded: null },
+  ];
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage({ indexes: [sessionPinsIndex] }),
+    params: {},
+    overrides: {
+      sessions: {
+        query: async () => ({
+          items: sessions.map((session, index) => ({
+            ...session,
+            id: `s${index}`,
+            title: `Session ${index}`,
+            updatedAt: new Date().toISOString(),
+          })) as never,
+          nextCursor: null,
+        }),
+      },
+    },
+  });
+  const sections = await browse(ctx, { renderer: { rendererId: "list" } });
+  const rows = sections[0].nodes.filter((row) => row.resource);
+  expect(rows.map((row) => [row.icon, row.iconColor])).toEqual([
+    ["circle-check", "fg.success"],
+    ["circle-alert", "fg.error"],
+    ["circle-stop", "fg.warning"],
+    ["circle-pause", "fg.warning"],
+    ["clock-alert", "fg.info"],
+    ["loader-circle", "fg.info"],
+    ["circle-dot", "fg.muted"],
+    ["circle-dashed", "fg.muted"],
+  ]);
+  expect(rows.every((row) => row.resource?.icon === "message-circle")).toBe(true);
+  const result = await search.query(ctx, {
+    query: "",
+    limit: 10,
+    providerId: "sessions",
+    renderer: { rendererId: "list" },
+  });
+  expect(result.items.every((item) => item.icon === "message-circle")).toBe(true);
+});

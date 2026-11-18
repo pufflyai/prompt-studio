@@ -84,7 +84,8 @@ const fileRendererOwnerKey = (
   placement: WorkbenchPanelInstance | undefined,
   contributionId: string,
   loadKey: string,
-) => (placement ? rendererReadKey(placement) : JSON.stringify(["file", contributionId, loadKey]));
+  queryScope: RegisteredFileRendererContribution["queryScope"],
+) => JSON.stringify([placement ? rendererReadKey(placement) : ["file", contributionId, loadKey], queryScope]);
 
 export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps) => {
   const { workbench, contribution } = props;
@@ -133,7 +134,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   });
   const contributionId = contribution.id;
   const hasSave = Boolean(contribution.save);
-  const ownerKey = fileRendererOwnerKey(props.placement, contributionId, loadKey);
+  const ownerKey = fileRendererOwnerKey(props.placement, contributionId, loadKey, contribution.queryScope);
   const instanceId = props.placement?.instanceId ?? contributionId;
   // Re-binding a singleton widget to another resource changes `resource` and reloads.
   useLayoutEffect(() => {
@@ -153,6 +154,8 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       read.request(
         {
           queryKey: loadKey,
+          queryScope: contributionRef.current.queryScope,
+          sourceId: contributionId,
           load: (signal) => contributionRef.current.load(resourceRef.current, signal, pageParamsRef.current),
           onValue: (next) => {
             if (cancelled || removed) return;

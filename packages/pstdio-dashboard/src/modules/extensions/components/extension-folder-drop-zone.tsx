@@ -7,19 +7,19 @@ import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import { readDroppedFolder } from "./read-dropped-folder";
 
 export interface ExtensionFolderDropZoneProps {
-  /** Name of the folder being copied, while a copy is running. */
-  addingName?: string;
+  /** Status text for the folder copy while it is running. */
+  addingLabel?: string;
   onDropFolder: (folder: DroppedExtensionFolder) => void;
 }
 
 const carriesFiles = (event: DragEvent) => event.dataTransfer.types.includes("Files");
 
 export const ExtensionFolderDropZone = (props: ExtensionFolderDropZoneProps) => {
-  const { addingName, onDropFolder } = props;
+  const { addingLabel, onDropFolder } = props;
   const { showError, errorNotice, clearError } = useActionError();
   const { t } = useTranslation("projects");
   const [dragging, setDragging] = useState(false);
-  const adding = addingName !== undefined;
+  const adding = addingLabel !== undefined;
 
   const handleDragOver = (event: DragEvent) => {
     if (adding || !carriesFiles(event)) return;
@@ -81,11 +81,7 @@ export const ExtensionFolderDropZone = (props: ExtensionFolderDropZoneProps) => 
             <FolderPlus />
           </Icon>
         )}
-        <Text textStyle="label/S/medium">
-          {adding
-            ? t("projectSettings.extensionsPanel.dropZone.uploading", { name: addingName })
-            : t("projectSettings.extensionsPanel.dropZone.title")}
-        </Text>
+        <Text textStyle="label/S/medium">{addingLabel ?? t("projectSettings.extensionsPanel.dropZone.title")}</Text>
       </HStack>
       <Text textStyle="label/XS" color="fg.subtle">
         {t("projectSettings.extensionsPanel.dropZone.hint")}

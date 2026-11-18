@@ -46,7 +46,6 @@ const createSessionViaApi = async (
 };
 
 test("dashboard keeps the project mode and blocks controls behind the project switcher", async ({ page, request }) => {
-  test.setTimeout(20_000);
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "Overlay Blocking Test");
 
@@ -136,7 +135,6 @@ test("dashboard keeps the project mode and blocks controls behind the project sw
 });
 
 test("dashboard clears a saved project that no longer exists", async ({ page, request }) => {
-  test.setTimeout(20_000);
   await deleteAllProjects(request);
   const firstProject = await createProjectViaApi(request, "Current Project");
   const secondProject = await createProjectViaApi(request, "Other Project");
@@ -158,7 +156,6 @@ test("dashboard opens Home for a selected project and resumes a resource after i
   page,
   request,
 }) => {
-  test.setTimeout(20_000);
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "Dashboard Start Test");
   const session = await createSessionViaApi(request, project.id, "Recent start session");
