@@ -13,10 +13,8 @@ export const readTicketTreeData = async (
   ticket: Ticket,
 ) => {
   const workspaceData = (async () => {
-    const [page, home] = await Promise.all([linkedWorkspacePage(ctx, [ticket]), ctx.workspaces.getDefault()]);
-    const workspaces = [...new Map([...(home ? [home] : []), ...page.items].map((row) => [row.id, row])).values()];
+    const page = await linkedWorkspacePage(ctx, [ticket]);
     return {
-      workspaces,
       linkedWorkspaces: page.items,
       workspaceCursor: page.nextCursor,
     };

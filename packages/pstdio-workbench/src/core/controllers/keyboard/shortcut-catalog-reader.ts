@@ -7,14 +7,16 @@ import { shortcutHints } from "./shortcut-menu";
 export const createShortcutHintReader = (catalog: () => ResolvedShortcut[], readState: () => KeyboardState) => {
   let hintCatalog: ResolvedShortcut[] | undefined;
   let hintState: KeyboardState | undefined;
+  let hintIncludesLayers = false;
   let snapshot = new Map<string, string>();
-  return () => {
+  return (includeLayers = false) => {
     const currentCatalog = catalog();
     const currentState = readState();
-    if (hintCatalog !== currentCatalog || hintState !== currentState) {
-      snapshot = shortcutHints(currentCatalog, currentState);
+    if (hintCatalog !== currentCatalog || hintState !== currentState || hintIncludesLayers !== includeLayers) {
+      snapshot = shortcutHints(currentCatalog, includeLayers ? { ...currentState, preview: true } : currentState);
       hintCatalog = currentCatalog;
       hintState = currentState;
+      hintIncludesLayers = includeLayers;
     }
     return snapshot;
   };

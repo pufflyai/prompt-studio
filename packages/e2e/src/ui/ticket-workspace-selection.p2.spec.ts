@@ -1,7 +1,7 @@
 import { existsSync, rmSync } from "node:fs";
 import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
-import { createPlannerTicket, createPlannerTicketFile } from "../helpers/planner-api";
+import { createPlannerTicket, createPlannerTicketFile, executePlannerCommand } from "../helpers/planner-api";
 import { observeTreeRows } from "../helpers/tree-continuity";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
@@ -28,6 +28,7 @@ test("workspace navigation owns selection while keeping ticket document context"
       rootPath: path,
     });
     const ticket = await createPlannerTicket(request, uiOrigin, projectId!, { content: "# Workspace selection" });
+    await executePlannerCommand(request, uiOrigin, projectId!, "link", { id: ticket.id, workspace: root.id });
     await createPlannerTicketFile(request, uiOrigin, projectId!, ticket.id, { name: "plan.md", content: "# Plan" });
     const linked = await request.post(`${uiOrigin}/v1/workspaces`, {
       data: {

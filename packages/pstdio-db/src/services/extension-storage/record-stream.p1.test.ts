@@ -748,6 +748,31 @@ test("a device that skipped an update does not replace the latest state after a 
   expect((await restarted.status()).needsAttention).toBe(true);
 });
 
+test("a device with quarantined updates cannot refound a lost stream", async () => {
+  const fixture = createRelay();
+  const first = await device(fixture.relay);
+  const second = await device(fixture.relay);
+  await first.records.commit({ operationId: "seed", edits: [{ recordId: "seed", replace: 1 }] });
+  for (const peer of [first, second]) await peer.sync.synchronize();
+  const update = await sealUpdate(space, documentId, new Uint8Array([255, 1, 2, 3]), []);
+  await fixture.relay.update(update);
+  await second.sync.synchronize();
+  expect((await second.sync.status()).needsAttention).toBe(true);
+  await second.records.commit({ operationId: "pending", edits: [{ recordId: "pending", replace: 2 }] });
+  fixture.lose();
+  const restarted = second.restart();
+  await restarted.synchronize();
+  expect(fixture.latest()).toBeNull();
+  expect(await restarted.status()).toMatchObject({ needsAttention: true, pending: true });
+  expect((await second.records.read("pending"))?.value).toBe(2);
+
+  await first.restart().synchronize();
+  expect(fixture.latest()).not.toBeNull();
+  await restarted.synchronize();
+  await first.restart().synchronize();
+  expect((await first.records.read("pending"))?.value).toBe(2);
+});
+
 test("a latest state lists the files its records point to, even when a file changes while it uploads", async () => {
   const fixture = createRelay();
   const cover = file("first cover");

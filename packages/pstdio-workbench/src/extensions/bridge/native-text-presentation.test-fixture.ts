@@ -54,6 +54,25 @@ export const nativeTextFixture = () => {
     if (operation === "project") return reply({ revision });
     return reply();
   };
+  const connectPeer = async (initial?: { memberId: string }) => {
+    calls.push("connect");
+    connectionEntered.resolve();
+    if (holdConnection) await release.promise;
+    for (const notify of connectionObservers) notify();
+    if (refuseConnection) {
+      refuseConnection = false;
+      return Response.json({
+        ok: false,
+        error: { code: "source_unavailable", message: "Opening interrupted", retryable: true },
+      });
+    }
+    if (initial) {
+      calls.push("initial");
+      const response = await call({ operation: "open", memberId: initial.memberId });
+      return reply({ token: "connection", opened: (await response.json()).value });
+    }
+    return reply({ token: "connection" });
+  };
   const streams = new Set<ReadableStreamDefaultController<Uint8Array>>();
   const server = Bun.serve({
     hostname: "127.0.0.1",
@@ -65,20 +84,10 @@ export const nativeTextFixture = () => {
       const input = (request.method === "POST" ? await request.json() : {}) as {
         request?: WireRequest;
         active?: boolean;
+        initial?: { memberId: string };
       };
-      if (path.endsWith("/text-editing")) {
-        calls.push("connect");
-        connectionEntered.resolve();
-        if (holdConnection) await release.promise;
-        for (const notify of connectionObservers) notify();
-        if (refuseConnection) {
-          refuseConnection = false;
-          return Response.json({
-            ok: false,
-            error: { code: "source_unavailable", message: "Opening interrupted", retryable: true },
-          });
-        }
-        return reply({ token: "connection" });
+      if (path.endsWith("/text-editing") || path.endsWith("/text-editing/open")) {
+        return connectPeer(input.initial);
       }
       if (path === "/v1/session-stream")
         return new Response(

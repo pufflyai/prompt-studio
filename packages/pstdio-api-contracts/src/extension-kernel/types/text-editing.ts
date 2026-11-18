@@ -46,6 +46,7 @@ export interface TextWireParticipant {
 export type TextOpenInput = TextDocumentRef | { grant: TextSourceGrant };
 export type TextEditingRequest =
   | { operation: "current" }
+  | { operation: "openSelected"; memberId: string }
   | { operation: "register" | "abandon"; memberId: string }
   | {
       operation: "open";
@@ -76,7 +77,7 @@ export type TextEditingResult<Request extends TextEditingRequest = TextEditingRe
   operation: "current";
 }
   ? TextSourceGrant | undefined
-  : Request extends { operation: "open" }
+  : Request extends { operation: "open" | "openSelected" }
     ? TextEditingOpened
     : Request extends { operation: "submit" | "snapshot" }
       ? TextWireSnapshot

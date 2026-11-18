@@ -132,6 +132,7 @@ export const workbenchSlots = {
   /** Custom controls shown in the owner's extension detail Settings tab. */
   extensionSettings: hostRef("settings-panel", "extension.settings"),
   statusBarLeading: hostRef("status-bar-item", "status-bar.leading"),
+  statusBarCenter: hostRef("status-bar-item", "status-bar.center"),
   statusBarTrailing: hostRef("status-bar-item", "status-bar.trailing"),
 };
 

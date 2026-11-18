@@ -156,7 +156,7 @@
         // Specs install fixture extensions by path.
         "src/fixtures/**/extension.ts",
         // Extension manifests load this webview entry by packageAsset path.
-        "src/fixtures/{editing-session,document,mode,settings,file-download}/view.ts",
+        "src/fixtures/{editing-session,document,mode,settings,file-download,render-highlights}/view.ts",
         "src/fixtures/panel-views/letter-{browser,reader}.tsx",
         "src/fixtures/public-text-editor/view.tsx"
       ],

@@ -3,10 +3,11 @@ import type { BlobBegin } from "pstdio-sync-contracts";
 import type { createRelayAssets } from "../assets/assets";
 import { multipartSize, type PartInput } from "../assets/streams";
 import type { RelayLimits } from "../limits";
-import { admitWrite, lockAccount, rejection, requireQuota, type SyncCaller } from "./accounts";
+import { admitWrite, assertProjectActive, lockAccount, rejection, requireQuota, type SyncCaller } from "./accounts";
 import { requireBlobChildren } from "./blob-graph";
 import type { connectRelay } from "./database";
 import { syncBlobs, syncProjects } from "./document-schema";
+import type { createProjectAccess } from "./project-access";
 
 /** One encrypted blob. Its ID is random; a null space owner marks the project's shared space. */
 export interface BlobAddress {
@@ -31,9 +32,11 @@ export const createSyncBlobs = (
   connection: ReturnType<typeof connectRelay>,
   assets: ReturnType<typeof createRelayAssets>,
   limits: RelayLimits,
+  access: ReturnType<typeof createProjectAccess>,
 ) => {
   const find = (address: BlobAddress, signal?: AbortSignal) =>
     connection.run(async (db) => {
+      await assertProjectActive(db, address.projectKey);
       const [blob] = await db
         .select()
         .from(syncBlobs)
@@ -90,56 +93,60 @@ export const createSyncBlobs = (
     return uploadStatus(address, await find(address, signal));
   };
 
+  const writePart = async (address: BlobAddress, number: number, input: PartInput) => {
+    const blob = await find(address, input.signal);
+    // A part sent again after the upload finished is already stored.
+    if (blob.status === "completed") return;
+    const partSize = multipartSize(blob.byteLength);
+    if (input.byteLength !== Math.min(partSize, blob.byteLength - (number - 1) * partSize))
+      throw rejection(400, "invalid-request");
+    // A stored part is immutable. The same bytes are already there; different bytes are a client error.
+    const stored = (await uploadStatus(address, blob)).parts.find((part) => part.number === number);
+    if (stored && stored.sha256 !== input.sha256) throw rejection(400, "invalid-request");
+    if (stored) return;
+    await assets.writePart(blobOwner(address), address.blobId, number, input);
+  };
+  const finish = async (address: BlobAddress, signal?: AbortSignal) => {
+    const blob = await find(address, signal);
+    if (blob.status === "completed") return;
+    const status = await uploadStatus(address, blob);
+    if (status.parts.length !== Math.ceil(blob.byteLength / status.partSize)) throw rejection(400, "invalid-request");
+    await assets.finish(blobOwner(address), address.blobId);
+    const completed = await connection.run(
+      (db) =>
+        db.transaction(async (transaction) => {
+          const [project] = await transaction
+            .select()
+            .from(syncProjects)
+            .where(eq(syncProjects.projectKey, address.projectKey));
+          if (!project) throw rejection(404, "not-found");
+          await lockAccount(transaction, project.accountId);
+          await requireBlobChildren(transaction, address, blob.children);
+          return transaction
+            .update(syncBlobs)
+            .set({ status: "completed", completedAt: new Date() })
+            .where(and(blobWhere(address), eq(syncBlobs.status, "open")))
+            .returning();
+        }),
+      signal,
+    );
+    // Another request finished it first, or cleanup retired the unfinished upload.
+    if (!completed.length && (await find(address, signal)).status !== "completed") throw rejection(404, "not-found");
+  };
   return {
     begin: (address: BlobAddress, caller: SyncCaller, input: BlobBegin, signal?: AbortSignal) =>
-      begin(address, caller, input, [], signal),
+      access.write(address.projectKey, () => begin(address, caller, input, [], signal), signal),
     // Explicit manifest uploads declare immutable children. Ordinary begin remains leaf-only.
     beginManifest: (
       address: BlobAddress,
       caller: SyncCaller,
       input: BlobBegin & { children: string[] },
       signal?: AbortSignal,
-    ) => begin(address, caller, input, input.children, signal),
-    async writePart(address: BlobAddress, number: number, input: PartInput) {
-      const blob = await find(address, input.signal);
-      // A part sent again after the upload finished is already stored.
-      if (blob.status === "completed") return;
-      const partSize = multipartSize(blob.byteLength);
-      if (input.byteLength !== Math.min(partSize, blob.byteLength - (number - 1) * partSize))
-        throw rejection(400, "invalid-request");
-      // A stored part is immutable. The same bytes are already there; different bytes are a client error.
-      const stored = (await uploadStatus(address, blob)).parts.find((part) => part.number === number);
-      if (stored && stored.sha256 !== input.sha256) throw rejection(400, "invalid-request");
-      if (stored) return;
-      await assets.writePart(blobOwner(address), address.blobId, number, input);
-    },
-    async finish(address: BlobAddress, signal?: AbortSignal) {
-      const blob = await find(address, signal);
-      if (blob.status === "completed") return;
-      const status = await uploadStatus(address, blob);
-      if (status.parts.length !== Math.ceil(blob.byteLength / status.partSize)) throw rejection(400, "invalid-request");
-      await assets.finish(blobOwner(address), address.blobId);
-      const completed = await connection.run(
-        (db) =>
-          db.transaction(async (transaction) => {
-            const [project] = await transaction
-              .select()
-              .from(syncProjects)
-              .where(eq(syncProjects.projectKey, address.projectKey));
-            if (!project) throw rejection(404, "not-found");
-            await lockAccount(transaction, project.accountId);
-            await requireBlobChildren(transaction, address, blob.children);
-            return transaction
-              .update(syncBlobs)
-              .set({ status: "completed", completedAt: new Date() })
-              .where(and(blobWhere(address), eq(syncBlobs.status, "open")))
-              .returning();
-          }),
-        signal,
-      );
-      // Another request finished it first, or cleanup removed the unfinished upload after its grace period.
-      if (!completed.length && (await find(address, signal)).status !== "completed") throw rejection(404, "not-found");
-    },
+    ) => access.write(address.projectKey, () => begin(address, caller, input, input.children, signal), signal),
+    writePart: (address: BlobAddress, number: number, input: PartInput) =>
+      access.write(address.projectKey, () => writePart(address, number, input), input.signal),
+    finish: (address: BlobAddress, signal?: AbortSignal) =>
+      access.write(address.projectKey, () => finish(address, signal), signal),
     async read(address: BlobAddress, offset: number, signal?: AbortSignal) {
       const blob = await find(address, signal);
       if (blob.status !== "completed") throw rejection(404, "not-found");
