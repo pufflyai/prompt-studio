@@ -6,7 +6,7 @@ import type { DeviceLogin } from "./native-store";
 const workbenchesSchema = z.array(z.object({ workbenchId: identitySchema }));
 const accountSchema = z.object({
   features: z.object({ relay: z.boolean() }),
-  projectDeletion: z.boolean().default(false),
+  projectDeletion: z.boolean().optional(),
 });
 
 const deletionsSchema = z.array(projectDeletionStatusSchema);
@@ -20,10 +20,17 @@ export const readManagerAccount = async (login: DeviceLogin, signal?: AbortSigna
       workbenchesSchema.parse(data),
     ),
   ]);
-  const deletions = account.projectDeletion
-    ? deletionsSchema.parse(
-        await managerRequest(login.managerOrigin, "/v1/project-deletions", login.token, undefined, signal),
-      )
-    : [];
-  return { credential: login.token, ids: projects.map((row) => row.workbenchId), ...account, deletions };
+  const deletions =
+    account.projectDeletion !== undefined
+      ? deletionsSchema.parse(
+          await managerRequest(login.managerOrigin, "/v1/project-deletions", login.token, undefined, signal),
+        )
+      : [];
+  return {
+    credential: login.token,
+    ids: projects.map((row) => row.workbenchId),
+    ...account,
+    projectDeletion: account.projectDeletion ?? false,
+    deletions,
+  };
 };

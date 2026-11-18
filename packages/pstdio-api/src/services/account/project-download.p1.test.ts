@@ -25,6 +25,7 @@ test("a Cloud only project can be listed and deleted without starting a download
   const managerPath = `/v1/workbenches/${id}/deletion`;
   let deletionStarted = false;
   let loseReply = true;
+  let deletionAvailable = true;
   let downloads = 0;
   const handleDeletion = async (request: Request) => {
     if (request.method === "POST") {
@@ -42,7 +43,9 @@ test("a Cloud only project can be listed and deleted without starting a download
     port: 0,
     async fetch(request) {
       const { pathname } = new URL(request.url);
-      if (pathname === "/v1/account") return Response.json({ features: { relay: true }, projectDeletion: true });
+      if (pathname === "/v1/account") {
+        return Response.json({ features: { relay: true }, projectDeletion: deletionAvailable });
+      }
       if (pathname === "/v1/workbenches") return Response.json(deletionStarted ? [] : [{ workbenchId: id }]);
       if (pathname === "/v1/project-deletions") return Response.json(deletionStarted ? [operation] : []);
       if (pathname === "/v1/devices/presence") return Response.json({ ok: true });
@@ -88,6 +91,7 @@ test("a Cloud only project can be listed and deleted without starting a download
     expect(resumed.status).toBe(202);
     expect(await resumed.json()).toEqual(receipt);
     expect(receipt).toMatchObject({ projectId: id, state: "deleting" });
+    deletionAvailable = false;
     await host.deps.accountService.refresh();
     expect(await catalog()).toMatchObject({ projects: [], deletions: [{ ...receipt, name }] });
     const status = await host.app.request(`${path}/deletion`);

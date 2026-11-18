@@ -25,7 +25,7 @@ const deletionRoute = async (auth: Authentication, request: Request, path: strin
   const { method } = request;
   if (path === "/v1/account" && method === "GET") {
     const account = await auth.devices.account(bearer(request));
-    return json({ ...account, ...(auth.projectDeletions.enabled ? { projectDeletion: true } : {}) });
+    return json({ ...account, projectDeletion: auth.projectDeletions.enabled });
   }
   if (path === "/v1/project-deletions" && method === "GET")
     return json(await auth.devices.outstandingProjectDeletions(bearer(request)));
