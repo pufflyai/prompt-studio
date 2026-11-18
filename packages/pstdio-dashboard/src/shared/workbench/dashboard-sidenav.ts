@@ -51,6 +51,7 @@ const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
       body: {
         kind: "tree",
         getReadKey: () => navigation.getReadKey(),
+        getGroupScope: navigation.getGroupScope,
         getStructure: () => navigation.getStructure("content"),
         getHeaderStructure: () => homeFirst(navigation.getStructure("header")),
         getFooterStructure: () => navigation.getStructure("footer"),
