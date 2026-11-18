@@ -70,6 +70,15 @@ without waiting for ordinary retention. A failed purge reports Needs attention.
 Retry reuses the operation and resumes from its durable barrier and remaining
 rows. The manager marks completion only after the relay acknowledges the purge.
 
+The object provider creates multipart reservations at random addresses. The
+relay records the upload ID and assigns it to the project in PostgreSQL before
+sending any bytes. If the initiating process dies before that commit, the
+provider can still create an empty reservation. It has no project association.
+Scheduled cleanup aborts unassigned reservations and skips addresses whose
+ownership transaction is still in progress. Empty encrypted blobs use a
+verified database record and need no object-store write. A legacy upload that
+resumes at a new address keeps its original address for cancellation and purge.
+
 For cleanup diagnostics, check the operation's status in the manager, then query
 `relay_project_retirements` by the hashed project key. A row with no completion
 time means the barrier is installed and purge can resume. Remaining project rows

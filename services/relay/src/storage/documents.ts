@@ -1,5 +1,6 @@
-import { and, eq, isNotNull, isNull, lte } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import type { StateEnvelope, UpdateEnvelope } from "pstdio-sync-contracts";
+import { reservationKey, reservationLock } from "../assets/object-reservations";
 import type { RelayLimits } from "../limits";
 import {
   admitWrite,
@@ -99,8 +100,8 @@ const retire = async (
 };
 
 export const createSyncDocuments = ({ connection, payloads, access, limits, changed }: SyncDocumentsOptions) => {
-  // Register every object before its first PUT. Cleanup can reclaim a lost request or
-  // process, and a project retirement can account for every write it has drained.
+  // Claim the provider reservation before uploading bytes. A lost Create leaves no
+  // document address in storage. The cleanup sweep shares the reservation lock.
   const store = <T extends { stored: boolean }>(
     projectKey: string,
     objectKey: string,
@@ -111,19 +112,17 @@ export const createSyncDocuments = ({ connection, payloads, access, limits, chan
     access.write(
       projectKey,
       async () => {
-        await connection.run((db) => db.insert(syncObjectDeletions).values({ objectKey, projectKey }), signal);
-        await payloads.put(objectKey, bytes, async (multipartId) => {
-          const staged = await connection.run(
-            (db) =>
-              db
-                .update(syncObjectDeletions)
-                .set({ multipartId })
-                .where(eq(syncObjectDeletions.objectKey, objectKey))
-                .returning(),
-            signal,
-          );
-          if (!staged.length) throw rejection(410, "project-retired");
-        });
+        const uploadId = await connection.run(
+          (db) =>
+            db.transaction(async (tx) => {
+              await tx.execute(sql`SELECT pg_advisory_xact_lock(${reservationLock(objectKey)})`);
+              const multipartId = await payloads.reserve(objectKey);
+              await tx.insert(syncObjectDeletions).values({ objectKey, projectKey, multipartId });
+              return multipartId;
+            }),
+          signal,
+        );
+        await payloads.put(objectKey, uploadId, bytes);
         return connection.run(
           (db) =>
             db.transaction(async (tx) => {
@@ -145,7 +144,7 @@ export const createSyncDocuments = ({ connection, payloads, access, limits, chan
     async appendUpdate(address: DocumentAddress, caller: SyncCaller, envelope: UpdateEnvelope, signal?: AbortSignal) {
       const bytes = decode(envelope.payload, limits.maxUpdateBytes);
       const now = new Date();
-      const objectKey = payloads.key(address.projectKey, address.documentId, "updates");
+      const objectKey = reservationKey();
       const result = await store(address.projectKey, objectKey, bytes, signal, async (transaction) => {
         await admitWrite(transaction, address.projectKey, caller.accountId, now);
         const document = await lockDocument(transaction, address);
@@ -186,7 +185,7 @@ export const createSyncDocuments = ({ connection, payloads, access, limits, chan
       const bytes = decode(envelope.payload, limits.maxStateBytes);
       decode(envelope.summary, limits.maxSummaryBytes);
       const now = new Date();
-      const objectKey = payloads.key(address.projectKey, address.documentId, "states");
+      const objectKey = reservationKey();
       const result = await store(address.projectKey, objectKey, bytes, signal, async (transaction) => {
         await admitWrite(transaction, address.projectKey, caller.accountId, now);
         const document = await lockDocument(transaction, address);

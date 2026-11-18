@@ -7,6 +7,7 @@ import type { connectRelay } from "./database";
 import { syncStates, syncUpdates } from "./document-schema";
 import { cleanupPayloads } from "./payload-cleanup";
 import type { PayloadObjects } from "./payloads";
+import { cleanupUnassignedReservations } from "./unassigned-reservations";
 
 export interface SyncCleanupOptions {
   connection: ReturnType<typeof connectRelay>;
@@ -34,6 +35,7 @@ export const cleanupSync = async (
   await cleanupBlobGraph(connection, assets, cutoff, signal);
 
   await cleanupPayloads(connection, payloads, signal);
+  await cleanupUnassignedReservations(connection, payloads, signal);
 };
 
 /** Runs cleanup now and then on an interval, one run at a time. Stopping interrupts the current run. */

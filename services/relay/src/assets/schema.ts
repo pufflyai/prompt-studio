@@ -1,4 +1,4 @@
-import { bigint, integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { bigint, index, integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import type { Asset } from "pstdio-sync-contracts";
 
 export const assetUploads = pgTable(
@@ -8,11 +8,15 @@ export const assetUploads = pgTable(
     id: text().notNull(),
     asset: jsonb().$type<Asset>().notNull(),
     objectKey: text().notNull(),
+    legacyObjectKey: text(),
     partSize: bigint({ mode: "number" }).notNull(),
     multipartId: text(),
     status: text({ enum: ["open", "cancelled", "completed"] }).notNull(),
   },
-  (table) => [primaryKey({ columns: [table.ownerId, table.id] })],
+  (table) => [
+    primaryKey({ columns: [table.ownerId, table.id] }),
+    index("relay_asset_uploads_object_key").on(table.objectKey),
+  ],
 );
 
 export const assetParts = pgTable(
