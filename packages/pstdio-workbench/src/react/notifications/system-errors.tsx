@@ -64,6 +64,7 @@ const WorkbenchSystemNotices = (props: { workbench: WorkbenchCore }) => {
       <Portal>
         <Popover.Positioner>
           <Popover.Content
+            aria-label={label}
             width="performance-popover"
             maxW="calc(100vw - var(--chakra-spacing-md) * 2)"
             maxH="70dvh"

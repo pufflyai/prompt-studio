@@ -82,7 +82,9 @@ test("System activity stays pinned when other status widgets reorder", async ({ 
   const idleActivity = activity.getByRole("button", { name: "System activity", exact: true });
   await expect(idleActivity).toBeVisible();
   await idleActivity.press("Enter");
-  const details = preview.getByRole("region", { name: "System notice list" });
+  const panel = preview.getByRole("dialog", { name: "System notices", exact: true });
+  await expect(panel).toBeVisible();
+  const details = panel.getByRole("region", { name: "System notice list" });
   await expect(details).toBeVisible();
   await expect(details.getByRole("alert")).toHaveCount(0);
   await idleActivity.press("Enter");
