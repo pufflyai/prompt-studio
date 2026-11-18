@@ -257,15 +257,15 @@ test("session rows distinguish running sessions from drafts and preserve resourc
     ["circle-pause", "fg.warning"],
     ["clock-alert", "fg.info"],
     ["loader-circle", "fg.info"],
-    ["circle-dot", "fg.muted"],
+    ["circle-dot", "fg.warning"],
     ["circle-dashed", "fg.muted"],
   ]);
-  expect(rows.every((row) => row.resource?.icon === "message-circle")).toBe(true);
+  expect(rows.every((row) => row.resource?.icon === row.icon)).toBe(true);
   const result = await search.query(ctx, {
     query: "",
     limit: 10,
     providerId: "sessions",
     renderer: { rendererId: "list" },
   });
-  expect(result.items.every((item) => item.icon === "message-circle")).toBe(true);
+  expect(result.items.map((item) => item.icon ?? "")).toEqual(rows.map((row) => row.icon ?? ""));
 });

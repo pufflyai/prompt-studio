@@ -206,6 +206,13 @@ export default defineExtension({
     }),
   ],
   commandPaletteResources: [search],
+  resourcePresentations: [
+    {
+      resourceKind: workbenchResourceKinds.session,
+      resolve: resolve.ref,
+      refreshEvents: [viewDataEvents.sessionsChanged],
+    },
+  ],
   keybindings: [
     defineKeybinding({
       id: "new-in-viewer",
