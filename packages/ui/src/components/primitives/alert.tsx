@@ -17,15 +17,27 @@ export interface AlertProps extends Omit<ChakraAlert.RootProps, "title"> {
   compact?: boolean;
 }
 
+const alertText = (content: React.ReactNode): string => {
+  let text = "";
+  React.Children.forEach(content, (child) => {
+    if (React.isValidElement<{ children?: React.ReactNode }>(child)) text += alertText(child.props.children);
+    else if (typeof child === "string" || typeof child === "number" || typeof child === "bigint") text += String(child);
+  });
+  return text;
+};
+
 export const AlertMessage = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(props, ref) {
   const { title, children, icon, startElement, endElement, onClose, closeLabel = "Dismiss", compact, ...rest } = props;
   const contentRef = React.useRef<HTMLDivElement>(null);
   const isError = rest.status === "error";
-  const message = typeof children === "string" ? children : undefined;
-  const [dismissed, setDismissed] = React.useState<{ title: React.ReactNode; message?: string }>();
-  if (dismissed && (dismissed.title !== title || dismissed.message !== message)) setDismissed(undefined);
-  if (dismissed && dismissed.title === title && dismissed.message === message && isError && !onClose) return null;
-  const close = onClose ?? (isError ? () => setDismissed({ title, message }) : undefined);
+  const defaultDismissal = isError && !onClose;
+  const heading = defaultDismissal ? alertText(title) : "";
+  const message = defaultDismissal ? alertText(children) : "";
+  const [dismissed, setDismissed] = React.useState<{ heading: string; message: string }>();
+  const sameError = defaultDismissal && dismissed?.heading === heading && dismissed.message === message;
+  if (dismissed && !sameError) setDismissed(undefined);
+  if (sameError) return null;
+  const close = onClose ?? (isError ? () => setDismissed({ heading, message }) : undefined);
   const copyable = isError && !compact;
   return (
     <ChakraAlert.Root ref={ref} size={compact ? "sm" : undefined} role={isError ? "alert" : undefined} {...rest}>

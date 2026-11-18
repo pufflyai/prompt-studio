@@ -223,6 +223,42 @@ const ConstrainedContent: Story = {
   render: () => <VariableContentPreview constrained />,
 };
 
+const RetryFailurePreview = () => {
+  const [failure, setFailure] = useState("Git is unavailable.");
+  const [retrying, setRetrying] = useState(false);
+  return (
+    <Stack width="sm" maxW="full">
+      <Button
+        disabled={!retrying}
+        onClick={() => {
+          setFailure("The project folder cannot be written.");
+          setRetrying(false);
+        }}
+      >
+        Finish retry
+      </Button>
+      <AlertMessage
+        status="error"
+        title="Project setup did not finish"
+        endElement={
+          <Button disabled={retrying} onClick={() => setRetrying(true)}>
+            Retry setup
+          </Button>
+        }
+      >
+        <Stack>
+          <Text>Fix the issue and try again.</Text>
+          <Text>{failure}</Text>
+        </Stack>
+      </AlertMessage>
+    </Stack>
+  );
+};
+const RetryFailure: Story = {
+  id: "primitives-alertmessage--retry-failure",
+  render: () => <RetryFailurePreview />,
+};
+
 const PageScrolling: Story = {
   id: "primitives-alertmessage--page-scrolling",
   render: () => (
@@ -254,6 +290,7 @@ const Examples = createCanvasExampleNavigator(meta, {
   VariableContent,
   VariableTitle,
   ConstrainedContent,
+  RetryFailure,
   PageScrolling,
 });
 const ExamplePage = { name: "Explore", render: () => <Examples /> };
