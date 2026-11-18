@@ -281,6 +281,7 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
   const join = async (cursor: RecordStreamCursor) => {
     let first = await relay.read(0);
     if (!first.state && first.lastSequence === 0) {
+      if (incomplete || cursor.skipped) return null;
       if (!(await store.hasRecords())) return null;
       const founded = await publish(cursor, true);
       if (founded) return founded;
@@ -328,7 +329,10 @@ export const createRecordStreamSync = (input: RecordStreamInput) => {
   /** One pass after reading: restart a lost stream, send saved changes, then compact. Null when done. */
   const send = async (cursor: RecordStreamCursor | null, previous: RecordStreamCursor) => {
     // The relay lost this stream. Any device with a full copy uploads it again (R3).
-    if (!cursor) return (await publish(previous, true)) ?? previous;
+    if (!cursor) {
+      if (incomplete || previous.skipped) return null;
+      return (await publish(previous, true)) ?? previous;
+    }
     if (await push()) return cursor;
     // A device that set data aside never claims to cover it, even to republish its receipts.
     if (incomplete || cursor.skipped) return null;
