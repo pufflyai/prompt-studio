@@ -6,16 +6,6 @@ const inside = (root: string, path: string) => {
   const rel = relative(root, path);
   return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
 };
-const containingPackage = (file: string) => {
-  let owner = dirname(file);
-  while (!existsSync(join(owner, "package.json"))) {
-    const parent = dirname(owner);
-    if (parent === owner) return dirname(file);
-    owner = parent;
-  }
-  return owner;
-};
-
 export const createBrowserEntryResolver = () => {
   const entries = new Map<string, string | null>();
   return (canonical: string, target: string) => {
@@ -36,6 +26,17 @@ export const createBrowserEntryResolver = () => {
 export const createRevisionModuleResolver = () => {
   const physicalPaths = new Map<string, string>();
   const resolvedFiles = new Map<string, string | null>();
+  const packageRoots = new Map<string, string | null>();
+  const containingPackage = (directory: string): string | null => {
+    const previous = packageRoots.get(directory);
+    if (previous !== undefined) return previous;
+    const parent = dirname(directory);
+    let owner: string | null = null;
+    if (existsSync(join(directory, "package.json"))) owner = directory;
+    else if (parent !== directory) owner = containingPackage(parent);
+    packageRoots.set(directory, owner);
+    return owner;
+  };
   const physicalPath = (path: string) => {
     const previous = physicalPaths.get(path);
     if (previous !== undefined) return previous;
@@ -71,7 +72,8 @@ export const createRevisionModuleResolver = () => {
       if (regularDependency && inside(regularDependency, file)) return { owner: regularDependency, file };
       if (inside(canonical, file) && !relative(canonical, file).split(/[/\\]/).includes("node_modules"))
         return { owner: canonical, file };
-      const owner = containingPackage(file);
+      const directory = dirname(file);
+      const owner = containingPackage(directory) ?? directory;
       // A shared loose source folder must not turn its whole enclosing repository
       // into an opaque dependency. Its selected files/assets get their own record.
       return { owner: inside(owner, sourceRoot) ? dirname(file) : owner, file };
