@@ -40,14 +40,9 @@ await runScenario("B5", (capture) =>
         await seeded.page.getByRole("button", { name: "Hide Bottom Panel", exact: true }).click();
         await Bun.sleep(3_000);
         await seeded.page.getByRole("button", { name: "Show Bottom Panel", exact: true }).click();
-        const deadline = started + (cycle + 1) * workload.cycleMs;
-        let remaining = deadline - performance.now();
+        const remaining = started + (cycle + 1) * workload.cycleMs - performance.now();
         assert(remaining > 0, `Fixed memory cycle ${cycle} overran its 15-second slot`);
-        // Timers can wake before a fractional deadline; retain the full absolute slot.
-        do {
-          await Bun.sleep(remaining);
-          remaining = deadline - performance.now();
-        } while (remaining > 0);
+        await Bun.sleep(remaining);
       }
       assert(performance.now() - started >= workload.durationMs);
       sampler.phase("after");

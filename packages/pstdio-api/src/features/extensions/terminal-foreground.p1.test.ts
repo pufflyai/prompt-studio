@@ -22,6 +22,7 @@ describe("terminal foreground probe", () => {
     },
   ])("reads the PTY foreground $name without blocking the event loop", async ({ command, name }) => {
     child = Bun.spawn([...command], { terminal: { cols: 80, rows: 24 } });
+    const spawn = spyOn(Bun, "spawn");
     const spawnSync = spyOn(Bun, "spawnSync");
     try {
       const probe = readTerminalForeground(child.pid);
@@ -34,8 +35,10 @@ describe("terminal foreground probe", () => {
       }
 
       expect(foreground).toEqual({ group: child.pid, name });
+      expect(spawn).not.toHaveBeenCalled();
       expect(spawnSync).not.toHaveBeenCalled();
     } finally {
+      spawn.mockRestore();
       spawnSync.mockRestore();
     }
   });

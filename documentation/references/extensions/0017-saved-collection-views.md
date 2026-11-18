@@ -35,6 +35,8 @@ Webviews call extension commands through `createWebviewClient`. Subscribe to `vi
 - `searchRows` searches the visible text supplied by the renderer.
 - `ViewBarPopover` provides the shared popover shell for custom display controls.
 
+Extension commands can import `filterRowsByView` and `withTitleField` from `@pstdio/ui/collection-view-model` without loading React components.
+
 Provide a `CollectionViewsSource` backed by `ctx.views` commands. Keep search and selection local. Keep the collection's saved settings, filters, and sorts in the project API. A custom presentation can share a native collection's filters while retaining its own display preferences.
 
 See [the collection header stories](../../../packages/ui/src/components/collection-view/collection-view-bar.canvas.tsx) for props and interactions, and [ADR 0060](../../adrs/0060-shared-project-board-views.md) for storage ownership.

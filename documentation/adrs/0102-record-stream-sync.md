@@ -13,7 +13,7 @@ records stopped syncing between devices.
 
 Syncing each record as its own relay document does not scale. An owner can hold 100,000 records.
 One relay document per record means one read per record on every catch-up, 100,000 cursors and
-100,000 latest states. [PRD 0014](../requirements/platform/0014-local-first-sync.md) also needs a
+100,000 latest states. [0014 · RB 9.A.1](../requirement-book/book.json) also needs a
 save that writes several records to arrive whole (R4), which separate documents cannot promise.
 
 Each device moved its records out of the owner document on its own. Two devices that hold the same

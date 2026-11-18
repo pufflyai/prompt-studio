@@ -109,11 +109,26 @@ The CLI `globalAliases` declaration is removed in API 0.5.0. Root shortcuts such
 
 The shorter first-party extension identities also share API 0.5.0. Canonical discovery and output use names such as `pstdio.notes`; historical invocations remain deprecated aliases. Ship the migration-capable host before renamed packages. See [identity upgrades](../../guides/extensions/0011-identity-upgrades.md).
 
+Data-table image columns, resource list `subGroupings` (any number of levels) with children nested to any depth, and tree row `tags` are additive and share API 0.5.0. Existing columns, saved views and tree rows keep their behavior. Publish the supporting host, SDK and UI before independent extensions adopt them. See [image columns](0004-contribution-api.md#image-columns-on-main) and [resource lists](0004-contribution-api.md#resource-lists).
+
 `ctx.resources.allocateMany` also shares API 0.5.0. It numbers 1 to 100 resources of one kind in one save, so imports do not allocate one number per call.
+
+The optional `files.download` webview capability and typed `client.files.download`
+also share API 0.5.0 on `main`. They deliver bytes the extension already holds to
+the user's browser download UI, without adding sandbox permissions or file read
+access. Publish the host and SDK before independent extensions adopt it. See
+[webview files](0005-webview-and-storage-api.md#webview-files).
+
+The optional `resources.actions.register` capability and `registerWebviewResourceAction`
+also share API 0.5.0. They attach live reader actions to native resource menus,
+bound to the calling extension, project, placement and resource. Closing or
+replacing that reader removes its actions and cancels pending work.
 
 `migration.moveCollection` and the `keyPrefix` option of storage index declarations also share API 0.5.0. Older hosts do not provide either; see [move a collection to records](0018-data-migrations.md#move-a-collection-to-records).
 
 The optional `HarnessStartInput.approvals` channel also shares API 0.5.0. A supporting host passes the session's approval channel on a session's first turn as well as on resume. Hosts up to 0.47 pass it only on resume, so providers must treat it as optional on start.
+
+The optional durable-automation `notBefore` deadline also shares API 0.5.0 on `main`. Waiting runs remain queued across restart until the deadline. See [delayed execution](0007-durable-automation.md#delayed-execution-on-main).
 
 ### Which version each check uses
 
@@ -498,4 +513,4 @@ Optional resource Activity declarations, `ctx.activity` discussion/outcome metho
 
 `NavigationTreeContribution.optionalView` lets a tool attach a tree supplied by an independently installed view provider. An absent foreign provider keeps the tree inactive; missing local views, missing views in a present provider, and non-tree views still fail validation. Publish a compatible SDK and host before consumers adopt this additive contract. The published 0.47.0 SDK does not include it. See [navigation trees](0004-contribution-api.md#dashboard-ui-contributions).
 
-*Updated at: 2026-11-14*
+*Updated at: 2026-11-17*

@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { ChakraProvider, psTheme } from "@pstdio/ui";
 import type { KanbanRendererProps } from "@pstdio/ui/kanban-renderer";
-import { Activity } from "react";
+import { Activity, useSyncExternalStore } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { createWorkbench, getWorkbenchRenderers } from "../../../core";
 import { WorkbenchKanbanView } from "./kanban-view";
@@ -105,4 +105,112 @@ test("production duplicate boards share semantic queries while retaining indepen
   expect(calls).toBe(3);
   await act(async () => tree?.update(content(true)));
   expect(calls).toBe(4);
+});
+
+test("create and open leaves the departing board stale until it is visible again", async () => {
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  core = createWorkbench();
+  const renderers = getWorkbenchRenderers(core);
+  let navigation = Promise.withResolvers<void>();
+  let visible = true;
+  let navigate = true;
+  const listeners = new Set<() => void>();
+  const subscribe = (listener: () => void) => {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  };
+  const show = (next: boolean) => {
+    visible = next;
+    for (const listener of listeners) listener();
+  };
+  let calls = 0;
+  let board!: KanbanRendererProps;
+  renderers.registerKanbanRenderer({
+    id: "tickets",
+    title: "Tickets",
+    attributes: [],
+    executeQuery: () => [{ id: "row", title: String(++calls), attributes: {} }],
+    onCreateRow: async () => {
+      renderers.refreshKanbanRenderer("tickets");
+      await navigation.promise;
+      if (navigate) show(false);
+    },
+  });
+  const Renderer = (props: KanbanRendererProps) => {
+    board = props;
+    return null;
+  };
+  const Page = ({ peer = false }: { peer?: boolean }) => (
+    <ChakraProvider value={psTheme}>
+      <Activity mode={useSyncExternalStore(subscribe, () => visible) ? "visible" : "hidden"}>
+        <WorkbenchKanbanView
+          workbench={core}
+          contribution={renderers.getKanbanRenderer("tickets")!}
+          placement={{ instanceId: "one", panelId: "tickets", closable: false }}
+          Renderer={Renderer}
+        />
+      </Activity>
+      {peer && (
+        <WorkbenchKanbanView
+          workbench={core}
+          contribution={renderers.getKanbanRenderer("tickets")!}
+          placement={{ instanceId: "peer", panelId: "tickets", closable: false }}
+          Renderer={() => null}
+        />
+      )}
+    </ChakraProvider>
+  );
+  await act(async () => {
+    tree = create(<Page />);
+  });
+  const submission = { columnId: "todo", values: {}, attributeValues: {}, files: [] };
+  let createRow: Promise<void> | void;
+  await act(async () => {
+    createRow = board.onCreateRow!(submission);
+  });
+  expect(calls).toBe(1);
+  await act(async () => {
+    navigation.resolve();
+    await createRow;
+  });
+  expect(calls).toBe(1);
+  navigate = false;
+  await act(async () => show(true));
+  expect(calls).toBe(2);
+
+  // A rejected activation leaves the original board visible and able to reconcile.
+  navigation = Promise.withResolvers<void>();
+  await act(async () => {
+    createRow = board.onCreateRow!(submission);
+  });
+  expect(calls).toBe(2);
+  await act(async () => {
+    navigation.reject(new Error("navigation failed"));
+    await expect(Promise.resolve(createRow)).rejects.toThrow("navigation failed");
+  });
+  expect(calls).toBe(3);
+
+  navigation = Promise.withResolvers<void>();
+  await act(async () => {
+    createRow = board.onCreateRow!({ ...submission, openCreatedRow: false });
+  });
+  expect(calls).toBe(4);
+  await act(async () => {
+    navigation.resolve();
+    await createRow;
+  });
+
+  await act(async () => tree?.update(<Page peer />));
+  navigation = Promise.withResolvers<void>();
+  await act(async () => {
+    createRow = board.onCreateRow!(submission);
+  });
+  expect(calls).toBe(5);
+  await act(async () => {
+    navigation.resolve();
+    await createRow;
+  });
+  expect(calls).toBe(5);
 });

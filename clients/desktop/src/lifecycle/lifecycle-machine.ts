@@ -27,7 +27,7 @@ export type DesktopRecoveryCode =
 export type DesktopRecoveryError = {
   code: DesktopRecoveryCode;
   message: string;
-  actions: Array<"retry" | "open_logs" | "copy_diagnostics" | "quit">;
+  actions: Array<"retry" | "open_logs" | "quit">;
 };
 
 export type DesktopStartupPhase =
@@ -38,8 +38,6 @@ export type DesktopStartupPhase =
   | "database"
   | "retiring"
   | "migrations"
-  | "cleanup"
-  | "compacting"
   | "extensions"
   | "readiness";
 
@@ -70,7 +68,7 @@ const hasActivity = (activity: RuntimeActivity) =>
 const unexpectedExitError = (): DesktopRecoveryError => ({
   code: "unexpected_exit",
   message: "The Prompt Studio runtime stopped unexpectedly.",
-  actions: ["retry", "open_logs", "copy_diagnostics", "quit"],
+  actions: ["retry", "open_logs", "quit"],
 });
 
 const transitionStarting = (state: Extract<DesktopState, { kind: "starting" }>, event: DesktopEvent) => {

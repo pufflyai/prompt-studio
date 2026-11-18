@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { constants, copyFileSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { constants, mkdirSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { copyFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 
 export const visitRevisionFiles = (root: string, visit: (path: string, rel: string) => void) => {
@@ -25,23 +26,59 @@ export const visitRevisionFiles = (root: string, visit: (path: string, rel: stri
   };
   walk(root);
 };
-export const copyRevisionSource = (sourcePath: string, targetPath: string, files?: Set<string>) => {
+export function* revisionSourceFiles(sourcePath: string, targetPath: string, files?: Set<string>) {
   mkdirSync(targetPath, { recursive: true });
-  const directories = new Set([targetPath]);
-  const copy = (file: string, rel: string) => {
-    const target = join(targetPath, rel);
+  if (files) {
+    for (const rel of files) yield { source: join(sourcePath, rel), target: join(targetPath, rel) };
+  } else {
+    const entries: { source: string; target: string }[] = [];
+    visitRevisionFiles(sourcePath, (source, rel) => entries.push({ source, target: join(targetPath, rel) }));
+    yield* entries;
+  }
+}
+
+type RevisionFileCopy = { source: string; target: string };
+
+export const copyRevisionFiles = async (files: Iterable<RevisionFileCopy>) => {
+  const entries = files[Symbol.iterator]();
+  const directories = new Set<string>();
+  const copies = new Map<string, string>();
+  const copy = ({ source, target }: RevisionFileCopy) => {
+    const key = process.platform === "win32" ? target.toLowerCase() : target;
+    const owner = process.platform === "win32" ? source.toLowerCase() : source;
+    const previous = copies.get(key);
+    if (previous === owner) return;
+    if (previous !== undefined) throw new Error("Snapshot file has conflicting source owners.");
+    // Ancestor and nested package roots can enumerate the same frozen file.
+    copies.set(key, owner);
     const directory = dirname(target);
     if (!directories.has(directory)) {
       mkdirSync(directory, { recursive: true });
       directories.add(directory);
     }
-    // Copy-on-write keeps accepted bytes independent without physically copying
-    // large native dependencies on filesystems that support cloning.
-    copyFileSync(file, target, constants.COPYFILE_FICLONE);
+    // Retain independent accepted bytes, using copy-on-write where available.
+    return copyFile(source, target, constants.COPYFILE_FICLONE);
   };
-  if (files) for (const rel of files) copy(join(sourcePath, rel), rel);
-  else visitRevisionFiles(sourcePath, copy);
+  let failure: { reason: unknown } | undefined;
+  await Promise.all(
+    Array.from({ length: 8 }, async () => {
+      try {
+        while (!failure) {
+          const entry = entries.next();
+          if (entry.done) return;
+          await copy(entry.value);
+        }
+      } catch (reason) {
+        failure ??= { reason };
+      }
+    }),
+  );
+  // Every admitted write must finish before a failed preparation can remove its snapshot.
+  if (failure) throw failure.reason;
 };
+
+export const copyRevisionSource = (sourcePath: string, targetPath: string, files?: Set<string>) =>
+  copyRevisionFiles(revisionSourceFiles(sourcePath, targetPath, files));
 export const hashRevisionSource = (sourcePath: string, include: (path: string) => boolean = () => true) => {
   const hash = createHash("sha256");
   visitRevisionFiles(sourcePath, (file, rel) => {

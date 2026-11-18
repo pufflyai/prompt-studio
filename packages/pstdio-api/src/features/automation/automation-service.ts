@@ -22,6 +22,7 @@ import {
   toRunRecord,
   toTokenRecord,
 } from "./automation-policy";
+import { createDelayedExecution } from "./delayed-execution";
 import { createExtensionAutomationService } from "./extension-automation-service";
 
 const TOKEN_PREFIX = "pst_at";
@@ -66,7 +67,17 @@ const canonicalRun = async (deps: AutomationServiceDeps, row: Parameters<typeof 
   return { ...record, commandId: canonicalRuntimeId(runtime, row.command_id) };
 };
 
+const recoverQueuedRuns = async (
+  db: AutomationPolicyDeps["automationDBService"],
+  start: (runId: string, notBefore?: string) => void,
+) => {
+  const queued = await db.listQueuedRuns();
+  for (const run of queued) start(run.id, (run.input_json as CreateAutomationRunInput | undefined)?.notBefore);
+  return queued.length;
+};
+
 export const createAutomationService = (deps: AutomationServiceDeps) => {
+  const delayed = createDelayedExecution((runId) => executeNow(runId));
   const activeRuns = new Map<
     string,
     { controller: AbortController; execution: Promise<void>; cleanupFailed: boolean }
@@ -155,7 +166,7 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
     if (!token) throw new AutomationRequestError("machine_token_not_found", "Machine token not found.", 404);
   };
 
-  const startExecution = (runId: string) => {
+  const executeNow = (runId: string) => {
     if (activeRuns.has(runId)) return;
     const controller = new AbortController();
     const active = { controller, execution: Promise.resolve(), cleanupFailed: false };
@@ -174,6 +185,8 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
     active.execution = execution;
     activeRuns.set(runId, active);
   };
+
+  const startExecution = delayed.start;
 
   const createRun = async (input: {
     rawToken: string | null;
@@ -252,6 +265,7 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
   };
 
   const cancelOwnedRun = async (runId: string) => {
+    delayed.cancel(runId);
     const active = activeRuns.get(runId);
     if (active) {
       active.controller.abort(new DOMException("Automation run cancelled.", "AbortError"));
@@ -273,16 +287,11 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
   };
 
   const close = async () => {
+    delayed.close();
     const active = [...activeRuns.values()];
     if (active.length === 0) return;
     for (const run of active) run.controller.abort(new DOMException("Prompt Studio is shutting down.", "AbortError"));
     await waitForExecutions(active.map((run) => run.execution));
-  };
-
-  const recoverQueuedRuns = async () => {
-    const queued = await deps.automationDBService.listQueuedRuns();
-    for (const run of queued) startExecution(run.id);
-    return queued.length;
   };
 
   return {
@@ -297,7 +306,7 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
     listTokens: (projectId: string) => listCanonicalTokens(deps, projectId),
     recoverInterruptedRuns: () =>
       deps.automationDBService.recoverInterruptedRuns((run) => recordRunActivity(deps, run)),
-    recoverQueuedRuns,
+    recoverQueuedRuns: () => recoverQueuedRuns(deps.automationDBService, startExecution),
     revokeToken,
   };
 };

@@ -19,26 +19,30 @@ const processInfo = (pid: number) => {
   return new DataView(bytes.buffer);
 };
 
+const readForegroundName = (group: number) => {
+  // KERN_PROCARGS2 retains argv[0], including exec aliases, as ps -o comm does.
+  const args = new Uint8Array(argumentLimit[0]!);
+  const size = new BigUint64Array([BigInt(args.length)]);
+  const mib = new Int32Array([1, 49, group]);
+  if (symbols.sysctl(ptr(mib), mib.length, ptr(args), ptr(size), null, 0) !== 0) return "";
+  const length = Number(size[0]);
+  if (length < 4 || new DataView(args.buffer).getInt32(0, true) <= 0) return "";
+  const pathEnd = args.indexOf(0, 4);
+  if (pathEnd < 4 || pathEnd >= length) return "";
+  let start = pathEnd + 1;
+  while (start < length && args[start] === 0) start++;
+  const end = args.indexOf(0, start);
+  if (end <= start || end >= length) return "";
+  return basename(new TextDecoder().decode(args.subarray(start, end)).trim());
+};
+
 export const readDarwinTerminalForeground = (pid: number) => {
   const before = processInfo(pid);
   if (!before) return null;
   const group = before.getInt32(112, true); // proc_bsdinfo.e_tpgid
   if (group <= 0) return null;
 
-  // KERN_PROCARGS2 retains argv[0], including exec aliases, as ps -o comm does.
-  const args = new Uint8Array(argumentLimit[0]!);
-  const size = new BigUint64Array([BigInt(args.length)]);
-  const mib = new Int32Array([1, 49, group]);
-  if (symbols.sysctl(ptr(mib), mib.length, ptr(args), ptr(size), null, 0) !== 0) return null;
-  const length = Number(size[0]);
-  if (length < 4 || new DataView(args.buffer).getInt32(0, true) <= 0) return null;
-  const pathEnd = args.indexOf(0, 4);
-  if (pathEnd < 4 || pathEnd >= length) return null;
-  let start = pathEnd + 1;
-  while (start < length && args[start] === 0) start++;
-  const end = args.indexOf(0, start);
-  if (end <= start || end >= length) return null;
-
+  const name = readForegroundName(group);
   const after = processInfo(pid);
   // A restarted shell or foreground switch cannot inherit the previous title.
   if (
@@ -48,5 +52,5 @@ export const readDarwinTerminalForeground = (pid: number) => {
     after.getBigUint64(128, true) !== before.getBigUint64(128, true)
   )
     return null;
-  return { group, name: basename(new TextDecoder().decode(args.subarray(start, end)).trim()) };
+  return { group, name };
 };

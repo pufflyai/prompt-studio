@@ -6,8 +6,9 @@ export const hasGitDiscoveryContext = (root: string) => {
   if (["GIT_DIR", "GIT_COMMON_DIR", "GIT_WORK_TREE", "GIT_OBJECT_DIRECTORY"].some((name) => process.env[name]))
     return true;
   for (let directory = realpathSync(root); ; directory = dirname(directory)) {
-    // Linked worktrees use a .git file; bare repositories keep HEAD in their root.
-    if (existsSync(join(directory, ".git")) || existsSync(join(directory, "HEAD"))) return true;
+    // Linked worktrees use a .git file; bare repositories keep HEAD and objects in their root.
+    if (existsSync(join(directory, ".git"))) return true;
+    if (existsSync(join(directory, "HEAD")) && existsSync(join(directory, "objects"))) return true;
     if (dirname(directory) === directory) return false;
   }
 };

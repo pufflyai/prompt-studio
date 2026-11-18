@@ -1,7 +1,7 @@
-import { Badge, chakra, IconButton, Image, Text } from "@chakra-ui/react";
+import { Badge, chakra, IconButton, Text } from "@chakra-ui/react";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { ScopedPopover as Popover } from "@/utils/scoped-overlays";
+import { ImageViewer } from "@/components/image-viewer/image-viewer";
 
 export interface AttachmentChipProps {
   file: File;
@@ -46,18 +46,11 @@ export const AttachmentChip = (props: AttachmentChipProps) => {
   return (
     <Badge variant="chip" gap="2xs" pr="2xs">
       {previewUrl ? (
-        <Popover.Root positioning={{ placement: "top" }}>
-          <Popover.Trigger asChild>
-            <chakra.button type="button" cursor="pointer" minW="0" display="inline-flex">
-              {name}
-            </chakra.button>
-          </Popover.Trigger>
-          <Popover.Positioner>
-            <Popover.Content w="auto" p="2xs" bg="bg">
-              <Image src={previewUrl} alt={file.name} maxW="240px" maxH="240px" borderRadius="sm" />
-            </Popover.Content>
-          </Popover.Positioner>
-        </Popover.Root>
+        <ImageViewer images={[{ src: previewUrl, alt: file.name }]} placement="top">
+          <chakra.button type="button" cursor="pointer" minW="0" display="inline-flex">
+            {name}
+          </chakra.button>
+        </ImageViewer>
       ) : (
         name
       )}

@@ -52,26 +52,6 @@ const retainDraftWatch = (signal: AbortSignal) =>
     else signal.addEventListener("abort", () => done(), { once: true });
   });
 
-type IdleTurn = { backgroundTasks: { description: string }[] } | null;
-
-const createIdleTurnReporter = (
-  write: (snapshot: ChatRendererSnapshot) => Promise<void>,
-  displayedNotice: () => string | undefined,
-) => {
-  let idleNotice: string | undefined;
-  // The run stays open during an idle turn, so Stop remains; it also ends these tasks.
-  return async (idle: IdleTurn) => {
-    const tasks = idle?.backgroundTasks.map((task) => task.description).join("; ");
-    if (tasks) {
-      idleNotice = `The agent finished its turn and is waiting for your reply. Still running in the background: ${tasks}. Stop also ends these.`;
-      await write({ notice: idleNotice });
-    } else if (idleNotice !== undefined && displayedNotice() === idleNotice) {
-      // Clear only this notice; queue or execution feedback shown since then stays.
-      await write({ notice: "" });
-    }
-  };
-};
-
 const matchesCanonicalMessages = (messages: SessionMessage[], displayed: SessionMessage[]) =>
   displayed.length === messages.length && displayed.every((message, index) => message === messages[index]);
 
@@ -94,7 +74,6 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
   let available = true;
   let hasTranscript = false;
   let canonicalDisplay = false;
-  let displayedNotice: string | undefined;
   let queueClock = 0;
   let runClock = 0;
   let streamActive = false;
@@ -120,7 +99,6 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
   };
   const emittedRecovery = new Set<string>();
   const writeEvent = (event: ChatWatchUpdate) => {
-    if ("snapshot" in event && event.snapshot && "notice" in event.snapshot) displayedNotice = event.snapshot.notice;
     writes = writes.then(async () => {
       for (const frame of chatRendererStreamFrames({ revision: revision++, ...event })) {
         if (ctx.signal.aborted) return;
@@ -148,14 +126,12 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
     };
   };
   const notice = () => watchNotice(metadata.query.getSnapshot().data, queued?.error);
-  const idleTurn = createIdleTurnReporter(write, () => displayedNotice);
   const patch = async (data: Extract<ExtensionSessionStreamEvent, { event: "patch" }>["data"]) => {
     if (data.path === "/approval_requests") {
       approvals = Array.isArray(data.value) ? (data.value as ApprovalRequest[]) : [];
       await write({ approval: approvalSnapshot(approvals[0]) });
       return;
     }
-    if (data.path === "/idle_turn") return idleTurn(data.value as IdleTurn);
     const next = applySessionMessagePatch(messages, data);
     if (next === messages) return;
     messages = next;

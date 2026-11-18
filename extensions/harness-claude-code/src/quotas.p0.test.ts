@@ -19,14 +19,17 @@ test("Claude reports subscription windows without treating missing utilization a
 test("Claude preserves model-specific weekly allowances", () => {
   const result = normalizeClaudeQuotas({
     rate_limits: {
+      seven_day_sonnet: { utilization: 100 },
+      seven_day_opus: { utilization: 10 },
       model_scoped: [
         { display_name: "Fable", utilization: 30, resets_at: "2026-11-15T18:00:00Z" },
         { display_name: "Other model", utilization: null, resets_at: null },
       ],
     },
   });
-  expect(result.limits).toHaveLength(1);
-  expect(result.limits[0]?.label).toBe("Fable weekly");
-  expect(result.limits[0]?.remainingPercent).toBe(70);
-  expect(result.limits[0]?.windowMinutes).toBe(10080);
+  expect(result.limits).toMatchObject([
+    { modelFamily: "sonnet", remainingPercent: 0 },
+    { modelFamily: "opus", remainingPercent: 90 },
+    { label: "Fable weekly", modelFamily: "fable", remainingPercent: 70, windowMinutes: 10080 },
+  ]);
 });

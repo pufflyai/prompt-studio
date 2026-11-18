@@ -15,16 +15,27 @@ const isInside = (root: string, path: string) => {
   return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
 };
 
-const resolveLocalImport = (importerPath: string, importPath: string) => {
-  if (!importPath.startsWith(".") && extname(importerPath) !== ".css") return null;
-
-  const unresolvedPath = resolve(dirname(importerPath), importPath);
-  const candidates = [
-    unresolvedPath,
-    ...moduleExtensions.map((extension) => `${unresolvedPath}${extension}`),
-    ...moduleExtensions.map((extension) => join(unresolvedPath, `index${extension}`)),
-  ];
-  return candidates.find((candidate) => statSync(candidate, { throwIfNoEntry: false })?.isFile()) ?? null;
+// Importers in one graph commonly resolve the same relative module. Each inspection
+// owns its lookups so the post-build guard sees new files and changed links.
+export const createLocalImportResolver = () => {
+  const paths = new Map<string, string | null>();
+  const isFile = (path: string) => statSync(path, { throwIfNoEntry: false })?.isFile();
+  const find = (path: string) => {
+    if (isFile(path)) return path;
+    for (const extension of moduleExtensions) if (isFile(path + extension)) return path + extension;
+    const index = join(path, "index");
+    for (const extension of moduleExtensions) if (isFile(index + extension)) return index + extension;
+    return null;
+  };
+  return (importer: string, specifier: string) => {
+    if (!specifier.startsWith(".") && extname(importer) !== ".css") return null;
+    const path = resolve(dirname(importer), specifier);
+    const previous = paths.get(path);
+    if (previous !== undefined) return previous;
+    const file = find(path);
+    paths.set(path, file);
+    return file;
+  };
 };
 
 const transpilerLoader = (filePath: string) => {
@@ -67,9 +78,10 @@ export const readRuntimeModuleImports = (
     transpilers.set(loader, transpiler);
   }
 
+  // CSS regex captures can retain the whole stylesheet. Copy their UTF-16 code units before caching.
   const imports =
     extname(filePath) === ".css"
-      ? cssModuleInputs(contents.toString())
+      ? cssModuleInputs(contents.toString()).map((path) => Buffer.from(path, "utf16le").toString("utf16le"))
       : [
           ...new Set([
             ...(foldConstants
@@ -94,6 +106,7 @@ export const collectRuntimeModulePaths = (
   entryPath: string,
   readSource: (path: string) => Buffer = (path) => readFileSync(path),
   knownPaths: ReadonlySet<string> = new Set(),
+  resolveLocalImport = createLocalImportResolver(),
 ) => {
   const pending = [entryPath];
   const modulePaths = new Set<string>();

@@ -61,6 +61,17 @@ const meta = {
 export default meta;
 type Story = CanvasFrame<typeof meta>;
 export const WorkspaceActivity: Story = { id: "patterns-chat-activity-layout--workspace-activity" };
+export const ReopenedConversation: Story = {
+  id: "patterns-chat-activity-layout--reopened-conversation",
+  description: "Reopening a conversation keeps the reply visible without task lifecycle notices.",
+  args: {
+    streaming: false,
+    messages: [
+      { id: "user", role: "user", parts: [{ type: "text", text: "Watch the workspace for changes." }] },
+      { id: "assistant", role: "assistant", parts: [{ type: "text", text: "The workspace watcher is ready." }] },
+    ],
+  },
+};
 export const Narrow: Story = {
   id: "patterns-chat-activity-layout--narrow",
   render: (args) => (

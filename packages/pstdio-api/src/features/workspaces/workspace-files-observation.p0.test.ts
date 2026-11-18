@@ -1,10 +1,30 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WatchDirectory } from "pstdio-extensions";
 import { git } from "pstdio-wt";
 import { watchWorkspaceFiles } from "./workspace-files-observation";
+
+test("an ordinary HEAD file does not start Git discovery", async () => {
+  const root = await mkdtemp(join(tmpdir(), "pstdio-files-plain-head-"));
+  await writeFile(join(root, "HEAD"), "ordinary text");
+  const spawn = spyOn(Bun, "spawn");
+  let observation: Awaited<ReturnType<typeof watchWorkspaceFiles>> | undefined;
+  try {
+    observation = await watchWorkspaceFiles(
+      root,
+      () => {},
+      () => ({ close() {} }),
+      false,
+    );
+    expect(spawn).not.toHaveBeenCalled();
+  } finally {
+    spawn.mockRestore();
+    observation?.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test("Git ignore decorations refresh on index and exclude changes without watching object storage", async () => {
   const root = await mkdtemp(join(tmpdir(), "pstdio-files-git-watch-"));
