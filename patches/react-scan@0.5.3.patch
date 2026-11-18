@@ -1,0 +1,87 @@
+diff --git a/dist/index.d.mts b/dist/index.d.mts
+--- a/dist/index.d.mts
++++ b/dist/index.d.mts
+@@ -238,1 +238,6 @@
+ export { type Change, type ChangesListener, type ChangesPayload, type ClassComponentStateChange, type ContextChange, type FunctionalComponentStateChange, type Internals, type LocalStorageOptions, type Options, type OutlineKey, type PropsChange, ReactScanInternals, type StateChange, Store, type StoreType, getIsProduction, getOptions, getReport, ignoreScan, ignoredProps, onRender, scan, setOptions, start, useScan };
++
++export declare function createRenderOutlinePainter(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): {
++  collect(root: import("bippy").FiberRoot): boolean;
++  draw(): boolean;
++};
+diff --git a/dist/index.mjs b/dist/index.mjs
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -7172,21 +7172,21 @@
+ var activeOutlines = /* @__PURE__ */ new Map();
+ var blueprintMap = /* @__PURE__ */ new Map();
+ var blueprintMapKeys = /* @__PURE__ */ new Set();
+-var outlineFiber = (fiber) => {
++var outlineFiber = (fiber, outlines = blueprintMap) => {
+   if (!isCompositeFiber2(fiber)) return;
+   const name = typeof fiber.type === "string" ? fiber.type : getDisplayName5(fiber);
+   if (!name) return;
+-  const blueprint = blueprintMap.get(fiber);
++  const blueprint = outlines.get(fiber);
+   const nearestFibers = getNearestHostFibers(fiber);
+   const didCommit = didFiberCommit2(fiber);
+   if (!blueprint) {
+-    blueprintMap.set(fiber, {
++    outlines.set(fiber, {
+       name,
+       count: 1,
+       elements: nearestFibers.map((fiber2) => fiber2.stateNode),
+       didCommit: didCommit ? 1 : 0
+     });
+-    blueprintMapKeys.add(fiber);
++    if (outlines === blueprintMap) blueprintMapKeys.add(fiber);
+   } else {
+     blueprint.count++;
+   }
+@@ -15275,6 +15275,47 @@
+     ignoredProps.add(node);
+   }
+ };
++// Disposable outline-only entry. The host owns the commit subscription and frame.
++export function createRenderOutlinePainter(canvas, ctx) {
++  const pending = new Map();
++  const active = new Map();
++  return {
++    collect(root) {
++      traverseRenderedFibers(root, (fiber, phase) => {
++        if (phase !== "unmount") outlineFiber(fiber, pending);
++      });
++      return pending.size > 0;
++    },
++    draw() {
++      const dpr = getDpr();
++      const width = Math.round(window.innerWidth * dpr);
++      const height = Math.round(window.innerHeight * dpr);
++      if (canvas.width !== width || canvas.height !== height) {
++        canvas.width = width;
++        canvas.height = height;
++      }
++      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
++      const bounds = new Map();
++      for (const [fiber, blueprint] of pending) {
++        const rects = [];
++        for (const element of blueprint.elements) {
++          if (!(element instanceof Element) || !element.isConnected) continue;
++          if (!bounds.has(element)) bounds.set(element, element.getBoundingClientRect());
++          const rect = bounds.get(element);
++          if (rect.width && rect.height && rect.right > 0 && rect.bottom > 0
++              && rect.left < window.innerWidth && rect.top < window.innerHeight) rects.push(rect);
++        }
++        if (!rects.length) continue;
++        const { x, y, width, height } = mergeRects(rects);
++        updateOutlines(active, [{ id: getFiberId3(fiber), name: blueprint.name,
++          count: blueprint.count, didCommit: blueprint.didCommit, x, y, width, height }]);
++      }
++      pending.clear();
++      return drawCanvas(ctx, canvas, dpr, active);
++    }
++  };
++}
++
+ export {
+   ReactScanInternals,
+   Store,
