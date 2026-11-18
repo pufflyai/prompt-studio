@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { planHash, type SourceIdentity, type TestPlan, validateTestPlan } from "./test-plan";
 import { testExecutionId } from "./test-plan-source";
-import { collectRunEvidence, registeredStableEmpty } from "./test-run-evidence";
+import { collectRunEvidence } from "./test-run-evidence";
 
 export interface TestRunResult {
   runId: string;
@@ -216,9 +216,7 @@ export const browserCoverageErrors = (plan: TestPlan, results: TestRunResult[]) 
         .filter((result) => runs.some((run) => run.id === result.runId))
         .flatMap((result) => result.reportedFiles ?? []),
     );
-    return runs[0]!.files
-      .filter((file) => !files.has(file) && !registeredStableEmpty({ ...runs[0]!, files: [file] }))
-      .map((file) => `Browser selection never reported: ${file}`);
+    return runs[0]!.files.filter((file) => !files.has(file)).map((file) => `Browser selection never reported: ${file}`);
   });
 };
 if (import.meta.main) {

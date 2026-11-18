@@ -16,7 +16,7 @@ test("reattaching an observed edit permits inventory while a new offline edit re
   const skill = join(source, "SKILL.md");
   await writeFile(skill, "accepted A");
   await loadExtensionSource(source, { accepted: true });
-  const phases = ["initial", "live", "repeated", "offline"] as const;
+  const phases = ["initial", "live", "unchanged", "repeated", "offline"] as const;
   type Phase = (typeof phases)[number];
   const entered = Object.fromEntries(phases.map((phase) => [phase, Promise.withResolvers<void>()])) as Record<
     Phase,
@@ -49,6 +49,10 @@ test("reattaching an observed edit permits inventory while a new offline edit re
     await writeFile(skill, "observed B");
     await finished.live.promise;
     expect(priorities.live).toBe("requested");
+    phase = "unchanged";
+    await writeFile(skill, "observed B");
+    await finished.unchanged.promise;
+    expect(priorities.unchanged).toBe("background");
     await stopExtensionPreparation(false);
     phase = "repeated";
     await watcher.refresh();

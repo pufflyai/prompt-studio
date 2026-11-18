@@ -3,6 +3,20 @@ name: Harness CLI support
 # Runs each harness against the real agent CLI. `minimum` reads the version the harness detection
 # accepts as its oldest; `latest` is the newest release on npm. No agent login is needed.
 on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Exact Git revision to test
+        required: true
+        type: string
+      versions:
+        description: JSON list of requested versions, from minimum and latest
+        required: true
+        type: string
+      harnesses:
+        description: JSON harness rows selected from scripts/ci/production-platforms.ts
+        required: true
+        type: string
   workflow_call:
     inputs:
       ref:

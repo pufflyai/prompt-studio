@@ -18,7 +18,7 @@ Contributions are what an extension adds to Prompt Studio. This page lists every
 | `navigationItems`, `navigationTrees`              | Explicit actions and Sidenav trees owned by a mode or page.                                        |
 | `resourceKinds`                                   | Domain resource identity, labels, icons, menus, and hierarchy.                                     |
 | `resourceHierarchyProviders`                      | Domain parent lookup for resources. Page targets supply breadcrumb destinations.                                   |
-| `statusBarItems`                                  | Views in the host status bar; all visible items render without layout persistence.                 |
+| `statusBarItems`                                  | Views in the host status bar with device-local user order and alignment.                 |
 | `statuses`                                        | Deprecated workflow providers; use query-owned enums and an extension settings panel.                     |
 | `settings`, `settingsSections` | Extension setting definitions and grouped settings sections. |
 | `templateTypes` | Commands and metadata for extension-owned template editing. |
@@ -317,6 +317,83 @@ its parent. This keeps copied links and renamed files consistent with sidebar na
 
 See [Workbench composition](0008-contextual-workbench-composition.md) and [Modes and layout](0009-modes-and-layout.md) for the full rules.
 
+## Status bar widgets
+
+Status widgets use `workbenchSlots.statusBarLeading`, `statusBarCenter` or
+`statusBarTrailing` as their initial alignment. People can drag the widget
+surface or use its alignment menu. Inline iframe controls keep their pointer
+input, so their surrounding padding is the drag surface. The host retains the
+chosen alignment and order when an extension reloads. An optional `popover` view
+makes the host own the indicator's click and keyboard activation. Inline controls
+remain available in status widgets without a popover. Keep the indicator's
+background transparent so the host can paint one surface across the widget,
+including its hover and focus states.
+
+## Native action bars
+
+A view can declare `body.kind: "actionBar"`. Use it for tool rails and
+compact command bars whose labels and menus must remain readable beside isolated
+webviews. The workbench renders the buttons, tooltips and menus in its document.
+Canvas, inspector and other custom content keep their iframe isolation.
+
+An action bar in the activity region follows its dock: top and bottom use a
+horizontal row and left and right use a vertical rail. Tooltips, menu placement
+and arrow-key navigation follow that axis. Other placements use the view body's
+optional `orientation`.
+
+```ts
+const tools = defineView({
+  id: "tools",
+  title: "Tools",
+  body: {
+    kind: "actionBar",
+    refreshEvents: [documentChanged],
+    query: async (ctx, { renderer }) => {
+      const state = await readDocument(ctx, renderer.resource);
+      const move = {
+        id: "move",
+        label: "Move tool",
+        icon: "Move",
+        selected: state.tool === "move",
+        action: { kind: "command" as const, target: {
+          command: selectTool.ref, params: { tool: "move" },
+        } },
+      };
+      return { items: [
+        move,
+        { id: "document", label: "Document actions", icon: "Ellipsis",
+          items: [{ ...move, selected: false }] },
+      ] };
+    },
+  },
+});
+```
+
+Set `mode.chrome.activity` to the view's ref for a native rail. The same view can
+be placed in a page or panel. Outside the activity region, orientation defaults
+to `vertical`; use `horizontal` for a command row. Snapshot order sets the
+default order. People can drag top-level buttons or reorder the focused button
+with Alt and the arrow keys along the bar. The host saves their order per
+project and view using the item IDs. Menu actions can declare `group` to separate
+related commands.
+
+Queries return actions with stable IDs, labels, icons, navigation targets and
+optional `selected` and `disabled` state. A menu has an `items` array of actions
+instead of an `action`. Return only actions available in the current context.
+The host resolves local command refs against the contributing extension and
+shows hints from the shared keybinding system. Bound command parameters stay
+the same for people and agents.
+
+Chrome follows the active page's primary resource. A resource-bound placement
+uses its own resource. Declared refresh events update the snapshot; changing the
+resource releases the old read and closes its menus. Disabling or removing the
+contribution disposes its view. Arrow keys, Home and End move through enabled
+buttons. Escape, outside click and clicking the open trigger dismiss a menu.
+
+This additive surface requires host capability `view.actionBar.v1` and a
+supporting published SDK. Publish platform support before releasing independent
+extensions that adopt it. Older view kinds and activity items stay supported.
+
 ## Native view toolbar actions
 
 Both `dataTable` and `kanban` bodies accept `toolbarActions`. These actions stay
@@ -523,7 +600,7 @@ columns: [
 
 Thumbnails fill the row, so Comfortable and Tall row heights show larger previews. A gallery shows three thumbnails and counts the rest. Clicking a thumbnail opens the shared image viewer without activating the row; a gallery opens as a carousel. An image that fails to load shows a placeholder, and an empty value shows a dash. `fit` is `cover` (default) or `contain`; `shape` is `square` (default) or `circle`; `showLabel` shows the first image's alt text beside it. Image columns are text fields for filters. This addition shares API 0.5.0 on `main`; publish the host, SDK and UI before an independent extension adopts it.
 
-The query receives `filter`, `sorts`, and the display `settings`. For default full-result providers, use them only to narrow what you load. The renderer applies the full filter and sorts to the returned rows, so returning more rows than the view shows is correct. Opt-in [paged providers](#paged-tables-and-boards) apply these controls before returning a bounded page.
+The query receives `filter`, `sorts`, and the display `settings`. The new indexed collection query helpers infer [paged providers](#paged-tables-and-boards), which apply these controls before returning a bounded page. Custom providers without an explicit query mode retain the full-result contract: the renderer applies filtering and sorting to their returned rows.
 
 API 0.2.0 removes the fields deprecated in published package version 0.43.1. Migrate declarations and query handlers to the replacements below.
 
@@ -716,15 +793,38 @@ Publish the additive SDK before harness extensions adopt it. Codex native accept
 
 ## Paged tables and boards
 
-Set `queryMode: "paged"` on a `dataTable` or `kanban` view body to opt in. This is
-an additive API 0.2.2 change. Existing providers keep their full-result query and
-local filtering, sorting, and search.
+On unreleased API 0.5.0, `defineView` defaults queries created by
+`collectionViewQuery` or `collectionTableQuery` to `queryMode: "paged"`. Existing
+custom callbacks retain their full-result contract when rebuilt with the new SDK;
+custom bounded providers explicitly set `queryMode: "paged"`. For a genuinely small fixed list,
+declare `queryMode: "static"` and `maxRows` between 1 and 500. The host checks
+the bound, including nested rows. Both modes reject complete collection reads
+through storage or workspace APIs, including nested command calls. Query only
+the required projections and use database aggregates for counts. Providers without an explicit bounded mode retain their existing full-result contract.
+
+For a new resource, use `collectionViewQuery({ index, attributes, resourceKind })`
+from `@pstdio/sdk/extensions`, or `collectionTableQuery({ index, columns,
+resourceKind })`. `defineExtension` installs their collection-scoped index before
+queries run. These helpers translate filters, search, the first supported sort,
+grouping and collapsed groups before selection. Table helpers also return
+requested statistics for scalar projections. Date controls use the viewer's
+calendar; option search uses resolved display labels and text sorting uses the
+viewer locale with numeric, case-insensitive ordering. Custom display values
+need explicit query projections and matching search predicates through `fields`.
+Dynamic computed or related date values must supply `date.dayField`,
+`date.textField`, and `orderField` projections for the controls they expose.
+Declared local dates and literal or conditional computed dates are formatted by
+the helper using the viewer's locale and time zone.
+Publish the supporting host and SDK before releasing independent consumers.
 
 The host passes `params.page` with a limit of at most 500, a zero-based offset,
 optional cursor and expected revision, search text, selected field IDs, and
-collapsed table group keys. Set `initialPageSize` on a paged table or board to
+collapsed table group keys. `page.presentation` supplies resolved option labels
+and empty-group keys so query search and collapse match the native controls.
+Set `initialPageSize` on a paged table or board to
 request a larger page; tables can also offer `pageSizeOptions`. Fields include
-visible columns/properties and active grouping fields. Badge-list displays also
+visible columns/properties and active grouping fields. `page.searchFields`
+separately names the displayed searchable fields. Badge-list displays also
 request their companion item field. Apply `params.filter`, `params.sorts`, and
 search to the complete indexed collection before selecting a page. Return the
 requested fields and only the bounded rows.
@@ -753,6 +853,7 @@ Return `{ rows, page }`, where `page` contains:
 - `filteredTotal`: rows matching filter and search, excluding collapsed table groups.
 - `groups`: complete grouping counts, each with `field`, `value`, and `count`.
   Subgroups also identify their parent field/value. Missing values use `null`.
+  At most 500 grouped combinations produce at most 1,000 parent/subgroup summaries.
 - `statistics`: requested table column summaries, keyed by field ID, when a
   visible statistics control requests them. Never calculate these from one page.
 
@@ -819,4 +920,4 @@ The old `workbenchPages.sessions`, `session`, `newSession`, `sessionComposer`, `
 
 Resource mutation commands can act on another provider's canonical resource. When the invoking resource matches the declared mutation type and resolved ID in the selected project, native optimistic previews and write serialization preserve that resource's identity. Without a matching subject, the command's own extension identity remains the default. This changes presentation ownership only; the command service still enforces its normal permissions and scope.
 
-*Updated at: 2026-11-14*
+*Updated at: 2026-11-17*

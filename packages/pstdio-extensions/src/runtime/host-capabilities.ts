@@ -14,6 +14,7 @@ export const dashboardExtensionHostCapabilities = {
     "mode.v1": { version: 1, since: "0.25.0" },
     "page.v1": { version: 1, since: "0.27.0" },
     "view.webview.v1": { version: 1, since: "0.26.0" },
+    "view.actionBar.v1": { version: 1, since: "0.48.0" },
     "view.tree.v1": { version: 1, since: "0.26.0" },
     "view.tree.pages.v1": { version: 1, since: "0.47.0" },
     "view.file.v1": { version: 1, since: "0.26.0" },

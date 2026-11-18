@@ -22,7 +22,7 @@ Planner refuses to start an attempt in a folder that is not a Git repository. Yo
 
 ## Workspaces on a ticket
 
-The **Workspaces** section of a ticket lists the project folder, shown as **Project workspace**, and every workspace linked to the ticket. Open the project workspace to work directly in the project's files. Archiving a ticket never archives the project workspace.
+The **Workspaces** section of a ticket lists only workspaces explicitly linked to it. The project folder appears as **Project folder** only when linked. Tickets without linked workspaces hide this section. Archiving a ticket never removes the project folder.
 
 When the project can create workspaces, the section shows **Create workspace**. It opens a form where you choose a workspace type, called a provider, and fill in its options. The new workspace is linked to the ticket, even while a remote environment is still starting. Creating a workspace does not start an agent. A plain folder or a remote project with no provider shows no create action.
 

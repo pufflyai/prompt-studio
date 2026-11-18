@@ -25,7 +25,8 @@ test("measures while the Performance Monitoring extension is loaded and shows it
       )
         return;
       const request = message.args?.[0];
-      if (request?.method === "performance.read") operations.push(request.params.operation);
+      if (request?.method === "performance.read" && request.params.operation === "query")
+        operations.push(request.params.query.operation);
     });
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
@@ -38,28 +39,28 @@ test("measures while the Performance Monitoring extension is loaded and shows it
   await expect(preparedFrame).toHaveCount(0);
   await expect(details).toHaveCount(0);
   const operations = () => page.evaluate(() => Reflect.get(window, "performanceDetailsOperations") as string[]);
-  expect(await operations()).not.toContain("subscribe");
-  await meter(page).click();
+  expect(await operations()).not.toContain("observe");
+  await page.locator("footer").getByRole("button", { name: "Performance", exact: true }).click();
   await expect(preparedFrame).toHaveCount(1);
   await expect.poll(() => details.evaluate(() => document.visibilityState)).toBe("visible");
-  await expect.poll(operations).toContain("subscribe");
+  await expect.poll(operations).toContain("observe");
   await expect(details.getByText("CPU is measured in the desktop app", { exact: true })).toBeVisible();
   await expect(details.getByRole("checkbox")).toHaveCount(0);
 
   // Critical: reopening must reuse the webview document instead of repeating its startup.
   const detailFrame = page.locator('iframe[title="Performance details"]');
   const loadedFrame = await detailFrame.elementHandle();
-  await meter(page).click();
+  await page.locator("footer").getByRole("button", { name: "Performance", exact: true }).click();
   await expect(detailFrame).toBeHidden();
   await expect.poll(() => details.evaluate(() => document.visibilityState)).toBe("hidden");
-  await expect.poll(operations).toContain("unsubscribe");
+  await expect.poll(operations).toContain("close");
   expect(await loadedFrame!.evaluate((frame) => frame.isConnected)).toBe(true);
-  await meter(page).click();
+  await page.locator("footer").getByRole("button", { name: "Performance", exact: true }).click();
   await expect(details).toBeVisible();
   await expect
     .poll(async () => {
       const seen = await operations();
-      return seen.lastIndexOf("subscribe") > seen.lastIndexOf("unsubscribe");
+      return seen.lastIndexOf("observe") > seen.lastIndexOf("close");
     })
     .toBe(true);
   expect(await detailFrame.evaluate((frame, original) => frame === original, loadedFrame)).toBe(true);

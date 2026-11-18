@@ -125,7 +125,9 @@ export const selectProject = async (page: Page, name: string) => {
       await page.getByRole("button", { name: "Open / create project", exact: true }).click();
     await picker.getByText(name, { exact: true }).click();
   }
-  await expect(tab).toHaveAttribute("aria-selected", "true");
+  // First opening a prepared project's workbench can outlast the default assertion allowance.
+  // Measured switches still record their complete elapsed time against the fixed product budget.
+  await expect(tab).toHaveAttribute("aria-selected", "true", { timeout: 30_000 });
 };
 export const projectActions = (runtime: Runtime, page: Page, fixture: ProjectFixture) => ({
   async home() {

@@ -1,55 +1,41 @@
-import { Box } from "@chakra-ui/react";
 import { ScopedPopover as Popover, Portal } from "@pstdio/ui";
-import { useEffect, useState } from "react";
-import type { WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
+import type { ReactNode } from "react";
+import type { WorkbenchCore, WorkbenchStatusBarSlot, WorkbenchWidgetPlacement } from "../../core";
 import { WorkbenchWidgetHost } from "../region/widget-host";
 import { ViewActivityContext } from "../shared/view-activity-context";
 
-export const StatusItemContent = (props: {
+interface StatusItemPopoverProps {
   workbench: WorkbenchCore;
   placement: WorkbenchWidgetPlacement;
-  visible: boolean;
-}) => {
-  const { workbench, placement, visible } = props;
-  const [open, setOpen] = useState(false);
-  useEffect(() => {
-    if (!visible) setOpen(false);
-  }, [visible]);
-  const item = workbench.statusBar.getItem(placement.widgetId);
-  const trigger = <WorkbenchWidgetHost workbench={workbench} region="status" placement={placement} />;
-  if (!item?.popoverViewId) return trigger;
+  viewId: string;
+  slot: WorkbenchStatusBarSlot;
+  open: boolean;
+  onOpenChange(open: boolean): void;
+  children: ReactNode;
+}
+
+export const StatusItemPopover = (props: StatusItemPopoverProps) => {
+  const { workbench, placement, viewId, slot, open, onOpenChange, children } = props;
   const detail = {
     ...placement,
     widgetId: JSON.stringify(["status-popover", placement.widgetId]),
-    contributionId: item.popoverViewId,
-    viewId: item.popoverViewId,
-    title: workbench.views.getView(item.popoverViewId)?.title,
+    contributionId: viewId,
+    viewId,
+    title: workbench.views.getView(viewId)?.title,
   };
   return (
     <Popover.Root
-      open={visible && open}
-      onOpenChange={(event) => setOpen(event.open)}
+      open={open}
+      onOpenChange={(event) => onOpenChange(event.open)}
       variant="widget"
       lazyMount
       unmountOnExit={false}
-      positioning={{ placement: item.slot === "trailing" ? "top-end" : "top-start", offset: { mainAxis: 4 } }}
+      positioning={{
+        placement: ({ leading: "top-start", center: "top", trailing: "top-end" } as const)[slot],
+        offset: { mainAxis: 4 },
+      }}
     >
-      <Popover.Trigger asChild>
-        <Box
-          display="flex"
-          minW="0"
-          role="button"
-          tabIndex={0}
-          aria-label={placement.title}
-          onKeyDown={(event) => {
-            if (event.target !== event.currentTarget || !["Enter", " "].includes(event.key)) return;
-            event.preventDefault();
-            setOpen((current) => !current);
-          }}
-        >
-          {trigger}
-        </Box>
-      </Popover.Trigger>
+      {children}
       <Portal>
         <Popover.Positioner>
           <Popover.Content
@@ -61,7 +47,7 @@ export const StatusItemContent = (props: {
           >
             {/* The webview scrolls itself, so it can keep its own header in place and its scrollbar at the edge. */}
             <Popover.Body minH="0" display="flex" flexDirection="column" css={{ "& iframe": { maxHeight: "70dvh" } }}>
-              <ViewActivityContext value={visible && open}>
+              <ViewActivityContext value={open}>
                 <WorkbenchWidgetHost workbench={workbench} region="main" placement={detail} sizing="content-height" />
               </ViewActivityContext>
             </Popover.Body>

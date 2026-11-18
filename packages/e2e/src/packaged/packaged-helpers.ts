@@ -43,11 +43,16 @@ export const runPackaged = (args: string, cwd: string, env: Record<string, strin
     timeout: TEST_TIMEOUT,
   });
 
-export const runPackagedAsync = async (args: string[], cwd: string, env: Record<string, string>) => {
+export const runPackagedAsync = async (
+  args: string[],
+  cwd: string,
+  env: Record<string, string>,
+  timeout = TEST_TIMEOUT,
+) => {
   const { stdout } = await runTestCommand(PACKAGED_BINARY_PATH, args, {
     cwd,
     env: { ...process.env, PSTDIO_DEFAULT_EXTENSIONS: "[]", ...env },
-    timeout: TEST_TIMEOUT,
+    timeout,
   });
   return stdout;
 };
