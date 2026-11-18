@@ -1,5 +1,5 @@
 import { VIEW_FILTER_CONDITIONS, type ViewFilterGroup } from "@pstdio/sdk/extensions";
-import { filterRowsByView } from "@pstdio/ui/collection-view";
+import { filterRowsByView } from "@pstdio/ui/collection-view-model";
 import type { AttributeDescriptor, KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 
 interface AutoBuildFilterResult {

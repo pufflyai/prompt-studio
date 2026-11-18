@@ -1,5 +1,5 @@
 import type { NavigationTarget, ResourceRef } from "@pstdio/sdk/extensions";
-import { withTitleField } from "@pstdio/ui/collection-view";
+import { withTitleField } from "@pstdio/ui/collection-view-model";
 import type { AttributeDescriptor, KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 import { localizeTicketFormOption, localizeTicketFormValue } from "../../ticket-create-form";
 import type { readPlanCommand } from "../commands/read-plan";

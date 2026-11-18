@@ -79,6 +79,10 @@
       "import": "./dist/collection-view.js",
       "types": "./dist/collection-view.d.ts"
     },
+    "./collection-view-model": {
+      "import": "./dist/collection-view-model.js",
+      "types": "./dist/collection-view-model.d.ts"
+    },
     "./mermaid": {
       "import": "./dist/mermaid.js",
       "types": "./dist/mermaid.d.ts"
