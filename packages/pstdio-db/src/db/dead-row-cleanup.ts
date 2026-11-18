@@ -1,4 +1,5 @@
 import type { PGlite } from "@electric-sql/pglite";
+import { analyzeRecordProjection } from "./record-projection-statistics";
 
 const FIRST_PASS_DELAY_MS = 60_000;
 const CHECK_INTERVAL_MS = 5 * 60_000;
@@ -40,7 +41,13 @@ export const vacuumDeadRows = async (
     if (options.stopped?.()) break;
     try {
       // PGlite queues each statement behind any open transaction, so a vacuum never runs inside one.
-      await db.exec(`VACUUM ${options.all ? "(ANALYZE) " : ""}${name}`);
+      if (options.all && name === "storage_current_records") {
+        await db.exec(`VACUUM ${name}`);
+        if (!options.stopped?.())
+          await db.transaction((tx) => analyzeRecordProjection((statement) => tx.exec(statement)));
+      } else {
+        await db.exec(`VACUUM ${options.all ? "(ANALYZE) " : ""}${name}`);
+      }
       vacuumed.push(name);
     } catch (error) {
       options.onError?.(error, name);

@@ -75,8 +75,7 @@ export const defineRecordIndexes = async (
     const saved = new Map(previous.map((row) => [row.name, row.database_name]));
     for (const index of publicDesired)
       if (saved.get(index.name) !== names.get(index.name)) await installRecordIndex(tx, owner, index);
-    // Expression indexes get planner statistics only from ANALYZE, not from CREATE INDEX.
-    // Dropping indexes needs none, and analyzing the table shared by all owners is slow.
-    if (desired.length) await tx.execute(sql`ANALYZE storage_current_records`);
+    // Projection maintenance collects statistics for all owners together. An ANALYZE here
+    // would scan the shared projection for every extension admitted during startup.
   });
 };

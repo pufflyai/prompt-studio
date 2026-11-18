@@ -16,8 +16,22 @@ describe("extension request timeout", () => {
     expect(timeout).toHaveBeenCalledWith(request, 0);
   });
 
+  test.each(["", "/ui", "/appearance"])("keeps cold project extension metadata reads connected for %s", (suffix) => {
+    const request = new Request(`http://localhost:19840/v1/projects/${projectId}/extensions${suffix}`);
+    const timeout = mock(() => {});
+    disableExtensionPreparationTimeout(request, { timeout });
+    expect(timeout).toHaveBeenCalledWith(request, 0);
+  });
+
+  test("keeps a saved view read connected while the extension resolves its board fields", () => {
+    const request = new Request(`http://localhost:19840/v1/projects/${projectId}/boards/planner.tickets/views`);
+    const timeout = mock(() => {});
+    disableExtensionPreparationTimeout(request, { timeout });
+    expect(timeout).toHaveBeenCalledWith(request, 0);
+  });
+
   test("keeps the server timeout for other requests", () => {
-    const request = new Request(`http://localhost:19840/v1/projects/${projectId}/extensions`, { method: "GET" });
+    const request = new Request(`http://localhost:19840/v1/projects/${projectId}/extensions/other`, { method: "GET" });
     const timeout = mock(() => {});
 
     disableExtensionPreparationTimeout(request, { timeout });
