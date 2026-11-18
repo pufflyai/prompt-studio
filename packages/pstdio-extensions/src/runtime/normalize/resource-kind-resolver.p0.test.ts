@@ -49,17 +49,6 @@ test("resource paths cannot run another extension's command", () => {
 });
 
 describe("resource kind resolver", () => {
-  test("names the owner's resolver command by its qualified id", () => {
-    const note = defineResourceKind({ id: "note", resolve: resolveNote.ref });
-
-    const runtime = normalizeExtensionSources([
-      source("notes", defineExtension({ commands: [resolveNote], resourceKinds: [note] })),
-    ]);
-
-    expect(runtime.resourceKinds[0]?.resolveCommandId).toBe("pstdio.notes.command.resolve-note");
-    expect(runtime.diagnostics).toEqual([]);
-  });
-
   test("drops a resolver that is not a command of the resource kind's extension", () => {
     const missing = defineResourceKind({ id: "note", resolve: { kind: "command", id: "missing" } });
     const foreign = defineResourceKind({

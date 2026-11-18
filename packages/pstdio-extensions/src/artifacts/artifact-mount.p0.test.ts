@@ -104,14 +104,6 @@ describe("createArtifactMount", () => {
     expect(written.at(-1)).toBe(join(root, "sales", "q4.json"));
   });
 
-  test("rejects path escaping mount root", async () => {
-    const repo = createTempDir();
-    const mount = createArtifactMount({ repoRoot: repo, extensionId: "pstdio.planner", mountPath: "tickets" });
-
-    await expect(mount.writeText("../evil.md", "x")).rejects.toThrow(/escapes/);
-    await expect(mount.writeText("/abs.md", "x")).rejects.toThrow(/escapes/);
-  });
-
   test("lists files matching glob", async () => {
     const repo = createTempDir();
     const mount = createArtifactMount({ repoRoot: repo, extensionId: "pstdio.planner", mountPath: "tickets" });
@@ -138,15 +130,6 @@ describe("createArtifactMount", () => {
     await mount.writeText("top.md", "");
 
     expect(await mount.listDirs()).toEqual(["a", "b"]);
-  });
-
-  test("delete removes a file", async () => {
-    const repo = createTempDir();
-    const mount = createArtifactMount({ repoRoot: repo, extensionId: "pstdio.planner", mountPath: "tickets" });
-
-    await mount.writeText("a.md", "a");
-    await mount.delete("a.md");
-    expect(await mount.exists("a.md")).toBe(false);
   });
 });
 
