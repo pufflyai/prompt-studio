@@ -62,9 +62,17 @@ test(
       });
       expect(renameRes.status).toBe(400);
       await expectPackagedChatComposer(started.baseUrl, runtimeAuthorization(started.descriptor), owned, browser);
-    } finally {
-      await owned.close();
+    } catch (error) {
+      try {
+        await owned.cancel();
+      } catch (cleanupError) {
+        if (cleanupError !== error) throw new AggregateError([error, cleanupError], "Composer case and cleanup failed");
+      } finally {
+        fixture = undefined;
+      }
+      throw error;
     }
+    await owned.close();
     // Bun's PASS label must never certify a whole-case overrun hidden by cleanup.
     expect(performance.now() - began).toBeLessThanOrEqual(allowance);
   },
