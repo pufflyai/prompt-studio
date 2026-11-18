@@ -1,5 +1,6 @@
 import { mock } from "bun:test";
 import type { WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
+import { createWorkspaceMaintenance } from "../../services/workspace-maintenance";
 import { makeWorkspace, remoteWorkspaceCapabilities } from "./workspace-provider.test-fixture";
 
 export const readyRemoteResult = (state: WorkspaceProviderResult["state"]): WorkspaceProviderResult => ({
@@ -42,6 +43,7 @@ export const makeDeps = (provider: Record<string, unknown>, workspace = makeWork
   return {
     deps: {
       workspaceService: {
+        maintenance: createWorkspaceMaintenance(),
         get: async () => stored,
         listForProviderReconciliation: async () => [stored],
         updateProviderProjection,

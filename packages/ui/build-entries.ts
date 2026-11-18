@@ -20,6 +20,7 @@ export const entries = {
   "param-editor": path.resolve(import.meta.dirname, "src/components/param-editor/index.ts"),
   "data-table": path.resolve(import.meta.dirname, "src/components/data-table/index.ts"),
   "collection-view": path.resolve(import.meta.dirname, "src/components/collection-view/index.ts"),
+  "collection-view-model": path.resolve(import.meta.dirname, "src/components/collection-view/model.ts"),
   mermaid: path.resolve(import.meta.dirname, "src/components/mermaid-renderer/index.ts"),
   terminal: path.resolve(import.meta.dirname, "src/components/terminal/index.ts"),
 };

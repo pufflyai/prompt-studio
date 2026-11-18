@@ -9,6 +9,7 @@ import {
   scheduleProjectWorkspaceProvisioning,
   type WorkspaceProvisioningHooks,
 } from "./provision-coordinator";
+import { makeWorkspace } from "./workspace-provider.test-fixture";
 
 type Row = {
   id: string;
@@ -59,6 +60,21 @@ const makeHooks = (diagnostics: CommandDiagnostic[] | undefined, readyFired: str
 });
 
 describe("runWorkspaceProvisioning", () => {
+  test("a provision request never returns a workspace outside its project", async () => {
+    const workspace = makeWorkspace({ project_id: "p1", execution_kind: "local", root_path: "/accepted" });
+    const { deps, calls } = makeDeps(workspace);
+    deps.workspaceService.get = async () => ({ ...workspace, project_id: "other", root_path: "/other" });
+
+    const result = await runWorkspaceProvisioning(
+      deps,
+      { projectId: "p1", workspace, repoPath: "/repo" },
+      makeHooks(undefined, []),
+    );
+
+    expect(result).toEqual(workspace);
+    expect(calls).toEqual([]);
+  });
+
   test("gates initializing around an awaited provision, then clears it and fires ready", async () => {
     const row: Row = {
       provider_state: "ready",
