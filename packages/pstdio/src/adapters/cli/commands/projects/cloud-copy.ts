@@ -1,4 +1,4 @@
-import { LocalRemovalConflictError } from "@pstdio/sdk/client";
+import { LocalRemovalConflictError, PstdioApiError } from "@pstdio/sdk/client";
 import type { Arguments, Argv } from "yargs";
 import {
   downloadCloudProject,
@@ -27,6 +27,17 @@ const defaults = {
 
 const discardMessage = "Upload completion is pending or unknown. Use --discard-unsynced to acknowledge the risk.";
 
+const inspectRemoval = async (deps: typeof defaults, id: string) => {
+  try {
+    return await deps.inspect(id);
+  } catch (error) {
+    if (!(error instanceof PstdioApiError) || error.status !== 404) throw error;
+    const { projects } = await deps.catalog();
+    if (!projects.some((entry) => entry.id === id && entry.presence === "cloud-only")) throw error;
+    return null;
+  }
+};
+
 export const createProjectCloudCommands = (deps = defaults) => ({
   remove: {
     command: "delete-local <project-id>",
@@ -40,11 +51,16 @@ export const createProjectCloudCommands = (deps = defaults) => ({
     handler: async (argv: Arguments<ProjectArgs & { "discard-unsynced"?: boolean }>) => {
       const id = argv["project-id"];
       const discardUnsynced = argv["discard-unsynced"] === true;
-      const preflight = await deps.inspect(id);
+      const preflight = await inspectRemoval(deps, id);
+      if (!preflight) {
+        deps.output({ projectId: id, presence: "cloud-only" });
+        return;
+      }
       deps.scope(`Remove "${preflight.name}" (${id}) from this device. Cloud and other devices keep their copies.`);
       if (preflight.requiresDiscard && !discardUnsynced) throw new Error(discardMessage);
       try {
-        deps.output(await deps.remove(id, { discardUnsynced }));
+        const expectedAccount = preflight.account;
+        deps.output(await deps.remove(id, { discardUnsynced, ...(expectedAccount && { expectedAccount }) }));
       } catch (error) {
         if (error instanceof LocalRemovalConflictError) throw new Error(discardMessage, { cause: error });
         throw error;
@@ -71,12 +87,12 @@ export const createProjectCloudCommands = (deps = defaults) => ({
     handler: async (argv: Arguments<ProjectArgs & { confirm?: boolean }>) => {
       if (argv.confirm !== true) throw new Error("Use --confirm to authorize permanent Cloud deletion.");
       const id = argv["project-id"];
-      const { projects, deletions } = await deps.catalog();
+      const { projects, deletions, account } = await deps.catalog();
       const name =
         projects.find((entry) => entry.id === id)?.name ?? deletions.find((entry) => entry.projectId === id)?.name;
       const label = name && name !== id ? `"${name}" (${id})` : id;
       deps.scope(`Permanently delete ${label} from Cloud. Devices keep their downloaded copies as local projects.`);
-      deps.output(await deps.erase(id, { confirm: true }));
+      deps.output(await deps.erase(id, { confirm: true, ...(account && { expectedAccount: account }) }));
     },
   },
   status: {

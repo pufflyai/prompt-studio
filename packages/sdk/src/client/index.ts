@@ -9,6 +9,7 @@ export type {
   HarnessAuthenticationPrompt,
   HarnessAuthenticationQuestion,
   LocalRemovalPreflight,
+  ProjectCopyAccount,
   ProjectSyncFile,
   ProjectSyncSource,
   ProjectSyncState,

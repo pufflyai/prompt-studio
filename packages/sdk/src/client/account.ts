@@ -87,8 +87,10 @@ export const createAccountClient = (request: RequestFn) => {
     deleteCloudProject: (projectId: string, input: DeleteCloudProjectInput, options?: AccountReadOptions) =>
       request<CloudProjectDeletion>(`${project(projectId)}/delete-cloud`, { ...options, method: "POST", body: input }),
     /** Reads an authoritative deletion receipt without requiring a device copy. */
-    projectDeletionStatus: (projectId: string, options?: AccountReadOptions) =>
-      request<CloudProjectDeletion>(`${project(projectId)}/deletion`, options),
+    projectDeletionStatus: (projectId: string, options?: AccountReadOptions & { expected?: AccountReadIdentity }) =>
+      request<CloudProjectDeletion>(`${project(projectId)}/deletion${expectedIdentityQuery(options?.expected)}`, {
+        signal: options?.signal,
+      }),
     /** An explicit null expectation means signed out; omission preserves unspecified caller authority. */
     projectSyncStatus: (projectId: string, options?: { signal?: AbortSignal; expected?: AccountReadIdentity | null }) =>
       request<ProjectSyncStatus>(`${project(projectId)}/sync${expectedIdentityQuery(options?.expected)}`, {

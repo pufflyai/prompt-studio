@@ -107,6 +107,9 @@ test(
       const removed = await run("delete-local", projectId, "--discard-unsynced");
       expect(removed.exitCode).toBe(0);
       expect(JSON.parse(removed.stdout)).toEqual({ projectId, presence: "cloud-only" });
+      const replay = await run("delete-local", projectId);
+      expect(replay.exitCode).toBe(0);
+      expect(JSON.parse(replay.stdout)).toEqual(JSON.parse(removed.stdout));
       const readsAfterRemoval = [...projectReads];
       const list = await run("list", "--cloud");
       expect(JSON.parse(list.stdout)).toMatchObject({ projects: [{ id: projectId, presence: "cloud-only" }] });
