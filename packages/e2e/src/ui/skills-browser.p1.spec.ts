@@ -47,8 +47,8 @@ test("opens an installed skill browser with native menus and preserves files acr
   await menuContent.getByText("pages.md", { exact: true }).click();
   const document = page.getByRole("region", { name: "Main", exact: true });
   await expect(document).toContainText("Pages and panels");
+  await expect(document.getByLabel("File path references/pages.md", { exact: true })).toBeVisible();
   const fileHeader = page.locator('[data-workbench-page-menu-header="main"]');
-  await expect(fileHeader).toContainText("references/pages.md");
   await expect(fileHeader.getByRole("button", { name: "Close Main right menu", exact: true })).toBeVisible();
   await fileHeader.getByRole("button", { name: "Close Main right menu", exact: true }).click();
   await expect(menu).toBeHidden();
