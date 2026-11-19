@@ -99,10 +99,19 @@ const openSavedWork = async (
   const browser = await chromium.launch(PROVISIONED_CHROMIUM);
   let page: Page | undefined;
   const clock = Date.now();
+  const traffic: object[] = [];
+  const pending = new Map<any, number>();
   const times: Record<string, number> = {};
   let phase = "tickets";
   try {
     page = await browser.newPage();
+    page.on("request", req => pending.set(req,Date.now()));
+    page.on("requestfinished", async req => {
+      const u = new URL(req.url());
+      const name = u.pathname.replace(/[0-9a-f]{8}-[0-9a-f-]{27,}/gi,"<id>").replace(/(webviews|assets)\/[^/]+/g,"$1/<file>");
+      if (!name.startsWith("/v1/") && !name.startsWith("/runtime/")) return;
+      const then = pending.get(req); if(then)traffic.push({name, method:req.method(), start:then-clock, ms:Date.now()-then, status:(await req.response())?.status()});
+    });
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     // Open Tickets as the first project request after restart, before API checks can warm it.
     await signInBrowser(page, descriptor, routes.tickets);
@@ -136,6 +145,7 @@ const openSavedWork = async (
     }
     throw error;
   } finally {
+    await record(evidence, "request-timing", traffic);
     await record(evidence, "observed-timings", times);
     await browser.close();
   }
@@ -208,6 +218,7 @@ const run = async (
         {
           PSTDIO_DB_PATH: join(input.home, "pstdio.db"),
           PSTDIO_LOG_PATH: join(input.evidence, `${phase}.jsonl`),
+          ...(phase === "restart" && process.env.TRACE_BACKGROUND === "disabled-for-comparison" ? {PSTDIO_EXTENSION_WEBVIEW_BUILDS:"0"} : {}),
           PSTDIO_DEFAULT_EXTENSIONS: "",
           PSTDIO_EXTENSION_CATALOG: "",
           GITHUB_TOKEN: "",
