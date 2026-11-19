@@ -115,7 +115,8 @@ export const VirtualTreeList = (props: VirtualTreeListProps) => {
         if (!row) return null;
         const nextRow = rows[virtualItem.index + 1];
         const endsSection = row.sectionId !== nextRow?.sectionId;
-        const rowGap = endsSection ? sectionGap : nodeGap;
+        const startsNextGroup = nextRow?.kind === "group-header" && row.kind !== "section-header";
+        const rowGap = endsSection || startsNextGroup ? sectionGap : nodeGap;
 
         return (
           <Box

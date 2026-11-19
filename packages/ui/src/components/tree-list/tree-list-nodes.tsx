@@ -1,4 +1,4 @@
-import { Box, Stack } from "@chakra-ui/react";
+import { Box, Stack, type StackProps } from "@chakra-ui/react";
 import type { ComponentProps } from "react";
 import type { TreeListNode } from "./tree-list.types";
 import type { TreeListDropIndicator } from "./tree-list-drop-indicator";
@@ -14,15 +14,18 @@ interface TreeListNodesProps
   nodes: TreeListNode[];
   level?: number;
   visualLevel?: number;
+  sectionGap?: StackProps["gap"];
   focusRowId?: string;
   onRowFocus?: (id: string) => void;
   sortable?: boolean;
   indicator?: TreeListDropIndicator | null;
 }
 
-const TreeListNodeBranch = (props: TreeListNodesProps & { node: TreeListNode }) => {
+const TreeListNodeBranch = (props: TreeListNodesProps & { node: TreeListNode; gapBefore: StackProps["gap"] }) => {
   const {
     node,
+    gapBefore,
+    sectionGap,
     nodes: _nodes,
     level = 0,
     visualLevel = level,
@@ -53,6 +56,7 @@ const TreeListNodeBranch = (props: TreeListNodesProps & { node: TreeListNode }) 
         <Box pt={rowProps.nodeGap}>
           <TreeListNodes
             {...props}
+            sectionGap={sectionGap}
             nodes={children}
             level={level + 1}
             visualLevel={group ? visualLevel : visualLevel + 1}
@@ -66,7 +70,7 @@ const TreeListNodeBranch = (props: TreeListNodesProps & { node: TreeListNode }) 
 
   if (sortable && level === 0 && !group) {
     return (
-      <Box position="relative" minW="0">
+      <Box position="relative" minW="0" mt={gapBefore}>
         <SortableHost
           id={node.id}
           disabled={node.canReorder === false}
@@ -90,7 +94,7 @@ const TreeListNodeBranch = (props: TreeListNodesProps & { node: TreeListNode }) 
     );
   }
   return (
-    <Box position="relative" minW="0">
+    <Box position="relative" minW="0" mt={gapBefore}>
       {row}
       {descendants}
       {indicator?.lineId === node.id ? <DropLine edge={indicator.edge} /> : null}
@@ -99,12 +103,13 @@ const TreeListNodeBranch = (props: TreeListNodesProps & { node: TreeListNode }) 
 };
 
 export const TreeListNodes = (props: TreeListNodesProps) => {
-  const { nodes, nodeGap } = props;
+  const { nodes, nodeGap, sectionGap = "0", level = 0 } = props;
   return (
-    <Stack gap={nodeGap} w="full" minW="0">
-      {nodes.map((node) => (
-        <TreeListNodeBranch key={node.id} {...props} node={node} />
-      ))}
+    <Stack gap="0" w="full" minW="0">
+      {nodes.map((node, index) => {
+        const gapBefore = isFixedTreeListGroup(node, level) ? sectionGap : nodeGap;
+        return <TreeListNodeBranch key={node.id} {...props} node={node} gapBefore={index === 0 ? "0" : gapBefore} />;
+      })}
     </Stack>
   );
 };

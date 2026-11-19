@@ -5,6 +5,7 @@ export default { title: "Design system/Components/Data display/Tree list/Fixed r
 export const ResourceGroups = () => (
   <ScrollArea h="md">
     <TreeList
+      sectionGap="4"
       expandedSectionIds={["workspaces"]}
       sections={[
         {
