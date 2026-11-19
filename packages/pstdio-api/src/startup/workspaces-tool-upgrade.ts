@@ -1,10 +1,10 @@
 import type { DefaultExtensionEntry } from "../features/extensions/default-extensions";
-import { findExtensionCatalogEntry } from "../features/extensions/extension-catalog";
+import { findExtensionCatalogEntry, packagedExtensionCatalog } from "../features/extensions/extension-catalog";
 import { createSharedNamedSourceCheckout } from "../features/extensions/extension-source-checkout";
 import { packExtension } from "../features/extensions/publication/package";
-import { sourceMatchesPublication } from "../features/extensions/publication/source";
 import type { createExtensionService } from "../services/extension-service";
 import { parseExtensionSourceRef } from "../services/extension-source-ref";
+import { matchesManagedWorkspaceSource } from "./managed-workspace-source";
 
 type InstalledSource = Awaited<ReturnType<ReturnType<typeof createExtensionService>["getInstalledSource"]>>;
 const managedSourceBytes = async (commit: string) => {
@@ -26,8 +26,11 @@ export const canRefreshWorkspacesTool = async (
   try {
     const origin = parseExtensionSourceRef(source.source_ref);
     const entry = await findExtensionCatalogEntry("workspaces");
+    const bundled = packagedExtensionCatalog.extensions.find(({ installName }) => installName === "workspaces");
+    if (!entry || !bundled || entry.origin.url !== bundled.origin.url || entry.origin.path !== bundled.origin.path)
+      return false;
     if (!origin || !entry || origin.url !== entry.origin.url || origin.path !== entry.origin.path) return false;
-    return await sourceMatchesPublication(source.source_path, await readManagedSource(origin.commit));
+    return await matchesManagedWorkspaceSource(source.source_path, await readManagedSource(origin.commit));
   } catch {
     // Offline or unavailable historical bytes are not proof that the user copy may be replaced.
     return false;

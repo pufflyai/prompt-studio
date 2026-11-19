@@ -199,6 +199,9 @@ test("an unchanged older Workspaces installation upgrades before the shared Git 
       throw new Error("offline");
     }),
   ).toBe(false);
+  await writeFile(join(oldBrowser.path, ".env"), "PRIVATE=keep");
+  expect(await canRefreshWorkspacesTool(installedSource, readManagedSource)).toBe(false);
+  await rm(join(oldBrowser.path, ".env"));
   await writeFile(join(oldBrowser.path, "private-edit.txt"), "Keep private");
   expect(await canRefreshWorkspacesTool(installedSource, readManagedSource)).toBe(false);
   await rm(join(oldBrowser.path, "private-edit.txt"));
