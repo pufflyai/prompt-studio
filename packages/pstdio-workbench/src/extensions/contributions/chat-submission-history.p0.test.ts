@@ -208,3 +208,25 @@ test("Stop also removes an old queued receipt arriving during its acknowledgemen
   expect(session.getSnapshot().messages).toHaveLength(1);
   expect(session.getSnapshot().pending).toBeUndefined();
 });
+
+test("Stop retires a late queued acknowledgement for a send issued while idle", async () => {
+  const stopped = Promise.withResolvers<unknown>();
+  const session = createChatSession({
+    initial: { streaming: false },
+    query: async () => ({}),
+    action: async (command) => (command.type === "stop" ? stopped.promise : {}),
+  });
+  await session.run(action);
+  session.accept({ revision: 1, snapshot: { streaming: true } });
+  const stopping = session.run({ type: "stop" });
+  session.accept({ revision: 2, snapshot: { queuedFollowUps: [{ id: "old", prompt: action.text }] } });
+  stopped.resolve({ snapshot: { streaming: false, queuedFollowUps: [] } });
+  await stopping;
+  session.accept({ revision: 3, snapshot: { streaming: false, queuedFollowUps: [] } });
+  expect(prompts(session)).toEqual([]);
+  await session.run(action);
+  const delivered = user("new", action.text);
+  session.accept({ revision: 4, snapshot: { messages: [delivered] } });
+  expect(session.getSnapshot().messages).toMatchObject([delivered]);
+  expect(session.getSnapshot().pending).toBeUndefined();
+});

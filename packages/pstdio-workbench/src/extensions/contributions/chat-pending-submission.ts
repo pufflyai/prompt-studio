@@ -144,16 +144,15 @@ export const createChatSubmissionPresentation = () => {
   const captureQueuedRemoval = (action: ChatRendererAction, pending: ChatPendingSubmission[] = []) => {
     const stopping = action.type === "stop";
     const removing = action.type === "queue" && action.operation === "remove";
-    const canceled = new Set(
-      stopping ? pending.filter((item) => item.queue && !item.failure).map((item) => item.message.id) : [],
-    );
+    // A send first shown in the transcript can receive its queue acknowledgement during Stop.
+    const captured = new Set(stopping ? pending.filter((item) => !item.failure).map((item) => item.message.id) : []);
     const release =
       stopping || removing
-        ? queuePresentation.captureRemoval(removing ? action.item.id : undefined, canceled)
+        ? queuePresentation.captureRemoval(removing ? action.item.id : undefined, captured)
         : () => false;
     return (current: ChatPendingSubmission[] = []) => {
       const released = release();
-      const remaining = current.filter((item) => !canceled.has(item.message.id) || item.failure);
+      const remaining = current.filter((item) => !captured.has(item.message.id) || !item.queue || item.failure);
       return released || remaining.length !== current.length ? remaining : undefined;
     };
   };
