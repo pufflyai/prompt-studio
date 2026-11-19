@@ -98,7 +98,15 @@ export const mergeTicketLinkSections = (
     if (!resource || visible.has(key(resource))) continue;
     const group = ticketLinkGroup(resource);
     const section = groups.get(group.id) ?? { ...group, collapsible: true, nodes: [] };
-    section.nodes.push({ id: `link:${item.id}`, label: item.label, icon: item.icon, resource, target: item.action });
+    section.nodes.push({
+      id: `link:${item.id}`,
+      label: item.label,
+      icon: item.icon,
+      resource,
+      target: item.action,
+      disabled: !item.action,
+      tooltip: item.tooltip,
+    });
     groups.set(group.id, section);
     visible.add(key(resource));
   }
@@ -128,7 +136,6 @@ export const ticketLinkTypeNodes = (sections: TreeViewSection[]): TreeNode[] =>
     .map((section) => ({
       id: section.id,
       label: section.label ?? "",
-      icon: section.nodes[0]?.icon,
       collapsible: false,
       children: section.nodes,
     }));
