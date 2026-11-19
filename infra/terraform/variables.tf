@@ -88,21 +88,24 @@ variable "registry_credentials" {
 
 variable "relay_secrets" {
   type = object({
-    S3_ACCESS_KEY_ID     = string
-    S3_SECRET_ACCESS_KEY = string
-    RELAY_ACCESS_TRUST   = string
+    S3_ACCESS_KEY_ID             = string
+    S3_SECRET_ACCESS_KEY         = string
+    RELAY_ACCESS_TRUST           = string
+    PROJECT_DELETION_RELAY_TOKEN = optional(string)
   })
   sensitive = true
 }
 
 variable "manager_secrets" {
   type = object({
-    BETTER_AUTH_SECRET   = string
-    GOOGLE_CLIENT_ID     = string
-    GOOGLE_CLIENT_SECRET = string
+    BETTER_AUTH_SECRET           = string
+    GOOGLE_CLIENT_ID             = string
+    GOOGLE_CLIENT_SECRET         = string
+    PROJECT_DELETION_RELAY_TOKEN = optional(string)
   })
   sensitive = true
 }
+
 
 # Required only when services includes psx.
 variable "psx_secrets" {

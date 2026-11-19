@@ -96,7 +96,11 @@ export const openDashboardTerminalSession = (
     socket.addEventListener("open", () =>
       send(
         view
-          ? { type: "openView", request: { ...view, cols: request.cols, rows: request.rows } }
+          ? {
+              type: "openView",
+              request: { ...view, cols: request.cols, rows: request.rows },
+              ...(attachKey ? { attachKey } : {}),
+            }
           : { type: "open", request, ...(attachKey ? { attachKey } : {}) },
       ),
     );

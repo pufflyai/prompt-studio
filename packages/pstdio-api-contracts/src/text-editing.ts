@@ -31,6 +31,7 @@ export const textOpenInputSchema = z.union([
 ]);
 export const textEditingRequestSchema = z.union([
   z.strictObject({ operation: z.literal("current") }),
+  z.strictObject({ operation: z.literal("openSelected"), memberId: z.uuid() }),
   z.strictObject({ operation: z.enum(["register", "abandon"]), memberId: z.uuid() }),
   z.strictObject({
     operation: z.literal("open"),
@@ -85,6 +86,9 @@ export const textEditingConnectionSchema = z.discriminatedUnion("kind", [
     .refine((input) => input.viewId || input.target, "A text placement needs a view or selected file"),
 ]);
 export type TextEditingConnectionInput = z.infer<typeof textEditingConnectionSchema>;
+export const textEditingInitialMemberSchema = z.strictObject({ memberId: z.uuid(), active: z.boolean() });
+export type TextEditingInitialMember = z.infer<typeof textEditingInitialMemberSchema>;
 export interface TextEditingConnectionInfo {
+  opened?: import("./extension-kernel/types/text-editing").TextEditingOpened;
   token: string;
 }

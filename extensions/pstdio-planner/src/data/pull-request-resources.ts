@@ -30,14 +30,20 @@ export const isPullRequest = (ref: ResourceRef) => ref.extensionId === "pstdio.g
 export const legacyPullRequestOrder = (ref: ResourceRef) =>
   `${ref.metadata?.plannerLinkedAt ?? ""}:${ref.metadata?.plannerLinkId ?? ""}`;
 
+export const isLegacyPullRequestLink = (link: NonNullable<Ticket["reviewLinks"]>[number]) =>
+  link.provider === "github" && link.kind === "pull_request";
+
 // Save each relationship before removing its legacy representation. A disabled provider leaves the old URLs intact.
 export const migratePullRequestLinks = async (ctx: Context, ticket: Pick<Ticket, "id">) => {
   const stored = await ticketRecords(ctx.storage).get(ticket.id);
-  for (const link of stored?.reviewLinks ?? []) {
-    if (link.provider !== "github" || link.kind !== "pull_request") continue;
+  let changed = false;
+  for (const link of stored?.reviewLinks?.filter(isLegacyPullRequestLink) ?? []) {
     try {
       const outcome = await ctx.commands.execute(importPr, { params: { url: link.url } });
-      if (!outcome.ok) continue;
+      if (!outcome.ok) {
+        if (outcome.code === "command_not_found") return { changed, providerMissing: true };
+        continue;
+      }
       const source = ticketReference(ctx, ticket.id);
       let cursor: string | undefined;
       let existing: ResourceAnchor | undefined;
@@ -68,10 +74,12 @@ export const migratePullRequestLinks = async (ctx: Context, ticket: Pick<Ticket,
         ...current,
         reviewLinks: current.reviewLinks?.filter((saved) => saved.id !== link.id),
       }));
+      changed = true;
     } catch {
       /* Keep the legacy URL available until the provider and relationship service recover. */
     }
   }
+  return { changed, providerMissing: false };
 };
 
 export const pullRequestRelationships = async (

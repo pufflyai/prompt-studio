@@ -4,11 +4,14 @@ import { fingerprint } from "pstdio-sync-contracts";
 import type { createAssetObjects } from "./objects";
 import { assetParts, assetUploads, verifiedAssets } from "./schema";
 
+const emptyDigest = new Bun.CryptoHasher("sha256").digest("hex");
+
 export const completeUpload = async (
   db: NodePgDatabase,
   row: typeof assetUploads.$inferSelect,
   objects: ReturnType<typeof createAssetObjects>,
   signal: AbortSignal,
+  blind: boolean,
 ) => {
   const parts = await db
     .select()
@@ -18,19 +21,25 @@ export const completeUpload = async (
   const count = Math.ceil(row.asset.byteLength / row.partSize);
   if (parts.length !== count || parts.some((part, index) => part.number !== index + 1 || !part.etag))
     throw new Error("Asset upload has incomplete parts");
-  if (!(await objects.head(row.objectKey, undefined, signal))) {
-    if (row.asset.byteLength === 0) await objects.empty(row.objectKey, row.asset, signal);
-    else {
-      if (!row.multipartId) throw new Error("Asset multipart upload is not initialized");
-      await objects.finish(
-        row.objectKey,
-        row.multipartId,
-        parts.map((part) => ({ ...part, etag: part.etag! })),
-        signal,
-      );
+  let etag = "";
+  if (!blind || row.asset.byteLength > 0) {
+    if (!row.objectKey) throw new Error("Asset upload does not have a storage key");
+    if (!(await objects.head(row.objectKey, undefined, signal))) {
+      if (row.asset.byteLength === 0) await objects.empty(row.objectKey, row.asset, signal);
+      else {
+        if (!row.multipartId) throw new Error("Asset multipart upload is not initialized");
+        await objects.finish(
+          row.objectKey,
+          row.multipartId,
+          parts.map((part) => ({ ...part, etag: part.etag! })),
+          signal,
+        );
+      }
     }
+    etag = await objects.verify(row.objectKey, row.asset, signal);
+  } else if (row.asset.sha256 !== emptyDigest) {
+    throw new Error("Asset data could not be verified");
   }
-  const etag = await objects.verify(row.objectKey, row.asset, signal);
   await db.transaction(async (transaction) => {
     const updated = await transaction
       .update(assetUploads)
