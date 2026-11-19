@@ -11,7 +11,7 @@ import {
 } from "./tree-list-drag-handling";
 import { SharedTreeListDragContext } from "./tree-list-drag-provider";
 import { type TreeListDropIndicator, treeListDropIndicator } from "./tree-list-drop-indicator";
-import { buildVirtualRows, type VirtualRow } from "./tree-list-model";
+import { buildVirtualRows, isFixedTreeListGroup, type VirtualRow } from "./tree-list-model";
 import { TreeListNodes } from "./tree-list-nodes";
 import { TreeListPageBoundary } from "./tree-list-page-boundary";
 import { type TreeListMovePolicy, toSectionDragId, verticalTreeDrag } from "./tree-list-reorder";
@@ -65,7 +65,7 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
 
   const headerRow = sectionRows.find((row) => row.kind === "section-header");
   const nodeRows = sectionRows.filter((row) => row.kind === "node");
-  const topLevelNodeIds = section.nodes.map((node) => node.id);
+  const topLevelNodeIds = section.nodes.filter((node) => !isFixedTreeListGroup(node, 0)).map((node) => node.id);
 
   return (
     <SortableHost

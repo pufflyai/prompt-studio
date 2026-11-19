@@ -2,7 +2,8 @@ import { Box, Stack } from "@chakra-ui/react";
 import type { ComponentProps } from "react";
 import type { TreeListNode } from "./tree-list.types";
 import type { TreeListDropIndicator } from "./tree-list-drop-indicator";
-import { getNodeChildren, isNodeExpanded } from "./tree-list-model";
+import { TreeListGroupHeader } from "./tree-list-group-header";
+import { getNodeChildren, isFixedTreeListGroup, isNodeExpanded } from "./tree-list-model";
 import { TreeListNodeRow } from "./tree-list-node-row";
 import { TreeListPageBoundary } from "./tree-list-page-boundary";
 import { TreeListReveal } from "./tree-list-reveal";
@@ -12,6 +13,7 @@ interface TreeListNodesProps
   extends Omit<ComponentProps<typeof TreeListNodeRow>, "node" | "level" | "onFocus" | "tabIndex"> {
   nodes: TreeListNode[];
   level?: number;
+  visualLevel?: number;
   focusRowId?: string;
   onRowFocus?: (id: string) => void;
   sortable?: boolean;
@@ -19,15 +21,28 @@ interface TreeListNodesProps
 }
 
 const TreeListNodeBranch = (props: TreeListNodesProps & { node: TreeListNode }) => {
-  const { node, nodes: _nodes, level = 0, focusRowId, onRowFocus, sortable, indicator = null, ...rowProps } = props;
+  const {
+    node,
+    nodes: _nodes,
+    level = 0,
+    visualLevel = level,
+    focusRowId,
+    onRowFocus,
+    sortable,
+    indicator = null,
+    ...rowProps
+  } = props;
   const children = getNodeChildren(node);
   let tabIndex: number | undefined;
   if (focusRowId !== undefined) tabIndex = node.id === focusRowId ? 0 : -1;
-  const row = (
+  const group = isFixedTreeListGroup(node, level);
+  const row = group ? (
+    <TreeListGroupHeader node={node} />
+  ) : (
     <TreeListNodeRow
       {...rowProps}
       node={node}
-      level={level}
+      level={visualLevel}
       tabIndex={tabIndex}
       onFocus={() => onRowFocus?.(node.id)}
     />
@@ -36,7 +51,12 @@ const TreeListNodeBranch = (props: TreeListNodesProps & { node: TreeListNode }) 
     children.length || node.pagination ? (
       <TreeListReveal open={isNodeExpanded(node, rowProps.expandedNodeIds)}>
         <Box pt={rowProps.nodeGap}>
-          <TreeListNodes {...props} nodes={children} level={level + 1} />
+          <TreeListNodes
+            {...props}
+            nodes={children}
+            level={level + 1}
+            visualLevel={group ? visualLevel : visualLevel + 1}
+          />
           {node.pagination && isNodeExpanded(node, rowProps.expandedNodeIds) ? (
             <TreeListPageBoundary pagination={node.pagination} />
           ) : null}
@@ -44,7 +64,7 @@ const TreeListNodeBranch = (props: TreeListNodesProps & { node: TreeListNode }) 
       </TreeListReveal>
     ) : null;
 
-  if (sortable && level === 0) {
+  if (sortable && level === 0 && !group) {
     return (
       <Box position="relative" minW="0">
         <SortableHost
