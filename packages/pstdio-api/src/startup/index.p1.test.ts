@@ -1,14 +1,14 @@
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../test-utils/create-test-app";
 import { runStartupTasks } from ".";
 import { prepareSourceRefreshFixture } from "./source-refresh-source.fixture";
 
-const waitFor = async (predicate: () => boolean) => {
+const waitFor = async (predicate: () => boolean | Promise<boolean>) => {
   const deadline = Date.now() + 10_000;
-  while (!predicate()) {
+  while (!(await predicate())) {
     if (Date.now() >= deadline) throw new Error("Timed out waiting for startup background work");
     await Bun.sleep(10);
   }
@@ -103,6 +103,59 @@ describe("startup default extensions", () => {
       expect(backgroundSettled).toBe(true);
     } finally {
       preparation.resolve();
+    }
+  });
+
+  test("an existing project adopts the Terminal tool once and preserves disable and uninstall choices", async () => {
+    process.env.PSTDIO_HOME = join(tempRoot, "home-terminal-upgrade");
+    delete process.env.PSTDIO_DISABLE_EMBED_MANIFEST;
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+    const options = {
+      databasePath: join(tempRoot, "terminal-upgrade-db"),
+      storageRoot: join(tempRoot, "terminal-upgrade-storage"),
+    };
+    const old = await createTestApp(options);
+    const project = await old.deps.projectService.create({ name: "Existing project" });
+    await old.close();
+    const source = prepareSourceRefreshFixture(join(tempRoot, "terminal-upgrade-source"));
+    const manifestPath = join(source, "package.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    writeFileSync(manifestPath, JSON.stringify({ ...manifest, name: "pstdio-terminal", publisher: "pstdio" }));
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([{ source, installName: "pstdio-terminal" }]);
+    const upgraded = await createTestApp(options);
+    const terminalFor = async (app: typeof upgraded) =>
+      (await app.deps.extensionService.listProjectExtensionInstances(project.id)).find(
+        ({ installedSource }) => installedSource.extension_id === "pstdio.pstdio-terminal",
+      );
+    try {
+      await waitFor(async () => (await terminalFor(upgraded))?.instance.enabled === true);
+      await upgraded.deps.extensionService.setProjectExtensionEnabled(
+        (await terminalFor(upgraded))!.instance.id,
+        false,
+      );
+    } finally {
+      await upgraded.close();
+    }
+    const restarted = await createTestApp(options);
+    try {
+      expect((await terminalFor(restarted))?.instance.enabled).toBe(false);
+      await restarted.deps.extensionService.uninstallProjectExtension({
+        projectId: project.id,
+        instanceId: (await terminalFor(restarted))!.instance.id,
+      });
+    } finally {
+      await restarted.close();
+    }
+    const afterUninstall = await createTestApp(options);
+    try {
+      const background: Promise<void>[] = [];
+      await runStartupTasks(afterUninstall.deps, undefined, { onBackgroundTask: (task) => background.push(task) });
+      await Promise.all(background);
+      expect(await terminalFor(afterUninstall)).toBeUndefined();
+      expect(await afterUninstall.deps.extensionService.getInstalledSource("pstdio-terminal")).toBeNull();
+      expect(existsSync(join(process.env.PSTDIO_HOME!, "extensions", "pstdio-terminal"))).toBe(false);
+    } finally {
+      await afterUninstall.close();
     }
   });
 
