@@ -104,6 +104,7 @@ const desktopApi: PromptStudioDesktopApi = Object.freeze({
   setProjectTabs: (state: DesktopProjectTabsState) => ipcRenderer.invoke(DESKTOP_CHANNELS.setProjectTabs, state),
   setWorkbenchItem: (key: string, value: string | null) =>
     ipcRenderer.invoke(DESKTOP_CHANNELS.setWorkbenchItem, key, value),
+  reportWorkbenchError: (report: unknown) => ipcRenderer.invoke(DESKTOP_CHANNELS.reportWorkbenchError, report),
   getPerformanceMonitoring: () => ipcRenderer.invoke(DESKTOP_CHANNELS.getPerformanceMonitoring),
   setPerformanceMonitoring: (enabled: boolean) =>
     ipcRenderer.invoke(DESKTOP_CHANNELS.setPerformanceMonitoring, enabled),

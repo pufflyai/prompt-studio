@@ -153,6 +153,13 @@ export const createWorkbenchExtensionMetadata = (
       : [];
   }),
   commands: input.runtime.commands.map(toCommandRecord),
+  workspaceTypes: input.runtime.workspaceTypes.map(({ id, extensionId, provider }) => ({
+    id,
+    localId: provider.id,
+    extensionId,
+    label: provider.label,
+    icon: provider.icon,
+  })),
   menuContributions: toMenuContributions(input.runtime),
   commandPaletteContributions: toCommandPaletteContributions(input.runtime.commands).map((contribution) => ({
     ...contribution,

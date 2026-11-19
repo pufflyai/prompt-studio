@@ -72,6 +72,10 @@ Electron's `DesktopProjectTabsStore` persists only `{ projectIds: string[] }` in
 
 A failed write shows an error through the workbench notification system. Tabs remain usable. The next tab change saves the full current order and dismisses the error after a successful write.
 
+Each project has its own React error boundary. If a project fails to initialize or render, the selected tab shows a recovery screen with Retry and project switching. Retry rebuilds that project's workbench from persisted state. Other tabs keep their mounted workbenches. The desktop log records the project ID and available stacks with credentials redacted.
+
+The dashboard document offers Reload Prompt Studio when startup fails or React cannot display the root. If the visible workbench renderer crashes or fails to navigate, Electron hides that view and reveals the lifecycle recovery page. Retry reopens the workbench through normal runtime discovery.
+
 `@pstdio/ui` owns the title-bar and tab recipes. The live Canvas examples define normal and full-screen desktop title bars. `@pstdio/workbench` provides a generic `titleBar` slot above its regions and inside its theme. It has no project or Electron knowledge.
 
 ## Theme

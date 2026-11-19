@@ -11,6 +11,7 @@ import {
   defineResourceKind,
   defineStatusBarItem,
   defineView,
+  defineWorkspaceType,
   packageAsset,
   resourceMenuSlotRef,
   workbenchModes,
@@ -34,6 +35,33 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
     enginesPstdio: "^0.1.0",
   },
   definition,
+});
+test("publishes declared workspace providers without running project discovery", () => {
+  const provider = defineWorkspaceType({
+    id: "git",
+    label: "Git worktree",
+    icon: "git-branch",
+    discover: () => {
+      throw new Error("Inventory must not depend on project discovery");
+    },
+    create: async () => {
+      throw new Error("Not called");
+    },
+    resolve: async () => {
+      throw new Error("Not called");
+    },
+  });
+  const runtime = normalizeExtensionSources([source(defineExtension({ workspaceTypes: [provider] }))]);
+  const metadata = workbenchExtensionMetadataSchema.parse(createWorkbenchExtensionMetadata({ runtime }));
+  expect(metadata).toHaveProperty("workspaceTypes", [
+    {
+      id: "pstdio.lab.workspace-type.git",
+      localId: "git",
+      extensionId: "pstdio.lab",
+      label: "Git worktree",
+      icon: "git-branch",
+    },
+  ]);
 });
 test("preserves clipboard command declarations through normalization and public metadata", () => {
   const command = defineCommand({
