@@ -85,3 +85,16 @@ test("preserves errors and distinguishes authoritative acceptance from completed
     ["POST", "/v1/account/projects/notes%2F2026/delete-cloud"],
   ]);
 });
+
+test("download pins the displayed account while preserving cancellation", async () => {
+  const { requests, account } = createFixture(Response.json({ projectId, presence: "downloading" }, { status: 202 }));
+  const controller = new AbortController();
+  const expected = { accountId: "shown-account", managerOrigin: "https://accounts.example.test" };
+  await account.downloadCloudProject(projectId, { expected, signal: controller.signal });
+  const url = new URL(requests[0]!.url);
+  expect(url.searchParams.get("accountId")).toBe(expected.accountId);
+  expect(url.searchParams.get("managerOrigin")).toBe(expected.managerOrigin);
+  expect(requests[0]!.signal.aborted).toBe(false);
+  controller.abort();
+  expect(requests[0]!.signal.aborted).toBe(true);
+});

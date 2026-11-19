@@ -81,8 +81,11 @@ export const createAccountClient = (request: RequestFn) => {
         throw localRemovalError(error);
       }),
     /** Explicitly requests a device copy and returns its current download state. */
-    downloadCloudProject: (projectId: string, options?: AccountReadOptions) =>
-      request<DownloadCloudProjectResult>(`${project(projectId)}/download`, { ...options, method: "POST" }),
+    downloadCloudProject: (projectId: string, options?: AccountReadOptions & { expected?: AccountReadIdentity }) =>
+      request<DownloadCloudProjectResult>(`${project(projectId)}/download${expectedIdentityQuery(options?.expected)}`, {
+        signal: options?.signal,
+        method: "POST",
+      }),
     /** Starts or resumes permanent Cloud deletion. The receipt reports whether cleanup has completed. */
     deleteCloudProject: (projectId: string, input: DeleteCloudProjectInput, options?: AccountReadOptions) =>
       request<CloudProjectDeletion>(`${project(projectId)}/delete-cloud`, { ...options, method: "POST", body: input }),

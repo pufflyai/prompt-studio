@@ -103,7 +103,7 @@ export const registerCloudProjectRoutes = (
       method: "post",
       path: "/account/projects/{id}/download",
       tags,
-      request: { params },
+      request: { params, query: expectedAccountQuery },
       responses: {
         200: response("The cloud project is downloaded.", downloadCloudProjectResultSchema),
         202: response("Cloud project download accepted.", downloadCloudProjectResultSchema),
@@ -111,7 +111,10 @@ export const registerCloudProjectRoutes = (
       },
     }),
     async (c) => {
-      const result = await account.downloadCloudProject(c.req.valid("param").id);
+      const result = await account.downloadCloudProject(
+        c.req.valid("param").id,
+        readExpectedAccount(c.req.valid("query")),
+      );
       return result.presence === "downloaded" ? c.json(result, 200) : c.json(result, 202);
     },
   );
