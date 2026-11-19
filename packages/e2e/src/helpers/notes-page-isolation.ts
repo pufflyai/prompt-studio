@@ -1,6 +1,6 @@
 import { expect, type Page } from "@playwright/test";
 
-export const verifyNotesPageIsolation = async (page: Page) => {
+export const verifyNotesPageIsolation = async (page: Page, tabbedUrl: string) => {
   const main = page.locator('[data-workbench-panel="main"]');
   const header = page.locator('[data-workbench-panel-header="main"]');
   const breadcrumbs = page.getByRole("navigation", { name: "breadcrumb" });
@@ -21,7 +21,7 @@ export const verifyNotesPageIsolation = async (page: Page) => {
     await expect(header.getByRole("tab")).toHaveCount(0);
   };
   const expectNoteTab = async (title: string, body: string) => {
-    await expect(page).toHaveURL(/\/extensions\/pstdio\.artifacts\/artifacts$/);
+    await expect(page).toHaveURL(tabbedUrl);
     await expect(header.getByRole("tab", { name: title, exact: true })).toHaveAttribute("aria-selected", "true");
     await expect(editor).toContainText(body);
   };
@@ -56,40 +56,31 @@ export const verifyNotesPageIsolation = async (page: Page) => {
   await notes.click();
   await expect(notes).toHaveAttribute("aria-expanded", "true");
   await expectNote("Isolation second", bodies.second);
-  await nav.getByRole("option", { name: "Artifacts", exact: true }).click();
-  await expect(main.getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
+  await page.goto(tabbedUrl);
+  await expect(header.getByRole("tab", { name: "Files", exact: true })).toBeVisible();
+  await expect(header.getByRole("tab", { name: "Changes", exact: true })).toBeVisible();
   await expect(sideFirst).toBeVisible();
-  await main.getByRole("button", { name: "Close Artifacts", exact: true }).click();
-  const cards = main.getByRole("group", { name: "Available tabs" });
-  await expect(cards.getByRole("button", { name: "Artifacts", exact: true })).toBeVisible();
-  await expect(cards.getByRole("button", { name: "New session", exact: true })).toBeVisible();
-  await expect(cards.getByRole("button", { name: "Tickets", exact: true })).toHaveCount(0);
-  await header.getByRole("button", { name: "Add panel" }).click();
-  await expect(page.getByRole("menu")).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "New session", exact: true })).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Tickets", exact: true })).toHaveCount(0);
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("menu")).toHaveCount(0);
-  await cards.getByRole("button", { name: "New session", exact: true }).click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.artifacts\/artifacts$/);
-  await expect(main.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
-  await main.getByRole("button", { name: "Close New session", exact: true }).click();
-  await cards.getByRole("button", { name: "Artifacts", exact: true }).click();
-  await expect(main.getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
-  const artifactTabs = await main.getByRole("tab").allTextContents();
+  const containerTabs = await main.getByRole("tab").allTextContents();
   await firstRow.click();
   await expectNoteTab("Isolation first", bodies.first);
-  await expect(header.getByRole("tab")).toHaveText([...artifactTabs, "Isolation first"]);
+  await expect(header.getByRole("tab")).toHaveText([...containerTabs, "Isolation first"]);
   await expect(sideFirst).toHaveCount(0);
   await page.reload();
   await expectNoteTab("Isolation first", bodies.first);
-  await nav.getByRole("option", { name: "Artifacts", exact: true }).click();
-  await expect(main.getByRole("tab")).toHaveText([...artifactTabs, "Isolation first"]);
+  await page.goto(tabbedUrl);
+  await expect(main.getByRole("tab")).toHaveText([...containerTabs, "Isolation first"]);
   await page.reload();
-  await expect(main.getByRole("tab")).toHaveText([...artifactTabs, "Isolation first"]);
+  await expect(main.getByRole("tab")).toHaveText([...containerTabs, "Isolation first"]);
   await secondRow.click();
   await expectNoteTab("Isolation second", bodies.second);
   await firstRow.click();
   await expectNoteTab("Isolation first", bodies.first);
   await expect(sideFirst).toHaveCount(0);
+  await page.keyboard.press("Alt+Shift+K");
+  const palette = page.getByRole("dialog", { name: "Command palette" });
+  await palette.getByRole("textbox").fill(">New note");
+  await palette.getByRole("option", { name: /New note/, selected: true }).click();
+  await expectNoteTab("New note", "");
+  await editor.fill("Created inside the tabbed Main");
+  await expect(page).toHaveURL(tabbedUrl);
 };

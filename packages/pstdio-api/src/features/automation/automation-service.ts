@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import type { CreateAutomationRunInput, IssueAutomationTokenInput } from "pstdio-api-contracts";
 import { canonicalRuntimeId } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
+import type { createProjectWork } from "../../services/project-work";
 import { executeProjectExtensionCommand } from "../extensions/execute-project-extension-command";
 import { SessionCancellationCleanupError } from "../sessions/session-request-cancellation";
 import { admitAutomationRun } from "./automation-admission";
@@ -32,6 +33,7 @@ type AutomationServiceDeps = AutomationPolicyDeps & {
   maxAuthAttemptsPerMinute?: number;
   executeCommand?: typeof executeProjectExtensionCommand;
   shutdownGraceMs?: number;
+  projectWork?: ReturnType<typeof createProjectWork>;
 };
 
 const createAuthAttemptConsumer = (maxAttemptsPerMinute: number) => {
@@ -76,6 +78,20 @@ const recoverQueuedRuns = async (
   return queued.length;
 };
 
+const waitForExecutions = async (executions: Promise<void>[], shutdownGraceMs: number) => {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      Promise.allSettled(executions).then(() => true),
+      new Promise<false>((resolve) => {
+        timeout = setTimeout(() => resolve(false), shutdownGraceMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+};
+
 export const createAutomationService = (deps: AutomationServiceDeps) => {
   const delayed = createDelayedExecution((runId) => executeNow(runId));
   const activeRuns = new Map<
@@ -89,6 +105,8 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
   const consumeAuthAttempt = createAuthAttemptConsumer(deps.maxAuthAttemptsPerMinute ?? 120);
   const policyDeps = { ...deps, consumeAuthAttempt };
   const runExecutor = createAutomationRunExecutor({ ...policyDeps, executeCommand });
+  const admitProjectWork = <T>(projectId: string, task: () => Promise<T>) =>
+    deps.projectWork ? deps.projectWork.run(projectId, task) : task();
 
   const withAdmissionLock = async <T>(key: string, task: () => Promise<T>) => {
     const previous = admissionLocks.get(key) ?? Promise.resolve();
@@ -245,31 +263,17 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
     }));
   };
 
-  const waitForExecutions = async (executions: Promise<void>[]) => {
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    try {
-      return await Promise.race([
-        Promise.allSettled(executions).then(() => true),
-        new Promise<false>((resolve) => {
-          timeout = setTimeout(() => resolve(false), shutdownGraceMs);
-        }),
-      ]);
-    } finally {
-      if (timeout) clearTimeout(timeout);
-    }
-  };
-
   const cancelRun = async (rawToken: string | null, projectId: string, runId: string) => {
     const run = await getAuthorizedRun(rawToken, projectId, runId);
     return cancelOwnedRun(run.id);
   };
 
-  const cancelOwnedRun = async (runId: string) => {
+  const stopExecution = async (runId: string) => {
     delayed.cancel(runId);
     const active = activeRuns.get(runId);
     if (active) {
       active.controller.abort(new DOMException("Automation run cancelled.", "AbortError"));
-      if (!(await waitForExecutions([active.execution]))) {
+      if (!(await waitForExecutions([active.execution], shutdownGraceMs))) {
         throw new AutomationRequestError("automation_cancellation_pending", "Automation run is still stopping.", 409);
       }
       if (active.cleanupFailed) {
@@ -279,11 +283,14 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
           409,
         );
       }
-      const settled = await runExecutor.cancelStoredRun(runId);
-      if (!settled) throw new AutomationRequestError("automation_run_not_found", "Automation run not found.", 404);
-      return canonicalRun(deps, settled);
     }
-    return canonicalRun(deps, (await runExecutor.cancelStoredRun(runId))!);
+    return runExecutor.cancelStoredRun(runId);
+  };
+
+  const cancelOwnedRun = async (runId: string) => {
+    const settled = await stopExecution(runId);
+    if (!settled) throw new AutomationRequestError("automation_run_not_found", "Automation run not found.", 404);
+    return canonicalRun(deps, settled);
   };
 
   const close = async () => {
@@ -291,17 +298,23 @@ export const createAutomationService = (deps: AutomationServiceDeps) => {
     const active = [...activeRuns.values()];
     if (active.length === 0) return;
     for (const run of active) run.controller.abort(new DOMException("Prompt Studio is shutting down.", "AbortError"));
-    await waitForExecutions(active.map((run) => run.execution));
+    await waitForExecutions(
+      active.map((run) => run.execution),
+      shutdownGraceMs,
+    );
   };
 
   return {
     ...createExtensionAutomationService({ deps, withAdmissionLock, maxRunsPerMinute, startExecution, cancelOwnedRun }),
     auditDeniedRoute,
     cancelRun,
+    async cancelProjectRuns(projectId: string) {
+      for (const run of await deps.automationDBService.listActiveProjectRuns(projectId)) await stopExecution(run.id);
+    },
     close,
-    createRun,
+    createRun: (input: Parameters<typeof createRun>[0]) => admitProjectWork(input.projectId, () => createRun(input)),
     getRun,
-    issueToken,
+    issueToken: (input: IssueAutomationTokenInput) => admitProjectWork(input.projectId, () => issueToken(input)),
     listRunEvents,
     listTokens: (projectId: string) => listCanonicalTokens(deps, projectId),
     recoverInterruptedRuns: () =>

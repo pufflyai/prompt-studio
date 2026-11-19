@@ -23,6 +23,10 @@ const ok = async (action: Promise<unknown>) => {
 
 const deletionRoute = async (auth: Authentication, request: Request, path: string) => {
   const { method } = request;
+  if (path === "/v1/account" && method === "GET") {
+    const account = await auth.devices.account(bearer(request));
+    return json({ ...account, projectDeletion: auth.projectDeletions.enabled });
+  }
   if (path === "/v1/project-deletions" && method === "GET")
     return json(await auth.devices.outstandingProjectDeletions(bearer(request)));
   const deletion = /^\/v1\/workbenches\/([^/]+)\/deletion$/.exec(path);
@@ -85,7 +89,6 @@ const route = async (auth: Authentication, origin: string, request: Request, pat
   const devices = auth.devices;
   const signingKey = await signingKeyRoute(devices, request, path);
   if (signingKey) return signingKey;
-  if (path === "/v1/account" && method === "GET") return json(await devices.account(bearer(request)));
   if (path === "/v1/devices/presence" && method === "POST") return ok(devices.heartbeat(bearer(request)));
   if (path === "/v1/devices" && method === "GET") return json(await devices.devices(bearer(request)));
   if (path === "/v1/workbenches" && method === "GET") return json(await devices.workbenches(bearer(request)));

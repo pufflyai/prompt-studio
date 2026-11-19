@@ -1,18 +1,10 @@
 import { defineKeybinding, type ViewRef } from "@pstdio/sdk/extensions";
-import type { MarmaladeAction, MarmaladeTool } from "./marmalade.types";
+import type { MarmaladeAction } from "./marmalade.types";
 import { executeMarmalade } from "./marmalade-commands";
+import { marmaladeTools } from "./marmalade-tools";
 
-const tools: [string, MarmaladeTool][] = [
-  ["V", "move"],
-  ["T", "text"],
-  ["R", "rectangle"],
-  ["E", "ellipse"],
-  ["B", "brush"],
-  ["H", "hand"],
-  ["Z", "zoom"],
-];
 const actions: readonly (readonly [string, MarmaladeAction])[] = [
-  ...tools.map(([key, tool]) => [key, { type: "tool", tool }] as const),
+  ...marmaladeTools.map(({ key, id }) => [key, { type: "tool", tool: id }] as const),
   ["Mod+Z", { type: "undo" }],
   ["Mod+Shift+Z", { type: "redo" }],
   ["Mod+D", { type: "duplicate" }],

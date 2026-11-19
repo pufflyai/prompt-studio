@@ -4,6 +4,7 @@ import {
   setNavigationTreeNodeSource,
 } from "../../registries/navigation/navigation-tree-node-source";
 import { mergeNavigationTreePages } from "../../registries/navigation/navigation-tree-pages";
+import { ownerId } from "../../registries/navigation/navigation-tree-projection";
 import type { NavigationTreeRegistry, NavigationTreeSlot } from "../../registries/navigation/navigation-tree-registry";
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry";
 import type { TreeViewSection } from "../../registries/renderers/tree-renderer-types";
@@ -102,6 +103,13 @@ export const createLevelNavigation = (host: LevelNavigationHost) => {
   return {
     getReadKey: () =>
       JSON.stringify(queries().map(({ owner, resource }) => host.navigationTrees.getReadKey(owner, { resource }))),
+
+    getGroupScope: () => {
+      const levels = queries();
+      const root = levels[0];
+      const active = levels.at(-1);
+      if (root && active) return { root: ownerId(root.owner), active: ownerId(active.owner) };
+    },
 
     getStructure: (slot: NavigationTreeSlot) => mergeSections(structureOf(slot, ordered(slot)).flat()),
 

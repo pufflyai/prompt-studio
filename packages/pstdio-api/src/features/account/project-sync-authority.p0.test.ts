@@ -40,6 +40,7 @@ const fixture = async () => {
   const cloud = {
     signOut: async () => {},
     release: async () => {},
+    removalState: async () => "pending",
     apply: async () => false,
     discard: async () => false,
     dismissReplaced: async () => {},

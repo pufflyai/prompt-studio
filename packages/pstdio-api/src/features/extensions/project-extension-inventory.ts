@@ -67,6 +67,10 @@ export const listProjectExtensionInventory = async (
           url: extension.origin.url,
         },
         publisher: extension.extensionId?.split(".")[0] ?? extension.publisher,
+        author:
+          extension.extensionId || extension.publisher
+            ? { kind: "publisher" as const, publisher: extension.extensionId?.split(".")[0] ?? extension.publisher! }
+            : undefined,
         visibility: publicExtensionVisibility(extension.extensionId),
         registry:
           deps.extensionUpgradeService?.registry && extension.extensionId

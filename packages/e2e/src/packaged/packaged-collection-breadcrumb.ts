@@ -27,33 +27,29 @@ export const verifyPackagedCollectionBreadcrumb = async (
   expect(result, JSON.stringify(result)).toMatchObject({ outcome: { status: "success" } });
   await page.goto(`${baseUrl}/projects/${projectId}/extensions/pstdio.artifacts/artifacts`);
   const libraryUrl = page.url();
-  await page.frameLocator('iframe[title="Artifacts"]').getByText(title, { exact: true }).click();
-  const breadcrumbs = page
-    .locator('[data-workbench-panel-header="main"]')
-    .getByRole("navigation", { name: "breadcrumb", exact: true });
-  const tab = (region: string) =>
-    page.locator(`[data-workbench-panel-header="${region}"]`).getByRole("tab", { name: title, exact: true });
-  await expect(tab("main")).toHaveAttribute("aria-selected", "true");
-  await expect(
-    page.locator('[data-workbench-panel-header="main"]').getByRole("button", { name: "Switch project", exact: true }),
-  ).toBeVisible();
-  await expect(page).toHaveURL((url) => url.pathname === `${new URL(libraryUrl).pathname}/view`);
-  await expect(breadcrumbs).toHaveCount(0);
+  await page.frameLocator('iframe[title="Artifacts"]:visible').last().getByText(title, { exact: true }).click();
+  const breadcrumbs = page.getByRole("navigation", { name: "breadcrumb", exact: true });
+  await expect(breadcrumbs.getByText("Artifacts", { exact: true })).toBeVisible();
+  await expect(breadcrumbs.getByText(title, { exact: true })).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe(`${new URL(libraryUrl).pathname}/view`);
+  const header = page.locator('[data-workbench-panel-header="main"]');
+  const moved = page
+    .locator('[data-workbench-panel-header="secondary"]')
+    .getByRole("tab", { name: title, exact: true });
+  await expect(header.getByRole("tab")).toHaveCount(0);
   const detailUrl = page.url();
-  await tab("main").focus();
-  await page.keyboard.press("Shift+F10");
-  await page.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();
-  await expect(tab("secondary")).toBeVisible();
+  const move = async () => {
+    await header.focus();
+    await page.keyboard.press("Shift+F10");
+    await page.getByRole("menuitem", { name: "Move to Bottom", exact: true }).click();
+    await expect(moved).toBeVisible();
+  };
+  await move();
   await page.reload();
-  await expect(tab("secondary")).toBeVisible();
-  await expect(tab("main")).toHaveCount(0);
-  // Reload retains auxiliary ownership; explicitly reopening the detail reclaims it.
+  await expect(moved).toBeVisible();
   await navigatePackagedPage(page, detailUrl);
-  await expect(tab("main")).toBeVisible();
-  await tab("main").focus();
-  await page.keyboard.press("Shift+F10");
-  await page.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();
-  await expect(tab("secondary")).toBeVisible();
+  await expect(breadcrumbs.getByText(title, { exact: true })).toBeVisible();
+  await expect(moved).toHaveCount(0);
   const projectReturnUrl = page.url();
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   const home = await sidenav.getByRole("option", { name: "Home", exact: true }).boundingBox();
@@ -104,21 +100,17 @@ export const verifyPackagedCollectionBreadcrumb = async (
   await modeReturn.click();
   for (const frame of await returningRows) expect(frame).toEqual({ home: home!.y, sessions: sessionsEntry!.y });
   await expect(page).toHaveURL(projectReturnUrl);
-  await expect(tab("main")).toBeVisible();
-  await expect(tab("secondary")).toHaveCount(0);
-  await expect(breadcrumbs).toHaveCount(0);
   await expect(modeReturn).toHaveCount(0);
   await page.goBack();
   await expect(modeReturn).toBeVisible();
   await page.goBack();
-  await expect(tab("main")).toBeVisible();
-  await expect(tab("secondary")).toHaveCount(0);
-  await page.getByRole("button", { name: `Close ${title}`, exact: true }).click();
-  await expect(tab("main")).toHaveCount(0);
+  await expect(page).toHaveURL(projectReturnUrl);
+  await expect(breadcrumbs.getByText(title, { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(breadcrumbs.getByText(title, { exact: true })).toBeVisible();
+  await breadcrumbs.getByText("Artifacts", { exact: true }).click();
   await expect(page).toHaveURL(libraryUrl);
   await expect(
-    page.locator('[data-workbench-panel-header="main"]').getByRole("tab", { name: "Artifacts", exact: true }),
+    page.frameLocator('iframe[title="Artifacts"]:visible').last().getByText(title, { exact: true }),
   ).toBeVisible();
-  await expect(breadcrumbs).toHaveCount(0);
-  await expect(page.frameLocator('iframe[title="Artifacts"]:visible').getByText(title, { exact: true })).toBeVisible();
 };

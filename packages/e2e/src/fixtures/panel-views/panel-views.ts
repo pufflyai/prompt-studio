@@ -135,12 +135,20 @@ export const createPanelViewFixture = (baseUrl: string) => {
     main: { kind: "view", presentation: "page", view: reader.ref, cardinality: "many" },
     slots: [],
   });
+  const collection = definePage({
+    id: "collection",
+    title: "Letter collection",
+    path: "collection",
+    mode: workbenchModes.project,
+    main: { kind: "view", view: browser.ref, cardinality: "one" },
+    slots: [],
+  });
   return {
     commands: [addLetterViewer, completeLetter, deleteLetter],
     resourceKinds: [kind],
     views: [reader, browser],
     placements: [viewer, browserPanel],
-    pages: [mailbox, letter],
+    pages: [mailbox, letter, collection],
     navigationItems: [
       defineNavigationItem({
         id: "mailbox",

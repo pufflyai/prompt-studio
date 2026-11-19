@@ -82,7 +82,7 @@ Navigation trees in the sidenav keep their available rows when a read fails. The
 
 A navigation item's `group` names a collapsible Sidenav section. The section belongs to the extension that declared the item: its ID is `<extensionId>:<group>`. Each extension's items for one owner and slot also register as their own contribution. Two extensions that both use `group: "Tools"` therefore show two separate **Tools** sections. The workbench does not merge equal labels from different extensions, because a merged section would have no single owner for its order, hiding, and moves. An empty `group` places items at the slot root. See [`navigation-item-contributions.ts`](../../../packages/pstdio-workbench/src/extensions/contributions/navigation-item-contributions.ts).
 
-Choose a group label that names your tool, such as its display name, rather than a generic word. People can still collect rows that share a mode or page owner into their own group with **New group** in the Sidenav menu; see [API](0002-api.md).
+Choose a group label that names your tool, such as its display name, rather than a generic word. Use **New group** in the Sidenav menu to create a group for the current navigation level. Each level shows its own groups, including when pinned rows from a parent level are visible. See [API](0002-api.md).
 
 ## Resource actions on navigation rows
 

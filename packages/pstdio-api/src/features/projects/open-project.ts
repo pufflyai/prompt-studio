@@ -1,12 +1,10 @@
-import { mkdir, realpath } from "node:fs/promises";
-import { join } from "node:path";
 import { initialWorkspaceSchema } from "pstdio-api-contracts";
-import { resolvePstdioHome } from "pstdio-paths";
 import { rootProviderId } from "../workspaces/workspace-provider-service";
 import type { ProjectsRouteDeps } from "./deps";
+import { prepareManagedProjectFolder } from "./managed-project-folder";
 import { initializeProjectWorkspace, withFolderCreation } from "./project-folder";
 
-export const openProject = (deps: ProjectsRouteDeps, projectId: string) =>
+const open = (deps: ProjectsRouteDeps, projectId: string) =>
   withFolderCreation(`project-folder:${projectId}`, async () => {
     let workspace = await deps.workspaceService.getDefault(projectId);
     // An explicit provider binding belongs to its provider, including remote workspaces.
@@ -15,9 +13,7 @@ export const openProject = (deps: ProjectsRouteDeps, projectId: string) =>
       const sync = await deps.accountService.projectSyncStatus(projectId);
       if (sync.state !== "local" && !sync.offlineReady)
         throw new Error("Project content has not finished downloading. Retry opening the project after download.");
-      const path = join(resolvePstdioHome(), "projects", `project-${encodeURIComponent(projectId)}`);
-      await mkdir(path, { recursive: true });
-      const canonical = await realpath(path);
+      const canonical = await prepareManagedProjectFolder(projectId);
       return withFolderCreation(canonical, async () => {
         const owner = await deps.workspaceService.findByPath(canonical);
         if (owner && (owner.project_id !== projectId || !owner.is_default))
@@ -48,3 +44,6 @@ const requireReady = (
     throw new Error("The project folder is still being prepared. Retry opening the project.");
   return workspace;
 };
+
+export const openProject = (deps: ProjectsRouteDeps, id: string) =>
+  deps.projectService.work.run(id, () => open(deps, id));

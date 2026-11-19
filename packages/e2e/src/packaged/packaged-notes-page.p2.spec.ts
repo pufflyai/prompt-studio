@@ -28,7 +28,7 @@ test("Notes creates dedicated pages and reclaims Side views into the current tab
   try {
     const started = await startPackagedServe(root, {
       PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(
-        "pstdio-artifacts",
+        "pstdio-workspaces",
         "pstdio-notes",
         "pstdio-planner",
         "pstdio-session-browser",
@@ -44,6 +44,15 @@ test("Notes creates dedicated pages and reclaims Side views into the current tab
     });
     expect(response.status).toBe(201);
     const project = (await response.json()) as { id: string };
+    const workspaceResponse = await fetch(`${started.baseUrl}/v1/workspaces?project_id=${project.id}`, {
+      headers: runtimeAuthorization(started.descriptor),
+    });
+    expect(workspaceResponse.status).toBe(200);
+    const workspaces = (await workspaceResponse.json()) as { id: string; is_default: boolean }[];
+    const workspace = workspaces.find((workspace) => workspace.is_default)!;
+    expect(workspace).toBeDefined();
+    const resource = `pstdio://extension-resource/workspace/${workspace.id}?extensionId=pstdio&projectId=${project.id}`;
+    const tabbedUrl = `${started.baseUrl}/projects/${project.id}/extensions/pstdio.workspaces/workspace?resource=${encodeURIComponent(resource)}`;
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
     finishEvidence = await observePackagedNotes(page);
@@ -61,7 +70,7 @@ test("Notes creates dedicated pages and reclaims Side views into the current tab
     await palette.getByRole("option", { name: /New note/, selected: true }).click();
     await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("New note");
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await verifyNotesPageIsolation(page);
+    await verifyNotesPageIsolation(page, tabbedUrl);
     failed = false;
   } finally {
     await finishEvidence?.(folder, failed);
