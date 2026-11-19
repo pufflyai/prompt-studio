@@ -2,6 +2,7 @@ import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { legacyAttemptOutput } from "../data/attempt-compatibility";
 import { readAttemptHistoryPage } from "../data/attempt-history-page";
+import { attemptId, resolveAttemptId } from "../data/attempt-identity";
 import {
   appendAttemptEvent,
   attemptSelectionsCollection,
@@ -21,17 +22,19 @@ export const readAttemptHistoryCommand = defineCommand({
   title: "Read attempt history",
   cli: true,
   params: {
-    workspaceId: params.text({ required: true }),
+    attemptId: params.text({ label: "Attempt ID" }),
+    workspaceId: params.text({ label: "Legacy Git workspace ID" }),
     cursor: params.text(),
     limit: params.number(),
   },
   async run(ctx, commandParams) {
-    const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
-    if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
+    const id = resolveAttemptId(commandParams);
+    const attempt = await readAttempt(ctx.storage, id);
+    if (!attempt) throw new Error(`Unknown managed attempt "${id}"`);
     const page = await readAttemptHistoryPage<AttemptTimelineEvent>(ctx.storage, {
       ...commandParams,
-      scope: "workspaceId",
-      id: attempt.workspaceId,
+      scope: attempt.base === null ? "attemptId" : "workspaceId",
+      id: attemptId(attempt),
     });
     return {
       attempt: await legacyAttemptOutput(ctx.storage, attempt),
@@ -197,7 +200,8 @@ export const selectAttemptCommand = defineCommand({
   cli: true,
   params: {
     ticket: params.text({ required: true }),
-    workspaceId: params.text({ required: true }),
+    attemptId: params.text({ label: "Attempt ID" }),
+    workspaceId: params.text({ label: "Legacy Git workspace ID" }),
     reviewRequestId: params.text(),
   },
   async run(ctx, commandParams) {
@@ -206,7 +210,7 @@ export const selectAttemptCommand = defineCommand({
         throw new Error("Automation cannot select an attempt.");
       }
       const ticket = await findTicket(ctx, commandParams.ticket);
-      const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
+      const attempt = await readAttempt(ctx.storage, resolveAttemptId(commandParams));
       if (!ticket || !attempt || attempt.ticketId !== ticket.id)
         throw new Error("Workspace is not an attempt for this ticket.");
       if (commandParams.reviewRequestId) {
@@ -217,6 +221,7 @@ export const selectAttemptCommand = defineCommand({
       }
       const selection = {
         ticketId: ticket.id,
+        ...(attempt.id ? { attemptId: attemptId(attempt) } : {}),
         workspaceId: attempt.workspaceId,
         selectedBy: actorFromSource(ctx.source, ctx.invocationId),
         reviewRequestId: commandParams.reviewRequestId ?? null,
@@ -224,6 +229,7 @@ export const selectAttemptCommand = defineCommand({
       };
       await attemptSelectionsCollection(ctx.storage).put(ticket.id, selection);
       await appendAttemptEvent(ctx.storage, {
+        attemptId: attemptId(attempt),
         workspaceId: attempt.workspaceId,
         revision: attempt.revisions.at(-1)?.revision ?? null,
         type: "attempt_selected",

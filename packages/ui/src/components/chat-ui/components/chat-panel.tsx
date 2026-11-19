@@ -1,13 +1,12 @@
 import { Box, Flex, useRecipe } from "@chakra-ui/react";
 import { MessageCircleIcon } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { EmptyState } from "@/components/primitives/empty-state";
 import type { PromptCommand } from "@/components/rich-text";
 import { chatPanelRecipe } from "@/theme/recipes/chat-panel";
 import { ChatImageHistoryContext, indexChatImageSources } from "../links/chat-image-sources";
 import type { ChatLinkProps } from "../links/chat-link";
 import { ChatLinkProvider } from "../links/chat-link-context";
-import { resolveActiveQuestionPrompt } from "../tool-rendering/question-prompt";
 import { ChatPrimitives } from "./ai-conversation";
 import { AutoScroll } from "./auto-scroll";
 import { getRecentUserPrompts } from "./chat-input-history";
@@ -23,6 +22,7 @@ import {
   type SessionMessage,
 } from "./message-types";
 import type { QueuedFollowUpMoveDirection } from "./queued-follow-up-list-state";
+import { useChatVisibility } from "./use-chat-visibility";
 import { WorkingIndicator } from "./working-indicator";
 
 /** Full conversation shell for agent sessions, including messages, input, attachments, and host-provided slots. */
@@ -30,6 +30,10 @@ export interface ChatPanelProps extends ChatLinkProps {
   /** Stable conversation identity used to reset ready state when switching sessions. */
   conversationKey?: string;
   messages: SessionMessage[];
+  /** IDs intersecting the settled conversation viewport, excluding virtual overscan. */
+  onVisibleMessageIdsChange?: (ids: string[]) => void;
+  /** The exact question currently mounted in the composer. */
+  onVisibleQuestionChange?: (id: string | undefined) => void;
   /** Submitted input for prompt recall while receipt handoff differs from the displayed transcript. Defaults to messages. */
   historyMessages?: SessionMessage[];
   loading?: boolean;
@@ -77,6 +81,12 @@ export interface ChatPanelProps extends ChatLinkProps {
   inputDisabled?: boolean;
   /** Blocks ordinary messages while the editor stays usable. Pending questions and decisions stay available. */
   submitDisabled?: boolean;
+  /** Show a question from history alongside the draft while signing in. */
+  showAgentQuestionAlongsideDraft?: boolean;
+  /** Blocks replies to questions from conversation history while choices remain editable. */
+  agentQuestionSubmitDisabled?: boolean;
+  /** Keep agent requests from taking over the draft when the execution target is unavailable. */
+  composerRequestsDisabled?: boolean;
   chatInputQuestionPrompt?: ChatInputQuestionPrompt;
   composerDecision?: ComposerDecision;
   chatInputAutoFocus?: boolean;
@@ -104,6 +114,19 @@ export interface ChatPanelProps extends ChatLinkProps {
   ) => void;
   chatInputCommands?: PromptCommand[];
 }
+
+const agentQuestionComposerProps = (
+  activePrompt: ChatInputQuestionPrompt | undefined,
+  hostPrompt: ChatInputQuestionPrompt | undefined,
+  showDraft: boolean,
+  blockSubmission: boolean,
+) => {
+  const isAgentQuestion = Boolean(activePrompt && activePrompt !== hostPrompt);
+  return {
+    keepDraftVisibleForQuestion: showDraft && isAgentQuestion,
+    questionSubmitDisabled: blockSubmission && isAgentQuestion,
+  };
+};
 
 export const ChatPanel = (props: ChatPanelProps) => {
   const {
@@ -141,6 +164,9 @@ export const ChatPanel = (props: ChatPanelProps) => {
     workspaceInitializing = false,
     inputDisabled = false,
     submitDisabled = false,
+    showAgentQuestionAlongsideDraft = false,
+    agentQuestionSubmitDisabled = false,
+    composerRequestsDisabled,
     chatInputQuestionPrompt,
     composerDecision,
     chatInputAutoFocus = false,
@@ -162,7 +188,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
   } = props;
 
   const panelStyles = useRecipe({ recipe: chatPanelRecipe })();
-  const merged = normalizeChatMessagesForDisplay(messages, { streaming });
+  const merged = useMemo(() => normalizeChatMessagesForDisplay(messages, { streaming }), [messages, streaming]);
   const hasMessages = merged.length > 0;
   const messageListKey = conversationKey ?? merged[0]?.id;
   const messageListIdentity = hasMessages ? (messageListKey ?? "active-conversation") : null;
@@ -180,12 +206,27 @@ export const ChatPanel = (props: ChatPanelProps) => {
   );
   const emptyContent = showLoadingState ? loaderComponent : (emptyStateContent ?? defaultEmptyContent);
   const hasWorkspaceHub = Boolean(workspaceHub);
-  const questionNavigation = useChatQuestionNavigation(messages, conversationKey ?? messages[0]?.id);
-  const activeQuestionPrompt =
-    questionNavigation.prompt ?? chatInputQuestionPrompt ?? resolveActiveQuestionPrompt(messages);
+  const questionNavigation = useChatQuestionNavigation(messages, {
+    conversationKey: conversationKey ?? messages[0]?.id,
+    disabled: composerRequestsDisabled && !showAgentQuestionAlongsideDraft,
+    hostPrompt: composerRequestsDisabled ? undefined : chatInputQuestionPrompt,
+  });
+  const activeQuestionPrompt = questionNavigation.activePrompt;
+  const questionComposer = agentQuestionComposerProps(
+    activeQuestionPrompt,
+    chatInputQuestionPrompt,
+    showAgentQuestionAlongsideDraft,
+    agentQuestionSubmitDisabled,
+  );
   const hideActiveQuestionForms = Boolean(activeQuestionPrompt);
   const showThinkingIndicator = streaming && hasMessages && !workspaceInitializing && !activeQuestionPrompt;
   const isMessageViewportReady = !messageListIdentity || readyMessageListKey === messageListIdentity;
+  const onVisibleMessageIdsChange = useChatVisibility(
+    props,
+    isMessageViewportReady,
+    activeQuestionPrompt?.callId,
+    merged,
+  );
   const queuedComposer = useQueuedFollowUpComposer({
     queuedFollowUps,
     defaultValue: chatInputDefaultValue,
@@ -232,6 +273,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
                       expandedStickyMessageIds={expandedStickyMessageIds}
                       onToggleStickyMessage={toggleStickyMessageExpanded}
                       onReady={() => setReadyMessageListKey(messageListIdentity)}
+                      onVisibleMessageIdsChange={onVisibleMessageIdsChange}
                       onForkMessage={onForkMessage}
                       forkDisabledReason={forkDisabledReason}
                     />
@@ -262,7 +304,10 @@ export const ChatPanel = (props: ChatPanelProps) => {
                   chatInputAutoFocus={chatInputAutoFocus}
                   chatInputPlaceholder={chatInputPlaceholder}
                   chatInputQuestionPrompt={activeQuestionPrompt}
-                  composerDecision={questionNavigation.prompt ? undefined : composerDecision}
+                  {...questionComposer}
+                  composerDecision={
+                    composerRequestsDisabled || questionNavigation.prompt ? undefined : composerDecision
+                  }
                   chatInputCommands={chatInputCommands}
                   hasWorkspaceHub={hasWorkspaceHub}
                   inputDisabled={inputDisabled}

@@ -128,6 +128,7 @@ export const parseStoredRequest = (value: unknown): ReviewRequest => {
     requestedAt: text(input.requestedAt, "Request time"),
     requestedBy: actor(input.requestedBy),
     context: {
+      ...(context.attemptId === undefined ? {} : { attemptId: text(context.attemptId, "Request attempt") }),
       ...affectedAction(context.affectedAction),
       reason: nullableText(context.reason, "Request reason") as ReviewRequest["context"]["reason"],
       workspaceId: nullableText(context.workspaceId, "Request workspace"),

@@ -1,6 +1,6 @@
 import { useTooltipContext } from "@chakra-ui/react";
 import * as React from "react";
-import { ScopedTooltip as ChakraTooltip } from "@/utils/scoped-overlays";
+import { ScopedTooltip as ChakraTooltip } from "@/utils/scoped-tooltip";
 import { Portal } from "@/utils/ui-scope";
 
 export interface TooltipProps extends React.ComponentProps<typeof ChakraTooltip.Root> {
@@ -41,12 +41,30 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(function T
   React.useLayoutEffect(() => {
     const label = overflowRef?.current;
     if (!label) return;
-    const measure = () => setOverflowing(label.scrollWidth > label.clientWidth);
-    measure();
+    const clipped = (element: Element) =>
+      Boolean(
+        element.textContent?.trim() &&
+          element.getClientRects().length &&
+          !element.closest('[aria-hidden="true"], [hidden]') &&
+          ((element.clientWidth > 0 && element.scrollWidth > element.clientWidth) ||
+            (element.clientHeight > 0 && element.scrollHeight > element.clientHeight)),
+      );
+    const measure = () => setOverflowing([label, ...label.querySelectorAll("*")].some(clipped));
     const observer = new ResizeObserver(measure);
-    observer.observe(label);
-    const textObserver = new MutationObserver(measure);
-    textObserver.observe(label, { childList: true, characterData: true, subtree: true });
+    const observeLabels = () => {
+      observer.disconnect();
+      observer.observe(label);
+      for (const child of label.querySelectorAll("*")) if (child.textContent?.trim()) observer.observe(child);
+      measure();
+    };
+    observeLabels();
+    const textObserver = new MutationObserver(observeLabels);
+    textObserver.observe(label, {
+      childList: true,
+      characterData: true,
+      subtree: true,
+      attributeFilter: ["aria-hidden", "hidden"],
+    });
     return () => {
       observer.disconnect();
       textObserver.disconnect();
@@ -79,13 +97,15 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(function T
     >
       <TooltipHoverReset disabled={visibilityBlocked} />
       <ChakraTooltip.Trigger asChild>{children}</ChakraTooltip.Trigger>
-      <Portal disabled={!portalled} container={portalRef}>
-        <ChakraTooltip.Positioner>
-          <ChakraTooltip.Content ref={ref} {...contentProps}>
-            {content}
-          </ChakraTooltip.Content>
-        </ChakraTooltip.Positioner>
-      </Portal>
+      {!visibilityBlocked ? (
+        <Portal disabled={!portalled} container={portalRef}>
+          <ChakraTooltip.Positioner>
+            <ChakraTooltip.Content ref={ref} {...contentProps}>
+              {content}
+            </ChakraTooltip.Content>
+          </ChakraTooltip.Positioner>
+        </Portal>
+      ) : null}
     </ChakraTooltip.Root>
   );
 });

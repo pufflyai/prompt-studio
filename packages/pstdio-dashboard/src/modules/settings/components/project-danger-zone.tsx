@@ -1,5 +1,5 @@
 import { Button, HStack, Stack, Text } from "@chakra-ui/react";
-import { DeleteConfirmationModal, SimpleCard, SimpleCardBody, useToaster } from "@pstdio/ui";
+import { DeleteConfirmationModal, SimpleCard, SimpleCardBody } from "@pstdio/ui";
 import { WorkbenchIcon } from "@pstdio/workbench/react";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
@@ -8,13 +8,11 @@ import { useActionError } from "@/shared/components/use-action-error";
 
 interface ProjectDangerZoneProps {
   projectId?: string;
-  projectName: string;
   onDeleted?: () => void;
 }
 
 export const ProjectDangerZone = (props: ProjectDangerZoneProps) => {
-  const toaster = useToaster();
-  const { projectId, projectName, onDeleted } = props;
+  const { projectId, onDeleted } = props;
   const { showError, errorNotice, clearError } = useActionError();
   const deleteProject = useMutation({
     mutationFn: async (input: { projectId: string }) => {
@@ -41,11 +39,6 @@ export const ProjectDangerZone = (props: ProjectDangerZoneProps) => {
 
     try {
       await deleteProject.mutateAsync({ projectId });
-      toaster.create({
-        type: "success",
-        title: "Project deleted",
-        description: projectName,
-      });
       setDeleteOpen(false);
       onDeleted?.();
     } catch (error) {

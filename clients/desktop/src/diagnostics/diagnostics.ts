@@ -5,6 +5,8 @@ type DesktopDiagnostics = {
   platform: string;
   arch: string;
   state: string;
+  startupPhase?: string;
+  startupError?: string;
   runtimeOrigin?: string;
   runtimePid?: number;
   ownerType?: string;

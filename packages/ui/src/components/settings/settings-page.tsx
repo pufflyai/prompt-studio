@@ -1,6 +1,8 @@
 import { Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { RotateCcw, Save } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { ActionErrorSlot } from "../primitives/action-error-slot";
+import { AlertMessage } from "../primitives/alert";
 import { ScrollArea } from "../primitives/scroll-area";
 
 export interface SettingsChanges {
@@ -36,7 +38,7 @@ export const SettingsActions = (props: SettingsChanges) => {
   };
   if (!props.dirty) return null;
   return (
-    <Stack gap="xs" align="end" minW="0" maxW="full">
+    <Stack position="relative" gap="xs" align="end" minW="0" maxW="full">
       <HStack gap="sm" flexShrink="0">
         <Button
           size="sm"
@@ -59,9 +61,9 @@ export const SettingsActions = (props: SettingsChanges) => {
         </Button>
       </HStack>
       {error ? (
-        <Text role="alert" color="fg.error" textStyle="paragraph/S/regular" w="full" maxW="sm" overflowWrap="anywhere">
-          {error}
-        </Text>
+        <ActionErrorSlot edge="below">
+          <AlertMessage compact status="error" title={error} onClose={() => setError(undefined)} />
+        </ActionErrorSlot>
       ) : null}
     </Stack>
   );

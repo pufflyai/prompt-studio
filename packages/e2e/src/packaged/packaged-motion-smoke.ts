@@ -107,8 +107,11 @@ export const expectPackagedStreamingMotion = async (
   await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
   const side = page.locator('[data-workbench-panel="side"]');
   await side.getByRole("button", { name: "Add panel", exact: true }).click();
-  await page.getByRole("menuitem", { name: "New session", exact: true }).click();
-  await side.getByRole("tab", { name: "New session", exact: true }).click({ button: "right" });
+  const openSession = page.getByRole("menuitem", { name: "New session", exact: true });
+  const newSession = side.getByRole("tab", { name: "New session", exact: true });
+  await expect(openSession.or(newSession)).toBeVisible();
+  if (await openSession.isVisible()) await openSession.click();
+  await newSession.click({ button: "right" });
   await switchSession(page, "Motion replay");
   await side.getByRole("tab", { name: "Motion replay", exact: true }).dblclick();
   const transcript = page.getByRole("log").filter({ visible: true }).first();

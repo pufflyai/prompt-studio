@@ -46,17 +46,12 @@ const assertForkSourceReady = async (deps: SessionsRouteDeps, id: string, status
 
 const resolveForkWorkspace = async (deps: SessionsRouteDeps, id: string, cwdRequirement: "required" | "optional") => {
   const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(id);
-  if (
-    !workspace ||
-    workspace.deleted_at ||
-    workspace.archived ||
-    workspace.provider_operation_kind ||
-    workspace.initializing ||
-    workspace.setup_error ||
-    (workspace.provider_state && workspace.provider_state !== "ready")
-  ) {
-    throw new SessionForkError("The workspace is not ready.", 409);
-  }
+  if (!workspace || workspace.deleted_at || workspace.archived)
+    throw new SessionForkError("Open a conversation in an active workspace to fork it.", 409);
+  if (workspace.initializing || workspace.provider_operation_kind)
+    throw new SessionForkError("Wait for workspace setup to finish, then fork again.", 409);
+  if (workspace.setup_error || (workspace.provider_state && workspace.provider_state !== "ready"))
+    throw new SessionForkError("Check the workspace setup before forking this conversation.", 409);
   const context = toHarnessWorkspaceContext(workspace, cwdRequirement);
   if (context?.executionTarget.kind === "remote" && cwdRequirement === "required") {
     throw new SessionForkError("This harness requires a local workspace.", 400);

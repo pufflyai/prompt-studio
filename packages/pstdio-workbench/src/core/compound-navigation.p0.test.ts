@@ -42,7 +42,7 @@ const createHarness = () => {
   };
   const persisted = new Map<string, PersistedWorkbenchPageLocation>();
   const workbench = createWorkbench({
-    startPage: pageRef("home"),
+    defaultPage: pageRef("home"),
     initialSidePanelMode: "closed",
     pageLocationBrowser: browser,
     pageLocationPersistence: {

@@ -94,3 +94,21 @@ test("available Workspaces supplies header presentation without changing executi
     expect(snapshot.workspaceId).toBe("a");
   }
 });
+
+test("workspace setup disables unavailable choices and reply forks without hiding the conversation", async () => {
+  const ctx = snapshotContext();
+  const workspace = { ...workspaces[0]!, providerState: "provisioning" as const };
+  ctx.workspaces.list = async () => [workspace];
+  ctx.workspaces.get = async () => workspace;
+  ctx.commands.execute = async () => ({ ok: true, status: "success", value: presentation }) as never;
+
+  const draft = await readSnapshot(ctx);
+  const selector = draft.controls?.find((control) => control.id === "workspace");
+  expect(selector?.type === "selection" ? selector.options : undefined).toMatchObject([{ id: "a", disabled: true }]);
+
+  const saved = await readSnapshot(ctx, resource);
+  expect(saved.messages).toEqual([]);
+  expect(saved.fork?.disabledReason).toBeTruthy();
+  ctx.workspaces.get = async () => ({ ...workspace, providerState: "ready" });
+  expect((await readSnapshot(ctx, resource)).fork?.disabledReason).toBeNull();
+});

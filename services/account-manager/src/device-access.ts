@@ -18,6 +18,7 @@ import {
   removeWorkbenchInTransaction,
   renameDeviceInTransaction,
 } from "./devices";
+import { listOutstandingProjectDeletions, readProjectDeletion, startProjectDeletion } from "./project-deletion";
 import { DeviceAccessDenied } from "./renewal-errors";
 import { accounts } from "./schema";
 import { spaceKeysInTransaction } from "./space-keys";
@@ -100,6 +101,22 @@ export const createDeviceAccess = (db: ManagerDatabase) => {
       }),
     workbenches: (token: string) =>
       apply(token, (transaction, device) => listWorkbenches(transaction, device.accountId)),
+    outstandingProjectDeletions: (token: string) =>
+      apply(token, (transaction, device) => listOutstandingProjectDeletions(transaction, device.accountId)),
+    projectDeletion: (token: string, workbenchId: string) =>
+      apply(token, (transaction, device) =>
+        readProjectDeletion(transaction, {
+          accountId: device.accountId,
+          workbenchId: identitySchema.parse(workbenchId),
+        }),
+      ),
+    startProjectDeletion: (token: string, workbenchId: string) =>
+      apply(token, (transaction, device) =>
+        startProjectDeletion(transaction, {
+          accountId: device.accountId,
+          workbenchId: identitySchema.parse(workbenchId),
+        }),
+      ),
     /** The keys of a cloud project, or null when the account has no such project. */
     keys: (token: string, workbenchId: string) =>
       apply(token, (transaction, device) =>

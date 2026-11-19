@@ -1,4 +1,5 @@
 import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
+import { attemptId } from "../data/attempt-identity";
 import { type AttemptReadinessResult, findPendingPrerequisites } from "../data/attempt-readiness";
 import { retiredWorkspaceIds } from "../data/attempt-retirement";
 import { attemptEventsCollection, attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
@@ -35,7 +36,7 @@ function appendCandidate(
   } else if (resumable) {
     next.push({ ...summary, action: "resume" });
   } else {
-    next.push({ ...summary, action: "start", baseHeadSha: readiness.baseHeadSha });
+    next.push({ ...summary, action: "start", baseHeadSha: readiness.baseHeadSha ?? undefined });
   }
 }
 
@@ -69,8 +70,8 @@ async function appendStackRepair(
         action: "recover-workspace",
         recoveryBaseSha: recoveryBase,
         workspaceId: repair.unavailableWorkspaceId,
-        baseHeadSha: readiness.baseHeadSha,
-        recoveryHeadSha: await readRecoverySeed(ctx, repair.attempt, readiness.baseHeadSha),
+        baseHeadSha: readiness.baseHeadSha ?? undefined,
+        recoveryHeadSha: await readRecoverySeed(ctx, repair.attempt, readiness.baseHeadSha!),
         detail: repair.detail,
       });
   } else {
@@ -130,7 +131,7 @@ export async function readNextTickets(
   );
   const byId = new Map(tickets.map((ticket) => [ticket.id, ticket]));
   const started = new Set(
-    attempts.filter(({ workspaceId }) => !retired.has(workspaceId)).map(({ ticketId }) => ticketId),
+    attempts.filter((attempt) => !retired.has(attemptId(attempt))).map(({ ticketId }) => ticketId),
   );
   const { selected, scoped, completed, configurationError } = await selectScopedWork(ctx, {
     plan,
@@ -156,7 +157,7 @@ export async function readNextTickets(
     const wait = nextTicketWait(row, {
       pending,
       assigned: assignments.assigned.has(row.id),
-      attempts: attempts.filter(({ ticketId, workspaceId }) => ticketId === row.id && !retired.has(workspaceId)),
+      attempts: attempts.filter((attempt) => attempt.ticketId === row.id && !retired.has(attemptId(attempt))),
       resumable: resumptions.has(row.id),
       capacity,
     });
@@ -196,7 +197,9 @@ export async function readNextTickets(
     }
     const resumption = resumptions.get(row.id);
     const recordedBase =
-      resumption && attempts.find(({ workspaceId }) => workspaceId === resumption.workspaceId)?.base.headSha;
+      resumption &&
+      attempts.find((attempt) => attemptId(attempt) === (resumption.attemptId ?? resumption.workspaceId))?.base
+        ?.headSha;
     if (!recordedBase) base ??= await resolveImplementationBase(ctx, await ctx.settings.all());
     const { readiness } = await loadAttemptReadiness(
       ctx,

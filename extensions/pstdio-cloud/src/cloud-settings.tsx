@@ -4,6 +4,7 @@ import { AlertMessage, DeleteConfirmationModal, ScrollArea, SimpleCard, SimpleCa
 import { type ReactNode, useState } from "react";
 import { Button } from "./button";
 import { useCloudContext } from "./cloud-context";
+import { CloudError } from "./cloud-error";
 import { CloudIcon, CloudLabel } from "./cloud-label";
 import { useCloud } from "./use-cloud";
 
@@ -21,9 +22,9 @@ interface ActionError {
   section: string;
   message: string;
 }
-const ActionFailure = (props: { section: string; error?: ActionError }) => {
-  const { section, error } = props;
-  return error?.section === section ? <AlertMessage status="error">{error.message}</AlertMessage> : null;
+const ActionFailure = (props: { section: string; error?: ActionError; onClose: () => void }) => {
+  const { section, error, onClose } = props;
+  return error?.section === section ? <CloudError message={error.message} onClose={onClose} /> : null;
 };
 
 const DeviceRow = (props: { device: AccountDevice; onChange: () => void }) => {
@@ -49,7 +50,7 @@ const DeviceRow = (props: { device: AccountDevice; onChange: () => void }) => {
     }
   };
   return (
-    <Stack gap="xs">
+    <Stack gap="xs" position="relative">
       <HStack gap="sm" justify="space-between">
         <CloudIcon name={device.current ? "laptop" : "monitor"} />
         <Stack gap="2xs" flex="1" minW="0">
@@ -97,7 +98,7 @@ const DeviceRow = (props: { device: AccountDevice; onChange: () => void }) => {
           {t("devices.remove", "Remove")}
         </Button>
       </HStack>
-      {error && <AlertMessage status="error">{error}</AlertMessage>}
+      {error && <CloudError message={error} onClose={() => setError(undefined)} />}
     </Stack>
   );
 };
@@ -147,22 +148,20 @@ export const CloudSettings = (props: { projectId?: string }) => {
   return (
     <Stack h="full" minH="0" gap="0">
       <ScrollArea flex="1" minH="0">
-        <Stack gap="md" px="lg" pb="lg" maxW="3xl" w="full" mx="auto">
+        <Stack gap="md" px="lg" pb="lg" maxW="3xl" w="full" mx="auto" position="relative">
           {error && (
-            <AlertMessage
-              status="error"
-              endElement={
+            <CloudError
+              message={error}
+              action={
                 <Button size="sm" onClick={refresh}>
                   {t("actions.retry", "Retry")}
                 </Button>
               }
-            >
-              {error}
-            </AlertMessage>
+            />
           )}
           <SimpleCard>
             <SimpleCardBody>
-              <Stack gap="sm">
+              <Stack gap="sm" position="relative">
                 <SectionTitle icon="user-round">{t("account.title", "Account")}</SectionTitle>
                 <HStack justify="space-between">
                   <Stack gap="2xs">
@@ -204,11 +203,9 @@ export const CloudSettings = (props: { projectId?: string }) => {
                   )}
                 </HStack>
                 {data?.loginFailed && !account?.login && (
-                  <AlertMessage status="error">
-                    {t("account.loginFailed", "Sign-in did not complete. Sign in to try again.")}
-                  </AlertMessage>
+                  <CloudError message={t("account.loginFailed", "Sign-in did not complete. Sign in to try again.")} />
                 )}
-                <ActionFailure section="account" error={actionError} />
+                <ActionFailure section="account" error={actionError} onClose={() => setActionError(undefined)} />
               </Stack>
             </SimpleCardBody>
           </SimpleCard>
@@ -241,7 +238,7 @@ export const CloudSettings = (props: { projectId?: string }) => {
                 <>
                   <SimpleCard>
                     <SimpleCardBody>
-                      <Stack gap="sm">
+                      <Stack gap="sm" position="relative">
                         <HStack justify="space-between">
                           <SectionTitle icon="folder">{t("project.title", "This project")}</SectionTitle>
                           <CloudLabel data={data} online={online} />
@@ -267,7 +264,11 @@ export const CloudSettings = (props: { projectId?: string }) => {
                             </Button>
                           </>
                         )}
-                        <ActionFailure section="project" error={actionError} />
+                        <ActionFailure
+                          section="project"
+                          error={actionError}
+                          onClose={() => setActionError(undefined)}
+                        />
                       </Stack>
                     </SimpleCardBody>
                   </SimpleCard>
@@ -312,7 +313,9 @@ export const CloudSettings = (props: { projectId?: string }) => {
           }
         }}
       >
-        <ActionFailure section="confirmation" error={actionError} />
+        <Stack position="relative">
+          <ActionFailure section="confirmation" error={actionError} onClose={() => setActionError(undefined)} />
+        </Stack>
       </DeleteConfirmationModal>
     </Stack>
   );

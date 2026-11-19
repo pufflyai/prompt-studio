@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkspaceProvisionPayload } from "pstdio-api-contracts/extension-kernel";
+import { createWorkspaceMaintenance } from "../../services/workspace-maintenance";
 import {
   type ProvisionCoordinatorDeps,
   provisionProjectWorkspaces,
@@ -22,6 +23,8 @@ const setup = (home: ReturnType<typeof makeWorkspace> | null = null) => {
   let ready = 0;
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
+      get: async () => workspace,
       getDefault: async () => home,
       list: async () => [workspace],
       setInitializing: async (_id: string, initializing: boolean) => (workspace = { ...workspace, initializing }),

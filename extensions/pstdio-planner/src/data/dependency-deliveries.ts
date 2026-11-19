@@ -1,4 +1,5 @@
 import type { ExtensionContextBase, ResourceRef } from "@pstdio/sdk/extensions";
+import { attemptId, selectedAttemptId } from "./attempt-identity";
 import { readTicketAttempts } from "./attempt-queries";
 import { readRetiredWorkspaceIds } from "./attempt-retirement";
 import { attemptSelectionsCollection } from "./attempt-storage";
@@ -42,8 +43,8 @@ const readDelivery = async (
       .filter(
         (attempt) =>
           attempt.ticketId === dependency.id &&
-          !retired.has(attempt.workspaceId) &&
-          (!selected || attempt.workspaceId === selected.workspaceId),
+          !retired.has(attemptId(attempt)) &&
+          (!selected || attemptId(attempt) === selectedAttemptId(selected)),
       )
       .flatMap((attempt) => attempt.revisions.at(-1)?.headSha ?? []),
   );
@@ -103,10 +104,7 @@ export async function readDependencyDeliveries(
     Promise.all(tickets.map(({ id }) => attemptSelectionsCollection(ctx.storage).get(id))),
   ]);
   const selections = selected.filter((value) => value !== undefined);
-  const retired = await readRetiredWorkspaceIds(
-    ctx.storage,
-    attempts.map(({ workspaceId }) => workspaceId),
-  );
+  const retired = await readRetiredWorkspaceIds(ctx.storage, attempts.map(attemptId));
   for (const ticket of pending) {
     for (const ref of normalizeTicketDependencies(ticket.dependsOn)) {
       const dependency = byRef.get(ref);

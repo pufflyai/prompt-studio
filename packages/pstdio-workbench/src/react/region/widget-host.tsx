@@ -1,5 +1,6 @@
 import { Box, Center } from "@chakra-ui/react";
-import { resourceKey } from "@pstdio/sdk/extensions";
+import { contributionRefId, resourceKey } from "@pstdio/sdk/extensions";
+import { sizesToContentHeight } from "pstdio-extensions/bridge/contract";
 import type { ReactNode } from "react";
 import type {
   RegisteredPlaceholderContribution,
@@ -17,6 +18,7 @@ import { WorkbenchActionErrors } from "../notifications/action-errors";
 import { WorkbenchResourceActivity } from "../resource-activity/resource-activity";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { presentsResourceActivity } from "./resource-activity-presentation";
 import { WorkbenchWidgetContents } from "./widget-contents";
 
 interface WorkbenchWidgetHostProps {
@@ -99,6 +101,15 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
   const activity = useWorkbenchStore(workbench.resources.store, () =>
     resource ? workbench.resources.getKind(resource.type, resource.extensionId)?.activity : undefined,
   );
+  const showsActivity = useWorkbenchStore(workbench.pages.store, () =>
+    presentsResourceActivity(
+      resource,
+      view?.body.kind,
+      workbench.pages.listPages(),
+      view?.id,
+      (ref) => workbench.views.getView(contributionRefId(ref))?.id,
+    ),
+  );
 
   if (!widget && !view) {
     return <WorkbenchWidgetFallback label="Widget contribution is no longer registered." />;
@@ -119,16 +130,17 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
       minW="0"
       minH="0"
       w="full"
+      position="relative"
       overflow="hidden"
       // A tree owns its scrollbar. Its virtual spacer must not size the region
       // to the full file list and turn every row into a visible row.
-      contain={view?.body.kind === "tree" && props.sizing !== "content-height" ? "size" : undefined}
+      contain={view?.body.kind === "tree" && !sizesToContentHeight(props.sizing) ? "size" : undefined}
     >
       <WorkbenchActionErrors workbench={workbench} target={placement.widgetId} />
       {renderer ? (
         <WorkbenchRenderedWidgetFrame
           status={props.region === "status"}
-          contentHeight={props.sizing === "content-height"}
+          contentHeight={sizesToContentHeight(props.sizing)}
         >
           <WorkbenchWidgetContents
             renderer={renderer}
@@ -141,7 +153,7 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
       ) : (
         <WorkbenchWidgetFallback label={`No renderer registered for ${rendererId}.`} />
       )}
-      {resource && activity && props.region === "main" && (
+      {resource && activity && showsActivity && props.region === "main" && (
         <WorkbenchResourceActivity
           key={resourceKey(resource)}
           workbench={workbench}

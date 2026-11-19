@@ -1,5 +1,6 @@
 import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
 import type { PreparedExtensionRevision } from "pstdio-extensions";
+import type { RegistryRelease } from "pstdio-extensions/distribution";
 import type { GitExtensionOrigin } from "./extension-catalog";
 import type { ExtensionInstallTransaction } from "./extension-install-transaction";
 import type { ExtensionMetadata } from "./extension-runtime";
@@ -14,6 +15,10 @@ export type InstallExtensionSourceInput = {
   force?: boolean;
   homedir?: () => string;
   installName?: string;
+  /** Existing instance selected for a release upgrade. */
+  installedSourcePath?: string;
+  /** An Upgrade action may refresh the same version or replace it with a newer one. */
+  upgradeFromVersion?: string | null;
   /** Worker-inspected owner whose destination family was reserved before preparation. */
   expectedIdentity?: string;
   /** The batch can share source reads while retaining exclusive destination ownership. */
@@ -41,7 +46,7 @@ export type InstallExtensionSourceInput = {
   signal?: AbortSignal;
   preparedSource?: { path: string; ref: string };
   originSource?: { kind: "git" | "release"; origin: GitExtensionOrigin };
-  registrySource?: { url: string; id: string };
+  registrySource?: { url: string; id: string; release?: RegistryRelease };
   source: string;
 };
 

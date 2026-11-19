@@ -21,7 +21,10 @@ export const createSyncOwners = (
 ) => {
   const allow = createRateLimit(config.limits.requestsPerSecond, config.limits.requestBurst);
   const sync = createRelaySync(config);
-  const live = createLiveHub(config.limits, allow);
+  const live = createLiveHub(config.limits, allow, (key, dispatch) =>
+    sync.projectAccess.write(key, async () => dispatch()),
+  );
   sync.watch(live.changed);
+  sync.watchRetirement(live.retire, live.closeAll);
   return { sync, live, limits: config.limits, allow };
 };

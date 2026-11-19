@@ -51,6 +51,8 @@ const canonicalResource = (resource: ResourceRef | undefined, resources: Workben
     ...(normalized.label ? { label: normalized.label } : {}),
     ...(normalized.shorthand ? { shorthand: normalized.shorthand } : {}),
     ...(normalized.icon ? { icon: normalized.icon } : {}),
+    ...(normalized.iconColor ? { iconColor: normalized.iconColor } : {}),
+    ...(normalized.iconLabel ? { iconLabel: normalized.iconLabel } : {}),
     ...(normalized.extensionId ? { extensionId: normalized.extensionId } : {}),
     ...(normalized.device ? { device: Object.freeze({ ...normalized.device }) } : {}),
     ...(normalized.metadata ? { metadata: cloneMetadata(normalized.metadata) } : {}),

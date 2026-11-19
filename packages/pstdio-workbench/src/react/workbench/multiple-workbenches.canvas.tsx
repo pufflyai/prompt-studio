@@ -104,7 +104,7 @@ const createExample = (
   const page = { kind: "page", extensionId: "multiple", id: "editor" } as const;
   const workbench = createWorkbench({
     active,
-    startPage: page,
+    defaultPage: page,
     ...createLocalStorageWorkbenchPersistence({ namespace: "multiple-workbenches", scope: name, storage }),
   });
   workbench.fileIconThemes.register(

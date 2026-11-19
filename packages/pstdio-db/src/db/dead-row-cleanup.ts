@@ -1,4 +1,6 @@
 import type { PGlite } from "@electric-sql/pglite";
+import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
+import { analyzeMissingRecordStatistics, analyzeRecordProjection } from "./record-projection-statistics";
 
 const FIRST_PASS_DELAY_MS = 60_000;
 const CHECK_INTERVAL_MS = 5 * 60_000;
@@ -8,7 +10,7 @@ const CHECK_INTERVAL_MS = 5 * 60_000;
  * This applies the autovacuum default rule: a table, or its TOAST table, needs a vacuum once its
  * dead rows exceed 50 plus 20% of its estimated rows. The estimate is `reltuples`, which survives a
  * restart; PGlite starts every session with empty activity counters. A plain VACUUM makes the space
- * reusable without a rewrite; startup maintenance keeps VACUUM FULL for after migrations.
+ * reusable without a rewrite. The running app leaves a full rewrite to offline maintenance.
  *
  * Those counters also forget dead rows left by earlier sessions, so `all` vacuums every table once.
  * A plain VACUUM skips pages the visibility map marks clean, so tables without leftovers cost little.
@@ -40,7 +42,13 @@ export const vacuumDeadRows = async (
     if (options.stopped?.()) break;
     try {
       // PGlite queues each statement behind any open transaction, so a vacuum never runs inside one.
-      await db.exec(`VACUUM ${name}`);
+      if (options.all && name === "storage_current_records") {
+        await db.exec(`VACUUM ${name}`);
+        if (!options.stopped?.())
+          await db.transaction((tx) => analyzeRecordProjection((statement) => tx.exec(statement)));
+      } else {
+        await db.exec(`VACUUM ${options.all ? "(ANALYZE) " : ""}${name}`);
+      }
       vacuumed.push(name);
     } catch (error) {
       options.onError?.(error, name);
@@ -49,11 +57,19 @@ export const vacuumDeadRows = async (
   return vacuumed;
 };
 
-export const startDeadRowCleanup = (db: PGlite, onError: (error: unknown, table?: string) => void) => {
+export const startDeadRowCleanup = (
+  db: PGlite,
+  cleanupRetiredRows: (stopped: () => boolean) => Promise<void>,
+  onError: (error: unknown, table?: string) => void,
+) => {
   let stopped = false;
   let running: Promise<unknown> | undefined;
   const pass = (all: boolean) => {
-    running ??= vacuumDeadRows(db, { all, stopped: () => stopped, onError })
+    running ??= withRuntimeOperationOrigin({ kind: "background", name: "database.dead-row-cleanup" }, async () => {
+      await cleanupRetiredRows(() => stopped);
+      if (!stopped) await vacuumDeadRows(db, { all, stopped: () => stopped, onError });
+      if (!all && !stopped) await analyzeMissingRecordStatistics(db);
+    })
       .catch((error) => onError(error))
       .finally(() => {
         running = undefined;

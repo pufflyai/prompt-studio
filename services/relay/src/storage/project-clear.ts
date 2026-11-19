@@ -67,9 +67,10 @@ export const clearRelayProject = async (
       for (const table of ["relay_sync_updates", "relay_sync_states"] as const)
         await tx.execute(sql`
           WITH gone AS (
-            DELETE FROM ${sql.identifier(table)} WHERE "projectKey" = ${key} RETURNING "objectKey"
+            DELETE FROM ${sql.identifier(table)} WHERE "projectKey" = ${key} RETURNING "objectKey", "projectKey"
           )
-          INSERT INTO relay_sync_object_deletions SELECT "objectKey" FROM gone ON CONFLICT DO NOTHING`);
+          INSERT INTO relay_sync_object_deletions ("objectKey", "projectKey")
+            SELECT "objectKey", "projectKey" FROM gone ON CONFLICT DO NOTHING`);
       await tx.execute(sql`
         UPDATE relay_sync_blobs SET status = 'deleting' WHERE "projectKey" = ${key} AND status <> 'deleting'`);
       await tx.execute(sql`DELETE FROM relay_sync_documents WHERE "projectKey" = ${key}`);

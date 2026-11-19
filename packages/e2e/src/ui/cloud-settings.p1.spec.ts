@@ -15,11 +15,11 @@ test("Cloud status toggles and opens its app-wide settings with keyboard recover
   const detailsFrame = page.locator('iframe[title="Cloud details"]');
   const details = page.frameLocator('iframe[title="Cloud details"]');
   await expect(status.getByTestId("cloud-status-item")).toHaveText("Sign in");
-  await status.getByTestId("cloud-status-item").click();
+  await page.locator("footer").getByRole("button", { name: "Prompt Studio Cloud", exact: true }).click();
   await expect(details.getByRole("button", { name: "Cloud settings" })).toBeVisible();
-  await status.getByTestId("cloud-status-item").click();
+  await page.locator("footer").getByRole("button", { name: "Prompt Studio Cloud", exact: true }).click();
   await expect(detailsFrame).toBeHidden();
-  await status.getByTestId("cloud-status-item").click();
+  await page.locator("footer").getByRole("button", { name: "Prompt Studio Cloud", exact: true }).click();
   await details.getByRole("button", { name: "Cloud settings" }).click();
   const settings = page.frameLocator('iframe[title="Cloud"]');
   await expect(settings.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();

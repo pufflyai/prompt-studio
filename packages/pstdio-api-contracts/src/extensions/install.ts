@@ -35,6 +35,10 @@ export const projectExtensionInstanceSchema = z.object({
   icon: z.string().optional(),
   sourcePath: z.string(),
   scope: z.enum(["repo", "global"]),
+  /** Mine identifies a locally maintained source, independently of installation scope or authorship. */
+  ownership: z.enum(["mine", "unknown"]).optional(),
+  /** Public confirms that a package exists in the bundled public catalog, not that local edits were published. */
+  visibility: z.enum(["public", "unknown"]).optional(),
   status: z.enum(["pending", "loaded", "error", "missing", "disabled"]),
   lastLoadedAt: z.string().nullable().optional(),
   lastError: jsonObjectSchema.nullable().optional(),
@@ -60,6 +64,7 @@ export const marketplaceExtensionSchema = z.object({
     ref: z.string(),
   }),
   publisher: z.string().optional(),
+  visibility: z.enum(["public", "unknown"]).optional(),
   /** Stable package source. origin describes the repository source used by development builds. */
   registry: z.object({ url: z.string(), extensionId: z.string() }).optional(),
 });
@@ -67,6 +72,8 @@ export const marketplaceExtensionSchema = z.object({
 export const listProjectExtensionsResponseSchema = z.object({
   extensions: z.array(projectExtensionInstanceSchema),
   marketplace: z.array(marketplaceExtensionSchema),
+  /** Number of independent upgrades the API host can run concurrently. */
+  upgradeConcurrency: z.number().int().min(1).max(4).optional(),
 });
 
 export const setProjectExtensionEnabledRequestSchema = z.object({

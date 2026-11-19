@@ -1,5 +1,5 @@
-import { Box, Button, Heading, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage, SimpleCard, SimpleCardBody, WindowTitleBar } from "@pstdio/ui";
+import { Box, Button, Heading, HStack, Icon, Spinner, Stack, Text } from "@chakra-ui/react";
+import { EmptyState, resolveIconComponent, ScrollArea, WindowTitleBar } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import { DesktopStartingState } from "./desktop-starting-state";
@@ -23,6 +23,8 @@ const desktopActions: DesktopLifecycleActions = {
   quitApp: () => window.promptStudioDesktop.quitApp(),
   retryRuntime: () => window.promptStudioDesktop.retryRuntime(),
 };
+
+const RecoveryIcon = resolveIconComponent("circle-alert");
 
 const useDesktopState = (initialState: DesktopState) => {
   const [state, setState] = useState(initialState);
@@ -49,36 +51,31 @@ const RecoveryState = (props: {
   const { actions, state } = props;
   const availableActions = new Set(state.error.actions);
   return (
-    <SimpleCard width="full" maxHeight="full" display="flex" minHeight="0">
-      <SimpleCardBody display="flex" minHeight="0" width="full">
-        <Stack gap="lg" role="alert" minHeight="0" minWidth="0" width="full">
-          <Heading textStyle="heading/M" flexShrink="0">
-            Prompt Studio needs attention
-          </Heading>
-          <AlertMessage status="error" title={state.error.code}>
-            {state.error.message}
-          </AlertMessage>
-          <HStack gap="xs" flexWrap="wrap" flexShrink="0">
-            {availableActions.has("retry") && <Button onClick={actions.retryRuntime}>Retry</Button>}
-            {availableActions.has("open_logs") && (
-              <Button variant="outline" onClick={actions.openLogs}>
-                Open logs
-              </Button>
-            )}
-            {availableActions.has("copy_diagnostics") && (
-              <Button variant="outline" onClick={actions.copyDiagnostics}>
-                Copy diagnostics
-              </Button>
-            )}
-            {availableActions.has("quit") && (
-              <Button variant="ghost" onClick={actions.quitApp}>
-                Quit
-              </Button>
-            )}
-          </HStack>
-        </Stack>
-      </SimpleCardBody>
-    </SimpleCard>
+    <ScrollArea width="full" maxHeight="full" viewportProps={{ maxHeight: "full" }}>
+      <EmptyState
+        role="alert"
+        title="Prompt Studio needs attention"
+        description={state.error.message}
+        icon={<Icon as={RecoveryIcon} color="fg.error" aria-hidden="true" />}
+      >
+        <HStack gap="xs" flexWrap="wrap" justify="center">
+          {availableActions.has("retry") && <Button onClick={actions.retryRuntime}>Retry</Button>}
+          {availableActions.has("open_logs") && (
+            <Button variant="outline" onClick={actions.openLogs}>
+              Open logs
+            </Button>
+          )}
+          <Button variant="outline" onClick={actions.copyDiagnostics}>
+            Copy diagnostics
+          </Button>
+          {availableActions.has("quit") && (
+            <Button variant="ghost" onClick={actions.quitApp}>
+              Quit
+            </Button>
+          )}
+        </HStack>
+      </EmptyState>
+    </ScrollArea>
   );
 };
 
@@ -108,7 +105,9 @@ export const DesktopLifecycleView = (props: DesktopLifecycleViewProps) => {
       <WindowTitleBar platform={platform} />
       <Box flex="1" minHeight="0" display="flex" justifyContent="center" padding="xl">
         <Box width="full" maxWidth="2xl" height="full" display="flex" alignItems="center" justifyContent="center">
-          {state.kind === "starting" && <DesktopStartingState phase={state.phase} />}
+          {state.kind === "starting" && (
+            <DesktopStartingState phase={state.phase} copyDiagnostics={actions.copyDiagnostics} />
+          )}
           {state.kind === "recovery" && <RecoveryState actions={actions} state={state} />}
           {state.kind === "closing" && <ClosingState />}
         </Box>

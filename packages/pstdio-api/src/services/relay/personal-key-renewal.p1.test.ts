@@ -63,6 +63,11 @@ test("planned access renewal refreshes personal keys while retaining the small i
     await until(async () => ready === 2 && !(await sync.status()).busy);
     expect(keyReads).toBe(2);
     expect([...peer.documents.keys()].sort()).toEqual(documentIds);
+    // Ready and local history completion precede the peer's asynchronous resubscribe.
+    await until(() => {
+      const subscriptions = peer.subscriptions();
+      return subscriptions.length === 1 && subscriptions[0]!.topics.length === 2;
+    });
     expect(peer.subscriptions().map((entry) => entry.topics.length)).toEqual([2]);
     generation = 2;
     await until(async () => ready === 3 && !(await sync.status()).busy);
@@ -74,6 +79,10 @@ test("planned access renewal refreshes personal keys while retaining the small i
     await until(async () => !(await sync.status()).busy);
     expect([...peer.documents.keys()]).toHaveLength(3);
     expect(documentIds.every((id) => peer.documents.has(id))).toBe(true);
+    await until(() => {
+      const subscriptions = peer.subscriptions();
+      return subscriptions.length === 1 && subscriptions[0]!.topics.length === 3;
+    });
     expect(peer.subscriptions().map((entry) => entry.topics.length)).toEqual([3]);
   } finally {
     stop();

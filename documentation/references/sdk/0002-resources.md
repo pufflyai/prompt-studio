@@ -200,4 +200,22 @@ remote workspace memberships. Session title `search` is a literal,
 case-insensitive substring applied before the limit. Each query defaults to 50
 rows and clamps its limit to 1–200. Resource-link pages default to 100 and cap at 100.
 
-*Updated at: 2026-11-14*
+
+## Changed since last seen
+
+A resource kind can opt into a workbench dot by declaring `changes: { heads, read, refreshEvents }`. Supply command references from the owning extension and the events that can advance its position. Its normal `resolveMany` must resolve only resources the current reader may see.
+
+| Contract | What the extension supplies |
+| --- | --- |
+| `heads` | Accept `params.resources`, a batch of up to 50 references. Return an array of `{ resource, stamp }` for readable resources. Use stored positions so the query can skip opening each document. |
+| `read` | Read the content for `ctx.resource`. Return `{ content, stamp }` where the stamp describes precisely that content. |
+| `stamp` | A stable `lineage` and an unsigned decimal `revision` (up to 40 digits). Advance it at meaningful commits. Change lineage when a resource is recreated or the meaning of a revision changes. |
+| `refreshEvents` | Emit an event with `resourceKeys` or `resourceIds` after a qualifying commit. The host rechecks mounted resources and reconciles on reconnect. |
+
+For example, a publishing extension can use its publication sequence. Editing a draft keeps the same position until the next edition goes live. Sessions uses a completed assistant reply or a request for human input. Renames, queue updates and streamed fragments keep the current position.
+
+To integrate a content viewer, call `await ctx.resources.observeChange?.(resource, stamp)` from the owner command after the authorized read. Return the resulting receipt with the content. A chat renderer returns it in `observedChange` together with `observedChangeMessageIds`, naming the source messages that contain its latest meaningful content. The host maps combined tool rows back to these source IDs. For a question, also supply `observedChangeQuestionId` with the exact tool call ID (or `approval:<id>` for a native approval). The host acknowledges a pending question only when its exact prompt is displayed; inline or answered questions use their visible transcript row. Virtual overscan and scrolled-away rows do not count. Nonempty conversations require a visible content witness, including historical revision-zero conversations; a settled empty conversation can establish its initial baseline without a message ID. A webview declares `resources.changes.observed` and calls `host.call("resources.changes.observed", { receipt })` after rendering the content, passing `null` when it clears the content. The host checks focus and resource identity. The receipt carries the observed revision even if a newer revision is already available.
+
+The first observation sets a quiet baseline. Later acknowledgements advance the reader’s position monotonically. Each account owns its baselines in its personal sync space. Signed-out use has a local baseline. Use `client.resourceChanges.query`, `read` and `acknowledge` for programmatic access. A read or a list query alone leaves the baseline untouched.
+
+*Updated at: 2026-11-18*
