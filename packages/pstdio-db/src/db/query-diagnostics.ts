@@ -1,14 +1,48 @@
 import { createHash } from "node:crypto";
 import type { PGlite } from "@electric-sql/pglite";
+import { query as queryTemplate } from "@electric-sql/pglite/template";
 import { finishRuntimeOperation, runRuntimeOperation, startRuntimeOperation } from "pstdio-diagnostics";
+
+const statementKinds = new Set([
+  "SELECT",
+  "INSERT",
+  "UPDATE",
+  "DELETE",
+  "WITH",
+  "CREATE",
+  "ALTER",
+  "DROP",
+  "TRUNCATE",
+  "BEGIN",
+  "COMMIT",
+  "ROLLBACK",
+  "SAVEPOINT",
+  "RELEASE",
+  "SET",
+  "SHOW",
+  "RESET",
+  "EXPLAIN",
+  "ANALYZE",
+  "VACUUM",
+  "CALL",
+  "DO",
+  "COPY",
+  "GRANT",
+  "REVOKE",
+]);
+
+const queryMeasurements = (statement: string) => {
+  const kind = /^\s*(\w+)/.exec(statement)?.[1]?.toUpperCase() ?? "UNKNOWN";
+  return {
+    statement: statementKinds.has(kind) ? kind : "UNKNOWN",
+    queryHash: createHash("sha256").update(statement).digest("hex"),
+  };
+};
 
 const startQuery = (statement: string) => {
   const operation = startRuntimeOperation("database.query");
   if (!operation) return;
-  operation.measurements = {
-    statement: /^\s*(\w+)/.exec(statement)?.[1]?.toUpperCase().slice(0, 16) ?? "UNKNOWN",
-    queryHash: createHash("sha256").update(statement).digest("hex"),
-  };
+  operation.measurements = queryMeasurements(statement);
   return operation;
 };
 
@@ -55,27 +89,25 @@ export const observePgliteQueries = (database: PGlite) => {
   const transaction = database.transaction;
   database.transaction = function (this: PGlite, callback: Parameters<typeof transaction>[0]) {
     return transaction.call(this, (handle) => {
+      const transactionQuery = handle.query;
       observeSqlQueries(handle);
       // Transaction.sql closes over its original query function, so observing handle.query alone misses it.
       const sql = handle.sql;
       handle.sql = function (this: typeof handle, ...args: Parameters<typeof sql>) {
         const operation = startRuntimeOperation("database.query");
         if (!operation) return sql.apply(this, args);
-        const statement = args[0].join("$parameter$");
-        operation.measurements = {
-          statement: /^\s*(\w+)/.exec(statement)?.[1]?.toUpperCase().slice(0, 16) ?? "UNKNOWN",
-          queryHash: createHash("sha256").update(statement).digest("hex"),
-        };
-        return runRuntimeOperation(operation, () => sql.apply(this, args)).then(
-          (result) => {
+        return runRuntimeOperation(operation, async () => {
+          try {
+            const prepared = queryTemplate(...args);
+            operation.measurements = queryMeasurements(prepared.query);
+            const result = await transactionQuery.call(handle, prepared.query, prepared.params);
             finishRuntimeOperation(operation, { rows: result.rows.length, failed: false });
             return result;
-          },
-          (error: unknown) => {
+          } catch (error) {
             finishRuntimeOperation(operation, { failed: true });
             throw error;
-          },
-        );
+          }
+        });
       } as typeof sql;
       return callback(handle);
     });
