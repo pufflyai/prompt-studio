@@ -37,7 +37,8 @@
     "pstdio-sync-contracts": "workspace:*",
     "pstdio-wt": "workspace:*",
     "yjs": "^13.6.29",
-    "zod": "^4.3.6"
+    "zod": "^4.3.6",
+    "pstdio-diagnostics": "workspace:*"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.4.6",

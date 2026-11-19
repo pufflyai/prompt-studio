@@ -26,6 +26,7 @@ import { createArtifactMountWriteLedger } from "./features/extensions/artifact-m
 import { validateLegacyAnchors } from "./features/extensions/command-environment/resource-link-policy";
 import { provisionWorkspacesUsingSource } from "./features/extensions/extension-skill-cleanup";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
+import { runtimeOperationOrigin } from "./features/performance/operation-origin";
 import type { RuntimeRouteDeps } from "./features/runtime/routes";
 import { deliverIdleFollowUp } from "./features/sessions/idle-turn";
 import { createSessionImportService } from "./features/sessions/imports/service";
@@ -135,6 +136,7 @@ const buildApp = async (
   const { db, close: closeDb } = database;
   const runtimeHost = input.host.kind === "runtime" ? input.host.runtime : undefined;
   const app = new OpenAPIHono<AppBindings>();
+  app.use("*", runtimeOperationOrigin);
 
   const storageRoot = input.config.storage.root;
   ensureStorageRoot(storageRoot);
