@@ -288,6 +288,7 @@ describe("pstdio planner workspace contributions", () => {
   test("opens the Tickets list and ticket detail as separate pages", async () => {
     const tickets = extension.views?.find((view) => view.id === "tickets");
     if (tickets?.body.kind !== "kanban") throw new Error("Tickets view must use a Kanban body");
+    expect(tickets.body).toMatchObject({ supportsFieldsOnly: true });
     expect(tickets.body.defaultFilter).toEqual({
       conjunction: "and",
       rules: [{ attributeId: "archived", condition: "is-any-of", value: ["active"] }],

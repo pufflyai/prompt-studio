@@ -13,24 +13,8 @@ import {
 import { sessionBrowser } from "../refs";
 import { create } from "./navigation";
 import { sessionResource, sessionTarget } from "./resource";
-import { sessionDisplayStatus, sessionIndicator } from "./session-indicator";
 import { pinSession, readPinnedSessions, readSessionPins } from "./session-pins";
 
-const icons: Record<string, string> = {
-  completed: "circle-check",
-  failed: "circle-alert",
-  cancelled: "circle-stop",
-  disconnected: "circle-pause",
-  queued: "clock-alert",
-  awaiting_input: "circle-dot",
-};
-const sessionStatusColor = (status: string) => {
-  if (status === "completed") return "fg.success";
-  if (status === "failed") return "fg.error";
-  if (status === "cancelled" || status === "disconnected") return "fg.warning";
-  if (status === "queued") return "fg.info";
-  return "fg.muted";
-};
 const sessionDayLabel = (date: Date) => {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -77,12 +61,11 @@ const sessionNodes = async (
       });
     }
     const resource = sessionResource(session, ctx.projectId);
-    const status = sessionDisplayStatus(session);
     nodes.push({
       id: session.id,
       label: session.title,
-      icon: icons[status] ?? "circle-dashed",
-      iconColor: sessionStatusColor(status),
+      icon: resource.icon,
+      iconColor: resource.iconColor,
       resource,
       contextMenuActions: [
         {
@@ -201,13 +184,15 @@ export const search = defineCommandPaletteResource({
       if (!cursor) break;
     }
     return {
-      items: sessions.map((session) => ({
-        id: session.id,
-        label: session.title,
-        icon: "message-circle",
-        indicator: sessionIndicator(sessionDisplayStatus(session)),
-        target: sessionTarget(sessionResource(session, ctx.projectId)),
-      })),
+      items: sessions.map((session) => {
+        const resource = sessionResource(session, ctx.projectId);
+        return {
+          id: session.id,
+          label: resource.label,
+          icon: resource.icon,
+          target: sessionTarget(resource),
+        };
+      }),
     };
   },
 });

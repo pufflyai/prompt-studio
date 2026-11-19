@@ -16,9 +16,11 @@ Database startup moves the complete owner and its dependent state transactionall
 
 Allocated files move from roots such as `.pstdio/extension-storage/pstdio.pstdio-notes/` to `.pstdio/extension-storage/pstdio.notes/`. Every available registered writable local workspace participates. A workspace that returns later migrates before its first directed access. Existing generated file links use the authorized workspace path resolver to reach the migrated file.
 
-Equal destination files can be reused. Different bytes or distinct owner histories cause an explicit conflict; both versions remain available. Inspect the diagnostic's owner and scope, reconcile the intended source externally, then reload or restart to retry. Do not delete a namespace merely to suppress its diagnostic. Interrupted copies retain their source until verification completes and can be retried.
+Equal destination files can be reused. Text files with separate document IDs retain their revisions, updates and retry history under the canonical owner. Different bytes at the same file path, shared document histories and independent ordered streams cause an explicit conflict. Both versions remain available. Inspect the diagnostic's owner and scope, reconcile the intended source externally, then reload or restart to retry. Do not delete a namespace merely to suppress its diagnostic. Interrupted copies retain their source until verification completes and can be retried.
 
-On Windows, the host keeps the verified original as `.extension-identity-original` inside the canonical allocation. It is protected evidence and does not appear as another artifact tree. This uses native same-volume rename and journal semantics; automatic deletion is deferred to a separate explicit cleanup action. POSIX hosts flush destination directories before deleting the old tree.
+The host moves the verified original into `.extension-identity-original` inside the canonical allocation. The original stays hidden from artifact discovery. Windows keeps it for recovery. POSIX hosts flush the destination and the rename before attempting cleanup. If cleanup fails, the extension can use the migrated files while any remainder stays in the protected directory.
+
+Previously saved assets stay readable under the historical identity. In-progress uploads can resume from the bytes they already staged.
 
 Encrypted owner catalogs, records, text and logs continue using the same historical transport names, including on a fresh device. No second stream is created. Do not downgrade an upgraded project to an older host.
 

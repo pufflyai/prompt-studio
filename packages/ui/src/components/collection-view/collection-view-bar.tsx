@@ -1,6 +1,8 @@
-import { Box, Button, HStack, Icon, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Icon, Stack } from "@chakra-ui/react";
 import { ListFilter, RotateCcw } from "lucide-react";
 import { type ReactNode, type RefObject, useRef, useState } from "react";
+import { ActionErrorSlot } from "@/components/primitives/action-error-slot";
+import { AlertMessage } from "@/components/primitives/alert";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Tooltip } from "@/components/primitives/tooltip";
 import type { AttributeDescriptor } from "../kanban-renderer/types";
@@ -109,6 +111,7 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
   return (
     <CollectionItemLabelContext.Provider value={props.itemLabel ?? "Item"}>
       <Stack
+        position="relative"
         data-testid="collection-view-bar"
         gap="0"
         flexShrink={0}
@@ -210,9 +213,9 @@ export const CollectionViewBar = <TSettings,>(props: CollectionViewBarProps<TSet
         ) : null}
 
         {error ? (
-          <Text role="alert" color="fg.error" textStyle="label/S" padding="xs">
-            {error}
-          </Text>
+          <ActionErrorSlot edge="below">
+            <AlertMessage compact status="error" title={error} onClose={() => setError(undefined)} />
+          </ActionErrorSlot>
         ) : null}
 
         <ViewBarPopover

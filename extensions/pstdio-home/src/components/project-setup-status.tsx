@@ -1,5 +1,6 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
 import { AlertMessage } from "@pstdio/ui";
+import { useState } from "react";
 
 interface ProjectSetupStatusProps {
   error: string;
@@ -11,10 +12,18 @@ interface ProjectSetupStatusProps {
 // A person who never reads the docs needs the fix where they see the problem.
 export const ProjectSetupStatus = (props: ProjectSetupStatusProps) => {
   const { error, retrying, onRetry } = props;
+  const [dismissed, setDismissed] = useState<string>();
+  if (dismissed === error) return null;
 
   return (
     <AlertMessage
+      size="sm"
       status="error"
+      position="absolute"
+      bottom="xs"
+      insetInline="sm"
+      zIndex="docked"
+      onClose={() => setDismissed(error)}
       variant="subtle"
       role="alert"
       title="Project setup did not finish"

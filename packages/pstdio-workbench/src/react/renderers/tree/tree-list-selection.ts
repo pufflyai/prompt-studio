@@ -54,11 +54,24 @@ const resolveActiveResourceNodeIds = (
 const findSectionNode = (sections: TreeViewSection[], nodeId: string, childrenByNodeId: Record<string, TreeNode[]>) =>
   listSectionNodes(sections, childrenByNodeId).find((node) => node.id === nodeId);
 const pageRefsEqual = (left: PageRef, right: PageRef) => left.id === right.id && left.extensionId === right.extensionId;
+const pageResourceMatches = (
+  target: ResourceRef,
+  active: ResourceRef,
+  referenceKey: (resource: ResourceRef) => string,
+  includeDocuments: boolean,
+) => {
+  const key = referenceKey(target);
+  if (key === referenceKey(active)) return true;
+  if (!includeDocuments || key !== referenceKey({ ...target, metadata: undefined })) return false;
+  // A resource page owns its documents. An explicit document target keeps its exact identity.
+  return key === referenceKey({ ...active, metadata: target.metadata });
+};
 const targetMatchesPage = (
   target: NavigationTarget | undefined,
   activePage: PageRef,
   activeResource?: ResourceRef,
   referenceKey: (resource: ResourceRef) => string = resourceKey,
+  includeDocuments = false,
 ) => {
   // A resource panel owns its selection; its containing page can host other open resources.
   if (!target || targetPanelResource(target)) return false;
@@ -68,7 +81,8 @@ const targetMatchesPage = (
       candidate.kind === "page" &&
       pageRefsEqual(candidate.page, activePage) &&
       (candidate.resource
-        ? activeResource !== undefined && referenceKey(candidate.resource) === referenceKey(activeResource)
+        ? activeResource !== undefined &&
+          pageResourceMatches(candidate.resource, activeResource, referenceKey, includeDocuments)
         : activeResource === undefined),
   );
 };
@@ -80,12 +94,16 @@ const resolveActivePageNodeIds = (
 ) => {
   const nodes = listSectionNodes(sections, childrenByNodeId);
   for (let location = activeLocation; location; location = location.parent) {
-    const matches = activeNodeIds(
-      nodes
-        .filter((node) => targetMatchesPage(node.target, location.page, location.resource, referenceKey))
-        .map((node) => node.id),
-    );
-    if (matches) return matches;
+    for (const includeDocuments of [false, true]) {
+      const matches = activeNodeIds(
+        nodes
+          .filter((node) =>
+            targetMatchesPage(node.target, location.page, location.resource, referenceKey, includeDocuments),
+          )
+          .map((node) => node.id),
+      );
+      if (matches) return matches;
+    }
   }
   return undefined;
 };
@@ -134,11 +152,12 @@ export const resolveTreeSelectionIntent = (input: ResolveTreeListSelectionInput)
   if (key && getWorkbenchSelectionResourceKeys(input.activeResource).includes(key)) return node.id;
   if (
     input.activeLocation &&
-    targetMatchesPage(node.target, input.activeLocation.page, input.activeResource, input.resourceReferenceKey)
+    targetMatchesPage(node.target, input.activeLocation.page, input.activeResource, input.resourceReferenceKey, true)
   )
     return node.id;
   for (let location = input.activeLocation?.parent; location; location = location.parent) {
-    if (targetMatchesPage(node.target, location.page, location.resource, input.resourceReferenceKey)) return node.id;
+    if (targetMatchesPage(node.target, location.page, location.resource, input.resourceReferenceKey, true))
+      return node.id;
   }
   return undefined;
 };

@@ -2,9 +2,13 @@ import { defineConfig } from "@playwright/test";
 import { playwrightQuarantineSelection } from "pstdio-scripts/testing";
 
 const quarantine = process.env.E2E_TEST_LANE === "quarantine";
+const executionPath = [process.env.CI_TEST_EXECUTION_ID, process.env.CI_PLAN_RUN_ID].filter(Boolean).join("/");
+const outputDir = `test-results/${quarantine ? "packaged-quarantine" : "packaged"}${executionPath ? `/${executionPath}` : ""}`;
+const reportName = quarantine ? "packaged-quarantine-readiness" : "packaged-release-readiness";
+const outputFile = executionPath && !quarantine ? `${outputDir}/readiness.json` : `test-results/${reportName}.json`;
 export default defineConfig({
   maxFailures: process.env.CI_PRIORITY === "P1" && process.env.CI_PROFILE !== "production" ? 1 : 0,
-  outputDir: quarantine ? "test-results/packaged-quarantine" : "test-results/packaged",
+  outputDir,
   testDir: "src/e2e",
   testMatch:
     process.env.TEST_PRIORITIES?.split(",").map((priority) => `packaged-*.${priority.toLowerCase()}.spec.ts`) ??
@@ -21,9 +25,7 @@ export default defineConfig({
     [
       "json",
       {
-        outputFile: quarantine
-          ? "test-results/packaged-quarantine-readiness.json"
-          : "test-results/packaged-release-readiness.json",
+        outputFile,
       },
     ],
   ],

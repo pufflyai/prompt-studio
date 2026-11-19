@@ -23,9 +23,11 @@ const metadata = Object.fromEntries(
   Object.entries(allMetadata).map(([key, records]) => [
     key,
     Array.isArray(records)
-      ? records.filter((record: { extensionId?: string; id?: string }) =>
-          key === "extensions" ? record.id === sessionBrowserId : record.extensionId === sessionBrowserId,
-        )
+      ? records.filter((record: { extensionId?: string; id?: string; view?: { extensionId?: string } }) => {
+          if (key === "navigationTrees" && record.extensionId === "pstdio.workspaces")
+            return record.view?.extensionId === sessionBrowserId;
+          return key === "extensions" ? record.id === sessionBrowserId : record.extensionId === sessionBrowserId;
+        })
       : records,
   ]),
 ) as typeof allMetadata;

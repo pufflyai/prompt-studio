@@ -52,7 +52,7 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
     }
     return work;
   };
-  const sourcesByPath = new Map<string, { loadKey: string; loading: Promise<CachedSource | null> }>();
+  const sourcesByPath = new Map<string, { loadKey: string | null; loading: Promise<CachedSource | null> }>();
   // Sources an invalidation reported as possibly changed. Their load key is compared
   // on the next read, so only a changed source is imported again.
   const uncheckedPaths = new Set<string>();
@@ -75,7 +75,10 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
     const loading = (async () => {
       const accepted = await readAcceptedRevision(installedSource.source_path);
       const inspect = input.loadSources ? hashExtensionSourceAsync : inspectExtensionLoadKey;
-      const loadKey = accepted ? `${accepted.loadKey}:${accepted.id}` : await inspect(installedSource.source_path);
+      // The default loader returns the input identity it computes during preparation.
+      // Only rechecks and loaders without a prepared revision need a separate scan.
+      let loadKey = accepted ? `${accepted.loadKey}:${accepted.id}` : null;
+      if (!accepted && (cached || input.loadSources)) loadKey = await inspect(installedSource.source_path);
       if (cached?.loadKey === loadKey) return cached.loading;
       const prepared = accepted
         ? inspectCandidate(installedSource, accepted).then((cached) => ({
@@ -140,26 +143,22 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
     },
 
     collect: async (enabledSources: readonly EnabledExtensionSource[]) => {
-      const cachedSources: CachedSource[] = [];
-
-      // Accepted artifacts remain usable if an offline edit removes the manifest. A source
-      // disappears from this catalog when its installed instance is disabled or uninstalled.
-      for (const { installedSource } of enabledSources) {
-        if (installedSource.last_error_json?.code === "extension_identity_conflict") continue;
-        if (
-          !existsSync(join(installedSource.source_path, "package.json")) &&
-          !(await readAcceptedRevision(installedSource.source_path))
-        ) {
-          const retained = lastHealthyByPath.get(canonicalSourcePath(installedSource.source_path));
-          if (retained) cachedSources.push(retained);
-          continue;
-        }
-
-        const cached = await load(installedSource);
-        if (cached) cachedSources.push(cached);
-      }
-
-      return cachedSources;
+      // The preparation pool owns admission. Queue independent source reads together
+      // and preserve the declaration order when assembling the project snapshot.
+      const records = await Promise.all(
+        enabledSources.map(async ({ installedSource }) => {
+          if (installedSource.last_error_json?.code === "extension_identity_conflict") return null;
+          if (
+            !existsSync(join(installedSource.source_path, "package.json")) &&
+            !(await readAcceptedRevision(installedSource.source_path))
+          ) {
+            // A transient rename can hide the source while an upgrade is being promoted.
+            return lastHealthyByPath.get(canonicalSourcePath(installedSource.source_path)) ?? null;
+          }
+          return load(installedSource);
+        }),
+      );
+      return records.filter((record) => record !== null);
     },
   };
 };

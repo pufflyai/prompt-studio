@@ -25,6 +25,8 @@ Use this map to choose the first component to inspect in the live Canvas catalog
 - `onPan` receives content movement in screen pixels; native-scroll callers negate it. The forwarded ref points to the scroll viewport. Floating controls and the dot pattern stay fixed while content scrolls.
 - Mark interactive content or separate drag targets with `data-canvas-control`. This preserves native input while Space-drag and middle-drag still pan over those regions. Keep portals in their native roots.
 - Start from `Design system/Components/Layout/Canvas` canvas for both native scrolling with sticky headers and transformed live previews. Ordinary lists and documents still use `ScrollArea`.
+
+For isolated native documents outside the React tree, `@pstdio/ui/scrollbars` exports `nativeScrollbarCss`, `nativeScrollbarThemeTokens` and `nativeScrollbarDefaults`. Capture the listed `--chakra-<token>` values from the owning surface and apply them under the corresponding CSS variable names inside the document, then inline the stylesheet. This keeps native document and nested scrollbars aligned with the ScrollArea theme without wrapping the author's content.
 - Use `DependencyTimeline` from `@pstdio/ui/dependency-timeline` for dependency cards arranged in milestone sections and collapsible tracks. It uses `Canvas` and owns card measurement, dependency arrows, sticky headers, and windowed rendering. Supply `TimelineSection`, `TimelineTrack`, and `TimelineItem` data with your own card content, headers, editors, and action callbacks. Keep domain data and saved presentation in the caller. See `Design system/Components/Layout/Dependency timeline`.
 
 - Use `KeyframeTimeline` from `@pstdio/ui/keyframe-timeline` for animation/video property tracks, keyframe editing, frame snapping, time rulers and playhead scrubbing. Callers own data, playback and persistence. Omit `onTracksChange` for review-only tracks; use `markers` for named moments. See `Design system/Components/Media/Keyframe timeline`.
@@ -39,7 +41,7 @@ Use this map to choose the first component to inspect in the live Canvas catalog
 
 ## Feedback and overlays
 
-- `AlertMessage`, `EmptyState`, `SessionIndicator`, and `Toaster` cover status and feedback.
+- `AlertMessage` provides dismissible errors. Use `ActionErrorSlot` within the affected control or view to keep the layout stable. Use `EmptyState` and `SessionIndicator` to communicate application state.
 - `DeleteConfirmationModal`, `Palette`, and `RepoPickerDialog` cover overlay interactions.
 - `PopoverHeader` gives titled popovers a shared icon, title, and optional actions. Pass `Popover.Title` as its title inside a Chakra popover. Keep dismissal on Escape and outside clicks; do not add a close icon.
 

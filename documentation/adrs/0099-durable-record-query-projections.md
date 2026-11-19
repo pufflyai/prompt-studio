@@ -67,6 +67,20 @@ looks like half the owner, and Postgres reads every row instead of the matching
 index entries. An `in` list compiles to one array comparison per row, not one
 comparison per value, so a full scan stays cheap when it is the right plan.
 
+Equality-prefixed indexes also install an ordering-only companion for pages that
+leave equality fields unconstrained. Physical layout identities are versioned;
+registration atomically replaces older layouts even when the public definition
+is unchanged. Removal drops both access paths and their statistics.
+
+For a positive multi-value `in` on the leading equality key, SQL selects a page
+window per distinct value and merges those ordered prefixes. Each branch retains
+the complete predicate and cursor; the outer query applies the final ordering,
+offset and limit before selecting fields. This avoids both an ordered scan of
+unrelated records and materializing every matching record before sorting. The
+candidate count is bounded by distinct values times the page window. Additional
+unconstrained equality keys can still require sorting within a branch. Unfiltered
+and single-value pages retain the direct ordered query.
+
 A cursor binds the owner, definition, predicate, selected fields and projection
 revision. It carries the last sort values and record ID. A revision change rejects
 the cursor; callers restart instead of combining inconsistent pages. Nulls sort

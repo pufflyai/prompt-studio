@@ -49,6 +49,8 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "editing.text",
   "harnesses.read",
   "resources.actions",
+  "resources.changes.observed",
+  "resources.actions.register",
   "navigation.open",
   "page.params.update",
   "placement.close",
@@ -64,6 +66,7 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "extension.settings.delete",
   "terminal.session",
   "files.upload",
+  "files.download",
   "files.list",
   "files.delete",
   "account.read",
@@ -162,6 +165,9 @@ export interface WebviewFilesListParams {
   scope?: WebviewFileScope;
 }
 
+/** Download bytes already available to the extension onto the user's device. */
+export type WebviewFilesDownloadParams = Pick<WebviewFilesUploadParams, "name" | "data" | "mimeType">;
+
 export interface WebviewFilesDeleteParams {
   id: string;
 }
@@ -212,6 +218,16 @@ export interface WebviewKeyboardShortcutRequest {
   inputFocus?: boolean;
 }
 
+export interface WebviewResourceActionChoice {
+  /** Omit for a radio choice; action rows can navigate a paged list without changing its value. */
+  kind?: "action";
+  closeOnSelect?: boolean;
+  id: string;
+  label: string;
+  selected?: boolean;
+  disabled?: boolean;
+}
+
 export interface WebviewHostCapabilityParams {
   "performance.read": PerformanceReadRequest;
   "performance.control": PerformanceControlRequest;
@@ -219,6 +235,25 @@ export interface WebviewHostCapabilityParams {
   "resources.actions":
     | { operation: "list"; resource: ResourceRef }
     | { operation: "execute"; resource: ResourceRef; key: string };
+  "resources.changes.observed": { receipt: string | null };
+  "resources.actions.register":
+    | {
+        operation: "register";
+        registrationId: string;
+        resource: ResourceRef;
+        label: string;
+        icon?: string;
+        /** One mutually exclusive native menu group, sharing a single live-view lease. */
+        choices?: readonly WebviewResourceActionChoice[];
+      }
+    | {
+        operation: "update-choices";
+        registrationId: string;
+        choices: readonly WebviewResourceActionChoice[];
+        label?: string;
+      }
+    | { operation: "unregister"; registrationId: string }
+    | { operation: "complete"; requestId: string; error?: string };
   "commands.execute": WebviewCommandsExecuteParams;
   "commands.query": WebviewCommandQueryRequest;
   "commands.stream": WebviewCommandsStreamParams;
@@ -245,6 +280,7 @@ export interface WebviewHostCapabilityParams {
   /** @deprecated Use the host terminal surface. */
   "terminal.session": TerminalSessionOperation;
   "files.upload": WebviewFilesUploadParams;
+  "files.download": WebviewFilesDownloadParams;
   /** @deprecated Use extension commands and owned storage. */
   "files.list": WebviewFilesListParams;
   /** @deprecated Use extension commands and owned storage. */
@@ -266,6 +302,8 @@ export interface WebviewHostCapabilityResults {
     selection?: ExtensionHarnessInput;
   };
   "resources.actions": WebviewResourceAction[];
+  "resources.actions.register": void;
+  "resources.changes.observed": void;
   "commands.execute": { outcome: CommandOutcome };
   "commands.query": WebviewCommandQuerySnapshot | undefined;
   "commands.stream": { operation: "start" | "cancel" | "ack"; accepted: true };
@@ -290,6 +328,8 @@ export interface WebviewHostCapabilityResults {
   /** @deprecated Use the host terminal surface. */
   "terminal.session": TerminalSessionResult;
   "files.upload": ExtensionBlobRef;
+  /** The browser accepted the download; completion and cancellation belong to its download UI. */
+  "files.download": void;
   /** @deprecated Use extension commands and owned storage. */
   "files.list": { files: ExtensionBlobRef[] };
   /** @deprecated Use extension commands and owned storage. */

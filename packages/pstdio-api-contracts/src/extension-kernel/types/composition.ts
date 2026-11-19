@@ -27,6 +27,12 @@ export interface ResourceMenuSlotDefinition {
 export interface ResourceKindDefinition extends ContributionDefinition<"resource-kind"> {
   /** Core resource Activity is absent unless the owner explicitly opts in. */
   readonly activity?: import("../../resource-activity").ResourceActivityCapabilities;
+  /** Report ordered positions for meaningful changes and read the associated content. */
+  readonly changes?: {
+    readonly refreshEvents?: readonly import("./renderer-base").RendererEventReference[];
+    readonly heads: CommandRef;
+    readonly read: CommandRef;
+  };
   /** Owner permission check for Activity operations. A false result denies access. */
   readonly authorizeActivity?: CommandRef;
   /** Return { text: string } with the current resource snapshot for an agent handoff. */

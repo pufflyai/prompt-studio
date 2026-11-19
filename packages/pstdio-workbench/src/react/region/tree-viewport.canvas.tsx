@@ -5,7 +5,7 @@ import { WorkbenchStory } from "../../examples/workbench-story";
 
 const createTreeWorkbench = (menu: boolean) => {
   const page = { kind: "page", extensionId: "preview", id: "tree-viewport" } as const;
-  const workbench = createWorkbench({ startPage: page });
+  const workbench = createWorkbench({ defaultPage: page });
   workbench.modes.registerMode({ id: "files", label: "Files", activate: () => undefined });
   workbench.commands.registerCommand(
     { id: "select-file", label: "Select file" },

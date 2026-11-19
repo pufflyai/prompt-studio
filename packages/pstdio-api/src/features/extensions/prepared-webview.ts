@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { retainPreparedArtifacts } from "pstdio-extensions/prepared-cache";
 import { resolvePstdioHome, withFileMutationLock } from "pstdio-paths";
 import {
@@ -13,8 +13,15 @@ import {
   buildExtensionWebviewBatch,
   extensionWebviewBuildOptions,
 } from "./extension-webview-builder";
+import { readBatchedWebviewStyles, recordWebviewEntryStyle } from "./extension-webview-entry-styles";
 import { trackPreparationStage } from "./preparation-stages";
 import { inspectPreparedWebviewInputs } from "./prepared-webview-inputs";
+
+// Preparation layout changes must invalidate completed artifacts as well as build inputs.
+const artifactId = (signature: string) =>
+  createHash("sha256")
+    .update(["entry-styles-v1", signature, Bun.version, JSON.stringify(extensionWebviewBuildOptions)].join("\0"))
+    .digest("hex");
 
 export const prepareWebviewArtifact = async (
   input: {
@@ -30,9 +37,7 @@ export const prepareWebviewArtifact = async (
   // the fresh post-build inspection below still rejects edits before publication.
   const buildInputs = input.buildInputs ?? (await inspectManagedWebviewBuildInputsAsync(input, signal));
   signal.throwIfAborted();
-  const id = createHash("sha256")
-    .update([buildInputs.signature, Bun.version, JSON.stringify(extensionWebviewBuildOptions)].join("\0"))
-    .digest("hex");
+  const id = artifactId(buildInputs.signature);
   const root = join(resolvePstdioHome(), "cache", "prepared-webviews", id);
   const distDir = join(root, "dist");
   const complete = join(root, "complete.json");
@@ -97,13 +102,7 @@ export const prepareWebviewArtifacts = async (inputs: WebviewArtifactInput[], si
   mkdirSync(batch, { recursive: true });
   try {
     const { sources, signatures } = await inspectPreparedWebviewInputs(inputs, join(batch, "sources"), signal);
-    const artifacts = signatures.map((signature) =>
-      artifactPaths(
-        createHash("sha256")
-          .update([signature.signature, Bun.version, JSON.stringify(extensionWebviewBuildOptions)].join("\0"))
-          .digest("hex"),
-      ),
-    );
+    const artifacts = signatures.map((signature) => artifactPaths(artifactId(signature.signature)));
     const missing = artifacts
       .map((artifact, index) => ({ artifact, index }))
       .filter(({ artifact }) => !isCompleteArtifact(artifact));
@@ -123,26 +122,35 @@ export const prepareWebviewArtifacts = async (inputs: WebviewArtifactInput[], si
       );
       return entry;
     });
-    const outcome = await buildExtensionWebviewBatch({ entryPaths: entries, outdir: join(batch, "dist"), signal });
+    const outdir = join(batch, "dist");
+    const metafilePath = join(batch, "build.json");
+    const outcome = await buildExtensionWebviewBatch({ entryPaths: entries, outdir, metafilePath, signal });
     if (!outcome.success) throw new Error(outcome.details);
     signal.throwIfAborted();
     const after = await inspectPreparedWebviewInputs(inputs, join(batch, "sources"), signal);
     signal.throwIfAborted();
     if (after.signatures.some((signature, index) => signature.signature !== signatures[index]!.signature))
       throw new Error("Extension webview changed while preparing its bundle.");
+    const styles = readBatchedWebviewStyles(metafilePath, outdir);
     for (const { artifact, index } of missing) {
       mkdirSync(artifact.root, { recursive: true });
       const stage = join(artifact.root, `staging-${crypto.randomUUID()}`);
-      cpSync(join(batch, "dist"), stage, { recursive: true });
-      copyFileSync(join(stage, `entry-${index}.js`), join(stage, "module.js"));
-      withFileMutationLock(artifact.complete, () => {
-        if (!isCompleteArtifact(artifact)) {
-          rmSync(artifact.distDir, { recursive: true, force: true });
-          renameSync(stage, artifact.distDir);
-          writeFileSync(artifact.complete, JSON.stringify({ id: artifact.id }));
-        }
-      });
-      rmSync(stage, { recursive: true, force: true });
+      try {
+        const entry = `entry-${index}.js`;
+        cpSync(outdir, stage, { recursive: true });
+        copyFileSync(join(stage, entry), join(stage, "module.js"));
+        const stylesheet = styles.get(join(outdir, entry));
+        if (stylesheet) recordWebviewEntryStyle(stage, relative(outdir, stylesheet));
+        withFileMutationLock(artifact.complete, () => {
+          if (!isCompleteArtifact(artifact)) {
+            rmSync(artifact.distDir, { recursive: true, force: true });
+            renameSync(stage, artifact.distDir);
+            writeFileSync(artifact.complete, JSON.stringify({ id: artifact.id }));
+          }
+        });
+      } finally {
+        rmSync(stage, { recursive: true, force: true });
+      }
     }
     retainPreparedArtifacts(
       undefined,

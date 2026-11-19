@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { visibleChatDraftAttachments } from "./chat-pending-submission";
 import { createChatSession } from "./chat-session";
 
 const deferred = () => {
@@ -10,6 +11,35 @@ const deferred = () => {
 };
 const file = { id: "file-A", name: "A.txt" };
 const action = { type: "submit" as const, text: "Queued work", attachments: [file], values: { model: "B" } };
+
+test("a send queued while the chat was idle leaves the transcript when its queue row arrives", async () => {
+  const held = deferred();
+  const session = createChatSession({
+    initial: { streaming: false },
+    query: async () => ({}),
+    action: async (command) => {
+      if (command.type === "queue") return { snapshot: { queuedFollowUps: [] } };
+      return {};
+    },
+  });
+  const queued = { id: "saved", prompt: action.text, attachments: [file] };
+  const sent = session.run(action, () => held.promise);
+  expect(session.getSnapshot().messages[0]?.role).toBe("user");
+  session.accept({ revision: 1, snapshot: { streaming: true, queuedFollowUps: [queued] } });
+  expect(session.getSnapshot().messages).toEqual([]);
+  expect(session.getSnapshot().queuedFollowUps).toEqual([queued]);
+  held.resolve({});
+  await sent;
+  await session.run({ type: "queue", operation: "remove", item: queued, values: {}, attachments: [] });
+  await session.run({ type: "stop" });
+  session.accept({ revision: 2, snapshot: { streaming: false, queuedFollowUps: [] } });
+  await session.run({ ...action, text: "New message", attachments: [] });
+  const next = { id: "next", role: "user" as const, parts: [{ type: "text" as const, text: "New message" }] };
+  session.accept({ revision: 3, snapshot: { messages: [next] } });
+  expect(session.getSnapshot().messages).toMatchObject([next]);
+  expect(session.getSnapshot().queuedFollowUps).toEqual([]);
+  expect(session.getSnapshot().pending).toBeUndefined();
+});
 
 test("held streaming sends retain one pending queue row across owner presentations without changing canonical messages", async () => {
   const held = deferred();
@@ -280,6 +310,7 @@ test("identical failed inputs share recovery until their last acknowledgement wi
     await session.run(action).catch(() => {});
     await session.run(action).catch(() => {});
     expect(session.getSnapshot().draft.recovered).toHaveLength(1);
+    session.dismissSubmission(session.getSnapshot().pending![1]!.message.id);
     const first = { id: "one", prompt: action.text, attachments: action.attachments };
     session.accept({ revision: 1, snapshot: { queuedFollowUps: [first] } });
     expect(session.getSnapshot().pending).toHaveLength(1);
@@ -288,4 +319,34 @@ test("identical failed inputs share recovery until their last acknowledgement wi
     expect(session.getSnapshot().pending).toBeUndefined();
     expect(session.getSnapshot().draft.recovered ?? []).toHaveLength(preexisting ? 1 : 0);
   }
+});
+
+test("dismissing an unsent message preserves both the current draft and the failed input", async () => {
+  const session = createChatSession({
+    initial: { streaming: true },
+    query: async () => ({}),
+    action: async () => {
+      throw new Error("Could not send");
+    },
+  });
+  session.changeDraft({ attachments: [file] });
+  await expect(session.run(action)).rejects.toThrow("Could not send");
+  const unrelated = { id: "file-B", name: "B.txt" };
+  session.changeDraft({ text: "Keep typing", attachments: [file, unrelated] });
+  const { draft, pending } = session.getSnapshot();
+  expect(visibleChatDraftAttachments(draft.attachments, pending)).toEqual([unrelated]);
+  session.dismissSubmission(session.getSnapshot().pending![0]!.message.id);
+  const dismissed = session.getSnapshot();
+  expect(dismissed.pending?.[0]?.failureDismissed).toBe(true);
+  expect(dismissed.draft).toEqual(draft);
+  expect(visibleChatDraftAttachments(dismissed.draft.attachments, dismissed.pending)).toEqual([unrelated]);
+  expect(draft.recovered).toContainEqual({ text: action.text, attachments: action.attachments, values: action.values });
+  session.restoreDraft(0);
+  expect(session.getSnapshot().pending).toBeUndefined();
+  expect(session.getSnapshot().draft).toMatchObject({ text: action.text, attachments: [file] });
+  expect(session.getSnapshot().draft.recovered).toContainEqual({
+    text: "Keep typing",
+    attachments: [unrelated],
+    values: draft.values,
+  });
 });

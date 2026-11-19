@@ -42,6 +42,32 @@ const decision = (fingerprint: string, epoch = "first"): OrderedDecision => ({
   state: "refused",
 });
 
+test("a reserved operation identity queues once and rejected reuse leaves its saved request intact", async () => {
+  const f = await fixture();
+  const input = await operation();
+  const changed = await prepareOrderedOperation(
+    { operationId: input.operationId, edits: [{ recordId: "setting", replace: "changed" }] },
+    new Map(),
+  );
+  await f.run(async (journal) => {
+    await journal.bindIdentity(input.operationId, input.fingerprint);
+    await expect(journal.queue(changed, "changed")).rejects.toThrow("identity reused");
+    expect(await journal.pending()).toEqual([]);
+    const neighbor = await prepareOrderedOperation(
+      { operationId: "neighbor", edits: [{ recordId: "other", replace: true }] },
+      new Map(),
+    );
+    const earlier = await journal.queue(neighbor, "neighbor");
+    const saved = await journal.queue(input, "original");
+    expect(saved.sequence).toBeGreaterThan(earlier.sequence);
+    const retry = await journal.queue(input, "original");
+    expect(retry.sequence).toBe(saved.sequence);
+    await expect(journal.queue(input, "different request")).rejects.toThrow("identity reused");
+    expect(await journal.pending()).toEqual([earlier, saved]);
+    expect(await journal.pendingFor(["audit"])).toEqual([saved]);
+  });
+});
+
 test("a pre-open save survives restart and delivery acknowledgement retains its immutable envelope", async () => {
   const directory = await mkdtemp(join(tmpdir(), "ordered-journal-"));
   cleanup.push(() => rm(directory, { recursive: true, force: true }));

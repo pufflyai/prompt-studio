@@ -62,7 +62,12 @@ export const alertSlotRecipe = defineSlotRecipe({
     status: { info: {}, success: {}, warning: {}, error: {}, neutral: {} },
     variant: { subtle: {}, surface: {}, outline: {}, solid: {} },
     size: {
-      sm: { root: rootDensity },
+      sm: {
+        root: { ...rootDensity, w: "fit-content", maxW: "full", shadow: "sm" },
+        indicator: { boxSize: "4" },
+        title: { textStyle: "label/S/medium" },
+        description: { textStyle: "paragraph/XS/regular" },
+      },
       md: { root: rootDensity },
       lg: { root: rootDensity },
     },

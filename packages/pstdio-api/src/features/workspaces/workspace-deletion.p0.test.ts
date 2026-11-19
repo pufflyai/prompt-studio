@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createWorkspaceMaintenance } from "../../services/workspace-maintenance";
 import { createWorkspacesApi } from "../extensions/command-environment/workspaces";
 import { deleteWorkspaceHandler } from "./endpoints/delete-workspace";
 import { deleteWorkspace } from "./workspace-deletion";
@@ -12,11 +13,100 @@ const deferred = () => {
   return { promise, resolve };
 };
 
+test("reciprocal workspace deletions are rejected while their maintenance hooks are active", async () => {
+  const [left, right] = [makeWorkspace({ id: "left" }), makeWorkspace({ id: "right" })] as const;
+  const maintenance = createWorkspaceMaintenance();
+  const entered = deferred();
+  const release = deferred();
+  const deps = {
+    workspaceService: {
+      maintenance,
+      get: async (id: string) => (id === left.id ? left : right),
+      softDelete: async () => true,
+    },
+    workspaceSessionService: { listByWorkspace: async () => [] },
+  } as never;
+  const results: Promise<PromiseSettledResult<void>[]>[] = [];
+  const held = (
+    [
+      [left, right],
+      [right, left],
+    ] as const
+  ).map(([owner, target]) =>
+    maintenance.run(owner.id, async () => {
+      results.push(
+        Promise.allSettled([
+          deleteWorkspace(deps, target as never, { deleteProviderBackedWorkspace: async () => false }),
+        ]),
+      );
+      if (results.length === 2) entered.resolve();
+      await release.promise;
+    }),
+  );
+  try {
+    await entered.promise;
+    // Keep both gates held while checking admission, then drain either result on failure.
+    const settled = await Promise.race([
+      Promise.all(results),
+      new Promise<undefined>((resolve) => setImmediate(resolve)),
+    ]);
+    expect(settled?.flat().map(({ status }) => status)).toEqual(["rejected", "rejected"]);
+  } finally {
+    release.resolve();
+    await Promise.allSettled(held);
+    await Promise.all(results);
+  }
+});
+
+test("a maintenance hook can delete an idle sibling workspace", async () => {
+  const target = makeWorkspace({ id: "idle" });
+  let deleted = false;
+  const maintenance = createWorkspaceMaintenance();
+  const deps = {
+    workspaceService: { maintenance, get: async () => target, softDelete: async () => (deleted = true) },
+    workspaceSessionService: { listByWorkspace: async () => [] },
+  } as never;
+  await maintenance.run("active", () =>
+    deleteWorkspace(deps, target as never, { deleteProviderBackedWorkspace: async () => false }),
+  );
+  expect(deleted).toBe(true);
+});
+
+test("a queued deletion honors a capability revoked during maintenance", async () => {
+  const workspace = makeWorkspace();
+  let current = workspace;
+  const entered = deferred();
+  const release = deferred();
+  const maintenance = createWorkspaceMaintenance();
+  const writer = maintenance.run(workspace.id, async () => {
+    entered.resolve();
+    await release.promise;
+    current = { ...workspace, provider_capabilities_json: { ...workspace.provider_capabilities_json, delete: false } };
+  });
+  let providerCalls = 0;
+  const deps = {
+    workspaceService: { maintenance, get: async () => current, softDelete: async () => true },
+    workspaceSessionService: { listByWorkspace: async () => [] },
+  } as never;
+  await entered.promise;
+  const deletion = deleteWorkspace(deps, workspace as never, {
+    deleteProviderBackedWorkspace: async () => {
+      providerCalls++;
+      return false;
+    },
+  });
+  release.resolve();
+  await writer;
+  await expect(deletion).rejects.toThrow("Workspace provider does not allow deletion.");
+  expect(providerCalls).toBe(0);
+});
+
 test("forgetting an orphan stops active sessions and archives its history without calling a provider", async () => {
   const workspace = makeWorkspace({ provider_state: "provider_missing", provider_ref_json: null });
   const events: string[] = [];
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
       get: async () => workspace,
       softDelete: async () => {
         events.push("delete record");
@@ -50,6 +140,7 @@ test("forgetting rechecks the latest workspace and preserves a recovered provide
   let deleted = false;
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
       get: async () => current,
       softDelete: async () => {
         deleted = true;
@@ -74,6 +165,7 @@ test.each(["cancel", "archive"])("forget retries unfinished session cleanup afte
   let failed = false;
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
       get: async () => workspace,
       softDelete: async () => {
         deleted++;
@@ -120,6 +212,7 @@ test.each([
   let providerCalls = 0;
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
       get: async () => workspace,
       softDelete: async () => true,
     },
@@ -169,6 +262,7 @@ test("HTTP and extension deletions across projects share two slots through sessi
   let peak = 0;
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
       get: async (id: string) => workspaces.find((workspace) => workspace.id === id),
       beginProviderOperation: async (id: string, operation: { operationId: string; kind: string }) => ({
         ...workspaces.find((workspace) => workspace.id === id),
@@ -233,6 +327,8 @@ test("duplicate deletions share cleanup and publish the removed event once", asy
   let events = 0;
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
+      get: async () => workspace,
       softDelete: async () => {
         finalizations++;
       },
@@ -266,17 +362,19 @@ test("duplicate deletions share cleanup and publish the removed event once", asy
 
 test("failed deletions release both slots, preserve rows, and allow retry", async () => {
   const deleted: string[] = [];
+  const failed = makeWorkspace({ id: "failed" });
+  const second = makeWorkspace({ id: "second" });
+  const success = makeWorkspace({ id: "success" });
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
+      get: async (id: string) => [failed, second, success].find((workspace) => workspace.id === id),
       softDelete: async (id: string) => {
         deleted.push(id);
       },
     },
     workspaceSessionService: { listByWorkspace: async () => [] },
   } as never;
-  const failed = makeWorkspace({ id: "failed" });
-  const second = makeWorkspace({ id: "second" });
-  const success = makeWorkspace({ id: "success" });
   const fail = {
     deleteProviderBackedWorkspace: async () => {
       throw new Error("Cannot remove");

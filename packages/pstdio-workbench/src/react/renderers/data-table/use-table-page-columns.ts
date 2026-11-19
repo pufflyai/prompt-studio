@@ -3,7 +3,7 @@ import type { DataTableRendererColumn, DataTableRendererQueryResult } from "../.
 import { rendererQueryKey } from "../renderer-query-key";
 import { resolveDataTableRendererColumns } from "./data-table-view-model";
 
-type PageColumn = Pick<DataTableRendererColumn, "id" | "hidden">;
+type PageColumn = Pick<DataTableRendererColumn, "id" | "hidden" | "label">;
 
 /** Accepted column metadata owns field selection; loaded rows stay in the renderer read. */
 export const useTablePageColumns = (scope: string, declared: DataTableRendererColumn[] | undefined) => {
@@ -16,8 +16,15 @@ export const useTablePageColumns = (scope: string, declared: DataTableRendererCo
       !error && loaded !== undefined && rendererQueryKey(loaded) !== rendererQueryKey(requested),
     accept: (result: DataTableRendererQueryResult | undefined, enabled: boolean) => {
       if (!enabled || !result) return;
-      const selection = resolveDataTableRendererColumns(result, declared).map(({ id, hidden }) => ({ id, hidden }));
-      if (rendererQueryKey(selection) !== rendererQueryKey(columns.map(({ id, hidden }) => ({ id, hidden }))))
+      const selection = resolveDataTableRendererColumns(result, declared).map(({ id, hidden, label }) => ({
+        id,
+        hidden,
+        label,
+      }));
+      if (
+        rendererQueryKey(selection) !==
+        rendererQueryKey(columns.map(({ id, hidden, label }) => ({ id, hidden, label })))
+      )
         setAccepted({ scope, columns: selection });
     },
   };

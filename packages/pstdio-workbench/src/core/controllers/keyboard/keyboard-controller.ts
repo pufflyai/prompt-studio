@@ -228,11 +228,19 @@ export const createKeyboardController = (getCore: () => WorkbenchCore) => {
     },
     ...createKeyboardPreferences(getCore, refresh),
     hints,
-    hint(action: import("../../registries/navigation/navigation-registry").NavigationTarget) {
+    hint(
+      action: import("../../registries/navigation/navigation-registry").NavigationTarget,
+      options?: { includeLayers?: boolean },
+    ) {
       const { active, preview } = store.getState();
       if (active) return hints().get(getNavigationTargetKey(action));
       const direct = directShortcutHint(getCore(), action);
-      return direct ?? (preview ? hints().get(getNavigationTargetKey(action)) : undefined);
+      return (
+        direct ??
+        (preview || options?.includeLayers
+          ? hints(options?.includeLayers).get(getNavigationTargetKey(action))
+          : undefined)
+      );
     },
     visibleTargets,
   };

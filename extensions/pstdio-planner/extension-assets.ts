@@ -47,6 +47,12 @@ export const plannerTemplateAssets = [
     path: "templates/prompts/implement-ticket.prompt.md",
   },
   {
+    id: "implement-folder-ticket",
+    title: "Implement ticket in project folder",
+    type: "prompt",
+    path: "templates/prompts/implement-folder-ticket.prompt.md",
+  },
+  {
     id: "cleanup-board",
     title: "Cleanup board",
     type: "prompt",

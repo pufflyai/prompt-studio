@@ -2,6 +2,7 @@ import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { Disposable, FileRendererRefreshEnvelope, WorkbenchModuleContext } from "../../core";
 
 export type WorkbenchExtensionRendererKind =
+  | "actionBar"
   | "chat"
   | "tree"
   | "file"

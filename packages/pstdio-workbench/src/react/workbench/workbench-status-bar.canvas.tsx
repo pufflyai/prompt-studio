@@ -34,7 +34,7 @@ const meta = {
   title: "Product/Workbench/Status bar",
   component: WorkbenchStatusBar,
   description:
-    "The host status-bar registry places registered views on its leading or trailing side and centers each item vertically. Extensions reach it through defineStatusBarItem.",
+    "The status bar aligns with the outer panel frame. Widgets use a single surface with list item corners, 2px vertical margins and 2xs gaps. Hover uses the tab background across the whole widget.",
   fullscreen: true,
 } satisfies CanvasMeta<typeof WorkbenchStatusBar>;
 export default meta;
@@ -68,12 +68,35 @@ for (const title of ["Connection", "Performance"]) {
   });
   reorderWorkbench.statusBar.registerItem({ id: title, viewId: title, slot: "trailing" });
 }
+reorderWorkbench.views.registerView({
+  id: "workspace",
+  title: "Workspace",
+  body: { kind: "react", render: () => <Text textStyle="label/XS">Workspace</Text> },
+});
+reorderWorkbench.statusBar.registerItem({ id: "workspace", viewId: "workspace", slot: "center" });
+reorderWorkbench.views.registerView({
+  id: "iframe-widget",
+  title: "Iframe widget",
+  body: {
+    kind: "react",
+    render: () => (
+      <Box asChild w="32" h="full">
+        <iframe
+          title="Status widget editor"
+          sandbox="allow-scripts"
+          srcDoc='<button onclick="this.textContent = Number(this.textContent) + 1">0</button>'
+        />
+      </Box>
+    ),
+  },
+});
+reorderWorkbench.statusBar.registerItem({ id: "iframe-widget", viewId: "iframe-widget", slot: "leading" });
 export const ReorderableItems: Story = {
   id: "pstdio-workbench-reference-core-api-status-bar--reorderable-items",
   ...SeveralOwnersInOrder,
   args: { workbench: reorderWorkbench },
   description:
-    "Drag a widget directly, like a tab, to reorder it. Focus a widget or its control and use Alt+Left or Alt+Right to reorder with the keyboard. Items keep their leading or trailing slot.",
+    "Drag the widget surface or the padding around an inline iframe. The rounded placeholder has the widget's size and shows exactly where it will land. Other widgets make room at the destination. Right-click or use Alt+Shift+Left/Right to change alignment.",
 };
 const mixedWorkbench = createWorkbench();
 for (const slot of ["leading", "trailing"] as const) {
