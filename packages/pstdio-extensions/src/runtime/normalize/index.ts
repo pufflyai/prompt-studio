@@ -21,6 +21,7 @@ import { registerPages } from "./pages";
 import { validateParamOptions } from "./param-options";
 import { registerProviders } from "./providers";
 import { validateResourcePrefixes } from "./resource-prefixes";
+import { normalizeResourcePresentations } from "./resource-presentations";
 import { registerSchedules } from "./schedules";
 import { registerSettings, validateSettingOptions } from "./settings";
 import { normalizeTemplateParamIdentities } from "./template-param-identities";
@@ -133,6 +134,7 @@ export const normalizeExtensionSources = (
   validateResourcePrefixes(runtime);
   validatePageDefinitions(runtime);
   validatePageNavigationTargets(runtime);
+  normalizeResourcePresentations(runtime);
 
   return runtime;
 };

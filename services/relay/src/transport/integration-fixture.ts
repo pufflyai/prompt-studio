@@ -1,7 +1,14 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  CreateBucketCommand,
+  CreateMultipartUploadCommand,
+  ListMultipartUploadsCommand,
+  ListObjectsV2Command,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { Client } from "pg";
 import {
   createAccountManager,
@@ -14,6 +21,49 @@ import { createRelayAssets } from "../assets/assets";
 import { defaultRelayLimits, type RelayLimits } from "../limits";
 import { migrateRelayStorage } from "../storage/database";
 import { createSyncOwners } from "./owners";
+
+type FixtureDatabase = { role: string; url: string; password: string };
+
+const initializeTransportFixture = async ({
+  admin,
+  managerDatabase,
+  relayDatabase,
+  objects,
+  bucket,
+}: {
+  admin: Client;
+  managerDatabase: FixtureDatabase;
+  relayDatabase: FixtureDatabase;
+  objects: S3Client;
+  bucket: string;
+}) => {
+  const started = performance.now();
+  const phase = (name: string) =>
+    console.log(JSON.stringify({ relayFixtureSetup: name, elapsedMs: Math.round(performance.now() - started) }));
+  phase("start");
+  await admin.connect();
+  phase("admin connected");
+  for (const target of [managerDatabase, relayDatabase]) {
+    const name = target === managerDatabase ? "manager" : "relay";
+    phase(`${name} role starting`);
+    await admin.query(`CREATE ROLE "${target.role}" LOGIN PASSWORD '${target.password}'`);
+    phase(`${name} database starting`);
+    await admin.query(`CREATE DATABASE "${target.role}" OWNER "${target.role}"`);
+    phase(`${name} permissions starting`);
+    await admin.query(`REVOKE ALL ON DATABASE "${target.role}" FROM PUBLIC`);
+    await admin.query(`GRANT CONNECT ON DATABASE "${target.role}" TO "${target.role}"`);
+  }
+  phase("manager migration starting");
+  await migrateAccountManager(
+    managerDatabase.url,
+    new URL("../drizzle/", import.meta.resolve("pstdio-account-manager")).pathname,
+  );
+  phase("relay migration starting");
+  await migrateRelayStorage(relayDatabase.url, new URL("../../drizzle/", import.meta.url).pathname);
+  phase("bucket starting");
+  await objects.send(new CreateBucketCommand({ Bucket: bucket }));
+  phase("complete");
+};
 
 export const createTransportFixture = () => {
   const input = process.env.SYNC_TEST_DATABASE_URL;
@@ -39,24 +89,51 @@ export const createTransportFixture = () => {
     credentials: { accessKeyId: "conformance-access", secretAccessKey: "conformance-secret-only" },
   };
   const objects = new S3Client({ ...s3, maxAttempts: 1 });
+  const initiateMultipart = (key: string) =>
+    objects.send(new CreateMultipartUploadCommand({ Bucket: bucket, Key: key }));
   return {
     relayDatabaseUrl: relayDatabase.url,
     managerDatabaseUrl: managerDatabase.url,
-    async initialize() {
-      await admin.connect();
-      for (const target of [managerDatabase, relayDatabase]) {
-        await admin.query(`CREATE ROLE "${target.role}" LOGIN PASSWORD '${target.password}'`);
-        await admin.query(`CREATE DATABASE "${target.role}" OWNER "${target.role}"`);
-        await admin.query(`REVOKE ALL ON DATABASE "${target.role}" FROM PUBLIC`);
-        await admin.query(`GRANT CONNECT ON DATABASE "${target.role}" TO "${target.role}"`);
-      }
-      await migrateAccountManager(
-        managerDatabase.url,
-        new URL("../drizzle/", import.meta.resolve("pstdio-account-manager")).pathname,
-      );
-      await migrateRelayStorage(relayDatabase.url, new URL("../../drizzle/", import.meta.url).pathname);
-      await objects.send(new CreateBucketCommand({ Bucket: bucket }));
+    putLegacyObject: (key: string, bytes: Uint8Array) =>
+      objects.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: bytes })),
+    initiateMultipart,
+    deferMultipartCreation() {
+      const captured = Promise.withResolvers<string>();
+      const proxy = Bun.serve({
+        hostname: "127.0.0.1",
+        port: 0,
+        async fetch(request) {
+          const url = new URL(request.url);
+          if (request.method === "POST" && url.searchParams.has("uploads")) {
+            captured.resolve(decodeURIComponent(url.pathname.slice(bucket.length + 2)));
+            return new Response("The initiating process lost the request", { status: 502 });
+          }
+          return fetch(`${endpoint}${url.pathname}${url.search}`, {
+            method: request.method,
+            headers: request.headers,
+            body: request.body,
+          });
+        },
+      });
+      return {
+        endpoint: proxy.url.href,
+        async finish() {
+          const key = await captured.promise;
+          await initiateMultipart(key);
+          return key;
+        },
+        close: () => proxy.stop(true),
+      };
     },
+    async objectKeys() {
+      const objectsPage = await objects.send(new ListObjectsV2Command({ Bucket: bucket }));
+      return (objectsPage.Contents ?? []).map(({ Key }) => Key!).sort();
+    },
+    async multipartKeys() {
+      const uploads = await objects.send(new ListMultipartUploadsCommand({ Bucket: bucket }));
+      return (uploads.Uploads ?? []).map(({ Key }) => Key!).sort();
+    },
+    initialize: () => initializeTransportFixture({ admin, managerDatabase, relayDatabase, objects, bucket }),
     async disconnectRelayListeners() {
       await admin.query(
         "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND application_name = 'pstdio-relay-changes'",
@@ -73,8 +150,9 @@ export const createTransportFixture = () => {
         await client.end();
       };
     },
-    async waitForBlockedData(count = 1) {
+    async waitForBlockedData(count = 1, signal?: AbortSignal) {
       while (true) {
+        signal?.throwIfAborted();
         const result = await admin.query(
           "SELECT count(*)::int AS count FROM pg_stat_activity WHERE datname = $1 AND wait_event_type = 'Lock'",
           [relayDatabase.role],
@@ -89,14 +167,17 @@ export const createTransportFixture = () => {
         environmentId?: string;
         accessLifetimeSeconds?: number;
         limits?: RelayLimits;
+        projectDeletionRelayToken?: string;
+        objectEndpoint?: string;
       } = {},
     ) {
       const manager = createAccountManager(managerDatabase.url);
-      const assets = createRelayAssets({ databaseUrl: relayDatabase.url, bucket, s3 });
+      const storage = options.objectEndpoint ? { ...s3, endpoint: options.objectEndpoint } : s3;
+      const assets = createRelayAssets({ databaseUrl: relayDatabase.url, bucket, s3: storage });
       const sync = createSyncOwners({
         databaseUrl: relayDatabase.url,
         bucket,
-        s3,
+        s3: storage,
         assets,
         limits: options.limits ?? defaultRelayLimits,
       });
@@ -105,6 +186,7 @@ export const createTransportFixture = () => {
         origin: "https://manager.fixture.test",
         audience: "https://relay.fixture.test",
         secret: "owned-transport-fixture-secret-0123456789",
+        projectDeletionRelayToken: options.projectDeletionRelayToken,
         googleClientId: "owned-fixture-client",
         googleClientSecret: "owned-fixture-secret",
         sessionLifetimeSeconds: 120,

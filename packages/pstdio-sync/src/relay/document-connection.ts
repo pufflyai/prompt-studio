@@ -21,19 +21,24 @@ interface DocumentRelayConnectionInput {
   onStatusChange?: () => void;
 }
 
+const documentLiveConnection = (input: DocumentRelayConnectionInput) =>
+  input.live ??
+  createLiveConnection({
+    origin: input.origin,
+    projectId: input.projectId,
+    access: input.access,
+    signal: input.signal,
+    onError: input.onError,
+    onStatusChange: input.onStatusChange,
+  });
+
 export const createDocumentRelayConnection = (input: DocumentRelayConnectionInput) => {
-  const live =
-    input.live ??
-    createLiveConnection({
-      origin: input.origin,
-      projectId: input.projectId,
-      access: input.access,
-      signal: input.signal,
-      onError: input.onError,
-      onStatusChange: input.onStatusChange,
-    });
+  const live = documentLiveConnection(input);
   const topics = new Map<string, () => void>();
   const awaiting = new Set<string>();
+  // Initial late admissions have their own catch-up rounds. A renewal must also
+  // own replay of the subscriptions it retained before it can report idle.
+  const renewalReplay = new Set<string>();
   const subscribe: SubscribeDocument = (spaceOwner, documentId) => {
     if (input.signal.aborted) return;
     const key = JSON.stringify([spaceOwner, documentId]);
@@ -153,7 +158,10 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     return restarting;
   };
   const ready = () => {
-    for (const key of topics.keys()) awaiting.add(key);
+    for (const key of topics.keys()) {
+      awaiting.add(key);
+      if (renewing) renewalReplay.add(key);
+    }
     if (restarting) return;
     if (!renewing || attempt.signal.aborted) resetAttempt();
     renewing = false;
@@ -162,7 +170,9 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     wake();
   };
   const admitted = (event: { spaceOwner: string | null; topic: string }) => {
-    if (!awaiting.delete(JSON.stringify([event.spaceOwner, event.topic]))) return;
+    const key = JSON.stringify([event.spaceOwner, event.topic]);
+    if (!awaiting.delete(key)) return;
+    const replayed = renewalReplay.delete(key);
     if (input.synchronizeChanged)
       changed({
         type: "changed",
@@ -171,10 +181,12 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
         lastSequence: 0,
         stateId: null,
       });
-    else if (!awaiting.size) wake();
+    else if (!awaiting.size || (replayed && !renewalReplay.size)) wake();
+    if (replayed) input.onStatusChange?.();
   };
   const stopListening = live.listen((event) => {
     if (event.type === "disconnected") {
+      renewalReplay.clear();
       renewing = event.reason === "renewal";
       if (!renewing) attempt.abort();
       input.onDisconnect?.(event.reason);
@@ -202,6 +214,7 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     for (const release of topics.values()) release();
     topics.clear();
     awaiting.clear();
+    renewalReplay.clear();
     if (!input.live) live.close();
     void Promise.allSettled([running, ...targeted, restarting, input.live ? undefined : live.done]).then(() =>
       done.resolve(),
@@ -230,7 +243,7 @@ export const createDocumentRelayConnection = (input: DocumentRelayConnectionInpu
     done: done.promise.finally(() => input.signal.removeEventListener("abort", close)),
     status: () => ({
       connected: live.status().connected,
-      busy: dirty || !!running || targeted.size > 0 || !!restarting,
+      busy: dirty || !!running || targeted.size > 0 || !!restarting || renewalReplay.size > 0,
       error: errorMessage,
     }),
   };

@@ -36,6 +36,7 @@ export interface ExtensionSessionControlsApi {
   ): Promise<{ kind: "local" | "remote"; available: boolean; device?: { id: string; name: string } }>;
   getConversation(sessionId: string): Promise<{
     session: SessionDetails;
+    approvals?: ApprovalRequest[];
     messages: SessionQueuedMessagesResponse["messages"];
   }>;
   /** Fork a local conversation or completed earlier reply through the native harness without starting execution. */

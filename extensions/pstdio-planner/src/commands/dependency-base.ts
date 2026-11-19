@@ -15,6 +15,7 @@ export const dependencyHeads = async (ctx: Pick<CommandContext, "storage" | "res
   );
 
 export const containsDependencyHeads = async (ctx: CommandContext, readiness: Ready, head: string) => {
+  if (readiness.mode === "folder") throw new Error("Folder attempts have no Git dependency stack.");
   const workspace = await ctx.workspaces.getDefault();
   if (!workspace?.root_path) throw new Error("The project has no Git folder.");
   for (const dependency of await dependencyHeads(ctx, readiness.dependencyAttemptIds)) {
@@ -29,6 +30,7 @@ export const containsDependencyHeads = async (ctx: CommandContext, readiness: Re
 
 // A combined dependency commit belongs to the attempt base. No target branch or worktree is changed.
 export const prepareDependencyBase = async (ctx: CommandContext, readiness: Ready) => {
+  if (readiness.mode === "folder") throw new Error("Folder attempts have no Git dependency base.");
   const base = { workspaceId: readiness.baseWorkspaceId, headSha: readiness.baseHeadSha };
   if (readiness.mode !== "stacked" || readiness.baseWorkspaceId) return base;
   const workspace = await ctx.workspaces.getDefault();

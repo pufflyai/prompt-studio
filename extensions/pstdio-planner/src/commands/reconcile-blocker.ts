@@ -1,5 +1,6 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
+import { attemptId } from "../data/attempt-identity";
 import { appendAttemptEvent, putAttempt } from "../data/attempt-storage";
 import type { AttemptBlocker, AttemptRecord } from "../data/attempt-types";
 import { ticketsCollection } from "../data/collections";
@@ -25,6 +26,7 @@ export const blockAttempt = async (
     updatedAt: blocker.createdAt,
   });
   await appendAttemptEvent(ctx.storage, {
+    attemptId: attemptId(attempt),
     workspaceId: attempt.workspaceId,
     revision: attempt.revisions.at(-1)?.revision ?? null,
     type: "attempt_blocked",
@@ -40,6 +42,7 @@ export const blockAttempt = async (
   if (!ticket) throw new Error(`Unknown ticket "${attempt.ticketId}"`);
   await createReviewRequest(ctx, {
     ticket: attempt.ticketId,
+    attemptId: attemptId(attempt),
     workspaceId: attempt.workspaceId,
     revision: attempt.revisions.at(-1)?.revision,
     sessionId: input.sessionId,

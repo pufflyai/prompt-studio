@@ -1,19 +1,49 @@
+import { startProjectDeletionSchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import { AccountFeatureDenied } from "./account-features";
 import type { createManagerAuthentication } from "./manager-authentication";
+import { ProjectRetired } from "./project-deletion";
 import { DeviceAccessDenied } from "./renewal-errors";
 
 type Authentication = ReturnType<typeof createManagerAuthentication>;
 const json = (value: unknown, status = 200) =>
   Response.json(value, { status, headers: { "cache-control": "no-store" } });
+export const readBearer = (request: Request) =>
+  /^Bearer[ \t]+(\S+)[ \t]*$/i.exec(request.headers.get("authorization") ?? "")?.[1];
+
 const bearer = (request: Request) => {
-  const token = /^Bearer[ \t]+(\S+)[ \t]*$/i.exec(request.headers.get("authorization") ?? "")?.[1];
+  const token = readBearer(request);
   if (!token) throw new DeviceAccessDenied();
   return token;
 };
 const ok = async (action: Promise<unknown>) => {
   await action;
   return json({ ok: true });
+};
+
+const deletionRoute = async (auth: Authentication, request: Request, path: string) => {
+  const { method } = request;
+  if (path === "/v1/project-deletions" && method === "GET")
+    return json(await auth.devices.outstandingProjectDeletions(bearer(request)));
+  const deletion = /^\/v1\/workbenches\/([^/]+)\/deletion$/.exec(path);
+  if (!deletion || (method !== "GET" && method !== "POST")) return null;
+  const token = bearer(request);
+  let id: string;
+  try {
+    id = decodeURIComponent(deletion[1]);
+  } catch {
+    return json({ error: "Invalid request" }, 400);
+  }
+  if (id.includes("\0")) return json({ error: "Invalid request" }, 400);
+  if (method === "GET") {
+    const found = await auth.devices.projectDeletion(token, id);
+    return found ? json(found) : json({ error: "Unknown project deletion" }, 404);
+  }
+  startProjectDeletionSchema.parse(await request.json());
+  if (!auth.projectDeletions.enabled) return json({ error: "Cloud project deletion unavailable" }, 503);
+  const started = await auth.devices.startProjectDeletion(token, id);
+  if (!started) return json({ error: "Unknown workbench" }, 404);
+  return json(started, started.state === "completed" ? 200 : 202);
 };
 
 const workbenchRoute = async (devices: Authentication["devices"], request: Request, path: string) => {
@@ -72,11 +102,19 @@ const route = async (auth: Authentication, origin: string, request: Request, pat
 
 export const deviceHttp = async (auth: Authentication, origin: string, request: Request) => {
   const path = new URL(request.url).pathname;
-  if (!["/v1/device-login", "/v1/account"].includes(path) && !/^\/v1\/(devices|workbenches)(\/|$)/.test(path))
+  if (
+    !["/v1/device-login", "/v1/account", "/v1/project-deletions"].includes(path) &&
+    !/^\/v1\/(devices|workbenches)(\/|$)/.test(path)
+  )
     return null;
   try {
-    return (await route(auth, origin, request, path)) ?? json({ error: "Method not allowed" }, 405);
+    return (
+      (await deletionRoute(auth, request, path)) ??
+      (await route(auth, origin, request, path)) ??
+      json({ error: "Method not allowed" }, 405)
+    );
   } catch (error) {
+    if (error instanceof ProjectRetired) return json({ error: error.message }, 410);
     if (error instanceof AccountFeatureDenied) return json({ error: error.message }, 403);
     if (error instanceof z.ZodError || error instanceof SyntaxError) return json({ error: "Invalid request" }, 400);
     if (error instanceof DeviceAccessDenied) return json({ error: "Authentication unavailable" }, 401);

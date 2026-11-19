@@ -27,12 +27,13 @@ const ResourceMenuItem = (props: { action: ResourceContextAction; onSelect: Reso
         <ResourceSubmenu actions={action.items} onSelect={onSelect} />
       </Menu.Root>
     );
+  const Item = action.group?.selectionMode === "single" ? Menu.RadioItem : Menu.Item;
   return (
-    <Menu.Item
+    <Item
       value={action.key}
       disabled={action.isDisabled}
       closeOnSelect={action.closeOnSelect}
-      onSelect={() => onSelect(action)}
+      onSelect={action.group?.selectionMode === "single" ? undefined : () => onSelect(action)}
       asChild
     >
       <ListRow
@@ -52,16 +53,21 @@ const ResourceMenuItem = (props: { action: ResourceContextAction; onSelect: Reso
         }
         disabled={action.isDisabled}
       />
-    </Menu.Item>
+    </Item>
   );
 };
 
 export const ResourceMenuItems = (props: ResourceMenuItemsProps) => {
   const { actions, onSelect } = props;
-  const groups = new Map<string, { label?: string; actions: ResourceContextAction[] }>();
+  const groups = new Map<string, { label?: string; selectionMode?: "single"; actions: ResourceContextAction[] }>();
   for (const action of actions) {
     const id = action.group?.id ?? "ungrouped";
-    const group = groups.get(id) ?? { label: action.group?.label, actions: [] };
+    const group = groups.get(id) ?? {
+      label: action.group?.label,
+      selectionMode: action.group?.selectionMode,
+      actions: [],
+    };
+    if (action.group?.selectionMode === "single") group.selectionMode = "single";
     group.actions.push(action);
     groups.set(id, group);
   }
@@ -70,12 +76,27 @@ export const ResourceMenuItems = (props: ResourceMenuItemsProps) => {
       {index > 0 ? <Menu.Separator /> : null}
       <Menu.ItemGroup>
         {group.label ? <Menu.ItemGroupLabel>{group.label}</Menu.ItemGroupLabel> : null}
-        {group.actions.map((action, actionIndex) => (
-          <Fragment key={action.key}>
-            {action.separatorBefore && actionIndex > 0 ? <Menu.Separator /> : null}
-            <ResourceMenuItem action={action} onSelect={onSelect} />
-          </Fragment>
-        ))}
+        {group.selectionMode === "single" ? (
+          <Menu.RadioItemGroup
+            aria-label={group.label}
+            value={group.actions.find((action) => action.isSelected)?.key ?? ""}
+            onValueChange={({ value }) => {
+              const action = group.actions.find((action) => action.key === value);
+              if (action && !action.isDisabled) onSelect(action);
+            }}
+          >
+            {group.actions.map((action) => (
+              <ResourceMenuItem key={action.key} action={action} onSelect={onSelect} />
+            ))}
+          </Menu.RadioItemGroup>
+        ) : (
+          group.actions.map((action, actionIndex) => (
+            <Fragment key={action.key}>
+              {action.separatorBefore && actionIndex > 0 ? <Menu.Separator /> : null}
+              <ResourceMenuItem action={action} onSelect={onSelect} />
+            </Fragment>
+          ))
+        )}
       </Menu.ItemGroup>
     </Fragment>
   ));

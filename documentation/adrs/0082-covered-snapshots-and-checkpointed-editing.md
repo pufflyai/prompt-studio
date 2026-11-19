@@ -2,7 +2,7 @@
 
 Proposed: 2026-10-18
 
-Status: Superseded by [PRD 0014](../requirements/platform/0014-local-first-sync.md) on 2026-10-19.
+Status: Superseded by [0014 · RB 9.A.1](../requirement-book/book.json) on 2026-10-19.
 
 ## Decision
 

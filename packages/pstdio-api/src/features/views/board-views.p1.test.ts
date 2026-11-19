@@ -52,7 +52,7 @@ const settings={viewMode:"board",columnGrouping:"state",rowGrouping:"none",displ
 const filter={conjunction:"and",rules:[]};
 const extension = {
 commands:[{id:"remove",ref:{kind:"command",id:"remove"},title:"Remove",params:{},run:()=>{values=values.slice(0,1);return null;}},{id:"fail",ref:{kind:"command",id:"fail"},title:"Fail",params:{},run:()=>{fail=true;return null;}},{id:"empty",ref:{kind:"command",id:"empty"},title:"Empty",params:{},run:()=>{inbox=[];return null;}}],
-views:[{id:"explicit",ref:{kind:"view",id:"explicit"},title:"Explicit",body:{kind:"kanban",defaultActiveViewId:"second",defaultViews:[{id:"first",title:"First",settings,filter,sorts:[]},{id:"second",title:"Second",settings,filter,sorts:[]}],query:()=>({rows:[]})}},{id:"other",ref:{kind:"view",id:"other"},title:"Other",body:{kind:"kanban",query:()=>{throw Error("Other unavailable")}}},{id:"tasks",ref:{kind:"view",id:"tasks"},title:"Tasks",body:{kind:"kanban",defaultSettings:settings,defaultViews:[{id:"all",title:"All",settings,filter,sorts:[]}],query:()=>{if(fail)throw Error("Unavailable");return {rows:[],attributes:[{id:"state",label:"State",type:{kind:"enum",options:values},filterable:true,groupable:true,displayable:true,sortable:true}]};}}},{id:"scores",ref:{kind:"view",id:"scores"},title:"Scores",body:{kind:"dataTable",columns:[{id:"name",label:"Name"},{id:"status",label:"Status",groupable:true,filterable:false},{id:"score",label:"Score"},{id:"updated",label:"Updated",renderer:{type:"date"}}],defaultSorts:[{attributeId:"score",direction:"desc"}],query:()=>({rows:[{id:"a",values:{name:"Chat",status:"open",score:80,updated:"2026-10-01"}},{id:"b",values:{name:"Docs",status:null,score:40,updated:"2026-10-02"}}]})}},{id:"inbox",ref:{kind:"view",id:"inbox"},title:"Inbox",body:{kind:"dataTable",query:()=>({rows:inbox})}}]
+views:[{id:"fields",ref:{kind:"view",id:"fields"},title:"Fields",body:{kind:"kanban",supportsFieldsOnly:true,query:(_,input)=>{if(!input.fieldsOnly)throw Error("Unexpected row request");if(fail)return {rows:[]};return {rows:[],attributes:[{id:"state",label:"State",type:{kind:"enum",options:values},filterable:true}]};}}},{id:"explicit",ref:{kind:"view",id:"explicit"},title:"Explicit",body:{kind:"kanban",defaultActiveViewId:"second",defaultViews:[{id:"first",title:"First",settings,filter,sorts:[]},{id:"second",title:"Second",settings,filter,sorts:[]}],query:()=>({rows:[]})}},{id:"other",ref:{kind:"view",id:"other"},title:"Other",body:{kind:"kanban",query:()=>{throw Error("Other unavailable")}}},{id:"tasks",ref:{kind:"view",id:"tasks"},title:"Tasks",body:{kind:"kanban",defaultSettings:settings,defaultViews:[{id:"all",title:"All",settings,filter,sorts:[]}],query:(_,input)=>{if("fieldsOnly" in input)throw Error("Unexpected option on legacy board");if(fail)throw Error("Unavailable");return {rows:[],attributes:[{id:"state",label:"State",type:{kind:"enum",options:values},filterable:true,groupable:true,displayable:true,sortable:true}]};}}},{id:"scores",ref:{kind:"view",id:"scores"},title:"Scores",body:{kind:"dataTable",columns:[{id:"name",label:"Name"},{id:"status",label:"Status",groupable:true,filterable:false},{id:"score",label:"Score"},{id:"updated",label:"Updated",renderer:{type:"date"}}],defaultSorts:[{attributeId:"score",direction:"desc"}],query:()=>({rows:[{id:"a",values:{name:"Chat",status:"open",score:80,updated:"2026-10-01"}},{id:"b",values:{name:"Docs",status:null,score:40,updated:"2026-10-02"}}]})}},{id:"inbox",ref:{kind:"view",id:"inbox"},title:"Inbox",body:{kind:"dataTable",query:()=>({rows:inbox})}}]
 };
 extension.views.push({id:"badges",ref:{kind:"view",id:"badges"},title:"Badges",body:{kind:"kanban",defaultSettings:{...settings,displayProperties:["badge"]},query:()=>({rows:[],attributes:[{id:"badge",label:"Badge",type:{kind:"enum",options:[{value:"mention",label:"Mention"}]}},{id:"private",label:"Private",type:{kind:"string"},displayable:false}]})}});
 export default extension;
@@ -94,6 +94,29 @@ test("keeps the project default above the extension's initial active view", asyn
   expect(initial.views.find((view: { id: string }) => view.id === initial.defaultViewId).title).toBe("Second");
   expect((await request(`${path}/default`, "PUT", { viewId: first.id })).status).toBe(200);
   expect(await (await request(path)).json()).toMatchObject({ defaultViewId: first.id });
+});
+
+test("requests fresh fields from an opted-in board without requesting rows", async () => {
+  const path = "/boards/test.boards.view.fields";
+  const read = async () => {
+    const response = await request(path);
+    expect(response.status).toBe(200);
+    const { fields } = await response.json();
+    return fields.find((field: { id: string }) => field.id === "state").options;
+  };
+  expect(await read()).toMatchObject([{ value: "todo" }, { value: "gone" }]);
+  await command("remove");
+  expect(await read()).toMatchObject([{ value: "todo" }]);
+});
+
+test("preserves saved filters if a fields-only response omits its attributes", async () => {
+  const path = "/boards/test.boards.view.fields/views";
+  const response = await request(path, "POST", { title: "Keep", filter: stateIs("gone") });
+  expect(response.status).toBe(201);
+  const created = await response.json();
+  await command("fail");
+  const { views } = await (await request(path)).json();
+  expect(views.find((view: { id: string }) => view.id === created.id).filter).toEqual(stateIs("gone"));
 });
 
 test("exposes runtime fields and shares create/default/order/delete", async () => {

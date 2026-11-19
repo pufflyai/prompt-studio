@@ -28,6 +28,12 @@ export interface DesktopProjectTabsState {
   projectIds: string[];
 }
 
+export interface DesktopUpdateNotice {
+  level: "info" | "error";
+  title: string;
+  message?: string;
+}
+
 export interface PromptStudioDesktopApi {
   cancelQuit: () => Promise<void>;
   confirmQuit: () => Promise<void>;
@@ -43,6 +49,8 @@ export interface PromptStudioDesktopApi {
   revealInFinder: (path: string) => Promise<void>;
   copyDiagnostics: () => Promise<void>;
   checkForUpdates: () => Promise<void>;
+  takeUpdateNotice: () => Promise<DesktopUpdateNotice | undefined>;
+  onUpdateNotice: (listener: () => void) => () => void;
   /** The chosen update channel, or `null` when this app cannot change it (Windows and source builds). */
   getUpdateChannel: () => Promise<UpdateChannel | null>;
   setUpdateChannel: (channel: UpdateChannel) => Promise<void>;
@@ -51,6 +59,7 @@ export interface PromptStudioDesktopApi {
   getProjectTabs: () => Promise<DesktopProjectTabsState>;
   setProjectTabs: (state: DesktopProjectTabsState) => Promise<void>;
   setWorkbenchItem: (key: string, value: string | null) => Promise<void>;
+  reportWorkbenchError: (report: unknown) => Promise<void>;
   getPerformanceMonitoring: () => Promise<boolean>;
   retainPerformanceCapture: (id: string, monitoring?: boolean) => Promise<void>;
   releasePerformanceCapture: (id: string) => Promise<void>;
@@ -83,6 +92,8 @@ export const DESKTOP_CHANNELS = {
   revealInFinder: "pstdio:desktop:reveal-in-finder",
   copyDiagnostics: "pstdio:desktop:copy-diagnostics",
   checkForUpdates: "pstdio:desktop:check-for-updates",
+  takeUpdateNotice: "pstdio:desktop:take-update-notice",
+  updateNotice: "pstdio:desktop:update-notice",
   getUpdateChannel: "pstdio:desktop:get-update-channel",
   setUpdateChannel: "pstdio:desktop:set-update-channel",
   quitApp: "pstdio:desktop:quit-app",
@@ -90,6 +101,7 @@ export const DESKTOP_CHANNELS = {
   getProjectTabs: "pstdio:desktop:get-project-tabs",
   setProjectTabs: "pstdio:desktop:set-project-tabs",
   setWorkbenchItem: "pstdio:desktop:set-workbench-item",
+  reportWorkbenchError: "pstdio:desktop:report-workbench-error",
   getPerformanceMonitoring: "pstdio:desktop:get-performance-monitoring",
   retainPerformanceCapture: "pstdio:desktop:retain-performance-capture",
   releasePerformanceCapture: "pstdio:desktop:release-performance-capture",

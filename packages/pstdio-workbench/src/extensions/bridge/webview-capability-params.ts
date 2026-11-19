@@ -94,6 +94,28 @@ const accountQuery = serviceQuery(
   ]),
 );
 const performanceQuery = serviceQuery(z.strictObject({ service: z.literal("snapshot") }));
+const resourceActionChoices = z
+  .array(
+    z
+      .object({
+        kind: z.literal("action").optional(),
+        closeOnSelect: z.boolean().optional(),
+        id: z.string().min(1).max(200),
+        label: z.string().trim().min(1).max(1000),
+        selected: z.boolean().optional(),
+        disabled: z.boolean().optional(),
+      })
+      .strict()
+      .refine((choice) => choice.kind !== "action" || !choice.selected, "Action rows cannot be selected"),
+  )
+  .min(1)
+  .max(1024)
+  .refine((choices) => new Set(choices.map((choice) => choice.id)).size === choices.length, "Choice IDs must be unique")
+  .refine(
+    (choices) => choices.filter((choice) => choice.selected).length <= 1,
+    "A choice group has one selected value",
+  );
+
 const schemas = {
   "performance.read": z.discriminatedUnion("operation", [
     z.strictObject({ operation: z.literal("query"), query: performanceQuery }),
@@ -103,9 +125,33 @@ const schemas = {
   ]),
   "performance.control": z.discriminatedUnion("operation", [
     z.strictObject({ operation: z.literal("set-enabled"), enabled: z.boolean() }),
+    z.strictObject({ operation: z.literal("set-render-overlay"), enabled: z.boolean() }),
     z.strictObject({ operation: z.enum(["pause-extension", "resume-extension"]), installedExtensionId: identifier }),
   ]),
   "harnesses.read": z.object({ harnessId: identifier.optional(), model: z.string().optional() }),
+  "resources.changes.observed": z.strictObject({ receipt: z.string().min(1).max(16000).nullable() }),
+  "resources.actions.register": z.discriminatedUnion("operation", [
+    z.object({
+      operation: z.literal("register"),
+      registrationId: z.string().uuid(),
+      resource: extensionResourceRefSchema,
+      label: z.string().trim().min(1).max(200),
+      icon: z.string().max(100).optional(),
+      choices: resourceActionChoices.optional(),
+    }),
+    z.object({
+      operation: z.literal("update-choices"),
+      registrationId: z.string().uuid(),
+      choices: resourceActionChoices,
+      label: z.string().trim().min(1).max(200).optional(),
+    }),
+    z.object({ operation: z.literal("unregister"), registrationId: z.string().uuid() }),
+    z.object({
+      operation: z.literal("complete"),
+      requestId: z.string().uuid(),
+      error: z.string().max(2000).optional(),
+    }),
+  ]),
   "resources.actions": z.discriminatedUnion("operation", [
     z.object({ operation: z.literal("list"), resource: extensionResourceRefSchema }),
     z.object({ operation: z.literal("execute"), resource: extensionResourceRefSchema, key: identifier }),
@@ -182,6 +228,13 @@ const schemas = {
     scope: fileScope.optional(),
   }),
   "files.list": z.object({ scope: fileScope.optional() }),
+  "files.download": z.object({
+    name: identifier
+      .regex(/^[^/\\]+$/)
+      .refine((name) => name !== "." && name !== ".." && [...name].every((char) => char.charCodeAt(0) >= 32)),
+    data: binary,
+    mimeType: z.string().optional(),
+  }),
   "files.delete": z.object({ id: identifier }),
   "artifacts.read": z.discriminatedUnion("op", [
     z.object({ op: z.literal("list"), mount: identifier, prefix: z.string().optional() }),

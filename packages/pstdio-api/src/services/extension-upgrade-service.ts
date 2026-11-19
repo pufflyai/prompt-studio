@@ -1,10 +1,7 @@
 import { join, resolve } from "node:path";
 import { GitUnavailableError, isGitAvailable } from "pstdio-wt";
 import type { ExtensionRelease } from "../app-config";
-import {
-  hasBundledExtensionSource,
-  resolveBundledExtensionCommit,
-} from "../features/extensions/bundled-extension-source";
+import { findBundledExtensionSource } from "../features/extensions/bundled-extension-source";
 import {
   type ExtensionCatalog,
   type ExtensionCatalogEntry,
@@ -60,14 +57,20 @@ const installFromRecordedOrigin = (input: {
   install: InstallExtension;
   installName: string;
   origin: { kind: "git"; url: string; path: string; ref: string };
+  identity: string;
+  upgradeFromVersion: string | null;
+  installedSourcePath: string;
   repoPath?: string;
 }) =>
   input.install({
     source: input.installName,
     installName: input.installName,
+    installedSourcePath: input.installedSourcePath,
+    upgradeFromVersion: input.upgradeFromVersion,
     force: true,
     retainBackup: true,
     ref: input.origin.ref,
+    ...(input.origin.url.startsWith("https:") ? { expectedIdentity: input.identity } : {}),
     originSource: { kind: "release", origin: input.origin },
     ...(input.repoPath ? { repoPath: input.repoPath } : {}),
     reuseInstalledDependencies: true,
@@ -83,12 +86,8 @@ const matchesCatalogOrigin = (
   source: ReturnType<typeof parseExtensionSourceRef>,
 ) => !entry || !source || (entry.origin.url === source.url && entry.origin.path === source.path);
 
-const matchesPinnedRelease = async (source: ReturnType<typeof parseExtensionSourceRef>, ref: string) => {
-  if (source?.commit !== ref.toLowerCase()) return false;
-  // Nightly refs can map to another bundled source commit. Only that local alias can change a pinned target.
-  const bundled = await resolveBundledExtensionCommit(source, ref);
-  return !bundled || bundled === source.commit;
-};
+const upgradeRef = (entry: ExtensionCatalogEntry | undefined, release: ExtensionRelease | null) =>
+  entry && entry.origin.ref !== "{hostRelease}" ? entry.origin.ref : release?.ref;
 
 const releaseCommitKey = (origin: { url: string; path: string }, ref: string) =>
   `${origin.url}\0${origin.path}\0${ref}`;
@@ -101,8 +100,8 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const previewSources = new Map<string, ReturnType<typeof install>>();
   const catalogEntry = async (installName: string) => selectExtensionCatalogEntry(await catalog, installName);
   const releaseRefFor = (entry: ExtensionCatalogEntry) => {
-    if (entry.origin.ref !== "{hostRelease}") return entry.origin.ref;
-    if (deps.release) return deps.release.ref;
+    const ref = upgradeRef(entry, deps.release);
+    if (ref !== undefined) return ref;
     throw new ExtensionUpgradeUnavailableError("This extension requires a Prompt Studio host release ref.");
   };
   const currentReleaseCommit = (origin: { url: string; path: string }, releaseRef: string) => {
@@ -129,34 +128,16 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     if (!entry || !parsed || !version || !matchesCatalogOrigin(entry, parsed)) return false;
     return registry.canUpgradeCatalog(entry, version);
   };
-  const upgradeRef = (entry: ExtensionCatalogEntry | undefined) => {
-    try {
-      return entry ? releaseRefFor(entry) : deps.release?.ref;
-    } catch {
-      return undefined;
-    }
-  };
-  const canReadSource = async (
-    entry: ExtensionCatalogEntry | undefined,
+  const canUpgradeGitSource = async (
+    source: UpgradeSource,
     parsed: ReturnType<typeof parseExtensionSourceRef>,
-    ref: string,
+    origin: { url: string; path: string },
+    releaseRef: string,
   ) => {
-    if (deps.release?.source === "workspace") return true;
-    const origin = parsed ?? entry?.origin;
-    if (origin && (await hasBundledExtensionSource(origin, ref))) return true;
-    return isGitAvailable();
-  };
-  const canUpgrade = async (source: UpgradeSource) => {
-    if (registry.matches(source)) return registry.canUpgrade(source);
-    const entry = await catalogEntry(source.install_name);
-    const parsed = parseExtensionSourceRef(source.source_ref);
-    if (deps.release?.source === "registry") return canMoveToRegistry(entry, parsed, source.version);
-    if (!entry && !parsed) return false;
-    if (!matchesCatalogOrigin(entry, parsed)) return false;
-    const releaseRef = upgradeRef(entry);
-    if (!releaseRef) return false;
-    if (await matchesPinnedRelease(parsed, releaseRef)) return false;
-    if (!(await canReadSource(entry, parsed, releaseRef))) return false;
+    const bundled = await findBundledExtensionSource(origin, releaseRef);
+    if (bundled && source.version && Bun.semver.order(bundled.version, source.version) < 0) return false;
+    if (parsed?.commit === (bundled?.commit ?? releaseRef.toLowerCase())) return false;
+    if (!bundled && deps.release?.source !== "workspace" && !(await isGitAvailable())) return false;
     if (!parsed) return compatibilityError(source) !== null;
     try {
       return parsed.commit !== (await currentReleaseCommit(parsed, releaseRef));
@@ -164,6 +145,16 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
       // Keep the recovery action available when the release ref cannot be checked yet.
       return !(error instanceof GitUnavailableError);
     }
+  };
+  const canUpgrade = async (source: UpgradeSource) => {
+    if (registry.matches(source)) return registry.canUpgrade(source);
+    const entry = await catalogEntry(source.install_name);
+    const parsed = parseExtensionSourceRef(source.source_ref);
+    if (deps.release?.source === "registry") return canMoveToRegistry(entry, parsed, source.version);
+    const origin = parsed ?? entry?.origin;
+    const releaseRef = upgradeRef(entry, deps.release);
+    if (!origin || !releaseRef || !matchesCatalogOrigin(entry, parsed)) return false;
+    return canUpgradeGitSource(source, parsed, origin, releaseRef);
   };
 
   const requireCatalogEntry = async (installName: string) => {
@@ -173,11 +164,23 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     return entry;
   };
 
-  const installForRelease = async (installName: string, repoPath?: string) => {
+  const installForRelease = async (
+    installName: string,
+    identity: string,
+    installedSourcePath: string,
+    upgradeFromVersion: string | null,
+    repoPath?: string,
+  ) => {
     const entry = await requireCatalogEntry(installName);
-    if (deps.release?.source === "registry" && entry.extensionId) {
-      return registry.installCatalog(entry, { installName, force: true, retainBackup: true, repoPath });
-    }
+    const options = {
+      installName,
+      installedSourcePath,
+      upgradeFromVersion,
+      force: true,
+      retainBackup: true,
+      ...(repoPath ? { repoPath } : {}),
+    };
+    if (deps.release?.source === "registry" && entry.extensionId) return registry.installCatalog(entry, options);
     const workspaceSource = deps.release?.source === "workspace" && entry.origin.ref === "{hostRelease}";
     const source =
       workspaceSource && deps.release?.source === "workspace"
@@ -185,12 +188,10 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
         : installName;
     return install({
       source,
-      installName,
-      force: true,
+      ...options,
       ...(workspaceSource ? { skipInstall: true } : { hostReleaseRef: deps.release?.ref }),
-      ...(repoPath ? { repoPath } : {}),
+      ...(!workspaceSource && entry.origin.url.startsWith("https:") ? { expectedIdentity: identity } : {}),
       reuseInstalledDependencies: true,
-      retainBackup: true,
     });
   };
 
@@ -242,29 +243,46 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const upgrade = async (projectId: string, instanceId: string) => {
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return null;
-    if (!(await canUpgrade(existing.installedSource))) {
-      throw new ExtensionUpgradeUnavailableError("This extension is already up to date.");
-    }
-
-    const repoPath = await repoForSource(deps, projectId, existing.installedSource.source_path);
     const entry = await catalogEntry(existing.installedSource.install_name);
     const parsed = parseExtensionSourceRef(existing.installedSource.source_ref);
+    // Select once for this operation; the worker downloads and validates that exact release.
+    const registrySource = await registry.upgradeTarget(
+      existing.installedSource,
+      parsed && matchesCatalogOrigin(entry, parsed) ? entry : undefined,
+    );
+    if (!registrySource && !(await canUpgrade(existing.installedSource)))
+      throw new ExtensionUpgradeUnavailableError("This extension is already up to date.");
+    const repoPath = await repoForSource(deps, projectId, existing.installedSource.source_path);
+    const upgradeFromVersion = existing.installedSource.version ?? null;
     let installed: Awaited<ReturnType<typeof install>>;
-    if (registry.matches(existing.installedSource)) {
-      installed = await registry.installRecorded(existing.installedSource, {
+    if (registrySource) {
+      installed = await install({
+        source: registrySource.id,
+        registrySource,
+        installedSourcePath: existing.installedSource.source_path,
+        upgradeFromVersion,
         installName: existing.installedSource.install_name,
         force: true,
         retainBackup: true,
         repoPath,
       });
     } else if (entry) {
-      installed = await installForRelease(existing.installedSource.install_name, repoPath);
+      installed = await installForRelease(
+        existing.installedSource.install_name,
+        existing.installedSource.extension_id,
+        existing.installedSource.source_path,
+        upgradeFromVersion,
+        repoPath,
+      );
     } else if (parsed && deps.release?.ref) {
       const origin = { kind: "git" as const, url: parsed.url, path: parsed.path, ref: deps.release.ref };
       installed = await installFromRecordedOrigin({
         install,
         installName: existing.installedSource.install_name,
         origin,
+        identity: existing.installedSource.extension_id,
+        installedSourcePath: existing.installedSource.source_path,
+        upgradeFromVersion,
         repoPath,
       });
     } else {

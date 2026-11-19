@@ -30,7 +30,7 @@ export const openCloudProjectInPicker = async (input: {
     const details = page.frameLocator('iframe[title="Cloud details"]');
     // Reads are rejected before any asset transfer starts: expose the pending source truthfully.
     await expect(status).toHaveText("Waiting to sync");
-    await status.click();
+    await page.locator("footer").getByRole("button", { name: "Prompt Studio Cloud", exact: true }).click();
     await expect(details.getByText("No files are downloading.", { exact: false })).toBeVisible();
     await expect(details.getByRole("button", { name: "Retry", exact: true })).toBeVisible();
     await page.screenshot({ path: join(import.meta.dir, "../../test-results/cloud-project-opening.png") });

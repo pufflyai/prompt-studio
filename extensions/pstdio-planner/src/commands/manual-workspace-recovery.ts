@@ -20,6 +20,8 @@ export async function prepareManualRecovery(
     throw new Error("The previous implementation session is running. Continue its existing owner.");
   const base = await readRecoveryBase(ctx, previous, chosenBase);
   const { readiness } = await loadAttemptReadiness(ctx, previous.ticketId, { base });
+  if (readiness.decision === "ready" && readiness.mode === "folder")
+    throw new Error("Git workspace recovery requires a Git base.");
   if (readiness.decision === "wait")
     throw new Error(`Cannot recover ${previous.ticketShorthand}: ${readiness.reason}.`);
   const headSha = await readRecoverySeed(ctx, previous, readiness.baseHeadSha);

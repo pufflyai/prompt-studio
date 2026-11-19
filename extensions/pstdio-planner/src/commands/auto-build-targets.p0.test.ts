@@ -106,7 +106,7 @@ test("adopting a draft preserves its real Git branch, staged changes, and untrac
     expect(await Bun.file(join(path, "notes.txt")).text()).toBe("Preserve this draft\n");
     const { attemptEventsCollection, readAttempt } = await import("../data/attempt-storage");
     expect((await attemptEventsCollection(f.storage).list())[0]?.commitSha).toBe(head);
-    expect((await readAttempt(f.storage, "draft"))?.base.headSha).toBe("main-sha");
+    expect((await readAttempt(f.storage, "draft"))?.base?.headSha).toBe("main-sha");
   } finally {
     await rm(path, { recursive: true, force: true });
   }

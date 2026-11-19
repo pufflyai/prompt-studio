@@ -381,6 +381,17 @@ test("hints match typed arguments and show the remaining layer path", async () =
   expect(core.keyboard.hint({ kind: "command", commandId: "open", args: { id: "one" } })).toBe("P");
 });
 
+test("tooltips can request a shared layered hint without activating keyboard mode", () => {
+  const { core } = setup();
+  core.commands.registerCommand({ id: "move", label: "Move" }, { execute() {} });
+  const action = { kind: "command" as const, commandId: "move", args: { tool: "move" } };
+  core.keybindings.registerKeybinding({ action, keybinding: "V", layer: "go" });
+  const state = core.keyboard.store.getState();
+  expect(core.keyboard.hint(action, { includeLayers: true })).toBe("Alt+Shift+Space → G → V");
+  expect(core.keyboard.store.getState()).toBe(state);
+  expect(core.keyboard.hint(action)).toBeUndefined();
+});
+
 test("Option preview includes the complete entry chord for layered shortcuts", () => {
   const { core } = setup();
   for (const id of ["sequence", "chord"]) core.commands.registerCommand({ id, label: id }, { execute() {} });

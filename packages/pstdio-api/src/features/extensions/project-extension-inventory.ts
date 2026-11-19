@@ -1,9 +1,10 @@
 import { existsSync } from "node:fs";
+import { extensionUpgradeConcurrency } from "pstdio-extensions/preparation-client";
 import { resolveCatalogIcon } from "./catalog-icon";
 import type { ExtensionsRouteDeps } from "./deps";
 import { getExtensionCatalog } from "./extension-catalog";
 import { runExtensionPreparation } from "./extension-preparation";
-import { toProjectExtensionInstance } from "./project-extension-instance";
+import { publicExtensionVisibility, toProjectExtensionInstance } from "./project-extension-instance";
 
 export const listProjectExtensionInventory = async (
   deps: ExtensionsRouteDeps,
@@ -66,6 +67,7 @@ export const listProjectExtensionInventory = async (
           url: extension.origin.url,
         },
         publisher: extension.extensionId?.split(".")[0] ?? extension.publisher,
+        visibility: publicExtensionVisibility(extension.extensionId),
         registry:
           deps.extensionUpgradeService?.registry && extension.extensionId
             ? { url: deps.extensionUpgradeService.registry, extensionId: extension.extensionId }
@@ -75,5 +77,5 @@ export const listProjectExtensionInventory = async (
           Boolean(extension.extensionId && installedIds.has(extension.extensionId)),
       })),
   );
-  return { extensions, marketplace };
+  return { extensions, marketplace, upgradeConcurrency: extensionUpgradeConcurrency };
 };

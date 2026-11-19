@@ -60,8 +60,8 @@
         "errorCopied": "Error copiado"
       },
       "upgrade": {
+        "waiting": "En espera de actualización",
         "action": "Actualizar versión",
-        "succeeded": "Extensión actualizada",
         "current": "La extensión ya está al día",
         "failed": "No se pudo actualizar la extensión"
       },
@@ -82,7 +82,6 @@
         "title": "Suelta aquí una carpeta de extensión",
         "hint": "El servidor la instala en el ámbito declarado por la extensión.",
         "uploading": "Añadiendo {{name}}…",
-        "succeeded": "{{name}} añadida",
         "failed": "No se pudo añadir la carpeta de la extensión",
         "notFolder": "Suelta una carpeta, no un archivo."
       },
@@ -136,7 +135,8 @@
           "templates": "Plantillas",
           "themes": "Temas",
           "navigationItems": "Elementos de navegación",
-          "commandPaletteResources": "Recursos de la paleta de comandos"
+          "commandPaletteResources": "Recursos de la paleta de comandos",
+          "workspaceTypes": "Tipos de espacio de trabajo"
         },
         "deleteHintShared": "Eliminar los archivos de esta extensión. Esto la quita de todos los proyectos que la usan."
       },
@@ -158,6 +158,29 @@
         "title": "¿Reemplazar {{name}}?",
         "message": "Esto reemplaza los archivos instalados. Los otros proyectos que usan esta extensión también usarán los nuevos archivos.",
         "action": "Reemplazar"
+      },
+      "feedback": {
+        "queued": "En espera",
+        "upgrading": "Actualizando {{name}}",
+        "updating": "Actualizando {{name}}",
+        "installing": "Instalando {{name}}",
+        "batch": "{{count}} de {{total}} actualizaciones terminadas",
+        "retry": "Reintentar",
+        "dismiss": "Cerrar",
+        "upgradingButton": "Actualizando",
+        "batchFailed": "{{count}} de {{total}} actualizaciones fallaron",
+        "installingButton": "Instalando"
+      },
+      "provenance": {
+        "filter": "Origen de las extensiones",
+        "all": "Todas",
+        "public": "Pública",
+        "mine": "Mías",
+        "unknown": "Visibilidad desconocida",
+        "publicHelp": "Hay un paquete público disponible. Los cambios locales pueden no estar publicados.",
+        "mineHelp": "Código local editable mantenido en este proyecto o dispositivo.",
+        "unknownHelp": "No se ha verificado la disponibilidad pública.",
+        "noMatches": "No hay extensiones coincidentes"
       }
     }
   },

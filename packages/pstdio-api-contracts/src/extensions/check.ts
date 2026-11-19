@@ -28,6 +28,7 @@ const checkWorkbenchMetadataSchema = workbenchExtensionMetadataSchema.pick({
   viewMenus: true,
   placements: true,
   resourceKinds: true,
+  resourcePresentations: true,
   resourceHierarchyProviders: true,
   navigationItems: true,
   navigationTrees: true,

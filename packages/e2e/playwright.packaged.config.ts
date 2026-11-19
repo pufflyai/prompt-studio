@@ -9,7 +9,7 @@ export default defineConfig({
   testMatch:
     process.env.TEST_PRIORITIES?.split(",").map((priority) => `packaged-*.${priority.toLowerCase()}.spec.ts`) ??
     "packaged-*.spec.ts",
-  ...playwrightQuarantineSelection("playwright", "packages/e2e/src/packaged", quarantine),
+  ...(quarantine ? playwrightQuarantineSelection("playwright", "packages/e2e/src/packaged", true) : {}),
   timeout: 120_000,
   workers: 1,
   maxFailures: !quarantine && process.env.CI_PRIORITY === "P1" && process.env.CI_PROFILE !== "production" ? 1 : 0,

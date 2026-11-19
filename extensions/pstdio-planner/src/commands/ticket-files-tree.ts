@@ -25,7 +25,7 @@ import {
 import { isImageAttachment } from "../utils/is-image-attachment";
 import { createTicketFileCommand, fileContextMenuActions } from "./ticket-files";
 import { readTicketTreeData } from "./ticket-files-tree-data";
-import { mergeTicketLinkSections, ticketRelationshipSections } from "./ticket-link-sections";
+import { mergeTicketLinkSections, ticketLinkTypeNodes, ticketRelationshipSections } from "./ticket-link-sections";
 import { buildSessionsSection } from "./ticket-sessions-tree";
 import { buildSubTicketsSection } from "./ticket-sub-tickets-tree";
 import { buildWorkspacesSection } from "./ticket-workspaces-tree";
@@ -70,7 +70,6 @@ export const listTicketFilesTree = async (
     children,
     dependents,
     reviewRequests,
-    workspaces,
     linkedWorkspaces,
     workspaceCursor,
     providers,
@@ -110,7 +109,9 @@ export const listTicketFilesTree = async (
         target: ticketPageTarget(ticketResource),
         selected: selectedDocument === TICKET_BODY_DOCUMENT,
       },
-      ...(summary ? [reviewRequestsNode] : []),
+      ...(summary && [TICKET_BODY_DOCUMENT, REVIEW_REQUESTS_DOCUMENT].includes(selectedDocument)
+        ? [reviewRequestsNode]
+        : []),
     ],
   };
 
@@ -147,12 +148,6 @@ export const listTicketFilesTree = async (
     nodes: fileNodes.length === 0 ? [emptyFilesNode()] : fileNodes,
   };
 
-  // Linked workspaces open as native workspace tabs from the same sidenav.
-  const visibleWorkspaces = workspaces.filter(
-    (workspace) =>
-      workspace.is_default || workspace.isDefault || linkedWorkspaces.some(({ id }) => id === workspace.id),
-  );
-
   const maybeSubTicketsSection = buildSubTicketsSection({
     tickets,
     parentTicketId: ticket.id,
@@ -160,8 +155,9 @@ export const listTicketFilesTree = async (
     children: children.tickets,
     nextCursor: children.nextCursor,
   });
-  const linkedWorkspacesSection = buildWorkspacesSection(
-    visibleWorkspaces,
+  const linkedWorkspacesSection = await buildWorkspacesSection(
+    ctx,
+    linkedWorkspaces,
     ticketMeta,
     providers.length > 0
       ? {
@@ -193,23 +189,21 @@ export const listTicketFilesTree = async (
       ...(maybeSubTicketsSection ? [maybeSubTicketsSection] : []),
       linkedWorkspacesSection,
       sessionsSection,
-      ...(resourceCursor
-        ? [
-            {
-              id: "related",
-              label: l10n("navigation.related", "Related resources"),
-              collapsible: true,
-              nodes: [],
-              nextCursor: resourceCursor,
-            },
-          ]
-        : []),
     ],
     resourceLinks,
     ctx.projectId,
     plannerOwnerFor(ctx),
   );
-  return sections.map((section) => ({
+  const typeNodes = ticketLinkTypeNodes(sections);
+  const visibleSections = sections.filter((section) => !section.id.startsWith("resource-type:"));
+  if (typeNodes.length || resourceCursor)
+    visibleSections.push({
+      id: "related",
+      collapsible: false,
+      nodes: typeNodes,
+      ...(resourceCursor ? { nextCursor: resourceCursor } : {}),
+    });
+  return visibleSections.map((section) => ({
     ...section,
     ...(section.id === "sub-tickets" && children.nextCursor ? { nextCursor: children.nextCursor } : {}),
     ...(section.id === "required-by" && dependents.nextCursor ? { nextCursor: dependents.nextCursor } : {}),

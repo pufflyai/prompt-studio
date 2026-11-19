@@ -1,7 +1,9 @@
+import { nativePresenceLimits } from "pstdio-api-contracts";
 import type { TextEditingRequest, TextWireSnapshot } from "pstdio-api-contracts/extension-kernel";
 import { validateTextEditorFrame } from "pstdio-sync/text";
 import { validateTextGrant } from "./admission";
 import { textFailure } from "./errors";
+import { emitTextEvent } from "./events";
 import { textHandleMember } from "./handles";
 import type { TextConnection, TextEditingDeps, TextMember } from "./types";
 export const roomAddress = (connection: TextConnection, member: TextMember) => {
@@ -59,3 +61,37 @@ export const submitTextMember = (
     member.lastAck = wireTextSnapshot(member, snapshot);
     return member.lastAck;
   });
+
+export const releaseTextMember = async (deps: TextEditingDeps, connection: TextConnection, member: TextMember) => {
+  if (connection.members.get(member.id) === member) connection.members.delete(member.id);
+  member.stop?.();
+  await member.queue;
+  if (member.room) await deps.documents.release(roomAddress(connection, member));
+  if (
+    member.grant &&
+    connection.selected !== member.grant.token &&
+    ![...connection.members.values()].some((value) => value.grant === member.grant)
+  )
+    connection.grants.delete(member.grant.token);
+  connection.barrier?.waiting.delete(member);
+  if (connection.barrier && !connection.barrier.waiting.size) connection.barrier.resolve();
+};
+
+export const registerTextMember = (connection: TextConnection, memberId: string) => {
+  if (connection.members.has(memberId)) return;
+  if (connection.barrier && !connection.barrier.waiting.size)
+    throw textFailure("session_closed", "This placement has completed close preparation");
+  if (connection.members.size >= nativePresenceLimits.rooms)
+    throw textFailure("capability_denied", "This placement has reached its text member limit");
+  const member: TextMember = {
+    id: memberId,
+    handle: "",
+    queue: Promise.resolve(),
+    sequence: 0,
+    version: 0,
+    selection: null,
+  };
+  connection.members.set(memberId, member);
+  connection.barrier?.waiting.add(member);
+  if (connection.barrier) emitTextEvent(connection, { type: "prepareClose", barrierId: connection.barrier.id });
+};

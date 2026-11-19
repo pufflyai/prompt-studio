@@ -35,7 +35,7 @@ export const createPlacementTextPresence = (workbench: Pick<WorkbenchCore, "pres
     },
   });
   const registered = (request: TextEditingRequest) => {
-    if (request.operation !== "register") return;
+    if (request.operation !== "register" && request.operation !== "openSelected") return;
     if (!members.has(request.memberId)) members.set(request.memberId, { events: new Map() });
   };
   const forget = (request: TextEditingRequest, member: Member | undefined) => {
@@ -67,13 +67,17 @@ export const createPlacementTextPresence = (workbench: Pick<WorkbenchCore, "pres
     async request<T>(request: TextEditingRequest, action: () => Promise<T>) {
       registered(request);
       let member = "memberId" in request ? members.get(request.memberId) : undefined;
-      if (request.operation === "open" && member) {
+      if ((request.operation === "open" || request.operation === "openSelected") && member) {
         // A new receipt owns this observation, while close still owns the admitted handle.
         member = { handle: member.handle, events: new Map(member.events) };
         members.set(request.memberId, member);
       }
       const result = await action();
-      if (request.operation === "open" && member && members.get(request.memberId) === member) {
+      if (
+        (request.operation === "open" || request.operation === "openSelected") &&
+        member &&
+        members.get(request.memberId) === member
+      ) {
         const { handle } = result as TextEditingOpened;
         const event = member.events.get(handle);
         member.handle = handle;

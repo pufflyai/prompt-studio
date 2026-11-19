@@ -16,7 +16,7 @@ export const admitAutomationRun = async (input: {
   idempotencyKey: string;
   body: CreateAutomationRunInput;
   maxRunsPerMinute: number;
-  startExecution: (runId: string) => void;
+  startExecution: (runId: string, notBefore?: string) => void;
 }) => {
   const { deps, auth, projectId, idempotencyKey, maxRunsPerMinute, startExecution } = input;
   const commandDeps = deps.getCommandDeps();
@@ -57,7 +57,7 @@ export const admitAutomationRun = async (input: {
         409,
       );
     }
-    if (existing.status === "queued") startExecution(existing.id);
+    if (existing.status === "queued") startExecution(existing.id, body.notBefore);
     return { ...toRunRecord(existing), commandId };
   }
 
@@ -97,6 +97,6 @@ export const admitAutomationRun = async (input: {
     );
   }
   if (stored.created) await recordRunActivity(deps, stored.run);
-  if (stored.run.status === "queued") startExecution(stored.run.id);
+  if (stored.run.status === "queued") startExecution(stored.run.id, body.notBefore);
   return toRunRecord(stored.run);
 };

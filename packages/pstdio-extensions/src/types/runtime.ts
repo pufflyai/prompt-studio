@@ -114,6 +114,7 @@ export interface RuntimePrivateHandlerRecord {
   sourcePath: string;
   rendererId: string;
   rendererKind:
+    | "actionBar"
     | "terminal"
     | "chat"
     | "commandPaletteResource"
@@ -127,6 +128,7 @@ export interface RuntimePrivateHandlerRecord {
     | "tree"
     | "textSource";
   operation: string;
+  collectionQuery?: { mode: "paged" | "static"; maxRows?: number };
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with renderer-specific input
   handler: RendererCallback<any, any>;
 }
@@ -193,6 +195,8 @@ export interface RuntimeHarnessRecord {
   extensionId: string;
   name: string;
   sourcePath: string;
+  /** Installed package folder that owns the harness, also when it runs from a prepared copy. */
+  packagePath?: string;
   provider: HarnessProvider;
 }
 
@@ -241,6 +245,12 @@ export interface ExtensionRuntime {
   pages: RuntimePageRecord[];
   statusBarItems: RuntimeStatusBarItemRecord[];
   resourceKinds: RuntimeResourceKindRecord[];
+  resourcePresentations?: Array<{
+    extensionId: string;
+    resourceKind: { extensionId: string; kind: "resource-kind"; id: string };
+    resolveCommand: string;
+    refreshEvents: string[];
+  }>;
   resourceHierarchyProviders: RuntimeResourceHierarchyProviderRecord[];
   activityItems: RuntimeActivityItemRecord[];
   settingsSections: RuntimeSettingsSectionRecord[];

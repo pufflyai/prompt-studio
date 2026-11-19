@@ -79,6 +79,8 @@ export const resolveMenuEntries = (input: ResolveMenuEntriesInput) => {
         },
         label,
         group: action.resourceGroup,
+        selected: action.selected,
+        closeOnSelect: action.closeOnSelect,
         commandId: action.sourceCommandId ?? record.command.id,
         description: state.description,
         disabledReason: state.disabledReason,

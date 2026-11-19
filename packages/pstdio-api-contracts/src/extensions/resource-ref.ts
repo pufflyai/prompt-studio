@@ -9,6 +9,8 @@ export const extensionResourceRefSchema = z.object({
   projectId: z.string().optional(),
   label: z.string().optional(),
   icon: z.string().optional(),
+  iconColor: z.string().optional(),
+  iconLabel: z.string().optional(),
   extensionId: z.string().optional(),
   metadata: serializableJsonObjectSchema.optional(),
 });

@@ -1,4 +1,4 @@
-import { IconButton } from "@chakra-ui/react";
+import { Box, IconButton } from "@chakra-ui/react";
 import { Tooltip, WindowTabs, WindowTitleBar } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { useWorkbenchStore, WorkbenchFullscreenToggle, WorkbenchPanelToggles } from "@pstdio/workbench/react";
@@ -7,7 +7,7 @@ import { useSyncExternalStore } from "react";
 import { useCollectionSelection } from "@/lib/sync/use-collection-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
-import { findDashboardProject } from "../data/project-data";
+import { findDashboardProjectRow } from "../data/project-data";
 import type { DesktopProjectTabsController } from "../desktop-project-tabs-controller";
 
 interface DesktopProjectTabsProps {
@@ -18,8 +18,16 @@ interface DesktopProjectTabsProps {
 
 const resolveProjectTabs = (projectIds: readonly string[], _dataVersion: unknown) =>
   projectIds.flatMap((id) => {
-    const project = findDashboardProject(id);
-    return project ? [{ id, label: project.name, icon: <Folder aria-hidden="true" /> }] : [];
+    const project = findDashboardProjectRow(id);
+    return project
+      ? [
+          {
+            id,
+            label: typeof project.name === "string" && project.name ? project.name : "Project",
+            icon: <Folder aria-hidden="true" />,
+          },
+        ]
+      : [];
   });
 
 export const openProjectTabSettings = async (controller: DesktopProjectTabsController, projectId: string) => {
@@ -32,6 +40,7 @@ export const openProjectTabSettings = async (controller: DesktopProjectTabsContr
 
 export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
   const { workbench, controller, platform } = props;
+  const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
   const projectIds = useSyncExternalStore(controller.subscribe, controller.getProjectIds, controller.getProjectIds);
   const dataVersion = useCollectionSelection({ tables: ["projects"], rowIds: projectIds });
   const selected = useWorkbenchStore(
@@ -69,29 +78,31 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
       platform={platform}
       actions={
         <>
-          <WorkbenchPanelToggles workbench={workbench} />
+          {!fullscreen && <WorkbenchPanelToggles workbench={workbench} />}
           <WorkbenchFullscreenToggle workbench={workbench} />
         </>
       }
     >
-      <WindowTabs
-        tabs={tabs}
-        selectedId={typeof selected === "string" ? selected : undefined}
-        aria-label="Project tabs"
-        onSelect={selectTab}
-        onClose={(id) => controller.close(id)}
-        onReorder={(id, targetId) => controller.reorder(id, targetId)}
-      />
-      <Tooltip content="Open / create project" positioning={{ placement: "bottom" }}>
-        <IconButton
-          aria-label="Open / create project"
-          variant="ghost"
-          size="xs"
-          onClick={() => void workbench.commands.executeCommand(dashboardCommandIds.openProjects)}
-        >
-          <Plus />
-        </IconButton>
-      </Tooltip>
+      <Box display={fullscreen ? "none" : "contents"}>
+        <WindowTabs
+          tabs={tabs}
+          selectedId={selected}
+          aria-label="Project tabs"
+          onSelect={selectTab}
+          onClose={(id) => controller.close(id)}
+          onReorder={(id, targetId) => controller.reorder(id, targetId)}
+        />
+        <Tooltip content="Open / create project" positioning={{ placement: "bottom" }}>
+          <IconButton
+            aria-label="Open / create project"
+            variant="ghost"
+            size="xs"
+            onClick={() => void workbench.commands.executeCommand(dashboardCommandIds.openProjects)}
+          >
+            <Plus />
+          </IconButton>
+        </Tooltip>
+      </Box>
     </WindowTitleBar>
   );
 };

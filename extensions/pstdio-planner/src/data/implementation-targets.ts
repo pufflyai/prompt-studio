@@ -4,11 +4,15 @@ export const targetBranchSetting = "implementation.defaultTargetBranch";
 export const savedTargetBranch = (settings: Record<string, unknown>) => (settings[targetBranchSetting] ?? "") as string;
 
 export const resolveImplementationBase = async (ctx: ExtensionContextBase, settings: Record<string, unknown>) => {
-  const configured = savedTargetBranch(settings);
-  if (configured) return configured;
   const workspace = await ctx.workspaces.getDefault();
   const cwd = workspace?.root_path;
-  if (!cwd) throw new Error("Attach a Git project folder before using Auto build.");
+  if (!cwd) throw new Error("Attach a project folder before using Auto build.");
+  const head = await ctx.process
+    .run({ command: ["git", "rev-parse", "--verify", "HEAD^{commit}"], cwd })
+    .catch(() => null);
+  if (!head || head.exitCode !== 0) return undefined;
+  const configured = savedTargetBranch(settings);
+  if (configured) return configured;
   const remote = await ctx.process.run({
     command: ["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"],
     cwd,

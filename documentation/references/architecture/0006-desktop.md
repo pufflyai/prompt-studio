@@ -72,6 +72,10 @@ Electron's `DesktopProjectTabsStore` persists only `{ projectIds: string[] }` in
 
 A failed write shows an error through the workbench notification system. Tabs remain usable. The next tab change saves the full current order and dismisses the error after a successful write.
 
+Each project has its own React error boundary. If a project fails to initialize or render, the selected tab shows a recovery screen with Retry and project switching. Retry rebuilds that project's workbench from persisted state. Other tabs keep their mounted workbenches. The desktop log records the project ID and available stacks with credentials redacted.
+
+The dashboard document offers Reload Prompt Studio when startup fails or React cannot display the root. If the visible workbench renderer crashes or fails to navigate, Electron hides that view and reveals the lifecycle recovery page. Retry reopens the workbench through normal runtime discovery.
+
 `@pstdio/ui` owns the title-bar and tab recipes. The live Canvas examples define normal and full-screen desktop title bars. `@pstdio/workbench` provides a generic `titleBar` slot above its regions and inside its theme. It has no project or Electron knowledge.
 
 ## Theme
@@ -131,7 +135,7 @@ People and agents read the same snapshot. While monitoring is on, main listens o
 
 The workbench registers file rendering without loading its editor implementation. Code and diff editor components initialize the bundled Monaco runtime when first rendered. Opening a desktop window with no file open does not download or initialize Monaco.
 
-Desktop keeps waiting while startup is in progress. After 20 seconds, the startup screen shows a non-blocking notice that this is taking longer than usual. The notice stays visible across startup steps, and the workbench opens automatically when ready. Quitting cancels the pending startup. Recovery handles actual failures, including a missing sidecar, port bind failure, PGlite ownership conflict, PGlite recovery failure, uncertain runtime ownership, and unexpected exit. Recovery never recommends deleting the database.
+Desktop keeps waiting while startup is in progress. After 10 seconds, the startup screen adds “This is taking longer than usual” and a Copy logs action below the current step. Both stay visible across startup steps, and the workbench opens automatically when ready. Stale-data cleanup runs in the background after startup. After five minutes without a phase change, the startup screen says it may be stuck. Quitting cancels the pending startup. Recovery shows an error alert for confirmed failures, including a missing sidecar, port bind failure, PGlite ownership conflict, PGlite recovery failure, uncertain runtime ownership, and unexpected exit. The alert offers Retry when a restart is possible.
 
 The runtime records each startup step as a `runtime.startup.phase` entry in the shared log file and in its output, which desktop keeps in `desktop-runtime.log`. The steps are `database_locked`, `database_engine_loaded`, `database_retiring` and `database_retired` (only when the data folder comes from a release before 0.46), `database_image_restored` (first start only), `database_opened`, `database_migrated`, `extensions_ready`, and `app_ready`. Each entry has `elapsedMs`, the time since the runtime process started. Desktop reads these entries to show progress while it prepares local data, applies updates, and loads tools. These entries are written at every log level. The runtime publishes its descriptor at `database_locked`, before the database opens; `/runtime/ready` waits for `app_ready`.
 
@@ -143,7 +147,7 @@ The runtime's `db.open.failed` event identifies database startup failures even w
 
 The main thread stays available during sidecar verification. It streams the executable checksum and awaits the version subprocess with startup cancellation. The lifecycle protocol reads packaged files directly with their content types. It does not route local asset reads through Electron's networking service.
 
-Open logs reveals the shared Prompt Studio log file. Copy diagnostics contains only application/runtime versions, platform and architecture, lifecycle state, safe loopback origin, owner PID/type, log path, and bounded process output. Runtime tokens, bearer headers, URL credentials, and named secrets are redacted.
+Open logs reveals the shared Prompt Studio log file. Copy logs includes application and runtime metadata, lifecycle state and startup phase or error code, safe loopback origin, owner PID and type, log path, and bounded process output. Runtime tokens, bearer headers, URL credentials, and named secrets are redacted.
 
 ## Packaged layout
 
@@ -214,7 +218,7 @@ Keep notarization and the complete four-target publish check enabled.
 The workflow builds and tests the planned release commit. Its Electron checks come
 from that same commit. To fix a failed release, merge the fix to `main`; the next
 release run builds the fixed commit, unless npm publishing already started. See
-[Versioning and releases](../../requirements/platform/0005-versioning-and-releases.md#done-marker-and-recovery).
+[Versioning and releases · RB 12.A.10](../../requirement-book/book.json).
 
 The native updater is configured in packaged macOS and Windows apps. It resolves
 the newest complete `pstdio@<version>` release on the device's update channel and
@@ -294,7 +298,7 @@ uploaded.
 Windows signing trusts the `main` branch's GitHub identity and release tags, so
 desktop release builds run only from `release-packages.yml` on `main`. A failed
 release resumes by re-running the failed jobs or with the next push to `main`; see
-[Versioning and releases](../../requirements/platform/0005-versioning-and-releases.md#done-marker-and-recovery).
+[Versioning and releases · RB 12.A.10](../../requirement-book/book.json).
 
 The secured compiled-runtime webview suite runs Chromium and Firefox. Packaged native-settings checks also retain WebKit.
 `bun run --cwd packages/e2e test:packaged` runs the compiled CLI checks with Bun and the browser checks with the Playwright runner.
@@ -324,7 +328,7 @@ Rebuild with `bun run --cwd clients/desktop package`. If an installed package re
 Release-only failures are fail closed. Missing signing credentials, an invalid
 native signature, a failed notarization staple, an incomplete artifact matrix,
 or version/checksum drift stops the release before anything is published. See [Desktop
-distribution and updates](../../requirements/platform/0002-desktop-distribution.md) for credential
+distribution and updates · RB 12.A.4](../../requirement-book/book.json) for credential
 names, verification commands, and operator recovery.
 
 ### External runtime process capture
