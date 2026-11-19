@@ -3,7 +3,9 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
+import type { Response as BrowserResponse } from "@playwright/test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
+import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-host";
 import { folderProjectInput } from "../helpers/folder-project";
 import { verifyTreeGroups } from "../helpers/tree-groups";
 import { browserLaunchOptions } from "../scripts/browser-launch-options";
@@ -34,6 +36,32 @@ import { verifyPackagedWebviewDisposal } from "./packaged-webview-retention";
 
 test.afterEach(stopPendingTestProcesses);
 test.afterAll(stopPendingTestProcesses);
+
+const verifyAssetResponses = async (responses: Map<BrowserResponse, Promise<number> | undefined>) => {
+  expect(responses.size).toBeGreaterThanOrEqual(3);
+  for (const response of responses.keys()) {
+    if (response.status() !== 307) {
+      expect(response.status()).toBe(200);
+      continue;
+    }
+    const from = new URL(response.url());
+    const parsed = parseExtensionWebviewPath(from.pathname);
+    expect(parsed?.resource).toBe("stylesheet");
+    expect(parsed?.rest).toEqual([]);
+    const target = new URL(response.headers().location!, from);
+    const asset = parseExtensionWebviewPath(target.pathname);
+    expect(target.origin === from.origin && asset?.capability === parsed?.capability).toBe(true);
+    expect(asset?.scope).toEqual(parsed?.scope);
+    expect(asset?.resource).toBe("assets");
+    expect(asset?.rest).toHaveLength(1);
+    expect(asset?.rest[0]).toMatch(/^[\w.-]+\.css$/);
+    const final = [...responses.keys()].find((r) => r.request().redirectedFrom() === response.request());
+    expect(final?.url() === target.href).toBe(true);
+    expect(final?.status()).toBe(200);
+    expect(final?.headers()["content-type"]).toContain("text/css");
+    expect(await responses.get(final!)).toBeGreaterThan(0);
+  }
+};
 
 const REQUIRE_WEBVIEW_BROWSERS = process.env.E2E_REQUIRE_WEBVIEW_BROWSERS === "1";
 // Package verification does not install Playwright browsers on every release runner.
@@ -84,6 +112,7 @@ const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[numb
         "pstdio-home",
         "pstdio-session-browser",
         "pstdio-workspaces",
+        ...(behavior === "workspace panels and session tabs" ? ["pstdio-terminal"] : []),
         "git-workspaces",
         ...(behavior === "documents, collections and preview" ? ["pstdio-artifacts", "pstdio-notes"] : []),
       ],
@@ -151,12 +180,21 @@ const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[numb
     const page = await context.newPage();
     page.setDefaultTimeout(10_000);
     page.setDefaultNavigationTimeout(10_000);
-    const extensionAssetStatuses: number[] = [];
+    const extensionAssets = new Map<BrowserResponse, Promise<number> | undefined>();
     const authenticationFailures: string[] = [];
     page.on("response", (response) => {
       const pathname = new URL(response.url()).pathname;
       if (pathname.startsWith("/v1/extensions/")) {
-        extensionAssetStatuses.push(response.status());
+        const css = response.headers()["content-type"]?.startsWith("text/css") && response.request().redirectedFrom();
+        extensionAssets.set(
+          response,
+          css
+            ? response.body().then(
+                (body) => body.length,
+                () => -1,
+              )
+            : undefined,
+        );
       }
       if (pathname.startsWith("/v1/") && [401, 403].includes(response.status())) {
         authenticationFailures.push(`${response.status()} ${pathname}`);
@@ -210,8 +248,7 @@ const verifyPackagedBehavior = async (browserCase: (typeof webviewBrowsers)[numb
     }
 
     if (behavior === "commands and settings") {
-      expect(extensionAssetStatuses.length).toBeGreaterThanOrEqual(3);
-      expect(extensionAssetStatuses.every((status) => status === 200)).toBe(true);
+      await verifyAssetResponses(extensionAssets);
     }
     expect(authenticationFailures).toEqual([]);
     expect((await page.content()).includes(started.descriptor.token)).toBe(false);

@@ -25,7 +25,8 @@ export const createChatSubmissionRunner = (input: {
       ? createChatPendingSubmission(
           action,
           before.conversation.messages ?? [],
-          before.conversation.streaming ? (before.conversation.queuedFollowUps ?? []) : undefined,
+          before.conversation.queuedFollowUps ?? [],
+          Boolean(before.conversation.streaming),
           ++sequence,
         )
       : undefined;

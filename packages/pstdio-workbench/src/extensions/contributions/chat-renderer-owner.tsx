@@ -235,6 +235,8 @@ export const createChatRendererOwner = (
                 observe: slot.observe,
                 resolve: slot.resolve,
                 visible: render.visible,
+                workbench: render.workbench,
+                resource: render.instance.resource,
                 extensionId: view.extensionId,
                 emptyTitle: body.emptyTitle === undefined ? undefined : text(body.emptyTitle),
                 emptyDescription: body.emptyDescription === undefined ? undefined : text(body.emptyDescription),

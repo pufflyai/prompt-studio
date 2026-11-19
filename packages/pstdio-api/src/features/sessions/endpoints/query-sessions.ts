@@ -6,6 +6,18 @@ import { queryExtensionSessions, SessionQueryWorkspaceNotFound } from "../query-
 
 const querySchema = z
   .object({
+    ids: z
+      .string()
+      .transform((raw, ctx) => {
+        try {
+          return JSON.parse(raw) as unknown;
+        } catch {
+          ctx.addIssue({ code: "custom", message: "Expected a JSON array of session IDs." });
+          return z.NEVER;
+        }
+      })
+      .pipe(z.array(z.string()).max(50))
+      .optional(),
     search: z.string().optional(),
     includeWorkspaceAnchors: z
       .enum(["true", "false"])

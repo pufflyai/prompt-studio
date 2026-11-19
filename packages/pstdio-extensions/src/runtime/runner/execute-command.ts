@@ -5,6 +5,7 @@ import type {
   CommandSource,
   JsonObject,
 } from "@pstdio/sdk/extensions";
+import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
 import type { RuntimeCommandRecord, RuntimeMiddlewareRecord } from "../../types/runtime";
 import { validateCollectionQueryRequest, validateCollectionQueryResult } from "./collection-query";
 import { createCommandStreamWriter } from "./command-stream";
@@ -46,7 +47,10 @@ export const executeExtensionCommand = async (
   const scope = createInvocationScope({ logger: state.logger, parent: input.signal });
   scope.collectionQuery = input.collectionQuery;
   try {
-    return await runExtensionCommand(state, input, scope);
+    return await withRuntimeOperationOrigin(
+      { kind: "command", name: input.commandId, projectId: input.projectId },
+      () => runExtensionCommand(state, input, scope),
+    );
   } finally {
     await scope.close();
   }

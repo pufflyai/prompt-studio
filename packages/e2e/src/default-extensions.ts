@@ -24,6 +24,7 @@ export const e2eExtension = (name: string) => {
       ? {}
       : {
           skipInstall:
+            name !== "pstdio-terminal" &&
             name !== "git-workspaces" &&
             name !== "workbench-fixture" &&
             !name.includes("/fixtures/") &&
@@ -39,6 +40,7 @@ const e2eDefaultExtensions = [
   e2eExtension("pstdio-home"),
   e2eExtension("pstdio-session-browser"),
   e2eExtension("pstdio-workspaces"),
+  e2eExtension("pstdio-terminal"),
   e2eExtension("git-workspaces"),
   e2eExtension("pstdio-base-themes"),
   e2eExtension("canvas"),

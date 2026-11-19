@@ -33,7 +33,8 @@ import { formatDatabasePrefix } from "./record-format-key";
 import { defineRecordIndexes } from "./record-index-definition";
 import { recordIndexName } from "./record-index-lifecycle";
 import { decodeProjectionValue } from "./record-projection-codec";
-import { pageAfterSql, recordPageSql, recordScopeSql } from "./record-query-sql";
+import { pageAfterSql, recordPageSql } from "./record-query-sql";
+import { recordVisibilitySql } from "./record-query-visibility";
 import { loadRelatedQueryIndexes, relatedRecordPredicateSql } from "./record-related-query";
 import { prepareTextOrder } from "./record-text-order";
 import { identityQueryVersion, prepareResourceQueryValues } from "./resource-query-values";
@@ -151,7 +152,6 @@ const prepareQueryMetadata = async (
 export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnostics?: StorageDiagnostics) => {
   const ownerWhere = (table: typeof current | typeof indexes | typeof projections) =>
     and(eq(table.workbench_id, owner.workbenchId), eq(table.extension_id, owner.extensionId));
-  const visible = (index: StorageRecordIndex) => recordScopeSql(owner, index);
   const physicalNames = new WeakMap<StorageRecordIndex, string>();
   const getIndex = async (connection: Pick<DbClient, "select">, name: string) => {
     const [index] = await connection
@@ -195,7 +195,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     return row.revision + identityRevision;
   };
   const api: StorageRecordQueries = {
-    defineIndexes: (definitions) => defineRecordIndexes(db, owner, ownerWhere(indexes)!, definitions, diagnostics),
+    defineIndexes: (definitions) => defineRecordIndexes(db, owner, definitions, "immediate", diagnostics),
     query: (query) =>
       db.transaction(async (tx) => {
         traceStorageQuery("query-start", query.index);
@@ -204,6 +204,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
         traceStorageQuery("query-execute", query.index);
         const page = await prepareRecordQuery(owner, index, query, revision, related);
         if (page.limit === 0) return emptyQueryResult(owner, revision, diagnostics);
+        const visible = await recordVisibilitySql(owner, index, declared, physicalNames.get(declared));
         const result = await tx.execute<QueryRow>(
           query.dependencyOrder
             ? dependencyOrderedPageSql(
@@ -211,14 +212,14 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
                 index,
                 query.dependencyOrder,
                 page.fields,
-                sql`${visible(index)} AND ${relatedRecordPredicateSql(owner, index, query.where, related)}`,
+                sql`${visible} AND ${relatedRecordPredicateSql(owner, index, query.where, related)}`,
                 page.limit,
                 related,
               )
             : recordPageSql(
                 index,
                 page.fields,
-                sql`${visible(index)} AND ${relatedRecordPredicateSql(owner, index, query.where, related)} AND ${pageAfterSql(index, page.after, related, owner)}`,
+                sql`${visible} AND ${relatedRecordPredicateSql(owner, index, query.where, related)} AND ${pageAfterSql(index, page.after, related, owner)}`,
                 // One extra row shows whether a next page exists without a second scan.
                 page.limit + 1,
                 page.offset,
@@ -298,12 +299,13 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
           name === (await recordIndexName(owner, declared))
             ? await countIndexSource(tx, index, query, name, predicate)
             : undefined;
+        const visible = counted ? sql`true` : await recordVisibilitySql(owner, index, declared, name);
         return aggregateRecordQuery(
           tx,
           index,
           query,
           revision,
-          sql`${visible(index)} AND ${predicate}`,
+          sql`${visible} AND ${predicate}`,
           related,
           owner,
           counted,

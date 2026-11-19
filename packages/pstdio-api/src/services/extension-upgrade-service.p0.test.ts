@@ -168,6 +168,13 @@ describe("extension upgrade service", () => {
       expect(await service.canUpgrade({ ...installedSource, source_ref: namedSourceRef(ref, "pstdio-planner") })).toBe(
         true,
       );
+      expect(
+        await service.canUpgrade({
+          ...installedSource,
+          version: "1.1.0-nightly.20261119040652",
+          source_ref: namedSourceRef(ref, "pstdio-planner"),
+        }),
+      ).toBe(false);
     } finally {
       files.splice(files.indexOf(file), 1);
     }

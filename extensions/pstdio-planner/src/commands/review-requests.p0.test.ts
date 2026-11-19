@@ -450,8 +450,13 @@ describe("attempt handoffs", () => {
 
     const first = await requestReviewCommand.run(context("automation"), handoff as never);
     const second = await requestReviewCommand.run(context("automation"), handoff as never);
+    const withAttemptId = await requestReviewCommand.run(context("automation"), {
+      ...handoff,
+      attemptId: handoff.workspaceId,
+    } as never);
 
     expect(second.id).toBe(first.id);
+    expect(withAttemptId.id).toBe(first.id);
     expect(created).toHaveLength(0);
     expect(first.context).toEqual({
       reason: "approved-revision",

@@ -1,4 +1,5 @@
 import {
+  accountEvents,
   defineExtension,
   defineKeybinding,
   defineNavigationItem,
@@ -17,6 +18,7 @@ import {
 import { sessionBrowser } from "./refs";
 import { act } from "./src/actions";
 import { browse, browsePage, search } from "./src/browse";
+import { changeHeads, readChange } from "./src/changes";
 import { connectionRefresh } from "./src/controls";
 import { copySessionId } from "./src/copy-session-id";
 import { readDraft, saveDraft } from "./src/drafts";
@@ -59,7 +61,7 @@ const conversation = defineView({
       nativeHarnessAccount: { controlId: "harness" },
       controls: composerControls,
     },
-    refreshEvents: [viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged],
+    refreshEvents: [viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged, accountEvents.changed],
     query: (ctx, { renderer }) => readSnapshot(ctx, renderer.resource),
     loadDraft: (ctx, { draftKey }) => readDraft(ctx, draftKey),
     saveDraft: async (ctx, { renderer, draftKey, draft }) => {
@@ -166,6 +168,8 @@ export default defineExtension({
   storageIndexes: [nativeSubmissionIndex, sessionPinsIndex],
   hooks: [quotaRestartHook],
   commands: [
+    changeHeads,
+    readChange,
     quotaRestart,
     quotaAvailability,
     pinSession,
@@ -206,6 +210,13 @@ export default defineExtension({
     }),
   ],
   commandPaletteResources: [search],
+  resourcePresentations: [
+    {
+      resourceKind: workbenchResourceKinds.session,
+      resolve: resolve.ref,
+      refreshEvents: [viewDataEvents.sessionsChanged],
+    },
+  ],
   keybindings: [
     defineKeybinding({
       id: "new-in-viewer",
