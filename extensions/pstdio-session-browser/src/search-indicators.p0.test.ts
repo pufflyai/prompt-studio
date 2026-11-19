@@ -30,9 +30,10 @@ test("Sessions search supplies status colors, accessible labels and running icon
   const colors = ["fg.info", "fg.info", "fg.success", "fg.error", "fg.warning", "fg.warning", "fg.warning"];
   for (const [index, status] of statuses.entries()) {
     const item = result.items[index];
-    expect(item.indicator?.color).toBe(colors[index]);
-    expect(item.indicator?.label).toBe(`Session status: ${status}`);
-    expect(item.icon).toBe("message-circle");
+    const resource = item.target.resource;
+    expect(resource.iconColor).toBe(colors[index]);
+    expect(resource.iconLabel).toBe(`Session status: ${status}`);
+    expect(item.icon).toEqual(resource.icon ?? "");
   }
-  expect(result.items[0].indicator?.icon).toBe("loader-circle");
+  expect(result.items[0].target.resource.icon).toBe("loader-circle");
 });

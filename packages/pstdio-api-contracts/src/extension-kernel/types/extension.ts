@@ -2,7 +2,7 @@ import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
 import type { ResourceHierarchyProvider, ResourceKindDefinition } from "./composition";
 import type { CommandMiddlewareHandler, CommandRunHandler, EventContext, ExtensionContextBase } from "./context";
-import type { ContributionDefinition, ViewRef } from "./contribution-identity";
+import type { ContributionDefinition, ResourceKindRef, ViewRef } from "./contribution-identity";
 import type {
   ActivityItemContribution,
   ArtifactMountContribution,
@@ -271,6 +271,12 @@ export interface UiContributions {
   modes?: readonly ModeContribution[];
   pages?: readonly PageContribution[];
   resourceKinds?: readonly ResourceKindDefinition[];
+  /** Supply current presentation for a resource kind. Only one enabled provider may claim each kind. */
+  resourcePresentations?: readonly {
+    resourceKind: ResourceKindRef;
+    resolve: CommandRef;
+    refreshEvents?: readonly import("./renderer-base").RendererEventReference[];
+  }[];
   activityItems?: readonly ActivityItemContribution[];
   settingsSections?: readonly SettingsSectionContribution[];
   settingsPanels?: readonly SettingsPanelContribution[];

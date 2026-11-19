@@ -57,6 +57,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-wt",
     "extension-lab",
     "base-themes",
+    "pstdio-terminal",
     "planner",
     "skills",
     "workbench-fixture",
@@ -130,6 +131,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "home",
     "session-browser",
     "workspaces",
+    "pstdio-terminal",
     "base-themes",
     "pstdio-dashboard",
     "notes",
@@ -159,7 +161,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "home",
     "session-browser",
     "performance",
-
+    "pstdio-terminal",
     "pstdio-scripts",
   ],
   "@pstdio/landing-page": ["@pstdio/canvas", "@pstdio/ui"],
@@ -201,4 +203,5 @@ export const PRIVATE_EXPORT_LIMITS: Record<string, number> = {
 export const DEVELOPMENT_ONLY_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-db": ["@pstdio/sdk"],
   "pstdio-api": ["pstdio-scripts"],
+  "@pstdio/desktop": ["pstdio-terminal"],
 };

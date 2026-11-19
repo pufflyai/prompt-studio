@@ -140,26 +140,22 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
     },
 
     collect: async (enabledSources: readonly EnabledExtensionSource[]) => {
-      const cachedSources: CachedSource[] = [];
-
-      // Accepted artifacts remain usable if an offline edit removes the manifest. A source
-      // disappears from this catalog when its installed instance is disabled or uninstalled.
-      for (const { installedSource } of enabledSources) {
-        if (installedSource.last_error_json?.code === "extension_identity_conflict") continue;
-        if (
-          !existsSync(join(installedSource.source_path, "package.json")) &&
-          !(await readAcceptedRevision(installedSource.source_path))
-        ) {
-          const retained = lastHealthyByPath.get(canonicalSourcePath(installedSource.source_path));
-          if (retained) cachedSources.push(retained);
-          continue;
-        }
-
-        const cached = await load(installedSource);
-        if (cached) cachedSources.push(cached);
-      }
-
-      return cachedSources;
+      // The preparation pool owns admission. Queue independent source reads together
+      // and preserve the declaration order when assembling the project snapshot.
+      const records = await Promise.all(
+        enabledSources.map(async ({ installedSource }) => {
+          if (installedSource.last_error_json?.code === "extension_identity_conflict") return null;
+          if (
+            !existsSync(join(installedSource.source_path, "package.json")) &&
+            !(await readAcceptedRevision(installedSource.source_path))
+          ) {
+            // A transient rename can hide the source while an upgrade is being promoted.
+            return lastHealthyByPath.get(canonicalSourcePath(installedSource.source_path)) ?? null;
+          }
+          return load(installedSource);
+        }),
+      );
+      return records.filter((record) => record !== null);
     },
   };
 };

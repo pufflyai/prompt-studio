@@ -195,7 +195,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     return row.revision + identityRevision;
   };
   const api: StorageRecordQueries = {
-    defineIndexes: (definitions) => defineRecordIndexes(db, owner, ownerWhere(indexes)!, definitions, diagnostics),
+    defineIndexes: (definitions) => defineRecordIndexes(db, owner, definitions, "immediate", diagnostics),
     query: (query) =>
       db.transaction(async (tx) => {
         traceStorageQuery("query-start", query.index);

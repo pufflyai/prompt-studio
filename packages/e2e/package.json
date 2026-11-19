@@ -76,6 +76,7 @@
     "@types/react-test-renderer": "^19.1.0",
     "extension-lab": "workspace:*",
     "pstdio-skill-browser": "workspace:*",
-    "git-workspaces": "workspace:*"
+    "git-workspaces": "workspace:*",
+    "pstdio-terminal": "workspace:*"
   }
 }

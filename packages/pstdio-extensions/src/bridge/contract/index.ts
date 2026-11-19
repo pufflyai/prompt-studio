@@ -9,10 +9,15 @@ export const HOST_RUNTIME_ERROR_EVENT = "pstdio.extension.runtime-error";
 
 export type ThemePreference = "dark" | "light";
 
+export type WebviewSizing = "content-width" | "content-height" | "bounded-height";
+
+export const sizesToContentHeight = (sizing?: WebviewSizing): sizing is "content-height" | "bounded-height" =>
+  sizing === "content-height" || sizing === "bounded-height";
+
 export type InitMessage = {
   visible?: boolean;
   keyboardShortcuts?: readonly WebviewKeyboardShortcut[];
-  sizing?: "content-width" | "content-height";
+  sizing?: WebviewSizing;
   moduleUrl: string;
   styles: string[];
   props: WebviewHostProps;

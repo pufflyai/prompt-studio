@@ -245,7 +245,12 @@ export const prepareAndInstallExtensionSource = async (input: InstallExtensionSo
     validateInstallName(installName);
 
     const directoryName = installName === source.manifest.id ? extensionStorageDirectory(installName) : installName;
-    const targetPath = installedIdentityPath(extensionsRoot, directoryName, source.manifest.id);
+    const targetPath = installedIdentityPath(
+      extensionsRoot,
+      directoryName,
+      source.manifest.id,
+      input.installedSourcePath,
+    );
     const targetExists = existsSync(targetPath);
     const inPlace = targetExists && isSameDirectory(resolvedSource.path, targetPath);
     if (!inPlace) assertCanCopy(resolvedSource.path, targetPath);
