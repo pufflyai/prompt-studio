@@ -266,6 +266,7 @@ describe("installDefaultExtensions sources", () => {
       "base-themes",
       "skills",
       "github",
+      "pstdio-terminal",
       "git-workspaces",
     ]);
     expect(

@@ -32,6 +32,17 @@ const createStore = (): WorkbenchStorageLike => {
 };
 
 describe("local storage workbench persistence", () => {
+  test("restores status widget alignment and ordering from host storage", () => {
+    const storage = createStore();
+    const first = createLocalStorageWorkbenchPersistence({ namespace: "status-layout", storage });
+    first.statusBarPersistence.setOrder(["meter", "cloud"]);
+    first.statusBarPersistence.setSlots!({ meter: "center", cloud: "leading" });
+    const second = createLocalStorageWorkbenchPersistence({ namespace: "status-layout", storage });
+    expect(second.statusBarPersistence.getOrder()).toEqual(["meter", "cloud"]);
+    expect(second.statusBarPersistence.getSlots!()).toEqual({ meter: "center", cloud: "leading" });
+    first.snapshotPersistence.dispose?.();
+    second.snapshotPersistence.dispose?.();
+  });
   test("discards layouts persisted by earlier schema versions so the scope seeds as new", () => {
     const storage = createStore();
     const scope = "project:one";

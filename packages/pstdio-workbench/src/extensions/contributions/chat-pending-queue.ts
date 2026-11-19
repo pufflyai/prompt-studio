@@ -4,13 +4,22 @@ import type { ChatPendingSubmission } from "./chat-pending-submission";
 import { chatMessageIdentity } from "./chat-submission-identity";
 
 const matchesQueuedRequest = (item: ChatPendingSubmission, request: ChatQueuedRequest) =>
-  !item.known.has(request.id) &&
+  !item.knownQueued.has(request.id) &&
   request.prompt === item.text &&
   (request.attachments?.length ?? 0) === item.attachments.length &&
   item.attachments.every((file) => request.attachments?.some((saved) => saved.id === file.id));
 
 const canClaim = (claims: Map<string, string>, id: string, owner: string) =>
   !claims.has(id) || claims.get(id) === owner;
+const findQueuedReceipt = (
+  saved: ChatQueuedRequest[],
+  claims: Map<string, string>,
+  item: ChatPendingSubmission,
+  echo: boolean,
+) => {
+  if (!item.queue && echo) return undefined;
+  return saved.find((request) => canClaim(claims, request.id, item.message.id) && matchesQueuedRequest(item, request));
+};
 const claimQueuedReceipt = (
   claims: Map<string, string>,
   receipts: Map<string, ChatPendingSubmission>,
@@ -37,14 +46,14 @@ export const createPendingChatQueuePresentation = (messageClaims: Map<string, st
     }
     return [...receipts.values()];
   };
-  const reconcile = (item: ChatPendingSubmission, saved: ChatQueuedRequest[], messages: SessionMessage[]) => {
-    const accepted = saved.find(
-      (request) => canClaim(claims, request.id, item.message.id) && matchesQueuedRequest(item, request),
-    );
-    const echo = messages.some((message) => messageClaims.get(chatMessageIdentity(message)) === item.message.id);
-    if (accepted || echo) {
-      if (accepted) claimQueuedReceipt(claims, receipts, item, accepted, echo);
-      return { pending: !item.accepted && !item.failure ? { ...item, echoed: true } : undefined };
+  const reconcile = (item: ChatPendingSubmission, saved: ChatQueuedRequest[], echo: boolean) => {
+    if (item.echoed) return { pending: item.accepted ? undefined : item };
+    // The server may queue an input while the client still shows an idle session.
+    const receipt = findQueuedReceipt(saved, claims, item, echo);
+    if (!item.queue && !receipt) return { transcript: item };
+    if (receipt) claimQueuedReceipt(claims, receipts, { ...item, queue: true }, receipt, echo);
+    if (receipt || echo) {
+      return { pending: !item.accepted && !item.failure ? { ...item, queue: true, echoed: true } : undefined };
     }
     return {
       pending: item,
@@ -54,19 +63,29 @@ export const createPendingChatQueuePresentation = (messageClaims: Map<string, st
     };
   };
   const present = (saved: ChatQueuedRequest[], pending: ChatPendingSubmission[], messages: SessionMessage[]) => {
-    for (const [id, item] of receipts) {
-      if (messages.some((message) => messageClaims.get(chatMessageIdentity(message)) === item.message.id))
-        receipts.delete(id);
-    }
+    const echoed = new Set(messages.map((message) => messageClaims.get(chatMessageIdentity(message))));
+    for (const [id, item] of receipts) if (echoed.has(item.message.id)) receipts.delete(id);
     const items = [...saved];
     const waiting: ChatPendingSubmission[] = [];
-    for (const item of pending.filter((candidate) => candidate.queue)) {
-      if (item.accepted && item.echoed) continue;
-      const next = reconcile(item, saved, messages);
+    const transcript: ChatPendingSubmission[] = [];
+    // Give sends already presented in the queue first claim on matching queue rows.
+    for (const item of [...pending.filter((item) => item.queue), ...pending.filter((item) => !item.queue)]) {
+      const next = reconcile(item, saved, echoed.has(item.message.id));
+      if (next.transcript) transcript.push(next.transcript);
       if (next.pending) waiting.push(next.pending);
       if (next.row) items.push(next.row);
     }
-    return { items, pending: waiting };
+    return { items, pending: waiting, transcript };
   };
-  return { transfer, present };
+  const captureRemoval = (id: string | undefined, submissions: Set<string>) => {
+    const removed = id ? [id] : [...receipts.keys()];
+    return () => {
+      let changed = false;
+      for (const [key, item] of receipts) {
+        if (removed.includes(key) || submissions.has(item.message.id)) changed = receipts.delete(key) || changed;
+      }
+      return changed;
+    };
+  };
+  return { transfer, present, captureRemoval };
 };

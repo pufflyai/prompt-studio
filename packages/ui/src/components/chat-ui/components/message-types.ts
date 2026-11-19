@@ -240,7 +240,7 @@ export const normalizeChatMessagesForDisplay = (messages: SessionMessage[], opti
     const displayMessage = displayParts.length === message.parts.length ? message : { ...message, parts: displayParts };
 
     if (displayMessage.role === "user") {
-      flushTrailingActivity(false);
+      flushTrailingActivity(Boolean(options.streaming));
       normalized.push(displayMessage);
       continue;
     }

@@ -48,6 +48,7 @@ const MIME_TYPES: Record<string, string> = {
   ".json": "application/json",
   ".map": "application/json",
   ".mjs": "application/javascript",
+  ".otf": "font/otf",
   ".png": "image/png",
   ".svg": "image/svg+xml",
   ".ttf": "font/ttf",

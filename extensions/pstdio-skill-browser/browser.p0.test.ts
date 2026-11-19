@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import type { NavigationTarget } from "@pstdio/sdk/extensions";
 import type { Skill } from "@pstdio/sdk/resources";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import extension from "./extension";
@@ -81,7 +82,12 @@ test("reads a supporting file through the native file view using the page route"
       pageParams: { file: "references/examples.md" },
     },
   });
-  expect(loaded).toMatchObject({ fileName: "references/examples.md", content: "# Examples", editable: false });
+  expect(loaded).toMatchObject({
+    fileName: "references/examples.md",
+    filePath: "references/examples.md",
+    content: "# Examples",
+    editable: false,
+  });
 });
 
 test("groups skills by source extension display name and keeps project skills separate", async () => {
@@ -161,4 +167,75 @@ test("opens an empty browser when the project has no skills", async () => {
     overrides: { skills: { list: async () => [] } },
   });
   expect(await commands.read.run(empty, {})).toBeNull();
+});
+
+test("opens the first skill in one navigation without an intermediate landing", async () => {
+  const opened: NavigationTarget[] = [];
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    projectId: "project",
+    params: {},
+    overrides: {
+      skills: { list: async () => [skill] },
+      navigation: {
+        open: (target) => {
+          opened.push(target);
+        },
+      },
+    },
+  });
+  await commands.open.run(ctx, {});
+  expect(opened).toEqual([
+    {
+      kind: "page",
+      page: { kind: "page", id: "skill" },
+      resource: { type: "skill", id: skill.id, label: skill.title, projectId: "project", extensionId: ctx.extensionId },
+    },
+  ]);
+});
+
+test("opens the empty Skills landing when no skills are available", async () => {
+  const opened: NavigationTarget[] = [];
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    projectId: "project",
+    params: {},
+    overrides: {
+      skills: { list: async () => [] },
+      navigation: {
+        open: (target) => {
+          opened.push(target);
+        },
+      },
+    },
+  });
+  await commands.open.run(ctx, {});
+  expect(opened).toEqual([{ kind: "page", page: { kind: "page", id: "skills" } }]);
+});
+
+test("a failed initial skill lookup leaves navigation unchanged and can be retried", async () => {
+  const opened: NavigationTarget[] = [];
+  let attempts = 0;
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    projectId: "project",
+    params: {},
+    overrides: {
+      skills: {
+        list: async () => {
+          if (++attempts === 1) throw new Error("Catalog unavailable");
+          return [skill];
+        },
+      },
+      navigation: {
+        open: (target) => {
+          opened.push(target);
+        },
+      },
+    },
+  });
+  await expect(commands.open.run(ctx, {})).rejects.toThrow("Catalog unavailable");
+  expect(opened).toHaveLength(0);
+  await commands.open.run(ctx, {});
+  expect(opened).toHaveLength(1);
 });

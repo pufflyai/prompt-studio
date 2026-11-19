@@ -38,4 +38,15 @@ Declare `activity: { comments: true, changes: true, outcomes: true }` on a resou
 
 New Planner submissions use `--change-request-activity-id` and reviews use `--review-activity-id`. Existing report parameters remain deprecated compatibility inputs. `pst pstdio-planner migrate-ticket-outcomes --id PS-12` preserves historical bodies, files, authors, timestamps and exact revision associations, then replaces Reports bodies with verified Activity references. RP identities and aliases remain owned by the compatibility extension. Migration can resume after interruption; reports without an unambiguous owner remain in compatibility storage. New workflows do not require Reports installed.
 
-*Updated at: 2026-11-12*
+
+## Read and acknowledge a changed resource
+
+`pst resources changes query` reports the current indicator. To mark content as seen, first read it and then acknowledge the receipt returned for that read. Run these commands in the same project. A later revision stays marked.
+
+```sh
+pst resources changes query --resource '{"extensionId":"pstdio","type":"session","id":"SESSION_ID"}'
+pst resources changes read --resource '{"extensionId":"pstdio","type":"session","id":"SESSION_ID"}'
+pst resources changes acknowledge --receipt "$receipt"
+```
+
+*Updated at: 2026-11-18*

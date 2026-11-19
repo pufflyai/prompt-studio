@@ -1,3 +1,4 @@
+import { accountEvents } from "@pstdio/sdk/extensions";
 import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
 import {
   fileRendererRefreshEnvelopeFromCommand,
@@ -32,6 +33,7 @@ import {
   buildDashboardWorkbenchWhenExpression,
   dashboardMenuTargetsById,
 } from "@/shared/extensions/workbench-extension-contributions";
+import { configuredRelatedOpenings } from "@/shared/workbench/resource-openers";
 import { workspaceTreeSources } from "@/shared/workspaces/workspace-files-source";
 import { ExtensionViewWidget } from "./components/extension-view-widget";
 import { createSharedTableViews } from "./extension-board-views";
@@ -166,6 +168,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         },
         kanbanAdapter: kanban,
         nativeDocuments: getApiClient().nativeDocuments,
+        resourceChanges: getApiClient().resourceChanges,
         resourceActivity: {
           api: getApiClient().activity,
           watch: (resource, options) => getApiClient().activity.watch(resource, options),
@@ -216,6 +219,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
             uploadFile: uploadExtensionCommandFile,
           }),
         projectId: input.projectId,
+        resolveRelatedResourceOpenings: (resource, signal) => configuredRelatedOpenings(input.ctx, resource, signal),
         resolveTreeNodeResource: (resource) =>
           toDashboardExtensionResource(resource, input.projectId, input.metadata.resourceKinds)!,
         renderTreeNodeEndContent: (resource) =>
@@ -227,8 +231,8 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         settingsSectionTitle: "Project",
         subscribeRefreshEvents: (listener) => {
           const unsubscribe = subscribeToExtensionEventFeed((event) => {
-            if (event.projectId === input.projectId) listener(event);
-          });
+            if (event.projectId === input.projectId || event.id === accountEvents.changed.id) listener(event);
+          }, owner);
           return { dispose: unsubscribe };
         },
         subscribeRefreshReset: (listener) => ({ dispose: subscribeToExtensionEventReset(listener, owner) }),

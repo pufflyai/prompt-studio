@@ -23,7 +23,7 @@ export const createFullscreenWorkbench = (
   options: { hiddenNav?: boolean; renderEditor?: (name: string) => ReactNode } = {},
 ) => {
   const page = { kind: "page", extensionId: "fullscreen", id: "first" } as const;
-  const w = createWorkbench({ startPage: page, initialSidePanelMode: "attached" });
+  const w = createWorkbench({ defaultPage: page, initialSidePanelMode: "attached" });
   const lifecycle = { mounts: 0, unmounts: 0 };
   const mounted = () => lifecycle.mounts++;
   const unmounted = () => lifecycle.unmounts++;

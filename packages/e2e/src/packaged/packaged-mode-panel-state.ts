@@ -41,6 +41,7 @@ export const verifyModePanelState = async (page: Page, terminal: Locator) => {
   await header.getByRole("button", { name: "Add panel", exact: true }).click();
   await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
   await expect(header.getByRole("tab")).toHaveCount(2);
+  await expect(terminal).toHaveAttribute("aria-selected", "false");
   const temporary = header.getByRole("tab", { selected: true });
   await tabAction(page, temporary, "Unpin tab");
   await expect(header.getByRole("tab")).toHaveCount(2);

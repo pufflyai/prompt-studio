@@ -48,6 +48,17 @@ const executeChatAction = async (
   return chatRendererActionResultSchema.parse((await handler(chatRendererActionSchema.parse(action))) ?? {});
 };
 
+const applyChatActionDraft = (
+  drafts: ReturnType<typeof createChatSessionDraft>,
+  current: ChatDraft,
+  incoming: ChatDraft | undefined,
+  expectedEdits: number,
+  capturedSave?: ChatSessionInput["saveDraft"],
+) => {
+  if (incoming)
+    drafts.change(drafts.edits() === expectedEdits ? incoming : hydrateChatDraft(current, incoming), capturedSave);
+};
+
 const initialChatState = (initial?: ChatRendererSnapshot) => ({
   conversation: {
     ...chatRendererSnapshotSchema.parse(initial ?? {}),
@@ -182,7 +193,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     publish({ ...merged.state, loading: false }, transcriptOnly);
     const recovery = clearDeliveredChatRecoveries(state.draft, pending ?? [], state.pending);
     if (recovery.pending !== state.pending) publish({ pending: recovery.pending });
-    if (recovery.recovery) changeDraft(recovery.recovery);
+    if (recovery.recovery) drafts.change(recovery.recovery);
     if (expectedValues && merged.valuesChanged) {
       drafts.changed(capturedSave);
     }
@@ -192,7 +203,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     merge,
     messages: () => state.conversation.messages ?? [],
     recover: (recovered) => {
-      changeDraft(
+      drafts.change(
         recoverChatDraft(
           state.draft,
           recovered,
@@ -215,7 +226,6 @@ export const createChatSession = (input: ChatSessionInput) => {
     pin,
     idle: () => input.onIdle?.(),
   });
-  const changeDraft = drafts.change;
   const finite = createChatFiniteRead({
     context: input.queryContext,
     read: input.query,
@@ -251,20 +261,19 @@ export const createChatSession = (input: ChatSessionInput) => {
     const issued = ++clock;
     const changed = drafts.edits();
     const expectedValues = snapshots.values.capture();
+    const removed = present.captureQueuedRemoval(action, state.pending);
     const result = await executeChatAction(action, handler, state.conversation);
+    const pending = removed(state.pending);
+    if (pending) publish({ pending });
     if (result.snapshot) merge(result.snapshot, issued, expectedValues, action, capturedSave);
-    if (result.draft)
-      drafts.change(
-        drafts.edits() === changed ? result.draft : hydrateChatDraft(state.draft, result.draft),
-        capturedSave,
-      );
+    applyChatActionDraft(drafts, state.draft, result.draft, changed, capturedSave);
     return result;
   };
   const submit = createChatSubmissionRunner({
     read: () => ({ ...state, edits: drafts.edits() }),
     execute,
     publish: (update) => publish({ ...update, ...(update.sending ? { error: drafts.error() } : {}) }),
-    changeDraft,
+    changeDraft: drafts.change,
     fail,
     markRecoverable: () => {
       recoverableDraft = chatDraftContentKey(state.draft);
@@ -305,14 +314,14 @@ export const createChatSession = (input: ChatSessionInput) => {
       if (!retired) reader.accept(event);
     },
     changeDraft: (update: Partial<ChatDraft>) => {
-      if (!retired) changeDraft(update);
+      if (!retired) drafts.change(update);
     },
     ...createChatSubmissionHandoff(() => state.pending, publish),
     ...createChatDraftRestoration({
       active: () => !retired,
       read: () => state,
       values: snapshots.values,
-      changeDraft,
+      changeDraft: drafts.change,
       publish,
     }),
     run,

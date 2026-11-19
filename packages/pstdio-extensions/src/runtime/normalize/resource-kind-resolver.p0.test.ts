@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { commandRef, defineCommand, defineExtension, defineResourceKind } from "@pstdio/sdk/extensions";
+import {
+  commandRef,
+  defineCommand,
+  defineExtension,
+  defineResourceKind,
+  viewDataEvents,
+  workbenchResourceKinds,
+} from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "./index";
@@ -20,6 +27,34 @@ const source = (name: string, definition: LoadedExtensionSource["definition"]): 
 });
 
 const resolveNote = defineCommand({ id: "resolve-note", title: "Resolve note", async run() {} });
+
+test("a public presentation provider resolves a host kind and rejects ambiguous claims", () => {
+  const definition = defineExtension({
+    commands: [resolveNote],
+    resourcePresentations: [
+      {
+        resourceKind: workbenchResourceKinds.session,
+        resolve: resolveNote.ref,
+        refreshEvents: [viewDataEvents.sessionsChanged],
+      },
+    ],
+  });
+  const runtime = normalizeExtensionSources([source("notes", definition)]);
+  expect(runtime.diagnostics).toEqual([]);
+  expect(runtime.resourcePresentations).toEqual([
+    {
+      extensionId: "pstdio.notes",
+      resourceKind: { extensionId: "pstdio", kind: "resource-kind", id: "session" },
+      resolveCommand: "pstdio.notes.command.resolve-note",
+      refreshEvents: [viewDataEvents.sessionsChanged.id],
+    },
+  ]);
+  const conflict = normalizeExtensionSources([source("notes", definition), source("other", definition)]);
+  expect(conflict.resourcePresentations).toEqual([]);
+  expect(
+    conflict.diagnostics.filter((diagnostic) => diagnostic.code === "extension_resource_presentation_invalid"),
+  ).toHaveLength(2);
+});
 
 test("resource path handlers keep their prefixes and use owner commands", () => {
   const note = defineResourceKind({

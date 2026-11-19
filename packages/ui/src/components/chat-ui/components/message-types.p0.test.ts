@@ -143,6 +143,35 @@ describe("chat message types", () => {
     expect(normalized.map((message) => message.id)).toEqual(["user-1", "activity"]);
   });
 
+  test("keeps tool calls with the preceding response after the user steers", () => {
+    const beforeSteering: SessionMessage[] = [
+      { id: "user-1", role: "user", parts: [{ type: "text", text: "Run the checks" }] },
+      { id: "commentary", role: "assistant", parts: [{ type: "text", text: "I will run the tests." }] },
+      {
+        id: "tool-1",
+        role: "assistant",
+        parts: [{ type: "tool", tool: "bash", callId: "run-tests", state: { status: "completed" } }],
+      },
+      {
+        id: "tool-2",
+        role: "assistant",
+        parts: [{ type: "tool", tool: "read", callId: "read-results", state: { status: "running" } }],
+      },
+    ];
+    const steered: SessionMessage[] = [
+      ...beforeSteering,
+      { id: "steer", role: "user", parts: [{ type: "text", text: "Run the chat tests first." }] },
+      { id: "answer", role: "assistant", parts: [{ type: "text", text: "I ran the chat tests first." }] },
+    ];
+    const activity = normalizeChatMessagesForDisplay(beforeSteering, { streaming: true }).at(-1);
+    for (const streaming of [true, false]) {
+      const { groups } = groupMessagesByTurn(normalizeChatMessagesForDisplay(steered, { streaming }));
+      const preserved = streaming ? activity : { ...activity!, parts: [beforeSteering[2]!.parts[0]!] };
+      expect(groups[0]?.responses).toEqual([beforeSteering[1], preserved]);
+      expect(groups[1]?.responses).toEqual([steered.at(-1)]);
+    }
+  });
+
   test("targets message actions at the final assistant response in a completed turn", () => {
     const normalized = normalizeChatMessagesForDisplay(
       [

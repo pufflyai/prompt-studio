@@ -155,7 +155,7 @@
         // Specs install fixture extensions by path.
         "src/fixtures/**/extension.ts",
         // Extension manifests load this webview entry by packageAsset path.
-        "src/fixtures/{editing-session,document,mode,settings,file-download}/view.ts",
+        "src/fixtures/{editing-session,document,mode,settings,file-download,render-highlights}/view.ts",
         "src/fixtures/panel-views/letter-{browser,reader}.tsx",
         "src/fixtures/public-text-editor/view.tsx"
       ],
@@ -175,6 +175,7 @@
         "local-example",
         "artifacts",
         "base-themes",
+        "pstdio-terminal",
         "cloud",
         "pstdio-dashboard",
         "home",
@@ -213,6 +214,7 @@
         "github",
         "extension-lab",
         "base-themes",
+        "pstdio-terminal",
         "planner",
         "skills",
         "workbench-fixture",
@@ -514,7 +516,7 @@
         "src/e2e/*-fixture.ts",
         // The ordered benchmark runner selects these files through the shared suite registry.
         "src/**/*.bench.ts",
-        "src/**/*.test.ts",
+        "src/**/*.test.{ts,tsx}",
         "src/**/*.spec.ts",
         "src/**/*.canvas.tsx"
       ],

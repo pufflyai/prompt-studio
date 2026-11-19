@@ -66,8 +66,11 @@ export const createSessionReaders = (deps: ExtensionsRouteDeps, input: SessionAp
         const queued = (await getProjectSession(id))
           ? await read(() => getQueuedSessionMessages(deps, input.projectId, id))
           : (await remoteQueue(id)).messages;
+        let approvals = "approval_requests" in session ? session.approval_requests : undefined;
+        if (local) approvals = deps.sessionService.store.get(id)?.approvalService.pendingRequests();
         return {
           session: toExtensionSessionDetails(session, workspaceId),
+          approvals,
           messages: [...messages, ...queued],
         };
       }),

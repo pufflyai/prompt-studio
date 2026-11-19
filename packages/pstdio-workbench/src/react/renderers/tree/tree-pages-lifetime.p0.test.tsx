@@ -4,6 +4,63 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { createWorkbench, getWorkbenchRenderers, type TreeViewSection } from "../../../core";
 import { useTreeData } from "./use-tree-data";
 
+test("visible fixed groups revalidate their retained child pages after refresh", async () => {
+  const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previous = environment.IS_REACT_ACT_ENVIRONMENT;
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  const workbench = createWorkbench();
+  let revision = 0;
+  let continuations = 0;
+  workbench.views.registerView({
+    id: "fixed-groups",
+    title: "Groups",
+    body: {
+      kind: "tree",
+      getChildren: () => [],
+      getBody: () => [
+        {
+          id: "resources",
+          nodes: [
+            {
+              id: "custom",
+              label: "Custom resources",
+              collapsible: false,
+              children: [{ id: "first", label: `First ${revision}` }],
+              nextPage: async () => {
+                continuations++;
+                return { nodes: [{ id: "second", label: `Second ${revision}` }] };
+              },
+            },
+          ],
+        },
+      ],
+    },
+  });
+  let value!: ReturnType<typeof useTreeData>;
+  const Capture = () => {
+    value = useTreeData(workbench, "fixed-groups");
+    return null;
+  };
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      renderer = create(<Capture />);
+    });
+    await act(async () => {
+      await value.body[0]!.nodes[0]!.pagination!.loadMore();
+    });
+    expect(continuations).toBe(1);
+    revision++;
+    await act(async () => workbench.views.reads.invalidate("fixed-groups"));
+    expect(continuations).toBe(2);
+    expect(value.body[0]!.nodes[0]!.children?.map((node) => node.label)).toEqual(["First 1", "Second 1"]);
+  } finally {
+    await act(async () => renderer?.unmount());
+    await workbench.dispose();
+    environment.IS_REACT_ACT_ENVIRONMENT = previous;
+  }
+});
+
 test("an equal-data automatic root refresh keeps rendered paging usable and clean Activity returns reuse pages", async () => {
   const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
   const previous = environment.IS_REACT_ACT_ENVIRONMENT;

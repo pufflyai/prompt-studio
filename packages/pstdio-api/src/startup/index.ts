@@ -1,9 +1,11 @@
+import { basename } from "node:path";
 import type { RouteDeps } from "../features/deps";
 import {
   installDefaultExtensions,
   registerInstalledExtensionSources,
   syncInstalledExtensionsForProjects,
 } from "../features/extensions/default-extensions";
+import { resolveDefaultExtensionsConfig } from "../features/extensions/default-extensions-config";
 import { refreshProjectSkillsInRepos } from "../features/extensions/extension-skill-cleanup";
 import { syncRepoExtensionsForProjectFolder } from "../features/extensions/repo-extensions";
 import { resumeRestoredFolderSetup } from "../features/projects/project-folder";
@@ -12,6 +14,7 @@ import { provisionProjectWorkspaces } from "../features/workspaces/provision-coo
 import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-provider-reconciliation";
 import { apiLogger } from "../lib/logger";
 import { traceSetupPhase } from "../lib/setup-phase";
+import { adoptExtractedDefaultTools, extractedDefaultTools } from "./extracted-default-tools";
 
 interface StartupTaskOptions {
   onBackgroundTask?: (task: Promise<void>) => void;
@@ -62,10 +65,35 @@ const provisionRecoveredWorkspaces = (deps: RouteDeps, projectIds: string[], sig
 
 const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortSignal) => {
   const sourceMode = process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1";
-  if (!sourceMode && (await deps.projectService.list()).length > 0) return;
+  const projects = await deps.projectService.list();
+  const existingProjects = !sourceMode && projects.length > 0;
 
   try {
+    const missing = new Set<string>();
+    if (existingProjects) {
+      for (const name of extractedDefaultTools) {
+        const choices = await Promise.all(
+          projects.map(({ id }) => deps.extensionService.hasDefaultSourceChoice(id, `pstdio.${name}`)),
+        );
+        if (choices.includes(false)) missing.add(name);
+      }
+      if (!missing.size) return;
+    }
     await installDefaultExtensions({
+      ...(existingProjects
+        ? {
+            env: {
+              ...process.env,
+              PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(
+                (await resolveDefaultExtensionsConfig()).defaultExtensions.filter((entry) =>
+                  missing.has(
+                    typeof entry === "string" ? basename(entry) : (entry.installName ?? basename(entry.source)),
+                  ),
+                ),
+              ),
+            },
+          }
+        : {}),
       registerInstalledSources: (installed) =>
         traceSetupPhase("default_extensions.register", {}, () =>
           registerInstalledExtensionSources(deps.extensionService, installed),
@@ -140,6 +168,7 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
   }
   registerBackgroundTask(
     defaultExtensionPreparation.then(async () => {
+      await adoptExtractedDefaultTools(deps, projectIds, signal);
       await provisionRecoveredWorkspaces(deps, projectIds, signal);
       for (const projectId of projectIds) {
         signal?.throwIfAborted();

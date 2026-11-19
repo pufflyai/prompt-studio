@@ -1,6 +1,7 @@
 // Start a request conversation only after the person opens it.
 import type { CommandContext, ResourceAnchor } from "@pstdio/sdk/extensions";
 import { emitPlannerTicketsChanged } from "../events";
+import { attemptId } from "./attempt-identity";
 import { readAttempt } from "./attempt-storage";
 import type { AttemptRecord } from "./attempt-types";
 import { findTicket } from "./resolve";
@@ -35,7 +36,7 @@ const canReuseSession = (
   if (!attempt) return anchors.some((anchor) => anchor.type === "ticket" && anchor.id === ticketId);
   const ownsImplementation =
     attempt.implementationSessionId === session.id &&
-    anchors.some((anchor) => anchor.type === "planner-attempt" && anchor.id === attempt.workspaceId);
+    anchors.some((anchor) => anchor.type === "planner-attempt" && anchor.id === attemptId(attempt));
   return ownsImplementation || sessionOwnsReview(attempt, session, revision);
 };
 
@@ -61,7 +62,8 @@ const startReviewRequestSession = async (ctx: CommandContext, requestId: string)
   }
   const ticket = await findTicket(ctx, request.ticketId);
   if (!ticket) throw new Error("The ticket was removed.");
-  const attempt = request.context.workspaceId ? await readAttempt(ctx.storage, request.context.workspaceId) : null;
+  const id = request.context.attemptId ?? request.context.workspaceId;
+  const attempt = id ? await readAttempt(ctx.storage, id) : null;
   const requestAnchor: ResourceAnchor = {
     type: "planner-review-request",
     id: request.id,

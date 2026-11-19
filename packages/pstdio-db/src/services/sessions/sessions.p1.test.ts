@@ -35,6 +35,20 @@ afterEach(async () => {
   }
 });
 
+test("a finalized correction with the same reply ID advances its exact observed content", async () => {
+  const session = await sessionsService.create({ project_id: projectId, title: "Correction", agent: "test" });
+  const first = { kind: "reply" as const, id: "reply", textDigest: "a".repeat(64) };
+  await sessionsService.update(session.id, { contentEvent: first });
+  await sessionsService.update(session.id, { contentEvent: first });
+  expect((await sessionsService.get(session.id))?.change_positions?.reply?.position).toBe(1);
+  await sessionsService.update(session.id, { contentEvent: { ...first, textDigest: "b".repeat(64) } });
+  expect((await sessionsService.get(session.id))?.change_positions?.reply).toEqual({
+    id: "reply",
+    textDigest: "b".repeat(64),
+    position: 2,
+  });
+});
+
 describe("sessions service", () => {
   test("an old run cannot finish a resumed session", async () => {
     const session = await sessionsService.create({ project_id: projectId, title: "Resume", agent: "test" });

@@ -52,7 +52,7 @@ export type TerminalWebSocketClientMessage =
   // With an attach key, the PTY outlives the socket: closing the socket detaches it, and a later
   // `open` with the same key reattaches to it instead of starting a new one.
   | { type: "open"; request: TerminalSessionRequest; attachKey?: string }
-  | { type: "openView"; request: TerminalViewOpenRequest }
+  | { type: "openView"; request: TerminalViewOpenRequest; attachKey?: string }
   | { type: "write"; data: string }
   | { type: "resize"; cols: number; rows: number }
   | { type: "kill"; signal?: string };

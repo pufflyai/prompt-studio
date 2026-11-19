@@ -1,12 +1,14 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { putStatus, putTag } from "../data/collections";
 import { seedDefaultStatuses } from "../data/seed";
 import { countStorageWrites } from "../data/storage-writes.fixture";
-import { putTicket } from "../data/ticket-context.fixture";
+import { createTicketRecordStorage, putTicket } from "../data/ticket-context.fixture";
+import { ticketRecords } from "../data/ticket-records";
 import type { Ticket } from "../data/types";
 import { commandParamsFor, makeCommandContext } from "./command-context.fixture";
-import { queryTicketsCommand } from "./query-tickets";
+import { queryTickets, queryTicketsCommand } from "./query-tickets";
 
 const makeTicket = (overrides: Partial<Ticket>): Ticket => ({
   id: "ticket-1",
@@ -33,6 +35,35 @@ describe("queryTicketsCommand", () => {
 
     expect(result.rows.map((row) => row.title)).toEqual(["Active"]);
     expect(counter.writes).toBe(0);
+  });
+
+  test("reads current filter options without fetching tickets or linked resources", async () => {
+    const storage = createMemoryStorage();
+    await putTicket(storage, makeTicket({}));
+    const ctx = makeCommandContext({ storage, params: {} });
+    const initial = await queryTickets(ctx, {});
+    await storage.set("timeline.plan", {
+      deadlines: [
+        { id: "later", date: "2026-12-01" },
+        { id: "earlier", date: "2026-11-20" },
+      ],
+      order: [],
+    });
+    const [firstStatus] = await seedDefaultStatuses(storage);
+    await putStatus(storage, { ...firstStatus, name: "Renamed status" });
+    await putTag(storage, { id: "custom", name: "Priority", type: "single_select", sortOrder: 7, options: [] });
+    const full = await queryTickets(ctx, {});
+    expect(full.rows).toHaveLength(1);
+    expect(full.attributes).not.toEqual(initial.attributes);
+    const query = spyOn(storage.records, "query");
+    const reads = spyOn(storage.records, "readMany");
+    const identities = spyOn(ctx.resources, "identityMany");
+    const fields = await queryTickets(ctx, { fieldsOnly: true });
+    expect(fields.attributes).toEqual(full.attributes);
+    expect(fields.rows).toEqual([]);
+    expect(query.mock.calls.filter(([request]) => request.index === "ticket-records")).toHaveLength(0);
+    expect(reads).not.toHaveBeenCalled();
+    expect(identities).not.toHaveBeenCalled();
   });
 
   test("passes archived filter values to the tickets query", async () => {
@@ -95,4 +126,15 @@ describe("queryTicketsCommand", () => {
       itemsAttributeId: "linkedResourceItems",
     });
   });
+});
+
+test("lists a large board using full index pages and bounded record reads", async () => {
+  const tickets = Array.from({ length: 503 }, (_, i) => makeTicket({ id: `ticket-${String(i).padStart(3, "0")}` }));
+  const storage = await createTicketRecordStorage(tickets);
+  const query = spyOn(storage.records, "query");
+  const reads = spyOn(storage.records, "readMany");
+  const listed = await ticketRecords(storage).list();
+  expect(listed.map((ticket) => ticket.id)).toEqual(tickets.map((ticket) => ticket.id));
+  expect(query.mock.calls.filter(([request]) => request.index === "ticket-records")).toHaveLength(2);
+  expect(reads.mock.calls.map(([ids]) => ids.length)).toEqual([100, 100, 100, 100, 100, 3]);
 });

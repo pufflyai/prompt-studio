@@ -24,6 +24,7 @@ const nativeCli = new Set([
   "packaged-storage-migration-smoke",
   "packaged-artifact-watch-limit",
   "packaged-project-setup-smoke",
+  "packaged-chat-composer",
   "packaged-folder-recovery",
   "packaged-document-sync-smoke",
   "packaged-two-device-sync-smoke",

@@ -1,9 +1,8 @@
-import {
-  type ChatRendererAction,
-  type ChatRendererActionResult,
-  type ExtensionContextBase,
-  type RendererContext,
-  workspaceCommands,
+import type {
+  ChatRendererAction,
+  ChatRendererActionResult,
+  ExtensionContextBase,
+  RendererContext,
 } from "@pstdio/sdk/extensions";
 import { sessionBrowser } from "../refs";
 import { nativeAction } from "./native-actions";
@@ -50,13 +49,19 @@ export const act = async (
     // Removing a chip releases a draft reference; another draft or submitted message may still use the file.
     case "deleteAttachment":
       return {};
-    case "openResource":
-      // Workspaces resolves the current device/capabilities and owns its page policy.
-      ctx.navigation.open({
-        kind: "command",
-        target: { command: workspaceCommands.open, params: { id: action.id } },
-      });
+    case "openResource": {
+      const [opening] = await ctx.resources.resolveOpenings([
+        {
+          type: "workspace",
+          extensionId: "pstdio",
+          projectId: ctx.projectId,
+          id: action.id,
+        },
+      ]);
+      if (!opening?.target) throw new Error("The configured workspace opener is unavailable.");
+      ctx.navigation.open(opening.target);
       return {};
+    }
     case "openLink":
       throw new Error("This link is unavailable in the session workspace.");
     case "control":

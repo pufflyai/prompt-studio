@@ -7,7 +7,7 @@ import { PigeonReadingPane } from "./pigeon-reading-pane";
 import { pigeonTheme } from "./themes";
 
 export const createPigeonWorkbench = () => {
-  const workbench = createWorkbench({ startPage: pigeonHomePage, initialSidePanelMode: "floating" });
+  const workbench = createWorkbench({ defaultPage: pigeonHomePage, initialSidePanelMode: "floating" });
   workbench.themes.register([pigeonTheme]);
   workbench.modes.registerMode({
     id: "pigeon",

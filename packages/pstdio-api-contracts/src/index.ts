@@ -44,6 +44,7 @@ export * from "./projects";
 export * from "./queued-follow-ups";
 export * from "./resource-activity";
 export * from "./resource-anchors";
+export * from "./resource-changes";
 export * from "./result-recovery";
 export * from "./runtime-auth";
 export * from "./session-attachment-types";

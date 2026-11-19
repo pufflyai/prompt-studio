@@ -378,6 +378,49 @@ test("accepting a runtime retires an earlier frontend snapshot at the same mutab
   }
 });
 
+test("first use serves the accepted frontend while checking offline edits", async () => {
+  const { root, source } = fixture();
+  const installed = await installExtensionSource({ source, skipInstall: true });
+  await acceptPreparedRevision(source, installed.preparedRevision!);
+  const row = { id: "offline", source_path: source, install_name: installed.installName, updated_at: "initial" };
+  const viewId = "test.prepared-install.view.page";
+  const dist = join(root, "views", row.id, viewId, "dist", "module.js");
+  const release = Promise.withResolvers<void>();
+  const publication = Promise.withResolvers<void>();
+  let successes = 0;
+  const manager = createExtensionWebviewBuildManager({
+    listInstalledSources: async () => [row],
+    webviewCacheRoot: join(root, "views"),
+    reportBuildFailure: async (_id, _view, error) => {
+      throw error;
+    },
+    reportBuildSuccess: async () => {
+      successes++;
+      await release.promise;
+      return "reported";
+    },
+    reportPublication: async () => {
+      publication.resolve();
+      return "reported";
+    },
+    onError: publication.reject,
+  });
+  try {
+    writeFileSync(join(source, "main.ts"), 'console.log("offline edit");');
+    await manager.refresh(source, "attachment");
+    await manager.reconcile();
+    await Promise.all([manager.ensure(row.id, viewId), manager.ensure(row.id, viewId)]);
+    expect(readFileSync(dist, "utf8")).toContain("prepared UI");
+    release.resolve();
+    await publication.promise;
+    expect(readFileSync(dist, "utf8")).toContain("offline edit");
+    expect(successes).toBe(1);
+  } finally {
+    release.resolve();
+    manager.dispose();
+  }
+});
+
 test("registration reconciliation repairs accepted output without reinspecting unchanged sources", async () => {
   const { root, source } = fixture();
   const installed = await installExtensionSource({ source, skipInstall: true });
@@ -460,6 +503,33 @@ test("a retained replacement can roll back its source after activation fails", a
   await settlePreparedInstall(next.installation!, false);
   expect(readFileSync(join(first.targetPath, "main.ts"), "utf8")).toBe(original);
   expect((await readAcceptedRevision(first.targetPath))?.id).toBe(first.preparedRevision!.id);
+});
+
+test("an upgrade prepared before a newer version arrived cannot replace its files", async () => {
+  const { source } = fixture();
+  const { activatePreparedInstall, settlePreparedInstall } = await import("./extension-install-transaction");
+  const first = await installExtensionSource({ source, skipInstall: true });
+  const options = {
+    source,
+    skipInstall: true,
+    force: true,
+    retainBackup: true,
+    upgradeFromVersion: first.metadata.version,
+  };
+  const staged = await installExtensionSource(options);
+  const currentPath = join(first.targetPath, "package.json");
+  const current = { ...JSON.parse(readFileSync(currentPath, "utf8")), version: "1.1.0-nightly.20261119040652" };
+  writeFileSync(currentPath, JSON.stringify(current));
+  try {
+    const failure = await activatePreparedInstall(staged.installation!).then(
+      () => null,
+      (error: Error) => error.message,
+    );
+    expect(failure).toContain("Cannot downgrade extension");
+    expect(JSON.parse(readFileSync(currentPath, "utf8"))).toEqual(current);
+  } finally {
+    await settlePreparedInstall(staged.installation!, false);
+  }
 });
 
 test("an older rollback cannot undo a newer committed install with identical bytes", async () => {

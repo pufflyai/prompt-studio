@@ -51,6 +51,41 @@ Durable catch-up remains authoritative. A reconnect reads missing updates; prese
 and live messages never become stored content. See the
 [two-dashboard guide](0008-two-dashboard-relay.md) for an isolated application check.
 
+## Permanent project deletion
+
+The account manager retires a cloud identity and creates an operation. The relay
+uses its separate service credential to read pending operations at
+`/internal/v1/project-deletions` relative to the manager issuer. Configure the same
+`PROJECT_DELETION_RELAY_TOKEN` in both services. In Terraform, supply it in the
+manager and relay secret maps. In portable Compose, set it once in the deployment
+environment. Enable this credential after all serving relay replicas support
+retirement.
+
+The relay installs a PostgreSQL barrier after previously admitted project
+requests drain. Other replicas reject that scope with `410 project-retired` and
+close its live channels when they receive the database notification. The barrier
+survives the purge and process restarts. The worker drains registered payload
+objects, document history, verified assets and incomplete multipart uploads
+without waiting for ordinary retention. A failed purge reports Needs attention.
+Retry reuses the operation and resumes from its durable barrier and remaining
+rows. The manager marks completion only after the relay acknowledges the purge.
+
+The object provider creates multipart reservations at random addresses. The
+relay records the upload ID and assigns it to the project in PostgreSQL before
+sending any bytes. If the initiating process dies before that commit, the
+provider can still create an empty reservation. It has no project association.
+Scheduled cleanup aborts unassigned reservations and skips addresses whose
+ownership transaction is still in progress. Empty encrypted blobs use a
+verified database record and need no object-store write. A legacy upload that
+resumes at a new address keeps its original address for cancellation and purge.
+
+For cleanup diagnostics, check the operation's status in the manager, then query
+`relay_project_retirements` by the hashed project key. A row with no completion
+time means the barrier is installed and purge can resume. Remaining project rows
+in `relay_sync_object_deletions` and `relay_sync_blobs` identify work the worker
+still owns. Handoff failures emit the fixed `project_deletion_handoff_failed`
+diagnostic. Keep tokens, content and object keys out of logs.
+
 ## Build and validation
 
 Use Bun 1.4.4 and Docker with the Compose plugin:
