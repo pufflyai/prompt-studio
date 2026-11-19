@@ -21,7 +21,7 @@ jobs:
           path: app-main
       - uses: actions/checkout@v5
         with:
-          ref: 7c8b4682b1626a7538c55b105f76b4761e534159
+          ref: 2e4f6669807c234287128a2c160fbcaaffb7b1e2
           path: app-candidate
       - uses: oven-sh/setup-bun@v2
         with:
