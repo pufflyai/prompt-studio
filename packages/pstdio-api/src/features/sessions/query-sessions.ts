@@ -16,6 +16,8 @@ export const queryExtensionSessions = async (
   input: ExtensionSessionQuery = {},
   signal?: AbortSignal,
 ) => {
+  if (input.ids && (input.ids.length > 50 || !input.ids.every((id) => typeof id === "string")))
+    throw new Error("Select at most 50 session IDs.");
   const read = createReadBoundary(signal);
   let workspaceId: string | undefined;
   if (input.workspaceId) {

@@ -44,6 +44,7 @@ export interface ExtensionSessionUsage {
 }
 
 export interface ExtensionSession {
+  changePositions?: import("../../sessions").SessionChangePositions;
   /** The device that owns execution. Present on synced personal sessions. */
   device?: { ownerId: string; id: string; name: string };
   id: string;
@@ -97,6 +98,8 @@ export interface ExtensionSessionSummary {
 }
 
 export interface ExtensionSessionQuery {
+  /** Resolve a bounded selection by stable identity. */
+  ids?: string[];
   /** Case-insensitive literal title substring, applied before pagination. */
   search?: string;
   status?: SessionStatus[];

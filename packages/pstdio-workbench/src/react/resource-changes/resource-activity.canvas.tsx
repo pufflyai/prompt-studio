@@ -1,21 +1,16 @@
-import { Box, Button, HStack, Stack, Tabs, Text } from "@chakra-ui/react";
-import { ListRow, Tooltip } from "@pstdio/ui";
+import { Button, HStack, Stack, Tabs, Text } from "@chakra-ui/react";
+import { ListRow } from "@pstdio/ui";
 import { FileText, LoaderCircle, MessageCircle, Ticket } from "lucide-react";
 import { useState } from "react";
+import { ResourceActivityDot as ActivityDot } from "./activity-dot";
 
-export default { title: "Proposals/PS-215 Resource activity" };
+export default { title: "Resources/Changed since last seen" };
 
 const resources = [
   { id: "session", label: "Release conversation", icon: MessageCircle, tracked: true },
   { id: "note", label: "Release notes", icon: FileText, tracked: true },
   { id: "ticket", label: "Release checklist", icon: Ticket, tracked: false },
 ];
-const ActivityDot = () => (
-  <Tooltip content="New activity">
-    <Box boxSize="1.5" bg="fg.info" borderRadius="full" flexShrink="0" role="img" aria-label="New activity" />
-  </Tooltip>
-);
-
 export const SharedActivity = () => {
   const [active, setActive] = useState("session");
   const [versions, setVersions] = useState<Record<string, number>>({ session: 1, note: 1, ticket: 1 });
@@ -33,7 +28,7 @@ export const SharedActivity = () => {
   };
   return (
     <Stack p="md" gap="md" w="3xl">
-      <Text textStyle="heading.sm">Shared resource activity · proposed</Text>
+      <Text textStyle="heading.sm">Shared resource activity</Text>
       <HStack gap="sm" flexWrap="wrap">
         <Button onClick={() => change(active === "note" ? "session" : "note")}>Change inactive resource</Button>
         <Button onClick={() => change(active)}>Change visible resource</Button>

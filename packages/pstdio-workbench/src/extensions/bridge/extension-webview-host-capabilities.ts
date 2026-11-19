@@ -124,6 +124,7 @@ export const createExtensionWebviewHostCapabilities = (
   const account = createAccountCapability(adapters.account);
   return {
     "harnesses.read": capability("harnesses.read", readHarnesses),
+    "resources.changes.observed": capability("resources.changes.observed", undefined),
     "resources.actions": capability("resources.actions", adapters.resourceActions),
     "resources.actions.register": capability("resources.actions.register", adapters.registerResourceAction),
     "commands.execute": capability("commands.execute", commandExecution(adapters)),

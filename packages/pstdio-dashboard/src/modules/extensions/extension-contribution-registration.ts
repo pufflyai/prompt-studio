@@ -1,3 +1,4 @@
+import { accountEvents } from "@pstdio/sdk/extensions";
 import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
 import {
   fileRendererRefreshEnvelopeFromCommand,
@@ -167,6 +168,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         },
         kanbanAdapter: kanban,
         nativeDocuments: getApiClient().nativeDocuments,
+        resourceChanges: getApiClient().resourceChanges,
         resourceActivity: {
           api: getApiClient().activity,
           watch: (resource, options) => getApiClient().activity.watch(resource, options),
@@ -229,8 +231,8 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         settingsSectionTitle: "Project",
         subscribeRefreshEvents: (listener) => {
           const unsubscribe = subscribeToExtensionEventFeed((event) => {
-            if (event.projectId === input.projectId) listener(event);
-          });
+            if (event.projectId === input.projectId || event.id === accountEvents.changed.id) listener(event);
+          }, owner);
           return { dispose: unsubscribe };
         },
         subscribeRefreshReset: (listener) => ({ dispose: subscribeToExtensionEventReset(listener, owner) }),
