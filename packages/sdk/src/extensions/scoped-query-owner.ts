@@ -161,7 +161,9 @@ export const createQueryOwner = <T>(
       cancelRequest();
       repeat.resume();
     },
-    accept: publication.accept,
+    accept(value: T) {
+      publication.accept(value);
+    },
     /** Schedulers may observe passively while retaining control of read admission. */
     subscribe(listener: () => void, input: { automatic?: boolean } = {}) {
       if (disposed) throw new Error("Query owner is disposed");
