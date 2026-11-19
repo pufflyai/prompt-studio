@@ -108,6 +108,7 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
       hostReleaseRef: "f".repeat(40),
       installName: "pstdio-planner",
       reuseInstalledDependencies: true,
+      upgradeFromVersion: "1.0.0",
       retainBackup: true,
       source: "pstdio-planner",
     });
