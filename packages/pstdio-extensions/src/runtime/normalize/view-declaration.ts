@@ -94,7 +94,6 @@ const body = z.discriminatedUnion("kind", [
     .object({
       kind: z.literal("kanban"),
       ...native,
-      supportsFieldsOnly: z.boolean().optional(),
       query: callbackSchema,
       onAttributeChange: callbackSchema.optional(),
       onMove: callbackSchema.optional(),
@@ -106,7 +105,6 @@ const body = z.discriminatedUnion("kind", [
     .object({
       kind: z.literal("resourceList"),
       ...native,
-      supportsFieldsOnly: z.boolean().optional(),
       query: callbackSchema,
       onAttributeChange: callbackSchema.optional(),
       onColumnAction: callbackSchema.optional(),

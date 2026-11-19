@@ -125,11 +125,8 @@ const resolveKanbanFields = async (
           },
         }
       : {}),
-    ...(board.body.supportsFieldsOnly ? { fieldsOnly: true as const } : {}),
   } satisfies KanbanRendererQueryParams);
   const rawAttributes = result && typeof result === "object" && "attributes" in result ? result.attributes : undefined;
-  if (board.body.supportsFieldsOnly && rawAttributes === undefined)
-    throw new BoardViewError("Board fields could not be resolved", 503);
   const attributes =
     rawAttributes === undefined
       ? (board.body.attributes ?? [])

@@ -8,15 +8,13 @@ import { dependencyOrder } from "./dependency-order";
 export const byDate = (left: Deadline, right: Deadline) =>
   left.date.localeCompare(right.date) || (left.name ?? "").localeCompare(right.name ?? "");
 
-export const sortedPlanDeadlines = (stored: StoredPlan | undefined) => [...(stored?.deadlines ?? [])].sort(byDate);
-
 export function resolvePlan(
   stored: StoredPlan | undefined,
   tickets: PlannerTicket[],
   _statuses: PlannerStatus[],
   workflow: WorkflowStatusSelections = emptyWorkflowStatuses(),
 ) {
-  const deadlines = sortedPlanDeadlines(stored);
+  const deadlines = [...(stored?.deadlines ?? [])].sort(byDate);
   const deadlineIds = new Set(deadlines.map(({ id }) => id));
   const known = new Set(tickets.map(({ id }) => id));
   const seen = new Set<string>();

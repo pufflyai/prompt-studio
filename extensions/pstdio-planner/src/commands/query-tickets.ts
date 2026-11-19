@@ -1,7 +1,6 @@
 import type { ExtensionContextBase, ViewFilterGroup } from "@pstdio/sdk/extensions";
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { migratePlannerStorage } from "../data/migrate-storage";
-import { readTicketBoardFields, runTicketsQuery } from "../data/query";
+import { runTicketsQuery } from "../data/query";
 import { readMigratedTickets } from "../data/read-migrated-tickets";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
 
@@ -10,12 +9,8 @@ export const queryTickets = async (
     ExtensionContextBase,
     "commands" | "extensionId" | "files" | "projectId" | "storage" | "settings" | "resources"
   >,
-  input: { filter?: ViewFilterGroup; fieldsOnly?: true },
+  input: { filter?: ViewFilterGroup },
 ) => {
-  if (input.fieldsOnly) {
-    await migratePlannerStorage(ctx);
-    return readTicketBoardFields(ctx.storage);
-  }
   const tickets = await readMigratedTickets(ctx);
 
   return runTicketsQuery({
