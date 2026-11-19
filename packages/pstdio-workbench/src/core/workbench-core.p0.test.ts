@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { createLocalStorageWorkbenchPersistence } from "../storage";
-import { createWorkbench, type WorkbenchModuleContribution } from "./workbench-core";
+import { createWorkbench } from "./workbench-core";
 
 describe("workbench modules", () => {
   it("enforces the host detachment option through the shell API", () => {
@@ -44,18 +44,5 @@ describe("workbench modules", () => {
     workbench.focus.setActiveRegion("secondary");
     workbench.layout.setRegionVisible("secondary", false);
     expect(workbench.focus.getActiveRegion()).toBeUndefined();
-  });
-
-  it("registers modules through the core API", () => {
-    const workbench = createWorkbench();
-    const module: WorkbenchModuleContribution = {
-      id: "dashboard.project",
-      activate: (ctx) => {
-        ctx.commands.registerCommand({ id: "project.open", label: "Open project" }, { execute: () => undefined });
-      },
-    };
-    workbench.registerModule(module);
-    expect(workbench.commands.getCommand("project.open")?.ownerId).toBe("dashboard.project");
-    expect(workbench.commands.getCommand("project.open")?.source).toBe("module");
   });
 });

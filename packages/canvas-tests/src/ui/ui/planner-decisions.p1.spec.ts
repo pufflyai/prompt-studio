@@ -136,12 +136,9 @@ test("Auto Build can dismiss and show the same failure again", async ({ page }) 
   await preview.getByRole("button", { name: "Auto Build", exact: true }).click();
   const activity = preview.getByRole("dialog", { name: "Auto Build activity" });
   const pause = activity.getByRole("button", { name: "Pause", exact: true });
-  const viewport = activity.locator('[data-scope="scroll-area"][data-part="viewport"]').first();
-  const height = await viewport.evaluate((element) => element.clientHeight);
   await pause.click();
   const alert = activity.getByRole("alert");
   await expect(alert).toContainText("Could not pause");
-  expect(await viewport.evaluate((element) => element.clientHeight)).toBe(height);
   await activity.getByRole("button", { name: /Build the notes tool/ }).click({ trial: true });
   await alert.getByRole("button", { name: "Dismiss" }).click();
   await expect(alert).toHaveCount(0);

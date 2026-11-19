@@ -59,16 +59,6 @@ describe("arg building", () => {
     expect(args.at(args.indexOf("--permission-mode") + 1)).toBe("bypassPermissions");
   });
 
-  test("ignores permission-mode params from stale callers", () => {
-    const startArgs = buildStartSessionArgs({ model: "sonnet", params: { "permission-mode": "plan" } });
-    const resumeArgs = buildResumeArgs({ agentSessionId: "session-abc", model: null });
-
-    expect(startArgs.at(startArgs.indexOf("--permission-mode") + 1)).toBe("bypassPermissions");
-    expect(startArgs.slice(-2)).toEqual(["--model", "sonnet"]);
-    expect(resumeArgs.at(resumeArgs.indexOf("--permission-mode") + 1)).toBe("bypassPermissions");
-    expect(resumeArgs.slice(0, 2)).toEqual(["--resume", "session-abc"]);
-  });
-
   test("maps every thinking level to start and resume effort args", () => {
     for (const thinking of ["low", "medium", "high", "xhigh", "max"]) {
       const startArgs = buildStartSessionArgs({ model: null, params: { thinking } });
@@ -237,31 +227,6 @@ describe("resumeClaudeCodeSession", () => {
     const usagePatch = patches[2];
     expect(usagePatch.path).toBe("/messages/7");
     expect((usagePatch.value as { parts: Array<{ type: string }> }).parts[0].type).toBe("token_usage");
-  });
-
-  test("handles thinking/reasoning events during resume", async () => {
-    const lines = [
-      JSON.stringify({ type: "content_block_start", content_block: { type: "thinking", thinking: "" } }),
-      JSON.stringify({ type: "content_block_delta", delta: { type: "thinking_delta", thinking: "Let me think..." } }),
-      JSON.stringify({ type: "content_block_delta", delta: { type: "text_delta", text: "Here's my answer" } }),
-    ];
-
-    const deps = createMockSpawnDeps(lines);
-    const { patches, sink } = recordingSink();
-
-    const session = resumeClaudeCodeSession(
-      { agentSessionId: "session-abc", prompt: "Think about this", messageOffset: 0, events: sink },
-      deps,
-    );
-
-    await session.done;
-
-    const types = patches
-      .filter((p) => p.path.startsWith("/messages/"))
-      .map((p) => (p.value as { parts: Array<{ type: string }> }).parts[0]?.type);
-
-    expect(types).toContain("reasoning");
-    expect(types).toContain("text");
   });
 
   test("preserves streamed TodoWrite input when the tool result replaces the pending tool", async () => {

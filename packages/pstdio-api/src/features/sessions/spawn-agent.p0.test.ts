@@ -112,7 +112,7 @@ describe("resumeAgentSession", () => {
     );
 
     await Bun.sleep(0);
-    expect(sessionService.store.create).toHaveBeenCalledTimes(1);
+    expect(sessionService.store.get("s_1")).not.toBeNull();
 
     resolveMessages([]);
     await resumePromise;

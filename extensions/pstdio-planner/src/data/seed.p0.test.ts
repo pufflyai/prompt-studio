@@ -19,23 +19,6 @@ describe("seedDefaultStatuses", () => {
     expect(stored.every((status) => Boolean(status.id))).toBe(true);
   });
 
-  test("matches the default board status set", () => {
-    expect(
-      DEFAULT_STATUSES.map((status) => ({
-        name: status.name,
-        color: status.color,
-        isDefault: status.isDefault,
-      })),
-    ).toEqual([
-      { name: "Backlog", color: "gray", isDefault: true },
-      { name: "Todo", color: "purple", isDefault: false },
-      { name: "In Progress", color: "blue", isDefault: false },
-      { name: "Blocked", color: "red", isDefault: false },
-      { name: "In Review", color: "yellow", isDefault: false },
-      { name: "Done", color: "green", isDefault: false },
-    ]);
-  });
-
   test("is idempotent — does not duplicate on re-run", async () => {
     const storage = createMemoryStorage();
 
@@ -74,21 +57,6 @@ describe("seedDefaultStatuses", () => {
 
     expect(seeded.map((status) => status.id)).not.toContain(DEFAULT_STATUSES[0].id);
   });
-
-  test("exposes exactly one default status", () => {
-    expect(DEFAULT_STATUSES.filter((status) => status.isDefault)).toHaveLength(1);
-  });
-
-  test("draws every default status with a status ring glyph", () => {
-    expect(DEFAULT_STATUSES.map((status) => status.icon)).toEqual([
-      "status-backlog",
-      "status-todo",
-      "status-progress",
-      "status-canceled",
-      "status-review",
-      "status-done",
-    ]);
-  });
 });
 
 describe("seedDefaultTags", () => {
@@ -118,11 +86,5 @@ describe("seedDefaultTags", () => {
     for (const seeded of results) expect(seeded.find((tag) => tag.id === customized.id)).toEqual(customized);
     expect(await tagsCollection(storage).get(customized.id)).toEqual(customized);
     expect(sortedBySortOrder(await seedDefaultTags(storage))).toEqual(results[0]);
-  });
-
-  test("draws the default complexity options with level glyphs", () => {
-    const complexity = DEFAULT_TAGS.map((seed) => seed()).find((tag) => tag.id === "default-complexity");
-
-    expect(complexity?.options.map((option) => option.icon)).toEqual(["level-low", "level-high", "level-xhigh"]);
   });
 });

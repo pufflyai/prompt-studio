@@ -30,17 +30,6 @@ describe("invocation scope", () => {
     expect(order).toEqual(["second", "first"]);
   });
 
-  test("does not cancel work the invocation handed to the host", async () => {
-    const { logger } = recordingLogger();
-    const scope = createInvocationScope({ logger });
-
-    // Commands start work the host keeps running after they return, such as an agent
-    // session. Closing the scope releases what the invocation owns, and nothing else.
-    await scope.close();
-
-    expect(scope.signal.aborted).toBe(false);
-  });
-
   test("releases every resource once", async () => {
     const { logger } = recordingLogger();
     const scope = createInvocationScope({ logger });

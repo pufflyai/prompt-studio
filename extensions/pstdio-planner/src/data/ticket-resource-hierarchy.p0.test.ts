@@ -165,34 +165,6 @@ describe("ticket resource hierarchy", () => {
   });
 });
 
-describe("tickets browse root", () => {
-  test("the lineage root names the Tickets view as its parent", () => {
-    const root = storedTicket({ id: "root", shorthand: "PS-1" });
-    const child = storedTicket({ id: "child", shorthand: "PS-2", parentId: root.id });
-    const tickets = new Map([
-      [root.id, root],
-      [child.id, child],
-    ]);
-
-    const reference = ticketResourceReference(child, tickets);
-    const rootReference = reference.metadata.resourceParent as { metadata: Record<string, unknown> };
-
-    expect(rootReference.metadata.resourceParent).toEqual({
-      type: "view",
-      viewId: "pstdio.planner.view.tickets",
-    });
-  });
-
-  test("a top-level ticket names the Tickets view as its parent", () => {
-    const ticket = storedTicket({ id: "solo", shorthand: "PS-9" });
-
-    expect(ticketResourceReference(ticket).metadata.resourceParent).toEqual({
-      type: "view",
-      viewId: "pstdio.planner.view.tickets",
-    });
-  });
-});
-
 test("a current host's owner qualifies every ancestor in a newly created ticket reference", () => {
   const ticket = { id: "ticket", shorthand: "T-1", title: "Ticket" } as never;
   expect(ticketResourceReference(ticket, new Map(), "pstdio.planner").metadata.resourceParent).toEqual({

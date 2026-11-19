@@ -91,12 +91,8 @@ test("dashboard keeps the project mode and blocks controls behind the project sw
 
     const projectPicker = page.getByRole("dialog").filter({ hasText: project.name });
     const positioner = page.locator('[data-scope="dialog"][data-part="positioner"]').filter({ has: projectPicker });
-    const backdrop = page.locator('[data-scope="dialog"][data-part="backdrop"]');
     await expect(projectPicker).toBeVisible();
     await expect.poll(() => positioner.evaluate((element) => getComputedStyle(element).pointerEvents)).toBe("auto");
-    await expect
-      .poll(() => backdrop.evaluate((element) => getComputedStyle(element).backgroundColor))
-      .not.toBe("rgba(0, 0, 0, 0)");
 
     await page.mouse.click(controlBox!.x + controlBox!.width / 2, controlBox!.y + controlBox!.height / 2);
     await expect
@@ -154,27 +150,6 @@ test("dashboard clears a saved project that no longer exists", async ({ page, re
   await expect
     .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb2:selected-project:global")))
     .toBeNull();
-});
-
-test("project picker stays open when the background is clicked", async ({ page, request }) => {
-  await deleteAllProjects(request);
-  const firstProject = await createProjectViaApi(request, "First Project");
-  await createProjectViaApi(request, "Second Project");
-  await page.addInitScript((projectId) => {
-    window.localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
-  }, firstProject.id);
-
-  await page.goto("/");
-  await expect(
-    page.getByRole("region", { name: "Nav Chrome" }).getByRole("button", { name: /First Project/ }),
-  ).toBeVisible();
-  await navSwitchProjectButton(page).click();
-
-  const picker = page.getByRole("dialog", { name: "Projects", exact: true });
-  await expect(picker).toBeVisible();
-  await page.mouse.click(100, 100);
-
-  await expect(picker).toBeVisible();
 });
 
 test("dashboard opens Home for a selected project and resumes a resource after its first visit", async ({

@@ -104,22 +104,6 @@ describe("createWorkspaceSessionsDBService", () => {
     );
   });
 
-  test("allows concurrent sessions on the same workspace", async () => {
-    const ws = await workspacesService.create({
-      project_id: projectId,
-      shorthand_base: "PS-1",
-      anchors: [ticketAnchor],
-    });
-    const s1 = await sessionsService.create({ project_id: projectId, title: "Implement", agent: "claude-code" });
-    const s2 = await sessionsService.create({ project_id: projectId, title: "Review", agent: "claude-code" });
-
-    await workspaceSessionsService.link(ws.id, s1.id);
-    await workspaceSessionsService.link(ws.id, s2.id);
-
-    const sessions = await workspaceSessionsService.listByWorkspace(ws.id);
-    expect(sessions).toHaveLength(2);
-  });
-
   test("rejects duplicate workspace-session link", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,

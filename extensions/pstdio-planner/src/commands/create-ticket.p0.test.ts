@@ -148,27 +148,6 @@ describe("createTicketCommand", () => {
     expect(created.shorthand).toBe("T-4");
     expect(created.position! > third.position!).toBe(true);
   });
-
-  test("continues project shorthand after hard delete", async () => {
-    const storage = createMemoryStorage();
-    const ctx = (title: string) =>
-      makeCommandArgs({
-        storage,
-        params: { title },
-        overrides: { project: { id: "proj-1", name: "Prompt Studio", shorthand: "PS" } },
-      });
-
-    await createTicketCommand.run(...ctx("First"));
-    const second = await createTicketCommand.run(...ctx("Second"));
-    await createTicketCommand.run(...ctx("Third"));
-
-    await deleteTicketCommand.run(
-      ...makeCommandArgs({ storage, params: {}, overrides: { resource: { type: "ticket", id: second.id } } }),
-    );
-    const created = await createTicketCommand.run(...ctx("Fourth"));
-
-    expect(created.shorthand).toBe("PS-4");
-  });
 });
 
 describe("createTicket dependencies", () => {

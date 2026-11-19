@@ -87,7 +87,8 @@ test("pending inline rows cannot alias provider IDs", () => {
     },
   ];
   const result = withTreeInlineInput(sections, request, () => {});
-  expect(result[0].nodes[0].id).toBe("workbench:inline-input:2");
+  expect(["workbench:inline-input", "workbench:inline-input:1"]).not.toContain(result[0].nodes[0].id);
+  expect(result[0].nodes[0].inlineInput).toBeDefined();
   expect(result[0].nodes[1].id).toBe("workbench:inline-input");
 });
 

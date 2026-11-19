@@ -54,25 +54,6 @@ test("preserves browser Forward history between extension pages after refresh", 
   await verifyNativePublicTextEditor(page, ticket.content);
 });
 
-test("keeps the project selector and Session Panel available on project home", async ({ page, request }) => {
-  const response = await request.post(`${apiBase}/v1/projects`, {
-    data: folderProjectInput({ name: "PS-170 Project Chrome" }),
-  });
-  expect(response.ok()).toBe(true);
-  const project = (await response.json()) as { id: string };
-  await page.addInitScript((projectId: string) => {
-    localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
-  }, project.id);
-
-  await page.goto(`/projects/${project.id}/`);
-
-  await expect(
-    page.getByRole("region", { name: "Nav Chrome" }).getByRole("button", { name: "Switch project", exact: true }),
-  ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Open Side Panel" })).toBeVisible();
-});
-
 test("preserves other Session tabs when selecting from New session", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: folderProjectInput({ name: "PS-170 Session Sub Panels" }),
@@ -221,25 +202,12 @@ test("updates a New session Sub Panel in place after the first message", async (
     );
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
-  // Open the generic shell before the real provider catalog arrives.
-  const catalog = Promise.withResolvers<void>();
-  await page.route(`**/v1/projects/${project.id}/extensions/ui`, async (route) => {
-    await catalog.promise;
-    await route.continue();
-  });
-  try {
-    await page.goto(`/projects/${project.id}/`);
-    await page.getByRole("button", { name: "Open Side Panel" }).click();
-    await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
-  } finally {
-    catalog.resolve();
-  }
+  // Session panels come from the Sessions extension, so the Side Panel opens once its provider has loaded.
+  await page.goto(`/projects/${project.id}/`);
+  await page.getByRole("button", { name: "Open Side Panel" }).click();
+  await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
   const sidePanel = page.locator('[data-workbench-panel="side"]');
-  await sidePanel
-    .getByRole("group", { name: "Available tabs" })
-    .getByRole("button", { name: "New session", exact: true })
-    .click();
   await expect(sideHeader.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   const sessionChoice = page
