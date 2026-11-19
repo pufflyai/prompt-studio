@@ -60,6 +60,7 @@ describe("extensionInstancesService", () => {
       enabled: true,
       config_json: { choice: "retained" },
     });
+    await svc.remove(first!.instance.id);
     await Promise.all([
       svc.createProjectOffer(projectId, installedId),
       createProjectsDBService(db).hardDelete(projectId),
