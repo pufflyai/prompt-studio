@@ -6,6 +6,7 @@ import {
   useTreeListOrderStore,
 } from "@pstdio/ui";
 import { useState } from "react";
+import type { TreeGroupScope } from "../../../core/registries/renderers/tree-renderer-types";
 import { WorkbenchIcon } from "../../shared/icon";
 import { activeTreeGroupLayout } from "./tree-group-scope";
 
@@ -20,29 +21,30 @@ export const useTreeViewGroups = (
   sections: TreeListSection[],
   nodeOrderBySection: Record<string, string[]>,
   enabled: boolean,
+  groupScope?: TreeGroupScope,
 ) => {
   const savedGroups = useTreeListOrderStore(storageKey, (state) => state.groups);
   const addGroup = useTreeListOrderStore(storageKey, (state) => state.addGroup);
   const renameGroup = useTreeListOrderStore(storageKey, (state) => state.renameGroup);
   const removeGroup = useTreeListOrderStore(storageKey, (state) => state.removeGroup);
   const [draft, setDraft] = useState<GroupDraft | null>(null);
-  const currentDraft = draft?.storageKey === storageKey ? draft : null;
+  const currentDraft =
+    draft?.storageKey === storageKey && (!groupScope || draft.group.moveScope === groupScope.active) ? draft : null;
   const { groups, nodeOrderBySection: activeNodeOrder } = activeTreeGroupLayout(
     sections,
     savedGroups,
     nodeOrderBySection,
+    groupScope,
   );
   if (currentDraft?.isNew) groups.push(currentDraft.group);
 
-  // No default parameter: React Compiler cannot compile an optional chain in one, and an
-  // uncompiled hook rebuilds every section, so every tree row renders again.
-  const startGroup = (moveScope?: string) => {
+  const startGroup = () => {
     setDraft({
       storageKey,
       group: {
         id: `tree-list-group:${crypto.randomUUID()}`,
         label: "New group",
-        moveScope: moveScope ?? sections[0]?.moveScope,
+        moveScope: groupScope?.active ?? sections[0]?.moveScope,
       },
       isNew: true,
     });
@@ -52,10 +54,13 @@ export const useTreeViewGroups = (
     label: "New group",
     icon: <WorkbenchIcon name="folder-plus" size={14} />,
     closeOnSelect: true,
-    onClick: () => startGroup(),
+    onClick: startGroup,
   };
 
-  const withGroupControls = (orderedSections: TreeListSection[]) =>
+  const withGroupControls = (
+    orderedSections: TreeListSection[],
+    orderForCurrentLevel: (sectionIds: string[]) => string[],
+  ) =>
     orderedSections.map((section) => {
       const group = groups.find((group) => group.id === section.id);
       if (!group) return section;
@@ -93,10 +98,7 @@ export const useTreeViewGroups = (
               defaultValue: currentDraft.isNew ? "" : group.label,
               onCommit: (label: string) => {
                 if (currentDraft.isNew)
-                  addGroup(
-                    { ...group, label },
-                    orderedSections.map((section) => section.id),
-                  );
+                  addGroup({ ...group, label }, orderForCurrentLevel(orderedSections.map((section) => section.id)));
                 else renameGroup(group.id, label);
                 setDraft(null);
               },

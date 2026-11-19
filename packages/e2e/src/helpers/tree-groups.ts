@@ -1,15 +1,20 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { revealTreeEntry } from "./tree-entry";
 
-export const verifyTreeGroups = async (page: Page, tree: Locator, source: Locator) => {
+export const createTreeGroup = async (page: Page, tree: Locator, source: Locator, label: string) => {
   await source.click({ button: "right" });
   await page.getByRole("menuitem", { name: "New group", exact: true }).click();
   const input = tree.getByRole("textbox", { name: "Group name", exact: true });
   await expect(input).toBeFocused();
-  await input.fill("Research");
+  await input.fill(label);
   await input.press("Enter");
-  const group = tree.getByText("Research", { exact: true });
+  const group = tree.getByText(label, { exact: true });
   await expect(group).toBeVisible();
+  return group;
+};
+
+export const verifyTreeGroups = async (page: Page, tree: Locator, source: Locator) => {
+  const group = await createTreeGroup(page, tree, source, "Research");
   await group.click();
 
   const from = (await source.boundingBox())!;
@@ -87,6 +92,7 @@ export const verifyTreeGroups = async (page: Page, tree: Locator, source: Locato
   await page.waitForTimeout(100);
   await group.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Rename group", exact: true }).click();
+  const input = tree.getByRole("textbox", { name: "Group name", exact: true });
   await input.fill("Product research");
   await input.press("Enter");
   const renamed = tree.getByText("Product research", { exact: true });
