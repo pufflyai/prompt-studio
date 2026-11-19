@@ -1,5 +1,5 @@
 import type { SessionsRouteDeps } from "./deps";
-import { latestReply, persistSessionMessages } from "./session-messages";
+import { latestReply, persistSessionMessages, sameReply } from "./session-messages";
 import type { ActiveSession } from "./session-store";
 
 type CheckpointDeps = Pick<SessionsRouteDeps, "sessionService" | "fileService">;
@@ -11,19 +11,21 @@ export const checkpointConversation = async (
   completed = false,
 ) => {
   if (entry.checkpointPromise) return entry.checkpointPromise;
-  await Promise.all(Array.from(entry.controlInvocations, (control) => control.done));
-  const conversation = await entry.conversationReady;
-  // The snapshot is taken after the last accepted patch, with no await in between.
-  conversation.close();
-  const messages = conversation.getMessages();
-  const reply = completed ? latestReply(messages) : undefined;
-  entry.checkpointPromise ??= persistSessionMessages(
-    sessionId,
-    messages,
-    deps,
-    reply?.id !== entry.initialReplyId ? reply : undefined,
-  );
-  const pending = entry.checkpointPromise;
+  const pending = (async () => {
+    await Promise.all(Array.from(entry.controlInvocations, (control) => control.done));
+    const conversation = await entry.conversationReady;
+    while (true) {
+      const tail = entry.contentPublications;
+      await tail;
+      if (entry.contentPublications === tail) break;
+    }
+    // Snapshot only after every accepted idle/input publication, before another patch can land.
+    conversation.close();
+    const messages = conversation.getMessages();
+    const reply = completed ? latestReply(messages) : undefined;
+    return persistSessionMessages(sessionId, messages, deps, !sameReply(reply, entry.initialReply) ? reply : undefined);
+  })();
+  entry.checkpointPromise = pending;
   try {
     return await pending;
   } finally {

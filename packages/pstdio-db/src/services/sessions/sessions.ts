@@ -122,7 +122,8 @@ const updateSession = async (db: DbClient, id: string, input: UpdateInput) => {
       if (!current) return null;
       const previous = current.positions ?? {};
       const positions =
-        previous[contentEvent.kind]?.id === contentEvent.id
+        previous[contentEvent.kind]?.id === contentEvent.id &&
+        (contentEvent.kind !== "reply" || previous.reply?.textDigest === contentEvent.textDigest)
           ? previous
           : {
               ...previous,

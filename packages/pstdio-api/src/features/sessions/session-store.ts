@@ -9,7 +9,7 @@ import type {
 } from "pstdio-api-contracts";
 import { createApprovalService, createEventStore, createQuestionService } from "pstdio-api-runtime-host";
 import { createSessionConversation, type SessionConversation } from "./session-conversation";
-import { latestReply } from "./session-messages";
+import { latestReply, sameReply } from "./session-messages";
 
 /** What the host does when a per-session channel signals. The store has no session service of its own. */
 export type SessionChannelHooks = {
@@ -30,8 +30,11 @@ export type ActiveSession = {
   conversation?: SessionConversation;
   controlInvocations: Set<{ done: Promise<void>; abort: AbortController }>;
   executionSettings?: { model: string | null; params: Record<string, string | boolean> };
-  initialReplyId?: string;
+  /** Null means recovery proved that this run has no previously committed reply. */
+  initialReply?: ReturnType<typeof latestReply> | null;
   checkpointPromise?: Promise<SessionMessage[] | null>;
+  /** Ordered durable publications while a provider remains open between turns. */
+  contentPublications: Promise<unknown>;
   /** Set while the provider's turn has ended but its run stays open for background tasks. */
   idleTurn: { backgroundTasks: HarnessBackgroundTask[] } | null;
   turns: HarnessTurnChannel;
@@ -89,13 +92,14 @@ export const createSessionStore = (options: { onIdleTurn?: (sessionId: string) =
       submittedAttachmentFileIds: new Set(),
       conversationReady: ready.promise,
       controlInvocations: new Set(),
+      contentPublications: Promise.resolve(),
       idleTurn: null,
       idleDelivery: Promise.resolve(),
       idleTurnSkipped: null,
       turns: {
         idle: ({ backgroundTasks }) => {
           const reply = entry.conversation && latestReply(entry.conversation.getMessages());
-          if (reply && reply.id !== entry.initialReplyId) hooks.onIdleReply?.(reply);
+          if (reply && !sameReply(reply, entry.initialReply)) hooks.onIdleReply?.(reply);
           entry.idleTurn = { backgroundTasks };
           entry.idleTurnSkipped = null;
           publishIdleTurn();
@@ -111,7 +115,7 @@ export const createSessionStore = (options: { onIdleTurn?: (sessionId: string) =
     // Only live streams show this state; it is not conversation content to sync.
     const publishIdleTurn = () => eventStore.push({ op: "replace", path: IDLE_TURN_PATH, value: entry.idleTurn });
     const initializeConversation = (messages: SessionMessage[]) => {
-      entry.initialReplyId = latestReply(messages)?.id;
+      if (entry.initialReply === undefined) entry.initialReply = latestReply(messages) ?? null;
       entry.conversation = createSessionConversation(eventStore, messages, (patch) => changed(sessionId, patch));
       ready.resolve(entry.conversation);
     };

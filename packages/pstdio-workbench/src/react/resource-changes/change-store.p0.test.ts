@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 import type { PstdioClient } from "@pstdio/sdk/client";
 import type { ResourceRef } from "@pstdio/sdk/extensions";
-import { createChangeStore } from "./change-store";
+import { createWorkbench } from "../../core";
+import { createChangeStore, installResourceChanges } from "./change-store";
 
 test("rows and tabs share bounded reads and discard stale results after a scoped refresh", async () => {
   const ref = (i: number) => ({ extensionId: "example.notes", projectId: "project", type: "note", id: String(i) });
@@ -44,4 +45,59 @@ test("rows and tabs share bounded reads and discard stale results after a scoped
   await Promise.resolve();
   expect(pages.length).toBe(2);
   store.dispose();
+});
+
+test("an account switch immediately retires the prior reader's dots and held responses", async () => {
+  const workbench = createWorkbench();
+  const resource = { extensionId: "example.notes", projectId: "project", type: "note", id: "one" };
+  let refresh!: (event: { id: string }) => void;
+  let calls = 0;
+  const held = Promise.withResolvers<void>();
+  const registration = installResourceChanges({
+    projectId: "project",
+    workbench,
+    metadata: { resourceChangeProviders: [{ ...resource, refreshEvents: [] }] },
+    subscribeRefreshEvents: (listener) => {
+      refresh = listener;
+      return { dispose() {} };
+    },
+    resourceChanges: {
+      query: async (_project, refs) => {
+        const current = ++calls;
+        if (current === 2) await held.promise;
+        return refs.map((resource) => ({
+          resource,
+          stamp: { lineage: "edition", revision: "2" },
+          changedSinceSeen: current < 3,
+        }));
+      },
+      read: async () => {
+        throw Error("No duplicate content read");
+      },
+      acknowledge: async () => {
+        throw Error("Lists never acknowledge");
+      },
+    },
+  });
+  const { resourceChangesFor } = await import("./change-store");
+  const store = resourceChangesFor(workbench)!;
+  const stop = store.subscribe(resource, () => {});
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+  try {
+    await settle();
+    expect(store.changed(resource)).toBe(true);
+    store.refresh();
+    await settle();
+    refresh({ id: "account.changed" });
+    expect(store.changed(resource)).toBe(false);
+    held.resolve();
+    await settle();
+    expect(store.changed(resource)).toBe(false);
+    expect(calls).toBe(3);
+  } finally {
+    held.resolve();
+    stop();
+    registration.dispose();
+    await workbench.dispose();
+  }
 });

@@ -1,5 +1,5 @@
 import type { PstdioClient } from "@pstdio/sdk/client";
-import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
+import { accountEvents, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext } from "../../core";
 import type { RegisterWorkbenchExtensionContributionsInput } from "../../extensions/host/workbench-extension-host-types";
 
@@ -30,6 +30,7 @@ export const createChangeStore = (projectId: string, api: Api, providers: { exte
   const dirty = new Set<string>();
   const controller = new AbortController();
   let running = false;
+  let reader = new AbortController();
   const defaultOwners = new Map<string, string | undefined>();
   for (const p of providers) defaultOwners.set(p.type, defaultOwners.has(p.type) ? undefined : p.extensionId);
   const normalize = (ref: ResourceRef) => ({
@@ -62,7 +63,7 @@ export const createChangeStore = (projectId: string, api: Api, providers: { exte
           const result = await api.query(
             projectId,
             page.map(({ entry }) => entry.ref),
-            controller.signal,
+            AbortSignal.any([controller.signal, reader.signal]),
           );
           const changed = new Set(result.filter((r) => r.changedSinceSeen).map((r) => keyOf(r.resource)));
           for (const { key, entry, generation } of page)
@@ -116,15 +117,23 @@ export const createChangeStore = (projectId: string, api: Api, providers: { exte
       };
     },
     refresh,
+    resetReader() {
+      reader.abort();
+      reader = new AbortController();
+      for (const entry of entries.values()) publish(entry, false);
+      refresh();
+    },
     async observe(ref: ResourceRef, receipt: string, signal: AbortSignal) {
-      signal = AbortSignal.any([signal, controller.signal]);
+      signal = AbortSignal.any([signal, controller.signal, reader.signal]);
       const resource = normalize(ref);
       signal.throwIfAborted();
       await api.acknowledge(projectId, receipt, signal, resource);
+      signal.throwIfAborted();
       refresh((key) => key === resourceKey(resource));
     },
     dispose() {
       controller.abort();
+      reader.abort();
       for (const entry of entries.values()) publish(entry, false);
       entries.clear();
       dirty.clear();
@@ -147,6 +156,10 @@ export const installResourceChanges = (input: Registration) => {
   stores.set(owner, store);
   notifyRegistration(owner);
   const events = input.subscribeRefreshEvents?.((event) => {
+    if (event.id === accountEvents.changed.id) {
+      store.resetReader();
+      return;
+    }
     const seen = event.id === "pstdio.event.resource-seen-changed";
     if (!seen && !providers.some((k) => k.refreshEvents.includes(event.id))) return;
     const keys = event.resourceKeys ?? (event.resourceKey ? [event.resourceKey] : undefined);

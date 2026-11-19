@@ -75,6 +75,13 @@ const displayConversation = (
   };
 };
 
+const writeFrames = async (ctx: CommandContext, id: string, revision: number, event: ChatWatchUpdate) => {
+  for (const frame of diagnosticChatFrames(id, { revision, ...event })) {
+    if (ctx.signal.aborted) return;
+    await ctx.stream.write(JSON.parse(JSON.stringify(frame)));
+  }
+};
+
 export const watchConversation = async (ctx: CommandContext, resource?: ResourceRef) => {
   const id = sessionId(resource);
   // A visible draft retains its shared watch until disposal, without reconnect churn.
@@ -124,14 +131,9 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
     });
     return writes;
   };
-  const writeEvent = (event: ChatWatchUpdate) => enqueue(async () => {
-    for (const frame of diagnosticChatFrames(id, { revision: revision++, ...event })) {
-      if (ctx.signal.aborted) return;
-      await ctx.stream.write(JSON.parse(JSON.stringify(frame)));
-    }
-  });
-  const observe = createStreamObservation(ctx, id, (receipt) =>
-    ctx.stream.write({ revision: revision++, snapshot: { observedChange: receipt } }),
+  const writeEvent = (event: ChatWatchUpdate) => enqueue(() => writeFrames(ctx, id, revision++, event));
+  const observe = createStreamObservation(ctx, id, (observation) =>
+    writeFrames(ctx, id, revision++, { snapshot: observation }),
   );
   const observation = () =>
     observe(metadata.query.getSnapshot().data?.session, hasTranscript ? messages : undefined, approvals[0]?.id);

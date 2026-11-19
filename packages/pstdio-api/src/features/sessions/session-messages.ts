@@ -23,6 +23,9 @@ export const latestReply = (messages: SessionMessage[]) => {
   }
 };
 
+export const sameReply = (a: ReturnType<typeof latestReply> | null, b: ReturnType<typeof latestReply> | null) =>
+  a?.id === b?.id && a?.textDigest === b?.textDigest;
+
 export const persistSessionMessages = async (
   sessionId: string,
   messages: SessionMessage[],

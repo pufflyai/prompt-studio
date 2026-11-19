@@ -59,6 +59,23 @@ export const observeRenderedSession = (
     : null;
 };
 
+const historicalWitness = (messages: SessionMessage[]) =>
+  messages
+    .filter(
+      (message) =>
+        ["assistant", "user"].includes(message.role) &&
+        message.parts.some((part) => {
+          if (part.type === "text") return Boolean(part.text.trim());
+          if (part.type === "tool")
+            return (
+              part.tool.toLowerCase() === "question" ||
+              ["completed", "failed", "denied", "error"].includes(part.status ?? part.state?.status ?? "")
+            );
+          return part.type === "file" || part.type === "error";
+        }),
+    )
+    .at(-1);
+
 export const renderedObservation = async (
   ctx: Pick<CommandContext, "resources" | "projectId">,
   id: string,
@@ -67,7 +84,22 @@ export const renderedObservation = async (
   approvalId?: string,
 ) => {
   if (!ctx.resources || !("observeChange" in ctx.resources)) return {};
+  const { reply, input } = session.changePositions ?? {};
+  const latestInput = input && input.position > (reply?.position ?? 0) ? input : undefined;
+  const inputMessage =
+    latestInput &&
+    messages.find((message) => message.parts.some((part) => part.type === "tool" && part.callId === latestInput.id));
+  const fallback = historicalWitness(messages);
+  const targetId = inputMessage?.id ?? reply?.id ?? fallback?.id;
+  const questionPart = inputMessage?.parts.find(
+    (part) => part.type === "tool" && part.callId === latestInput?.id && part.tool.toLowerCase() === "question",
+  );
+  let questionId: string | null = null;
+  if (questionPart?.type === "tool") questionId = questionPart.callId ?? null;
+  if (latestInput && latestInput.id === approvalId) questionId = `approval:${approvalId}`;
   return {
+    observedChangeMessageIds: targetId ? [targetId] : [],
+    observedChangeQuestionId: questionId,
     observedChange: await observeRenderedSession(ctx, id, await observedSessionChange(session, messages, approvalId)),
   };
 };
@@ -76,7 +108,7 @@ export const renderedObservation = async (
 export const createStreamObservation = (
   ctx: CommandContext,
   id: string,
-  write: (receipt: string) => Promise<unknown>,
+  write: (observation: Awaited<ReturnType<typeof renderedObservation>>) => Promise<unknown>,
 ) => {
   let emitted: string | undefined;
   return (session: SessionChanges | undefined, messages: SessionMessage[] | undefined, approvalId?: string) => {
@@ -86,9 +118,9 @@ export const createStreamObservation = (
     if (position === emitted) return;
     return async () => {
       if (position === emitted || ctx.signal.aborted) return;
-      const { observedChange } = await renderedObservation(ctx, id, session, messages, approvalId);
-      if (observedChange && !ctx.signal.aborted) {
-        await write(observedChange);
+      const observation = await renderedObservation(ctx, id, session, messages, approvalId);
+      if (observation.observedChange && !ctx.signal.aborted) {
+        await write(observation);
         emitted = position;
       }
     };
@@ -104,7 +136,7 @@ export const changeHeads = defineCommand({
       .filter((r) => r.type === "session" && r.extensionId === "pstdio" && r.projectId === ctx.projectId)
       .map((r) => r.id);
     if (!ids.length) return [];
-    const query = { ids, limit: 50 };
+    const query = { ids, limit: 50, includeArchived: true };
     const { items } = await ctx.sessions.query(query);
     return items.map((session: (typeof items)[number] & SessionChanges) => ({
       resource: sessionResource(session, ctx.projectId),

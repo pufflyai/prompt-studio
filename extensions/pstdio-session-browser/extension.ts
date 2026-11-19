@@ -1,4 +1,5 @@
 import {
+  accountEvents,
   defineExtension,
   defineKeybinding,
   defineNavigationItem,
@@ -60,7 +61,7 @@ const conversation = defineView({
       nativeHarnessAccount: { controlId: "harness" },
       controls: composerControls,
     },
-    refreshEvents: [viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged],
+    refreshEvents: [viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged, accountEvents.changed],
     query: (ctx, { renderer }) => readSnapshot(ctx, renderer.resource),
     loadDraft: (ctx, { draftKey }) => readDraft(ctx, draftKey),
     saveDraft: async (ctx, { renderer, draftKey, draft }) => {

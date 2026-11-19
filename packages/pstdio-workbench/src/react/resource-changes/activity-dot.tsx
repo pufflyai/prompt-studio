@@ -28,13 +28,13 @@ export const ActivityDot = ({
   id?: string;
 }) => {
   const store = useChangeStore(workbench);
-  const { id, type, extensionId, projectId } = resource;
+  const { id, type, extensionId, projectId, device } = resource;
   const subscription = useCallback(
     (listener: () => void) => {
-      const ref = { id, type, extensionId, projectId };
+      const ref = { id, type, extensionId, projectId, device };
       return store?.tracks(ref) ? store.subscribe(ref, listener) : emptySubscription();
     },
-    [store, id, type, extensionId, projectId],
+    [store, id, type, extensionId, projectId, device],
   );
   const changed = useSyncExternalStore(
     subscription,
@@ -66,10 +66,10 @@ export const useObservedResource = (
   visible: boolean,
 ) => {
   const store = useChangeStore(workbench);
-  const { id, type, projectId, extensionId } = resource ?? {};
+  const { id, type, projectId, extensionId, device } = resource ?? {};
   useEffect(() => {
     if (!store || !id || !type || !visible || !receipt) return;
-    const ref = { id, type, projectId, extensionId };
+    const ref = { id, type, projectId, extensionId, device };
     if (!store.tracks(ref)) return;
     let pending: AbortController | undefined;
     let done = false;
@@ -104,5 +104,5 @@ export const useObservedResource = (
       window.removeEventListener("online", check);
       document.removeEventListener("visibilitychange", check);
     };
-  }, [store, id, type, projectId, extensionId, receipt, visible]);
+  }, [store, id, type, projectId, extensionId, device, receipt, visible]);
 };

@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createActivityApi } from "../extensions/command-environment/activity";
+import { createResourcesApi } from "../extensions/command-environment/resources";
 import { executeProjectExtensionCommand } from "../extensions/execute-project-extension-command";
 import { createResourceActivityApi } from "./resource-activity-api";
 import { createResourceActivityStore } from "./resource-activity-store";
@@ -41,7 +42,7 @@ beforeAll(async () => {
       commands:[
         {id:"resolve",title:"Resolve",ref:{kind:"command",id:"resolve"},run(ctx,p){return p.resources.filter(r=>r.id!=="missing").map(resource=>({resource}));}},
         {id:"authorize",title:"Authorize",ref:{kind:"command",id:"authorize"},run(ctx,p){return {allowed:p.resource.id!=="private" && (p.resource.id!=="readonly" || p.operation==="read"),reason:"Private resource"};}},
-        {id:"heads",title:"Heads",ref:{kind:"command",id:"heads"},run(ctx,p){return p.resources.map(resource=>({resource,stamp:{lineage:"publication",revision:"2"}}));}},
+        {id:"heads",title:"Heads",ref:{kind:"command",id:"heads"},run(ctx,p){if(p.resources.some(r=>r.id==="unavailable"))throw new Error("Owner temporarily unavailable");return p.resources.map(resource=>({resource,stamp:{lineage:"publication",revision:"2"}}));}},
         {id:"read",title:"Edition",ref:{kind:"command",id:"read"},run(){return {content:"Edition one",stamp:{lineage:"publication",revision:"1"}};}},
         {id:"context",title:"Context",ref:{kind:"command",id:"context"},run(){return {text:"Resource snapshot"};}}
       ],
@@ -75,6 +76,43 @@ test("only an observed edition establishes a baseline and a newer edition remain
   await expect(api.acknowledge(observation.receipt, { ...ref, id: "other" })).rejects.toThrow("different resource");
   await expect(api.read({ ...ref, id: "missing" })).rejects.toThrow("unavailable");
   await expect(api.query(Array.from({ length: 51 }, () => ref))).rejects.toThrow();
+});
+
+test("a provider failure cannot masquerade as successful deletion", async () => {
+  const api = createResourceChanges(app.deps, project.id);
+  await expect(api.query([ref, { ...ref, id: "unavailable" }])).rejects.toThrow("temporarily unavailable");
+});
+
+test("a device-qualified ref cannot read or acknowledge a colliding local resource", async () => {
+  const api = createResourceChanges(app.deps, project.id);
+  const device = { ownerId: "other", id: "other-device", name: "Other device" };
+  await expect(api.read({ ...ref, device })).rejects.toThrow("device");
+  await expect(api.query([{ ...ref, device }])).rejects.toThrow("device");
+});
+
+test("an existing viewer cannot mint an observation for a replacement account", async () => {
+  let accountId = "alice";
+  const deps = {
+    ...app.deps,
+    accountService: {
+      ...app.deps.accountService,
+      status: async () => {
+        const captured = accountId;
+        return {
+          ...(await app.deps.accountService.status()),
+          login: {
+            managerOrigin: "https://manager.test",
+            relayOrigin: "https://relay.test",
+            deviceId: "device",
+            accountId: captured,
+          },
+        };
+      },
+    },
+  };
+  const viewer = createResourcesApi(deps, { projectId: project.id, extensionId: ref.extensionId });
+  accountId = "bob";
+  await expect(viewer.observeChange!(ref, { lineage: "publication", revision: "1" })).rejects.toThrow("Reader changed");
 });
 
 test("Sessions reports only committed conversation changes through its installed extension", async () => {

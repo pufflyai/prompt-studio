@@ -7,6 +7,7 @@ import { resolveResources } from "../extensions/command-environment/resource-res
 import type { ExtensionsRouteDeps } from "../extensions/deps";
 import { executeProjectExtensionCommand } from "../extensions/execute-project-extension-command";
 import { issueReceipt, unseal } from "./change-receipt";
+import { admitChangeResource } from "./change-resource";
 import { openSeenStore, seenOwnerId } from "./resource-seen";
 
 const batch = z.array(extensionResourceRefSchema).max(50);
@@ -27,12 +28,12 @@ export const createResourceChanges = (deps: ExtensionsRouteDeps, projectId: stri
     const providers = resourceChangeProviders(runtime);
     const found = new Map<string, { heads: string; read: string; resources: Map<string, ResourceRef> }>();
     for (const raw of batch.parse(input)) {
-      if (raw.projectId && raw.projectId !== projectId) throw new Error("Resource belongs to another project.");
       const owner = raw.extensionId ? canonicalExtensionId(raw.extensionId) : undefined;
       const candidates = providers.filter((k) => k.type === raw.type && (!owner || k.extensionId === owner));
       if (candidates.length !== 1) continue;
       const { extensionId, heads, read } = candidates[0]!;
-      const ref = { projectId, extensionId, type: raw.type, id: raw.id };
+      const ref = await admitChangeResource(deps, projectId, raw, extensionId, signal);
+      if (!ref) continue;
       const key = JSON.stringify([heads, read, ref.type]);
       const group = found.get(key) ?? { heads, read, resources: new Map<string, ResourceRef>() };
       group.resources.set(resourceKey(ref), ref);
@@ -43,16 +44,18 @@ export const createResourceChanges = (deps: ExtensionsRouteDeps, projectId: stri
         let refs = [...group.resources.values()];
         if (refs[0]?.extensionId !== "pstdio") {
           const readable = new Set(
-            (await resolveResources(deps, { projectId, signal }, refs)).map((item) => resourceKey(item.resource)),
+            (await resolveResources(deps, { projectId, signal, strict: true }, refs)).map((item) =>
+              resourceKey(item.resource),
+            ),
           );
           refs = refs.filter((ref) => readable.has(resourceKey(ref)));
         }
-        return { ...group, refs };
+        return { ...group, refs, runtime };
       }),
     );
   };
   const resolve = async (refs: ResourceRef[]) => {
-    const results = await Promise.allSettled(
+    const results = await Promise.all(
       (await groups(refs)).map(async (group) => {
         if (!group.refs.length) return [];
         const allowed = new Map(group.refs.map((ref) => [resourceKey(ref), ref]));
@@ -60,6 +63,8 @@ export const createResourceChanges = (deps: ExtensionsRouteDeps, projectId: stri
           .array(changeHeadSchema)
           .max(50)
           .parse(await run(group.heads, { resources: group.refs }));
+        if ((await deps.extensionRuntimeCatalog.get(projectId)).runtime !== group.runtime)
+          throw new Error("Resource provider changed during the read.");
         return result.flatMap(({ resource, stamp }) => {
           const ref = allowed.get(resourceKey(resource));
           return ref ? [{ resource: ref, stamp, provider: group.heads }] : [];
@@ -67,13 +72,13 @@ export const createResourceChanges = (deps: ExtensionsRouteDeps, projectId: stri
       }),
     );
     signal?.throwIfAborted();
-    return results.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
+    return results.flat();
   };
   return {
     async query(refs: ResourceRef[]) {
       const store = await openSeenStore(deps, projectId);
       const result = await store.query(await resolve(refs));
-      if (store.principal !== (await principal())) return [];
+      if (store.principal !== (await principal())) throw new Error("Reader changed.");
       return result;
     },
     async read(resource: ResourceRef) {
@@ -84,6 +89,8 @@ export const createResourceChanges = (deps: ExtensionsRouteDeps, projectId: stri
         .object({ content: z.json(), stamp: changeStampSchema })
         .parse(await run(group.read, {}, group.refs[0]));
       if (store.principal !== (await principal())) throw new Error("Reader changed.");
+      if ((await deps.extensionRuntimeCatalog.get(projectId)).runtime !== group.runtime)
+        throw new Error("Resource provider changed during the read.");
       return {
         ...result,
         receipt: issueReceipt({

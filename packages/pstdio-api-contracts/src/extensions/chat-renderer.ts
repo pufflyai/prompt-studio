@@ -73,6 +73,9 @@ const chatDecisionSchema = z.object({
 /** Public wire messages retain the existing session protocol; no second transcript format. */
 export const chatRendererSnapshotSchema = z.strictObject({
   observedChange: z.string().max(16000).nullable().optional(),
+  /** Content witnesses for the receipt's latest meaningful position. */
+  observedChangeMessageIds: z.array(z.string()).max(50).optional(),
+  observedChangeQuestionId: z.string().nullable().optional(),
   messages: z.array(sessionMessageSchema).optional(),
   queuedFollowUps: z.array(chatQueuedRequestSchema).optional(),
   controls: z.array(controlParamSchema).optional(),
