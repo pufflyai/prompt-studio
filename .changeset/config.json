@@ -47,7 +47,8 @@
     "canvas-tests",
     "pstdio-theme",
     "design-studies",
-    "remote-testing"
+    "remote-testing",
+    "pocketcoder"
   ],
   "snapshot": {
     "useCalculatedVersion": true,
