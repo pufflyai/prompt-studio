@@ -177,17 +177,37 @@ const enableMetadataSource = async (projectId: string, name: string, webview = f
   });
 };
 
-test("opens the project UI without starting builds for unrelated views", async () => {
-  const project = await createProject("Native page with a managed sibling");
-  await enableMetadataSource(project.id, "first-use", true);
+test("describes webviews only after the checks of enabled sources finish", async () => {
+  const project = await createProject("Webview first use");
+  const webview = await enableMetadataSource(project.id, "first-use", true);
   await enableMetadataSource(project.id, "native-only");
-  const ensure = spyOn(handle.deps, "ensureExtensionWebviews").mockRejectedValue(new Error("unopened view"));
+  const release = Promise.withResolvers<void>();
+  const ensure = spyOn(handle.deps, "ensureExtensionWebviews").mockImplementation(() => release.promise);
+  try {
+    let answered = false;
+    const response = Promise.resolve(app.request(`/v1/projects/${project.id}/extensions/ui`)).then((value) => {
+      answered = true;
+      return value;
+    });
+    await Bun.sleep(50);
+    expect(ensure.mock.calls).toEqual([[webview.installedSource.id]]);
+    expect(answered).toBe(false);
+    release.resolve();
+    expect((await response).status).toBe(200);
+  } finally {
+    release.resolve();
+    ensure.mockRestore();
+  }
+});
+
+test("describes the project's tools when one source's webview check fails", async () => {
+  const project = await createProject("Webview check failure");
+  await enableMetadataSource(project.id, "broken-check", true);
+  const ensure = spyOn(handle.deps, "ensureExtensionWebviews").mockRejectedValue(new Error("check failed"));
   try {
     const response = await app.request(`/v1/projects/${project.id}/extensions/ui`);
     expect(response.status).toBe(200);
-    const metadata = await response.json();
-    expect(metadata.extensions.some((extension: { id: string }) => extension.id === "test.native-only")).toBe(true);
-    expect(ensure).not.toHaveBeenCalled();
+    expect(ensure).toHaveBeenCalled();
   } finally {
     ensure.mockRestore();
   }

@@ -61,23 +61,17 @@ export class ExtensionIdentityConflictError extends Error {
 }
 
 const assertNoConflicts = async (tx: Transaction, from: string, to: string) => {
-  // Each text file has its own document, updates and retry journal. Separate file IDs can
-  // retain both histories byte for byte. Ordered streams and shared document IDs cannot.
-  const documents = new Set<PgTable>([s.storage_documents, s.storage_document_updates, s.storage_document_operations]);
+  // Cross-family detection prevents a new document and an old ordered stream becoming one accidental history.
   const owners = sql.join(
-    projectTables.map((table) => {
-      const textFile = documents.has(table) ? sql`starts_with(document_id, '["text-file",')` : sql`false`;
-      return sql`SELECT workbench_id AS scope, extension_id, ${textFile} AS text_file FROM ${table}
-        WHERE ${ownerColumn} IN (${from}, ${to})`;
-    }),
+    projectTables.map(
+      (table) => sql`SELECT workbench_id AS scope, extension_id FROM ${table}
+    WHERE ${ownerColumn} IN (${from}, ${to})`,
+    ),
     sql` UNION ALL `,
   );
-  const scopes = await tx.execute(sql`SELECT scope FROM (${owners}) owners GROUP BY scope
-    HAVING count(DISTINCT extension_id) > 1 AND (
-      (bool_or(NOT text_file AND extension_id = ${from}) AND bool_or(NOT text_file AND extension_id = ${to}))
-      OR EXISTS (SELECT 1 FROM ${s.storage_documents} a JOIN ${s.storage_documents} b USING (workbench_id, document_id)
-        WHERE a.workbench_id = owners.scope AND a.extension_id = ${from} AND b.extension_id = ${to})
-    ) LIMIT 1`);
+  const scopes = await tx.execute(
+    sql`SELECT scope FROM (${owners}) owners GROUP BY scope HAVING count(DISTINCT extension_id) > 1 LIMIT 1`,
+  );
   if (scopes.rows[0]) throw new ExtensionIdentityConflictError(from, to, String(scopes.rows[0].scope));
   for (const [table, scope] of [
     [s.extension_settings, sql`jsonb_build_array(owner_type, owner_id)`],

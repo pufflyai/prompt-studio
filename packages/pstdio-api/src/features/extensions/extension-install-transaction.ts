@@ -15,7 +15,6 @@ import {
   type PreparedExtensionRevision,
   preparedRevisionState,
   readAcceptedRevision,
-  readPackageManifestMetadata,
 } from "pstdio-extensions";
 import { hashExtensionSource } from "pstdio-extensions/authoring";
 import {
@@ -38,7 +37,6 @@ interface InstallationIntent {
   sourceHash: string;
   preserveDependencies: boolean;
   replaceExisting: boolean;
-  upgradeFromVersion?: string | null;
   revision?: PreparedExtensionRevision;
   owner: { pid: number; threadId: number; worker?: string };
   ownership?: { ownerPath: string; token: string; previousToken: string | null };
@@ -107,15 +105,6 @@ export const activatePreparedInstall = async (transaction: ExtensionInstallTrans
     intent.replaceExisting,
     intent.preserveDependencies,
     (ownership) => {
-      // The target can move forward while an upgrade for another project is being prepared.
-      // This callback runs under the destination lock, before the ownership token or files change.
-      if (intent.upgradeFromVersion !== undefined) {
-        const next =
-          intent.revision?.manifest.version ?? readPackageManifestMetadata(intent.installPath).manifest?.version;
-        const current = readPackageManifestMetadata(intent.targetPath).manifest?.version ?? intent.upgradeFromVersion;
-        if (current && (!next || Bun.semver.order(next, current) < 0))
-          throw new Error(`Cannot downgrade extension from ${current} to ${next ?? "an unknown version"}.`);
-      }
       intent.ownership = ownership;
       writeIntent(transaction.intentPath, intent);
     },
