@@ -47,7 +47,7 @@ export const loadExpandedTreeChildren = async (
     const batch: TreeNode[] = [];
     while (queue.length && batch.length < 4) {
       const node = queue.shift()!;
-      if (!expanded.has(node.id) || visited.has(node.id)) continue;
+      if ((node.collapsible !== false && !expanded.has(node.id)) || visited.has(node.id)) continue;
       visited.add(node.id);
       batch.push(node);
     }

@@ -9,14 +9,19 @@ import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 import {
+  assertProjectToolsRetained,
   assertUpgradeEdit,
+  candidateToolVersions,
   editUpgradeProject,
+  installedProjectTools,
   type ProjectUpgradeInput,
   readUpgradeProject,
+  seedConflictedProject,
   seedUpgradeProject,
   upgradeApi,
   upgradeCoreProjectTools,
 } from "./project-upgrade-fixture";
+import { assertHomeConflict, assertHomeOpens, checkHomeHistory } from "./project-upgrade-home";
 import { preparePublishedHost, versionFromTag } from "./published-host-binary";
 
 type Seed = Awaited<ReturnType<typeof seedUpgradeProject>>;
@@ -46,17 +51,22 @@ const seed = async (descriptor: { origin: string; token: string }, input: Projec
   const fixture = await seedUpgradeProject(api, input);
   const manifest = await readUpgradeProject(api, fixture);
   await record(input.evidence, "before", manifest);
-  return { fixture, manifest };
+  const tools = await installedProjectTools(api, fixture.id);
+  await record(input.evidence, "installed-before", tools);
+  return { fixture, manifest, tools };
 };
 
 const verify = async (
   descriptor: { origin: string; token: string },
   evidence: string,
-  state: { fixture: Seed; manifest: Snapshot },
+  state: Awaited<ReturnType<typeof seed>>,
+  expectedVersions?: Map<string, string>,
 ) => {
   const upgrade = upgradeApi(descriptor);
   const changes = await upgradeCoreProjectTools(upgrade, state.fixture.id);
   await record(evidence, "extension-upgrades", changes);
+  await assertProjectToolsRetained(upgrade, state.fixture.id, state.tools, expectedVersions);
+  await assertHomeOpens(upgrade, state.fixture.id);
   const after = await readUpgradeProject(upgrade, state.fixture);
   await record(evidence, "after", after);
   compare(state.manifest, after);
@@ -66,23 +76,41 @@ const verify = async (
   return edited;
 };
 
-const openSavedWork = async (descriptor: Runtime["descriptor"], fixture: Seed, evidence: string) => {
+const workbenchRoutes = async (descriptor: Runtime["descriptor"], fixture: Seed) => {
   const api = upgradeApi(descriptor);
   const { extensionIds } = await api.get<{ extensionIds: string[] }>(`/projects/${fixture.id}/extensions/commands`);
   const plannerId = extensionIds.find((id) => /^pstdio\.(pstdio-)?planner$/.test(id));
   const sessionsId = extensionIds.find((id) => /^pstdio\.(pstdio-)?session-browser$/.test(id));
   assert(plannerId && sessionsId, "Planner and Sessions must be enabled in the upgraded workbench");
+  const project = `/projects/${fixture.id}/extensions`;
+  return {
+    tickets: `${project}/${plannerId}/tickets`,
+    home: `${project}/pstdio.home/home`,
+    conversation: `${project}/${sessionsId}/conversation?resource=${encodeURIComponent(`pstdio://extension-resource/session/${fixture.linkedSession}`)}`,
+  };
+};
+
+const openSavedWork = async (
+  descriptor: Runtime["descriptor"],
+  fixture: Seed,
+  evidence: string,
+  routes: Awaited<ReturnType<typeof workbenchRoutes>>,
+) => {
   const browser = await chromium.launch(PROVISIONED_CHROMIUM);
   let page: Page | undefined;
   try {
     page = await browser.newPage();
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-    await signInBrowser(page, descriptor);
-    const project = `${descriptor.origin}/projects/${fixture.id}/extensions`;
-    await page.goto(`${project}/${plannerId}/tickets`);
+    // Open Tickets as the first project request after restart, before API checks can warm it.
+    await signInBrowser(page, descriptor, routes.tickets);
     await expect(page.getByTestId("renderer-card").first()).toBeVisible();
-    const resource = encodeURIComponent(`pstdio://extension-resource/session/${fixture.linkedSession}`);
-    await page.goto(`${project}/${sessionsId}/conversation?resource=${resource}`);
+    await page.getByTestId("renderer-card").first().click();
+    await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).toBeVisible();
+    await page.goto(new URL(routes.home, descriptor.origin).href);
+    await expect(
+      page.frameLocator('iframe[title="Home"]:visible').getByText(fixture.name, { exact: true }),
+    ).toBeVisible();
+    await page.goto(new URL(routes.conversation, descriptor.origin).href);
     await expect(page.getByText("Keep the change small.", { exact: false }).first()).toBeVisible();
     await page.screenshot({ path: join(evidence, "saved-conversation.png") });
   } catch (error) {
@@ -107,6 +135,7 @@ const verifyRestart = async (
   edited: Snapshot,
 ) => {
   const api = upgradeApi(descriptor);
+  await assertHomeOpens(api, fixture.id);
   await assertUpgradeEdit(api, fixture);
   const restarted = await readUpgradeProject(api, fixture);
   await record(evidence, "restarted", restarted);
@@ -128,6 +157,7 @@ const run = async (
     from: string;
     candidate: string;
     candidateRef: string;
+    expectedVersions?: Map<string, string>;
     baseline: string;
   },
 ) => {
@@ -182,16 +212,40 @@ const run = async (
   let runtime: Runtime | undefined;
   try {
     runtime = await launch(baseline, "baseline");
+    if (input.profile === "conflicted") {
+      const id = await seedConflictedProject(upgradeApi(runtime.descriptor), input.home);
+      await stopProcess(runtime.child);
+      runtime = undefined;
+      const before = await checkHomeHistory(input, id);
+      runtime = await launch(candidate, "upgrade");
+      await assertCurrentDatabase(input.home);
+      await assertHomeConflict(upgradeApi(runtime.descriptor), id);
+      await stopProcess(runtime.child);
+      runtime = undefined;
+      await checkHomeHistory(input, id, before);
+      return;
+    }
     const state = await seed(runtime.descriptor, input);
     await stopProcess(runtime.child);
     runtime = undefined;
+    const home = await checkHomeHistory(input, state.fixture.id);
     runtime = await launch(candidate, "upgrade");
     await assertCurrentDatabase(input.home);
-    const edited = await verify(runtime.descriptor, input.evidence, state);
+    const edited = await verify(runtime.descriptor, input.evidence, state, pair.expectedVersions);
+    const routes = await workbenchRoutes(runtime.descriptor, state.fixture);
     await stopProcess(runtime.child);
     runtime = await launch(candidate, "restart");
+    await openSavedWork(runtime.descriptor, state.fixture, input.evidence, routes);
+    await assertProjectToolsRetained(
+      upgradeApi(runtime.descriptor),
+      state.fixture.id,
+      state.tools,
+      pair.expectedVersions,
+    );
     await verifyRestart(runtime.descriptor, input.evidence, state.fixture, edited);
-    await openSavedWork(runtime.descriptor, state.fixture, input.evidence);
+    await stopProcess(runtime.child);
+    runtime = undefined;
+    await checkHomeHistory(input, state.fixture.id, home);
   } finally {
     if (runtime) await stopProcess(runtime.child);
   }
@@ -203,13 +257,17 @@ if (import.meta.main) {
       from: { type: "string" },
       candidate: { type: "string" },
       "candidate-ref": { type: "string" },
+      "candidate-root": { type: "string" },
       "baseline-binary": { type: "string" },
       profile: { type: "string" },
       evidence: { type: "string" },
     },
   });
   const profile = values.profile;
-  assert(profile === undefined || profile === "active" || profile === "aged", "Choose --profile active or aged");
+  assert(
+    profile === undefined || profile === "active" || profile === "aged" || profile === "conflicted",
+    "Choose --profile active, aged or conflicted",
+  );
   const { from, candidate, "candidate-ref": candidateRef, "baseline-binary": baselinePath } = values;
   assert(from, "Supply the published release tag with --from");
   versionFromTag(from);
@@ -221,9 +279,11 @@ if (import.meta.main) {
   console.log(`Project upgrade ${from} → ${candidateRef}. Evidence in ${evidence}`);
   await record(evidence, "pair", { from, candidateRef });
   const baseline = baselinePath ? resolve(baselinePath) : (await preparePublishedHost(from)).path;
-  const pair = { from, candidateRef, baseline, candidate: resolve(candidate) };
+  const expectedVersions = values["candidate-root"] ? await candidateToolVersions(values["candidate-root"]) : undefined;
+  const pair = { from, candidateRef, baseline, candidate: resolve(candidate), expectedVersions };
   const failures: unknown[] = [];
   const profiles: ProjectUpgradeInput["profile"][] = profile ? [profile] : ["active", "aged"];
+  if (!profile && from === "pstdio@0.47.0") profiles.push("conflicted");
   for (const variant of profiles) {
     const output = join(evidence, variant);
     await mkdir(output);
