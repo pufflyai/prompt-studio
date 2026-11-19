@@ -108,7 +108,7 @@ jobs:
           BENCHMARK_BASELINE: "1"
           BENCHMARK_SOURCE_SHA: ${{ github.sha }}
           BENCHMARK_EVIDENCE_DIR: test-results/ps233-windows-cold-profile
-        run: bun --preload ./scripts/diagnostics/ps233-windows-cold-read-preload.ts --conditions=source packages/pstdio-db/src/services/extension-storage/critical-store.p3.bench.ts
+        run: bun --preload ./packages/pstdio-db/src/experiments/ps233-windows-cold-read-preload.ts --conditions=source packages/pstdio-db/src/services/extension-storage/critical-store.p3.bench.ts
       - uses: actions/upload-artifact@v4
         if: always()
         with:
