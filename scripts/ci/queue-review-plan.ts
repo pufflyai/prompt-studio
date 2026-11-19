@@ -2,6 +2,7 @@ import { createCiTestPlan } from "./ci-test-plan";
 import { resolveCiScope } from "./pull-request-ci-scope";
 import type { TestPackage } from "./runner-profiles";
 import { createTestPlan, mergeTestPlans, type SourceIdentity } from "./test-plan";
+import { matchesPlatform, quarantineRegistry, quarantineRunnerForTest } from "./test-quarantine";
 
 // The review worker consumes the queue's actual runs; no matrix-to-files translation lives here.
 export const queueReviewPlan = (
@@ -12,14 +13,24 @@ export const queueReviewPlan = (
 ) => {
   const scope = resolveCiScope({ event: "merge_group", changedFiles: changed, packages, tests });
   const required = createCiTestPlan(scope, packages, tests, source);
-  // Local execution proves the same selected files on its actual host. Only CI can
+  // Local execution proves selected coverage supported on its actual host. Only CI can
   // qualify the Linux artifact and ten-minute hosted result; never label a Mac pass Linux.
   const testPlan = mergeTestPlans(
     required.runs.map((run) =>
       createTestPlan({
         source,
         packages,
-        files: run.files,
+        files:
+          run.lane === "quarantine"
+            ? run.files.filter((file) =>
+                quarantineRegistry.some(
+                  (entry) =>
+                    entry.file === file &&
+                    entry.runner === quarantineRunnerForTest(run.runner) &&
+                    matchesPlatform(entry, process.platform, process.arch),
+                ),
+              )
+            : run.files,
         target: { platform: process.platform, arch: process.arch },
         job: run.job,
         lane: run.lane,
