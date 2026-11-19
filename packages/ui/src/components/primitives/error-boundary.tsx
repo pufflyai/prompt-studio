@@ -8,6 +8,7 @@ interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
   label?: string;
+  onError?: (error: Error, info: ErrorInfo) => void;
   onReset?: () => void;
 }
 
@@ -18,12 +19,16 @@ interface ErrorBoundaryState {
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   state: ErrorBoundaryState = { error: null };
 
-  static getDerivedStateFromError(error: Error) {
-    return { error };
+  static getDerivedStateFromError(error: unknown) {
+    return {
+      error:
+        error instanceof Error ? error : new Error(typeof error === "string" ? error : "Unexpected render failure"),
+    };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("Dashboard error boundary caught an error", error, info);
+    if (this.props.onError && this.state.error) this.props.onError(this.state.error, info);
+    else console.error("Dashboard error boundary caught an error", error, info);
   }
 
   handleReset = () => {

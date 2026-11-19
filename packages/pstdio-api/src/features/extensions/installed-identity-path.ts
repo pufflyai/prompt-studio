@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import {
   canonicalExtensionId,
   extensionIdentityRenames,
@@ -8,7 +8,12 @@ import {
 import { readPackageManifestMetadata } from "pstdio-extensions";
 
 /** Preserve an existing installation's origin path while its visible owner changes. */
-export const installedIdentityPath = (root: string, directory: string, extensionId?: string) => {
+export const installedIdentityPath = (
+  root: string,
+  directory: string,
+  extensionId?: string,
+  installedSourcePath?: string,
+) => {
   const target = join(root, directory);
   if (!extensionId) return target;
   const canonical = canonicalExtensionId(extensionId);
@@ -23,7 +28,10 @@ export const installedIdentityPath = (root: string, directory: string, extension
       const { manifest } = readPackageManifestMetadata(path);
       return manifest && canonicalExtensionId(manifest.id) === canonical;
     });
-  if (matching.length > 1)
+  if (matching.length > 1) {
+    const selected = matching.find((path) => installedSourcePath && resolve(path) === resolve(installedSourcePath));
+    if (selected) return selected;
     throw new Error(`Conflicting installed extension directories for ${canonical}: ${matching.join(", ")}`);
+  }
   return matching[0] ?? target;
 };

@@ -5,6 +5,37 @@ import { createScopedQueryClient, type ScopedQuery } from "./scoped-query";
 const scope = { runtimeId: "runtime", projectId: "a", extensionId: "example" };
 const turn = () => new Promise<void>((resolve) => setImmediate(resolve));
 
+test.each([
+  "required",
+  "accepted",
+  "disposed",
+])("background repeat admission responds to %s ownership", async (ending) => {
+  const root = createScopedQueryClient(scope);
+  const initial = Promise.withResolvers<string>();
+  let reads = 0;
+  const query = root.query({
+    id: "yielding",
+    read: () => (++reads === 1 ? initial.promise : Promise.resolve("fresh")),
+  });
+  const stop = query.subscribe(() => {});
+  try {
+    query.invalidate();
+    initial.resolve("stale");
+    await turn();
+    expect(reads).toBe(1);
+    if (ending === "required") expect(await query.read()).toBe("fresh");
+    if (ending === "accepted") query.accept("accepted");
+    if (ending === "disposed") root.dispose();
+    await turn();
+    expect(reads).toBe(ending === "required" ? 2 : 1);
+    if (ending === "accepted") expect(query.getSnapshot().data).toBe("accepted");
+    if (ending === "disposed") expect(query.getSnapshot().data).toBeUndefined();
+  } finally {
+    stop();
+    root.dispose();
+  }
+});
+
 test("scoped storage resets invalidate only matching extension records, including descriptors without event IDs", async () => {
   const root = createScopedQueryClient(scope);
   const reads = new Map<string, number>();
@@ -90,6 +121,9 @@ test("shared query observers subscribe before reading, coalesce bursts and rejec
   for (let i = 0; i < 100; i++) for (const event of events) event();
   requests[0].resolve(1);
   await turn();
+  // A background follow-up yields the host queue after a superseded read.
+  expect(requests).toHaveLength(1);
+  await new Promise((resolve) => setTimeout(resolve, 110));
   expect(requests).toHaveLength(2);
   expect(values).not.toContain(1);
   requests[1].resolve(2);
@@ -590,11 +624,38 @@ test("an invalidation at the cache commit boundary still queues one trailing rea
   pending.resolve("old");
   queueMicrotask(query.invalidate);
   await turn();
+  expect(reads).toBe(1);
+  await new Promise((resolve) => setTimeout(resolve, 110));
   expect(reads).toBe(2);
   expect(query.getSnapshot().data).toBe("newer");
   expect(values).not.toContain("old");
   stop();
   root.dispose();
+});
+
+test("cancelling a post-commit background repeat prevents another host read and permits a later required read", async () => {
+  const root = createScopedQueryClient(scope);
+  const pending = Promise.withResolvers<string>();
+  let reads = 0;
+  const query = root.query({
+    id: "cancel-gap",
+    read: () => (++reads === 1 ? pending.promise : Promise.resolve("fresh")),
+  });
+  const stop = query.subscribe(() => {});
+  try {
+    pending.resolve("stale");
+    queueMicrotask(query.invalidate);
+    await turn();
+    expect(reads).toBe(1);
+    query.cancel();
+    await turn();
+    expect(reads).toBe(1);
+    expect(await query.read()).toBe("fresh");
+    expect(reads).toBe(2);
+  } finally {
+    stop();
+    root.dispose();
+  }
 });
 
 test("explicitly disposed queries reopen, zero retention admits a first observer, and disposal clears snapshots", async () => {

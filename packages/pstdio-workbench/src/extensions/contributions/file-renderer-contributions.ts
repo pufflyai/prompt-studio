@@ -108,6 +108,7 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
       icon: record.icon,
       body: {
         kind: "file",
+        queryScope: { projectId: input.projectId, extensionId: record.extensionId },
         resourceKind: record.resourceKind,
         saveMode: record.saveMode,
         documentKey: record.document

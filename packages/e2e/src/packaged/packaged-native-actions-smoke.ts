@@ -38,6 +38,7 @@ export default {
     {id:"choices",ref:choices,title:"Choices",params:{},run:()=>[{id:"one",name:"One"}]},
     {id:"run",ref:run,title:"Run",params:input,run:(_ctx:unknown,params:unknown)=>params},
   ],
+  statusBarItems:[{id:"tools",ref:{kind:"status-bar-item",id:"tools"},view:{kind:"view",id:"tools"},slot:{id:"status-bar.center"}}],
   workspaceTypes:[{
     id:"machine",ref:{kind:"workspace-type",id:"machine"},label:"Agent machine",params:input,
     create:(_ctx,input)=>({
@@ -49,7 +50,11 @@ export default {
   }],
   views:[{id:"history",ref:{kind:"view",id:"history"},title:"History",body:{kind:"tree",body:()=>[{id:"sessions",nodes:[],nextCursor:"older"}],page:(_ctx,input)=>({nodes:[{id:"older",label:input.cursor}]})}},...["dataTable","kanban","resourceList"].map(kind=>({id:kind.toLowerCase(),ref:{kind:"view",id:kind.toLowerCase()},title:kind,body:{kind,...(kind==="dataTable"?{columns:[{id:"approved",type:"boolean"}]}:{schemaRefreshEvents:[],...(kind==="kanban"?{onMove:(_ctx,input)=>input}:{}),attributes:[{id:"approved",label:"Approved",type:{kind:"boolean"},filterable:true}]}),query:()=>({rows:[kind==="dataTable"?{id:"one",values:{approved:false}}:{id:"one",title:"One",attributes:{approved:false}}]}),toolbarActions:[{id:"run",label:"Run",command:run,presentation:"primary",input}]}})),
     {id:"conversation",ref:{kind:"view",id:"conversation"},title:"Native conversation",body:{kind:"chat",draftKey:"compose",initial:{messages:[],values:{}},query:(ctx)=>({messages:[],notice:ctx.projectId}),onAction:(_ctx,input)=>({draft:{text:input.action.text,attachments:input.action.attachments,values:input.action.values}})}},
-    {id:"agent",ref:{kind:"view",id:"agent"},title:"Research agent",body:{kind:"controls",query:()=>({params:[{id:"agent",name:"Model",type:"harness",defaultValue:{harnessId:"test.native-actions.harness.worker",model:"research",params:{effort:"high"}}}]}),onApply:(_ctx,input)=>input.values}}
+    {id:"agent",ref:{kind:"view",id:"agent"},title:"Research agent",body:{kind:"controls",query:()=>({params:[{id:"agent",name:"Model",type:"harness",defaultValue:{harnessId:"test.native-actions.harness.worker",model:"research",params:{effort:"high"}}}]}),onApply:(_ctx,input)=>input.values}},
+    {id:"tools",ref:{kind:"view",id:"tools"},title:"Tools",body:{kind:"actionBar",orientation:"horizontal",query:(_ctx,input)=>({items:[
+      {id:"run",label:"Run",selected:true,action:{kind:"command",target:{command:run,params:{value:input.renderer.resource?.id??"one"}}}},
+      {id:"document",label:"Document",items:[{id:"fail",label:"Fail",disabled:true,action:{kind:"command",target:{command:{kind:"command",id:"fail"}}}}]}
+    ]})}}
   ],
 };
 `,
@@ -97,6 +102,31 @@ export const expectPackagedNativeActions = async (input: {
   const metadata = await fetch(`${root}/ui`, { headers: input.headers });
   expect(metadata.status).toBe(200);
   const body = await metadata.json();
+  expect(body.statusBarItems).toContainEqual(
+    expect.objectContaining({
+      id: "test.native-actions.status-bar-item.tools",
+      slot: { id: "status-bar.center" },
+    }),
+  );
+  const tools = body.views.find(
+    (view: { extensionId: string; localId: string }) =>
+      view.extensionId === "test.native-actions" && view.localId === "tools",
+  );
+  expect(tools.body.kind).toBe("actionBar");
+  const toolQuery = await fetch(`${root}/commands/${tools.body.queryHandlerId}/execute`, {
+    method: "POST",
+    headers: { ...input.headers, "content-type": "application/json" },
+    body: JSON.stringify({
+      params: { renderer: { rendererId: tools.id, resource: { type: "note", id: "selected" } } },
+    }),
+  });
+  expect(toolQuery.status).toBe(200);
+  expect((await toolQuery.json()).outcome.value).toMatchObject({
+    items: [
+      { id: "run", selected: true, action: { target: { params: { value: "selected" } } } },
+      { id: "document", items: [{ id: "fail", disabled: true }] },
+    ],
+  });
   const history = body.views.find(
     (entry: { extensionId: string; localId: string }) =>
       entry.extensionId === "test.native-actions" && entry.localId === "history",

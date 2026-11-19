@@ -5,6 +5,7 @@ import { documentProgress } from "./document-progress";
 import { createSourceActivity } from "./source-activity";
 
 interface SyncInput extends ExtensionDocumentSyncInput {
+  privateSpace?: boolean;
   beforeDownload?: () => Promise<void>;
 }
 
@@ -63,11 +64,12 @@ export const createExtensionDocumentSync = (input: SyncInput) => {
     let request: NonNullable<typeof preparing>;
     const work = Promise.resolve().then(async () => {
       const { config } = input;
-      const { project: space } = await activity.run(
+      const spaces = await activity.run(
         "loading-keys",
         () => fetchSyncSpaces({ ...config, credential: config.renewalGrant, signal }),
         signal,
       );
+      const space = input.privateSpace ? spaces.personal : spaces.project;
       if (!current || current.signal !== signal || current.generation !== space.generation) {
         await close();
         signal.throwIfAborted();
@@ -103,7 +105,7 @@ export const createExtensionDocumentSync = (input: SyncInput) => {
     acceptsChange(change: Extract<LiveServerMessage, { type: "changed" | "discovered" }>) {
       const active = current;
       return (
-        change.spaceOwner === null &&
+        change.spaceOwner === active?.spaceOwner &&
         !!active &&
         (change.documentId === active.ownerId ||
           change.documentId === active.recordStreamId ||
@@ -112,9 +114,9 @@ export const createExtensionDocumentSync = (input: SyncInput) => {
       );
     },
     synchronizeChanged(change: Extract<LiveServerMessage, { type: "changed" | "discovered" }>, signal: AbortSignal) {
-      if (change.spaceOwner !== null) return Promise.resolve(true);
       const active = current;
       if (!active || active.signal !== signal) return Promise.resolve(false);
+      if (change.spaceOwner !== active.spaceOwner) return Promise.resolve(true);
       if (change.documentId === active.ownerId || change.documentId === active.recordStreamId)
         return Promise.resolve(false);
       if (active.logs.changed(change.documentId)) return Promise.resolve(true);

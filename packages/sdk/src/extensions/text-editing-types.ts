@@ -53,5 +53,5 @@ export interface TextEditingSession {
 }
 export interface TextEditingClient {
   current(): Promise<TextSourceGrant | undefined>;
-  open(input: TextOpenInput): Promise<TextEditingSession>;
+  open(input: TextOpenInput | { selected: true }): Promise<TextEditingSession>;
 }

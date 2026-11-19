@@ -65,5 +65,5 @@ export const createPendingWebviewChecks = (onChecked: (id: string, webviews: str
     const caller = createPreparationScope();
     return joinPreparationDependencies(caller, entry.owners, entry.completion).finally(() => caller.dispose());
   };
-  return { check, join, clear: () => pending.clear() };
+  return { check, join, has: (id: string) => pending.has(id), clear: () => pending.clear() };
 };

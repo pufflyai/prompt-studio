@@ -24,10 +24,13 @@ import { extensionKeybindingRecordSchema } from "./keybindings";
 import { navigationTargetSchema } from "./navigation-target-metadata";
 import { workbenchExtensionPageRecordSchema } from "./page-metadata";
 import { regionSettingsSchema, workbenchPlacementPresentationSchema } from "./placement-metadata";
+import { workbenchHarnessRecordSchema, workbenchWorkspaceTypeRecordSchema } from "./provider-metadata";
 import { extensionFileRendererRecordSchema, extensionTreeRendererRecordSchema } from "./renderers";
 import { placementItemSchema } from "./resource-binding-metadata";
+import { resourcePresentationRecordSchema } from "./resource-presentation";
 import { extensionSettingDefinitionRecordSchema, extensionSettingsSectionRecordSchema } from "./settings";
 import { viewToolbarActionSchema } from "./view-toolbar-action";
+import { resourceChangeProviderMetadataSchema } from "./workbench-resource-changes";
 
 const contributionRefSchema = <Kind extends string>(kind: Kind) =>
   z.object({ extensionId: z.string(), kind: z.literal(kind), id: z.string() });
@@ -109,6 +112,12 @@ const dataTableBodySchema = extensionDataTableRendererRecordSchema
   });
 
 export const workbenchExtensionViewBodySchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("actionBar"),
+    orientation: z.enum(["vertical", "horizontal"]).optional(),
+    queryHandlerId: z.string(),
+    refreshEventIds: z.array(z.string()).optional(),
+  }),
   z.object({
     kind: z.literal("terminal"),
     resourceKind: z.string().optional(),
@@ -269,7 +278,9 @@ export const workbenchExtensionMetadataSchema = z.object({
   views: z.array(workbenchExtensionViewRecordSchema),
   viewMenus: z.array(workbenchExtensionViewMenuRecordSchema),
   placements: z.array(workbenchExtensionPlacementRecordSchema),
+  resourceChangeProviders: z.array(resourceChangeProviderMetadataSchema).optional(),
   resourceKinds: z.array(workbenchExtensionResourceKindRecordSchema),
+  resourcePresentations: z.array(resourcePresentationRecordSchema).optional(),
   resourceHierarchyProviders: z
     .array(z.object({ id: z.string(), extensionId: z.string(), resourceKind: resourceKindRefSchema }))
     .optional(),
@@ -297,16 +308,8 @@ export const workbenchExtensionMetadataSchema = z.object({
   settingsDefinitions: z.array(extensionSettingDefinitionRecordSchema).optional(),
   automations: z.array(workbenchExtensionAutomationRecordSchema).optional(),
   connections: z.array(workbenchExtensionConnectionRecordSchema).optional(),
-  harnesses: z
-    .array(
-      z.object({
-        id: z.string(),
-        localId: z.string(),
-        extensionId: z.string(),
-        label: localizableStringSchema.optional(),
-      }),
-    )
-    .optional(),
+  workspaceTypes: z.array(workbenchWorkspaceTypeRecordSchema).optional(),
+  harnesses: z.array(workbenchHarnessRecordSchema).optional(),
   skills: z
     .array(
       z.object({

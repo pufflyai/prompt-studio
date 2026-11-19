@@ -1,4 +1,5 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
+import { scrollbarTokens } from "../scrollbar-tokens";
 
 export const scrollAreaSlotRecipe = defineSlotRecipe({
   slots: ["root", "viewport", "content", "scrollbar", "thumb", "corner"],
@@ -7,11 +8,11 @@ export const scrollAreaSlotRecipe = defineSlotRecipe({
       outline: "none",
     },
     scrollbar: {
-      borderRadius: "2xs",
+      borderRadius: scrollbarTokens.radius,
       bg: "transparent",
-      "--thumb-bg": "colors.border",
+      "--thumb-bg": `colors.${scrollbarTokens.thumb}`,
       "&:is(:hover, :active)": {
-        "--thumb-bg": "colors.fg.subtle",
+        "--thumb-bg": `colors.${scrollbarTokens.thumbHover}`,
       },
       // Extend the target into the viewport so the root cannot clip it away.
       _vertical: {
@@ -41,7 +42,7 @@ export const scrollAreaSlotRecipe = defineSlotRecipe({
     size: {
       xs: {
         root: {
-          "--scrollbar-size": "sizes.scrollbar-thin",
+          "--scrollbar-size": `sizes.${scrollbarTokens.size}`,
           "--scrollbar-click-area": "spacing.xs",
         },
       },

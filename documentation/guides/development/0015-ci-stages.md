@@ -110,7 +110,7 @@ When a P1 job fails, the other P1 jobs stop themselves on purpose (see [Failure 
 
 1. Read the `validation_results` log. It lists each failed job.
 2. Sort the failures by time. The earliest failed job that is not `validation_results` or `ci_passed` is the cause.
-3. If the PR did not touch that code, the test is unreliable. Fix it in a separate PR. Remove a failing quarantined case and keep the evidence for restoring coverage after a fix. Do not queue the same commit again and hope it passes.
+3. If the PR did not touch that code, run a focused main control and track the cause in a separate PR. Quarantine only confirmed intermittent cases with evidence, ownership and removal criteria. Do not queue the same commit again and hope it passes.
 
 Causes of unreliable queue failures we have fixed before:
 
@@ -135,7 +135,7 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
 
 - It builds a nightly only if `main` changed since the last published nightly. If `main` did not change, it validates the last nightly's files again.
 - It versions the packages on a tag, never on `main`.
-- It builds and publishes the npm packages, containers, and signed desktop apps for Linux x64 and Apple Silicon. Nightly publishing does not wait for the deep validation.
+- It builds and publishes the npm packages, containers, and signed desktop apps for Linux x64 and Apple Silicon. Before publishing, both platforms must pass the populated-project upgrade from the latest stable release and, when available, the preceding published nightly. The other production diagnostics run independently.
 - **Production validation** runs on the same files:
   - P0, P1 and P2 on Linux, with up to twelve P2 app shards; native desktop and packaged CLI checks also run on Apple Silicon
   - P1 and P2 against the signed desktop apps. When the run validates signed release files, the source desktop jobs keep only the source Electron checks, so each packaged desktop case runs once.
@@ -147,7 +147,7 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
 - The shared Bun unit, API and database suites run on Linux. Apple Silicon runs the desktop app's own Bun tests, the native desktop and packaged CLI checks, and the Bun quarantine lane.
 - Source line coverage comes from the nightly's P0–P2 Bun jobs. The Coverage workflow publishes only a successful full nightly's measurement. Quarantined tests and P3 are not counted.
 
-A failed validation job does not unpublish the nightly. It makes the run red, `certify` reports the failed checks, and the Coverage workflow skips that nightly's measurement.
+A failed, cancelled or skipped upgrade check blocks nightly publication. A later failure in independent production diagnostics does not unpublish an existing nightly. It makes the run red, `certify` reports the failed checks, and the Coverage workflow skips that nightly's measurement.
 
 P3 budgets describe the hosted CI runners, not a developer machine. Each was set from the slowest result of several runs on the hosted ubuntu-24.04 runner, plus about 20% (see [sidenav and subnav](../../references/performance/0004-sidenav-subnav.md) and [board cold open](../../references/performance/0002-planner-board-cold-open.md)). A fast laptop passes them easily, so a P3 failure on CI is the signal to act on. To change a budget, collect several CI runs of the same candidate first and get the exact value approved (see [CI guidance](../../guidance/0004-ci.md#3-ci-timeouts-and-performance-budgets)).
 
@@ -170,6 +170,28 @@ A source-built diagnostic cannot certify a stable release app. Other channels:
 - `packages`: SDK and UI previews only. See [SDK and UI previews](0014-sdk-ui-previews.md).
 
 If a stable release stops halfway, re-run the `publish` job. It skips the steps that already finished.
+
+## Populated project upgrades
+
+**Verify a populated project upgrade** selects one version pair for Linux x64 and Apple Silicon. A manual run freezes the current `main` commit and runs the nightly versioning script once in a disposable checkout. Both platforms compile that same versioned source. It defaults to the current stable release as the source. Supply `from_tag` to start from another published stable release that supports session import. When the source release already includes the current `main` commit, the workflow records that there is no newer commit to test.
+
+Stable and patch certification use the previous stable release as the source and the exact packaged CLI from the candidate build. Both platform results must pass before publishing. The setup needs a published source release and the target build. Nightly publication uses the same packaged upgrade check against the exact archive selected for publication. It also tests the previous published nightly when one exists.
+
+Both profiles start with a temporary home and a Git project with 1,000 files, 500 Planner tickets, 150 saved conversations, and three worktrees. Each has a saved view and links between tickets, workspaces, and conversations. The long-lived profile adds an archived and a deleted ticket, larger attachments, and longer transcripts.
+
+The check verifies the source binary, records a before snapshot of the project through its APIs, and stops the source. It opens the same disposable home with the compiled target. It uses the documented upgrade action for available Home, Planner, Sessions, Git Workspaces, and fixture harness updates. After restart each enabled tool must run at least the version in the candidate source, including when the runtime claims it is already current. Both populated profiles start with Home data under the baseline's installed identity. The aged profile includes a quota observation written by 0.47. The upgraded Home must open, preserve its observation and journal, and keep its saved documents after restart. A separate 0.47 recovery fixture starts with two independent Home journals. It checks that an attempted upgrade reports the conflict and keeps both original observations, operations, and receipts. The populated profiles also check extension instance IDs, enablement, and versions, compare project files including edited skills, and verify that a ticket edit survives restart. Opening an existing ticket cold, rendering Home and a saved conversation, reading an attachment, and using existing Git worktrees must all succeed. A retired database fails the check.
+
+For a local run, build a target binary from the commit you want to check and install Playwright Chromium. Run from the repository root:
+
+```sh
+target=$(git rev-parse HEAD)
+PSTDIO_EXTENSION_RELEASE_REF="$target" bun run build -- --scope pstdio --include-dependencies
+bun --no-env-file packages/e2e/src/packaged/project-upgrade.ts \
+  --from 'pstdio@0.47.0' --candidate dist/pstdio \
+  --candidate-ref "$target" --profile aged
+```
+
+Omit `--profile` to run both profiles. For a retained local source binary, supply its tag and `--baseline-binary` after checking its release checksum. GitHub Actions saves the source tag, target commit, binary digests, before and after manifests, and startup logs. Find the same files locally under `test-results/project-upgrades`.
 
 ## Extra diagnostics
 
@@ -198,9 +220,9 @@ None of these replace the real queue run or release certification.
 
 ### Quarantine
 
-Remove failing quarantined cases and their matching entries from `scripts/ci/test-quarantine.json`. Preserve first-failure evidence in the ticket or report; restore product coverage after fixing the cause. Do not turn a failing quarantine into a stable test or a permanent skip.
+Keep confirmed intermittent cases in `scripts/ci/test-quarantine.json` with their exact title, file, affected platform, owner, failure/pass evidence and removal criteria. Preserve all assertions and workloads. Execute each once in quarantine and require complete native evidence. A known failure is reported separately as `quarantined-failure`; unexpected failures and missing coverage block. Restore the case to the stable lane after fixing its cause. See [ADR 0101](../../adrs/0101-temporary-flaky-test-quarantine.md).
 
-The registry is currently empty. Quarantine execution remains available for focused diagnosis. Registered diagnostic cases must run once in their separate lane with native evidence. Setup failures, missing cases or reports, cancellation, skipped cases, and retries fail verification. A stable pass does not establish that a diagnostic case passed.
+Quarantine retains confirmed intermittent cases for focused diagnosis. Registered cases must run once in their separate lane with native evidence. Setup failures, missing cases or reports, cancellation, skipped cases, and retries fail verification. A stable pass does not establish that a diagnostic case passed.
 
 ## Builds and caches
 

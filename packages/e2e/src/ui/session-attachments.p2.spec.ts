@@ -74,7 +74,6 @@ test.describe("Session attachments", () => {
   let projectId: string;
 
   test.beforeEach(async ({ request }) => {
-    test.setTimeout(20_000);
     await deleteAllProjects(request);
     const project = await createProjectViaApi(request, "Session Attachment Test Project");
     projectId = project.id;

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync, realpathSync } from "node:fs";
 import { rename } from "node:fs/promises";
-import { basename, extname, isAbsolute, join, relative } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { revisionSnapshotPath } from "./revision-snapshot-path";
 
@@ -44,8 +44,14 @@ const preserveImportMetaUrlPlugin = (packagePath: string) => {
 
         const sourcePath = join(packagePath, relativePath);
         const loader = asJavaScriptLoader(args.loader);
+        // Without explicit paths the transpiler declares `__filename` as "input.js". Dependencies of a
+        // prepared copy pass through here too, and some locate their own files through `__filename`.
         const transpiler = new Bun.Transpiler({
-          define: { "import.meta.url": JSON.stringify(pathToFileURL(sourcePath).href) },
+          define: {
+            "import.meta.url": JSON.stringify(pathToFileURL(sourcePath).href),
+            __filename: JSON.stringify(sourcePath),
+            __dirname: JSON.stringify(dirname(sourcePath)),
+          },
           loader,
           target: "bun",
         });

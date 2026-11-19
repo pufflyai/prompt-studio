@@ -1,8 +1,14 @@
+import { Box, Center, Flex } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { EmptyState, WindowTabs, WindowTitleBar } from "@pstdio/ui";
 import { createWorkbench } from "@pstdio/workbench";
+import { WorkbenchThemeProvider } from "@pstdio/workbench/react";
 import { useState } from "react";
+import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
+import { DashboardWorkbenchView } from "@/shared/workbench/dashboard-workbench-view";
 import { DesktopProjectTabsController } from "../desktop-project-tabs-controller";
+import { ProjectRecoveryMessage } from "./desktop-project-recovery";
 import { DesktopProjectTabs } from "./desktop-project-tabs";
 
 const ProjectTabsStory = () => {
@@ -13,6 +19,47 @@ const ProjectTabsStory = () => {
   });
   const [controller] = useState(() => new DesktopProjectTabsController([], async () => {}));
   return <DesktopProjectTabs workbench={workbench} controller={controller} platform="darwin" />;
+};
+
+const WindowControlsOverlayStory = () => {
+  const [workbench] = useState(() => {
+    // Canvas frames have an opaque origin and no browser session.
+    if (window.origin === "null") Object.defineProperty(window, "localStorage", { value: undefined });
+    getWriter("projects")?.truncateAndWrite([{ id: "project", name: "Project" }]);
+    const page = { kind: "page", extensionId: "preview", id: "project" } as const;
+    const workbench = createWorkbench({ defaultPage: page });
+    workbench.presence.register({
+      getParticipants: () => [{ id: "editor", label: "Alex" }],
+      subscribe: () => () => {},
+    });
+    workbench.modes.registerMode({ id: "project", activate() {} });
+    workbench.views.registerView({ id: "project", title: "Project", body: { kind: "react", render: () => "Project" } });
+    workbench.pages.registerPage({
+      id: "project",
+      ref: page,
+      path: "project",
+      modeId: "project",
+      main: { kind: "view", view: { kind: "view", id: "project" }, cardinality: "one" },
+      slots: [],
+    });
+    selectDashboardProject(workbench, { id: "project", name: "Project" });
+    workbench.pageLocations.switchProject("project");
+    workbench.pageLocations.navigate({ kind: "page", page });
+    return workbench;
+  });
+  const [controller] = useState(() => new DesktopProjectTabsController(["project"], async () => {}));
+  return (
+    <WorkbenchThemeProvider>
+      <Box h="100dvh" css={{ "--pstdio-title-bar-area-width": "calc(100% - 140px)" }}>
+        <DashboardWorkbenchView
+          workbench={workbench}
+          panelControlsPlacement="host"
+          storage={undefined}
+          titleBar={<DesktopProjectTabs workbench={workbench} controller={controller} platform="linux" />}
+        />
+      </Box>
+    </WorkbenchThemeProvider>
+  );
 };
 const meta = {
   title: "Product/Projects/Tabs",
@@ -26,4 +73,41 @@ export const OpenProjectHover: Story = {
 };
 export const OpenProjectFocus: Story = {
   id: "dashboard-project-tabs--open-project-focus",
+};
+export const WindowControlsOverlay: Story = {
+  name: "Window controls overlay",
+  render: () => <WindowControlsOverlayStory />,
+};
+
+const ProjectRecoveryPreview = () => {
+  const [project, setProject] = useState("lab");
+  const [failed, setFailed] = useState(true);
+  return (
+    <Flex direction="column" h="100dvh" minW="0" bg="bg">
+      <WindowTitleBar platform="darwin">
+        <WindowTabs
+          aria-label="Project tabs"
+          tabs={[
+            { id: "lab", label: "Lab", closable: false },
+            { id: "notes", label: "Notes", closable: false },
+          ]}
+          selectedId={project}
+          onSelect={setProject}
+          onClose={() => {}}
+        />
+      </WindowTitleBar>
+      {project === "lab" && failed ? (
+        <ProjectRecoveryMessage canSwitch retry={() => setFailed(false)} />
+      ) : (
+        <Center flex="1" p="md">
+          <EmptyState title={project === "lab" ? "Lab" : "Notes"} />
+        </Center>
+      )}
+    </Flex>
+  );
+};
+
+export const ProjectRecovery: Story = {
+  name: "Project recovery",
+  render: () => <ProjectRecoveryPreview />,
 };

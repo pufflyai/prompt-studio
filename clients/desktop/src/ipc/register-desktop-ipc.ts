@@ -1,7 +1,12 @@
 import { isAbsolute } from "node:path";
 import type { IpcMain, IpcMainInvokeEvent, WebContents } from "electron";
 import { isUpdateChannel, type UpdateChannel } from "pstdio-paths";
-import type { DesktopProjectTabsState, DesktopStartupAppearance, DesktopWorkbenchState } from "../desktop-api";
+import type {
+  DesktopProjectTabsState,
+  DesktopStartupAppearance,
+  DesktopUpdateNotice,
+  DesktopWorkbenchState,
+} from "../desktop-api";
 import { DESKTOP_CHANNELS } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import { registerPerformanceCaptureIpc } from "../performance/performance-ipc";
@@ -16,6 +21,7 @@ type DesktopIpcOptions = {
   appInfo: () => { platform: string; version: string };
   cancelQuit: () => Promise<void>;
   checkForUpdates: () => Promise<void>;
+  takeUpdateNotice: () => DesktopUpdateNotice | undefined;
   updateChannel: {
     choice: () => UpdateChannel | null;
     set: (channel: UpdateChannel) => void;
@@ -34,6 +40,7 @@ type DesktopIpcOptions = {
   revealInFinder: (path: string) => void;
   quitApp: () => Promise<void>;
   retryRuntime: () => Promise<void>;
+  reportWorkbenchError: (report: unknown) => void;
   runtimeOrigin: () => string | null;
   setWorkbenchItem: (key: string, value: string | null) => void;
   webContents: () => WebContents[];
@@ -93,6 +100,7 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
   });
   handle(DESKTOP_CHANNELS.copyDiagnostics, options.copyDiagnostics);
   handle(DESKTOP_CHANNELS.checkForUpdates, options.checkForUpdates);
+  handle(DESKTOP_CHANNELS.takeUpdateNotice, options.takeUpdateNotice);
   handle(DESKTOP_CHANNELS.getUpdateChannel, options.updateChannel.choice);
   handle(DESKTOP_CHANNELS.setUpdateChannel, (channel) => {
     if (!isUpdateChannel(channel)) throw new Error("Invalid update channel");
@@ -108,6 +116,7 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
     }
     options.setWorkbenchItem(key, value);
   });
+  handle(DESKTOP_CHANNELS.reportWorkbenchError, options.reportWorkbenchError);
   handle(DESKTOP_CHANNELS.getPerformanceMonitoring, () => options.performance.enabled);
   handle(DESKTOP_CHANNELS.setPerformanceMonitoring, (enabled) => {
     if (typeof enabled !== "boolean") throw new Error("Invalid performance monitoring update");

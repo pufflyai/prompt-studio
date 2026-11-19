@@ -1,6 +1,7 @@
 // Save review requests without starting or continuing an agent session.
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "./attempt-actors";
+import { attemptId } from "./attempt-identity";
 import { readAttempt } from "./attempt-storage";
 import type { AttemptState } from "./attempt-types";
 import { findTicket } from "./resolve";
@@ -17,6 +18,7 @@ export interface CreateReviewRequestInput {
   request: unknown;
   reason?: ReviewRequestReason;
   affectedAction?: "implementation" | "merge";
+  attemptId?: string;
   workspaceId?: string;
   revision?: number;
   sessionId?: string;
@@ -32,9 +34,14 @@ export const handoffRequest = {
 } as const;
 
 const readHandoffAttempt = async (ctx: CommandContext, input: CreateReviewRequestInput, ticketId: string) => {
-  if (!input.workspaceId) return null;
-  const attempt = await readAttempt(ctx.storage, input.workspaceId);
-  if (!attempt || attempt.ticketId !== ticketId) {
+  const id = input.attemptId ?? input.workspaceId;
+  if (!id) return null;
+  const attempt = await readAttempt(ctx.storage, id);
+  if (
+    !attempt ||
+    attempt.ticketId !== ticketId ||
+    (input.attemptId && input.workspaceId && attempt.workspaceId !== input.workspaceId)
+  ) {
     throw new Error("The workspace does not own this ticket handoff.");
   }
   if (input.revision !== undefined && attempt.revisions.at(-1)?.revision !== input.revision) {
@@ -45,6 +52,7 @@ const readHandoffAttempt = async (ctx: CommandContext, input: CreateReviewReques
 
 const sameHandoff = (request: ReviewRequest, input: CreateReviewRequestInput) =>
   request.context.reason === input.reason &&
+  (request.context.attemptId ?? request.context.workspaceId) === (input.attemptId ?? input.workspaceId ?? null) &&
   request.context.workspaceId === (input.workspaceId ?? null) &&
   request.context.attemptRevision === (input.revision ?? null) &&
   request.context.relatedSessionId === (input.sessionId ?? null);
@@ -61,14 +69,16 @@ export const createReviewRequest = async (ctx: CommandContext, input: CreateRevi
   if (input.expectedTicketStatusId !== undefined && ticket.statusId !== input.expectedTicketStatusId) {
     throw new Error("Ticket status changed before the handoff.");
   }
-  await readHandoffAttempt(ctx, input, ticket.id);
+  const attempt = await readHandoffAttempt(ctx, input, ticket.id);
   const body = parseRequestBody(input.request);
   if (!input.title.trim() || !input.instructions.trim()) throw new Error("A title and instructions are required.");
 
   // Workflow producers retry; an open request with the same handoff key is the same request.
   if (input.reason) {
     const existing = (await listTicketReviewRequests(ctx.storage, ticket.id)).requests.find(
-      (request) => request.state === "open" && sameHandoff(request, input),
+      (request) =>
+        request.state === "open" &&
+        sameHandoff(request, { ...input, workspaceId: attempt?.workspaceId ?? input.workspaceId }),
     );
     if (existing) return existing;
   }
@@ -85,8 +95,9 @@ export const createReviewRequest = async (ctx: CommandContext, input: CreateRevi
     requestedBy: actorFromSource(ctx.source, ctx.invocationId),
     context: {
       reason: input.reason ?? null,
+      ...(attempt?.id ? { attemptId: attemptId(attempt) } : {}),
       ...(input.affectedAction ? { affectedAction: input.affectedAction } : {}),
-      workspaceId: input.workspaceId ?? null,
+      workspaceId: attempt?.workspaceId ?? input.workspaceId ?? null,
       attemptRevision: input.revision ?? null,
       sessionId: null,
       relatedSessionId: input.sessionId ?? null,

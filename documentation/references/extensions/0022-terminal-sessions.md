@@ -54,14 +54,18 @@ to the presentation and its installed owner. Returning from the command that
 opened the panel does not end the PTY. Movement, hiding, mode changes, and
 unchanged contribution refreshes preserve its binding. Different projects or
 owners never share a session even when their placement IDs match. Explicit tab
-closure, removal/replacement of the installed owner, disconnecting its terminal
-transport, and host shutdown stop its PTY. Closing or disposing an owner while
+closure, removal/replacement of the installed owner, and host shutdown stop its PTY.
+A transport without an attachment key also stops its PTY on disconnect. Closing or disposing an owner while
 admission is pending also releases any late session.
 
 The authenticated `/v1/terminal` transport accepts `openView` with only the
 project/view binding, resource context, and dimensions. The host invokes the
 enabled view's callback and keeps the live handle. Each socket controls only its
-own session. The deprecated webview bridge can address only sessions it opened;
+own session. An optional attachment key lets a native view reconnect after reload.
+The host scopes this key to its project, installed owner, view, resource identity,
+and resource metadata, and checks the current enabled owner before replaying output.
+Presentation labels can change without starting another shell.
+The deprecated webview bridge can address only sessions it opened;
 knowing another presentation's session ID grants no access.
 
 ## Invocation-scoped handles
@@ -80,5 +84,14 @@ In the dashboard, a WebSocket at `/v1/terminal` opens a PTY in the runtime and c
 A terminal panel opens its PTY with an attach key made of its project and panel placement. Such a PTY outlives its socket: closing the workbench that shows it, such as closing a desktop project tab or reloading the page, only detaches it. Reopening the panel resumes the same shell and replays up to 256 KiB of its recent output. Only closing the panel, the process exiting, or the app exiting ends it. A second window that opens the same panel while the PTY is attached elsewhere gets its own shell. A PTY opened without an attach key still ends with its socket.
 
 Logs record only lifecycle data: session ID, process ID, exit code, and signal. Terminal content is never logged.
+
+
+## Default Terminal tool
+
+`pstdio.pstdio-terminal` owns the default Open terminal action, workspace menu, tab names, search results and Bottom placement. Its native view uses the shared host renderer and PTY transport. Disabling the tool removes its actions and stops only its owned terminals; re-enabling it creates fresh shells when opened. No shell is restored across a host restart.
+
+Existing projects adopt the extracted default tool once. Its host-local adoption receipt preserves later disable and uninstall choices even when filesystem discovery attached a disabled instance before adoption.
+
+The host retains hidden compatibility for `workbench.terminal.open` and `dashboard.openWorkspaceTerminal`, delegating to the installed tool. Saved host-terminal tabs migrate to its ordinary placement while preserving their title, workspace and chosen region. The exported workbench terminal module and helper are deprecated for existing embedders; the dashboard uses the installed tool.
 
 *Updated at: 2026-11-11*

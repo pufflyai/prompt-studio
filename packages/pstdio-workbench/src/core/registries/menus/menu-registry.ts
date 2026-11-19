@@ -24,7 +24,9 @@ export interface MenuItem {
   disabledWhen?: string;
   disabledReason?: string;
   group?: string;
-  resourceGroup?: { id: string; label: string };
+  resourceGroup?: { id: string; label: string; selectionMode?: "single" };
+  selected?: boolean;
+  closeOnSelect?: boolean;
   order?: number;
   args?: unknown;
   readOnly?: boolean;

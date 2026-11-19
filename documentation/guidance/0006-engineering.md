@@ -22,8 +22,9 @@
 12. Fix a problem in the part of the system responsible for it. Do not build a large solution for a small local issue.
 13. Reconsider a design that needs a workaround flag, special case, duplicate data, or internal details exposed across layers.
 14. Tests must prove restored behavior and system rules rather than preserve a workaround.
-15. Design Planner reads and actions for thousands of tickets. Never load the complete ticket collection to filter, count, resolve relationships, or perform an action. Query only the required records and fields; use bounded pages for bulk work and scoped existence checks for shared-resource protection. See [Planner scale](0003-nonfunctional-requirements.md#3-performance).
+15. Design Planner reads and actions for thousands of tickets. Never load the complete ticket collection to filter, count, resolve relationships, or perform an action. Query only the required records and fields; use bounded pages for bulk work and scoped existence checks for shared-resource protection. See [Planner scale](../requirement-book/book.json).
 16. The database holds structured data and references only, never blobs. Store bytes such as file contents, transcripts, document snapshots, encrypted payloads, and cached remote data in file storage. Keep only their ID, hash, and size in the database. This includes caches and private bookkeeping rows. Every cache and history needs a rule that removes entries. See [What belongs in the database](../references/architecture/0031-database-contents.md).
+17. Prefer changes in the owning extension. Core changes should be rare and serve a general workbench capability. When a fix does not specify its implementation, first check whether the extension can solve it through existing public APIs and its own storage. Explain the missing general capability before changing core; do not change core schemas or weaken host constraints to accommodate one extension's internal model. See [Keep extension workflows in extensions](../lessons-learned/0032-extension-first-implementation.md).
 
 ## 3. Before writing code
 
@@ -34,6 +35,7 @@
 5. If an external limit forces a workaround, write an ADR before coding. Follow the [temporary-workaround rules](0008-planning.md#3-architecture-decisions).
 6. If stuck, follow the [troubleshooting guidance](0009-troubleshooting.md) before trying another approach.
 7. For live resource or transport changes, follow the [streaming contract](../references/architecture/0021-stream.md) and [resource ownership lesson](../lessons-learned/0020-resource-stream-ownership.md). Keep logical permissions separate from physical connections and run the required mixed-resource HTTP/1.1 connection-budget regression before completion.
+8. Check the extension-level solution first, including for unspecified bug fixes. Identify the owner, inspect its commands and storage, and check existing public APIs before proposing a core change. Follow rule 006.2.17.
 
 ## 4. Code style
 
@@ -54,20 +56,12 @@
 4. Use components instead of `render*` helpers. Move extracted UI logic into a component.
 5. Use kebab-case component filenames, such as `my-component.tsx`.
 6. Never use `NativeSelect`.
-7. Follow the [design and styling rules](0002-design.md#3-styling-rules).
+7. Follow the [canonical styling requirements](../requirement-book/book.json) (RB4).
 
 ## 6. Extension storage
 
-1. Keep all extension-owned project files under `.pstdio/extension-storage/<publisher>.<name>/`: configuration, caches, drafts, prototypes, screenshots, ticket and report checkouts, and migration backups.
-2. Use `ctx.extensionFiles` or declared artifact mounts for files and `ctx.storage` for structured project data. Both file APIs stay inside the full extension-ID directory.
-3. Prompt Studio 0.46 does not read the older `<name>/` or `.publishers/<publisher>/` folders.
-4. Keep artifact drafts and prototypes under `.pstdio/extension-storage/pstdio.artifacts/`. Put report evidence under the `filesPath` returned by `pst pstdio.reports reports write`.
-5. Do not create extension data folders directly under `.pstdio/` or keep runtime data in extension source folders. `.pstdio/extensions/` holds extension source.
-6. Files an extension deliberately edits as project source, such as icon fonts, stay at their configured paths. The extension's own settings and working files stay in extension storage.
+Follow the [canonical book](../requirement-book/book.json), RB 7.A.11.
 
 ## 7. Public extension API
 
-1. The public `@pstdio/sdk/extensions` types, manifest rules, bridge capabilities, and event payloads support external extensions. Their compatibility rules override the general rules to remove old code and add compatibility only on request.
-2. Deprecate first. Add the replacement beside the old API and mark the old one `@deprecated`, naming its replacement.
-3. Remove deprecated APIs together in one breaking release, not one breaking release per removal.
-4. Follow the change levels and one-step-per-release rule in [API versioning](../references/extensions/0014-api-versioning.md).
+Follow the [canonical book](../requirement-book/book.json), RB 6.A.32. Public extension compatibility takes precedence over general code cleanup guidance.

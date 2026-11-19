@@ -15,7 +15,7 @@ import type {
   WebviewCapabilityDiagnostic,
   WebviewPointerEvent,
 } from "../contract";
-import { createHostCapabilityGate } from "../contract";
+import { createHostCapabilityGate, sizesToContentHeight, type WebviewSizing } from "../contract";
 import { createWebviewHostProps } from "../contract/host-props";
 import { normalizeRuntimeError } from "../normalize-error";
 import { callFrameCapability, frameDimensionChanged } from "./frame-capability";
@@ -30,7 +30,7 @@ export interface ExtensionFrameProps {
   visible?: boolean;
   keyboardShortcuts?: readonly WebviewKeyboardShortcut[];
   onShortcut?: (request: WebviewKeyboardShortcutRequest) => void | Promise<void>;
-  sizing?: "content-width" | "content-height";
+  sizing?: WebviewSizing;
   view: ExtensionViewDescriptor;
   props: Partial<WebviewHostProps> & Record<string, unknown>;
   theme: ThemePreference;
@@ -63,6 +63,11 @@ const iframeStyle: CSSProperties = {
   minHeight: 0,
   width: "100%",
 };
+
+// Before the first measurement a bounded guest needs room to lay out viewport-sized content.
+const measuringIframeStyle: CSSProperties = { ...iframeStyle, flex: "none", height: "100dvh" };
+const frameViewportStyle = (sizing: ExtensionFrameProps["sizing"], height: number) =>
+  sizing === "bounded-height" && height === 0 ? measuringIframeStyle : iframeStyle;
 
 const frameShellStyle: CSSProperties = {
   display: "flex",
@@ -99,6 +104,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   const initializedRef = useRef(false);
   const visibleRef = useRef(visible);
   visibleRef.current = visible;
+  const isVisible = () => visibleRef.current;
   // The connection belongs to one browsing context. Navigation keeps the iframe's
   // WindowProxy, so a different contentWindow means the runtime document is gone.
   const connectedWindowRef = useRef<Window | null>(null);
@@ -119,6 +125,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
   // Panel floats). The bump remounts a fresh iframe so a single clean connection
   // owns the new browsing context.
   const [frameEpoch, setFrameEpoch] = useState(0);
+  const frameKey = `${frameEpoch}\n${view.webview.runtimeUrl}\n${view.webview.moduleUrl}`;
   const [contentWidth, setContentWidth] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
 
@@ -210,8 +217,8 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
           }),
         );
       },
-      contentHeightChanged: frameDimensionChanged(sizing === "content-height", setContentHeight),
-      contentWidthChanged: frameDimensionChanged(sizing === "content-width", setContentWidth),
+      contentHeightChanged: frameDimensionChanged(sizesToContentHeight(sizing), setContentHeight, isVisible),
+      contentWidthChanged: frameDimensionChanged(sizing === "content-width", setContentWidth, isVisible),
       dispatchKeyboardEvent: async (event: import("pstdio-api-contracts").WebviewKeyboardEventParams) => {
         if (onKeyboardEventRef.current) return onKeyboardEventRef.current(event);
         document.dispatchEvent(new KeyboardEvent("keydown", { ...event, bubbles: true, cancelable: true }));
@@ -294,7 +301,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     // Register cleanup before the asynchronous handshake completes. A stable
     // publisher does not rerun this effect when the remote becomes available.
     return () => hostEvents?.unbind();
-  }, [hostEvents, frameEpoch]);
+  }, [hostEvents, frameKey]);
 
   useEffect(() => {
     if (!initializedRef.current) return;
@@ -312,19 +319,20 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
       style={{
         ...frameShellStyle,
         width: sizing === "content-width" ? contentWidth : "100%",
-        height: sizing === "content-height" ? contentHeight : "100%",
+        height: sizesToContentHeight(sizing) ? contentHeight : "100%",
+        overflow: sizing === "bounded-height" ? "hidden" : undefined,
       }}
     >
       <iframe
         // A new runtime or module needs its own browsing context and bridge handshake.
-        key={`${frameEpoch}\n${view.webview.runtimeUrl}\n${view.webview.moduleUrl}`}
+        key={frameKey}
         ref={iframeRef}
         title={title ?? view.label}
         allow={extensionIframeAllow(view.webview.capabilities)}
         sandbox={EXTENSION_IFRAME_SANDBOX}
         // Match the host theme so the empty/loading iframe paints the right canvas
         // instead of flashing the default light background while the guest connects.
-        style={{ ...iframeStyle, colorScheme: theme }}
+        style={{ ...frameViewportStyle(sizing, contentHeight), colorScheme: theme }}
         onError={() => {
           onErrorRef.current?.({ message: `Failed to load extension runtime at ${view.webview.runtimeUrl}` });
         }}

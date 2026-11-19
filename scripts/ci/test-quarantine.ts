@@ -10,6 +10,7 @@ export interface QuarantinedTest {
   platforms: string[];
   arch?: string;
   cliVersion?: string;
+  failureMessageIncludes?: string[];
 }
 
 export const quarantineRegistry = JSON.parse(
@@ -30,6 +31,14 @@ const escapeRegex = (name: string) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"
 
 export const matchesPlatform = (entry: QuarantinedTest, platform: string, arch: string) =>
   entry.platforms.includes(platform) && (!entry.arch || entry.arch === arch);
+
+export const quarantineFiles = (runner: string, target: { platform: string; arch: string }) => [
+  ...new Set(
+    quarantineRegistry
+      .filter((entry) => entry.runner === runner && matchesPlatform(entry, target.platform, target.arch))
+      .map((entry) => entry.file),
+  ),
+];
 
 export const quarantinePattern = (cases: QuarantinedTest[], runner: string, platform: string, arch = process.arch) => {
   const names = cases.filter((entry) => entry.runner === runner && matchesPlatform(entry, platform, arch));

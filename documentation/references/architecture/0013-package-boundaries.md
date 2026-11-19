@@ -10,6 +10,25 @@ Cross-package native editor integration tests live in `packages/e2e`. They may
 start the real `pstdio-api/app` host and use the public `@pstdio/workbench` session
 API. The workbench package itself does not depend on the API host.
 
+## Bundled presentation ownership
+
+Home, Workspaces, and Cloud are optional presentation extensions. The catalog supplies
+ready-to-use defaults; their identities are not required to keep a project usable.
+Core owns workspace records, execution, account services, synchronization, and extension
+management independently of these tools.
+
+Project composition stores an explicit default page and resource-opener bindings in
+core's existing synced project information. The default is an ordinary resource-free
+page. Openers return normal navigation targets independently of data ownership.
+Names, paths, navigation order, and workspace capability-to-page decisions belong to
+tools. Missing contributions leave the existing empty workbench and recovery controls.
+
+The catalog supplies editable defaults. Enabling or disabling a tool preserves an
+explicit project choice and the shared workspace/session records. The alpha host
+removes old presentation aliases and selectors together with their callers. Deprecated
+SDK reference exports remain during migration; removing them is a separate breaking change.
+See [project composition](../extensions/0004-contribution-api.md#configure-project-composition).
+
 ## Layers
 
 1. **Contracts and utilities**
@@ -51,6 +70,13 @@ API. The workbench package itself does not depend on the API host.
    depends only on payload contracts. Callers supply native process observations;
    it imports no Electron, UI, database or client code. Desktop, CLI and E2E
    declare their own dependency on it. Native sampling stays in the host.
+   It also owns process-local operation spans and asynchronous origin context.
+   `pstdio-db`, `pstdio-extensions` and `pstdio-api` depend on this primitive to
+   publish bounded query measurements and preserve command, route-pattern and
+   background-task origins before asynchronous queueing. This adds no database,
+   API or extension-runtime dependency to the diagnostics package. Backend
+   monitoring extensions consume the documented Node diagnostics channel and
+   own their bounded subscription lifetime.
 
    The private `pstdio-benchmarks` package owns benchmark measurements, suite membership,
    sampling, budget policy and shared browser helpers. It has no workspace dependencies.
@@ -156,7 +182,7 @@ API. The workbench package itself does not depend on the API host.
    package graph treat a change to one of them as an e2e change. A scoped pull
    request then only lints the e2e package. The e2e jobs run in the full CI stage
    on `main`, or on a pull request labeled `ci:full`; see
-   [CI scope](../../requirements/platform/0001-cross-platform-support.md#ci-scope).
+   [CI scope · RB 12.A.1](../../requirement-book/book.json).
 
    Its compiled device-command test declares `pstdio-relay` as a development
    dependency and starts the exported live hub. This exercises the deployed
@@ -279,4 +305,10 @@ The database uses the contract-layer `ResourceRef` type for persisted resource v
 
 The published `@pstdio/canvas` package owns the canvas file format, preview composition, source indexing, and the `pstdio-canvas` command that builds and watches a project's canvases. It has no application-layer dependencies; React is a peer dependency. Projects, UI packages and repository preview builds use it as development tooling. The UI Canvas extension depends on its released version for the build manifest, frame messages and the nested-frame loader; it never runs the build itself. Published extensions may use its type-only imports inside colocated `.canvas.tsx` examples without declaring a runtime dependency. Runtime imports still require a declared, allowed dependency. Published extension type checks exclude `.canvas.tsx` examples; `bun run --cwd packages/canvas-tests typecheck` checks them through each owner’s `tsconfig.canvas.json` (or the UI examples configuration). This keeps repository examples independent of extension installation and published SDK/UI versions.
 
+The default Terminal tool lives in `extensions/pstdio-terminal` and imports only the public SDK. It owns commands, placement, naming, workspace selection and workspace menu/search contributions. Dashboard owns authenticated native transport and narrow legacy command/layout migration. Workbench owns reusable rendering and presentation lifetimes; the host PTY supervisor remains shared.
+
+Desktop declares Terminal as a development dependency for native scenarios that install the extracted tool from source. This edge is restricted to test and fixture code; packaged desktop runtime code does not import the extension.
+
 The repository-owned `pstdio-scripts/testing` entry groups source-only test policy, fixture selection, and file sharding. API test workers consume its shared allocator as a development dependency; packaged runtime code does not import this test surface.
+
+*Updated at: 2026-11-18*

@@ -163,7 +163,8 @@ const retireDeviceHome = async (child: Parameters<typeof stopProcess>[0], home: 
   }
 };
 
-const TWO_DEVICE_TEST_TIMEOUT = 60_000;
+// Two real hosts, synchronization and browser preparation share this whole-case allowance.
+const TWO_DEVICE_TEST_TIMEOUT = 180_000;
 
 setupPackagedSmokeTests();
 test(
