@@ -14,7 +14,7 @@ import { provisionProjectWorkspaces } from "../features/workspaces/provision-coo
 import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-provider-reconciliation";
 import { apiLogger } from "../lib/logger";
 import { traceSetupPhase } from "../lib/setup-phase";
-import { adoptExtractedDefaultTools, extractedDefaultTools } from "./extracted-default-tools";
+import { adoptTerminalTool } from "./terminal-tool-upgrade";
 
 interface StartupTaskOptions {
   onBackgroundTask?: (task: Promise<void>) => void;
@@ -69,26 +69,25 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
   const existingProjects = !sourceMode && projects.length > 0;
 
   try {
-    const missing = new Set<string>();
-    if (existingProjects) {
-      for (const name of extractedDefaultTools) {
-        const choices = await Promise.all(
-          projects.map(({ id }) => deps.extensionService.hasDefaultSourceChoice(id, `pstdio.${name}`)),
-        );
-        if (choices.includes(false)) missing.add(name);
-      }
-      if (!missing.size) return;
-    }
+    if (
+      existingProjects &&
+      (
+        await Promise.all(
+          projects.map(({ id }) => deps.extensionService.hasDefaultSourceChoice(id, "pstdio.pstdio-terminal")),
+        )
+      ).every(Boolean)
+    )
+      return;
     await installDefaultExtensions({
       ...(existingProjects
         ? {
             env: {
               ...process.env,
               PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(
-                (await resolveDefaultExtensionsConfig()).defaultExtensions.filter((entry) =>
-                  missing.has(
-                    typeof entry === "string" ? basename(entry) : (entry.installName ?? basename(entry.source)),
-                  ),
+                (await resolveDefaultExtensionsConfig()).defaultExtensions.filter(
+                  (entry) =>
+                    (typeof entry === "string" ? basename(entry) : (entry.installName ?? basename(entry.source))) ===
+                    "pstdio-terminal",
                 ),
               ),
             },
@@ -168,7 +167,7 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
   }
   registerBackgroundTask(
     defaultExtensionPreparation.then(async () => {
-      await adoptExtractedDefaultTools(deps, projectIds, signal);
+      await adoptTerminalTool(deps, projectIds, signal);
       await provisionRecoveredWorkspaces(deps, projectIds, signal);
       for (const projectId of projectIds) {
         signal?.throwIfAborted();

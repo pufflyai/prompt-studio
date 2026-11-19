@@ -5,6 +5,7 @@ import { readPublishedWebviewRevision } from "pstdio-extensions/prepared-cache";
 import { createWorkbenchExtensionMetadata, type ResolveWorkbenchExtensionWebview } from "pstdio-extensions/workbench";
 import type { ExtensionWebviewUrlIssuer } from "./extension-webview-access";
 import { readWebviewBuildSignature } from "./extension-webview-build-cache";
+import { readWebviewEntryStyles } from "./extension-webview-entry-styles";
 import { classifyWebviewEntry, resolveManagedWebviewPaths } from "./extension-webviews";
 
 type ExtensionIdMap = Map<string, string>;
@@ -41,12 +42,13 @@ const createResolveWebview = (assets: WebviewAssets): ResolveWorkbenchExtensionW
       readPublishedWebviewRevision(distDir) ??
       readWebviewBuildSignature(distDir) ??
       assets.assetRevisionsByExtensionId?.get(extensionId);
+    const cssFiles = readWebviewEntryStyles(distDir);
     const scope = { installedExtensionId, webviewId: id };
     return {
       ...webview,
       runtimeUrl: assets.urlIssuer.runtimeUrl(scope),
       moduleUrl: assets.urlIssuer.assetUrl(scope, "module.js", assetRevision),
-      styles: [assets.urlIssuer.stylesheetUrl(scope, assetRevision)],
+      styles: cssFiles.map((file) => assets.urlIssuer.assetUrl(scope, file, assetRevision)),
     } as ExtensionWebviewRecord;
   };
 };

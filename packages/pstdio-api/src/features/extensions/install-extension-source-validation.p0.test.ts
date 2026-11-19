@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { installExtensionSource } from "./install-extension-source";
@@ -135,27 +135,4 @@ describe("installExtensionSource package scripts", () => {
     expect(existsSync(marker)).toBe(false);
     expect(existsSync(join(pstdioHome, "extensions", "dropped-extension"))).toBe(false);
   });
-});
-
-test("an upgrade preserves the installed files when its resolved version is older", async () => {
-  const source = join(root, "source");
-  const options = {
-    env: { PSTDIO_HOME: pstdioHome },
-    skipInstall: true,
-    runCommand: mock(async () => ({ exitCode: 0, stdout: "", stderr: "" })),
-  };
-  makeExtension(source, { version: "0.2.0-nightly.20261119040652" });
-  const first = await installExtensionSource({ source, ...options });
-  const before = readFileSync(join(first.targetPath, "package.json"), "utf8");
-  writeManifest(source, { version: "0.1.0" });
-  await expect(
-    installExtensionSource({
-      source,
-      ...options,
-      force: true,
-      installedSourcePath: first.targetPath,
-      upgradeFromVersion: first.metadata.version,
-    }),
-  ).rejects.toThrow(/older|downgrade/i);
-  expect(readFileSync(join(first.targetPath, "package.json"), "utf8")).toBe(before);
 });

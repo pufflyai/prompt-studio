@@ -25,7 +25,6 @@ export interface ExtensionWebviewArtifactRequest {
 
 export type AuthorizedExtensionWebviewRequest =
   | (ExtensionWebviewScope & { kind: "runtime" })
-  | (ExtensionWebviewScope & { kind: "stylesheet" })
   | (ExtensionWebviewScope & { assetPath: string; kind: "asset" })
   | (ExtensionWebviewScope & ExtensionWebviewArtifactRequest & { kind: "artifact" });
 
@@ -35,10 +34,9 @@ export interface ExtensionWebviewAccess {
   authorize: (request: Request) => AuthorizedExtensionWebviewRequest | null;
   redactPath: (path: string) => string;
   runtimeUrl: (scope: ExtensionWebviewScope) => string;
-  stylesheetUrl: (scope: ExtensionWebviewScope, revision?: string | null) => string;
 }
 
-export type ExtensionWebviewUrlIssuer = Pick<ExtensionWebviewAccess, "assetUrl" | "runtimeUrl" | "stylesheetUrl">;
+export type ExtensionWebviewUrlIssuer = Pick<ExtensionWebviewAccess, "assetUrl" | "runtimeUrl">;
 
 interface CreateExtensionWebviewAccessInput {
   /** Deterministic test seam. Production callers must let the service create its key. */
@@ -127,8 +125,8 @@ export const createExtensionWebviewAccess = (input: CreateExtensionWebviewAccess
   ): AuthorizedExtensionWebviewRequest | null => {
     if (!capabilityMatches(capability, capabilityFor(scope))) return null;
 
-    if ((resource === "runtime" || resource === "stylesheet") && segments.length === 0) {
-      return { ...scope, kind: resource };
+    if (resource === "runtime" && segments.length === 0) {
+      return { ...scope, kind: "runtime" as const };
     }
     if (resource !== "assets" || segments.length === 0) return null;
 
@@ -161,9 +159,5 @@ export const createExtensionWebviewAccess = (input: CreateExtensionWebviewAccess
     authorize,
     redactPath: (path) => path.replaceAll(CAPABILITY_PATH, "/v1/extensions/webviews/[Redacted]"),
     runtimeUrl: (scope) => `${basePath(scope)}/runtime`,
-    stylesheetUrl: (scope, revision) => {
-      const url = `${basePath(scope)}/stylesheet`;
-      return revision ? `${url}?h=${encodeURIComponent(revision)}` : url;
-    },
   };
 };
