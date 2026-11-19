@@ -39,7 +39,7 @@ const createCapture = async (id: ScenarioId) => {
     catalogRevision,
     catalogDigest: contract.digest,
     scenario: id,
-    workloadVersion: scenario.id === "B5" ? scenario.workloadVersion : 1,
+    workloadVersion: "workloadVersion" in scenario ? scenario.workloadVersion : 1,
     ...(scenario.id === "B5" && { memoryMetric: scenario.memoryMetrics[process.platform] }),
     planDigest: process.env.CI_PLAN_DIGEST,
     runId: process.env.CI_PLAN_RUN_ID,
