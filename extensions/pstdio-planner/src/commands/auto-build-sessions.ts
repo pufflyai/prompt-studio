@@ -1,12 +1,10 @@
 import type { CommandContext, ExtensionSessionSummary } from "@pstdio/sdk/extensions";
-import { readSessionHistory } from "../data/session-history";
 
 type Session = ExtensionSessionSummary;
 export const isLiveSession = (session: { status?: string } | null) =>
   session !== null && ["queued", "in_progress", "awaiting_input"].includes(session.status ?? "");
 
-export async function readAutoBuildAssignments(ctx: CommandContext) {
-  const [workspaces, all] = await Promise.all([ctx.workspaces.list(), readSessionHistory(ctx.sessions)]);
+export async function readAutoBuildAssignments(ctx: CommandContext, ticketIds?: string[]) {
   const assigned = new Set<string>();
   const ticketSessions = new Map<string, Session>();
   const record = (sessions: Session[], ticketIds: string[]) => {
@@ -19,15 +17,32 @@ export async function readAutoBuildAssignments(ctx: CommandContext) {
       for (const id of ids) assigned.add(id);
     }
   };
-  record(all, []);
-  await Promise.all(
-    workspaces.map(async (workspace) => {
-      const ids = (workspace.anchors_json ?? [])
-        .filter((anchor) => anchor.type === "ticket")
-        .map((anchor) => anchor.id);
-      if (ids.length) record(await readSessionHistory(ctx.sessions, { workspaceId: workspace.id }), ids);
-    }),
-  );
+  if (ticketIds) {
+    for (let offset = 0; offset < ticketIds.length; offset += 8)
+      await Promise.all(
+        ticketIds.slice(offset, offset + 8).map(async (id) => {
+          const page = await ctx.sessions.query({
+            anchor: { type: "ticket", id, extensionId: ctx.extensionId, projectId: ctx.projectId },
+            includeWorkspaceAnchors: true,
+            status: ["queued", "in_progress", "awaiting_input"],
+            includeArchived: true,
+            limit: 1,
+          });
+          record(page.items, [id]);
+        }),
+      );
+  } else {
+    const page = await ctx.sessions.query({
+      status: ["queued", "in_progress", "awaiting_input"],
+      includeArchived: true,
+      limit: 100,
+    });
+    for (const session of page.items) {
+      const workspace = session.workspaceId ? await ctx.workspaces.get(session.workspaceId) : undefined;
+      const ids = (workspace?.anchors_json ?? []).filter(({ type }) => type === "ticket").map(({ id }) => id);
+      record([session], ids);
+    }
+  }
   return { assigned, sessions: [...ticketSessions.values()] };
 }
 

@@ -18,6 +18,9 @@ test.beforeAll(() => {
 });
 
 test("Planner keeps long dependency chains usable with a bounded card window", async () => {
+  // Linux CI's 120 s elapsed during the 80-ticket seed (~1.8 s per create).
+  // PS-1232: user-authorized whole-case allowance; keep the full seed and scroll assertions.
+  test.setTimeout(300_000);
   const home = mkdtempSync(join(tmpdir(), "pstdio-packaged-planner-window-"));
   let child: ChildProcess | undefined;
   let browser: Browser | undefined;
@@ -48,6 +51,11 @@ test("Planner keeps long dependency chains usable with a bounded card window", a
     browser = await chromium.launch({ headless: true });
     const page = await (await browser.newContext()).newPage();
     const errors: string[] = [];
+    let schemaReads = 0;
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname.endsWith("/pstdio.planner.command.timeline.plan.schema/execute"))
+        schemaReads++;
+    });
     page.on("pageerror", (error) => errors.push(error.message));
     await page.addInitScript(() => {
       if (window.top === window) localStorage.setItem("onboarding-complete", "true");
@@ -55,8 +63,12 @@ test("Planner keeps long dependency chains usable with a bounded card window", a
     await signInBrowser(page, started.descriptor);
     await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.planner/ticket-timeline`);
     const timeline = page.locator('[data-workbench-region="main"]').frameLocator("iframe");
+    // The Timeline shell mounts before its initial plan is available.
+    await expect(timeline.getByRole("button", { name: "Search this view", exact: true })).toBeVisible();
     await expect(timeline.locator("[data-timeline-viewport]")).toBeVisible();
+    const initialSchemaReads = schemaReads;
     await expectPlannerWindow(timeline, execute, track.id);
+    expect(schemaReads, "ordinary ticket changes must not reload the Timeline field schema").toBe(initialSchemaReads);
     expect(errors).toEqual([]);
   } finally {
     await browser?.close();

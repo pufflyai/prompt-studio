@@ -19,6 +19,7 @@ export const ticketRelationshipSections = (
   extensionId = "pstdio.planner",
   requiredBy?: TicketSummary[],
   nextCursor?: string,
+  dependencyPage?: { tickets: TicketSummary[]; nextCursor?: string },
 ) => {
   const lookup = createTicketParentLookup(tickets);
   const byReference = new Map(
@@ -30,17 +31,22 @@ export const ticketRelationshipSections = (
   const dependencies = normalizeTicketDependencies(ticket.dependsOn);
   const groups = [
     { id: "parent", label: l10n("ticketDetail.parent", "Parent"), refs: ticket.parentId ? [ticket.parentId] : [] },
-    { id: "depends-on", label: l10n("ticketDetail.dependsOn", "Depends on"), refs: dependencies },
+    {
+      id: "depends-on",
+      label: l10n("ticketDetail.dependsOn", "Depends on"),
+      refs: dependencyPage?.tickets.map(({ id }) => id) ?? dependencies,
+    },
     {
       id: "required-by",
       label: l10n("navigation.requiredBy", "Required by"),
-      refs: (requiredBy ?? tickets)
-        .filter(
+      refs: (
+        requiredBy ??
+        tickets.filter(
           (item) =>
             !item.archived &&
             normalizeTicketDependencies(item.dependsOn).some((ref) => ref === ticket.id || ref === ticket.shorthand),
         )
-        .map((item) => item.id),
+      ).map((item) => item.id),
     },
   ];
   return groups.flatMap(({ refs, ...group }): TreeViewSection[] => {
@@ -58,7 +64,9 @@ export const ticketRelationshipSections = (
         },
       ];
     });
-    const cursor = group.id === "required-by" ? nextCursor : undefined;
+    let cursor: string | undefined;
+    if (group.id === "required-by") cursor = nextCursor;
+    if (group.id === "depends-on") cursor = dependencyPage?.nextCursor;
     return nodes.length || cursor
       ? [{ ...group, collapsible: true, nodes, ...(cursor ? { nextCursor: cursor } : {}) }]
       : [];

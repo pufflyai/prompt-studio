@@ -6,8 +6,8 @@ import { ticketWithAttributes } from "../data/ticket-attributes";
 import type { Ticket } from "../data/types";
 import { withWriteGuard } from "../data/write-guard";
 import { emitPlannerTicketsChanged } from "../events";
-import { deadlineOrNone, loadPlan, writeStoredPlan } from "../timeline/commands/plan-store";
-import { moveTicket } from "../timeline/model/edit-plan";
+import { movePlanPlacement, planPlacements, readPlanMetadata } from "../timeline/commands/placement-store";
+import { deadlineOrNone } from "../timeline/commands/plan-store";
 
 export const moveTicketOnBoard = async (
   ctx: Pick<
@@ -47,11 +47,12 @@ export const moveTicketOnBoard = async (
     };
     if (milestone === undefined) return save();
     return withWriteGuard(ctx, "plan", async () => {
-      const { plan } = await loadPlan(ctx);
+      const plan = await readPlanMetadata(ctx.storage);
       const deadlineId = typeof milestone === "string" && milestone ? deadlineOrNone(plan, milestone) : null;
-      const current = plan.order.find(({ ticketId }) => ticketId === input.rowId)?.deadlineId ?? null;
+      const current = (await planPlacements(ctx.storage).get(input.rowId))?.deadlineId ?? null;
       if (current === deadlineId) return save();
-      const next = moveTicket(plan, { ticketId: input.rowId, deadlineId });
-      return save(() => writeStoredPlan(ctx.storage, next));
+      return save(async () => {
+        await movePlanPlacement(ctx.storage, { ticketId: input.rowId, deadlineId });
+      });
     });
   });

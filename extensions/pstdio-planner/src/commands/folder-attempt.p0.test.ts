@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { listAttempts } from "../data/attempt-storage";
+import { readAttemptPage } from "../data/attempt-page";
 import { readAttemptHistoryCommand, selectAttemptCommand } from "./attempt-history";
 import { createSessionResource, makeCommandContext } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
@@ -118,7 +118,7 @@ test("separate tickets and variants share a folder without overwriting attempts 
   for (const s of f.sessions.values()) s.status = "completed";
   const variant = await runAttemptCommand.run(f.ctx, { ticket: f.ticket.shorthand, newVariant: true });
   expect(new Set([first.variant.id, second.variant.id, variant.variant.id]).size).toBe(3);
-  expect(await listAttempts(f.ctx.storage)).toHaveLength(3);
+  expect((await readAttemptPage(f.ctx.storage)).variants).toHaveLength(3);
   for (const result of [first, second, variant]) {
     const history = await readAttemptHistoryCommand.run(f.ctx, { attemptId: result.variant.id });
     expect(history.variant.id).toBe(result.variant.id);
@@ -137,7 +137,7 @@ test("another live session blocks a folder attempt without allocating a workspac
   f.sessions.set("other", { ...createSessionResource(), id: "other", workspace_id: f.home.id });
   await expect(runAttemptCommand.run(f.ctx, { ticket: f.ticket.shorthand })).rejects.toThrow(/Another session/);
   expect(f.inputs).toHaveLength(0);
-  expect(await listAttempts(f.ctx.storage)).toHaveLength(0);
+  expect((await readAttemptPage(f.ctx.storage)).variants).toHaveLength(0);
 });
 
 test("a repository without an initial commit uses its existing project folder", async () => {

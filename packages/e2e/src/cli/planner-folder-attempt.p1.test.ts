@@ -10,7 +10,7 @@ import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 let api: ApiInstance;
 const dirs: string[] = [];
 beforeAll(async () => {
-  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "workbench-fixture") } });
+  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture") } });
 }, SETUP_TIMEOUT);
 afterAll(async () => {
   await api?.stop();
@@ -49,6 +49,16 @@ test(
         root_path: string;
       }[];
     const [home] = await workspaces();
+    const boardPath = `${api.url}/v1/projects/${project.id}/boards/pstdio.planner.view.tickets`;
+    const fields = await fetch(boardPath);
+    expect(fields.status).toBe(200);
+    expect((await fields.json()).fields.some((field: { id: string }) => field.id === "status")).toBe(true);
+    const saved = await fetch(`${boardPath}/views`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title: "Saved ticket view", filter: { conjunction: "and", rules: [] } }),
+    });
+    expect(saved.status).toBe(201);
     type Started = {
       variant: { id: string; workspaceId: string; base: null };
       session: { id: string };

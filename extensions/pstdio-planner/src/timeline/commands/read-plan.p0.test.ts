@@ -17,6 +17,7 @@ import { createDeadlineCommand } from "./deadline-commands";
 import { registerGate } from "./gate-store";
 import { moveTicketCommand } from "./move-ticket";
 import { readPlanCommand } from "./read-plan";
+import { requestPageCommand } from "./request-page";
 
 test("an invalid Track stops the snapshot before saved views can be initialized", async () => {
   const storage = createMemoryStorage();
@@ -77,7 +78,7 @@ test("the timeline carries gate instructions without copying ordinary ticket doc
   expect(rows.find(({ id }) => id === gate.id)?.instructions).toBe(gate.content);
 });
 
-test("the plan reads one ticket snapshot without loading workspace session histories", async () => {
+test("the plan reads ticket projections without loading workspace session histories", async () => {
   const storage = createMemoryStorage();
   const [ctx] = makeCommandArgs({ storage, params: {} });
   const ticket = await createTicketCommand.run(ctx, { title: "Visible work", statusId: "ready" });
@@ -123,7 +124,7 @@ test("the plan reads one ticket snapshot without loading workspace session histo
   expect(plan.sections.flatMap(({ rows }) => rows).find(({ id }) => id === ticket.id)?.target.resource).toEqual(
     plan.ticketRows.find(({ id }) => id === ticket.id)?.resource,
   );
-  expect(ticketReads).toBe(1);
+  expect(ticketReads).toBe(0);
   expect(sessionReads).toBe(0);
 });
 
@@ -315,13 +316,16 @@ test("answering one request keeps another open request awaiting input", async ()
   const plan = await readPlanCommand.run(ctx, {});
   const row = plan.sections.flatMap((section) => section.rows).find((entry) => entry.id === ticket.id);
   expect(row).toMatchObject({ state: "await-input", flags: expect.arrayContaining(["review-needed"]) });
-  expect(row?.requests.map((request) => request.state).sort()).toEqual(["answered", "open"]);
+  expect(row?.reviewCounts).toEqual({ total: 2, pending: 1, answered: 1 });
+  expect(row?.requests).toEqual([]);
+  const requestPage = await requestPageCommand.run(ctx, { scope: { ticketId: ticket.id } });
+  expect(requestPage.requests.map((request) => request.state).sort()).toEqual(["answered", "open"]);
   expect(row?.target.page.id).toBe("ticket");
   expect(selectedDocumentFromResource(row?.target.resource)).toBe(TICKET_BODY_DOCUMENT);
   expect(await reviewState()).toBe("requested");
   expect(plan.sections.find((section) => section.rows.includes(row!))?.counts.reviewNeeded).toBe(1);
 
-  const handoffId = row?.requests.find((request) => request.state === "open")?.id as string;
+  const handoffId = requestPage.requests.find((request) => request.state === "open")!.id;
   await reviewCommand.run(ctx, { requestId: handoffId, response: { answers: { result: "Merged A1." } } });
   expect(await reviewState()).toBe("answered");
   const stateWith = async (statusId: string) => {

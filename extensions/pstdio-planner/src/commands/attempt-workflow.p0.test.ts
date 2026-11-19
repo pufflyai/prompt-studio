@@ -101,6 +101,8 @@ const setup = async () => {
           get: async (id: string) => ({
             id,
             title: id,
+            workspaceId: "workspace-1",
+            workspace_id: "workspace-1",
             status: id === "implementation-1" ? implementationStatus : "completed",
             anchors_json: [{ type: "planner-attempt", id: "workspace-1" }],
           }),

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
-import { listAttempts, putAttempt } from "../data/attempt-storage";
+import { putAttempt } from "../data/attempt-storage";
+import { listAttempts } from "../data/attempt-storage.fixture";
 import { tagsCollection } from "../data/collections";
 import { seedDefaultTags } from "../data/seed";
 import { putTicket, ticketsCollection } from "../data/ticket-context.fixture";
@@ -318,7 +319,7 @@ test("a scope change during dispatch prevents launching work outside the new sco
     return run(input);
   };
   await expect(autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: "test" })).rejects.toThrow(
-    "no longer ready",
+    "Work scope changed",
   );
   expect(await listAttempts(storage)).toHaveLength(0);
 });

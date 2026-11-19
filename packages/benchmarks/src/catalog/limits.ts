@@ -65,6 +65,12 @@ export const retainedLimit = (scenario: string, metric: string, platform: string
         "idle-task": rendererBudgets.idleTask,
       } as Record<string, { value: number; evidence: string }>
     )[metric];
-  if (scenario === "B5" && metric === "native-average")
+  if (scenario === "B5" && metric === "native-average") {
+    if (platform === "linux")
+      return {
+        value: 2_500_000_000,
+        evidence: "User-approved 2026-11-17: raise Linux B5 average native-memory limit to 2.5 GB",
+      };
     return { value: platform === "win32" ? 3_000_000_000 : 2_000_000_000, evidence: approval };
+  }
 };

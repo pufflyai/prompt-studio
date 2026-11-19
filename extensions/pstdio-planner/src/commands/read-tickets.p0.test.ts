@@ -37,7 +37,7 @@ describe("readTicketsCommand", () => {
       }),
     );
 
-    const result = await readTicketsCommand.run(...makeCommandArgs({ storage, params: {} }));
+    const { tickets: result } = await readTicketsCommand.run(...makeCommandArgs({ storage, params: {} }));
 
     expect(result.map((ticket) => ticket.shorthand)).toEqual(["T-early", "T-late"]);
     expect(result[0]).toMatchObject({
@@ -48,4 +48,47 @@ describe("readTicketsCommand", () => {
     expect(result[0]?.tagIds.toSorted()).toEqual(["api", "default-priority-high", "ui"]);
     expect(result[0]).not.toHaveProperty("tags");
   });
+});
+
+test("restarts a first-page ticket read when sync changes the selected revision", async () => {
+  const storage = createMemoryStorage();
+  await putTicket(storage, makeTicket({ shorthand: "T-local", sortOrder: 0 }));
+  const remote = makeTicket({ shorthand: "T-synced", sortOrder: 1 });
+  const query = storage.records.query.bind(storage.records);
+  let revisionChecks = 0;
+  storage.records.query = async (input) => {
+    if (input.index === "ticket-view" && input.revision && input.fields?.length === 0) {
+      revisionChecks++;
+      if (revisionChecks === 1) await putTicket(storage, remote);
+    }
+    return query(input);
+  };
+
+  const result = await readTicketsCommand.run(...makeCommandArgs({ storage, params: {} }));
+
+  expect(revisionChecks).toBe(2);
+  expect(result.total).toBe(2);
+  expect(result.tickets.map(({ shorthand }) => shorthand)).toEqual(["T-local", "T-synced"]);
+});
+
+test("a stale continuation cannot silently mix rows from two revisions", async () => {
+  const storage = createMemoryStorage();
+  await putTicket(storage, makeTicket({ shorthand: "T-first", sortOrder: 0 }));
+  await putTicket(storage, makeTicket({ shorthand: "T-second", sortOrder: 1 }));
+  const first = await readTicketsCommand.run(...makeCommandArgs({ storage, params: { limit: 1 } }));
+  expect(first.cursor).toBeString();
+  const query = storage.records.query.bind(storage.records);
+  let continuations = 0;
+  storage.records.query = async (input) => {
+    if (input.cursor) {
+      continuations++;
+      if (continuations === 1) await putTicket(storage, makeTicket({ shorthand: "T-new", sortOrder: 2 }));
+    }
+    return query(input);
+  };
+
+  await expect(
+    readTicketsCommand.run(...makeCommandArgs({ storage, params: { limit: 1, cursor: first.cursor! } })),
+  ).rejects.toThrow("stale");
+  expect(continuations).toBe(1);
 });

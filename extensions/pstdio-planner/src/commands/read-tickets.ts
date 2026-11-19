@@ -1,18 +1,34 @@
-import { defineCommand } from "@pstdio/sdk/extensions";
-import { readTicketsWithReviewState } from "../data/collections";
-import { readMigratedTickets } from "../data/read-migrated-tickets";
-import type { TicketContext } from "../data/ticket-identity";
+import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { ticketsCollection, withDerivedTicketState } from "../data/collections";
+import { ticketCommandPage } from "../data/ticket-command-page";
 import { withTicketTagIds } from "../data/ticket-tags";
-import type { Ticket } from "../data/types";
-import { sortedByTicketOrder } from "../utils/sort";
-export const readTickets = async (ctx: TicketContext, snapshot?: Ticket[]) =>
-  sortedByTicketOrder((await readTicketsWithReviewState(ctx, snapshot)).filter((ticket) => !ticket.archived));
-
 export const readTicketsCommand = defineCommand({
   id: "read-tickets",
   title: "Read tickets",
-  async run(ctx, _commandParams) {
-    const migrated = await readMigratedTickets(ctx);
-    return (await readTickets(ctx, migrated)).map(withTicketTagIds);
+  params: { limit: params.number(), cursor: params.text() },
+  async run(ctx, input) {
+    const read = async () => {
+      const page = await ticketCommandPage(ctx, { ...input, includeDraft: true });
+      const selected = await ticketsCollection(ctx).getMany(page.tickets.map(({ id }) => id));
+      const tickets = await Promise.all(
+        selected.flatMap((ticket) => (ticket ? [withDerivedTicketState(ctx, ticket).then(withTicketTagIds)] : [])),
+      );
+      await ctx.storage.records.query({
+        index: "ticket-view",
+        fields: [],
+        limit: 1,
+        orderBy: [],
+        revision: page.revision,
+      });
+      return { ...page, tickets };
+    };
+    try {
+      return await read();
+    } catch (error) {
+      // Sync can advance the revision between projection and enrichment.
+      if (input.cursor || !(error instanceof Error) || error.message !== "Query revision is stale; restart the query")
+        throw error;
+      return read();
+    }
   },
 });

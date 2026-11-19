@@ -1,21 +1,23 @@
 import type { CommandContext, SessionRunSnapshot } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { attemptId, selectedAttemptId } from "../data/attempt-identity";
+import { readTicketAttempts } from "../data/attempt-queries";
 import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
 import {
   appendAttemptEvent,
   attemptEventsCollection,
   attemptSelectionsCollection,
-  listAttempts,
   putAttempt,
   readAttempt,
 } from "../data/attempt-storage";
 import type { AttemptRecord, TicketAttemptSelection } from "../data/attempt-types";
 import { hasFolderWriter } from "../data/folder-writers";
 import { hasPendingImplementationInput, isMergeOnlyInput } from "../data/implementation-input";
-import { readTicketReviewRequests } from "../data/review-request-storage";
+import { answeredReviewRequest } from "../data/review-query-indexes";
+import { readReviewRequestPage } from "../data/review-request-storage";
 import type { ReviewRequestView, TicketReviewRequests } from "../data/review-request-types";
-import { readSessionHistory } from "../data/session-history";
+import { readTicketInputStates } from "../data/ticket-input-state";
+import { hasWorkspaceWriter } from "../data/workspace-writers";
 import { readImplementationCapacity } from "./attempt-readiness";
 import { isLiveSession } from "./auto-build-sessions";
 
@@ -75,18 +77,20 @@ const readResumption = async (
   ctx: CommandContext,
   attempt: AttemptRecord,
   group: TicketReviewRequests | undefined,
+  pendingImplementation = false,
 ): Promise<AutoBuildResumption | null> => {
-  if (group && hasPendingImplementationInput(group)) return null;
+  if (pendingImplementation || (group && hasPendingImplementationInput(group))) return null;
   const pending = await readPendingAnswers(ctx, attempt, group?.requests ?? []);
   const session = await ctx.sessions.get(attempt.implementationSessionId);
   if (!session || isLiveSession(session) || !canContinue(attempt, session)) return null;
   // Submitted work continues through stack, PR and CI repair unless its run was lost or a person answered.
   if (!pending.length && attempt.revisions.length && !isUnexpectedExit(session)) return null;
   // A workspace without readable history cannot be resumed safely; recovery handles a lost workspace.
-  const others = await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId }).catch(() => null);
   if (
-    !others ||
-    (attempt.base === null ? await hasFolderWriter(ctx, attempt.workspaceId, session.id) : others.some(isLiveSession))
+    await (attempt.base === null
+      ? hasFolderWriter(ctx, attempt.workspaceId, session.id)
+      : hasWorkspaceWriter(ctx.sessions, attempt.workspaceId)
+    ).catch(() => true)
   )
     return null;
   // One stopped turn can be resumed once, even if a stale session snapshot is read again.
@@ -109,17 +113,75 @@ const readResumption = async (
   };
 };
 
-export async function readAutoBuildResumptions(ctx: CommandContext) {
-  const [attempts, requests, selections, retired] = await Promise.all([
-    listAttempts(ctx.storage),
-    readTicketReviewRequests(ctx.storage),
-    attemptSelectionsCollection(ctx.storage).list(),
-    readRetiredWorkspaceIds(ctx.storage),
-  ]);
+export async function readAutoBuildResumptions(ctx: CommandContext, ticketIds: string[]) {
+  const attempts = await readTicketAttempts(ctx.storage, ticketIds);
   const resumptions = new Map<string, AutoBuildResumption>();
+  if (!attempts.length) return resumptions;
+  const attemptedTicketIds = [...new Set(attempts.map(({ ticketId }) => ticketId))];
+  const [input, selected] = await Promise.all([
+    readTicketInputStates(ctx.storage, attemptedTicketIds),
+    Promise.all(attemptedTicketIds.map((id) => attemptSelectionsCollection(ctx.storage).get(id))),
+  ]);
+  const selections = selected.filter((value) => value !== undefined);
+  const retired = await readRetiredWorkspaceIds(ctx.storage, attempts.map(attemptId));
   for (const attempt of attempts) {
     if (retired.has(attemptId(attempt)) || !isChosenAttempt(attempt, attempts, selections, retired)) continue;
-    const resumption = await readResumption(ctx, attempt, requests.get(attempt.ticketId));
+    const page = await readReviewRequestPage(ctx.storage, {
+      all: [
+        { field: "ticketId", op: "eq", value: attempt.ticketId },
+        answeredReviewRequest,
+        {
+          any: [
+            { field: "attemptId", op: "eq", value: attemptId(attempt) },
+            {
+              all: [
+                {
+                  any: [
+                    { field: "attemptId", op: "missing" },
+                    { field: "attemptId", op: "eq", value: null },
+                  ],
+                },
+                { field: "workspaceId", op: "eq", value: attempt.workspaceId },
+              ],
+            },
+          ],
+        },
+        {
+          any: [
+            { field: "relatedSessionId", op: "eq", value: attempt.implementationSessionId },
+            {
+              all: [
+                {
+                  any: [
+                    { field: "relatedSessionId", op: "missing" },
+                    { field: "relatedSessionId", op: "eq", value: null },
+                  ],
+                },
+                { field: "sessionId", op: "eq", value: attempt.implementationSessionId },
+              ],
+            },
+          ],
+        },
+        {
+          not: {
+            any: [
+              { field: "affectedAction", op: "eq", value: "merge" },
+              { field: "reason", op: "eq", value: "approved-revision" },
+            ],
+          },
+        },
+        {
+          not: {
+            exists: {
+              index: "attempt-events-workspace",
+              on: [{ sourceField: "id", relatedField: "reviewRequestId" }],
+              where: { field: "type", op: "eq", value: "implementation_resumed" },
+            },
+          },
+        },
+      ],
+    });
+    const resumption = await readResumption(ctx, attempt, page, input.get(attempt.ticketId)?.pendingImplementation);
     if (resumption) resumptions.set(attempt.ticketId, resumption);
   }
   return resumptions;
@@ -130,7 +192,7 @@ export async function resumeAutoBuildAttempt(
   ticketId: string,
   beforeDispatch: () => Promise<void>,
 ) {
-  const resumption = (await readAutoBuildResumptions(ctx)).get(ticketId);
+  const resumption = (await readAutoBuildResumptions(ctx, [ticketId])).get(ticketId);
   if (!resumption) return { decision: "wait" as const, reason: "ticket-not-ready" };
   const currentAttempt = await readAttempt(ctx.storage, resumption.attemptId ?? resumption.workspaceId);
   const { running, limit } = await readImplementationCapacity(ctx);
