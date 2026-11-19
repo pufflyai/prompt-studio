@@ -114,14 +114,16 @@ const readResumption = async (
 };
 
 export async function readAutoBuildResumptions(ctx: CommandContext, ticketIds: string[]) {
-  const [attempts, input, selected] = await Promise.all([
-    readTicketAttempts(ctx.storage, ticketIds),
-    readTicketInputStates(ctx.storage, ticketIds),
-    Promise.all(ticketIds.map((id) => attemptSelectionsCollection(ctx.storage).get(id))),
+  const attempts = await readTicketAttempts(ctx.storage, ticketIds);
+  const resumptions = new Map<string, AutoBuildResumption>();
+  if (!attempts.length) return resumptions;
+  const attemptedTicketIds = [...new Set(attempts.map(({ ticketId }) => ticketId))];
+  const [input, selected] = await Promise.all([
+    readTicketInputStates(ctx.storage, attemptedTicketIds),
+    Promise.all(attemptedTicketIds.map((id) => attemptSelectionsCollection(ctx.storage).get(id))),
   ]);
   const selections = selected.filter((value) => value !== undefined);
   const retired = await readRetiredWorkspaceIds(ctx.storage, attempts.map(attemptId));
-  const resumptions = new Map<string, AutoBuildResumption>();
   for (const attempt of attempts) {
     if (retired.has(attemptId(attempt)) || !isChosenAttempt(attempt, attempts, selections, retired)) continue;
     const page = await readReviewRequestPage(ctx.storage, {

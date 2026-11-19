@@ -28,7 +28,19 @@ export const plannerStorageIndexes = () => [
   reviewThreadIndex,
 ];
 // Queries must not run before an older project's tickets have moved into the indexed records.
-export const preparePlannerIndexes = async (storage: ExtensionStorageApi) => {
-  await migratePlannerStorage({ storage });
-  await storage.records.defineIndexes(plannerStorageIndexes());
+const prepared = new WeakMap<ExtensionStorageApi, Promise<void>>();
+export const preparePlannerIndexes = (storage: ExtensionStorageApi) => {
+  const existing = prepared.get(storage);
+  if (existing) return existing;
+  // The declaration is fixed for this runtime. Reinstalling it for every evidence
+  // read repeats validation and index setup for every ticket in a candidate page.
+  const ready = (async () => {
+    await migratePlannerStorage({ storage });
+    await storage.records.defineIndexes(plannerStorageIndexes());
+  })().catch((error: unknown) => {
+    prepared.delete(storage);
+    throw error;
+  });
+  prepared.set(storage, ready);
+  return ready;
 };
