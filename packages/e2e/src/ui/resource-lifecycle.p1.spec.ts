@@ -5,6 +5,7 @@ import {
   getPlannerTicketStatuses,
   listPlannerTickets,
 } from "../helpers/planner-api";
+import { nativePublicTextEditor } from "../helpers/verify-public-text-editor";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
@@ -153,7 +154,8 @@ test("a removed note's pending draft stays recoverable until its tab is explicit
     .getAttribute("data-workbench-tab");
   expect(tabId).toBeTruthy();
   const tab = page.locator(`[data-workbench-tab="${tabId}"]`);
-  const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
+  // The note body loads after the page's Activity composer, so select the body editor itself.
+  const editor = nativePublicTextEditor(page);
   await expect(editor).toBeVisible();
   const held: import("@playwright/test").Route[] = [];
   await page.route("**/text-editing/request", async (route) => {
