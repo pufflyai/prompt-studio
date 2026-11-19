@@ -1,8 +1,8 @@
-import { Spinner, Stack, Text } from "@chakra-ui/react";
+import { Spinner } from "@chakra-ui/react";
 import { EmptyState } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { DesktopStartupPhase } from "../lifecycle/lifecycle-machine";
-import { CopyStartupLogsButton } from "./copy-startup-logs-button";
+import { CopyStartupDiagnosticsButton } from "./copy-startup-diagnostics-button";
 
 const phaseCopy: Record<DesktopStartupPhase, string> = {
   discovery: "Connecting to Prompt Studio on your computer…",
@@ -18,36 +18,30 @@ const phaseCopy: Record<DesktopStartupPhase, string> = {
 
 interface DesktopStartupProgressProps {
   phase: DesktopStartupPhase;
-  copyStartupLogs: () => Promise<void>;
+  copyDiagnostics: () => Promise<void>;
   takingLonger?: boolean;
   waitingWithoutProgress?: boolean;
 }
 
 export const DesktopStartupProgress = (props: DesktopStartupProgressProps) => {
-  const { phase, copyStartupLogs, takingLonger = false, waitingWithoutProgress = false } = props;
+  const { phase, copyDiagnostics, takingLonger = false, waitingWithoutProgress = false } = props;
+  const progressTitle = phase === "migrations" ? "Updating Prompt Studio" : "Opening Prompt Studio";
+  let title = takingLonger ? "This is taking longer than usual" : progressTitle;
+  if (waitingWithoutProgress) title = "Startup hasn’t reported progress for a while. Something may be wrong.";
   return (
     <EmptyState
       role="status"
-      title={phase === "migrations" ? "Updating Prompt Studio" : "Opening Prompt Studio"}
+      title={title}
       description={phaseCopy[phase]}
       icon={<Spinner size="lg" color="fg.muted" aria-hidden="true" _motionReduce={{ display: "none" }} />}
     >
-      {takingLonger && (
-        <Stack align="center" gap="xs" textAlign="center">
-          <Text color="fg.muted" textStyle="paragraph/S/regular">
-            {waitingWithoutProgress
-              ? "Startup hasn’t reported progress for a while. Something may be wrong."
-              : "This is taking longer than usual"}
-          </Text>
-          <CopyStartupLogsButton copyStartupLogs={copyStartupLogs} />
-        </Stack>
-      )}
+      {takingLonger && <CopyStartupDiagnosticsButton copyDiagnostics={copyDiagnostics} />}
     </EmptyState>
   );
 };
 
-export const DesktopStartingState = (props: Pick<DesktopStartupProgressProps, "phase" | "copyStartupLogs">) => {
-  const { phase, copyStartupLogs } = props;
+export const DesktopStartingState = (props: Pick<DesktopStartupProgressProps, "phase" | "copyDiagnostics">) => {
+  const { phase, copyDiagnostics } = props;
   const [takingLonger, setTakingLonger] = useState(false);
   const [waitingPhase, setWaitingPhase] = useState<DesktopStartupPhase | null>(null);
   useEffect(() => {
@@ -62,7 +56,7 @@ export const DesktopStartingState = (props: Pick<DesktopStartupProgressProps, "p
   return (
     <DesktopStartupProgress
       phase={phase}
-      copyStartupLogs={copyStartupLogs}
+      copyDiagnostics={copyDiagnostics}
       takingLonger={takingLonger}
       waitingWithoutProgress={waitingPhase === phase}
     />

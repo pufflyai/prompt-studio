@@ -2,6 +2,12 @@ import type { AutomationRun, AutomationRunStatus, CreateAutomationRunInput } fro
 import type { CommandRef } from "./commands";
 
 export type { AutomationRun, AutomationRunStatus } from "../../automation";
+export interface AutomationRunFilter {
+  status?: AutomationRunStatus[];
+  commandId?: string;
+  limit?: number;
+  order?: "oldest" | "newest";
+}
 
 export interface ExtensionAutomationApi {
   /** Enqueue a command owned by this extension and declared automation: true. */
@@ -14,6 +20,7 @@ export interface ExtensionAutomationApi {
     notBefore?: string;
   }): Promise<AutomationRun>;
   get(runId: string): Promise<AutomationRun | undefined>;
-  list(filter?: { status?: AutomationRunStatus[] }): Promise<AutomationRun[]>;
+  /** Use a limit and command filter for activity previews. */
+  list(filter?: AutomationRunFilter): Promise<AutomationRun[]>;
   cancel(runId: string): Promise<AutomationRun>;
 }

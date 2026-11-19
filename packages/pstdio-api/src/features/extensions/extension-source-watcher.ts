@@ -15,6 +15,7 @@ type InstalledSourceRegistration = Awaited<ReturnType<LocalWatcherInput["listIns
 
 export type CreateExtensionSourceWatcherInput = Omit<LocalWatcherInput, "listInstalledSources"> & {
   listInstalledSources: () => Promise<InstalledSourceRegistration[]>;
+  onSourceAttached?: (sourcePath: string) => Promise<unknown>;
   afterSourceChanged?: (sourcePath: string) => Promise<unknown>;
 };
 
@@ -38,7 +39,8 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
   const observedHashes = new Map<string, string | undefined>();
   let attaching: Promise<void> | undefined;
   const updateFrontend = async (path: string, origin: Change["origin"]) => {
-    const update = () => withBackgroundPreparation(async () => input.onSourceChanged(path));
+    const refresh = origin === "attachment" ? (input.onSourceAttached ?? input.onSourceChanged) : input.onSourceChanged;
+    const update = () => withBackgroundPreparation(async () => refresh(path));
     try {
       const accepted = origin === "edit" || (await readAcceptedRevision(path));
       if (accepted)
@@ -119,8 +121,9 @@ export const createExtensionSourceWatcher = async (input: CreateExtensionSourceW
     }
     if (typeof event.sourcePath !== "string" || !observedHashes.has(event.sourcePath)) return;
     const repeated = observe(event.sourcePath, event.sourceHash);
-    const reconciliation =
-      (event.attachment === true && (event.changed !== true || repeated)) || (event.metadataOnly === true && repeated);
+    // Touches and dependency notifications can repeat the same own-source bytes.
+    // Recheck frontend inputs without retiring an installation as if this were a new edit.
+    const reconciliation = repeated || (event.attachment === true && event.changed !== true);
     if (reconciliation) {
       attachments.add(event.sourcePath);
       reconcileAttachment();

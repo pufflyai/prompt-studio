@@ -24,18 +24,20 @@ async function stopLinkedSessions(ctx: CommandContext, supervisorId: string | un
   };
   await stop(supervisorId);
   const dispatches = await autoBuildDispatches(ctx, supervisorId).list();
-  const workspaces = new Set(dispatches.map(({ workspaceId }) => workspaceId));
-  for (const { workspaceId } of dispatches) {
-    const attempt = await readAttempt(ctx.storage, workspaceId);
+  const attemptIds = new Set(dispatches.map(({ attemptId, workspaceId }) => attemptId ?? workspaceId));
+  for (const { attemptId, workspaceId } of dispatches) {
+    const id = attemptId ?? workspaceId;
+    const attempt = await readAttempt(ctx.storage, id);
     await stop(attempt?.implementationSessionId);
     // An implementation can have requested a review just before it acknowledged cancellation.
-    await withQueuedWriteGuard(ctx, `attempt:${workspaceId}`, async () => {
-      const latest = await readAttempt(ctx.storage, workspaceId);
+    await withQueuedWriteGuard(ctx, `attempt:${id}`, async () => {
+      const latest = await readAttempt(ctx.storage, id);
       const events = await attemptEventsCollection(ctx.storage).list();
       for (const revision of latest?.revisions ?? []) {
         for (const review of revision.reviews) await stop(review.sessionId);
       }
-      for (const event of events.filter((event) => event.workspaceId === workspaceId)) await stop(event.sessionId);
+      for (const event of events.filter((event) => (event.attemptId ?? event.workspaceId) === id))
+        await stop(event.sessionId);
     });
   }
   // A supervisor or worker can ask for input before a workspace is attached to the request.
@@ -44,7 +46,7 @@ async function stopLinkedSessions(ctx: CommandContext, supervisorId: string | un
   while (found) {
     found = false;
     const requests = linkedAutoBuildRequests(await reviewRequestsCollection(ctx.storage).list(), {
-      workspaceIds: workspaces,
+      attemptIds,
       sessionIds: linked,
     });
     for (const request of requests) {

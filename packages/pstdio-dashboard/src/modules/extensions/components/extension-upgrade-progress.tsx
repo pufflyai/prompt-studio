@@ -14,29 +14,18 @@ interface ExtensionUpgradeProgressProps {
 export const ExtensionUpgradeProgress = (props: ExtensionUpgradeProgressProps) => {
   const { batch, onUpgrade, onDismiss, canUpgrade } = props;
   const { t } = useTranslation("projects");
-  const finished = batch?.finishedAt !== undefined;
-  let action: ExtensionActionState | undefined;
-  if (batch) {
-    action = {
-      status: "running",
-      label: t("projectSettings.extensionsPanel.feedback.batch", { count: batch.completed, total: batch.ids.length }),
-      startedAt: batch.startedAt,
-      finishedAt: batch.finishedAt,
-    };
-    if (finished) {
-      action.status = batch.failed > 0 ? "error" : "success";
-      if (batch.failed > 0)
-        action.label = t("projectSettings.extensionsPanel.feedback.batchFailed", {
-          count: batch.failed,
-          total: batch.ids.length,
-        });
-    }
-    if (batch.failed > 0)
-      action.error = t("projectSettings.extensionsPanel.feedback.batchFailed", {
-        count: batch.failed,
-        total: batch.ids.length,
-      });
-  }
+  const failure = batch?.failed
+    ? t("projectSettings.extensionsPanel.feedback.batchFailed", { count: batch.failed, total: batch.ids.length })
+    : undefined;
+  const action: ExtensionActionState | undefined = batch
+    ? {
+        status: batch.running ? "running" : "error",
+        label: batch.running
+          ? t("projectSettings.extensionsPanel.feedback.batch", { count: batch.completed, total: batch.ids.length })
+          : failure!,
+        error: failure,
+      }
+    : undefined;
   return (
     <ExtensionActionButton
       variant="primary"

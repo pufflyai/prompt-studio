@@ -3,7 +3,7 @@ import { createWorkbench } from "./workbench-core";
 
 const pageRef = (id: string) => ({ extensionId: "example.tools", kind: "page" as const, id });
 const createTools = () => {
-  const workbench = createWorkbench({ startPage: pageRef("start") });
+  const workbench = createWorkbench({ defaultPage: pageRef("start") });
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
   for (const id of ["start", "ticket", "workspace"]) {
     workbench.views.registerView({ id, title: id, body: { kind: "react", render: () => null } });

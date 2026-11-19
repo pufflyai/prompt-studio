@@ -114,6 +114,7 @@ export interface RuntimePrivateHandlerRecord {
   sourcePath: string;
   rendererId: string;
   rendererKind:
+    | "actionBar"
     | "terminal"
     | "chat"
     | "commandPaletteResource"
@@ -127,6 +128,7 @@ export interface RuntimePrivateHandlerRecord {
     | "tree"
     | "textSource";
   operation: string;
+  collectionQuery?: { mode: "paged" | "static"; maxRows?: number };
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with renderer-specific input
   handler: RendererCallback<any, any>;
 }
@@ -243,6 +245,12 @@ export interface ExtensionRuntime {
   pages: RuntimePageRecord[];
   statusBarItems: RuntimeStatusBarItemRecord[];
   resourceKinds: RuntimeResourceKindRecord[];
+  resourcePresentations?: Array<{
+    extensionId: string;
+    resourceKind: { extensionId: string; kind: "resource-kind"; id: string };
+    resolveCommand: string;
+    refreshEvents: string[];
+  }>;
   resourceHierarchyProviders: RuntimeResourceHierarchyProviderRecord[];
   activityItems: RuntimeActivityItemRecord[];
   settingsSections: RuntimeSettingsSectionRecord[];

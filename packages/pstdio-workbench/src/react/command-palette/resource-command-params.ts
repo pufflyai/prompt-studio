@@ -31,7 +31,7 @@ export const queryCommandResources = async (
   for (const group of groups) {
     for (const item of group.results) {
       if (item.resource?.type !== resourceType) continue;
-      const resource = { ...item.resource, label: item.label, icon: item.icon ?? item.resource.icon };
+      const resource = { ...item.resource, label: item.label, icon: item.resource.icon ?? item.icon };
       resources.set(resourceKey(resource), {
         resource,
         indicator: item.indicator,

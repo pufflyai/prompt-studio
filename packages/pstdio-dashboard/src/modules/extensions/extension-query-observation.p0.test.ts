@@ -72,6 +72,7 @@ test("catalog refresh bursts apply only their latest result and preserve warm A 
   const root = createScopedQueryClient({ runtimeId: "coalescing", extensionId: "pstdio" });
   const first = Promise.withResolvers<string>();
   const second = Promise.withResolvers<string>();
+  const secondStarted = Promise.withResolvers<void>();
   const values: string[] = [];
   let calls = 0;
   const observer = createExtensionQueryObservation({
@@ -81,7 +82,10 @@ test("catalog refresh bursts apply only their latest result and preserve warm A 
         id: "metadata",
         read: () => {
           if (++calls === 1) return first.promise;
-          if (calls === 2) return second.promise;
+          if (calls === 2) {
+            secondStarted.resolve();
+            return second.promise;
+          }
           return Promise.resolve(projectId);
         },
       }),
@@ -92,7 +96,7 @@ test("catalog refresh bursts apply only their latest result and preserve warm A 
   for (let index = 0; index < 1000; index++) observer.refresh("a");
   expect(calls).toBe(1);
   first.resolve("obsolete");
-  await turn();
+  await secondStarted.promise;
   expect(calls).toBe(2);
   expect(values).toEqual([]);
   second.resolve("latest");

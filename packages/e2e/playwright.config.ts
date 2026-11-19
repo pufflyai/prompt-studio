@@ -10,7 +10,10 @@ export default defineConfig({
     process.env.TEST_PRIORITIES?.split(",").map((priority) => `**/*.${priority.toLowerCase()}.spec.ts`) ??
     "**/*.spec.ts",
   ...playwrightQuarantineSelection("playwright-ui", "packages/e2e/src/ui", quarantine),
-  expect: { timeout: 5_000 },
+  // Cold project/tool setup takes 24–45 s in release CI; UI settlement can exceed 5 s.
+  // These execution allowances do not change the independent benchmark budgets (PS-1232).
+  timeout: 120_000,
+  expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: 1,
   retries: 0,
@@ -35,5 +38,5 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: [{ ...serveWebServer, timeout: process.platform === "darwin" ? 45_000 : serveWebServer.timeout }],
+  webServer: [serveWebServer],
 });

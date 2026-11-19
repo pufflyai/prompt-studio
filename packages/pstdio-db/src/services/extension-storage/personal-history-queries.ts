@@ -40,6 +40,7 @@ const sessionConditions = (owner: StorageOwner, login: Login, input: ExtensionSe
   if (!input.includeArchived) conditions.push(sql`coalesce(${field("archived")}, 'false') = 'false'`);
   if (input.status) conditions.push(inArray(field("status"), input.status));
   if (input.agent) conditions.push(sql`${field("agent")} = ${input.agent}`);
+  if (input.ids) conditions.push(inArray(history.record_id, input.ids));
   if (input.search) conditions.push(sql`position(lower(${input.search}) in lower(${field("title")})) > 0`);
   if (input.createdFrom) conditions.push(sql`${field("created_at")} >= ${new Date(input.createdFrom).toISOString()}`);
   if (input.createdTo) conditions.push(sql`${field("created_at")} <= ${new Date(input.createdTo).toISOString()}`);

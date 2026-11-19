@@ -12,6 +12,35 @@ const deferred = () => {
 const file = { id: "file-A", name: "A.txt" };
 const action = { type: "submit" as const, text: "Queued work", attachments: [file], values: { model: "B" } };
 
+test("a send queued while the chat was idle leaves the transcript when its queue row arrives", async () => {
+  const held = deferred();
+  const session = createChatSession({
+    initial: { streaming: false },
+    query: async () => ({}),
+    action: async (command) => {
+      if (command.type === "queue") return { snapshot: { queuedFollowUps: [] } };
+      return {};
+    },
+  });
+  const queued = { id: "saved", prompt: action.text, attachments: [file] };
+  const sent = session.run(action, () => held.promise);
+  expect(session.getSnapshot().messages[0]?.role).toBe("user");
+  session.accept({ revision: 1, snapshot: { streaming: true, queuedFollowUps: [queued] } });
+  expect(session.getSnapshot().messages).toEqual([]);
+  expect(session.getSnapshot().queuedFollowUps).toEqual([queued]);
+  held.resolve({});
+  await sent;
+  await session.run({ type: "queue", operation: "remove", item: queued, values: {}, attachments: [] });
+  await session.run({ type: "stop" });
+  session.accept({ revision: 2, snapshot: { streaming: false, queuedFollowUps: [] } });
+  await session.run({ ...action, text: "New message", attachments: [] });
+  const next = { id: "next", role: "user" as const, parts: [{ type: "text" as const, text: "New message" }] };
+  session.accept({ revision: 3, snapshot: { messages: [next] } });
+  expect(session.getSnapshot().messages).toMatchObject([next]);
+  expect(session.getSnapshot().queuedFollowUps).toEqual([]);
+  expect(session.getSnapshot().pending).toBeUndefined();
+});
+
 test("held streaming sends retain one pending queue row across owner presentations without changing canonical messages", async () => {
   const held = deferred();
   const history = [{ id: "history", role: "assistant" as const, parts: [{ type: "text" as const, text: "Working" }] }];

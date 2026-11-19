@@ -62,7 +62,6 @@
       "upgrade": {
         "waiting": "En attente de mise à niveau",
         "action": "Mettre à niveau",
-        "succeeded": "Extension mise à niveau",
         "current": "L'extension est déjà à jour",
         "failed": "Échec de la mise à niveau de l'extension"
       },
@@ -83,7 +82,6 @@
         "title": "Déposez un dossier d'extension ici",
         "hint": "Le serveur installe l’extension dans la portée qu’elle déclare.",
         "uploading": "Ajout de {{name}}…",
-        "succeeded": "{{name}} ajoutée",
         "failed": "Impossible d'ajouter le dossier de l'extension",
         "notFolder": "Déposez un dossier, pas un fichier."
       },
@@ -164,15 +162,24 @@
         "queued": "En attente",
         "upgrading": "Mise à niveau de {{name}}",
         "updating": "Mise à jour de {{name}}",
-        "updated": "Extension mise à jour",
         "installing": "Installation de {{name}}",
         "batch": "{{count}} mises à niveau terminées sur {{total}}",
         "retry": "Réessayer",
         "dismiss": "Fermer",
         "upgradingButton": "Mise à niveau",
         "batchFailed": "{{count}} mises à niveau sur {{total}} ont échoué",
-        "installingButton": "Installation",
-        "installedButton": "Installée"
+        "installingButton": "Installation"
+      },
+      "provenance": {
+        "filter": "Source des extensions",
+        "all": "Toutes",
+        "public": "Publique",
+        "mine": "Les miennes",
+        "unknown": "Visibilité inconnue",
+        "publicHelp": "Un paquet public est disponible. Les modifications locales peuvent ne pas être publiées.",
+        "mineHelp": "Source locale modifiable maintenue dans ce projet ou sur cet appareil.",
+        "unknownHelp": "La disponibilité publique n’a pas été vérifiée.",
+        "noMatches": "Aucune extension correspondante"
       }
     }
   },

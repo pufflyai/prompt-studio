@@ -19,8 +19,8 @@ test("workbench history works on HTTP origins without randomUUID", async () => {
 test("background navigation leaves the window history with the active workbench", async () => {
   const startPage = { extensionId: "pstdio", kind: "page", id: "start" } as const;
   const browser = createMemoryWorkbenchPageLocationBrowser();
-  const visible = createWorkbench({ startPage, pageLocationBrowser: browser });
-  const background = createWorkbench({ startPage, active: false, pageLocationBrowser: browser });
+  const visible = createWorkbench({ defaultPage: startPage, pageLocationBrowser: browser });
+  const background = createWorkbench({ defaultPage: startPage, active: false, pageLocationBrowser: browser });
   visible.pages.registerPage({
     id: "start",
     ref: { extensionId: "pstdio", kind: "page", id: "start" },
@@ -60,7 +60,7 @@ test("retained workbenches traverse their own history after several switches and
   const browser = createMemoryWorkbenchPageLocationBrowser();
   const ref = (id: string) => ({ kind: "page", extensionId: "example", id }) as const;
   const open = (project: string, active: boolean) => {
-    const workbench = createWorkbench({ active, startPage: ref("start"), pageLocationBrowser: browser });
+    const workbench = createWorkbench({ active, defaultPage: ref("start"), pageLocationBrowser: browser });
     workbench.modes.registerMode({ id: "project", activate() {} });
     for (const id of ["start", "editor", "other"])
       workbench.pages.registerPage({
@@ -111,7 +111,7 @@ test("reloaded workbench controls traverse history from before reload", async ()
   const browser = createMemoryWorkbenchPageLocationBrowser();
   const ref = (id: string) => ({ kind: "page", extensionId: "example", id }) as const;
   const open = (active: boolean) => {
-    const workbench = createWorkbench({ active, startPage: ref("start"), pageLocationBrowser: browser });
+    const workbench = createWorkbench({ active, defaultPage: ref("start"), pageLocationBrowser: browser });
     workbench.modes.registerMode({ id: "project", activate() {} });
     for (const id of ["start", "editor"])
       workbench.pages.registerPage({

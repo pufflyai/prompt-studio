@@ -62,7 +62,6 @@
       "upgrade": {
         "waiting": "Waiting to upgrade",
         "action": "Upgrade",
-        "succeeded": "Extension upgraded",
         "current": "Extension is already current",
         "failed": "Extension upgrade failed"
       },
@@ -83,7 +82,6 @@
         "title": "Drop an extension folder here",
         "hint": "The host installs it in the scope declared by the extension.",
         "uploading": "Adding {{name}}…",
-        "succeeded": "{{name}} added",
         "failed": "Could not add the extension folder",
         "notFolder": "Drop a folder, not a single file."
       },
@@ -164,15 +162,24 @@
         "queued": "Waiting",
         "upgrading": "Upgrading {{name}}",
         "updating": "Updating {{name}}",
-        "updated": "Extension updated",
         "installing": "Installing {{name}}",
         "batch": "{{count}} of {{total}} upgrades finished",
         "retry": "Retry",
         "dismiss": "Dismiss",
         "upgradingButton": "Upgrading",
         "batchFailed": "{{count}} of {{total}} upgrades failed",
-        "installingButton": "Installing",
-        "installedButton": "Installed"
+        "installingButton": "Installing"
+      },
+      "provenance": {
+        "filter": "Extension source",
+        "all": "All",
+        "public": "Public",
+        "mine": "Mine",
+        "unknown": "Visibility unknown",
+        "publicHelp": "A public package is available. Local changes may not be published.",
+        "mineHelp": "Editable local source maintained in this project or on this device.",
+        "unknownHelp": "Public availability has not been verified.",
+        "noMatches": "No matching extensions"
       }
     },
     "machineTokens": {

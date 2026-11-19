@@ -154,7 +154,8 @@ export const createNativeDocumentService = (deps: {
     },
     resolveSource(input: NativeTextTarget & { projectId: string; signal?: AbortSignal }) {
       return track(async () => {
-        const expectedSource = await deps.access(input);
+        const expectedSource = await deps.access({ ...input, verifyRecordField: true });
+        if (expectedSource.verifiedRecordField) return expectedSource;
         return projection.read(expectedSource, () => loadNativeRoomSource(deps, { ...input, expectedSource }));
       });
     },

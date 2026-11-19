@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useMutationState, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { getRuntimeApiClient } from "@/lib/api";
 import { getDashboardScopedQueries } from "@/lib/scoped-queries";
@@ -22,6 +22,25 @@ const ownerKey = (owner: object) => {
     ownerKeys.set(owner, key);
   }
   return key;
+};
+
+/** Observe source changes owned by this project even after their detail view is left. */
+export const usePendingExtensionSourceChanges = (projectId: string | undefined) => {
+  const scope = getProjectExtensionQueries(projectId).metadata;
+  const token = ownerKey(scope);
+  const pending = useMutationState({
+    filters: {
+      mutationKey: [...scope.key, "mutation"],
+      status: "pending",
+      predicate: (mutation) => {
+        const key = mutation.options.mutationKey;
+        const operation = key?.at(-2);
+        return key?.at(-1) === token && (operation === "reload" || operation === "uninstall");
+      },
+    },
+    select: (mutation) => (mutation.state.variables as { instanceId: string }).instanceId,
+  });
+  return new Set(pending);
 };
 
 /** Each invocation keeps its original authority, even when React Query updates observer options. */

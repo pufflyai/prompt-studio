@@ -123,7 +123,7 @@ Global panel controls render in the web navigation header: closed Sidenav recove
 | `workbench.resizePanel` | `region: sidenav, secondary, side`, `size: number` in pixels |
 | `workbench.setSidePanelPresentation` | `presentation: attached, floating, closed` |
 
-The matching shell methods enforce the same permissions. Main headers follow page presentation: tabless pages have no tab header, while tabbed pages keep theirs. A tabless page can provide a title and icon through `main.tab`; a header shows that presentation beside its view-menu toggles with the standard bottom divider. Without an explicit title, it shows only closed-menu openers and remains borderless. This header accepts no tab drops or panel placement. Header menus offer placement actions without a visibility toggle. `setPanelHeaderVisible` and `shell.setHeaderVisible` remain for legacy auxiliary integrations and cannot override a page's Main header policy. Optional panels collapse after their last tab closes, including panels previously opened empty.
+The matching shell methods enforce the same permissions. Tabbed pages use the Main tab header. Tabless pages use the breadcrumb for page identity and show a borderless row in Main when a view menu has an open or close control. This header accepts no tab drops or panel placement. Header menus offer placement actions without a visibility toggle. `setPanelHeaderVisible` and `shell.setHeaderVisible` remain for legacy auxiliary integrations and cannot override a page's Main header policy. Optional panels collapse after their last tab closes, including panels previously opened empty.
 
 ## Panel placement and closed-edge drops
 
@@ -143,12 +143,16 @@ During a tab drag, a closed eligible Side offers both allowed left/right edges a
 
 ## Project default page
 
-An application sets its default page with `createWorkbench({ startPage })`. Prompt Studio sets this directly to the ordinary project-local Home extension page. Project-root bookmarks open Home at its normal namespaced URL. Valid saved destinations and the last root-level page used by the project breadcrumb retain their existing precedence. If Home is unavailable, the selected mode and its shared panels remain active so the existing empty-panel UI can render. Prompt Studio-owned callers target Home directly. Start targets and parents contributed by other hosts remain ordinary references; they are not rewritten to the configured default.
+An application supplies an eligible resource-free page through `createWorkbench({ defaultPage })`, using a page reference or a callback that reads its current configuration. Prompt Studio reads the fully qualified reference from public project composition. The distribution chooses the ordinary Home page initially; people and agents can replace that choice through the same SDK, HTTP, or CLI interface.
+
+An explicit destination and a valid saved location take precedence over the default. A project-root bookmark restores that saved location when available. The Open default page command follows the current configured choice. Updating composition refreshes the open workbench's choices without moving away from its current page. The project breadcrumb retains its last root-level location before using the default.
+
+If the configured page is missing, disabled, or requires a resource, the selected mode and shared panels remain active and the existing empty workbench and extension-management controls remain usable. Core does not guess another page or supply a Start/Home alias. Old presentation links and saved references are discarded by the coordinated alpha API break; workspace and session data remain in their existing stores.
 
 ## Workspace provider destinations
 
-Use the Workspaces provider's public `workspacePages` refs for the grouped list, project Files, workspace, overview and synced history destinations. Files are documents in `workspaceFilePath` on the routed host-owned workspace resource. The default project folder uses `workspacePages.files` and has no Changes tab. Foreign resources use `workspacePages.history`; local file and execution actions require the host's current provider permissions.
+Workspaces declares its own ordinary page references for its grouped list, Files, workspace, overview, and synced history. Its opener chooses among those pages using workspace capabilities. Files use its declared document metadata key on the routed host-owned workspace resource; its default-folder presentation omits Changes. Other tools may declare different names, document keys, page structures, and normal page/panel/compound targets. Local file and execution actions retain the host's current provider permissions.
 
-The legacy host `workbenchPages.workspace` and `workbenchPages.workspaces` refs are deprecated. Their saved URLs remain available through compatibility declarations while the provider views are installed. An ordinary extension can declare workspace page names under its own namespace; this does not grant ownership of the host's resource kind or file services.
+Bare workspace references use the project’s configured public resource opener. Workspaces owns its normal page references and capability-to-page choices. An ordinary extension can present the same core resource kind through its own declared pages. Core keeps ownership of workspace data and file services.
 
-*Updated at: 2026-11-12*
+*Updated at: 2026-11-15*

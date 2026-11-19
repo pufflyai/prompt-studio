@@ -1,6 +1,6 @@
 # Attempts
 
-An attempt is one implementation variant of a ticket. An agent does the work in its own Git worktree and keeps the ticket's progress current. Reviews are optional evidence, and you decide what to do with the finished work. Most tickets need one attempt; corrections continue in the same workspace and conversation.
+An attempt is one implementation variant of a ticket. An agent works in a Git worktree when the project has a usable Git commit, or directly in the existing project folder otherwise. It keeps the ticket's progress current. Reviews are optional evidence, and you decide what to do with the finished work. Most tickets need one attempt; corrections continue in the same workspace and conversation.
 
 ## Words used on this page
 
@@ -14,15 +14,15 @@ A revision is one version of the work that the implementing agent hands in. An a
 
 A managed attempt needs:
 
-- A project opened from a local folder that is a Git repository with at least one commit.
+- A project opened from a local folder. Git is optional.
 - An agent, such as [Claude Code](../../harness-claude-code/README.md), [Codex](../../harness-codex/README.md), or [OpenCode](../../harness-open-code/README.md).
 - Core resource Activity stores implementation and independent review outcomes on the ticket. Reports is needed only to read or migrate historical report evidence.
 
-Planner refuses to start an attempt in a folder that is not a Git repository. You can still use tickets, tools, and ordinary agent sessions there.
+Without Git, without an initial commit, or when Git is unavailable, Planner starts the attempt in the existing project workspace. The session is linked to the ticket and its own Planner attempt ID. No extra workspace record is created. Folder attempts share the project files, so Planner permits only one implementation writer at a time. The Auto Build supervisor only dispatches work and does not count as an implementation writer.
 
 ## Workspaces on a ticket
 
-The **Workspaces** section of a ticket lists the project folder, shown as **Project workspace**, and every workspace linked to the ticket. Open the project workspace to work directly in the project's files. Archiving a ticket never archives the project workspace.
+The **Workspaces** section of a ticket lists only workspaces explicitly linked to it. The project folder appears as **Project folder** only when linked. Tickets without linked workspaces hide this section. Archiving a ticket never removes the project folder.
 
 When the project can create workspaces, the section shows **Create workspace**. It opens a form where you choose a workspace type, called a provider, and fill in its options. The new workspace is linked to the ticket, even while a remote environment is still starting. Creating a workspace does not start an agent. A plain folder or a remote project with no provider shows no create action.
 
@@ -40,12 +40,14 @@ Planner then does the following:
 
 1. It checks that the ticket can start. See [Dependencies](#dependencies).
 2. If the ticket already has one attempt, or a selected one, Planner asks that implementation owner to continue in its workspace and conversation. Choose **Explore another implementation variant** (`--new-variant`) only when another approach is useful.
-3. Otherwise it creates a Git worktree from the chosen commit, links it to the ticket, and starts an implementation session there.
+3. Otherwise it creates a Git worktree from the chosen commit, or reuses the project workspace when there is no Git base, and starts a ticket-linked implementation session there.
 4. The implementation agent updates the ticket status as it starts, blocks, resumes, and hands off its work. It finds the current status IDs with `pst pstdio.planner ticket-status read` and `implementation-policy`. A person can change the status at any time.
 5. When the agent finishes, it runs the configured adversarial review, publishes an implementation Activity entry, and records the commit with `submit-revision`. Planner checks that the Activity entry and the latest commit belong to this workspace, then records a new revision.
 6. An extra review is optional. It starts when someone chooses **Run review** from the workspace's actions menu, or runs `pst pstdio.planner run-review --workspace-id <workspace> --expected-revision <number>`. The reviewer publishes a review Activity entry and submits a verdict. A verdict is evidence about that commit. It does not change the ticket status, resume the implementation, or ask for a merge.
 
 Planner does not merge work. Merging, delivering, and moving the ticket to a completed status are your decisions, or the implementation agent's when its task requires it.
+
+Folder attempts record validation and completion evidence in ticket Activity and update ticket progress. They have no Git revisions, stacks, PR or merge step. Read their history with `pst pstdio.planner read-attempt-history --attempt-id <attempt-id>`, and use `--attempt-id` for selection, reconciliation, repairs and human requests. An explicit unavailable Git base is an error rather than a request to change modes. Folder dependencies wait for completed prerequisite tickets and any pending human decisions; Git-backed dependency work must still retain its commit evidence.
 
 If two implementation sessions are already running in the project, Run attempt does not start another one. To change the limit, open **Settings → Project Planner → Workflow & automation**, set **Maximum in-progress tickets**, and select **Save changes**.
 

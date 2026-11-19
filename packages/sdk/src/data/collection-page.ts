@@ -6,11 +6,14 @@ import {
   type StoragePredicate,
   type StorageRecordQueries,
   type StorageRecordQuery,
+  storageLimits,
 } from "pstdio-api-contracts/extension-kernel";
 import { canonicalJson, type Json } from "pstdio-sync-contracts";
 
 export interface CollectionPageSelection {
   index: string;
+  computed?: StorageRecordQuery["computed"];
+  formats?: StorageRecordQuery["formats"];
   /** The complete view filter, translated to declared index fields. */
   where?: StoragePredicate;
   /** Search is separate so total retains the count before search. */
@@ -19,6 +22,7 @@ export interface CollectionPageSelection {
   visible?: StoragePredicate;
   fields?: string[];
   orderBy?: StorageRecordQuery["orderBy"];
+  textOrder?: StorageRecordQuery["textOrder"];
   groups?: { field: string; indexField: string }[];
   page?: CollectionPageRequest;
 }
@@ -35,37 +39,51 @@ export const readCollectionPage = async (
   storage: { records: Pick<StorageRecordQueries, "query" | "aggregate"> },
   selection: CollectionPageSelection,
 ) => {
-  const { index, fields, orderBy, where, search, visible, groups = [], page } = selection;
+  const { index, computed, formats, fields, orderBy, where, search, visible, groups = [], page } = selection;
   if (page?.search && !search) throw new Error("A nonempty search needs an indexed search predicate");
   if (page?.collapsedGroups?.length && !visible)
     throw new Error("Collapsed groups need an indexed collapsed-group predicate");
   if (groups.length > 2 || new Set(groups.map((group) => group.field)).size !== groups.length)
     throw new Error("Collection pages support at most two different grouping fields");
-  const total = await storage.records.aggregate({ index, where });
+  const limit = page?.limit ?? DEFAULT_COLLECTION_PAGE_SIZE;
+  if (!Number.isSafeInteger(limit) || limit < 0 || limit > storageLimits.queryLimit)
+    throw new Error(`Query limit must be between 0 and ${storageLimits.queryLimit}`);
+  const groupSelection = groups.length ? { groupBy: groups.map((group) => group.indexField), groupLimit: 500 } : {};
+  const total = await storage.records.aggregate({
+    index,
+    computed,
+    formats,
+    where,
+    ...(!search ? groupSelection : {}),
+  });
   const revision = total.revision;
   const sameRevision = (actual: string) => {
     if (actual !== revision) throw new Error("Collection query revision is stale; restart the query");
   };
   if (page?.revision !== undefined) sameRevision(page.revision);
-  const filtered =
-    search || groups.length
-      ? await storage.records.aggregate({
-          index,
-          where: together(where, search),
-          ...(groups.length ? { groupBy: groups.map((group) => group.indexField), groupLimit: 500 } : {}),
-        })
-      : total;
+  const filtered = search
+    ? await storage.records.aggregate({
+        index,
+        computed,
+        formats,
+        where: together(where, search),
+        ...groupSelection,
+      })
+    : total;
   sameRevision(filtered.revision);
   const counts = visible
-    ? await storage.records.aggregate({ index, where: together(where, search, visible) })
+    ? await storage.records.aggregate({ index, computed, formats, where: together(where, search, visible) })
     : filtered;
   sameRevision(counts.revision);
   const selected = await storage.records.query({
     index,
+    computed,
+    formats,
     where: together(where, search, visible),
     fields,
     orderBy,
-    limit: page?.limit ?? DEFAULT_COLLECTION_PAGE_SIZE,
+    textOrder: selection.textOrder,
+    limit: counts.count === 0 ? 0 : limit,
     cursor: page?.cursor,
     offset: page?.cursor ? undefined : page?.offset,
     revision,

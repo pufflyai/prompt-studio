@@ -21,12 +21,13 @@ export const projectOwnerProgress = (
   /** Folder progress sits beside records and never makes them unready. */
   folder?: ProjectFolderRecoveryStatus,
 ) => {
-  const names = ["core", "publications", "automations", "activity", "personal", ...extensionIds];
+  const names = ["core", "publications", "automations", "activity", "seen", "personal", ...extensionIds];
   const labels = [
     "Project information",
     "Extensions",
     "Automations",
     "Resource Activity",
+    "Seen resource changes",
     "Sessions and history",
     ...extensionNames,
   ];

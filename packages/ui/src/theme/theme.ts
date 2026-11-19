@@ -45,6 +45,7 @@ import { queuedFollowUpRecipe } from "./recipes/queued-follow-up";
 import { resizableSplitLayoutSlotRecipe } from "./recipes/resizable-split-layout";
 import { scrollAreaSlotRecipe } from "./recipes/scroll-area";
 import { skeletonRecipe } from "./recipes/skeleton";
+import { statusBarSlotRecipe } from "./recipes/status-bar";
 import { stickyUserMessageRecipe } from "./recipes/sticky-user-message";
 import { switchSlotRecipe } from "./recipes/switch";
 import { tabsSlotRecipe } from "./recipes/tabs";
@@ -109,6 +110,7 @@ const config = defineConfig({
       borders,
     },
     slotRecipes: {
+      statusBar: statusBarSlotRecipe,
       dashboard: dashboardRecipe,
       chart: chartRecipe,
       dataTable: dataTableRecipe,

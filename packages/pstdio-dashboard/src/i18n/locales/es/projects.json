@@ -62,7 +62,6 @@
       "upgrade": {
         "waiting": "En espera de actualización",
         "action": "Actualizar versión",
-        "succeeded": "Extensión actualizada",
         "current": "La extensión ya está al día",
         "failed": "No se pudo actualizar la extensión"
       },
@@ -83,7 +82,6 @@
         "title": "Suelta aquí una carpeta de extensión",
         "hint": "El servidor la instala en el ámbito declarado por la extensión.",
         "uploading": "Añadiendo {{name}}…",
-        "succeeded": "{{name}} añadida",
         "failed": "No se pudo añadir la carpeta de la extensión",
         "notFolder": "Suelta una carpeta, no un archivo."
       },
@@ -164,15 +162,24 @@
         "queued": "En espera",
         "upgrading": "Actualizando {{name}}",
         "updating": "Actualizando {{name}}",
-        "updated": "Extensión actualizada",
         "installing": "Instalando {{name}}",
         "batch": "{{count}} de {{total}} actualizaciones terminadas",
         "retry": "Reintentar",
         "dismiss": "Cerrar",
         "upgradingButton": "Actualizando",
         "batchFailed": "{{count}} de {{total}} actualizaciones fallaron",
-        "installingButton": "Instalando",
-        "installedButton": "Instalada"
+        "installingButton": "Instalando"
+      },
+      "provenance": {
+        "filter": "Origen de las extensiones",
+        "all": "Todas",
+        "public": "Pública",
+        "mine": "Mías",
+        "unknown": "Visibilidad desconocida",
+        "publicHelp": "Hay un paquete público disponible. Los cambios locales pueden no estar publicados.",
+        "mineHelp": "Código local editable mantenido en este proyecto o dispositivo.",
+        "unknownHelp": "No se ha verificado la disponibilidad pública.",
+        "noMatches": "No hay extensiones coincidentes"
       }
     }
   },

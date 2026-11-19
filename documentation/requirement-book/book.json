@@ -3603,6 +3603,19 @@
       "acceptance": [],
       "related": [],
       "governing": ["RB 1.A.3"]
+    },
+    {
+      "ref": "RB 9.A.69",
+      "chapter": 9,
+      "title": "Permanent cloud project deletion retires the cloud identity",
+      "level": 2,
+      "statement": "The account manager records a durable deletion operation and withdraws the cloud identity from account discovery, access renewal and key issuance in the same transaction. Old enrollment and owned restore cannot reactivate a known retired identity. The relay bars the retired scope even for previously issued access, then purges its owned cloud content. The manager removes the project keys and reports completion only after verified relay cleanup. Existing downloaded copies become local, including offline edits. Make local keeps its later-merge behavior. Deliberate publication after permanent deletion uses a fresh cloud identity.",
+      "rationale": "",
+      "status": "proposed",
+      "section": "Cloud requirements",
+      "acceptance": [],
+      "related": ["RB 9.A.40", "RB 9.A.67"],
+      "governing": ["RB 1.A.3"]
     }
   ],
   "retired": [

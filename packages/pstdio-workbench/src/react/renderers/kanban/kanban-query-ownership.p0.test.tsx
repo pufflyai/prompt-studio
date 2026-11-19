@@ -214,3 +214,60 @@ test("create and open leaves the departing board stale until it is visible again
   });
   expect(calls).toBe(5);
 });
+
+test("column actions defer board reconciliation until their writes finish", async () => {
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  core = createWorkbench();
+  let output: KanbanRendererProps | undefined;
+  let reads = 0;
+  let archived = false;
+  const saving = Promise.withResolvers<void>();
+  const entered = Promise.withResolvers<void>();
+  const renderers = getWorkbenchRenderers(core);
+  renderers.registerKanbanRenderer({
+    id: "column action board",
+    title: "Column action board",
+    attributes: [],
+    executeQuery: () => {
+      reads++;
+      return archived ? [] : [{ id: "row", title: "Row", attributes: {} }];
+    },
+    onColumnAction: async () => {
+      renderers.refreshKanbanRenderer("column action board");
+      entered.resolve();
+      await saving.promise;
+      archived = true;
+      renderers.refreshKanbanRenderer("column action board");
+    },
+  });
+  const Capture = (props: KanbanRendererProps) => {
+    output = props;
+    return null;
+  };
+  await act(async () => {
+    tree = create(
+      <ChakraProvider value={psTheme}>
+        <WorkbenchKanbanView
+          workbench={core}
+          contribution={renderers.getKanbanRenderer("column action board")!}
+          placement={{ instanceId: "column-action", panelId: "column action board", closable: false }}
+          Renderer={Capture}
+        />
+      </ChakraProvider>,
+    );
+  });
+  expect(reads).toBe(1);
+  let action: Promise<unknown> | undefined;
+  await act(async () => {
+    action = Promise.resolve(output!.onColumnAction!("done", "archive"));
+    await entered.promise;
+  });
+  const pendingReads = reads;
+  await act(async () => {
+    saving.resolve();
+    await action;
+  });
+  expect(pendingReads).toBe(1);
+  expect(reads).toBe(2);
+  expect(output!.rows).toEqual([]);
+});

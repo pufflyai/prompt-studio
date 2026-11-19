@@ -89,6 +89,31 @@ export const DeferredFocusIgnoresPopupRestore: Story = {
   id: "components-terminal--deferred-focus-ignores-popup-restore",
   render: () => <PopupRestoreFocusFixture />,
 };
+const LateMountFocusFixture = () => {
+  const [bridge] = useState(() => createScriptedTerminalBridge({ initial: [{ data: "Late terminal ready\r\n" }] }));
+  const [mounted, setMounted] = useState(false);
+  return (
+    <Stack>
+      <div role="menu" aria-label="Existing tab actions">
+        <Button role="menuitem" onClick={() => setMounted(true)}>
+          Finish pending terminal load
+        </Button>
+        <Button role="menuitem" onClick={() => setMounted(false)}>
+          Close tab
+        </Button>
+      </div>
+      {mounted ? (
+        <TerminalFrame>
+          <Terminal bridge={bridge} />
+        </TerminalFrame>
+      ) : null}
+    </Stack>
+  );
+};
+export const LateMountPreservesMenuFocus: Story = {
+  id: "components-terminal--late-mount-preserves-menu-focus",
+  render: () => <LateMountFocusFixture />,
+};
 export const Default: Story = {
   id: "components-terminal--default",
   render: () => (

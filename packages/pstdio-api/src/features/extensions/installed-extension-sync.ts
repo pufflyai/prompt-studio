@@ -63,12 +63,12 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
 
   const load = deps.loadExtension ?? ((path: string) => loadExtensionSource(path, { accepted: true }));
   const hash = deps.hashExtension ?? hashExtensionSourceAsync;
-  const discovered: DiscoveredInstalledExtension[] = [];
-  const presentSourcePaths: string[] = [];
+  const discovered = new Array<DiscoveredInstalledExtension | undefined>(listing.paths.length);
+  let next = 0;
+  let failure: { index: number; error: unknown } | undefined;
 
-  for (const sourcePath of listing.paths) {
+  const read = async (sourcePath: string): Promise<DiscoveredInstalledExtension | undefined> => {
     const installName = basename(sourcePath);
-
     let loaded: Awaited<ReturnType<typeof loadExtensionSource>>;
     try {
       loaded = await load(sourcePath);
@@ -80,12 +80,10 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
       } catch {
         deps.onLoadFailure?.({ error, installName, sourcePath });
         // User-edited installed sources can become invalid; project creation should still sync healthy extensions.
-        continue;
+        return;
       }
     }
-
-    presentSourcePaths.push(sourcePath);
-    discovered.push({
+    return {
       installName,
       displayName: loaded.metadata.displayName,
       extensionId: loaded.metadata.id,
@@ -94,10 +92,33 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
       sourceHash: await hash(sourcePath),
       sourcePath,
       version: loaded.metadata.version,
-    });
-  }
+    };
+  };
+  const fail = (index: number, error: unknown) => {
+    if (!failure || index < failure.index) failure = { index, error };
+  };
+  const inspect = async () => {
+    while (!failure && next < listing.paths.length) {
+      const index = next++;
+      try {
+        discovered[index] = await read(listing.paths[index]!);
+      } catch (error) {
+        fail(index, error);
+      }
+    }
+  };
+  // Independent fresh reads may overlap, while registration retains disk order.
+  // Drain admitted reads on failure before callers can tear down their source folders.
+  await Promise.all(Array.from({ length: Math.min(2, listing.paths.length) }, inspect));
+  if (failure) throw failure.error;
+  const healthy = discovered.filter((extension): extension is DiscoveredInstalledExtension => extension !== undefined);
 
-  return { discovered, presentSourcePaths, root, rootExists: true };
+  return {
+    discovered: healthy,
+    presentSourcePaths: healthy.map((extension) => extension.sourcePath),
+    root,
+    rootExists: true,
+  };
 };
 
 type InstalledExtensionSnapshot = Awaited<ReturnType<typeof discoverInstalledExtensions>>;
@@ -146,17 +167,21 @@ export const syncInstalledExtensionsForProject = async (deps: SyncInstalledExten
 export const syncInstalledExtensionsForProjects = async (deps: SyncInstalledExtensionsForProjectsDeps) => {
   const snapshotStartedAt = new Date().toISOString();
   const snapshot = await discoverInstalledExtensions(deps);
-  const synced: Array<SyncedInstalledExtension & { projectId: string }> = [];
-
-  for (const project of await deps.projectService.list()) {
-    const projectSynced = await syncSnapshotForProject({
-      ...deps,
-      projectId: project.id,
-      snapshot,
-      snapshotStartedAt,
-    });
-    synced.push(...projectSynced.map((entry) => ({ ...entry, projectId: project.id })));
-  }
-
-  return synced;
+  const projects = await deps.projectService.list();
+  const synced: Array<Array<SyncedInstalledExtension & { projectId: string }>> = [];
+  let next = 0;
+  const sync = async () => {
+    while (next < projects.length) {
+      const index = next++;
+      const projectId = projects[index]!.id;
+      const projectSynced = await syncSnapshotForProject({ ...deps, projectId, snapshot, snapshotStartedAt });
+      synced[index] = projectSynced.map((entry) => ({ ...entry, projectId }));
+    }
+  };
+  // A project's frontend refresh must not hold every other project's disabled
+  // registration behind it. Bound admission and drain work before returning.
+  const results = await Promise.allSettled(Array.from({ length: Math.min(2, projects.length) }, sync));
+  const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+  if (failures.length) throw new AggregateError(failures, "Installed extension discovery failed");
+  return synced.flat();
 };

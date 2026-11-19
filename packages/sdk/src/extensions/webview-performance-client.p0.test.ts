@@ -2,6 +2,24 @@ import { expect, test } from "bun:test";
 import type { GuestHost } from "./guest-host";
 import { createWebviewPerformanceClient } from "./webview-performance-client";
 
+test("render highlighting uses the permission-checked performance control", async () => {
+  const requests: unknown[] = [];
+  const host: GuestHost = {
+    call: async <T>(method: string, params?: unknown) => {
+      requests.push({ method, params });
+      return undefined as T;
+    },
+    onEvent: () => () => {},
+  };
+  await createWebviewPerformanceClient(host).setRenderOverlayEnabled(true);
+  expect(requests).toEqual([
+    {
+      method: "performance.control",
+      params: { operation: "set-render-overlay", enabled: true },
+    },
+  ]);
+});
+
 test("concurrent clients share a subscription and only the last disposal unsubscribes", async () => {
   const requests: unknown[] = [];
   const listeners = new Set<(value: unknown) => void>();

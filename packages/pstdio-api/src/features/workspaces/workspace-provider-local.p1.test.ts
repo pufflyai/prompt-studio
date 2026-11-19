@@ -54,7 +54,11 @@ export default { commands: [{ id: "ordinary", ref: { kind: "command", id: "ordin
     await ctx.projectFiles.readText("revision.txt");
     if (input.revision === "missing") throw new Error("Choose an existing revision.");
   },
-  async resolve(ctx) { return result(await ctx.localDirectory()); },
+  async resolve(ctx) {
+    const directory = await ctx.localDirectory();
+    await directory.files.writeText("resolved.txt", directory.path);
+    return result(directory);
+  },
   async delete(ctx) { await (await ctx.localDirectory()).remove(); },
 }] };
 `;
@@ -122,6 +126,56 @@ test("an installed provider discovers current choices through its public project
   expect(await providers()).toMatchObject([{ id: providerId, params: { revision: { defaultValue: "main" } } }]);
   await writeFile(join(sourceFolder, "revision.txt"), "review");
   expect(await providers()).toMatchObject([{ id: providerId, params: { revision: { defaultValue: "review" } } }]);
+});
+
+test("an installed local provider prepares its directory before readiness and reopens it after restart", async () => {
+  // This case also runs without the preceding discovery check in quarantine.
+  await writeFile(join(sourceFolder, "revision.txt"), "review");
+  const created = await post("/v1/workspaces", { project_id: projectId, provider_id: providerId, params: {} });
+  expect(created.status).toBe(201);
+  const workspace = await created.json();
+  expect(workspace).toMatchObject({ provider_state: "ready", execution_kind: "local", provider_error_json: null });
+  const directory = join(root, "home", "workspaces", workspace.id);
+  expect(workspace.root_path).toBe(directory);
+  expect(JSON.parse(await readFile(join(directory, "identity.json"), "utf8"))).toEqual({
+    id: workspace.id,
+    revision: "review",
+  });
+  await handle.close();
+  const resolved = join(directory, "resolved.txt");
+  await rm(resolved, { force: true });
+  handle = await openApp();
+  const deadline = Date.now() + 2000;
+  const readResolvedDirectory = () =>
+    readFile(resolved, "utf8").catch((error: NodeJS.ErrnoException) => {
+      if (error.code !== "ENOENT") throw error;
+    });
+  let resolvedDirectory = await readResolvedDirectory();
+  while (resolvedDirectory !== directory && Date.now() < deadline) {
+    await Bun.sleep(10);
+    resolvedDirectory = await readResolvedDirectory();
+  }
+  expect(resolvedDirectory).toBe(directory);
+  const runtime = await findWorkspaceProvider(handle.deps, { projectId, providerId, workspaceId: workspace.id });
+  expect(runtime).toBeDefined();
+  // Catalog reload schedules the normal project setup queue. Join it before
+  // checking command readiness or removing its local target.
+  await provisionProjectWorkspaces(handle.deps, projectId);
+  expect(await handle.deps.workspaceService.get(workspace.id)).toMatchObject({
+    initializing: false,
+    setup_error: null,
+    provider_state: "ready",
+    root_path: directory,
+    provider_ref_json: workspace.provider_ref_json,
+  });
+  expect(await runtime!.context.workspaces.get(workspace.id)).toMatchObject({
+    id: workspace.id,
+    rootPath: directory,
+    providerId,
+  });
+  await runtime!.context.workspaces.delete(workspace.id);
+  expect(existsSync(directory)).toBe(false);
+  expect(existsSync(sourceFolder)).toBe(true);
 });
 
 const providerDirectory = async (workspaceId: string) => {

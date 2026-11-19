@@ -10,17 +10,21 @@ export interface WorkbenchResourcePaletteEntry extends PaletteEntry {
 }
 export const WorkbenchResourcePaletteIcon = (props: {
   icon?: string;
+  iconColor?: string;
+  iconLabel?: string;
   indicator?: ResourceBrowseEntry["indicator"];
 }) => {
   const { indicator } = props;
   const icon = indicator?.icon ?? props.icon;
+  const color = indicator ? indicator.color : props.iconColor;
+  const label = indicator ? indicator.label : props.iconLabel;
   return icon ? (
     <WorkbenchIcon
       name={icon}
-      color={indicator?.color}
-      role={indicator?.label ? "img" : undefined}
-      aria-label={indicator?.label}
-      aria-hidden={indicator?.label ? undefined : true}
+      color={color}
+      role={label ? "img" : undefined}
+      aria-label={label}
+      aria-hidden={label ? undefined : true}
     />
   ) : null;
 };
@@ -34,7 +38,7 @@ const createResourceEntry = (input: {
   const label = entry.resource.label ?? resourceKey(entry.resource);
   const kind = workbench.resources.getKind(resource.type, resource.extensionId);
   const indicator = entry.indicator;
-  const icon = indicator?.icon ?? resource.icon ?? kind?.icon;
+  const icon = resource.icon ?? indicator?.icon ?? kind?.icon;
   const activate = entry.activate;
   if (!activate) return undefined;
   return {
@@ -45,7 +49,14 @@ const createResourceEntry = (input: {
     searchText: entry.searchText ?? label,
     description: entry.description,
     group: entry.group,
-    icon: <WorkbenchResourcePaletteIcon icon={icon} indicator={indicator} />,
+    icon: (
+      <WorkbenchResourcePaletteIcon
+        icon={icon}
+        iconColor={resource.iconColor}
+        iconLabel={resource.iconLabel}
+        indicator={indicator}
+      />
+    ),
     onActivate: () => {
       void runUserAction(workbench, label, () => activate(resource), {
         inlineTarget: "command-palette",

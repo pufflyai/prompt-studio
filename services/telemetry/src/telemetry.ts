@@ -11,6 +11,7 @@ const failures = {
   sync_recover_failed: "service_operation_failed",
   sync_subscription_failed: "service_operation_failed",
   sync_document_failed: "service_operation_failed",
+  project_deletion_handoff_failed: "service_operation_failed",
   sync_cleanup_failed: "service_operation_failed",
   asset_operation_failed: "service_operation_failed",
 } as const;

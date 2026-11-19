@@ -17,14 +17,9 @@ import { createExtensionSourceWatcher } from "./extension-source-watcher";
 import { createExtensionWebviewBuildManager } from "./extension-webview-build-manager";
 import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
 import type { ProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
-import { listRepoExtensionRoots } from "./repo-extension-roots";
+import { listRepoExtensionRoots, readyRepoExtensionFolder } from "./repo-extension-roots";
 import { syncRepoExtensionsForProject } from "./repo-extensions";
 import { createRuntimeCandidateInspection } from "./runtime-candidate-inspection";
-
-type RuntimeProcess = {
-  dispose: () => void;
-  refresh: (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => Promise<void>;
-};
 
 // An installed source whose directory has been removed (project deleted/moved, extension
 // uninstalled by hand) is a stale registration, not an error. Skip it so the watcher and the
@@ -82,13 +77,16 @@ export const createInstalledExtensionRuntime = (input: {
       sync: async () => {
         let markedMissing = false;
         for (const project of root.projects) {
+          // Setup registers restored sources as disabled before background discovery can load them.
+          const workspace = await input.workspaceService.getDefault(project.projectId);
+          if (readyRepoExtensionFolder(workspace) !== project.repoPath) continue;
           const result = await syncRepoExtensionsForProject({
             extensionService: input.extensionService,
             installedExtensionSourcesService: input.installedExtensionSourcesService,
             projectId: project.projectId,
             repoPath: project.repoPath,
           });
-          if (result.missing.length > 0) markedMissing = true;
+          if (result.newlyMissing.length > 0) markedMissing = true;
         }
         // Discovering a source already refreshes through onInstalledSourcesChanged; a removed folder
         // only updates source status directly, so refresh to drop stale source/webview tracking.
@@ -118,7 +116,9 @@ export const createInstalledExtensionRuntime = (input: {
     return rows;
   };
   const webviewSourceInspection = createEnabledWebviewSourceInspection(input.extensionService.hasEnabledProjectSource);
-  const webviewBuildManager: RuntimeProcess & {
+  const webviewBuildManager: {
+    dispose: () => void;
+    refresh: (sourcePath?: string, reason?: "attachment") => Promise<void>;
     adopt: (sourcePath: string, validatedSource?: LoadedExtensionSnapshot) => Promise<void>;
     ensure: (installedExtensionId: string, webviewId?: string) => Promise<void>;
     reconcile: () => Promise<void>;
@@ -202,12 +202,14 @@ export const createInstalledExtensionRuntime = (input: {
   // Editing a watched folder rebuilds the assets of the extension the project already adopted. It
   // never re-reads contributions from disk: adopting new source is an explicit act. Skill files
   // are read from disk, so the edit also re-provisions workspaces to keep harness copies current.
+  const refreshFrontend = (sourcePath: string, reason?: "attachment") => {
+    candidateInspection.cancel(sourcePath);
+    return webviewBuildManager.refresh(sourcePath, reason);
+  };
   const sourceWatcher = createSourceWatcher({
     listInstalledSources: listExistingInstalledSources,
-    onSourceChanged: (sourcePath) => {
-      candidateInspection.cancel(sourcePath);
-      return webviewBuildManager.refresh(sourcePath);
-    },
+    onSourceChanged: (sourcePath) => refreshFrontend(sourcePath),
+    onSourceAttached: (sourcePath) => refreshFrontend(sourcePath, "attachment"),
     afterSourceChanged: provisionWhenSourceChanged,
     onError: (err) => apiLogger.error({ err, event: "extensions.source_watcher.error" }, "Extension watcher failed"),
   });
