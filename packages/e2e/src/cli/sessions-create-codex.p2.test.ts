@@ -3,7 +3,8 @@ import { execSync } from "node:child_process";
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { cleanupDirs, createGitRepo, runPstdio, runPstdioSafe } from "./helpers";
+import { e2eExtensions } from "../default-extensions";
+import { cleanupDirs, createGitRepo, runPstdioAsync } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { FLOW_TIMEOUT, SETUP_TIMEOUT } from "./timeouts";
 
@@ -11,16 +12,14 @@ let api: ApiInstance;
 const dirs: string[] = [];
 let promptLogPath = "";
 
-const run = (args: string, cwd: string, timeout?: number) => runPstdio(args, cwd, { PSTDIO_API_URL: api.url }, timeout);
+const run = (args: string[], cwd: string, timeout?: number) =>
+  runPstdioAsync(args, cwd, { PSTDIO_API_URL: api.url }, timeout);
 
-const runSafe = (args: string, cwd: string, timeout?: number) =>
-  runPstdioSafe(args, cwd, { PSTDIO_API_URL: api.url }, timeout);
-
-const createInitializedRepo = (name: string) => {
+const createInitializedRepo = async (name: string) => {
   const repo = createGitRepo();
   dirs.push(repo);
   execSync("git commit --allow-empty -m init", { cwd: repo, stdio: "pipe" });
-  run(`projects create ${name}`, repo, FLOW_TIMEOUT);
+  await run(["projects", "create", name], repo, FLOW_TIMEOUT);
   return repo;
 };
 
@@ -57,6 +56,7 @@ beforeAll(async () => {
   promptLogPath = join(tmpdir(), `pstdio-e2e-codex-prompts-${crypto.randomUUID()}.log`);
   api = await startApi({
     env: {
+      PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("harness-codex"),
       CODEX_E2E_PROMPTS: promptLogPath,
       PATH: `${binDir}:${process.env.PATH ?? ""}`,
     },
@@ -75,22 +75,28 @@ describe("pstdio sessions create with mocked Codex", () => {
   test(
     "uploads an attachment and sends Codex a local attachment manifest",
     async () => {
-      const repo = createInitializedRepo("external-codex-attachment-session");
+      const repo = await createInitializedRepo("external-codex-attachment-session");
       writeFileSync(join(repo, "notes.txt"), "codex attachment context\n");
 
-      const result = runSafe(
-        'sessions create --agent pstdio.harness-codex.harness.codex --model gpt-5.5 --prompt "Inspect the attachment" --attach notes.txt',
+      const output = await run(
+        [
+          "sessions",
+          "create",
+          "--agent",
+          "pstdio.harness-codex.harness.codex",
+          "--model",
+          "gpt-5.5",
+          "--prompt",
+          "Inspect the attachment",
+          "--attach",
+          "notes.txt",
+        ],
         repo,
         FLOW_TIMEOUT,
       );
 
-      if (result.exitCode !== 0) {
-        throw new Error(
-          `sessions create exited with ${result.exitCode}\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}`,
-        );
-      }
-      const createdSessionId = result.stdout.match(/Created session (\S+)/)?.[1];
-      if (!createdSessionId) throw new Error(`Session id missing from CLI output: ${result.stdout}`);
+      const createdSessionId = output.match(/Created session (\S+)/)?.[1];
+      if (!createdSessionId) throw new Error(`Session id missing from CLI output: ${output}`);
 
       await waitForCompletedSession(createdSessionId);
 

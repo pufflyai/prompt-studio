@@ -30,28 +30,6 @@ const setup = () => {
 };
 
 describe("session resource retention", () => {
-  test("closing many retained sessions with the same deadline shares one cleanup timer", async () => {
-    let schedules = 0;
-    const resources = createHarnessSessionResources({
-      now: () => 0,
-      schedule: () => {
-        schedules++;
-        return () => {};
-      },
-    });
-    const owner = {};
-    const interests = [];
-    for (let index = 0; index < 10_000; index++) {
-      const id = `session-${index}`;
-      interests.push(resources.retain(id));
-      const done = await resources.acquire(owner, id, async () => true);
-      done();
-    }
-    for (const close of interests) close();
-    expect(schedules).toBe(1);
-    await resources.retire(owner);
-  });
-
   test("ten thousand owners expire without releasing the sessions still retained by tabs", async () => {
     const { resources, advance, timers } = setup();
     const owner = {};

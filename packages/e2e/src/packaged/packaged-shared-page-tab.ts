@@ -22,7 +22,12 @@ export const verifySharedPageTab = async (page: Page, session: Locator, leaveWor
   await page.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();
   await expect(page.locator('[data-workbench-panel-header="secondary"]').getByRole("tab")).toHaveCount(1);
   await page.reload();
-  await expect(shared).toBeVisible();
+  await expect(
+    page
+      .locator('[data-workbench-panel-header="secondary"]')
+      .locator(`[data-workbench-tab=${JSON.stringify(id)}]`)
+      .getByRole("tab"),
+  ).toBeVisible();
   await navigatePackagedPage(page, workspaceUrl);
   await expect(shared).toBeVisible();
   // Explicitly reopening this page reclaims its singleton into tabless Main.

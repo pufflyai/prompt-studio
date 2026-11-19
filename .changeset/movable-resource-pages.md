@@ -1,12 +1,8 @@
 ---
-"pstdio": minor
-"@pstdio/sdk": minor
-"@pstdio/workbench": minor
 "canvas": patch
 "notes": patch
 "planner": patch
 "workspaces": patch
-"home": patch
 "session-browser": patch
 ---
 

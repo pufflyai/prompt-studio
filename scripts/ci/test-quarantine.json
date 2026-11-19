@@ -2,7 +2,7 @@
   {
     "runner": "playwright",
     "file": "packages/e2e/src/packaged/packaged-notes-page.p2.spec.ts",
-    "name": "Notes offers note creation and restores its Main tabs separately from Artifacts",
+    "name": "Notes creates dedicated pages and reclaims Side views into the current tabbed page",
     "platforms": ["linux"],
     "arch": "x64",
     "owner": "PS-1218",

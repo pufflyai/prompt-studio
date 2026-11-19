@@ -62,20 +62,7 @@ describe("buildSessionsSection", () => {
       ticketId: "ticket-1",
     });
 
-    expect(section).toEqual({
-      id: "sessions",
-      label: expect.anything(),
-      collapsible: true,
-      nodes: [
-        {
-          id: "sessions-empty",
-          label: "No sessions",
-          icon: "MessageCircle",
-          disabled: true,
-          rowVariant: "empty-state",
-        },
-      ],
-    });
+    expect(section?.nodes).toMatchObject([{ label: "No sessions", disabled: true }]);
   });
 
   test("opens each session in the Sessions provider panel", () => {

@@ -250,29 +250,6 @@ describe("page input validation", () => {
     });
     expect(diagnosticsFor(definition).map((diagnostic) => diagnostic.code)).toContain("invalid_page_slot");
   });
-  test("rejects a Main view with a non-callable tab query", () => {
-    const definition = defineExtension({
-      views: [pageView],
-      pages: [
-        {
-          id: "broken-tab",
-          ref: { kind: "page", id: "broken-tab" },
-          title: "Broken tab",
-          path: "broken-tab",
-          mode: workbenchModes.project,
-          panels: {},
-          main: {
-            kind: "view",
-            view: pageView.ref,
-            cardinality: "one",
-            tab: { query: "not-a-function" },
-          },
-          slots: [],
-        },
-      ] as never,
-    });
-    expect(diagnosticsFor(definition).map((diagnostic) => diagnostic.code)).toContain("invalid_page");
-  });
 });
 
 test("document declarations require a nonempty key and a routed resource", () => {

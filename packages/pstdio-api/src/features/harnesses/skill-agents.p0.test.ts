@@ -42,20 +42,20 @@ describe("listSkillAgents", () => {
   });
 
   test("scopes to a project when requested", async () => {
-    const calls: unknown[] = [];
+    const projectHandle = handle({ skills: { dir: ".agents/skills", globalDir: ".agents/skills" } });
     const registry: HarnessRegistryService = {
-      list: async (options) => {
-        calls.push(options);
-        return [];
-      },
-      get: async () => null,
-      retainSession: () => () => {},
-      invalidate: () => {},
-      dispose: async () => {},
+      ...registryOf([]),
+      list: async (options) => (options?.projectId === "p1" ? [projectHandle] : []),
     };
 
-    await listSkillAgents(registry, { projectId: "p1" });
-
-    expect(calls).toEqual([{ projectId: "p1" }]);
+    expect(await listSkillAgents(registry, { projectId: "p1" })).toEqual([
+      {
+        id: "pstdio.harness-x.x",
+        extensionId: "pstdio.harness-x",
+        skillsDir: ".agents/skills",
+        globalSkillsDir: ".agents/skills",
+      },
+    ]);
+    expect(await listSkillAgents(registry)).toEqual([]);
   });
 });

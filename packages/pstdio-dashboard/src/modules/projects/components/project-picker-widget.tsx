@@ -9,7 +9,8 @@ import { useCollectionSelection } from "@/lib/sync/use-collection-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { type ProjectCloudState, useCloudProjectStates } from "../data/cloud-project-states";
-import { createDashboardProjects, type DashboardProject } from "../data/project-data";
+import { useCloudProjectCatalog } from "../data/project-catalog";
+import { createDashboardProjects, type DashboardProject, mergeCloudProjectCatalog } from "../data/project-data";
 import { projectLocationKey } from "../data/project-location";
 
 const filterProjects = (projects: DashboardProject[], searchTerm: string, _dataVersion: unknown) => {
@@ -85,15 +86,22 @@ export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput })
   const dashboardDataVersion = useCollectionSelection({ tables: ["projects", "workspaces"] });
 
   const selectedProjectId = typeof selectedProjectIdValue === "string" ? selectedProjectIdValue : undefined;
-  const allProjects = createDashboardProjects();
+  const catalog = useCloudProjectCatalog();
+  const localProjects = createDashboardProjects();
+  const allProjects = mergeCloudProjectCatalog(localProjects, catalog.data);
   const showSearch = allProjects.length >= 8;
   const activeSearchTerm = showSearch ? searchTerm : "";
   const projects = filterProjects(allProjects, activeSearchTerm, dashboardDataVersion);
-  const cloudState = useCloudProjectStates(allProjects.map((project) => project.id));
+  const cloudState = useCloudProjectStates(
+    localProjects.map((project) => project.id),
+    catalog.data,
+  );
 
   const handleSelectProject = (project: DashboardProject) => {
+    const presence = cloudState(project.id).presence;
     void input.workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
       project: { id: project.id, name: project.name },
+      cloudCopyChoice: presence === "cloud-only" || presence === "removing",
     });
   };
 

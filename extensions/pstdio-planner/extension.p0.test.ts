@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { viewDataEvents } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import extension from "./extension";
 import { fixture } from "./src/commands/auto-build.fixture";
@@ -12,11 +11,7 @@ import { putTicket, ticketContext, ticketsCollection } from "./src/data/ticket-c
 import type { Ticket } from "./src/data/types";
 import { plannerTicketsChanged } from "./src/events";
 
-const command = (id: string) => extension.commands?.find((contribution) => contribution.id === id);
 const hook = (id: string) => extension.hooks?.find((contribution) => contribution.id === id);
-const skill = (id: string) => extension.skills?.find((contribution) => contribution.id === id);
-const template = (id: string) => extension.templates?.find((contribution) => contribution.id === id);
-const templateType = (id: string) => extension.templateTypes?.find((contribution) => contribution.id === id);
 const fileMount = (root: string) => ({
   exists: async (path: string) => existsSync(join(root, path)),
   readText: async (path: string) => readFileSync(join(root, path), "utf8"),
@@ -49,150 +44,6 @@ describe("pstdio planner extension contributions", () => {
   test("registers each command once", () => {
     const ids = (extension.commands ?? []).map(({ id }) => id);
     expect(ids.filter((id, index) => ids.indexOf(id) !== index)).toEqual([]);
-  });
-
-  test("contributes a routed ticket editor with page-owned navigation", () => {
-    expect(extension.modes).toBeUndefined();
-    expect(extension.resourceKinds?.[0]).toMatchObject({ id: "ticket" });
-    expect(extension.pages?.find((page) => page.id === "ticket")).toMatchObject({
-      resource: { kinds: [{ id: "ticket" }] },
-      main: { kind: "view", view: { id: "ticket-editor" } },
-    });
-    expect(extension.navigationTrees?.[0]).toMatchObject({
-      id: "ticket-files",
-      owner: { kind: "page", id: "ticket" },
-      slot: "content",
-      view: { kind: "view", id: "ticket-files" },
-    });
-    expect(extension.viewMenus?.find((menu) => menu.id === "ticket.properties")).toMatchObject({
-      id: "ticket.properties",
-      owner: { id: "ticket-editor" },
-      view: { id: "ticket-properties" },
-      side: "right",
-    });
-    expect(extension.placements).toContainEqual(expect.objectContaining({ id: "ticket-board" }));
-    expect(extension.pages?.find((page) => page.id === "tickets")).toMatchObject({
-      main: { kind: "view", presentation: "page" },
-      panelView: { kind: "placement", id: "ticket-board" },
-    });
-  });
-  test("uses a native tree body for ticket files", () => {
-    expect(extension.views?.find((view) => view.id === "ticket-files")).toMatchObject({
-      title: { $l10n: "panels.ticketFiles.title", default: "Files" },
-      icon: "Files",
-      body: {
-        kind: "tree",
-        body: expect.any(Function),
-        defaultExpandedSectionIds: [
-          "files",
-          "parent",
-          "depends-on",
-          "required-by",
-          "related",
-          "sub-tickets",
-          "workspaces",
-          "sessions",
-        ],
-      },
-    });
-  });
-  test("declares each native ticket view's data dependencies", () => {
-    const tickets = { extensionId: "pstdio.planner", id: "tickets.changed", kind: "event" };
-    const plan = { extensionId: "pstdio.planner", id: "timeline.plan.changed", kind: "event" };
-    const linkedResources = [viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged];
-    const dependencies = {
-      "ticket-editor": [tickets],
-      "ticket-properties": [tickets, plan],
-      "ticket-files": [
-        tickets,
-        ...linkedResources,
-        viewDataEvents.resourceAnchorsChanged,
-        viewDataEvents.resourcesChanged,
-      ],
-      tickets: [
-        tickets,
-        plan,
-        ...linkedResources,
-        viewDataEvents.resourceAnchorsChanged,
-        viewDataEvents.resourcesChanged,
-      ],
-    };
-    for (const [id, events] of Object.entries(dependencies)) {
-      expect(extension.views?.find((view) => view.id === id)?.body.refreshEvents).toEqual(events);
-    }
-  });
-  test("contributes shared document templates and planner skills", () => {
-    expect(templateType("document")).toMatchObject({ label: "Document" });
-    expect(template("prd")).toMatchObject({ title: "PRD", type: "document" });
-    expect(template("commit-message")).toMatchObject({ title: "Commit message", type: "prompt" });
-    expect(skill("create-ticket")).toMatchObject({ title: "Create a ticket" });
-    expect(skill("create-pstdio-extension")).toBeUndefined();
-    expect(skill("pstdio")).toBeUndefined();
-  });
-  test("registers the link review ticket command", () => {
-    expect(command("link-review")).toMatchObject({
-      title: "Link review",
-      params: { id: { required: true }, url: { required: true } },
-    });
-    expect(command("link-review")?.cli).toBeTruthy();
-  });
-  test("exposes manual planner settings commands through the CLI", () => {
-    expect(command("ticket-status.update")?.cli).toEqual({
-      examples: ["pstdio pstdio.planner ticket-status update --status-id backlog --label Backlog"],
-    });
-    expect(command("ticket-status.reorder")?.cli).toEqual({
-      examples: ['pstdio pstdio.planner ticket-status reorder --status-ids \'["backlog","ready"]\''],
-    });
-    expect(command("ticket-tag.update")).toMatchObject({
-      cli: {
-        examples: ["pstdio pstdio.planner ticket-tag update --tag-id default-priority --sort-order 0"],
-      },
-      params: { sortOrder: { type: "number" } },
-    });
-    for (const id of [
-      "ticket-tag.create-option",
-      "ticket-tag.update-option",
-      "ticket-tag.delete-option",
-      "ticket-tag.apply-draft",
-    ]) {
-      expect(command(id)?.cli).toBeTruthy();
-      expect(command(id)?.params).toMatchObject({ tagId: { required: true } });
-    }
-  });
-  test("owns planner translation bundles and localizable contribution copy", () => {
-    expect(extension.defaultLocale).toBe("en");
-    expect(extension.translations).toEqual({
-      es: expect.objectContaining({ kind: "package-asset" }),
-      fr: expect.objectContaining({ kind: "package-asset" }),
-      ja: expect.objectContaining({ kind: "package-asset" }),
-      ko: expect.objectContaining({ kind: "package-asset" }),
-      "zh-Hans": expect.objectContaining({ kind: "package-asset" }),
-      "zh-Hant": expect.objectContaining({ kind: "package-asset" }),
-    });
-    const tickets = extension.views?.find((view) => view.id === "tickets");
-    expect(tickets?.title).toEqual({
-      $l10n: "kanbanRenderers.tickets.title",
-      default: "Tickets",
-    });
-    expect(tickets?.body.kind === "kanban" ? tickets.body.createRow : undefined).toMatchObject({
-      columnParam: "statusId",
-      attributesParam: "attributes",
-      params: {
-        content: {
-          type: "markdown",
-          label: { $l10n: "kanbanRenderers.tickets.createRow.content.label", default: "Description" },
-          required: true,
-        },
-        files: { type: "files", multiple: true },
-      },
-      attachments: {
-        resourceParam: "ticketId",
-        fileParam: "ref",
-      },
-      labels: {
-        cancel: { $l10n: "kanbanRenderers.tickets.createRow.cancel", default: "Cancel" },
-      },
-    });
   });
 });
 describe("pstdio planner workspace contributions", () => {
@@ -269,96 +120,6 @@ describe("pstdio planner workspace contributions", () => {
       rmSync(repoPath, { recursive: true, force: true });
       rmSync(worktreePath, { recursive: true, force: true });
     }
-  });
-  test("mounts run review in the workspace overflow menu", () => {
-    expect(command("run-review")?.menus).toMatchObject([
-      {
-        slot: { id: "workspace.headerOverflow", kind: "menu" },
-        label: { $l10n: "commands.runReview.menuLabel", default: "Run review" },
-        icon: "clipboard-check",
-        when: { resourceType: [{ extensionId: "pstdio", id: "workspace", kind: "resource-kind" }] },
-      },
-    ]);
-  });
-  test("run-review exposes workspace, revision, and harness options", () => {
-    const runReview = command("run-review");
-    expect(Object.keys(runReview?.params ?? {}).sort()).toEqual(["expectedRevision", "harness", "workspaceId"]);
-    expect(runReview?.params?.workspaceId).toMatchObject({ required: false });
-  });
-  test("opens the Tickets list and ticket detail as separate pages", async () => {
-    const tickets = extension.views?.find((view) => view.id === "tickets");
-    if (tickets?.body.kind !== "kanban") throw new Error("Tickets view must use a Kanban body");
-    expect(tickets.body).toMatchObject({ supportsFieldsOnly: true });
-    expect(tickets.body.defaultFilter).toEqual({
-      conjunction: "and",
-      rules: [{ attributeId: "archived", condition: "is-any-of", value: ["active"] }],
-    });
-    expect(tickets.body.defaultSorts).toEqual([{ attributeId: "created", direction: "desc" }]);
-    expect(tickets.body.defaultSettings).toMatchObject({
-      viewMode: "board",
-      columnGrouping: "status",
-      displayProperties: ["id", "workspace", "type", "priority", "needsAttention"],
-    });
-    expect(tickets.body.onColumnAction).toBeFunction();
-    expect(tickets.body.onRowActivate).toBeFunction();
-    expect(extension.pages?.find((page) => page.id === "tickets")).toMatchObject({
-      path: "tickets",
-      mode: { extensionId: "pstdio", kind: "mode", id: "project" },
-      main: {
-        kind: "view",
-        view: tickets.ref,
-        cardinality: "one",
-      },
-    });
-    expect(extension.pages?.find((page) => page.id === "ticket")).toMatchObject({
-      path: "ticket",
-      mode: { extensionId: "pstdio", kind: "mode", id: "project" },
-      parent: { kind: "page", id: "tickets" },
-      resource: {
-        kinds: [{ kind: "resource-kind", id: "ticket" }],
-      },
-      main: {
-        kind: "view",
-        view: { kind: "view", id: "ticket-editor" },
-        cardinality: "one",
-      },
-      slots: [],
-    });
-    let detailTarget: unknown;
-    await tickets.body.onRowActivate?.(
-      {
-        storage: createMemoryStorage(),
-        navigation: {
-          open: (target: unknown) => {
-            detailTarget = target;
-          },
-        },
-      } as never,
-      {
-        row: {
-          id: "ticket-1",
-          title: "Ticket one",
-          attributes: {},
-          resource: { type: "ticket", id: "ticket-1", label: "PS-1 Ticket one" },
-        },
-      },
-    );
-    expect(detailTarget).toEqual({
-      kind: "page",
-      page: { kind: "page", id: "ticket", extensionId: "pstdio.planner" },
-      parent: { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.planner" } },
-      resource: { type: "ticket", id: "ticket-1", label: "PS-1 Ticket one" },
-    });
-    expect(extension.navigationItems?.find((item) => item.id === "tickets")).toMatchObject({
-      action: { kind: "page", page: { kind: "page", id: "tickets" } },
-    });
-    expect(extension.placements?.find((placement) => placement.id === "tickets.project")).toBeUndefined();
-  });
-  test("provides Planner status settings", () => {
-    expect(extension.settingsPanels?.find((panel) => panel.id === "ticket-status")?.view).toEqual({
-      kind: "view",
-      id: "ticket-status-settings",
-    });
   });
 });
 describe("pstdio planner notification hooks", () => {

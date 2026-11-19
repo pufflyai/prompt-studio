@@ -218,6 +218,9 @@
     "cloudWaiting": "Cloud · waiting to download",
     "cloudReady": "Cloud · ready offline · no folder yet",
     "cloud": "Cloud",
+    "cloudOnly": "Cloud only",
+    "cloudDeleting": "Deleting cloud project",
+    "cloudRemovalPending": "Local removal needs attention",
     "cloudNeedsAttention": "Cloud · needs attention",
     "localPath": "{{path}} · local"
   },

@@ -55,7 +55,7 @@ const home = definePage({
   title: "Removal home",
   path: "removal-home",
   mode: workbenchModes.project,
-  main: { kind: "view", view: view.ref, cardinality: "one" },
+  main: { kind: "view", view: view.ref, cardinality: "one", presentation: "page" },
   slots: [],
 });
 const document = definePage({

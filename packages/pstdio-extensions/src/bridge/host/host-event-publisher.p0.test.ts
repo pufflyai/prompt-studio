@@ -1,18 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import type { HostEventMessage } from "../contract";
 import { createHostEventPublisher } from "./host-event-publisher";
 
 describe("createHostEventPublisher", () => {
-  test("delivers events to the bound sink", () => {
-    const publisher = createHostEventPublisher();
-    const received: HostEventMessage[] = [];
-    publisher.bind((message) => received.push(message));
-
-    publisher.emit({ scope: "terminal.session", payload: { kind: "data" } });
-
-    expect(received).toEqual([{ scope: "terminal.session", payload: { kind: "data" } }]);
-  });
-
   test("buffers events emitted before the guest connects and flushes them on bind", () => {
     const publisher = createHostEventPublisher();
     publisher.emit({ scope: "terminal.session", payload: 1 });

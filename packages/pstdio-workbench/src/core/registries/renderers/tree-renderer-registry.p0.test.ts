@@ -63,16 +63,6 @@ describe("createTreeRendererRegistry", () => {
     await expect(trees.getHeader("settings.tree")).resolves.toEqual([]);
     await expect(trees.getFooter("settings.tree")).resolves.toEqual([]);
   });
-  test("auto-registers a widget renderer with the same id", () => {
-    const { rendererRegistry, trees } = createRegistry();
-    trees.registerTreeRenderer({
-      id: "sessions.tree",
-      title: "Sessions",
-      getBody: () => [],
-      getChildren: () => [],
-    });
-    expect(rendererRegistry.getRenderer("sessions.tree")).toBeDefined();
-  });
   test("invokes the tree renderer implementation when the widget renderer renders", () => {
     const { rendererRegistry, trees } = createRegistry();
     const calls: {

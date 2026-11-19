@@ -3,7 +3,7 @@ import type { ChildProcess } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { chromium } from "@playwright/test";
+import { expect as browserExpect, chromium } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { enablePackagedProjectExtension } from "./packaged-project-extensions";
@@ -39,7 +39,8 @@ test("packaged resource actions pass hidden values to dependent choices and subm
       );
     }, project.id);
     await signInBrowser(page, started.descriptor);
-    await page.goto(`${started.baseUrl}/projects/${project.id}`);
+    await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/e2e.resource-choices/resource-choices-home`);
+    await browserExpect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Instances");
     for (const id of ["first", "second"]) {
       await page.getByText(`Instance ${id}`, { exact: true }).first().click();
       await page.getByRole("button", { name: `Actions for Instance ${id}` }).click();

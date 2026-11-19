@@ -213,7 +213,7 @@ export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeIn
   const removedPreviews = connectTrayPreviewRemoval(input, () => applyingTransition);
   const scope = input.layout.onDidChangePersistenceScope(() => {
     const state = input.registry.store.getState();
-    if (!applyingTransition && state.activePageId) applyPageState(input, state, "scope-restore");
+    if (!applyingTransition && state.activeModeId) applyPageState(input, state, "scope-restore");
   });
   return createDisposable(() => {
     scope.dispose();
