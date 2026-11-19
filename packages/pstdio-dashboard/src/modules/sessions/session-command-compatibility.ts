@@ -53,6 +53,18 @@ const providerArgs = (command: string, input: LegacyArgs, context?: WorkbenchCom
     ...(command === "fork" ? { messageId: input.messageId } : {}),
   };
 };
+const commandResource = (
+  ctx: WorkbenchModuleContext,
+  command: string,
+  input: LegacyArgs,
+  context?: WorkbenchCommandExecutionContext,
+) => {
+  const explicit = input.from ?? input.resource ?? context?.resource;
+  if (explicit || command !== "new" || input.workspace !== undefined || input.workspaceId !== undefined)
+    return explicit;
+  const primary = ctx.getPrimaryResource();
+  return primary?.type === "workspace" ? primary : undefined;
+};
 export const registerLegacySessionCommands = (ctx: WorkbenchModuleContext) => {
   const forwards = [
     [dashboardCommandIds.createSession, "new"],
@@ -69,17 +81,9 @@ export const registerLegacySessionCommands = (ctx: WorkbenchModuleContext) => {
       {
         async execute(args, context) {
           const input = (args ?? {}) as LegacyArgs;
-          const primary =
-            command === "new" && input.workspace === undefined && input.workspaceId === undefined
-              ? ctx.getPrimaryResource()
-              : undefined;
           const execution = {
             ...context,
-            resource:
-              input.from ??
-              input.resource ??
-              context?.resource ??
-              (primary?.type === "workspace" ? primary : undefined),
+            resource: commandResource(ctx, command, input, context),
             placement: input.replacePanel ?? input.placementIdentity ?? context?.placement,
           };
           const commandId = contributionRefId({
