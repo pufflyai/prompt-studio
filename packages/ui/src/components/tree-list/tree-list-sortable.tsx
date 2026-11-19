@@ -11,7 +11,7 @@ import {
 } from "./tree-list-drag-handling";
 import { SharedTreeListDragContext } from "./tree-list-drag-provider";
 import { type TreeListDropIndicator, treeListDropIndicator } from "./tree-list-drop-indicator";
-import { buildVirtualRows, type VirtualRow } from "./tree-list-model";
+import { buildVirtualRows, isFixedTreeListGroup, type VirtualRow } from "./tree-list-model";
 import { TreeListNodes } from "./tree-list-nodes";
 import { TreeListPageBoundary } from "./tree-list-page-boundary";
 import { type TreeListMovePolicy, toSectionDragId, verticalTreeDrag } from "./tree-list-reorder";
@@ -31,6 +31,7 @@ interface SortableSectionGroupProps {
   activeNodeId?: string | string[] | null;
   rowVariant: TreeListRowVariant;
   nodeGap: StackProps["gap"];
+  sectionGap?: StackProps["gap"];
   linkComponent?: TreeListLinkComponent;
   onNavigate?: (event: TreeListNavigateEvent) => void;
   onToggleSection?: (sectionId: string) => void;
@@ -51,6 +52,7 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
     activeNodeId,
     rowVariant,
     nodeGap,
+    sectionGap,
     linkComponent,
     onNavigate,
     onToggleSection,
@@ -65,7 +67,7 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
 
   const headerRow = sectionRows.find((row) => row.kind === "section-header");
   const nodeRows = sectionRows.filter((row) => row.kind === "node");
-  const topLevelNodeIds = section.nodes.map((node) => node.id);
+  const topLevelNodeIds = section.nodes.filter((node) => !isFixedTreeListGroup(node, 0)).map((node) => node.id);
 
   return (
     <SortableHost
@@ -111,6 +113,7 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
                 activeNodeId={activeNodeId}
                 rowVariant={rowVariant}
                 nodeGap={nodeGap}
+                sectionGap={sectionGap}
                 linkComponent={linkComponent}
                 onNavigate={onNavigate}
                 onToggleNode={onToggleNode}
@@ -188,6 +191,7 @@ const SortableSections = (props: SortableSectionsProps) => {
               expandedNodeIds={expandedNodeIds}
               rowVariant={rest.rowVariant ?? "tree"}
               nodeGap={rest.nodeGap}
+              sectionGap={sectionGap}
               activeNodeId={rest.activeNodeId}
               linkComponent={rest.linkComponent}
               onNavigate={rest.onNavigate}

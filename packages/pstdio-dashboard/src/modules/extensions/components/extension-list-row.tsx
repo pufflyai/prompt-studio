@@ -13,6 +13,7 @@ import { ExtensionAutomationsPopover } from "./extension-automations-popover";
 import { ExtensionHealthPopover } from "./extension-health-popover";
 import { ExtensionIcon } from "./extension-icon";
 import { ExtensionIdentity } from "./extension-identity";
+import { ExtensionProvenance } from "./extension-provenance";
 import { ExtensionToggle } from "./extension-toggle";
 
 export interface ExtensionListRowProps {
@@ -100,6 +101,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         <Text textStyle="label/XS" color="fg.muted" truncate>
           {extension.description ?? t("projectSettings.extensionsPanel.noDescription")}
         </Text>
+        <ExtensionProvenance extension={extension} />
       </Stack>
 
       <Box
