@@ -2,7 +2,7 @@ import { integrationCoverage, selectIntegrationFiles } from "./coverage-ownershi
 import type { resolveCiScope } from "./pull-request-ci-scope";
 import { priorityFromFile, testRunner } from "./test-discovery";
 import type { PlanInput } from "./test-plan";
-import { matchesPlatform, quarantineRegistry } from "./test-quarantine";
+import { quarantineFiles } from "./test-quarantine";
 
 type Scope = ReturnType<typeof resolveCiScope>;
 export type CiPlanRequest = { job: string; files: string[]; extra?: Partial<PlanInput> };
@@ -11,13 +11,6 @@ const host = (os: string) => {
   if (os.startsWith("windows")) return { platform: "win32", arch: "x64" };
   return { platform: "linux", arch: "x64" };
 };
-const quarantineFiles = (runner: string, target: { platform: string; arch: string }) => [
-  ...new Set(
-    quarantineRegistry
-      .filter((entry) => entry.runner === runner && matchesPlatform(entry, target.platform, target.arch))
-      .map((entry) => entry.file),
-  ),
-];
 const desktopRequests = (scope: Scope, tests: string[]) => {
   const requests: CiPlanRequest[] = [];
   const functional = tests.filter((file) => priorityFromFile(file) !== "P3");
