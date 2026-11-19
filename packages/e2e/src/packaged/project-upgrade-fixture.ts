@@ -64,7 +64,7 @@ export const installedProjectTools = async (api: StackApi, project: string) => {
 // Read candidate releases independently of the runtime's canUpgrade response.
 export const candidateToolVersions = async (root: string) => {
   const versions = new Map<string, string>();
-  for (const dir of ["pstdio-home", "pstdio-planner", "pstdio-session-browser", "git-workspaces", "harness-codex"]) {
+  for (const dir of ["pstdio-home", "pstdio-planner", "pstdio-session-browser", "pstdio-workspaces", "harness-codex"]) {
     const manifest = await Bun.file(join(root, "extensions", dir, "package.json")).json();
     assert.equal(typeof manifest.version, "string");
     versions.set(canonicalExtensionId(`pstdio.${dir}`), manifest.version);
