@@ -21,6 +21,7 @@ import {
   stopMonitoring,
 } from "./packaged-performance-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
+import { observePauseInput, pauseInputEvidence } from "./performance-pause-input.diagnostic";
 
 // Renderer CPU budgets are benchmarks in packaged-renderer.p3.bench.ts.
 
@@ -210,6 +211,7 @@ test("names the process that hosts an extension and ends its frames when paused"
   let app: PackagedApp | null = null;
   try {
     ({ app } = await launchProject("Extension processes", { monitoring: true, webview: true }));
+    await observePauseInput(app.page);
     const processes = async () => (await readSnapshot(app!.page))?.processes ?? [];
     const extensionProcesses = async () =>
       (await processes()).filter((process) => process.role === "extension-frames" && process.extensionFrames.length);
@@ -265,6 +267,11 @@ test("names the process that hosts an extension and ends its frames when paused"
     expect(await rows).toEqual([1]);
     await expect(app.page.locator('iframe[title="Host page"]')).toHaveCount(1);
   } finally {
+    if (app)
+      await test.info().attach("pause-input-diagnostic", {
+        body: JSON.stringify(await pauseInputEvidence(app.page).catch((error) => ({ error: String(error) })), null, 2),
+        contentType: "application/json",
+      });
     await disposePackagedApp(app);
   }
 });
