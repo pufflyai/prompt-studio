@@ -20,7 +20,7 @@ export async function placeNewTicket<T extends PlannerTicket>(
       created = ticket;
       try {
         const plan = resolvePlan(loaded.plan, [...loaded.tickets, ticket], loaded.statuses);
-        await savePlan(ctx, moveTicket(plan, { ticketId: ticket.id, deadlineId }), "ticket");
+        await savePlan(ctx, moveTicket(plan, { ticketId: ticket.id, deadlineId }), "ticket", loaded.snapshot);
         return { ticket, placementError: null as string | null };
       } catch (error) {
         return { ticket, placementError: String(error) };

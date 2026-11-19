@@ -1,41 +1,26 @@
-import type { ExtensionContextBase, ViewFilterGroup } from "@pstdio/sdk/extensions";
+import type { KanbanRendererQueryParams } from "@pstdio/sdk/extensions";
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { migratePlannerStorage } from "../data/migrate-storage";
-import { readTicketBoardFields, runTicketsQuery } from "../data/query";
-import { readMigratedTickets } from "../data/read-migrated-tickets";
-import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
+import { queryTicketPage } from "../data/query-ticket-page";
+import { readTicketBoardFields } from "../data/ticket-board-fields";
 
 export const queryTickets = async (
-  ctx: Pick<
-    ExtensionContextBase,
-    "commands" | "extensionId" | "files" | "projectId" | "storage" | "settings" | "resources"
-  >,
-  input: { filter?: ViewFilterGroup; fieldsOnly?: true },
-) => {
-  if (input.fieldsOnly) {
-    await migratePlannerStorage(ctx);
-    return readTicketBoardFields(ctx.storage);
-  }
-  const tickets = await readMigratedTickets(ctx);
+  ctx: Parameters<typeof queryTicketPage>[0],
+  input: Partial<KanbanRendererQueryParams> & { fieldsOnly?: true },
+) => (input.fieldsOnly ? readTicketBoardFields(ctx) : queryTicketPage(ctx, input));
 
-  return runTicketsQuery({
-    tickets,
-    storage: ctx.storage,
-    resources: ctx.resources,
-    projectId: ctx.projectId,
-    extensionId: ctx.extensionId === "pstdio.pstdio-planner" ? ctx.extensionId : "pstdio.planner",
-    workflow: usableWorkflowStatuses(await readWorkflowStatuses(ctx)),
-    filter: input.filter,
-  });
-};
+export const queryTicketRenderer = async (
+  ctx: Parameters<typeof queryTicketPage>[0],
+  input: Partial<KanbanRendererQueryParams> & { fieldsOnly?: true },
+) => (input.fieldsOnly ? readTicketBoardFields(ctx) : queryTickets(ctx, input));
 
-// Backs the tickets kanban-renderer. The host invokes this per query and re-applies
-// filter / sort / group locally after the planner selects the requested archive set.
 export const queryTicketsCommand = defineCommand({
   id: "query-tickets",
   title: "Query tickets",
   params: {
-    filter: params.json<ViewFilterGroup>(),
+    filter: params.json<KanbanRendererQueryParams["filter"]>(),
+    sorts: params.json<KanbanRendererQueryParams["sorts"]>(),
+    page: params.json<KanbanRendererQueryParams["page"]>(),
+    settings: params.json<KanbanRendererQueryParams["settings"]>(),
   },
   run: queryTickets,
 });
