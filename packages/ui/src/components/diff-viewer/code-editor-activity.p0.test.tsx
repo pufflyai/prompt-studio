@@ -103,8 +103,10 @@ test("code and diff editors are recreated after Activity hides and reveals them"
 
   // Revealing re-runs the editors' effects; a disposed editor must not receive the new model.
   await act(async () => renderer!.update(view(true, "inmemory://editor/two.ts")));
-  expect(created.filter((editor) => !editor.disposed).map((editor) => editor.kind).sort()).toEqual([
-    "diff",
-    "editor",
-  ]);
+  expect(
+    created
+      .filter((editor) => !editor.disposed)
+      .map((editor) => editor.kind)
+      .sort(),
+  ).toEqual(["diff", "editor"]);
 });
