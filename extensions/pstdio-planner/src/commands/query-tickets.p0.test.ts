@@ -1,9 +1,10 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { seedDefaultStatuses } from "../data/seed";
 import { countStorageWrites } from "../data/storage-writes.fixture";
-import { putTicket } from "../data/ticket-context.fixture";
+import { createTicketRecordStorage, putTicket } from "../data/ticket-context.fixture";
+import { ticketRecords } from "../data/ticket-records";
 import type { Ticket } from "../data/types";
 import { commandParamsFor, makeCommandContext } from "./command-context.fixture";
 import { queryTicketsCommand } from "./query-tickets";
@@ -106,4 +107,15 @@ describe("queryTicketsCommand", () => {
       itemsAttributeId: "linkedResourceItems",
     });
   });
+});
+
+test("lists a large board using full index pages and bounded record reads", async () => {
+  const tickets = Array.from({ length: 503 }, (_, i) => makeTicket({ id: `ticket-${String(i).padStart(3, "0")}` }));
+  const storage = await createTicketRecordStorage(tickets);
+  const query = spyOn(storage.records, "query");
+  const reads = spyOn(storage.records, "readMany");
+  const listed = await ticketRecords(storage).list();
+  expect(listed.map((ticket) => ticket.id)).toEqual(tickets.map((ticket) => ticket.id));
+  expect(query.mock.calls.filter(([request]) => request.index === "ticket-records")).toHaveLength(2);
+  expect(reads.mock.calls.map(([ids]) => ids.length)).toEqual([100, 100, 100, 100, 100, 3]);
 });
