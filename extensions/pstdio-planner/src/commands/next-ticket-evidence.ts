@@ -45,6 +45,21 @@ export const readNextTicketEvidence = async (ctx: CommandContext, ticket: Ticket
   return { closure, attempts, requests, assignment, resumption, events, retired, selections, pending };
 };
 
+const readSnapshotEvidence = async (
+  ctx: CommandContext,
+  ticketId: string,
+  mode: AutoBuildMode,
+  evidence: Awaited<ReturnType<typeof readNextTicketEvidence>>,
+  revision: string,
+) => {
+  // Reuse evidence only while its storage snapshot is still current. Delivery
+  // preparation or concurrent writes require the fresh dependency readback.
+  const current = await ctx.storage.records.query({ index: "ticket-view", fields: [], limit: 0, orderBy: [] });
+  if (current.revision === revision) return evidence;
+  const ticket = await findStoredTicket(ctx, ticketId);
+  return ticket ? readNextTicketEvidence(ctx, ticket, mode) : evidence;
+};
+
 export interface NextPageState {
   base?: string;
   offset: number;
@@ -70,6 +85,7 @@ export const visitNextTicketPage = async (
     limit,
     matchingTicketCount,
     requestedBase,
+    revision,
   }: {
     mode: AutoBuildMode;
     workflow: WorkflowStatusSelections;
@@ -81,6 +97,7 @@ export const visitNextTicketPage = async (
     limit: number;
     matchingTicketCount: number;
     requestedBase?: string;
+    revision: string;
   },
 ) => {
   for (const record of records) {
@@ -110,13 +127,8 @@ export const visitNextTicketPage = async (
       requestedBase: requestedBase,
       pullRequestReads: state.pullRequestReads,
     });
-    // Readiness can convert legacy delivery links into canonical relationships.
-    // Seal the dependency snapshot after that preparation, using current records.
-    const currentTicket = await findStoredTicket(ctx, row.id);
-    if (currentTicket) {
-      const currentEvidence = await readNextTicketEvidence(ctx, currentTicket, mode);
-      state.dependencies = await nextDependencySnapshot(ctx, state.dependencies, currentEvidence);
-    }
+    const snapshotEvidence = await readSnapshotEvidence(ctx, row.id, mode, evidence, revision);
+    state.dependencies = await nextDependencySnapshot(ctx, state.dependencies, snapshotEvidence);
     // Wake checks may search past waiting pages; keep only a bounded explanation window.
     if (waiting.length > 100) waiting.length = 100;
     if (observations.length > 100) observations.length = 100;

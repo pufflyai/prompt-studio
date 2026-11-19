@@ -95,6 +95,7 @@ export async function readNextTickets(
       limit,
       matchingTicketCount,
       requestedBase: input.base,
+      revision: page.revision,
     });
     await reconcilePreparationWrites();
     if (!input.scan) break;
