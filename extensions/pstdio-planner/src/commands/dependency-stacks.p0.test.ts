@@ -64,14 +64,14 @@ test("repairs an unsubmitted child from Done dependency branches without changin
     expect(await readStackRepair(f.ctx, f.attempt, {})).toMatchObject({ needsIntegration: true });
     const updated = await updateStackCommand.run(f.ctx, f.input);
     expect(updated.base.workspaceId).toBeNull();
-    await f.git("merge-base", "--is-ancestor", f.left, updated.base.headSha);
-    await f.git("merge-base", "--is-ancestor", f.right, updated.base.headSha);
+    await f.git("merge-base", "--is-ancestor", f.left, updated.base?.headSha);
+    await f.git("merge-base", "--is-ancestor", f.right, updated.base?.headSha);
     expect(await f.git("show", "HEAD:left.txt")).toBe("left.txt");
     expect(await f.git("show", "HEAD:right.txt")).toBe("right.txt");
     expect(await f.git("show", "HEAD:child.txt")).toBe("child.txt");
     expect(await f.git("rev-parse", "main")).toBe(f.base);
     const submitted = await submitChangeRequestCommand.run(f.ctx, await f.params());
-    expect(submitted.revisions.at(-1)?.baseSha).toBe(updated.base.headSha);
+    expect(submitted.revisions.at(-1)?.baseSha).toBe(updated.base?.headSha);
     expect(await readStackRepair(f.ctx, (await readAttempt(f.storage, "child"))!, {})).toBeNull();
   } finally {
     await f.cleanup();

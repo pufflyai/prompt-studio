@@ -5,10 +5,10 @@ import {
   withBackgroundPreparation,
 } from "pstdio-extensions";
 import {
+  createWebviewUsage,
   hasAcceptedNativeWebviews,
   hasAcceptedWebviews,
   notifyAcceptedWebviewPublication,
-  reconcileAcceptedWebviews,
 } from "./accepted-webview-output";
 import { createInitialWebviewCompletion } from "./complete-initial-webviews";
 import type { LoadedExtensionSnapshot } from "./extension-runtime";
@@ -124,6 +124,20 @@ const canRetainNativeWebviews = (
   validatedSource?: LoadedExtensionSnapshot,
 ) => !validatedSource && !input.loadSource && !input.buildWebview;
 
+const refreshInstalledSources = async (
+  rows: InstalledSourceWithManifest[],
+  webviewCacheRoot: string,
+  sourcePath: string | undefined,
+  check: (row: InstalledSourceWithManifest) => Promise<unknown>,
+) => {
+  if (!sourcePath)
+    removeUnownedWebviewBuilds(
+      webviewCacheRoot,
+      rows.map((row) => row.id),
+    );
+  await Promise.all(rows.filter((row) => !sourcePath || row.source_path === sourcePath).map(check));
+};
+
 export const createExtensionWebviewBuildManager = (input: CreateExtensionWebviewBuildManagerInput) => {
   const attempts = new Map<string, BuildAttempt>();
   const checked = new Map<string, Set<string>>();
@@ -137,6 +151,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
   });
   const loadSource = input.loadSource ?? input.inspectSource ?? inspectWebviewSource;
   const webviewCacheRoot = input.webviewCacheRoot ?? defaultWebviewCacheRoot(process.env);
+  const usage = createWebviewUsage(webviewCacheRoot);
   const { reportResult } = createBuildReporters(input);
   const getInstalledSource = installedSourceGetter(input);
   const loadCurrentSource = currentSourceLoader(input, backoff, loadSource, getInstalledSource, () => disposed);
@@ -277,8 +292,13 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     pending.check(installedExtensionId, () => refreshRow(installedExtensionId, validatedSource));
 
   const ensure = async (installedExtensionId: string, webviewId?: string) => {
-    if (await hasAcceptedWebviews(await getInstalledSource(installedExtensionId), webviewCacheRoot, webviewId)) return;
-    if (disposed) return Promise.resolve();
+    const row = await getInstalledSource(installedExtensionId);
+    if (!row || disposed) return;
+    const served = await usage.serveAccepted(row, webviewId, () => {
+      if (!disposed && !checked.has(row.id) && !pending.has(row.id))
+        void withBackgroundPreparation(() => check(row.id)).catch((error) => input.onError?.(error));
+    });
+    if (served || disposed) return;
     const running = pending.join(installedExtensionId);
     if (running) return running;
     const repair =
@@ -294,25 +314,16 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
 
   const refreshSources = async (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => {
     if (disposed) return;
-    const rows = await input.listInstalledSources();
-    if (!sourcePath)
-      removeUnownedWebviewBuilds(
-        webviewCacheRoot,
-        rows.map((row) => row.id),
-      );
-    await Promise.all(
-      rows
-        .filter((row) => !sourcePath || row.source_path === sourcePath)
-        .map((row) => {
-          checked.delete(row.id);
-          if (sourcePath) backoff.forgetExtension(row.id);
-          else backoff.forget(row.id);
-          return check(row.id, validatedSource);
-        }),
-    );
+    await refreshInstalledSources(await input.listInstalledSources(), webviewCacheRoot, sourcePath, (row) => {
+      checked.delete(row.id);
+      if (sourcePath) backoff.forgetExtension(row.id);
+      else backoff.forget(row.id);
+      return check(row.id, validatedSource);
+    });
   };
 
-  const refresh = async (sourcePath?: string) => {
+  const refresh = async (sourcePath?: string, reason?: "attachment") => {
+    if (reason === "attachment" && sourcePath && !usage.opened.has(sourcePath)) return;
     try {
       await withBackgroundPreparation(() => refreshSources(sourcePath));
     } catch (error) {
@@ -336,7 +347,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
   const reconcile = () =>
     withBackgroundPreparation(async () => {
       if (disposed) return;
-      await reconcileAcceptedWebviews(await input.listInstalledSources(), webviewCacheRoot, check);
+      await usage.reconcile(await input.listInstalledSources(), check);
     });
 
   const dispose = () => {
@@ -345,6 +356,7 @@ export const createExtensionWebviewBuildManager = (input: CreateExtensionWebview
     activeBuilds.clear();
     attempts.clear();
     checked.clear();
+    usage.opened.clear();
     pending.clear();
     backoff.clear();
   };

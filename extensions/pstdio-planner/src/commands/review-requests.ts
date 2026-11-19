@@ -51,6 +51,7 @@ export const requestReviewCommand = defineCommand({
       ],
     }),
     reason: params.select({ options: reviewRequestReasons.map((reason) => ({ label: reason, value: reason })) }),
+    attemptId: params.text(),
     workspaceId: params.text(),
     revision: params.number(),
     sessionId: params.text(),

@@ -15,6 +15,7 @@ export const reviewQueryIndexes: StorageRecordIndex[] = [
       ticketId: { path: ["ticketId"], type: "string", derive: { kind: "string" } },
       attemptRevision: { path: ["context", "attemptRevision"], type: "number" },
       workspaceId: { path: ["context", "workspaceId"], type: "string" },
+      attemptId: { path: ["context", "attemptId"], type: "string" },
       affectedAction: { path: ["context", "affectedAction"], type: "string" },
       reason: { path: ["context", "reason"], type: "string" },
       sessionId: { path: ["context", "sessionId"], type: "string" },

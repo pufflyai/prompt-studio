@@ -42,8 +42,8 @@ test("run ownership pages dispatch metadata and selects only its workspaces' eve
     },
   });
   const ownership = await readAutoBuildOwnership({ storage: guard(storage) }, "owner");
-  expect(ownership.workspaceIds.size).toBe(203);
-  expect(ownership.workspaceIds.has("other-0")).toBe(false);
+  expect(ownership.attemptIds.size).toBe(203);
+  expect(ownership.attemptIds.has("other-0")).toBe(false);
   expect(ownership.sessionIds).toEqual(new Set(["owner", "review"]));
 });
 
@@ -99,7 +99,7 @@ test("linked request and event pages survive writes between pages", async () => 
   const requestIds: string[] = [];
   for await (const page of linkedAutoBuildRequestPages(storage, {
     sessionIds: new Set(),
-    workspaceIds: new Set(["workspace"]),
+    attemptIds: new Set(["workspace"]),
   })) {
     requestIds.push(...page.map(({ id }) => id));
     await requests.put("000", {
@@ -115,4 +115,50 @@ test("linked request and event pages survive writes between pages", async () => 
     await events.put("000", { id: "000", workspaceId: "workspace", sessionId: "session-000", stopped: true });
   }
   expect(sessionIds).toHaveLength(203);
+});
+
+test("folder attempt ownership excludes sibling work in the same project workspace", async () => {
+  const { linkedAutoBuildRequestPages } = await import("./auto-build-request-links");
+  const storage = createMemoryStorage();
+  const ctx = { storage };
+  await autoBuildDispatches(ctx, "owner").put("owned-attempt", {
+    attemptId: "owned-attempt",
+    workspaceId: "home",
+    dispatchedAt: "2026-01-01",
+  });
+  await autoBuildDispatches(ctx, "owner").put("legacy-workspace", {
+    workspaceId: "legacy-workspace",
+    dispatchedAt: "2026-01-01",
+  });
+  const { autoBuildPullRequestNotifications } = await import("./auto-build-dispatches");
+  await autoBuildPullRequestNotifications(ctx, "owner").put("observed-workspace", { evidenceKey: "observation" });
+  for (const [id, attemptId, workspaceId, sessionId] of [
+    ["own-event", "owned-attempt", "home", "owned-session"],
+    ["sibling-event", "sibling-attempt", "home", "sibling-session"],
+    ["legacy-event", undefined, "legacy-workspace", "legacy-session"],
+    ["observed-event", undefined, "observed-workspace", "observed-session"],
+  ])
+    await storage.collection("planner-attempt-events").put(id!, { id, attemptId, workspaceId, sessionId });
+  for (const [id, attemptId, workspaceId] of [
+    ["own-request", "owned-attempt", "home"],
+    ["sibling-request", "sibling-attempt", "home"],
+    ["legacy-request", undefined, "legacy-workspace"],
+    ["foreign-request", "foreign-attempt", "legacy-workspace"],
+  ])
+    await storage.collection("planner-review-requests").put(id!, { id, context: { attemptId, workspaceId } });
+  const ownership = await readAutoBuildOwnership(ctx, "owner");
+  expect(ownership.attemptIds).toEqual(new Set(["owned-attempt", "legacy-workspace"]));
+  expect(ownership.sessionIds).toEqual(new Set(["owner", "owned-session", "legacy-session"]));
+  const requests: string[] = [];
+  for await (const page of linkedAutoBuildRequestPages(storage, ownership)) requests.push(...page.map(({ id }) => id));
+  expect(requests.sort()).toEqual(["legacy-request", "own-request"]);
+  const { readRetiredWorkspaceIds } = await import("./attempt-retirement");
+  await storage.collection("planner-attempt-events").put("abandoned", {
+    id: "abandoned",
+    attemptId: "owned-attempt",
+    workspaceId: "home",
+    type: "attempt_abandoned",
+  });
+  expect(await readRetiredWorkspaceIds(storage, ["owned-attempt"])).toEqual(new Set(["owned-attempt"]));
+  expect(await readRetiredWorkspaceIds(storage, ["sibling-attempt"])).toEqual(new Set());
 });

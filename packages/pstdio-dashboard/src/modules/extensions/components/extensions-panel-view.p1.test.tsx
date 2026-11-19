@@ -8,6 +8,34 @@ import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ExtensionsPanelView } from "./extensions-panel-view";
 
+test("installed extensions expose public availability and local maintenance independently", () => {
+  const extension: ProjectExtensionInstance = {
+    id: "local-copy",
+    projectId: "project",
+    extensionId: "example.tool",
+    installedExtensionId: "source",
+    installName: "tool",
+    name: "tool",
+    displayName: "Local public tool",
+    sourcePath: "/source",
+    scope: "repo",
+    status: "loaded",
+    enabled: true,
+    config: {},
+    canUpgrade: false,
+    updateAvailable: false,
+    ownership: "mine",
+    visibility: "public",
+  };
+  const markup = renderToStaticMarkup(
+    <ChakraProvider value={psTheme}>
+      <ExtensionsPanelView extensions={[extension]} marketplace={[]} diagnostics={[]} automations={[]} />
+    </ChakraProvider>,
+  );
+  expect(markup.includes('data-extension-ownership="mine"')).toBe(true);
+  expect(markup.includes('data-extension-visibility="public"')).toBe(true);
+});
+
 test("automation controls belong to their installed extension instance", () => {
   const active: ProjectExtensionInstance = {
     id: "active-instance",

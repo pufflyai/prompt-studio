@@ -319,7 +319,7 @@ test("a scope change during dispatch prevents launching work outside the new sco
     return run(input);
   };
   await expect(autoBuildDispatchCommand.run(ctx, { ticket: task.id, revision: "test" })).rejects.toThrow(
-    "no longer ready",
+    "Work scope changed",
   );
   expect(await listAttempts(storage)).toHaveLength(0);
 });

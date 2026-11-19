@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { ExtensionActionButton } from "./extension-action-button";
 import type { ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionIcon } from "./extension-icon";
+import { ExtensionProvenance } from "./extension-provenance";
 
 interface MarketplaceExtensionRowProps {
   extension: MarketplaceExtension;
@@ -57,6 +58,7 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
         <Text textStyle="label/XS" color="fg.muted" truncate>
           {extension.description}
         </Text>
+        <ExtensionProvenance extension={extension} />
         <Text textStyle="label/XS" color="fg.subtle" fontFamily="mono" truncate>
           {extension.publisher ? `${extension.publisher} · ` : ""}
           {extension.origin.url}@{extension.origin.ref}#{extension.origin.path}

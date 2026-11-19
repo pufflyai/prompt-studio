@@ -1,4 +1,5 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import { attemptId } from "./attempt-identity";
 import { readRetiredWorkspaceIds } from "./attempt-retirement";
 import { deriveRevisionVerdict } from "./attempt-state";
 import type { AttemptRecord, AttemptState } from "./attempt-types";
@@ -9,8 +10,8 @@ export const legacyAttemptOutput = async (
   variant: AttemptRecord,
   retiredWorkspaces?: ReadonlySet<string>,
 ) => {
-  const retired = (retiredWorkspaces ?? (await readRetiredWorkspaceIds(storage, [variant.workspaceId]))).has(
-    variant.workspaceId,
+  const retired = (retiredWorkspaces ?? (await readRetiredWorkspaceIds(storage, [attemptId(variant)]))).has(
+    attemptId(variant),
   );
   const revision = variant.revisions.at(-1);
   const verdict = revision ? deriveRevisionVerdict(revision) : null;

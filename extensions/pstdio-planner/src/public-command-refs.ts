@@ -42,6 +42,8 @@ export interface WorkspaceActivitySession {
 }
 
 export interface PlannerAttempt {
+  /** Folder attempts own an identity separate from their execution workspace. */
+  id?: string;
   workspaceId: string;
   workspaceShorthand: string;
   ticketId: string;
@@ -109,9 +111,10 @@ export const planner = {
     { limit?: number; cursor?: string },
     { attempts: PlannerAttempt[]; total: number; cursor: string | null; revision: string }
   >("list-attempts"),
-  reconcileAttempt: plannerCommand<{ workspaceId: string }, { decision: string; attempt: PlannerAttempt }>(
-    "reconcile-attempt",
-  ),
+  reconcileAttempt: plannerCommand<
+    { attemptId: string; workspaceId?: never } | { workspaceId: string; attemptId?: never },
+    { decision: string; attempt: PlannerAttempt }
+  >("reconcile-attempt"),
   ticketWorkspaces: plannerCommand<{ id: string }, TicketWorkspaceRow[]>("ticket-workspaces"),
   workspaceActivity: plannerCommand<{ workspaceId: string; limit?: number; cursor?: string }, WorkspaceActivity>(
     "workspace-activity",

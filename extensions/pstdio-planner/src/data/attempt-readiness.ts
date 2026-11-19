@@ -1,3 +1,4 @@
+import { attemptId, selectedAttemptId } from "./attempt-identity";
 import type { AttemptRecord, TicketAttemptSelection } from "./attempt-types";
 import type { DependencyDelivery } from "./dependency-deliveries";
 import { hasPendingImplementationInput } from "./implementation-input";
@@ -13,6 +14,13 @@ export interface AttemptReadinessTicket {
 }
 
 export type AttemptReadinessResult =
+  | {
+      decision: "ready";
+      mode: "folder";
+      baseWorkspaceId: null;
+      baseHeadSha: null;
+      dependencyAttemptIds: string[];
+    }
   | {
       decision: "ready";
       mode: "main" | "stacked";
@@ -43,7 +51,7 @@ interface ResolveAttemptReadinessInput {
   attempts: AttemptRecord[];
   selections: TicketAttemptSelection[];
   doneStatusIds: Set<string>;
-  mainHeadSha: string;
+  mainHeadSha: string | null;
   mergedHeads: Map<string, string[]>;
   dependencyDeliveries: Map<string, DependencyDelivery>;
   activeImplementationCount: number;
@@ -57,8 +65,23 @@ type DependencyInput = Omit<ResolveAttemptReadinessInput, "activeImplementationC
 // A submitted commit is the dependency evidence. Review verdicts are optional and never gate stacking.
 const isDependencyAttemptReady = (input: DependencyInput, attempt: AttemptRecord) =>
   latestHead(attempt) !== null &&
-  !input.retiredWorkspaceIds?.has(attempt.workspaceId) &&
+  !input.retiredWorkspaceIds?.has(attemptId(attempt)) &&
   !input.activeImplementationWorkspaceIds?.has(attempt.workspaceId);
+
+const folderDependencyReadiness = (
+  dependency: AttemptReadinessTicket,
+  attempts: AttemptRecord[],
+  done: boolean,
+  active: boolean,
+) => {
+  return done && !active && attempts.every((attempt) => attempt.base === null)
+    ? null
+    : ({
+        decision: "wait",
+        reason: "dependency-not-ready",
+        dependencyIds: [dependency.shorthand],
+      } satisfies AttemptReadinessResult);
+};
 
 const selectDependencyAttempt = async (input: DependencyInput, dependency: AttemptReadinessTicket) => {
   const selection = input.selections.find((candidate) => candidate.ticketId === dependency.id);
@@ -66,9 +89,10 @@ const selectDependencyAttempt = async (input: DependencyInput, dependency: Attem
   const done = input.doneStatusIds.has(dependency.statusId ?? "");
   const delivery = input.dependencyDeliveries.get(dependency.id);
   const active = attempts.some((attempt) => input.activeImplementationWorkspaceIds?.has(attempt.workspaceId));
+  if (input.mainHeadSha === null) return folderDependencyReadiness(dependency, attempts, done, active);
   const candidates = attempts.filter(
     (attempt) =>
-      (!selection || attempt.workspaceId === selection.workspaceId) && isDependencyAttemptReady(input, attempt),
+      (!selection || attemptId(attempt) === selectedAttemptId(selection)) && isDependencyAttemptReady(input, attempt),
   );
   if (delivery && active)
     return {
@@ -82,7 +106,9 @@ const selectDependencyAttempt = async (input: DependencyInput, dependency: Attem
       reason: "ambiguous-dependency-attempt",
       dependencyIds: [dependency.shorthand],
     } satisfies AttemptReadinessResult;
-  const selectedAttempt = attempts.find(({ workspaceId }) => workspaceId === selection?.workspaceId);
+  const selectedAttempt = selection
+    ? attempts.find((attempt) => attemptId(attempt) === selectedAttemptId(selection))
+    : undefined;
   if (selection && !selectedAttempt)
     return {
       decision: "wait",
@@ -110,7 +136,7 @@ const selectDependencyAttempt = async (input: DependencyInput, dependency: Attem
     } satisfies AttemptReadinessResult;
   const head = latestHead(selected[0]!)!;
   const integrated = await Promise.all(
-    [head, ...(input.mergedHeads.get(head) ?? [])].map((commit) => input.isAncestor(commit, input.mainHeadSha)),
+    [head, ...(input.mergedHeads.get(head) ?? [])].map((commit) => input.isAncestor(commit, input.mainHeadSha!)),
   );
   if (integrated.some(Boolean)) return null;
   return selected[0]!;
@@ -122,7 +148,7 @@ const selectDependencyAttempts = async (input: DependencyInput, dependencies: At
     const selected = await selectDependencyAttempt(input, dependency);
     if (!selected) continue;
     if ("decision" in selected) return selected;
-    if (!selectedAttempts.some((attempt) => attempt.workspaceId === selected.workspaceId))
+    if (!selectedAttempts.some((attempt) => attemptId(attempt) === attemptId(selected)))
       selectedAttempts.push(selected);
   }
   return selectedAttempts;
@@ -207,6 +233,8 @@ export const resolveAttemptDependencies = async (input: DependencyInput): Promis
     return { decision: "wait", reason: "review-needed", dependencyIds: pending.map((ticket) => ticket.shorthand) };
   const selectedAttempts = await selectDependencyAttempts(input, unresolvedTickets);
   if (!Array.isArray(selectedAttempts)) return selectedAttempts;
+  if (input.mainHeadSha === null)
+    return { decision: "ready", mode: "folder", baseWorkspaceId: null, baseHeadSha: null, dependencyAttemptIds: [] };
 
   if (selectedAttempts.length === 0) {
     return {

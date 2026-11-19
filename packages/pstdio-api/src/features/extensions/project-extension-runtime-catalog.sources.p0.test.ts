@@ -1,8 +1,9 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import * as extensions from "pstdio-extensions";
 import {
   acceptPreparedRevision,
   loadExtensionSources,
@@ -14,6 +15,21 @@ import { createExtensionSourceCache } from "./project-extension-runtime-sources"
 
 const tempDirs: string[] = [];
 let previousPstdioHome: string | undefined;
+
+test("prepares uncached runtime inputs once on a new host", async () => {
+  const path = createTempDir();
+  writeRuntimeExtension(path, "fresh");
+  const check = spyOn(extensions, "inspectExtensionLoadKey");
+  try {
+    const cache = createExtensionSourceCache({});
+    const source = await cache.load({ source_path: path, source_kind: "local_path" });
+    expect(source?.source.preparedRevision?.loadKey).toBeTruthy();
+    expect(check).not.toHaveBeenCalled();
+  } finally {
+    check.mockRestore();
+    await stopExtensionPreparation();
+  }
+});
 
 test("refreshes an incompatible tool's displayed identity without importing its code", async () => {
   const path = createTempDir();

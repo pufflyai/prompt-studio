@@ -6,12 +6,12 @@ import { autoBuildDispatchPages } from "./auto-build-dispatches";
 // Run membership follows explicit dispatch and conversation links, never all project sessions.
 export async function readAutoBuildOwnership(ctx: Pick<ExtensionContextBase, "storage">, supervisorId?: string) {
   const sessionIds = new Set(supervisorId ? [supervisorId] : []);
-  const workspaceIds = new Set<string>();
-  if (!supervisorId) return { sessionIds, workspaceIds };
+  const attemptIds = new Set<string>();
+  if (!supervisorId) return { sessionIds, attemptIds };
   for await (const dispatches of autoBuildDispatchPages(ctx, supervisorId)) {
-    for (const { workspaceId } of dispatches) {
-      workspaceIds.add(workspaceId);
-      const attempt = await readAttempt(ctx.storage, workspaceId);
+    for (const { attemptId } of dispatches) {
+      attemptIds.add(attemptId);
+      const attempt = await readAttempt(ctx.storage, attemptId);
       if (!attempt) continue;
       sessionIds.add(attempt.implementationSessionId);
       const reviews = attempt.revisions.flatMap((revision) => revision.reviews);
@@ -19,12 +19,12 @@ export async function readAutoBuildOwnership(ctx: Pick<ExtensionContextBase, "st
     }
     for await (const ids of workspaceEventSessionPages(
       ctx.storage,
-      dispatches.map(({ workspaceId }) => workspaceId),
+      dispatches.map(({ attemptId }) => attemptId),
     )) {
       for (const id of ids) sessionIds.add(id);
     }
   }
-  return { sessionIds, workspaceIds };
+  return { sessionIds, attemptIds };
 }
 
 export { readPendingAutoBuildRequests } from "./auto-build-request-page";

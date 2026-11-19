@@ -245,6 +245,7 @@ const toTreeListNode = (
     },
     ...(node.menuPlacement ? { menuPlacement: node.menuPlacement } : {}),
     isContainer: node.collapsible,
+    collapsible: node.collapsible,
     isNavigable: Boolean(navigationIntent),
     navigationIntent,
     children: [...(node.children ?? []), ...(childrenByNodeId[node.id] ?? [])].map((child) =>

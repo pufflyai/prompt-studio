@@ -1,4 +1,5 @@
 import type { CommandContext, StorageQueryRecord } from "@pstdio/sdk/extensions";
+import { attemptId } from "../data/attempt-identity";
 import { readTicketAttempts, readWorkspaceEvents } from "../data/attempt-queries";
 import { findPendingPrerequisites } from "../data/attempt-readiness";
 import { retiredWorkspaceIds } from "../data/attempt-retirement";
@@ -30,12 +31,7 @@ export const readNextTicketEvidence = async (ctx: CommandContext, ticket: Ticket
     readAutoBuildResumptions(ctx, [ticket.id]),
     attemptSelectionsCollection(ctx.storage).get(ticket.id),
   ]);
-  const events = attempts.length
-    ? await readWorkspaceEvents(
-        ctx.storage,
-        attempts.map(({ workspaceId }) => workspaceId),
-      )
-    : [];
+  const events = attempts.length ? await readWorkspaceEvents(ctx.storage, attempts.map(attemptId)) : [];
   const retired = retiredWorkspaceIds(events);
   const selections = selected ? [selected] : [];
   const byRef = new Map(

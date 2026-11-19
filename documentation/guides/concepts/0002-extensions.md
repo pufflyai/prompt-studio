@@ -66,6 +66,14 @@ A project keeps running the version of an extension it loaded. Editing the insta
 
 Each project runs one copy of an extension ID. If two folders provide the same ID, you choose which one is turned on.
 
+## Public and personal sources
+
+The Extensions page shows **Public** for packages in Prompt Studio's bundled public catalog and **Mine** for locally maintained source installs. Use All, Public, or Mine beside search to filter the list. A local copy of a public package can show both badges. Mine describes editable local source, not its original author.
+
+**Visibility unknown** means public availability has not been verified. Installation scope (repo or shared), a Git URL, and a publisher name do not establish privacy. Public describes the package's availability; edits to a local copy may not have been published.
+
+The project extensions API returns optional `ownership` (`mine` or `unknown`) and `visibility` (`public` or `unknown`) fields on installed entries, and `visibility` on available entries. Clients treat missing fields as unknown.
+
 ## Trust
 
 Installing an extension gives it the access of your user account. Its code runs inside the Prompt Studio runtime on your computer. It can read your files, the API keys in the environment that started Prompt Studio, and the connection secrets Prompt Studio stores. Install extensions only from sources you trust.

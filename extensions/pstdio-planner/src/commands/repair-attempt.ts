@@ -1,7 +1,9 @@
 import { type CommandContext, defineCommand, params, type SessionRunSnapshot } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
+import { attemptId, resolveAttemptId } from "../data/attempt-identity";
 import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
 import { appendAttemptEvent, readAttempt } from "../data/attempt-storage";
+import { hasFolderWriter } from "../data/folder-writers";
 import { preparePlannerIndexes } from "../data/storage-indexes";
 import { readTicketInputStates } from "../data/ticket-input-state";
 import { hasWorkspaceWriter } from "../data/workspace-writers";
@@ -26,7 +28,12 @@ const alreadyRequested = async (ctx: CommandContext, workspaceId: string, key: s
         limit: 1,
         where: {
           all: [
-            { field: "workspaceId", op: "eq", value: workspaceId },
+            {
+              any: [
+                { field: "workspaceId", op: "eq", value: workspaceId },
+                { field: "attemptId", op: "eq", value: workspaceId },
+              ],
+            },
             {
               any: [
                 { field: "evidenceKey", op: "eq", value: key },
@@ -40,11 +47,37 @@ const alreadyRequested = async (ctx: CommandContext, workspaceId: string, key: s
   );
 };
 
+const requireRepairOwner = async (
+  ctx: CommandContext,
+  attempt: import("../data/attempt-types").AttemptRecord,
+  expectedHeadSha: string | null,
+) => {
+  if (attempt.base !== null && (await workspaceHead(ctx, attempt.workspaceId)) !== expectedHeadSha)
+    throw new Error("Workspace HEAD changed before repair.");
+  if ((await readTicketInputStates(ctx.storage, [attempt.ticketId])).get(attempt.ticketId)?.pendingImplementation)
+    throw new Error("Resolve implementation input before repair.");
+  const session = await ctx.sessions.get(attempt.implementationSessionId);
+  if (!session)
+    throw new Error(
+      "The implementation owner is missing. Arrange an acknowledged handoff before assigning another writer.",
+    );
+  const capacity = await readImplementationCapacity(ctx);
+  if (attempt.base === null && capacity.running > (isLiveSession(session) ? 1 : 0))
+    throw new Error("Another attempt is using the shared project folder. Wait for its handoff.");
+  if (!isLiveSession(session) && capacity.running >= capacity.limit)
+    throw new Error("Implementation capacity is full.");
+  if (attempt.base === null) {
+    if (await hasFolderWriter(ctx, attempt.workspaceId, session.id))
+      throw new Error("Another session is executing in this project folder.");
+  } else await assertNoCompetingWriter(ctx, attempt.workspaceId, session.id);
+  return session;
+};
+
 export const repairAttempt = async (
   ctx: CommandContext,
   input: {
     workspaceId: string;
-    expectedHeadSha: string;
+    expectedHeadSha: string | null;
     reason: string;
     evidenceKey?: string;
     expectedRun?: SessionRunSnapshot;
@@ -53,31 +86,20 @@ export const repairAttempt = async (
 ) => {
   return withWriteGuard(ctx, `attempt:${input.workspaceId}`, async () => {
     const attempt = await readAttempt(ctx.storage, input.workspaceId);
-    if (!attempt || (await readRetiredWorkspaceIds(ctx.storage, [attempt.workspaceId])).has(attempt.workspaceId))
+    if (!attempt || (await readRetiredWorkspaceIds(ctx.storage, [attemptId(attempt)])).has(attemptId(attempt)))
       throw new Error("Choose a current implementation variant.");
-    if ((await workspaceHead(ctx, attempt.workspaceId)) !== input.expectedHeadSha)
-      throw new Error("Workspace HEAD changed before repair.");
-    if ((await readTicketInputStates(ctx.storage, [attempt.ticketId])).get(attempt.ticketId)?.pendingImplementation)
-      throw new Error("Resolve implementation input before repair.");
-    const session = await ctx.sessions.get(attempt.implementationSessionId);
-    if (!session)
-      throw new Error(
-        "The implementation owner is missing. Arrange an acknowledged handoff before assigning another writer.",
-      );
-    const capacity = await readImplementationCapacity(ctx);
-    if (!isLiveSession(session) && capacity.running >= capacity.limit)
-      throw new Error("Implementation capacity is full.");
-    await assertNoCompetingWriter(ctx, attempt.workspaceId, session.id);
+    const session = await requireRepairOwner(ctx, attempt, input.expectedHeadSha);
     if (await alreadyRequested(ctx, input.workspaceId, input.evidenceKey))
       return { decision: "already-requested" as const, sessionId: session.id };
     await beforeFollowup?.();
     const outcome = await ctx.sessions.followup({
       sessionId: session.id,
       expectedRun: input.expectedRun,
-      prompt: `${input.reason}\n\nContinue in workspace ${attempt.workspaceShorthand}. Read current workflow status IDs and update ticket progress. Follow the task's validation, adversarial review, PR and CI rules. Save a report and submit the exact new HEAD with submit-revision. A queued follow-up does not transfer ownership. Do not merge without authority.`,
+      prompt: `${input.reason}\n\nContinue in workspace ${attempt.workspaceShorthand}. Read current workflow status IDs and update ticket progress. Follow the task's validation rules. ${attempt.base === null ? "Work in the shared project folder, post a completion comment in ticket Activity, and update ticket progress. No Git submission or merge is required." : "Follow adversarial review, PR and CI rules. Save a report and submit the exact new HEAD with submit-revision."} A queued follow-up does not transfer ownership. Do not merge without authority.`,
     });
     await appendAttemptEvent(ctx.storage, {
       id: input.evidenceKey,
+      attemptId: attemptId(attempt),
       workspaceId: attempt.workspaceId,
       revision: attempt.revisions.at(-1)?.revision ?? null,
       type: "implementation_resumed",
@@ -104,12 +126,19 @@ export const repairAttemptCommand = defineCommand({
   cli: true,
   mutating: true,
   params: {
-    workspaceId: params.text({ required: true }),
-    expectedHeadSha: params.text({ required: true }),
+    attemptId: params.text({ label: "Attempt ID" }),
+    workspaceId: params.text({ label: "Legacy Git workspace ID" }),
+    expectedHeadSha: params.text(),
     reason: params.longText({ required: true }),
     evidenceKey: params.text(),
   },
   async run(ctx, input) {
-    return withWriteGuard(ctx, "attempt-launch", () => repairAttempt(ctx, input));
+    return withWriteGuard(ctx, "attempt-launch", () =>
+      repairAttempt(ctx, {
+        ...input,
+        workspaceId: resolveAttemptId(input),
+        expectedHeadSha: input.expectedHeadSha ?? null,
+      }),
+    );
   },
 });
