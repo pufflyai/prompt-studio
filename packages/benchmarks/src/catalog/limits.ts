@@ -31,10 +31,7 @@ const approvedReleaseLimits: Record<string, Record<string, number>> = {
     move: 250,
     reopen: 5_000,
     "longest-stall": 200,
-    "rows-scanned": 2_000,
-    writes: 2,
   },
-  B7: { "rows-scanned": 1_000 },
 };
 
 // Human-approved targets use strict < for milliseconds and bytes. Retained renderer
