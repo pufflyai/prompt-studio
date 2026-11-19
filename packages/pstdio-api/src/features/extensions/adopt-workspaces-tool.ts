@@ -19,10 +19,12 @@ type ExtensionRecords = Awaited<ReturnType<ExtensionsRouteDeps["extensionService
 const prepareSuccessor = async (deps: ExtensionsRouteDeps, projectId: string, records: ExtensionRecords) => {
   // Alias lookup can return another private copy of the same extension. Only the
   // explicitly named installation is the default source we may publish here.
-  const candidate = await deps.extensionService.getInstalledSource("workspaces");
+  const candidate = await deps.extensionService.getInstalledSource("pstdio.workspaces");
   const source =
-    records.find(({ installedSource }) => installedSource.install_name === "workspaces")?.installedSource ??
-    (candidate?.install_name === "workspaces" ? candidate : undefined);
+    records.find(
+      ({ installedSource }) =>
+        installedSource.extension_id === "pstdio.workspaces" && installedSource.install_name === "workspaces",
+    )?.installedSource ?? (candidate?.install_name === "workspaces" ? candidate : undefined);
   const preferred = selectPublicationSource(
     records.filter(({ installedSource }) => installedSource.extension_id === "pstdio.workspaces"),
   );

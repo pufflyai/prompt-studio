@@ -59,6 +59,7 @@ describe("installedExtensionSourcesService", () => {
       source_path: "/installed/workspaces",
     });
     expect((await svc.getByInstallName("workspaces"))?.id).toBe(named.id);
+    expect((await svc.getByInstallName("pstdio.workspaces"))?.id).toBe(named.id);
   });
 
   test("registers and retrieves a source by install name", async () => {

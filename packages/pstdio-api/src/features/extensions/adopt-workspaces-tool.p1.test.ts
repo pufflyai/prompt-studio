@@ -262,3 +262,46 @@ test("an unavailable shared successor keeps the legacy fallback and private file
   expect((await catalog.read("pstdio.workspaces")).asset).toEqual(shared.asset);
   expect(await readFile(join(combined.path, "private-marker.txt"), "utf8")).toBe("Keep private");
 });
+
+test("a different publisher named workspaces cannot shadow the first-party successor", async () => {
+  const project = await handle.deps.projectService.create({ name: "Qualified successor" });
+  const combined = await source("workspaces");
+  const privatePath = join(root, "repo", "workspaces");
+  await mkdir(privatePath, { recursive: true });
+  const manifest = { ...combined.manifest, publisher: "acme" };
+  await writeFile(join(privatePath, "package.json"), JSON.stringify(manifest));
+  await writeFile(join(privatePath, "extension.ts"), await readFile(join(combined.path, "extension.ts")));
+  await writeFile(join(privatePath, "private.txt"), "Acme customization");
+  const acme = await handle.deps.extensionService.enableInstalledSourceForProject({
+    projectId: project.id,
+    installName: "workspaces",
+    name: "workspaces",
+    displayName: "Acme Workspaces",
+    extensionId: "acme.workspaces",
+    manifest,
+    sourcePath: privatePath,
+    sourceKind: "local_path",
+    sourceHash: null,
+    sourceRef: null,
+    version: "0.1.0",
+  });
+  const legacy = await source("git-workspaces");
+  const old = await enableSource(project.id, "git-workspaces", legacy);
+  const successor = await enableSource(project.id, "workspaces", combined);
+  await handle.deps.extensionService.setProjectExtensionEnabled(successor.instance.id, false);
+  const catalog = await openPublishedCatalog(handle.deps, project.id);
+  await publishExtension(handle.deps, {
+    projectId: project.id,
+    instanceId: old.instance.id,
+    expectedRevision: (await catalog.read("pstdio.git-workspaces")).revision,
+  });
+  await adoptWorkspacesTool(handle.deps, project.id, [
+    { path: combined.path, hash: await hashExtensionSourceAsync(combined.path) },
+  ]);
+  expect((await catalog.read("pstdio.git-workspaces")).value).toBeNull();
+  expect((await catalog.read("pstdio.workspaces")).value).toMatchObject({ enabled: true });
+  expect(
+    (await handle.deps.extensionService.getProjectExtensionInstance(project.id, acme.instance.id))?.instance.enabled,
+  ).toBe(true);
+  expect(await readFile(join(privatePath, "private.txt"), "utf8")).toBe("Acme customization");
+});

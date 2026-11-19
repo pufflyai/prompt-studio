@@ -28,7 +28,7 @@ export const adoptBuiltInGitWorkspaces = async (deps: ExtensionsRouteDeps, proje
       await reconcileProviderWorkspaces(deps, projectId);
     return;
   }
-  const source = await deps.extensionService.getInstalledSource("workspaces");
+  const source = await deps.extensionService.getInstalledSource("pstdio.workspaces");
   if (
     !source ||
     source.extension_id !== "pstdio.workspaces" ||

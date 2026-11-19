@@ -70,7 +70,7 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
   const sourceMode = process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1";
   const projects = await deps.projectService.list();
   const existingProjects = !sourceMode && projects.length > 0;
-  const workspaceSource = await deps.extensionService.getInstalledSource("workspaces");
+  const workspaceSource = await deps.extensionService.getInstalledSource("pstdio.workspaces");
   const hasCombinedWorkspaces = workspaceSource
     ? await combinedWorkspacesSource(workspaceSource.source_path).catch(() => false)
     : false;
