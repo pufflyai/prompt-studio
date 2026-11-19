@@ -60,9 +60,11 @@ test("Notes creates dedicated pages and reclaims Side views into the current tab
       if (window.top === window) localStorage.setItem("onboarding-complete", "true");
     });
     await signInBrowser(page, started.descriptor);
-    await page.goto(`${started.baseUrl}/projects/${project.id}/`);
+    await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.notes/notes`);
     // Critical creation path: palette creation must reach the editor without a parameter dialog.
     await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
+    // This fixture has no default Home; the Notes route supplies its dedicated receiving page.
+    await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Notes");
     await page.mouse.move(0, 0);
     await page.keyboard.press("Alt+Shift+K");
     const palette = page.getByRole("dialog", { name: "Command palette" });

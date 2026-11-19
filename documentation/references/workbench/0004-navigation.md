@@ -8,13 +8,13 @@ The workbench navigates only to explicit targets. This page lists the target kin
 
 | Target | Effect |
 | --- | --- |
-| `page` | Opens Main. A resource with one representable Main renderer becomes a tab in the current tabbed container; otherwise activates its page and mode and updates location, URL, history, breadcrumbs and restore state. |
+| `page` | Opens Main by default, or the requested auxiliary panel. A resource with one representable Main renderer becomes a tab in the current tabbed container; otherwise activates its page and mode and updates location, URL, history, breadcrumbs and restore state. |
 | `panel` | Opens one active page slot or mode placement without changing the location. |
 | `command` | Executes one command target. |
 | `href` | Opens an external URL. |
 | `compound` | Prepares page and panel steps against proposed state, then publishes the final state with at most one history entry. |
 
-A page target may carry `resource`, `section` or `position`, `open`, and contextual `parent`. A panel target may carry `resource` and `open`. A target never carries a region or activation callback.
+A page target may carry `resource`, `section` or `position`, `open`, and contextual `parent`. A panel target may carry `resource` and `open`. Both may specify `region: "main" | "side" | "secondary"`; an auxiliary page target requires a resource. Targets do not carry activation callbacks.
 
 Resource tabs keep their semantic page context without changing the receiving container's route. Pages with multiple Main views or static landings open their complete page. Explicit page-location navigation, URL loads, Back/Forward and Main-body drops keep their full-page meaning; tab-strip drops follow the receiving container.
 

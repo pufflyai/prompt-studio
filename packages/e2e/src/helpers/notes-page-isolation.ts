@@ -6,14 +6,22 @@ export const verifyNotesPageIsolation = async (page: Page, tabbedUrl: string) =>
   const breadcrumbs = page.getByRole("navigation", { name: "breadcrumb" });
   const nav = page.locator('[data-workbench-region="sidenav"]');
   const notes = nav.getByRole("option", { name: "Notes", exact: true });
-  const firstRow = nav.getByRole("option", { name: "Isolation first", exact: true });
-  const secondRow = nav.getByRole("option", { name: "Isolation second", exact: true });
   const sideFirst = page
     .locator('[data-workbench-panel-header="side"]')
     .getByRole("tab", { name: "Isolation first", exact: true });
   const resourceActions = () => header.getByRole("button", { name: /^Actions for / });
   const editor = main.getByRole("textbox", { name: "", exact: true });
   const bodies = { first: "First note body", second: "Second note body" };
+  const openNote = async (title: string) => {
+    await header.focus();
+    await page.keyboard.press("Alt+Shift+K");
+    const palette = page.getByRole("dialog", { name: "Command palette" });
+    await palette.getByRole("textbox").fill(title);
+    const result = palette.getByRole("option").filter({ hasText: title });
+    await expect(result).toBeVisible();
+    await result.click();
+    await expect(palette).toBeHidden();
+  };
   const expectNote = async (title: string, body?: string) => {
     await expect(breadcrumbs).toContainText(title);
     await expect(editor).toBeVisible();
@@ -61,7 +69,7 @@ export const verifyNotesPageIsolation = async (page: Page, tabbedUrl: string) =>
   await expect(header.getByRole("tab", { name: "Changes", exact: true })).toBeVisible();
   await expect(sideFirst).toBeVisible();
   const containerTabs = await main.getByRole("tab").allTextContents();
-  await firstRow.click();
+  await openNote("Isolation first");
   await expectNoteTab("Isolation first", bodies.first);
   await expect(header.getByRole("tab")).toHaveText([...containerTabs, "Isolation first"]);
   await expect(sideFirst).toHaveCount(0);
@@ -71,9 +79,9 @@ export const verifyNotesPageIsolation = async (page: Page, tabbedUrl: string) =>
   await expect(main.getByRole("tab")).toHaveText([...containerTabs, "Isolation first"]);
   await page.reload();
   await expect(main.getByRole("tab")).toHaveText([...containerTabs, "Isolation first"]);
-  await secondRow.click();
+  await openNote("Isolation second");
   await expectNoteTab("Isolation second", bodies.second);
-  await firstRow.click();
+  await openNote("Isolation first");
   await expectNoteTab("Isolation first", bodies.first);
   await expect(sideFirst).toHaveCount(0);
   await page.keyboard.press("Alt+Shift+K");

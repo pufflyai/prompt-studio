@@ -3,6 +3,7 @@ import { serializePageUrl } from "@pstdio/sdk/extensions";
 import { workspacePages } from "../helpers/installed-workspaces";
 import { isSessionChatAction } from "../helpers/session-chat-actions";
 import { verifyExtensionModeSessionRestore, verifyModePanelState } from "./packaged-mode-panel-state";
+import { navigatePackagedPage } from "./packaged-page-navigation";
 import { verifyPageSessionTab } from "./packaged-page-session-tab";
 import { verifyClosedSidePreference, verifyGlobalBottomState } from "./packaged-related-resource-preferences";
 import { createPackagedSessionWorkspace } from "./packaged-session-workspace";
@@ -53,11 +54,16 @@ const openExistingSessionInMain = async (page: Page, row: Locator, sessionId: st
   await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Packaged session actions");
 };
 const startNewSessionInViewer = async (page: Page, preview: Locator, workspaceName: string) => {
+  const workspaceUrl = page.url();
   await preview.focus();
   await page.keyboard.press("ControlOrMeta+Alt+s");
-  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("New session");
+  const draft = page
+    .locator('[data-workbench-panel-header="main"]')
+    .getByRole("tab", { name: "New session", exact: true });
+  await expect(draft).toHaveAttribute("aria-selected", "true");
+  await expect(page).toHaveURL(workspaceUrl);
   await expect(page.locator('[data-workbench-panel="main"]')).toContainText(workspaceName);
-  await page.goBack();
+  await draft.getByRole("button", { name: "Close New session", exact: true }).click();
   await expect(preview).toBeVisible();
   await preview.focus();
   await page.keyboard.press("Shift+F10");
@@ -89,11 +95,10 @@ export const verifyPackagedSessionMenus = async (
   await expect(page.getByRole("menuitem", { name: "Pin tab", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   expect(new URL(page.url()).pathname).toBe(new URL(workspaceUrl, baseUrl).pathname);
-  const leaveWorkspace = () =>
-    page
-      .getByRole("navigation", { name: "breadcrumb" })
-      .getByRole("button", { name: "Workspaces", exact: true })
-      .click();
+  const listUrl = new URL(workspaceUrl, baseUrl);
+  listUrl.pathname = `/projects/${projectId}/extensions/pstdio.workspaces/workspaces`;
+  listUrl.search = "";
+  const leaveWorkspace = () => navigatePackagedPage(page, listUrl.href);
   const reopenWorkspace = () => page.goBack();
   await leaveWorkspace();
   await expect(preview).toBeHidden();
@@ -107,7 +112,7 @@ export const verifyPackagedSessionMenus = async (
   await expect(page.locator('[data-workbench-panel="side"]:visible')).toHaveCount(0);
   await leaveWorkspace();
   await reopenWorkspace();
-  await verifyClosedSidePreference(page, preview, leaveWorkspace, reopenWorkspace, workspace.workspace_shorthand);
+  await verifyClosedSidePreference(page, preview, leaveWorkspace, reopenWorkspace);
   await startNewSessionInViewer(page, preview, workspace.workspace_shorthand);
   const sideTabs = page.locator('[data-workbench-panel-header="side"]').getByRole("tab");
   await expect(sideTabs.filter({ hasText: "New session" })).toBeVisible();
@@ -175,7 +180,7 @@ export const verifyPackagedSessionMenus = async (
   await expect(bottomHeader.getByRole("tab")).toHaveCount(1);
   await verifyGlobalBottomState(page, terminalTab, reopenWorkspace, leaveWorkspace);
   await verifyModePanelState(page, terminalTab);
-  await verifyRetainedTerminalDrop(page, terminalTab);
+  await verifyRetainedTerminalDrop(page, terminalTab, new URL(workspaceUrl, baseUrl).href);
   await terminalInput.pressSequentially('printf "__navigation_%s__\\n" "$PSTDIO_NAVIGATION_STATE"');
   await terminalInput.press("Enter");
   await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__navigation_retained__");

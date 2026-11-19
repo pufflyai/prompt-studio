@@ -14,14 +14,11 @@ const dragTab = async (page: Page, tab: Locator, target: Locator, region: "main"
   await page.mouse.up();
 };
 
-export const verifyRetainedTerminalDrop = async (page: Page, terminal: Locator) => {
+export const verifyRetainedTerminalDrop = async (page: Page, terminal: Locator, tabbedUrl: string) => {
   const previous = page.url();
-  const home = new URL(previous);
-  home.pathname = `/projects/${home.pathname.split("/")[2]}/extensions/pstdio.home/home`;
-  home.search = "";
-  await navigatePackagedPage(page, home.href);
+  await navigatePackagedPage(page, tabbedUrl);
   await expect(
-    page.locator('[data-workbench-panel-header="main"]').getByRole("tab", { name: "Home", exact: true }),
+    page.locator('[data-workbench-panel-header="main"]').getByRole("tab", { name: "Files", exact: true }),
   ).toBeVisible();
   await dragTab(page, terminal, page.locator('[data-workbench-panel="main"]'), "main");
   await expect(
