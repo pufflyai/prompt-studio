@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -33,6 +33,43 @@ describe("buildExtensionWebview", () => {
       expect(state[key]).toBe(true);
     } finally {
       delete state[key];
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test.each([false, true])("keeps equation styles with the module that imports them (eager: %s)", async (eager) => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-webview-equation-styles-"));
+    const entryPath = join(root, "main.ts");
+    const outdir = join(root, "dist");
+    const ui = join(root, "node_modules", "@pstdio", "ui", "dist");
+    const katex = join(root, "node_modules", "katex", "dist");
+    mkdirSync(ui, { recursive: true });
+    mkdirSync(katex, { recursive: true });
+    writeFileSync(join(katex, "katex.css"), ".katex { color: red; }");
+    writeFileSync(join(ui, "EquationComponent-test.js"), 'import "katex/dist/katex.css"; export default true;');
+    writeFileSync(join(root, "view.css"), "body { background: blue; }");
+    writeFileSync(
+      entryPath,
+      `${eager ? 'import "katex/dist/katex.css";' : ""}
+      import "./view.css";
+      export const equation = () => import("./node_modules/@pstdio/ui/dist/EquationComponent-test.js");`,
+    );
+
+    try {
+      const result = await buildExtensionWebview({ entryPath, outdir, signal: new AbortController().signal });
+      expect(result.success).toBe(true);
+      const entryStyles = readFileSync(join(outdir, "module.css"), "utf8");
+      expect(entryStyles).toContain("background:");
+      expect(entryStyles.includes(".katex")).toBe(eager);
+      const equationStyles = readdirSync(outdir).find((name) => name.endsWith(".css") && name !== "module.css");
+      expect(equationStyles).toBeDefined();
+      expect(readFileSync(join(outdir, equationStyles!), "utf8")).toContain(".katex");
+      const entryCode = readFileSync(join(outdir, "module.js"), "utf8");
+      const [equationChunk] = new Bun.Transpiler({ loader: "js" })
+        .scanImports(entryCode)
+        .filter(({ kind }) => kind === "dynamic-import");
+      expect(readFileSync(join(outdir, equationChunk!.path), "utf8").includes(equationStyles!)).toBe(!eager);
+    } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });

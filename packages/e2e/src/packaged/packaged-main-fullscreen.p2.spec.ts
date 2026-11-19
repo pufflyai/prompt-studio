@@ -13,7 +13,7 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
   try {
-    const defaults = JSON.parse(await packagedFixtureExtensions(root, ["pstdio-home"], ["webview"]));
+    const defaults = JSON.parse(await packagedFixtureExtensions(root, ["pstdio-home", "pstdio-terminal"], ["webview"]));
     defaults.defaultExtensions[0].force = true;
     const started = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(defaults) });
     child = started.child;

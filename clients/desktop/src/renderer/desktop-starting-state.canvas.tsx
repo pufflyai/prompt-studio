@@ -4,7 +4,7 @@ import { DesktopStartupProgress } from "./desktop-starting-state";
 const meta = {
   title: "Product/Desktop/Startup progress",
   component: DesktopStartupProgress,
-  args: { phase: "database", copyStartupLogs: async () => {} },
+  args: { phase: "database", copyDiagnostics: async () => {} },
 } satisfies CanvasMeta<typeof DesktopStartupProgress>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;
@@ -32,6 +32,7 @@ export const LoadingTools: Story = {
 export const TakingLonger: Story = {
   id: "patterns-desktop-startup-progress--taking-longer",
   args: { phase: "database", takingLonger: true },
+  description: "The empty state shows the current startup phase and offers Copy diagnostics while startup continues.",
 };
 export const WaitingWithoutProgress: Story = {
   args: { phase: "database", takingLonger: true, waitingWithoutProgress: true },

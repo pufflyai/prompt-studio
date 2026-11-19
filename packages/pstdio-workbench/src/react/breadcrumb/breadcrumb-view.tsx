@@ -1,7 +1,7 @@
 import { HStack, Text } from "@chakra-ui/react";
-import { Breadcrumb, type ResourceContextAction, type SessionCompletionStatus, SessionIndicator } from "@pstdio/ui";
+import { Breadcrumb, type ResourceContextAction } from "@pstdio/ui";
 import type { ReactNode } from "react";
-import type { WorkbenchBreadcrumbItem, WorkbenchCore, WorkbenchTabSnapshot } from "../../core";
+import type { WorkbenchBreadcrumbItem, WorkbenchCore } from "../../core";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
 import { useWorkbenchResourceActionResolver } from "../menus/resource-actions";
 import { createWorkbenchResourceMenu } from "../menus/resource-menu";
@@ -14,41 +14,22 @@ import { useBreadcrumbPlacement } from "./use-breadcrumb-placement";
 interface WorkbenchBreadcrumbViewProps {
   workbench: WorkbenchCore;
 }
-type BreadcrumbTitleItem = WorkbenchBreadcrumbItem & {
-  placementIndicator?: WorkbenchTabSnapshot["indicator"];
-};
-
-const getSessionStatus = (item: WorkbenchBreadcrumbItem) =>
-  typeof item.resource?.metadata?.status === "string"
-    ? (item.resource.metadata.status as SessionCompletionStatus)
-    : undefined;
-const WorkbenchBreadcrumbIcon = (props: { item: BreadcrumbTitleItem }) => {
+const WorkbenchBreadcrumbIcon = (props: { item: WorkbenchBreadcrumbItem }) => {
   const { item } = props;
-  const indicator = item.placementIndicator;
-  if (indicator) {
-    return (
-      <WorkbenchIcon
-        name={indicator.icon}
-        size={14}
-        flexShrink={0}
-        color={indicator.color ?? "fg.muted"}
-        role={indicator.label ? "img" : undefined}
-        aria-label={indicator.label}
-        aria-hidden={indicator.label ? undefined : true}
-      />
-    );
-  }
-  if (item.indicator === "session-status") {
-    return <SessionIndicator status={getSessionStatus(item)} boxSize="14px" />;
-  }
-  if (!item.icon) return null;
+  const resource = item.icon === item.resource?.icon ? item.resource : undefined;
   return (
-    <Text as="span" aria-hidden="true" color="fg.muted" display="inline-flex" flexShrink={0}>
-      <WorkbenchIcon name={item.icon} size={14} />
-    </Text>
+    <WorkbenchIcon
+      name={item.icon}
+      size={14}
+      flexShrink={0}
+      color={resource?.iconColor ?? "fg.muted"}
+      role={resource?.iconLabel ? "img" : undefined}
+      aria-label={resource?.iconLabel}
+      aria-hidden={resource?.iconLabel ? undefined : true}
+    />
   );
 };
-const WorkbenchBreadcrumbTitle = (props: { item: BreadcrumbTitleItem }) => {
+const WorkbenchBreadcrumbTitle = (props: { item: WorkbenchBreadcrumbItem }) => {
   const { item } = props;
   const title = item.title as ReactNode;
   return (
@@ -61,7 +42,7 @@ const WorkbenchBreadcrumbTitle = (props: { item: BreadcrumbTitleItem }) => {
   );
 };
 export const buildWorkbenchBreadcrumbItems = (
-  items: BreadcrumbTitleItem[] | undefined,
+  items: WorkbenchBreadcrumbItem[] | undefined,
   actionsForResource?: (item: WorkbenchBreadcrumbItem) => ResourceContextAction[] | undefined,
 ) =>
   (items ?? []).map((item) => {
@@ -81,7 +62,7 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
   useWorkbenchResourceActionResolver(workbench);
   if (items.length === 0) return null;
   const resource = placement?.resource;
-  const crumbs = items.flatMap<BreadcrumbTitleItem>((item) => {
+  const crumbs = items.flatMap<WorkbenchBreadcrumbItem>((item) => {
     if (!item.resource) return [item];
     const projected = resolveResourcePreview(item.resource, changes);
     if (!projected) return [];
@@ -97,8 +78,7 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
         ...item,
         resource: projected,
         title: projected !== item.resource ? projected.label : (current.label ?? item.title),
-        icon: (projected !== item.resource ? projected.icon : undefined) ?? current.icon ?? item.icon,
-        placementIndicator: current.indicator,
+        icon: projected.icon === item.resource.icon ? item.icon : projected.icon,
       },
     ];
   });
@@ -116,8 +96,10 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
   ) {
     crumbs.push({
       title: resourcePresentation.label ?? resource.label ?? resource.id,
-      icon: resourcePresentation.icon ?? workbench.resources.getKind(resource.type, resource.extensionId)?.icon,
-      placementIndicator: resourcePresentation.indicator,
+      icon:
+        resource.icon ??
+        resourcePresentation.icon ??
+        workbench.resources.getKind(resource.type, resource.extensionId)?.icon,
       resource,
     });
   }
