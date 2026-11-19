@@ -33,18 +33,18 @@ test("keeps performance measurements live when switching and closing project tab
     const launched = await launchProject("First monitored project", { monitoring: true });
     app = launched.app;
     // Critical: the production bootstrap must instrument the workbench before React starts.
-    await performanceMeter(app.page).click();
+    await performanceTrigger(app.page).click();
     const highlighting = performanceDetails(app.page).getByRole("checkbox", { name: "Highlight React renders" });
     await expect(highlighting).toBeEnabled();
     await expect(highlighting).not.toBeChecked();
     await performanceDetails(app.page).getByText("Highlight React renders", { exact: true }).click();
-    await expect(app.page.locator("[data-react-scan] canvas")).toBeVisible();
-    await performanceMeter(app.page).click();
-    await expect(app.page.locator("[data-react-scan] canvas")).toBeVisible();
-    await performanceMeter(app.page).click();
+    await expect(app.page.locator("canvas[data-react-scan]")).toBeVisible();
+    await performanceTrigger(app.page).click();
+    await expect(app.page.locator("canvas[data-react-scan]")).toBeVisible();
+    await performanceTrigger(app.page).click();
     await performanceDetails(app.page).getByText("Highlight React renders", { exact: true }).click();
-    await expect(app.page.locator("[data-react-scan] canvas")).toBeHidden();
-    await performanceMeter(app.page).click();
+    await expect(app.page.locator("canvas[data-react-scan]")).toBeHidden();
+    await performanceTrigger(app.page).click();
     const capture = async () => {
       const snapshot = await readSnapshot(app!.page);
       return snapshot?.version === 2 ? snapshot.capture : undefined;
