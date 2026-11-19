@@ -239,7 +239,7 @@ test("chat paths use the session workspace while another workspace is selected",
       metadata: { workspaceFilePath: "src/app.ts" },
     });
     await handler.open(candidate);
-    expect(workbench.layout.getActivePanel("main")).toMatchObject({
+    expect(workbench.layout.getActivePanel("side")).toMatchObject({
       resource: { id: "workspace-a", metadata: { workspaceFilePath: "src/app.ts" } },
       position: { line: 12 },
     });

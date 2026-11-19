@@ -8,6 +8,7 @@ import { resolvePanelPosition, type WorkbenchPositionedRegion } from "../../core
 import { resolvePageContent } from "../../core/registries/pages/page-content";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { tabDragDestinations } from "./tab-drag-destinations";
 
 const usePanelMovePositions = (workbench: WorkbenchCore, region: WorkbenchPositionedRegion) => {
   useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
@@ -56,7 +57,7 @@ export const usePanelDragSurface = (workbench: WorkbenchCore, region: WorkbenchP
     region === "main" ? resolvePageContent(state) : undefined,
   );
   useWorkbenchStore(workbench.layout.store, (state) => state.layout);
-  const canMove = content ? workbench.getPanelDestinations(content.widgetId).length > 0 : positions.length > 0;
+  const canMove = content ? tabDragDestinations(workbench, content.widgetId).length > 0 : positions.length > 0;
   const floatingSide = useWorkbenchStore(
     workbench.layout.store,
     () => region === "side" && workbench.sidePanel.getMode() === "floating",

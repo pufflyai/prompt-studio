@@ -5,6 +5,7 @@ import {
   type ResourceResolution,
   resourceKey,
 } from "@pstdio/sdk/extensions";
+import { resourceLinkTarget } from "./resource-link-target";
 
 // Keep the saved display preference identity while broadening it to every resource kind.
 export const TICKET_LINKED_RESOURCES_ATTRIBUTE = "workspace";
@@ -26,7 +27,7 @@ const badgeItem = (saved: ResourceRef, resolved: ResourceResolution | undefined)
     label,
     icon: available ? resource.icon : "circle-alert",
     tooltip: `${resource.extensionId ?? "pstdio"} · ${label}${available ? "" : " · Unavailable"}`,
-    ...(resolved?.target ? { action: resolved.target, resource } : {}),
+    ...(resolved?.target ? { action: resourceLinkTarget(resolved.target), resource } : {}),
   } satisfies CollectionBadgeItem;
 };
 

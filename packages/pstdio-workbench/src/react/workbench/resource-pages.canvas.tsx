@@ -15,7 +15,7 @@ export const Interactive = () => {
   const [example] = useState(createResourcePagesWorkbench);
   return (
     <Flex h="100dvh" minH="0" direction="column">
-      <HStack p="xs" flexShrink={0}>
+      <HStack p="xs" flexShrink={0} flexWrap="wrap">
         <Button size="xs" onClick={example.home}>
           Open Home
         </Button>
@@ -27,6 +27,18 @@ export const Interactive = () => {
         </Button>
         <Button size="xs" onClick={() => example.open("B")}>
           Open B in Main
+        </Button>
+        <Button size="xs" onClick={example.create}>
+          New record
+        </Button>
+        <Button size="xs" onClick={example.link}>
+          Open B link
+        </Button>
+        <Button size="xs" onClick={() => example.togglePanel("side")}>
+          Toggle Side
+        </Button>
+        <Button size="xs" onClick={() => example.togglePanel("secondary")}>
+          Toggle Bottom
         </Button>
       </HStack>
       <Box flex="1" minH="0">

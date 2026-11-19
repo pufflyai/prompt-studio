@@ -18,6 +18,7 @@ export const viewerResource = (id: string, type = "record"): ResourceRef => ({
 export const createResourceViewerFixture = (
   options: {
     tabs?: boolean;
+    homePage?: boolean;
     viewerCardinality?: "one" | "many";
     landing?: boolean;
     document?: boolean;
@@ -70,7 +71,9 @@ export const createResourceViewerFixture = (
     title: "Home",
     path: "home",
     modeId: "project",
-    main: { kind: "panels" },
+    main: options.homePage
+      ? { kind: "view", view: { kind: "view", id: "browser" }, cardinality: "one", presentation: "page" }
+      : { kind: "panels" },
     slots: [],
   });
   w.pages.registerPage({

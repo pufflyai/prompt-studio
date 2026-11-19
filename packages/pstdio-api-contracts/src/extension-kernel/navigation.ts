@@ -13,6 +13,8 @@ const isResource = (value: unknown) =>
   isRecord(value) && typeof value.type === "string" && typeof value.id === "string";
 
 const isOpenIntent = (value: unknown) => value === undefined || value === "preview" || value === "pin";
+const isPanelRegion = (value: unknown) =>
+  value === undefined || value === "main" || value === "side" || value === "secondary";
 
 const isPageTarget = (value: unknown, ancestors = new Set<unknown>()): boolean => {
   if (!isRecord(value) || value.kind !== "page" || !isContributionRef(value.page, "page")) return false;
@@ -22,6 +24,8 @@ const isPageTarget = (value: unknown, ancestors = new Set<unknown>()): boolean =
   if (value.position !== undefined && (!isFileSourcePosition(value.position) || value.section !== undefined))
     return false;
   if (!isOpenIntent(value.open)) return false;
+  if (!isPanelRegion(value.region)) return false;
+  if (value.region !== undefined && value.region !== "main" && value.resource === undefined) return false;
   if (value.intent !== undefined && value.intent !== "open" && value.intent !== "restore") return false;
   if (value.parent === undefined) return true;
   const next = new Set(ancestors);
@@ -35,7 +39,12 @@ const isPanelTarget = (value: unknown) => {
   const validPanel =
     isContributionRef(panel, "placement") ||
     (panel.kind === "page-slot" && isContributionRef(panel.page, "page") && typeof panel.id === "string");
-  return validPanel && (value.resource === undefined || isResource(value.resource)) && isOpenIntent(value.open);
+  return (
+    validPanel &&
+    (value.resource === undefined || isResource(value.resource)) &&
+    isOpenIntent(value.open) &&
+    isPanelRegion(value.region)
+  );
 };
 
 const isItemTarget = (value: unknown): value is Exclude<NavigationTarget, { kind: "compound" }> => {

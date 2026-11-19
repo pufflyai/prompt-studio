@@ -1,7 +1,7 @@
 import { prepareWorkbenchNavigation } from "./controllers/navigation/compound-navigation";
 import { openPageDialog } from "./controllers/navigation/page-dialog";
 import { canOpenCorePanel } from "./controllers/navigation/panel-target";
-import { resourcePageTab } from "./controllers/navigation/resource-page-tab";
+import { resolveResourceTabTarget } from "./controllers/navigation/resource-page-tab";
 import type { WorkbenchRegion } from "./registries/layout/layout-model";
 import { createNavigationRegistry, type NavigationTargetPanel } from "./registries/navigation/navigation-registry";
 import type { WorkbenchCore } from "./workbench-core-types";
@@ -32,9 +32,10 @@ export const createCoreNavigationRegistry = (resolveCore: () => WorkbenchCore) =
         },
         openDialogTarget: (target) => openPageDialog(core, target),
         openPageTarget: (target) => {
-          const tab = resourcePageTab(core, target, core.pages.store.getState());
-          if (tab) return prepareWorkbenchNavigation(core, [tab.target], { location: tab.location }).commit();
-          const result = core.pageLocations.navigate(target);
+          const resolved = resolveResourceTabTarget(core, target, core.pages.store.getState(), { resourceTabs: true });
+          if (resolved.target.kind === "panel")
+            return prepareWorkbenchNavigation(core, [resolved.target], { location: resolved.location }).commit();
+          const result = core.pageLocations.navigate(resolved.target);
           if (!result.ok) throw new Error(result.diagnostic.message);
           return result;
         },

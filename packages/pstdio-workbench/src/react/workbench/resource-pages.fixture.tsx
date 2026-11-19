@@ -40,6 +40,28 @@ export const createResourcePagesWorkbench = () => {
     title: "Properties",
     body: { kind: "react", render: ({ instance }) => <Text p="md">Properties for {instance.resource?.id}</Text> },
   });
+  workbench.views.registerView({
+    id: "navigation",
+    title: "Pages",
+    body: {
+      kind: "tree",
+      getChildren: () => [],
+      getBody: () => [
+        {
+          id: "pages",
+          nodes: [
+            { id: "home", label: "Home", target: { kind: "page", page: page("home") } },
+            { id: "tabs", label: "Collection", target: { kind: "page", page: page("tabs") } },
+          ],
+        },
+      ],
+    },
+  });
+  workbench.shellPlacements.registerPlacement({
+    id: "navigation",
+    region: "sidenav",
+    item: { kind: "view", view: { kind: "view", id: "navigation" }, presence: "fixed" },
+  });
   workbench.viewMenus.registerViewMenu({
     id: "properties",
     ownerViewId: "editor",
@@ -82,7 +104,7 @@ export const createResourcePagesWorkbench = () => {
       kind: "view",
       presentation: "page",
       view: { kind: "view", id: "editor" },
-      cardinality: "many",
+      cardinality: "one",
       mountStrategy: "keep-mounted",
     },
     slots: [],
@@ -100,17 +122,33 @@ export const createResourcePagesWorkbench = () => {
       kind: "page",
       page: page("record"),
       resource: { type: "record", id, label: `Resource ${id}` },
-      open: "pin",
     });
+  let nextRecord = 0;
+  workbench.commands.registerCommand(
+    { id: "create", label: "New record" },
+    {
+      execute: () => open(`Created ${++nextRecord}`),
+    },
+  );
   workbench.pageLocations.navigate({
     kind: "page",
     page: page("record"),
     resource: { type: "record", id: "A", label: "Resource A" },
-    open: "pin",
   });
   return {
     workbench,
     open,
+    link: () =>
+      workbench.navigation.openTarget({
+        kind: "page",
+        page: page("record"),
+        resource: { type: "record", id: "B", label: "Resource B" },
+        region: "side",
+        open: "preview",
+      }),
+    create: () => workbench.commands.executeCommand("create"),
+    togglePanel: (region: "side" | "secondary") =>
+      workbench.shell.setRegionOpen(region, !workbench.shell.getPanelPolicy(region).open),
     home: () => workbench.pageLocations.navigate({ kind: "page", page: page("home") }),
     tabs: () => workbench.pageLocations.navigate({ kind: "page", page: page("tabs") }),
   };

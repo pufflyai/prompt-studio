@@ -68,6 +68,19 @@ export const registerPortablePagePanel = (
   };
   try {
     for (const slot of page.slots) {
+      if (page.resource && slot.region === "main" && slot.item.kind === "view") {
+        registrations.push(
+          registry.registerPlacement({
+            ...slot,
+            id: `workbench.portable.${page.id}.${encodeURIComponent(slot.id)}`,
+            ref: portablePageSlotPanel(page, slot.id),
+            modeId: page.modeId,
+            addableIn: [],
+            item: { kind: "binding", binding: { ...page.resource, view: slot.item.view, cardinality: "many" } },
+          }),
+        );
+        continue;
+      }
       if (slot.item.kind !== "binding" || slot.openOn === "page-resource") continue;
       registrations.push(
         registry.registerPlacement({

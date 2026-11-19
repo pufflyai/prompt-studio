@@ -15,7 +15,7 @@ import { reusableNavigationViewer } from "../resource-viewers/reusable-navigatio
 import { requirePanelOpen } from "../shell/panel-open-policy";
 import { prepareMainDeparture } from "./main-page-departure";
 import { preparePageNavigation } from "./page-navigation-preparation";
-import { requireCorePanelTargets } from "./panel-target";
+import { auxiliarySlotTarget, requireCorePanelTargets } from "./panel-target";
 import { commitPreparedNavigation } from "./prepared-navigation-commit";
 import { resolveResourceTabTarget } from "./resource-page-tab";
 import {
@@ -160,7 +160,8 @@ export const prepareWorkbenchNavigation = (
       target.kind === "panel" && target.panel.kind === "page-slot"
         ? replacedPageSlot(core.modePlacements, target.panel)
         : undefined;
-    return replacement ? { ...target, kind: "panel" as const, panel: replacement.ref } : target;
+    if (replacement) return { ...target, kind: "panel" as const, panel: replacement.ref };
+    return target;
   });
   if (!targets.length) throw new Error("Compound navigation requires at least one page or panel target");
   const pages = getWorkbenchPageRegistryInternals(core.pages);
@@ -188,7 +189,12 @@ export const prepareWorkbenchNavigation = (
   });
 
   for (const rawTarget of targets) {
-    const resolved = resolveResourceTabTarget(core, rawTarget, destination, options);
+    const resolved = resolveResourceTabTarget(
+      core,
+      auxiliarySlotTarget(core, rawTarget, proposed.activePageId),
+      destination,
+      options,
+    );
     const location = resolved.location;
     const target = retainTransferredPin(core, resolved.target, original);
     const departure = prepareMainDeparture(core, target, proposed, modeState, shellState, destinations);

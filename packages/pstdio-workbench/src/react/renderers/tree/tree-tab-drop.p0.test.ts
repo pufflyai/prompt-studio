@@ -8,6 +8,32 @@ import {
 } from "../../../core/controllers/resource-viewers/resource-viewer-test-fixture";
 import { treePageTarget, treeTabTarget } from "./tree-tab-drop";
 
+for (const compound of [false, true])
+  for (const header of [false, true])
+    test(`an explicit Main ${header ? "header" : "body"} drop overrides a link's Side default; compound=${compound}`, async () => {
+      const { w, openSide } = createResourceViewerFixture();
+      await openSide("linked");
+      const link = {
+        kind: "page" as const,
+        page: viewerPage("reader"),
+        resource: viewerResource("linked"),
+        region: "side" as const,
+        open: "preview" as const,
+      };
+      const input = compound ? { kind: "compound" as const, targets: [link] } : link;
+      const target = header ? treeTabTarget(w, input, "main") : treePageTarget(w, input);
+      if (header) await w.navigation.openTarget(target!);
+      else await openDroppedPage(w, target as NonNullable<ReturnType<typeof treePageTarget>>);
+      expect(w.layout.listPanelInstances("side")).toHaveLength(0);
+      if (header) {
+        expect(w.pages.store.getState().activePageId).toBe("home");
+        expect(w.layout.getActivePanel("main")).toMatchObject({
+          resource: { id: "linked" },
+          tabRetention: "persistent",
+        });
+      } else expect(w.pages.getContent()?.resource?.id).toBe("linked");
+    });
+
 test("dropping a static page on Main opens it without a resource-tab intent", async () => {
   const { w, other } = createResourceViewerFixture();
   other();
