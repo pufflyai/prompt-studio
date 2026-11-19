@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { createMemoryActivity, createMemoryStorage } from "@pstdio/sdk/testing";
 import { createTagOption, createTicketTag, readTicketTags } from "../data/tag-operations";
 import { ticketContext, ticketsCollection } from "../data/ticket-context.fixture";
+import { queueTicketWrite } from "../data/ticket-write-queue";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { setTicketAttributeCommand } from "./set-ticket-attribute";
+import { ticketPropertiesUpdateCommand } from "./ticket-properties/update";
 
 describe("setTicketAttributeCommand", () => {
   test("moves a ticket to the target status column", async () => {
@@ -145,4 +147,75 @@ test("property edits retain the title derived from current native content", asyn
   );
   expect(saved?.title).toBe("Current native title");
   expect((await records.get(created.id))?.title).toBe("Current native title");
+});
+
+test.each([
+  "inline",
+  "properties",
+] as const)("%s status and tag edits publish their committed changes", async (route) => {
+  const storage = createMemoryStorage();
+  const activity = createMemoryActivity();
+  const [ctx] = makeCommandArgs({ storage, params: {}, overrides: { activity } });
+  const created = await createTicketCommand.run(ctx, { title: "Activity", statusId: "ready" });
+  const beforeTags = (await ticketsCollection(storage).get(created.id))?.tags ?? null;
+  const resource = { projectId: ctx.projectId, extensionId: ctx.extensionId, type: "ticket", id: created.id };
+  const edit = (rowId: string, attributeId: string, value: string) =>
+    route === "inline"
+      ? setTicketAttributeCommand.run(ctx, { rowId, attributeId, value })
+      : ticketPropertiesUpdateCommand.run(
+          ...makeCommandArgs({
+            storage,
+            params: { controlId: attributeId, value },
+            overrides: { activity, resource: { ...resource, id: rowId } },
+          }),
+        );
+  await edit(created.id, "status", "done");
+  await edit(created.id, "priority", "default-priority-high");
+  const entries = (await activity.query({ resource })).items.filter((entry) => entry.kind === "change");
+  const changes = entries.flatMap((entry) => entry.changes ?? []);
+  expect(changes).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ field: "statusId", before: "ready", after: "done" }),
+      expect.objectContaining({
+        field: "tags",
+        before: beforeTags,
+        after: { "default-priority": "default-priority-high" },
+      }),
+    ]),
+  );
+  expect(entries).toHaveLength(2);
+  await edit(created.id, "status", "done");
+  await edit(created.id, "unknown", "ignored");
+  await edit("missing", "status", "done");
+  expect((await activity.query({ resource })).items.filter((entry) => entry.kind === "change")).toHaveLength(2);
+});
+
+test("Activity is published before the following queued ticket write starts", async () => {
+  const storage = createMemoryStorage();
+  const activity = createMemoryActivity();
+  const [ctx] = makeCommandArgs({ storage, params: {}, overrides: { activity } });
+  const created = await createTicketCommand.run(ctx, { title: "Ordered history", statusId: "ready" });
+  const resource = { projectId: ctx.projectId, extensionId: ctx.extensionId, type: "ticket", id: created.id };
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const publish = ctx.activity.publish;
+  ctx.activity.publish = async (...args) => {
+    entered.resolve();
+    await release.promise;
+    return publish(...args);
+  };
+  const editing = setTicketAttributeCommand.run(ctx, { rowId: created.id, attributeId: "status", value: "done" });
+  let following: Promise<void> | undefined;
+  try {
+    await entered.promise;
+    following = queueTicketWrite(created.id, async () => {
+      const entries = (await activity.query({ resource })).items;
+      expect(entries.some((entry) => entry.changes?.some((change) => change.field === "statusId"))).toBe(true);
+    });
+    release.resolve();
+    await Promise.all([editing, following]);
+  } finally {
+    release.resolve();
+    await Promise.allSettled([editing, ...(following ? [following] : [])]);
+  }
 });
