@@ -1,14 +1,11 @@
 import { devicePresenceIntervalMs } from "pstdio-sync-contracts";
 import { ManagerRequestDenied, managerRequest } from "./manager-client";
 
-interface PresenceLogin {
-  token: string;
-  managerOrigin: string;
-}
+import { type DeviceLogin, matchesDeviceLogin } from "./native-store";
 
-export const createNativePresence = (input: { denied: (credential: string) => Promise<void> }) => {
+export const createNativePresence = (input: { denied: (login: DeviceLogin) => Promise<void> }) => {
   let closed = false;
-  let active: { login: PresenceLogin; controller: AbortController; timer?: ReturnType<typeof setTimeout> } | undefined;
+  let active: { login: DeviceLogin; controller: AbortController; timer?: ReturnType<typeof setTimeout> } | undefined;
   const stop = () => {
     active?.controller.abort();
     clearTimeout(active?.timer);
@@ -28,7 +25,7 @@ export const createNativePresence = (input: { denied: (credential: string) => Pr
       if (state.controller.signal.aborted) return;
       if (error instanceof ManagerRequestDenied && error.status === 401) {
         stop();
-        await input.denied(state.login.token);
+        await input.denied(state.login);
         return;
       }
     }
@@ -40,9 +37,9 @@ export const createNativePresence = (input: { denied: (credential: string) => Pr
     }
   };
   return {
-    update(login: PresenceLogin | null) {
+    update(login: DeviceLogin | null) {
       if (closed) return Promise.resolve();
-      if (active?.login.token === login?.token) return Promise.resolve();
+      if ((!active && !login) || (login && matchesDeviceLogin(active?.login, login))) return Promise.resolve();
       stop();
       if (!login) return Promise.resolve();
       active = { login, controller: new AbortController() };

@@ -28,6 +28,69 @@ const request = (host: Awaited<ReturnType<typeof openHost>>, path: string, body?
       : undefined,
   );
 
+const settleCleanup = async (actions: unknown[]) => {
+  const results = await Promise.allSettled(actions);
+  const failure = results.find((result) => result.status === "rejected");
+  if (failure?.status === "rejected") throw failure.reason;
+};
+
+test("an offline saved roster cannot authorize deletion of a project another device enables in Cloud", async () => {
+  const root = await mkdtemp(join(tmpdir(), "cached-cloud-deletion-"));
+  const previousHome = process.env.PSTDIO_HOME;
+  process.env.PSTDIO_HOME = join(root, "home");
+  const id = crypto.randomUUID();
+  let enabled = false;
+  let offline = false;
+  const manager = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(input) {
+      const path = new URL(input.url).pathname;
+      if (offline) return Response.json({ error: "offline" }, { status: 503 });
+      if (path === "/v1/account") return Response.json({ features: { relay: true } });
+      if (path === "/v1/workbenches") return Response.json(enabled ? [{ workbenchId: id }] : []);
+      return Response.json({ ok: true });
+    },
+  });
+  let host: Awaited<ReturnType<typeof openHost>> | undefined;
+  try {
+    host = await openHost(root);
+    await host.deps.projectService.create({ id, name: "New Cloud project" });
+    const file = await host.deps.fileService.upload({
+      project_id: id,
+      file_name: "local-only.txt",
+      file_kind: "attachment",
+      data: Buffer.from("Unpublished work"),
+    });
+    const { environmentId } = await host.deps.environmentService.get();
+    const store = createNativeStore(nativeAccountFile(join(root, "db"), join(root, "storage")));
+    await store.save({
+      managerOrigin: manager.url.origin,
+      relayOrigin: manager.url.origin,
+      accountId: "account",
+      deviceId: environmentId,
+      token: "device-credential",
+    });
+    await host.deps.accountService.refresh();
+    expect((await host.deps.accountService.status()).cloudProjectsLoaded).toBe(true);
+    enabled = true;
+    offline = true;
+    await host.deps.accountService.refresh();
+    expect((await host.app.request(`/v1/projects/${id}`, { method: "DELETE" })).status).toBe(409);
+    expect(await host.deps.projectService.get(id)).not.toBeNull();
+    expect(await readFile(file.storage_path, "utf8")).toBe("Unpublished work");
+    expect((await host.deps.accountService.status()).cloudProjectsLoaded).toBe(false);
+  } finally {
+    try {
+      await settleCleanup([host?.close(), manager.stop(true)]);
+    } finally {
+      if (previousHome === undefined) delete process.env.PSTDIO_HOME;
+      else process.env.PSTDIO_HOME = previousHome;
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+});
+
 test("removing a local copy preserves its source folder and stays removed after a same-account login", async () => {
   const root = await mkdtemp(join(tmpdir(), "local-project-removal-"));
   const previousHome = process.env.PSTDIO_HOME;
@@ -200,8 +263,9 @@ test("provider failure leaves removal resumable and keeps the managed folder unt
       return Response.json({ ok: true });
     },
   });
-  const host = await openHost(root);
+  let host: Awaited<ReturnType<typeof openHost>> | undefined;
   try {
+    host = await openHost(root);
     await host.deps.projectService.create({ id, name: "Managed folder with a provider workspace" });
     const home = await openProject(host.deps, id);
     const folder = home!.root_path!;
@@ -223,7 +287,7 @@ test("provider failure leaves removal resumable and keeps the managed folder unt
     const attempts: string[] = [];
     const provider = {
       delete: async (_ctx, operation) => {
-        expect(await host.deps.projectService.get(id)).toMatchObject({ id });
+        expect(await host!.deps.projectService.get(id)).toMatchObject({ id });
         attempts.push(operation.operationId);
         if (attempts.length === 1) throw new Error("Provider temporarily unavailable");
       },
@@ -266,11 +330,13 @@ test("provider failure leaves removal resumable and keeps the managed folder unt
     expect(attempts).toEqual([attempts[0], attempts[0]]);
     await expect(lstat(folder)).rejects.toMatchObject({ code: "ENOENT" });
   } finally {
-    await host.close();
-    await manager.stop(true);
-    if (previousHome === undefined) delete process.env.PSTDIO_HOME;
-    else process.env.PSTDIO_HOME = previousHome;
-    await rm(root, { recursive: true, force: true });
+    try {
+      await settleCleanup([host?.close(), manager.stop(true)]);
+    } finally {
+      if (previousHome === undefined) delete process.env.PSTDIO_HOME;
+      else process.env.PSTDIO_HOME = previousHome;
+      await rm(root, { recursive: true, force: true });
+    }
   }
 });
 

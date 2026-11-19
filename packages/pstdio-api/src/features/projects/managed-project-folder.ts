@@ -1,4 +1,4 @@
-import { lstat, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, realpath, rm, rmdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { resolvePstdioHome } from "pstdio-paths";
 
@@ -21,9 +21,14 @@ export const prepareManagedProjectFolder = async (id: string) => {
   if (await mkdir(path, { recursive: true })) {
     const owned = await identity(path);
     if (!owned) throw new Error("The managed project directory changed during setup.");
-    const record = marker(id);
-    await mkdir(dirname(record), { recursive: true, mode: 0o700 });
-    await writeFile(record, owned, { mode: 0o600 });
+    try {
+      const record = marker(id);
+      await mkdir(dirname(record), { recursive: true, mode: 0o700 });
+      await writeFile(record, owned, { mode: 0o600 });
+    } catch (error) {
+      if ((await identity(path).catch(() => null)) === owned) await rmdir(path).catch(() => {});
+      throw error;
+    }
   }
   return realpath(path);
 };

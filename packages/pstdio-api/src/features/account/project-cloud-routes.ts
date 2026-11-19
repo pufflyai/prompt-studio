@@ -13,6 +13,7 @@ import { apiLogger } from "../../lib/logger";
 import { LocalRemovalPending } from "../../services/account/local-project-removal";
 import type { createNativeAccount } from "../../services/account/native-account";
 import type { AppBindings } from "../../types";
+import { expectedAccountQuery, readExpectedAccount } from "./read-identity";
 
 const tags = ["Account"];
 const params = z.object({ id: z.string().min(1) });
@@ -121,7 +122,7 @@ export const registerCloudProjectRoutes = (
       tags,
       request: {
         params,
-        query: z.object({ accountId: z.string().min(1), managerOrigin: z.string().min(1) }).partial(),
+        query: expectedAccountQuery,
       },
       responses: {
         200: response("Authoritative deletion status.", cloudProjectDeletionSchema),
@@ -130,8 +131,7 @@ export const registerCloudProjectRoutes = (
       },
     }),
     async (c) => {
-      const { accountId, managerOrigin } = c.req.valid("query");
-      const expected = accountId && managerOrigin ? { accountId, managerOrigin } : undefined;
+      const expected = readExpectedAccount(c.req.valid("query"));
       const status = await account.cloudProjectDeletion(c.req.valid("param").id, c.req.raw.signal, expected);
       return status ? c.json(status, 200) : c.json({ error: "No deletion for this cloud project" }, 404);
     },

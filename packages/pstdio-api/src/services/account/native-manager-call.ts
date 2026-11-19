@@ -6,7 +6,7 @@ export const createNativeManagerCall =
   (input: {
     current(): Promise<DeviceLogin>;
     shutdown: AbortSignal;
-    reject(credential: string): Promise<unknown>;
+    reject(credential: string, expected?: DeviceLogin): Promise<unknown>;
     refresh(): Promise<unknown>;
     changed(): Error;
     removed(): Error;
@@ -21,7 +21,7 @@ export const createNativeManagerCall =
     } catch (error) {
       if (!(error instanceof ManagerRequestDenied && error.status === 401)) throw error;
       // Removing this owner drains its calls. Finish rejection before refresh waits for it.
-      await input.reject(login.token);
+      await input.reject(login.token, login);
       void input.refresh();
       throw input.removed();
     }

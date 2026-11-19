@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import * as Y from "yjs";
 import { resolveNativeTextAccess } from "../native-documents/source-access";
+import { createProjectWork } from "../project-work";
 import { createTextEditingService } from "./service";
 import { editorView, selected, textEditingFixture } from "./text-editing.test-fixture";
 
@@ -8,8 +9,8 @@ const cleanups: Array<() => Promise<void>> = [];
 afterEach(async () => {
   for (const cleanup of cleanups.splice(0)) await cleanup();
 });
-const setup = async () => {
-  const f = await textEditingFixture();
+const setup = async (projectWork?: ReturnType<typeof createProjectWork>) => {
+  const f = await textEditingFixture({ projectWork });
   let hold: (() => Promise<void>) | undefined;
   const openRoom = f.documents.open;
   f.documents.open = async (input) => {
@@ -220,4 +221,97 @@ test("an opening request cannot claim a same-ID successor while presentation loo
     resume.resolve();
     await Promise.allSettled([opening, abandoned, successor]);
   }
+});
+
+test("a release rejected during removal can retry its handle and finish the close barrier", async () => {
+  const work = createProjectWork();
+  const f = await setup(work);
+  const opened = await f.open();
+  let prepared = false;
+  const closing = f.text.prepareClose(f.address).then(() => {
+    prepared = true;
+  });
+  work.freeze("project-1");
+  try {
+    await expect(f.text.request(f.address, { operation: "close", handle: opened.handle })).rejects.toBeDefined();
+    expect(prepared).toBe(false);
+    expect(f.documents.sources.current({ workbenchId: "project-1", extensionId: "example.context" })).not.toEqual([]);
+    await expect(f.documents.resolveSource({ ...selected, projectId: "project-1" })).rejects.toThrow(
+      "removing its copy",
+    );
+    work.release("project-1");
+    await f.text.request(f.address, { operation: "close", handle: opened.handle });
+    expect(prepared).toBe(true);
+    expect(f.documents.sources.current({ workbenchId: "project-1", extensionId: "example.context" })).toEqual([]);
+    await closing;
+  } finally {
+    work.release("project-1");
+    await f.text.disconnect(f.address);
+    await closing.catch(() => {});
+  }
+});
+
+test("failed detached cleanup keeps the original handle distinct from a same-ID successor", async () => {
+  const work = createProjectWork();
+  const f = await setup(work);
+  const previous = await f.open();
+  const release = f.documents.release;
+  const entered = Promise.withResolvers<void>();
+  const resume = Promise.withResolvers<void>();
+  let hold = true;
+  f.documents.release = async (input) => {
+    if (hold) {
+      hold = false;
+      entered.resolve();
+      await resume.promise;
+    }
+    await release(input);
+  };
+  const abandoned = f.text.request(f.address, { operation: "abandon", memberId: f.memberId }).catch((error) => error);
+  try {
+    await entered.promise;
+    await f.text.request(f.address, { operation: "register", memberId: f.memberId });
+    const current = await f.open();
+    work.freeze("project-1");
+    resume.resolve();
+    expect(await abandoned).toBeInstanceOf(Error);
+    work.release("project-1");
+    await f.text.request(f.address, { operation: "close", handle: previous.handle });
+    expect(await f.text.request(f.address, { operation: "snapshot", handle: current.handle })).toHaveProperty("state");
+    await f.text.request(f.address, { operation: "close", handle: current.handle });
+    await f.text.prepareClose(f.address);
+    expect(f.documents.sources.current({ workbenchId: "project-1", extensionId: "example.context" })).toEqual([]);
+  } finally {
+    resume.resolve();
+    work.release("project-1");
+    await abandoned;
+    f.documents.release = release;
+  }
+});
+
+test("disconnect retains failed room cleanup for a later retry", async () => {
+  const work = createProjectWork();
+  const f = await setup(work);
+  await f.open();
+  work.freeze("project-1");
+  try {
+    await expect(f.text.disconnect(f.address)).rejects.toBeDefined();
+    await expect(f.text.request(f.address, { operation: "current" })).rejects.toMatchObject({
+      code: "connection_expired",
+    });
+    work.release("project-1");
+    await f.text.disconnect(f.address);
+    expect(f.documents.sources.current({ workbenchId: "project-1", extensionId: "example.context" })).toEqual([]);
+  } finally {
+    work.release("project-1");
+  }
+});
+
+test("disconnect completes member cleanup after native project withdrawal already closed its rooms", async () => {
+  const f = await setup();
+  await f.open();
+  await f.documents.withdrawProject("project-1");
+  await f.text.disconnect(f.address);
+  await f.text.dispose();
+  expect(f.documents.sources.current({ workbenchId: "project-1", extensionId: "example.context" })).toEqual([]);
 });

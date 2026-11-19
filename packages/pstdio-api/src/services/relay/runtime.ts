@@ -266,8 +266,14 @@ export const startRelayRuntime = async (input: RelayRuntimeInput) => {
   // Replaces the synced workbenches. Only workbenches whose login changed restart their connections.
   const update = async (next: RelayWorkbench[]) => {
     await deps.personalHistoryService.refreshIdentity();
+    const admitted = await Promise.all(
+      next.map(async (connection) =>
+        (await deps.accountService.acceptsRelayWorkbench(connection)) ? connection : undefined,
+      ),
+    );
     const desired = new Map(
-      next
+      admitted
+        .filter((connection): connection is RelayWorkbench => Boolean(connection))
         .filter((connection) => !deps.projectService.work.hidden(connection.workbenchId))
         .map((connection) => [connection.workbenchId, connection]),
     );

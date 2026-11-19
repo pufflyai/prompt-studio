@@ -9,12 +9,13 @@ import type { RelayWorkbench } from "../relay/runtime";
 import { createAccountRefresh } from "./account-refresh";
 import { readAccountStatus } from "./account-status";
 import { createDeviceIdentity } from "./device-identity";
-import type { readManagerAccount } from "./manager-account";
-import { ManagerRequestDenied, managerOriginSchema, managerRequest } from "./manager-client";
+import { matchesManagerLogin, type readManagerAccount } from "./manager-account";
+import { ManagerRequestDenied, managerOriginSchema } from "./manager-client";
 import { createMissingProjectRecovery, partitionCloudProjects } from "./missing-project-recovery";
 import { type CloudReturn, createNativeCloudReturn } from "./native-cloud-return";
 import { createNativeDeviceReader, finalizeDeviceLogin, readDeviceLogin } from "./native-device-read";
 import { createNativeLoginRequests } from "./native-login-requests";
+import { createNativeLogout } from "./native-logout";
 import { createNativeManagerCall } from "./native-manager-call";
 import { createNativePresence } from "./native-presence";
 import {
@@ -24,7 +25,7 @@ import {
 } from "./native-project-sync-read";
 import { createNativeStore, type DeviceLogin } from "./native-store";
 import { createProjectCloudCatalog } from "./project-cloud-catalog";
-import { initialProjectSyncStatus } from "./project-sync-readiness";
+import { initialProjectSyncStatus, recoveringProjectSyncStatus } from "./project-sync-readiness";
 
 type FolderRecoveryOwners = (projectId: string) => ReturnType<typeof startFolderRecovery> | undefined;
 
@@ -120,8 +121,8 @@ export const createNativeAccount = (input: {
 }) => {
   const store = createNativeStore(input.file);
   const presence = createNativePresence({
-    denied: async (credential) => {
-      await store.reject(credential);
+    denied: async (login) => {
+      await store.reject(login.token, login);
       await refresh();
     },
   });
@@ -133,7 +134,7 @@ export const createNativeAccount = (input: {
   let cloudProjects: Awaited<ReturnType<typeof readManagerAccount>> | undefined;
   let online = false;
   const projectsFor = (login: DeviceLogin | null) =>
-    login?.token === cloudProjects?.credential ? cloudProjects?.ids : undefined;
+    matchesManagerLogin(cloudProjects, login) ? cloudProjects?.ids : undefined;
   let update: (connections: RelayWorkbench[]) => Promise<void> = async () => {};
   let retryProject: (projectId: string, sourceId?: string) => Promise<void> = async () => {};
   let folders: FolderRecoveryOwners = () => undefined;
@@ -172,10 +173,13 @@ export const createNativeAccount = (input: {
   const catalog = createProjectCloudCatalog({
     accountFile: input.file,
     login: readLogin,
-    cloud: (login) => (cloudProjects?.credential === login.token ? cloudProjects : undefined),
+    cloud: (login) => (matchesManagerLogin(cloudProjects, login) ? cloudProjects : undefined),
     projects: input.projects,
     online: () => online,
-    syncStatus: (id) => projectStatus(id),
+    syncStatus: async (id) => {
+      const status = await projectStatus(id);
+      return missing.recovering(id) ? recoveringProjectSyncStatus(status) : status;
+    },
     returnedUploadState: away.removalState,
     call,
     refresh: () => refresh(),
@@ -210,7 +214,7 @@ export const createNativeAccount = (input: {
       online = false;
       if (login && denied(error)) {
         // Another device removed this one. A newer login saved meanwhile stays.
-        await store.reject(login.token);
+        await store.reject(login.token, login);
         login = await readLogin();
         cloudProjects = undefined;
       } else if (!closed) {
@@ -224,7 +228,7 @@ export const createNativeAccount = (input: {
       retry = setTimeout(() => void refresh(), RETRY_MS);
       retry.unref?.();
     }
-    await publish(login);
+    await publish(await readLogin());
     if (!closed) changes.notify();
   };
   const refreshes = createAccountRefresh({
@@ -241,22 +245,7 @@ export const createNativeAccount = (input: {
   });
   const refresh = refreshes.refresh;
   const changeMembership = changeCloudMembership(call, refresh);
-  // Logging out works offline and after removal. Removing the device at the manager is best effort.
-  const logout = () =>
-    logins.logout(async () => {
-      const login = await readLogin();
-      if (!login) {
-        await store.forget(null);
-        await refresh();
-        return { ok: true, removed: false };
-      }
-      const removed = await managerRequest(login.managerOrigin, `${devicePath(login.deviceId)}/remove`, login.token, {})
-        .then(() => true)
-        .catch(() => false);
-      await store.forget(login.token);
-      await refresh();
-      return { ok: true, removed };
-    });
+  const logout = createNativeLogout({ logins, readLogin, store, refresh });
 
   return {
     ...catalog,
@@ -288,7 +277,14 @@ export const createNativeAccount = (input: {
     async status() {
       const { environmentId } = await input.environment.get();
       const login = await readLogin(environmentId);
-      const status = await readAccountStatus(store, login, cloudProjects, environmentId, catalog.knownProjectIds);
+      const status = await readAccountStatus(
+        store,
+        login,
+        cloudProjects,
+        environmentId,
+        catalog.knownProjectIds,
+        online,
+      );
       const loginAttempt = logins.attempt();
       return { ...status, ...(loginAttempt && { loginAttempt }) };
     },

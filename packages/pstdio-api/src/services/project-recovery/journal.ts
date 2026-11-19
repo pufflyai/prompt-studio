@@ -37,6 +37,24 @@ const alive = (pid: number) => {
 export const recoveryJournalKey = (source: string[]) =>
   createHash("sha256").update(JSON.stringify(source)).digest("hex").slice(0, 32);
 
+/** Keep the inode until release: the OS relinquishes this lease on process death. */
+export const acquireRecoveryJournalLease = (path: string, create = true) => {
+  const lease = new Database(path, { create });
+  try {
+    lease.exec("BEGIN IMMEDIATE");
+  } catch (error) {
+    lease.close();
+    if ((error as { code?: string }).code === "SQLITE_BUSY") return null;
+    throw error;
+  }
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    lease.close();
+  };
+};
+
 /** Durable per-source lifecycle state, kept in recovery working storage outside
  * every captured folder. It holds only opaque ciphertext references. */
 export const openRecoveryJournal = (input: { root: string; source: string[]; previousRoot?: string }) => {
@@ -139,15 +157,8 @@ export const openRecoveryJournal = (input: { root: string; source: string[]; pre
   };
   const acquire = async () => {
     await mkdir(directory, { recursive: true, mode: 0o700 });
-    // Keep this inode: the OS releases the lease on process death.
-    const lease = new Database(`${lockPath}.sqlite`, { create: true });
-    try {
-      lease.exec("BEGIN IMMEDIATE");
-    } catch (error) {
-      lease.close();
-      if ((error as { code?: string }).code === "SQLITE_BUSY") return null;
-      throw error;
-    }
+    const closeLease = acquireRecoveryJournalLease(`${lockPath}.sqlite`);
+    if (!closeLease) return null;
     let release: (() => Promise<void>) | null = null;
     try {
       release = await acquireMarker();
@@ -161,11 +172,11 @@ export const openRecoveryJournal = (input: { root: string; source: string[]; pre
       }
     } catch (error) {
       await release?.();
-      lease.close();
+      closeLease();
       throw error;
     }
     if (!release) {
-      lease.close();
+      closeLease();
       return null;
     }
     let released = false;
@@ -175,7 +186,7 @@ export const openRecoveryJournal = (input: { root: string; source: string[]; pre
       try {
         await release();
       } finally {
-        lease.close();
+        closeLease();
       }
     };
   };

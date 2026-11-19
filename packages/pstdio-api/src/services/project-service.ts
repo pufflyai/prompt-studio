@@ -30,7 +30,7 @@ export const createProjectService = (deps: ProjectServiceDeps) => {
         await initialize?.(project);
         signal.throwIfAborted();
       } catch (error) {
-        await db.hardDelete(project.id);
+        await deleteProject(project.id);
         throw error;
       }
       return publish(project);

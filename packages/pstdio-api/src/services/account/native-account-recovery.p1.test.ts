@@ -118,6 +118,9 @@ test("recovered data downloads during tool setup while readiness stays incomplet
       state: "first-download-incomplete",
       offlineReady: false,
     });
+    expect((await device.account.catalogProjects()).projects.find(({ id }) => id === "elsewhere")).toMatchObject({
+      presence: "downloading",
+    });
     await device.account.refresh();
     expect(device.recoveries[0]!.signal.aborted).toBe(false);
 
@@ -125,6 +128,9 @@ test("recovered data downloads during tool setup while readiness stays incomplet
     // Recovery completion publishes the readiness change.
     await device.account.refresh();
     expect(await device.account.projectSyncStatus("elsewhere")).toMatchObject({ state: "synced", offlineReady: true });
+    expect((await device.account.catalogProjects()).projects.find(({ id }) => id === "elsewhere")).toMatchObject({
+      presence: "downloaded",
+    });
   } finally {
     await device.close();
   }

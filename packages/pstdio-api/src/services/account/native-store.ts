@@ -16,10 +16,26 @@ export const deviceLoginSchema = z.strictObject({
 const fileSchema = z.strictObject({
   login: deviceLoginSchema.nullable(),
   signingKeys: z.strictObject({ publicKey: z.string(), privateKey: z.string() }).optional(),
-  rejected: z.object({ deviceId: identitySchema, credentialHash: z.string() }).optional(),
+  rejected: z
+    .object({
+      deviceId: identitySchema,
+      credentialHash: z.string(),
+      managerOrigin: z.string().optional(),
+      accountId: identitySchema.optional(),
+    })
+    .optional(),
 });
 const credentialHash = (token: string) => createHash("sha256").update(token).digest("hex");
 export type DeviceLogin = z.infer<typeof deviceLoginSchema>;
+
+export const matchesDeviceLogin = (first: DeviceLogin | null | undefined, second: DeviceLogin) =>
+  Boolean(
+    first &&
+      first.token === second.token &&
+      first.deviceId === second.deviceId &&
+      first.accountId === second.accountId &&
+      first.managerOrigin === second.managerOrigin,
+  );
 
 export const createNativeStore = (path: string) => {
   const readStateRaw = async () => readPrivateFile(path, fileSchema, { login: null });
@@ -44,20 +60,32 @@ export const createNativeStore = (path: string) => {
     save: (login: z.input<typeof deviceLoginSchema>) =>
       serializeNativeWrite(path, () => writePrivateFile(path, { login: deviceLoginSchema.parse(login) })),
     // Clears the login only while it still holds this credential, so a newer login is kept.
-    forget: (token: string | null) =>
+    forget: (token: string | null, expected?: DeviceLogin) =>
       serializeNativeWrite(path, async () => {
         const state = await readStateRaw();
-        const sameLogin = (state.login?.token ?? null) === token;
-        const sameRejection = token !== null && state.rejected?.credentialHash === credentialHash(token);
+        const sameLogin =
+          (state.login?.token ?? null) === token && (!expected || matchesDeviceLogin(state.login, expected));
+        const sameRejection =
+          token !== null &&
+          state.rejected?.credentialHash === credentialHash(token) &&
+          (!expected ||
+            (state.rejected?.managerOrigin === expected.managerOrigin &&
+              state.rejected.accountId === expected.accountId &&
+              state.rejected.deviceId === expected.deviceId));
         if (sameLogin || sameRejection) await writePrivateFile(path, { login: null });
       }),
-    reject: (token: string) =>
+    reject: (token: string, expected?: DeviceLogin) =>
       serializeNativeWrite(path, async () => {
         const login = await readLoginRaw();
-        if (login?.token === token)
+        if (login?.token === token && (!expected || matchesDeviceLogin(login, expected)))
           await writePrivateFile(path, {
             login: null,
-            rejected: { deviceId: login.deviceId, credentialHash: credentialHash(token) },
+            rejected: {
+              deviceId: login.deviceId,
+              credentialHash: credentialHash(token),
+              managerOrigin: login.managerOrigin,
+              accountId: login.accountId,
+            },
           });
       }),
   };
