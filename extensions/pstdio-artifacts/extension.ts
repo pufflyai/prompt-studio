@@ -11,7 +11,7 @@ import { commands } from "./src/commands";
 import { libraryTarget } from "./src/contracts";
 import { artifactShortcuts } from "./src/keyboard";
 import { sites } from "./src/mounts";
-import { artifact, artifactPanel, detail, library, libraryPanel, view } from "./src/pages";
+import { artifact, detail, library, view } from "./src/pages";
 import { artifactResources } from "./src/resources";
 
 export default defineExtension({
@@ -22,7 +22,6 @@ export default defineExtension({
   resourceKinds: [artifact],
   commandPaletteResources: [artifactResources],
   views: [view],
-  placements: [libraryPanel, artifactPanel],
   pages: [library, detail],
   keybindings: [
     ...artifactShortcuts,

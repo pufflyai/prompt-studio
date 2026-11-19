@@ -26,7 +26,7 @@ const details = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./src/details-view.tsx", import.meta.url),
-    capabilities: ["performance.read", "performance.control", "commands.execute", "clipboard.write"],
+    capabilities: ["performance.read", "performance.control", "clipboard.write"],
   },
 });
 
