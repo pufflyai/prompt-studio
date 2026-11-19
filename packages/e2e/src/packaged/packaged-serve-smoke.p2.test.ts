@@ -250,6 +250,26 @@ test(
   PACKAGED_TEST_TIMEOUT,
 );
 
+test("packaged CLI exposes Cloud project copy and deletion commands", () => {
+  const help = spawnSync(PACKAGED_BINARY_PATH, ["projects", "--help"], { encoding: "utf8" });
+  expect(help.status).toBe(0);
+  for (const [command, flag] of [
+    ["delete-local", "--discard-unsynced"],
+    ["download"],
+    ["delete-cloud", "--confirm"],
+    ["deletion-status"],
+    ["list", "--cloud"],
+  ] as const) {
+    expect(help.stdout).toContain(`pstdio projects ${command}`);
+    const subcommand = spawnSync(PACKAGED_BINARY_PATH, ["projects", command, "--help"], { encoding: "utf8" });
+    expect(subcommand.status).toBe(0);
+    expect(subcommand.stdout.split("\n")[0]).toBe(
+      command === "list" ? "pstdio projects list" : `pstdio projects ${command} <project-id>`,
+    );
+    if (flag) expect(subcommand.stdout).toContain(flag);
+  }
+});
+
 test("packaged CLI includes automation and machine authentication", () => {
   const result = spawnSync(PACKAGED_BINARY_PATH, ["--help"], { encoding: "utf8" });
 

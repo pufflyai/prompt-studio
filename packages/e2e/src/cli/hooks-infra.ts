@@ -121,9 +121,3 @@ export const createWorktreeBranchWithCommit = (
   execSync(`git add -A && git commit -m "add ${file}"`, { cwd: wtPath, stdio: "pipe" });
   return wtPath;
 };
-
-/** Adds a conflicting commit on the currently checked-out branch. */
-export const createConflictOnMain = (repo: string, file: string, content: string) => {
-  writeFileSync(join(repo, file), content);
-  execSync(`git add -A && git commit -m "conflict on ${file}"`, { cwd: repo, stdio: "pipe" });
-};

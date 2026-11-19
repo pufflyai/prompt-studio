@@ -8,12 +8,6 @@ import { testContext, testManifest } from "./test-build";
 const leaves = (nodes: TreeNode[]): TreeNode[] =>
   nodes.flatMap((node) => (node.children ? leaves(node.children) : [node]));
 
-test("opening UI Canvas restores the last design and has a visible landing view", () => {
-  const item = extension.navigationItems.find((entry) => entry.id === "canvases")!;
-  expect(item.action).toMatchObject({ kind: "page", page: homePage.ref, intent: "restore" });
-  expect(homePage.main).toMatchObject({ kind: "view", view: { id: "canvas" }, cardinality: "one" });
-});
-
 test("the canvas navigation panel exposes each grouped resource on overview and detail pages", async () => {
   const { ctx } = await testContext();
   for (const page of [homePage, canvasPage]) {

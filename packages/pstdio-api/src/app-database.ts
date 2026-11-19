@@ -34,6 +34,7 @@ import { apiLogger } from "./lib/logger";
 import { isPgliteCheckpointFailure, pgliteRecoverySteps } from "./lib/pglite-recovery-hint";
 import { logStartupPhase } from "./lib/startup-phase";
 import { upgradeNativeSources } from "./services/native-documents/source-upgrade";
+import type { createProjectWork } from "./services/project-work";
 import { upgradeArtifactFileProjections } from "./services/shared-files/artifact-projection-upgrade";
 import { storageObserver } from "./services/shared-files/storage-observation";
 
@@ -67,7 +68,11 @@ const freeBytes = (path: string) => async () => {
   return disk.bavail * disk.bsize;
 };
 
-export const createAppDatabaseServices = (db: DbClient, databasePath: string) => ({
+export const createAppDatabaseServices = (
+  db: DbClient,
+  databasePath: string,
+  work?: ReturnType<typeof createProjectWork>,
+) => ({
   assetTransfersDBService: createAssetTransfersDBService(db),
   environmentDBService: createEnvironmentDBService(db),
   boardViewsDBService: createBoardViewsDBService(db),
@@ -90,6 +95,7 @@ export const createAppDatabaseServices = (db: DbClient, databasePath: string) =>
   extensionAutomationPreferencesDBService: createExtensionAutomationPreferencesDBService(db),
   extensionStorageDBService: createExtensionStorageDBService(db, storageObserver, {
     freeBytes: freeBytes(databasePath),
+    withProjectWork: work?.run,
   }),
   resourceLinksDBService: createResourceLinksDBService(db),
   extensionResourceSequencesDBService: createExtensionResourceSequencesDBService(db),

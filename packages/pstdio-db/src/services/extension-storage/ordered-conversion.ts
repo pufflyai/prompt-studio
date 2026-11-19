@@ -202,7 +202,11 @@ export const ensureOrderedOwner = (db: DbClient, owner: StorageOwner, signal?: A
 /** Startup starts owners independently; a corrupt owner's input cannot roll back its neighbors. */
 export const convertLegacyOwners = async (
   db: DbClient,
-  options: { signal?: AbortSignal; onError(owner: StorageOwner, error: unknown): void },
+  options: {
+    signal?: AbortSignal;
+    onError(owner: StorageOwner, error: unknown): void;
+    withProjectWork?: (id: string, task: () => Promise<void>) => Promise<void>;
+  },
 ) => {
   let after: { workbenchId: string; extensionId: string } | undefined;
   while (!options.signal?.aborted) {
@@ -218,7 +222,8 @@ export const convertLegacyOwners = async (
       .limit(1);
     if (!row) return;
     try {
-      await ensureOrderedOwner(db, row, options.signal);
+      const convert = () => ensureOrderedOwner(db, row, options.signal);
+      await (options.withProjectWork?.(row.workbenchId, convert) ?? convert());
     } catch (error) {
       if (!options.signal?.aborted) options.onError(row, error);
     }

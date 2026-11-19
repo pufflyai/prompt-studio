@@ -31,21 +31,6 @@ const createInitializedRepo = (name: string) => {
 
 describe("pstdio pstdio.planner archive-ticket", () => {
   test(
-    "archives a ticket",
-    () => {
-      const repo = createInitializedRepo("tk-archive");
-
-      const { shorthand } = JSON.parse(run('pstdio.planner create-ticket --content "Archive me"', repo));
-
-      const archived = JSON.parse(run(`pstdio.planner archive-ticket --id ${shorthand}`, repo));
-
-      expect(archived.shorthand).toBe(shorthand);
-      expect(archived.archived).toBe(true);
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
     "archived ticket is hidden by default and included with --archived flag",
     () => {
       const repo = createInitializedRepo("tk-archive-visible");

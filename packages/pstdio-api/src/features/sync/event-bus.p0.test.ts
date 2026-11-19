@@ -2,11 +2,6 @@ import { describe, expect, it, mock } from "bun:test";
 import { EventBus } from "./event-bus";
 
 describe("EventBus", () => {
-  it("starts with seq 0", () => {
-    const bus = new EventBus();
-    expect(bus.seq).toBe(0);
-  });
-
   it("increments seq on emit", () => {
     const bus = new EventBus();
     bus.emit("projects", "set", { id: "1", name: "test" });

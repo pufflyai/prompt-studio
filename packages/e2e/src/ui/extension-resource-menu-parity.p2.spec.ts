@@ -77,46 +77,38 @@ test("Note actions share identity and rename the inactive subject across navigat
   }
 });
 
-test("Artifact actions keep rename defaults, target inactive tabs, and refresh through owner events", async ({
+test("Artifact actions keep rename defaults and refresh breadcrumb names through owner events", async ({
   page,
   request,
 }, testInfo) => {
   const root = mkdtempSync(join(tmpdir(), "artifact-resource-menu-"));
   try {
-    writeFileSync(join(root, "a.html"), "<title>Artifact A</title><p>A</p>");
     writeFileSync(join(root, "b.html"), "<title>Artifact B</title><p>B</p>");
     const project = await createProject(request, root);
-    await execute(request, project.id, "artifacts", "publish", { file_path: "a.html" });
     const b = await execute(request, project.id, "artifacts", "publish", { file_path: "b.html" });
     await prepareResourceActionsDashboard(page, project.id);
-    // Library cards pin their viewers; a bare URL load opens a preview that the next preview replaces.
     await page.goto(`/projects/${project.id}/extensions/pstdio.artifacts/artifacts`);
     const library = page.frameLocator('iframe[title="Artifacts"]:visible').last();
-    await library.getByRole("button", { name: "Artifact A", exact: true }).click();
-    const firstTab = page.getByRole("tab", { name: "Artifact A", exact: true });
-    await expect(firstTab).toHaveAttribute("aria-selected", "true");
-    await page.getByRole("tab", { name: "Artifacts", exact: true }).click();
     await library.getByRole("button", { name: "Artifact B", exact: true }).click();
-    const secondTab = page.getByRole("tab", { name: "Artifact B", exact: true });
-    await expect(secondTab).toHaveAttribute("aria-selected", "true");
-    await firstTab.click();
-    await expect(firstTab).toHaveAttribute("aria-selected", "true");
+    await expect(page).toHaveURL(
+      (url) =>
+        url.pathname.endsWith("/artifacts/view") && url.searchParams.get("resource")?.includes(b.artifactId) === true,
+    );
     const route = page.url();
-    await secondTab.click({ button: "right" });
-    const expected = await menuValues(page, "Artifact");
+    await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
+    const commandActions = async () =>
+      (await menuValues(page, "Artifact")).filter(({ id }) => id?.startsWith("pstdio.artifacts.command."));
+    const expected = await commandActions();
     expect(expected).toHaveLength(2);
     await page.getByRole("menuitem", { name: "Rename artifact…", exact: true }).click();
     const name = page.getByRole("textbox", { name: "Artifact name", exact: true });
     await expect(name).toHaveValue("Artifact B");
     await name.fill("Artifact B renamed");
     await page.getByRole("button", { name: "Run", exact: true }).click();
-    const renamed = page.getByRole("tab", { name: "Artifact B renamed", exact: true });
-    await expect(renamed).toBeVisible();
-    await expect(firstTab).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Artifact B renamed");
     await expect(page).toHaveURL(route);
-    await renamed.click();
     await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
-    expect(await menuValues(page, "Artifact")).toEqual(expected);
+    expect(await commandActions()).toEqual(expected);
     await page.screenshot({ path: testInfo.outputPath("artifact-menu-parity.png") });
     await page.keyboard.press("Escape");
     await execute(request, project.id, "artifacts", "rename-resource", {

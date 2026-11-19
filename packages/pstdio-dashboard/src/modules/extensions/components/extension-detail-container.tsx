@@ -110,6 +110,8 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         workbench={settingsInput?.workbench}
         projectId={projectId}
         extension={extension}
+        onBack={onBack}
+        visible={settingsInput?.visible}
         metadata={contributions}
         unavailableHarnesses={unavailableExtensionHarnesses(
           extension,

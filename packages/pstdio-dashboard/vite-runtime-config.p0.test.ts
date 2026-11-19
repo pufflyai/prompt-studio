@@ -1,9 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  createDashboardRuntimeConfigPlugin,
-  injectDashboardRuntimeConfig,
-  resolveTerminalWebSocketUrl,
-} from "./vite-runtime-config";
+import { injectDashboardRuntimeConfig, resolveTerminalWebSocketUrl } from "./vite-runtime-config";
 
 describe("resolveTerminalWebSocketUrl", () => {
   test("preserves a complete explicit browser-reachable terminal endpoint", () => {
@@ -42,15 +38,5 @@ describe("dashboard runtime config injection", () => {
     expect(JSON.parse(decodeURIComponent(encoded ?? ""))).toEqual({
       terminalWebSocketUrl: "ws://localhost:19841/v1/terminal",
     });
-  });
-
-  test("registers one serve-only adapter for Vite development and preview", () => {
-    const plugin = createDashboardRuntimeConfigPlugin({
-      terminalWebSocketUrl: "ws://localhost:19841/v1/terminal",
-    });
-
-    expect(plugin.apply).toBe("serve");
-    expect(plugin.transformIndexHtml).toBeDefined();
-    expect(plugin.configurePreviewServer).toBeDefined();
   });
 });

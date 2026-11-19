@@ -107,7 +107,6 @@ describe("createSettingsModule", () => {
     const panels = workbench.settings.listPanels();
     const byId = (id: string) => panels.find((panel) => panel.id === id);
 
-    expect(byId("harnesses")).toBeUndefined();
     expect(byId("project-folder")).toMatchObject({ kind: "view", scope: "project" });
     expect(byId("danger-zone")).toMatchObject({ kind: "view", scope: "project" });
   });

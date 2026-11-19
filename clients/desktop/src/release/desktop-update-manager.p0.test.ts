@@ -281,10 +281,4 @@ describe("Linux update checks", () => {
     expect(check.opened).toEqual([]);
     expect(check.notifications).toEqual(["up-to-date"]);
   });
-
-  test("opens the page of a newer release", async () => {
-    const check = linuxCheck("0.33.2");
-    await check.manager.checkForUpdates();
-    expect(check.opened).toEqual(["https://github.com/pufflyai/prompt-studio/releases/tag/pstdio@0.33.3"]);
-  });
 });

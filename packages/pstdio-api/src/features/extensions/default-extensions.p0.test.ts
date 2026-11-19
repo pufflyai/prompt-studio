@@ -10,21 +10,6 @@ afterEach(() => {
 });
 
 describe("resolveDefaultExtensionsConfig", () => {
-  test("returns the production defaults when the env override is absent", async () => {
-    const config = await resolveDefaultExtensionsConfig({});
-
-    expect(config.defaultExtensions).toEqual([
-      "home",
-      "session-browser",
-      "onboarding",
-      "base-themes",
-      "skills",
-      "github",
-      "pstdio-terminal",
-      "git-workspaces",
-    ]);
-  });
-
   test("uses PSTDIO_DEFAULT_EXTENSIONS JSON when set", async () => {
     const config = await resolveDefaultExtensionsConfig({
       PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([

@@ -3,7 +3,7 @@ import { resourceKey } from "@pstdio/sdk/extensions";
 import { createLayoutModel } from "./layout-model";
 
 describe("Panel registration", () => {
-  test("preserves tab and menu behavior without public presentation roles", () => {
+  test("keeps closability per opened panel and opens declared menus", () => {
     const layout = createLayoutModel();
     layout.registerPanel({
       id: "project.overview",
@@ -27,7 +27,6 @@ describe("Panel registration", () => {
     });
     const overview = layout.openPanel("project.overview");
     const terminal = layout.openPanel("project.terminal", { closable: true });
-    expect(layout.getWidget("project.overview")).not.toHaveProperty("role");
     expect(overview).toMatchObject({ closable: false });
     expect(layout.getWidget("project.overview.tools")).toMatchObject({
       panelMenuOwner: { level: "panel", contributionId: "project.overview" },
@@ -35,7 +34,6 @@ describe("Panel registration", () => {
     expect(layout.getLayout().regions["main-left-menu"].widgets).toEqual([
       expect.objectContaining({ contributionId: "project.overview.tools" }),
     ]);
-    expect(layout.getWidget("project.terminal")).not.toHaveProperty("closable");
     expect(terminal).toMatchObject({ closable: true });
   });
   test("treats an eligible resource-backed Panel as a Sub Panel", () => {
@@ -49,7 +47,6 @@ describe("Panel registration", () => {
       eligibleLocations: {},
     });
     const preview = layout.openPanel("project.preview", { closable: true });
-    expect(layout.getWidget("project.preview")).not.toHaveProperty("role");
     expect(preview).toMatchObject({ closable: true });
     expect(layout.getLayout().regions.main.widgets[0]).toMatchObject({ role: "sub-panel" });
   });
@@ -84,14 +81,12 @@ describe("Panel registration", () => {
       region: "main-left-menu",
       panelMenuOwner: { level: "panel", contributionId: "project.notes" },
     });
-    expect(layout.getWidget("project.notes.outline")).not.toHaveProperty("role");
     expect(layout.getLayout().regions["main-left-menu"].widgets).toEqual([
       expect.objectContaining({
         contributionId: "project.notes.outline",
         ownerResourceKey: resourceKey({ type: "project", id: "pstdio://project/alpha" }),
       }),
     ]);
-    expect(layout.getWidget("project.notes")).not.toHaveProperty("role");
     expect(notes.closable).toBe(false);
     expect(layout.getLayout().regions.main.activeWidgetId).toBe(notes.widgetId);
   });

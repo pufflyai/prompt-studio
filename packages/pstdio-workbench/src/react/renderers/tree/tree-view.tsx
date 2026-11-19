@@ -10,6 +10,7 @@ import type {
   WorkbenchPanelInstance,
 } from "../../../core";
 import { getWorkbenchRenderers } from "../../../core";
+import type { TreeGroupScope } from "../../../core/registries/renderers/tree-renderer-types";
 import { reportUserActionError } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { WorkbenchIcon } from "../../shared/icon";
@@ -52,10 +53,11 @@ interface WorkbenchTreeViewProps {
 
 const EMPTY_TREE_STATE: TreeRendererState = { expandedNodeIds: [], expandedSectionIds: [] };
 
-const treeCustomizationOptions = (sections: TreeViewSection[], isSidenav: boolean) => ({
+const treeCustomizationOptions = (sections: TreeViewSection[], isSidenav: boolean, groupScope?: TreeGroupScope) => ({
   suppressNodeContextMenus: isSidenav,
   pinnedOnlyNodeIds: pinnedOnlyNodeIds(sections),
   allowGroups: isSidenav,
+  groupScope,
 });
 
 const useSidenavContextActions = (
@@ -132,16 +134,17 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     useWorkbenchStore(getWorkbenchRenderers(workbench).treeStore, (state) => state.statesByTreeId[treeViewId]) ??
     EMPTY_TREE_STATE;
   const { projectId, activeLocation, activeResource } = useTreeNavigationState(workbench);
-  const { body, childrenByNodeId, moveNode, error, footer, header, loadChildren, loading, retry } = useTreeData(
-    workbench,
-    treeViewId,
-    resource,
-    viewId,
-    treeRenderer?.searchable ? filter.trim() || undefined : undefined,
-    props.readOwnerKey,
-    onOpenResourceError,
-    props.placement,
-  );
+  const { body, childrenByNodeId, moveNode, error, footer, groupScope, header, loadChildren, loading, retry } =
+    useTreeData(
+      workbench,
+      treeViewId,
+      resource,
+      viewId,
+      treeRenderer?.searchable ? filter.trim() || undefined : undefined,
+      props.readOwnerKey,
+      onOpenResourceError,
+      props.placement,
+    );
   const actionInput = useTreeActionInput(`${treeViewId}:${projectId}:${resource?.id}`, treeState.expandedNodeIds);
   const shortcutHints = useWorkbenchStore(workbench.keyboard.store, (state) => state.active || state.preview);
   const adapterContext = {
@@ -177,7 +180,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       hiddenIcon: <WorkbenchIcon name="eye-off" size={14} />,
       resetIcon: <WorkbenchIcon name="rotate-ccw" size={14} />,
     },
-    treeCustomizationOptions([...header, ...body, ...footer], isSidenav),
+    treeCustomizationOptions([...header, ...body, ...footer], isSidenav, groupScope),
   );
   useSidenavContextActions(
     props.placement?.instanceId ?? treeViewId,

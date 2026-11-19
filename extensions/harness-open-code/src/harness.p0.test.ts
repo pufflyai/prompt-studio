@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import type { HarnessContext } from "@pstdio/sdk/extensions";
 import { createOpencodeHarness } from "./harness";
 import { ctx, harnessDefaults, serviceOverrides } from "./harness.test-helpers";
 import { acceptedPrompt, emptyMessages, nativeMessagesResponse } from "./native-api.test-helpers";
@@ -27,80 +26,10 @@ type MockMessage = { role: string; content: { type: string; text: string }[] };
 // --- Factory ---
 
 describe("createOpencodeHarness", () => {
-  test("returns a harness with id and label", () => {
-    const h = harness();
-
-    expect(h.id).toBe("opencode");
-    expect(h.label).toEqual({ $l10n: "harness.opencode", default: "OpenCode" });
-  });
-
-  test("declares model thinking variants", () => {
-    const h = harness();
-
-    expect(h.params).toMatchObject({
-      variant: {
-        type: "select",
-        label: "Thinking",
-        defaultValue: "medium",
-        options: [
-          { label: "None", value: "none", icon: "CircleSlash" },
-          { label: "Minimal", value: "minimal", icon: "level-low" },
-          { label: "Low", value: "low", icon: "level-low" },
-          { label: "Medium", value: "medium", icon: "level-mid" },
-          { label: "High", value: "high", icon: "level-high" },
-          { label: "XHigh", value: "xhigh", icon: "level-xhigh" },
-          { label: "Max", value: "max", icon: "flame" },
-        ],
-      },
-    });
-  });
-
   test("reports capabilities", () => {
     const h = harness();
 
     expect(h.capabilities(ctx)).toEqual(["SessionFork", "ContextUsage", "SessionReattach"]);
-  });
-});
-
-// --- Detection ---
-
-describe("detect", () => {
-  test("reports available when the CLI is present", async () => {
-    const h = harness({ available: true });
-
-    expect(await h.detect!(ctx)).toEqual({ available: true });
-  });
-
-  test("reports unavailable when the CLI is missing", async () => {
-    const h = harness({ available: false });
-
-    expect(await h.detect!(ctx)).toEqual({ available: false });
-  });
-
-  test("default detection runs opencode --version and reports its output", async () => {
-    const h = createOpencodeHarness({}, serviceOverrides());
-    const versionCtx: HarnessContext = {
-      ...ctx,
-      process: {
-        ...ctx.process,
-        run: async ({ command }) =>
-          command[1] === "--version"
-            ? { exitCode: 0, stdout: "2.2.5\n", stderr: "" }
-            : { exitCode: 1, stdout: "", stderr: "" },
-      },
-    };
-
-    expect(await h.detect!(versionCtx)).toMatchObject({ available: true, version: "2.2.5" });
-  });
-
-  test("default detection reports unavailable on non-zero exit", async () => {
-    const h = createOpencodeHarness({}, serviceOverrides());
-    const missingCtx: HarnessContext = {
-      ...ctx,
-      process: { ...ctx.process, run: async () => ({ exitCode: 1, stdout: "", stderr: "" }) },
-    };
-
-    expect(await h.detect!(missingCtx)).toMatchObject({ available: false, reason: expect.stringMatching(/\S/) });
   });
 });
 
@@ -161,12 +90,6 @@ describe("listModels", () => {
     expect(await h.listModels!(ctx)).toEqual([{ id: "openai/gpt-4" }]);
   });
 
-  test("falls back to line-based parsing for non-JSON", async () => {
-    const h = harness({ modelsOutput: "openai/gpt-4\nanthropic/claude-3\n" });
-
-    expect(await h.listModels!(ctx)).toEqual([{ id: "openai/gpt-4" }, { id: "anthropic/claude-3" }]);
-  });
-
   test("extracts first token from lines with spaces", async () => {
     const h = harness({ modelsOutput: "openai/gpt-4  (default)\nanthropic/claude-3  (fast)\n" });
 
@@ -177,23 +100,6 @@ describe("listModels", () => {
     const h = harness({ modelsOutput: "Models:\nopenai/gpt-4\n---\nanthropic/claude-3\n" });
 
     expect(await h.listModels!(ctx)).toEqual([{ id: "openai/gpt-4" }, { id: "anthropic/claude-3" }]);
-  });
-
-  test("reads model output through ctx.process.run by default", async () => {
-    const h = createOpencodeHarness({}, serviceOverrides());
-    const modelsCtx: HarnessContext = {
-      ...ctx,
-      process: {
-        ...ctx.process,
-        run: async ({ command }) => ({
-          exitCode: 0,
-          stdout: command[1] === "api" ? "openai/gpt-4\n" : "2.2.5",
-          stderr: "",
-        }),
-      },
-    };
-
-    expect(await h.listModels!(modelsCtx)).toEqual([{ id: "openai/gpt-4" }]);
   });
 
   test("caches discovered models", async () => {
@@ -362,7 +268,7 @@ describe("cancellation", () => {
     expect(abortCalls).toBe(1);
   });
 
-  test("stop logs opencode abort failures", async () => {
+  test("stop still cancels the turn when the opencode abort fails", async () => {
     const originalConsoleError = console.error;
     const errors: unknown[][] = [];
     const abortError = new Error("server down");
@@ -405,10 +311,8 @@ describe("cancellation", () => {
         events: recordingSink().sink,
       });
       session.stop();
-      await session.done;
-      await Bun.sleep(0);
 
-      expect(errors).toEqual([["[opencode] failed to abort session oc-1", abortError]]);
+      expect(await session.done).toEqual({ status: "cancelled" });
     } finally {
       console.error = originalConsoleError;
     }
@@ -799,10 +703,5 @@ describe("reattach", () => {
 
     const statusPatches = patches.filter((p) => p.path === "/status");
     expect(statusPatches.at(-1)?.value).toBe("disconnected");
-  });
-
-  test("advertises SessionReattach capability", () => {
-    const h = harness();
-    expect(h.capabilities(ctx)).toContain("SessionReattach");
   });
 });

@@ -23,35 +23,30 @@ export const expectPackagedArtifacts = async (input: {
     expect.objectContaining({
       extensionId: "pstdio.artifacts",
       localId: "artifacts",
-      main: { kind: "panels", landing: { kind: "placement", extensionId: "pstdio.artifacts", id: "library" } },
-      panelView: { kind: "placement", extensionId: "pstdio.artifacts", id: "library" },
+      main: {
+        kind: "view",
+        presentation: "page",
+        view: { kind: "view", extensionId: "pstdio.artifacts", id: "artifacts" },
+        cardinality: "one",
+      },
       slots: [],
     }),
   );
-  expect(metadata.placements).toEqual(
-    expect.arrayContaining([
-      expect.objectContaining({
-        extensionId: "pstdio.artifacts",
-        localId: "library",
-        addableIn: ["main"],
-        item: expect.objectContaining({ kind: "view", presence: "closed" }),
-        replaces: [
-          {
-            kind: "page-slot",
-            page: { kind: "page", extensionId: "pstdio.artifacts", id: "artifacts" },
-            id: "library",
-          },
-        ],
-      }),
-      expect.objectContaining({
-        extensionId: "pstdio.artifacts",
-        localId: "artifact",
+  expect(metadata.pages).toContainEqual(
+    expect.objectContaining({
+      extensionId: "pstdio.artifacts",
+      localId: "artifact",
+      main: expect.objectContaining({
+        kind: "view",
+        presentation: "page",
+        view: { kind: "view", extensionId: "pstdio.artifacts", id: "artifacts" },
+        cardinality: "one",
         tab: expect.objectContaining({
           queryHandlerId: expect.any(String),
           refreshEventIds: ["pstdio.pstdio-artifacts.artifacts.changed"],
         }),
       }),
-    ]),
+    }),
   );
   expect(metadata.commands).toContainEqual(expect.objectContaining({ id: "pstdio.artifacts.command.start-creation" }));
   for (const action of ["rename-resource", "delete-resource"]) {

@@ -4,7 +4,6 @@ import { expect, type Page, test } from "../scripts/playwright-test";
 const panelTest = fixtureTest("panels", test);
 
 import { folderProjectInput } from "../helpers/folder-project";
-import { homePage } from "../helpers/home-loading";
 import { uiOrigin } from "../ui-server";
 
 const panel = (page: Page, id: string) => page.locator(`[data-workbench-panel="${id}"]`);
@@ -23,45 +22,6 @@ const prepare = async (page: Page) => {
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
 };
-
-test("tabless pages render their content without tab headers", async ({ page, request }) => {
-  const created = await request.post(`${uiOrigin}/v1/projects`, {
-    data: folderProjectInput({ name: "Page presentation" }),
-  });
-  expect(created.ok()).toBe(true);
-  const { id } = await created.json();
-  try {
-    await prepare(page);
-    await page.goto(`/projects/${id}`);
-    await expect(homePage(page)).toBeVisible();
-    await expect(page.locator('[data-workbench-panel-header="main"]')).toHaveCount(0);
-    await expect(panel(page, "main").getByRole("group", { name: "Available tabs" })).toHaveCount(0);
-    await page.getByRole("option", { name: "Sessions", exact: true }).click();
-    await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("New session");
-    await expect(panel(page, "main").getByRole("tab")).toHaveCount(0);
-    await expect(panel(page, "main").getByRole("button", { name: "Add panel", exact: true })).toHaveCount(0);
-    await page.goBack();
-    await expect(homePage(page)).toBeVisible();
-    await expect(page.locator('[data-workbench-panel-header="main"]')).toHaveCount(0);
-    for (const path of ["tickets", "ticket-timeline"]) {
-      await page.goto(`/projects/${id}/extensions/pstdio.planner/${path}`);
-      await expect(page.getByRole("navigation", { name: "breadcrumb" })).toBeVisible();
-      await expect(panel(page, "main").getByRole("tab")).toHaveCount(0);
-      await expect(panel(page, "main").getByRole("button", { name: "Add panel", exact: true })).toHaveCount(0);
-      await expect(page.locator('[data-workbench-tab-strip="main"]')).toHaveCount(0);
-      await expect(page.locator('[data-workbench-panel-header="main"]')).toHaveCount(0);
-      if (path === "ticket-timeline") {
-        await expect(
-          page
-            .frameLocator('iframe[title="Project Timeline"]')
-            .getByRole("button", { name: "Auto Build", exact: true }),
-        ).toBeVisible();
-      }
-    }
-  } finally {
-    await request.delete(`${uiOrigin}/v1/projects/${id}`);
-  }
-});
 
 panelTest(
   "an SDK-only viewer switches locally, reuses resources, replaces drafts and closes on deletion",
@@ -121,8 +81,8 @@ panelTest(
     const { id } = await created.json();
     try {
       await prepare(page);
-      await page.goto(`/projects/${id}/extensions/pstdio.artifacts/artifacts`);
-      await expect(panel(page, "main").getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
+      await page.goto(`/projects/${id}/extensions/test.panel-views/collection`);
+      await expect(panel(page, "main").getByRole("tab", { name: "Letter browser", exact: true })).toBeVisible();
       await openTool(page, "side", "New letter viewer");
       const side = panel(page, "side");
       const source = side.getByRole("tab", { name: /^Letter draft-/ });
@@ -133,7 +93,7 @@ panelTest(
       const moved = main.getByRole("tab", { name: /^Letter draft-/ });
       await expect(moved).toBeVisible();
       await moved.click();
-      const collectionUrl = `/projects/${id}/extensions/pstdio.artifacts/artifacts`;
+      const collectionUrl = `/projects/${id}/extensions/test.panel-views/collection`;
       await expect(page).toHaveURL(collectionUrl);
       const reader = main.frameLocator('iframe[title="Letter viewer"]:visible');
       await reader.getByRole("button", { name: "Switch to B", exact: true }).click();

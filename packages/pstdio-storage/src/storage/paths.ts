@@ -15,7 +15,7 @@ export const ensureProjectStorageRoot = (storageRoot: string, projectId: string)
 };
 
 const segment = (value: string) => Buffer.from(value).toString("base64url");
-const projectStorageRoot = (storageRoot: string, projectId: string) =>
+export const projectStorageRoot = (storageRoot: string, projectId: string) =>
   path.join(storageRoot, "files", segment(projectId));
 
 export const resolveFileStoragePath = (storageRoot: string, projectId: string, fileId: string) =>

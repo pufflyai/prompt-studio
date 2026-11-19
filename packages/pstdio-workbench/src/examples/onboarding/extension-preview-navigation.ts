@@ -12,6 +12,7 @@ export const registerPreviewNavigation = (workbench: WorkbenchCore) => {
       kind: "tree",
       defaultExpandedSectionIds: navigation.getDefaultExpandedSectionIds(),
       getReadKey: () => navigation.getReadKey(),
+      getGroupScope: navigation.getGroupScope,
       getHeader: (context) => navigation.getSections("header", context.signal, context.onProgress),
       getBody: (context) => navigation.getSections("content", context.signal, context.onProgress),
       getFooter: (context) => navigation.getSections("footer", context.signal, context.onProgress),

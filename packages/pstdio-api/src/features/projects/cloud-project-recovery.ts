@@ -30,6 +30,8 @@ export const recoverCloudProject = async (
   }
   signal.throwIfAborted();
   const installDefaults = (await deps.projectService.list()).length === 0;
+  await deps.accountService.recordCloudDiscovery(connection, info.name);
+  signal.throwIfAborted();
   await deps.projectService.create({ id: connection.workbenchId, name: info.name }, async (project) => {
     // Keep the downloaded history, so a rename here before the first full sync builds on it.
     await deps.projectInfoService.merge(project.id, state);

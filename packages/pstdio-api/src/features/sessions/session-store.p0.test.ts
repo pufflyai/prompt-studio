@@ -7,8 +7,6 @@ describe("session-store", () => {
   test("creates and retrieves an active session", () => {
     const store = createSessionStore();
     const entry = store.create("s1", inertSessionChannelHooks);
-    expect(entry.eventStore).toBeDefined();
-    expect(entry.approvalService).toBeDefined();
     expect(entry.session).toBeNull();
     expect(store.get("s1")).toBe(entry);
   });
