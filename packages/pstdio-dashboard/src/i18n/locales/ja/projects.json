@@ -133,7 +133,8 @@
           "templates": "テンプレート",
           "themes": "テーマ",
           "navigationItems": "ナビゲーション項目",
-          "commandPaletteResources": "コマンドパレットリソース"
+          "commandPaletteResources": "コマンドパレットリソース",
+          "workspaceTypes": "ワークスペースの種類"
         },
         "deleteHintShared": "この拡張機能のファイルを削除します。使用しているすべてのプロジェクトから取り除かれます。"
       },

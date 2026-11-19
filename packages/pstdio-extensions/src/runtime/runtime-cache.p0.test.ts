@@ -165,18 +165,34 @@ test("loading a newer version never removes a version that is still loading", as
     writeExtension(extensionDir);
     for (let round = 0; round < 5; round += 1) {
       const diagnostics: ExtensionDiagnostic[] = [];
-      writeFileSync(
-        join(extensionDir, "extension.ts"),
-        `export default { commands: { check: { title: "a${round}" } } };`,
-      );
+      const entered = Promise.withResolvers<boolean>();
+      const release = Promise.withResolvers<void>();
+      const gate = crypto.randomUUID();
+      const entry = join(extensionDir, "extension.ts");
+      const commandSource = (title: string) =>
+        `export default { commands: [{ id: "check", ref: { kind: "command", id: "check" }, title: ${JSON.stringify(title)}, run() {} }] };`;
+      writeFileSync(entry, `await globalThis[${JSON.stringify(gate)}]?.(); ${commandSource(`a${round}`)}`);
+      Reflect.set(globalThis, gate, () => {
+        entered.resolve(true);
+        return release.promise;
+      });
       const first = loadExtensionPackage({ path: extensionDir }, diagnostics);
-      writeFileSync(
-        join(extensionDir, "extension.ts"),
-        `export default { commands: { check: { title: "b${round}" } } };`,
-      );
-      const second = loadExtensionPackage({ path: extensionDir }, diagnostics);
-      await Promise.all([first, second]);
-      expect(diagnostics).toEqual([]);
+      try {
+        // Edit only after the first immutable entry reaches module evaluation.
+        expect(await Promise.race([entered.promise, first.then(() => false)])).toBe(true);
+        writeFileSync(entry, commandSource(`b${round}`));
+        const second = await loadExtensionPackage({ path: extensionDir }, diagnostics);
+        release.resolve();
+        const older = await first;
+        expect(older?.definition.commands?.[0]?.title).toBe(`a${round}`);
+        expect(second?.definition.commands?.[0]?.title).toBe(`b${round}`);
+        expect(existsSync(older!.preparedRevision!.entryPath)).toBe(true);
+        expect(diagnostics).toEqual([]);
+      } finally {
+        release.resolve();
+        Reflect.deleteProperty(globalThis, gate);
+        await first;
+      }
     }
   } finally {
     if (previousHome === undefined) delete process.env.PSTDIO_HOME;

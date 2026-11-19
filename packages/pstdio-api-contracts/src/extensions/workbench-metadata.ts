@@ -24,6 +24,7 @@ import { extensionKeybindingRecordSchema } from "./keybindings";
 import { navigationTargetSchema } from "./navigation-target-metadata";
 import { workbenchExtensionPageRecordSchema } from "./page-metadata";
 import { regionSettingsSchema, workbenchPlacementPresentationSchema } from "./placement-metadata";
+import { workbenchHarnessRecordSchema, workbenchWorkspaceTypeRecordSchema } from "./provider-metadata";
 import { extensionFileRendererRecordSchema, extensionTreeRendererRecordSchema } from "./renderers";
 import { placementItemSchema } from "./resource-binding-metadata";
 import { resourcePresentationRecordSchema } from "./resource-presentation";
@@ -307,16 +308,8 @@ export const workbenchExtensionMetadataSchema = z.object({
   settingsDefinitions: z.array(extensionSettingDefinitionRecordSchema).optional(),
   automations: z.array(workbenchExtensionAutomationRecordSchema).optional(),
   connections: z.array(workbenchExtensionConnectionRecordSchema).optional(),
-  harnesses: z
-    .array(
-      z.object({
-        id: z.string(),
-        localId: z.string(),
-        extensionId: z.string(),
-        label: localizableStringSchema.optional(),
-      }),
-    )
-    .optional(),
+  workspaceTypes: z.array(workbenchWorkspaceTypeRecordSchema).optional(),
+  harnesses: z.array(workbenchHarnessRecordSchema).optional(),
   skills: z
     .array(
       z.object({

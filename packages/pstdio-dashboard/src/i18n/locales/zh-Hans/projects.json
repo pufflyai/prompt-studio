@@ -133,7 +133,8 @@
           "templates": "模板",
           "themes": "主题",
           "navigationItems": "导航项",
-          "commandPaletteResources": "命令面板资源"
+          "commandPaletteResources": "命令面板资源",
+          "workspaceTypes": "工作区类型"
         },
         "deleteHintShared": "删除此扩展的文件。它将从所有使用它的项目中移除。"
       },

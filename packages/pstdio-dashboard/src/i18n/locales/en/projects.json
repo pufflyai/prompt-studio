@@ -135,7 +135,8 @@
           "templates": "Templates",
           "themes": "Themes",
           "navigationItems": "Navigation items",
-          "commandPaletteResources": "Command palette resources"
+          "commandPaletteResources": "Command palette resources",
+          "workspaceTypes": "Workspace types"
         },
         "deleteHintShared": "Delete this extension's files. This removes it from every project that uses it."
       },

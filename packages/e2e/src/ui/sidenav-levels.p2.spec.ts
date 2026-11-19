@@ -31,7 +31,6 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   await page.goto(`/projects/${project.id}`);
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   const row = (name: string) => sidenav.getByRole("option", { name, exact: true });
-  const firstRow = sidenav.locator("[data-tree-list-node-id]").first();
 
   // Users pin a project row by dragging it into the header.
   const source = row("Tickets");
@@ -39,6 +38,7 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   const targetList = sidenav
     .getByRole("listbox")
     .filter({ has: page.getByRole("option", { name: "Home", exact: true }) });
+  const headerRows = targetList.getByRole("option");
   await source.hover();
   const from = (await source.boundingBox())!;
   const to = (await target.boundingBox())!;
@@ -50,13 +50,13 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   });
   await expect(targetList.locator('[data-tree-list-drop-indicator="before"]')).toBeVisible();
   await page.mouse.up();
-  await expect(firstRow).toHaveAccessibleName("Tickets");
+  await expect(headerRows).toHaveText(["Search", "Tickets", "Home"]);
   // dnd-kit swallows clicks for 50ms after a drop so the drop is not also a click; a person never clicks that fast.
   await page.waitForTimeout(100);
 
   await row("Notes").click();
   await expect(row("Sessions")).toBeVisible();
-  await expect(firstRow).toHaveAccessibleName("Tickets");
+  await expect(headerRows).toHaveText(["Search", "Tickets", "Home"]);
   await sidenav.getByText("Notes", { exact: true }).hover();
   await sidenav.getByRole("button", { name: "New note", exact: true }).click();
   const editor = nativePublicTextEditor(page);
@@ -73,7 +73,7 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   await expect(row("Level note")).toHaveAttribute("aria-selected", "true");
   await page.reload();
   await expect(row("Level note")).toBeVisible();
-  await expect(firstRow).toHaveAccessibleName("Tickets");
+  await expect(headerRows).toHaveText(["Search", "Tickets", "Home"]);
 
   await row("Tickets").click();
   await expect(page).toHaveURL(/\/tickets$/);
@@ -82,7 +82,7 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   await expect(sidenav.getByText("Today", { exact: true })).toBeVisible();
   await row("Level session").click();
   await expect(page).toHaveURL(/\/extensions\/pstdio\.session-browser\/conversation\?resource=/);
-  await expect(firstRow).toHaveAccessibleName("Tickets");
+  await expect(headerRows).toHaveText(["Search", "Tickets", "Home"]);
   await row("Search").click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.keyboard.press("Escape");
@@ -98,7 +98,7 @@ test("Notes and Sidenav levels keep rows users pinned to the header", async ({ p
   await row("Tickets").click();
   await page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first().click();
   await expect(sidenav.getByRole("option", { name: new RegExp(`^${ticket.shorthand} `) })).toBeVisible();
-  await expect(firstRow).toHaveAccessibleName("Tickets");
+  await expect(headerRows).toHaveText(["Search", "Tickets", "Home"]);
   await expect(sidenav.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   await expect(row("Settings")).toBeVisible();
   await page
