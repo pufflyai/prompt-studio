@@ -98,7 +98,9 @@ jobs:
         # PS-1232: native Windows browser installation exceeded 3 min before measurements.
         # The user authorized setup allowances on 2026-11-17; keep product limits unchanged.
         timeout-minutes: ${{ matrix.os == 'windows-2025' && 8 || 3 }}
-        run: bunx playwright@1.60.0 install --with-deps
+        # The planner family runs only B6, which launches Chromium. Installing every engine pulled
+        # 181 Firefox/WebKit media packages (126 MB) from apt and overran the 3-minute limit.
+        run: bunx playwright@1.60.0 install --with-deps chromium
       - name: "[phase:test] Collect every fixed workload with existing budgets"
         run: bun scripts/test.ts --performance-family ${{ matrix.family }} --prebuilt
       - name: Download the immutable candidate identity
