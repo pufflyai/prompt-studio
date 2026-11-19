@@ -6,7 +6,6 @@ import {
   ARTIFACT_TEXT_LIMIT_BYTES,
   artifactImageMediaType,
   artifactMediaType,
-  findArtifactFile,
   resolveExtensionArtifactMount,
   safeArtifactPath,
 } from "../extension-artifact-assets";
@@ -158,7 +157,7 @@ export const readExtensionArtifactTextHandler = (
     const resolved = await resolveMount(deps, params);
     if (!resolved) return c.json(mountNotFound(params), 404);
 
-    const file = await findArtifactFile(resolved.mount, safePath);
+    const file = await resolved.mount.statFile(safePath);
     if (!file) return c.json({ error: `Artifact not found: ${path}` }, 404);
     if (file.size !== undefined && file.size > ARTIFACT_TEXT_LIMIT_BYTES) {
       return c.json({ error: `Artifact exceeds the ${ARTIFACT_TEXT_LIMIT_BYTES.toString()} byte text limit` }, 413);
@@ -186,7 +185,7 @@ export const getExtensionArtifactImageUrlHandler = (
     const resolved = await resolveMount(deps, params);
     if (!resolved) return c.json(mountNotFound(params), 404);
 
-    const file = await findArtifactFile(resolved.mount, safePath);
+    const file = await resolved.mount.statFile(safePath);
     if (!file) return c.json({ error: `Artifact not found: ${path}` }, 404);
 
     const url = deps.extensionWebviewAccess.artifactUrl(

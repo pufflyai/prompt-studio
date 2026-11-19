@@ -78,6 +78,13 @@ test("ticking rows in a table that is not paged offers and runs its selection ac
   await page.getByRole("row", { name: /Beta/ }).getByRole("checkbox").check({ force: true });
   const toolbar = page.getByRole("toolbar", { name: "Selection actions" });
   await expect(toolbar).toContainText("1 rows selected");
+  const archived = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname.endsWith("/extensions/commands/e2e.table-selection.command.archive/execute"),
+  );
   await toolbar.getByRole("button", { name: "Archive", exact: true }).click();
-  await expect(page.getByText("Archived beta")).toBeVisible();
+  const response = await archived;
+  expect(response.ok(), await response.text()).toBe(true);
+  expect((await response.json()).outcome).toMatchObject({ status: "success", value: ["beta"] });
 });

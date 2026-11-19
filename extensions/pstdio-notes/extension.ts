@@ -5,6 +5,7 @@ import {
   deleteNoteCommand,
   renameNoteCommand,
   resolveNoteCommand,
+  resolveNoteOpeningCommand,
   resolveNotesCommand,
 } from "./src/commands";
 import { createFolderCommand, deleteFolderCommand, moveNoteCommand, renameFolderCommand } from "./src/folder-commands";
@@ -32,6 +33,7 @@ export default defineExtension({
     deleteNoteCommand,
     renameNoteCommand,
     resolveNoteCommand,
+    resolveNoteOpeningCommand,
     resolveNotePathCommand,
     createFolderCommand,
     renameFolderCommand,

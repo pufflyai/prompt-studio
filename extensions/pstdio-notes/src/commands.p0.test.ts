@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { createMemoryRepoFiles, createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
-import { createNoteCommand } from "./commands";
+import extension from "../extension";
+import { createNoteCommand, type resolveNoteOpeningCommand } from "./commands";
 import { createFolderCommand } from "./folder-commands";
 import { listNotes, readNote } from "./notes";
 import { noteTarget } from "./pages";
@@ -56,3 +57,35 @@ test("notes and folders use the core's record IDs", async () => {
   expect(allocated).toEqual([note.id, folder.id]);
   expect(note.id).not.toBe(folder.id);
 });
+
+for (const files of ["read", "write"] as const) {
+  test(`linked notes resolve their compound opening with ${files} access`, async () => {
+    const mount = createMemoryRepoFiles();
+    const ctx = makeCommandContext({
+      storage: createMemoryStorage(),
+      params: {},
+      overrides: {
+        artifacts: { mount: () => mount },
+        workspaces: {
+          getDefault: async () =>
+            ({
+              execution_kind: "local",
+              provider_state: "ready",
+              root_path: "/notes",
+              provider_capabilities_json: { files },
+            }) as never,
+        },
+      },
+    });
+    const note = await createNoteCommand.run(ctx, { title: "Linked note" });
+    const opener = extension.commands?.find(
+      (command): command is typeof resolveNoteOpeningCommand => command.id === "notes.resolve-opening",
+    );
+    expect(await opener?.run(ctx, { noteId: note.id })).toEqual(
+      noteTarget(note.id, note.title, ctx, files === "write"),
+    );
+    expect(await opener?.run(ctx, { noteId: "missing" })).toBeNull();
+    ctx.workspaces.getDefault = async () => null;
+    expect(await opener?.run(ctx, { noteId: note.id })).toBeNull();
+  });
+}

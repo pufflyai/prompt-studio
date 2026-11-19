@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -195,6 +195,17 @@ describe("extension artifact endpoints", () => {
     // The signature binds the mount: pointing the same URL at another mount fails.
     const tampered = await app.request(url.replace("/runs/", "/secrets/"));
     expect(tampered.status).toBe(404);
+  });
+
+  test("treats escaping links and paths beneath regular files as missing artifacts", async () => {
+    const outside = join(tempRoot, "outside.png");
+    writeFileSync(outside, pngBytes);
+    symlinkSync(outside, join(mountRoot, "linked.png"), "file");
+    for (const path of ["linked.png", "a/chart.png/child.png"]) {
+      const query = new URLSearchParams({ path, webviewId: "report" });
+      const response = await app.request(artifactsPath(labInstanceId, "runs", "image-url", `?${query}`));
+      expect(response.status).toBe(404);
+    }
   });
 
   test("refuses image URLs for media types outside the raster allowlist", async () => {

@@ -24,8 +24,11 @@ export const recordVisibilitySql = async (
     return recordScopeSql(owner, index);
 
   // Query validation prevents replacing the declared local identity field.
+  // rid is a primary key: membership is one boolean, not a document/identity join.
+  // Keeping that cardinality avoids flattening broad matches into all-pairs comparisons.
   const id = identityQueryText(recordFieldSql(index, identity.idField));
   return sql`${recordScopeSql(owner, { ...index, identity: undefined })}
-    AND EXISTS (SELECT 1 FROM ${sql.identifier(`${physicalName}_i`)} AS identity_membership
-      WHERE identity_membership.rid = ${id} AND identity_membership.mapped AND identity_membership.named)`;
+    AND (SELECT identity_membership.mapped AND identity_membership.named
+      FROM ${sql.identifier(`${physicalName}_i`)} AS identity_membership
+      WHERE identity_membership.rid = ${id}) IS TRUE`;
 };
