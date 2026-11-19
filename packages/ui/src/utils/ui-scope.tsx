@@ -31,6 +31,7 @@ export const UiScopeActivity = (props: { active: boolean; children: ReactNode })
   const parent = useContext(UiScopeViewActivityContext);
   const parentPortal = useContext(UiScopePortalContext);
   const [portal, setPortal] = useState<HTMLDivElement | null>(null);
+  // A suspended child can miss the inactive render; retain that dismissal until it resumes.
   const [activity, setActivity] = useState({ active, revision: 0 });
   if (activity.active !== active) {
     setActivity({ active, revision: activity.revision + Number(!active) });
