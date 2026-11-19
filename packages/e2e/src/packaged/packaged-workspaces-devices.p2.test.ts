@@ -303,22 +303,24 @@ test(
         return { first, second, session, foreignWorkspace };
       });
       const [history, opened] = await Promise.allSettled([preparingHistory, openingPage]);
+      progress("history data and collection prepared");
       if (history.status === "rejected") throw history.reason;
       if (opened.status === "rejected") throw opened.reason;
       const { first, second, session, foreignWorkspace } = history.value;
       const page = opened.value;
+      progress("open foreign workspace history");
       await page.locator(`[role="option"][id='${JSON.stringify(["resource", foreignWorkspace.id])}']`).click();
       await expectUI(page).toHaveURL(/\/history\?/);
+      progress("open the private session from history");
       await page
         .getByRole("region", { name: "Main", exact: true })
         .getByRole("option")
         .filter({ hasText: "Device A history" })
         .click();
       await expectUI(
-        page
-          .getByRole("region", { name: "Side Panel", exact: true })
-          .getByText("Private workspace history", { exact: true }),
+        page.getByRole("region", { name: "Main", exact: true }).getByText("Private workspace history", { exact: true }),
       ).toBeVisible();
+      await expectUI(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Device A history");
       progress("private history visible");
       progress("stop first runtime");
       if (a) await stopProcess(a.child);

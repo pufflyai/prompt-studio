@@ -49,7 +49,7 @@ export const reusableNavigationViewer = (
   state: State,
   allowReuse = true,
 ) => {
-  if (!allowReuse || !target.resource || (target.kind === "page" && target.intent === "restore")) return undefined;
+  if (!allowReuse || !target.resource || target.kind === "page") return undefined;
   const binding = targetBinding(core, target, state);
   if (!binding) return undefined;
   if (!resourceMatchesConstraint(binding, target.resource))
@@ -63,8 +63,26 @@ export const reusableNavigationViewer = (
     return core.pages.resourceReferenceKey(placement.value.resource) === key;
   });
   if (!match) return undefined;
-  const region = actualRegion(core, match.identity) ?? match.region;
+  const panel = target.panel;
+  let sameOwner = false;
+  if (panel.kind === "placement")
+    sameOwner =
+      match.identity.kind === "mode" && core.modePlacements.getPlacement(panel)?.id === match.identity.placementId;
+  else if (panel.kind === "shell-placement")
+    sameOwner = match.identity.kind === "shell" && panel.id === match.identity.placementId;
+  else
+    sameOwner =
+      match.identity.kind === "page" &&
+      match.identity.slotId === panel.id &&
+      state.pages[match.identity.pageId]?.ref.id === panel.page.id;
+  if (!sameOwner) return undefined;
+  const region = target.region ?? actualRegion(core, match.identity) ?? match.region;
   if (!isPageContent(page, match.identity))
-    requirePanelOpen(core, region, { identity: match.identity, proposed: state, modeId: state.activeModeId });
+    requirePanelOpen(core, region, {
+      identity: match.identity,
+      requestedRegion: target.region,
+      proposed: state,
+      modeId: state.activeModeId,
+    });
   return { identity: match.identity, region };
 };

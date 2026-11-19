@@ -2,6 +2,7 @@ import { Tabs } from "@chakra-ui/react";
 import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../core";
 import { numberedTargetShortcut } from "../keybindings/numbered-target-shortcut";
 import { useKeyboardTabs } from "../keybindings/use-keyboard-tabs";
+import { tabDragDestinations } from "./tab-drag-destinations";
 import { WorkbenchRegionTab } from "./workbench-region-tab";
 
 interface RegionTabListProps {
@@ -27,7 +28,7 @@ export const RegionTabList = (props: RegionTabListProps) => {
           activeWidgetId={activeWidgetId}
           disabled={disabled}
           region={panelRegion}
-          sortable={Boolean(panelRegion && workbench.getPanelDestinations(placement.widgetId).length)}
+          sortable={Boolean(panelRegion && tabDragDestinations(workbench, placement.widgetId).length)}
           previousWidgetId={placements[index - 1]?.widgetId}
           nextWidgetId={placements[index + 1]?.widgetId}
         />

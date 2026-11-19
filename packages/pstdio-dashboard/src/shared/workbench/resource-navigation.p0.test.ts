@@ -77,8 +77,8 @@ for (const transition of [
       } else w.pageLocations.replay(structuredClone(w.pages.store.getState().location!));
       release.resolve();
       await first;
-      if (transition === "metadata replay") expect(w.pages.store.getState().location?.resource?.id).toBe("one");
-      else if (transition === "newer opening") expect(w.pages.store.getState().location?.resource?.id).toBe("two");
+      if (transition === "metadata replay") expect(w.layout.getActivePanel("main")?.resource?.id).toBe("one");
+      else if (transition === "newer opening") expect(w.layout.getActivePanel("main")?.resource?.id).toBe("two");
       else if (transition === "unavailable default" || transition === "already unavailable default")
         expect(w.pages.store.getState().location).toBeUndefined();
       else expect(w.pages.store.getState().location?.page).toEqual(page("desk"));

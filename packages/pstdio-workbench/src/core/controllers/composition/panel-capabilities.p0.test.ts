@@ -35,14 +35,14 @@ test("compound navigation cannot reveal a forbidden panel or publish part of the
   expect(w.pages.store.getState().location?.resource?.id).toBe("alpha");
 });
 
-test("reopening a resource focuses its existing viewer and movement still enforces destination permissions", async () => {
+test("reopening a resource enforces the requested destination permissions", async () => {
   const w = harness();
   await w.navigation.openTarget(navigate("alpha"));
   const target = { kind: "panel", panel, resource: resource("one"), open: "pin" } as const;
   await w.navigation.openTarget(target);
   w.modes.getMode("edit")!.regionSettings = { secondary: { acceptsTabs: false }, side: { acceptsTabs: false } };
   const viewer = w.layout.getActivePanel("side")!;
-  await w.navigation.openTarget({ ...target, region: "secondary" });
+  await expect(w.navigation.openTarget({ ...target, region: "secondary" })).rejects.toThrow("cannot accept tabs");
   expect(w.layout.getActivePanel("side")?.instanceId).toBe(viewer.instanceId);
   expect(w.layout.listPanelInstances("secondary")).toEqual([]);
   expect(() => w.movePanel(viewer.instanceId, "secondary")).toThrow("cannot move");

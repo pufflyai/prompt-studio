@@ -232,8 +232,8 @@ export const createWorkbenchLayoutCache = (
     loadPageLayout(context: WorkbenchPagePersistenceScopeInput, page: WorkbenchPageContribution | undefined) {
       const scope = input.resolvePagePersistenceScope?.(context)?.scope;
       const layout = read(scope);
-      if (!context.pageId || !context.modeId) return layout;
-      if (layout?.regions.main.widgets.length) migratePageMain(layout, context, page, scope);
+      if (!context.modeId) return layout;
+      if (context.pageId && layout?.regions.main.widgets.length) migratePageMain(layout, context, page, scope);
       const owner = pageMainOwner(context, page);
       if (owner.page?.main.kind === "panels" && !owner.page.resource)
         migrateCollectionMain({
@@ -248,7 +248,7 @@ export const createWorkbenchLayoutCache = (
           clear,
         });
       const main = isSingleViewPage(page) ? undefined : read(pageMainScope(context, page));
-      const pageHeaders = headers.load(context);
+      const pageHeaders = context.pageId ? headers.load(context) : undefined;
       return assemblePageLayout(layout, main, pageHeaders);
     },
     savePageMain(
@@ -257,11 +257,11 @@ export const createWorkbenchLayoutCache = (
       page: WorkbenchPageContribution | undefined,
       beforePreviewRemoval = layout,
     ) {
-      if (!context.pageId || !context.modeId) return;
-      headers.save(context, layout);
+      if (!context.modeId) return;
+      if (context.pageId) headers.save(context, layout);
       const scope = pageMainScope(context, page);
       const snapshot = selectPlacements(layout, (_widget, region) => region === "main");
-      if (isSingleViewPage(page)) {
+      if (isSingleViewPage(page) || (!context.pageId && !snapshot.regions.main.widgets.length)) {
         clear(scope, snapshot);
         return;
       }

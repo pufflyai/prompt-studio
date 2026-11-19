@@ -3,22 +3,21 @@ import { modePanelFixture, pageRef } from "./mode-panel-state.fixture";
 
 for (const scoped of [true, false]) {
   for (const region of ["side", "secondary"] as const) {
-    test(`a page moved into ${region} stays across pages, modes and restart; scoped=${scoped}`, () => {
+    test(`a restored page moved into ${region} stays across pages, modes and restart; scoped=${scoped}`, () => {
       const s = modePanelFixture(undefined, scoped);
       const original = s.w.layout.getActivePanel("main")!;
       s.w.movePanel(original.instanceId, region);
       s.navigate("alpha-list");
       expect(s.w.layout.listPanelInstances(region).map((tab) => tab.instanceId)).toEqual([original.instanceId]);
       expect(s.w.shell.getRegionState(region).open).toBe(true);
-      s.navigate("alpha");
+      s.w.pageLocations.navigate({ kind: "page", page: pageRef("alpha"), intent: "restore" });
       expect(s.w.layout.listPanelInstances("main").map((tab) => tab.instanceId)).not.toContain(original.instanceId);
       expect(s.w.layout.listPanelInstances(region).map((tab) => tab.instanceId)).toEqual([original.instanceId]);
       s.navigate("bare");
       expect(s.w.layout.listPanelInstances(region)).toEqual([]);
       s.navigate("alpha-list");
       expect(s.w.layout.listPanelInstances(region).map((tab) => tab.instanceId)).toEqual([original.instanceId]);
-      const restored = modePanelFixture(s.saved, scoped);
-      restored.navigate("alpha-list");
+      const restored = modePanelFixture(s.saved, scoped, [], "alpha-list");
       expect(restored.w.layout.listPanelInstances(region).map((tab) => tab.instanceId)).toEqual([original.instanceId]);
     });
 
@@ -166,7 +165,7 @@ test("an explicit single-slot open replaces shared content", () => {
   expect(s.w.layout.listPanelInstances("side")[0]?.instanceId).toBe(original.instanceId);
 });
 
-test("a moved page tab accepts section navigation without changing its panel", () => {
+test("a moved page tab returns to Main for explicit section navigation", () => {
   const s = modePanelFixture();
   s.navigate("document", "a");
   s.w.movePanel(s.w.layout.getActivePanel("main")!.instanceId, "side");
@@ -179,5 +178,6 @@ test("a moved page tab accepts section navigation without changing its panel", (
       section,
     }).ok,
   ).toBe(true);
-  expect(s.w.layout.getLayout().regions.side.widgets[0]?.section).toEqual(section);
+  expect(s.w.layout.getActivePanel("main")?.section).toEqual(section);
+  expect(s.w.layout.listPanelInstances("side")).toHaveLength(0);
 });

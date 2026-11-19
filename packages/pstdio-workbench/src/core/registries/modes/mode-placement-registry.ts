@@ -20,6 +20,7 @@ import {
   closeOwnedPlacementInstance,
   createOwnedPlacementState,
   isStaticPlacementOpen,
+  type OwnedResourceInstance,
   placementItemViewId,
   staticPlacementClosable,
   updateResourcePlacementInstance,
@@ -133,12 +134,9 @@ export const createWorkbenchModePlacementRegistry = (input: {
   const resolve = (
     placement: WorkbenchModePlacementContribution,
     instanceKey: string,
-    resource?: ResourceRef,
-    open?: PageOpenIntent,
-    title?: string,
-    relatedSource?: string,
-    location?: ViewLocation,
+    details: Partial<OwnedResourceInstance> = {},
   ): ResolvedOwnedPlacement<WorkbenchWidgetPlacement> => {
+    const { resource, open, title, relatedSource, ...location } = details;
     const view = input.views.getView(placementItemViewId(placement.item));
     if (!view)
       throw new Error(`Workbench mode placement view is not registered: ${placementItemViewId(placement.item)}`);
@@ -220,22 +218,16 @@ export const createWorkbenchModePlacementRegistry = (input: {
       state = next;
     },
     publish: emitChange,
+    notify: observation.publish,
     resolve(modeId, current = state) {
       if (!modeId) return [];
       return listPlacements(modeId).flatMap((placement) => {
-        if (placement.item.kind === "view") {
-          return isStaticPlacementOpen(placement.item, current, placement.id) ? [resolve(placement, "default")] : [];
-        }
+        if (placement.item.kind === "view")
+          return isStaticPlacementOpen(placement.item, current, placement.id)
+            ? [resolve(placement, "default", current.staticLocations?.get(placement.id))]
+            : [];
         return (current.resourceInstances.get(placement.id) ?? []).map((instance) =>
-          resolve(
-            placement,
-            instance.instanceKey,
-            instance.resource,
-            instance.open,
-            instance.title,
-            instance.relatedSource,
-            instance,
-          ),
+          resolve(placement, instance.instanceKey, instance),
         );
       });
     },
