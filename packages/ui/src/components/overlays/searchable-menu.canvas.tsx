@@ -4,6 +4,7 @@ import { FolderGit2, GitBranch } from "lucide-react";
 import { useRef, useState } from "react";
 import { ListRow } from "@/components/list-row/list-row";
 import { SearchableMenu, type SearchableMenuItem } from "@/components/overlays/searchable-menu";
+import { SelectionInput } from "@/components/param-editor/inputs/selection-input";
 import { ScopedDialog as Dialog, ScopedMenu as Menu } from "@/utils/scoped-overlays";
 import { Portal } from "@/utils/ui-scope";
 
@@ -163,38 +164,88 @@ export const PortalledInsideDialog: Story = {
   fullscreen: true,
   render: () => {
     const dialogRef = useRef<HTMLDivElement>(null);
+    const [branch, setBranch] = useState("main");
+    const [tags, setTags] = useState<string[]>(["known"]);
+    const [confirming, setConfirming] = useState(false);
     return (
       <Dialog.Root open modal>
         <Portal>
           <Dialog.Backdrop />
           <Dialog.Positioner>
-            <Dialog.Content ref={dialogRef} maxW="sm" overflow="hidden">
-              <Dialog.Header>
-                <Dialog.Title>Create workspace</Dialog.Title>
-              </Dialog.Header>
-              <Dialog.Body>
-                <Stack alignItems="flex-start" gap="3">
-                  <SearchableMenu
-                    portalContainer={dialogRef}
-                    positioning={{ strategy: "fixed", hideWhenDetached: true }}
-                    trigger={<Button variant="outline">Select workspace</Button>}
-                    items={branchItems}
-                    searchPlaceholder="Search workspaces..."
-                    emptyState={
-                      <Menu.Item value="empty" asChild>
-                        <ListRow
-                          asChild
-                          variant="full-width"
-                          label="No workspaces found"
-                          icon={<Icon as={GitBranch} boxSize="16px" />}
-                          disabled
-                        />
-                      </Menu.Item>
-                    }
-                  />
-                  <Button variant="primary">Create workspace</Button>
-                </Stack>
-              </Dialog.Body>
+            <Dialog.Content asChild ref={dialogRef} maxW="sm" overflow="hidden">
+              <form onSubmit={(event) => event.preventDefault()}>
+                <Dialog.Header>
+                  <Dialog.Title>Create workspace</Dialog.Title>
+                </Dialog.Header>
+                <Dialog.Body>
+                  <Stack alignItems="flex-start" gap="3">
+                    <SearchableMenu
+                      portalContainer={dialogRef}
+                      positioning={{ strategy: "fixed", hideWhenDetached: true }}
+                      trigger={<Button variant="outline">Select workspace</Button>}
+                      items={branchItems}
+                      searchPlaceholder="Search workspaces..."
+                      emptyState={
+                        <Menu.Item value="empty" asChild>
+                          <ListRow
+                            asChild
+                            variant="full-width"
+                            label="No workspaces found"
+                            icon={<Icon as={GitBranch} boxSize="16px" />}
+                            disabled
+                          />
+                        </Menu.Item>
+                      }
+                    />
+                    <SelectionInput
+                      id="base"
+                      name="Base branch"
+                      description="Choose the branch without leaving the command dialog."
+                      defaultValue={branch}
+                      options={branchItems.map((item) => ({ id: item.id, name: item.label }))}
+                      onChange={(_, value) => setBranch(value as string)}
+                    />
+                    <SelectionInput
+                      id="tags"
+                      name="Tags"
+                      description="Search or add a custom tag while retaining the dialog."
+                      multiSelect
+                      searchable
+                      allowCustomValues
+                      defaultValue={tags}
+                      options={[{ id: "known", name: "Known tag" }]}
+                      onChange={(_, value) => setTags(value as string[])}
+                    />
+                    <Button onClick={() => setConfirming(true)}>Review workspace</Button>
+                    <Dialog.Root open={confirming} onOpenChange={({ open }) => setConfirming(open)}>
+                      <Portal>
+                        <Dialog.Backdrop />
+                        <Dialog.Positioner>
+                          <Dialog.Content maxW="sm">
+                            <Dialog.Header>
+                              <Dialog.Title>Review workspace</Dialog.Title>
+                            </Dialog.Header>
+                            <Dialog.Body>
+                              <SelectionInput
+                                id="review-base"
+                                name="Review base branch"
+                                description="A nested dialog owns its choices independently."
+                                defaultValue={branch}
+                                options={branchItems.map((item) => ({ id: item.id, name: item.label }))}
+                                onChange={(_, value) => setBranch(value as string)}
+                              />
+                            </Dialog.Body>
+                            <Dialog.Footer>
+                              <Button onClick={() => setConfirming(false)}>Back to workspace</Button>
+                            </Dialog.Footer>
+                          </Dialog.Content>
+                        </Dialog.Positioner>
+                      </Portal>
+                    </Dialog.Root>
+                    <Button variant="primary">Create workspace</Button>
+                  </Stack>
+                </Dialog.Body>
+              </form>
             </Dialog.Content>
           </Dialog.Positioner>
         </Portal>
