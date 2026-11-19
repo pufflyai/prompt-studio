@@ -19,7 +19,7 @@
     "typecheck": "bun check"
   },
   "dependencies": {
-    "@pstdio/sdk": "0.48.0-preview.sha-95f860c42fc872202a03183625d8b8e9179f58d9"
+    "@pstdio/sdk": "0.48.0-preview.sha-1dea002d5091620d9cee41520eca2cb634450299"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",
