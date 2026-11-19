@@ -91,7 +91,7 @@ export const createInstalledExtensionRuntime = (input: {
             projectId: project.projectId,
             repoPath: project.repoPath,
           });
-          if (result.missing.length > 0) markedMissing = true;
+          if (result.newlyMissing.length > 0) markedMissing = true;
         }
         // Discovering a source already refreshes through onInstalledSourcesChanged; a removed folder
         // only updates source status directly, so refresh to drop stale source/webview tracking.

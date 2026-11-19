@@ -176,6 +176,7 @@
         "local-example",
         "artifacts",
         "base-themes",
+        "pstdio-terminal",
         "cloud",
         "pstdio-dashboard",
         "home",
@@ -214,6 +215,7 @@
         "github",
         "extension-lab",
         "base-themes",
+        "pstdio-terminal",
         "planner",
         "skills",
         "workbench-fixture",
@@ -517,7 +519,7 @@
         "src/e2e/*-fixture.ts",
         // The ordered benchmark runner selects these files through the shared suite registry.
         "src/**/*.bench.ts",
-        "src/**/*.test.ts",
+        "src/**/*.test.{ts,tsx}",
         "src/**/*.spec.ts",
         "src/**/*.canvas.tsx"
       ],

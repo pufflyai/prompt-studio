@@ -1,6 +1,7 @@
 import { Box, CloseButton, Tabs, Text, useTabsContext } from "@chakra-ui/react";
 import { DropIndicator, PaletteShortcut, Tooltip } from "@pstdio/ui";
 import { useRef } from "react";
+import { ActivityDot } from "../resource-changes/activity-dot";
 import { WorkbenchIcon } from "../shared/icon";
 import { RegionTabMenu } from "./region-tab-menu";
 import { resolveTabIconName } from "./region-tabs-visibility";
@@ -15,7 +16,9 @@ const TabIcon = (props: { indicator?: import("../../core").WorkbenchTabSnapshot[
         size={12}
         flexShrink={0}
         color={indicator.color ?? "fg.muted"}
+        role={indicator.label ? "img" : undefined}
         aria-label={indicator.label}
+        aria-hidden={indicator.label ? undefined : true}
       />
     );
   return icon ? <WorkbenchIcon name={icon} size={12} flexShrink={0} color="fg.muted" /> : null;
@@ -32,6 +35,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
   const labelRef = useRef<HTMLSpanElement>(null);
   const widget = workbench.layout.getWidget(placement.contributionId);
   const icon =
+    placement.resource?.icon ??
     snapshot.icon ??
     resolveTabIconName(
       placement,
@@ -60,6 +64,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
             id={triggerId}
             value={placement.widgetId}
             aria-labelledby={labelId}
+            aria-describedby={placement.resource ? `${labelId}-activity` : undefined}
             disabled={disabled}
             aria-haspopup="menu"
             aria-expanded={behavior.menu.api.open}
@@ -82,12 +87,27 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
                 <PaletteShortcut binding={props.shortcut} />
               </span>
             ) : null}
-            <TabIcon indicator={snapshot.indicator} icon={icon} />
+            <TabIcon
+              indicator={
+                snapshot.indicator ??
+                (placement.resource?.icon
+                  ? {
+                      icon: placement.resource.icon,
+                      color: placement.resource.iconColor,
+                      label: placement.resource.iconLabel,
+                    }
+                  : undefined)
+              }
+              icon={icon}
+            />
             <Text asChild>
               <span ref={labelRef} id={labelId} data-tab-label>
                 {label}
               </span>
             </Text>
+            {placement.resource ? (
+              <ActivityDot id={`${labelId}-activity`} workbench={workbench} resource={placement.resource} />
+            ) : null}
             {placement.closable ? (
               <CloseButton
                 as="span"

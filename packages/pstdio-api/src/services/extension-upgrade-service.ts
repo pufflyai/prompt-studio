@@ -61,11 +61,13 @@ const installFromRecordedOrigin = (input: {
   installName: string;
   origin: { kind: "git"; url: string; path: string; ref: string };
   identity: string;
+  installedSourcePath: string;
   repoPath?: string;
 }) =>
   input.install({
     source: input.installName,
     installName: input.installName,
+    installedSourcePath: input.installedSourcePath,
     force: true,
     retainBackup: true,
     ref: input.origin.ref,
@@ -175,11 +177,21 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     return entry;
   };
 
-  const installForRelease = async (installName: string, identity: string, repoPath?: string) => {
+  const installForRelease = async (
+    installName: string,
+    identity: string,
+    installedSourcePath: string,
+    repoPath?: string,
+  ) => {
     const entry = await requireCatalogEntry(installName);
-    if (deps.release?.source === "registry" && entry.extensionId) {
-      return registry.installCatalog(entry, { installName, force: true, retainBackup: true, repoPath });
-    }
+    const options = {
+      installName,
+      installedSourcePath,
+      force: true,
+      retainBackup: true,
+      ...(repoPath ? { repoPath } : {}),
+    };
+    if (deps.release?.source === "registry" && entry.extensionId) return registry.installCatalog(entry, options);
     const workspaceSource = deps.release?.source === "workspace" && entry.origin.ref === "{hostRelease}";
     const source =
       workspaceSource && deps.release?.source === "workspace"
@@ -187,13 +199,10 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
         : installName;
     return install({
       source,
-      installName,
-      force: true,
+      ...options,
       ...(workspaceSource ? { skipInstall: true } : { hostReleaseRef: deps.release?.ref }),
       ...(!workspaceSource && entry.origin.url.startsWith("https:") ? { expectedIdentity: identity } : {}),
-      ...(repoPath ? { repoPath } : {}),
       reuseInstalledDependencies: true,
-      retainBackup: true,
     });
   };
 
@@ -260,6 +269,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
       installed = await install({
         source: registrySource.id,
         registrySource,
+        installedSourcePath: existing.installedSource.source_path,
         installName: existing.installedSource.install_name,
         force: true,
         retainBackup: true,
@@ -269,6 +279,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
       installed = await installForRelease(
         existing.installedSource.install_name,
         existing.installedSource.extension_id,
+        existing.installedSource.source_path,
         repoPath,
       );
     } else if (parsed && deps.release?.ref) {
@@ -278,6 +289,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
         installName: existing.installedSource.install_name,
         origin,
         identity: existing.installedSource.extension_id,
+        installedSourcePath: existing.installedSource.source_path,
         repoPath,
       });
     } else {

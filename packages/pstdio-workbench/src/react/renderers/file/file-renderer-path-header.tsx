@@ -6,7 +6,7 @@ export const FileRendererPathHeader = (props: { fileName: string; filePath: stri
   const { activeFileIconTheme } = useFileIconThemePreference();
 
   return (
-    <Header variant="narrow" flexShrink={0} gap="2xs" bg="bg">
+    <Header variant="narrow" flexShrink={0} gap="2xs" bg="bg" borderBottomWidth="1px" borderColor="border.subtle">
       {resolveFileIconElement(fileName, { theme: activeFileIconTheme })}
       <Text aria-label={`File path ${filePath}`} textStyle="label/S/regular" color="fg.muted" truncate>
         {filePath}

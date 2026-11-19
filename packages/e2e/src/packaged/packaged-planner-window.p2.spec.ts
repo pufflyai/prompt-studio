@@ -63,6 +63,8 @@ test("Planner keeps long dependency chains usable with a bounded card window", a
     await signInBrowser(page, started.descriptor);
     await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.planner/ticket-timeline`);
     const timeline = page.locator('[data-workbench-region="main"]').frameLocator("iframe");
+    // The Timeline shell mounts before its initial plan is available.
+    await expect(timeline.getByRole("button", { name: "Search this view", exact: true })).toBeVisible();
     await expect(timeline.locator("[data-timeline-viewport]")).toBeVisible();
     const initialSchemaReads = schemaReads;
     await expectPlannerWindow(timeline, execute, track.id);

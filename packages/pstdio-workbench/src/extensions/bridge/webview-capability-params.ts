@@ -129,6 +129,7 @@ const schemas = {
     z.strictObject({ operation: z.enum(["pause-extension", "resume-extension"]), installedExtensionId: identifier }),
   ]),
   "harnesses.read": z.object({ harnessId: identifier.optional(), model: z.string().optional() }),
+  "resources.changes.observed": z.strictObject({ receipt: z.string().min(1).max(16000).nullable() }),
   "resources.actions.register": z.discriminatedUnion("operation", [
     z.object({
       operation: z.literal("register"),

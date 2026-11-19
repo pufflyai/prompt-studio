@@ -48,7 +48,7 @@ describe("pstdio pstdio.planner delete-ticket", () => {
       const result = JSON.parse(run(`pstdio.planner delete-ticket --id ${shorthand}`, repo));
       expect(result.id).toBe(id);
 
-      const tickets = JSON.parse(run("pstdio.planner list-tickets", repo));
+      const tickets = JSON.parse(run("pstdio.planner list-tickets", repo)).tickets;
       expect(tickets.map((ticket: { title: string }) => ticket.title)).not.toContain("Gone ticket");
     },
     TEST_TIMEOUT,
@@ -69,7 +69,7 @@ describe("pstdio pstdio.planner delete-ticket", () => {
 
       run(`pstdio.planner delete-ticket --id ${shorthand}`, repo);
 
-      const tickets = JSON.parse(run("pstdio.planner list-tickets --draft", repo));
+      const tickets = JSON.parse(run("pstdio.planner list-tickets --draft", repo)).tickets;
       expect(tickets.map((ticket: { shorthand: string }) => ticket.shorthand)).not.toContain(shorthand);
     },
     TEST_TIMEOUT,

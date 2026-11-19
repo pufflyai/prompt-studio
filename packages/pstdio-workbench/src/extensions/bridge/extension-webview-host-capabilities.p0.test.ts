@@ -6,6 +6,7 @@ const requests = {
   "performance.read": { operation: "state" },
   "performance.control": { operation: "set-enabled", enabled: true },
   "harnesses.read": {},
+  "resources.changes.observed": { receipt: null },
   "resources.actions": { operation: "list", resource: { type: "ticket", id: "one" } },
   "commands.execute": { commandId: "notes.read" },
   "commands.query": { operation: "close", owner: "owner", requestId: "read" },

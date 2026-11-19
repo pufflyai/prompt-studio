@@ -87,8 +87,8 @@ const plannerInstance = async (host: Host, projectId: string) => {
   const response = await fetch(`${host.baseUrl}/v1/projects/${projectId}/extensions`, {
     headers: runtimeAuthorization(host.descriptor),
   });
-  const { extensions } = (await response.json()) as { extensions: { id: string; installName: string }[] };
-  return extensions.find((instance) => instance.installName === "planner");
+  const { extensions } = (await response.json()) as { extensions: { id: string; extensionId: string }[] };
+  return extensions.find((instance) => instance.extensionId === "pstdio.planner");
 };
 
 // Installing from one project enables Planner there. Other projects receive a disabled instance
@@ -137,6 +137,26 @@ const openTimeline = async (page: Page, host: Host, projectId: string) => {
   return page.locator('[data-workbench-region="main"]').frameLocator("iframe");
 };
 
+const expectTimelineStyles = async (timeline: FrameLocator) => {
+  const entryStyle = timeline.locator('link[rel="stylesheet"]');
+  await expect(entryStyle).toHaveCount(1);
+  const stylesheetUrl = await entryStyle.evaluate((link) => (link as HTMLLinkElement).href);
+  const stylesheet = await fetch(stylesheetUrl);
+  expect(stylesheet.status).toBe(200);
+  const css = await stylesheet.text();
+  expect(css).toContain("prompt-studio-icons");
+  expect(css).not.toContain("data:font/");
+  expect(css).not.toContain("KaTeX_Main");
+  await expect
+    .poll(() =>
+      timeline.locator("body").evaluate(async () => {
+        const faces = await document.fonts.load('16px "prompt-studio-icons"', "\uE80C");
+        return faces.some((face) => face.status === "loaded");
+      }),
+    )
+    .toBe(true);
+};
+
 const timelineCache = (host: Host) => {
   const root = join(host.home, "cache", "extension-webviews");
   const [installedId] = readdirSync(root);
@@ -162,6 +182,7 @@ const expectAutoBuildFilter = async (timeline: FrameLocator) => {
   const autoBuild = timeline.getByRole("dialog", { name: "Auto Build", exact: true });
   // The lazy editor's initial autofocus must finish before opening another control.
   await expect(autoBuild.getByRole("textbox")).toBeFocused();
+  await expect(autoBuild.locator(".katex")).toHaveCSS("font-family", /KaTeX_Main/);
   await autoBuild.getByRole("button", { name: "Filter", exact: true }).click();
   const filterMenu = timeline.getByTestId("filter-menu");
   await filterMenu.getByRole("button", { name: "Title", exact: true }).click();
@@ -209,7 +230,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
       seedTrackProject(conflicting.execute, "multi_select"),
       seedTrackProject(valid.execute, "single_select"),
     ]);
-    phase("seed complete");
+    await valid.execute("auto-build.configure", { enabled: false, prompt: "Check equation \\( x^2 + y^2 \\)." });
     expect(await moduleStatus(host, valid.id, "ticket-tags-settings")).toEqual({ status: 200, body: "" });
 
     // A valid Track cannot hide a missing module behind a schema error.
@@ -225,6 +246,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     let timeline = await openTimeline(page, host, valid.id);
     await expect(timeline.getByText("Product", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
     await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible();
+    await expectTimelineStyles(timeline);
 
     const focusedView = await valid.execute<{ id: string }>("timeline.views.create", {
       value: {
