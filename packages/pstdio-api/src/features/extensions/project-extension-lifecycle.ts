@@ -214,8 +214,7 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
   };
 
   return {
-    install: (projectId: string, input: InstallExtensionRequest | UploadExtensionRequest) =>
-      withProjectExtensionChoices(deps.extensionService, projectId, () => install(projectId, input)),
+    install,
     setAutomationEnabled,
     setEnabled: (projectId: string, instanceId: string, enabled: boolean) =>
       withProjectExtensionChoices(deps.extensionService, projectId, () => setEnabled(projectId, instanceId, enabled)),
