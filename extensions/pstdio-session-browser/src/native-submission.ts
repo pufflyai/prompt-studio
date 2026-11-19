@@ -12,16 +12,18 @@ export const nativeSubmissionIndex: StorageRecordIndex = {
   name: "native-inputs",
   fields: {
     sessionId: { path: ["sessionId"], type: "string" },
+    draftClientId: { path: ["draftClientId"], type: "string" },
     state: { path: ["state"], type: "string" },
     createdAt: { path: ["createdAt"], type: "string" },
   },
-  equality: ["sessionId"],
+  equality: ["sessionId", "draftClientId"],
   orderBy: [{ field: "createdAt", direction: "desc" }],
 };
 interface NativeSubmission {
   sessionId: string;
   fileId: string;
   previousRequest: string | null;
+  draftClientId?: string;
   requestStarted?: string | null;
   started: boolean;
   createdAt: string;
@@ -40,6 +42,7 @@ export const saveNativeSubmission = async (
   previousRequest: string | null,
   started: boolean,
   requestStarted?: string | null,
+  draftClientId?: string,
 ) => {
   const file = await ctx.storage.files.put({
     name: "native-input.json",
@@ -50,6 +53,7 @@ export const saveNativeSubmission = async (
     sessionId: id,
     fileId: file.id,
     previousRequest,
+    ...(draftClientId && { draftClientId }),
     ...(requestStarted !== undefined && { requestStarted }),
     started,
     createdAt: new Date().toISOString(),
@@ -63,12 +67,18 @@ export const saveNativeSubmission = async (
   });
   return recordId;
 };
-export const readNativeSubmissions = async (ctx: ExtensionContextBase, id: string, pendingOnly = false) => {
+export const readNativeSubmissions = async (
+  ctx: ExtensionContextBase,
+  id: string,
+  pendingOnly = false,
+  draftClientId?: string,
+) => {
   const page = await ctx.storage.records.query({
     index: nativeSubmissionIndex.name,
     where: {
       all: [
         { field: "sessionId", op: "eq", value: id },
+        ...(draftClientId ? [{ field: "draftClientId", op: "eq" as const, value: draftClientId }] : []),
         ...(pendingOnly
           ? [
               {

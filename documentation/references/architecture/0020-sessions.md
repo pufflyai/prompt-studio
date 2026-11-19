@@ -22,10 +22,10 @@ commands delegate to the installed provider; they contain no second chat/list
 implementation. Disabling the provider removes its presentation while core data
 and running work remain intact. Missing targets use normal unavailable feedback.
 
-Draft text, attachments and settings use public project storage, including
-projects without a local folder. The native host transfers the existing browser
-`session-drafts` and `session-attachments` as one guarded source snapshot, only
-acknowledging it after durable save. Generic layout remains the owner of selected
+The native host stores draft text, attachment references, and composer settings in
+the browser. Each browser can compose independently in the same session, including
+when execution runs on another device. Browser-local legacy drafts are carried
+forward after a local save. Successful submission still uses the session owner. Generic layout remains the owner of selected
 panels and page/panel conversion. See [native chat](../extensions/0028-native-chat.md)
 and the [provider README](../../../extensions/pstdio-session-browser/README.md).
 

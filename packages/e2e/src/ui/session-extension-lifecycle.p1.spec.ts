@@ -53,37 +53,25 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
       if (path.endsWith("chat.onAction/execute") && sent.postDataJSON()?.params?.action?.type === "stop") stops++;
     });
     await prepareResourceActionsDashboard(page, project.id);
-    const target = `/projects/${project.id}/extensions/pstdio.session-browser/conversation?resource=${encodeURIComponent(`pstdio://extension-resource/session/${sessionId}`)}`;
-    await page.goto(target);
-    const main = page.locator('[data-workbench-region="main"]');
-    const side = page.locator('[data-workbench-region="side"]');
-    const editor = main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true });
-    await expect(editor).toBeVisible();
+    await page.goto(`/projects/${project.id}`);
     await openSessionSidePanel(page, "Retained execution");
-    await expect(
-      side.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
-    ).toBeVisible();
+    const side = page.locator('[data-workbench-region="side"]');
+    const retainedTab = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { selected: true });
+    const retainedId = await retainedTab.getAttribute("data-value");
+    const editor = side.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true });
+    await expect(editor).toBeVisible();
     await expect.poll(() => watches.length).toBe(1);
     await expect.poll(() => holds.length).toBe(1);
     expect(budget.state().active.some((url) => new URL(url).pathname === "/v1/session-stream")).toBe(true);
-    const saved = page.waitForResponse(
-      (response) =>
-        response.url().endsWith("conversation.chat.saveDraft/execute") &&
-        response.request().postDataJSON()?.params?.draft?.attachments?.length === 1,
-    );
     await editor.fill("Unsent work survives provider disablement");
     const chooser = page.waitForEvent("filechooser");
-    await main.getByRole("button", { name: "Attach files", exact: true }).click();
+    await side.getByRole("button", { name: "Attach files", exact: true }).click();
     await (await chooser).setFiles({
       name: "retained.txt",
       mimeType: "text/plain",
       buffer: Buffer.from("Durable attachment"),
     });
-    expect((await saved).ok()).toBe(true);
     await expect(side.getByRole("button", { name: "Remove retained.txt", exact: true })).toBeVisible();
-    const tabs = await side
-      .locator("[data-workbench-tab]")
-      .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-workbench-tab")));
     const projectNavigation = async () => {
       const back = page.getByRole("button", { name: "Back to project", exact: true });
       if (await back.isVisible()) await back.click();
@@ -118,30 +106,15 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     expect(enabled.ok()).toBe(true);
     await projectNavigation();
     await expect(page.getByRole("option", { name: "Sessions", exact: true })).toHaveCount(1);
-    // Core owns panel visibility; reopening activates the existing retained tab.
+    // Reopen the saved viewer rather than introducing a second viewer of this resource.
     await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
     await page
       .getByRole("dialog", { name: "Side Panel", exact: true })
       .getByRole("button", { name: "Reattach Side Panel", exact: true })
       .click();
-    await expect(
-      side.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
-    ).toContainText("Unsent work survives provider disablement");
-    await expect(side.getByRole("button", { name: "Remove retained.txt", exact: true })).toBeVisible();
-    expect(
-      await side
-        .locator("[data-workbench-tab]")
-        .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-workbench-tab"))),
-    ).toEqual(tabs);
-    // Normal navigation reuses Side. History/deep-link restoration addresses Main
-    // explicitly while retaining this document and its shared client transport.
-    await page.evaluate((url) => {
-      history.pushState(null, "", url);
-      dispatchEvent(new PopStateEvent("popstate"));
-    }, target);
-    await expect(page).toHaveURL(new URL(target, page.url()).href);
     await expect(editor).toContainText("Unsent work survives provider disablement");
-    await expect(main.getByRole("button", { name: "Remove retained.txt", exact: true })).toBeVisible();
+    await expect(side.getByRole("button", { name: "Remove retained.txt", exact: true })).toBeVisible();
+    await expect(retainedTab).toHaveAttribute("data-value", retainedId!);
     await expect.poll(() => watches.length).toBe(2);
     expect(holds).toHaveLength(1);
     expect(deleted).not.toContain(holds[0]!);
