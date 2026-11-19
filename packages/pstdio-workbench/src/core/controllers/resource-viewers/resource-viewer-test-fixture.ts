@@ -31,6 +31,7 @@ export const createResourceViewerFixture = (
   const saved = options.saved ?? new Map<string | undefined, WorkbenchLayout>();
   const locations = options.locations ?? new Map<string, PersistedWorkbenchPageLocation>();
   const w = createWorkbench({
+    defaultPage: viewerPage("home"),
     pageLocationBrowser: options.browser,
     ...(options.sideCanOpen === false ? { defaultPanelOpenByRegionId: { side: true } } : {}),
     layoutPersistence: {
@@ -65,7 +66,7 @@ export const createResourceViewerFixture = (
     id: "home",
     ref: viewerPage("home"),
     title: "Home",
-    path: "",
+    path: "home",
     modeId: "project",
     main: { kind: "panels" },
     slots: [],

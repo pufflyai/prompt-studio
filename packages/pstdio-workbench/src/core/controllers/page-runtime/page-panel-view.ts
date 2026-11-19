@@ -11,6 +11,7 @@ import { getOwnedPlacementPreparation } from "../../registries/placements/owned-
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { requirePanelOpen } from "../shell/panel-open-policy";
+import { portablePagePanel } from "./portable-page-panel";
 
 export const validatePagePanelView = (page: WorkbenchPageContribution, registry: WorkbenchModePlacementRegistry) => {
   if (!page.panelView) return;
@@ -42,7 +43,9 @@ export const migratePagePanelView = (
     registry && identity?.kind === "page"
       ? replacedPageSlot(registry, { kind: "page-slot", page: page.ref, id: identity.slotId })
       : undefined;
-  const panel = replacement?.ref ?? (isPageContent(page, identity) ? page.panelView : undefined);
+  const panel =
+    replacement?.ref ??
+    (isPageContent(page, identity) && registry ? (page.panelView ?? portablePagePanel(page, registry)) : undefined);
   if (!panel) return undefined;
   const placement = registry?.getPlacement(panel);
   if (!placement || !registry) return widget;

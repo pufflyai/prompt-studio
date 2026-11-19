@@ -50,6 +50,7 @@ export interface OwnedPlacementPreparation {
   resolve(modeId?: string, state?: OwnedPlacementState): readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[];
   apply(state: OwnedPlacementState): void;
   publish(destination?: PlacementDestination): void;
+  notify?(): void;
 }
 const preparations = new WeakMap<object, OwnedPlacementPreparation>();
 export const setOwnedPlacementPreparation = (registry: object, preparation: OwnedPlacementPreparation) =>
@@ -69,6 +70,7 @@ export const prepareOwnedPlacement = (input: {
 }) => {
   const state = {
     staticOverrides: new Map(input.current.staticOverrides),
+    staticLocations: new Map(input.current.staticLocations),
     resourceInstances: new Map(input.current.resourceInstances),
   };
   const operation = {

@@ -5,6 +5,7 @@ import type { ComponentProps, MouseEvent, TouchEvent } from "react";
 import { useShallow } from "zustand/react/shallow";
 import type { WorkbenchCore } from "../../core";
 import { resolvePanelPosition, type WorkbenchPositionedRegion } from "../../core/registries/layout/panel-positions";
+import { resolvePageContent } from "../../core/registries/pages/page-content";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
@@ -20,7 +21,19 @@ const usePanelMovePositions = (workbench: WorkbenchCore, region: WorkbenchPositi
 };
 
 export const usePanelPositionActions = (workbench: WorkbenchCore, region: WorkbenchPositionedRegion) => {
-  return usePanelMovePositions(workbench, region).map((position) => ({
+  const content = useWorkbenchStore(workbench.pages.store, (state) =>
+    region === "main" ? resolvePageContent(state) : undefined,
+  );
+  const positions = usePanelMovePositions(workbench, region);
+  useWorkbenchStore(workbench.layout.store, (state) => state.layout);
+  if (content)
+    return workbench.getPanelDestinations(content.widgetId).map((destination) => ({
+      key: `move-view-${destination}`,
+      label: `Move to ${destination === "side" ? "Side" : "Bottom"}`,
+      icon: <WorkbenchIcon name={destination === "side" ? "PanelRight" : "PanelBottom"} size={14} />,
+      onClick: () => workbench.movePanel(content.widgetId, destination),
+    }));
+  return positions.map((position) => ({
     key: `position-${position}`,
     label: `Move ${region === "activity" ? "action bar" : "panel"} to ${position}`,
     icon: (
@@ -38,7 +51,12 @@ const interactive =
 
 /** Only unused header space starts a whole-panel drag. Tab and control gestures keep their owners. */
 export const usePanelDragSurface = (workbench: WorkbenchCore, region: WorkbenchPositionedRegion) => {
-  const canMove = usePanelMovePositions(workbench, region).length > 0;
+  const positions = usePanelMovePositions(workbench, region);
+  const content = useWorkbenchStore(workbench.pages.store, (state) =>
+    region === "main" ? resolvePageContent(state) : undefined,
+  );
+  useWorkbenchStore(workbench.layout.store, (state) => state.layout);
+  const canMove = content ? workbench.getPanelDestinations(content.widgetId).length > 0 : positions.length > 0;
   const floatingSide = useWorkbenchStore(
     workbench.layout.store,
     () => region === "side" && workbench.sidePanel.getMode() === "floating",
@@ -49,8 +67,8 @@ export const usePanelDragSurface = (workbench: WorkbenchCore, region: WorkbenchP
   );
   const disabled = !canMove || floatingSide || fullscreenPanel;
   const drag = useDraggable({
-    id: `panel:${region}`,
-    data: { panelRegion: region },
+    id: content?.widgetId ?? `panel:${region}`,
+    data: content ? { pageContent: true } : { panelRegion: region },
     disabled,
   });
   const empty = (event: MouseEvent | TouchEvent) => !(event.target as Element).closest(interactive);
@@ -59,6 +77,7 @@ export const usePanelDragSurface = (workbench: WorkbenchCore, region: WorkbenchP
     tabIndex: 0,
     "aria-label": `Move ${region} panel`,
     "data-workbench-panel-drag": region,
+    "data-workbench-page-drag": content?.widgetId,
     "data-panel-draggable": !disabled || undefined,
     "data-panel-dragging": drag.isDragging || undefined,
     layerStyle: "panelDragSurface",

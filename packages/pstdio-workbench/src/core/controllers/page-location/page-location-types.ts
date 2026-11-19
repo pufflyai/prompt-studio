@@ -26,7 +26,9 @@ export interface WorkbenchPageLocationBrowser {
 }
 
 export interface PersistedWorkbenchPageLocation {
-  location: PageLocation;
+  location?: PageLocation;
+  // A locationless Main retains its mode while content lives in auxiliary panels.
+  modeId?: string;
   // The last location outside every Sidenav level. Users return here when a level hides the project rows.
   rootLevel?: PageLocation;
   remembered?: readonly RememberedWorkbenchPageLocation[];
@@ -56,6 +58,7 @@ export interface WorkbenchPageHistoryState {
   projectId: string;
   routeKey?: string;
   location?: PageLocation;
+  modeId?: string;
   removalVersion?: number;
   removalEpoch?: string;
 }
@@ -75,6 +78,9 @@ export interface CreateWorkbenchPageLocationControllerInput<Value> {
   getResourceRemovalEpoch?(): string;
   restoreLocation?(location: PageLocation, projectId: string, removalVersion?: number): PageLocation;
   focusResource?(location: PageLocation, open?: import("@pstdio/sdk/extensions").PageOpenIntent): boolean;
+  navigateTarget?(target: NavigationTargetPage): WorkbenchPageNavigationResult;
+  navigateHistory?(location: PageLocation, history: "replace" | "none"): WorkbenchPageNavigationResult;
+  restoreHistoryLocation?(location: PageLocation, removalVersion: number): PageLocation;
   activateLocation?(): void;
   reportDiagnostic?(diagnostic: WorkbenchPageLocationDiagnostic): void;
 }

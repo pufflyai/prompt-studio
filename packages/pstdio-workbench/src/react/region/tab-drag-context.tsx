@@ -32,6 +32,10 @@ interface TabDrop {
   edge?: "before" | "after";
   panelPosition?: WorkbenchPanelPosition;
 }
+const draggedPlacement = (workbench: WorkbenchCore, id: string) => {
+  const content = workbench.pages.getContent();
+  return content?.widgetId === id ? content : findPlacementByWidgetId(workbench.layout.getLayout(), id)?.placement;
+};
 const TabDragContext = createContext<{
   activeId?: string;
   drop?: TabDrop;
@@ -72,7 +76,7 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
     )
       return undefined;
     const layout = workbench.layout.getLayout();
-    const placement = findPlacementByWidgetId(layout, String(event.active.id))?.placement;
+    const placement = draggedPlacement(workbench, String(event.active.id));
     if (!placement) return undefined;
     const region = data.region as WorkbenchPanelRegion;
     const widgets = layout.regions[region].widgets;
@@ -93,7 +97,7 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
       panelPosition: data.panelPosition as WorkbenchPanelPosition | undefined,
     } satisfies TabDrop;
   };
-  const placement = activeId ? findPlacementByWidgetId(workbench.layout.getLayout(), activeId)?.placement : undefined;
+  const placement = activeId ? draggedPlacement(workbench, activeId) : undefined;
   return (
     <TabDragContext
       value={{
@@ -159,7 +163,11 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
           }
           const target = resolveDrop(event);
           finish();
-          if (target?.region === "main" && panelPageDropTarget(workbench, String(event.active.id))) {
+          if (
+            target?.region === "main" &&
+            !workbench.shell.getPanelPolicy("main").acceptsTabs &&
+            panelPageDropTarget(workbench, String(event.active.id))
+          ) {
             void openPanelAsPage(workbench, String(event.active.id)).catch((error) =>
               reportUserActionError(workbench, "Open page", error),
             );

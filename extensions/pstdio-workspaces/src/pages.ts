@@ -1,7 +1,7 @@
 import { definePage, l10n, workbenchModes, workbenchResourceKinds } from "@pstdio/sdk/extensions";
 import { fileView } from "./files";
 import { workspaceCommands, workspaceFileDocument } from "./refs";
-import { actionView, changesView, historyView, summaryView, workspacesView } from "./views";
+import { actionView, historyView, summaryView, workspacesView } from "./views";
 
 const mode = workbenchModes.project;
 const resource = { kinds: [workbenchResourceKinds.workspace] };
@@ -16,7 +16,7 @@ export const workspaces = definePage({
     kind: "view",
     view: workspacesView.ref,
     cardinality: "one",
-    presentation: "tabs",
+    presentation: "page",
     tab: {
       query: () => ({
         label: workspaceListTitle,
@@ -60,23 +60,8 @@ export const workspace = definePage({
   resource,
   document: workspaceFileDocument,
   params: { comparison: { type: "string", default: "provider", values: ["provider", "current", "fork_point"] } },
-  main: { kind: "panels", landing: "files", empty: summaryView.ref },
-  slots: [
-    {
-      id: "files",
-      region: "main",
-      tab: { query: () => ({ label: "Files" }) },
-      order: 1,
-      item: { kind: "view", view: fileView.ref, presence: "open" },
-    },
-    {
-      id: "changes",
-      region: "main",
-      tab: { query: () => ({ label: "Changes" }) },
-      order: 2,
-      item: { kind: "view", view: changesView.ref, presence: "open" },
-    },
-  ],
+  main: { kind: "view", view: fileView.ref, cardinality: "one", presentation: "page" },
+  slots: [],
 });
 export const history = definePage({
   id: "history",

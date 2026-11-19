@@ -7,7 +7,6 @@ import type { WorkbenchCore } from "../../workbench-core-types";
 import { prepareWorkbenchNavigation } from "../navigation/compound-navigation";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 import { pageLocationTarget } from "../page-location/page-location-target";
-import { findDisplayedResource } from "../resource-viewers/displayed-viewers";
 
 export const panelResourcePageTarget = (
   core: WorkbenchCore,
@@ -91,27 +90,10 @@ export const panelPageDropTarget = (core: WorkbenchCore, instanceId: string) => 
 export const openDroppedPage = async (
   core: WorkbenchCore,
   target: NavigationTargetPage | NavigationTargetCompound,
-  instanceId?: string,
+  _instanceId?: string,
 ) => {
   if (target.kind === "compound") prepareWorkbenchNavigation(core, target.targets, { reuseViewers: false });
   else getPageLocationPreparation(core.pageLocations).resolve(target);
-  const projectId = core.pages.store.getState().projectId;
-  const resource =
-    target.kind === "compound"
-      ? [...target.targets].reverse().find((item) => item.resource)?.resource
-      : target.resource;
-  const existing = resource && findDisplayedResource(core, resource);
-  const sourceId = instanceId ?? (existing && existing.region !== "main" ? existing.widget.widgetId : undefined);
-  if (sourceId) {
-    const placement = findPlacementByWidgetId(core.layout.getLayout(), sourceId)?.placement;
-    if (!placement?.placementIdentity) return;
-    await core.closePlacement(placement.placementIdentity);
-    if (
-      core.pages.store.getState().projectId !== projectId ||
-      findPlacementByWidgetId(core.layout.getLayout(), sourceId)
-    )
-      return;
-  }
   await core.navigation.openTarget(target);
 };
 export const openPanelAsPage = async (core: WorkbenchCore, instanceId: string) => {

@@ -8,23 +8,20 @@ import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/pag
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import type { OwnedPlacementState } from "../../registries/placements/owned-placement-lifecycle";
 import { getOwnedPlacementPreparation } from "../../registries/placements/owned-placement-preparation";
-import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 import type { ResolvedPageLocation } from "../page-location/page-location-types";
-import { preparePageLanding } from "../page-runtime/page-panel-view";
 import { reusableNavigationViewer } from "../resource-viewers/reusable-navigation-viewer";
 import { requirePanelOpen } from "../shell/panel-open-policy";
+import { prepareMainDeparture } from "./main-page-departure";
+import { preparePageNavigation } from "./page-navigation-preparation";
 import { requireCorePanelTargets } from "./panel-target";
-import { isReusedViewerPin, prepareReusedViewerPin, retainOutgoingViewerPins } from "./reused-viewer-pin";
+import { commitPreparedNavigation } from "./prepared-navigation-commit";
+import { finalHostTransfers, prepareResourceTransfer, retainTransferredPin } from "./resource-transfer";
+import { isReusedViewerPin, prepareReusedViewerPin, recordOutgoingViewerPins } from "./reused-viewer-pin";
 
 type NavigationOperation = NavigationTargetPage | NavigationTargetPanel;
 type PageState = WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
-const requireProject = (state: PageState) => {
-  if (!state.projectId) throw new Error("Cannot navigate before a project is active");
-  return state.projectId;
-};
-
 const validatePanelOpenings = (
   core: WorkbenchCore,
   target: NavigationOperation,
@@ -56,22 +53,23 @@ const recordPanelOpenings = (
   activate: Map<WorkbenchRegion, PlacementIdentity>,
   destinations: Map<string, PlacementDestination>,
 ) => {
-  const region = target.kind === "panel" ? target.region : undefined;
   for (const placement of placements) {
+    let region = target.kind === "panel" ? target.region : undefined;
+    if (target.kind === "page" && placement.region === "main") region = "main";
     activate.set(region ?? placement.region, placement.identity);
     if (region) destinations.set(placementIdentityKey(placement.identity), { identity: placement.identity, region });
   }
 };
 
-const placementContext = (state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) =>
-  state.activeModeId
-    ? {
-        modeId: state.activeModeId,
-        pageId: state.activePageId,
-        projectId: state.projectId,
-        location: state.location,
-      }
-    : undefined;
+const recordExplicitDestination = (
+  target: NavigationOperation,
+  identity: PlacementIdentity,
+  destinations: Map<string, PlacementDestination>,
+) => {
+  if (target.kind === "panel" && target.region)
+    destinations.set(placementIdentityKey(identity), { identity, region: target.region });
+};
+
 const requirePanelPage = (state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>, panel: PageSlotRef) => {
   const page = Object.values(state.pages).find(
     (page) => page.ref.extensionId === panel.page.extensionId && page.ref.id === panel.page.id,
@@ -86,6 +84,7 @@ const prepareSharedPanel = (
   modeId: string | undefined,
   modeState: OwnedPlacementState,
   shellState: OwnedPlacementState,
+  location?: ViewLocation,
 ) => {
   const panel = target.panel;
   if (panel.kind === "placement") {
@@ -93,7 +92,7 @@ const prepareSharedPanel = (
     if (!placement || placement.modeId !== modeId)
       throw new Error(`Mode panel "${panel.id}" is not owned by the proposed mode`);
     const prepared = getOwnedPlacementPreparation(core.modePlacements).open(
-      { placementId: placement.id, resource: target.resource, open: target.open, region: target.region },
+      { placementId: placement.id, resource: target.resource, open: target.open, region: target.region, location },
       modeState,
     );
     return { modeState: prepared.state, shellState, identity: prepared.identity };
@@ -109,36 +108,6 @@ const prepareSharedPanel = (
     shellState,
   );
   return { modeState, shellState: prepared.state, identity: prepared.identity };
-};
-const restorePageOwners = (
-  core: WorkbenchCore,
-  state: PageState,
-  resolved: ResolvedPageLocation,
-  modeState: OwnedPlacementState,
-  shellState: OwnedPlacementState,
-) => {
-  const page = state.pages[resolved.pageId]!;
-  const context = {
-    modeId: page.modeId,
-    pageId: page.id,
-    projectId: requireProject(state),
-    location: resolved.location,
-  };
-  const shell = getOwnedPlacementPreparation(core.shellPlacements);
-  const mode = getOwnedPlacementPreparation(core.modePlacements);
-  const nextShell = shell.restore?.(context, shellState, placementContext(state)) ?? shellState;
-  const restored = mode.restore?.(context, modeState) ?? modeState;
-  const landing = preparePageLanding(page, core.modePlacements, restored, resolved);
-  const nextMode = landing?.state ?? restored;
-  return {
-    mode: nextMode,
-    shell: nextShell,
-    placements: {
-      shell: shell.resolve(undefined, nextShell),
-      mode: mode.resolve(page.modeId, nextMode),
-      ...(landing ? { landing: landing.identity } : {}),
-    },
-  };
 };
 
 type ResourceReference = { resource: ResourceRef } & ViewLocation;
@@ -169,7 +138,12 @@ const applyViewerReferences = (
 export const prepareWorkbenchNavigation = (
   core: WorkbenchCore,
   targets: readonly NavigationOperation[],
-  options: { reuseViewers?: boolean } = {},
+  options: {
+    reuseViewers?: boolean;
+    location?: ViewLocation;
+    replace?: WorkbenchWidgetPlacement;
+    history?: "push" | "replace" | "none";
+  } = {},
 ) => {
   requireCorePanelTargets(core, targets);
   targets = targets.map((target) => {
@@ -196,17 +170,24 @@ export const prepareWorkbenchNavigation = (
   const consumedMemory: PageLocation[] = [];
   const activate = new Map<WorkbenchRegion, PlacementIdentity>();
   const destinations = new Map<string, PlacementDestination>();
+  const transfers: { source: WorkbenchWidgetPlacement; destination: WorkbenchWidgetPlacement }[] = [];
   const owned = (modeId = proposed.activeModeId) => ({
     shell: shell.resolve(undefined, shellState),
     mode: mode.resolve(modeId, modeState),
   });
 
-  for (const target of targets) {
+  for (const rawTarget of targets) {
+    const target = retainTransferredPin(core, rawTarget, original);
+    const departure = prepareMainDeparture(core, target, proposed, modeState, shellState, destinations);
+    proposed = departure.page;
+    modeState = departure.mode;
+    shellState = departure.shell;
     const beforeOpen = proposed;
     resourceToFocus = undefined;
     const reusable = reusableNavigationViewer(core, target, proposed, options.reuseViewers);
     if (reusable) {
       activate.set(reusable.region, reusable.identity);
+      recordExplicitDestination(target, reusable.identity, destinations);
       resourceToFocus = referenceForTarget(target, locations.resolve);
       references.set(placementIdentityKey(reusable.identity), resourceToFocus);
       if (isReusedViewerPin(target.open, proposed, reusable.identity)) {
@@ -224,27 +205,11 @@ export const prepareWorkbenchNavigation = (
       continue;
     }
     if (target.kind === "page") {
-      const projectId = requireProject(proposed);
-      const resolved = locations.resolve(target);
-      if (resolved.consumeRemembered) consumedMemory.push(resolved.consumeRemembered);
-      const page = proposed.pages[resolved.pageId]!;
-      const restored = restorePageOwners(core, proposed, resolved, modeState, shellState);
-      shellState = restored.shell;
-      modeState = restored.mode;
-      proposed = pages.prepare.location(
-        {
-          pageId: page.id,
-          projectId,
-          location: resolved.location,
-          resource: resolved.location.resource,
-          section: resolved.location.section,
-          position: resolved.location.position,
-          open: resolved.open,
-          action: "preparePageNavigation",
-        },
-        proposed,
-        restored.placements,
-      );
+      const page = preparePageNavigation(core, target, proposed, modeState, shellState);
+      proposed = page.state;
+      modeState = page.mode;
+      shellState = page.shell;
+      if (page.resolved.consumeRemembered) consumedMemory.push(page.resolved.consumeRemembered);
     } else if (target.kind === "panel") {
       const modeId = panelModeId(core, target, proposed.activeModeId);
       const panel = target.panel;
@@ -256,7 +221,7 @@ export const prepareWorkbenchNavigation = (
           owned(),
         );
       } else {
-        const prepared = prepareSharedPanel(core, target, modeId, modeState, shellState);
+        const prepared = prepareSharedPanel(core, target, modeId, modeState, shellState, options.location);
         modeState = prepared.modeState;
         shellState = prepared.shellState;
         const identity = prepared.identity;
@@ -269,6 +234,20 @@ export const prepareWorkbenchNavigation = (
     } else {
       throw new Error("Compound navigation accepts only page and panel targets");
     }
+    const transfer = prepareResourceTransfer(core, target, {
+      before: beforeOpen,
+      original,
+      page: proposed,
+      mode: modeState,
+      shell: shellState,
+      replacement: options.replace ?? departure?.source,
+    });
+    proposed = transfer.page;
+    modeState = transfer.mode;
+    shellState = transfer.shell;
+    transfers.push(...transfer.hosts);
+
+    recordOutgoingViewerPins(target.open, beforeOpen, proposed.reconciliation.activate, outgoingPins);
     validatePanelOpenings(core, target, beforeOpen, proposed);
     recordPanelOpenings(target, proposed.reconciliation.activate, activate, destinations);
   }
@@ -290,22 +269,24 @@ export const prepareWorkbenchNavigation = (
   );
   return {
     commit: () =>
-      batchWorkbenchChanges(() => {
-        const applyOwners = () => {
-          // Browser acceptance precedes owner changes; outgoing-tray capture follows them.
-          retainOutgoingViewerPins(core, outgoingPins.values(), original);
-          mode.apply(modeState);
-          shell.apply(shellState);
-        };
-        const publishWithoutLocation = () => {
-          applyOwners();
-          return pages.publish(final, "navigateCompoundTarget");
-        };
-        const result = final.location ? locations.commit(final, applyOwners, consumedMemory) : publishWithoutLocation();
-        if (modeState !== originalMode) mode.publish();
-        if (shellState !== originalShell) shell.publish();
-        applyViewerReferences(core, references.values(), resourceToFocus, targets.at(-1));
-        return result;
+      commitPreparedNavigation({
+        core,
+        original,
+        pins: outgoingPins.values(),
+        transfers: finalHostTransfers(transfers, final),
+        owners: [
+          { owner: mode, previous: originalMode, next: modeState },
+          { owner: shell, previous: originalShell, next: shellState },
+        ],
+        publish: (beforePublish) => {
+          if (final.location) return locations.commit(final, beforePublish, consumedMemory, options.history);
+          return locations.commitUnavailable(
+            final,
+            beforePublish,
+            options.history ?? (original.location ? "push" : "none"),
+          );
+        },
+        afterPublish: () => applyViewerReferences(core, references.values(), resourceToFocus, targets.at(-1)),
       }),
   };
 };

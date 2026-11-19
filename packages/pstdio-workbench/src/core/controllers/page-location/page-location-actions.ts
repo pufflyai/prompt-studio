@@ -90,7 +90,7 @@ export const createPageLocationControllerActions = <Value>(
           return actions.resolveUrl(projectId, input.browser.current())?.location;
         }
         const saved = input.persistence.load(projectId);
-        if (saved) return actions.normalizeStored(saved.location).location;
+        if (saved) return saved.location ? actions.normalizeStored(saved.location).location : undefined;
         const page = eligibleDefaultPage(input);
         return page ? actions.normalizeTarget({ kind: "page", page: page.ref }).location : undefined;
       } catch {
@@ -108,6 +108,7 @@ export const createPageLocationControllerActions = <Value>(
       if (!projectId) return actions.fail("navigation", new Error("Cannot navigate before a project is active"));
       try {
         const resolved = actions.normalizeTarget(target);
+        if (target.intent !== "restore" && input.navigateTarget) return navigated(input.navigateTarget(target));
         const current = input.registry.store.getState().location;
         if (current && target.intent !== "restore" && input.focusResource?.(resolved.location, resolved.open)) {
           navigation.notify(current);
