@@ -55,7 +55,7 @@ describe("spawnAgentSession lifecycle", () => {
 
     await expect(spawning).rejects.toThrow();
     expect(stop).toHaveBeenCalledTimes(1);
-    expect(sessionService.store.setSession).not.toHaveBeenCalled();
+    expect(sessionService.store.get("s_cancelled_start")?.session ?? null).toBeNull();
   });
 
   test("stops a running harness session when its originating request is cancelled", async () => {
@@ -117,7 +117,7 @@ describe("spawnAgentSession lifecycle", () => {
 
     await expect(spawning).rejects.toThrow();
     expect(stop).toHaveBeenCalledTimes(1);
-    expect(sessionService.store.setSession).not.toHaveBeenCalled();
+    expect(sessionService.store.get("s_cancelled_persist")?.session ?? null).toBeNull();
     expect(sessionService.transitionStatus).toHaveBeenCalledWith("s_cancelled_persist", "cancelled", expect.anything());
   });
 
@@ -148,52 +148,7 @@ describe("spawnAgentSession lifecycle", () => {
 
     await expect(spawning).rejects.toThrow("remote delete failed");
     expect(sessionService.transitionStatus).not.toHaveBeenCalled();
-    expect(sessionService.store.setSession).toHaveBeenCalledWith(
-      "s_cleanup_failed",
-      expect.objectContaining({ agentSessionId: "accepted-1" }),
-      expect.anything(),
-    );
-  });
-
-  test("fires status hooks when the spawned session exits", async () => {
-    const start = mock((_ctx: unknown, _input: unknown) => completedSession());
-    const registry = createTestHarnessRegistry([createTestHarnessRecord("claude-code", { provider: { start } })]);
-
-    const transitionStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "completed" }));
-
-    await spawnAgentSession(
-      {
-        sessionId: "session_1",
-        agentId: CLAUDE_CODE_ID,
-        prompt: "hello",
-        cwd: "/repo",
-      },
-      {
-        harnessRegistry: registry,
-        eventBus: {
-          emit: () => {},
-        },
-        workspaceSessionService: readyWorkspaceSession,
-        fileService: {
-          get: async () => null,
-          upload: async () => ({ id: "file_1" }),
-          update: async () => null,
-        },
-        sessionService: {
-          get: mock(async () => ({ id: "session_1", project_id: "project_1", status: "in_progress" })),
-          update: async () => null,
-          transitionStatus,
-          store: createTrackedSessionStore(),
-        },
-      } as unknown as Parameters<typeof spawnAgentSession>[1],
-    );
-
-    for (let index = 0; index < 20; index += 1) {
-      if (transitionStatus.mock.calls.length > 0) break;
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-
-    expect(transitionStatus).toHaveBeenCalledWith("session_1", "completed", expect.anything());
+    expect(sessionService.store.get("s_cleanup_failed")?.session?.agentSessionId).toBe("accepted-1");
   });
 
   test("does not overwrite a cancelled session when the session exits later", async () => {

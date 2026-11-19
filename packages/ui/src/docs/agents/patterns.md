@@ -32,6 +32,8 @@ Use the diff patterns for changed-file navigation, file summaries, and drawer-ba
 
 Use `Dialog.Title`, the shared `CloseButton`, and `Dialog.Footer` with grouped actions for creation dialogs.
 The workbench overlay owns its close button; widgets supply the header, body, and footer.
+Scoped dialog content owns nested popup portals so their focus stays inside the dialog. Popup positioning stays fixed within clipped dialog content; an explicit popup container or positioning still takes precedence. Nested dialog roots retain their own backdrop and portal owner.
+
 Put parameter explanations in `description`. `ParamEditorLabel` shows a tooltip on hover or keyboard focus of its
 info button. Escape uses the shared overlay behavior and can also dismiss a containing dialog. Labels do not add an asterisk; required validation
 stays in the form.

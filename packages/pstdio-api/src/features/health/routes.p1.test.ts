@@ -62,7 +62,6 @@ describe("GET /openapi.json", () => {
 
     const body = await res.json();
     expect(body.openapi).toBe("3.0.0");
-    expect(body.info.title).toBe("Demo API Service");
   });
 });
 

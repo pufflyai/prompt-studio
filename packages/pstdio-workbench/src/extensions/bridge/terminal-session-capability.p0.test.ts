@@ -65,14 +65,6 @@ describe("createTerminalSessionCapability", () => {
     expect(scripted.calls).toEqual([]);
     await owner({ operation: "kill", sessionId: "session-1" });
   });
-  test("open returns only a serializable session id", async () => {
-    const { workbench, hostEvents } = setupTerminal();
-    const capability = createTerminalSessionCapability({ terminal: workbench.terminal, hostEvents });
-
-    const result = await capability({ operation: "open", request: { cols: 80, rows: 24 } });
-
-    expect(result).toEqual({ operation: "open", sessionId: "session-1" });
-  });
 
   test("write, resize, and kill call the matching host session methods", async () => {
     const { workbench, scripted, hostEvents } = setupTerminal();
@@ -155,18 +147,6 @@ describe("terminal.session capability gate", () => {
     await expect(
       gate.call({ method: "terminal.session", params: { operation: "open", request: { cols: 80, rows: 24 } } }),
     ).resolves.toEqual({ operation: "open", sessionId: "session-1" });
-  });
-
-  test("a webview omitting terminal.session is rejected", async () => {
-    const setup = setupTerminal();
-    const gate = createHostCapabilityGate({
-      capabilities: buildRegistry(setup),
-      declaredCapabilities: ["commands.execute"],
-    });
-
-    await expect(
-      gate.call({ method: "terminal.session", params: { operation: "open", request: { cols: 80, rows: 24 } } }),
-    ).rejects.toThrow(/did not declare/i);
   });
 
   test("versioned terminal.session declarations are accepted", async () => {

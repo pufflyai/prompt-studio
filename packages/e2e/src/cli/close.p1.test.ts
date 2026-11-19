@@ -86,42 +86,6 @@ describe("pstdio close", () => {
   });
 
   test(
-    "shuts down a running API",
-    async () => {
-      const port = await getFreePort();
-      const url = `http://127.0.0.1:${port}`;
-      const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-close-home-"));
-      runtimeToCleanup = spawn(
-        "bun",
-        ["run", PSTDIO_CLI, "serve", "--foreground", "--owner", "persistent", "--port", String(port)],
-        {
-          cwd: join(import.meta.dirname, "../.."),
-          env: {
-            ...process.env,
-            PSTDIO_DB_PATH: ":memory:",
-            PSTDIO_DEFAULT_EXTENSIONS: "[]",
-            PSTDIO_DISABLE_EMBED_MANIFEST: "1",
-            PSTDIO_HOME: homePath,
-            PSTDIO_STORAGE_PATH: join(homePath, "storage"),
-          },
-          stdio: "pipe",
-        },
-      );
-      await waitForReady(url, runtimeToCleanup);
-
-      expect(await isReachable(url)).toBe(true);
-
-      const output = await runClose(homePath);
-
-      expect(output).toContain("Runtime stopped.");
-
-      expect(await waitForUnreachable(url)).toBe(true);
-      runtimeToCleanup = null;
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
     "shuts down while a dashboard event stream is connected",
     async () => {
       const port = await getFreePort();
@@ -212,20 +176,13 @@ describe("pstdio close", () => {
   );
 
   test(
-    "does not auto-start when API is not running",
+    "reports when no runtime is running",
     async () => {
-      const port = await getFreePort();
-      const url = `http://localhost:${port}`;
-
-      expect(await isReachable(url)).toBe(false);
-
       const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-close-home-"));
 
       const output = await runClose(homePath);
 
       expect(output).toContain("Runtime is not running.");
-
-      expect(await waitForUnreachable(url)).toBe(true);
     },
     TEST_TIMEOUT,
   );

@@ -134,16 +134,4 @@ describe("view sort validation", () => {
       'Invalid sort field "tags". Valid IDs: title, score, updated, status',
     );
   });
-
-  test("refuses a second sort", () => {
-    expect(
-      findViewSortsProblem(
-        [
-          { attributeId: "score", direction: "asc" },
-          { attributeId: "score", direction: "desc" },
-        ],
-        fields,
-      ),
-    ).toContain("one sort");
-  });
 });

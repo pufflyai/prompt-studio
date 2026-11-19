@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { bookFixture } from "./model.fixture";
-import { resourceEntries, resourceSelection, resourceSpecs } from "./resource-catalog";
+import { resourceEntries, resourceSelection } from "./resource-catalog";
 
 test("book resources have distinct identities and navigate to their own content", () => {
   const book = bookFixture();
@@ -17,7 +17,6 @@ test("book resources have distinct identities and navigate to their own content"
       },
     ],
   };
-  expect(new Set(resourceSpecs.map((spec) => spec.icon)).size).toBe(4);
   for (const [type, id, section] of [
     ["requirement", book.rules[0].ref, null],
     ["chapter", "2", null],

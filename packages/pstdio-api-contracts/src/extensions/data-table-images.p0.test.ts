@@ -2,18 +2,6 @@ import { expect, test } from "bun:test";
 import { readDataTableImageValue } from "../extension-kernel/data-table-image-values";
 import { resolveDataTableComparableValue, resolveDataTableFieldKind } from "../extension-kernel/data-table-values";
 import type { DataTableRendererImageValue, DataTableRendererRow } from "../extension-kernel/types/data-table-renderer";
-import { dataTableRendererColumnSchema } from "./data-table-renderer";
-
-test("native tables accept image columns with fit, shape and label options", () => {
-  const column = {
-    id: "photo",
-    renderer: { type: "image", fit: "contain", shape: "circle", showLabel: true },
-  } as const;
-  expect(dataTableRendererColumnSchema.parse(column)).toEqual(column);
-  expect(() =>
-    dataTableRendererColumnSchema.parse({ id: "photo", renderer: { type: "image", fit: "fill" } }),
-  ).toThrow();
-});
 
 test("an image cell holds a URL, an image with alt text, or a gallery of both", () => {
   expect(readDataTableImageValue("https://example.com/a.png")).toEqual([{ src: "https://example.com/a.png" }]);

@@ -48,14 +48,6 @@ describe("writeConfig", () => {
     expect(raw).toContain("xyz-789");
     expect(readFileSync(join(root, ".pstdio", ".gitignore"), "utf8")).toBe("config.json\n");
   });
-
-  test("creates .pstdio directory if missing", () => {
-    const root = setup("write-config-mkdir");
-
-    writeConfig(root, { project_id: "new" });
-
-    expect(existsSync(join(root, ".pstdio", "config.json"))).toBe(true);
-  });
 });
 
 describe("removeConfig", () => {

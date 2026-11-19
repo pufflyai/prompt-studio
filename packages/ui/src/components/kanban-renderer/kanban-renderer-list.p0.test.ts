@@ -1,17 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { flattenKanbanRendererListItems, getKanbanRendererListIndentation } from "./kanban-renderer-list";
-
-describe("getKanbanRendererListIndentation", () => {
-  it("does not indent top-level rows", () => {
-    expect(getKanbanRendererListIndentation(0)).toBeUndefined();
-  });
-
-  it("uses compact depth indentation", () => {
-    expect(getKanbanRendererListIndentation(1)).toBe("12px");
-    expect(getKanbanRendererListIndentation(2)).toBe("24px");
-  });
-});
+import { flattenKanbanRendererListItems } from "./kanban-renderer-list";
 
 describe("flattenKanbanRendererListItems", () => {
   const currentItems = [

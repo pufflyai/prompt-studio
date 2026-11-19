@@ -53,18 +53,15 @@ test("deleteFile is a no-op when file does not exist", () => {
   service.deleteFile(join(storageRoot, "nonexistent"));
 });
 
-test("computeHash returns a consistent sha256 hex digest", () => {
+test("computeHash returns the sha256 hex digest of the bytes", () => {
   const storageRoot = mkdtempSync(join(tmpdir(), "pstdio-files-"));
   roots.push(storageRoot);
 
   const service = createFilesStorageService(storageRoot);
-  const data = Buffer.from("hello world");
 
-  const hash1 = service.computeHash(data);
-  const hash2 = service.computeHash(data);
-
-  expect(hash1).toBe(hash2);
-  expect(hash1).toHaveLength(64);
+  expect(service.computeHash(Buffer.from("hello world"))).toBe(
+    "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9",
+  );
 });
 
 test("opaque workbench and file identities cannot alias another owner's bytes", () => {

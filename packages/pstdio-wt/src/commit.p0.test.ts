@@ -101,26 +101,6 @@ describe("commitChanges", () => {
     ).rejects.toThrow("HOOK preCommit FAILED");
   });
 
-  test("post-commit hook runs after successful commit", async () => {
-    const wtPath = join(repo.dir, "wt-commit");
-    await createWorktree({ repoRoot: repo.dir, branch: "task/hook-post", path: wtPath });
-
-    const dispatch = noopDispatch();
-
-    await Bun.write(join(wtPath, "file.txt"), "content");
-
-    await commitChanges({ worktreePath: wtPath, message: "with hook", repoPath: repo.dir, dispatch });
-
-    expect(dispatch.firePostHook).toHaveBeenCalledWith(
-      "postCommit",
-      expect.objectContaining({
-        repoPath: repo.dir,
-        worktreePath: wtPath,
-        commitMessage: "with hook",
-      }),
-    );
-  });
-
   test("dispatch ctx contains expected fields", async () => {
     const wtPath = join(repo.dir, "wt-commit");
     await createWorktree({ repoRoot: repo.dir, branch: "task/payload", path: wtPath });

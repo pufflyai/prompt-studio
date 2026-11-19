@@ -1,5 +1,6 @@
 import { Tooltip, useTooltipContext } from "@chakra-ui/react";
 import { createContext, useEffect, useLayoutEffect, useRef } from "react";
+import { usePortalPositioning } from "./portal-container";
 import { useUiScopeViewActivity } from "./ui-scope";
 import { useScopedOpen } from "./use-scoped-open";
 
@@ -32,7 +33,7 @@ const TooltipHoverReset = (props: { disabled: boolean }) => {
 
 const TooltipRoot = (props: Tooltip.RootProps) => (
   <TooltipPresence value={true}>
-    <Tooltip.Root {...useScopedOpen(props)}>
+    <Tooltip.Root {...useScopedOpen(props)} positioning={usePortalPositioning(props.positioning)}>
       <TooltipHoverReset disabled={props.disabled ?? false} />
       {props.children}
     </Tooltip.Root>

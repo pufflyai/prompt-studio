@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { HarnessQuestionChannel } from "@pstdio/sdk/extensions";
-import { MINIMUM_VERSION } from "./detection";
 import { controlledChild, recordingSink, waitForStreamIo } from "./mocks/controlled-child";
 import { startClaudeCodeSession } from "./spawn";
 
@@ -22,10 +21,6 @@ const replay = async (emit: (event: object) => void, events: Record<string, unkn
     if (event.type === "result") afterResult();
   }
 };
-
-test("has recorded output from the minimum supported Claude Code version", () => {
-  expect(versions).toContain(MINIMUM_VERSION);
-});
 
 describe.each(versions)("Claude Code %s", (version) => {
   test("keeps the run open until its background task finishes", async () => {

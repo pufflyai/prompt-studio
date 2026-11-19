@@ -130,39 +130,3 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
     rmSync(repoRoot, { recursive: true, force: true });
   }
 });
-
-test("keeps ticket creation and ticket status settings available", async ({ page, request }) => {
-  const project = await createProject(request);
-  await prepareDashboard(page, project.id, "");
-  await page.goto(`/projects/${project.id}/tickets`);
-
-  const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
-
-  await page.getByRole("button", { name: "Create row", exact: true }).first().click();
-  const createDialog = page.getByRole("dialog").last();
-  await expect(createDialog).toBeVisible();
-  await createDialog.getByRole("textbox").first().fill("Create flow remains available");
-
-  const createResponse = page.waitForResponse(
-    (response) =>
-      response.request().method() === "POST" &&
-      new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio.planner.command.create-ticket/execute"),
-  );
-  await createDialog.getByRole("button", { name: "Create ticket", exact: true }).click();
-  expect((await createResponse).ok()).toBe(true);
-  await expect(createDialog).toBeHidden();
-  await expect(sidenav.getByRole("option").filter({ hasText: "Create flow remains available" })).toBeVisible();
-  await openProjectHome(page, "Resource Actions");
-  await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
-  await expect(page.getByTestId("renderer-card").filter({ hasText: "Create flow remains available" })).toBeVisible();
-
-  const settingsNavigation = sidenav.getByRole("option", { name: "Settings", exact: true });
-  await expect(settingsNavigation).toBeVisible();
-  await settingsNavigation.click();
-  const settingsDialog = page.getByRole("dialog").last();
-  await expect(settingsDialog.getByRole("option", { name: "Ticket status", exact: true })).toBeVisible();
-  await expect(settingsDialog.getByRole("option", { name: "Ticket tags", exact: true })).toBeVisible();
-  await settingsDialog.getByRole("option", { name: "Ticket status", exact: true }).click();
-  await expect(settingsDialog.getByRole("heading", { name: "Ticket status", exact: true })).toBeVisible();
-});

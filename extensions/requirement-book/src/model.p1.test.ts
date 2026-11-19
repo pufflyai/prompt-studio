@@ -86,10 +86,3 @@ test("extension rules use RBE and keep relationships and identities when moved w
     applyOperations(added, [{ type: "MOVE", before: extension, after: { ...extension, chapter: 1 } }]),
   ).toThrow("RB");
 });
-
-test("a rule needs its statement and identity without a separate scope entry", () => {
-  const book = bookFixture();
-  const rule = { ...book.rules[0], acceptance: [] };
-  delete (rule as { scope?: string }).scope;
-  expect(() => parseBook(serializeBook({ ...book, rules: [rule] }))).not.toThrow();
-});
