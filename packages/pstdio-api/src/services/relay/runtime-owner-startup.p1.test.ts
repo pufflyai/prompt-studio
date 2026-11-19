@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -7,9 +7,10 @@ import { documentPeer } from "../../features/extensions/publication/document-pee
 import { createTestExtensionSource } from "../../features/extensions/test-utils/create-test-extension-source";
 import { initializeProjectWorkspace } from "../../features/projects/project-folder";
 import { createTestApp } from "../../test-utils/create-test-app";
+import * as extensionOwner from "./extension-owner";
 import { startRelayRuntime } from "./runtime";
 
-test("an extension waiting for its folder does not hold up another extension's Cloud saves", async () => {
+test("a blocked extension start does not hold up another extension's Cloud saves", async () => {
   const root = await mkdtemp(join(tmpdir(), "cloud-owner-startup-"));
   const app = await createTestApp({ storageRoot: join(root, "home") });
   const peer = documentPeer();
@@ -17,7 +18,9 @@ test("an extension waiting for its folder does not hold up another extension's C
   const folderRequested = Promise.withResolvers<void>();
   let runtime: Awaited<ReturnType<typeof startRelayRuntime>> | undefined;
   let updating: Promise<void> | undefined;
-  const getDefault = app.deps.workspaceService.getDefault;
+  const startExtension = extensionOwner.startRelayExtension;
+  let start: ReturnType<typeof spyOn<typeof extensionOwner, "startRelayExtension">> | undefined;
+  let blocked = false;
   try {
     const project = await app.deps.projectService.create({ name: "Independent downloads" });
     const folder = join(root, "checkout");
@@ -44,7 +47,8 @@ test("an extension waiting for its folder does not hold up another extension's C
     }
     const snapshot = await app.deps.extensionRuntimeCatalog.get(project.id);
     expect(snapshot.enabledSources).toHaveLength(2);
-    const independent = snapshot.enabledSources[1]!.installedSource.extension_id;
+    const slow = snapshot.enabledSources[1]!.installedSource.extension_id;
+    const independent = snapshot.enabledSources[0]!.installedSource.extension_id;
     const environmentId = (await app.deps.environmentService.get()).environmentId;
     const prior = await app.deps.accountService.status();
     app.deps.accountService.status = async () => ({
@@ -59,16 +63,24 @@ test("an extension waiting for its folder does not hold up another extension's C
     });
     await records.commit({ operationId: "independent", edits: [{ recordId: "note", replace: "Saved independently" }] });
     expect((await records.outcome("independent"))?.state).toBe("saved-locally");
+    // Exercise discovery order changing after the earlier catalog read.
+    const getCatalog = app.deps.extensionRuntimeCatalog.get.bind(app.deps.extensionRuntimeCatalog);
+    app.deps.extensionRuntimeCatalog.get = async (...args) => {
+      const current = await getCatalog(...args);
+      return { ...current, enabledSources: [...current.enabledSources].reverse() };
+    };
     runtime = await startRelayRuntime({ deps: app.deps });
-    let lookups = 0;
-    app.deps.workspaceService.getDefault = async (...args) => {
-      // The first lookup captures the shared context; the next belongs to the first owner's folder.
-      if (++lookups === 2) {
+    start = spyOn(extensionOwner, "startRelayExtension").mockImplementation(async (input) => {
+      // Delay one identified owner at its entry, before its folder preparation.
+      // Counting shared workspace lookups can instead delay the independent owner.
+      if (input.source.installedSource.extension_id === slow) {
+        blocked = true;
         folderRequested.resolve();
         await releaseFolder.promise;
+        blocked = false;
       }
-      return getDefault(...args);
-    };
+      return startExtension(input);
+    });
     updating = runtime.update([
       {
         accountId: "owner",
@@ -83,9 +95,10 @@ test("an extension waiting for its folder does not hold up another extension's C
     const end = Date.now() + 3000;
     while ((await records.outcome("independent"))?.state !== "synced" && Date.now() < end) await Bun.sleep(10);
     expect((await records.outcome("independent"))?.state).toBe("synced");
+    expect(blocked).toBe(true);
   } finally {
     releaseFolder.resolve();
-    app.deps.workspaceService.getDefault = getDefault;
+    start?.mockRestore();
     await updating;
     await runtime?.close();
     await app.close();
