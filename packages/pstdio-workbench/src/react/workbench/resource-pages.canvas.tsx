@@ -28,7 +28,7 @@ export const Interactive = () => {
         <Button size="xs" onClick={() => example.open("B")}>
           Open B in Main
         </Button>
-        <Button size="xs" onClick={example.create}>
+        <Button size="xs" onClick={example.create} title="Alt+Shift+N">
           New record
         </Button>
         <Button size="xs" onClick={example.link}>

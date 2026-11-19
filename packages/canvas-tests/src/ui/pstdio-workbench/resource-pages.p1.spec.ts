@@ -15,10 +15,11 @@ test("a resource page moves into tabs and reopening brings the same live editor 
   const editor = main.locator('[data-resource-editor="A"]');
   await editor.getByRole("textbox").fill("Keep this native draft");
   const mount = await editor.getAttribute("data-editor-mount");
-  const properties = main.getByText("Properties for A", { exact: true });
-  if (!(await properties.isVisible())) await header.getByRole("button", { name: /Properties/ }).click();
+  const properties = preview.getByText("Properties for A", { exact: true });
+  if (!(await properties.isVisible()))
+    await header.getByRole("button", { name: "Open Main right menu", exact: true }).click();
   await expect(properties).toBeVisible();
-  await header.getByRole("button", { name: "Close Main right menu", exact: true }).click();
+  await header.getByRole("button", { name: /^(Open|Close) Main right menu$/ }).click();
   await expect(properties).toBeHidden();
 
   const breadcrumb = header.locator("[data-workbench-page-drag-handle]");
@@ -130,14 +131,15 @@ test("moving Home clears its navigation selection and New record then opens in a
   await page.mouse.up();
   await expect(side.getByRole("tab", { name: "Home", exact: true })).toBeVisible();
   await expect(home).not.toHaveAttribute("aria-selected", "true");
-  await preview.getByRole("button", { name: "New record", exact: true }).click();
+  await header.focus();
+  await page.keyboard.press("Alt+Shift+N");
   await expect(header.getByRole("tab", { name: "Resource Created 1", exact: true })).toBeVisible();
   await expect(main.getByRole("textbox", { name: "Draft for Created 1" })).toBeVisible();
   await expect(home).not.toHaveAttribute("aria-selected", "true");
 });
 
-// Critical: a closed destination cannot be created by dragging Main, including if it closes during the gesture.
-test("Main dragging only accepts auxiliary panels that remain open", async ({ page }) => {
+// Critical: dragging Main must not reveal closed auxiliary destinations.
+test("Main dragging cannot create a closed auxiliary panel", async ({ page }) => {
   const preview = await openCanvasPreview(
     page,
     "packages/pstdio-workbench/src/react/workbench/resource-pages.canvas.tsx#Interactive",
@@ -146,21 +148,19 @@ test("Main dragging only accepts auxiliary panels that remain open", async ({ pa
   const header = main.locator('[data-workbench-panel-header="main"]');
   await preview.getByRole("button", { name: "Toggle Side", exact: true }).click();
   await expect(header).not.toHaveAttribute("data-panel-draggable", "true");
-  await preview.getByRole("button", { name: "Toggle Side", exact: true }).click();
-  await expect(header).toHaveAttribute("data-panel-draggable", "true");
   const source = (await header.locator("[data-workbench-page-drag-handle]").boundingBox())!;
-  const target = (await preview.locator('[data-workbench-panel="side"]').boundingBox())!;
+  const target = (await main.boundingBox())!;
   await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
   await page.mouse.down();
   await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2 + 10, { steps: 3 });
   await expect(preview.locator('[data-workbench-edge-hit="secondary"]')).toHaveCount(0);
-  await preview
-    .getByRole("button", { name: "Toggle Side", exact: true })
-    .evaluate((button) => (button as HTMLButtonElement).click());
-  await page.mouse.move(target.x + target.width / 2, target.y + 20, { steps: 12 });
+  await expect(preview.locator('[data-workbench-edge-hit="side"]')).toHaveCount(0);
+  await page.mouse.move(target.x + target.width - 2, target.y + target.height / 2, { steps: 12 });
   await page.mouse.up();
   await expect(main.getByRole("textbox", { name: "Draft for A" })).toBeVisible();
-  await expect(preview.locator('[data-workbench-panel="side"]')).toBeHidden();
+  await expect(preview.locator('[data-workbench-panel="side"]:visible')).toHaveCount(0);
+  await preview.getByRole("button", { name: "Toggle Side", exact: true }).click();
+  await expect(header).toHaveAttribute("data-panel-draggable", "true");
 });
 
 // Critical: resource references must leave the source editor and its input visible.

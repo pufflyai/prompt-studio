@@ -18,7 +18,11 @@ const ResourceEditor = (props: { resource?: ResourceRef }) => {
 
 export const createResourcePagesWorkbench = () => {
   const page = (id: string) => ({ kind: "page" as const, extensionId: "preview.pages", id });
-  const workbench = createWorkbench({ defaultPage: page("home"), initialSidePanelMode: "attached" });
+  const workbench = createWorkbench({
+    defaultPage: page("home"),
+    initialSidePanelMode: "attached",
+    defaultPanelOpenByRegionId: { secondary: false },
+  });
   workbench.modes.registerMode({ id: "project", activate() {} });
   workbench.views.registerView({
     id: "editor",
@@ -130,6 +134,11 @@ export const createResourcePagesWorkbench = () => {
       execute: () => open(`Created ${++nextRecord}`),
     },
   );
+  workbench.keybindings.registerKeybinding({
+    action: { kind: "command", commandId: "create" },
+    keybinding: "Alt+Shift+N",
+    allowInInputs: true,
+  });
   workbench.pageLocations.navigate({
     kind: "page",
     page: page("record"),
