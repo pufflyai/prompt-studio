@@ -28,7 +28,7 @@ import {
 
 interface WatchOpenExtensionResourceInput {
   executeCommand: ExecuteDashboardExtensionCommand;
-  metadata: Pick<DashboardExtensionMetadata, "resourceKinds">;
+  metadata: Pick<DashboardExtensionMetadata, "resourceKinds" | "resourcePresentations">;
   projectId: string;
 }
 
@@ -75,6 +75,19 @@ export const watchOpenExtensionResource = (
   );
   const resolverOf = (resource: ResourceRef | undefined) => {
     if (!resource) return undefined;
+    resource = canonicalDashboardResource(resource, input.projectId, input.metadata.resourceKinds);
+    const provider = input.metadata.resourcePresentations?.find(
+      (provider) =>
+        provider.resourceKind.id === resource.type && provider.resourceKind.extensionId === resource.extensionId,
+    );
+    if (provider)
+      return {
+        commandId: provider.resolveCommand,
+        extensionId: provider.extensionId,
+        batch: false,
+        refreshEvents: provider.refreshEvents,
+        presentation: true,
+      };
     if (resource.extensionId) return resolvers.get(JSON.stringify([resource.extensionId, resource.type]));
     const ref = canonicalDashboardResource(resource, input.projectId, input.metadata.resourceKinds);
     return ref.extensionId ? resolvers.get(JSON.stringify([ref.extensionId, ref.type])) : undefined;
@@ -83,7 +96,7 @@ export const watchOpenExtensionResource = (
     resource
       ? JSON.stringify([
           resource.projectId ?? input.projectId,
-          resource.extensionId ?? resolverOf(resource)?.extensionId,
+          canonicalDashboardResource(resource, input.projectId, input.metadata.resourceKinds).extensionId,
           resource.type,
           resource.id,
         ])
@@ -163,6 +176,8 @@ export const watchOpenExtensionResource = (
       ...canonicalDashboardResource(latest, input.projectId, input.metadata.resourceKinds),
       label: resolved.label,
       icon: resolved.icon,
+      iconColor: resolved.iconColor,
+      iconLabel: resolved.iconLabel,
       shorthand: resolved.shorthand,
       metadata: resolved.metadata,
     };
@@ -211,7 +226,11 @@ export const watchOpenExtensionResource = (
     const open = ctx.getPrimaryResource();
     const resolver = resolverOf(open);
     if (event.projectId !== input.projectId || !resolver) return;
-    if (isResourceRefreshEvent(event.id, resolver.extensionId)) void resolveOpenResource();
+    if (
+      ("refreshEvents" in resolver && resolver.refreshEvents.includes(event.id)) ||
+      isResourceRefreshEvent(event.id, resolver.extensionId)
+    )
+      void resolveOpenResource();
   });
   const placementResources = watchExtensionPlacementResources(ctx, input);
   const unsubscribeReset = subscribeToExtensionEventReset((event) => {

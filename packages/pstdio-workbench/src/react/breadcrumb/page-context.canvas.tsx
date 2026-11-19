@@ -171,11 +171,6 @@ const createSessionWorkbench = () => {
       presentation: "page",
       cardinality: "one",
       view: { kind: "view", id: page.id },
-      tab: {
-        getSnapshot: () => ({
-          indicator: { icon: "loader-circle", color: "fg.info", label: "Session status: in_progress" },
-        }),
-      },
     },
     slots: [],
   });
@@ -183,7 +178,14 @@ const createSessionWorkbench = () => {
   workbench.pageLocations.navigate({
     kind: "page",
     page,
-    resource: { type: "session", id: "logs", label: "Investigate logs", icon: "message-circle" },
+    resource: {
+      type: "session",
+      id: "logs",
+      label: "Investigate logs",
+      icon: "loader-circle",
+      iconColor: "fg.info",
+      iconLabel: "Session status: in_progress",
+    },
   });
   return workbench;
 };
@@ -191,4 +193,6 @@ const createSessionWorkbench = () => {
 export const SessionStatus: Story = {
   id: "pstdio-workbench-guides-page-context--session-status",
   args: { workbench: createSessionWorkbench() },
+  description:
+    "The resource owner supplies the current icon, semantic color, and accessible state label to every appearance of this conversation.",
 };

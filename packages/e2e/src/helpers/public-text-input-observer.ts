@@ -68,35 +68,41 @@ export const observePublicTextInput = async (page: Page) => {
           via: "stream",
         });
     };
+    const observeAdmission = (response: Response, memberId: string, initialAdmission: boolean) => {
+      const json = response.json.bind(response);
+      response.json = () =>
+        json().then((reply) => {
+          const opened = initialAdmission ? reply.value?.opened : reply.value;
+          if (reply.ok && opened) {
+            activeHandle = opened.handle;
+            activeMember = memberId;
+            record({
+              kind: "snapshot",
+              state: opened.snapshot.state,
+              revision: opened.snapshot.revision,
+              composing,
+              via: "open",
+            });
+          }
+          return reply;
+        });
+    };
+    const observeRequest = (url: string, init?: RequestInit) => {
+      if (typeof init?.body !== "string") return;
+      if (url.endsWith("/text-editing/open")) return JSON.parse(init.body).initial?.memberId;
+      if (!url.endsWith("/text-editing/request")) return;
+      const { request } = JSON.parse(init.body);
+      if (request.operation === "submit")
+        record({ kind: "submit", update: request.update, sequence: request.sequence, composing, started, ended });
+      if (request.operation === "open" || request.operation === "openSelected") return request.memberId;
+    };
     const originalFetch = window.fetch.bind(window);
     window.fetch = (async (...args: Parameters<typeof window.fetch>) => {
       const [input, init] = args;
       const url = input instanceof Request ? input.url : String(input);
-      const request =
-        url.endsWith("/text-editing/request") && typeof init?.body === "string"
-          ? JSON.parse(init.body).request
-          : undefined;
-      if (request?.operation === "submit")
-        record({ kind: "submit", update: request.update, sequence: request.sequence, composing, started, ended });
+      const openingMember = observeRequest(url, init);
       const response = await originalFetch(...args);
-      if (request?.operation === "open") {
-        const json = response.json.bind(response);
-        response.json = () =>
-          json().then((reply) => {
-            if (reply.ok) {
-              activeHandle = reply.value.handle;
-              activeMember = request.memberId;
-              record({
-                kind: "snapshot",
-                state: reply.value.snapshot.state,
-                revision: reply.value.snapshot.revision,
-                composing,
-                via: "open",
-              });
-            }
-            return reply;
-          });
-      }
+      if (openingMember) observeAdmission(response, openingMember, url.endsWith("/text-editing/open"));
       const body = response.body;
       if (!url.endsWith("/session-stream") || !body) return response;
       const getReader = body.getReader.bind(body);

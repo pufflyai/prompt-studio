@@ -13,7 +13,6 @@ import {
 import { sessionBrowser } from "../refs";
 import { create } from "./navigation";
 import { sessionResource, sessionTarget } from "./resource";
-import { sessionDisplayStatus, sessionIndicator } from "./session-indicator";
 import { pinSession, readPinnedSessions, readSessionPins } from "./session-pins";
 
 const sessionDayLabel = (date: Date) => {
@@ -62,13 +61,11 @@ const sessionNodes = async (
       });
     }
     const resource = sessionResource(session, ctx.projectId);
-    const status = sessionDisplayStatus(session);
-    const { icon, color } = sessionIndicator(status);
     nodes.push({
       id: session.id,
       label: session.title,
-      icon,
-      iconColor: status === "awaiting_input" ? "fg.muted" : color,
+      icon: resource.icon,
+      iconColor: resource.iconColor,
       resource,
       contextMenuActions: [
         {
@@ -187,13 +184,15 @@ export const search = defineCommandPaletteResource({
       if (!cursor) break;
     }
     return {
-      items: sessions.map((session) => ({
-        id: session.id,
-        label: session.title,
-        icon: "message-circle",
-        indicator: sessionIndicator(sessionDisplayStatus(session)),
-        target: sessionTarget(sessionResource(session, ctx.projectId)),
-      })),
+      items: sessions.map((session) => {
+        const resource = sessionResource(session, ctx.projectId);
+        return {
+          id: session.id,
+          label: resource.label,
+          icon: resource.icon,
+          target: sessionTarget(resource),
+        };
+      }),
     };
   },
 });

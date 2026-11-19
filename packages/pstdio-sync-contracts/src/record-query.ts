@@ -48,6 +48,10 @@ export interface StorageRecordIndex {
   /** Explicit equality keys preceding the sort keys. Defaults to no equality keys. */
   equality?: string[];
   orderBy?: { field: string; direction: "asc" | "desc" }[];
+  /** Maintain exact counts for combinations of up to four local, derived scalar fields. */
+  countBy?: string[];
+  /** Additional local sort orders served by physical indexes. The default result order stays in orderBy. */
+  alternateOrders?: { field: string; direction: "asc" | "desc" }[][];
   /** Restrict this index to complete record addresses with this prefix. */
   prefix?: string;
 }

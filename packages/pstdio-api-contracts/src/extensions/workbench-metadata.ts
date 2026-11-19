@@ -26,6 +26,7 @@ import { workbenchExtensionPageRecordSchema } from "./page-metadata";
 import { regionSettingsSchema, workbenchPlacementPresentationSchema } from "./placement-metadata";
 import { extensionFileRendererRecordSchema, extensionTreeRendererRecordSchema } from "./renderers";
 import { placementItemSchema } from "./resource-binding-metadata";
+import { resourcePresentationRecordSchema } from "./resource-presentation";
 import { extensionSettingDefinitionRecordSchema, extensionSettingsSectionRecordSchema } from "./settings";
 import { viewToolbarActionSchema } from "./view-toolbar-action";
 
@@ -276,6 +277,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   viewMenus: z.array(workbenchExtensionViewMenuRecordSchema),
   placements: z.array(workbenchExtensionPlacementRecordSchema),
   resourceKinds: z.array(workbenchExtensionResourceKindRecordSchema),
+  resourcePresentations: z.array(resourcePresentationRecordSchema).optional(),
   resourceHierarchyProviders: z
     .array(z.object({ id: z.string(), extensionId: z.string(), resourceKind: resourceKindRefSchema }))
     .optional(),
