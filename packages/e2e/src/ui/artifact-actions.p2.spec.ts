@@ -48,7 +48,7 @@ for (const action of ["rename", "delete"] as const) {
         await expect(name).toHaveValue("Release report");
         await name.fill("Launch plan");
         await dialog.getByRole("button", { name: "Run", exact: true }).click();
-        await expect(page.getByRole("tab", { name: "Launch plan", exact: true })).toBeVisible();
+        await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Launch plan");
         await expect(menu).toHaveAttribute("aria-label", "Actions for Launch plan");
         expect(
           (await execute("list", {})).find((item: { artifactId: string }) => item.artifactId === artifact.artifactId)
@@ -58,8 +58,7 @@ for (const action of ["rename", "delete"] as const) {
         await expect(dialog).toBeVisible();
         expect(await execute("list", {})).toHaveLength(2);
         await dialog.getByRole("button", { name: "Delete artifact", exact: true }).click();
-        // The deleted artifact's viewer closes; only the library tab remains.
-        await expect(page.locator('[data-workbench-panel="main"]').getByRole("tab")).toHaveText(["Artifacts"]);
+        await expect(page).toHaveURL(new RegExp(`/extensions/${extensionId}/artifacts$`));
         await expect(frame.getByRole("button", { name: "Reference page", exact: true })).toBeVisible();
         expect((await execute("list", {})).map((item: { artifactId: string }) => item.artifactId)).toEqual([
           reference.artifactId,
