@@ -97,6 +97,13 @@ export const ticketViewIndex: StorageRecordIndex = {
       lookup: { index: "timeline-gates", on: [{ sourceField: "id", relatedField: "ticketId" }], field: "ticketId" },
     },
   },
-  equality: ["id", "archived", "statusId", "createdCalendarOnly", "updatedCalendarOnly"],
+  equality: ["id", "archived", "parentId", "statusId", "createdCalendarOnly", "updatedCalendarOnly"],
   orderBy: [{ field: "position", direction: "asc" }],
+  countBy: ["archived", "statusId"],
+  alternateOrders: [
+    [
+      { field: "createdInstant", direction: "desc" },
+      { field: "position", direction: "asc" },
+    ],
+  ],
 };
