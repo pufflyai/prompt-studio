@@ -32,7 +32,7 @@ on:
         description: Optional single native test file; runs its owning runner instead of a full profile
       test_os:
         type: choice
-        options: [windows-latest, macos-15, macos-15-intel]
+        options: [ubuntu-latest, windows-latest, macos-15, macos-15-intel]
         default: windows-latest
         description: Host for a single-file native diagnostic
       release_channel:
