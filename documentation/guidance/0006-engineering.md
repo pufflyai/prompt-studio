@@ -24,6 +24,7 @@
 14. Tests must prove restored behavior and system rules rather than preserve a workaround.
 15. Design Planner reads and actions for thousands of tickets. Never load the complete ticket collection to filter, count, resolve relationships, or perform an action. Query only the required records and fields; use bounded pages for bulk work and scoped existence checks for shared-resource protection. See [Planner scale](../requirement-book/book.json).
 16. The database holds structured data and references only, never blobs. Store bytes such as file contents, transcripts, document snapshots, encrypted payloads, and cached remote data in file storage. Keep only their ID, hash, and size in the database. This includes caches and private bookkeeping rows. Every cache and history needs a rule that removes entries. See [What belongs in the database](../references/architecture/0031-database-contents.md).
+17. Prefer changes in the owning extension. Core changes should be rare and serve a general workbench capability. When a fix does not specify its implementation, first check whether the extension can solve it through existing public APIs and its own storage. Explain the missing general capability before changing core; do not change core schemas or weaken host constraints to accommodate one extension's internal model. See [Keep extension workflows in extensions](../lessons-learned/0032-extension-first-implementation.md).
 
 ## 3. Before writing code
 
@@ -34,6 +35,7 @@
 5. If an external limit forces a workaround, write an ADR before coding. Follow the [temporary-workaround rules](0008-planning.md#3-architecture-decisions).
 6. If stuck, follow the [troubleshooting guidance](0009-troubleshooting.md) before trying another approach.
 7. For live resource or transport changes, follow the [streaming contract](../references/architecture/0021-stream.md) and [resource ownership lesson](../lessons-learned/0020-resource-stream-ownership.md). Keep logical permissions separate from physical connections and run the required mixed-resource HTTP/1.1 connection-budget regression before completion.
+8. Check the extension-level solution first, including for unspecified bug fixes. Identify the owner, inspect its commands and storage, and check existing public APIs before proposing a core change. Follow rule 006.2.17.
 
 ## 4. Code style
 
