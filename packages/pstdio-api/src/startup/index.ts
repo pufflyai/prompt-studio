@@ -1,6 +1,7 @@
 import { basename } from "node:path";
 import type { RouteDeps } from "../features/deps";
 import { adoptWorkspacesTool, combinedWorkspacesSource } from "../features/extensions/adopt-workspaces-tool";
+import { needsBuiltInGitRecovery } from "../features/extensions/built-in-git-workspaces";
 import {
   installDefaultExtensions,
   registerInstalledExtensionSources,
@@ -81,13 +82,19 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
   const needsWorkspaceUpgrade =
     existingProjects &&
     !hasCombinedWorkspaces &&
-    (await Promise.all(projects.map(({ id }) => deps.extensionService.listProjectExtensionInstances(id)))).some(
-      (records) =>
-        records.some(
-          ({ instance, installedSource }) =>
-            instance.enabled && installedSource.extension_id === "pstdio.git-workspaces",
-        ),
-    );
+    (
+      await Promise.all(
+        projects.map(async ({ id }) => {
+          const records = await deps.extensionService.listProjectExtensionInstances(id);
+          return (
+            records.some(
+              ({ instance, installedSource }) =>
+                instance.enabled && installedSource.extension_id === "pstdio.git-workspaces",
+            ) || (await needsBuiltInGitRecovery(deps, id, records))
+          );
+        }),
+      )
+    ).some(Boolean);
 
   const refreshWorkspaces = needsWorkspaceUpgrade && (await canRefreshWorkspacesTool(workspaceSource));
 

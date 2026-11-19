@@ -2,23 +2,17 @@ import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { reconcileProviderWorkspaces } from "../workspaces/workspace-provider-reconciliation";
+import { adoptBuiltInGitWorkspaces } from "./built-in-git-workspaces";
 import type { ExtensionsRouteDeps } from "./deps";
-import { hashExtensionSourceAsync, loadExtensionSource } from "./extension-runtime";
+import { hashExtensionSourceAsync } from "./extension-runtime";
+import { combinedWorkspacesSource } from "./workspace-tool-source";
+
+export { combinedWorkspacesSource } from "./workspace-tool-source";
+
 import { withProjectExtensionChoices } from "./project-extension-choices";
 import { openPublishedCatalog, publishExtension, publishedOwner } from "./publication/catalog";
 import { preparePublishedExtension } from "./publication/prepare";
 import { selectPublicationSource } from "./publication/prepare-activation";
-
-export const combinedWorkspacesSource = async (sourcePath: string) => {
-  const loaded = await loadExtensionSource(sourcePath, { accepted: true });
-  const providers = loaded.definition.workspaceTypes;
-  return (
-    Array.isArray(providers) &&
-    providers.some(
-      (provider) => typeof provider === "object" && provider !== null && "id" in provider && provider.id === "git",
-    )
-  );
-};
 
 type ExtensionRecords = Awaited<ReturnType<ExtensionsRouteDeps["extensionService"]["listProjectExtensionInstances"]>>;
 
@@ -100,7 +94,7 @@ export const adoptWorkspacesTool = (deps: ExtensionsRouteDeps, projectId: string
 const adopt = async (deps: ExtensionsRouteDeps, projectId: string, fresh: FreshWorkspaceSource[]) => {
   const records = await deps.extensionService.listProjectExtensionInstances(projectId);
   const legacy = records.filter(({ installedSource }) => installedSource.extension_id === "pstdio.git-workspaces");
-  if (!legacy.length) return;
+  if (!legacy.length) return adoptBuiltInGitWorkspaces(deps, projectId, records);
   const token = (items: typeof records, owner: string) =>
     JSON.stringify(
       items
