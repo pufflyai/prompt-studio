@@ -35,10 +35,18 @@ test("opens an installed skill browser with native menus and preserves files acr
   const footer = page.getByRole("listbox").last();
   const labels = await footer.getByRole("option").allTextContents();
   expect(labels.indexOf("Skills")).toBeLessThan(labels.indexOf("Settings"));
+  const previousUrl = page.url();
   await page.getByRole("option", { name: "Skills", exact: true }).click();
   await expect(page).toHaveURL(/extensions\/pstdio.pstdio-skill-browser\/skill\?/);
   const menu = page.locator('[data-workbench-panel-menu="main-right"]');
   const menuContent = menu.frameLocator("iframe");
+  await expect(menuContent.getByText(first.name, { exact: true })).toBeVisible();
+  // Critical: Back must leave Skills rather than trigger automatic selection again.
+  const initialSkillUrl = page.url();
+  await page.getByRole("button", { name: "Navigate back", exact: true }).click();
+  await expect(page).toHaveURL(previousUrl);
+  await page.getByRole("button", { name: "Navigate forward", exact: true }).click();
+  await expect(page).toHaveURL(initialSkillUrl);
   await expect(menuContent.getByText(first.name, { exact: true })).toBeVisible();
   await expect(page.getByText("Prompt Studio Skills", { exact: true })).toBeVisible();
   await page.getByRole("option", { name: skill.title, exact: true }).click();
@@ -48,6 +56,13 @@ test("opens an installed skill browser with native menus and preserves files acr
   const document = page.getByRole("region", { name: "Main", exact: true });
   await expect(document).toContainText("Pages and panels");
   await expect(document.getByLabel("File path references/pages.md", { exact: true })).toBeVisible();
+  const supportingFileUrl = page.url();
+  await page.getByRole("option", { name: "Skills", exact: true }).click();
+  await expect(menuContent.getByText(first.name, { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Navigate back", exact: true }).click();
+  await expect(page).toHaveURL(supportingFileUrl);
+  await expect(document).toContainText("Pages and panels");
+  await expect(menuContent.getByText("pages.md", { exact: true })).toBeVisible();
   const fileHeader = page.locator('[data-workbench-page-menu-header="main"]');
   await expect(fileHeader.getByRole("button", { name: "Close Main right menu", exact: true })).toBeVisible();
   await fileHeader.getByRole("button", { name: "Close Main right menu", exact: true }).click();
