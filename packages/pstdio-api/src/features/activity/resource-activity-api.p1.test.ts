@@ -1,10 +1,11 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createActivityApi } from "../extensions/command-environment/activity";
+import { executeProjectExtensionCommand } from "../extensions/execute-project-extension-command";
 import { createResourcesApi } from "../extensions/command-environment/resources";
 import { createResourceActivityApi } from "./resource-activity-api";
 import { createResourceActivityStore } from "./resource-activity-store";
@@ -112,6 +113,48 @@ test("an existing viewer cannot mint an observation for a replacement account", 
   const viewer = createResourcesApi(deps, { projectId: project.id, extensionId: ref.extensionId });
   accountId = "bob";
   await expect(viewer.observeChange!(ref, { lineage: "publication", revision: "1" })).rejects.toThrow("Reader changed");
+});
+
+test("Sessions reports only committed conversation changes through its installed extension", async () => {
+  const sourcePath = resolve(import.meta.dir, "../../../../../extensions/pstdio-session-browser");
+  const manifest = await Bun.file(join(sourcePath, "package.json")).json();
+  await app.deps.extensionService.enableInstalledSourceForProject({
+    projectId: project.id,
+    sourcePath,
+    sourceKind: "local_path",
+    name: manifest.name,
+    installName: manifest.name,
+    extensionId: "pstdio.session-browser",
+    displayName: "Sessions",
+    manifest,
+  });
+  const session = await app.deps.sessionService.create({
+    project_id: project.id,
+    title: "A conversation",
+    agent: "example.activity-test.harness.agent",
+  });
+  const resource = { type: "session", extensionId: "pstdio", projectId: project.id, id: session.id };
+  const api = createResourceChanges(app.deps, project.id);
+  expect(await api.query([resource])).toMatchObject([{ changedSinceSeen: false, stamp: { revision: "0" } }]);
+  const rendered = await executeProjectExtensionCommand(app.deps, {
+    commandId: "pstdio.session-browser.view.conversation.chat.query",
+    projectId: project.id,
+    body: { resource, source: "dashboard", params: { renderer: { resource } } },
+  });
+  if (!rendered.outcome.ok) throw Error(rendered.outcome.reason);
+  const snapshot = rendered.outcome.value as { messages: unknown[]; observedChange: string };
+  expect(snapshot.messages).toEqual([]);
+  const receipt = snapshot.observedChange;
+  expect(typeof receipt).toBe("string");
+  expect((await api.acknowledge(receipt, resource)).changedSinceSeen).toBe(false);
+  const observed = await api.read(resource);
+  expect(observed.content).toMatchObject({ messages: [] });
+  await api.acknowledge(observed.receipt, resource);
+  await app.deps.sessionService.update(session.id, { title: "Renamed" });
+  expect((await api.query([resource]))[0]?.changedSinceSeen).toBe(false);
+  await app.deps.sessionService.update(session.id, { contentEvent: { kind: "input", id: "question" } });
+  expect((await api.query([resource]))[0]?.changedSinceSeen).toBe(true);
+  expect((await api.acknowledge(observed.receipt, resource)).changedSinceSeen).toBe(true);
 });
 
 test("command changes preserve human UI authors without misattributing CLI and automation", async () => {
