@@ -117,7 +117,6 @@ export const extensionKanbanRendererRecordSchema = extensionRendererRecordBaseSc
   queryHandlerId: z.string(),
   attributeChangeHandlerId: z.string().optional(),
   moveHandlerId: z.string().optional(),
-  supportsFieldsOnly: z.boolean().optional(),
   schemaRefreshEventIds: z.array(z.string()).optional(),
   columnActionHandlerId: z.string().optional(),
   createRow: extensionKanbanRendererCreateRowSchema.optional(),

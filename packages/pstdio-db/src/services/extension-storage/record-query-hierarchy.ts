@@ -14,13 +14,13 @@ export const recordHierarchySql = (
   const hierarchy = index.hierarchy!;
   const source = sql.identifier(outer);
   const ancestor = sql.identifier("hierarchy_ancestor");
-  // The outer row already supplies the lineage seed. Probe storage only for its parents.
   return sql`(WITH RECURSIVE lineage AS (
-    SELECT ${field(hierarchy.idField, outer)} AS id,
-      ${field(hierarchy.parentField, outer)} AS parent,
-      ${field(hierarchy.labelField, outer)} AS label,
-      ARRAY[${source}.record_id] AS visited, 0 AS depth
-    WHERE ${scope(outer)}
+    SELECT ${field(hierarchy.idField, "hierarchy_ancestor")} AS id,
+      ${field(hierarchy.parentField, "hierarchy_ancestor")} AS parent,
+      ${field(hierarchy.labelField, "hierarchy_ancestor")} AS label,
+      ARRAY[${ancestor}.record_id] AS visited, 0 AS depth
+    FROM storage_current_records AS ${ancestor}
+    WHERE ${ancestor}.record_id = ${source}.record_id AND ${scope("hierarchy_ancestor")}
     UNION ALL
     SELECT parent.id, parent.parent, parent.label, lineage.visited || parent.record_id, lineage.depth + 1
     FROM lineage CROSS JOIN LATERAL (

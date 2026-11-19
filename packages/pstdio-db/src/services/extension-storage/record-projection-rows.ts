@@ -10,9 +10,6 @@ import { identityQueryKey } from "./resource-query-values";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
-const jsonInput = (value: unknown) =>
-  value === null || value === undefined ? sql`NULL::jsonb` : sql`${JSON.stringify(value)}::jsonb`;
-
 /** Writes the query rows of saved records in their commit's transaction. Unchanged rows stay as they are. */
 export const publishProjectedRecords = async (tx: Transaction, owner: StorageOwner, input: NativeProjectedRecord[]) => {
   const records = await Promise.all(input.map((record) => projectNativeRecordText(tx, owner, record)));
@@ -36,25 +33,12 @@ export const writeProjectedRecords = async (tx: Transaction, owner: StorageOwner
     native_versions: record.nativeVersions ?? {},
     record_lifetime: record.recordLifetime ?? "",
   }));
-  const inputs = function* () {
-    if (rows.length === 1) {
-      const row = rows[0]!;
-      // An ordinary edit already has scalar fields. Avoid parsing a surrounding
-      // JSON recordset only to unpack that one row again in Postgres.
-      yield sql`VALUES (${owner.workbenchId}, ${owner.extensionId}, ${row.record_id}, ${row.deleted},
-        ${jsonInput(row.value)}, ${jsonInput(row.query_values)}, ${jsonInput(row.asset)}, ${jsonInput(row.shared)},
-        ${row.revision}, ${jsonInput(row.native_sources)}, ${jsonInput(row.native_versions)}, ${row.record_lifetime})`;
-      return;
-    }
-    for (const batch of jsonBatches(rows))
-      yield sql`SELECT ${owner.workbenchId}, ${owner.extensionId}, input.record_id, input.deleted, input.value, input.query_values, input.asset, input.shared, input.revision, input.native_sources, input.native_versions, input.record_lifetime
-        FROM jsonb_to_recordset(${batch}::jsonb)
-          AS input(record_id text, deleted boolean, value jsonb, query_values jsonb, asset jsonb, shared jsonb, revision text, native_sources jsonb, native_versions jsonb, record_lifetime text)`;
-  };
-  for (const input of inputs()) {
+  for (const batch of jsonBatches(rows)) {
     const changed = await tx.execute(sql`
       INSERT INTO storage_current_records (workbench_id, extension_id, record_id, deleted, value, query_values, asset, shared, revision, native_sources, native_versions, record_lifetime)
-      ${input}
+      SELECT ${owner.workbenchId}, ${owner.extensionId}, input.record_id, input.deleted, input.value, input.query_values, input.asset, input.shared, input.revision, input.native_sources, input.native_versions, input.record_lifetime
+      FROM jsonb_to_recordset(${batch}::jsonb)
+        AS input(record_id text, deleted boolean, value jsonb, query_values jsonb, asset jsonb, shared jsonb, revision text, native_sources jsonb, native_versions jsonb, record_lifetime text)
       ON CONFLICT (workbench_id, extension_id, record_id) DO UPDATE SET
         deleted = excluded.deleted, value = excluded.value,
         query_values = excluded.query_values || ${owner.extensionId === "pstdio" ? sql`CASE WHEN storage_current_records.query_values ? ${identityQueryKey} THEN jsonb_build_object(${identityQueryKey}::text, storage_current_records.query_values -> ${identityQueryKey}) ELSE '{}'::jsonb END` : sql`'{}'::jsonb`},

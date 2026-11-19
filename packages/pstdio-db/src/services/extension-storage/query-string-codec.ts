@@ -1,32 +1,6 @@
 import { type SQL, sql } from "drizzle-orm";
 import { expressionLiteral } from "./query-expression-values";
-import {
-  projectionBytesTag,
-  projectionFoldedTag,
-  projectionStringTag,
-  projectionSubstringBytes,
-} from "./record-projection-codec";
-
-export const stringBytesSql = (value: SQL, folded = false) => {
-  const tag = folded ? projectionFoldedTag : projectionBytesTag;
-  const text = sql`(${value} #>> '{}')`;
-  const normalized = folded ? sql`lower(${text})` : text;
-  // decode is immutable for expression indexes; protect literal backslashes.
-  const bytes = sql`decode(replace(${normalized}, ${expressionLiteral("\\")}, ${expressionLiteral("\\\\")}), 'escape')`;
-  return sql`(CASE WHEN jsonb_typeof(${value}) = 'object' AND ${value} ? ${expressionLiteral(projectionStringTag)}
-    THEN decode(${value} ->> ${expressionLiteral(tag)}, 'hex')
-    ELSE ${bytes} END)`;
-};
-
-export const recordTextMatch = (value: SQL, search: string, recursive: boolean) => {
-  const needle = projectionSubstringBytes(search.toLowerCase());
-  const matches = (text: SQL) => sql`position(decode(${needle}, 'hex') in ${stringBytesSql(text, true)}) > 0`;
-  if (!recursive) return matches(value);
-  // String normalization references its input in several branches. Evaluate the
-  // recursive projection once and let those branches reuse its result.
-  return sql`(WITH breadcrumb_value AS MATERIALIZED (SELECT ${value} AS value)
-    SELECT ${matches(sql`breadcrumb_value.value`)} FROM breadcrumb_value)`;
-};
+import { projectionBytesTag, projectionFoldedTag, projectionStringTag } from "./record-projection-codec";
 
 const byte = (value: SQL) => sql`lpad(to_hex(${value}), 2, '0')`;
 const utf8 = (point: SQL): SQL => sql`CASE

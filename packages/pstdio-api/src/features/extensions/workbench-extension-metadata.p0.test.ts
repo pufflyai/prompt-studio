@@ -149,10 +149,10 @@ describe("buildWorkbenchExtensionMetadata", () => {
       });
       const body = metadata.views[0]?.body;
       if (body?.kind !== "webview") throw new Error("Expected a webview body");
-      const entryStyle = webviewUrlIssuer.stylesheetUrl({
-        installedExtensionId: "installed-lab",
-        webviewId: "pstdio.lab.view.page",
-      });
+      const entryStyle = webviewUrlIssuer.assetUrl(
+        { installedExtensionId: "installed-lab", webviewId: "pstdio.lab.view.page" },
+        "module.css",
+      );
       expect(body.webview.styles).toEqual([entryStyle]);
     } finally {
       rmSync(root, { recursive: true, force: true });

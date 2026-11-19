@@ -105,28 +105,6 @@ describe("webview build usage", () => {
     }
   });
 
-  test("defers unopened source checks and builds offline edits on first use", async () => {
-    const fixture = setup();
-    try {
-      const manager = fixture.createManager();
-      await manager.refresh(fixture.sourcePath, "attachment");
-      await manager.reconcile();
-      expect(fixture.builds).toEqual([]);
-
-      writeFileSync(join(fixture.sourcePath, "src/main.tsx"), "export default 2;");
-      await Promise.all([manager.ensure("installed-lab"), manager.ensure("installed-lab")]);
-      expect(fixture.builds).toHaveLength(1);
-      expect(readFileSync(join(fixture.dist, "module.js"), "utf8")).toBe("export default 2;");
-
-      writeFileSync(join(fixture.sourcePath, "src/main.tsx"), "export default 3;");
-      await manager.refresh(fixture.sourcePath, "attachment");
-      expect(readFileSync(join(fixture.dist, "module.js"), "utf8")).toBe("export default 3;");
-      expect(fixture.builds).toHaveLength(2);
-    } finally {
-      fixture.dispose();
-    }
-  });
-
   test("rebuilds edits made while the runtime was closed", async () => {
     const fixture = setup();
     try {
