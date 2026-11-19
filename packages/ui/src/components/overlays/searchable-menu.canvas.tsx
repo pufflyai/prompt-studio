@@ -4,6 +4,7 @@ import { FolderGit2, GitBranch } from "lucide-react";
 import { useRef, useState } from "react";
 import { ListRow } from "@/components/list-row/list-row";
 import { SearchableMenu, type SearchableMenuItem } from "@/components/overlays/searchable-menu";
+import { SelectionInput } from "@/components/param-editor/inputs/selection-input";
 import { ScopedDialog as Dialog, ScopedMenu as Menu } from "@/utils/scoped-overlays";
 import { Portal } from "@/utils/ui-scope";
 
@@ -163,6 +164,8 @@ export const PortalledInsideDialog: Story = {
   fullscreen: true,
   render: () => {
     const dialogRef = useRef<HTMLDivElement>(null);
+    const [branch, setBranch] = useState("main");
+    const [tags, setTags] = useState<string[]>(["known"]);
     return (
       <Dialog.Root open modal>
         <Portal>
@@ -191,6 +194,25 @@ export const PortalledInsideDialog: Story = {
                         />
                       </Menu.Item>
                     }
+                  />
+                  <SelectionInput
+                    id="base"
+                    name="Base branch"
+                    description="Choose the branch without leaving the command dialog."
+                    defaultValue={branch}
+                    options={branchItems.map((item) => ({ id: item.id, name: item.label }))}
+                    onChange={(_, value) => setBranch(value as string)}
+                  />
+                  <SelectionInput
+                    id="tags"
+                    name="Tags"
+                    description="Search or add a custom tag while retaining the dialog."
+                    multiSelect
+                    searchable
+                    allowCustomValues
+                    defaultValue={tags}
+                    options={[{ id: "known", name: "Known tag" }]}
+                    onChange={(_, value) => setTags(value as string[])}
                   />
                   <Button variant="primary">Create workspace</Button>
                 </Stack>
