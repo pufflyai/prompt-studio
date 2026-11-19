@@ -242,7 +242,7 @@ jobs:
       - name: Upgrade both populated projects
         run: |
           bun --no-env-file packages/e2e/src/packaged/project-upgrade.ts \
-            --from "$FROM_TAG" --candidate "$CANDIDATE_BINARY" --candidate-ref "$CANDIDATE_REF"
+            --from "$FROM_TAG" --candidate "$CANDIDATE_BINARY" --candidate-ref "$CANDIDATE_REF" --candidate-root __test-tmp__/upgrade-candidate
       - name: Preserve the pair, manifests and startup logs
         if: always()
         uses: actions/upload-artifact@v4

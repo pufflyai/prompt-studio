@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readdir, readFile, realpath } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, sep } from "node:path";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import {
   createStackApi,
   importedSessionId,
@@ -57,13 +58,25 @@ interface ProjectExtension {
 
 export const installedProjectTools = async (api: StackApi, project: string) => {
   const { extensions } = await api.get<{ extensions: ProjectExtension[] }>(`/projects/${project}/extensions`);
-  return extensions.map(({ id, enabled, version }) => ({ id, enabled, version }));
+  return extensions.map(({ id, extensionId, enabled, version }) => ({ id, extensionId, enabled, version }));
+};
+
+// Read candidate releases independently of the runtime's canUpgrade response.
+export const candidateToolVersions = async (root: string) => {
+  const versions = new Map<string, string>();
+  for (const dir of ["pstdio-home", "pstdio-planner", "pstdio-session-browser", "git-workspaces", "harness-codex"]) {
+    const manifest = await Bun.file(join(root, "extensions", dir, "package.json")).json();
+    assert.equal(typeof manifest.version, "string");
+    versions.set(canonicalExtensionId(`pstdio.${dir}`), manifest.version);
+  }
+  return versions;
 };
 
 export const assertProjectToolsRetained = async (
   api: StackApi,
   project: string,
   before: Awaited<ReturnType<typeof installedProjectTools>>,
+  expectedVersions?: Map<string, string>,
 ) => {
   const current = new Map((await installedProjectTools(api, project)).map((tool) => [tool.id, tool]));
   for (const previous of before) {
@@ -74,6 +87,14 @@ export const assertProjectToolsRetained = async (
       assert(
         tool.version && Bun.semver.order(tool.version, previous.version) >= 0,
         `Downgrade for ${tool.id}: ${previous.version} → ${tool.version}`,
+      );
+  }
+  for (const tool of current.values()) {
+    const expected = expectedVersions?.get(canonicalExtensionId(tool.extensionId));
+    if (tool.enabled && expected)
+      assert(
+        tool.version && Bun.semver.order(tool.version, expected) >= 0,
+        `${tool.extensionId} stayed at ${tool.version} with ${expected} available in the candidate`,
       );
   }
 };

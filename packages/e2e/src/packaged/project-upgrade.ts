@@ -11,6 +11,7 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 import {
   assertProjectToolsRetained,
   assertUpgradeEdit,
+  candidateToolVersions,
   editUpgradeProject,
   installedProjectTools,
   type ProjectUpgradeInput,
@@ -59,11 +60,12 @@ const verify = async (
   descriptor: { origin: string; token: string },
   evidence: string,
   state: Awaited<ReturnType<typeof seed>>,
+  expectedVersions?: Map<string, string>,
 ) => {
   const upgrade = upgradeApi(descriptor);
   const changes = await upgradeCoreProjectTools(upgrade, state.fixture.id);
   await record(evidence, "extension-upgrades", changes);
-  await assertProjectToolsRetained(upgrade, state.fixture.id, state.tools);
+  await assertProjectToolsRetained(upgrade, state.fixture.id, state.tools, expectedVersions);
   await assertHomeOpens(upgrade, state.fixture.id);
   const after = await readUpgradeProject(upgrade, state.fixture);
   await record(evidence, "after", after);
@@ -155,6 +157,7 @@ const run = async (
     from: string;
     candidate: string;
     candidateRef: string;
+    expectedVersions?: Map<string, string>;
     baseline: string;
   },
 ) => {
@@ -228,12 +231,17 @@ const run = async (
     const home = await checkHomeHistory(input, state.fixture.id);
     runtime = await launch(candidate, "upgrade");
     await assertCurrentDatabase(input.home);
-    const edited = await verify(runtime.descriptor, input.evidence, state);
+    const edited = await verify(runtime.descriptor, input.evidence, state, pair.expectedVersions);
     const routes = await workbenchRoutes(runtime.descriptor, state.fixture);
     await stopProcess(runtime.child);
     runtime = await launch(candidate, "restart");
     await openSavedWork(runtime.descriptor, state.fixture, input.evidence, routes);
-    await assertProjectToolsRetained(upgradeApi(runtime.descriptor), state.fixture.id, state.tools);
+    await assertProjectToolsRetained(
+      upgradeApi(runtime.descriptor),
+      state.fixture.id,
+      state.tools,
+      pair.expectedVersions,
+    );
     await verifyRestart(runtime.descriptor, input.evidence, state.fixture, edited);
     await stopProcess(runtime.child);
     runtime = undefined;
@@ -249,6 +257,7 @@ if (import.meta.main) {
       from: { type: "string" },
       candidate: { type: "string" },
       "candidate-ref": { type: "string" },
+      "candidate-root": { type: "string" },
       "baseline-binary": { type: "string" },
       profile: { type: "string" },
       evidence: { type: "string" },
@@ -270,7 +279,8 @@ if (import.meta.main) {
   console.log(`Project upgrade ${from} → ${candidateRef}. Evidence in ${evidence}`);
   await record(evidence, "pair", { from, candidateRef });
   const baseline = baselinePath ? resolve(baselinePath) : (await preparePublishedHost(from)).path;
-  const pair = { from, candidateRef, baseline, candidate: resolve(candidate) };
+  const expectedVersions = values["candidate-root"] ? await candidateToolVersions(values["candidate-root"]) : undefined;
+  const pair = { from, candidateRef, baseline, candidate: resolve(candidate), expectedVersions };
   const failures: unknown[] = [];
   const profiles: ProjectUpgradeInput["profile"][] = profile ? [profile] : ["active", "aged"];
   if (!profile && from === "pstdio@0.47.0") profiles.push("conflicted");
