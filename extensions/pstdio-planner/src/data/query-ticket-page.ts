@@ -25,9 +25,9 @@ export const readTicketViewPage = async (
   ctx: TicketQueryContext,
   input: Partial<KanbanRendererQueryParams>,
   selection: TicketViewSelection = {},
-  displayFields?: readonly string[],
+  displayFields: readonly string[] | undefined = input.settings?.displayProperties ?? input.page?.fields,
 ) => {
-  const prepared = await prepareTicketViewQuery(ctx, input, selection);
+  const prepared = await prepareTicketViewQuery(ctx, input, selection, displayFields);
   const { scope, tags, statuses, attributes } = prepared;
   const requested = (fields: string[]) => !displayFields || fields.some((field) => displayFields.includes(field));
   const showLinkedResources = requested([TICKET_LINKED_RESOURCES_ATTRIBUTE, TICKET_LINKED_RESOURCE_ITEMS_ATTRIBUTE]);
@@ -43,12 +43,15 @@ export const readTicketViewPage = async (
       ? loadTicketLinkedResources(
           ctx.resources,
           tickets.map(({ id }) => ({ type: "ticket", id, extensionId, projectId: ctx.projectId })),
+          { preview: true },
         )
       : undefined,
     readTicketPageParents(ctx, new Map(tickets.map((ticket) => [ticket.id, ticket]))),
     readReviewCounts(
       ctx.storage,
-      requested(["reviewRequests", REVIEW_REQUEST_ITEMS_ATTRIBUTE]) ? tickets.map(({ id }) => id) : [],
+      requested(["needsAttention", "reviewRequests", REVIEW_REQUEST_ITEMS_ATTRIBUTE])
+        ? tickets.map(({ id }) => id)
+        : [],
     ),
   ]);
   const projections = new Map(selected.records.map(({ fields }) => [String(fields.id), fields]));
@@ -60,6 +63,7 @@ export const readTicketViewPage = async (
           links.get(id) ?? [],
           readReviewLinkProjections(projections.get(id)!),
           ctx.projectId,
+          { type: "ticket", id, extensionId, projectId: ctx.projectId },
         ),
       );
   }

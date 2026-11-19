@@ -69,7 +69,21 @@ const ticketToRowWithTags = (
   extensionId: string,
 ) => {
   const hierarchy = resolveTicketHierarchy(ticket, parentLookup, extensionId);
+  const resource = {
+    type: TICKET_RESOURCE_KIND,
+    id: ticket.id,
+    shorthand: ticket.shorthand,
+    projectId,
+    label: ticketDisplayTitle(ticket),
+    icon: TICKET_RESOURCE_ICON,
+    metadata: hierarchy.resourceReference.metadata,
+  };
   const linkedResourceItems = (linkedResources.get(ticket.id) ?? []).map((item) => {
+    if (item.id === "linked-resources-more")
+      return {
+        ...item,
+        action: ticketPageTarget({ ...resource, extensionId }),
+      };
     if (item.resource?.type !== "workspace" || item.resource.extensionId !== "pstdio" || item.action?.kind !== "page")
       return item;
     // Keep workspace navigation inside the ticket whose badge was activated.
@@ -87,15 +101,7 @@ const ticketToRowWithTags = (
     // Card/list rows show the bare title; shorthand ancestry stays in the "id"
     // attribute while the resource label remains the navigation title.
     title: ticket.title || ticket.shorthand,
-    resource: {
-      type: TICKET_RESOURCE_KIND,
-      id: ticket.id,
-      shorthand: ticket.shorthand,
-      projectId,
-      label: ticketDisplayTitle(ticket),
-      icon: TICKET_RESOURCE_ICON,
-      metadata: hierarchy.resourceReference.metadata,
-    },
+    resource,
     attributes: {
       status: ticket.statusId ?? "",
       [TICKET_ARCHIVE_STATE_ATTRIBUTE_ID]: ticket.archived

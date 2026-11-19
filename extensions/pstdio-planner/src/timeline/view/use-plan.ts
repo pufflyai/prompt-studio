@@ -42,6 +42,6 @@ export function usePlan(host: GuestHost) {
     value: plan,
     error,
     retry,
-  } = usePlannerQuery(client, client.commands["timeline.plan.read"].query(undefined, { events: planEvents }));
+  } = usePlannerQuery(client, client.commands["timeline.plan.read"].query({ fields: [] }, { events: planEvents }));
   return { client, plan, error, retry };
 }

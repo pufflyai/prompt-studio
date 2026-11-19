@@ -195,6 +195,56 @@ const expectAutoBuildFilter = async (timeline: FrameLocator) => {
   await autoBuild.getByRole("button", { name: "Cancel", exact: true }).click();
 };
 
+async function expectTimelinePreviews(
+  timeline: FrameLocator,
+  host: Host,
+  projectId: string,
+  ticketId: string,
+  execute: Execute,
+) {
+  // E3: only visible cards load bounded previews; the full graph admits independently.
+  const anchors = [];
+  for (let index = 0; index < 105; index++) {
+    const linked = await execute("create-ticket", { content: `# E3 note ${index}` });
+    await execute("archive-ticket", { id: linked.id });
+    anchors.push({
+      type: "ticket",
+      id: linked.id,
+      label: `E3 note ${index}`,
+      projectId,
+      extensionId: "pstdio.planner",
+    });
+  }
+  for (let offset = 0; offset < 105; offset += 100) {
+    const response = await fetch(`${host.baseUrl}/v1/projects/${projectId}/resource-anchors/add`, {
+      method: "POST",
+      headers: { ...runtimeAuthorization(host.descriptor), "content-type": "application/json" },
+      body: JSON.stringify({
+        resource: { type: "ticket", id: ticketId, projectId: projectId, extensionId: "pstdio.planner" },
+        anchors: anchors.slice(offset, offset + 100),
+      }),
+    });
+    expect(response.status, await response.text()).toBe(200);
+  }
+  const previewCard = timeline.locator(`[data-ticket="${ticketId}"]`);
+  await expect(previewCard.getByText(/E3 note /)).toHaveCount(0);
+  await timeline.getByRole("button", { name: "Display settings", exact: true }).click();
+  await timeline
+    .locator('[aria-label="Display settings"][data-part="content"]')
+    .getByRole("button", { name: "Linked resources", exact: true })
+    .click();
+  await timeline.getByRole("button", { name: "Display settings", exact: true }).click();
+  await expect(previewCard.getByText(/E3 note /)).toHaveCount(8);
+  await expect(previewCard.getByText("…", { exact: true })).toBeVisible();
+  await timeline.getByRole("button", { name: "Display settings", exact: true }).click();
+  await timeline
+    .locator('[aria-label="Display settings"][data-part="content"]')
+    .getByRole("button", { name: "Linked resources", exact: true })
+    .click();
+  await timeline.getByRole("button", { name: "Display settings", exact: true }).click();
+  await expect(previewCard.getByText(/E3 note /)).toHaveCount(0);
+}
+
 browserTest("serves populated Planner projects and recovers cached webviews", async () => {
   // Two project installs, populated migrations and repeated cold module rebuilds share this allowance.
   test.setTimeout(300_000);
@@ -219,14 +269,11 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
 
     phase("install start");
     // Planner uses SDK and UI APIs that may not be on npm yet, so install it with the workspace builds.
-    await installPlanner(
-      host,
-      conflicting.folder,
-      await preparePlannerSource(join(home, "fixtures", "current-planner")),
-    );
+    const plannerSource = await preparePlannerSource(join(home, "fixtures", "current-planner"));
+    await installPlanner(host, conflicting.folder, plannerSource);
     await enablePlanner(host, valid.id);
     phase("install complete; seed start");
-    const [conflictData] = await Promise.all([
+    const [conflictData, validData] = await Promise.all([
       seedTrackProject(conflicting.execute, "multi_select"),
       seedTrackProject(valid.execute, "single_select"),
     ]);
@@ -246,6 +293,8 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     await expect(timeline.getByText("Product", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
     await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible();
     await expectTimelineStyles(timeline);
+
+    await expectTimelinePreviews(timeline, host, valid.id, validData.active[0]!.id, valid.execute);
 
     const focusedView = await valid.execute<{ id: string }>("timeline.views.create", {
       value: {

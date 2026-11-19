@@ -1,5 +1,5 @@
 // Return the execution plan with its deadlines, blockers, risk, and the Planner tags tracks can use.
-import { defineCommand } from "@pstdio/sdk/extensions";
+import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { listAttempts } from "../../data/attempt-storage";
 import { readTicketSnapshot } from "../../data/collections";
 import { buildTicketAttributes, createTicketParentLookup, createTicketRowMapper } from "../../data/mappers";
@@ -25,7 +25,8 @@ export const readPlanCommand = defineCommand({
   id: "timeline.plan.read",
   title: "Read execution plan",
   cli: { description: "Print the execution order, deadlines, blockers, and risk as JSON." },
-  async run(ctx) {
+  params: { fields: params.json<string[]>() },
+  async run(ctx, input) {
     const migrated = await readMigratedTickets(ctx);
     const [{ tickets, requests }, { statuses }, { tags }, stored, gates, attempts, selections] = await Promise.all([
       readTicketSnapshot(ctx, migrated),
@@ -55,15 +56,17 @@ export const readPlanCommand = defineCommand({
     const toRow = createTicketRowMapper(
       ctx.projectId,
       tags,
-      await loadTicketLinkedResources(
-        ctx.resources,
-        active.map((ticket) => ({
-          type: "ticket",
-          id: ticket.id,
-          extensionId: ctx.extensionId,
-          projectId: ctx.projectId,
-        })),
-      ),
+      !input.fields || input.fields.includes("workspace")
+        ? await loadTicketLinkedResources(
+            ctx.resources,
+            active.map((ticket) => ({
+              type: "ticket",
+              id: ticket.id,
+              extensionId: ctx.extensionId,
+              projectId: ctx.projectId,
+            })),
+          )
+        : undefined,
       createTicketParentLookup(tickets),
       ctx.extensionId,
     );

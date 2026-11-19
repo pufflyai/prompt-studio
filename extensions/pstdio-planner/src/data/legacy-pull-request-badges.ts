@@ -1,10 +1,12 @@
-import { type CollectionBadgeItem, resourceKey } from "@pstdio/sdk/extensions";
+import { type CollectionBadgeItem, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
+import { ticketLinkedResourcePreview } from "./ticket-linked-resources";
 import type { StoredTicketReviewLink } from "./types";
 
 export const appendLegacyPullRequestBadges = (
   items: CollectionBadgeItem[],
   links: StoredTicketReviewLink[],
   projectId: string,
+  preview?: ResourceRef,
 ) => {
   const saved = new Set(items.map(({ id }) => id));
   const badges = [...items];
@@ -35,5 +37,5 @@ export const appendLegacyPullRequestBadges = (
       action: { kind: "href", href },
     });
   }
-  return badges;
+  return preview ? ticketLinkedResourcePreview(badges, preview) : badges;
 };

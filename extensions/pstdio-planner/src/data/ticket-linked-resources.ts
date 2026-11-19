@@ -5,6 +5,7 @@ import {
   type ResourceResolution,
   resourceKey,
 } from "@pstdio/sdk/extensions";
+import { ticketPageTarget } from "./ticket-page-target";
 
 // Keep the saved display preference identity while broadening it to every resource kind.
 export const TICKET_LINKED_RESOURCES_ATTRIBUTE = "workspace";
@@ -45,7 +46,9 @@ const addRelatedReference = (
 export const loadTicketLinkedResources = async (
   resources: ExtensionResourcesApi,
   tickets: ResourceRef[],
+  options?: { preview?: boolean },
 ): Promise<TicketLinkedResourceLookup> => {
+  if (options?.preview) return loadPreviews(resources, tickets);
   const byIdentity = new Map(tickets.map((ticket) => [resourceKey(ticket), new Map<string, ResourceRef>()]));
   // Keep both directions on the same path. A workspace's ticket anchor is an incoming link.
   for (let offset = 0; offset < tickets.length; offset += 100) {
@@ -78,6 +81,65 @@ export const loadTicketLinkedResources = async (
         .map((ref) => badgeItem(ref, resolved.get(resourceKey(ref))))
         .filter((item): item is CollectionBadgeItem => item !== undefined),
     ]),
+  );
+};
+
+export const ticketLinkedResourcePreview = (items: CollectionBadgeItem[], ticket: ResourceRef) => {
+  const badges = items.filter(({ id }) => id !== "linked-resources-more");
+  const result = badges.slice(0, 8);
+  if (badges.length > 8 || items.some(({ id }) => id === "linked-resources-more"))
+    result.push({
+      id: "linked-resources-more",
+      label: "…",
+      icon: "ellipsis",
+      tooltip: "Open all linked resources",
+      action: ticketPageTarget(ticket),
+    });
+  return result;
+};
+
+// Card previews have bounded provider work. The ticket page retains full pagination.
+const loadPreviews = async (
+  resources: ExtensionResourcesApi,
+  tickets: ResourceRef[],
+): Promise<TicketLinkedResourceLookup> => {
+  const pages = new Map<string, Awaited<ReturnType<ExtensionResourcesApi["queryRelated"]>>>();
+  for (let offset = 0; offset < tickets.length; offset += 100) {
+    const batch = tickets.slice(offset, offset + 100);
+    const exists = await resources.queryRelated({ resources: batch, direction: "both", limit: 1 });
+    if (!exists.items.length) continue;
+    for (let start = 0; start < batch.length; start += 8)
+      await Promise.all(
+        batch.slice(start, start + 8).map(async (ticket) => {
+          pages.set(ticket.id, await resources.queryRelated({ resources: [ticket], direction: "both", limit: 8 }));
+        }),
+      );
+  }
+  const refs = [
+    ...new Map(
+      [...pages.values()].flatMap((page) => page.items.map((ref) => [resourceKey(ref), ref] as const)),
+    ).values(),
+  ];
+  const resolved = new Map<string, ResourceResolution>();
+  for (let offset = 0; offset < refs.length; offset += 100)
+    for (const item of await resources.resolveOpenings(refs.slice(offset, offset + 100)))
+      resolved.set(resourceKey(item.resource), item);
+  return new Map(
+    tickets.map((ticket) => {
+      const page = pages.get(ticket.id);
+      const items = (page?.items ?? [])
+        .map((ref) => badgeItem(ref, resolved.get(resourceKey(ref))))
+        .filter((item): item is CollectionBadgeItem => item !== undefined);
+      if (page?.nextCursor)
+        items.push({
+          id: "linked-resources-more",
+          label: "…",
+          icon: "ellipsis",
+          tooltip: "Open all linked resources",
+          action: ticketPageTarget(ticket),
+        });
+      return [ticket.id, items];
+    }),
   );
 };
 

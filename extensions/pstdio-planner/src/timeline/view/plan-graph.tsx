@@ -1,7 +1,7 @@
 // Show the plan as a dependency graph: the milestone timeline runs down the left, execution order runs down,
 // parallel work sits side by side, each milestone is a band, and collapsible tracks split every band into columns.
 import { Box } from "@chakra-ui/react";
-import type { RefObject } from "react";
+import { type RefObject, useRef } from "react";
 import { layoutGraph } from "../model/graph-layout";
 import { dropRegion } from "./drop-region";
 import { GraphContent } from "./graph-content";
@@ -50,6 +50,7 @@ function useGraphBox(
 
 export function PlanGraph(props: PlanViewProps) {
   const { sections, tracks, selectedId, ...actions } = props;
+  const overlayRef = useRef<HTMLDivElement>(null);
   const { ref, width, height } = useSize();
   const { zoom, change } = useCanvasZoom(ref);
   const { panning, handlers } = useCanvasPan(ref, zoom, change);
@@ -70,7 +71,7 @@ export function PlanGraph(props: PlanViewProps) {
   const canvasHeight = Math.max(box.height, height / zoom - trackHeaderHeight);
 
   return (
-    <Box h="full" minH="0" minW="0" position="relative">
+    <Box ref={overlayRef} h="full" minH="0" minW="0" position="relative">
       <Box
         ref={ref}
         data-timeline-viewport
@@ -106,6 +107,7 @@ export function PlanGraph(props: PlanViewProps) {
             collapsed={collapsed}
             viewport={{
               ref,
+              overlayRef,
               width: width / zoom,
               height: height / zoom,
               canvasWidth,

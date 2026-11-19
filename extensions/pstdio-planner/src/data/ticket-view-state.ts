@@ -32,12 +32,14 @@ export const ticketViewState = async (
   storage: ExtensionStorageApi,
   workflow: WorkflowStatusSelections,
   deadlineId?: string | null,
+  requested?: ReadonlySet<string>,
 ) => {
   const metadata = await readPlanMetadata(storage);
   const done: StoragePredicate = { field: "statusId", op: "in", value: workflow.completedStatusIds };
   const unfinished: StoragePredicate = { all: [activeTicket, { not: done }] };
   const today = new Intl.DateTimeFormat("en-CA").format(new Date());
   const milestoneIds = metadata.deadlines
+    .filter(() => !requested || requested.has("milestoneState"))
     .filter(({ id }) => deadlineId === undefined || id === deadlineId)
     .map(({ id }) => id);
   const { counts, doneCounts } = await readMilestoneProgress(storage, milestoneIds, activeTicket, done);

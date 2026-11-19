@@ -38,6 +38,7 @@ export const prepareTicketViewQuery = async (
   ctx: TicketQueryContext,
   input: Partial<KanbanRendererQueryParams>,
   selection: TicketViewSelection = {},
+  displayFields?: readonly string[],
 ) => {
   await ensureTicketStorage(ctx);
   const [tags, statuses] = await Promise.all([seedDefaultTags(ctx.storage), seedDefaultStatuses(ctx.storage)]);
@@ -55,16 +56,22 @@ export const prepareTicketViewQuery = async (
     : undefined;
   const deadlineId = point?.records[0]?.fields.deadlineId;
   const pointDeadline = typeof deadlineId === "string" ? deadlineId : null;
-  const state = await ticketViewState(ctx.storage, usableWorkflowStatuses(workflow), point ? pointDeadline : undefined);
-  const { computed, metadata } = state;
-  const attributes = [...buildTicketAttributes(statuses, tags), ...timelineTicketAttributes(metadata.deadlines)];
   const groups = [input.settings?.columnGrouping ?? "status", input.settings?.rowGrouping ?? "none"];
   const requested = new Set([
+    ...(displayFields ?? []),
     ...filterFields(input.filter),
     ...groups,
     ...(input.sorts ?? []).map(({ attributeId }) => attributeId),
     ...(input.page?.search ? (input.page.searchFields ?? input.page.fields) : []),
   ]);
+  const state = await ticketViewState(
+    ctx.storage,
+    usableWorkflowStatuses(workflow),
+    point ? pointDeadline : undefined,
+    displayFields ? requested : undefined,
+  );
+  const { computed, metadata } = state;
+  const attributes = [...buildTicketAttributes(statuses, tags), ...timelineTicketAttributes(metadata.deadlines)];
   const dateSort = input.sorts?.[0]?.attributeId;
   const calendarField = ({ created: "createdCalendarOnly", updated: "updatedCalendarOnly" } as Record<string, string>)[
     dateSort ?? ""
