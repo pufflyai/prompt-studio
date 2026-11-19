@@ -1,15 +1,25 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { e2eExtensions } from "../default-extensions";
 import { enableCoreSkillsExtension } from "./extension-helpers";
-import { cleanupDirs, createGitRepo, createTempDir, runPstdio, runPstdioSafe } from "./helpers";
+import { cleanupDirs, createGitRepo, createTempDir, runPstdioAsync } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
 let api: ApiInstance;
 
 beforeAll(async () => {
-  api = await startApi();
+  api = await startApi({
+    env: {
+      PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(
+        "harness-claude-code",
+        "harness-open-code",
+        "pstdio-skills",
+        "pstdio-planner",
+      ),
+    },
+  });
 }, SETUP_TIMEOUT);
 
 afterAll(async () => {
@@ -21,24 +31,23 @@ describe("pstdio agents (harness listing)", () => {
   let repo: string;
   const apiDirs: string[] = [];
 
-  beforeAll(() => {
+  beforeAll(async () => {
     repo = createGitRepo();
     apiDirs.push(repo);
     // Harnesses are contributed by extensions, which are seeded on first project create.
-    runPstdio("projects create agents-e2e", repo, { PSTDIO_API_URL: api.url }, SETUP_TIMEOUT);
+    await runPstdioAsync(["projects", "create", "agents-e2e"], repo, { PSTDIO_API_URL: api.url }, SETUP_TIMEOUT);
   });
 
   afterAll(() => {
     cleanupDirs(apiDirs);
   });
 
-  const run = (args: string) => runPstdio(args, repo, { PSTDIO_API_URL: api.url });
-  const runSafe = (args: string) => runPstdioSafe(args, repo, { PSTDIO_API_URL: api.url });
+  const run = (args: string[]) => runPstdioAsync(args, repo, { PSTDIO_API_URL: api.url });
 
   test(
     "lists installed harnesses",
-    () => {
-      const output = run("agents list");
+    async () => {
+      const output = await run(["agents", "list"]);
 
       expect(output).toContain("Claude Code");
       expect(output).toContain("OpenCode");
@@ -49,8 +58,8 @@ describe("pstdio agents (harness listing)", () => {
 
   test(
     "setup resolves the bare agent id to its harness",
-    () => {
-      const output = run("agents setup opencode");
+    async () => {
+      const output = await run(["agents", "setup", "opencode"]);
 
       expect(output).toContain('Using harness "pstdio.harness-open-code.harness.opencode"');
     },
@@ -59,11 +68,10 @@ describe("pstdio agents (harness listing)", () => {
 
   test(
     "rejects unknown agent for setup",
-    () => {
-      const result = runSafe("agents setup unknown-agent");
-
-      expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain("No installed harness found for agent: unknown-agent");
+    async () => {
+      await expect(run(["agents", "setup", "unknown-agent"])).rejects.toThrow(
+        "No installed harness found for agent: unknown-agent",
+      );
     },
     TEST_TIMEOUT,
   );
@@ -71,7 +79,7 @@ describe("pstdio agents (harness listing)", () => {
 
 describe("pstdio agents (filesystem)", () => {
   const dirs: string[] = [];
-  const run = (args: string, cwd: string) => runPstdio(args, cwd, { PSTDIO_API_URL: api.url });
+  const run = (args: string[], cwd: string) => runPstdioAsync(args, cwd, { PSTDIO_API_URL: api.url });
   const readProjectId = (repo: string) => {
     const config = JSON.parse(readFileSync(join(repo, ".pstdio", "config.json"), "utf8")) as { project_id: string };
     return config.project_id;
@@ -88,9 +96,9 @@ describe("pstdio agents (filesystem)", () => {
       dirs.push(repo);
 
       // Initialize a project so skills can be fetched from the API
-      run("projects create e2e-agents-test", repo);
+      await run(["projects", "create", "e2e-agents-test"], repo);
       await enableCoreSkillsExtension(api.url, readProjectId(repo));
-      run("agents setup claude-code", repo);
+      await run(["agents", "setup", "claude-code"], repo);
 
       // Skills are installed either during project creation (via registerRepo) or agent setup
       expect(existsSync(join(repo, ".claude", "skills", "pstdio", "SKILL.md"))).toBe(true);
@@ -106,26 +114,30 @@ describe("pstdio agents (filesystem)", () => {
       // The global skill folder is outside every workspace, so workspace provisioning never writes there.
       const home = createTempDir();
       dirs.push(repo, home);
-      run("projects create e2e-agents-skill-folders", repo);
+      await run(["projects", "create", "e2e-agents-skill-folders"], repo);
       await enableCoreSkillsExtension(api.url, readProjectId(repo));
-      const installSkills = (flags = "") =>
-        runPstdio(`agents install-skills claude-code --global-skills ${flags}`, repo, {
-          PSTDIO_API_URL: api.url,
-          HOME: home,
-          USERPROFILE: home,
-        });
+      const installSkills = (force = false) =>
+        runPstdioAsync(
+          ["agents", "install-skills", "claude-code", "--global-skills", ...(force ? ["--force"] : [])],
+          repo,
+          {
+            PSTDIO_API_URL: api.url,
+            HOME: home,
+            USERPROFILE: home,
+          },
+        );
       const skillFile = join(home, ".claude", "skills", "pstdio", "SKILL.md");
 
-      expect(installSkills()).toMatch(/Installed \d+ skill\(s\): .*pstdio/);
+      expect(await installSkills()).toMatch(/Installed \d+ skill\(s\): .*pstdio/);
       const source = readFileSync(skillFile, "utf8");
 
       writeFileSync(skillFile, "edited");
-      const output = installSkills();
+      const output = await installSkills();
       expect(output).toMatch(/Kept \d+ existing skill folder\(s\) unchanged: .*pstdio/);
       expect(output).toContain("pst agents install-skills claude-code --global-skills --force");
       expect(readFileSync(skillFile, "utf8")).toBe("edited");
 
-      expect(installSkills("--force")).toMatch(/Replaced \d+ skill\(s\): .*pstdio/);
+      expect(await installSkills(true)).toMatch(/Replaced \d+ skill\(s\): .*pstdio/);
       expect(readFileSync(skillFile, "utf8")).toBe(source);
     },
     TEST_TIMEOUT,
@@ -133,11 +145,11 @@ describe("pstdio agents (filesystem)", () => {
 
   test(
     "skips skill installation outside a project folder",
-    () => {
+    async () => {
       const dir = createTempDir();
       dirs.push(dir);
 
-      const output = run("agents setup claude-code", dir);
+      const output = await run(["agents", "setup", "claude-code"], dir);
 
       expect(output).toContain("Not inside a project folder");
     },
