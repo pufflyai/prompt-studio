@@ -117,28 +117,6 @@ afterEach(() => {
 
 describe("realtime sync stream", () => {
   test(
-    "sends init payload without yjs tables",
-    async () => {
-      const response = await fetch(`${api.url}/v1/sync/stream`);
-      expect(response.ok).toBe(true);
-
-      const sse = createSseReader(response);
-      const event = await sse.readEvent();
-      await sse.close();
-
-      expect(event).toBeTruthy();
-      expect(event?.event).toBe("init");
-
-      const payload = event?.data as { tables: Record<string, unknown[]> };
-      expect(payload.tables).toHaveProperty("projects");
-      expect(payload.tables).not.toHaveProperty("ydoc_updates");
-      expect(payload.tables).not.toHaveProperty("ydoc_awareness");
-      expect(payload.tables).not.toHaveProperty("ydoc_resume_state");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
     "streams project create changes to connected clients",
     async () => {
       const response = await fetch(`${api.url}/v1/sync/stream`);

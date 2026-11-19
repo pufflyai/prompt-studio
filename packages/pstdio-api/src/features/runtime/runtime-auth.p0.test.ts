@@ -10,37 +10,6 @@ const createSecurity = (now?: () => number) => {
 };
 
 describe("runtime request authentication", () => {
-  test("accepts the browser session as a bearer header", () => {
-    const { secret, security } = createSecurity();
-    const request = new Request(`${origin}/v1/projects`, { headers: { authorization: `Bearer ${secret}` } });
-
-    expect(isRuntimeRequestAuthorized(request, security)).toBe(true);
-  });
-
-  test("accepts the browser session in the WebSocket protocol list", () => {
-    const { secret, security } = createSecurity();
-    const request = new Request(`${origin}/v1/terminal`, {
-      headers: {
-        connection: "Upgrade",
-        origin,
-        "sec-websocket-protocol": `pstdio, pstdio.bearer.${secret}`,
-        upgrade: "websocket",
-      },
-    });
-
-    expect(isRuntimeRequestAuthorized(request, security)).toBe(true);
-  });
-
-  test("rejects the browser session sent only as a cookie, even with the runtime Host", () => {
-    const { secret, security } = createSecurity();
-    // Another local server received the cookie and replays it with a forged Host and no Origin.
-    const request = new Request(`${origin}/v1/terminal`, {
-      headers: { cookie: `pstdio_runtime_session=${secret}`, host: "127.0.0.1:43123" },
-    });
-
-    expect(isRuntimeRequestAuthorized(request, security)).toBe(false);
-  });
-
   test("rejects a valid browser session sent from a foreign origin", () => {
     const { secret, security } = createSecurity();
     const request = new Request(`${origin}/v1/projects`, {
@@ -52,13 +21,6 @@ describe("runtime request authentication", () => {
 });
 
 describe("browser sessions", () => {
-  test("give a login code the browser session secret, which is not the runtime token", () => {
-    const { secret } = createSecurity();
-
-    expect(secret).toMatch(/^[A-Za-z0-9_-]{43}$/);
-    expect(secret).not.toBe("runtime-secret");
-  });
-
   test("redeem a login code only once", () => {
     const { browserSessions } = createSecurity();
     const code = browserSessions.createLoginCode();

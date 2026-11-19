@@ -1,10 +1,12 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, mock, spyOn, test } from "bun:test";
 import { mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { ensureWorkspaceConfig } from "../workspaces/workspace-config";
-import { cleanupProjectArtifacts } from "./cleanup-project";
+import { cleanupProjectArtifacts, evictProjectCopy } from "./cleanup-project";
+
+import { prepareManagedProjectFolder } from "./managed-project-folder";
 
 describe("cleanupProjectArtifacts", () => {
   test("preserves the folder binding when project storage cannot be removed", async () => {
@@ -113,40 +115,41 @@ describe("cleanupProjectArtifacts", () => {
     expect(softDelete).not.toHaveBeenCalled();
     expect(removeProjectStorage).not.toHaveBeenCalled();
   });
+});
 
-  test("skips provider cleanup already persisted by an earlier attempt", async () => {
-    const deleteProviderWorkspace = mock(async () => true);
-    const softDelete = mock(async () => {});
-    const listForProviderReconciliation = mock()
-      .mockResolvedValueOnce([
-        {
-          id: "remote-1",
-          provider_id: "example.remote",
-          project_id: "project-1",
-          is_default: false,
-          root_path: null,
-        },
-      ])
-      .mockResolvedValueOnce([]);
-    const removeProjectStorage = mock(() => {
-      throw new Error("storage busy");
-    });
-    const deps = { workspaceService: { listForProviderReconciliation, softDelete } } as never;
-
-    await expect(
-      cleanupProjectArtifacts(deps, "project-1", {
-        deleteProviderWorkspace: deleteProviderWorkspace as never,
-        removeProjectStorage,
-      }),
-    ).rejects.toThrow("storage busy");
-    await expect(
-      cleanupProjectArtifacts(deps, "project-1", {
-        deleteProviderWorkspace: deleteProviderWorkspace as never,
-        removeProjectStorage,
-      }),
-    ).rejects.toThrow("storage busy");
-
-    expect(deleteProviderWorkspace).toHaveBeenCalledTimes(1);
-    expect(softDelete).toHaveBeenCalledTimes(1);
+test("an interrupted unbound creation stops eviction before project artifacts or secrets are deleted", async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), "project-creation-eviction-")));
+  const previous = process.env.PSTDIO_HOME;
+  process.env.PSTDIO_HOME = root;
+  const host = await createTestApp();
+  const effects: string[] = [];
+  const storage = spyOn(host.deps.fileService, "removeProjectStorage").mockImplementation(async () => {
+    effects.push("storage");
   });
+  const bytes = spyOn(host.deps.fileService, "removeOwnedBytes").mockImplementation(async () => {
+    effects.push("bytes");
+  });
+  const assets = spyOn(host.deps.assetTransferService, "removeProjectBytes").mockImplementation(async () => {
+    effects.push("assets");
+  });
+  const secrets = spyOn(host.deps.extensionConnectionService, "prepareProjectRemoval").mockImplementation(async () => {
+    effects.push("secrets");
+    return async () => {};
+  });
+  try {
+    const project = await host.deps.projectService.create({ name: "Interrupted creation" });
+    await prepareManagedProjectFolder(project.id);
+    await expect(evictProjectCopy(host.deps, project.id)).rejects.toThrow("incomplete");
+    expect(effects).toEqual([]);
+    expect(await host.deps.projectService.get(project.id)).toBeDefined();
+  } finally {
+    storage.mockRestore();
+    bytes.mockRestore();
+    assets.mockRestore();
+    secrets.mockRestore();
+    await host.close();
+    if (previous === undefined) delete process.env.PSTDIO_HOME;
+    else process.env.PSTDIO_HOME = previous;
+    await rm(root, { recursive: true, force: true });
+  }
 });

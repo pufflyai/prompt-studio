@@ -39,12 +39,13 @@ const setup = (initializing: boolean, agents: unknown[] = [], value?: { harnessI
 };
 
 test("new chat suppresses unavailable feedback until draft hydration and harness selection settle", () => {
-  expect(setup(true).includes("lucide-triangle-alert")).toBe(false);
+  const unavailable = (html: string) => html.includes(i18n.t("harnessAccount.noHarnessTitle", { ns: "projects" }));
+  expect(unavailable(setup(true))).toBe(false);
   expect(
-    setup(false, [
-      { id: "installed", name: "Installed", availability: { type: "INSTALLED" }, supportsModels: true },
-    ]).includes("lucide-triangle-alert"),
+    unavailable(
+      setup(false, [{ id: "installed", name: "Installed", availability: { type: "INSTALLED" }, supportsModels: true }]),
+    ),
   ).toBe(false);
-  expect(setup(false).includes("lucide-triangle-alert")).toBe(true);
-  expect(setup(false, [], { harnessId: "removed" }).includes("lucide-triangle-alert")).toBe(true);
+  expect(unavailable(setup(false))).toBe(true);
+  expect(unavailable(setup(false, [], { harnessId: "removed" }))).toBe(true);
 });

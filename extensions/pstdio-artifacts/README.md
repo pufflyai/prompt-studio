@@ -47,16 +47,36 @@ Artifacts are also searchable resources. Search by their current name to open th
 
 When an agent mentions a saved snapshot path, such as `.pstdio/extension-storage/pstdio.artifacts/sites/<revision-id>.html`, in a conversation, the link shows the artifact's current name and opens its dashboard reader instead of the raw file. The reader restores your saved version selection across reloads and project returns; without a saved selection, it opens the latest version. Choose the latest entry in **Versions** to move a retained reader to the newest published version.
 
-The artifact list opens in a single Artifacts tab in Main. Opening an artifact adds its own tab, so you can return to the list without closing your previews. When the list is closed, Main's default placeholder and Add panel offer an Artifacts entry contributed by this page. Side and Bottom never offer the creation entry. The open list tab can move freely between Main, Side, and Bottom; while open anywhere, its singleton entry is omitted from all choices. Search can open another artifact while tabs are open. Switching tabs keeps each interactive preview's state. A link to a published URL opens the matching artifact tab.
+The library and each artifact open as pages, like Tickets. Opening another artifact changes the current page without adding tabs. Use the breadcrumb to return to the library, or browser Back and Forward to revisit a page. A published URL opens the matching artifact.
 
-Use **Versions** in the reader header to pick a saved version. New versions appear in this menu without resetting the preview you are looking at. Use the action menu beside the breadcrumb to:
+Choose a saved revision from the **Versions** dropdown on the right of the panel header. The menu has a maximum height and scrolls through the history. Each version shows its creation date and time. New versions appear without resetting the current preview, and your selected version is remembered when you reopen the reader. Use the action menu beside the breadcrumb to:
 
 - Rename the artifact. The new name applies to all versions and later updates. The saved HTML does not change.
 - Delete the artifact. After you confirm, Artifacts removes all its versions and their saved copies. Your original source files stay.
 
+## Export an artifact
+
+Choose **Export HTML** in the artifact actions dropdown beside the breadcrumb, alongside Rename and Delete, to download the displayed saved version.
+The file includes its scripts, embedded images and the current preview theme, and
+opens in a browser without Prompt Studio. It starts from the saved HTML; temporary
+form values, filters and other preview state are not included. Your browser handles
+the download location and cancellation.
+
+Agents can save the latest version to a workspace-relative destination:
+
+```sh
+pst pstdio.artifacts export --url '<returned url>' --file_path exports/report.html
+```
+
+Add `--revision-id '<version id>'` to export an earlier version. Without
+`--file_path`, the command returns the portable `html`, suggested `fileName` and
+`revisionId`. CLI exports use system theme colors unless a theme is supplied.
+Exports leave the published versions unchanged and work after the original source
+file has been removed. External assets are not fetched or bundled.
+
 ## Pages that follow the theme
 
-Previews and thumbnails follow the dashboard's light or dark theme. When you switch themes, the page does not reload and keeps its state. The page body takes the dashboard's background, text color, and font. Use these CSS variables for the rest of the page:
+Previews and thumbnails follow the dashboard's light or dark theme. Scrollbars in previews and exported HTML use the shared scroll-area thickness and theme colors, including nested scrolling content. When you switch themes, the page does not reload and keeps its state. The page body takes the dashboard's background, text color, and font. Use these CSS variables for the rest of the page:
 
 | Variable             | Use it for                    |
 | -------------------- | ----------------------------- |

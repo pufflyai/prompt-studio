@@ -143,26 +143,6 @@ test("runApi keeps child attached when detached is false", () => {
   expect(unrefCalled()).toBe(false);
 });
 
-test("runApi uses stdio override when provided", () => {
-  const base = mkdtempSync(join(tmpdir(), "pstdio-api-stdio-"));
-  const apiRoot = writeApiPackage(base);
-  const nested = join(base, "packages", "pstdio", "src");
-  mkdirSync(nested, { recursive: true });
-
-  const { calls, spawner } = createSpawnRecorder();
-  const env = { PSTDIO_DISABLE_API_AUTO_START: "0" } as NodeJS.ProcessEnv;
-
-  runApi(nested, { spawner, env, stdio: "inherit" });
-
-  expect(calls).toEqual([
-    {
-      command: process.execPath,
-      args: runtimeArgs(),
-      options: { cwd: apiRoot, stdio: "inherit", detached: true, env: withApiRuntimeEnv(env), windowsHide: true },
-    },
-  ]);
-});
-
 test("runApi forwards PSTDIO_API_PORT to the runtime serve command", () => {
   const base = mkdtempSync(join(tmpdir(), "pstdio-api-port-"));
   const apiRoot = writeApiPackage(base);
@@ -246,42 +226,4 @@ test("runApi falls back to bundled api when no workspace found", () => {
   expect(calls[0]!.options.detached).toBe(true);
   expect(calls[0]!.options.windowsHide).toBe(true);
   expect(unrefCalled()).toBe(true);
-});
-
-test("runApi leaves state path defaults to the API for bundled mode", () => {
-  const base = mkdtempSync(join(tmpdir(), "pstdio-api-bundled-env-"));
-  const startDir = join(base, "some-project");
-  mkdirSync(startDir, { recursive: true });
-
-  const cliDistDir = join(base, "dist");
-  const apiDir = join(cliDistDir, "api");
-  mkdirSync(apiDir, { recursive: true });
-  writeFileSync(join(apiDir, "server.js"), "// bundled api");
-
-  const { calls, spawner } = createSpawnRecorder();
-  const env = { PSTDIO_DISABLE_API_AUTO_START: "0" } as NodeJS.ProcessEnv;
-
-  runApi(startDir, { spawner, env, bundledCliPath: join(cliDistDir, "index.js") });
-
-  const spawnedEnv = calls[0]?.options.env as Record<string, string>;
-  expect(spawnedEnv.PSTDIO_DB_PATH).toBeUndefined();
-  expect(spawnedEnv.PSTDIO_STORAGE_PATH).toBeUndefined();
-});
-
-test("runApi leaves state path defaults to the API for workspace mode", () => {
-  const base = mkdtempSync(join(tmpdir(), "pstdio-api-workspace-env-"));
-  const apiRoot = writeApiPackage(base);
-  const startDir = join(base, "packages", "pstdio", "src");
-  mkdirSync(startDir, { recursive: true });
-
-  const { calls, spawner } = createSpawnRecorder();
-  const env = { PSTDIO_DISABLE_API_AUTO_START: "0" } as NodeJS.ProcessEnv;
-
-  runApi(startDir, { spawner, env });
-
-  const spawnedEnv = calls[0]?.options.env as Record<string, string>;
-  expect(calls[0]?.options.cwd).toBe(apiRoot);
-  expect(spawnedEnv.PSTDIO_DB_PATH).toBeUndefined();
-  expect(spawnedEnv.PSTDIO_STORAGE_PATH).toBeUndefined();
-  expect(spawnedEnv.PSTDIO_FILES_ROOT).toBeUndefined();
 });

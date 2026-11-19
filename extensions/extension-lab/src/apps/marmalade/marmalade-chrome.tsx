@@ -1,8 +1,6 @@
-import { Box, Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
-import { ScrollArea, Tooltip } from "@pstdio/ui";
+import { Box, Button, HStack, Text } from "@chakra-ui/react";
 import { ExampleIcon } from "../../icon";
 import { BackToProject } from "../back-to-project";
-import type { MarmaladeTool } from "./marmalade.types";
 import { marmaladeStore, useMarmalade } from "./marmalade-store";
 
 export const MarmaladeNav = () => {
@@ -23,37 +21,6 @@ export const MarmaladeNav = () => {
         Restore sample
       </Button>
     </HStack>
-  );
-};
-const tools: { id: MarmaladeTool; label: string; icon: string }[] = [
-  { id: "move", label: "Move tool", icon: "Move" },
-  { id: "text", label: "Text tool", icon: "Type" },
-  { id: "rectangle", label: "Rectangle tool", icon: "Square" },
-  { id: "ellipse", label: "Ellipse tool", icon: "Circle" },
-  { id: "brush", label: "Brush tool", icon: "Paintbrush" },
-  { id: "hand", label: "Hand tool", icon: "Hand" },
-  { id: "zoom", label: "Zoom tool", icon: "ZoomIn" },
-];
-export const MarmaladeRail = () => {
-  const selectedTool = useMarmalade((projection) => projection.state.tool);
-  return (
-    <ScrollArea h="full">
-      <Stack align="center" gap="xs" py="sm" role="toolbar" aria-label="Marmalade tools">
-        {tools.map((tool) => (
-          <Tooltip key={tool.id} content={tool.label}>
-            <IconButton
-              aria-label={tool.label}
-              aria-pressed={selectedTool === tool.id}
-              variant={selectedTool === tool.id ? "subtle" : "ghost"}
-              size="xs"
-              onClick={() => void marmaladeStore.dispatch({ type: "tool", tool: tool.id })}
-            >
-              <ExampleIcon name={tool.icon} />
-            </IconButton>
-          </Tooltip>
-        ))}
-      </Stack>
-    </ScrollArea>
   );
 };
 export const MarmaladeStatus = () => {

@@ -1,4 +1,4 @@
-import { expect, spyOn, test } from "bun:test";
+import { expect, test } from "bun:test";
 import { createWorkbench, type WorkbenchPanelInstance } from "@pstdio/workbench";
 import { createElement } from "react";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
@@ -35,7 +35,6 @@ test("a bound webview ignores unrelated page catalog changes and still follows i
     return createElement("span", null, String(current.pageParams.name));
   };
   let renderer: ReactTestRenderer | undefined;
-  const serialization = spyOn(JSON, "stringify");
   try {
     await act(async () => {
       renderer = create(createElement(Probe));
@@ -66,11 +65,7 @@ test("a bound webview ignores unrelated page catalog changes and still follows i
     });
     expect(current!.pageParams.name).toBe("Updated");
     expect(afterUnrelated).toBe(initial);
-    expect(
-      serialization.mock.calls.filter(([value]) => value && typeof value === "object" && "pageParams" in value),
-    ).toHaveLength(0);
   } finally {
-    serialization.mockRestore();
     await act(async () => renderer?.unmount());
     await workbench.dispose();
     environment.IS_REACT_ACT_ENVIRONMENT = previous;

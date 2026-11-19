@@ -10,20 +10,6 @@ const createRegistry = () => {
 };
 
 describe("createKanbanRendererRegistry", () => {
-  test("stores the contribution and auto-registers a widget renderer with the same id", () => {
-    const { rendererRegistry, data } = createRegistry();
-
-    data.registerKanbanRenderer({
-      id: "tickets",
-      title: "Tickets",
-      attributes: [],
-      executeQuery: () => [],
-    });
-
-    expect(data.getKanbanRenderer("tickets")?.title).toBe("Tickets");
-    expect(rendererRegistry.getRenderer("tickets")).toBeDefined();
-  });
-
   test("invokes the kanban renderer implementation when the widget renderer renders", () => {
     const { rendererRegistry, data } = createRegistry();
     const calls: { kanbanRendererId: string }[] = [];

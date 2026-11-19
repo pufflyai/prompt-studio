@@ -32,23 +32,6 @@ for (const [name, role, content] of [
   });
 }
 
-test("Planner display settings close when their trigger is clicked again", async ({ page }) => {
-  const preview = await openCanvasPreview(
-    page,
-    "extensions/pstdio-planner/src/timeline/view/timeline-display-menu.canvas.tsx#Properties",
-  );
-  const trigger = preview.getByRole("button", { name: "Display settings", exact: true });
-  const overlay = preview.getByRole("dialog", { name: "Display settings", exact: true });
-  await trigger.click();
-  await expect(overlay).toBeVisible();
-  await trigger.click();
-  await expect(overlay).toBeHidden();
-  await trigger.click();
-  await expect(overlay).toBeVisible();
-  await overlay.press("Escape");
-  await expect(overlay).toBeHidden();
-});
-
 // Critical: inspecting Auto Build must not repeatedly reopen its activity panel.
 test("Auto Build activity closes when the Auto Build button is clicked again", async ({ page }) => {
   const preview = await openCanvasPreview(

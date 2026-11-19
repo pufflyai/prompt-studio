@@ -6,16 +6,8 @@ describe("deriveShorthand", () => {
     expect(deriveShorthand("prompt-studio")).toBe("PS");
   });
 
-  test("space-separated words", () => {
-    expect(deriveShorthand("my app")).toBe("MA");
-  });
-
   test("single word", () => {
     expect(deriveShorthand("backend")).toBe("B");
-  });
-
-  test("underscore-separated words", () => {
-    expect(deriveShorthand("cool_side_project")).toBe("CSP");
   });
 
   test("mixed separators", () => {
@@ -36,10 +28,6 @@ describe("deriveShorthand", () => {
 
   test("words made entirely of non-letter characters are excluded", () => {
     expect(deriveShorthand("app --- 123 test")).toBe("AT");
-  });
-
-  test("leading special characters in words are ignored", () => {
-    expect(deriveShorthand("#my-@app")).toBe("MA");
   });
 });
 

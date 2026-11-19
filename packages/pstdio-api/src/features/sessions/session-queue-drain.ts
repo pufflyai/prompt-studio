@@ -1,4 +1,5 @@
 import { sessionLogger } from "../../lib/logger";
+import { ProjectRemovalInProgress } from "../../services/project-work";
 import { workspaceSessionReadiness } from "../workspaces/workspace-session-readiness";
 import type { SessionsRouteDeps } from "./deps";
 import { dispatchQueuedEntry } from "./session-queue-dispatch";
@@ -9,10 +10,24 @@ const isTerminal = (status: string) =>
 
 type QueueDrainInput = { releasedSessionId?: string; queuePositions?: ReadonlySet<number> };
 
+const admitQueuedDispatch = async (...args: Parameters<typeof dispatchQueuedEntry>) => {
+  const [deps, session] = args;
+  const work = deps.projectService?.work;
+  try {
+    return work && session.project_id
+      ? await work.run(session.project_id, () => dispatchQueuedEntry(...args))
+      : await dispatchQueuedEntry(...args);
+  } catch (error) {
+    if (!(error instanceof ProjectRemovalInProgress)) throw error;
+  }
+};
+
 export const createSessionQueueDrain = (deps: SessionsRouteDeps) => {
+  const removing = (id: string | null) => id && deps.projectService?.work?.blocked(id);
   const maybeRequeueReleasedSession = async (sessionId: string) => {
     const session = await deps.sessionService.get(sessionId);
-    if (!session || !isTerminal(session.status) || session.status === "cancelled") return;
+    if (!session || removing(session.project_id) || !isTerminal(session.status) || session.status === "cancelled")
+      return;
 
     const pending = await deps.sessionQueueEntriesService.listPendingBySession(sessionId);
     if (pending.length === 0) return;
@@ -37,13 +52,12 @@ export const createSessionQueueDrain = (deps: SessionsRouteDeps) => {
         if (!queued || queued.status !== "queued") continue;
         const hasCapacity = await withSchedulingLock(async () => {
           const session = await deps.sessionService.get(entry.session_id);
-          if (session?.status !== "queued") return true;
+          if (session?.status !== "queued" || removing(session.project_id)) return true;
           const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(session.id, { forLaunch: true });
           if (!(await hasCreateCapacity(deps, workspace?.id))) return false;
           // Lifecycle changes and quiet maintenance settlement both wake the queue when it becomes ready.
           if (workspaceSessionReadiness(workspace).kind === "wait") return true;
-          const dispatch = await dispatchQueuedEntry(deps, session, entry);
-          dispatches.push(dispatch?.settled);
+          dispatches.push((await admitQueuedDispatch(deps, session, entry))?.settled);
           return true;
         });
         if (!hasCapacity) continue;

@@ -1,0 +1,1 @@
+CREATE INDEX "automation_runs_project_status_idx" ON "automation_runs" USING btree ("project_id","status");

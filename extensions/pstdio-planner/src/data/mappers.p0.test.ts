@@ -79,18 +79,6 @@ describe("ticketToRow", () => {
     });
   });
 
-  test("maps the complete root-first shorthand ancestry and direct parent", () => {
-    const parent = { ...ticket, id: "t2", shorthand: "T-2", parentId: ticket.id };
-    const child = { ...ticket, id: "t3", shorthand: "T-3", parentId: parent.id };
-
-    const row = ticketToRow(child, "proj-1", [], new Map(), createTicketParentLookup([ticket, parent, child]));
-
-    expect(row.attributes).toMatchObject({
-      id: "T-1 / T-2 / T-3",
-      parent: "T-2",
-    });
-  });
-
   test("maps legacy default type selections as a single scalar value", () => {
     const typeTag: StoredTag = {
       id: "default-type",

@@ -192,7 +192,7 @@ test("extension pages keep headers reachable and restore nested navigation", asy
       .filter({ visible: true })
       .filter({ has: page.getByText("Example tool 0", { exact: true }) });
     await expect(installed).toBeVisible();
-    await installed.click();
+    await installed.getByText("Example tool 0", { exact: true }).click();
     await expect(installedDetail).toBeVisible();
     const installedUrl = page.url();
     await expect(page).toHaveURL(/extensions\/detail\?resource=/);

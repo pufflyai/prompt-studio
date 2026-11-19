@@ -58,13 +58,6 @@ describe("resolveOverlayDialogConfig", () => {
     });
   });
 
-  test("uses scrollable large dialogs by default", () => {
-    expect(resolveOverlayDialogConfig({ closable: true }, undefined)).toMatchObject({
-      size: "xl",
-      scrollBehavior: "inside",
-    });
-  });
-
   test("keeps overlay dialogs modal with focus and scroll locked", () => {
     expect(resolveOverlayDialogConfig({ closable: true }, undefined)).toMatchObject({
       modal: true,

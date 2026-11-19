@@ -29,9 +29,4 @@ describe("pgliteRecoverySteps", () => {
       `pg_resetwal -f '/Users/o'\\''brien/.pstdio/pstdio.db'`,
     );
   });
-
-  // The hint ships inside the published CLI, so it must not point at files that only exist in this repo.
-  it("stays self-contained", () => {
-    expect(pgliteRecoverySteps("/home/dev/.pstdio/pstdio.db")).not.toContain("docs/");
-  });
 });

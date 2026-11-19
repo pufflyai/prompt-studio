@@ -26,17 +26,11 @@ export const verifyPackagedCollectionBreadcrumb = async (
   expect(result, JSON.stringify(result)).toMatchObject({ outcome: { status: "success" } });
   await page.goto(`${baseUrl}/projects/${projectId}/extensions/pstdio.artifacts/artifacts`);
   const libraryUrl = page.url();
-  await page.frameLocator('iframe[title="Artifacts"]').getByText(title, { exact: true }).click();
+  await page.frameLocator('iframe[title="Artifacts"]:visible').last().getByText(title, { exact: true }).click();
   const breadcrumbs = page.getByRole("navigation", { name: "breadcrumb", exact: true });
   await expect(breadcrumbs.getByText("Artifacts", { exact: true })).toBeVisible();
   await expect(breadcrumbs.getByText(title, { exact: true })).toBeVisible();
   expect(new URL(page.url()).pathname).toBe(`${new URL(libraryUrl).pathname}/view`);
-  const tab = (region: string) =>
-    page.locator(`[data-workbench-panel-header="${region}"]`).getByRole("tab", { name: title, exact: true });
-  await tab("main").focus();
-  await page.keyboard.press("Shift+F10");
-  await page.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();
-  await expect(tab("secondary")).toBeVisible();
   const projectReturnUrl = page.url();
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   const home = await sidenav.getByRole("option", { name: "Home", exact: true }).boundingBox();
@@ -91,11 +85,13 @@ export const verifyPackagedCollectionBreadcrumb = async (
   await page.goBack();
   await expect(modeReturn).toBeVisible();
   await page.goBack();
-  await expect(tab("secondary")).toBeVisible();
-  await expect(tab("main")).toHaveCount(0);
+  await expect(page).toHaveURL(projectReturnUrl);
+  await expect(breadcrumbs.getByText(title, { exact: true })).toBeVisible();
   await page.reload();
-  await expect(tab("secondary")).toBeVisible();
-  await page.getByRole("button", { name: `Close ${title}`, exact: true }).click();
-  await expect(breadcrumbs.getByText(title, { exact: true })).toHaveCount(0);
-  await expect(breadcrumbs.getByText("Artifacts", { exact: true })).toBeVisible();
+  await expect(breadcrumbs.getByText(title, { exact: true })).toBeVisible();
+  await breadcrumbs.getByText("Artifacts", { exact: true }).click();
+  await expect(page).toHaveURL(libraryUrl);
+  await expect(
+    page.frameLocator('iframe[title="Artifacts"]:visible').last().getByText(title, { exact: true }),
+  ).toBeVisible();
 };

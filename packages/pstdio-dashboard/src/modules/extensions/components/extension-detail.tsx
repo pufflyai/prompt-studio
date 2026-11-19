@@ -18,13 +18,14 @@ import { createExtensionStringResolver } from "@/shared/extensions/extension-loc
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import { ExtensionActionButton } from "./extension-action-button";
 import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
+import { ExtensionBackButton } from "./extension-back-button";
 import { ExtensionConnectionsCard } from "./extension-connections-card";
 import { ExtensionContributions } from "./extension-contributions";
 import { ExtensionDeleteSection } from "./extension-delete-section";
 import { ExtensionDetailHealth } from "./extension-detail-health";
 import { ExtensionHealthPopover } from "./extension-health-popover";
 import { ExtensionIcon } from "./extension-icon";
-import { ExtensionProvenance } from "./extension-provenance";
+import { ExtensionAuthorBadge, ExtensionScopeBadge } from "./extension-labels";
 import { ExtensionSettingsForm } from "./extension-settings-form";
 import { settingsToParams } from "./extension-settings-params";
 import { ExtensionToggle } from "./extension-toggle";
@@ -33,6 +34,8 @@ export interface ExtensionDetailProps {
   projectId?: string;
   workbench?: WorkbenchCore;
   extension: ProjectExtensionInstance;
+  onBack?: () => void;
+  visible?: boolean;
   metadata: DashboardExtensionMetadata | undefined;
   automations: WorkbenchExtensionAutomationRecord[];
   diagnostics: ExtensionDiagnostic[];
@@ -120,7 +123,8 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
         header={
           <Stack gap="md">
             <Stack gap="md" paddingX="lg" paddingTop="lg">
-              <HStack gap="md" alignItems="center">
+              <ExtensionBackButton onBack={props.onBack} visible={props.visible} />
+              <HStack gap="md" alignItems="center" flexWrap="wrap">
                 <Flex
                   alignItems="center"
                   justifyContent="center"
@@ -135,11 +139,13 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                 </Flex>
                 <Stack gap="0" flex="1" minW="0">
                   <Text textStyle="heading/M">{extension.displayName}</Text>
-                  <ExtensionProvenance extension={extension} />
+                  <HStack gap="sm" flexWrap="wrap">
+                    <ExtensionAuthorBadge author={extension.author} />
+                    <ExtensionScopeBadge scope={extension.scope} />
+                  </HStack>
                   <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle">
                     {extension.extensionId}
-                    {extension.version ? ` · v${extension.version}` : ""} ·{" "}
-                    {t(`projectSettings.extensionsPanel.scope.${extension.scope}`)}
+                    {extension.version ? ` · v${extension.version}` : ""}
                   </Text>
                 </Stack>
                 {unavailableHarnesses.length > 0 && (

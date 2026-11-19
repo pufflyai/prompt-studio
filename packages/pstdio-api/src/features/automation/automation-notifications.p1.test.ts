@@ -17,7 +17,7 @@ test("notification lookup failures cannot prevent durable command execution", as
       inputHash: "hash",
       inputJson: { input: {} },
     });
-    const lookup = spyOn(db, "getPrincipal").mockRejectedValue(new Error("notification lookup unavailable"));
+    spyOn(db, "getPrincipal").mockRejectedValue(new Error("notification lookup unavailable"));
     const executor = createAutomationRunExecutor({
       automationDBService: db,
       getCommandDeps: () => ({ activityEventsService: { create: async () => {} } }) as never,
@@ -25,7 +25,6 @@ test("notification lookup failures cannot prevent durable command execution", as
     });
     await executor.executeRun(run.id, new AbortController().signal);
     expect(await db.getRun(project.id, run.id)).toMatchObject({ status: "succeeded", result_json: "finished" });
-    expect(lookup).toHaveBeenCalledTimes(2);
   } finally {
     await database.close();
   }

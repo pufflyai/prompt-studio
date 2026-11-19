@@ -1,4 +1,5 @@
 import type { ProjectSyncStatus } from "pstdio-api-contracts";
+import { AccountRequestError } from "./native-account";
 import { type DeviceReadIdentity, matchesDeviceAccount } from "./native-device-read";
 import type { DeviceLogin } from "./native-store";
 import { recoveringProjectSyncStatus } from "./project-sync-readiness";
@@ -56,4 +57,22 @@ export const createNativeProjectSyncReader =
     const away = await input.away(projectId);
     await assertCurrent();
     return { ...status, ...away };
+  };
+
+export const createFolderRecoveryReader =
+  <Owner>(input: {
+    exists(id: string): Promise<unknown>;
+    login(): Promise<DeviceLogin | null>;
+    projectsFor(login: DeviceLogin): string[] | undefined;
+    folder(id: string): Owner | undefined;
+  }) =>
+  async (id: string) => {
+    if (!(await input.exists(id))) throw new AccountRequestError("Unknown project");
+    const login = await input.login();
+    if (!login) throw new AccountRequestError("Log in first with pst login");
+    if (!input.projectsFor(login)?.includes(id))
+      throw new AccountRequestError("This project does not sync with Cloud on this device");
+    const owner = input.folder(id);
+    if (!owner) throw new AccountRequestError("Cloud sync for this project is starting. Try again shortly.");
+    return owner;
   };

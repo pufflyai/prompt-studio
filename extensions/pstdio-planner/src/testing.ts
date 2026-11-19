@@ -1,6 +1,5 @@
 /** Production adapters exposed for cross-package host conformance checks. */
-export { createTicketCommand } from "./commands/create-ticket";
-export { queryTicketPage } from "./data/query-ticket-page";
+
 export { publishRequestChange } from "./data/review-request-service";
 export { plannerTicketsChanged } from "./events";
 export { RelationshipWindow } from "./timeline/view/relation-links";

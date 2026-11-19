@@ -31,7 +31,7 @@
       "loadError": "Failed to load extensions.",
       "title": "Extensions",
       "searchPlaceholder": "Search extensions…",
-      "installedGroup": "Installed · {{count}}",
+      "installedGroup": "Installed",
       "marketplace": {
         "group": "Available · {{count}}",
         "allInstalled": "All available extensions are installed.",
@@ -42,8 +42,10 @@
       "noSearchResults": "No extensions match \"{{query}}\".",
       "noDescription": "No description provided.",
       "scope": {
-        "repo": "repo",
-        "global": "shared"
+        "label": "Scope",
+        "all": "All scopes",
+        "repo": "This Project",
+        "global": "All Projects"
       },
       "status": {
         "error": "Failed to load"
@@ -171,17 +173,19 @@
         "batchFailed": "{{count}} of {{total}} upgrades failed",
         "installingButton": "Installing"
       },
-      "provenance": {
-        "filter": "Extension source",
-        "all": "All",
-        "public": "Public",
-        "mine": "Mine",
-        "unknown": "Visibility unknown",
-        "publicHelp": "A public package is available. Local changes may not be published.",
-        "mineHelp": "Editable local source maintained in this project or on this device.",
-        "unknownHelp": "Public availability has not been verified.",
-        "noMatches": "No matching extensions"
-      }
+      "enabledGroup": "Enabled",
+      "author": {
+        "label": "Author",
+        "all": "All authors",
+        "me": "Me",
+        "promptStudio": "Prompt Studio"
+      },
+      "columns": {
+        "extension": "Extension",
+        "enabled": "Enabled"
+      },
+      "clearFilters": "Clear filters",
+      "noMatches": "No extensions match these filters."
     },
     "machineTokens": {
       "title": "Machine tokens",
@@ -214,6 +218,9 @@
     "cloudWaiting": "Cloud · waiting to download",
     "cloudReady": "Cloud · ready offline · no folder yet",
     "cloud": "Cloud",
+    "cloudOnly": "Cloud only",
+    "cloudDeleting": "Deleting cloud project",
+    "cloudRemovalPending": "Local removal needs attention",
     "cloudNeedsAttention": "Cloud · needs attention",
     "localPath": "{{path}} · local"
   },

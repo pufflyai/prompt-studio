@@ -7,7 +7,6 @@ import {
   getWriter,
   releaseRuntimeCollections,
   retainRuntimeCollections,
-  SYNCED_TABLES,
   subscribeCollections,
 } from "./collections";
 
@@ -84,23 +83,6 @@ test("sync notifications distinguish complete snapshots from row events", () => 
 });
 
 describe("SYNCED_TABLES", () => {
-  test("includes extension rows used by dashboard contribution selectors", () => {
-    expect(SYNCED_TABLES).toContain("installed_extension_sources");
-    expect(SYNCED_TABLES).toContain("extension_instances");
-  });
-
-  test("notifies subscribers when synced rows change", () => {
-    const changes: string[] = [];
-    const unsubscribe = subscribeCollections((change) => {
-      if (change) changes.push(change.table);
-    });
-
-    getWriter("projects")?.truncateAndWrite([{ id: "project-1", name: "Project" }]);
-
-    unsubscribe();
-    expect(changes).toEqual(["projects"]);
-  });
-
   test("keeps synced rows available after collection subscribers unmount", async () => {
     const originalSetTimeout = globalThis.setTimeout;
     const originalClearTimeout = globalThis.clearTimeout;

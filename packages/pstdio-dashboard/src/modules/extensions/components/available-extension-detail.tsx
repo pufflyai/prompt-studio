@@ -6,13 +6,16 @@ import { PageContentLayout } from "@/shared/components/page-content-layout";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import { ExtensionActionButton } from "./extension-action-button";
 import type { ExtensionActionState } from "./extension-action-feedback";
+import { ExtensionBackButton } from "./extension-back-button";
 import { ExtensionContributions } from "./extension-contributions";
 import { ExtensionIcon } from "./extension-icon";
 import { ExtensionIdentity } from "./extension-identity";
-import { ExtensionProvenance } from "./extension-provenance";
+import { ExtensionAuthorBadge } from "./extension-labels";
 
 interface AvailableExtensionDetailProps {
   extension: MarketplaceExtension;
+  onBack?: () => void;
+  visible?: boolean;
   metadata: DashboardExtensionMetadata | undefined;
   contributionsError?: string;
   loadingContributions: boolean;
@@ -47,6 +50,7 @@ export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) =
         header={
           <Stack gap="md">
             <Stack gap="md" paddingX="lg" paddingTop="lg">
+              <ExtensionBackButton onBack={props.onBack} visible={props.visible} />
               <HStack gap="md" alignItems="center">
                 <Flex
                   alignItems="center"
@@ -62,7 +66,7 @@ export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) =
                 </Flex>
                 <Stack gap="0" flex="1" minW="0">
                   <Text textStyle="heading/M">{extension.displayName}</Text>
-                  <ExtensionProvenance extension={extension} />
+                  <ExtensionAuthorBadge author={extension.author} />
                   <ExtensionIdentity value={extensionId} />
                   <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle" truncate>
                     {extension.publisher ? `${extension.publisher} · ` : ""}

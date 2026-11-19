@@ -207,7 +207,7 @@ export const renderCommandHelp = (command: ExtensionCommandRecord) => {
 // The router, unlike the dashboard, has no schema layer in front of it, so it must
 // reject invocations missing a required param itself — otherwise a command reads
 // `undefined` for a value it declared required and can persist malformed data.
-export const missingRequiredParams = (command: ExtensionCommandRecord, params: Record<string, unknown>) =>
+const missingRequiredParams = (command: ExtensionCommandRecord, params: Record<string, unknown>) =>
   Object.entries(command.params ?? {})
     .filter(([name, descriptor]) => descriptor?.required === true && params[name] === undefined)
     .map(([name]) => name);

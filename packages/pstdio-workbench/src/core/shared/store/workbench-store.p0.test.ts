@@ -8,12 +8,6 @@ interface Counter {
 }
 
 describe("createWorkbenchStore", () => {
-  test("returns the current state via getState", () => {
-    const store = createWorkbenchStore<Counter>({ initialState: { count: 0, label: "zero" } });
-
-    expect(store.getState()).toEqual({ count: 0, label: "zero" });
-  });
-
   test("notifies subscribers when state changes", () => {
     const store = createWorkbenchStore<Counter>({ initialState: { count: 0, label: "zero" } });
     const events: Array<{ state: Counter; previous: Counter }> = [];

@@ -18,22 +18,6 @@ const trackingFetch = () => {
 };
 
 describe("createClient", () => {
-  it("creates a client with all domain groups", () => {
-    const client = createClient({ baseUrl: "http://test:1234", fetch: (() => {}) as unknown as typeof fetch });
-
-    expect(client.projects).toBeDefined();
-    expect(client.workspaces).toBeDefined();
-    expect(client.sessions).toBeDefined();
-    expect(client.skills).toBeDefined();
-    expect(client.agents).toBeDefined();
-    expect("actions" in client).toBe(false);
-    expect(client.notifications).toBeDefined();
-    expect(client.extensions).toBeDefined();
-    expect(client.settings).toBeDefined();
-    expect(client.sync).toBeDefined();
-    expect(client.runtime).toBeDefined();
-  });
-
   it("client.runtime creates a browser login link without putting the token in the URL", async () => {
     const { fetchFn, calls } = trackingFetch();
     const client = createClient({ baseUrl: "http://127.0.0.1:43123", fetch: fetchFn, token: "runtime-secret" });

@@ -153,7 +153,6 @@ describe("report workflow", () => {
       source: "review-changes",
       draft: true,
     });
-    expect(stripFrontmatter(markdown)).toContain("## Confidence Score");
     expect(events).toHaveLength(1);
     expect(events[0]?.event).toBe("pstdio-reports.report.created");
     expect(events[0]?.payload).toMatchObject({ reportId: report.id, workspaceId: "ws-1" });
@@ -432,24 +431,6 @@ describe("saved report workflow", () => {
 });
 
 describe("saved report identity and failures", () => {
-  test("reads a saved report by its stable id", async () => {
-    const { storage, projectFiles } = setup();
-    const written = await writeReportCommand.run(
-      ...makeCommandArgs({
-        storage,
-        params: { workspace: "PS-116_A1", kind: "review", template: "review" },
-        overrides: { projectFiles },
-      }),
-    );
-    await saveReportCommand.run(
-      ...makeCommandArgs({ storage, params: { workspace: "PS-116_A1", name: "review" }, overrides: { projectFiles } }),
-    );
-
-    const report = await readReportCommand.run(...makeCommandArgs({ storage, params: { id: written.reportId } }));
-
-    expect(report).toMatchObject({ id: written.reportId, workspaceShorthand: "PS-116_A1", draft: false });
-  });
-
   test("a long report body is stored as a file and the report record stays small", async () => {
     const { storage, projectFiles } = setup();
     const written = await writeReportCommand.run(

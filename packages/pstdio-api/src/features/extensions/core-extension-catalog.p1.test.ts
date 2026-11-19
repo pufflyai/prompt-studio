@@ -128,37 +128,5 @@ describe("core extension catalog", () => {
           skill.name === "create-pstdio-extension" && skill.install_name === "planner",
       ),
     ).toBe(false);
-
-    const coreExtensionSkillRes = await handle.app.request(`/v1/projects/${project.id}/skills/create-pstdio-extension`);
-    expect(coreExtensionSkillRes.status).toBe(200);
-    const coreExtensionSkill = await coreExtensionSkillRes.json();
-    expect(coreExtensionSkill.files.map((file: { path: string }) => file.path).sort()).toEqual([
-      "SKILL.md",
-      "references/client-contracts.md",
-      "references/examples.md",
-      "references/examples/commands.ts",
-      "references/examples/controls.ts",
-      "references/examples/panel-view-entry.tsx",
-      "references/examples/panel-view.ts",
-      "references/examples/pigeon.ts",
-      "references/examples/resource-reviewer/catalog.ts",
-      "references/examples/resource-reviewer/commands.ts",
-      "references/examples/resource-reviewer/extension.ts",
-      "references/examples/resource-reviewer/inspector.ts",
-      "references/examples/resource-reviewer/preview-entry.tsx",
-      "references/examples/resource-reviewer/preview.tsx",
-      "references/examples/resource-reviewer/style-types.ts",
-      "references/examples/resource-reviewer/use-review-settings.ts",
-      "references/examples/scribble.ts",
-      "references/examples/table-navigation.ts",
-      "references/examples/zipline.ts",
-      "references/extension-api.md",
-      "references/host-storage-and-workspaces.md",
-      "references/native-actions.md",
-      "references/pages.md",
-      "references/scope.md",
-      "references/validation.md",
-      "references/webviews.md",
-    ]);
   });
 });

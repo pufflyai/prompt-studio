@@ -69,7 +69,9 @@ export const nativeTerminalAttachmentKey = async (
   request: TerminalViewOpenRequest,
   signal: AbortSignal,
 ) => {
+  deps.projectService?.work?.assertAvailable(request.projectId);
   const { projectId, resource, viewId, installedOwner } = await resolveNativeTerminalView(deps, request, signal);
+  deps.projectService?.work?.assertAvailable(projectId);
   return JSON.stringify([
     projectId,
     viewId,
@@ -79,26 +81,33 @@ export const nativeTerminalAttachmentKey = async (
 };
 
 /** Resolve launch settings on the host and retain the installed owner's cleanup guarantee. */
-export const openNativeTerminalSession = async (
-  deps: ExtensionsRouteDeps,
-  request: TerminalViewOpenRequest,
-  signal: AbortSignal,
-) => {
+const open = async (deps: ExtensionsRouteDeps, request: TerminalViewOpenRequest, signal: AbortSignal) => {
   const { projectId, resource, cols, rows, viewId, view, handler, installedOwner, terminal } =
     await resolveNativeTerminalView(deps, request, signal);
   const owner = new AbortController();
   const lifetime = AbortSignal.any([signal, owner.signal]);
   let session: TerminalSessionHandle | undefined;
   let closing: Promise<void> | undefined;
+  let stopping = false;
   let unsubscribe = () => {};
+  let disown = () => {};
   const release = () => {
+    disown();
     unsubscribe();
     lifetime.removeEventListener("abort", onAbort);
   };
   const close = (stopSignal?: string) => {
+    stopping = true;
     if (!closing) {
-      release();
-      closing = session?.kill(stopSignal) ?? Promise.resolve();
+      closing = Promise.resolve()
+        .then(async () => {
+          await session?.kill(stopSignal);
+          release();
+        })
+        .catch((error) => {
+          closing = undefined;
+          throw error;
+        });
     }
     return closing;
   };
@@ -142,6 +151,7 @@ export const openNativeTerminalSession = async (
     const target = await resolveLocalWorkspaceTarget(deps, { projectId, workspaceId: launch.workspaceId }, "process");
     await validateOwner();
     lifetime.throwIfAborted();
+    disown = deps.projectService?.work?.own(projectId, close) ?? disown;
     session = terminal.openSession({ cols, rows, cwd: target.root, command: launch.command, env: launch.env });
     return {
       ...session,
@@ -150,7 +160,7 @@ export const openNativeTerminalSession = async (
         try {
           yield* session!.events();
         } finally {
-          release();
+          if (!stopping) release();
         }
       },
     } satisfies TerminalSessionHandle;
@@ -159,3 +169,11 @@ export const openNativeTerminalSession = async (
     throw error;
   }
 };
+
+export const openNativeTerminalSession = (
+  deps: ExtensionsRouteDeps,
+  request: TerminalViewOpenRequest,
+  signal: AbortSignal,
+) =>
+  deps.projectService?.work?.run(request.projectId, (owned) => open(deps, request, owned), signal) ??
+  open(deps, request, signal);

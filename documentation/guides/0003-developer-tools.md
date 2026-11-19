@@ -45,6 +45,14 @@ Select the meter to open the popover. It has these parts, from top to bottom:
 
 The copy button beside the title copies the current snapshot as JSON.
 
+### Highlight React renders
+
+Turn on **Highlight React renders** in the Performance popover, then close the popover and use the app. React Scan highlights components as the workbench renders. Open the popover again to turn it off. It also stops when monitoring is disabled, and starts off after every reload.
+
+Coverage is limited to this window's workbench. Extension frames and other windows are separate. Production component names may be shortened. Frequent renders do not by themselves prove wasted work, and React Scan does not explain backend CPU, layout, or garbage collection.
+
+Scanning adds overhead. Compare the same interaction with highlighting off and on. Pausing hides highlights and stops active scanning, but React Scan's early hook and idle infrastructure remain until the window closes. Unsupported hosts show an unavailable control. Render details are not added to copied snapshots.
+
 ### The CPU list
 
 Each number is the 30-second average CPU of that row's process, as a share of one core. One busy core shows about 100%, so a process that uses two cores shows about 200%. A new process shows its latest sample until it has 30 seconds of history. A row turns amber at 25% or more.
@@ -111,7 +119,7 @@ The packaged desktop benchmarks measure the idle workbench with monitoring off a
 
 ## Runtime capture
 
-For explicit CPU profiling and function-call counts, use **Backend diagnostics** in the Performance details or the matching `pst pstdio.pstdio-performance diagnostics` commands. See the [Performance Monitoring README](../../extensions/pstdio-performance/README.md#for-agents) for start, list, read, cancel and export. These short captures run inside the backend as cancellable automation jobs. They keep raw profiles and memory readings on the runtime machine, including source paths, separately from the sanitized device capture below. Reading or opening the tool does not start a profiler. The temporary repository `runtime-diagnostic` extension has been retired; its previously saved files are preserved.
+For explicit CPU profiling and function-call counts, use the `pst pstdio.performance diagnostics` CLI commands. See the [Performance Monitoring README](../../extensions/pstdio-performance/README.md#for-agents) for start, list, read, cancel and export. These short captures run inside the backend as cancellable automation jobs. They keep raw profiles and memory readings on the runtime machine, including source paths, separately from the sanitized device capture below. Reading or opening the tool does not start a profiler. The temporary repository `runtime-diagnostic` extension has been retired; its previously saved files are preserved.
 
 For an intermittent backend CPU spike, run `pst pstdio.performance diagnostics arm --cpu-percent 60 --minutes 60` before it happens. Save the returned capture ID. The recorder keeps recent CPU profiles, bounded database and chat operation metadata, and aligned CPU readings. It completes on the threshold or expiry. Export with `pst pstdio.performance diagnostics export --id <capture-id> > backend-spike.json` and attach that file alongside the device snapshot. Completed windows are saved every 30 seconds so the last checkpoint remains exportable after a hang or termination. The current unfinished window can be lost. Arming adds profiling overhead and ends on cancellation, expiry or runtime shutdown. See the [Performance Monitoring README](../../extensions/pstdio-performance/README.md#for-agents) for bounds and interrupted-capture status.
 

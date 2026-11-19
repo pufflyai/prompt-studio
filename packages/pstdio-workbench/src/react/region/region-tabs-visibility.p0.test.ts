@@ -1,35 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchWidgetPlacement } from "../../core";
-import {
-  resolveDisplayedActiveWidgetId,
-  resolveTabIconName,
-  suppressesSidenavTabStrip,
-  toTabKey,
-} from "./region-tabs-visibility";
+import { resolveDisplayedActiveWidgetId, resolveTabIconName } from "./region-tabs-visibility";
 
 const placement = (overrides: Partial<WorkbenchWidgetPlacement>): WorkbenchWidgetPlacement => ({
   widgetId: overrides.widgetId ?? "w",
   contributionId: overrides.contributionId ?? "c",
   ...overrides,
-});
-describe("toTabKey", () => {
-  test("composes region and contribution into the storage key", () => {
-    expect(toTabKey("main", placement({ contributionId: "tickets" }))).toBe("main:tickets");
-  });
-});
-describe("suppressesSidenavTabStrip", () => {
-  test("suppresses the strip for every sidenav composition", () => {
-    expect(suppressesSidenavTabStrip("sidenav", [placement({ closable: true })])).toBe(true);
-    expect(
-      suppressesSidenavTabStrip("sidenav", [
-        placement({ widgetId: "w1", pinned: true }),
-        placement({ widgetId: "w2", pinned: true }),
-      ]),
-    ).toBe(true);
-  });
-  test("never suppresses outside the sidenav region", () => {
-    expect(suppressesSidenavTabStrip("side", [placement({ pinned: true, closable: false })])).toBe(false);
-  });
 });
 describe("resolveDisplayedActiveWidgetId", () => {
   const visible = [

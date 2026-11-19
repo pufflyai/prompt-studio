@@ -11,6 +11,7 @@ import { textFailure, throwTextError } from "./errors";
 import { failTextClose, prepareTextClose, textEventBufferKey } from "./events";
 import { textHandleMember } from "./handles";
 import { openTextMember } from "./member-open";
+import { currentTextMembers } from "./member-ownership";
 import { registerTextMember, releaseTextMember } from "./members";
 import { observeTextMember } from "./observe";
 import { requestOpenMember } from "./request-open-member";
@@ -30,20 +31,39 @@ export const createTextEditingService = (deps: TextEditingDeps) => {
       if (!input.projectId || input.projectId === connection.projectId)
         for (const member of connection.members.values()) member.refresh?.();
   });
-  const connectionFor = (address: TextConnectionAddress) => {
+  const connectionFor = (address: TextConnectionAddress, cleanup = false) => {
     const connection = connections.get(address.token);
     if (connection && connection.projectId !== address.projectId)
       throw textFailure("grant_invalid", "This text connection belongs to another project");
-    if (!connection || connection.disposed)
+    if (!connection || (connection.disposed && !cleanup))
       throw textFailure("connection_expired", "This text connection is no longer available", true);
     clearTimeout(unclaimed.get(connection.token));
     unclaimed.delete(connection.token);
     return connection;
   };
+  const cleanupConnection = async (connection: TextConnection) => {
+    connection.disposed = true;
+    failTextClose(connection, {
+      code: "session_closed",
+      message: "The text placement was disconnected",
+      retryable: false,
+    });
+    for (const member of currentTextMembers(connection)) member.stop?.();
+    await Promise.allSettled([...connection.pending]);
+    const released = await Promise.allSettled(
+      currentTextMembers(connection).map((member) => releaseTextMember(deps, connection, member)),
+    );
+    const failures = released.filter((result) => result.status === "rejected").map((result) => result.reason);
+    if (failures.length) throw new AggregateError(failures, "Text room cleanup is incomplete");
+    connection.listeners.clear();
+    connection.buffered.clear();
+    connections.delete(connection.token);
+  };
   const closeMember = async (connection: TextConnection, handle: string) => {
-    const member = connection.members.get(textHandleMember(connection, handle));
-    if (!member) return;
-    if (member.handle !== handle) throw textFailure("session_closed", "This text handle has been replaced");
+    const id = textHandleMember(connection, handle);
+    const member = currentTextMembers(connection).find((member) => member.handle === handle);
+    if (!member && !connection.members.has(id)) return;
+    if (!member) throw textFailure("session_closed", "This text handle has been replaced");
     await releaseTextMember(deps, connection, member);
   };
   const open = async (connection: TextConnection, input: Extract<TextEditingRequest, { operation: "open" }>) => {
@@ -73,8 +93,11 @@ export const createTextEditingService = (deps: TextEditingDeps) => {
         await validateTextPresentation(deps, connection);
         return registerTextMember(connection, input.memberId);
       case "abandon": {
-        const member = connection.members.get(input.memberId);
-        if (member) await releaseTextMember(deps, connection, member);
+        await Promise.all(
+          currentTextMembers(connection)
+            .filter((member) => member.id === input.memberId)
+            .map((member) => releaseTextMember(deps, connection, member)),
+        );
         return;
       }
       case "current": {
@@ -102,6 +125,7 @@ export const createTextEditingService = (deps: TextEditingDeps) => {
       input,
       grants: new Map(),
       members: new Map(),
+      releasing: new Map(),
       active: initial?.active ?? true,
       disposed: false,
       pending: new Set(),
@@ -121,20 +145,15 @@ export const createTextEditingService = (deps: TextEditingDeps) => {
         // A lost admission response leaves no client with the token to release its room.
         const timer = setTimeout(() => {
           unclaimed.delete(connection.token);
-          connections.delete(connection.token);
-          connection.disposed = true;
-          void track(
-            Promise.allSettled(
-              [...connection.members.values()].map((member) => releaseTextMember(deps, connection, member)),
-            ),
-          );
+          void track(cleanupConnection(connection)).catch(() => {});
         }, nativePresenceLimits.leaseMs);
         timer.unref?.();
         unclaimed.set(connection.token, timer);
         return { token: connection.token, opened };
       } catch (error) {
-        connection.disposed = true;
-        for (const member of connection.members.values()) await releaseTextMember(deps, connection, member);
+        // No client received this token; the service still owns any failed room cleanup.
+        connections.set(connection.token, connection);
+        await cleanupConnection(connection).catch(() => {});
         throw error;
       }
     }
@@ -178,7 +197,12 @@ export const createTextEditingService = (deps: TextEditingDeps) => {
       };
     },
     prepareClose(address: TextConnectionAddress) {
-      return prepareTextClose(connectionFor(address));
+      const connection = connectionFor(address);
+      const barrier = prepareTextClose(connection);
+      return Promise.all([
+        barrier,
+        ...[...connection.releasing.keys()].map((member) => releaseTextMember(deps, connection, member)),
+      ]).then(() => {});
     },
     setActive(address: TextConnectionAddress, active: boolean) {
       const connection = connectionFor(address);
@@ -188,22 +212,8 @@ export const createTextEditingService = (deps: TextEditingDeps) => {
         else member.stop?.();
       }
     },
-    async disconnect(address: TextConnectionAddress) {
-      const connection = connectionFor(address);
-      connection.disposed = true;
-      failTextClose(connection, {
-        code: "session_closed",
-        message: "The text placement was disconnected",
-        retryable: false,
-      });
-      for (const member of connection.members.values()) member.stop?.();
-      await Promise.allSettled([...connection.pending]);
-      await Promise.allSettled(
-        [...connection.members.values()].map((member) => releaseTextMember(deps, connection, member)),
-      );
-      connection.listeners.clear();
-      connection.buffered.clear();
-      connections.delete(connection.token);
+    disconnect(address: TextConnectionAddress) {
+      return cleanupConnection(connectionFor(address, true));
     },
     async dispose() {
       disposed = true;
@@ -211,24 +221,9 @@ export const createTextEditingService = (deps: TextEditingDeps) => {
       for (const timer of unclaimed.values()) clearTimeout(timer);
       unclaimed.clear();
       await Promise.allSettled([...admissions]);
-      await Promise.allSettled(
-        [...connections.values()].map(async (connection) => {
-          connection.disposed = true;
-          failTextClose(connection, {
-            code: "session_closed",
-            message: "The text service was closed",
-            retryable: false,
-          });
-          for (const member of connection.members.values()) member.stop?.();
-          await Promise.allSettled([...connection.pending]);
-          await Promise.allSettled(
-            [...connection.members.values()].map((member) => releaseTextMember(deps, connection, member)),
-          );
-          connection.listeners.clear();
-          connection.buffered.clear();
-        }),
-      );
-      connections.clear();
+      const cleaned = await Promise.allSettled([...connections.values()].map(cleanupConnection));
+      const failures = cleaned.filter((result) => result.status === "rejected").map((result) => result.reason);
+      if (failures.length) throw new AggregateError(failures, "Text connection cleanup is incomplete");
     },
   };
 };
