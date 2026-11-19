@@ -105,7 +105,9 @@ export const upgradeCoreProjectTools = async (api: StackApi, project: string) =>
   const changes: { extension: string; version: string | null; next: string | null }[] = [];
   for (const tool of extensions) {
     if (
-      !/^pstdio\.((pstdio-)?(home|planner|session-browser|workspaces)|harness-codex|git-workspaces)$/.test(tool.extensionId) ||
+      !/^pstdio\.((pstdio-)?(home|planner|session-browser|workspaces)|harness-codex|git-workspaces)$/.test(
+        tool.extensionId,
+      ) ||
       !tool.enabled
     )
       continue;

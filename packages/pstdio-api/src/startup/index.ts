@@ -16,7 +16,7 @@ import { provisionProjectWorkspaces } from "../features/workspaces/provision-coo
 import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-provider-reconciliation";
 import { apiLogger } from "../lib/logger";
 import { traceSetupPhase } from "../lib/setup-phase";
-import { adoptTerminalTool } from "./terminal-tool-upgrade";
+import { adoptExtractedDefaultTools } from "./extracted-default-tools";
 import { canRefreshWorkspacesTool, refreshingWorkspacesEntry } from "./workspaces-tool-upgrade";
 
 interface StartupTaskOptions {
@@ -209,7 +209,7 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
   }
   registerBackgroundTask(
     defaultExtensionPreparation.then(async (installed) => {
-      await adoptTerminalTool(deps, projectIds, signal);
+      await adoptExtractedDefaultTools(deps, projectIds, signal, ["pstdio-terminal"]);
       for (const projectId of projectIds)
         await adoptWorkspacesTool(
           deps,
