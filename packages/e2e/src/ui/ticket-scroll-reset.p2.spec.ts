@@ -34,10 +34,40 @@ const bypassOnboarding = async (page: import("@playwright/test").Page, projectId
 const longMarkdown = (label: string) =>
   Array.from({ length: 120 }, (_, index) => `${label} line ${String(index + 1).padStart(3, "0")}`).join("\n\n");
 
+const visibleEditorLine = async (page: import("@playwright/test").Page) =>
+  page
+    .locator('[role="textbox"]:visible')
+    .first()
+    .evaluate((element) => {
+      if (!(element instanceof HTMLElement)) throw new Error("The document editor is not an HTML element");
+      let viewport: HTMLElement | null = null;
+      let current: HTMLElement | null = element;
+      while (current) {
+        if (
+          ["auto", "scroll"].includes(getComputedStyle(current).overflowY) &&
+          current.scrollHeight > current.clientHeight + 1
+        )
+          viewport = current;
+        current = current.parentElement;
+      }
+      if (!viewport) throw new Error("Scroll viewport not found");
+      const bounds = viewport.getBoundingClientRect();
+      const line = [...element.querySelectorAll("p")].find((paragraph) => {
+        const rect = paragraph.getBoundingClientRect();
+        return rect.top >= bounds.top && rect.bottom <= bounds.bottom;
+      });
+      if (!line?.textContent) throw new Error("No readable line in the editor viewport");
+      return line.textContent;
+    });
+
+const expectEditorLine = async (page: import("@playwright/test").Page, line: string) =>
+  expect(page.locator('[role="textbox"]:visible').first().getByText(line, { exact: true })).toBeInViewport();
+
 const editorScrollTop = async (page: import("@playwright/test").Page) => {
   const editor = page.locator('[role="textbox"]:visible').first();
   await expect(editor).toBeVisible();
   return editor.evaluate((element) => {
+    if (!(element instanceof HTMLElement)) throw new Error("The document editor is not an HTML element");
     const ancestors: HTMLElement[] = [];
     let current: HTMLElement | null = element;
     while (current) {
@@ -57,6 +87,7 @@ const scrollEditor = async (page: import("@playwright/test").Page, fraction: num
   const editor = page.locator('[role="textbox"]:visible').first();
   await expect(editor).toBeVisible();
   await editor.evaluate((element, fraction) => {
+    if (!(element instanceof HTMLElement)) throw new Error("The document editor is not an HTML element");
     const ancestors: HTMLElement[] = [];
     let current: HTMLElement | null = element;
     while (current) {
@@ -101,6 +132,7 @@ test("restores markdown scroll when returning to a retained ticket or file", asy
   await scrollEditor(page, 0.5);
   await expect.poll(() => editorScrollTop(page)).toBeGreaterThan(0);
   const ticketScroll = await editorScrollTop(page);
+  const ticketLine = await visibleEditorLine(page);
 
   const fileRow = page.getByRole("option", { name: "scroll-proof" });
   await expect(fileRow).toBeVisible({ timeout: 15_000 });
@@ -111,6 +143,7 @@ test("restores markdown scroll when returning to a retained ticket or file", asy
   await scrollEditor(page, 1);
   await expect.poll(() => editorScrollTop(page)).toBeGreaterThan(0);
   const fileScroll = await editorScrollTop(page);
+  const fileLine = await visibleEditorLine(page);
   expect(fileScroll).toBeGreaterThan(ticketScroll);
 
   const ticketRow = page.getByRole("option", {
@@ -120,9 +153,9 @@ test("restores markdown scroll when returning to a retained ticket or file", asy
   await expect(ticketRow).toHaveAttribute("aria-selected", "true");
   await expect(page.locator('[role="textbox"]:visible').first()).toContainText("ticket-scroll-reset line 001");
 
-  await expect.poll(() => editorScrollTop(page)).toBe(ticketScroll);
+  await expectEditorLine(page, ticketLine);
   await fileRow.click();
-  await expect.poll(() => editorScrollTop(page)).toBe(fileScroll);
+  await expectEditorLine(page, fileLine);
 
   await page.getByRole("button", { name: "Back to project", exact: true }).click();
   await page.getByRole("option", { name: "Artifacts", exact: true }).click();
@@ -134,7 +167,7 @@ test("restores markdown scroll when returning to a retained ticket or file", asy
   await expect(main.getByRole("group", { name: "Available tabs" })).toBeVisible();
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
   await card.click();
-  await expect.poll(() => editorScrollTop(page)).toBe(ticketScroll);
+  await expectEditorLine(page, ticketLine);
   await fileRow.click();
-  await expect.poll(() => editorScrollTop(page)).toBe(fileScroll);
+  await expectEditorLine(page, fileLine);
 });

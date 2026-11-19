@@ -9,6 +9,7 @@ import {
   sessionBrowser,
   type TemplateParam,
 } from "@pstdio/sdk/extensions";
+import { hasFolderWriter } from "../data/folder-writers";
 import { findTicket } from "../data/resolve";
 import { renderOwnedTemplate } from "../data/template-store";
 import { plannerOwnerFor, readTicketParentLookup, ticketResourceIdentity } from "../data/ticket-resource-hierarchy";
@@ -120,7 +121,10 @@ export const requireReadyWorkspace = async (ctx: Pick<CommandContext, "workspace
   if (workspace.setup_error) throw new Error(workspace.setup_error);
   if (workspace.provider_state && workspace.provider_state !== "ready") {
     const result = await ctx.workspaces.resolve(workspace.id);
-    throw new Error(result.error?.message ?? "The workspace is not ready. Check its setup status.");
+    if (result.state === "ready") return;
+    if (result.state === "provisioning")
+      throw new Error("Wait for workspace setup to finish, then open ticket work again.");
+    throw new Error(result.error?.message ?? "Check the workspace status before opening ticket work.");
   }
   if (workspace.initializing) throw new Error("Workspace setup is still running. Try again when it finishes.");
   if (workspace.execution_kind === "local" && !workspace.root_path) {
@@ -134,27 +138,34 @@ export const createAnchoredWorkspace = async (
       ticket?: string;
       rowId?: string;
     }>,
-    "extensionId" | "projectId" | "resource" | "attachment" | "storage" | "resources" | "workspaces"
+    "extensionId" | "projectId" | "resource" | "attachment" | "storage" | "resources" | "workspaces" | "sessions"
   >,
   commandParams: {
     ticket?: string;
     rowId?: string;
   },
-  base: string,
+  base: string | null,
   beforeDispatch?: () => Promise<void>,
 ) => {
   const ticketRef = resolveTicket(ctx, commandParams);
   const { anchor, shorthand, ticket } = await resolveTicketAnchor(ctx, ticketRef);
-  const attemptMode = "worktree";
+  const attemptMode = base === null ? "folder" : "worktree";
   await beforeDispatch?.();
-  const workspace = await ctx.workspaces.create({
-    project_id: ctx.projectId,
-    shorthand_base: shorthand,
-    anchors: [anchor],
-    provider_id: "pstdio.worktree",
-    params: { base },
-  });
+  const workspace =
+    base === null
+      ? await ctx.workspaces.getDefault()
+      : await ctx.workspaces.create({
+          project_id: ctx.projectId,
+          shorthand_base: shorthand,
+          anchors: [anchor],
+          provider_id: "pstdio.worktree",
+          params: { base },
+        });
+  if (!workspace || (base === null && workspace.project_id !== ctx.projectId))
+    throw new Error("Attach a project folder before running an attempt.");
   await requireReadyWorkspace(ctx, workspace);
+  if (base === null && (await hasFolderWriter(ctx, workspace.id)))
+    throw new Error("Another session is executing in this project folder. Wait for its handoff.");
 
   return { anchor, mode: attemptMode, ticket, workspace };
 };

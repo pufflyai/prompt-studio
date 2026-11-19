@@ -2,14 +2,15 @@ import { expect, test } from "bun:test";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import extension from "../extension";
 import { newInViewer } from "./navigation";
+import { draftResource } from "./resource";
 import { conversationTab } from "./tab";
 
-test("a conversation that has not started shows Pending in its tab", async () => {
-  const ctx = makeCommandContext({ storage: createMemoryStorage(), params: {} });
-  const tab = await conversationTab.query(ctx, {
-    renderer: { rendererId: "conversation", resource: { type: "session-draft", id: "new" } },
+test("a conversation that has not started owns its pending icon", () => {
+  expect(draftResource("project")).toMatchObject({
+    icon: "circle-dashed",
+    iconColor: "fg.muted",
+    iconLabel: "Session status: pending",
   });
-  expect(tab.indicator).toMatchObject({ icon: "circle-dashed", color: "fg.muted", label: "Session status: pending" });
 });
 
 test("New session in an existing viewer starts a draft immediately with its workspace and device", async () => {

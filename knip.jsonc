@@ -7,8 +7,9 @@
     "gh",
     "wait",
     "version",
-    // Candidate workflows sparsely check out these installer files at runtime; see ADR 0028.
-    "__test-tmp__/native-installer/scripts/ci/install-native-dependencies.ts"
+    // Candidate workflows sparsely check out the installer (ADR 0028) and the active certification policy.
+    "__test-tmp__/native-installer/scripts/ci/install-native-dependencies.ts",
+    "__test-tmp__/certification-policy/scripts/ci/production-candidate.ts"
   ],
   "ignoreIssues": {
     "packages/pstdio/src/adapters/cli/commands/{close,inbox,login,logout,logs,performance,update-channel}.ts": [
@@ -155,7 +156,7 @@
         // Specs install fixture extensions by path.
         "src/fixtures/**/extension.ts",
         // Extension manifests load this webview entry by packageAsset path.
-        "src/fixtures/{editing-session,document,mode,settings,file-download}/view.ts",
+        "src/fixtures/{editing-session,document,mode,settings,file-download,render-highlights}/view.ts",
         "src/fixtures/panel-views/letter-{browser,reader}.tsx",
         "src/fixtures/public-text-editor/view.tsx"
       ],
@@ -175,6 +176,7 @@
         "local-example",
         "artifacts",
         "base-themes",
+        "pstdio-terminal",
         "cloud",
         "pstdio-dashboard",
         "home",
@@ -213,6 +215,7 @@
         "github",
         "extension-lab",
         "base-themes",
+        "pstdio-terminal",
         "planner",
         "skills",
         "workbench-fixture",
@@ -334,6 +337,7 @@
         // The Canvas build loads these themes by absolute path.
         "src/theme/custom/vscode-theme.canvas-fixture.ts",
         "src/components/{canvas,charts,dependency-timeline,keyframe-timeline,rich-text,chat-ui,diff-viewer,kanban-renderer,collection-view,command-form,param-editor,data-table,mermaid-renderer,terminal}/index.ts",
+        "src/components/collection-view/model.ts",
         "src/components/diff-viewer/monaco-bundle.ts",
         "src/**/*.canvas.tsx",
         "*.test.ts",
@@ -515,7 +519,7 @@
         "src/e2e/*-fixture.ts",
         // The ordered benchmark runner selects these files through the shared suite registry.
         "src/**/*.bench.ts",
-        "src/**/*.test.ts",
+        "src/**/*.test.{ts,tsx}",
         "src/**/*.spec.ts",
         "src/**/*.canvas.tsx"
       ],

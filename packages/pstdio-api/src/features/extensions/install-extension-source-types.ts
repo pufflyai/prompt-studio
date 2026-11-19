@@ -15,6 +15,10 @@ export type InstallExtensionSourceInput = {
   force?: boolean;
   homedir?: () => string;
   installName?: string;
+  /** Existing instance selected for a release upgrade. */
+  installedSourcePath?: string;
+  /** An Upgrade action may refresh the same version or replace it with a newer one. */
+  upgradeFromVersion?: string | null;
   /** Worker-inspected owner whose destination family was reserved before preparation. */
   expectedIdentity?: string;
   /** The batch can share source reads while retaining exclusive destination ownership. */

@@ -1,6 +1,6 @@
 import { Center, Text } from "@chakra-ui/react";
 import type { ResourceRef } from "@pstdio/sdk/extensions";
-import { getThemePreferenceMode, useThemePreference, useToaster } from "@pstdio/ui";
+import { getThemePreferenceMode, useThemePreference } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "@pstdio/workbench";
 import {
   createExtensionWebviewHostCapabilities,
@@ -8,6 +8,7 @@ import {
 } from "@pstdio/workbench/extensions";
 import type { NativeDocumentTarget } from "pstdio-api-contracts";
 import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-host";
+import type { WebviewSizing } from "pstdio-extensions/bridge/contract";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import i18n from "@/i18n";
@@ -41,7 +42,7 @@ import { PausedExtensionView } from "./paused-extension-view";
 
 interface ExtensionWebviewFrameProps {
   visible?: boolean;
-  sizing?: "content-width" | "content-height";
+  sizing?: WebviewSizing;
   extensionId: string;
   extensionInstanceId?: string;
   installName?: string;
@@ -70,16 +71,23 @@ const webviewOwnerKey = (props: ExtensionWebviewFrameProps, installedExtensionId
 
 const currentLocale = () => i18n.resolvedLanguage ?? i18n.language ?? "en";
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
-  const toaster = useToaster();
   const owner = getRuntimeCollections();
   const queryScope = useDashboardQueryScope();
   const { extensionId, extensionInstanceId, installName, projectId, resource, terminal, title, webview, webviewId } =
     props;
   const { themePreference, themePreferences } = useThemePreference();
   const { showError, errorNotice, clearError } = useActionError();
+  const showNotice = (notice: { type?: "info" | "success" | "warning"; title?: string; description?: string }) => {
+    if (!notice.title && !notice.description) return;
+    props.workbench?.notifications.show({
+      level: notice.type ?? "info",
+      title: notice.title ?? notice.description!,
+      message: notice.title ? notice.description : undefined,
+    });
+  };
   const executeCommand = useExecuteExtensionCommand(projectId, (notice) => {
-    if (notice.type === "error" || notice.type === "warning") showError(notice);
-    else toaster.create(notice);
+    if (notice.type === "error") showError(notice);
+    else showNotice({ ...notice, type: notice.type });
   });
   const [fallbackHostEvents] = useState(createHostEventPublisher);
   const hostEvents =
@@ -183,7 +191,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
         projectId,
         extensionId,
         showError,
-        showNotice: (notice) => toaster.create(notice),
+        showNotice,
       }),
     },
     queryAuthority: { id: JSON.stringify(queryScope), assertCurrent: serviceQueries.requireCurrent },

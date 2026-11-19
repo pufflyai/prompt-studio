@@ -37,8 +37,8 @@ const installedOwnerKey = (snapshot: ProjectExtensionRuntimeSnapshot, sourcePath
   ]);
 };
 
-/** Resolve executable settings on the host, then transfer PTY lifetime to the presentation's socket. */
-export const openNativeTerminalSession = async (
+/** Resolve the currently enabled installed owner before starting or reattaching its PTY. */
+export const resolveNativeTerminalView = async (
   deps: ExtensionsRouteDeps,
   request: TerminalViewOpenRequest,
   signal: AbortSignal,
@@ -61,7 +61,31 @@ export const openNativeTerminalSession = async (
   if (!handler || handler.extensionId !== view.extensionId)
     throw new Error("Native terminal view has no session callback");
   const installedOwner = installedOwnerKey(snapshot, view.sourcePath);
+  return { projectId, resource, cols, rows, viewId, view, handler, installedOwner, terminal: deps.terminal };
+};
 
+export const nativeTerminalAttachmentKey = async (
+  deps: ExtensionsRouteDeps,
+  request: TerminalViewOpenRequest,
+  signal: AbortSignal,
+) => {
+  const { projectId, resource, viewId, installedOwner } = await resolveNativeTerminalView(deps, request, signal);
+  return JSON.stringify([
+    projectId,
+    viewId,
+    installedOwner,
+    resource && [resource.type, resource.id, resource.extensionId, resource.projectId, resource.metadata],
+  ]);
+};
+
+/** Resolve launch settings on the host and retain the installed owner's cleanup guarantee. */
+export const openNativeTerminalSession = async (
+  deps: ExtensionsRouteDeps,
+  request: TerminalViewOpenRequest,
+  signal: AbortSignal,
+) => {
+  const { projectId, resource, cols, rows, viewId, view, handler, installedOwner, terminal } =
+    await resolveNativeTerminalView(deps, request, signal);
   const owner = new AbortController();
   const lifetime = AbortSignal.any([signal, owner.signal]);
   let session: TerminalSessionHandle | undefined;
@@ -118,7 +142,7 @@ export const openNativeTerminalSession = async (
     const target = await resolveLocalWorkspaceTarget(deps, { projectId, workspaceId: launch.workspaceId }, "process");
     await validateOwner();
     lifetime.throwIfAborted();
-    session = deps.terminal.openSession({ cols, rows, cwd: target.root, command: launch.command, env: launch.env });
+    session = terminal.openSession({ cols, rows, cwd: target.root, command: launch.command, env: launch.env });
     return {
       ...session,
       kill: close,

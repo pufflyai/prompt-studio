@@ -25,7 +25,7 @@ const createPanelWorkbench = (
 ) => {
   const page: PageRef = { extensionId: "preview", kind: "page", id: "panel-tabs" };
   const workbench = createWorkbench({
-    startPage: page,
+    defaultPage: page,
     initialSidePanelMode: "attached",
     defaultPanelOpenByRegionId: { secondary: true },
     regionSettings: Object.fromEntries(

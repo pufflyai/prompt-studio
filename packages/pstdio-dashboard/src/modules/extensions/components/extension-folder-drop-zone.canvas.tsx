@@ -17,5 +17,5 @@ export const DragOver: Story = {
 };
 export const Uploading: Story = {
   id: "projectsettings-extensionfolderdropzone--uploading",
-  args: { addingName: "my-extension" },
+  args: { addingLabel: "Adding my-extension…" },
 };

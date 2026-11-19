@@ -141,6 +141,7 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
     createConnectionsApi: (scope) => createExtensionConnectionsApi(extensionConnectionService, scope),
   });
   const extensionRuntime = createInstalledExtensionRuntime({
+    eventBus: input.eventBus,
     extensionService,
     harnessRegistry,
     installedExtensionSourcesService: input.installedExtensionSourcesDBService,

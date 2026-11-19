@@ -1,6 +1,8 @@
-import { HStack, IconButton, Text } from "@chakra-ui/react";
+import { HStack, IconButton } from "@chakra-ui/react";
 import { GitFork } from "lucide-react";
 import { useState } from "react";
+import { ActionErrorSlot } from "@/components/primitives/action-error-slot";
+import { AlertMessage } from "@/components/primitives/alert";
 import { Tooltip } from "@/components/primitives/tooltip";
 
 interface MessageForkActionProps {
@@ -26,7 +28,7 @@ export const MessageForkAction = (props: MessageForkActionProps) => {
     }
   };
   return (
-    <HStack gap="2xs">
+    <HStack gap="2xs" position="relative">
       <Tooltip content={disabledReason ?? "Fork conversation"}>
         <IconButton
           aria-label="Fork conversation"
@@ -41,9 +43,9 @@ export const MessageForkAction = (props: MessageForkActionProps) => {
         </IconButton>
       </Tooltip>
       {error ? (
-        <Text role="alert" color="fg.error" textStyle="label/XS/regular">
-          {error}
-        </Text>
+        <ActionErrorSlot edge="below">
+          <AlertMessage compact status="error" title={error} onClose={() => setError(undefined)} />
+        </ActionErrorSlot>
       ) : null}
     </HStack>
   );

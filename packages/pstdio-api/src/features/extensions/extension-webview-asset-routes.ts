@@ -1,6 +1,8 @@
+import { dirname } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Context } from "hono";
 import { getExtensionRuntimeScript, renderInlineExtensionRuntimeHtml } from "pstdio-extensions/bridge/webview-runtime";
+import { readPublishedWebviewRevision } from "pstdio-extensions/prepared-cache";
 import { apiLogger } from "../../lib/logger";
 import { ProjectNotFoundError } from "../../services/extension-service";
 import type { AppBindings } from "../../types";
@@ -8,7 +10,6 @@ import type { ExtensionsRouteDeps, ExtensionWebviewRouteDeps } from "./deps";
 import {
   ARTIFACT_IMAGE_LIMIT_BYTES,
   artifactImageMediaType,
-  findArtifactFile,
   resolveExtensionArtifactMount,
   safeArtifactPath,
 } from "./extension-artifact-assets";
@@ -18,6 +19,8 @@ import {
   renderWebviewBuildErrorModule,
   resolveWebviewAssetFile,
 } from "./extension-webview-assets";
+import { readWebviewBuildSignature } from "./extension-webview-build-cache";
+import { readWebviewEntryStyles } from "./extension-webview-entry-styles";
 
 type WebviewAssetRouteDeps = Pick<
   ExtensionsRouteDeps,
@@ -59,7 +62,7 @@ const serveArtifact = async (
   }
   if (!resolved) return notFound(c);
 
-  const file = await findArtifactFile(resolved.mount, artifactPath);
+  const file = await resolved.mount.statFile(artifactPath);
   if (!file) return notFound(c);
   if (file.size !== undefined && file.size > ARTIFACT_IMAGE_LIMIT_BYTES) {
     return c.json({ error: `Artifact image exceeds the ${ARTIFACT_IMAGE_LIMIT_BYTES.toString()} byte limit` }, 413);
@@ -82,23 +85,40 @@ const serveAuthorizedRequest = async (c: Context<AppBindings>, deps: WebviewAsse
 
   if (authorized.kind === "artifact") return serveArtifact(c, deps, authorized);
 
-  const { assetPath, installedExtensionId, webviewId } = authorized;
+  const { installedExtensionId, webviewId } = authorized;
   await deps.ensureExtensionWebviews(installedExtensionId, webviewId);
-  // Build failures must win over any previous bundle left on disk.
-  if (assetPath === "module.js") {
+  // A failed replacement can leave a previous bundle on disk.
+  if (authorized.kind === "stylesheet" || authorized.assetPath === "module.js") {
     const buildError = await findWebviewBuildError(deps, { installedExtensionId, webviewId });
     if (buildError) {
+      if (authorized.kind === "stylesheet") return notFound(c);
       return new Response(renderWebviewBuildErrorModule(buildError), {
-        headers: { "content-type": "application/javascript; charset=utf-8" },
+        headers: { "content-type": "application/javascript; charset=utf-8", "cache-control": "no-store" },
       });
     }
   }
-
+  if (authorized.kind === "stylesheet") {
+    const entry = await resolveWebviewAssetFile(deps, { installedExtensionId, webviewId, assetPath: "module.js" });
+    if (!entry) return notFound(c);
+    const distDir = dirname(entry.filePath);
+    const [style] = readWebviewEntryStyles(distDir);
+    if (!style) return new Response("", { headers: { "content-type": "text/css", "cache-control": "no-store" } });
+    // Preserve the base URL of relative fonts, images and imports in the published CSS.
+    const revision = readPublishedWebviewRevision(distDir) ?? readWebviewBuildSignature(distDir) ?? c.req.query("h");
+    const location = deps.extensionWebviewAccess.assetUrl(authorized, style, revision);
+    return new Response(null, { status: 307, headers: { location, "cache-control": "no-store" } });
+  }
+  const { assetPath } = authorized;
   const asset = await resolveWebviewAssetFile(deps, { assetPath, installedExtensionId, webviewId });
   if (!asset) return notFound(c);
 
   return new Response(Bun.file(asset.filePath), {
-    headers: { "content-type": asset.mimeType },
+    // Metadata can precede first-use preparation. Recheck the entry point even
+    // when the browser still has the previous publication's revision in its URL.
+    headers:
+      assetPath === "module.js"
+        ? { "content-type": asset.mimeType, "cache-control": "no-store" }
+        : { "content-type": asset.mimeType },
   });
 };
 

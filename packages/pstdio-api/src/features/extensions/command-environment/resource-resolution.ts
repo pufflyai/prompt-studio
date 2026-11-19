@@ -7,7 +7,6 @@ import {
   type ResourceResolution,
   resourceKey,
   workbenchPages,
-  workspacePages,
 } from "pstdio-api-contracts/extension-kernel";
 import {
   canonicalNavigationOwners,
@@ -43,11 +42,7 @@ const resolveHostResource = async (deps: ExtensionsRouteDeps, ref: ResourceRef, 
         workspaceError: record.setup_error,
       },
     };
-    let page = workspacePages.workspace;
-    if (record.execution_kind === "remote" || record.provider_capabilities_json?.files === "none")
-      page = workspacePages.overview;
-    else if (record.is_default || !record.provider_capabilities_json?.diff) page = workspacePages.files;
-    return { resource, target: { kind: "page" as const, page, resource } };
+    return { resource };
   }
   if (ref.type === "session") {
     const session = await read(() => deps.sessionService.get(ref.id));
@@ -87,7 +82,13 @@ const ownerResolutions = (batch: ResourceRef[], value: unknown, runtime: Extensi
 
 export const resolveResourceRecords = async (
   deps: ExtensionsRouteDeps,
-  input: { projectId: string; extensionId?: string; signal?: AbortSignal; resourceLinksReadOnly?: boolean },
+  input: {
+    projectId: string;
+    extensionId?: string;
+    signal?: AbortSignal;
+    resourceLinksReadOnly?: boolean;
+    strict?: boolean;
+  },
   resources: ResourceRef[],
 ) => {
   const read = createReadBoundary(input.signal);
@@ -127,9 +128,12 @@ export const resolveResourceRecords = async (
           resourceLinksReadOnly: input.resourceLinksReadOnly,
           body: { params: { resources: batch }, source: "api" },
         });
+        if (input.strict && !response.outcome.ok) throw new Error(response.outcome.reason);
         value = response.outcome.ok ? response.outcome.value : undefined;
-      } catch {
+        if (input.strict && !Array.isArray(value)) throw new Error("Resource resolver is unavailable.");
+      } catch (error) {
         input.signal?.throwIfAborted();
+        if (input.strict) throw error;
         return [];
       }
       return ownerResolutions(batch, value, runtime);
@@ -141,6 +145,12 @@ export const resolveResourceRecords = async (
 
 export const resolveResources = async (
   deps: ExtensionsRouteDeps,
-  input: { projectId: string; extensionId?: string; signal?: AbortSignal; resourceLinksReadOnly?: boolean },
+  input: {
+    projectId: string;
+    extensionId?: string;
+    signal?: AbortSignal;
+    resourceLinksReadOnly?: boolean;
+    strict?: boolean;
+  },
   resources: ResourceRef[],
 ) => (await resolveResourceRecords(deps, input, resources)).resolved;

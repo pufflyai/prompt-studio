@@ -59,6 +59,11 @@ afterAll(async () => {
 
 describe("POST /v1/sessions queueing", () => {
   test("queues a second session when global concurrency is full", async () => {
+    const started = Promise.withResolvers<void>();
+    startSession.mockImplementationOnce(() => {
+      started.resolve();
+      return pendingSession();
+    });
     const projectRes = await handle.app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -90,6 +95,7 @@ describe("POST /v1/sessions queueing", () => {
     expect(firstRes.status).toBe(201);
     const first = await firstRes.json();
     expect(first.status).toBe("in_progress");
+    await started.promise;
 
     const secondRes = await handle.app.request("/v1/sessions", {
       method: "POST",

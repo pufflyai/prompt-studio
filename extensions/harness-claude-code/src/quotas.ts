@@ -13,6 +13,11 @@ const windowMinutes = (id: string) => {
   return undefined;
 };
 
+const quotaModelFamily = (id: string, displayName?: string) => {
+  if (id === "model_scoped") return /\b(sonnet|opus|haiku|fable)\b/i.exec(displayName ?? "")?.[1]?.toLowerCase();
+  return /^seven_day_(sonnet|opus|haiku|fable)$/.exec(id)?.[1];
+};
+
 export const normalizeClaudeQuotas = (native: Record<string, unknown>) => {
   const windows = native.rate_limits;
   const limits = Object.entries(windows && typeof windows === "object" ? windows : {}).flatMap(([id, value]) =>
@@ -33,6 +38,7 @@ export const normalizeClaudeQuotas = (native: Record<string, unknown>) => {
           label,
           remainingPercent: Math.max(0, Math.min(100, 100 - window.utilization)),
           windowMinutes: windowMinutes(id),
+          modelFamily: quotaModelFamily(id, window.display_name),
           ...(Number.isFinite(date) ? { resetsAt: new Date(date).toISOString() } : {}),
         },
       ];
@@ -65,5 +71,10 @@ export const quotasCommand = defineCommand({
   title: l10n("quotas.title", "Inspect account quotas"),
   description: l10n("quotas.description", "Read Claude Code's native account quota snapshot without starting a turn."),
   cli: true,
-  run: readClaudeQuotas,
+  async run(ctx) {
+    return {
+      ...(await readClaudeQuotas(ctx)),
+      restartAfterQuotaReset: (await ctx.settings.get("restartAfterQuotaReset")) === true,
+    };
+  },
 });

@@ -13,7 +13,7 @@ test("Activity has its own retryable sync source without shifting personal or ex
   };
   const result = projectOwnerProgress(
     "project",
-    Array.from({ length: 6 }, () => ready),
+    Array.from({ length: 7 }, () => ready),
     ["example.files"],
     ["Files"],
   );
@@ -22,6 +22,7 @@ test("Activity has its own retryable sync source without shifting personal or ex
     { id: "publications", name: "Extensions", canRetry: true },
     { id: "automations", name: "Automations", canRetry: true },
     { id: "activity", name: "Resource Activity", canRetry: true },
+    { id: "seen", name: "Seen resource changes", canRetry: true },
     { id: "personal", name: "Sessions and history", canRetry: true },
     { id: "example.files", name: "Files", canRetry: true },
   ]);

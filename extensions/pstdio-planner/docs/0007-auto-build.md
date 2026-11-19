@@ -103,4 +103,11 @@ Automatic progress wakes, discovery checks, failed-supervisor recovery, and hour
 
 Answer the run’s pending decisions inline below Supervisor. Previous and Next preserve drafts and show one request at a time. Saving advances to the next request; failures keep the answer with an inline error. This reuses the Needs attention form, overlapping the request-answering portion of PS-691; broader blocker navigation remains separate.
 
-*Updated at: 2026-11-05*
+
+## Supervisor quota cooldowns
+
+Both event-driven wakes and scheduled progress checks read quota availability for the supervisor's selected model. Account-wide windows apply to all models. Auto Build stays enabled and waits while an applicable window is exhausted. It saves a known reset for the current harness and model and checks quota again when the deadline arrives. An exhausted window without a known reset keeps waiting for later checks. Multiple exhausted windows use the latest reset. Changing the model or harness checks quota for the new selection.
+
+The harness's optional **Restart after quota reset** setting can also resume a quota-stopped supervisor or other conversation at reset plus 15 seconds. Planner and the restart worker use guarded run identity so another continuation supersedes the delayed request.
+
+*Updated at: 2026-11-17*

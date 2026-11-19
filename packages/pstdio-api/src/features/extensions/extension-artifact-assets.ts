@@ -1,5 +1,4 @@
 import { extname } from "node:path";
-import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
 import { normalizeMountRelativePath } from "pstdio-extensions";
 import { createSharedArtifactMount } from "../../services/shared-files/artifact-mount";
 import { resolveWorkspaceFilesPath } from "./command-environment/workspace-files";
@@ -94,13 +93,6 @@ export const resolveExtensionArtifactMount = async (deps: ArtifactMountDeps, inp
     }),
     runtimeMount,
   };
-};
-
-// An exact path is a valid glob pattern, so list() doubles as a metadata lookup.
-// The equality check drops accidental glob matches for paths with glob characters.
-export const findArtifactFile = async (mount: ArtifactMount, path: string) => {
-  const files = await mount.list(path);
-  return files.find((file) => file.path === path);
 };
 
 /**

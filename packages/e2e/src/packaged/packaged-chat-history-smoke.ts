@@ -49,8 +49,11 @@ export const expectPackagedChatHistory = async (
   });
   try {
     await side.getByRole("button", { name: "Add panel", exact: true }).click();
-    await page.getByRole("menuitem", { name: "New session", exact: true }).click();
-    await side.getByRole("tab", { name: "New session", exact: true }).click({ button: "right" });
+    const openSession = page.getByRole("menuitem", { name: "New session", exact: true });
+    const newSession = side.getByRole("tab", { name: "New session", exact: true });
+    await expect(openSession.or(newSession)).toBeVisible();
+    if (await openSession.isVisible()) await openSession.click();
+    await newSession.click({ button: "right" });
     await switchSession(page, "Idle connection");
     await expect(replayTab).toHaveAttribute("aria-selected", "false");
     await expect(log).toBeAttached();

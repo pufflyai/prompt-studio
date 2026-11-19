@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { join, posix } from "node:path";
 import type { WorkspaceFileEntry } from "pstdio-api-contracts";
 import { requireGitExecutable } from "pstdio-wt";
+import { hasGitDiscoveryContext } from "./workspace-git-discovery";
 
 const checkIgnored = (root: string, paths: string[], signal?: AbortSignal) => {
   // NUL-delimited input handles directory rules and filenames containing newlines.
@@ -59,6 +60,8 @@ export const decorateIgnoredWorkspaceFiles = async (
   // Run one batch per repository sequentially, without unbounded Git process fan-out.
   for (const [repository, group] of groups) {
     try {
+      signal?.throwIfAborted();
+      if (!hasGitDiscoveryContext(join(root, repository))) continue;
       const paths = group.map((entry) => (repository ? posix.relative(repository, entry.path) : entry.path));
       const output = await checkIgnored(join(root, repository), paths, signal);
       for (const path of output.split("\0")) if (path) ignored.add(repository ? `${repository}/${path}` : path);

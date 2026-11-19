@@ -104,6 +104,7 @@ const registerHarnesses = (ext: NormalizedExtension, source: LoadedExtensionSour
     const normalizedProvider = { ...provider, params: normalizedParams.params };
     const record: RuntimeHarnessRecord = {
       ...contributionRecordBase(ext, source, "harness", provider.id),
+      packagePath: source.originalPackagePath ?? source.packagePath,
       provider: normalizedProvider as RuntimeHarnessRecord["provider"],
     };
     runtime.harnesses.push(record);

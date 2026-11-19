@@ -1,17 +1,20 @@
-import { Box, Flex, HStack, Icon, IconButton, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import type {
   ExtensionDiagnostic,
   ProjectExtensionInstance,
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
-import { Switch, type SwitchProps, Tooltip } from "@pstdio/ui";
-import { ArrowUpCircle, Clock, Folder, Globe } from "lucide-react";
+import { Folder, Globe } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useTranslation } from "react-i18next";
+import { ExtensionActionButton } from "./extension-action-button";
+import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionAutomationsPopover } from "./extension-automations-popover";
 import { ExtensionHealthPopover } from "./extension-health-popover";
 import { ExtensionIcon } from "./extension-icon";
 import { ExtensionIdentity } from "./extension-identity";
+import { ExtensionProvenance } from "./extension-provenance";
+import { ExtensionToggle } from "./extension-toggle";
 
 export interface ExtensionListRowProps {
   projectId?: string;
@@ -19,9 +22,10 @@ export interface ExtensionListRowProps {
   diagnostics: ExtensionDiagnostic[];
   automations: WorkbenchExtensionAutomationRecord[];
   unavailableHarnesses?: AgentInfo[];
-  toggling: boolean;
-  upgrading: boolean;
-  queued?: boolean;
+  action?: ExtensionActionState;
+  sourceChanging?: boolean;
+  onDismissAction?: (action: ExtensionActionState) => void;
+  onRetryAction?: () => void;
   togglingAutomation?: boolean;
   onToggle: (enabled: boolean) => void;
   onToggleAutomation: (automation: WorkbenchExtensionAutomationRecord, enabled: boolean) => Promise<unknown>;
@@ -37,9 +41,10 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
     diagnostics,
     automations,
     unavailableHarnesses = [],
-    toggling,
-    upgrading,
-    queued = false,
+    action,
+    sourceChanging,
+    onDismissAction,
+    onRetryAction,
     togglingAutomation,
     onToggle,
     onToggleAutomation,
@@ -47,16 +52,16 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
     onOpen,
   } = props;
   const { t } = useTranslation("projects");
-  const upgradeLabel = t(
-    queued ? "projectSettings.extensionsPanel.upgrade.waiting" : "projectSettings.extensionsPanel.upgrade.action",
-  );
-  const handleCheckedChange: NonNullable<SwitchProps["onCheckedChange"]> = (details) => {
-    onToggle(details.checked);
-  };
+  const toggleAction = action?.operation === "toggle" ? action : undefined;
+  const upgradeAction = toggleAction ? undefined : action;
+  const toggling = toggleAction?.status === "running";
+  const upgrading = upgradeAction?.status === "queued" || upgradeAction?.status === "running";
+  const changing = toggling || upgrading || sourceChanging;
 
   return (
     <HStack
       data-testid="extension-entry"
+      position="relative"
       gap="md"
       paddingX="lg"
       paddingY="sm"
@@ -96,6 +101,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         <Text textStyle="label/XS" color="fg.muted" truncate>
           {extension.description ?? t("projectSettings.extensionsPanel.noDescription")}
         </Text>
+        <ExtensionProvenance extension={extension} />
       </Stack>
 
       <Box
@@ -109,7 +115,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         <ExtensionAutomationsPopover
           projectId={props.projectId}
           automations={automations}
-          togglingAutomation={togglingAutomation}
+          togglingAutomation={togglingAutomation || changing}
           onToggleAutomation={onToggleAutomation}
         />
       </Box>
@@ -126,28 +132,25 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
           extension={extension}
           diagnostics={diagnostics}
           unavailableHarnesses={unavailableHarnesses}
-          upgrading={upgrading}
+          upgrading={changing}
           onUpgrade={onUpgrade}
         />
       </Box>
 
-      {/* The slot stays when there is nothing to upgrade, so the switches line up across rows. The row
-          opens on Enter, so a key press on the button must not reach it either. */}
-      <Box boxSize="6" flexShrink="0" onClick={stopRowClick} onKeyDown={stopRowClick}>
-        {extension.canUpgrade && (
-          <Tooltip content={upgradeLabel}>
-            <IconButton
-              variant="ghost"
-              size="2xs"
-              loading={upgrading && !queued}
-              disabled={upgrading}
-              onClick={onUpgrade}
-              aria-label={upgradeLabel}
-              data-testid="extension-row-upgrade"
-            >
-              {queued ? <Clock /> : <ArrowUpCircle />}
-            </IconButton>
-          </Tooltip>
+      <Box flexShrink="0" onClick={stopRowClick} onKeyDown={stopRowClick}>
+        {(extension.canUpgrade || upgradeAction) && (
+          <ExtensionActionButton
+            variant="outline"
+            size="2xs"
+            action={upgradeAction}
+            onAction={onUpgrade}
+            onDismiss={onDismissAction}
+            onRetry={upgradeAction?.status === "error" ? onRetryAction : undefined}
+            disabled={changing}
+            data-testid="extension-row-upgrade"
+          >
+            {t("projectSettings.extensionsPanel.upgrade.action")}
+          </ExtensionActionButton>
         )}
       </Box>
 
@@ -158,13 +161,19 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         </Text>
       </HStack>
 
-      <Box flexShrink="0" onClick={stopRowClick}>
-        <Switch
-          size="sm"
-          checked={extension.enabled}
-          onCheckedChange={handleCheckedChange}
-          disabled={toggling}
-          aria-label={t("projectSettings.extensionsPanel.toggleAriaLabel", { name: extension.displayName })}
+      <Box flexShrink="0" onClick={stopRowClick} onKeyDown={stopRowClick}>
+        <ExtensionActionFeedback
+          action={toggleAction}
+          onDismiss={toggleAction && (() => onDismissAction?.(toggleAction))}
+          onRetry={onRetryAction}
+          retryDisabled={changing}
+        />
+        <ExtensionToggle
+          name={extension.displayName}
+          enabled={extension.enabled}
+          action={toggleAction}
+          disabled={changing}
+          onToggle={onToggle}
         />
       </Box>
     </HStack>

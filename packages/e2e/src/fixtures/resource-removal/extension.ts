@@ -34,7 +34,6 @@ const kind = defineResourceKind({
   id: "document",
   label: "Document",
   resolveMany: resolve.ref,
-  relatedOpenings: related.ref,
   menuSlots: [{ id: "actions", placement: "header-overflow", label: "Document actions", access: "owner" }],
 });
 const remove = defineCommand({

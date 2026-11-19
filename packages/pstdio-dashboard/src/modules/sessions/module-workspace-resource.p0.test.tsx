@@ -1,17 +1,16 @@
 import { expect, test } from "bun:test";
-import { workbenchPages, workspacePages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { treeViewSections } from "@/shared/workbench/workbench-view-test-helpers";
-import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
+import { registerWorkspaceProviderViews, workspacePages } from "@/workspaces-provider.test-support";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionsModule } from "./module";
 import { registerSessionProvider } from "./session-provider.fixture";
 
-for (const page of [workspacePages.workspace, workbenchPages.workspace]) {
+for (const page of [workspacePages.workspace]) {
   test(`${page.extensionId} workspace navigation queries the provider and opens sessions in shared Side`, async () => {
     const workbench = createWorkbench();
     workbench.registerModule(createSidenavModule());

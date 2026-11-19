@@ -22,6 +22,8 @@ const installedExtensions: ProjectExtensionInstance[] = [
     description: "Plan and track tickets across workspaces.",
     sourcePath: "/repo/.pstdio/extensions/pstdio-planner",
     scope: "repo",
+    ownership: "mine",
+    visibility: "public",
     status: "loaded",
     lastLoadedAt: "2026-08-04T09:14:00.000Z",
     enabled: true,
@@ -42,6 +44,8 @@ const installedExtensions: ProjectExtensionInstance[] = [
     description: "Issue data and command surface.",
     sourcePath: "/home/user/.pstdio/extensions/issue-tracker",
     scope: "global",
+    ownership: "mine",
+    visibility: "unknown",
     status: "error",
     lastLoadedAt: "2026-08-04T08:02:00.000Z",
     lastError: {
@@ -66,6 +70,8 @@ const installedExtensions: ProjectExtensionInstance[] = [
     description: "Demo and experimental commands.",
     sourcePath: "/home/user/.pstdio/extensions/extension-lab",
     scope: "global",
+    ownership: "unknown",
+    visibility: "public",
     status: "disabled",
     enabled: false,
     config: {},
@@ -217,7 +223,7 @@ export const Mutating: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    togglingInstanceId: "planner-instance",
+    actionStates: { "planner-instance": { operation: "toggle", status: "running", label: "Updating Project Planner" } },
   },
 };
 export const InstallingMultipleAvailableExtensions: Story = {
@@ -227,7 +233,10 @@ export const InstallingMultipleAvailableExtensions: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    installingMarketplaceNames: ["pstdio-reports", "pstdio-planner"],
+    actionStates: {
+      "marketplace:pstdio-reports": { status: "running", label: "Installing" },
+      "marketplace:pstdio-planner": { status: "running", label: "Installing" },
+    },
   },
 };
 export const HealthPopoverOpen: Story = {
@@ -285,10 +294,12 @@ export const UpgradingOneExtension: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    upgradingInstanceIds: ["planner-instance"],
+    actionStates: {
+      "planner-instance": { status: "running", label: "Upgrading Project Planner" },
+    },
   },
 };
-// Waiting rows keep a static clock while an active upgrade shows progress.
+// Two installs can run at once; each active row identifies the extension and elapsed time.
 export const UpgradingAll: Story = {
   id: "projectsettings-extensionspanel--upgrading-all",
   args: {
@@ -296,11 +307,11 @@ export const UpgradingAll: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    upgradingAll: true,
-    queuedInstanceIds: [installedExtensions[2]!.id],
-    upgradingInstanceIds: installedExtensions
-      .filter((extension) => extension.canUpgrade)
-      .map((extension) => extension.id),
+    batch: { ids: ["pstdio-planner", "extension-lab"], running: true, completed: 0, failed: 0 },
+    actionStates: {
+      "planner-instance": { status: "running", label: "Upgrading Project Planner" },
+      "lab-instance": { status: "running", label: "Upgrading Extension Lab" },
+    },
   },
 };
 // No row can take a newer release, so there are no row upgrade buttons and no Upgrade all.
@@ -320,7 +331,7 @@ export const AddingLocalFolder: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    addingFolderName: "my-extension",
+    actionStates: { $folder: { status: "running", label: "Adding my-extension…" } },
   },
 };
 

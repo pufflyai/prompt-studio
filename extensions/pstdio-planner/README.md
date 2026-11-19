@@ -12,6 +12,8 @@ pst extensions add pstdio-planner
 
 Agents publish implementation and independent review outcomes to the ticket’s core Activity feed. New managed attempts do not require Reports. Keep the [Reports compatibility extension](../pstdio-reports/README.md) only while reading or migrating historical evidence.
 
+Ticket navigation groups linked resources by their owning resource type, including Workspaces, Sessions, Pull requests, Notes, and Reports. Type groups keep their contents visible while additional links load in bounded pages. Attached ticket files show their content without ticket Activity or Needs attention controls; returning to the ticket restores those controls.
+
 
 ## What Planner adds
 

@@ -1,3 +1,4 @@
+import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { apiLogger } from "../../lib/logger";
 
@@ -35,7 +36,7 @@ export const startRecoveryCapture = (input: {
   };
   const capture = () => {
     if (closed) return Promise.resolve();
-    running ??= run();
+    running ??= withRuntimeOperationOrigin({ kind: "background", name: "recovery.capture" }, run);
     return running;
   };
   const timer = setInterval(() => void capture(), 60_000);

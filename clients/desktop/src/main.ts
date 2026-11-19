@@ -5,6 +5,7 @@ import { resolvePstdioRuntimeDescriptorPath, resolvePstdioUpdateChannelPath } fr
 import { createMacOSCliSetup } from "./cli/macos-cli-setup";
 import { runWindowsInstallerEvent, windowsInstallerEvent } from "./cli/windows-installer";
 import { formatDesktopDiagnostics } from "./diagnostics/diagnostics";
+import { workbenchErrorDetails } from "./diagnostics/workbench-error";
 import { registerDesktopIpc } from "./ipc/register-desktop-ipc";
 import {
   type DesktopState,
@@ -27,7 +28,7 @@ import { validateSidecarArtifact } from "./runtime/sidecar-artifact";
 import { focusPrimaryWindow } from "./security/apply-window-security";
 import { DesktopProjectTabsStore } from "./windows/desktop-project-tabs-store";
 import { LIFECYCLE_SCHEME } from "./windows/lifecycle-protocol";
-import { DesktopWindowController } from "./windows/window-controller";
+import { DesktopWindowController, type WorkbenchLoadFailure } from "./windows/window-controller";
 import { DesktopWorkbenchStateStore } from "./windows/workbench-state-store";
 
 const logger = createLogger({ component: "desktop", level: "info", service: "pstdio-desktop", sync: true });
@@ -69,7 +70,7 @@ const performanceMonitor = createDesktopPerformanceMonitor({
 const updateNotifications = createDesktopUpdateNotifications({
   currentVersion: app.getVersion(),
   receipt: new DesktopUpdateReceipt(join(app.getPath("userData"), "downloaded-update-version")),
-  showMessageBox: (options) => dialog.showMessageBox(options),
+  onNotice: () => windowController?.notifyUpdate(),
   logError: (error) => {
     logger.error({ event: "desktop.update.failed", message: error.message }, "Desktop update check failed");
   },
@@ -196,6 +197,22 @@ const runtimeRecovery = createRuntimeRecovery({
   },
 });
 
+const showWorkbenchRecovery = (failure: WorkbenchLoadFailure) => {
+  if (state.kind !== "workbench" && state.kind !== "confirming_active_work") return;
+  logger.error({ event: "desktop.workbench.unavailable", ...failure }, "Workbench renderer unavailable");
+  setState({
+    kind: "recovery",
+    error: {
+      code: "workbench_unavailable",
+      message: "The workbench stopped. Retry to reopen it.",
+      actions: ["retry", "open_logs", "quit"],
+    },
+  });
+  void windowController?.showLifecycle().catch(() => {
+    logger.error({ event: "desktop.workbench.recovery.failed" }, "Could not show workbench recovery");
+  });
+};
+
 const bootstrap = async () => {
   const cliSetup = createMacOSCliSetup((error) => {
     logger.error({ event: "desktop.cli.install.failed", message: error.message }, "CLI setup failed");
@@ -215,7 +232,11 @@ const bootstrap = async () => {
     ),
   );
   const preloadPath = join(import.meta.dirname, "preload.cjs");
-  windowController = await DesktopWindowController.create(preloadPath, () => workbenchState.getStartupAppearance());
+  windowController = await DesktopWindowController.create(
+    preloadPath,
+    () => workbenchState.getStartupAppearance(),
+    showWorkbenchRecovery,
+  );
   const { window } = windowController;
   windowController.window.on("close", (event) => {
     if (quitFlow.isQuitAllowed()) return;
@@ -266,6 +287,7 @@ const bootstrap = async () => {
       );
     },
     checkForUpdates: () => updateManager.checkForUpdates(),
+    takeUpdateNotice: updateNotifications.take,
     updateChannel: {
       choice: updateChannel.choice,
       set: (channel) => {
@@ -283,6 +305,11 @@ const bootstrap = async () => {
       if (projectIds.length > 0) void cliSetup?.offerOnce();
     },
     setWorkbenchItem: (key, value) => workbenchState.setItem(key, value),
+    reportWorkbenchError: (report) => {
+      const token = runtimeManager.lastDescriptor?.token;
+      const details = workbenchErrorDetails(report, token ? [token] : []);
+      if (details) logger.error(details, "Workbench render failed");
+    },
     performance: performanceMonitor,
   });
   void performanceMonitor.start();

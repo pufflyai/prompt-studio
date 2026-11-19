@@ -330,8 +330,9 @@ their separate `CommandOutcomeError.outcome` contract.
 
 Declare bare capability names. Versioned declarations such as `"clipboard.write@1"` remain
 accepted but are deprecated through 0.44. Typed clients still require the declarations they use.
-`client.placement.close()` needs `placement.close`; `client.notify.toast({ type, title?, message })`
-needs `notification.show`. The old `{ level, title, message? }` toast shape is deprecated.
+`client.placement.close()` needs `placement.close`. Use `notification.show` for system notices in the status bar.
+The compatibility method `client.notify.toast({ type, title?, message })` uses the same host routing.
+The older `{ level, title, message? }` input shape is deprecated.
 
 ## Terminal sessions
 
@@ -517,7 +518,7 @@ Shared text uses `editing.text` and `client.editing.text`, separately from the
 structured editing sessions above. A source owner declares a `defineTextSource`
 provider and returns its `textDocument` reference from a file view. The view can
 select an installed text editor with `textEditor`; omission selects native Markdown.
-An editor opens its own source reference or the opaque grant from
+An editor can open the selected document with `await client.editing.text.open({ selected: true })`. This admits the member and returns the initial collaborative snapshot in one request on a new placement. The host checks the selection and current write permission. An editor can also open its own source reference or the opaque grant from
 `client.editing.text.current()`. A grant cannot open an unselected foreign source.
 
 `client.editing.text.open(input)` returns a public text session. Its snapshot contains

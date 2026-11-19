@@ -1,9 +1,10 @@
 import type { ChildProcess } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
 import { homeFrame, homePage } from "../helpers/home-loading";
+import { waitForDefaultExtensions } from "../scripts/default-extensions-readiness";
 import { type Browser, chromium, expect, test } from "../scripts/playwright-test";
 import { packagedFixtureExtensions } from "./packaged-fixture-extensions";
 import { signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -13,9 +14,13 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
   try {
-    const defaults = JSON.parse(await packagedFixtureExtensions(root, ["pstdio-home"], ["webview"]));
+    const defaults = JSON.parse(await packagedFixtureExtensions(root, ["pstdio-home", "pstdio-terminal"], ["webview"]));
     defaults.defaultExtensions[0].force = true;
-    const started = await startPackagedServe(root, { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(defaults) });
+    const logPath = test.info().outputPath("runtime.jsonl");
+    const started = await startPackagedServe(root, {
+      PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(defaults),
+      PSTDIO_LOG_PATH: logPath,
+    });
     child = started.child;
     browser = await chromium.launch();
     const page = await browser.newPage();
@@ -39,7 +44,7 @@ test("packaged Main fullscreen exits with Escape and resets on reload", async ()
     await page.screenshot({ path: test.info().outputPath("empty-project-selection.png") });
 
     const installedRoot = join(root, "extensions", "webview-host");
-    await expect.poll(() => existsSync(join(installedRoot, "package.json"))).toBe(true);
+    await waitForDefaultExtensions(child, logPath);
     const installedNote = join(installedRoot, "local-note.txt");
     writeFileSync(installedNote, "Keep the installed source");
     await picker.getByRole("button", { name: "Create project", exact: true }).click();

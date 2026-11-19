@@ -25,6 +25,8 @@ on:
       channel:
         required: true
         type: string
+      stable_tag:
+        type: string
   workflow_dispatch:
     inputs:
       ref:
@@ -153,9 +155,20 @@ jobs:
       artifact_attempt: ${{ inputs.artifact_attempt }}
       candidate_artifact_id: ${{ needs.candidate.outputs.artifact_id }}
       channel: ${{ inputs.channel }}
+  project_upgrade:
+    needs: candidate
+    if: inputs.channel == 'stable'
+    uses: ./.github/workflows/verify-project-upgrade.yml
+    with:
+      ref: ${{ inputs.ref }}
+      source_sha: ${{ inputs.source_sha }}
+      artifact_run_id: ${{ inputs.artifact_run_id }}
+      artifact_attempt: ${{ inputs.artifact_attempt }}
+      candidate_artifact_id: ${{ needs.candidate.outputs.artifact_id }}
+      from_tag: ${{ inputs.stable_tag }}
   certify:
     if: always()
-    needs: [candidate, functional, signed_functional, performance, services]
+    needs: [candidate, functional, signed_functional, performance, services, project_upgrade]
     outputs:
       certificate_name: ${{ steps.certify.outputs.certificate_name }}
     runs-on: ubuntu-latest
@@ -167,6 +180,15 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
+      - name: Read the workflow's current certification policy
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: __test-tmp__/certification-policy
+          sparse-checkout: |
+            /scripts/ci/production-candidate.ts
+            /scripts/ci/production-platforms.ts
+          sparse-checkout-cone-mode: false
       - uses: actions/download-artifact@v4
         with:
           artifact-ids: ${{ needs.candidate.outputs.artifact_id }}
@@ -184,7 +206,7 @@ jobs:
           CHANNEL: ${{ inputs.channel }}
         run: |
           echo "certificate_name=production-certificate-attempt-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
-          bun scripts/ci/production-candidate.ts production-candidate.json
+          bun __test-tmp__/certification-policy/scripts/ci/production-candidate.ts production-candidate.json
       - name: Preserve the decision, including every blocker
         if: always()
         uses: actions/upload-artifact@v4

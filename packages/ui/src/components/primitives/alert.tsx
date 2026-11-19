@@ -13,26 +13,46 @@ export interface AlertProps extends Omit<ChakraAlert.RootProps, "title"> {
   // Shows a close button that dismisses the alert.
   onClose?: () => void;
   closeLabel?: string;
+  /** Compact feedback beside an action or field. */
+  compact?: boolean;
 }
 
+const alertText = (content: React.ReactNode): string => {
+  let text = "";
+  React.Children.forEach(content, (child) => {
+    if (React.isValidElement<{ children?: React.ReactNode }>(child)) text += alertText(child.props.children);
+    else if (typeof child === "string" || typeof child === "number" || typeof child === "bigint") text += String(child);
+  });
+  return text;
+};
+
 export const AlertMessage = React.forwardRef<HTMLDivElement, AlertProps>(function Alert(props, ref) {
-  const { title, children, icon, startElement, endElement, onClose, closeLabel = "Dismiss", ...rest } = props;
+  const { title, children, icon, startElement, endElement, onClose, closeLabel = "Dismiss", compact, ...rest } = props;
   const contentRef = React.useRef<HTMLDivElement>(null);
-  const copyable = rest.status === "error";
+  const isError = rest.status === "error";
+  const defaultDismissal = isError && !onClose;
+  const heading = defaultDismissal ? alertText(title) : "";
+  const message = defaultDismissal ? alertText(children) : "";
+  const [dismissed, setDismissed] = React.useState<{ heading: string; message: string }>();
+  const sameError = defaultDismissal && dismissed?.heading === heading && dismissed.message === message;
+  if (dismissed && !sameError) setDismissed(undefined);
+  if (sameError) return null;
+  const close = onClose ?? (isError ? () => setDismissed({ heading, message }) : undefined);
+  const copyable = isError && !compact;
   return (
-    <ChakraAlert.Root ref={ref} {...rest}>
+    <ChakraAlert.Root ref={ref} size={compact ? "sm" : undefined} role={isError ? "alert" : undefined} {...rest}>
       {startElement || <ChakraAlert.Indicator>{icon}</ChakraAlert.Indicator>}
       <ButtonPropsProvider value={{ variant: "ghost", size: "2xs" }}>
         <ChakraAlert.Content>
           <Box position="relative" minW="0" minH="0" flex="1">
             <ScrollArea contentRef={contentRef}>
-              <Box paddingEnd={onClose ? "xl" : undefined}>
+              <Box paddingEnd={close ? "xl" : undefined}>
                 <ChakraAlert.Title>{title}</ChakraAlert.Title>
                 {children ? <ChakraAlert.Description>{children}</ChakraAlert.Description> : null}
               </Box>
             </ScrollArea>
-            {onClose ? (
-              <IconButton aria-label={closeLabel} position="absolute" top="0" right="xs" onClick={onClose}>
+            {close ? (
+              <IconButton aria-label={closeLabel} position="absolute" top="0" insetInlineEnd="0" onClick={close}>
                 <X />
               </IconButton>
             ) : null}

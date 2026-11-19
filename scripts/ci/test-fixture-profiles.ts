@@ -10,6 +10,7 @@ export const uiFixtureExtensions = [
   "pstdio-performance",
   "pstdio-planner",
   "pstdio-workspaces",
+  "pstdio-terminal",
 ];
 export const fixtureExtensionsForRunner = (runner: string) =>
   ["app", "packaged-cli", "packaged-browser"].includes(runner) ? uiFixtureExtensions : [];

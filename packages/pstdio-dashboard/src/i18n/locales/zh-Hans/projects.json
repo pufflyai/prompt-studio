@@ -62,7 +62,6 @@
       "upgrade": {
         "waiting": "等待升级",
         "action": "升级",
-        "succeeded": "扩展已升级",
         "current": "扩展已是最新",
         "failed": "扩展升级失败"
       },
@@ -81,7 +80,6 @@
         "title": "将扩展文件夹拖放到此处",
         "hint": "主机将按扩展声明的范围安装。",
         "uploading": "正在添加 {{name}}…",
-        "succeeded": "已添加 {{name}}",
         "failed": "无法添加扩展文件夹",
         "notFolder": "请拖放文件夹，而不是文件。"
       },
@@ -135,7 +133,8 @@
           "templates": "模板",
           "themes": "主题",
           "navigationItems": "导航项",
-          "commandPaletteResources": "命令面板资源"
+          "commandPaletteResources": "命令面板资源",
+          "workspaceTypes": "工作区类型"
         },
         "deleteHintShared": "删除此扩展的文件。它将从所有使用它的项目中移除。"
       },
@@ -157,6 +156,29 @@
         "title": "替换 {{name}}？",
         "message": "这将替换已安装的文件。使用此扩展的其他项目也会使用新文件。",
         "action": "替换"
+      },
+      "feedback": {
+        "queued": "等待中",
+        "upgrading": "正在升级 {{name}}",
+        "updating": "正在更新 {{name}}",
+        "installing": "正在安装 {{name}}",
+        "batch": "已完成 {{count}} / {{total}} 个升级",
+        "retry": "重试",
+        "dismiss": "关闭",
+        "upgradingButton": "正在升级",
+        "batchFailed": "{{total}} 个升级中有 {{count}} 个失败",
+        "installingButton": "正在安装"
+      },
+      "provenance": {
+        "filter": "扩展来源",
+        "all": "全部",
+        "public": "公开",
+        "mine": "我的",
+        "unknown": "可见性未知",
+        "publicHelp": "存在公开的软件包。本地修改可能尚未发布。",
+        "mineHelp": "在此项目或设备上维护的可编辑本地源码。",
+        "unknownHelp": "尚未验证是否公开可用。",
+        "noMatches": "没有匹配的扩展"
       }
     }
   },

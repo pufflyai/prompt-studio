@@ -254,6 +254,7 @@ export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps
       workspace = await resolveHarnessWorkspace(deps, input, harness);
     },
     input.signal,
+    "reattach",
   );
   const conversation = await entry.conversationReady;
   input.signal?.throwIfAborted();

@@ -29,6 +29,7 @@ export const createRendererQueryLease = (
     const state = query.inspect();
     if (
       admitted &&
+      holds === 0 &&
       !admission.held() &&
       state.stale &&
       state.revision !== checkedRevision &&

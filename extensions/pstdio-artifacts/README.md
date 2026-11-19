@@ -43,9 +43,9 @@ The command reads the file from the agent's current workspace. Without one, it r
 
 Open **Artifacts** in the project navigation. The library shows a grid of page previews with their names and edit dates. Select a card to open the artifact. Cards also work with the keyboard.
 
-Artifacts are also searchable resources. Search by their current name to open them from global search or choose them in a resource picker. Each artifact appears once, opens its latest version, and disappears from search when deleted.
+Artifacts are also searchable resources. Search by their current name to open them from global search or choose them in a resource picker. Each artifact appears once and disappears from search when deleted.
 
-When an agent mentions a saved snapshot path, such as `.pstdio/extension-storage/pstdio.artifacts/sites/<revision-id>.html`, in a conversation, the link shows the artifact's current name and opens the artifact at its latest version instead of the raw file.
+When an agent mentions a saved snapshot path, such as `.pstdio/extension-storage/pstdio.artifacts/sites/<revision-id>.html`, in a conversation, the link shows the artifact's current name and opens its dashboard reader instead of the raw file. The reader restores your saved version selection across reloads and project returns; without a saved selection, it opens the latest version. Choose the latest entry in **Versions** to move a retained reader to the newest published version.
 
 The library and each artifact open as pages, like Tickets. Opening another artifact changes the current page without adding tabs. Use the breadcrumb to return to the library, or browser Back and Forward to revisit a page. A published URL opens the matching artifact.
 

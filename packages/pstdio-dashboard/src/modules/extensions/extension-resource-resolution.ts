@@ -29,6 +29,8 @@ export const sameResourceReference = (left: ResourceRef, right: ResourceRef) =>
   left.projectId === right.projectId &&
   left.label === right.label &&
   left.icon === right.icon &&
+  left.iconColor === right.iconColor &&
+  left.iconLabel === right.iconLabel &&
   left.shorthand === right.shorthand &&
   JSON.stringify(left.device ?? null) === JSON.stringify(right.device ?? null) &&
   JSON.stringify(left.metadata ?? {}) === JSON.stringify(right.metadata ?? {});
