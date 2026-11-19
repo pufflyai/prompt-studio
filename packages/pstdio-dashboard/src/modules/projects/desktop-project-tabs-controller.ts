@@ -2,8 +2,9 @@ import { createWorkbenchStore, type WorkbenchCore } from "@pstdio/workbench";
 import { createCollectionSelection } from "@/lib/sync/collection-selection";
 import { getRuntimeCollections, isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
-import { createDashboardProjects, findDashboardProject } from "./data/project-data";
+import { findDashboardProjectRow, listVisibleDashboardProjectIds } from "./data/project-data";
 import { closeProjectTab, openProjectTab, reconcileProjectTabs, reorderProjectTab } from "./desktop-project-tabs";
+import type { DesktopProjectTabs } from "./project-selection-sync";
 
 const persistenceErrorId = "dashboard.project-tabs.persistence-error";
 
@@ -12,7 +13,7 @@ export interface DesktopProjectWorkbench {
   key: number;
   /** The project this workbench shows for its whole life. Without one, it shows project selection. */
   projectId: string | undefined;
-  workbench: WorkbenchCore;
+  workbench: WorkbenchCore | undefined;
 }
 
 interface DesktopProjectTabsState {
@@ -22,9 +23,10 @@ interface DesktopProjectTabsState {
 }
 
 interface StartDesktopProjectTabsInput {
-  createWorkbench: (projectId: string | undefined, active: boolean) => WorkbenchCore;
+  createWorkbench: (projectId: string | undefined, active: boolean, projectTabs: DesktopProjectTabs) => WorkbenchCore;
   persistence: DashboardProjectSelectionPersistence;
   projectId: string | undefined;
+  onWorkbenchError?: (projectId: string | undefined, error: unknown) => void;
 }
 
 /**
@@ -41,7 +43,7 @@ export class DesktopProjectTabsController {
   #nextKey = 0;
   #stopWaiting: (() => void) | undefined;
   // Released workbenches are disposed after React stops rendering them.
-  #released: WorkbenchCore[] = [];
+  #released: DesktopProjectWorkbench[] = [];
 
   constructor(projectIds: string[], persist: (state: { projectIds: string[] }) => Promise<void>) {
     this.#store.setState({ projectIds: [...projectIds] });
@@ -64,7 +66,7 @@ export class DesktopProjectTabsController {
   select(projectId: string) {
     this.#stopWaiting?.();
     this.#stopWaiting = undefined;
-    if (findDashboardProject(projectId)) {
+    if (findDashboardProjectRow(projectId)) {
       this.#updateTabs(openProjectTab(this.getProjectIds(), projectId));
       this.#show(projectId);
       return;
@@ -72,7 +74,7 @@ export class DesktopProjectTabsController {
     // A project created in this window is selected before its row syncs; open its tab once it arrives.
     const selection = createCollectionSelection(getRuntimeCollections(), { tables: ["projects"] });
     const unsubscribe = selection.subscribe(() => {
-      if (findDashboardProject(projectId)) this.select(projectId);
+      if (findDashboardProjectRow(projectId)) this.select(projectId);
     });
     this.#stopWaiting = unsubscribe;
   }
@@ -82,22 +84,6 @@ export class DesktopProjectTabsController {
     this.#stopWaiting?.();
     this.#stopWaiting = undefined;
     this.#show(undefined);
-  }
-
-  /**
-   * The tab actions of one workbench. Only the visible workbench may change the visible tab, so
-   * work that finishes in a background project never switches away from what the person sees.
-   */
-  forWorkbench(projectId: string | undefined) {
-    const visible = () => this.#store.getState().active?.projectId === projectId;
-    return {
-      select: (target: string) => {
-        if (visible()) this.select(target);
-      },
-      clear: () => {
-        if (visible()) this.clear();
-      },
-    };
   }
 
   close(projectId: string) {
@@ -113,19 +99,27 @@ export class DesktopProjectTabsController {
     this.#updateTabs(reorderProjectTab(this.getProjectIds(), projectId, targetId));
   }
 
+  retry(entry: DesktopProjectWorkbench) {
+    if (this.#store.getState().active !== entry) return;
+    const replacement = this.#create(entry.projectId, false);
+    this.#replace(entry, replacement);
+  }
+
+  fail(entry: DesktopProjectWorkbench) {
+    if (!entry.workbench || !this.#store.getState().workbenches.includes(entry)) return;
+    this.#replace(entry, { ...entry, workbench: undefined });
+  }
+
   connect() {
     const syncProjects = () => {
       if (!isInitialCollectionsSyncComplete()) return;
       const previous = this.getProjectIds();
-      const remaining = reconcileProjectTabs(
-        previous,
-        createDashboardProjects().map((project) => project.id),
-      );
+      const remaining = reconcileProjectTabs(previous, listVisibleDashboardProjectIds());
       this.#updateTabs(remaining);
       this.#release((entry) => entry.projectId !== undefined && !remaining.includes(entry.projectId));
       const selected = this.#store.getState().active?.projectId;
       if (!selected) return;
-      if (findDashboardProject(selected)) {
+      if (findDashboardProjectRow(selected)) {
         this.#updateTabs(openProjectTab(this.getProjectIds(), selected));
         return;
       }
@@ -144,20 +138,60 @@ export class DesktopProjectTabsController {
 
   /** Disposes the workbenches that are no longer rendered. */
   disposeReleased() {
-    for (const workbench of this.#released.splice(0)) void workbench.dispose();
+    for (const { workbench, projectId } of this.#released.splice(0)) {
+      void workbench?.dispose().catch((error) => this.#start?.onWorkbenchError?.(projectId, error));
+    }
   }
 
   dispose() {
     this.#stopWaiting?.();
     this.#stopWaiting = undefined;
-    this.#released.push(...this.#store.getState().workbenches.map((entry) => entry.workbench));
+    for (const entry of this.#store.getState().workbenches) this.#queueRelease(entry);
     this.#store.setState({ workbenches: [], active: undefined }, false, "disposeProjectTabs");
     this.disposeReleased();
   }
 
   #create(projectId: string | undefined, active: boolean): DesktopProjectWorkbench {
     if (!this.#start) throw new Error("Desktop project tabs have not started");
-    return { key: this.#nextKey++, projectId, workbench: this.#start.createWorkbench(projectId, active) };
+    const key = this.#nextKey++;
+    // A background or replaced workbench can finish async work after its tab loses ownership.
+    const visible = () => {
+      const { active } = this.#store.getState();
+      return active?.key === key && active.workbench?.activation.isActive();
+    };
+    try {
+      const workbench = this.#start.createWorkbench(projectId, active, {
+        select: (target) => {
+          if (visible()) this.select(target);
+        },
+        clear: () => {
+          if (visible()) this.clear();
+        },
+      });
+      return { key, projectId, workbench };
+    } catch (error) {
+      this.#start.onWorkbenchError?.(projectId, error);
+      return { key, projectId, workbench: undefined };
+    }
+  }
+
+  #queueRelease(entry: DesktopProjectWorkbench) {
+    if (entry.workbench) this.#released.push(entry);
+  }
+
+  #replace(entry: DesktopProjectWorkbench, replacement: DesktopProjectWorkbench) {
+    const { active, workbenches } = this.#store.getState();
+    entry.workbench?.activation.setActive(false);
+    replacement.workbench?.activation.setActive(active === entry);
+    this.#queueRelease(entry);
+    this.#store.setState(
+      {
+        active: active === entry ? replacement : active,
+        workbenches: workbenches.map((candidate) => (candidate === entry ? replacement : candidate)),
+      },
+      false,
+      "replaceProjectWorkbench",
+    );
   }
 
   #isRetained(entry: DesktopProjectWorkbench) {
@@ -171,10 +205,10 @@ export class DesktopProjectTabsController {
     const existing = workbenches.find((entry) => entry.projectId === projectId);
     const next = existing ?? this.#create(projectId, false);
     // Exactly one workbench is active: deactivate the previous one first.
-    active?.workbench.activation.setActive(false);
-    next.workbench.activation.setActive(true);
+    active?.workbench?.activation.setActive(false);
+    next.workbench?.activation.setActive(true);
     const kept = workbenches.filter((entry) => entry === next || entry !== active || this.#isRetained(entry));
-    if (active && !kept.includes(active)) this.#released.push(active.workbench);
+    if (active && !kept.includes(active)) this.#queueRelease(active);
     this.#store.setState(
       { workbenches: existing ? kept : [...kept, next], active: next },
       false,
@@ -187,7 +221,7 @@ export class DesktopProjectTabsController {
     const { active, workbenches } = this.#store.getState();
     const released = workbenches.filter((entry) => matches(entry) && entry !== active);
     if (released.length === 0) return;
-    this.#released.push(...released.map((entry) => entry.workbench));
+    for (const entry of released) this.#queueRelease(entry);
     this.#store.setState(
       { workbenches: workbenches.filter((entry) => !released.includes(entry)) },
       false,
@@ -202,7 +236,7 @@ export class DesktopProjectTabsController {
     void this.#persist({ projectIds: [...projectIds] }).then(
       () => {
         for (const entry of this.#store.getState().workbenches)
-          entry.workbench.notifications.dismiss(persistenceErrorId);
+          entry.workbench?.notifications.dismiss(persistenceErrorId);
       },
       (error: unknown) => {
         console.error("[dashboard.project-tabs] Could not save project tabs.", error);

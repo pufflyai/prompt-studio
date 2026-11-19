@@ -25,6 +25,7 @@ const contributionKeys = new Set(
     placements: true,
     projectSetup: true,
     resourceKinds: true,
+    resourcePresentations: true,
     resourceHierarchyProviders: true,
     schedules: true,
     settings: true,

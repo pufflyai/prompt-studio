@@ -104,9 +104,11 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
     expect(installExtensionSource).toHaveBeenCalledWith({
       force: true,
       expectedIdentity: loaded.metadata.id,
+      installedSourcePath: sourcePath,
       hostReleaseRef: "f".repeat(40),
       installName: "pstdio-planner",
       reuseInstalledDependencies: true,
+      upgradeFromVersion: "1.0.0",
       retainBackup: true,
       source: "pstdio-planner",
     });

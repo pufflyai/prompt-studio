@@ -2,6 +2,7 @@ import { installWebviewKeyboardRelay } from "@pstdio/sdk/extensions/keyboard";
 import type { WebviewHostProps, WebviewKeyboardShortcut } from "pstdio-api-contracts/extension-kernel";
 import { guest } from "rimless";
 import type { HostApi, HostEventMessage, InitMessage, PropsUpdateMessage, ThemeUpdateMessage } from "../contract";
+import { sizesToContentHeight } from "../contract";
 import { createWebviewHostProps } from "../contract/host-props";
 import { normalizeRuntimeError } from "../normalize-error";
 import { createGuestHost, createPropsStore, type ExtensionViewModule } from "./define-extension-view";
@@ -127,8 +128,12 @@ const start = async () => {
     let stopSizing: (() => void) | undefined;
     if (message.sizing === "content-width")
       stopSizing = observeContentWidth(mount, (width) => connection.remote.contentWidthChanged(width));
-    if (message.sizing === "content-height")
-      stopSizing = observeContentHeight(mount, (height) => connection.remote.contentHeightChanged?.(height));
+    if (sizesToContentHeight(message.sizing))
+      stopSizing = observeContentHeight(
+        mount,
+        (height) => connection.remote.contentHeightChanged?.(height),
+        message.sizing,
+      );
     const dispose = await view.mount(mount, host, propsStore);
     return () => {
       stopSizing?.();

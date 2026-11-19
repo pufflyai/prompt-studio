@@ -148,6 +148,7 @@ export const initializeDocumentPass = async (
   return {
     signal,
     generation: space.generation,
+    spaceOwner: space.spaceOwner,
     jobs,
     logs,
     ownerId,

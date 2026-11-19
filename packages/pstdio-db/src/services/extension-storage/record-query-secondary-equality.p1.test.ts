@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
 import type { StorageRecordIndex } from "pstdio-sync-contracts";
+import { analyzeRecordProjection } from "../../db/record-projection-statistics";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 import { predicateSql, recordPageSql, recordScopeSql } from "./record-query-sql";
@@ -28,7 +29,10 @@ test("an empty page seeks a nonleading equality field instead of walking every o
         replace: { id: `item-${rank}`, status: "ready", rank },
       })),
     });
-    await f.db.execute(sql`ANALYZE storage_current_records`);
+    const target = () => f.db.execute(sql`SHOW default_statistics_target`);
+    const before = (await target()).rows;
+    await f.db.transaction((tx) => analyzeRecordProjection((statement) => tx.execute(sql.raw(statement))));
+    expect((await target()).rows).toEqual(before);
     const where = { field: "status", op: "eq" as const, value: "done" };
     expect((await records.query({ index: index.name, where, fields: ["id"], limit: 100 })).records).toEqual([]);
     const statement = recordPageSql(

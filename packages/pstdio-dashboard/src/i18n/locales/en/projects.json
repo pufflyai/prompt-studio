@@ -135,7 +135,8 @@
           "templates": "Templates",
           "themes": "Themes",
           "navigationItems": "Navigation items",
-          "commandPaletteResources": "Command palette resources"
+          "commandPaletteResources": "Command palette resources",
+          "workspaceTypes": "Workspace types"
         },
         "deleteHintShared": "Delete this extension's files. This removes it from every project that uses it."
       },
@@ -169,6 +170,17 @@
         "upgradingButton": "Upgrading",
         "batchFailed": "{{count}} of {{total}} upgrades failed",
         "installingButton": "Installing"
+      },
+      "provenance": {
+        "filter": "Extension source",
+        "all": "All",
+        "public": "Public",
+        "mine": "Mine",
+        "unknown": "Visibility unknown",
+        "publicHelp": "A public package is available. Local changes may not be published.",
+        "mineHelp": "Editable local source maintained in this project or on this device.",
+        "unknownHelp": "Public availability has not been verified.",
+        "noMatches": "No matching extensions"
       }
     },
     "machineTokens": {

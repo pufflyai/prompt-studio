@@ -1,7 +1,7 @@
 import type { StorageOwner } from "pstdio-sync";
 import type { StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { createRecordQueries } from "./record-queries";
+import { defineRecordIndexes } from "./record-index-definition";
 
 /** A runtime's owner indexes are accepted together; failed refreshes retain the previous definitions. */
 export const installRecordIndexes = (
@@ -12,6 +12,6 @@ export const installRecordIndexes = (
   db.transaction(async (tx) => {
     // Indexes describe the existing query projection. Importing an owner's history here
     // nests conversion in the catalog transaction and rolls every owner back on failure.
-    for (const { owner, definitions } of owners) await createRecordQueries(tx, owner).defineIndexes(definitions);
+    for (const { owner, definitions } of owners) await defineRecordIndexes(tx, owner, definitions, "maintenance");
     validate();
   });

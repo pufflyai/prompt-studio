@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, mock, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -59,7 +59,13 @@ test("resource batches use enabled owners, preserve identity, and resolve host w
       name: "Current workspace",
     });
     await api.addAnchors(ref("one"), [ref("two", "draft")]);
-    const linked = await api.queryAnchorsMany({ resources: [ref("one"), ref("two", "draft")], direction: "both" });
+    const catalogReads = mock(app.deps.extensionRuntimeCatalog.get);
+    const reader = createResourcesApi(
+      { ...app.deps, extensionRuntimeCatalog: { ...app.deps.extensionRuntimeCatalog, get: catalogReads } },
+      { projectId: project.id, extensionId: "example.caller" },
+    );
+    const linked = await reader.queryAnchorsMany({ resources: [ref("one"), ref("two", "draft")], direction: "both" });
+    expect(catalogReads).not.toHaveBeenCalled();
     expect(linked.items).toHaveLength(1);
     expect(linked.nextCursor).toBeNull();
     const debug = await app.deps.extensionRuntimeCatalog.get(project.id);

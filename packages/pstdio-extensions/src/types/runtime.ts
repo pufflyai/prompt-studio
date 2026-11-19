@@ -245,6 +245,12 @@ export interface ExtensionRuntime {
   pages: RuntimePageRecord[];
   statusBarItems: RuntimeStatusBarItemRecord[];
   resourceKinds: RuntimeResourceKindRecord[];
+  resourcePresentations?: Array<{
+    extensionId: string;
+    resourceKind: { extensionId: string; kind: "resource-kind"; id: string };
+    resolveCommand: string;
+    refreshEvents: string[];
+  }>;
   resourceHierarchyProviders: RuntimeResourceHierarchyProviderRecord[];
   activityItems: RuntimeActivityItemRecord[];
   settingsSections: RuntimeSettingsSectionRecord[];

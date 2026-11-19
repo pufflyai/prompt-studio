@@ -429,3 +429,36 @@ describe("toTreeListSection end content", () => {
     expect(section.nodes[0]?.endContent).toMatchObject({ props: { children: explicitEndContent } });
   });
 });
+
+test("resource rows display the owner's state icon and accessible label", () => {
+  const workbench = createWorkbench();
+  const section = toTreeListSection(
+    {
+      id: "publications",
+      nodes: [
+        {
+          id: "one",
+          label: "Release notes",
+          icon: "file-text",
+          resource: {
+            type: "publication",
+            id: "one",
+            icon: "book-open",
+            iconColor: "fg.success",
+            iconLabel: "Published",
+          },
+        },
+      ],
+    },
+    {},
+    { workbench },
+  );
+  const row = section.nodes[0]!;
+  expect(row.iconColor).toBe("fg.success");
+  expect((row.icon as import("react").ReactElement).props).toMatchObject({
+    name: "book-open",
+    "aria-label": "Published",
+    role: "img",
+  });
+  workbench.dispose();
+});

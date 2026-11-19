@@ -155,13 +155,19 @@ const pageError = (error: unknown) => (error instanceof Error ? error.message : 
 
 const appendNodes = (existing: TreeNode[], incoming: TreeNode[]) => {
   if (!incoming.length) return existing;
+  const byId = new Map(incoming.map((node) => [node.id, node]));
   const ids = new Set(existing.map((node) => node.id));
-  return [
-    ...existing,
+  const nodes: TreeNode[] = [
+    ...existing.map((node) => {
+      const next = byId.get(node.id);
+      if (!node.children || !next?.children?.length) return node;
+      return { ...node, children: appendNodes(node.children, next.children) };
+    }),
     ...incoming.filter((node) => {
       if (ids.has(node.id)) return false;
       ids.add(node.id);
       return true;
     }),
   ];
+  return nodes;
 };

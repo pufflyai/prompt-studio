@@ -70,6 +70,7 @@ export const createRemoteSession = async (
       ...toExtensionSession(
         {
           ...session,
+          change_positions: session.change_positions ?? null,
           usage_json: session.usage_json ?? null,
           ...(device.identity ? { device: device.identity } : {}),
         },

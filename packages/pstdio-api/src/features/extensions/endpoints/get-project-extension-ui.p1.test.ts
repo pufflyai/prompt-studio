@@ -154,65 +154,40 @@ export default {
   });
 });
 
-test("describes webviews only after the checks of enabled sources finish", async () => {
-  const project = await createProject("Webview first use");
-  const sourcePath = createTestExtensionSource({
-    root: pstdioHome,
-    name: "first-use",
-    displayName: "First use",
-    installName: "first-use-source",
-  });
-  await handle.deps.extensionService.enableInstalledSourceForProject({
-    displayName: "First use",
-    extensionId: "test.first-use",
-    installName: "first-use-source",
-    manifest: { displayName: "First use", id: "test.first-use", name: "first-use" },
-    name: "first-use",
-    projectId: project.id,
-    sourcePath,
-  });
-  const sources = await handle.deps.extensionService.listEnabledSourcesForProject(project.id);
-  const release = Promise.withResolvers<void>();
-  const ensure = spyOn(handle.deps, "ensureExtensionWebviews").mockImplementation(() => release.promise);
-  try {
-    let answered = false;
-    const response = Promise.resolve(app.request(`/v1/projects/${project.id}/extensions/ui`)).then((value) => {
-      answered = true;
-      return value;
-    });
-    await Bun.sleep(50);
-    expect(ensure.mock.calls).toEqual(sources.map(({ installedSource }) => [installedSource.id]));
-    expect(answered).toBe(false);
-    release.resolve();
-    expect((await response).status).toBe(200);
-  } finally {
-    release.resolve();
-    ensure.mockRestore();
+const enableMetadataSource = async (projectId: string, name: string, webview = false) => {
+  const sourcePath = createTestExtensionSource({ root: pstdioHome, name, displayName: name, installName: name });
+  if (webview) {
+    writeFileSync(join(sourcePath, "module.ts"), "export default {};");
+    writeFileSync(
+      join(sourcePath, "extension.ts"),
+      `export default {
+      views: [{ id: "tool", title: "Tool", ref: { kind: "view", id: "tool" },
+        body: { kind: "webview", entry: {kind: "package-asset", path: "./module.ts", baseUrl: import.meta.url} } }]
+    };`,
+    );
   }
-});
-
-test("describes the project's tools when one source's webview check fails", async () => {
-  const project = await createProject("Webview check failure");
-  const sourcePath = createTestExtensionSource({
-    root: pstdioHome,
-    name: "broken-check",
-    displayName: "Broken check",
-    installName: "broken-check-source",
-  });
-  await handle.deps.extensionService.enableInstalledSourceForProject({
-    displayName: "Broken check",
-    extensionId: "test.broken-check",
-    installName: "broken-check-source",
-    manifest: { displayName: "Broken check", id: "test.broken-check", name: "broken-check" },
-    name: "broken-check",
-    projectId: project.id,
+  return handle.deps.extensionService.enableInstalledSourceForProject({
+    displayName: name,
+    extensionId: `test.${name}`,
+    installName: name,
+    manifest: { displayName: name, id: `test.${name}`, name },
+    name,
+    projectId,
     sourcePath,
   });
-  const ensure = spyOn(handle.deps, "ensureExtensionWebviews").mockRejectedValue(new Error("check failed"));
+};
+
+test("opens the project UI without starting builds for unrelated views", async () => {
+  const project = await createProject("Native page with a managed sibling");
+  await enableMetadataSource(project.id, "first-use", true);
+  await enableMetadataSource(project.id, "native-only");
+  const ensure = spyOn(handle.deps, "ensureExtensionWebviews").mockRejectedValue(new Error("unopened view"));
   try {
     const response = await app.request(`/v1/projects/${project.id}/extensions/ui`);
     expect(response.status).toBe(200);
-    expect(ensure).toHaveBeenCalled();
+    const metadata = await response.json();
+    expect(metadata.extensions.some((extension: { id: string }) => extension.id === "test.native-only")).toBe(true);
+    expect(ensure).not.toHaveBeenCalled();
   } finally {
     ensure.mockRestore();
   }

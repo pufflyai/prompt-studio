@@ -61,6 +61,7 @@ export const ActiveWorkInWorkbench: Story = {
 };
 export const Recovery: Story = {
   id: "patterns-desktop-lifecycle--recovery",
+  description: "An error icon and message stay visible with the recovery actions supplied by the runtime.",
   args: {
     state: {
       kind: "recovery",

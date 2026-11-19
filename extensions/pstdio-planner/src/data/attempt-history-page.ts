@@ -4,7 +4,7 @@ import { preparePlannerIndexes } from "./storage-indexes";
 
 export const readAttemptHistoryPage = async <T extends { id: string; createdAt: string }>(
   storage: ExtensionStorageApi,
-  input: { scope: "workspaceId" | "threadId"; id: string; cursor?: string; limit?: number },
+  input: { scope: "workspaceId" | "attemptId" | "threadId"; id: string; cursor?: string; limit?: number },
 ) => {
   await preparePlannerIndexes(storage);
   const limit = Math.min(100, Math.max(1, Math.trunc(input.limit ?? 50)));
@@ -28,7 +28,11 @@ export const readAttemptHistoryPage = async <T extends { id: string; createdAt: 
         ]
       : [];
   const page = await storage.records.query({
-    index: input.scope === "workspaceId" ? "attempt-events-history" : "attempt-comments-history",
+    index: {
+      workspaceId: "attempt-events-history",
+      attemptId: "attempt-events-by-attempt",
+      threadId: "attempt-comments-history",
+    }[input.scope],
     where: { all: [{ field: input.scope, op: "eq", value: input.id }, ...after] },
     fields: ["createdAt", "id"],
     limit: limit + 1,

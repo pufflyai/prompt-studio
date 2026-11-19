@@ -49,7 +49,6 @@ export type ExtensionsRouteDeps = Pick<
 export type ExtensionWebviewRouteDeps = Pick<RouteDeps, "extensionWebviewAccess" | "ensureExtensionWebviews">;
 
 export interface ExtensionWebviewMetadataDeps {
-  ensureExtensionWebviews: RouteDeps["ensureExtensionWebviews"];
   extensionWebviewAccess: ExtensionWebviewUrlIssuer;
 }
 
