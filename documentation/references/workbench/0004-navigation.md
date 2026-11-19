@@ -8,13 +8,15 @@ The workbench navigates only to explicit targets. This page lists the target kin
 
 | Target | Effect |
 | --- | --- |
-| `page` | Activates the page and its declared mode, then updates `PageLocation`, URL, history, breadcrumbs, and restore state. |
+| `page` | Opens Main. A resource with one representable Main renderer becomes a tab in the current tabbed container; otherwise activates its page and mode and updates location, URL, history, breadcrumbs and restore state. |
 | `panel` | Opens one active page slot or mode placement without changing the location. |
 | `command` | Executes one command target. |
 | `href` | Opens an external URL. |
 | `compound` | Prepares page and panel steps against proposed state, then publishes the final state with at most one history entry. |
 
 A page target may carry `resource`, `section` or `position`, `open`, and contextual `parent`. A panel target may carry `resource` and `open`. A target never carries a region or activation callback.
+
+Resource tabs keep their semantic page context without changing the receiving container's route. Pages with multiple Main views or static landings open their complete page. Explicit page-location navigation, URL loads, Back/Forward and Main-body drops keep their full-page meaning; tab-strip drops follow the receiving container.
 
 [Native chat views](../extensions/0028-native-chat.md) use those same page and panel
 targets. Their action bindings capture the current placement, so conversion does
@@ -123,7 +125,7 @@ Global panel controls render in the web navigation header: closed Sidenav recove
 | `workbench.resizePanel` | `region: sidenav, secondary, side`, `size: number` in pixels |
 | `workbench.setSidePanelPresentation` | `presentation: attached, floating, closed` |
 
-The matching shell methods enforce the same permissions. Main has a single header with history and either a tab strip or breadcrumbs/resource actions, followed by its view-menu controls. Dedicated pages have no tab or close action. Their empty header space moves the individual live page; their menu offers the same operation. Whole tabbed containers cannot drop onto tab strips. Legacy header setters cannot override the page's presentation. Optional panels collapse when their last tab leaves or closes.
+The matching shell methods enforce the same permissions. Main has a single header with history and either a tab strip or breadcrumbs/resource actions, followed by its view-menu controls. Dedicated pages have no tab or close action. Their current breadcrumb and empty header space move the individual live page; their menu offers the same operation. The current breadcrumb uses grab/grabbing cursors, while ancestor links and controls keep their own gestures. Whole tabbed containers cannot drop onto tab strips. Legacy header setters cannot override the page's presentation. Optional panels collapse when their last tab leaves or closes.
 
 Normal page opening targets Main, so a resource already in Side moves into Main. Explicit host panel-region targets behave the same way for that destination; public SDK panel targets retain their existing declaration/default semantics without a new `region` field. Canonical resource identity prevents duplicates, while the requested page/view determines the renderer. Source-following Properties views do not reserve a resource. Dedicated pages without a compatible `panelView` receive a private portable placement; extensions do not need an additional declaration to support movement.
 

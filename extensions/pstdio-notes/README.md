@@ -23,14 +23,15 @@ The sidebar keeps your notes within reach while Main shows the note's body. This
 - Choose **New note** next to **Notes**, or next to a folder, to start writing immediately. The note starts empty and is called **New note**.
 - **New note** in the command palette also creates and opens an empty note immediately.
 - On the Notes page, open **Page actions → New note** to create a note with an optional title and folder ID.
-- Selecting a note opens its dedicated page with breadcrumbs and a resource actions menu. Drag the page into Side, Bottom, or an existing tab strip to keep it beside another page. Opening the same note again moves its existing view into Main.
+- Selecting a note opens it in Main. In a tabbed page such as Artifacts, it opens as a tab there. Otherwise, it opens as a dedicated page with breadcrumbs and a resource actions menu.
+- Drag the current breadcrumb or page header into Side, Bottom, or an existing tab strip to keep the note beside another page. Opening the same note again moves its existing view into Main using that destination's presentation.
 - The first nonempty save gives an untitled note a title from the beginning of its content, up to 80 characters. That title is saved in Markdown front matter and stays unchanged through later edits or clearing the body. A title you choose prevents the automatic rename.
 - Right-click a note and choose **Rename note** to change its title. The sidebar, breadcrumbs, and any open tab update. The body stays the same.
 - Choose **New folder** next to **Notes** to group notes. Folder names must be unique within the project, ignoring capitalization and surrounding spaces. Drag notes into folders or back onto **Notes** to return them to the root.
 - Right-click a folder to rename it or remove it. Removing a folder keeps its notes at the root.
 - Use a note's resource actions menu or right-click its sidebar row to rename or delete it. A note moved into a tab offers the same actions in its tab menu.
 - Drag a note to the upper or lower half of another note to place it before or after that note. The placement line shows the destination. Notes can move only within the Notes subtree, and the order is saved.
-- Find notes by title or content from Search. Selecting a result opens its note page.
+- Find notes by title or content from Search. Selecting a result opens the note using Main's current presentation.
 - When an agent mentions a note's `content.md` path in a conversation, the link shows the note's title and opens the note in Notes instead of the raw file.
 - Every note has its own ID, so two people can create notes with the same title at the same time.
 
