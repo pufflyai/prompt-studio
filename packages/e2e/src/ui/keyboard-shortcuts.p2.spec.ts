@@ -90,6 +90,9 @@ test("direct panel shortcuts open, focus, move and close tabs without entering s
   await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
   await page.goto(`/projects/${project.id}/extensions/pstdio.session-browser/conversations`);
   await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
+  await expect(
+    page.locator('[data-workbench-region="main"] [data-testid="content-editable"]').filter({ visible: true }),
+  ).toBeVisible();
   const secondary = page.locator('[data-workbench-region="secondary"]');
   const before = await secondary.getByRole("tab").count();
   await page.keyboard.press("Alt+Shift+Enter");

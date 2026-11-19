@@ -70,7 +70,7 @@ test("starts the requested editor download while its document opens", async ({ p
   expect(editorRequested).toBe(false);
   const opening = Promise.withResolvers<void>();
   let documentRequested = false;
-  await page.route(/\/v1\/projects\/[^/]+\/text-editing$/, async (route) => {
+  await page.route(/\/v1\/projects\/[^/]+\/text-editing\/open$/, async (route) => {
     if (route.request().method() === "POST") {
       documentRequested = true;
       await opening.promise;

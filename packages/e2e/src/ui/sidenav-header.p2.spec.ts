@@ -9,7 +9,7 @@ import { showSidenavEntry } from "./helpers/sidenav-navigation";
 const test = mergeTests(notificationTest, sessionTest);
 test.use({ notificationsEnabled: true });
 
-const allSectionRowNames = ["Home", "Search", "Notifications", "Sessions", "Tickets", "Files", "Workspaces"] as const;
+const allSectionRowNames = ["Search", "Home", "Notifications", "Sessions", "Tickets", "Files", "Workspaces"] as const;
 const withoutWorkspaces = allSectionRowNames.filter((name) => name !== "Workspaces");
 
 const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
@@ -132,7 +132,7 @@ test("removes and restores owner-scoped collections across project and session p
     page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
   ).toBeVisible();
   await expect(sidenav.locator('[data-tree-list-node-id="sessions"]')).toHaveCount(0);
-  await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAccessibleName("Home");
+  await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAccessibleName("Search");
   await expect(row(sidenav, "Search")).toBeVisible();
   await expect(sidenav.getByText("Today", { exact: true })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: "Existing sidenav session", exact: true })).toBeVisible();
