@@ -225,3 +225,40 @@ test("an unchanged older Workspaces installation upgrades before the shared Git 
   expect((await catalog.read("pstdio.workspaces")).value).toMatchObject({ enabled: true });
   expect(await handle.deps.extensionService.getProjectExtensionInstance(project.id, old.instance.id)).toBeNull();
 });
+
+test("an unavailable shared successor keeps the legacy fallback and private files until its package can be verified", async () => {
+  const project = await handle.deps.projectService.create({ name: "Unavailable shared tool" });
+  const legacy = await source("git-workspaces");
+  const combined = await source("workspaces");
+  const old = await enableSource(project.id, "git-workspaces", legacy);
+  const next = await enableSource(project.id, "workspaces", combined);
+  const catalog = await openPublishedCatalog(handle.deps, project.id);
+  for (const [id, instanceId] of [
+    ["pstdio.git-workspaces", old.instance.id],
+    ["pstdio.workspaces", next.instance.id],
+  ])
+    await publishExtension(handle.deps, {
+      projectId: project.id,
+      instanceId: instanceId!,
+      expectedRevision: (await catalog.read(id!)).revision,
+    });
+  const shared = await catalog.read("pstdio.workspaces");
+  await writeFile(join(combined.path, "private-marker.txt"), "Keep private");
+  const read = handle.deps.assetTransferService.read;
+  const unavailable = {
+    ...handle.deps,
+    assetTransferService: {
+      ...handle.deps.assetTransferService,
+      read: async (...args: Parameters<typeof read>) => {
+        if (args[1].sha256 === shared.asset!.sha256) throw new Error("package not downloaded");
+        return read(...args);
+      },
+    },
+  };
+  await expect(adoptWorkspacesTool(unavailable, project.id)).resolves.toBeUndefined();
+  expect((await catalog.read("pstdio.git-workspaces")).value).not.toBeNull();
+  await adoptWorkspacesTool(handle.deps, project.id);
+  expect((await catalog.read("pstdio.git-workspaces")).value).toBeNull();
+  expect((await catalog.read("pstdio.workspaces")).asset).toEqual(shared.asset);
+  expect(await readFile(join(combined.path, "private-marker.txt"), "utf8")).toBe("Keep private");
+});

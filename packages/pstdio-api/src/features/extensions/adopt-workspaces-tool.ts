@@ -67,18 +67,23 @@ const sharedProviderReady = async (
   previous: Awaited<ReturnType<Awaited<ReturnType<typeof openPublishedCatalog>>["read"]>>,
 ) => {
   if (!previous.value || !previous.asset) return false;
-  const bytes = await new Response(
-    await deps.assetTransferService.read(publishedOwner(projectId), previous.asset),
-  ).blob();
-  const prepared = await preparePublishedExtension({
-    bytes,
-    root: join(tmpdir(), "pstdio-workspaces-upgrade"),
-    extensionId: "pstdio.workspaces",
-  });
   try {
-    return await combinedWorkspacesSource(prepared.path);
-  } finally {
-    await rm(prepared.path, { recursive: true, force: true });
+    const bytes = await new Response(
+      await deps.assetTransferService.read(publishedOwner(projectId), previous.asset),
+    ).blob();
+    const prepared = await preparePublishedExtension({
+      bytes,
+      root: join(tmpdir(), "pstdio-workspaces-upgrade"),
+      extensionId: "pstdio.workspaces",
+    });
+    try {
+      return await combinedWorkspacesSource(prepared.path);
+    } finally {
+      await rm(prepared.path, { recursive: true, force: true });
+    }
+  } catch {
+    // A missing or invalid package is no proof that the shared provider can be retired.
+    return false;
   }
 };
 
