@@ -37,7 +37,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const agents = projectId && agentsQuery.isSuccess ? agentsQuery.data : undefined;
   const setAutomationEnabled = useSetExtensionAutomationEnabled(projectId);
   const [filters, setFilters] = useState(defaultExtensionFilters);
-  const returnFocusId = useRef<string | undefined>(undefined);
+  const returnFocus = useRef<{ id: string; left: boolean } | undefined>(undefined);
   const focusTargets = useRef(new Map<string, HTMLElement>());
   const selection = settingsInput.instance.resource?.id;
   const selectedInstanceId = selectedExtension(selection, "installed");
@@ -46,6 +46,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
     settingsInput.workbench.pageLocations.navigate({ kind: "page", page: dashboardExtensionsPage });
   };
   const openDetail = (id: string, displayName: string) => {
+    returnFocus.current = { id, left: false };
     settingsInput.workbench.pageLocations.navigate({
       kind: "page",
       page: dashboardExtensionDetailPage,
@@ -54,21 +55,30 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   };
   const actions = useExtensionPanelActions(projectId, extensionsQuery.data?.upgradeConcurrency);
   useEffect(() => {
-    if (settingsInput.visible === false) return;
+    // Workbench can retain separate list/detail panels. The list owns its return target
+    // until it has actually left the screen; a render on the way out must not consume it.
     if (selection) {
-      returnFocusId.current = selection;
+      returnFocus.current ??= { id: selection, left: true };
+      returnFocus.current.left = true;
       return;
     }
-    const requested = returnFocusId.current;
-    if (!requested || !extensionsQuery.data) return;
-    const catalogName = selectedExtension(requested, "marketplace");
-    const installedId = catalogName && actions.installedIds[marketplaceActionKey(catalogName)];
+    const requested = returnFocus.current;
+    if (settingsInput.visible === false) {
+      if (requested) requested.left = true;
+      return;
+    }
+    if (!requested?.left || !extensionsQuery.data) return;
+    const catalogName = selectedExtension(requested.id, "marketplace");
+    const installedId =
+      catalogName &&
+      (actions.installedIds[marketplaceActionKey(catalogName)] ??
+        extensionsQuery.data.extensions.find((extension) => extension.installName === catalogName)?.id);
     const target =
-      focusTargets.current.get(installedId ? `installed:${installedId}` : requested) ??
+      focusTargets.current.get(installedId ? `installed:${installedId}` : requested.id) ??
       focusTargets.current.get("search");
     if (!target?.getClientRects().length) return;
     target.focus();
-    returnFocusId.current = undefined;
+    if (target.ownerDocument.activeElement === target) returnFocus.current = undefined;
   }, [selection, settingsInput.visible, actions.installedIds, extensionsQuery.data]);
   const registerFocusTarget = (id: string, node: HTMLElement | null) => {
     if (node) focusTargets.current.set(id, node);
