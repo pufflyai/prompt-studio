@@ -41,8 +41,9 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
       path: input.input.path,
       ...result,
     };
+    const contribution = await deps.getContribution(input);
     await Promise.allSettled([
-      deps.connectionsDBService.recordCheck(connectionKey(input), {
+      deps.connectionsDBService.recordCheck(connectionKey(input, contribution?.scope), {
         ok: result.ok,
         status: result.status,
         error: result.error,
@@ -53,11 +54,9 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
   };
 
   const prepare = async (input: RequestInput) => {
-    const [configured, contribution] = await Promise.all([
-      deps.connectionsDBService.get(connectionKey(input)),
-      deps.getContribution(input),
-    ]);
+    const contribution = await deps.getContribution(input);
     if (!contribution) throw new Error(`Connection is not declared: ${input.connectionId}`);
+    const configured = await deps.connectionsDBService.get(connectionKey(input, contribution.scope));
     if (!configured) throw new Error(`Connection is not configured: ${input.connectionId}`);
     const url = resolveRequestUrl(contribution, configured.base_url, input.input);
     const secret = configured.secret_ref ? await deps.secretStore.get(configured.secret_ref) : null;
@@ -185,7 +184,7 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
       ...input,
       input: { method: contribution.check.method, path: contribution.check.path },
     }).catch(() => undefined);
-    const stored = await deps.connectionsDBService.get(connectionKey(input));
+    const stored = await deps.connectionsDBService.get(connectionKey(input, contribution.scope));
     if (!stored) throw new Error(`Connection is not configured: ${input.connectionId}`);
     return toConnectionRecord(stored);
   };

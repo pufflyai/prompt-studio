@@ -96,6 +96,7 @@
       "connections": {
         "title": "Conexiones",
         "description": "Conecta esta extensión con sus servicios remotos. Las credenciales permanecen en el host de Prompt Studio.",
+        "globalScope": "Se comparte entre todos los proyectos locales de este dispositivo.",
         "endpoint": "Endpoint",
         "credential": "Credencial",
         "credentialUnchanged": "Déjalo vacío para conservar la credencial actual",

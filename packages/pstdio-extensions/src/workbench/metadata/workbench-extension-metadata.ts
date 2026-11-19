@@ -303,6 +303,7 @@ export const createWorkbenchExtensionMetadata = (
     label: record.contribution.label,
     authType: record.contribution.auth.type,
     supportsCheck: Boolean(record.contribution.check),
+    ...(record.contribution.scope ? { scope: record.contribution.scope } : {}),
   })),
   diagnostics: [...input.runtime.diagnostics],
 });
