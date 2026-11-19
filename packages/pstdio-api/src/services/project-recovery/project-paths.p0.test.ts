@@ -3,7 +3,7 @@ import * as fs from "node:fs/promises";
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { openRecoveryJournal, recoveryJournalKey } from "./journal";
+import { acquireRecoveryJournalLease, openRecoveryJournal, recoveryJournalKey } from "./journal";
 import { projectRecoveryRoot, removeProjectFolderRecovery } from "./project-paths";
 
 test("removing project recovery retains a foreign process's journal and lease until it exits", async () => {
@@ -101,6 +101,35 @@ test("independent source owners can share a project while removal waits for both
   } finally {
     await first?.();
     await second?.();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("recovery removal closes its own source leases before deleting their folder", async () => {
+  const root = await mkdtemp(join(tmpdir(), "project-recovery-own-leases-"));
+  const owned = projectRecoveryRoot(root, "project");
+  const source = ["project", "account", "workspace"];
+  const release = await openRecoveryJournal({ root: owned, source }).acquire();
+  await release!();
+  const leasePath = join(owned, "sources", `${recoveryJournalKey(source)}.lock.sqlite`);
+  expect((await stat(leasePath)).isFile()).toBe(true);
+  const remove = fs.rm;
+  let reacquired: boolean | undefined;
+  // Windows cannot delete a file this process still holds open, so the scan's leases must be closed first.
+  const deleting = spyOn(fs, "rm").mockImplementation(async (path, options) => {
+    if (path === owned && options?.recursive) {
+      const release = acquireRecoveryJournalLease(leasePath, false);
+      reacquired = release !== null;
+      release?.();
+    }
+    await remove(path, options);
+  });
+  try {
+    await removeProjectFolderRecovery(root, "project");
+    expect(reacquired).toBe(true);
+    expect(await stat(owned).catch((error) => error.code)).toBe("ENOENT");
+  } finally {
+    deleting.mockRestore();
     await rm(root, { recursive: true, force: true });
   }
 });

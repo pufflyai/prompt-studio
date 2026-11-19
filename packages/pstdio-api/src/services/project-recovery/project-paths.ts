@@ -25,6 +25,9 @@ export const removeProjectFolderRecovery = async (root: string, projectId: strin
     }
     if (await createRecoveryStagingJournal(owned).clean())
       throw new Error("A folder restore is still being cleaned up");
+    // The scan only proves no source is owned. Windows cannot delete files this process still
+    // holds open, and the exclusive project lease keeps new owners out until removal finishes.
+    for (const release of leases) release();
     await rm(owned, { recursive: true, force: true });
   } finally {
     for (const release of leases) release();
