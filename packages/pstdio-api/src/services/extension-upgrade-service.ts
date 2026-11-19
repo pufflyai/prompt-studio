@@ -1,10 +1,7 @@
 import { join, resolve } from "node:path";
 import { GitUnavailableError, isGitAvailable } from "pstdio-wt";
 import type { ExtensionRelease } from "../app-config";
-import {
-  hasBundledExtensionSource,
-  resolveBundledExtensionCommit,
-} from "../features/extensions/bundled-extension-source";
+import { findBundledExtensionSource } from "../features/extensions/bundled-extension-source";
 import {
   type ExtensionCatalog,
   type ExtensionCatalogEntry,
@@ -61,6 +58,7 @@ const installFromRecordedOrigin = (input: {
   installName: string;
   origin: { kind: "git"; url: string; path: string; ref: string };
   identity: string;
+  upgradeFromVersion: string | null;
   installedSourcePath: string;
   repoPath?: string;
 }) =>
@@ -68,6 +66,7 @@ const installFromRecordedOrigin = (input: {
     source: input.installName,
     installName: input.installName,
     installedSourcePath: input.installedSourcePath,
+    upgradeFromVersion: input.upgradeFromVersion,
     force: true,
     retainBackup: true,
     ref: input.origin.ref,
@@ -86,13 +85,6 @@ const matchesCatalogOrigin = (
   entry: ExtensionCatalogEntry | undefined,
   source: ReturnType<typeof parseExtensionSourceRef>,
 ) => !entry || !source || (entry.origin.url === source.url && entry.origin.path === source.path);
-
-const matchesPinnedRelease = async (source: ReturnType<typeof parseExtensionSourceRef>, ref: string) => {
-  if (source?.commit !== ref.toLowerCase()) return false;
-  // Nightly refs can map to another bundled source commit. Only that local alias can change a pinned target.
-  const bundled = await resolveBundledExtensionCommit(source, ref);
-  return !bundled || bundled === source.commit;
-};
 
 const releaseCommitKey = (origin: { url: string; path: string }, ref: string) =>
   `${origin.url}\0${origin.path}\0${ref}`;
@@ -140,16 +132,6 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
       return undefined;
     }
   };
-  const canReadSource = async (
-    entry: ExtensionCatalogEntry | undefined,
-    parsed: ReturnType<typeof parseExtensionSourceRef>,
-    ref: string,
-  ) => {
-    if (deps.release?.source === "workspace") return true;
-    const origin = parsed ?? entry?.origin;
-    if (origin && (await hasBundledExtensionSource(origin, ref))) return true;
-    return isGitAvailable();
-  };
   const canUpgrade = async (source: UpgradeSource) => {
     if (registry.matches(source)) return registry.canUpgrade(source);
     const entry = await catalogEntry(source.install_name);
@@ -159,8 +141,11 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     if (!matchesCatalogOrigin(entry, parsed)) return false;
     const releaseRef = upgradeRef(entry);
     if (!releaseRef) return false;
-    if (await matchesPinnedRelease(parsed, releaseRef)) return false;
-    if (!(await canReadSource(entry, parsed, releaseRef))) return false;
+    const origin = parsed ?? entry?.origin;
+    const bundled = origin && (await findBundledExtensionSource(origin, releaseRef));
+    if (bundled && source.version && Bun.semver.order(bundled.version, source.version) < 0) return false;
+    if (parsed?.commit === (bundled?.commit ?? releaseRef.toLowerCase())) return false;
+    if (!bundled && deps.release?.source !== "workspace" && !(await isGitAvailable())) return false;
     if (!parsed) return compatibilityError(source) !== null;
     try {
       return parsed.commit !== (await currentReleaseCommit(parsed, releaseRef));
@@ -181,12 +166,14 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     installName: string,
     identity: string,
     installedSourcePath: string,
+    upgradeFromVersion: string | null,
     repoPath?: string,
   ) => {
     const entry = await requireCatalogEntry(installName);
     const options = {
       installName,
       installedSourcePath,
+      upgradeFromVersion,
       force: true,
       retainBackup: true,
       ...(repoPath ? { repoPath } : {}),
@@ -270,6 +257,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
         source: registrySource.id,
         registrySource,
         installedSourcePath: existing.installedSource.source_path,
+        upgradeFromVersion: existing.installedSource.version ?? null,
         installName: existing.installedSource.install_name,
         force: true,
         retainBackup: true,
@@ -280,6 +268,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
         existing.installedSource.install_name,
         existing.installedSource.extension_id,
         existing.installedSource.source_path,
+        existing.installedSource.version ?? null,
         repoPath,
       );
     } else if (parsed && deps.release?.ref) {
@@ -290,6 +279,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
         origin,
         identity: existing.installedSource.extension_id,
         installedSourcePath: existing.installedSource.source_path,
+        upgradeFromVersion: existing.installedSource.version ?? null,
         repoPath,
       });
     } else {
