@@ -21,15 +21,21 @@ const deletion: CloudProjectDeletion = {
   completedAt: null,
 };
 
-const fixture = () => {
+const account = { accountId: "account-x", managerOrigin: "https://manager.example" };
+
+const fixture = (signedOut = false) => {
   const output = mock((_value: unknown) => {});
   const scope = mock((_message: string) => {});
-  const catalog = mock(async () => ({ projects: [], deletions: [{ ...deletion, name: preflight.name }] }));
+  const catalog = mock(async () => ({
+    projects: [],
+    deletions: [{ ...deletion, name: preflight.name }],
+    account: signedOut ? undefined : account,
+  }));
   const inspect = mock(async () => preflight);
   const remove = mock(async () => ({ projectId, presence: "cloud-only" as const }));
   const download = mock(async () => ({ projectId, presence: "downloading" as const }));
   const erase = mock(async () => {
-    expect(scope).toHaveBeenCalledWith(expect.stringContaining("Shared notes"));
+    expect(scope).toHaveBeenCalledWith(expect.stringContaining("Permanently delete"));
     return deletion;
   });
   const status = mock(
@@ -68,7 +74,7 @@ test("delete-cloud prints the affected scope and submits only with explicit conf
   expect(catalog).not.toHaveBeenCalled();
   expect(erase).not.toHaveBeenCalled();
   await commands.erase.handler(args({ "project-id": projectId, confirm: true }));
-  expect(erase).toHaveBeenCalledWith(projectId, { confirm: true });
+  expect(erase).toHaveBeenCalledWith(projectId, { confirm: true, expectedAccount: account });
   expect(output).toHaveBeenCalledWith(deletion);
 });
 
@@ -82,4 +88,18 @@ test("download and deletion-status print their operation state", async () => {
   expect(output).toHaveBeenCalledWith(
     expect.objectContaining({ operationId: deletion.operationId, state: "completed" }),
   );
+});
+
+test("delete-cloud cannot carry a signed-out confirmation into a later account login", async () => {
+  const { commands, erase, output } = fixture(true);
+  await expect(commands.erase.handler(args({ "project-id": projectId, confirm: true }))).rejects.toThrow("Sign in");
+  expect(erase).not.toHaveBeenCalled();
+  expect(output).not.toHaveBeenCalled();
+});
+
+test("delete-cloud pins the account even when replaying a deletion absent from the catalog", async () => {
+  const { commands, catalog, erase } = fixture();
+  catalog.mockResolvedValueOnce({ projects: [], deletions: [], account });
+  await commands.erase.handler(args({ "project-id": projectId, confirm: true }));
+  expect(erase).toHaveBeenCalledWith(projectId, { confirm: true, expectedAccount: account });
 });

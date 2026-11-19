@@ -88,11 +88,13 @@ export const createProjectCloudCommands = (deps = defaults) => ({
       if (argv.confirm !== true) throw new Error("Use --confirm to authorize permanent Cloud deletion.");
       const id = argv["project-id"];
       const { projects, deletions, account } = await deps.catalog();
+      if (!account)
+        throw new Error("Sign in to Cloud, then run delete-cloud again to confirm deletion for that account.");
       const name =
         projects.find((entry) => entry.id === id)?.name ?? deletions.find((entry) => entry.projectId === id)?.name;
       const label = name && name !== id ? `"${name}" (${id})` : id;
       deps.scope(`Permanently delete ${label} from Cloud. Devices keep their downloaded copies as local projects.`);
-      deps.output(await deps.erase(id, { confirm: true, ...(account && { expectedAccount: account }) }));
+      deps.output(await deps.erase(id, { confirm: true, expectedAccount: account }));
     },
   },
   status: {
