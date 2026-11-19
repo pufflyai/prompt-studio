@@ -1,9 +1,10 @@
-import { afterAll, afterEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../test-utils/create-test-app";
 import { runStartupTasks } from ".";
+import { adoptExtractedDefaultTools } from "./extracted-default-tools";
 import { prepareSourceRefreshFixture } from "./source-refresh-source.fixture";
 
 const waitFor = async (predicate: () => boolean | Promise<boolean>) => {
@@ -103,6 +104,37 @@ describe("startup default extensions", () => {
       expect(backgroundSettled).toBe(true);
     } finally {
       preparation.resolve();
+    }
+  });
+
+  test("continues adopting the Git provider when another project's workspaces cannot be listed", async () => {
+    const home = join(tempRoot, "home-workspace-list-failure");
+    process.env.PSTDIO_HOME = home;
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+    const { deps, close } = await createTestApp({
+      databasePath: join(tempRoot, "workspace-list-db"),
+      storageRoot: join(tempRoot, "workspace-list-storage"),
+    });
+    try {
+      const first = await deps.projectService.create({ name: "First" });
+      const second = await deps.projectService.create({ name: "Second" });
+      await deps.installedExtensionSourcesService.register({
+        install_name: "git-workspaces",
+        extension_id: "pstdio.git-workspaces",
+        display_name: "Git workspaces",
+        source_kind: "local_path",
+        source_path: join(home, "extensions", "git-workspaces"),
+        manifest_json: { id: "pstdio.git-workspaces" },
+        status: "loaded",
+      });
+      const list = spyOn(deps.workspaceService, "listForProviderReconciliation")
+        .mockRejectedValueOnce(new Error("Workspace listing unavailable"))
+        .mockResolvedValue([]);
+      await adoptExtractedDefaultTools(deps, [first.id, second.id]);
+      expect(list.mock.calls.map(([id]) => id)).toEqual([first.id, second.id]);
+      expect(await deps.extensionService.listEnabledSourcesForProject(second.id)).toHaveLength(1);
+    } finally {
+      await close();
     }
   });
 
