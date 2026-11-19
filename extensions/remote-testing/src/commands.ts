@@ -25,7 +25,7 @@ export const status = defineCommand({
     const { settings, problems } = readSettings(await ctx.settings.all());
     if (problems.length) return { available: false, problems };
     try {
-      const environments = await listEnvironments(connectionApi(ctx.connections), settings, ctx.projectId);
+      const environments = await listEnvironments(connectionApi(ctx.connections), ctx.projectId);
       await googleToken(ctx);
       return {
         available: true,
@@ -193,7 +193,7 @@ export const listEnvironmentsCommand = defineCommand({
   async run(ctx) {
     const { api, settings, store } = await runDeps(ctx);
     return Promise.all(
-      (await listEnvironments(api, settings, ctx.projectId)).map(async (item) => ({
+      (await listEnvironments(api, ctx.projectId)).map(async (item) => ({
         id: item.id,
         state: item.state,
         busy: await isBusy(store, item.id),
@@ -230,7 +230,7 @@ export const stopEnvironmentCommand = defineCommand({
   async run(ctx, input) {
     const { api, settings } = await runDeps(ctx);
     const ids = input.all
-      ? (await listEnvironments(api, settings, ctx.projectId)).map((item) => item.id)
+      ? (await listEnvironments(api, ctx.projectId)).map((item) => item.id)
       : [input.environment || input.rowId];
     if (!ids[0]) throw new Error("Pass --environment <id> or --all.");
     const stopped = await Promise.all(ids.map((id) => stopEnvironment(api, id as string)));
@@ -246,7 +246,7 @@ export const stopAllEnvironments = defineCommand({
   async run(ctx) {
     const { api, settings } = await runDeps(ctx);
     const stopped = await Promise.all(
-      (await listEnvironments(api, settings, ctx.projectId)).map((item) => stopEnvironment(api, item.id)),
+      (await listEnvironments(api, ctx.projectId)).map((item) => stopEnvironment(api, item.id)),
     );
     await ctx.events.emit(changed, {});
     return { stopped: stopped.length };
