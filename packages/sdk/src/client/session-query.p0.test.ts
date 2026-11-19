@@ -14,6 +14,7 @@ test("session query and iteration carry activity order and qualified anchors thr
   try {
     const client = createClient({ baseUrl: server.url.toString() });
     const input = {
+      ids: ["one,/#?"],
       orderBy: "lastActivity" as const,
       anchor: { type: "ticket", id: "one/#?", extensionId: "acme.planner", projectId: "project" },
     };
@@ -22,6 +23,7 @@ test("session query and iteration carry activity order and qualified anchors thr
       throw new Error("The server returns no sessions");
     }
     const expected = {
+      ids: JSON.stringify(input.ids),
       orderBy: "lastActivity",
       anchorType: "ticket",
       anchorId: "one/#?",

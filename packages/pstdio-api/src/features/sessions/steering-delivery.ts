@@ -3,6 +3,7 @@ import type { SessionsRouteDeps } from "./deps";
 import { hasQueuedSteeringEvidence } from "./queued-steering-evidence";
 import { captureActiveSteering, rejectQueuedSteering as rejected } from "./queued-steering-target";
 import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "./session-attachments";
+import { publishSessionContent } from "./session-content-publications";
 import { persistSessionMessages } from "./session-messages";
 import { withSchedulingLock } from "./session-scheduler-internals";
 import type { ActiveSession } from "./session-store";
@@ -104,10 +105,10 @@ export const deliverSteering = async (
     if (result.status === "accepted") {
       const accepted = await withSchedulingLock(async () => {
         const conversation = await owner.conversationReady;
-        const messages = conversation.getMessages();
+        const messages = structuredClone(conversation.getMessages());
         if (hasQueuedSteeringEvidence(messages, deliveryId, target.attachmentRefs)) {
           for (const attachment of attachments) owner.submittedAttachmentFileIds.add(attachment.fileId);
-          if (!(await persistSessionMessages(sessionId, messages, deps)))
+          if (!(await publishSessionContent(owner, () => persistSessionMessages(sessionId, messages, deps))))
             throw new Error("Conversation was removed before checkpointing.");
           await deps.sessionQueueEntriesService.remove(entry.queue_position);
           return { status: "accepted" as const, deliveryId };

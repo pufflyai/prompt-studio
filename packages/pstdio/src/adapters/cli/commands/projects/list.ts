@@ -53,8 +53,8 @@ export const createHandler =
       const known = new Set(catalog.projects.map((project) => project.id));
       const localOnly = locals
         .filter((project) => !known.has(project.id))
-        .map(({ id, name }) => ({ id, name, presence: "local" }));
-      deps.log(JSON.stringify({ projects: [...localOnly, ...catalog.projects], deletions: catalog.deletions }));
+        .map(({ id, name }) => ({ id, name, presence: catalog.membershipKnown === false ? "unknown" : "local" }));
+      deps.log(JSON.stringify({ ...catalog, projects: [...localOnly, ...catalog.projects] }));
       return;
     }
     const projects = await deps.listProjects();

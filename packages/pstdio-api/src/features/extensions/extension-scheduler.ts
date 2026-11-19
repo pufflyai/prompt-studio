@@ -160,9 +160,10 @@ export const createExtensionScheduler = (input: Input) => {
   const stopStorage = input.deps.extensionStorageService.watch?.((owner) => {
     if (owner.extensionId === deviceAutomationsOwnerId) void refresh(owner.workbenchId);
   });
-  const stopCatalog = input.deps.extensionRuntimeCatalog.subscribeInvalidation(
-    ({ projectId }) => void refresh(projectId),
-  );
+  const stopCatalog = input.deps.extensionRuntimeCatalog.subscribeInvalidation(({ projectId, reason }) => {
+    // Publishing webview bundles cannot change a schedule or its command.
+    if (reason !== "webviews_built") void refresh(projectId);
+  });
   const stopAccount = input.deps.accountService.watch(() => void refresh());
   return {
     activity: scheduler.activity,

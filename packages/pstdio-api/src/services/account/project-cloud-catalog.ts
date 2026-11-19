@@ -15,6 +15,7 @@ import { createLocalProjectRemoval, type ProjectCopyHooks, requireProjectCopyAcc
 import { readManagerAccount } from "./manager-account";
 import { ManagerRequestDenied } from "./manager-client";
 import { AccountRequestError } from "./native-account";
+import { matchesDeviceAccount } from "./native-device-read";
 import type { createNativeManagerCall } from "./native-manager-call";
 import type { DeviceLogin } from "./native-store";
 import { createProjectCopyStore, type ProjectCopy, projectCopyAccount } from "./project-copy-store";
@@ -44,14 +45,9 @@ interface CatalogInput {
   changed?: () => void;
 }
 
-export const createProjectCloudCatalog = (input: CatalogInput) => {
-  const copies = createProjectCopyStore(input.accountFile);
-  let projectCopies: ProjectCopyHooks | undefined;
-  const preparingFolders = new Set<string>();
-  const folderErrors = new Map<string, string>();
-  const knownCloud = async (login: DeviceLogin) => input.cloud(login) ?? (await copies.roster(login));
-
-  const entry = async (
+const createCatalogEntry =
+  (input: Pick<CatalogInput, "projects" | "syncStatus">, folderErrors: Map<string, string>) =>
+  async (
     id: string,
     choice: ProjectCopy | undefined,
     online: boolean,
@@ -77,6 +73,15 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
     };
   };
 
+export const createProjectCloudCatalog = (input: CatalogInput) => {
+  const copies = createProjectCopyStore(input.accountFile);
+  let projectCopies: ProjectCopyHooks | undefined;
+  const preparingFolders = new Set<string>();
+  const folderErrors = new Map<string, string>();
+  const knownCloud = async (login: DeviceLogin) => input.cloud(login) ?? (await copies.roster(login));
+
+  const entry = createCatalogEntry(input, folderErrors);
+
   const requireDevice = async () => {
     const login = await input.login();
     if (!login) throw new AccountRequestError("Log in before managing a cloud project");
@@ -84,7 +89,13 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
   };
 
   const requireCurrent = async (login: DeviceLogin) => {
-    if ((await input.login())?.token !== login.token)
+    const current = await input.login();
+    if (
+      !current ||
+      current.token !== login.token ||
+      current.deviceId !== login.deviceId ||
+      !matchesDeviceAccount(current, login)
+    )
       throw new AccountRequestError("The active account changed before the request completed");
   };
 
@@ -101,9 +112,20 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
     changed: input.changed ?? (() => {}),
   });
   return {
+    async acceptsRelayWorkbench(connection: RelayWorkbench) {
+      const choices = await copies.forAccount({
+        managerOrigin: connection.managerOrigin,
+        accountId: connection.accountId,
+        deviceId: connection.environmentId,
+      });
+      const copy = choices.find((copy) => copy.projectId === connection.workbenchId);
+      return !copy || copy.phase === "downloading";
+    },
     knownProjectIds: async (login: DeviceLogin) => (await knownCloud(login))?.ids,
     async readCloud(login: DeviceLogin, signal: AbortSignal) {
-      const { ids, deletions, projectDeletion, ...account } = await readManagerAccount(login, signal);
+      const { ids, deletions: discovered, projectDeletion, ...account } = await readManagerAccount(login, signal);
+      const deletions = discovered ?? (await knownCloud(login))?.deletions ?? [];
+      await requireCurrent(login);
       await copies
         .rememberRoster(login, { ids, deletions, projectDeletion })
         .catch((error) =>
@@ -242,7 +264,7 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
       const login = await requireDevice();
       requireProjectCopyAccount(login, expected);
       try {
-        const status = await input.call(projectDeletionPath(id), undefined, login.token, signal);
+        const status = await input.call(projectDeletionPath(id), undefined, login.token, signal, login);
         await requireCurrent(login);
         return deletionReceipt(status);
       } catch (error) {
@@ -254,7 +276,7 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
       const login = await requireDevice();
       requireProjectCopyAccount(login, body.expectedAccount);
       try {
-        const status = await input.call(projectDeletionPath(id), { confirm: body.confirm }, login.token, signal);
+        const status = await input.call(projectDeletionPath(id), { confirm: body.confirm }, login.token, signal, login);
         await requireCurrent(login);
         return deletionReceipt(status);
       } finally {

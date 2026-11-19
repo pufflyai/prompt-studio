@@ -5,7 +5,6 @@ import {
   type ChatRendererSnapshot,
   type ChatRendererStreamEvent,
   type CommandContext,
-  chatRendererStreamFrames,
   defineCommand,
   type ExtensionSessionStreamEvent,
   type JsonObject,
@@ -13,6 +12,8 @@ import {
   type ResourceRef,
   streamOf,
 } from "@pstdio/sdk/extensions";
+import { createStreamObservation } from "./changes";
+import { diagnosticChatFrames } from "./chat-stream-diagnostics";
 import { conversationOperations } from "./controls";
 import { conversationState } from "./conversation-state";
 import { recoverNativeInputs } from "./native-recovery";
@@ -58,6 +59,29 @@ const matchesCanonicalMessages = (messages: SessionMessage[], displayed: Session
 const watchNotice = (current: Awaited<ReturnType<typeof readSessionSnapshot>> | undefined, queueError?: string) =>
   current ? executionNotice(current.reads.execution, queueError) || current.nativeNotice : queueError;
 
+const displayConversation = (
+  id: string,
+  messages: SessionMessage[],
+  queued: Awaited<ReturnType<typeof readQueue>> | undefined,
+  harnessId: string | undefined,
+  remote: boolean,
+  hasTranscript: boolean,
+) => {
+  const state = conversationState(id, [...messages, ...(queued?.messages ?? [])], queued?.queue, harnessId, remote);
+  return {
+    ...state,
+    ...(queued?.error && { queueReadOnly: true, operations: conversationOperations(remote, true) }),
+    messages: hasTranscript ? state.messages : undefined,
+  };
+};
+
+const writeFrames = async (ctx: CommandContext, id: string, revision: number, event: ChatWatchUpdate) => {
+  for (const frame of diagnosticChatFrames(id, { revision, ...event })) {
+    if (ctx.signal.aborted) return;
+    await ctx.stream.write(JSON.parse(JSON.stringify(frame)));
+  }
+};
+
 export const watchConversation = async (ctx: CommandContext, resource?: ResourceRef) => {
   const id = sessionId(resource);
   // A visible draft retains its shared watch until disposal, without reconnect churn.
@@ -98,33 +122,28 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
     else queueRecovery.succeeded();
   };
   const emittedRecovery = new Set<string>();
-  const writeEvent = (event: ChatWatchUpdate) => {
-    writes = writes.then(async () => {
-      for (const frame of chatRendererStreamFrames({ revision: revision++, ...event })) {
-        if (ctx.signal.aborted) return;
-        await ctx.stream.write(JSON.parse(JSON.stringify(frame)));
-      }
-    });
-    // Retain the rejection for the loop/finally, but own it immediately while
-    // another public stream callback or availability read is still pending.
+  const enqueue = (send: () => Promise<unknown>) => {
+    writes = writes.then(send).then(() => {});
+    // Own a rejected write while other public stream callbacks are pending.
     void writes.catch((error) => {
       failure = error;
       changed();
     });
     return writes;
   };
+  const writeEvent = (event: ChatWatchUpdate) => enqueue(() => writeFrames(ctx, id, revision++, event));
+  const observe = createStreamObservation(ctx, id, (observation) =>
+    writeFrames(ctx, id, revision++, { snapshot: observation }),
+  );
+  const observation = () =>
+    observe(metadata.query.getSnapshot().data?.session, hasTranscript ? messages : undefined, approvals[0]?.id);
   const write = (snapshot: ChatRendererSnapshot) => {
     if (snapshot.messages) canonicalDisplay = matchesCanonicalMessages(messages, snapshot.messages);
-    return writeEvent({ snapshot });
+    writeEvent({ snapshot });
+    const send = observation();
+    return send ? enqueue(send) : writes;
   };
-  const display = () => {
-    const state = conversationState(id, [...messages, ...(queued?.messages ?? [])], queued?.queue, harnessId, remote);
-    return {
-      ...state,
-      ...(queued?.error && { queueReadOnly: true, operations: conversationOperations(remote, true) }),
-      messages: hasTranscript ? state.messages : undefined,
-    };
-  };
+  const display = () => displayConversation(id, messages, queued, harnessId, remote, hasTranscript);
   const notice = () => watchNotice(metadata.query.getSnapshot().data, queued?.error);
   const patch = async (data: Extract<ExtensionSessionStreamEvent, { event: "patch" }>["data"]) => {
     if (data.path === "/approval_requests") {
@@ -145,13 +164,15 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
       displayed.messages &&
       matchesCanonicalMessages(messages, displayed.messages)
     ) {
-      await writeEvent({
+      const send = observation();
+      writeEvent({
         patch: {
           op: data.op,
           path: data.path,
           ...(data.op === "remove" ? {} : { value: messages[Number(data.path.slice("/messages/".length))] }),
         },
       });
+      await (send ? enqueue(send) : writes);
     } else await write(displayed);
   };
   const acceptQueued = async (data: Extract<ExtensionSessionStreamEvent, { event: "queued_messages" }>["data"]) => {

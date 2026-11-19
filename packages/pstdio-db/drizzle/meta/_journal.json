@@ -57,6 +57,20 @@
       "when": 1794819254702,
       "tag": "0007_sturdy_ravenous",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795018020883,
+      "tag": "0008_session_change_positions",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795109146045,
+      "tag": "0009_fat_vision",
+      "breakpoints": true
     }
   ]
 }

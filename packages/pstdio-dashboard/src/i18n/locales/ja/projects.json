@@ -133,7 +133,8 @@
           "templates": "テンプレート",
           "themes": "テーマ",
           "navigationItems": "ナビゲーション項目",
-          "commandPaletteResources": "コマンドパレットリソース"
+          "commandPaletteResources": "コマンドパレットリソース",
+          "workspaceTypes": "ワークスペースの種類"
         },
         "deleteHintShared": "この拡張機能のファイルを削除します。使用しているすべてのプロジェクトから取り除かれます。"
       },
@@ -167,6 +168,17 @@
         "upgradingButton": "更新中",
         "batchFailed": "{{total}} 件中 {{count}} 件の更新に失敗しました",
         "installingButton": "インストール中"
+      },
+      "provenance": {
+        "filter": "拡張機能のソース",
+        "all": "すべて",
+        "public": "公開",
+        "mine": "自分のもの",
+        "unknown": "公開状態不明",
+        "publicHelp": "公開パッケージがあります。ローカルの変更は未公開の場合があります。",
+        "mineHelp": "このプロジェクトまたはデバイスで管理する編集可能なローカルソースです。",
+        "unknownHelp": "公開されているか確認されていません。",
+        "noMatches": "一致する拡張機能はありません"
       }
     }
   },

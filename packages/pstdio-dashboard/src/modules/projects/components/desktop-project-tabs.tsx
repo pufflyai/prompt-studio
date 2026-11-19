@@ -7,7 +7,7 @@ import { useSyncExternalStore } from "react";
 import { useCollectionSelection } from "@/lib/sync/use-collection-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
-import { findDashboardProject } from "../data/project-data";
+import { findDashboardProjectRow } from "../data/project-data";
 import type { DesktopProjectTabsController } from "../desktop-project-tabs-controller";
 
 interface DesktopProjectTabsProps {
@@ -18,8 +18,16 @@ interface DesktopProjectTabsProps {
 
 const resolveProjectTabs = (projectIds: readonly string[], _dataVersion: unknown) =>
   projectIds.flatMap((id) => {
-    const project = findDashboardProject(id);
-    return project ? [{ id, label: project.name, icon: <Folder aria-hidden="true" /> }] : [];
+    const project = findDashboardProjectRow(id);
+    return project
+      ? [
+          {
+            id,
+            label: typeof project.name === "string" && project.name ? project.name : "Project",
+            icon: <Folder aria-hidden="true" />,
+          },
+        ]
+      : [];
   });
 
 export const openProjectTabSettings = async (controller: DesktopProjectTabsController, projectId: string) => {

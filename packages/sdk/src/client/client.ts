@@ -13,6 +13,7 @@ import type { ClientOptions } from "./request";
 import { createRequest } from "./request";
 import { createResourceActivityClient, type ResourceActivityClient } from "./resource-activity";
 import { createResourceAnchorsClient, type ResourceAnchorsClient } from "./resource-anchors";
+import { createResourceChangesClient } from "./resource-changes";
 import { createRuntimeClient, type RuntimeClient } from "./runtime";
 import { createSessionStreamTransport } from "./session-stream";
 import { createSessionClient, type SessionClient } from "./sessions";
@@ -26,6 +27,7 @@ export type PstdioClient = {
   account: AccountClient;
   assets: AssetsClient;
   activity: ResourceActivityClient;
+  resourceChanges: ReturnType<typeof createResourceChangesClient>;
   resources: ResourceAnchorsClient;
   views: BoardViewsClient;
   projects: ProjectClient;
@@ -51,6 +53,7 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
   return {
     account: createAccountClient(request),
     assets: createAssetsClient(request),
+    resourceChanges: createResourceChangesClient(request),
     activity: createResourceActivityClient(request, streams),
     resources: createResourceAnchorsClient(request),
     views: createBoardViewsClient(request),

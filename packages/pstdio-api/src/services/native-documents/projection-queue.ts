@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import type { StorageOwner } from "pstdio-sync";
 
 interface Address {
@@ -8,7 +9,13 @@ interface Job {
   dirty: boolean;
   completed: number;
   work: Promise<void>;
-  fences: Set<{ revision: number; resolve: () => void; reject: (error: unknown) => void }>;
+  resume: ReturnType<typeof AsyncLocalStorage.snapshot>;
+  fences: Set<{
+    revision: number;
+    resolve: () => void;
+    reject: (error: unknown) => void;
+    resume: ReturnType<typeof AsyncLocalStorage.snapshot>;
+  }>;
 }
 
 const completeProjectionFences = (job: Job) => {
@@ -27,7 +34,9 @@ export const createNativeProjectionQueue = (input: {
   const jobs = new Map<string, Job>();
   const reconcile = async (job: Job, address: Address) => {
     try {
-      job.completed = (await input.reconcile(address)) ?? 0;
+      const fence = job.fences.values().next().value;
+      const revision = await (fence?.resume ?? job.resume)(() => input.reconcile(address));
+      job.completed = revision ?? 0;
       completeProjectionFences(job);
     } catch (error) {
       return { error };
@@ -38,9 +47,16 @@ export const createNativeProjectionQueue = (input: {
     const current = jobs.get(key);
     if (current) {
       current.dirty = true;
+      current.resume = AsyncLocalStorage.snapshot();
       return current;
     }
-    const job: Job = { dirty: true, completed: 0, work: Promise.resolve(), fences: new Set() };
+    const job: Job = {
+      dirty: true,
+      completed: 0,
+      work: Promise.resolve(),
+      fences: new Set(),
+      resume: AsyncLocalStorage.snapshot(),
+    };
     job.work = Promise.resolve().then(async () => {
       try {
         while (job.dirty) {
@@ -67,7 +83,7 @@ export const createNativeProjectionQueue = (input: {
       const job = request(address);
       if (job.completed >= revision) return Promise.resolve();
       const fence = Promise.withResolvers<void>();
-      job.fences.add({ revision, ...fence });
+      job.fences.add({ revision, ...fence, resume: AsyncLocalStorage.snapshot() });
       return fence.promise;
     },
     async drain() {

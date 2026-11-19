@@ -1,10 +1,12 @@
 import { nativePresenceLimits } from "pstdio-api-contracts";
 import type { TextEditingRequest, TextWireSnapshot } from "pstdio-api-contracts/extension-kernel";
+import { NativeDocumentRoomError } from "pstdio-db";
 import { validateTextEditorFrame } from "pstdio-sync/text";
 import { validateTextGrant } from "./admission";
 import { textFailure } from "./errors";
 import { emitTextEvent } from "./events";
 import { textHandleMember } from "./handles";
+import { currentTextMembers } from "./member-ownership";
 import type { TextConnection, TextEditingDeps, TextMember } from "./types";
 export const roomAddress = (connection: TextConnection, member: TextMember) => {
   if (!member.room) throw textFailure("session_closed", "The text session is not open");
@@ -62,19 +64,39 @@ export const submitTextMember = (
     return member.lastAck;
   });
 
-export const releaseTextMember = async (deps: TextEditingDeps, connection: TextConnection, member: TextMember) => {
+export const releaseTextMember = (deps: TextEditingDeps, connection: TextConnection, member: TextMember) => {
+  const pending = connection.releasing.get(member);
+  if (pending) return pending;
   if (connection.members.get(member.id) === member) connection.members.delete(member.id);
   member.stop?.();
-  await member.queue;
-  if (member.room) await deps.documents.release(roomAddress(connection, member));
-  if (
-    member.grant &&
-    connection.selected !== member.grant.token &&
-    ![...connection.members.values()].some((value) => value.grant === member.grant)
-  )
-    connection.grants.delete(member.grant.token);
-  connection.barrier?.waiting.delete(member);
-  if (connection.barrier && !connection.barrier.waiting.size) connection.barrier.resolve();
+  // Detach immediately so a pending open cannot claim a successor, but keep its cleanup retryable.
+  const work = Promise.resolve().then(async () => {
+    try {
+      await member.queue;
+      if (member.room) {
+        try {
+          await deps.documents.release(roomAddress(connection, member));
+        } catch (error) {
+          // Project withdrawal may already have closed this previously opened room.
+          if (!(error instanceof NativeDocumentRoomError && error.code === "not_found")) throw error;
+        }
+      }
+      connection.releasing.delete(member);
+      if (
+        member.grant &&
+        connection.selected !== member.grant.token &&
+        !currentTextMembers(connection).some((value) => value.grant === member.grant)
+      )
+        connection.grants.delete(member.grant.token);
+      connection.barrier?.waiting.delete(member);
+      if (connection.barrier && !connection.barrier.waiting.size) connection.barrier.resolve();
+    } catch (error) {
+      connection.releasing.set(member, undefined);
+      throw error;
+    }
+  });
+  connection.releasing.set(member, work);
+  return work;
 };
 
 export const registerTextMember = (connection: TextConnection, memberId: string) => {

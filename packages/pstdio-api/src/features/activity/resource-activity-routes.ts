@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { AppBindings } from "../../types";
 import type { ExtensionsRouteDeps } from "../extensions/deps";
 import { createResourceActivityApi } from "./resource-activity-api";
+import { createResourceChanges } from "./resource-changes";
 
 const reference = z.object({ resource: resourceLinkRefSchema });
 const entry = reference.extend({ id: z.string().min(1) });
@@ -49,6 +50,29 @@ const operations = (api: ReturnType<typeof createResourceActivityApi>) => ({
 });
 export const createResourceActivityRoutes = (deps: ExtensionsRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
+  routes.post("/projects/:projectId/resource-changes/:operation", async (c) => {
+    try {
+      const api = createResourceChanges(deps, c.req.param("projectId"), c.req.raw.signal);
+      const body = await c.req.json();
+      switch (c.req.param("operation")) {
+        case "query":
+          return c.json(await api.query(z.array(resourceLinkRefSchema).max(50).parse(body.resources)));
+        case "read":
+          return c.json(await api.read(reference.parse(body).resource));
+        case "acknowledge":
+          return c.json(
+            await api.acknowledge(
+              z.string().max(16000).parse(body.receipt),
+              resourceLinkRefSchema.optional().parse(body.resource),
+            ),
+          );
+        default:
+          return c.json({ error: "Unknown resource change operation." }, 404);
+      }
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : String(error) }, 400);
+    }
+  });
   routes.post("/projects/:projectId/activity/:operation", async (c) => {
     try {
       const raw = await c.req.json();

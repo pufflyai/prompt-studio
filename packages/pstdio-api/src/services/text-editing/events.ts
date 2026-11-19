@@ -1,5 +1,6 @@
 import type { TextEditingError, TextEditingEvent } from "pstdio-api-contracts/extension-kernel";
 import { textFailure } from "./errors";
+import { currentTextMembers } from "./member-ownership";
 import type { TextConnection, TextMember } from "./types";
 /** Full states can replace one another; failure occurrences and distinct close barriers cannot. */
 export const textEventBufferKey = (event: TextEditingEvent) => {
@@ -21,7 +22,7 @@ export const prepareTextClose = (connection: TextConnection) => {
   const deferred = Promise.withResolvers<void>();
   connection.barrier = {
     id: crypto.randomUUID(),
-    waiting: new Set(connection.members.values()),
+    waiting: new Set(currentTextMembers(connection)),
     work: deferred.promise,
     resolve: () => deferred.resolve(),
     reject: deferred.reject,

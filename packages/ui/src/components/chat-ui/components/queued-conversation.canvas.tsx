@@ -2,16 +2,35 @@ import { Box, Button, HStack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ChatPanel } from "./chat-panel";
-import type { QueuedFollowUp } from "./message-types";
+import type { QueuedFollowUp, SessionMessage } from "./message-types";
+
+const workingConversation: SessionMessage[] = [
+  { id: "request", role: "user", parts: [{ type: "text", text: "Run the checks." }] },
+  { id: "update", role: "assistant", parts: [{ type: "text", text: "I’ll check the repository first." }] },
+  {
+    id: "working",
+    role: "assistant",
+    parts: [
+      {
+        type: "tool",
+        tool: "bash",
+        callId: "git-status",
+        state: { status: "completed", input: { command: "git status" } },
+      },
+    ],
+  },
+];
 
 interface QueueHostProps {
   count?: number;
   fail?: boolean;
   unsupported?: boolean;
   liveInputHandler?: boolean;
+  initialMessages?: SessionMessage[];
 }
 const QueueHost = (props: QueueHostProps) => {
-  const { count = 2, fail = false, unsupported = false, liveInputHandler = true } = props;
+  const { count = 2, fail = false, unsupported = false, liveInputHandler = true, initialMessages = [] } = props;
+  const [messages, setMessages] = useState(initialMessages);
   const [items, setItems] = useState<QueuedFollowUp[]>(
     Array.from({ length: count }, (_, index) => ({
       id: `item-${index}`,
@@ -52,7 +71,7 @@ const QueueHost = (props: QueueHostProps) => {
         chatInputPlaceholder="Write a prompt"
         emptyStateDescription="Send a prompt"
         emptyStateTitle="Start a conversation"
-        messages={[]}
+        messages={messages}
         streaming
         chatInputDefaultValue={draft}
         onChatInputChange={setDraft}
@@ -164,6 +183,10 @@ const QueueHost = (props: QueueHostProps) => {
           liveInputHandler
             ? async (item) => {
                 setItems((state) => state.filter((saved) => saved.id !== item.id));
+                setMessages((state) => [
+                  ...state,
+                  { id: item.id, role: "user", parts: [{ type: "text", text: item.prompt }] },
+                ]);
                 setResult(`Accepted: ${item.prompt}`);
               }
             : undefined
@@ -180,6 +203,8 @@ export default meta;
 type Story = CanvasFrame<typeof meta>;
 export const InlineEditor: Story = {
   id: "patterns-chat-queued-conversation--inline-editor",
+  args: { initialMessages: workingConversation },
+  description: "Use Send now on a queued message to see the tool activity stay above the delivered message.",
 };
 export const SwitchingTargets: Story = {
   id: "patterns-chat-queued-conversation--switching-targets",

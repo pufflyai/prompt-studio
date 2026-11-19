@@ -23,6 +23,6 @@ export const useBreadcrumbPlacement = (workbench: WorkbenchCore) => {
   const resourcePresentation =
     placement?.placementIdentity && resourceViewerBinding(workbench, placement.placementIdentity)?.kind === "binding"
       ? snapshot
-      : { indicator: snapshot.indicator };
+      : {};
   return { placement, content, snapshot, resourcePresentation };
 };

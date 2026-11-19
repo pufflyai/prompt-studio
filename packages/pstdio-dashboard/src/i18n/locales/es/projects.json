@@ -135,7 +135,8 @@
           "templates": "Plantillas",
           "themes": "Temas",
           "navigationItems": "Elementos de navegación",
-          "commandPaletteResources": "Recursos de la paleta de comandos"
+          "commandPaletteResources": "Recursos de la paleta de comandos",
+          "workspaceTypes": "Tipos de espacio de trabajo"
         },
         "deleteHintShared": "Eliminar los archivos de esta extensión. Esto la quita de todos los proyectos que la usan."
       },
@@ -169,6 +170,17 @@
         "upgradingButton": "Actualizando",
         "batchFailed": "{{count}} de {{total}} actualizaciones fallaron",
         "installingButton": "Instalando"
+      },
+      "provenance": {
+        "filter": "Origen de las extensiones",
+        "all": "Todas",
+        "public": "Pública",
+        "mine": "Mías",
+        "unknown": "Visibilidad desconocida",
+        "publicHelp": "Hay un paquete público disponible. Los cambios locales pueden no estar publicados.",
+        "mineHelp": "Código local editable mantenido en este proyecto o dispositivo.",
+        "unknownHelp": "No se ha verificado la disponibilidad pública.",
+        "noMatches": "No hay extensiones coincidentes"
       }
     }
   },

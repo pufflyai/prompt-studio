@@ -10,8 +10,40 @@ export const isNavigableNode = (node: TreeListNode) => node.isNavigable || node.
 
 export const getNodeChildren = (node: TreeListNode) => (node.children as TreeListNode[] | undefined) ?? [];
 
+const hasRowContent = (value: unknown) => value !== undefined && value !== null && value !== false;
+
+/** A structural root group uses the same heading as a section, without becoming a selectable resource. */
+export const isFixedTreeListGroup = (node: TreeListNode, level: number) =>
+  level === 0 &&
+  node.collapsible === false &&
+  typeof node.label === "string" &&
+  !isNavigableNode(node) &&
+  !node.href &&
+  !node.onActivate &&
+  !node.inlineInput &&
+  !node.disabled &&
+  !node.rowVariant &&
+  !hasRowContent(node.icon) &&
+  !hasRowContent(node.description) &&
+  !hasRowContent(node.indicator) &&
+  !hasRowContent(node.startContent) &&
+  !hasRowContent(node.endContent) &&
+  !hasRowContent(node.tooltip) &&
+  !node.tone &&
+  !node.actions?.length &&
+  !node.menuItems?.length &&
+  !node.contextMenuItems?.length &&
+  !node.showContextMenuTrigger &&
+  !node.canDrag &&
+  !node.canDrop &&
+  (node.children !== undefined || Boolean(node.pagination));
+
 export const hasExpandableChildren = (node: TreeListNode) =>
-  getNodeChildren(node).length > 0 || node.isContainer === true || Boolean(node.pagination);
+  node.collapsible !== false &&
+  (getNodeChildren(node).length > 0 || node.isContainer === true || Boolean(node.pagination));
+
+export const isNodeExpanded = (node: TreeListNode, expandedNodeIds: string[]) =>
+  node.collapsible === false || isInList(node.id, expandedNodeIds);
 
 export type VirtualRow =
   | {
@@ -22,7 +54,16 @@ export type VirtualRow =
       collapsible: boolean;
       expanded: boolean;
     }
-  | { kind: "node"; key: string; sectionId: string; node: TreeListNode; level: number; parentNodeId?: string }
+  | { kind: "group-header"; key: string; sectionId: string; node: TreeListNode }
+  | {
+      kind: "node";
+      key: string;
+      sectionId: string;
+      node: TreeListNode;
+      level: number;
+      visualLevel?: number;
+      parentNodeId?: string;
+    }
   | { kind: "section-empty"; key: string; sectionId: string; emptyState: TreeListSection["emptyState"] }
   | { kind: "continuation"; key: string; sectionId: string; pagination: TreeListPagination };
 
@@ -38,15 +79,27 @@ const appendVisibleNodeRows = (input: {
   nodes: TreeListNode[];
   expandedNodeIds: string[];
   level: number;
+  visualLevel?: number;
   parentNodeId?: string;
 }) => {
-  const { rows, sectionId, nodes, expandedNodeIds, level, parentNodeId } = input;
+  const { rows, sectionId, nodes, expandedNodeIds, level, visualLevel = level, parentNodeId } = input;
 
   for (const node of nodes) {
-    rows.push({ kind: "node", key: `${sectionId}:${node.id}`, sectionId, node, level, parentNodeId });
+    const group = isFixedTreeListGroup(node, level);
+    if (group) rows.push({ kind: "group-header", key: `${sectionId}:${node.id}`, sectionId, node });
+    else
+      rows.push({
+        kind: "node",
+        key: `${sectionId}:${node.id}`,
+        sectionId,
+        node,
+        level,
+        ...(visualLevel !== level ? { visualLevel } : {}),
+        parentNodeId,
+      });
 
     const children = getNodeChildren(node);
-    if (!isInList(node.id, expandedNodeIds)) continue;
+    if (!isNodeExpanded(node, expandedNodeIds)) continue;
 
     appendVisibleNodeRows({
       rows,
@@ -54,6 +107,7 @@ const appendVisibleNodeRows = (input: {
       nodes: children,
       expandedNodeIds,
       level: level + 1,
+      visualLevel: group ? visualLevel : visualLevel + 1,
       parentNodeId: node.id,
     });
     if (node.pagination)
@@ -163,11 +217,11 @@ const resolveNodeNavigation = (input: {
   key: string;
 }) => {
   const { row, focusableRows, currentIndex, expandedNodeIds, key } = input;
-  const expanded = isInList(row.node.id, expandedNodeIds);
+  const expanded = isNodeExpanded(row.node, expandedNodeIds);
   const expandable = hasExpandableChildren(row.node);
 
   if (key === "ArrowRight") {
-    if (!expandable) return null;
+    if (!expandable && row.node.collapsible !== false) return null;
     if (!expanded) return { type: "toggle-node" as const, nodeId: row.node.id };
 
     const nextRow = focusableRows[currentIndex + 1];
@@ -179,7 +233,8 @@ const resolveNodeNavigation = (input: {
 
   if (key === "ArrowLeft") {
     if (expandable && expanded) return { type: "toggle-node" as const, nodeId: row.node.id };
-    if (row.parentNodeId) return { type: "focus" as const, rowId: row.parentNodeId };
+    if (row.parentNodeId && focusableRows.some((parent) => getRowFocusId(parent) === row.parentNodeId))
+      return { type: "focus" as const, rowId: row.parentNodeId };
   }
 
   return null;

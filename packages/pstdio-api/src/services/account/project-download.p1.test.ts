@@ -76,6 +76,10 @@ test("a Cloud only project can be listed and deleted without starting a download
         body: JSON.stringify(body),
       });
     expect((await start({})).status).toBe(400);
+    expect((await host.app.request(`${path}/deletion?accountId=fixture-account`)).status).toBe(400);
+    expect(
+      (await host.app.request(`${path}/deletion?managerOrigin=${encodeURIComponent(manager.url.origin)}`)).status,
+    ).toBe(400);
     const { account: expectedAccount } = await catalog();
     await store.save({ ...login, accountId: "other-account", token: "other-device-login" });
     expect((await start({ confirm: true, expectedAccount })).status).toBe(400);

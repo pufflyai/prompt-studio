@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite";
 import { createHash } from "node:crypto";
 import { link, mkdir, open, readFile, rename, stat, unlink, utimes } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { z } from "zod";
 import { recoveryChunkSchema } from "./chunks";
 
@@ -36,6 +36,36 @@ const alive = (pid: number) => {
 
 export const recoveryJournalKey = (source: string[]) =>
   createHash("sha256").update(JSON.stringify(source)).digest("hex").slice(0, 32);
+
+/** Keep the inode until release: the OS relinquishes this lease on process death. */
+export const acquireRecoveryJournalLease = (
+  path: string,
+  create = true,
+  mode: "read" | "write" | "exclusive" = "write",
+) => {
+  let lease: Database | undefined;
+  try {
+    lease = new Database(path, { create });
+    if (mode === "read") lease.exec("BEGIN; SELECT name FROM sqlite_schema LIMIT 1");
+    else lease.exec(mode === "exclusive" ? "BEGIN EXCLUSIVE" : "BEGIN IMMEDIATE");
+  } catch (error) {
+    lease?.close();
+    if ((error as { code?: string }).code === "SQLITE_BUSY") return null;
+    throw error;
+  }
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    lease!.close();
+  };
+};
+
+export const acquireRecoveryProjectLease = async (root: string, exclusive = false) => {
+  const path = `${resolve(root)}.ownership.sqlite`;
+  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+  return acquireRecoveryJournalLease(path, true, exclusive ? "exclusive" : "read");
+};
 
 /** Durable per-source lifecycle state, kept in recovery working storage outside
  * every captured folder. It holds only opaque ciphertext references. */
@@ -137,17 +167,10 @@ export const openRecoveryJournal = (input: { root: string; source: string[]; pre
     }
     return null;
   };
-  const acquire = async () => {
+  const acquireSource = async () => {
     await mkdir(directory, { recursive: true, mode: 0o700 });
-    // Keep this inode: the OS releases the lease on process death.
-    const lease = new Database(`${lockPath}.sqlite`, { create: true });
-    try {
-      lease.exec("BEGIN IMMEDIATE");
-    } catch (error) {
-      lease.close();
-      if ((error as { code?: string }).code === "SQLITE_BUSY") return null;
-      throw error;
-    }
+    const closeLease = acquireRecoveryJournalLease(`${lockPath}.sqlite`);
+    if (!closeLease) return null;
     let release: (() => Promise<void>) | null = null;
     try {
       release = await acquireMarker();
@@ -161,11 +184,11 @@ export const openRecoveryJournal = (input: { root: string; source: string[]; pre
       }
     } catch (error) {
       await release?.();
-      lease.close();
+      closeLease();
       throw error;
     }
     if (!release) {
-      lease.close();
+      closeLease();
       return null;
     }
     let released = false;
@@ -175,9 +198,30 @@ export const openRecoveryJournal = (input: { root: string; source: string[]; pre
       try {
         await release();
       } finally {
-        lease.close();
+        closeLease();
       }
     };
+  };
+  const acquire = async () => {
+    const releaseProject = await acquireRecoveryProjectLease(input.root);
+    if (!releaseProject) return null;
+    try {
+      const releaseSource = await acquireSource();
+      if (!releaseSource) {
+        releaseProject();
+        return null;
+      }
+      return async () => {
+        try {
+          await releaseSource();
+        } finally {
+          releaseProject();
+        }
+      };
+    } catch (error) {
+      releaseProject();
+      throw error;
+    }
   };
   return {
     read,

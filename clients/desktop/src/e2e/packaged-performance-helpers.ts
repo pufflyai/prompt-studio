@@ -27,12 +27,18 @@ type MonitoringBridge = {
 // measures with monitoring off launches without it.
 export const launchProject = async (
   name: string,
-  options: { monitoring?: boolean; webview?: boolean; harness?: boolean } = {},
+  options: {
+    monitoring?: boolean;
+    webview?: boolean;
+    harness?: boolean;
+    extraExtension?: { installName: string; source: string };
+  } = {},
 ) => {
   const home = createPackagedHome();
   const app = await launchPackagedApp(home, {
     PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
       defaultExtensions: [
+        ...(options.extraExtension ? [options.extraExtension] : []),
         ...(options.harness ? [benchmarkExtension("workbench-fixture", fixturePath)] : []),
         ...(options.webview
           ? [{ source: join(fixturePath, "fixtures/webview-host"), installName: "webview-host" }]
