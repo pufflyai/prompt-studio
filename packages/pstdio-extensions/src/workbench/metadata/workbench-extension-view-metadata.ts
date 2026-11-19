@@ -176,7 +176,6 @@ const toNativeViewBody = (
     queryHandlerId: String(handlers.queryHandlerId),
     attributeChangeHandlerId: handlers.attributeChangeHandlerId as string | undefined,
     moveHandlerId: handlers.moveHandlerId as string | undefined,
-    supportsFieldsOnly: body.supportsFieldsOnly,
     schemaRefreshEventIds:
       body.schemaRefreshEvents === undefined
         ? undefined
