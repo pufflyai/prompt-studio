@@ -22,7 +22,7 @@ const stamp = (session: SessionChanges, position: number) => ({
 export const observedSessionChange = async (
   session: SessionChanges,
   messages: SessionMessage[],
-  approvalId?: string,
+  approvalIds?: string | readonly string[],
 ) => {
   const { reply, input } = session.changePositions ?? {};
   if (reply) {
@@ -37,9 +37,8 @@ export const observedSessionChange = async (
   if (
     input &&
     input.position > (reply?.position ?? 0) &&
-    approvalId !== input.id &&
-    !messages.some((m) => m.parts.some((part) => part.type === "tool" && part.callId === input.id)) &&
-    (session.status === "awaiting_input" || session.status === "in_progress")
+    !(typeof approvalIds === "string" ? approvalIds === input.id : approvalIds?.includes(input.id)) &&
+    !messages.some((m) => m.parts.some((part) => part.type === "tool" && part.callId === input.id))
   )
     return null;
   return stamp(session, Math.max(reply?.position ?? 0, input?.position ?? 0));
@@ -155,7 +154,20 @@ export const readChange = defineCommand({
     if (ctx.resource?.type !== "session") throw new Error("Choose a session.");
     const content = await ctx.sessions.getConversation(ctx.resource.id);
     const approvals = ("approvals" in content ? (content.approvals as { id: string }[] | undefined) : undefined) ?? [];
-    const observed = await observedSessionChange(content.session, content.messages, approvals[0]?.id);
+    const latest = await observedSessionChange(
+      content.session,
+      content.messages,
+      approvals.map((approval) => approval.id),
+    );
+    // An expired request may have left the conversation. Return the older content
+    // that is actually proven, preserving the newer unseen head instead of making
+    // terminal history unreadable through this explicit read operation.
+    const observed =
+      latest ??
+      (await observedSessionChange(
+        { ...content.session, changePositions: { reply: content.session.changePositions?.reply } },
+        content.messages,
+      ));
     if (!observed) throw new Error("The displayed conversation is catching up.");
     return { content: { messages: content.messages, approvals }, stamp: observed };
   },
