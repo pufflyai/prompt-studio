@@ -1,6 +1,24 @@
 import { expect, test } from "bun:test";
 import { groupDevices, workspaceResource, workspaceTarget } from "./model";
 
+test.each([
+  "pstdio.worktree",
+  "pstdio.git-workspaces.workspace-type.git",
+  "pstdio.workspaces.workspace-type.git",
+])("%s opens as a Git workspace with the fork comparison", (providerId) => {
+  const workspace = {
+    id: "git",
+    providerId,
+    executionKind: "local" as const,
+    capabilities: { files: "write" as const, diff: true, merge: true, rebase: true, delete: true },
+  };
+  expect(workspaceResource(workspace, "project")).toMatchObject({
+    icon: "git-branch",
+    metadata: { workspaceType: "Git worktree" },
+  });
+  expect(workspaceTarget(workspace, "project").params).toEqual({ comparison: "fork_point" });
+});
+
 test("device groups put this device first, then online names, then offline last seen", () => {
   const devices = [
     { id: "old", name: "Old", online: false, current: false, lastSeenAt: "2026-10-01" },

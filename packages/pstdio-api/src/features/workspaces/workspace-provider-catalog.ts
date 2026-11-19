@@ -8,8 +8,19 @@ import { findWorkspaceProvider } from "./workspace-provider-runtime";
 export const listWorkspaceProviders = async (deps: WorkspacesRouteDeps, projectId: string) => {
   const providers: ExtensionWorkspaceProvider[] = [];
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
+  const providerIds = new Set<string>();
+  const entries = [...snapshot.runtime.workspaceTypes]
+    .sort(
+      (a, b) => Number(a.extensionId === "pstdio.git-workspaces") - Number(b.extensionId === "pstdio.git-workspaces"),
+    )
+    .filter((entry) => {
+      const id = catalogProviderId(entry.id);
+      if (providerIds.has(id)) return false;
+      providerIds.add(id);
+      return true;
+    });
   const installed = await Promise.all(
-    snapshot.runtime.workspaceTypes.map(async (entry) => {
+    entries.map(async (entry) => {
       let params = entry.provider.params ?? {};
       if (entry.provider.discover) {
         try {

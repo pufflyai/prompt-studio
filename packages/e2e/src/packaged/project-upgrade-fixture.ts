@@ -61,7 +61,9 @@ export const upgradeCoreProjectTools = async (api: StackApi, project: string) =>
   const changes: { extension: string; version: string | null; next: string | null }[] = [];
   for (const tool of extensions) {
     if (
-      !/^pstdio\.((pstdio-)?(planner|session-browser)|harness-codex|git-workspaces)$/.test(tool.extensionId) ||
+      !/^pstdio\.((pstdio-)?(planner|session-browser|workspaces)|harness-codex|git-workspaces)$/.test(
+        tool.extensionId,
+      ) ||
       !tool.enabled
     )
       continue;
@@ -257,7 +259,7 @@ export const seedUpgradeProject = async (api: StackApi, input: ProjectUpgradeInp
     await Bun.write(join(folder, "handoff.txt"), "Historical handoff · 修正\n".repeat(6000));
   const project = await api.post<{ id: string; name: string }>("/projects", folderProjectInput({ name }, folder));
   const prefix = `/projects/${project.id}`;
-  console.log("[upgrade fixture] Preparing Planner, Git Workspaces, and the conversation harness");
+  console.log("[upgrade fixture] Preparing Planner, Workspaces, and the conversation harness");
   const { marketplace, extensions } = await api.get<{
     marketplace: { installName: string }[];
     extensions: ProjectExtension[];
@@ -270,8 +272,8 @@ export const seedUpgradeProject = async (api: StackApi, input: ProjectUpgradeInp
   if (!enabled.has("pstdio.harness-codex"))
     await api.post(`${prefix}/extensions/install`, { source: { kind: "catalog", name: "harness-codex" } });
   // Older releases supply the Git provider directly.
-  if (!enabled.has("pstdio.git-workspaces") && marketplace.some(({ installName }) => installName === "git-workspaces"))
-    await api.post(`${prefix}/extensions/install`, { source: { kind: "catalog", name: "git-workspaces" } });
+  if (!enabled.has("pstdio.workspaces") && marketplace.some(({ installName }) => installName === "workspaces"))
+    await api.post(`${prefix}/extensions/install`, { source: { kind: "catalog", name: "workspaces" } });
   const commands = await planner(api, project.id);
   console.log("[upgrade fixture] Creating worktrees and conversations");
   const worktreeIds: string[] = [];

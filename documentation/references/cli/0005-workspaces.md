@@ -39,7 +39,7 @@ The provider must be available on the current host. Unknown or unavailable provi
 
 The Git provider needs a repository with at least one commit. For a project in a repository subfolder, sessions run in the matching subfolder of the worktree. Files stay within that folder, but Git diff and merge include every changed path in the repository.
 
-Git Workspaces (`pstdio.git-workspaces`) is installed through the default extension catalog. It supplies discovery, revision validation, creation and cleanup through the public workspace-provider API. Git is needed to use this provider; opening an ordinary folder and installing Prompt Studio do not require Git.
+Workspaces (`pstdio.workspaces`) is installed through the default extension catalog. It supplies discovery, revision validation, creation and cleanup through the public workspace-provider API. The Workspaces tool combines file browsing and the Git provider. Existing projects enable the combined tool when either predecessor was enabled; existing checkout IDs, folders and history stay intact. The old Git Workspaces source files are retained locally. Git is needed to use the Git provider; opening an ordinary folder and installing Prompt Studio do not require Git.
 
 The existing `pstdio.worktree` provider ID routes to this installed extension. Existing workspace IDs, folders, branches and session links survive upgrade and restart without recreating checkouts. Disabling the provider preserves those files and records while making provider operations unavailable. Re-enabling it restores operations. A missing ready checkout is reported for recovery rather than recreated from the base commit.
 

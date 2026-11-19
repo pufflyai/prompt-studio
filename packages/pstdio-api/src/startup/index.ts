@@ -1,5 +1,6 @@
 import { basename } from "node:path";
 import type { RouteDeps } from "../features/deps";
+import { adoptWorkspacesTool, combinedWorkspacesSource } from "../features/extensions/adopt-workspaces-tool";
 import {
   installDefaultExtensions,
   registerInstalledExtensionSources,
@@ -15,6 +16,7 @@ import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-pr
 import { apiLogger } from "../lib/logger";
 import { traceSetupPhase } from "../lib/setup-phase";
 import { adoptTerminalTool } from "./terminal-tool-upgrade";
+import { canRefreshWorkspacesTool, refreshingWorkspacesEntry } from "./workspaces-tool-upgrade";
 
 interface StartupTaskOptions {
   onBackgroundTask?: (task: Promise<void>) => void;
@@ -67,28 +69,55 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
   const sourceMode = process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1";
   const projects = await deps.projectService.list();
   const existingProjects = !sourceMode && projects.length > 0;
+  const workspaceSource = await deps.extensionService.getInstalledSource("workspaces");
+  const hasCombinedWorkspaces = workspaceSource
+    ? await combinedWorkspacesSource(workspaceSource.source_path).catch(() => false)
+    : false;
+  const terminalChosen = (
+    await Promise.all(
+      projects.map(({ id }) => deps.extensionService.hasDefaultSourceChoice(id, "pstdio.pstdio-terminal")),
+    )
+  ).every(Boolean);
+  const needsWorkspaceUpgrade =
+    existingProjects &&
+    !hasCombinedWorkspaces &&
+    (await Promise.all(projects.map(({ id }) => deps.extensionService.listProjectExtensionInstances(id)))).some(
+      (records) =>
+        records.some(
+          ({ instance, installedSource }) =>
+            instance.enabled && installedSource.extension_id === "pstdio.git-workspaces",
+        ),
+    );
+
+  const refreshWorkspaces = needsWorkspaceUpgrade && (await canRefreshWorkspacesTool(workspaceSource));
 
   try {
-    if (
-      existingProjects &&
-      (
-        await Promise.all(
-          projects.map(({ id }) => deps.extensionService.hasDefaultSourceChoice(id, "pstdio.pstdio-terminal")),
-        )
-      ).every(Boolean)
-    )
-      return;
-    await installDefaultExtensions({
+    if (existingProjects && !needsWorkspaceUpgrade && terminalChosen) return;
+    return await installDefaultExtensions({
       ...(existingProjects
         ? {
             env: {
               ...process.env,
               PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(
-                (await resolveDefaultExtensionsConfig()).defaultExtensions.filter(
-                  (entry) =>
+                (await resolveDefaultExtensionsConfig()).defaultExtensions
+                  .filter(
+                    (entry) =>
+                      (!terminalChosen &&
+                        (typeof entry === "string"
+                          ? basename(entry)
+                          : (entry.installName ?? basename(entry.source))) === "pstdio-terminal") ||
+                      (needsWorkspaceUpgrade &&
+                        (typeof entry === "string"
+                          ? basename(entry)
+                          : (entry.installName ?? basename(entry.source))) === "workspaces"),
+                  )
+                  .map((entry) =>
+                    refreshWorkspaces &&
                     (typeof entry === "string" ? basename(entry) : (entry.installName ?? basename(entry.source))) ===
-                    "pstdio-terminal",
-                ),
+                      "workspaces"
+                      ? refreshingWorkspacesEntry(entry)
+                      : entry,
+                  ),
               ),
             },
           }
@@ -136,10 +165,16 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
   );
   const defaultExtensionPreparation = (async () => {
     signal?.throwIfAborted();
-    if (options?.prepareDefaultExtensions) await options.prepareDefaultExtensions(signal);
-    else await ensureDefaultExtensionsInstalled(deps, signal);
+    if (options?.prepareDefaultExtensions) {
+      await options.prepareDefaultExtensions(signal);
+      return [];
+    }
+    return (await ensureDefaultExtensionsInstalled(deps, signal)) ?? [];
   })();
-  registerBackgroundTask(defaultExtensionPreparation, options);
+  registerBackgroundTask(
+    defaultExtensionPreparation.then(() => undefined),
+    options,
+  );
   const projectIds = (await deps.projectService.list()).map((project) => project.id);
   signal?.throwIfAborted();
   await reconcileProjectWorkspaces(deps, projectIds, signal);
@@ -166,8 +201,14 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
     });
   }
   registerBackgroundTask(
-    defaultExtensionPreparation.then(async () => {
+    defaultExtensionPreparation.then(async (installed) => {
       await adoptTerminalTool(deps, projectIds, signal);
+      for (const projectId of projectIds)
+        await adoptWorkspacesTool(
+          deps,
+          projectId,
+          installed.map(({ targetPath, sourceHash }) => ({ path: targetPath, hash: sourceHash })),
+        );
       await provisionRecoveredWorkspaces(deps, projectIds, signal);
       for (const projectId of projectIds) {
         signal?.throwIfAborted();

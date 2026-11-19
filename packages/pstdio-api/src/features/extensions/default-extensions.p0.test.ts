@@ -17,11 +17,11 @@ describe("resolveDefaultExtensionsConfig", () => {
       "home",
       "session-browser",
       "onboarding",
+      "workspaces",
       "base-themes",
       "skills",
       "github",
       "pstdio-terminal",
-      "git-workspaces",
     ]);
   });
 
@@ -278,11 +278,11 @@ describe("installDefaultExtensions sources", () => {
     expect(calls.map((call) => call.installName)).toEqual([
       "session-browser",
       "onboarding",
+      "workspaces",
       "base-themes",
       "skills",
       "github",
       "pstdio-terminal",
-      "git-workspaces",
     ]);
     expect(
       calls.every(

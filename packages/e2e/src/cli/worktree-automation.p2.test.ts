@@ -12,7 +12,7 @@ const ctx: HookTestContext = { api: null!, dirs: [] };
 
 beforeAll(async () => {
   api = await startApi({
-    env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "workbench-fixture", "git-workspaces") },
+    env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "workbench-fixture", "pstdio-workspaces") },
   });
   ctx.api = api;
 }, SETUP_TIMEOUT);

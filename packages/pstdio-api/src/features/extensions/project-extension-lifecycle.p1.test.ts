@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { normalizeExtensionSources } from "pstdio-extensions";
+import { type ExtensionRuntime, normalizeExtensionSources } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestDocumentStorage } from "../../test-utils/create-test-document-storage";
 import { loadExtensionSource } from "./extension-runtime";
@@ -46,7 +46,12 @@ const createDeps = (input: { skills?: unknown[] } = {}) => {
       extensionConnectionService: { removeExtension: mock(async () => {}) },
       extensionStorageService: createTestDocumentStorage(),
       extensionRuntimeCatalog: {
-        get: mock(async () => ({ runtime: { schedules: [] as Array<Record<string, unknown>> } })),
+        get: mock(async () => ({
+          runtime: {
+            schedules: [] as Array<Record<string, unknown>>,
+            workspaceTypes: [] as ExtensionRuntime["workspaceTypes"],
+          },
+        })),
         getSourcesRuntime: mock(async () => ({
           extensions: [installedSource],
           diagnostics: [],
