@@ -318,10 +318,9 @@ test(
         .filter({ hasText: "Device A history" })
         .click();
       await expectUI(
-        page
-          .getByRole("region", { name: "Side Panel", exact: true })
-          .getByText("Private workspace history", { exact: true }),
+        page.getByRole("region", { name: "Main", exact: true }).getByText("Private workspace history", { exact: true }),
       ).toBeVisible();
+      await expectUI(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Device A history");
       progress("private history visible");
       progress("stop first runtime");
       if (a) await stopProcess(a.child);
