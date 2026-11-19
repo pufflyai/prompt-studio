@@ -307,6 +307,17 @@ export const workbenchExtensionMetadataSchema = z.object({
   settingsDefinitions: z.array(extensionSettingDefinitionRecordSchema).optional(),
   automations: z.array(workbenchExtensionAutomationRecordSchema).optional(),
   connections: z.array(workbenchExtensionConnectionRecordSchema).optional(),
+  workspaceTypes: z
+    .array(
+      z.object({
+        id: z.string(),
+        localId: z.string(),
+        extensionId: z.string(),
+        label: localizableStringSchema,
+        icon: z.string().optional(),
+      }),
+    )
+    .optional(),
   harnesses: z
     .array(
       z.object({

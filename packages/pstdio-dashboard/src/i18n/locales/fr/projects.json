@@ -135,7 +135,8 @@
           "templates": "Modèles",
           "themes": "Thèmes",
           "navigationItems": "Éléments de navigation",
-          "commandPaletteResources": "Ressources de la palette de commandes"
+          "commandPaletteResources": "Ressources de la palette de commandes",
+          "workspaceTypes": "Types d’espace de travail"
         },
         "deleteHintShared": "Supprimer les fichiers de cette extension. Elle est retirée de tous les projets qui l'utilisent."
       },

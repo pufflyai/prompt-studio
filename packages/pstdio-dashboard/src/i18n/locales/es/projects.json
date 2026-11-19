@@ -135,7 +135,8 @@
           "templates": "Plantillas",
           "themes": "Temas",
           "navigationItems": "Elementos de navegación",
-          "commandPaletteResources": "Recursos de la paleta de comandos"
+          "commandPaletteResources": "Recursos de la paleta de comandos",
+          "workspaceTypes": "Tipos de espacio de trabajo"
         },
         "deleteHintShared": "Eliminar los archivos de esta extensión. Esto la quita de todos los proyectos que la usan."
       },

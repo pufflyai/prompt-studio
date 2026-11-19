@@ -133,7 +133,8 @@
           "templates": "템플릿",
           "themes": "테마",
           "navigationItems": "탐색 항목",
-          "commandPaletteResources": "명령 팔레트 리소스"
+          "commandPaletteResources": "명령 팔레트 리소스",
+          "workspaceTypes": "작업 공간 유형"
         },
         "deleteHintShared": "이 확장의 파일을 삭제합니다. 이 확장을 사용하는 모든 프로젝트에서 제거됩니다."
       },
