@@ -1,4 +1,5 @@
-import { integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { index, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import type { Json } from "pstdio-sync-contracts";
 
 export const accounts = pgTable("manager_accounts", {
@@ -31,6 +32,26 @@ export const workbenches = pgTable(
     id: text().notNull(),
   },
   (table) => [primaryKey({ columns: [table.accountId, table.id] })],
+);
+export const projectDeletions = pgTable(
+  "manager_project_deletions",
+  {
+    accountId: text()
+      .notNull()
+      .references(() => accounts.id),
+    workbenchId: text().notNull(),
+    operationId: text().notNull(),
+    delivery: integer().notNull().default(1),
+    startedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    state: text({ enum: ["deleting", "needs-attention", "completed"] }).notNull(),
+    completedAt: timestamp({ withTimezone: true }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.accountId, table.workbenchId] }),
+    index("manager_project_deletions_pending")
+      .on(table.startedAt, table.operationId)
+      .where(sql`${table.state} = 'deleting'`),
+  ],
 );
 // Encryption keys for a cloud project's shared space and the owner's personal space. A new generation
 // is added whenever a device leaves; older generations stay so older data stays readable.

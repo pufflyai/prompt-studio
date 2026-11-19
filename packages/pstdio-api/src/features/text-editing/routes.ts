@@ -1,6 +1,10 @@
 import { OpenAPIHono, z } from "@hono/zod-openapi";
 import { streamSSE } from "hono/streaming";
-import { textEditingConnectionSchema, textEditingRequestSchema } from "pstdio-api-contracts";
+import {
+  textEditingConnectionSchema,
+  textEditingInitialMemberSchema,
+  textEditingRequestSchema,
+} from "pstdio-api-contracts";
 import { textError } from "../../services/text-editing/errors";
 import type { createTextEditingService } from "../../services/text-editing/service";
 import type { AppBindings } from "../../types";
@@ -16,6 +20,12 @@ export const createTextEditingRoutes = (service: ReturnType<typeof createTextEdi
   routes.post(base, async (c) => {
     const scope = textEditingConnectionSchema.parse(await c.req.json());
     return c.json({ ok: true, value: await service.connect(c.req.param("projectId"), scope) });
+  });
+  routes.post(`${base}/open`, async (c) => {
+    const { scope, initial } = z
+      .strictObject({ scope: textEditingConnectionSchema, initial: textEditingInitialMemberSchema })
+      .parse(await c.req.json());
+    return c.json({ ok: true, value: await service.connect(c.req.param("projectId"), scope, initial) });
   });
   routes.post(`${base}/request`, async (c) => {
     const { token, request } = requestSchema.parse(await c.req.json());

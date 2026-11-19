@@ -85,7 +85,7 @@ test("a newer dependency revision during dispatch prevents starting on its stale
   const run = ctx.process.run;
   let checks = 0;
   ctx.process.run = async (input) => {
-    if (input.command.includes("--verify") && ++checks === 2) {
+    if (input.command.includes("--end-of-options") && ++checks === 2) {
       const parent = (await listAttempts(storage)).find(({ workspaceId }) => workspaceId === started.workspace.id)!;
       await putAttempt(storage, {
         ...parent,

@@ -262,12 +262,15 @@ export const createPreparationClient = (
       };
       const result = waitForPreparation(owned, options, scope, request, () => {
         cancelQueuedPreparation(jobs, queued, owned);
-        const slot = pool.slots.find((slot) => slot.active === owned);
-        if (slot) {
+        const slot = pool.slots.find((slot) => slot.active === owned || slot.retiring === owned);
+        if (slot?.active === owned) {
           if (slot.dispatched && slot.worker) pool.replace(slot);
           else slot.active = undefined;
         }
         schedule();
+        // A closed caller must not outlive its worker, including an evaluation
+        // already retiring after preemption. Unrelated slot work stays admitted.
+        return slot?.retiring === owned ? slot.restarting : undefined;
       });
       schedule();
       return result as Promise<T>;

@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth/minimal";
 import { bearer } from "better-auth/plugins/bearer";
@@ -7,9 +8,11 @@ import { and, eq, sql } from "drizzle-orm";
 import { identitySchema } from "pstdio-sync-contracts";
 import { type ManagerAuthConfig, parseManagerAuthConfig } from "./auth-config";
 import * as authSchema from "./auth-schema";
+import { digestCredential } from "./credential";
 import { connectManager } from "./database";
 import { createDeviceAccess, createDeviceLogin } from "./device-access";
 import { findDeviceAccess } from "./devices";
+import { acknowledgeProjectDeletion, listProjectDeletionJobs } from "./project-deletion";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
 import { devices } from "./schema";
 import { withAccountTransaction } from "./transactions";
@@ -39,7 +42,18 @@ export const createManagerAuthentication = (input: ManagerAuthConfig) => {
   });
   const readSession = (headers: Headers) => auth.api.getSession({ headers, query: { disableCookieCache: true } });
   const deviceLogin = createDeviceLogin(connection.db, readSession);
+  const relayDigest = config.projectDeletionRelayToken
+    ? Buffer.from(digestCredential(config.projectDeletionRelayToken), "hex")
+    : null;
   return {
+    projectDeletions: {
+      enabled: relayDigest !== null,
+      authenticate: (token: string) =>
+        relayDigest !== null && timingSafeEqual(Buffer.from(digestCredential(token), "hex"), relayDigest),
+      jobs: () => listProjectDeletionJobs(connection.db),
+      acknowledge: (input: Parameters<typeof acknowledgeProjectDeletion>[1]) =>
+        acknowledgeProjectDeletion(connection.db, input),
+    },
     handler: auth.handler,
     // The relay origin comes from the manager's own configuration, never from the client.
     loginDevice: async (headers: Headers, input: unknown) => ({

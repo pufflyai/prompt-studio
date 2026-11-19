@@ -3,6 +3,7 @@ import { z } from "zod";
 
 export const deviceSchema = z.object({ ownerId: z.string(), id: z.string(), name: z.string() });
 export const personalSessionSchema = sessionSchema.extend({
+  change_positions: sessionSchema.shape.change_positions.default(null),
   device: deviceSchema,
   workspace_id: z.string().nullable(),
   approval_requests: z

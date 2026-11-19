@@ -2,12 +2,10 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import {
   aggregateOptions,
-  compareQueryValues,
   encodeQueryCursor,
   prepareRecordQuery,
   requestedRecordIndex,
   validateComputedConditions,
-  validateIndexes,
   validatePredicate,
   validateRelatedQueryFields,
 } from "pstdio-sync/records";
@@ -28,18 +26,15 @@ import {
 } from "../../db/schemas.pg";
 import { traceStorageQuery } from "./query-trace";
 import { aggregateRecordQuery } from "./record-aggregate-query";
-import {
-  installDateFormatIndex,
-  prepareDateFormatIndexes,
-  pruneDateFormatIndexes,
-  retainDateFormatIndexes,
-} from "./record-date-format";
+import { countIndexSource } from "./record-count-query";
+import { prepareDateFormatIndexes, pruneDateFormatIndexes } from "./record-date-format";
 import { dependencyOrderedPageSql } from "./record-dependency-order";
-import { derivedQueryChanges, rebuildDerivedQueryValues } from "./record-derived-fields";
 import { formatDatabasePrefix } from "./record-format-key";
-import { dropRecordIndexes, installRecordIndex, recordIndexName } from "./record-index-lifecycle";
+import { defineRecordIndexes } from "./record-index-definition";
+import { recordIndexName } from "./record-index-lifecycle";
 import { decodeProjectionValue } from "./record-projection-codec";
-import { pageAfterSql, recordPageSql, recordScopeSql } from "./record-query-sql";
+import { pageAfterSql, recordPageSql } from "./record-query-sql";
+import { recordVisibilitySql } from "./record-query-visibility";
 import { loadRelatedQueryIndexes, relatedRecordPredicateSql } from "./record-related-query";
 import { prepareTextOrder } from "./record-text-order";
 import { identityQueryVersion, prepareResourceQueryValues } from "./resource-query-values";
@@ -47,8 +42,6 @@ import type { StorageDiagnostics } from "./storage-diagnostics";
 
 type QueryRow = { record_id: string; revision: string; fields: Record<string, Json>; sort_values: Json[] };
 type Current = typeof current.$inferSelect;
-const orderDefinitions = (definitions: StorageRecordIndex[]) =>
-  definitions.sort((left, right) => compareQueryValues(left.name, right.name));
 const missingRecord = async (recordId: string) => ({
   recordId,
   exists: false,
@@ -123,57 +116,6 @@ const emptyQueryResult = (owner: StorageOwner, revision: string, diagnostics?: S
   return { revision, records: [], cursor: null };
 };
 
-const matchesRecordCatalog = (
-  catalog: { name: string; databaseName: string }[],
-  names: ReadonlyMap<string, string>,
-) => {
-  const declared = catalog.filter((row) => !row.databaseName.startsWith(formatDatabasePrefix));
-  return declared.length === names.size && declared.every((row) => row.databaseName === names.get(row.name));
-};
-
-const defineRecordIndexes = async (
-  db: DbClient,
-  owner: StorageOwner,
-  scope: NonNullable<ReturnType<typeof and>>,
-  definitions: StorageRecordIndex[],
-  diagnostics?: StorageDiagnostics,
-) => {
-  traceStorageQuery("indexes-start", definitions.map(({ name }) => name).join(","));
-  validateIndexes(definitions);
-  const publicDesired = orderDefinitions(structuredClone(definitions));
-  const names = new Map(
-    await Promise.all(publicDesired.map(async (index) => [index.name, await recordIndexName(owner, index)] as const)),
-  );
-  await db.transaction(async (tx) => {
-    // The physical name hashes the complete definition and implementation version.
-    // Check that exact catalog identity before hydrating definitions needed only for replacement.
-    const catalog = await tx
-      .select({ name: indexes.name, databaseName: indexes.database_name })
-      .from(indexes)
-      .where(scope);
-    if (matchesRecordCatalog(catalog, names)) return;
-    const previous = await tx.select().from(indexes).where(scope);
-    const decoded = previous.map((row) => ({
-      index: decodeProjectionValue(row.definition as unknown as Json) as unknown as StorageRecordIndex,
-      cached: row.database_name.startsWith(formatDatabasePrefix),
-    }));
-    const installed = orderDefinitions(decoded.map(({ index }) => index));
-    const retained = await retainDateFormatIndexes(
-      decoded.filter(({ cached }) => cached).map(({ index }) => index),
-      publicDesired,
-    );
-    const desired = orderDefinitions([...publicDesired, ...retained]);
-    await dropRecordIndexes(tx, scope);
-    await tx.delete(indexes).where(scope);
-    await rebuildDerivedQueryValues(tx, owner, derivedQueryChanges(installed, desired), diagnostics);
-    for (const index of publicDesired) await installRecordIndex(tx, owner, index);
-    for (const index of retained) await installDateFormatIndex(tx, owner, index);
-    // Expression indexes get planner statistics only from ANALYZE, not from CREATE INDEX.
-    // Dropping indexes needs none, and analyzing the table shared by all owners is slow.
-    if (desired.length) await tx.execute(sql`ANALYZE storage_current_records`);
-  });
-};
-
 const prepareQueryMetadata = async (
   tx: Pick<DbClient, "select" | "execute" | "insert" | "delete">,
   owner: StorageOwner,
@@ -210,7 +152,7 @@ const prepareQueryMetadata = async (
 export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnostics?: StorageDiagnostics) => {
   const ownerWhere = (table: typeof current | typeof indexes | typeof projections) =>
     and(eq(table.workbench_id, owner.workbenchId), eq(table.extension_id, owner.extensionId));
-  const visible = (index: StorageRecordIndex) => recordScopeSql(owner, index);
+  const physicalNames = new WeakMap<StorageRecordIndex, string>();
   const getIndex = async (connection: Pick<DbClient, "select">, name: string) => {
     const [index] = await connection
       .select()
@@ -223,7 +165,9 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
         ),
       );
     if (!index) throw new Error(`Storage index not installed: ${name}`);
-    return decodeProjectionValue(index.definition as unknown as Json) as unknown as StorageRecordIndex;
+    const declaration = decodeProjectionValue(index.definition as unknown as Json) as unknown as StorageRecordIndex;
+    physicalNames.set(declaration, index.database_name);
+    return declaration;
   };
   // Index replacement can change selection without editing records. Both belong to a query snapshot.
   const getRevision = async (connection: Reader, identities = false) => {
@@ -251,7 +195,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     return row.revision + identityRevision;
   };
   const api: StorageRecordQueries = {
-    defineIndexes: (definitions) => defineRecordIndexes(db, owner, ownerWhere(indexes)!, definitions, diagnostics),
+    defineIndexes: (definitions) => defineRecordIndexes(db, owner, definitions, "immediate", diagnostics),
     query: (query) =>
       db.transaction(async (tx) => {
         traceStorageQuery("query-start", query.index);
@@ -260,6 +204,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
         traceStorageQuery("query-execute", query.index);
         const page = await prepareRecordQuery(owner, index, query, revision, related);
         if (page.limit === 0) return emptyQueryResult(owner, revision, diagnostics);
+        const visible = await recordVisibilitySql(owner, index, declared, physicalNames.get(declared));
         const result = await tx.execute<QueryRow>(
           query.dependencyOrder
             ? dependencyOrderedPageSql(
@@ -267,14 +212,14 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
                 index,
                 query.dependencyOrder,
                 page.fields,
-                sql`${visible(index)} AND ${relatedRecordPredicateSql(owner, index, query.where, related)}`,
+                sql`${visible} AND ${relatedRecordPredicateSql(owner, index, query.where, related)}`,
                 page.limit,
                 related,
               )
             : recordPageSql(
                 index,
                 page.fields,
-                sql`${visible(index)} AND ${relatedRecordPredicateSql(owner, index, query.where, related)} AND ${pageAfterSql(index, page.after, related, owner)}`,
+                sql`${visible} AND ${relatedRecordPredicateSql(owner, index, query.where, related)} AND ${pageAfterSql(index, page.after, related, owner)}`,
                 // One extra row shows whether a next page exists without a second scan.
                 page.limit + 1,
                 page.offset,
@@ -345,14 +290,25 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
           const [projection] = await tx.select().from(projections).where(ownerWhere(projections));
           return { revision, count: projection?.live_count ?? 0, groups: [] };
         }
+        const predicate = relatedRecordPredicateSql(owner, index, query.where, related);
+        const name = physicalNames.get(declared);
+        // An owner rename moves declarations before the new owner installs its count tables.
+        const counted =
+          name?.startsWith("storage_query_v4_") &&
+          declared.countBy?.length &&
+          name === (await recordIndexName(owner, declared))
+            ? await countIndexSource(tx, index, query, name, predicate)
+            : undefined;
+        const visible = counted ? sql`true` : await recordVisibilitySql(owner, index, declared, name);
         return aggregateRecordQuery(
           tx,
           index,
           query,
           revision,
-          sql`${visible(index)} AND ${relatedRecordPredicateSql(owner, index, query.where, related)}`,
+          sql`${visible} AND ${predicate}`,
           related,
           owner,
+          counted,
         );
       }),
     readMany: async (ids) => {

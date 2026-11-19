@@ -6,6 +6,9 @@ import { cleanupSync } from "./cleanup";
 import { connectRelay } from "./database";
 import { createSyncDocuments, type DocumentChange } from "./documents";
 import { createPayloadObjects } from "./payloads";
+import { createProjectAccess } from "./project-access";
+import { createProjectDeletion } from "./project-deletion";
+import { createProjectNotices } from "./project-notices";
 
 export interface RelaySyncConfig extends ObjectConfig {
   databaseUrl: string;
@@ -19,11 +22,25 @@ export interface RelaySyncConfig extends ObjectConfig {
  */
 export const createRelaySync = ({ databaseUrl, bucket, s3, assets, limits }: RelaySyncConfig) => {
   const connection = connectRelay(databaseUrl);
+  const control = connectRelay(databaseUrl);
+  const projectAccess = createProjectAccess(control);
+  const retired = new Set<(key: string) => void>();
+  const disconnected = new Set<() => void>();
+  const projectNotices = createProjectNotices(
+    databaseUrl,
+    (key) => {
+      for (const listener of retired) listener(key);
+    },
+    () => {
+      for (const listener of disconnected) listener();
+    },
+  );
   const payloads = createPayloadObjects({ bucket, s3 });
   const listeners = new Set<(change: DocumentChange) => void>();
   const documents = createSyncDocuments({
     connection,
     payloads,
+    access: projectAccess,
     limits,
     changed: (change) => {
       for (const listener of listeners) listener(change);
@@ -31,7 +48,14 @@ export const createRelaySync = ({ databaseUrl, bucket, s3, assets, limits }: Rel
   });
   return {
     documents,
-    blobs: createSyncBlobs(connection, assets, limits),
+    projectAccess,
+    projectNotices,
+    deleteProject: createProjectDeletion({ connection, control, payloads, assets }),
+    watchRetirement(onRetired: (key: string) => void, onDisconnected: () => void) {
+      retired.add(onRetired);
+      disconnected.add(onDisconnected);
+    },
+    blobs: createSyncBlobs(connection, assets, limits, projectAccess),
     /** Notifies after a commit. Only this relay process's writes are reported. */
     watch(listener: (change: DocumentChange) => void) {
       listeners.add(listener);
@@ -40,8 +64,9 @@ export const createRelaySync = ({ databaseUrl, bucket, s3, assets, limits }: Rel
     cleanup: (now?: Date, signal?: AbortSignal) => cleanupSync({ connection, payloads, assets, limits }, now, signal),
     async close() {
       listeners.clear();
+      await projectNotices.close();
       payloads.close();
-      await connection.close();
+      await Promise.all([connection.close(), control.close()]);
     },
   };
 };

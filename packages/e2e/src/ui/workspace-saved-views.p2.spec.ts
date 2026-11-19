@@ -25,9 +25,10 @@ test("the Workspaces extension saves shared views and isolates each project's se
       if (!localStorage.getItem("dashboard-wb2:selected-project:global"))
         localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, first!.id);
-    await page.goto(`/projects/${first!.id}/workspaces`);
+    await page.goto(`/projects/${first!.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
     // Saved-view controls follow the extension's initial collection and shared-view reads.
     await expect(page.getByRole("tab", { name: "By device", exact: true })).toHaveAttribute("aria-selected", "true");
+
     await expect(page.getByRole("button", { name: "Add view", exact: true })).toBeEnabled();
     await page.getByRole("button", { name: "Add view", exact: true }).click();
     const savedTab = page.getByRole("tab", { name: "View 3", exact: true });
@@ -37,8 +38,8 @@ test("the Workspaces extension saves shared views and isolates each project's se
     await page.getByRole("textbox", { name: "View name" }).fill("Release workspaces");
     await page.getByRole("button", { name: "Rename", exact: true }).click();
     await page.getByRole("button", { name: "Display settings" }).click();
-    await page.getByRole("button", { name: "Children Hidden", exact: true }).click();
-    await page.getByRole("menuitem", { name: "Nested", exact: true }).click();
+    await page.getByRole("button", { name: "Child rows Hide", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Show", exact: true }).click();
     await page.keyboard.press("Escape");
     // Keep the real persistence request pending long enough to expose a click-before-save race.
     await page.route(`**/v1/projects/${first!.id}/board-views/*`, async (route) => {
@@ -62,8 +63,8 @@ test("the Workspaces extension saves shared views and isolates each project's se
       ).settings.showChildren,
     ).toBe(true);
     await page.getByRole("button", { name: "Display settings" }).click();
-    await page.getByRole("button", { name: "Children Nested", exact: true }).click();
-    await page.getByRole("menuitem", { name: "Hidden", exact: true }).click();
+    await page.getByRole("button", { name: "Child rows Show", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Hide", exact: true }).click();
     await page.keyboard.press("Escape");
     await saveView(false);
     await expect(page.getByLabel("Unsaved view changes")).toHaveCount(0);
@@ -91,7 +92,7 @@ test("the Workspaces extension saves shared views and isolates each project's se
         localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
       }, first!.id);
       const otherPage = await otherClient.newPage();
-      await otherPage.goto(`/projects/${first!.id}/workspaces`);
+      await otherPage.goto(`/projects/${first!.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
       await otherPage.getByRole("tab", { name: "Release workspaces", exact: true }).click();
       await expect(otherPage.getByRole("tab", { name: "Release workspaces", exact: true })).toHaveAttribute(
         "aria-selected",
@@ -103,7 +104,7 @@ test("the Workspaces extension saves shared views and isolates each project's se
       await page.getByRole("button", { name: "Switch project", exact: true }).click();
       const projectPicker = page.getByRole("dialog", { name: "Projects", exact: true });
       await projectPicker.getByText("Other workspace views", { exact: true }).click();
-      await page.goto(`/projects/${second!.id}/workspaces`);
+      await page.goto(`/projects/${second!.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
       await expect(page.getByRole("tab", { name: "By device", exact: true })).toHaveAttribute("aria-selected", "true");
       await expect(releaseTab).toHaveCount(0);
       await expect(page.getByRole("tab", { name: "Compact", exact: true })).toBeVisible();
@@ -111,7 +112,7 @@ test("the Workspaces extension saves shared views and isolates each project's se
       expect(otherViews.views).toHaveLength(2);
       await page.getByRole("button", { name: "Switch project", exact: true }).click();
       await projectPicker.getByText("Saved workspace views", { exact: true }).click();
-      await page.goto(`/projects/${first!.id}/workspaces`);
+      await page.goto(`/projects/${first!.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
       await expect(releaseTab).toHaveAttribute("aria-selected", "true");
     };
     const checks = await Promise.allSettled([readSharedView(), checkProjectSelections()]);

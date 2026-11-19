@@ -9,6 +9,7 @@ import {
   sessionBrowser,
   type TemplateParam,
 } from "@pstdio/sdk/extensions";
+import { hasFolderWriter } from "../data/folder-writers";
 import { findTicket } from "../data/resolve";
 import { renderOwnedTemplate } from "../data/template-store";
 import { plannerOwnerFor, readTicketParentLookup, ticketResourceIdentity } from "../data/ticket-resource-hierarchy";
@@ -137,27 +138,34 @@ export const createAnchoredWorkspace = async (
       ticket?: string;
       rowId?: string;
     }>,
-    "extensionId" | "projectId" | "resource" | "attachment" | "storage" | "resources" | "workspaces"
+    "extensionId" | "projectId" | "resource" | "attachment" | "storage" | "resources" | "workspaces" | "sessions"
   >,
   commandParams: {
     ticket?: string;
     rowId?: string;
   },
-  base: string,
+  base: string | null,
   beforeDispatch?: () => Promise<void>,
 ) => {
   const ticketRef = resolveTicket(ctx, commandParams);
   const { anchor, shorthand, ticket } = await resolveTicketAnchor(ctx, ticketRef);
-  const attemptMode = "worktree";
+  const attemptMode = base === null ? "folder" : "worktree";
   await beforeDispatch?.();
-  const workspace = await ctx.workspaces.create({
-    project_id: ctx.projectId,
-    shorthand_base: shorthand,
-    anchors: [anchor],
-    provider_id: "pstdio.worktree",
-    params: { base },
-  });
+  const workspace =
+    base === null
+      ? await ctx.workspaces.getDefault()
+      : await ctx.workspaces.create({
+          project_id: ctx.projectId,
+          shorthand_base: shorthand,
+          anchors: [anchor],
+          provider_id: "pstdio.worktree",
+          params: { base },
+        });
+  if (!workspace || (base === null && workspace.project_id !== ctx.projectId))
+    throw new Error("Attach a project folder before running an attempt.");
   await requireReadyWorkspace(ctx, workspace);
+  if (base === null && (await hasFolderWriter(ctx, workspace.id)))
+    throw new Error("Another session is executing in this project folder. Wait for its handoff.");
 
   return { anchor, mode: attemptMode, ticket, workspace };
 };

@@ -8,10 +8,12 @@ test("unchanged index admission checks catalog identities without reloading ever
   const f = await createExtensionStorageFixture();
   try {
     const catalog: string[] = [];
+    const maintenance: string[] = [];
     const db = drizzle(f.db.$client, {
       schema,
       logger: {
         logQuery: (query) => {
+          if (/^analyze/i.test(query)) maintenance.push(query);
           if (query.startsWith("select") && query.includes('from "storage_record_indexes"')) catalog.push(query);
         },
       },
@@ -25,6 +27,7 @@ test("unchanged index admission checks catalog identities without reloading ever
       fields: { title: { path: ["title"], type: "string" as const } },
     };
     await records.defineIndexes([definition]);
+    expect(maintenance).toEqual([]);
     await records.commit({
       operationId: "seed",
       edits: ["first", "second"].map((name) => ({ recordId: `${name}/item`, replace: { title: name } })),

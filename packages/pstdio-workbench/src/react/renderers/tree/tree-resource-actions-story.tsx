@@ -6,7 +6,7 @@ import { WorkbenchStory } from "../../../examples/workbench-story";
 
 export const createTreeResourceActionsWorkbench = (region: "sidenav" | "main") => {
   const page: PageRef = { extensionId: "preview", kind: "page", id: `tree-actions-${region}` };
-  const workbench = createWorkbench({ startPage: page });
+  const workbench = createWorkbench({ defaultPage: page });
   const ticket: ResourceRef = { type: "ticket", id: "ticket", label: "Write notes" };
   const session: ResourceRef = { type: "session", id: "inactive-session", label: "Inactive session" };
   const workspace: ResourceRef = {

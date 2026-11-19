@@ -1,5 +1,5 @@
 import { createWorkbench, type SettingsRegistry, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
-import { createWorkbenchTerminalModule, WORKBENCH_TERMINAL_PANEL_SIZE } from "@pstdio/workbench/react";
+import { WORKBENCH_TERMINAL_PANEL_SIZE } from "@pstdio/workbench/react";
 import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { getDashboardScopedQueries } from "@/lib/scoped-queries";
 import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
@@ -9,6 +9,7 @@ import {
   createDashboardProjectSelectionPersistence,
   type DashboardProjectSelectionPersistence,
 } from "@/shared/app/project-selection-persistence";
+import { migrateLegacyTerminalLayout } from "@/shared/terminal/legacy-terminal-layout";
 import { createBootstrapModule } from "./modules/bootstrap";
 import { createCommandPaletteModule } from "./modules/command-palette/module";
 import { createExtensionsModule } from "./modules/extensions/module";
@@ -30,7 +31,8 @@ import { createSidenavModule } from "./modules/sidenav/module";
 import { createTerminalModule } from "./modules/terminal/module";
 import { createUpdatesModule } from "./modules/updates/module";
 import { createWorkspacesModule } from "./modules/workspaces/module";
-import { dashboardHomePage } from "./shared/app/resources";
+import { getDashboardSelectedProjectId } from "./shared/app/project-context";
+import { getCachedDashboardExtensionMetadata } from "./shared/extensions/workbench-extension-contributions";
 import { resolveDashboardPersistenceScope } from "./shared/workbench/dashboard-persistence-scope";
 import { DASHBOARD_SIDENAV_REGION_SIZE } from "./shared/workbench/dashboard-sidenav";
 
@@ -81,7 +83,6 @@ export const createDashboardModules = (input: CreateDashboardModulesInput & { se
     createNotificationsModule(),
     createPerformanceModule(input.settings, input.performance),
     createUpdatesModule(),
-    createWorkbenchTerminalModule(),
     createTerminalModule(),
     projectOpening.module,
     createBootstrapModule({
@@ -104,6 +105,11 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     debounceMs: input.layoutDebounceMs,
   });
 
+  for (const { scope, layout } of persistence.layoutPersistence.listLayouts?.() ?? []) {
+    const migrated = migrateLegacyTerminalLayout(layout);
+    if (migrated !== layout) persistence.layoutPersistence.setLayout(migrated, scope);
+  }
+
   const pageLocationBrowser =
     input.pageLocationBrowser ??
     (typeof window === "undefined" ? undefined : createDashboardPageLocationBrowser(window));
@@ -112,10 +118,15 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     ? undefined
     : pageLocationBrowser && readPageUrlProjectId(pageLocationBrowser.current().url);
   if (urlProjectId) projectSelectionPersistence.setSelectedProjectId(urlProjectId);
-  const workbench = createWorkbench({
+  const workbench: ReturnType<typeof createWorkbench> = createWorkbench({
     active: input.active,
     queries: getDashboardScopedQueries(),
-    startPage: dashboardHomePage,
+    defaultPage: () => {
+      const projectId = getDashboardSelectedProjectId(workbench);
+      return projectId
+        ? (getCachedDashboardExtensionMetadata(projectId)?.composition?.defaultPage ?? undefined)
+        : undefined;
+    },
     initialSidePanelMode: "closed",
     defaultPanelOpenByRegionId: { secondary: false },
     regionSettings: {

@@ -112,6 +112,7 @@ export const createExtensionWebviewHostCapabilities = (
     pageParams,
     placement,
     notifications,
+    performance,
     settings,
     preferences,
     files,
@@ -123,6 +124,7 @@ export const createExtensionWebviewHostCapabilities = (
   const account = createAccountCapability(adapters.account);
   return {
     "harnesses.read": capability("harnesses.read", readHarnesses),
+    "resources.changes.observed": capability("resources.changes.observed", undefined),
     "resources.actions": capability("resources.actions", adapters.resourceActions),
     "resources.actions.register": capability("resources.actions.register", adapters.registerResourceAction),
     "commands.execute": capability("commands.execute", commandExecution(adapters)),
@@ -223,9 +225,12 @@ export const createExtensionWebviewHostCapabilities = (
     "artifacts.read": capability("artifacts.read", artifacts && ((request) => artifacts.read(request))),
     "performance.read": capability(
       "performance.read",
-      createPerformanceReadCapability(adapters.performance, hostEvents, adapters.performanceQueries),
+      createPerformanceReadCapability(performance, hostEvents, adapters.performanceQueries),
     ),
-    "performance.control": capability("performance.control", adapters.performance?.control),
+    "performance.control": capability(
+      "performance.control",
+      performance && ((request) => performance.control(request, hostEvents)),
+    ),
     "account.read": capability("account.read", createAccountReadCapability(account, adapters.accountQueries)),
     "account.manage": capability("account.manage", account),
   } satisfies Record<WebviewHostCapability, HostCapability>;

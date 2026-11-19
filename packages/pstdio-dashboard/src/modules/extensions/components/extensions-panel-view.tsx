@@ -1,4 +1,4 @@
-import { HStack, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
+import { Button, HStack, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
 import type {
   ExtensionDiagnostic,
   MarketplaceExtension,
@@ -17,6 +17,7 @@ import { type ExtensionUpgradeBatch, marketplaceActionKey } from "./extension-ac
 import { ExtensionFolderDropZone } from "./extension-folder-drop-zone";
 import { unavailableExtensionHarnesses } from "./extension-harness-availability";
 import { ExtensionListRow } from "./extension-list-row";
+import { type ExtensionProvenanceFilter, matchesExtensionProvenance } from "./extension-provenance-filter";
 import { ExtensionUpgradeProgress } from "./extension-upgrade-progress";
 import { MarketplaceExtensionRow } from "./marketplace-extension-row";
 
@@ -109,12 +110,17 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
   } = props;
   const { t } = useTranslation("projects");
   const [search, setSearch] = useState("");
+  const [provenance, setProvenance] = useState<ExtensionProvenanceFilter>("all");
 
   const diagnosticsByExtensionId = getDiagnosticsByExtensionId(extensions, diagnostics);
   const sortedExtensions = [...extensions].sort(compareDisplayName);
-  const visible = sortedExtensions.filter((extension) => matchesSearch(extension, search));
+  const visible = sortedExtensions.filter(
+    (extension) => matchesSearch(extension, search) && matchesExtensionProvenance(extension, provenance),
+  );
   const availableMarketplace = marketplace.filter((extension) => !extension.installed).sort(compareDisplayName);
-  const visibleMarketplace = availableMarketplace.filter((extension) => matchesMarketplaceSearch(extension, search));
+  const visibleMarketplace = availableMarketplace.filter(
+    (extension) => matchesMarketplaceSearch(extension, search) && matchesExtensionProvenance(extension, provenance),
+  );
   const upgradable = extensions.filter((extension) => extension.canUpgrade && !sourceChangingIds?.has(extension.id));
   const folderAction = actionStates.$folder;
 
@@ -154,6 +160,19 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
               />
             </InputGroup>
           </HStack>
+          <HStack gap="xs" aria-label={t("projectSettings.extensionsPanel.provenance.filter")}>
+            {(["all", "public", "mine"] as const).map((value) => (
+              <Button
+                key={value}
+                size="sm"
+                variant={provenance === value ? "solid" : "ghost"}
+                aria-pressed={provenance === value}
+                onClick={() => setProvenance(value)}
+              >
+                {t(`projectSettings.extensionsPanel.provenance.${value}`)}
+              </Button>
+            ))}
+          </HStack>
         </Stack>
       }
     >
@@ -174,7 +193,9 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
       )}
       {extensions.length > 0 && visible.length === 0 && (
         <Text paddingX="lg" paddingY="md" textStyle="paragraph/S/regular" color="fg.muted">
-          {t("projectSettings.extensionsPanel.noSearchResults", { query: search })}
+          {search.trim()
+            ? t("projectSettings.extensionsPanel.noSearchResults", { query: search })
+            : t("projectSettings.extensionsPanel.provenance.noMatches")}
         </Text>
       )}
 
@@ -208,7 +229,9 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
       )}
       {availableMarketplace.length > 0 && visibleMarketplace.length === 0 && (
         <Text paddingX="lg" paddingY="md" textStyle="paragraph/S/regular" color="fg.muted">
-          {t("projectSettings.extensionsPanel.noSearchResults", { query: search })}
+          {search.trim()
+            ? t("projectSettings.extensionsPanel.noSearchResults", { query: search })
+            : t("projectSettings.extensionsPanel.provenance.noMatches")}
         </Text>
       )}
       {visibleMarketplace.map((extension) => (

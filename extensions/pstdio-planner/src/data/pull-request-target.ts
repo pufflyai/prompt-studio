@@ -7,6 +7,7 @@ export const pullRequestTarget = async (ctx: ExtensionContextBase) => {
   if (!home?.root_path) return null;
   try {
     const base = await resolveImplementationBase(ctx, await ctx.settings.all());
+    if (!base) return null;
     const remotes = await ctx.process.run({ command: ["git", "remote"], cwd: home.root_path });
     if (remotes.exitCode !== 0) return null;
     const remote =
