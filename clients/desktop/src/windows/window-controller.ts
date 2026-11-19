@@ -16,6 +16,8 @@ import { prepareWorkbenchDocument } from "./workbench-loading";
 const WORKBENCH_PARTITION = "pstdio-workbench";
 const logger = createLogger({ component: "desktop", level: "info", service: "pstdio-desktop", sync: true });
 
+export type WorkbenchLoadFailure = { reason: string; exitCode?: number; errorCode?: number };
+
 export class DesktopWindowController {
   #runtimeOrigin: string | null = null;
   #workbench: WebContentsView | null = null;
@@ -30,6 +32,7 @@ export class DesktopWindowController {
     private readonly preloadPath: string,
     workbenchSession: Session,
     appearance: DesktopStartupAppearance | undefined,
+    private readonly onWorkbenchFailure?: (failure: WorkbenchLoadFailure) => void,
   ) {
     this.lifecycleUrl = LIFECYCLE_URL;
     secureSession(workbenchSession, () => this.#runtimeOrigin);
@@ -79,14 +82,18 @@ export class DesktopWindowController {
     this.window.on("closed", () => this.#workbench?.webContents.close());
   }
 
-  static async create(preloadPath: string, startupAppearance: () => DesktopStartupAppearance | undefined) {
+  static async create(
+    preloadPath: string,
+    startupAppearance: () => DesktopStartupAppearance | undefined,
+    onWorkbenchFailure?: (failure: WorkbenchLoadFailure) => void,
+  ) {
     const rendererRoot = join(import.meta.dirname, "renderer");
     // The partition is memory-only; the lifecycle renderer stays mounted in the window.
     const workbenchSession = session.fromPartition(WORKBENCH_PARTITION, { cache: true });
     await workbenchSession.protocol.handle(LIFECYCLE_SCHEME, (request) =>
       readLifecycleAsset(request.url, rendererRoot, startupAppearance()),
     );
-    return new DesktopWindowController(preloadPath, workbenchSession, startupAppearance());
+    return new DesktopWindowController(preloadPath, workbenchSession, startupAppearance(), onWorkbenchFailure);
   }
 
   runtimeOrigin() {
@@ -122,7 +129,9 @@ export class DesktopWindowController {
 
   updateState(state: DesktopState) {
     // The workbench shows the quit confirmation; the lifecycle page shows every other state.
-    for (const contents of this.webContents()) contents.send(DESKTOP_CHANNELS.startupStateChanged, state);
+    for (const contents of this.webContents()) {
+      if (!contents.isDestroyed() && !contents.isCrashed()) contents.send(DESKTOP_CHANNELS.startupStateChanged, state);
+    }
   }
 
   setStartupAppearance(appearance: DesktopStartupAppearance) {
@@ -171,6 +180,16 @@ export class DesktopWindowController {
       lifecycleUrl: this.lifecycleUrl,
       runtimeOrigin: () => this.#runtimeOrigin,
       openExternal: (url) => shell.openExternal(url),
+    });
+    const reportFailure = (failure: WorkbenchLoadFailure) => {
+      // Startup owns failures until the workbench is visible. A replaced or closed view has no window to recover.
+      if (view === this.#workbench && view.getVisible() && !this.window.isDestroyed()) {
+        this.onWorkbenchFailure?.(failure);
+      }
+    };
+    view.webContents.on("render-process-gone", (_event, details) => reportFailure(details));
+    view.webContents.on("did-fail-load", (_event, errorCode, _description, _url, isMainFrame) => {
+      if (isMainFrame && errorCode !== -3) reportFailure({ reason: "navigation_failed", errorCode });
     });
     view.setVisible(false);
     this.window.contentView.addChildView(view);

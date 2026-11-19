@@ -29,6 +29,8 @@ const setup = (input: {
   openIds?: string[];
   selected?: string;
   persist?: (state: { projectIds: string[] }) => Promise<void>;
+  beforeCreate?: (projectId: string | undefined) => void;
+  onWorkbenchError?: (projectId: string | undefined, error: unknown) => void;
 }) => {
   const writes: string[][] = [];
   const disposed: WorkbenchCore[] = [];
@@ -44,22 +46,22 @@ const setup = (input: {
   markInitialCollectionsSyncComplete();
   tabs.start({
     projectId: input.selected,
+    onWorkbenchError: input.onWorkbenchError,
     persistence: {
       getSelectedProjectId: () => selection,
       setSelectedProjectId: (id) => {
         selection = id;
       },
     },
-    createWorkbench: (projectId, active) => {
+    createWorkbench: (projectId, active, projectTabs) => {
+      input.beforeCreate?.(projectId);
       const workbench = createWorkbench({ active });
       const dispose = workbench.dispose;
       workbench.dispose = () => {
         disposed.push(workbench);
         return dispose();
       };
-      workbench.registerModule(
-        createProjectsModule({ projectTabs: tabs.forWorkbench(projectId), initialProjectId: projectId }),
-      );
+      workbench.registerModule(createProjectsModule({ projectTabs, initialProjectId: projectId }));
       return workbench;
     },
   });
@@ -105,6 +107,53 @@ test("selecting a project inside a workbench shows that project's tab and leaves
   expect(tabs.getActiveWorkbench()).toBe(workbenchOf("second"));
   expect(getDashboardSelectedProjectId(first)).toBe("first");
   expect(first.activation.isActive()).toBe(false);
+});
+
+test("a workbench that fails during creation can be retried while the other project stays loaded", () => {
+  let fail = true;
+  const failure = new Error("could not create second workbench");
+  const reported: unknown[] = [];
+  const { tabs, disposed, render, workbenchOf } = setup({
+    selected: "first",
+    beforeCreate: (id) => {
+      if (id === "second" && fail) throw failure;
+    },
+    onWorkbenchError: (id, error) => reported.push({ id, error }),
+  });
+  const first = workbenchOf("first");
+  tabs.select("second");
+  const failed = tabs.getState().active!;
+  expect(failed.projectId).toBe("second");
+  expect(tabs.getActiveWorkbench()).toBeUndefined();
+  expect(reported).toEqual([{ id: "second", error: failure }]);
+
+  tabs.select("first");
+  fail = false;
+  tabs.retry(failed);
+  expect(tabs.getActiveWorkbench()).toBe(first);
+  tabs.select("second");
+  tabs.retry(failed);
+  render();
+  expect(tabs.getActiveWorkbench()?.activation.isActive()).toBe(true);
+  expect(tabs.getState().active?.key).not.toBe(failed.key);
+  expect(workbenchOf("first")).toBe(first);
+  expect(disposed).toEqual([]);
+});
+
+test("a replaced workbench cannot switch away from the retried tab while it is being released", async () => {
+  const { tabs, disposed, render, workbenchOf } = setup({ selected: "first" });
+  const original = tabs.getState().active!;
+  const retired = workbenchOf("first")!;
+  tabs.retry(original);
+  const replacement = workbenchOf("first")!;
+  expect(replacement).not.toBe(retired);
+
+  await retired.commands.executeCommand(dashboardCommandIds.selectProject, {
+    project: { id: "second", name: "second" },
+  });
+  expect(tabs.getActiveWorkbench()).toBe(replacement);
+  render();
+  expect(disposed).toEqual([retired]);
 });
 
 test("closing a tab releases only its workbench and shows the next tab", () => {
@@ -193,7 +242,7 @@ test("reports a failed tab write and clears the error after the next saved chang
   await save;
   expect(await Bun.file(path).json()).toEqual({ projectIds: [] });
   for (const entry of tabs.getState().workbenches)
-    expect(entry.workbench.notifications.listNotifications()).toEqual([]);
+    expect(entry.workbench?.notifications.listNotifications()).toEqual([]);
 });
 
 test("a project created in this window opens in its tab once its row syncs", () => {
