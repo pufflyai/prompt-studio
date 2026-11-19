@@ -21,7 +21,7 @@ jobs:
           path: app-main
       - uses: actions/checkout@v5
         with:
-          ref: de8c377094f2963e0aa7c90ef3b37d43d8cd5fc2
+          ref: ad1327c1a9b56d5dcb9846444d98697ea0ba73d8
           path: app-candidate
       - uses: oven-sh/setup-bun@v2
         with:
@@ -79,50 +79,3 @@ jobs:
         if: always()
         working-directory: app-candidate
         run: bun run dev:isolated -- --name ps236-candidate-${{ github.run_id }} --down
-  scoped-history:
-    name: Isolated macOS scoped history diagnosis
-    runs-on: macos-14
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: a84ce9fc70d25b782e715878d1534d5c2381ad4c
-          path: history-baseline
-      - uses: actions/checkout@v5
-        with:
-          ref: 1f78acd986836ee851dbb0b9c2db331ce2b91e70
-          path: history-candidate
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.4
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 26.7.0
-      - name: Prepare the same published dependencies before both observations
-        run: |
-          mkdir -p history-evidence
-          uname -a > history-evidence/host.txt
-          sysctl hw.ncpu hw.memsize >> history-evidence/host.txt
-          for app in history-baseline history-candidate; do
-            git -C "$app" rev-parse HEAD > "history-evidence/$app-source.txt"
-            bun install --cwd "$app/extensions/pstdio-planner" --frozen-lockfile --ignore-scripts > "history-evidence/$app-install.log" 2>&1
-          done
-      - name: Observe the original parent with its unchanged five-second case limit
-        id: baseline
-        continue-on-error: true
-        working-directory: history-baseline/extensions/pstdio-planner
-        run: bun test src/commands/attempt-scoped-history.p1.test.ts > ../../../history-evidence/baseline.log 2>&1
-      - name: Verify the integrated parent with the same fixture and case limit
-        id: candidate
-        working-directory: history-candidate/extensions/pstdio-planner
-        run: bun test src/commands/attempt-scoped-history.p1.test.ts > ../../../history-evidence/candidate.log 2>&1
-      - name: Record both original outcomes
-        if: always()
-        run: |
-          mkdir -p history-evidence
-          printf 'baseline=%s\ncandidate=%s\n' '${{ steps.baseline.outcome }}' '${{ steps.candidate.outcome }}' > history-evidence/step-outcomes.txt
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: ps236-history-${{ github.run_id }}
-          path: history-evidence
