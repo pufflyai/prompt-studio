@@ -25,13 +25,13 @@ import {
   storage_resource_projections,
 } from "../../db/schemas.pg";
 import { traceStorageQuery } from "./query-trace";
-import { aggregateRecordQuery } from "./record-aggregate-query";
+import { aggregateCacheEpochs, aggregateCacheFor } from "./record-aggregate-cache";
+import { aggregateRecordQuery, canCountOwnerProjection } from "./record-aggregate-query";
 import { countIndexSource } from "./record-count-query";
 import { prepareDateFormatIndexes, pruneDateFormatIndexes } from "./record-date-format";
 import { dependencyOrderedPageSql } from "./record-dependency-order";
 import { formatDatabasePrefix } from "./record-format-key";
 import { defineRecordIndexes } from "./record-index-definition";
-import { recordIndexName } from "./record-index-lifecycle";
 import { decodeProjectionValue } from "./record-projection-codec";
 import { pageAfterSql, recordPageSql } from "./record-query-sql";
 import { recordVisibilitySql } from "./record-query-visibility";
@@ -153,6 +153,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
   const ownerWhere = (table: typeof current | typeof indexes | typeof projections) =>
     and(eq(table.workbench_id, owner.workbenchId), eq(table.extension_id, owner.extensionId));
   const physicalNames = new WeakMap<StorageRecordIndex, string>();
+  const aggregateCache = aggregateCacheFor(db);
   const getIndex = async (connection: Pick<DbClient, "select">, name: string) => {
     const [index] = await connection
       .select()
@@ -253,8 +254,11 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
   const api: StorageRecordQueries = {
     defineIndexes: (definitions) => defineRecordIndexes(db, owner, definitions, "immediate", diagnostics),
     query: (query) => db.transaction((tx) => queryIn(tx, query)),
-    aggregate: (query) =>
-      db.transaction(async (tx) => {
+    aggregate: async (input) => {
+      const query = structuredClone(input);
+      let cacheKey: string | undefined;
+      let reused = false;
+      const result = await db.transaction(async (tx) => {
         traceStorageQuery("aggregate-start", query.index);
         validateRelatedQueryFields(query);
         const declared = await getIndex(tx, query.index);
@@ -278,27 +282,21 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
         traceStorageQuery("aggregate-execute", query.index);
         validatePredicate(index, query.where, 0, related);
         validateComputedConditions(index, related);
-        if (
-          query.where === undefined &&
-          query.groupBy === undefined &&
-          query.metrics === undefined &&
-          query.statistics === undefined &&
-          query.fingerprint === undefined &&
-          index.prefix === undefined &&
-          !index.identity
-        ) {
+        const epochs = await aggregateCacheEpochs(tx, owner, related.hasIdentity);
+        cacheKey = epochs ? JSON.stringify([owner.workbenchId, owner.extensionId, epochs, revision, query]) : undefined;
+        const cached = cacheKey ? aggregateCache.read(cacheKey) : undefined;
+        if (cached) {
+          reused = true;
+          return cached;
+        }
+        if (canCountOwnerProjection(index, query)) {
           const [projection] = await tx.select().from(projections).where(ownerWhere(projections));
           return { revision, count: projection?.live_count ?? 0, groups: [] };
         }
         const predicate = relatedRecordPredicateSql(owner, index, query.where, related);
         const name = physicalNames.get(declared);
         // An owner rename moves declarations before the new owner installs its count tables.
-        const counted =
-          name?.startsWith("storage_query_v4_") &&
-          declared.countBy?.length &&
-          name === (await recordIndexName(owner, declared))
-            ? await countIndexSource(tx, index, query, name, predicate)
-            : undefined;
+        const counted = await countIndexSource(tx, index, query, { name, declared, owner }, predicate);
         const visible = counted ? sql`true` : await recordVisibilitySql(owner, index, declared, name);
         return aggregateRecordQuery(
           tx,
@@ -310,7 +308,11 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
           owner,
           counted,
         );
-      }),
+      });
+      // Publish only after SQL accepts the snapshot; rolled-back reads never seed a shared cache.
+      if (cacheKey && !reused) aggregateCache.remember(cacheKey, result);
+      return result;
+    },
     readMany: async (ids) => {
       if (ids.length > 100) throw new Error("A batch can read at most 100 records");
       return readProjectedRecords(db, owner, ids);
