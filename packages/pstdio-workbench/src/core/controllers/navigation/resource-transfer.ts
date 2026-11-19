@@ -1,8 +1,8 @@
-import type { PlacementIdentity } from "@pstdio/sdk/extensions";
+import { contributionRefId, type PlacementIdentity, type ViewLocation } from "@pstdio/sdk/extensions";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import type { NavigationTargetPage, NavigationTargetPanel } from "../../registries/navigation/navigation-registry";
-import { isPageContent } from "../../registries/pages/page-main";
+import { isPageContent, pageSlots } from "../../registries/pages/page-main";
 import { editPagePlacementStates } from "../../registries/pages/page-placement-state";
 import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/page-registry";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
@@ -109,6 +109,42 @@ export const matchingResourcePlacement = (
       resourceViewerBinding(core, placement.identity)?.kind === "binding" &&
       core.pages.resourceReferenceKey(placement.value.resource) === key,
   );
+};
+
+export const panelTransferLocation = (
+  core: WorkbenchCore,
+  target: NavigationTargetPanel,
+  current: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+  original: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+  requested?: ViewLocation,
+  departing?: WorkbenchWidgetPlacement,
+) => {
+  const source =
+    departing ??
+    (target.resource &&
+      (
+        matchingResourcePlacement(core, current, target.resource) ??
+        matchingResourcePlacement(core, original, target.resource)
+      )?.value);
+  if (!source) return requested;
+  const ref = target.panel;
+  let item: WorkbenchOwnedPlacementItem | undefined;
+  if (ref.kind === "placement") item = core.modePlacements.getPlacement(ref)?.item;
+  else if (ref.kind === "shell-placement") item = core.shellPlacements.getPlacement(ref.id)?.item;
+  else {
+    const page = Object.values(current.pages).find(
+      (page) => page.ref.id === ref.page.id && page.ref.extensionId === ref.page.extensionId,
+    );
+    item = page && pageSlots(page).find((slot) => slot.id === ref.id)?.item;
+  }
+  const view = item && contributionRefId(item.kind === "view" ? item.view : item.binding.view);
+  if (view !== source.viewId) return requested;
+  return {
+    section: source.section,
+    position: source.position,
+    pageContext: source.pageContext ?? source.pageOwnerLocation,
+    ...requested,
+  };
 };
 
 export const prepareResourceTransfer = (

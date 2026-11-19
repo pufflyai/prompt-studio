@@ -171,6 +171,13 @@ export const updateResourcePlacementInstance = (input: {
   keyOfResource?(resource: ResourceRef): string;
 }) => {
   const { id, item, label, state } = input;
+  if (item.kind === "view") {
+    if (input.location) {
+      state.staticLocations ??= new Map();
+      state.staticLocations.set(id, { ...state.staticLocations.get(id), ...input.location });
+    }
+    return;
+  }
   if (input.instanceKey === "default" || item.kind !== "binding") return;
   if (input.resource && !resourceMatchesConstraint(item.binding, input.resource)) {
     throw new Error(`${label} "${id}" does not accept resource kind "${input.resource.type}"`);

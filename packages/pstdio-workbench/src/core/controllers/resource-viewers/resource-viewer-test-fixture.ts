@@ -26,6 +26,7 @@ export const createResourceViewerFixture = (
     sideCanOpen?: boolean;
     collection?: boolean;
     browser?: WorkbenchPageLocationBrowser;
+    registerPages?: (core: ReturnType<typeof createWorkbench>) => void;
   } = {},
 ) => {
   const saved = options.saved ?? new Map<string | undefined, WorkbenchLayout>();
@@ -100,6 +101,7 @@ export const createResourceViewerFixture = (
     main: { kind: "view", presentation: "page", cardinality: "one", view: { kind: "view", id: "browser" } },
     slots: [],
   });
+  options.registerPages?.(w);
   w.pageLocations.setProject("project");
   w.pageLocations.navigate({ kind: "page", page: viewerPage("home") });
   const openMain = (id: string, type = "record") =>

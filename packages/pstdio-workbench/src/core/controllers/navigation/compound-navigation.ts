@@ -17,7 +17,12 @@ import { prepareMainDeparture } from "./main-page-departure";
 import { preparePageNavigation } from "./page-navigation-preparation";
 import { requireCorePanelTargets } from "./panel-target";
 import { commitPreparedNavigation } from "./prepared-navigation-commit";
-import { finalHostTransfers, prepareResourceTransfer, retainTransferredPin } from "./resource-transfer";
+import {
+  finalHostTransfers,
+  panelTransferLocation,
+  prepareResourceTransfer,
+  retainTransferredPin,
+} from "./resource-transfer";
 import { isReusedViewerPin, prepareReusedViewerPin, recordOutgoingViewerPins } from "./reused-viewer-pin";
 
 type NavigationOperation = NavigationTargetPage | NavigationTargetPanel;
@@ -103,6 +108,7 @@ const prepareSharedPanel = (
       resource: target.resource,
       open: target.open,
       region: target.region,
+      location,
       ...("title" in target ? { title: target.title } : {}),
     },
     shellState,
@@ -213,15 +219,23 @@ export const prepareWorkbenchNavigation = (
     } else if (target.kind === "panel") {
       const modeId = panelModeId(core, target, proposed.activeModeId);
       const panel = target.panel;
+      const location = panelTransferLocation(core, target, beforeOpen, original, options.location, departure.source);
       if (panel.kind === "page-slot") {
         const page = requirePanelPage(proposed, panel);
         proposed = pages.prepare.slot(
-          { pageId: page.id, slotId: panel.id, resource: target.resource, open: target.open, region: target.region },
+          {
+            pageId: page.id,
+            slotId: panel.id,
+            resource: target.resource,
+            open: target.open,
+            region: target.region,
+            ...location,
+          },
           proposed,
           owned(),
         );
       } else {
-        const prepared = prepareSharedPanel(core, target, modeId, modeState, shellState, options.location);
+        const prepared = prepareSharedPanel(core, target, modeId, modeState, shellState, location);
         modeState = prepared.modeState;
         shellState = prepared.shellState;
         const identity = prepared.identity;
