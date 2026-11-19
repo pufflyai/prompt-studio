@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { e2eExtensions } from "../default-extensions";
-import { enableCoreSkillsExtension } from "./extension-helpers";
+import { enableCorePlannerExtension, enableCoreSkillsExtension } from "./extension-helpers";
 import { cleanupDirs, createGitRepo, createTempDir, runPstdioAsync } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
@@ -11,14 +11,7 @@ let api: ApiInstance;
 
 beforeAll(async () => {
   api = await startApi({
-    env: {
-      PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(
-        "harness-claude-code",
-        "harness-open-code",
-        "pstdio-skills",
-        "pstdio-planner",
-      ),
-    },
+    env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("harness-claude-code", "harness-open-code") },
   });
 }, SETUP_TIMEOUT);
 
@@ -98,6 +91,7 @@ describe("pstdio agents (filesystem)", () => {
       // Initialize a project so skills can be fetched from the API
       await run(["projects", "create", "e2e-agents-test"], repo);
       await enableCoreSkillsExtension(api.url, readProjectId(repo));
+      await enableCorePlannerExtension(api.url, readProjectId(repo));
       await run(["agents", "setup", "claude-code"], repo);
 
       // Skills are installed either during project creation (via registerRepo) or agent setup
