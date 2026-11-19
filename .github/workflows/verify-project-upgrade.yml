@@ -1,0 +1,268 @@
+name: Verify a populated project upgrade
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      source_sha:
+        required: true
+        type: string
+      artifact_run_id:
+        required: true
+        type: string
+      artifact_attempt:
+        required: true
+        type: string
+      candidate_artifact_id:
+        description: Production certification manifest artifact (stable)
+        type: string
+      build_artifact_id:
+        description: Exact release build artifact (nightly)
+        type: string
+      include_previous_nightly:
+        type: boolean
+        default: false
+      from_tag:
+        type: string
+  workflow_dispatch:
+    inputs:
+      from_tag:
+        description: Published stable source release (defaults to the current stable release)
+        type: string
+      include_previous_nightly:
+        description: Also upgrade the most recently published nightly to main
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  actions: read
+jobs:
+  pair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      to: ${{ steps.select.outputs.to }}
+      run: ${{ steps.select.outputs.run }}
+      platforms: ${{ steps.select.outputs.platforms }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: ${{ inputs.ref != '' && 1 || 0 }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Freeze the published baseline and target revision
+        id: select
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FROM_TAG: ${{ inputs.from_tag }}
+          CANDIDATE_REF: ${{ inputs.ref }}
+          INCLUDE_PREVIOUS_NIGHTLY: ${{ inputs.include_previous_nightly }}
+          PRODUCER_RUN: ${{ inputs.artifact_run_id }}
+          BUILD_ID: ${{ inputs.build_artifact_id }}
+          MANIFEST_ID: ${{ inputs.candidate_artifact_id }}
+        run: |
+          set -euo pipefail
+          from="${FROM_TAG:-$(gh release view --json tagName --jq .tagName)}"
+          [[ "$from" =~ ^pstdio@[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          to="${CANDIDATE_REF:-$(git rev-parse --verify 'refs/remotes/origin/main^{commit}')}"
+          [[ "$to" =~ ^[a-f0-9]{40}$ ]]
+          if [[ -n "$PRODUCER_RUN" ]]; then
+            [[ "$CANDIDATE_REF" =~ ^[a-f0-9]{40}$ ]]
+            # A release call must use an immutable artifact, never the manual source-build path.
+            [[ "$BUILD_ID$MANIFEST_ID" =~ ^[0-9]+$ && ( -z "$BUILD_ID" || -z "$MANIFEST_ID" ) ]]
+          fi
+          run=true
+          if [[ -z "${CANDIDATE_REF:-}" ]]; then
+            baseline_commit=$(git rev-parse --verify "refs/tags/$from^{commit}")
+            if git merge-base --is-ancestor "$to" "$baseline_commit"; then
+              run=false
+              echo "Current main is already included in $from." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          platforms=$(bun -e 'import { projectUpgradePlatforms } from "./scripts/ci/production-candidate"; console.log(JSON.stringify(projectUpgradePlatforms()))')
+          baselines=$(jq -cn --arg stable "$from" '[$stable]')
+          if [[ "$INCLUDE_PREVIOUS_NIGHTLY" == "true" ]]; then
+            previous=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" |
+              jq -r '[.[][] | select(.prerelease and (.draft | not)) | select(.tag_name | test("^pstdio@[0-9]+\\.[0-9]+\\.[0-9]+-nightly\\.[0-9]+$"))] | max_by(.published_at).tag_name // empty')
+            if [[ -n "$previous" ]]; then
+              baselines=$(jq -c --arg tag "$previous" '. + [$tag]' <<< "$baselines")
+            fi
+          fi
+          platforms=$(jq -c --argjson tags "$baselines" '[.[] as $p | $tags[] | $p + {from: .}]' <<< "$platforms")
+          {
+            echo "to=$to"
+            echo "run=$run"
+            echo "platforms=$platforms"
+          } >> "$GITHUB_OUTPUT"
+          echo "Project upgrade $baselines → $to" >> "$GITHUB_STEP_SUMMARY"
+  version_manual:
+    needs: pair
+    if: inputs.ref == '' && needs.pair.outputs.run == 'true'
+    runs-on: ubuntu-24.04
+    outputs:
+      artifact_id: ${{ steps.source.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.pair.outputs.to }}
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - run: bun scripts/ci/install-native-dependencies.ts
+      - name: Version one disposable candidate for all platforms
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PSTDIO_STABLE_TAG=$(gh release view --json tagName --jq .tagName)
+          export PSTDIO_STABLE_TAG
+          bun run --cwd scripts release:version --nightly
+          git add -A
+          git -c user.name=validation -c user.email=validation@localhost commit -m "Version disposable upgrade candidate"
+          git bundle create "$RUNNER_TEMP/candidate.bundle" HEAD ^HEAD^
+      - uses: actions/upload-artifact@v4
+        id: source
+        with:
+          name: manual-upgrade-source-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/candidate.bundle
+  upgrade:
+    needs: [pair, version_manual]
+    if: >-
+      !cancelled() && needs.pair.result == 'success' && needs.pair.outputs.run == 'true' &&
+      (needs.version_manual.result == 'success' || (inputs.ref != '' && needs.version_manual.result == 'skipped'))
+    name: Project upgrade (${{ matrix.from }} → ${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.pair.outputs.platforms) }}
+    env:
+      FROM_TAG: ${{ matrix.from }}
+      CANDIDATE_REF: ${{ needs.pair.outputs.to }}
+      TARGET: ${{ matrix.target }}
+      SOURCE_SHA: ${{ inputs.source_sha }}
+    steps:
+      # A candidate can predate this test. Keep the fixture and product checkouts separate.
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Install fixture dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+      - name: Check out the frozen candidate
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.pair.outputs.to }}
+          path: __test-tmp__/upgrade-candidate
+      - name: Download the shared manual candidate
+        if: inputs.ref == ''
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ needs.version_manual.outputs.artifact_id }}
+          merge-multiple: true
+          path: ${{ runner.temp }}
+      - name: Apply the nightly versions to the frozen main source
+        if: inputs.ref == ''
+        working-directory: __test-tmp__/upgrade-candidate
+        run: |
+          set -euo pipefail
+          git fetch "$RUNNER_TEMP/candidate.bundle" HEAD
+          test "$(git rev-parse FETCH_HEAD^)" = "$CANDIDATE_REF"
+          git checkout --detach FETCH_HEAD
+      - name: Use the candidate's recorded Bun version
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: __test-tmp__/upgrade-candidate/package.json
+      - uses: actions/setup-node@v5
+        if: inputs.ref == ''
+        with:
+          node-version: "26.7.0"
+      - name: Install native build dependencies for current main
+        if: inputs.ref == ''
+        working-directory: __test-tmp__/upgrade-candidate
+        run: bun scripts/ci/install-native-dependencies.ts
+      - name: Compile current main with its own extension sources
+        if: inputs.ref == ''
+        working-directory: __test-tmp__/upgrade-candidate
+        env:
+          PSTDIO_EXTENSION_RELEASE_REF: ${{ needs.pair.outputs.to }}
+        run: |
+          set -euo pipefail
+          bun run build -- --scope pstdio --include-dependencies
+          echo "CANDIDATE_BINARY=$PWD/dist/pstdio" >> "$GITHUB_ENV"
+      - name: Download the frozen candidate manifest
+        if: inputs.candidate_artifact_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ inputs.candidate_artifact_id }}
+          path: __test-tmp__/upgrade-candidate
+          merge-multiple: true
+      - name: Read the immutable build artifact ID
+        id: build
+        if: inputs.candidate_artifact_id != ''
+        working-directory: __test-tmp__/upgrade-candidate
+        env:
+          ARTIFACT_ATTEMPT: ${{ inputs.artifact_attempt }}
+        run: |
+          set -euo pipefail
+          id=$(jq -er --arg name "release-build-attempt-$ARTIFACT_ATTEMPT" '.artifacts[] | select(.name == $name) | .id' production-candidate.json)
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+      - name: Download the exact build
+        if: inputs.ref != ''
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ inputs.build_artifact_id || steps.build.outputs.id }}
+          run-id: ${{ inputs.artifact_run_id }}
+          github-token: ${{ github.token }}
+          path: __test-tmp__/upgrade-candidate
+          merge-multiple: true
+      - name: Restore the packaged CLI
+        if: inputs.ref != ''
+        working-directory: __test-tmp__/upgrade-candidate
+        run: |
+          set -euo pipefail
+          jq -e --arg ref "$CANDIDATE_REF" --arg source "$SOURCE_SHA" '.versionSha == $ref and .sourceSha == $source' production-build-identity.json
+          bun scripts/ci/production-payload.ts check
+          binary="packages/pstdio/dist/platforms/cli-$TARGET/bin/pstdio"
+          tar -xzf release-build.tar.gz "$binary"
+          echo "CANDIDATE_BINARY=$PWD/$binary" >> "$GITHUB_ENV"
+      - name: Install Chromium for the upgraded workbench
+        working-directory: packages/e2e
+        run: bun x --no-install playwright install chromium --with-deps --no-shell
+      - name: Upgrade both populated projects
+        run: |
+          bun --no-env-file packages/e2e/src/packaged/project-upgrade.ts \
+            --from "$FROM_TAG" --candidate "$CANDIDATE_BINARY" --candidate-ref "$CANDIDATE_REF" --candidate-root __test-tmp__/upgrade-candidate
+      - name: Preserve the pair, manifests and startup logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-upgrade-${{ matrix.from }}-${{ matrix.target }}-attempt-${{ github.run_attempt }}
+          path: test-results/project-upgrades
+          if-no-files-found: warn
+      - name: Attest the verified release artifacts
+        if: inputs.candidate_artifact_id != ''
+        working-directory: __test-tmp__/upgrade-candidate
+        env:
+          CHANNEL: stable
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
+          ARTIFACT_ATTEMPT: ${{ inputs.artifact_attempt }}
+        run: bun scripts/ci/production-evidence.ts --check "project-upgrade-$TARGET" --outcome success
+      - name: Preserve release certification evidence
+        if: inputs.candidate_artifact_id != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-evidence-project-upgrade-${{ matrix.target }}-attempt-${{ github.run_attempt }}
+          path: __test-tmp__/upgrade-candidate/production-evidence
+          if-no-files-found: error

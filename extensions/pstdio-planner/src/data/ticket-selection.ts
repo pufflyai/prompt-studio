@@ -1,7 +1,7 @@
-import { readCollectionRecords } from "@pstdio/sdk/data";
 import type { ExtensionStorageApi, StoragePredicate, StorageRecordIndex } from "@pstdio/sdk/extensions";
 import { preparePlannerIndexes } from "./storage-indexes";
-import { readTicketTags, type StoredTicketRecord } from "./ticket-tag-storage";
+import { readTicketRows, TICKET_KEY_PREFIX } from "./ticket-record-address";
+import { readTicketTags } from "./ticket-tag-storage";
 
 const fields: StorageRecordIndex["fields"] = {
   id: { path: ["id"], type: "string" },
@@ -22,7 +22,7 @@ export const missingTicketPosition: StoragePredicate = { field: "position", op: 
 export const ticketSelectionIndexes: StorageRecordIndex[] = [
   {
     name: "ticket-tags",
-    collection: "tickets",
+    keyPrefix: TICKET_KEY_PREFIX,
     fields: {
       ...fields,
       tags: { path: ["tags"], type: "object" },
@@ -30,24 +30,24 @@ export const ticketSelectionIndexes: StorageRecordIndex[] = [
     },
     orderBy: [{ field: "id", direction: "asc" }],
   },
-  { name: "ticket-records", collection: "tickets", fields, orderBy: [{ field: "id", direction: "asc" }] },
+  { name: "ticket-records", keyPrefix: TICKET_KEY_PREFIX, fields, orderBy: [{ field: "id", direction: "asc" }] },
   {
     name: "ticket-status",
-    collection: "tickets",
+    keyPrefix: TICKET_KEY_PREFIX,
     fields,
     equality: ["statusId", "archived"],
     orderBy: [{ field: "id", direction: "asc" }],
   },
   {
     name: "ticket-missing-position",
-    collection: "tickets",
+    keyPrefix: TICKET_KEY_PREFIX,
     fields,
     equality: ["position"],
     orderBy: [{ field: "id", direction: "asc" }],
   },
   {
     name: "ticket-active-order",
-    collection: "tickets",
+    keyPrefix: TICKET_KEY_PREFIX,
     fields,
     equality: ["archived"],
     orderBy: [
@@ -57,7 +57,7 @@ export const ticketSelectionIndexes: StorageRecordIndex[] = [
   },
   ...(["asc", "desc"] as const).map((direction) => ({
     name: `ticket-order-${direction}`,
-    collection: "tickets",
+    keyPrefix: TICKET_KEY_PREFIX,
     fields,
     orderBy: [
       { field: "position", direction },
@@ -66,7 +66,7 @@ export const ticketSelectionIndexes: StorageRecordIndex[] = [
   })),
   {
     name: "ticket-legacy-order",
-    collection: "tickets",
+    keyPrefix: TICKET_KEY_PREFIX,
     fields,
     orderBy: [
       { field: "sortOrder", direction: "asc" },
@@ -111,17 +111,21 @@ export async function* ticketRecordPages(
   where?: StoragePredicate,
   index = "ticket-records",
 ) {
+  // Full board reads can select 500 indexed keys at a time. Filtered migrations
+  // keep their 100-row window as they update the records they just selected.
+  const selectionLimit = where ? 100 : 500;
   let after: string | undefined;
   for (;;) {
-    const page = await ticketSelectionPage(storage, { where, index, after });
+    const page = await ticketSelectionPage(storage, { where, index, after, limit: selectionLimit });
     if (!page.records.length) return;
-    const rows = await readCollectionRecords<StoredTicketRecord>(
-      storage,
-      page.records.map(({ recordId }) => recordId),
-    );
-    yield rows.flatMap((row) => (row ? [readTicketTags(row)] : []));
+    // The record API accepts at most 100 full records per read.
+    for (let offset = 0; offset < page.records.length; offset += 100) {
+      const ids = page.records.slice(offset, offset + 100).map(({ recordId }) => recordId);
+      const rows = await readTicketRows(storage, ids);
+      yield rows.flatMap((row) => (row ? [readTicketTags(row)] : []));
+    }
     after = String(page.records.at(-1)!.fields.id);
-    if (page.records.length < 100) return;
+    if (page.records.length < selectionLimit) return;
   }
 }
 

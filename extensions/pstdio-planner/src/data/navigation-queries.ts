@@ -3,6 +3,7 @@ import { ticketsCollection } from "./collections";
 import { preparePlannerIndexes } from "./storage-indexes";
 import { normalizeTicketDependencies } from "./ticket-dependencies";
 import type { TicketContext } from "./ticket-identity";
+import { TICKET_KEY_PREFIX } from "./ticket-record-address";
 import { readTicketParentLookup } from "./ticket-resource-hierarchy";
 import { type TicketSummary, ticketSummary } from "./ticket-summary";
 import type { Ticket } from "./types";
@@ -31,10 +32,11 @@ const navigationIndexDefinitions: StorageRecordIndex[] = [
     equality: ["ticketId"],
   },
 ];
-export const plannerNavigationIndexes = navigationIndexDefinitions.map((index) => ({
-  ...index,
-  collection: index.name === "ticket-review-requests" ? "planner-review-requests" : "tickets",
-}));
+export const plannerNavigationIndexes = navigationIndexDefinitions.map((index) =>
+  index.name === "ticket-review-requests"
+    ? { ...index, collection: "planner-review-requests" }
+    : { ...index, keyPrefix: TICKET_KEY_PREFIX },
+);
 
 export const prepareNavigationQueries = (storage: ExtensionStorageApi) => preparePlannerIndexes(storage);
 

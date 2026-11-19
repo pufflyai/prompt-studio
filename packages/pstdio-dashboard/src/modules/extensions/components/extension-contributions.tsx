@@ -58,6 +58,13 @@ export const buildContributionGroups = (
     value === undefined ? "" : resolveString(value as never, extensionId);
   const groups: ContributionGroup[] = [
     {
+      key: "workspaceTypes",
+      icon: PanelsTopLeft,
+      rows: forExtension(metadata?.workspaceTypes, extensionId).map((record) =>
+        row(String(record.id), text(record.label, extensionId) || String(record.localId)),
+      ),
+    },
+    {
       key: "harnesses",
       icon: Bot,
       rows: forExtension(metadata?.harnesses, extensionId).map((record) =>

@@ -84,6 +84,7 @@ export const importHistoricalSession = async (
             session_file_id: file.id,
             last_selected_model: session.last_selected_model,
             params_json: session.params_json,
+            change_positions: null,
             usage_json: session.usage_json,
             original_session_id: session.original_session_id
               ? importedSessionId(session.original_session_id, projectId)

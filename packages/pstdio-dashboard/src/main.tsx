@@ -1,3 +1,4 @@
+import "./react-scan-bootstrap";
 import "@pstdio/ui/style.css";
 
 import { PstdioApiError } from "@pstdio/sdk/client";
@@ -11,8 +12,10 @@ import { storeBrowserSession, takeBrowserLoginCode, waitForBrowserLoginLink } fr
 import { connectDesktopCommands } from "@/lib/desktop-commands";
 import { resolveDesktopLifecycleBridge } from "@/lib/desktop-lifecycle-bridge";
 import { createDesktopProjectTabs } from "@/lib/desktop-project-tabs-bridge";
+import { connectDesktopUpdateNotices } from "@/lib/desktop-update-notices";
 import { createDesktopWorkbenchStorage } from "@/lib/desktop-workbench-storage";
 import { SyncProvider } from "@/lib/sync/sync-provider";
+import { reportWorkbenchError } from "@/lib/workbench-error-report";
 import { DesktopQuitConfirmation } from "@/modules/desktop/desktop-quit-confirmation";
 import { DesktopStartupAppearance } from "@/modules/desktop/desktop-startup-appearance";
 import { createPerformanceMonitoring } from "@/modules/performance/module";
@@ -51,8 +54,19 @@ const isBrowserSignedOut = async () => {
   }
 };
 
+const showDashboardFailure = (error: unknown, componentStack?: string | null) => {
+  const status = document.getElementById("dashboard-status-message");
+  if (status) {
+    status.setAttribute("role", "alert");
+    status.textContent = "Prompt Studio couldn’t open";
+  }
+  reportWorkbenchError(error, undefined, componentStack);
+};
+
 const renderDashboard = async () => {
-  const root = createRoot(document.getElementById("root")!);
+  const root = createRoot(document.getElementById("root")!, {
+    onUncaughtError: (error, info) => showDashboardFailure(error, info.componentStack),
+  });
   const initialLink = takeBrowserLoginCode(window.location.hash);
   const url = new URL(window.location.href);
   const preparingDesktop = Boolean(window.promptStudioDesktop) && url.searchParams.has("desktop-startup");
@@ -86,7 +100,13 @@ const renderDashboard = async () => {
     ? startDesktopProjectWorkbenches(projectTabs.controller, storage)
     : startBrowserWorkbench(storage);
   const stopDesktopCommands = connectDesktopCommands(window.promptStudioDesktop, workbenches.getActive);
+  const stopDesktopUpdateNotices = connectDesktopUpdateNotices(
+    window.promptStudioDesktop,
+    workbenches.getActive,
+    projectTabs?.controller.subscribeState,
+  );
   if (stopDesktopCommands) window.addEventListener("pagehide", stopDesktopCommands, { once: true });
+  if (stopDesktopUpdateNotices) window.addEventListener("pagehide", stopDesktopUpdateNotices, { once: true });
   // E2E specs and the packaged launch benchmark drive the visible workbench.
   Object.defineProperty(window, "__pstdioDashboardWorkbench", { configurable: true, get: workbenches.getActive });
 
@@ -149,11 +169,12 @@ const startDesktopProjectWorkbenches = (
   controller.start({
     persistence,
     projectId: readPageUrlProjectId(pageLocationBrowser.current().url) ?? persistence.getSelectedProjectId(),
-    createWorkbench: (projectId, active) =>
+    onWorkbenchError: (projectId, error) => reportWorkbenchError(error, projectId),
+    createWorkbench: (projectId, active, projectTabs) =>
       createDashboardWorkbench({
         active,
         projectId,
-        projectTabs: controller.forWorkbench(projectId),
+        projectTabs,
         setupHandoff,
         pageLocationBrowser,
         performance,
@@ -173,4 +194,4 @@ const startDesktopProjectWorkbenches = (
   };
 };
 
-void renderDashboard();
+void renderDashboard().catch(showDashboardFailure);

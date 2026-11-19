@@ -1,6 +1,7 @@
 import { Flex, HStack, Spinner, Text } from "@chakra-ui/react";
 import { AlertTriangle } from "lucide-react";
 import type { ReactNode } from "react";
+import { Tooltip } from "@/components/primitives/tooltip";
 
 type WorkspaceHubStatus = "ready" | "loading" | "error";
 
@@ -40,9 +41,11 @@ const HubStatus = (props: {
     return (
       <HStack gap="2xs" minW="0">
         <AlertTriangle size={14} color="var(--chakra-colors-fg-error)" />
-        <Text textStyle="label/XS/regular" color="fg.error" truncate>
-          {statusLabel ?? "Workspace setup failed"}
-        </Text>
+        <Tooltip content={statusLabel ?? "Workspace setup failed"}>
+          <Text textStyle="label/XS/regular" color="fg.error" truncate>
+            {statusLabel ?? "Workspace setup failed"}
+          </Text>
+        </Tooltip>
       </HStack>
     );
   }

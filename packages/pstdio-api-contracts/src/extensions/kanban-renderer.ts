@@ -61,6 +61,7 @@ export const kanbanViewSettingsSchema = z.object({
   viewMode: z.enum(["board", "list"]),
   columnGrouping: z.string(),
   rowGrouping: z.string(),
+  subGroupings: z.array(z.string()).optional(),
   displayProperties: z.array(z.string()),
   showChildren: z.boolean().optional(),
 });
@@ -116,6 +117,7 @@ export const extensionKanbanRendererRecordSchema = extensionRendererRecordBaseSc
   queryHandlerId: z.string(),
   attributeChangeHandlerId: z.string().optional(),
   moveHandlerId: z.string().optional(),
+  supportsFieldsOnly: z.boolean().optional(),
   schemaRefreshEventIds: z.array(z.string()).optional(),
   columnActionHandlerId: z.string().optional(),
   createRow: extensionKanbanRendererCreateRowSchema.optional(),

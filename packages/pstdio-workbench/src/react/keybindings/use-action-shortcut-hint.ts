@@ -2,7 +2,11 @@ import { useSyncExternalStore } from "react";
 import type { NavigationTarget, WorkbenchCoreContributionContext } from "../../core";
 
 /** A layout change can affect availability without changing the shortcut displayed beside an action. */
-export const useActionShortcutHint = (workbench: WorkbenchCoreContributionContext, action?: NavigationTarget) => {
+export const useActionShortcutHint = (
+  workbench: WorkbenchCoreContributionContext,
+  action?: NavigationTarget,
+  includeLayers = false,
+) => {
   const subscribe = (changed: () => void) => {
     const stops = [
       workbench.keyboard.store,
@@ -17,6 +21,6 @@ export const useActionShortcutHint = (workbench: WorkbenchCoreContributionContex
       preference.dispose();
     };
   };
-  const read = () => (action ? workbench.keyboard.hint(action) : undefined);
+  const read = () => (action ? workbench.keyboard.hint(action, { includeLayers }) : undefined);
   return useSyncExternalStore(subscribe, read, read);
 };

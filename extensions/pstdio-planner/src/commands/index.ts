@@ -30,6 +30,7 @@ import { getTicketContentCommand } from "./get-ticket-content";
 import { implementTicketCommand } from "./implement-ticket";
 import { implementationPolicyCommand } from "./implementation-policy";
 import { implementationTargetsCommand, setImplementationTargetCommand } from "./implementation-targets";
+import { importTicketsCommand } from "./import-tickets";
 import { linkReviewCommand } from "./link-review";
 import { listTicketFilesCommand } from "./list-ticket-files";
 import { listTicketTemplatesCommand } from "./list-ticket-templates";
@@ -46,7 +47,7 @@ import { refinementPolicyCommand } from "./refinement-policy";
 import { reorderTicketCommand } from "./reorder-ticket";
 import { repairAttemptCommand } from "./repair-attempt";
 import { resolveTicketPathCommand } from "./resolve-ticket-path";
-import { resolveTicketResourcesCommand } from "./resolve-ticket-resources";
+import { resolveTicketOpeningCommand, resolveTicketResourcesCommand } from "./resolve-ticket-resources";
 import {
   cancelReviewRequestCommand,
   listReviewRequestsCommand,
@@ -142,6 +143,7 @@ export const plannerCommands = [
   checkAutoBuildCommand,
   documentLinkCommand,
   resolveTicketResourcesCommand,
+  resolveTicketOpeningCommand,
   checkMergedPullRequestsCommand,
   openTicketsCommand,
   linkTicketCommand,
@@ -185,6 +187,7 @@ export const plannerCommands = [
   nextTicketsCommand,
   updateStackCommand,
   createTicketCommand,
+  importTicketsCommand,
   attachTicketFileCommand,
   detachTicketFileCommand,
   getTicketCommand,

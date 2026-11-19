@@ -20,6 +20,9 @@ const versions = { codex: "codex-cli 0.157.0", claude: "2.1.203 (Claude Code)", 
 const executableSuffix = process.platform === "win32" ? ".exe" : "";
 const sessionsPath = dirname(fileURLToPath(import.meta.resolve("session-browser/refs")));
 
+// Whole-case allowance includes cold project/tool preparation and owned cleanup (PS-1232).
+test.setTimeout(120_000);
+
 for (const shell of environments) {
   test(`selects installed harnesses after a desktop launch with ${shell}`, async () => {
     test.skip(process.platform !== "win32" && !existsSync(shell), `${shell} is not available on this platform.`);
@@ -89,7 +92,7 @@ for (const shell of environments) {
       await app.page.emulateMedia({ reducedMotion: "reduce" });
       await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
       const modelMenu = app.page.getByRole("button", { name: "Select model", exact: true });
-      const conversationHeading = app.page.getByRole("heading", { name: "No messages yet", exact: true });
+      const conversation = app.page.getByRole("log");
       await expect(modelMenu).not.toContainText("Loading");
       for (const name of ["Claude Code", "OpenCode", "Codex"]) {
         await modelMenu.click();
@@ -97,11 +100,11 @@ for (const shell of environments) {
         const option = app.page.getByTestId("workspace-agent-options").getByRole("menuitem", { name, exact: true });
         await expect(option).toBeEnabled();
         await option.click();
-        await conversationHeading.click();
+        await conversation.click();
         await expect(app.page.getByRole("menuitem", { name: "Select harness", exact: true })).not.toBeVisible();
         await modelMenu.click();
         await expect(app.page.getByRole("menuitem", { name: "Select harness", exact: true })).toContainText(name);
-        await conversationHeading.click();
+        await conversation.click();
         await expect(app.page.getByRole("menuitem", { name: "Select harness", exact: true })).not.toBeVisible();
       }
       await modelMenu.click();

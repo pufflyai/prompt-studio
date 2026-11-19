@@ -1,5 +1,6 @@
 import type { CommandContext, SessionRunSnapshot } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
+import { attemptId, selectedAttemptId } from "../data/attempt-identity";
 import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
 import {
   appendAttemptEvent,
@@ -10,6 +11,7 @@ import {
   readAttempt,
 } from "../data/attempt-storage";
 import type { AttemptRecord, TicketAttemptSelection } from "../data/attempt-types";
+import { hasFolderWriter } from "../data/folder-writers";
 import { hasPendingImplementationInput, isMergeOnlyInput } from "../data/implementation-input";
 import { readTicketReviewRequests } from "../data/review-request-storage";
 import type { ReviewRequestView, TicketReviewRequests } from "../data/review-request-types";
@@ -26,6 +28,7 @@ export const isUnexpectedExit = (session: Session) =>
   ["request_aborted", "worker_lost", "host_shutdown"].includes(session?.last_exit?.cause ?? "");
 
 interface AutoBuildResumption {
+  attemptId?: string;
   workspaceId: string;
   sessionId: string;
   eventId: string;
@@ -42,11 +45,8 @@ const isChosenAttempt = (
   retired: Set<string>,
 ) => {
   const selection = selections.find(({ ticketId }) => ticketId === attempt.ticketId);
-  if (selection) return selection.workspaceId === attempt.workspaceId;
-  return (
-    attempts.filter(({ ticketId, workspaceId }) => ticketId === attempt.ticketId && !retired.has(workspaceId))
-      .length === 1
-  );
+  if (selection) return selectedAttemptId(selection) === attemptId(attempt);
+  return attempts.filter((other) => other.ticketId === attempt.ticketId && !retired.has(attemptId(other))).length === 1;
 };
 
 const readPendingAnswers = async (ctx: CommandContext, attempt: AttemptRecord, requests: ReviewRequestView[]) => {
@@ -84,12 +84,17 @@ const readResumption = async (
   if (!pending.length && attempt.revisions.length && !isUnexpectedExit(session)) return null;
   // A workspace without readable history cannot be resumed safely; recovery handles a lost workspace.
   const others = await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId }).catch(() => null);
-  if (!others || others.some(isLiveSession)) return null;
+  if (
+    !others ||
+    (attempt.base === null ? await hasFolderWriter(ctx, attempt.workspaceId, session.id) : others.some(isLiveSession))
+  )
+    return null;
   // One stopped turn can be resumed once, even if a stale session snapshot is read again.
   const turn = session.updated_at ?? attempt.updatedAt;
   const eventId = `auto-build-resumed:${session.id}:${turn}`;
   if (!pending.length && (await attemptEventsCollection(ctx.storage).get(eventId))) return null;
   return {
+    ...(attempt.id ? { attemptId: attemptId(attempt) } : {}),
     workspaceId: attempt.workspaceId,
     sessionId: session.id,
     eventId,
@@ -113,7 +118,7 @@ export async function readAutoBuildResumptions(ctx: CommandContext) {
   ]);
   const resumptions = new Map<string, AutoBuildResumption>();
   for (const attempt of attempts) {
-    if (retired.has(attempt.workspaceId) || !isChosenAttempt(attempt, attempts, selections, retired)) continue;
+    if (retired.has(attemptId(attempt)) || !isChosenAttempt(attempt, attempts, selections, retired)) continue;
     const resumption = await readResumption(ctx, attempt, requests.get(attempt.ticketId));
     if (resumption) resumptions.set(attempt.ticketId, resumption);
   }
@@ -127,18 +132,22 @@ export async function resumeAutoBuildAttempt(
 ) {
   const resumption = (await readAutoBuildResumptions(ctx)).get(ticketId);
   if (!resumption) return { decision: "wait" as const, reason: "ticket-not-ready" };
+  const currentAttempt = await readAttempt(ctx.storage, resumption.attemptId ?? resumption.workspaceId);
   const { running, limit } = await readImplementationCapacity(ctx);
-  if (running >= limit) return { decision: "wait" as const, reason: "capacity-full" };
+  if (running >= limit || (currentAttempt?.base === null && running > 0))
+    return { decision: "wait" as const, reason: "capacity-full" };
   await beforeDispatch();
   await ctx.sessions.followup({
     sessionId: resumption.sessionId,
     expectedRun: resumption.expectedRun,
     prompt: [
-      "Continue the unfinished implementation in the same workspace and managed attempt. Read the current implement-ticket skill and attempt history. Verify the dependency files and saved review answers before editing. If code is missing or stale, run update-stack with the current HEAD and owner session; this does not approve work or merge the target branch. A confirmed answer alone does not repair Git. Address outstanding findings, keep the ticket status current, validate, and submit the exact resulting revision.",
+      currentAttempt?.base === null
+        ? "Continue the unfinished implementation in the same shared project folder and managed attempt. Read the ticket, attempt history and saved review answers. Address outstanding findings, validate the result, post a completion comment in ticket Activity, and update ticket progress. This attempt has no Git branch, commit, stack or merge step. Do not initialize Git or run Git submission commands."
+        : "Continue the unfinished implementation in the same workspace and managed attempt. Read the current implement-ticket skill and attempt history. Verify the dependency files and saved review answers before editing. If code is missing or stale, run update-stack with the current HEAD and owner session; this does not approve work or merge the target branch. A confirmed answer alone does not repair Git. Address outstanding findings, keep the ticket status current, validate, and submit the exact resulting revision.",
       ...resumption.requests.map((request) => `${request.title}\n${request.instructions}\n${request.outcomeText}`),
     ].join("\n\n"),
   });
-  const attempt = await readAttempt(ctx.storage, resumption.workspaceId);
+  const attempt = await readAttempt(ctx.storage, resumption.attemptId ?? resumption.workspaceId);
   if (attempt && resumption.unexpectedExit)
     await putAttempt(ctx.storage, {
       ...attempt,
@@ -147,6 +156,7 @@ export async function resumeAutoBuildAttempt(
     });
   await appendAttemptEvent(ctx.storage, {
     id: resumption.eventId,
+    attemptId: resumption.attemptId,
     workspaceId: resumption.workspaceId,
     revision: resumption.revision,
     type: "implementation_resumed",
@@ -161,6 +171,7 @@ export async function resumeAutoBuildAttempt(
   for (const request of resumption.requests) {
     await appendAttemptEvent(ctx.storage, {
       id: resumedEventId(request),
+      attemptId: resumption.attemptId,
       workspaceId: resumption.workspaceId,
       revision: request.context.attemptRevision,
       type: "implementation_resumed",
@@ -173,5 +184,10 @@ export async function resumeAutoBuildAttempt(
       metadata: { reviewRequestId: request.id },
     });
   }
-  return { decision: "started" as const, workspaceId: resumption.workspaceId, sessionId: resumption.sessionId };
+  return {
+    decision: "started" as const,
+    ...(resumption.attemptId ? { attemptId: resumption.attemptId } : {}),
+    workspaceId: resumption.workspaceId,
+    sessionId: resumption.sessionId,
+  };
 }

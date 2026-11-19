@@ -1,7 +1,8 @@
+import { Button, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { TreeList } from "@pstdio/ui";
 import { useState } from "react";
-import type { TreeViewSection } from "../../../core";
+import { createWorkbench, type ResourceRef, type TreeViewSection } from "../../../core";
 import { WorkbenchThemeProvider } from "../../theme/workbench-theme-provider";
 import { resolveTreeListSelection } from "./tree-list-adapter";
 
@@ -64,4 +65,60 @@ export default meta;
 type Story = CanvasFrame<typeof meta>;
 export const TicketContext: Story = {
   id: "pstdio-workbench-guides-workspace-selection--ticket-context",
+};
+
+const FileNavigation = () => {
+  const [path, setPath] = useState<string>();
+  const [workbench] = useState(() => {
+    const core = createWorkbench();
+    core.pages.registerPage({
+      id: "files",
+      modeId: "project",
+      ref: { kind: "page", extensionId: "example", id: "files" },
+      path: "files",
+      resource: { kinds: [{ kind: "resource-kind", id: "workspace" }] },
+      document: { metadataKey: "filePath" },
+      main: { kind: "panels" },
+      slots: [],
+    });
+    return core;
+  });
+  const page = { kind: "page", extensionId: "example", id: "files" } as const;
+  const parent = { ...page, id: "workspaces" };
+  const workspace = { type: "workspace", id: "project-folder" };
+  const resource: ResourceRef = { ...workspace, metadata: path ? { filePath: path } : {} };
+  const navigation: TreeViewSection[] = [
+    {
+      id: "project",
+      nodes: [
+        { id: "files", label: "Files", target: { kind: "page", page, resource: workspace } },
+        { id: "workspaces", label: "Workspaces", target: { kind: "page", page: parent } },
+      ],
+    },
+  ];
+  const activeNodeId = resolveTreeListSelection({
+    sections: navigation,
+    childrenByNodeId: {},
+    activeLocation: { page, resource, parent: { page: parent } },
+    activeResource: resource,
+    resourceReferenceKey: (value) => workbench.pages.resourceReferenceKey(value),
+  });
+  return (
+    <Stack>
+      <TreeList
+        sections={navigation.map((section) => ({
+          id: section.id,
+          nodes: section.nodes.map(({ id, label }) => ({ id, label, isNavigable: true })),
+        }))}
+        activeNodeId={activeNodeId}
+      />
+      <Button onClick={() => setPath("README.md")}>Open README.md</Button>
+      <Button onClick={() => setPath("src/index.ts")}>Open src/index.ts</Button>
+      <Text>{path ?? "Select a file"}</Text>
+    </Stack>
+  );
+};
+export const ProjectFiles: Story = {
+  render: () => <FileNavigation />,
+  description: "Open either file and keep Files selected in project navigation.",
 };

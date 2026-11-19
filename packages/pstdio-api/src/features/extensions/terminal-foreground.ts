@@ -1,14 +1,7 @@
 import { readFile } from "node:fs/promises";
-import { basename } from "node:path";
-
-const runPs = async (args: string[]) => {
-  const child = Bun.spawn(["/bin/ps", ...args], { stdout: "pipe", stderr: "ignore" });
-  const [output, exitCode] = await Promise.all([new Response(child.stdout).text(), child.exited]);
-  return { output: output.trim(), exitCode };
-};
 
 // Temporary platform probe until Bun exposes the PTY foreground group. See ADR 0033.
-// It runs every second for each open terminal, so it stays async to keep the API event loop free.
+// It runs every second for each open terminal, without starting probe subprocesses.
 export const readTerminalForeground = async (pid: number) => {
   try {
     if (process.platform === "linux") {
@@ -22,11 +15,8 @@ export const readTerminalForeground = async (pid: number) => {
       return { group, name: (await readFile(`/proc/${group}/comm`, "utf8")).trim() };
     }
     if (process.platform === "darwin") {
-      const tpgid = await runPs(["-o", "tpgid=", "-p", String(pid)]);
-      const group = Number(tpgid.output);
-      if (tpgid.exitCode !== 0 || group <= 0 || !Number.isInteger(group)) return null;
-      const name = await runPs(["-o", "comm=", "-p", String(group)]);
-      return { group, name: basename(name.output) };
+      const { readDarwinTerminalForeground } = await import("./terminal-foreground-darwin");
+      return readDarwinTerminalForeground(pid);
     }
   } catch {
     return null;

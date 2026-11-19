@@ -42,7 +42,14 @@ test("project composition stores explicit ordinary references in the existing sy
       },
     ],
   };
+  const sequence = fixture.deps.eventBus.seq;
   expect((await save(p.id, configured)).status).toBe(200);
+  expect(fixture.deps.eventBus.getSince(sequence)).toContainEqual(
+    expect.objectContaining({
+      table: "extension_events",
+      data: expect.objectContaining({ projectId: p.id, eventId: "pstdio.event.project-composition-changed" }),
+    }),
+  );
   const read = await fixture.app.request(`/v1/projects/${p.id}/composition`);
   expect(read.status).toBe(200);
   expect(await read.json()).toEqual(configured);
@@ -50,7 +57,13 @@ test("project composition stores explicit ordinary references in the existing sy
   await fixture.deps.projectInfoService.write(p.id, { name: "Renamed" });
   expect(await (await fixture.app.request(`/v1/projects/${p.id}/composition`)).json()).toEqual(configured);
   const other = await project();
-  expect(await (await fixture.app.request(`/v1/projects/${other.id}/composition`)).json()).not.toEqual(configured);
+  const defaults = await (await fixture.app.request(`/v1/projects/${other.id}/composition`)).json();
+  expect(defaults).not.toEqual(configured);
+  expect(defaults.resourceOpeners).toContainEqual({
+    resourceKind: { kind: "resource-kind", extensionId: "pstdio.planner", id: "ticket" },
+    opener: { kind: "command", extensionId: "pstdio.planner", id: "resolve-ticket-opening" },
+    relatedOpenings: { kind: "command", extensionId: "pstdio.planner", id: "ticket-related-openings" },
+  });
 });
 
 test("an explicit empty configuration persists instead of restoring distribution defaults", async () => {

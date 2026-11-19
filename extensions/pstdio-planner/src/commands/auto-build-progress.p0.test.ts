@@ -3,6 +3,7 @@ import { putAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { autoBuildDispatches, autoBuildPullRequestNotifications } from "../data/auto-build-dispatches";
 import { saveAutoBuildSupervisor } from "../data/auto-build-supervisor";
+import { observeTicketRecords } from "../data/storage-reads.fixture";
 import { ticketsCollection } from "../data/ticket-context.fixture";
 
 import { withWriteGuard } from "../data/write-guard";
@@ -40,7 +41,10 @@ async function monitorFixture() {
     lastRequestStarted: ago(5),
   });
   const followups: string[] = [];
-  const fetched: string[] = [];
+  // Tickets are records since storage version 5; their record reads count as fetches.
+  const tickets = observeTicketRecords(ctx.storage);
+  ctx.storage.records = tickets.storage.records;
+  const fetched = tickets.reads;
   const collection = ctx.storage.collection.bind(ctx.storage);
   ctx.storage.collection = <T>(name: string) => {
     const source = collection<T>(name);
@@ -466,4 +470,27 @@ test.each(["paused", "stopped"])("%s during a capacity read suppresses scheduled
   };
   await checkAutoBuildCommand.run(ctx, {});
   expect(followups).toEqual([]);
+});
+
+test("scheduled supervisor checks do not contact a supervisor before its quota reset", async () => {
+  const { ctx, storage, supervisor, followups } = await monitorFixture();
+  supervisor.status = "failed";
+  supervisor.agent = "pstdio.harness-codex.harness.codex";
+  await storage.set("auto-build-supervisor", {
+    sessionId: supervisor.id,
+    quotaCooldown: { harnessId: supervisor.agent, resetsAt: new Date(Date.now() + 60_000).toISOString() },
+  });
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toHaveLength(0);
+  expect(await storage.get("auto-build")).toMatchObject({ enabled: true });
+});
+
+test("an exhausted supervisor with no reset timestamp waits without pausing Auto Build", async () => {
+  const { ctx, storage, supervisor, followups } = await monitorFixture();
+  supervisor.status = "failed";
+  supervisor.agent = "pstdio.harness-codex.harness.codex";
+  ctx.commands.execute = async () => ({ ok: true, status: "success", value: { limited: true } }) as never;
+  await checkAutoBuildCommand.run(ctx, {});
+  expect(followups).toEqual([]);
+  expect(await storage.get("auto-build")).toMatchObject({ enabled: true });
 });

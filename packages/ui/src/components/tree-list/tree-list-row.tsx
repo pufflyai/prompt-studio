@@ -1,6 +1,7 @@
 import type { StackProps } from "@chakra-ui/react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import type { TreeListLinkComponent, TreeListNavigateEvent } from "./tree-list.types";
+import { TreeListGroupHeader } from "./tree-list-group-header";
 import type { VirtualRow } from "./tree-list-model";
 import { TreeListNodeRow } from "./tree-list-node-row";
 import { TreeListPageBoundary } from "./tree-list-page-boundary";
@@ -56,6 +57,7 @@ export const TreeListRow = (props: TreeListRowProps) => {
     );
   }
 
+  if (row.kind === "group-header") return <TreeListGroupHeader node={row.node} />;
   if (row.kind === "section-empty") return row.emptyState ?? null;
   if (row.kind === "continuation") return <TreeListPageBoundary pagination={row.pagination} />;
 
@@ -63,7 +65,7 @@ export const TreeListRow = (props: TreeListRowProps) => {
     <TreeListNodeRow
       sectionId={row.sectionId}
       node={row.node}
-      level={row.level}
+      level={row.visualLevel ?? row.level}
       expandedNodeIds={expandedNodeIds}
       activeNodeId={activeNodeId}
       rowVariant={rowVariant}

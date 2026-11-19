@@ -39,11 +39,13 @@ import { numberInputSlotRecipe } from "./recipes/number-input";
 import { paletteSlotRecipe } from "./recipes/palette";
 import { popoverRecipe } from "./recipes/popover";
 import { popoverHeaderRecipe } from "./recipes/popover-header";
+import { progressButtonSlotRecipe } from "./recipes/progress-button";
 import { progressCircleSlotRecipe } from "./recipes/progress-circle";
 import { queuedFollowUpRecipe } from "./recipes/queued-follow-up";
 import { resizableSplitLayoutSlotRecipe } from "./recipes/resizable-split-layout";
 import { scrollAreaSlotRecipe } from "./recipes/scroll-area";
 import { skeletonRecipe } from "./recipes/skeleton";
+import { statusBarSlotRecipe } from "./recipes/status-bar";
 import { stickyUserMessageRecipe } from "./recipes/sticky-user-message";
 import { switchSlotRecipe } from "./recipes/switch";
 import { tabsSlotRecipe } from "./recipes/tabs";
@@ -108,6 +110,7 @@ const config = defineConfig({
       borders,
     },
     slotRecipes: {
+      statusBar: statusBarSlotRecipe,
       dashboard: dashboardRecipe,
       chart: chartRecipe,
       dataTable: dataTableRecipe,
@@ -136,6 +139,7 @@ const config = defineConfig({
       dialog: dialogSlotRecipe,
       folderPicker: folderPickerSlotRecipe,
       progressCircle: progressCircleSlotRecipe,
+      progressButton: progressButtonSlotRecipe,
       switch: switchSlotRecipe,
       tabs: tabsSlotRecipe,
       timeline: timelineSlotRecipe,

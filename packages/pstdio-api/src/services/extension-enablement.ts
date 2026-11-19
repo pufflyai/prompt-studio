@@ -12,6 +12,7 @@ export const createExtensionEnablement = (deps: {
   extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   emitExtensionInstance: (instance: unknown) => void;
+  onDefaultAdopted: (sourcePath: string) => Promise<void>;
   validateResourcePrefixes?: (projectId: string, source: InstalledSource) => Promise<void>;
 }) => {
   const pendingClaims = new Map<string, Promise<unknown>>();
@@ -53,6 +54,8 @@ export const createExtensionEnablement = (deps: {
     const source = await deps.installedExtensionSourcesService.get(instance.installed_extension_id);
     if (!source) return null;
     if (!enabled) await assertOptional(source);
+    if (instance.scope_type === "project")
+      await deps.extensionInstancesService.recordProjectDefaultChoice(instance.scope_id, source.extension_id);
     if (enabled && instance.scope_type === "project") {
       await deps.validateResourcePrefixes?.(instance.scope_id, source);
       return claimExtensionId(instance, source);
@@ -62,5 +65,22 @@ export const createExtensionEnablement = (deps: {
     return updated;
   };
 
-  return { assertOptional, claimExtensionId, setProjectExtensionEnabled };
+  const adoptDefaultSourceForProject = async (projectId: string, installedSourceId: string) => {
+    const source = await deps.installedExtensionSourcesService.get(installedSourceId);
+    if (!source) return null;
+    if (await deps.extensionInstancesService.hasProjectDefaultChoice(projectId, source.extension_id)) return null;
+    await deps.validateResourcePrefixes?.(projectId, source);
+    const instance = await deps.extensionInstancesService.adoptProjectDefault({
+      projectId,
+      extensionId: source.extension_id,
+      installedSourceId,
+    });
+    if (instance) {
+      deps.emitExtensionInstance(instance);
+      await deps.onDefaultAdopted(source.source_path);
+    }
+    return instance;
+  };
+
+  return { adoptDefaultSourceForProject, assertOptional, claimExtensionId, setProjectExtensionEnabled };
 };

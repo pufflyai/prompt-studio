@@ -9,7 +9,7 @@ type PendingQuestion = {
 /** Each hook may be async; the service waits for it before the next one runs. */
 export type QuestionServiceHooks = {
   /** A question opened. The host moves the session to `awaiting_input`. */
-  onAsk: () => unknown;
+  onAsk: (id: string) => unknown;
   /** Every open question was answered. The host moves the session back to `in_progress`. */
   onAnswer: () => unknown;
 };
@@ -41,7 +41,7 @@ export const createQuestionService = (hooks: QuestionServiceHooks): QuestionServ
       }
 
       pending.set(request.toolUseId, { resolve, reject, questionCount: request.questions.length });
-      notify(hooks.onAsk);
+      notify(() => hooks.onAsk(request.toolUseId));
     });
 
   const answer = (response: QuestionResponse | string) => {

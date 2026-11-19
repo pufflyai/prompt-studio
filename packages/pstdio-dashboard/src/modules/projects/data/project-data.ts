@@ -21,6 +21,16 @@ const readRows = (table: "projects" | "workspaces") => Array.from(getCollection(
 
 const isVisibleRow = (row: SyncedRow) => !row.deleted_at;
 
+export const findDashboardProjectRow = (projectId: string) => {
+  const row = getCollection("projects").get(projectId);
+  if (row && isVisibleRow(row)) return row;
+};
+
+export const listVisibleDashboardProjectIds = () =>
+  readRows("projects")
+    .filter(isVisibleRow)
+    .map((row) => row.id);
+
 const toDashboardProject = (row: SyncedRow, folderPathByProjectId: ReadonlyMap<string, string>): DashboardProject => {
   const name = row.name as string;
 

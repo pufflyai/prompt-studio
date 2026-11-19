@@ -1,5 +1,6 @@
 import type { ExtensionKeybindingRecord, ExtensionMenuContribution, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { ContributionKind, ContributionRef, WhenExpression } from "@pstdio/sdk/extensions";
+import { resourceChangeProviders } from "../../resource-change-providers";
 import { toCommandPaletteContributions } from "../../runtime/command-palette-contributions";
 import { serializeWhenExpression } from "../../runtime/normalize/references";
 import { toSettingDefinitionRecord } from "../../runtime/normalize/settings";
@@ -136,6 +137,7 @@ export const createWorkbenchExtensionMetadata = (
   input: CreateWorkbenchExtensionMetadataInput,
 ): WorkbenchExtensionMetadata => ({
   extensions: input.runtime.extensions.map(toExtensionRecord),
+  resourcePresentations: input.runtime.resourcePresentations ?? [],
   projectSetups: input.runtime.extensions.flatMap((extension) => {
     const setup = extension.definition.projectSetup;
     const registeredView =
@@ -151,6 +153,13 @@ export const createWorkbenchExtensionMetadata = (
       : [];
   }),
   commands: input.runtime.commands.map(toCommandRecord),
+  workspaceTypes: input.runtime.workspaceTypes.map(({ id, extensionId, provider }) => ({
+    id,
+    localId: provider.id,
+    extensionId,
+    label: provider.label,
+    icon: provider.icon,
+  })),
   menuContributions: toMenuContributions(input.runtime),
   commandPaletteContributions: toCommandPaletteContributions(input.runtime.commands).map((contribution) => ({
     ...contribution,
@@ -195,6 +204,11 @@ export const createWorkbenchExtensionMetadata = (
     hostTreeFooter: menu.contribution.hostTreeFooter,
   })),
   placements: toPlacementRecords(input.runtime),
+  resourceChangeProviders: resourceChangeProviders(input.runtime).map(({ extensionId, type, refreshEvents }) => ({
+    extensionId,
+    type,
+    refreshEvents,
+  })),
   resourceKinds: input.runtime.resourceKinds.map((record) => ({
     activity: record.contribution.activity,
     activityHandoff: Boolean(record.contribution.activityContext),

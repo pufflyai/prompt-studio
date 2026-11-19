@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { runTestCommand } from "../scripts/run-test-command";
 import { TEST_TIMEOUT } from "./timeouts";
 
 export const PSTDIO_CLI = join(import.meta.dirname, "../../../pstdio/src/index.ts");
@@ -40,6 +41,20 @@ export const runPstdio = (args: string, cwd: string, env: Record<string, string>
     encoding: "utf8",
     timeout,
   });
+
+export const runPstdioAsync = async (
+  args: string[],
+  cwd: string,
+  env: Record<string, string>,
+  timeout = TEST_TIMEOUT,
+) =>
+  (
+    await runTestCommand("bun", ["run", PSTDIO_CLI_RUNNER, ...args], {
+      cwd: REPO_ROOT,
+      env: createPstdioEnv(env, cwd),
+      timeout,
+    })
+  ).stdout;
 
 export const runPstdioSafe = (args: string, cwd: string, env: Record<string, string>, timeout = TEST_TIMEOUT) => {
   try {

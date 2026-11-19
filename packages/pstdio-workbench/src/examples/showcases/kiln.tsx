@@ -9,7 +9,7 @@ import { kilnTheme } from "./themes";
 const homePage = kilnPage;
 export const createKilnWorkbench = () => {
   const workbench = createWorkbench({
-    startPage: homePage,
+    defaultPage: homePage,
     initialSidePanelMode: "attached",
     defaultPanelOpenByRegionId: { secondary: true },
   });

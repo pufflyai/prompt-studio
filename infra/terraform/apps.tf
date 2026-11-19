@@ -102,7 +102,7 @@ resource "digitalocean_app" "cloud" {
         }
         dynamic "env" {
           # Iterate names only: secret values must never become resource identities.
-          for_each = toset(nonsensitive(keys(local.secrets[service.key])))
+          for_each = toset(nonsensitive([for key, value in local.secrets[service.key] : key if value != null]))
           content {
             key   = env.value
             value = local.secrets[service.key][env.value]
@@ -147,7 +147,7 @@ resource "digitalocean_app" "cloud" {
           }
         }
         dynamic "env" {
-          for_each = toset(nonsensitive(keys(local.secrets[job.key])))
+          for_each = toset(nonsensitive([for key, value in local.secrets[job.key] : key if value != null]))
           content {
             key   = env.value
             value = local.secrets[job.key][env.value]

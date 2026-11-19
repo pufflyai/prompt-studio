@@ -1,6 +1,6 @@
 import type { NativeDocumentTarget } from "pstdio-api-contracts";
 import type { WebviewHostProps } from "pstdio-api-contracts/extension-kernel";
-import type { ThemePreference } from "pstdio-extensions/bridge/contract";
+import type { ThemePreference, WebviewSizing } from "pstdio-extensions/bridge/contract";
 import { createHostEventPublisher, type HostEventPublisher } from "pstdio-extensions/bridge/host";
 import type {
   WorkbenchCore,
@@ -117,7 +117,7 @@ export const getBridgeWebviewHostEventPublisher = (
 
 export const renderBridgeWebviewFrame = (input: {
   visible?: boolean;
-  sizing?: "content-width" | "content-height";
+  sizing?: WebviewSizing;
   context: BridgeWebviewRenderContext;
   createHostAdapters: CreateBridgeWebviewHostAdapters;
   createProps: CreateBridgeWebviewProps;

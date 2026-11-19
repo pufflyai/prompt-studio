@@ -16,11 +16,11 @@ const checks = ["lint", "unit"].map((mode) => ({
         ]
       : [process.execPath, join(import.meta.dir, "run-package-checks.ts"), "lint"],
 }));
-// Instrumented source tests must not compete with lint's own workers on the
-// same runner. PR and queue checks keep their existing parallel execution.
+// Lint already owns two type-check workers. Finish it before unit tests so
+// native readiness and file-I/O checks do not share those workers' CPU and disk.
 const result = await runCiChecks(checks, {
   priority: "P0",
-  concurrency: process.env.CI_SOURCE_COVERAGE === "1" ? 1 : 2,
+  concurrency: 1,
 });
 await Bun.write("test-results/ci/package-results.json", JSON.stringify(result, null, 2));
 process.exitCode = result.outcome === "success" ? 0 : 1;

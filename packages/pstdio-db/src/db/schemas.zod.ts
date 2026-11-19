@@ -1,5 +1,5 @@
 import { createSelectSchema } from "drizzle-zod";
-import { resourceAnchorSchema } from "pstdio-api-contracts";
+import { resourceAnchorSchema, sessionSchema } from "pstdio-api-contracts";
 import { z } from "zod";
 import { activity_events, notifications, sessions, workspaces } from "./schemas.pg";
 
@@ -21,6 +21,7 @@ export const notificationSelectSchema = createSelectSchema(notifications);
 export const workspaceApiSchema = workspaceSelectSchema;
 
 export const sessionApiSchema = sessionSelectSchema.extend({
+  change_positions: sessionSchema.shape.change_positions,
   agent_session_status: z.enum(["connected", "disconnected", "not_connected"]).optional(),
   branch: z.string().nullable(),
   workspace_id: z.string().nullable(),

@@ -32,6 +32,27 @@ const installedSource = {
 };
 
 describe("toProjectExtensionInstance", () => {
+  test("public package availability is independent of local maintenance and installation scope", () => {
+    const publicLocal = toProjectExtensionInstance(instance, {
+      ...installedSource,
+      extension_id: "pstdio.planner",
+      source_kind: "local_path",
+    });
+    expect(publicLocal).toMatchObject({ ownership: "mine", visibility: "public" });
+    const imported = toProjectExtensionInstance(instance, {
+      ...installedSource,
+      extension_id: "example.imported",
+      source_kind: "git",
+      source_path: "/repo/.pstdio/extensions/imported",
+    });
+    expect(imported).toMatchObject({ ownership: "unknown", visibility: "unknown" });
+    const personal = toProjectExtensionInstance(instance, {
+      ...installedSource,
+      extension_id: "example.personal",
+      source_kind: "local_path",
+    });
+    expect(personal).toMatchObject({ ownership: "mine", visibility: "unknown" });
+  });
   test("publishes installed SVG icon bytes and falls back when an asset disappears", () => {
     const root = mkdtempSync(join(tmpdir(), "instance-icon-"));
     try {

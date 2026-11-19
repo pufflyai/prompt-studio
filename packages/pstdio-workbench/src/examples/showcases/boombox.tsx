@@ -254,7 +254,7 @@ const Player = (props: { workbench: WorkbenchCore }) => {
   );
 };
 export const createBoomboxWorkbench = () => {
-  const workbench = createWorkbench({ startPage: homePage });
+  const workbench = createWorkbench({ defaultPage: homePage });
   workbench.themes.register([boomboxTheme]);
   workbench.modes.registerMode({
     id: "boombox",

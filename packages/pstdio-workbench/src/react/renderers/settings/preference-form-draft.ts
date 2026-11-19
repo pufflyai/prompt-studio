@@ -41,7 +41,6 @@ export const usePreferenceFormDraft = (
         },
       )
       .finally(() => {
-        if (latest.current.get(name) === token) latest.current.delete(name);
         setPending((count) => count - 1);
       });
   };
@@ -49,12 +48,20 @@ export const usePreferenceFormDraft = (
     if (saving.current) return saving.current;
     const values = Object.entries(staged);
     setPending((count) => count + 1);
-    setErrors({});
+    const tokens = values.map(([name]) => latest.current.get(name));
+    if (mode === "apply") setErrors({});
     const saved = Promise.allSettled(values.map(([name, value]) => Promise.resolve().then(() => persist(name, value))))
       .then((results) => {
+        if (mode === "live") {
+          values.forEach(([name, value], index) => {
+            if (results[index]?.status !== "fulfilled" || latest.current.get(name) !== tokens[index]) return;
+            accept(name, value);
+            setErrors((current) => without(current, name));
+          });
+        }
         // Wait for every accepted write before allowing teardown or reporting a failed batch.
         for (const result of results) if (result.status === "rejected") throw result.reason;
-        for (const [name, value] of values) accept(name, value);
+        if (mode === "apply") for (const [name, value] of values) accept(name, value);
       })
       .finally(() => {
         saving.current = undefined;

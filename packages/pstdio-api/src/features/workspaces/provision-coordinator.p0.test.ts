@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandDiagnostic } from "pstdio-api-contracts/extension-kernel";
+import { createWorkspaceMaintenance } from "../../services/workspace-maintenance";
 import {
   type ProvisionCoordinatorDeps,
   provisionProjectWorkspaces,
@@ -8,6 +9,7 @@ import {
   scheduleProjectWorkspaceProvisioning,
   type WorkspaceProvisioningHooks,
 } from "./provision-coordinator";
+import { makeWorkspace } from "./workspace-provider.test-fixture";
 
 type Row = {
   id: string;
@@ -23,6 +25,8 @@ const makeDeps = (row: Row) => {
   const calls: string[] = [];
   const deps = {
     workspaceService: {
+      maintenance: createWorkspaceMaintenance(),
+      get: async () => ({ ...row, project_id: "p1" }),
       getDefault: async () => ({
         id: "home",
         project_id: "project-1",
@@ -56,6 +60,21 @@ const makeHooks = (diagnostics: CommandDiagnostic[] | undefined, readyFired: str
 });
 
 describe("runWorkspaceProvisioning", () => {
+  test("a provision request never returns a workspace outside its project", async () => {
+    const workspace = makeWorkspace({ project_id: "p1", execution_kind: "local", root_path: "/accepted" });
+    const { deps, calls } = makeDeps(workspace);
+    deps.workspaceService.get = async () => ({ ...workspace, project_id: "other", root_path: "/other" });
+
+    const result = await runWorkspaceProvisioning(
+      deps,
+      { projectId: "p1", workspace, repoPath: "/repo" },
+      makeHooks(undefined, []),
+    );
+
+    expect(result).toEqual(workspace);
+    expect(calls).toEqual([]);
+  });
+
   test("gates initializing around an awaited provision, then clears it and fires ready", async () => {
     const row: Row = {
       provider_state: "ready",
@@ -298,7 +317,7 @@ describe("provisionProjectWorkspaces", () => {
 
     await provisionProjectWorkspaces(deps, "p1", hooks);
 
-    expect(calls).toEqual(["initializing:true", "setup_error:config write failed"]);
+    expect(calls).toEqual(["setup_error:config write failed"]);
     expect(row.initializing).toBe(false);
     expect(row.setup_error).toBe("config write failed");
     expect(readyFired).toEqual([]);
@@ -324,7 +343,7 @@ describe("removeProjectAfterProvisioning", () => {
     const order: string[] = [];
     const entered = Promise.withResolvers<void>();
     const release = Promise.withResolvers<void>();
-    const provisioning = provisionProjectWorkspaces(deps, "project-1", {
+    const provisioning = provisionProjectWorkspaces(deps, "p1", {
       ...makeHooks(undefined, []),
       ensureConfig: async (dir) => {
         order.push(`config:${dir}`);
@@ -334,7 +353,7 @@ describe("removeProjectAfterProvisioning", () => {
     });
     await entered.promise;
 
-    const removal = removeProjectAfterProvisioning("project-1", async () => {
+    const removal = removeProjectAfterProvisioning(deps, "p1", async () => {
       order.push("removed");
     });
     release.resolve();

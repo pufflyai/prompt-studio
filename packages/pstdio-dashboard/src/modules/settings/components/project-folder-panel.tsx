@@ -1,4 +1,4 @@
-import { Button, Dialog, Stack, Text } from "@chakra-ui/react";
+import { Button, Dialog, Stack } from "@chakra-ui/react";
 import { ParamEditor } from "@pstdio/ui/param-editor";
 import { useSettingsChanges } from "@pstdio/workbench/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -52,14 +52,11 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
       update.reset();
     },
   });
-  const providerError =
-    home && home.provider_state !== "ready" && (home.root_path || home.provider_ref_json || home.provider_operation_id)
-      ? (home.provider_error_json?.message ??
-        "The workspace provider has not finished setup. Retry to check its progress.")
-      : null;
+  const settingUp = home?.initializing || home?.provider_state === "provisioning";
+  const providerError = !settingUp ? home?.provider_error_json?.message : undefined;
   const setupError = retry.error?.message ?? home?.setup_error ?? providerError;
   return (
-    <Stack gap="md">
+    <Stack gap="md" position="relative">
       <ParamEditor
         changeDelay={0}
         fullWidth
@@ -70,26 +67,27 @@ export const ProjectFolderPanel = (props: { projectId?: string }) => {
             id: "folder",
             name: "Project folder",
             type: "property",
-            value: home?.root_path ?? home?.display_path ?? "No workspace attached",
+            value: settingUp
+              ? "Setting up workspace"
+              : (home?.root_path ?? home?.display_path ?? "No workspace attached"),
           },
         ]}
         onChange={(id, value) => {
           if (id === "name") setName(String(value));
         }}
       />
-      {update.error && (
-        <Text role="alert" color="fg.error">
-          {update.error.message}
-        </Text>
-      )}
       {setupError && (
         <ProjectSetupStatus error={setupError} retrying={retry.isPending} onRetry={() => retry.mutate()} />
       )}
-      {!home?.root_path && !home?.provider_ref_json && !home?.provider_operation_id && !query.isPending && (
-        <Button variant="outline" onClick={() => setAttaching(true)}>
-          Attach project folder
-        </Button>
-      )}
+      {!home?.root_path &&
+        !home?.provider_ref_json &&
+        !home?.provider_operation_id &&
+        !query.isPending &&
+        !settingUp && (
+          <Button variant="outline" onClick={() => setAttaching(true)}>
+            Attach project folder
+          </Button>
+        )}
       <Dialog.Root
         open={attaching}
         onOpenChange={(event) => setAttaching(event.open)}

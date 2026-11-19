@@ -11,9 +11,10 @@ const handler = (input: {
   index: RegistryIndex;
   viewId: string;
   localId: string;
-  kind: "chat" | "controls" | "dataTable" | "file" | "kanban" | "resourceList" | "terminal" | "tree";
+  kind: "actionBar" | "chat" | "controls" | "dataTable" | "file" | "kanban" | "resourceList" | "terminal" | "tree";
   operation: string;
   value: unknown;
+  body?: ViewBody;
 }) =>
   registerPrivateHandler({
     ext: input.ext,
@@ -24,6 +25,10 @@ const handler = (input: {
     rendererKind: input.kind,
     rendererLocalId: input.localId,
     operation: input.operation,
+    collectionQuery:
+      input.operation === "query" && input.body && "queryMode" in input.body && input.body.queryMode
+        ? { mode: input.body.queryMode, maxRows: input.body.maxRows }
+        : undefined,
     handler: input.value,
   });
 
@@ -38,6 +43,12 @@ export const normalizeViewBody = (input: {
 }) => {
   const body = input.body as ViewBody & Record<string, unknown>;
   if (body.kind === "webview") return body;
+  if (body.kind === "actionBar") {
+    return {
+      ...body,
+      queryHandlerId: handler({ ...input, kind: "actionBar", operation: "query", value: body.query }),
+    };
+  }
   if (body.kind === "terminal") {
     return {
       ...body,
