@@ -117,7 +117,7 @@ const createCapture = async (id: ScenarioId) => {
       write({ event: "finished", missing, failed, advisory, failedChecks, pending, qualification });
       if (advisory.length)
         console.warn(
-          `${id}: non-blocking timing targets missed: ${advisory.map(([name, metric]) => `${name}=${metric.value}ms (target <${metric.budget}ms)`).join(", ")}`,
+          `${id}: non-blocking targets missed: ${advisory.map(([name, metric]) => `${name}=${metric.value} ${metric.unit} (target ${metric.unit === "share" ? "≤" : "<"}${metric.budget} ${metric.unit})`).join(", ")}`,
         );
       if (missing.length) throw new Error(`${id}: missing required metrics: ${missing.join(", ")}`);
       if (failed.length) throw new Error(`${id}: failed approved limits: ${failed.map(([name]) => name).join(", ")}`);

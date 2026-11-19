@@ -2,6 +2,8 @@
 const primary = ["linux-x64", "darwin-arm64", "win32-x64"];
 const metric = (id: string, unit: "ms" | "bytes" | "share" | "count", kind = "supporting") => ({ id, unit, kind });
 const elapsed = (id: string) => metric(id, "ms", "pending-guard");
+// 0.48 release decision: desktop targets are recorded and reported, but misses do not block.
+const advisory = (id: string, unit: "ms" | "bytes" | "share" = "ms") => metric(id, unit, "advisory");
 export const catalogRevision = 1;
 export const conversationFixture = {
   version: 1,
@@ -14,16 +16,18 @@ export const conversationFixture = {
 export const scenarios = [
   {
     id: "B1",
+    workloadVersion: 2,
     label: "First installed launch",
     platforms: primary,
     file: "packages/e2e/src/perf/critical/first-launch.p3.bench.ts",
     cache: "empty app home; no owned process; OS first-launch checks retained",
     throttle: 1,
     actions: ["spawn", "window", "authenticated API", "default tools", "interactive workbench", "first interaction"],
-    metrics: [elapsed("window"), elapsed("shell"), metric("usable", "ms", "product"), elapsed("first-interaction")],
+    metrics: [advisory("window"), advisory("shell"), advisory("usable"), advisory("first-interaction")],
   },
   {
     id: "B2",
+    workloadVersion: 2,
     label: "Saved project process launch",
     platforms: primary,
     file: "packages/e2e/src/perf/critical/saved-launch.p3.bench.ts",
@@ -36,10 +40,11 @@ export const scenarios = [
       "restore conversation, file and terminal",
       "first interaction",
     ],
-    metrics: [elapsed("usable"), elapsed("first-interaction")],
+    metrics: [advisory("usable"), advisory("first-interaction")],
   },
   {
     id: "B3",
+    workloadVersion: 2,
     label: "Attach to owned runtime",
     platforms: primary,
     file: "packages/e2e/src/perf/critical/warm-reopen.p3.bench.ts",
@@ -53,10 +58,11 @@ export const scenarios = [
       "restore content",
       "first interaction",
     ],
-    metrics: [elapsed("attachment"), elapsed("usable"), elapsed("first-interaction")],
+    metrics: [advisory("attachment"), advisory("usable"), advisory("first-interaction")],
   },
   {
     id: "B4",
+    workloadVersion: 2,
     label: "Work during agent streaming",
     platforms: primary,
     file: "packages/e2e/src/perf/critical/streaming-work.p3.bench.ts",
@@ -84,25 +90,25 @@ export const scenarios = [
       "verify cancellation",
     ],
     metrics: [
-      elapsed("input"),
-      elapsed("history"),
-      elapsed("file"),
-      elapsed("terminal"),
-      elapsed("panel"),
-      elapsed("project-switch"),
-      elapsed("stream-to-paint"),
-      elapsed("longest-stall"),
-      elapsed("completion"),
-      elapsed("cancellation"),
-      metric("script", "share", "regression"),
-      metric("task", "share", "regression"),
-      metric("idle-script", "share", "regression"),
-      metric("idle-task", "share", "regression"),
+      advisory("input"),
+      advisory("history"),
+      advisory("file"),
+      advisory("terminal"),
+      advisory("panel"),
+      advisory("project-switch"),
+      advisory("stream-to-paint"),
+      advisory("longest-stall"),
+      advisory("completion"),
+      advisory("cancellation"),
+      advisory("script", "share"),
+      advisory("task", "share"),
+      advisory("idle-script", "share"),
+      advisory("idle-task", "share"),
     ],
   },
   {
     id: "B5",
-    workloadVersion: 2,
+    workloadVersion: 3,
     memoryMetrics: {
       darwin: "physical footprint including compression",
       linux: "resident set",
@@ -120,7 +126,7 @@ export const scenarios = [
     cycleMs: 15_000,
     actions: ["open conversation", "close conversation", "open file", "close file", "hide panel", "show panel"],
     metrics: [
-      metric("native-average", "bytes", "pending-guard"),
+      advisory("native-average", "bytes"),
       metric("native-peak", "bytes"),
       metric("retained-growth", "bytes"),
       metric("resident-peak", "bytes"),
@@ -172,6 +178,7 @@ export const scenarios = [
   },
   {
     id: "B8",
+    workloadVersion: 2,
     label: "Resume after a runtime crash",
     platforms: primary,
     file: "packages/e2e/src/perf/critical/crash-recovery.p3.bench.ts",
@@ -185,7 +192,7 @@ export const scenarios = [
       "first action",
       "verify persisted data and cleanup",
     ],
-    metrics: [elapsed("feedback"), elapsed("usable"), elapsed("first-action"), metric("processes", "count")],
+    metrics: [advisory("feedback"), advisory("usable"), advisory("first-action"), metric("processes", "count")],
   },
 ] as const;
 export type ScenarioId = (typeof scenarios)[number]["id"];

@@ -39,16 +39,18 @@ Timing and average-memory targets use strict **<**, including equality as a fail
 
 | Scenario | Targets |
 | --- | --- |
-| B1 | Window <1,200ms; shell <3,000ms; usable <5,000ms; first interaction <1,200ms |
-| B2 | Usable <5,000ms; first interaction <250ms |
-| B3 | Runtime attachment <1,800ms; usable <5,000ms; first interaction <250ms |
-| B4 | Input/history/stream-to-paint <250ms; file <1,500ms; terminal <250ms; panel <500ms; project/session switch <2,000ms; longest stall <200ms; completion <10,000ms; cancellation <500ms |
-| B5 | Average native memory <2GB on Linux/macOS, <3GB on Windows; complete ten-minute coverage, no missing samples, maximum gap ≤1,000ms |
+| B1 | Advisory: window <1,200ms; shell <3,000ms; usable <5,000ms; first interaction <1,200ms |
+| B2 | Advisory: usable <5,000ms; first interaction <250ms |
+| B3 | Advisory: runtime attachment <1,800ms; usable <5,000ms; first interaction <250ms |
+| B4 | Advisory: input/history/stream-to-paint <250ms; file <1,500ms; terminal <250ms; panel <500ms; project/session switch <2,000ms; longest stall <200ms; completion <10,000ms; cancellation <500ms |
+| B5 | Advisory: average native memory <2GB on Linux/macOS, <3GB on Windows. Required: complete ten-minute coverage, no missing samples, maximum gap ≤1,000ms |
 | B6 | Advisory timing targets: actionable/reopen <5,000ms; filter/page/move <250ms; longest stall <200ms. Timing misses do not block release. Correctness requires bounded query pages and mounted rows ≤100, and persisted edits. |
 | B7 | Cold read <300ms; warm read <180ms; one-record edit <120ms; read during maintenance <120ms. Correct page contents, persisted edits and maintenance results remain required. |
-| B8 | Recovery feedback <480ms; restored usable state <6,000ms; first action <300ms |
+| B8 | Advisory: recovery feedback <480ms; restored usable state <6,000ms; first action <300ms |
 
 The nine B6/B7 ceilings were approved by the user on 2026-11-17 in Planner decision `01a1e8d3-92c0-725d-8622-b831b57a51a7`. On 2026-11-19 the user instructed that benchmarks measure milliseconds rather than read/write counts. B6 and B7 version 2 keep only elapsed-time metrics and gates; storage counts and other supporting values remain raw diagnostics. Their former scan/write ceilings and count-based scan/write assertions are retired. The user also approved completed B6 timing misses as non-blocking for release on the same date. B6 retains targets and reports every miss as advisory; failed actions, missing measurements and functional correctness checks still block. Fixtures, actions, platforms, throttling, timing limits and functional correctness checks are unchanged. Earlier failed or unqualified results retain their original limits and status.
+
+For the 0.48 release, on 2026-11-19, the user made the desktop B1–B5 and B8 targets advisory with the same policy as B6 (issue #2241). B1, B2, B3, B4 and B8 move to workload version 2 and B5 to version 3. Every target value stays, and a completed miss is reported in raw evidence and logs without blocking release. Failed actions, missing measurements, functional assertions, B5 sampling-coverage checks and incomplete or unclean evidence still block. B7 remains the only scenario whose targets block release.
 
 B4's chosen limits bound immediate foreground feedback, allow file/tool initialization separately, and keep the ten-second completion target above the fixed six-second replay schedule without extending that schedule. Retained renderer guards are idle script ≤2% and task ≤5%, streaming script ≤85% and task ≤120%. The last task-share guard alone does not constrain responsiveness; paint and stall targets do.
 
