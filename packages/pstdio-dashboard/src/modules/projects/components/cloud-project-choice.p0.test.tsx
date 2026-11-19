@@ -6,6 +6,7 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { getDashboardAccountStatusQuery } from "@/lib/scoped-queries";
 import { getRuntimeCollections } from "@/lib/sync/collections";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { publishExtensionEvent } from "@/shared/extensions/extension-webview-broadcast";
 import { useCloudProjectChoice } from "./use-cloud-project-choice";
 
@@ -152,6 +153,121 @@ test("an old account's pending download cannot open the new account's same-ID co
     });
   } finally {
     release.resolve();
+    await act(async () => renderer?.unmount());
+    client.clear();
+    await owner.dispose();
+    runtime.__PSTDIO_CONFIG__ = previous;
+    runtime.IS_REACT_ACT_ENVIRONMENT = previousAct;
+    await server.stop(true);
+  }
+});
+
+test("a download opens its completed local copy after its response is lost", async () => {
+  const id = "recovered-project";
+  const account = { managerOrigin: "https://accounts.example.test", accountId: "account-a" };
+  let presence = "cloud-only";
+  const opened: unknown[] = [];
+  let closed = 0;
+  const server = Bun.serve({
+    port: 0,
+    fetch(request) {
+      const url = new URL(request.url);
+      if (url.pathname === "/v1/account")
+        return Response.json({
+          login: { ...account, deviceId: "device" },
+          features: { relay: true },
+          cloudProjects: [id],
+          cloudProjectsLoaded: true,
+          signInRequired: false,
+        });
+      if (url.pathname.endsWith("/download")) {
+        presence = "downloading";
+        return Response.json({ error: "Download response lost" }, { status: 503 });
+      }
+      if (url.pathname === "/v1/account/projects")
+        return Response.json({
+          account,
+          membershipKnown: true,
+          deletions: [],
+          projects: [
+            {
+              id,
+              name: "Recovered notes",
+              online: true,
+              presence,
+              actions: { download: presence !== "downloaded", removeLocal: false, deleteCloud: false },
+            },
+          ],
+        });
+      return Response.json({ state: "synced", offlineReady: true });
+    },
+  });
+  const runtime = globalThis as typeof globalThis & {
+    __PSTDIO_CONFIG__?: { apiBaseUrl: string };
+    IS_REACT_ACT_ENVIRONMENT?: boolean;
+  };
+  const previous = runtime.__PSTDIO_CONFIG__;
+  const previousAct = runtime.IS_REACT_ACT_ENVIRONMENT;
+  runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: server.url.origin };
+  runtime.IS_REACT_ACT_ENVIRONMENT = true;
+  const owner = getRuntimeCollections();
+  const client = getDashboardQueryClient(owner);
+  const input = {
+    instance: { instanceId: "choice", resource: { id }, title: "Recovered notes" },
+    workbench: {
+      overlays: {
+        closeOverlay() {
+          closed++;
+        },
+      },
+      commands: {
+        async executeCommand(command: string, args: unknown) {
+          opened.push({ command, args });
+        },
+      },
+    },
+  } as unknown as WorkbenchPanelRenderInput;
+  let choice: ReturnType<typeof useCloudProjectChoice>;
+  const Probe = () => {
+    choice = useCloudProjectChoice(input);
+    return null;
+  };
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await getDashboardAccountStatusQuery(owner).read();
+    await act(async () => {
+      renderer = create(
+        <QueryClientProvider client={client}>
+          <Probe />
+        </QueryClientProvider>,
+      );
+    });
+    await act(async () => until(() => Boolean(choice.entry?.actions.download)));
+    expect(opened).toEqual([]);
+    await act(async () => {
+      choice.requestDownload();
+      await until(() => Boolean(choice.download.error));
+    });
+    await act(async () => {
+      presence = "downloaded";
+      owner.getWriter("projects")!.upsert({
+        id,
+        name: "Recovered notes",
+        shorthand: "R",
+        created_at: "2026-01-01",
+        updated_at: "2026-01-01",
+      });
+      publishExtensionEvent({ id: accountEvents.changed.id }, owner);
+      await until(() => choice.entry?.presence === "downloaded");
+    });
+    expect(opened).toEqual([
+      {
+        command: dashboardCommandIds.selectProject,
+        args: { project: { id, name: "Recovered notes" } },
+      },
+    ]);
+    expect(closed).toBe(1);
+  } finally {
     await act(async () => renderer?.unmount());
     client.clear();
     await owner.dispose();

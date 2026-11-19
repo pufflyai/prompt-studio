@@ -46,10 +46,11 @@ const useCloudCopyDownload = (
       client: typeof client;
     }) => {
       if (!admission.account) throw new Error("The active Cloud account changed. Choose the project again.");
+      // The host may finish the download even if its response never reaches us.
+      accept(admission.owner);
       return admission.client.account.downloadCloudProject(admission.id, { expected: admission.account });
     },
-    onSuccess(_result, admission) {
-      accept(admission.owner);
+    onSettled() {
       void refresh();
     },
   });
