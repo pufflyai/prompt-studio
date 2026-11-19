@@ -11,6 +11,7 @@ import {
   matchesExtensionScope,
   matchesExtensionSearch,
 } from "./extension-filters";
+import { wideExtensionPanel } from "./extension-layout";
 
 type FilterableExtension = {
   author?: ExtensionAuthor;
@@ -20,6 +21,7 @@ type FilterableExtension = {
   description?: string;
 };
 interface ExtensionsPanelHeaderProps {
+  searchRef?: (node: HTMLInputElement | null) => void;
   extensions: FilterableExtension[];
   filters: ExtensionFilters;
   onFiltersChange: (filters: ExtensionFilters) => void;
@@ -27,6 +29,7 @@ interface ExtensionsPanelHeaderProps {
 }
 
 export const ExtensionsPanelHeader = ({
+  searchRef,
   extensions,
   filters,
   onFiltersChange,
@@ -59,8 +62,9 @@ export const ExtensionsPanelHeader = ({
             {t(`${key}.title`)}
           </Text>
           {upgrade}
-          <InputGroup startElement={<Icon as={Search} boxSize="3.5" />} w={{ base: "full", sm: "64" }}>
+          <InputGroup startElement={<Icon as={Search} boxSize="3.5" />} w={{ base: "full", sm: "64" }} maxW="full">
             <Input
+              ref={searchRef}
               size="sm"
               value={filters.search}
               placeholder={t(`${key}.searchPlaceholder`)}
@@ -108,7 +112,7 @@ export const ExtensionsPanelHeader = ({
         <Text textStyle="label/XS/medium" flex="1">
           {t(`${key}.columns.extension`)}
         </Text>
-        <HStack display={{ base: "none", md: "flex" }} gap="md">
+        <HStack display="none" css={{ [wideExtensionPanel]: { display: "flex" } }} gap="md">
           <Text textStyle="label/XS/medium" w="28">
             {t(`${key}.author.label`)}
           </Text>

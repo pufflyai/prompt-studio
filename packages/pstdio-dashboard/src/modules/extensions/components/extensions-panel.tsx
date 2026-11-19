@@ -1,6 +1,6 @@
 import { Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAgents } from "@/shared/agents/use-agents";
 import { dashboardExtensionDetailPage, dashboardExtensionsPage } from "@/shared/app/resources";
@@ -38,6 +38,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const setAutomationEnabled = useSetExtensionAutomationEnabled(projectId);
   const [filters, setFilters] = useState(defaultExtensionFilters);
   const returnFocusId = useRef<string | undefined>(undefined);
+  const focusTargets = useRef(new Map<string, HTMLElement>());
   const selection = settingsInput.instance.resource?.id;
   const selectedInstanceId = selectedExtension(selection, "installed");
   const selectedMarketplaceName = selectedExtension(selection, "marketplace");
@@ -45,7 +46,6 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
     settingsInput.workbench.pageLocations.navigate({ kind: "page", page: dashboardExtensionsPage });
   };
   const openDetail = (id: string, displayName: string) => {
-    returnFocusId.current = id;
     settingsInput.workbench.pageLocations.navigate({
       kind: "page",
       page: dashboardExtensionDetailPage,
@@ -53,6 +53,27 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
     });
   };
   const actions = useExtensionPanelActions(projectId, extensionsQuery.data?.upgradeConcurrency);
+  useEffect(() => {
+    if (settingsInput.visible === false) return;
+    if (selection) {
+      returnFocusId.current = selection;
+      return;
+    }
+    const requested = returnFocusId.current;
+    if (!requested || !extensionsQuery.data) return;
+    const catalogName = selectedExtension(requested, "marketplace");
+    const installedId = catalogName && actions.installedIds[marketplaceActionKey(catalogName)];
+    const target =
+      focusTargets.current.get(installedId ? `installed:${installedId}` : requested) ??
+      focusTargets.current.get("search");
+    if (!target?.getClientRects().length) return;
+    target.focus();
+    returnFocusId.current = undefined;
+  }, [selection, settingsInput.visible, actions.installedIds, extensionsQuery.data]);
+  const registerFocusTarget = (id: string, node: HTMLElement | null) => {
+    if (node) focusTargets.current.set(id, node);
+    else focusTargets.current.delete(id);
+  };
   const replacementDialog = settingsInput.visible !== false && (
     <ExtensionReplacementConfirmation replacement={actions.replacement} onClose={() => actions.setReplacement(null)} />
   );
@@ -143,11 +164,8 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         projectId={projectId}
         filters={filters}
         onFiltersChange={setFilters}
-        rowRef={(id, node) => {
-          if (!node || returnFocusId.current !== id) return;
-          returnFocusId.current = undefined;
-          node.focus();
-        }}
+        rowRef={registerFocusTarget}
+        searchRef={(node) => registerFocusTarget("search", node)}
         extensions={extensions}
         marketplace={marketplace}
         diagnostics={metadataQuery.data?.diagnostics ?? []}

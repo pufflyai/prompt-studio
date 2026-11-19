@@ -13,6 +13,7 @@ import { ExtensionHealthPopover } from "./extension-health-popover";
 import { ExtensionIcon } from "./extension-icon";
 import { ExtensionIdentity } from "./extension-identity";
 import { ExtensionAuthorBadge, ExtensionScopeBadge } from "./extension-labels";
+import { wideExtensionPanel } from "./extension-layout";
 import { ExtensionToggle } from "./extension-toggle";
 
 export interface ExtensionListRowProps {
@@ -63,7 +64,8 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
       ref={props.rowRef}
       data-testid="extension-entry"
       data-extension-id={extension.id}
-      flexWrap={{ base: "wrap", md: "nowrap" }}
+      flexWrap="wrap"
+      css={{ [wideExtensionPanel]: { flexWrap: "nowrap" } }}
       position="relative"
       gap="md"
       paddingX="lg"
@@ -97,7 +99,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         <ExtensionIcon name={extension.icon} />
       </Flex>
 
-      <Stack gap="0" flex="1" minW="0" flexBasis={{ base: "60%", md: "0" }}>
+      <Stack gap="0" flex="1" minW="0" flexBasis="60%" css={{ [wideExtensionPanel]: { flexBasis: "0" } }}>
         <HStack gap="sm" minW="0">
           <Text textStyle="label/S/medium" color={extension.enabled ? "fg" : "fg.muted"} truncate>
             {extension.displayName}
@@ -150,16 +152,16 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         )}
       </Box>
 
-      <Box w={{ md: "28" }} maxW="full" minW="0" flexShrink="1">
+      <Box css={{ [wideExtensionPanel]: { width: "28" } }} maxW="full" minW="0" flexShrink="1">
         <ExtensionAuthorBadge author={extension.author} />
       </Box>
-      <Box w={{ md: "28" }} flexShrink="0">
+      <Box css={{ [wideExtensionPanel]: { width: "28" } }} flexShrink="0">
         <ExtensionScopeBadge scope={extension.scope} />
       </Box>
 
       <Box
-        w={{ md: "16" }}
-        marginLeft={{ base: "auto", md: "0" }}
+        marginLeft="auto"
+        css={{ [wideExtensionPanel]: { width: "16", marginLeft: "0" } }}
         display="flex"
         justifyContent="end"
         flexShrink="0"

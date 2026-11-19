@@ -6,6 +6,7 @@ import { ExtensionActionButton } from "./extension-action-button";
 import type { ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionIcon } from "./extension-icon";
 import { ExtensionAuthorBadge } from "./extension-labels";
+import { wideExtensionPanel } from "./extension-layout";
 
 interface MarketplaceExtensionRowProps {
   extension: MarketplaceExtension;
@@ -25,7 +26,8 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
     <HStack
       ref={props.rowRef}
       data-testid="marketplace-extension-entry"
-      flexWrap={{ base: "wrap", md: "nowrap" }}
+      flexWrap="wrap"
+      css={{ [wideExtensionPanel]: { flexWrap: "nowrap" } }}
       gap="md"
       paddingX="lg"
       paddingY="sm"
@@ -57,7 +59,7 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
       >
         <ExtensionIcon name={extension.icon} />
       </Flex>
-      <Stack gap="0" flex="1" minW="0" flexBasis={{ base: "60%", md: "0" }}>
+      <Stack gap="0" flex="1" minW="0" flexBasis="60%" css={{ [wideExtensionPanel]: { flexBasis: "0" } }}>
         <Text textStyle="label/S/medium" truncate>
           {extension.displayName}
         </Text>
@@ -69,10 +71,10 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
           {extension.origin.url}@{extension.origin.ref}#{extension.origin.path}
         </Text>
       </Stack>
-      <Box w={{ md: "28" }} maxW="full" minW="0">
+      <Box css={{ [wideExtensionPanel]: { width: "28" } }} maxW="full" minW="0">
         <ExtensionAuthorBadge author={extension.author} />
       </Box>
-      <Box w="28" display={{ base: "none", md: "block" }} />
+      <Box display="none" css={{ [wideExtensionPanel]: { display: "block", width: "28" } }} />
       <Box onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
         <ExtensionActionButton
           variant="outline"
