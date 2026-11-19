@@ -33,6 +33,7 @@
   "reader.rename": "Renommer l’artefact…",
   "reader.delete": "Supprimer l’artefact…",
   "reader.preview": "Aperçu : {{title}}",
+  "reader.unavailable": "Artefacts indisponibles",
   "rename.name": "Nom de l’artefact",
   "commands.startCreation": "Créer un artefact",
   "params.example": "Exemple",

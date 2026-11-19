@@ -203,6 +203,18 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     releaseRead();
     await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
     await page.unrouteAll({ behavior: "wait" });
+    // A failed cold read keeps revision navigation available and reports the finished failure.
+    await page.route(readRoute, async (route) => {
+      if (route.request().postDataJSON()?.params?.revisionId === second.revisionId) {
+        await route.fulfill({ status: 500, json: { error: "Selected revision unavailable" } });
+        return;
+      }
+      await route.continue();
+    });
+    await page.reload();
+    await expect(versionMenu).toBeVisible();
+    await expect(frame.getByRole("alert")).toBeVisible();
+    await page.unrouteAll({ behavior: "wait" });
     await versionMenu.click();
     await expect(frame.getByRole("menuitemradio", { name: /^Second · Latest/ })).toBeChecked();
     await frame.getByRole("menuitemradio", { name: /^First/ }).click();

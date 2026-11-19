@@ -118,8 +118,8 @@ const ArtifactsApp = (props: AppProps) => {
   let body = (
     <Center flex="1">
       {readError ? (
-        <Text color="fg.muted" title={readError}>
-          Artifacts unavailable
+        <Text role="alert" color="fg.muted" title={readError}>
+          {context.t("reader.unavailable", "Artifacts unavailable")}
         </Text>
       ) : (
         <Spinner />
@@ -130,6 +130,7 @@ const ArtifactsApp = (props: AppProps) => {
     body = (
       <ArtifactReader
         content={content}
+        readError={readError}
         revisions={items}
         selectedId={selected ?? content?.id ?? items[0]?.id}
         onSelect={(id) => void chooseRevision(id)}

@@ -11,13 +11,14 @@ const Check = createGlyphIcon("check");
 const VERSION_PAGE_SIZE = 100;
 interface ArtifactReaderProps {
   content?: ArtifactContent;
+  readError?: string;
   selectedId?: string;
   revisions: ArtifactSummary[];
   onSelect: (revisionId: string) => void;
 }
 
 export const ArtifactReader = (props: ArtifactReaderProps) => {
-  const { content, selectedId = content?.id, revisions, onSelect } = props;
+  const { content, readError, selectedId = content?.id, revisions, onSelect } = props;
   const { t, locale } = useArtifactTranslations();
   const [versionLimit, setVersionLimit] = useState(VERSION_PAGE_SIZE);
   const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" });
@@ -34,6 +35,24 @@ export const ArtifactReader = (props: ArtifactReaderProps) => {
     if (scrollHeight - scrollTop <= clientHeight * 2)
       setVersionLimit((limit) => Math.min(limit + VERSION_PAGE_SIZE, revisions.length));
   };
+  let preview = (
+    <Center height="full">
+      <Spinner />
+    </Center>
+  );
+  if (readError) {
+    preview = (
+      <Center height="full">
+        <Text role="alert" color="fg.muted" title={readError}>
+          {t("reader.unavailable", "Artifacts unavailable")}
+        </Text>
+      </Center>
+    );
+  } else if (content) {
+    preview = (
+      <HtmlPreview key={content.id} title={t("reader.preview", "Preview: {{title}}", { title })} html={content.html} />
+    );
+  }
   return (
     <Stack height="full" gap="0" minHeight="0" minWidth="0">
       <Header flexShrink="0" minWidth="0" justifyContent="flex-end">
@@ -103,17 +122,7 @@ export const ArtifactReader = (props: ArtifactReaderProps) => {
         </Menu.Root>
       </Header>
       <Box flex="1" minHeight="0" width="full" bg="bg.muted" overflow="hidden">
-        {content ? (
-          <HtmlPreview
-            key={content.id}
-            title={t("reader.preview", "Preview: {{title}}", { title })}
-            html={content.html}
-          />
-        ) : (
-          <Center height="full">
-            <Spinner />
-          </Center>
-        )}
+        {preview}
       </Box>
     </Stack>
   );
