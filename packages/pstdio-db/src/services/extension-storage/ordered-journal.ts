@@ -56,6 +56,65 @@ const bindOperationIdentity = async (tx: Transaction, owner: StorageOwner, id: s
   return row!;
 };
 
+const queueOrderedOperation = async (
+  tx: Transaction,
+  owner: StorageOwner,
+  input: OrderedOperation,
+  requestFingerprint: string,
+  operation: (id: string) => Promise<typeof operations.$inferSelect | undefined>,
+) => {
+  const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId };
+  input = await verifyOrderedOperation(input);
+  if (isOrderedNativeRequest(requestFingerprint)) {
+    validateOrderedNativeOperation(input);
+    const previous = await operation(input.operationId);
+    if (previous && !isOrderedNativeRequest(previous.request_fingerprint)) throw identityError();
+  }
+  const [saved] = await tx
+    .insert(operations)
+    .values({
+      ...address,
+      operation_id: input.operationId,
+      fingerprint: input.fingerprint,
+      envelope: encode(input),
+      request_fingerprint: requestFingerprint,
+    })
+    .onConflictDoUpdate({
+      target: [operations.workbench_id, operations.extension_id, operations.operation_id],
+      // A receipt can reserve the identity before authorship. Only that empty,
+      // matching reservation may acquire an envelope and a fresh queue position.
+      set: {
+        envelope: sql`excluded.envelope`,
+        request_fingerprint: sql`excluded.request_fingerprint`,
+        local_sequence: sql`excluded.local_sequence`,
+      },
+      setWhere: and(
+        eq(operations.fingerprint, input.fingerprint),
+        isNull(operations.envelope),
+        isNull(operations.settled_epoch),
+      ),
+    })
+    .returning();
+  if (!saved) {
+    const row = (await operation(input.operationId))!;
+    if (row.fingerprint !== input.fingerprint) throw identityError();
+    return retryOrderedLocalOperation(row, input, requestFingerprint);
+  }
+  for (let offset = 0; offset < input.edits.length; offset += 1_000)
+    await tx
+      .insert(touches)
+      .values(
+        input.edits.slice(offset, offset + 1_000).map((edit) => ({
+          ...address,
+          operation_id: input.operationId,
+          record_id: edit.recordId,
+          local_sequence: saved!.local_sequence,
+        })),
+      )
+      .onConflictDoNothing();
+  return local(saved!)!;
+};
+
 /** All calls run inside the same project/owner lock as their projection and relay cursor. */
 export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
   const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId };
@@ -102,38 +161,8 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
     cachedDecision,
     bindIdentity: bind,
     ...createOrderedAuthorship(tx, owner, operation),
-    async queue(input: OrderedOperation, requestFingerprint: string) {
-      input = await verifyOrderedOperation(input);
-      if (isOrderedNativeRequest(requestFingerprint)) {
-        validateOrderedNativeOperation(input);
-        const previous = await operation(input.operationId);
-        if (previous && !isOrderedNativeRequest(previous.request_fingerprint)) throw identityError();
-      }
-      const row = await bind(input.operationId, input.fingerprint);
-      if (row.envelope || row.settled_epoch) return retryOrderedLocalOperation(row, input, requestFingerprint);
-      const [saved] = await tx
-        .update(operations)
-        .set({
-          envelope: encode(input),
-          request_fingerprint: requestFingerprint,
-          local_sequence: sql`nextval(pg_get_serial_sequence('storage_ordered_operations', 'local_sequence'))`,
-        })
-        .where(operationWhere(input.operationId))
-        .returning();
-      for (let offset = 0; offset < input.edits.length; offset += 1_000)
-        await tx
-          .insert(touches)
-          .values(
-            input.edits.slice(offset, offset + 1_000).map((edit) => ({
-              ...address,
-              operation_id: input.operationId,
-              record_id: edit.recordId,
-              local_sequence: saved!.local_sequence,
-            })),
-          )
-          .onConflictDoNothing();
-      return local(saved!)!;
-    },
+    queue: (input: OrderedOperation, requestFingerprint: string) =>
+      queueOrderedOperation(tx, owner, input, requestFingerprint, operation),
     async pending(options: { after?: number; limit?: number } = {}) {
       const rows = await tx
         .select()
