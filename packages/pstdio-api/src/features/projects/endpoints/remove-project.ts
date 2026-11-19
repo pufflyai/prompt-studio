@@ -47,6 +47,7 @@ export const removeProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
     }
 
     // Every device of the account gets every cloud project, so the next account refresh would bring it back.
+    await deps.accountService.refresh();
     const account = await deps.accountService.status();
     if (account.login && !account.cloudProjectsLoaded)
       return c.json({ error: "Connect to Cloud so this device can check which projects it syncs." }, 409);

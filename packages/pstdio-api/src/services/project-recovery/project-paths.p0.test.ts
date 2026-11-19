@@ -1,4 +1,5 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
+import * as fs from "node:fs/promises";
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -13,10 +14,13 @@ test("removing project recovery retains a foreign process's journal and lease un
   const key = recoveryJournalKey(source);
   const path = join(owned, "sources", `${key}.json`);
   const leasePath = join(owned, "sources", `${key}.lock.sqlite`);
-  const child = Bun.spawn([process.execPath, join(import.meta.dir, "journal-owner.fixture.ts"), owned], {
-    stdout: "pipe",
-    stderr: "inherit",
-  });
+  const child = Bun.spawn(
+    [process.execPath, join(import.meta.dir, "journal-owner.fixture.ts"), leasePath, "--lease-path"],
+    {
+      stdout: "pipe",
+      stderr: "inherit",
+    },
+  );
   const ready = child.stdout.getReader();
   let watchdog: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -48,6 +52,55 @@ test("removing project recovery retains a foreign process's journal and lease un
     child.kill("SIGKILL");
     await child.exited;
     ready.releaseLock();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("recovery removal refuses a new source owner admitted after its lease scan", async () => {
+  const root = await mkdtemp(join(tmpdir(), "project-recovery-new-owner-"));
+  const owned = projectRecoveryRoot(root, "project");
+  await openRecoveryJournal({ root: owned, source: ["existing"] }).update({ candidate: null });
+  const remove = fs.rm;
+  let probed = false;
+  const deleting = spyOn(fs, "rm").mockImplementation(async (path, options) => {
+    if (path === owned && options?.recursive) {
+      probed = true;
+      const child = Bun.spawn([process.execPath, join(import.meta.dir, "journal-owner.fixture.ts"), owned, "--probe"], {
+        stdout: "pipe",
+        stderr: "inherit",
+      });
+      const output = await new Response(child.stdout).text();
+      expect(await child.exited).toBe(0);
+      expect(output.trim()).toBe("busy");
+    }
+    await remove(path, options);
+  });
+  try {
+    await removeProjectFolderRecovery(root, "project");
+    expect(probed).toBe(true);
+  } finally {
+    deleting.mockRestore();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("independent source owners can share a project while removal waits for both", async () => {
+  const root = await mkdtemp(join(tmpdir(), "project-recovery-shared-owner-"));
+  const owned = projectRecoveryRoot(root, "project");
+  const first = await openRecoveryJournal({ root: owned, source: ["first"] }).acquire();
+  const second = await openRecoveryJournal({ root: owned, source: ["second"] }).acquire();
+  try {
+    expect(first).not.toBeNull();
+    expect(second).not.toBeNull();
+    await expect(removeProjectFolderRecovery(root, "project")).rejects.toThrow("Another Prompt Studio process");
+    await first!();
+    await expect(removeProjectFolderRecovery(root, "project")).rejects.toThrow("Another Prompt Studio process");
+    await second!();
+    await removeProjectFolderRecovery(root, "project");
+    await expect(stat(owned)).rejects.toMatchObject({ code: "ENOENT" });
+  } finally {
+    await first?.();
+    await second?.();
     await rm(root, { recursive: true, force: true });
   }
 });

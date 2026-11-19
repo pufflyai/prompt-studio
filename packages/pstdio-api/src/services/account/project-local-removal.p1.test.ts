@@ -74,6 +74,10 @@ test("an offline saved roster cannot authorize deletion of a project another dev
     await host.deps.accountService.refresh();
     expect((await host.deps.accountService.status()).cloudProjectsLoaded).toBe(true);
     enabled = true;
+    // Another device changed membership; no background refresh has run on this device yet.
+    expect((await host.app.request(`/v1/projects/${id}`, { method: "DELETE" })).status).toBe(409);
+    expect(await host.deps.projectService.get(id)).not.toBeNull();
+    expect(await readFile(file.storage_path, "utf8")).toBe("Unpublished work");
     offline = true;
     await host.deps.accountService.refresh();
     expect((await host.app.request(`/v1/projects/${id}`, { method: "DELETE" })).status).toBe(409);
