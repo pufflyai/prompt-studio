@@ -111,17 +111,21 @@ export async function* ticketRecordPages(
   where?: StoragePredicate,
   index = "ticket-records",
 ) {
+  // Full board reads can select 500 indexed keys at a time. Filtered migrations
+  // keep their 100-row window as they update the records they just selected.
+  const selectionLimit = where ? 100 : 500;
   let after: string | undefined;
   for (;;) {
-    const page = await ticketSelectionPage(storage, { where, index, after });
+    const page = await ticketSelectionPage(storage, { where, index, after, limit: selectionLimit });
     if (!page.records.length) return;
-    const rows = await readTicketRows(
-      storage,
-      page.records.map(({ recordId }) => recordId),
-    );
-    yield rows.flatMap((row) => (row ? [readTicketTags(row)] : []));
+    // The record API accepts at most 100 full records per read.
+    for (let offset = 0; offset < page.records.length; offset += 100) {
+      const ids = page.records.slice(offset, offset + 100).map(({ recordId }) => recordId);
+      const rows = await readTicketRows(storage, ids);
+      yield rows.flatMap((row) => (row ? [readTicketTags(row)] : []));
+    }
     after = String(page.records.at(-1)!.fields.id);
-    if (page.records.length < 100) return;
+    if (page.records.length < selectionLimit) return;
   }
 }
 
