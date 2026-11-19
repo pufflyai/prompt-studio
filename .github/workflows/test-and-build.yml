@@ -1,10 +1,16 @@
 name: Temporary PS236 paired isolated comparison
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [comparison, windows-cold-read]
+        default: comparison
 permissions:
   contents: read
 jobs:
   comparison:
+    if: inputs.mode == 'comparison'
     name: Same-host 5000-ticket and 5000-foobar comparison
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -79,3 +85,33 @@ jobs:
         if: always()
         working-directory: app-candidate
         run: bun run dev:isolated -- --name ps236-candidate-${{ github.run_id }} --down
+  windows-cold-read:
+    if: inputs.mode == 'windows-cold-read'
+    name: Profile the first Windows storage read
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 26.7.0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - uses: ./.github/actions/setup-ci-cache
+        with:
+          install-strategy: native
+          windows-dev-drive: "true"
+      - name: Profile the original fixed cold-read workload
+        env:
+          PSTDIO_STORAGE_QUERY_TRACE: "1"
+          BENCHMARK_BASELINE: "1"
+          BENCHMARK_SOURCE_SHA: ${{ github.sha }}
+          BENCHMARK_EVIDENCE_DIR: test-results/ps233-windows-cold-profile
+        run: bun --preload ./scripts/diagnostics/ps233-windows-cold-read-preload.ts --conditions=source packages/pstdio-db/src/services/extension-storage/critical-store.p3.bench.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ps233-windows-first-read-profile-${{ github.run_id }}
+          path: test-results/ps233-windows-cold-profile
+          if-no-files-found: error
