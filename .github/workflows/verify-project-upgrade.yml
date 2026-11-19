@@ -30,6 +30,10 @@ on:
       from_tag:
         description: Published stable source release (defaults to the current stable release)
         type: string
+      include_previous_nightly:
+        description: Also upgrade the most recently published nightly to main
+        type: boolean
+        default: false
 permissions:
   contents: read
   actions: read

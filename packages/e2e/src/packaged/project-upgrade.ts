@@ -73,29 +73,41 @@ const verify = async (
   return edited;
 };
 
-const openSavedWork = async (descriptor: Runtime["descriptor"], fixture: Seed, evidence: string) => {
+const workbenchRoutes = async (descriptor: Runtime["descriptor"], fixture: Seed) => {
   const api = upgradeApi(descriptor);
   const { extensionIds } = await api.get<{ extensionIds: string[] }>(`/projects/${fixture.id}/extensions/commands`);
   const plannerId = extensionIds.find((id) => /^pstdio\.(pstdio-)?planner$/.test(id));
   const sessionsId = extensionIds.find((id) => /^pstdio\.(pstdio-)?session-browser$/.test(id));
   assert(plannerId && sessionsId, "Planner and Sessions must be enabled in the upgraded workbench");
+  const project = `/projects/${fixture.id}/extensions`;
+  return {
+    tickets: `${project}/${plannerId}/tickets`,
+    home: `${project}/pstdio.home/home`,
+    conversation: `${project}/${sessionsId}/conversation?resource=${encodeURIComponent(`pstdio://extension-resource/session/${fixture.linkedSession}`)}`,
+  };
+};
+
+const openSavedWork = async (
+  descriptor: Runtime["descriptor"],
+  fixture: Seed,
+  evidence: string,
+  routes: Awaited<ReturnType<typeof workbenchRoutes>>,
+) => {
   const browser = await chromium.launch(PROVISIONED_CHROMIUM);
   let page: Page | undefined;
   try {
     page = await browser.newPage();
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-    await signInBrowser(page, descriptor);
-    const project = `${descriptor.origin}/projects/${fixture.id}/extensions`;
-    await page.goto(`${project}/pstdio.home/home`);
-    await expect(
-      page.frameLocator('iframe[title="Home"]:visible').getByText(fixture.name, { exact: true }),
-    ).toBeVisible();
-    await page.goto(`${project}/${plannerId}/tickets`);
+    // Open Tickets as the first project request after restart, before API checks can warm it.
+    await signInBrowser(page, descriptor, routes.tickets);
     await expect(page.getByTestId("renderer-card").first()).toBeVisible();
     await page.getByTestId("renderer-card").first().click();
     await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).toBeVisible();
-    const resource = encodeURIComponent(`pstdio://extension-resource/session/${fixture.linkedSession}`);
-    await page.goto(`${project}/${sessionsId}/conversation?resource=${resource}`);
+    await page.goto(new URL(routes.home, descriptor.origin).href);
+    await expect(
+      page.frameLocator('iframe[title="Home"]:visible').getByText(fixture.name, { exact: true }),
+    ).toBeVisible();
+    await page.goto(new URL(routes.conversation, descriptor.origin).href);
     await expect(page.getByText("Keep the change small.", { exact: false }).first()).toBeVisible();
     await page.screenshot({ path: join(evidence, "saved-conversation.png") });
   } catch (error) {
@@ -203,11 +215,12 @@ const run = async (
     runtime = await launch(candidate, "upgrade");
     await assertCurrentDatabase(input.home);
     const edited = await verify(runtime.descriptor, input.evidence, state);
+    const routes = await workbenchRoutes(runtime.descriptor, state.fixture);
     await stopProcess(runtime.child);
     runtime = await launch(candidate, "restart");
+    await openSavedWork(runtime.descriptor, state.fixture, input.evidence, routes);
     await assertProjectToolsRetained(upgradeApi(runtime.descriptor), state.fixture.id, state.tools);
     await verifyRestart(runtime.descriptor, input.evidence, state.fixture, edited);
-    await openSavedWork(runtime.descriptor, state.fixture, input.evidence);
     await stopProcess(runtime.child);
     runtime = undefined;
     await checkHomeHistory(input, state.fixture.id, "verify");
