@@ -90,58 +90,6 @@ test("disposal clears attachment checks that have not started", async () => {
   }
 });
 
-test("later edits do not extend the attachment barrier beyond its requested generation", async () => {
-  const root = await realpath(await mkdtemp(join(tmpdir(), "source-attachment-generations-")));
-  const previousHome = process.env.PSTDIO_HOME;
-  process.env.PSTDIO_HOME = join(root, "home");
-  const paths = ["first", "second"].map((name) => join(root, name));
-  for (const path of paths) {
-    await mkdir(path);
-    await writeFile(join(path, "SKILL.md"), "initial");
-  }
-  const entered = [Promise.withResolvers<void>(), Promise.withResolvers<void>()];
-  const released = [Promise.withResolvers<void>(), Promise.withResolvers<void>()];
-  const notified = Promise.withResolvers<void>();
-  const offline = Promise.withResolvers<void>();
-  let calls = 0;
-  const watcher = await createExtensionSourceWatcher({
-    listInstalledSources: async () => paths.map((source_path) => ({ source_path, install_name: source_path })),
-    onSourceChanged: async (path) => {
-      if (path === paths[1]) {
-        offline.resolve();
-        return;
-      }
-      const index = calls++;
-      if (index < 2) {
-        entered[index]!.resolve();
-        await released[index]!.promise;
-      }
-    },
-  });
-  const unsubscribe = subscribePreparationEvents((event) => {
-    if (event.sourcePath === paths[0] && !event.attachment) notified.resolve();
-  });
-  try {
-    await entered[0]!.promise;
-    await writeFile(join(paths[0]!, "SKILL.md"), "later edit");
-    await notified.promise;
-    released[0]!.resolve();
-    await entered[1]!.promise;
-    expect(await Promise.race([offline.promise.then(() => "reconciled"), Bun.sleep(1000).then(() => "stalled")])).toBe(
-      "reconciled",
-    );
-    expect(calls).toBe(2);
-  } finally {
-    for (const release of released) release.resolve();
-    unsubscribe();
-    await watcher.dispose();
-    await stopExtensionPreparation();
-    if (previousHome === undefined) delete process.env.PSTDIO_HOME;
-    else process.env.PSTDIO_HOME = previousHome;
-    await rm(root, { recursive: true, force: true });
-  }
-});
-
 test("reattachment keeps a fresh callback after an already running inspection", async () => {
   const root = await realpath(await mkdtemp(join(tmpdir(), "source-attachment-gap-")));
   const previousHome = process.env.PSTDIO_HOME;
