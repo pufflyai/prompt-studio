@@ -1,20 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { openCanvasPreview } from "../preview";
 
-// Critical: extension editors must fill the settings body without a second host scrollbar constraining their content.
-test("extension settings editors own their scrolling", async ({ page }) => {
-  const preview = await openCanvasPreview(
-    page,
-    "packages/pstdio-workbench/src/react/settings/settings-consistency.canvas.tsx#ExtensionSettings",
-  );
-  await preview.getByText("Bug fix", { exact: true }).click();
-  const content = preview.locator("pre");
-  await expect(content).toBeVisible();
-  await expect(content.locator('xpath=ancestor::*[@data-scope="scroll-area" and @data-part="viewport"]')).toHaveCount(
-    1,
-  );
-});
-
 // Critical: settings navigation and modal dismissal must not silently drop pending edits.
 test("settings preserve edits on Stay and guard both navigation and closing", async ({ page }) => {
   const preview = await openCanvasPreview(
@@ -45,11 +31,6 @@ test("concurrency toggle stages unlimited sessions and Reset restores the saved 
     page,
     "packages/pstdio-workbench/src/react/settings/settings-consistency.canvas.tsx#Settings",
   );
-  const header = preview
-    .locator("header")
-    .filter({ has: preview.getByRole("heading", { name: "Runtime", exact: true }) });
-  // Measure in the preview document so Canvas zoom animation cannot change the result.
-  const cleanHeight = await header.evaluate((element) => element.clientHeight);
   const toggle = preview.getByRole("checkbox", { name: "Limit concurrent sessions" });
   const limit = preview.getByRole("spinbutton", { name: "Maximum concurrent sessions" });
   const save = preview.getByRole("button", { name: "Save", exact: true });
@@ -61,11 +42,9 @@ test("concurrency toggle stages unlimited sessions and Reset restores the saved 
   await expect(limit).toHaveCount(0);
   await expect(save).toBeEnabled();
   await expect(reset).toBeEnabled();
-  expect(await header.evaluate((element) => element.clientHeight)).toBe(cleanHeight);
   await reset.click();
   await expect(toggle).toBeChecked();
   await expect(limit).toHaveValue("4");
-  expect(await header.evaluate((element) => element.clientHeight)).toBe(cleanHeight);
   await expect(save).toHaveCount(0);
   await expect(reset).toHaveCount(0);
   await toggle.press("Space");

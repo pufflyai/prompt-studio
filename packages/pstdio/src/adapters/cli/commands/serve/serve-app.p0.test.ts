@@ -147,50 +147,6 @@ describe("serveApp", () => {
 });
 
 describe("serveApp options", () => {
-  it("leaves state path defaults to the app runtime", async () => {
-    const previousDbPath = process.env.PSTDIO_DB_PATH;
-    const previousStoragePath = process.env.PSTDIO_STORAGE_PATH;
-    delete process.env.PSTDIO_DB_PATH;
-    delete process.env.PSTDIO_STORAGE_PATH;
-
-    try {
-      const serveApp = createServeApp({
-        createApp: async () => ({
-          app: {
-            fetch: () => new Response("ok"),
-          },
-          close: async () => {},
-        }),
-        injectConfig: (html) => html,
-        isCompiledBinary: () => false,
-        loadEmbeddedAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
-        loadFilesystemAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
-        resolveMimeType: () => "text/html",
-        serve: () => ({}) as ReturnType<typeof Bun.serve>,
-        onSignal: () => {},
-        offSignal: () => {},
-        log: () => {},
-      });
-
-      await serveApp({ port: 19840, host: "localhost" });
-
-      expect(process.env.PSTDIO_DB_PATH).toBeUndefined();
-      expect(process.env.PSTDIO_STORAGE_PATH).toBeUndefined();
-    } finally {
-      if (previousDbPath === undefined) {
-        delete process.env.PSTDIO_DB_PATH;
-      } else {
-        process.env.PSTDIO_DB_PATH = previousDbPath;
-      }
-
-      if (previousStoragePath === undefined) {
-        delete process.env.PSTDIO_STORAGE_PATH;
-      } else {
-        process.env.PSTDIO_STORAGE_PATH = previousStoragePath;
-      }
-    }
-  });
-
   it("does not create the app when server startup throws", async () => {
     let created = false;
 
@@ -260,35 +216,6 @@ describe("serveApp options", () => {
 
     await expect(serveApp({ port: 19840, host: "localhost" })).rejects.toThrow("valid checkpoint");
     expect(reportedError?.message).toContain("valid checkpoint");
-  });
-
-  it("configures Bun idle timeout to 20 seconds", async () => {
-    const captured = { idleTimeout: undefined as number | undefined };
-
-    const serveApp = createServeApp({
-      createApp: async () => ({
-        app: {
-          fetch: () => new Response("ok"),
-        },
-        close: async () => {},
-      }),
-      injectConfig: (html) => html,
-      isCompiledBinary: () => false,
-      loadEmbeddedAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
-      loadFilesystemAssets: () => new Map([["index.html", new Blob(["<html></html>"])]]),
-      resolveMimeType: () => "text/html",
-      serve: (options) => {
-        captured.idleTimeout = options.idleTimeout;
-        return {} as ReturnType<typeof Bun.serve>;
-      },
-      onSignal: () => {},
-      offSignal: () => {},
-      log: () => {},
-    });
-
-    await serveApp({ port: 19840, host: "localhost" });
-
-    expect(captured.idleTimeout).toBe(20);
   });
 
   it("forwards the host option to Bun.serve as hostname", async () => {

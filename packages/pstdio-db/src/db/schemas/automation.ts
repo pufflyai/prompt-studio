@@ -1,4 +1,4 @@
-import { jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { index, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { projects } from "./projects";
 import type { JsonObject } from "./types";
 
@@ -60,6 +60,7 @@ export const automation_runs = pgTable(
     finished_at: text("finished_at"),
   },
   (table) => [
+    index("automation_runs_project_status_idx").on(table.project_id, table.status),
     uniqueIndex("automation_runs_idempotency_idx").on(
       table.principal_id,
       table.project_id,

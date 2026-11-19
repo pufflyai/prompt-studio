@@ -48,7 +48,10 @@ export const smokeFeatures = async (input: {
     });
   const workbench = `/v1/workbenches/${input.device.workbenchId}`;
   assert.equal((await command("revoke")).status, 0);
-  assert.deepEqual(await (await request("/v1/account")).json(), { features: { relay: false } });
+  assert.deepEqual(await (await request("/v1/account")).json(), {
+    features: { relay: false },
+    projectDeletion: false,
+  });
   assert.deepEqual(await (await request("/v1/workbenches")).json(), []);
   assert.equal((await request(workbench, {})).status, 403);
   assert.equal((await request(`${workbench}/keys`)).status, 404);

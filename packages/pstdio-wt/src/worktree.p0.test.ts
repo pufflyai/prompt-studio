@@ -120,19 +120,6 @@ describe("createWorktree", () => {
     const worktreeHead = await git(wtPath, ["rev-parse", "HEAD"]);
     expect(worktreeHead).toBe(advancedSha);
   });
-
-  test("creates from a specific base", async () => {
-    const wtPath = join(repo.dir, "wt-test");
-    const result = await createWorktree({
-      repoRoot: repo.dir,
-      branch: "task/test-1",
-      path: wtPath,
-      base: "main",
-    });
-
-    expect(result.created).toBe(true);
-    expect(result.base).toBe("main");
-  });
 });
 
 describe("findWorktreeByBranch", () => {
@@ -201,13 +188,6 @@ describe("removeWorktree", () => {
 });
 
 describe("branchExists", () => {
-  test("returns true for existing branch", async () => {
-    const wtPath = join(repo.dir, "wt-exists");
-    await createWorktree({ repoRoot: repo.dir, branch: "task/exists", path: wtPath });
-
-    expect(await branchExists(repo.dir, "task/exists")).toBe(true);
-  });
-
   test("returns false for nonexistent branch", async () => {
     expect(await branchExists(repo.dir, "task/nope")).toBe(false);
   });

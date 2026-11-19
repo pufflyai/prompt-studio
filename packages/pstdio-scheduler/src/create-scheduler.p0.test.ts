@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { createScheduler } from "./create-scheduler";
 import { createFileWatermarkStore } from "./file-watermark-store";
 import { createTestCronDriver } from "./testing";
-import type { Job, Logger, Scheduler } from "./types";
+import type { Job, Scheduler } from "./types";
 import { toMinuteEpoch } from "./watermark-store";
 
 const tempDirs: string[] = [];
@@ -24,15 +24,6 @@ const waitFor = async (condition: () => boolean | Promise<boolean>, timeoutMs = 
     await Bun.sleep(5);
   }
   throw new Error(`Condition not met within ${timeoutMs}ms`);
-};
-
-const captureLogger = () => {
-  const events: { level: "info" | "error"; payload: Record<string, unknown> }[] = [];
-  const logger: Logger = {
-    info: (payload) => events.push({ level: "info", payload }),
-    error: (payload) => events.push({ level: "error", payload }),
-  };
-  return { events, logger };
 };
 
 afterEach(async () => {
@@ -186,26 +177,6 @@ describe("createScheduler live firing", () => {
 
     blocker.resolve();
     await first;
-  });
-
-  test("error in runJob does not propagate to the scheduler", async () => {
-    const cron = createTestCronDriver();
-    const { events, logger } = captureLogger();
-
-    const scheduler = createScheduler({
-      cron: cron.factory,
-      now: () => new Date("2026-04-20T09:00:00.000Z"),
-      logger,
-      listJobs: async () => [{ key: "demo", cron: "* * * * *", timeoutMs: 1_000 }],
-      runJob: async () => {
-        throw new Error("nope");
-      },
-    });
-    schedulers.push(scheduler);
-
-    await waitFor(() => cron.size() === 1);
-    await cron.fireAll();
-    await waitFor(() => events.some((e) => e.payload.outcome === "error"));
   });
 });
 

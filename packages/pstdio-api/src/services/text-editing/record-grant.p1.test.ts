@@ -1,11 +1,14 @@
 import { expect, test } from "bun:test";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { createProjectWork, ProjectRemovalInProgress } from "../project-work";
 import { selected, textEditingFixture } from "./text-editing.test-fixture";
 
 test("grant a record field from one verified source observation and reject incomplete content", async () => {
   let reloads = 0;
+  const projectWork = createProjectWork();
   const f = await textEditingFixture({
+    projectWork,
     beforeDocumentLoad: async () => {
       reloads++;
     },
@@ -31,6 +34,8 @@ test("grant a record field from one verified source observation and reject incom
     await writeFile(join(f.root, "provided.txt"), "complete note");
     expect(await connect()).toHaveProperty("token");
     expect(reloads).toBe(0);
+    projectWork.freeze(owner.workbenchId);
+    await expect(connect()).rejects.toBeInstanceOf(ProjectRemovalInProgress);
   } finally {
     await f.cleanup();
   }

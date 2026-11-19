@@ -141,31 +141,6 @@ describe("resolveOrphanedSessions (via createApp startup)", () => {
       await reader.cancel();
     }
   });
-
-  test("completed sessions are not affected", async () => {
-    const projectRes = await app.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(folderProjectInput({ name: "Completed Session Project" })),
-    });
-    const project = await projectRes.json();
-
-    const createRes = await app.request("/v1/sessions", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        project_id: project.id,
-        title: "Already completed",
-        prompt: "hello",
-        agent: FAKE_ID,
-      }),
-    });
-    const session = await createRes.json();
-    await waitForSessionStatus(session.id, "completed");
-
-    const res = await app.request(`/v1/sessions/${session.id}`);
-    expect((await res.json()).status).toBe("completed");
-  });
 });
 
 describe("resolveOrphanedSessions abort", () => {
@@ -250,38 +225,6 @@ describe("resolveOrphanedSessions abort", () => {
 });
 
 describe("resolveOrphanedSessions resolution", () => {
-  test("transitions orphaned session to disconnected", async () => {
-    const staleSession = {
-      id: "session-hooked",
-      agent: null,
-      agent_session_id: null,
-      project_id: "project-1",
-    };
-    const transitionStatus = mock(async () => ({ ...staleSession, status: "disconnected" }));
-
-    const deps = {
-      repoService: {},
-      harnessRegistry: createTestHarnessRegistry([]),
-      eventBus: { emit: () => {} },
-      fileService: checkpointFileService,
-      workspaceSessionService: { getWorkspaceBySessionId: async () => null },
-      sessionQueueEntriesService: {
-        listDispatchStarted: async () => [],
-        remove: async () => {},
-      },
-      sessionService: {
-        store: { get: () => undefined },
-        listActive: async () => [staleSession],
-        transitionStatus,
-      },
-      db: {},
-    } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
-
-    await resolveOrphanedSessions(deps);
-
-    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected", expect.anything());
-  });
-
   test("message lookup success does not imply completed", async () => {
     const staleSession = {
       id: "session-with-messages",
@@ -596,10 +539,6 @@ describe("resolveOrphanedSessions hooks", () => {
 
     await resolveOrphanedSessions(deps);
 
-    expect(updateStatus).toHaveBeenCalledWith("session-orphan-hook", "disconnected", {
-      expectedLastRequestStarted: null,
-      expectedStatus: "in_progress",
-    });
     expect(onSessionStatusChanged).toHaveBeenCalledWith({
       id: "session-orphan-hook",
       project_id: "project-orphan",

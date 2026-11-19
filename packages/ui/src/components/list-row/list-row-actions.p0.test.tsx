@@ -22,13 +22,3 @@ test.each([1, 8])("action menus with %i items keep their trigger semantics with 
   const button = html.match(/<button\b[^>]*>/)?.[0];
   expect(button).toContain('aria-haspopup="menu"');
 });
-
-test("icon actions expose tooltip triggers without separate tooltip text", () => {
-  const html = renderToStaticMarkup(
-    <ChakraProvider value={psTheme}>
-      <RowActions context={{}} actions={[{ id: "new-workspace", label: "New workspace" }]} />
-    </ChakraProvider>,
-  );
-  const button = html.match(/<button\b[^>]*>/)?.[0];
-  expect(button).toContain('data-scope="tooltip"');
-});

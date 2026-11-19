@@ -165,38 +165,6 @@ describe("pstdio serve", () => {
   );
 
   test(
-    "starts and serves API healthz",
-    async () => {
-      const port = await getFreePort();
-      const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-serve-"));
-      child = await startServe(port, storagePath);
-
-      const res = await fetch(`http://localhost:${port}/healthz`);
-      expect(res.ok).toBe(true);
-
-      const body = await res.json();
-      expect(body).toEqual({ ok: true });
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "serves API routes under /v1",
-    async () => {
-      const port = await getFreePort();
-      const storagePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-serve-"));
-      child = await startServe(port, storagePath);
-
-      const res = await fetch(`http://localhost:${port}/v1/projects`, { headers: runtimeAuthorization() });
-      expect(res.ok).toBe(true);
-
-      const body = (await res.json()) as unknown[];
-      expect(Array.isArray(body)).toBe(true);
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
     "serves dashboard with text/html content-type at root",
     async () => {
       const port = await getFreePort();

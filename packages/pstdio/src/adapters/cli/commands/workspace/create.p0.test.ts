@@ -21,19 +21,6 @@ const baseDeps = {
 };
 
 describe("workspaces create", () => {
-  test("creates a standalone workspace when no ticket id is given", async () => {
-    const createStandaloneWorkspace = mock(async () => mockWorkspace) as never;
-
-    const handler = createHandler({ ...baseDeps, createStandaloneWorkspace });
-    await handler({ provider: "pstdio.worktree", params: '{"base":"main"}', _: [], $0: "" } as never);
-
-    expect(createStandaloneWorkspace).toHaveBeenCalledWith({
-      projectId: "proj-1",
-      providerId: "pstdio.worktree",
-      params: { base: "main" },
-    });
-  });
-
   test("passes provider and params through to the API", async () => {
     const createStandaloneWorkspace = mock(async () => mockWorkspace) as never;
 

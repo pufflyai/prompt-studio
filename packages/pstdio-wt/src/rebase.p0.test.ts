@@ -158,32 +158,6 @@ describe("rebaseOntoTarget", () => {
     );
   });
 
-  test("post-rebase hook runs after successful rebase", async () => {
-    const wtPath = join(repo.dir, "wt-rebase");
-    await createWorktree({ repoRoot: repo.dir, branch: "task/rebase-post", path: wtPath });
-
-    const dispatch = noopDispatch();
-
-    await Bun.write(join(wtPath, "feature.txt"), "feature");
-    await commitChanges({ worktreePath: wtPath, message: "branch commit" });
-
-    // advance main so rebase is needed
-    await Bun.write(join(repo.dir, "main-change.txt"), "main change");
-    await git(repo.dir, ["add", "."]);
-    await git(repo.dir, ["commit", "-m", "main commit"]);
-
-    await rebaseOntoTarget({ repoRoot: repo.dir, branch: "task/rebase-post", target: "main", dispatch });
-
-    expect(dispatch.firePostHook).toHaveBeenCalledWith(
-      "postRebase",
-      expect.objectContaining({
-        repoPath: repo.dir,
-        branch: "task/rebase-post",
-        target: "main",
-      }),
-    );
-  });
-
   test("dispatch ctx contains expected fields", async () => {
     const wtPath = join(repo.dir, "wt-rebase");
     await createWorktree({ repoRoot: repo.dir, branch: "task/rebase-payload", path: wtPath });

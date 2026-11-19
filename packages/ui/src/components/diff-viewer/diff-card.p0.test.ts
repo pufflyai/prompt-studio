@@ -57,7 +57,7 @@ describe("shouldAutoLoadDiffContent", () => {
       shouldAutoLoadDiffContent({
         isExpanded: true,
         isSelected: true,
-        hasDiffContent: true,
+        hasDiffContent: false,
         isLargeDiff: false,
         isGeneratedDiff: false,
         isBinaryDiff: false,

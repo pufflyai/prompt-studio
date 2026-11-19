@@ -47,8 +47,6 @@ export interface KanbanRendererListProps {
   onExpandedGroupChange?: (rowId: string, isExpanded: boolean) => void;
 }
 
-const INDENT_STEP_PX = 12;
-
 export interface FlattenedKanbanRendererListItem {
   id: string;
   item: KanbanRendererListItem;
@@ -56,11 +54,6 @@ export interface FlattenedKanbanRendererListItem {
   isGroup: boolean;
   canExpand: boolean;
 }
-
-export const getKanbanRendererListIndentation = (depth: number) => {
-  if (depth <= 0) return undefined;
-  return `${depth * INDENT_STEP_PX}px`;
-};
 
 export const flattenKanbanRendererListItems = (
   items: KanbanRendererListItem[],

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderWorkspaceCapabilities } from "pstdio-db";
 import { apiLogger } from "../../lib/logger";
+import { createProjectWork } from "../../services/project-work";
 import { createTestDocumentStorage } from "../../test-utils/create-test-document-storage";
 import { EventBus } from "../sync/event-bus";
 import { fireExtensionEvent } from "./extension-event-runtime";
@@ -16,6 +17,7 @@ const withRuntimeCatalog = <T extends { extensionService: object; projectService
   deps: T,
 ) => ({
   ...deps,
+  projectService: { ...deps.projectService, work: createProjectWork() },
   eventBus: new EventBus(),
   extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({
     extensionService: deps.extensionService as never,

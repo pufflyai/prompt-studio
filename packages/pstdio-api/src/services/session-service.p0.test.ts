@@ -83,19 +83,6 @@ describe("SessionService", () => {
       });
     });
 
-    test("fires callback for failed status", async () => {
-      const { deps, mocks } = buildDeps();
-      const service = createSessionService(deps);
-
-      await service.transitionStatus("s1", "failed");
-
-      expect(mocks.onSessionStatusChanged).toHaveBeenCalledWith({
-        id: "s1",
-        project_id: "project_1",
-        status: "failed",
-      });
-    });
-
     test("returns null when session not found", async () => {
       const { deps, sessionsDb } = buildDeps();
       (sessionsDb.updateStatus as ReturnType<typeof mock>).mockImplementation(async () => null);

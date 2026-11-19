@@ -74,29 +74,31 @@ export const executeScheduledCommand = async (input: {
   const preparedIdentity = executionIdentity(workspace);
   if (input.workspaceId && !workspace) throw new Error("Scheduled workspace no longer exists.");
   if (workspace && workspace.project_id !== projectId) throw new Error("Workspace does not belong to this project.");
+  const execute = async (signal?: AbortSignal) => {
+    const outcome = await runner.execute({
+      signal,
+      commandId: schedule.commandId,
+      projectId,
+      params: (schedule.params ?? {}) as JsonObject,
+      workspaceId: workspace?.id,
+      workspaceDir: workspace?.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined,
+      source: "schedule",
+      metadata: {
+        reason: ctx.reason,
+        runId: ctx.runId,
+        scheduleId: schedule.id,
+        scheduleTitle: scheduleTitle(schedule.title),
+        scheduledFor: ctx.scheduledFor.toISOString(),
+      },
+    });
+    if (!outcome.ok)
+      throw new Error(
+        `Extension schedule command "${schedule.commandId}" failed: ${outcome.reason ?? outcome.status ?? "unknown error"}`,
+      );
+    return true;
+  };
   return input.dispatch(
-    async () => {
-      const outcome = await runner.execute({
-        commandId: schedule.commandId,
-        projectId,
-        params: (schedule.params ?? {}) as JsonObject,
-        workspaceId: workspace?.id,
-        workspaceDir: workspace?.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined,
-        source: "schedule",
-        metadata: {
-          reason: ctx.reason,
-          runId: ctx.runId,
-          scheduleId: schedule.id,
-          scheduleTitle: scheduleTitle(schedule.title),
-          scheduledFor: ctx.scheduledFor.toISOString(),
-        },
-      });
-      if (!outcome.ok)
-        throw new Error(
-          `Extension schedule command "${schedule.commandId}" failed: ${outcome.reason ?? outcome.status ?? "unknown error"}`,
-        );
-      return true;
-    },
+    () => deps.projectService?.work?.run(projectId, execute, undefined, { cancelOnFreeze: true }) ?? execute(),
     async () => executionIdentity(await resolveWorkspace()) === preparedIdentity,
   );
 };

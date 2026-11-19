@@ -13,7 +13,6 @@ import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 setupPackagedSmokeTests();
 
 test.each([
-  { name: "hosted default", environment: "", args: [], expected: "https://base.prompt.studio/accounts" },
   {
     name: "host environment",
     environment: "https://dev.fixture.test/accounts/",

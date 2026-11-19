@@ -12,7 +12,9 @@ import {
   type VisibilityOverride,
 } from "@pstdio/ui";
 import type { ReactNode } from "react";
+import type { TreeGroupScope } from "../../../core/registries/renderers/tree-renderer-types";
 import { keepSectionsEmptiedByMoves } from "./tree-emptied-sections";
+import { mergeLevelSectionOrder } from "./tree-group-scope";
 import { withoutPinnedOnlyRows } from "./tree-pinned-only";
 import { useTreeViewGroups } from "./use-tree-view-groups";
 
@@ -53,6 +55,7 @@ interface TreeViewCustomizationOptions {
   suppressNodeContextMenus?: boolean;
   pinnedOnlyNodeIds?: ReadonlySet<string>;
   allowGroups?: boolean;
+  groupScope?: TreeGroupScope;
 }
 
 const toStringLabel = (label: ReactNode, fallback: string) => (typeof label === "string" ? label : fallback);
@@ -164,7 +167,15 @@ export const useTreeViewCustomization = (
     nodeOrderBySection: activeNodeOrder,
     withGroupControls,
     newGroupAction,
-  } = useTreeViewGroups(storageKey, sourceSections, nodeOrderBySection, options?.allowGroups === true);
+  } = useTreeViewGroups(
+    storageKey,
+    sourceSections,
+    nodeOrderBySection,
+    options?.allowGroups === true,
+    options?.groupScope,
+  );
+  const orderForCurrentLevel = (sectionIds: string[]) =>
+    options?.groupScope ? mergeLevelSectionOrder(sectionOrder, sectionIds) : sectionIds;
   const visibilityActions = {
     onToggleSection: toggleSection,
     onToggleNode: toggleNode,
@@ -182,6 +193,7 @@ export const useTreeViewCustomization = (
   const orderedSectionsBySlot: Record<TreeViewSlot, TreeListSection[]> = { header: [], content: [], footer: [] };
   const orderedAllSections = withGroupControls(
     applyTreeListOrder(sourceSections, sectionOrder, activeNodeOrder, groups),
+    orderForCurrentLevel,
   );
   for (const section of orderedAllSections) {
     const slot = sectionSlotById[section.id] ?? defaultSlotBySectionId.get(section.id) ?? "content";
@@ -262,6 +274,7 @@ export const useTreeViewCustomization = (
     sectionOrder,
     nodeOrderBySection,
     sectionSlotById,
+    groupScope: options?.groupScope?.active,
     groups,
   });
 
@@ -278,13 +291,13 @@ export const useTreeViewCustomization = (
         footer: orderedFooterSections.map((section) => section.id),
       };
       idsBySlot[slot] = nextSectionIds;
-      setSectionOrder([...idsBySlot.header, ...idsBySlot.content, ...idsBySlot.footer]);
+      setSectionOrder(orderForCurrentLevel([...idsBySlot.header, ...idsBySlot.content, ...idsBySlot.footer]));
     },
     onMoveSection: (nextSectionIds, sourceSectionId, destinationSectionId) => {
       const destinationSlot =
         sectionSlotById[destinationSectionId] ?? defaultSlotBySectionId.get(destinationSectionId) ?? "content";
       setSectionSlot(sourceSectionId, destinationSlot);
-      setSectionOrder(nextSectionIds);
+      setSectionOrder(orderForCurrentLevel(nextSectionIds));
     },
     onReorderNodes: setNodeOrder,
   };

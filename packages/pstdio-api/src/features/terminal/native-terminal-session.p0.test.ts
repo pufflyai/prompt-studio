@@ -135,6 +135,20 @@ test("closing the view releases the PTY and removing its installed owner release
   expect(kills).toBe(2);
 });
 
+test("removing the device copy closes a retained native terminal and refuses reattachment", async () => {
+  const session = await openNativeTerminalSession(fixture.deps, binding, new AbortController().signal);
+  const work = fixture.deps.projectService.work;
+  work.suspend(binding.projectId);
+  await work.drain(binding.projectId);
+  await work.closeResources(binding.projectId);
+  expect(kills).toBe(1);
+  await expect(nativeTerminalAttachmentKey(fixture.deps, binding, new AbortController().signal)).rejects.toThrow(
+    "removing",
+  );
+  await session.kill();
+  expect(kills).toBe(1);
+});
+
 test("reloading another contribution retains the enabled terminal owner", async () => {
   const session = await openNativeTerminalSession(fixture.deps, binding, new AbortController().signal);
   const path = `${fixture.root}/extension.ts`;
@@ -157,5 +171,46 @@ test("replacing the enabled installed instance releases its existing terminal", 
   await Bun.sleep(0);
   expect(kills).toBe(1);
   await session.kill();
+  expect(kills).toBe(1);
+});
+
+test("copy removal waits for an already closing terminal to finish its process cleanup", async () => {
+  const stopped = Promise.withResolvers<void>();
+  const exiting = Promise.withResolvers<void>();
+  const exitObserved = Promise.withResolvers<void>();
+  fixture.deps.terminal!.openSession = () => ({
+    id: "closing-pty",
+    write() {},
+    resize() {},
+    async kill() {
+      kills++;
+      exiting.resolve();
+      await stopped.promise;
+    },
+    events: async function* () {
+      await exiting.promise;
+      yield { kind: "exit", code: 0, signal: null };
+      exitObserved.resolve();
+    },
+  });
+  const session = await openNativeTerminalSession(fixture.deps, binding, new AbortController().signal);
+  const events = (async () => {
+    for await (const event of session.events()) expect(event.kind).toBe("exit");
+  })();
+  const closing = session.kill();
+  await exitObserved.promise;
+  await events;
+  fixture.deps.projectService.work.suspend(binding.projectId);
+  let cleanupFinished = false;
+  const cleanup = fixture.deps.projectService.work.closeResources(binding.projectId).then(() => {
+    cleanupFinished = true;
+  });
+  try {
+    await Bun.sleep(0);
+    expect(cleanupFinished).toBe(false);
+  } finally {
+    stopped.resolve();
+    await Promise.all([closing, cleanup]);
+  }
   expect(kills).toBe(1);
 });
