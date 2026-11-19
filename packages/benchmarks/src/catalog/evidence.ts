@@ -50,7 +50,7 @@ export const scenarioEvidence = (
       event.scenario !== id ||
       event.budgetComparison !== "strict-ms-bytes" ||
       event.catalogRevision !== catalogRevision ||
-      event.workloadVersion !== (scenario.id === "B5" ? scenario.workloadVersion : 1) ||
+      event.workloadVersion !== ("workloadVersion" in scenario ? scenario.workloadVersion : 1) ||
       (scenario.id === "B5" && event.memoryMetric !== scenario.memoryMetrics[expected.platform.split("-")[0]!]) ||
       event.fingerprint !== fingerprint ||
       event.dirty ||
