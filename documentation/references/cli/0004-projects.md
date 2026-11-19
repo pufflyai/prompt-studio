@@ -64,6 +64,7 @@ Run `pst projects <command> --help` for current options.
 
 The device must have connected to Cloud once since Prompt Studio started, so it can unlock its private copies.
 
-*Updated at: 2026-11-07*
 
 Cloud JSON listing retains `account` and `membershipKnown`. When `membershipKnown` is false, `presence: "unknown"` on a locally listed copy means its Cloud membership has not been established; empty Cloud/deletion arrays are incomplete. `delete-cloud --confirm` requires a signed-in catalog account and pins the deletion to it.
+
+*Updated at: 2026-11-19*

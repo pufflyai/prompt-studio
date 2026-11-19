@@ -205,7 +205,12 @@ test("only explicit Download restores a cloud-only copy and prepares its local f
     expect(await host.account.catalogProjects()).toMatchObject({ projects: [{ id, presence: "cloud-only" }] });
     expect(await host.projects.get(id)).toBeNull();
 
-    const download = await host.app.request(`${projectPath}/download`, { method: "POST" });
+    const wrongAccount = new URLSearchParams({ accountId: "another-account", managerOrigin: device.managerOrigin });
+    const denied = await host.app.request(`${projectPath}/download?${wrongAccount}`, { method: "POST" });
+    expect(denied.status).toBe(400);
+    expect(await copies.forAccount(device)).toMatchObject([{ phase: "cloud-only" }]);
+    const expected = new URLSearchParams({ accountId: device.accountId, managerOrigin: device.managerOrigin });
+    const download = await host.app.request(`${projectPath}/download?${expected}`, { method: "POST" });
     expect(download.status).toBe(202);
     expect(await download.json()).toEqual({ projectId: id, presence: "downloading" });
     await started.promise;
