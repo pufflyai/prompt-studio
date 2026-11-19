@@ -17,6 +17,11 @@ export const plannerStorageIndexes = () => [
   ...placementIndexes,
   ticketViewIndex,
   ...definitionIndexes,
+  ...["workspace-status-definitions", "workspace-status-values"].map((collection) => ({
+    name: `cleanup:${collection}`,
+    collection,
+    fields: { id: { path: ["id"], type: "string" as const } },
+  })),
 ];
 // Queries must not run before an older project's tickets have moved into the indexed records.
 const prepared = new WeakMap<ExtensionStorageApi, Promise<void>>();

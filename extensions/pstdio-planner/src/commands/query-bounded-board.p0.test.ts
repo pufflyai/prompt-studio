@@ -6,6 +6,23 @@ import { putTicket } from "../data/ticket-context.fixture";
 import { makeCommandContext } from "./command-context.fixture";
 import { queryTickets } from "./query-tickets";
 
+test("Board fields admit a fresh project without unbounded collection reads", async () => {
+  const storage = createMemoryStorage();
+  const collection = storage.collection.bind(storage);
+  storage.collection = <T>(name: string) => ({
+    ...collection<T>(name),
+    list: async () => {
+      throw new Error(`Unbounded ${name}`);
+    },
+  });
+  storage.records.list = async () => {
+    throw new Error("Unbounded records");
+  };
+  const result = await queryTickets(makeCommandContext({ storage, params: {} }), { fieldsOnly: true });
+  expect(result.rows).toEqual([]);
+  expect(result.attributes.some(({ id }) => id === "status")).toBe(true);
+});
+
 test("Board selects late matching tickets and global counts without loading ticket bodies or collections", async () => {
   const storage = createMemoryStorage();
   let previous: string | undefined;
@@ -28,10 +45,6 @@ test("Board selects late matching tickets and global counts without loading tick
   const collection = storage.collection.bind(storage);
   storage.collection = <T>(name: string) => {
     const items = collection<T>(name);
-    if (
-      !["tickets", "planner-review-requests", "planner-review-request-outcomes", "timeline.placements"].includes(name)
-    )
-      return items;
     return {
       ...items,
       list: async () => {

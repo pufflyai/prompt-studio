@@ -178,6 +178,8 @@ export const createPlannerUi = (baseUrl: string) => {
     icon: "chart-no-axes-gantt",
     body: {
       ...tickets.body,
+      queryMode: "static",
+      maxRows: 1,
       query: timelineViewSchema,
       defaultSettings: { ...tickets.body.defaultSettings, displayProperties: DEFAULT_TIMELINE_DISPLAY_PROPERTIES },
     },
