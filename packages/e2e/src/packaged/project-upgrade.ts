@@ -86,10 +86,14 @@ const openSavedWork = async (descriptor: Runtime["descriptor"], fixture: Seed, e
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await signInBrowser(page, descriptor);
     const project = `${descriptor.origin}/projects/${fixture.id}/extensions`;
+    await page.goto(`${project}/pstdio.home/home`);
+    await expect(
+      page.frameLocator('iframe[title="Home"]:visible').getByText(fixture.name, { exact: true }),
+    ).toBeVisible();
     await page.goto(`${project}/${plannerId}/tickets`);
     await expect(page.getByTestId("renderer-card").first()).toBeVisible();
     await page.getByTestId("renderer-card").first().click();
-    await expect(page.locator('[contenteditable="true"]:visible').first()).toBeVisible();
+    await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).toBeVisible();
     const resource = encodeURIComponent(`pstdio://extension-resource/session/${fixture.linkedSession}`);
     await page.goto(`${project}/${sessionsId}/conversation?resource=${resource}`);
     await expect(page.getByText("Keep the change small.", { exact: false }).first()).toBeVisible();
