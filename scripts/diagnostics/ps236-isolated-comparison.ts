@@ -178,12 +178,16 @@ try {
       await page.goto(`${uiOrigin}/projects/${project.id}/extensions/pstdio.planner/ticket-timeline`, {
         waitUntil: "commit",
       });
-      await page.frameLocator("iframe").getByText("Scale ticket", { exact: false }).first().waitFor();
+      await page
+        .frameLocator('iframe[title="Project Timeline"]')
+        .getByText("Scale ticket", { exact: false })
+        .first()
+        .waitFor();
     });
     await page.screenshot({ path: join(output, "timeline.png"), fullPage: true });
   });
   await attempt("timeline-browser-move", async () => {
-    const frame = page.frameLocator("iframe"),
+    const frame = page.frameLocator('iframe[title="Project Timeline"]'),
       source = ids[1];
     const order = (value: any) => value.sections.flatMap((s: any) => s.rows.map((r: any) => r.id));
     const before = order(await planner("timeline.plan.read", { page: pageRequest() }));
