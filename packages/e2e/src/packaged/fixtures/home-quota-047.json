@@ -1,0 +1,170 @@
+{
+  "storage_current_records": [
+    {
+      "asset": null,
+      "value": {
+        "at": "2099-11-18T12:00:00.000Z",
+        "kind": "quota-sample",
+        "limitId": "upgrade-quota-0",
+        "resetsAt": null,
+        "providerId": "upgrade-fixture",
+        "usedPercent": 20
+      },
+      "shared": null,
+      "deleted": false,
+      "revision": "{\"version\":1,\"exists\":true,\"deleted\":false,\"lifetime\":\"initial\",\"value\":{\"kind\":\"object\",\"fields\":{\"value\":{\"kind\":\"object\",\"fields\":{\"kind\":{\"kind\":\"value\",\"digest\":\"877527e97a0e5f00da33e05a2b4558a0d6833be4e3addfef3098b32c9114efc7\"},\"providerId\":{\"kind\":\"value\",\"digest\":\"19a185136512887115c031a7adb14ac3f218c22a2b5ab5d88ced2fb17ab6e30b\"},\"limitId\":{\"kind\":\"value\",\"digest\":\"0b5dd169a0b2a9b83c6c0456361c6ff91e04094629b39dbefc3435d7892510a9\"},\"resetsAt\":{\"kind\":\"value\",\"digest\":\"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b\"},\"at\":{\"kind\":\"value\",\"digest\":\"d82a26f48e7e452dc8da01857d1d11370f28acff8f3de63b9b8739f8f84b2e23\"},\"usedPercent\":{\"kind\":\"value\",\"digest\":\"f5ca38f748a1d6eaf726b8a42fb575c3c71f1864a8143301782de13da2d9202b\"}}}}},\"stamps\":{\"/value/kind\":\"[\\\"canonical\\\",\\\"local:dff964e2-6d13-400b-a8ab-875bcf8d46a1\\\",\\\"save-upgrade-quota-0\\\"]\",\"/value/providerId\":\"[\\\"canonical\\\",\\\"local:dff964e2-6d13-400b-a8ab-875bcf8d46a1\\\",\\\"save-upgrade-quota-0\\\"]\",\"/value/limitId\":\"[\\\"canonical\\\",\\\"local:dff964e2-6d13-400b-a8ab-875bcf8d46a1\\\",\\\"save-upgrade-quota-0\\\"]\",\"/value/resetsAt\":\"[\\\"canonical\\\",\\\"local:dff964e2-6d13-400b-a8ab-875bcf8d46a1\\\",\\\"save-upgrade-quota-0\\\"]\",\"/value/at\":\"[\\\"canonical\\\",\\\"local:dff964e2-6d13-400b-a8ab-875bcf8d46a1\\\",\\\"save-upgrade-quota-0\\\"]\",\"/value/usedPercent\":\"[\\\"canonical\\\",\\\"local:dff964e2-6d13-400b-a8ab-875bcf8d46a1\\\",\\\"save-upgrade-quota-0\\\"]\",\"\":\"[\\\"canonical\\\",\\\"local:dff964e2-6d13-400b-a8ab-875bcf8d46a1\\\",\\\"save-upgrade-quota-0\\\"]\"}}",
+      "record_id": "upgrade-quota-0",
+      "extension_id": "pstdio.pstdio-home",
+      "native_sources": {},
+      "native_versions": {},
+      "record_lifetime": "initial"
+    },
+    {
+      "asset": null,
+      "value": {
+        "at": "2099-11-18T12:00:00.000Z",
+        "kind": "quota-sample",
+        "limitId": "upgrade-quota-1",
+        "resetsAt": null,
+        "providerId": "upgrade-fixture",
+        "usedPercent": 21
+      },
+      "shared": null,
+      "deleted": false,
+      "revision": "{\"version\":1,\"exists\":true,\"deleted\":false,\"lifetime\":\"initial\",\"value\":{\"kind\":\"object\",\"fields\":{\"value\":{\"kind\":\"object\",\"fields\":{\"kind\":{\"kind\":\"value\",\"digest\":\"877527e97a0e5f00da33e05a2b4558a0d6833be4e3addfef3098b32c9114efc7\"},\"providerId\":{\"kind\":\"value\",\"digest\":\"19a185136512887115c031a7adb14ac3f218c22a2b5ab5d88ced2fb17ab6e30b\"},\"limitId\":{\"kind\":\"value\",\"digest\":\"b9d000955cbc89951194161345ef2de519fafbf60a0d26ac80b15286cb973271\"},\"resetsAt\":{\"kind\":\"value\",\"digest\":\"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b\"},\"at\":{\"kind\":\"value\",\"digest\":\"d82a26f48e7e452dc8da01857d1d11370f28acff8f3de63b9b8739f8f84b2e23\"},\"usedPercent\":{\"kind\":\"value\",\"digest\":\"6f4b6612125fb3a0daecd2799dfd6c9c299424fd920f9b308110a2c1fbd8f443\"}}}}},\"stamps\":{\"/value/kind\":\"[\\\"canonical\\\",\\\"local:fc51ed50-9b6c-4715-b5af-7e973693e7a5\\\",\\\"save-upgrade-quota-1\\\"]\",\"/value/providerId\":\"[\\\"canonical\\\",\\\"local:fc51ed50-9b6c-4715-b5af-7e973693e7a5\\\",\\\"save-upgrade-quota-1\\\"]\",\"/value/limitId\":\"[\\\"canonical\\\",\\\"local:fc51ed50-9b6c-4715-b5af-7e973693e7a5\\\",\\\"save-upgrade-quota-1\\\"]\",\"/value/resetsAt\":\"[\\\"canonical\\\",\\\"local:fc51ed50-9b6c-4715-b5af-7e973693e7a5\\\",\\\"save-upgrade-quota-1\\\"]\",\"/value/at\":\"[\\\"canonical\\\",\\\"local:fc51ed50-9b6c-4715-b5af-7e973693e7a5\\\",\\\"save-upgrade-quota-1\\\"]\",\"/value/usedPercent\":\"[\\\"canonical\\\",\\\"local:fc51ed50-9b6c-4715-b5af-7e973693e7a5\\\",\\\"save-upgrade-quota-1\\\"]\",\"\":\"[\\\"canonical\\\",\\\"local:fc51ed50-9b6c-4715-b5af-7e973693e7a5\\\",\\\"save-upgrade-quota-1\\\"]\"}}",
+      "record_id": "upgrade-quota-1",
+      "extension_id": "pstdio.home",
+      "native_sources": {},
+      "native_versions": {},
+      "record_lifetime": "initial"
+    }
+  ],
+  "storage_documents": [
+    {
+      "state": "\\x0000",
+      "revision": 0,
+      "document_id": "records",
+      "extension_id": "pstdio.pstdio-home",
+      "folded_revision": 0
+    },
+    {
+      "state": "\\x7b2265706f6368223a226c6f63616c3a64666639363465322d366431332d343030622d613861622d383735626366386434366131227d",
+      "revision": 0,
+      "document_id": "[\"ordered-dependency\",\"save-upgrade-quota-0\"]",
+      "extension_id": "pstdio.pstdio-home",
+      "folded_revision": 0
+    },
+    {
+      "state": "\\x0000",
+      "revision": 0,
+      "document_id": "records",
+      "extension_id": "pstdio.home",
+      "folded_revision": 0
+    },
+    {
+      "state": "\\x7b2265706f6368223a226c6f63616c3a66633531656435302d396236632d343731352d623561662d376539373336393365376135227d",
+      "revision": 0,
+      "document_id": "[\"ordered-dependency\",\"save-upgrade-quota-1\"]",
+      "extension_id": "pstdio.home",
+      "folded_revision": 0
+    }
+  ],
+  "storage_ordered_operations": [
+    {
+      "envelope": null,
+      "admission": null,
+      "delivered": false,
+      "fingerprint": "2073e0fcdf4f6de509eb0e6ac1220019003151fefbc0c25478552e7994a7cba3",
+      "extension_id": "pstdio.pstdio-home",
+      "operation_id": "save-upgrade-quota-0",
+      "settled_epoch": "local:dff964e2-6d13-400b-a8ab-875bcf8d46a1",
+      "local_sequence": 2,
+      "admission_epoch": "local:dff964e2-6d13-400b-a8ab-875bcf8d46a1",
+      "request_fingerprint": "0c95b8a4837cb5cde0a5dcadf2409553ddfa88f007bc42aac9a38885d4ae2a84",
+      "admission_fingerprint": "dccd6a3561a3c9841ce6add52e1152674b859d5f68a6522e0c886a6b051f94bc"
+    },
+    {
+      "envelope": null,
+      "admission": null,
+      "delivered": false,
+      "fingerprint": "afbaa2f304183aa727a5a1ec59343d8bc8637d04a6933c97e12051270823e271",
+      "extension_id": "pstdio.home",
+      "operation_id": "save-upgrade-quota-1",
+      "settled_epoch": "local:fc51ed50-9b6c-4715-b5af-7e973693e7a5",
+      "local_sequence": 5,
+      "admission_epoch": "local:fc51ed50-9b6c-4715-b5af-7e973693e7a5",
+      "request_fingerprint": "96c2c8cd43fbde46fd4739ea5ea6095763cf2e1e1d6793978eee91e7fcaed2e2",
+      "admission_fingerprint": "f72097f50632f2ea4ae01b89437fff9dcc37743016c5b8a1be7e496a03d2c38b"
+    }
+  ],
+  "storage_ordered_owners": [
+    {
+      "after": 0,
+      "epoch": "local:dff964e2-6d13-400b-a8ab-875bcf8d46a1",
+      "joined": false,
+      "skipped": false,
+      "through": 0,
+      "state_id": null,
+      "state_bytes": 0,
+      "extension_id": "pstdio.pstdio-home",
+      "receipt_root": null,
+      "pending_bytes": 0
+    },
+    {
+      "after": 0,
+      "epoch": "local:fc51ed50-9b6c-4715-b5af-7e973693e7a5",
+      "joined": false,
+      "skipped": false,
+      "through": 0,
+      "state_id": null,
+      "state_bytes": 0,
+      "extension_id": "pstdio.home",
+      "receipt_root": null,
+      "pending_bytes": 0
+    }
+  ],
+  "storage_ordered_receipts": [
+    {
+      "epoch": "local:dff964e2-6d13-400b-a8ab-875bcf8d46a1",
+      "state": "accepted",
+      "indexed": false,
+      "extension_id": "pstdio.pstdio-home",
+      "operation_id": "save-upgrade-quota-0",
+      "admission_fingerprint": "dccd6a3561a3c9841ce6add52e1152674b859d5f68a6522e0c886a6b051f94bc"
+    },
+    {
+      "epoch": "local:fc51ed50-9b6c-4715-b5af-7e973693e7a5",
+      "state": "accepted",
+      "indexed": false,
+      "extension_id": "pstdio.home",
+      "operation_id": "save-upgrade-quota-1",
+      "admission_fingerprint": "f72097f50632f2ea4ae01b89437fff9dcc37743016c5b8a1be7e496a03d2c38b"
+    }
+  ],
+  "storage_ordered_records": [
+    {
+      "state": "\\x7b227265636f72644964223a22757067726164652d71756f74612d30222c2276616c7565223a7b2276616c7565223a7b227573656450657263656e74223a32302c226174223a22323039392d31312d31385431323a30303a30302e3030305a222c227265736574734174223a6e756c6c2c226c696d69744964223a22757067726164652d71756f74612d30222c2270726f76696465724964223a22757067726164652d66697874757265222c226b696e64223a2271756f74612d73616d706c65227d7d2c2264656c65746564223a66616c73652c226c69666574696d65223a22696e697469616c222c227374616d7073223a7b222f76616c75652f6b696e64223a225b5c2263616e6f6e6963616c5c222c5c226c6f63616c3a64666639363465322d366431332d343030622d613861622d3837356263663864343661315c222c5c22736176652d757067726164652d71756f74612d305c225d222c222f76616c75652f70726f76696465724964223a225b5c2263616e6f6e6963616c5c222c5c226c6f63616c3a64666639363465322d366431332d343030622d613861622d3837356263663864343661315c222c5c22736176652d757067726164652d71756f74612d305c225d222c222f76616c75652f6c696d69744964223a225b5c2263616e6f6e6963616c5c222c5c226c6f63616c3a64666639363465322d366431332d343030622d613861622d3837356263663864343661315c222c5c22736176652d757067726164652d71756f74612d305c225d222c222f76616c75652f7265736574734174223a225b5c2263616e6f6e6963616c5c222c5c226c6f63616c3a64666639363465322d366431332d343030622d613861622d3837356263663864343661315c222c5c22736176652d757067726164652d71756f74612d305c225d222c222f76616c75652f6174223a225b5c2263616e6f6e6963616c5c222c5c226c6f63616c3a64666639363465322d366431332d343030622d613861622d3837356263663864343661315c222c5c22736176652d757067726164652d71756f74612d305c225d222c222f76616c75652f7573656450657263656e74223a225b5c2263616e6f6e6963616c5c222c5c226c6f63616c3a64666639363465322d366431332d343030622d613861622d3837356263663864343661315c222c5c22736176652d757067726164652d71756f74612d305c225d222c22223a225b5c2263616e6f6e6963616c5c222c5c226c6f63616c3a64666639363465322d366431332d343030622d613861622d3837356263663864343661315c222c5c22736176652d757067726164652d71756f74612d305c225d227d7d",
+      "record_id": "upgrade-quota-0",
+      "extension_id": "pstdio.pstdio-home"
+    },
+    {
+      "state": "\\x7b227265636f72644964223a22757067726164652d71756f74612d31222c2276616c7565223a7b2276616c7565223a7b227573656450657263656e74223a32312c226174223a22323039392d31312d31385431323a30303a30302e3030305a222c227265736574734174223a6e756c6c2c226c696d69744964223a22757067726164652d71756f74612d31222c2270726f76696465724964223a22757067726164652d66697874757265222c226b696e64223a2271756f74612d73616d706c65227d7d2c2264656c65746564223a66616c73652c226c69666574696d65223a22696e697469616c222c227374616d7073223a7b222f76616c75652f6b696e64223a225b5c2263616e6f6e6963616c5c222c5c226c6f63616c3a66633531656435302d396236632d343731352d623561662d3765393733363933653761355c222c5c22736176652d757067726164652d71756f74612d315c225d222c222f76616c75652f70726f76696465724964223a225b5c2263616e6f6e6963616c5c222c5c226c6f63616c3a66633531656435302d396236632d343731352d623561662d3765393733363933653761355c222c5c22736176652d757067726164652d71756f74612d315c225d222c222f76616c75652f6c696d69744964223a225b5c2263616e6f6e6963616c5c222c5c226c6f63616c3a66633531656435302d396236632d343731352d623561662d3765393733363933653761355c222c5c22736176652d757067726164652d71756f74612d315c225d222c222f76616c75652f7265736574734174223a225b5c2263616e6f6e6963616c5c222c5c226c6f63616c3a66633531656435302d396236632d343731352d623561662d3765393733363933653761355c222c5c22736176652d757067726164652d71756f74612d315c225d222c222f76616c75652f6174223a225b5c2263616e6f6e6963616c5c222c5c226c6f63616c3a66633531656435302d396236632d343731352d623561662d3765393733363933653761355c222c5c22736176652d757067726164652d71756f74612d315c225d222c222f76616c75652f7573656450657263656e74223a225b5c2263616e6f6e6963616c5c222c5c226c6f63616c3a66633531656435302d396236632d343731352d623561662d3765393733363933653761355c222c5c22736176652d757067726164652d71756f74612d315c225d222c22223a225b5c2263616e6f6e6963616c5c222c5c226c6f63616c3a66633531656435302d396236632d343731352d623561662d3765393733363933653761355c222c5c22736176652d757067726164652d71756f74612d315c225d227d7d",
+      "record_id": "upgrade-quota-1",
+      "extension_id": "pstdio.home"
+    }
+  ],
+  "storage_record_projections": [
+    {
+      "revision": 1,
+      "live_count": 1,
+      "document_id": "records",
+      "extension_id": "pstdio.pstdio-home"
+    },
+    {
+      "revision": 1,
+      "live_count": 1,
+      "document_id": "records",
+      "extension_id": "pstdio.home"
+    }
+  ]
+}

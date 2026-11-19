@@ -1,6 +1,7 @@
 import type { ParamsOf } from "@pstdio/sdk/extensions";
 import { type CommandContext, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
+import { requireGitBase } from "../data/attempt-base";
 import { legacyAttemptOutput } from "../data/attempt-compatibility";
 import { appendRevision } from "../data/attempt-state";
 import { appendAttemptEvent, putAttempt, readAttempt, reviewThreadsCollection } from "../data/attempt-storage";
@@ -90,6 +91,7 @@ const submissionParams = {
 async function submitRevision(ctx: CommandContext, commandParams: ParamsOf<typeof submissionParams>) {
   const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
   if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
+  requireGitBase(attempt);
   const implementationSessionId = commandParams.implementationSessionId ?? commandParams.sessionId;
   if (!implementationSessionId || attempt.implementationSessionId !== implementationSessionId) {
     throw new Error("The implementation session does not own this attempt.");

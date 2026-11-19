@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 import { type CollectionBadgeItem, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
-import { loadTicketLinkedResources } from "./ticket-linked-resources";
+import { mergeTicketLinkSections } from "../commands/ticket-link-sections";
+import { loadTicketLinkedResources, readTicketLinkedResourcePage } from "./ticket-linked-resources";
 
 const ticket = (id: string): ResourceRef => ({
   type: "ticket",
@@ -143,4 +144,20 @@ test("overview relationships use a bounded preview with a continuation to the ti
   expect(lookup.get("one")).toHaveLength(9);
   expect(lookup.get("one")!.at(-1)?.action).toMatchObject({ kind: "page", resource: ticket("one") });
   expect(sizes).toEqual([8]);
+});
+
+test("unavailable labeled notes remain visible but disabled in the sidepanel", async () => {
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: { extensionId: "pstdio.planner" },
+  });
+  const note = { ...artifact, type: "note", extensionId: "pstdio.notes", label: "Saved note" };
+  await ctx.resources.addAnchors(ticket("one"), [note]);
+  const page = await readTicketLinkedResourcePage(ctx.resources, ticket("one"));
+  const sections = mergeTicketLinkSections([], page.items);
+  expect(sections.flatMap((section) => section.nodes)).toMatchObject([
+    { label: "Saved note", resource: note, disabled: true, tooltip: expect.stringContaining("Unavailable") },
+  ]);
+  expect(sections[0]?.nodes[0]?.target).toBeUndefined();
 });

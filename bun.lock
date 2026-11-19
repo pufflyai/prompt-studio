@@ -511,8 +511,6 @@
         "@types/bun": "1.4.4",
         "@types/react": "^19.2.0",
         "@types/react-dom": "^19.2.0",
-        "@types/react-test-renderer": "^19.1.0",
-        "react-test-renderer": "19.2.4",
         "typescript": "6.0.2",
       },
     },
@@ -664,6 +662,8 @@
       "devDependencies": {
         "@aws-sdk/client-s3": "3.1152.0",
         "@chakra-ui/react": "3.32.0",
+        "@electric-sql/pglite": "0.4.6",
+        "@electric-sql/pglite-icu-full": "0.1.0",
         "@playwright/test": "^1.60.0",
         "@pstdio/sdk": "workspace:*",
         "@pstdio/ui": "workspace:*",

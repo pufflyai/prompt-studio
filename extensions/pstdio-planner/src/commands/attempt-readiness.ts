@@ -1,4 +1,5 @@
 import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
+import { attemptId } from "../data/attempt-identity";
 import { readTicketAttempts, readWorkspaceEvents } from "../data/attempt-queries";
 import {
   type AttemptReadinessTicket,
@@ -103,7 +104,7 @@ const loadDependencyInput = async (
     const selection = await attemptSelectionsCollection(ctx.storage).get(id);
     if (selection) selections.push(selection);
   });
-  const workspaceIds = attempts.map(({ workspaceId }) => workspaceId);
+  const workspaceIds = attempts.map(attemptId);
   const events = await readWorkspaceEvents(ctx.storage, workspaceIds, "attempt_merged");
   const target: AttemptReadinessTicket = storedTarget ?? {
     id: ticketRef,
@@ -112,9 +113,8 @@ const loadDependencyInput = async (
     dependsOn: [],
   };
   const tickets = storedTarget ? storedTickets : [...storedTickets, target];
-  const gitRequirement =
-    "Planner attempts require a Git repository with a usable base commit. Tools and ordinary sessions remain available in the project folder.";
-  if (!home?.root_path || home.execution_kind !== "local") throw new Error(gitRequirement);
+  if (!home?.root_path || home.execution_kind !== "local")
+    throw new Error("Attach a project folder before running a Planner attempt.");
   const rootPath = home.root_path;
 
   // Resolving the requested commit proves Git can supply the base. Provider form
@@ -125,7 +125,8 @@ const loadDependencyInput = async (
     "--end-of-options",
     `${commandParams.base ?? "HEAD"}^{commit}`,
   ]).catch((cause) => {
-    throw new Error(gitRequirement, { cause });
+    if (commandParams.base) throw new Error("The selected Git base is unavailable.", { cause });
+    return null;
   });
   const doneStatusIds = new Set(usableWorkflowStatuses(statuses).completedStatusIds);
   const activeImplementationWorkspaceIds = new Set<string>();
@@ -134,9 +135,10 @@ const loadDependencyInput = async (
       activeImplementationWorkspaceIds.add(attempt.workspaceId);
   });
   const input = {
-    dependencyDeliveries: storedTarget
-      ? await readDependencyDeliveries(ctx, storedTarget, storedTickets, doneStatusIds, rootPath, deliveryReads)
-      : new Map(),
+    dependencyDeliveries:
+      storedTarget && mainHeadSha
+        ? await readDependencyDeliveries(ctx, storedTarget, storedTickets, doneStatusIds, rootPath, deliveryReads)
+        : new Map(),
     mergedHeads: events.reduce((heads, event) => {
       const head = event.metadata.headSha;
       if (event.type === "attempt_merged" && typeof head === "string" && event.commitSha)
@@ -190,6 +192,13 @@ export async function loadAttemptReadiness(
     activeImplementationCount: capacity.running,
     maxInProgress: capacity.limit,
   });
+  if (readiness.decision === "ready" && readiness.mode === "folder" && capacity.running > 0)
+    return {
+      readiness: { decision: "wait" as const, reason: "capacity-full" as const, dependencyIds: [] as string[] },
+      workspace,
+      target,
+      capacity: { ...capacity, limit: 1 },
+    };
   return { readiness, workspace, target, capacity };
 }
 

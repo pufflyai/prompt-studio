@@ -1,8 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { Context } from "hono";
 import { workbenchExtensionMetadataSchema } from "pstdio-api-contracts";
-import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
-import { apiLogger } from "../../../lib/logger";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppBindings, AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps, ExtensionWebviewMetadataDeps } from "../deps";
@@ -36,32 +34,9 @@ export const getProjectExtensionUiHandler = (
   const handler = async (c: Context<AppBindings>) => {
     const { projectId } = c.req.param();
     try {
-      const enabled = await deps.extensionRuntimeCatalog.get(projectId);
-      // Metadata names built bundles and their styles, so it describes webviews only after their checks.
-      // A failed check affects only that source's webviews; their asset requests report it.
-      const webviewOwners = new Set(
-        enabled.runtime.views
-          .filter((view) => view.contribution.body.kind === "webview")
-          .map((view) => view.extensionId),
-      );
-      const webviewSources = enabled.enabledSources.filter(({ installedSource }) =>
-        webviewOwners.has(canonicalExtensionId(installedSource.extension_id)),
-      );
-      const checks = await Promise.allSettled(
-        webviewSources.map(({ installedSource }) => deps.ensureExtensionWebviews(installedSource.id)),
-      );
-      checks.forEach((check, index) => {
-        if (check.status === "fulfilled") return;
-        apiLogger.warn(
-          {
-            err: check.reason,
-            event: "extensions.webview_check.failed",
-            installedExtensionId: webviewSources[index]?.installedSource.id,
-          },
-          "Extension webview check failed",
-        );
-      });
-      const snapshot = webviewSources.length ? await deps.extensionRuntimeCatalog.get(projectId) : enabled;
+      // The catalog describes all contributions. A webview's signed asset requests
+      // prepare its output when that view opens, independently of native pages.
+      const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
       return c.json(await assembleWorkbenchMetadata(deps, projectId, snapshot.runtime, snapshot.enabledSources), 200);
     } catch (error) {
       if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);

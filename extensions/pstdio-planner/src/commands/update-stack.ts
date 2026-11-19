@@ -1,6 +1,7 @@
 import type { ParamsOf } from "@pstdio/sdk/extensions";
 import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
+import { requireGitBase } from "../data/attempt-base";
 import { appendAttemptEvent, attemptEventsCollection, putAttempt, readAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { hasWorkspaceWriter, sessionBelongsToWorkspace } from "../data/workspace-writers";
@@ -32,13 +33,15 @@ export async function readStackRepair(
   const eventId = `stack-repair-resumed:${session.id}:${session.updated_at ?? attempt.updatedAt}`;
   if (await attemptEventsCollection(ctx.storage).get(eventId)) return null;
   const { readiness } = await loadAttemptDependencies(ctx, attempt.ticketId, {
-    base: attempt.base.headSha,
+    base: requireGitBase(attempt).headSha,
     requireMergedDependencies: policy.requireMergedDependencies,
   });
+  if (readiness.decision === "ready" && readiness.mode === "folder")
+    throw new Error("This operation requires a Git attempt.");
   if (readiness.decision === "wait") return null;
   const base =
     readiness.mode === "main"
-      ? attempt.base
+      ? requireGitBase(attempt)
       : { workspaceId: readiness.baseWorkspaceId, headSha: readiness.baseHeadSha };
   const needsIntegration =
     !(await containsCommit(ctx, workspace.root_path, base.headSha, head)) ||
@@ -99,7 +102,7 @@ async function updateStack(ctx: CommandContext, input: ParamsOf<typeof stackUpda
     throw new Error("The selected dependency revision changed during integration. Query and update the stack again.");
   if (!(await containsCommit(ctx, path, base.headSha, headSha)))
     throw new Error("The updated workspace does not contain the required dependency base.");
-  if (attempt.base.headSha !== base.headSha || attempt.base.workspaceId !== base.workspaceId) {
+  if (requireGitBase(attempt).headSha !== base.headSha || requireGitBase(attempt).workspaceId !== base.workspaceId) {
     await putAttempt(ctx.storage, { ...attempt, base, updatedAt: new Date().toISOString() });
     await appendAttemptEvent(ctx.storage, {
       workspaceId: attempt.workspaceId,
@@ -111,7 +114,11 @@ async function updateStack(ctx: CommandContext, input: ParamsOf<typeof stackUpda
       reportId: null,
       reviewId: null,
       threadId: null,
-      metadata: { previousBaseSha: attempt.base.headSha, baseSha: base.headSha, baseWorkspaceId: base.workspaceId },
+      metadata: {
+        previousBaseSha: requireGitBase(attempt).headSha,
+        baseSha: base.headSha,
+        baseWorkspaceId: base.workspaceId,
+      },
     });
   }
   return { workspaceId: attempt.workspaceId, headSha, base, validationRequired: true };

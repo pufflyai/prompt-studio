@@ -4,6 +4,7 @@ import { preparePlannerIndexes } from "./storage-indexes";
 export const reviewRequestLinkIndexes: StorageRecordIndex[] = [
   "id",
   "workspaceId",
+  "attemptId",
   "sessionId",
   "relatedSessionId",
 ].map((field) => ({
@@ -13,6 +14,7 @@ export const reviewRequestLinkIndexes: StorageRecordIndex[] = [
     id: { path: ["id"], type: "string" },
     requestedAt: { path: ["requestedAt"], type: "string" },
     workspaceId: { path: ["context", "workspaceId"], type: "string" },
+    attemptId: { path: ["context", "attemptId"], type: "string" },
     sessionId: { path: ["context", "sessionId"], type: "string" },
     relatedSessionId: { path: ["context", "relatedSessionId"], type: "string" },
   },
@@ -23,13 +25,24 @@ export const reviewRequestLinkIndexes: StorageRecordIndex[] = [
 /** Conversation reachability needs IDs, never request or history bodies. */
 export async function* linkedAutoBuildRequestPages(
   storage: ExtensionStorageApi,
-  ownership: { sessionIds: ReadonlySet<string>; workspaceIds: ReadonlySet<string> },
+  ownership: { sessionIds: ReadonlySet<string>; attemptIds: ReadonlySet<string> },
 ) {
   await preparePlannerIndexes(storage);
   const seen = new Set<string>();
   const visitedSessions = new Set<string>();
   const frontier = new Set(ownership.sessionIds);
   const pages = async function* (field: string, values: string[]) {
+    const legacy =
+      field === "workspaceId"
+        ? [
+            {
+              any: [
+                { field: "attemptId", op: "missing" as const },
+                { field: "attemptId", op: "eq" as const, value: null },
+              ],
+            },
+          ]
+        : [];
     for (let offset = 0; offset < values.length; offset += 100) {
       let after: string | undefined;
       do {
@@ -39,6 +52,7 @@ export async function* linkedAutoBuildRequestPages(
             all: [
               { field, op: "in", value: values.slice(offset, offset + 100) },
               { field: "id", op: "notEmpty" },
+              ...legacy,
               ...(after ? [{ field: "id", op: "gt" as const, value: after }] : []),
             ],
           },
@@ -58,7 +72,8 @@ export async function* linkedAutoBuildRequestPages(
       } while (after);
     }
   };
-  yield* pages("workspaceId", [...ownership.workspaceIds]);
+  yield* pages("attemptId", [...ownership.attemptIds]);
+  yield* pages("workspaceId", [...ownership.attemptIds]);
   while (frontier.size) {
     const batch = [...frontier].slice(0, 100);
     for (const id of batch) {

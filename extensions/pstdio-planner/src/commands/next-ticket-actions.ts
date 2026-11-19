@@ -1,4 +1,5 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
+import { attemptId } from "../data/attempt-identity";
 import type { AttemptReadinessResult } from "../data/attempt-readiness";
 import type { AttemptRecord, TicketAttemptSelection } from "../data/attempt-types";
 import type { AutoBuildMode } from "../data/auto-build-mode";
@@ -28,7 +29,7 @@ export function appendCandidate(
   } else if (resumable) {
     next.push({ ...summary, action: "resume" });
   } else {
-    next.push({ ...summary, action: "start", baseHeadSha: readiness.baseHeadSha });
+    next.push({ ...summary, action: "start", baseHeadSha: readiness.baseHeadSha ?? undefined });
   }
 }
 
@@ -62,8 +63,8 @@ export async function appendStackRepair(
         action: "recover-workspace",
         recoveryBaseSha: recoveryBase,
         workspaceId: repair.unavailableWorkspaceId,
-        baseHeadSha: readiness.baseHeadSha,
-        recoveryHeadSha: await readRecoverySeed(ctx, repair.attempt, readiness.baseHeadSha),
+        baseHeadSha: readiness.baseHeadSha ?? undefined,
+        recoveryHeadSha: await readRecoverySeed(ctx, repair.attempt, readiness.baseHeadSha!),
         detail: repair.detail,
       });
   } else {
@@ -133,7 +134,7 @@ export const appendNextTicketOutcome = async (
   const wait = nextTicketWait(row, {
     pending,
     assigned: assignment.assigned.has(ticket.id),
-    attempts: attempts.filter(({ workspaceId }) => !retired.has(workspaceId)),
+    attempts: attempts.filter((attempt) => !retired.has(attemptId(attempt))),
     resumable: resumption.has(ticket.id),
     capacity,
   });
@@ -170,7 +171,9 @@ export const appendNextTicketOutcome = async (
   else {
     const continuation = resumption.get(ticket.id);
     const recordedBase =
-      continuation && attempts.find(({ workspaceId }) => workspaceId === continuation.workspaceId)?.base.headSha;
+      continuation &&
+      attempts.find((attempt) => attemptId(attempt) === (continuation.attemptId ?? continuation.workspaceId))?.base
+        ?.headSha;
     if (!recordedBase) base ??= await resolveImplementationBase(ctx, await ctx.settings.all());
     const { readiness } = await loadAttemptReadiness(
       ctx,

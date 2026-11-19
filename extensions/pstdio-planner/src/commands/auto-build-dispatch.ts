@@ -1,4 +1,6 @@
 import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
+import { requireGitBase } from "../data/attempt-base";
+import { attemptId } from "../data/attempt-identity";
 import { readAttempt } from "../data/attempt-storage";
 import { autoBuildDispatches } from "../data/auto-build-dispatches";
 import { readAutoBuildMode } from "../data/auto-build-mode";
@@ -19,7 +21,8 @@ import { startAttempt } from "./run-attempt";
 
 async function dispatchWorkspaceId(ctx: CommandContext, candidate: NextTicket, draftWorkspaceId?: string) {
   if (candidate.action === "recover-workspace") return undefined;
-  if (candidate.action === "start") return draftWorkspaceId;
+  if (candidate.action === "start")
+    return draftWorkspaceId ?? (candidate.baseHeadSha ? undefined : (await ctx.workspaces.getDefault())?.id);
   if (candidate.action === "resume")
     return (await readAutoBuildResumptions(ctx, [candidate.id])).get(candidate.id)?.workspaceId;
   return candidate.workspaceId;
@@ -62,7 +65,7 @@ async function dispatchNext(
         ticket: candidate.id,
         workspace: {
           providerId: "pstdio.worktree",
-          params: { base: candidate.recoveryBaseSha ?? previous.base.headSha },
+          params: { base: candidate.recoveryBaseSha ?? requireGitBase(previous).headSha },
         },
       },
       {
@@ -75,6 +78,7 @@ async function dispatchNext(
     return {
       decision: "started" as const,
       ticket: candidate.ticket,
+      ...(started.variant.id ? { attemptId: attemptId(started.variant) } : {}),
       workspaceId: started.workspace.id,
       sessionId: started.session.id,
     };
@@ -94,10 +98,14 @@ async function dispatchNext(
   return {
     decision: "started" as const,
     ticket: candidate.ticket,
+    ...(started.variant.id ? { attemptId: attemptId(started.variant) } : {}),
     workspaceId: started.workspace.id,
     sessionId: started.session.id,
   };
 }
+
+const dispatchedAttemptId = (result: { workspaceId: string; attemptId?: unknown }) =>
+  typeof result.attemptId === "string" ? result.attemptId : result.workspaceId;
 
 export const autoBuildDispatchCommand = defineCommand({
   id: "auto-build.dispatch",
@@ -151,7 +159,9 @@ export const autoBuildDispatchCommand = defineCommand({
         throw error;
       });
       if (["started", "resumed", "queued"].includes(result.decision) && "workspaceId" in result && result.workspaceId) {
-        await autoBuildDispatches(ctx, owner.sessionId).put(result.workspaceId, {
+        const id = dispatchedAttemptId(result);
+        await autoBuildDispatches(ctx, owner.sessionId).put(id, {
+          ...(id !== result.workspaceId ? { attemptId: id } : {}),
           workspaceId: result.workspaceId,
           dispatchedAt: new Date().toISOString(),
         });

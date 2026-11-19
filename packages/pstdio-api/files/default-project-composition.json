@@ -62,6 +62,18 @@
         "extensionId": "pstdio.artifacts",
         "id": "artifact"
       }
+    },
+    {
+      "resourceKind": {
+        "kind": "resource-kind",
+        "extensionId": "pstdio.notes",
+        "id": "note"
+      },
+      "opener": {
+        "kind": "command",
+        "extensionId": "pstdio.notes",
+        "id": "notes.resolve-opening"
+      }
     }
   ]
 }
