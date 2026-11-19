@@ -24,7 +24,9 @@ test("native Markdown uses the selected public session and drains its close hand
     await closing;
     stop();
     expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(false);
-    expect(f.calls.indexOf("current")).toBeLessThan(f.calls.indexOf("open"));
+    expect(f.calls.filter((op) => op === "initial")).toHaveLength(1);
+    expect(f.calls).not.toContain("current");
+    expect(f.calls).not.toContain("register");
     expect(f.calls.indexOf("close")).toBeLessThan(f.calls.indexOf("disconnect"));
     await f.presentation.close();
     await expect(f.presentation.open()).rejects.toMatchObject({ code: "session_closed" });

@@ -1,5 +1,6 @@
 import { Box, Center } from "@chakra-ui/react";
 import { resourceKey } from "@pstdio/sdk/extensions";
+import { sizesToContentHeight } from "pstdio-extensions/bridge/contract";
 import type { ReactNode } from "react";
 import type {
   RegisteredPlaceholderContribution,
@@ -123,13 +124,13 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
       overflow="hidden"
       // A tree owns its scrollbar. Its virtual spacer must not size the region
       // to the full file list and turn every row into a visible row.
-      contain={view?.body.kind === "tree" && props.sizing !== "content-height" ? "size" : undefined}
+      contain={view?.body.kind === "tree" && !sizesToContentHeight(props.sizing) ? "size" : undefined}
     >
       <WorkbenchActionErrors workbench={workbench} target={placement.widgetId} />
       {renderer ? (
         <WorkbenchRenderedWidgetFrame
           status={props.region === "status"}
-          contentHeight={props.sizing === "content-height"}
+          contentHeight={sizesToContentHeight(props.sizing)}
         >
           <WorkbenchWidgetContents
             renderer={renderer}

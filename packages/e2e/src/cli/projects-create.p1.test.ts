@@ -2,7 +2,8 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { basename, join } from "node:path";
-import { cleanupDirs, createGitRepo, createTempDir, runPstdio, runPstdioSafe } from "./helpers";
+import { stopPendingTestProcesses, TestProcessStoppedError } from "../scripts/pending-test-processes";
+import { cleanupDirs, createGitRepo, createTempDir, runPstdio, runPstdioAsync, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
@@ -18,7 +19,8 @@ afterAll(async () => {
 
 const dirs: string[] = [];
 
-afterEach(() => {
+afterEach(async () => {
+  await stopPendingTestProcesses();
   cleanupDirs(dirs);
 });
 
@@ -41,13 +43,17 @@ describe("pstdio projects create", () => {
       const repo = createGitRepo();
       dirs.push(repo);
 
-      const output = run("projects create my-project", repo);
+      let output: string;
+      try {
+        output = await runPstdioAsync(["projects", "create", "my-project"], repo, { PSTDIO_API_URL: api.url });
+      } catch (error) {
+        // The runner already recorded the timeout before teardown stopped this abandoned call.
+        if (error instanceof TestProcessStoppedError) return;
+        throw error;
+      }
 
       expect(output).toContain("Opened project");
       expect(output).toContain("my-project");
-
-      // Configuring an agent installs its skills into the registered repos
-      run("agents setup claude-code", repo);
 
       const config = JSON.parse(readFileSync(join(repo, ".pstdio", "config.json"), "utf8"));
       expect(config.project_id).toBeTruthy();

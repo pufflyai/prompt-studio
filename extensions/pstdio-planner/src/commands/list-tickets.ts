@@ -19,7 +19,12 @@ export const listTicketsCommand = defineCommand({
     cursor: params.text(),
   },
   async run(ctx, input) {
-    const page = await ticketCommandPage(ctx, input);
+    const page = await ticketCommandPage(ctx, input).catch((error) => {
+      // A first page can restart after sync; continuations must keep their snapshot.
+      if (input.cursor || !(error instanceof Error) || error.message !== "Query revision is stale; restart the query")
+        throw error;
+      return ticketCommandPage(ctx, input);
+    });
     const [statuses, tags] = await Promise.all([readStatusDefinitions(ctx.storage), readTagDefinitions(ctx.storage)]);
     const statusNames = new Map(statuses.map(({ id, name }) => [id, name]));
     const optionNames = new Map(tags.flatMap(({ options }) => options).map(({ id, name }) => [id, name]));

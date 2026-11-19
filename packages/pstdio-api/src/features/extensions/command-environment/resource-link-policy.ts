@@ -33,15 +33,17 @@ export const canonicalResource = async (
   const read = createReadBoundary(input.signal);
   input.signal?.throwIfAborted();
   assertProject(resource, input.projectId);
-  const { runtime } = await read(() => deps.extensionRuntimeCatalog.get(input.projectId));
-  const owners = runtime.resourceKinds.filter((kind) => kind.localId === resource.type);
   let extensionId = resource.extensionId ? canonicalExtensionId(resource.extensionId) : undefined;
   if (!extensionId && hostKinds.has(resource.type)) extensionId = "pstdio";
-  if (!extensionId && owners.some((kind) => kind.extensionId === input.extensionId)) extensionId = input.extensionId;
-  if (!extensionId && owners.length === 1) extensionId = owners[0]!.extensionId;
-  if (!extensionId && owners.length === 0)
-    throw new ResourceReferenceError(`No enabled extension declares resource kind "${resource.type}".`);
-  if (!extensionId) throw new ResourceReferenceError(`Resource owner is ambiguous for "${resource.type}".`);
+  if (!extensionId) {
+    const { runtime } = await read(() => deps.extensionRuntimeCatalog.get(input.projectId));
+    const owners = runtime.resourceKinds.filter((kind) => kind.localId === resource.type);
+    if (!owners.length)
+      throw new ResourceReferenceError(`No enabled extension declares resource kind "${resource.type}".`);
+    extensionId = owners.find((kind) => kind.extensionId === input.extensionId)?.extensionId;
+    if (!extensionId && owners.length === 1) extensionId = owners[0]!.extensionId;
+    if (!extensionId) throw new ResourceReferenceError(`Resource owner is ambiguous for "${resource.type}".`);
+  }
   const ref = { ...resource, extensionId, projectId: input.projectId };
   if (extensionId === "pstdio") {
     const projectId = await hostProject(deps, ref, input.signal);

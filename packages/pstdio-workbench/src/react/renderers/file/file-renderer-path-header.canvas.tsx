@@ -18,6 +18,7 @@ export default meta;
 type Story = CanvasFrame<typeof meta>;
 export const Saved: Story = {
   id: "pstdio-workbench-file-editor-save-status--saved",
+  description: "The file path header has a subtle bottom border separating it from the editor.",
 };
 export const Unsaved: Story = {
   id: "pstdio-workbench-file-editor-save-status--unsaved",

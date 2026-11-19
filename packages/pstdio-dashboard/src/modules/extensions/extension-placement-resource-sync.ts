@@ -4,6 +4,7 @@ import {
   subscribeToExtensionEventFeed,
   subscribeToExtensionEventReset,
 } from "@/shared/extensions/extension-webview-broadcast";
+import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { toDashboardExtensionResource } from "./extension-kanban-adapter";
@@ -15,7 +16,7 @@ import {
 
 interface PlacementResourceSyncInput {
   projectId: string;
-  metadata: Pick<DashboardExtensionMetadata, "resourceKinds">;
+  metadata: Pick<DashboardExtensionMetadata, "resourceKinds" | "resourcePresentations">;
   executeCommand: ExecuteDashboardExtensionCommand;
 }
 // Workspace capabilities can change file access for any extension resource.
@@ -108,11 +109,15 @@ export const watchExtensionPlacementResources = (ctx: WorkbenchModuleContext, in
     refreshWorkbenchResource(ctx, updated);
   };
   const resolve = async (resource: ResourceRef) => {
+    resource = canonicalDashboardResource(resource, input.projectId, input.metadata.resourceKinds);
+    const provider = input.metadata.resourcePresentations?.find(
+      (provider) =>
+        provider.resourceKind.id === resource.type && provider.resourceKind.extensionId === resource.extensionId,
+    );
     const kind = input.metadata.resourceKinds.find(
       (kind) => kind.localId === resource.type && kind.extensionId === resource.extensionId,
     );
-    if (!kind) return;
-    const command = kind.resolveCommand ?? kind.resolveManyCommand;
+    const command = provider?.resolveCommand ?? kind?.resolveCommand ?? kind?.resolveManyCommand;
     if (!command) return;
     const key = referenceKey(resource);
     pending.get(key)?.abort();
@@ -122,13 +127,16 @@ export const watchExtensionPlacementResources = (ctx: WorkbenchModuleContext, in
       const response = await input.executeCommand(
         input.projectId,
         command,
-        resourceResolutionRequest(input.projectId, resource, !kind.resolveCommand),
+        resourceResolutionRequest(input.projectId, resource, !provider && !kind?.resolveCommand),
         request.signal,
       );
       if (request.signal.aborted || !resources().some((candidate) => referenceKey(candidate) === key)) return;
       if (response.outcome.status !== "success")
         throw new Error(response.outcome.reason ?? "Resource resolver failed.");
-      applyResource(resource, resolvedPlacementResource(response.outcome.value, resource, !kind.resolveCommand));
+      applyResource(
+        resource,
+        resolvedPlacementResource(response.outcome.value, resource, !provider && !kind?.resolveCommand),
+      );
     } catch (error) {
       if (!request.signal.aborted) console.warn(`Could not refresh resource ${key}`, error);
     } finally {
@@ -153,13 +161,33 @@ export const watchExtensionPlacementResources = (ctx: WorkbenchModuleContext, in
   const unsubscribeEvents = subscribeToExtensionEventFeed((event) => {
     if (event.projectId !== input.projectId) return;
     for (const resource of new Map(resources().map((resource) => [referenceKey(resource), resource])).values()) {
-      if (resource.extensionId && isResourceRefreshEvent(event.id, resource.extensionId)) void resolve(resource);
+      const current = canonicalDashboardResource(resource, input.projectId, input.metadata.resourceKinds);
+      const provider = input.metadata.resourcePresentations?.find(
+        (provider) =>
+          provider.resourceKind.id === current.type && provider.resourceKind.extensionId === current.extensionId,
+      );
+      if (
+        provider?.refreshEvents.includes(event.id) ||
+        (current.extensionId && isResourceRefreshEvent(event.id, provider?.extensionId ?? current.extensionId))
+      )
+        void resolve(resource);
     }
   });
   const unsubscribeReset = subscribeToExtensionEventReset((event) => {
-    for (const resource of new Map(resources().map((resource) => [referenceKey(resource), resource])).values())
-      if (matchesQueryDependency(event, { projectId: input.projectId, extensionId: resource.extensionId }))
+    for (const resource of new Map(resources().map((resource) => [referenceKey(resource), resource])).values()) {
+      const current = canonicalDashboardResource(resource, input.projectId, input.metadata.resourceKinds);
+      const provider = input.metadata.resourcePresentations?.find(
+        (provider) =>
+          provider.resourceKind.id === current.type && provider.resourceKind.extensionId === current.extensionId,
+      );
+      if (
+        matchesQueryDependency(event, {
+          projectId: input.projectId,
+          extensionId: provider?.extensionId ?? current.extensionId,
+        })
+      )
         void resolve(resource);
+    }
   });
   return {
     dispose() {

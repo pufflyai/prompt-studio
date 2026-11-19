@@ -181,7 +181,7 @@ const registerPage = (workbench: WorkbenchCore, page: GuidePage) => {
   });
 };
 export const createModeContributionWorkbench = () => {
-  const workbench = createWorkbench({ startPage: overviewPage });
+  const workbench = createWorkbench({ defaultPage: overviewPage });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   workbench.modes.registerMode({ id: "session", label: "Session", activate: () => undefined });
   registerModeSidenav(workbench, "project", "Northstar project");

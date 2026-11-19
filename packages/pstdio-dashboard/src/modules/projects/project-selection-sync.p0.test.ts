@@ -1,10 +1,9 @@
 import { expect, test } from "bun:test";
 import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
-import { createHomeModule } from "@/home-page.fixture";
+import { createHomeModule, dashboardHomePage } from "@/home-page.fixture";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import { dashboardHomePage } from "@/shared/app/resources";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { createBootstrapModule } from "../bootstrap";
 import { createExtensionsModule } from "../extensions/module";
@@ -14,7 +13,7 @@ import { registerSessionProvider } from "../sessions/session-provider.fixture";
 import { createProjectsModule } from "./module";
 
 test("opens the first created project without losing its active mode when the creation dialog closes", async () => {
-  const workbench = createWorkbench({ startPage: dashboardHomePage });
+  const workbench = createWorkbench({ defaultPage: dashboardHomePage });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   getWriter("projects")?.truncateAndWrite([]);
   markInitialCollectionsSyncComplete();
@@ -49,7 +48,7 @@ test("opens the first created project without losing its active mode when the cr
 });
 
 test.each([false, true])("project switches preserve extension page context (core child: %s)", async (coreChild) => {
-  const workbench = createWorkbench({ startPage: dashboardHomePage });
+  const workbench = createWorkbench({ defaultPage: dashboardHomePage });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   getWriter("projects")?.truncateAndWrite([
     { id: "first", name: "First" },
@@ -116,7 +115,7 @@ test.each([false, true])("project switches preserve extension page context (core
 });
 
 test("selects the URL project before the persisted project when opening a document", () => {
-  const workbench = createWorkbench({ startPage: dashboardHomePage });
+  const workbench = createWorkbench({ defaultPage: dashboardHomePage });
   let persistedProjectId: string | undefined = "source";
   getWriter("projects")?.truncateAndWrite([
     { id: "source", name: "Source" },

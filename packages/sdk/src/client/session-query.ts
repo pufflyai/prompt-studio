@@ -3,6 +3,7 @@ import type { RequestFn, RequestOptions } from "./request";
 
 const encodeQuery = (input: ExtensionSessionQuery) => {
   const params = new URLSearchParams();
+  if (input.ids !== undefined) params.set("ids", JSON.stringify(input.ids));
   if (input.status !== undefined) params.set("status", input.status.join(","));
   for (const key of [
     "search",

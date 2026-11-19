@@ -49,6 +49,41 @@ afterEach(async () => {
 });
 
 describe("extensionInstancesService", () => {
+  test("adopts an extracted default after discovery and preserves later disable and uninstall choices", async () => {
+    const discovered = await svc.create({
+      installed_extension_id: installedId,
+      scope_type: "project",
+      scope_id: projectId,
+      enabled: false,
+    });
+    const input = { projectId, extensionId: "pstdio.core-templates", installedSourceId: installedId };
+    expect((await svc.adoptProjectDefault(input))?.enabled).toBe(true);
+    await svc.update(discovered.id, { enabled: false });
+    expect(await svc.adoptProjectDefault(input)).toBeNull();
+    expect((await svc.get(discovered.id))?.enabled).toBe(false);
+    await svc.remove(discovered.id);
+    expect(await svc.adoptProjectDefault(input)).toBeNull();
+    expect(await svc.list({ scope_id: projectId })).toEqual([]);
+  });
+
+  test("an explicit choice before default adoption preserves the disabled provider", async () => {
+    const discovered = await svc.create({
+      installed_extension_id: installedId,
+      scope_type: "project",
+      scope_id: projectId,
+      enabled: false,
+    });
+    await svc.recordProjectDefaultChoice(projectId, "pstdio.core-templates");
+    expect(
+      await svc.adoptProjectDefault({
+        projectId,
+        extensionId: "pstdio.core-templates",
+        installedSourceId: installedId,
+      }),
+    ).toBeNull();
+    expect((await svc.get(discovered.id))?.enabled).toBe(false);
+  });
+
   test("creates and retrieves an instance with generic scope", async () => {
     const created = await svc.create({
       installed_extension_id: installedId,

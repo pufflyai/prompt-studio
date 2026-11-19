@@ -11,7 +11,11 @@ import type {
 } from "pstdio-api-contracts";
 import type { AppBindings } from "../../types";
 import type { TerminalRouteDeps } from "./deps";
-import { nativeTerminalOpenSchema, openNativeTerminalSession } from "./native-terminal-session";
+import {
+  nativeTerminalAttachmentKey,
+  nativeTerminalOpenSchema,
+  openNativeTerminalSession,
+} from "./native-terminal-session";
 import {
   createRetainedTerminals,
   type RetainedTerminal,
@@ -37,7 +41,20 @@ const errorMessage = (cause: unknown) => (cause instanceof Error ? cause.message
 
 type TerminalSocketDeps = Pick<TerminalRouteDeps, "terminal"> & {
   openView?(request: TerminalViewOpenRequest, signal: AbortSignal): Promise<TerminalSessionHandle>;
+  viewKey?(request: TerminalViewOpenRequest, signal: AbortSignal): Promise<string>;
   retained?: RetainedTerminals;
+};
+const resolveViewRetention = async (
+  deps: TerminalSocketDeps,
+  request: TerminalViewOpenRequest,
+  attachKey: string | undefined,
+  signal: AbortSignal,
+) => {
+  if (!attachKey || !deps.retained || !deps.viewKey) return undefined;
+  return {
+    registry: deps.retained,
+    key: JSON.stringify(["native-view", await deps.viewKey(request, signal), attachKey]),
+  };
 };
 export const createTerminalWebSocketEvents = (deps: TerminalSocketDeps): WSEvents => {
   let session: TerminalSessionHandle | undefined;
@@ -87,6 +104,33 @@ export const createTerminalWebSocketEvents = (deps: TerminalSocketDeps): WSEvent
     }
   };
 
+  const attachmentFor = (socket: WSContext): TerminalAttachment => ({
+    event: (event) => sendEvent(event, socket),
+    fail: (failure) => {
+      session = undefined;
+      retained = undefined;
+      sendMessage(socket, { type: "error", message: failure });
+      socket.close(1011, "Terminal session failed");
+    },
+  });
+
+  const reattach = (
+    registry: RetainedTerminals,
+    key: string,
+    request: { cols: number; rows: number },
+    attachment: TerminalAttachment,
+    socket: WSContext,
+  ) => {
+    const attached = registry.attach(key, attachment);
+    if (!attached) return false;
+    session = attached.terminal.session;
+    retained = { terminal: attached.terminal, attachment };
+    sendMessage(socket, { type: "open", sessionId: session.id });
+    if (attached.backlog.byteLength > 0) sendEvent({ kind: "data", chunk: attached.backlog }, socket);
+    session.resize(request.cols, request.rows);
+    return true;
+  };
+
   const openRetained = (
     terminal: NonNullable<TerminalRouteDeps["terminal"]>,
     registry: RetainedTerminals,
@@ -94,24 +138,8 @@ export const createTerminalWebSocketEvents = (deps: TerminalSocketDeps): WSEvent
     attachKey: string,
     socket: WSContext,
   ) => {
-    const attachment: TerminalAttachment = {
-      event: (event) => sendEvent(event, socket),
-      fail: (failure) => {
-        session = undefined;
-        retained = undefined;
-        sendMessage(socket, { type: "error", message: failure });
-        socket.close(1011, "Terminal session failed");
-      },
-    };
-    const attached = registry.attach(attachKey, attachment);
-    if (attached) {
-      session = attached.terminal.session;
-      retained = { terminal: attached.terminal, attachment };
-      sendMessage(socket, { type: "open", sessionId: session.id });
-      if (attached.backlog.byteLength > 0) sendEvent({ kind: "data", chunk: attached.backlog }, socket);
-      session.resize(request.cols, request.rows);
-      return;
-    }
+    const attachment = attachmentFor(socket);
+    if (reattach(registry, attachKey, request, attachment, socket)) return;
     const opened = terminal.openSession(request);
     session = opened;
     sendMessage(socket, { type: "open", sessionId: opened.id });
@@ -143,28 +171,33 @@ export const createTerminalWebSocketEvents = (deps: TerminalSocketDeps): WSEvent
     }
   };
 
-  const openView = (request: TerminalViewOpenRequest, socket: WSContext) => {
+  const openView = async (request: TerminalViewOpenRequest, attachKey: string | undefined, socket: WSContext) => {
+    const admission = new AbortController();
+    const cancelAdmission = () => admission.abort(lifetime.signal.reason);
+    lifetime.signal.addEventListener("abort", cancelAdmission, { once: true });
     try {
       if (!deps.openView) throw new Error("Native terminal views are not available on this host");
-      const opening = deps.openView(nativeTerminalOpenSchema.parse(request), lifetime.signal);
-      void opening
-        .then(async (accepted) => {
-          if (closed) {
-            await accepted.kill();
-            return;
-          }
-          session = accepted;
-          sendMessage(socket, { type: "open", sessionId: accepted.id });
-          void pumpSessionEvents(accepted, socket);
-        })
-        .catch((cause) => {
-          if (closed) return;
-          sendMessage(socket, { type: "error", message: errorMessage(cause) });
-          void closeSession().finally(() => socket.close(1011, "Terminal session failed"));
-        });
+      const parsed = nativeTerminalOpenSchema.parse(request);
+      const retention = attachKey ? await resolveViewRetention(deps, parsed, attachKey, lifetime.signal) : undefined;
+      if (closed) return;
+      const attachment = attachmentFor(socket);
+      if (retention && reattach(retention.registry, retention.key, parsed, attachment, socket)) return;
+      const accepted = await deps.openView(parsed, retention ? admission.signal : lifetime.signal);
+      if (closed) {
+        await accepted.kill();
+        return;
+      }
+      session = accepted;
+      sendMessage(socket, { type: "open", sessionId: accepted.id });
+      if (retention)
+        retained = { terminal: retention.registry.retain(retention.key, accepted, attachment), attachment };
+      else void pumpSessionEvents(accepted, socket);
     } catch (cause) {
+      if (closed) return;
       sendMessage(socket, { type: "error", message: errorMessage(cause) });
       void closeSession().finally(() => socket.close(1011, "Terminal session failed"));
+    } finally {
+      lifetime.signal.removeEventListener("abort", cancelAdmission);
     }
   };
 
@@ -201,7 +234,7 @@ export const createTerminalWebSocketEvents = (deps: TerminalSocketDeps): WSEvent
         }
         accepting = false;
         if (message.type === "openView") {
-          openView(message.request, socket);
+          void openView(message.request, message.attachKey, socket);
           return;
         }
         openTerminal(message, socket);
@@ -241,6 +274,7 @@ export const createTerminalRoutes = (deps: TerminalRouteDeps, options: TerminalR
       createTerminalWebSocketEvents({
         terminal: deps.terminal,
         openView: (request, signal) => openNativeTerminalSession(deps, request, signal),
+        viewKey: (request, signal) => nativeTerminalAttachmentKey(deps, request, signal),
         retained,
       }),
     ),

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -204,6 +204,23 @@ describe("syncRepoExtensionsForProject", () => {
     expect(result).toMatchObject({ conflicting: [], enabled: [], missing: ["worktree-bootstrap"], skipped: [] });
     expect(missing?.status).toBe("missing");
     expect(disabled?.enabled).toBe(false);
+
+    const markStatus = spyOn(installedExtensionSourcesService, "markStatus");
+    try {
+      const repeated = await syncRepoExtensionsForProject({
+        discover: false,
+        extensionService,
+        installedExtensionSourcesService,
+        projectId: project.id,
+        repoPath,
+      });
+      expect(repeated.missing).toEqual(["worktree-bootstrap"]);
+      expect(repeated.newlyMissing).toEqual([]);
+      expect(result.newlyMissing).toEqual(["worktree-bootstrap"]);
+      expect(markStatus).not.toHaveBeenCalled();
+    } finally {
+      markStatus.mockRestore();
+    }
   });
 
   test("keeps the accepted repo-local revision when its mutable package.json is deleted", async () => {

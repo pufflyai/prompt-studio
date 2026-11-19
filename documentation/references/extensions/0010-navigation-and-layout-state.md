@@ -47,6 +47,19 @@ See the [cookbook](../../guides/extensions/0002-workbench-cookbook.md) for worki
 
 Params describe view state and stay out of layout cache and breadcrumb identity. A page target carries all destination overrides and pushes history when they change. The page owner can use `page.params.update` to patch params and replace the current history entry. Defaults are omitted from URLs. Invalid URL values use defaults; invalid navigation values fail before any state changes. See [Page params](0005-webview-and-storage-api.md#page-params).
 
-Resource-list enum options can declare `contextMenuActions` with an `id`, localized `label`, `action` navigation target and optional `disabled` state. These actions belong to the group header and retain the declaring extension and project when invoked. Page dialogs use the standard dialog header and content sizing; embedded webviews report their content height. `workspacePages.create` is the bundled provider’s dedicated workspace creation page.
+Resource-list enum options can declare `contextMenuActions` with an `id`, localized `label`, `action` navigation target and optional `disabled` state. These actions belong to the group header and retain the declaring extension and project when invoked. Page dialogs use the standard dialog header and content sizing; embedded webviews report their content height. Workspace creation pages belong to their provider; use the reference exported by that tool.
 
-*Updated at: 2026-11-06*
+Resource references can supply `iconColor` and `iconLabel` with `icon`. Workbench
+uses that presentation in resource breadcrumbs, tabs, tree rows, and resource
+search. The color is a semantic theme token and the label describes the state for
+assistive technology.
+
+An extension can declare `resourcePresentations` entries naming a `resourceKind`,
+its own `resolve` command, and `refreshEvents`. This lets an installed tool provide
+presentation for a host resource kind such as sessions. Each kind accepts one
+enabled provider. Conflicting providers produce a contribution diagnostic. The
+resolve command receives `ctx.resource` and returns its current reference. The
+host preserves resource identity and refreshes open resources after the declared
+events. The owning extension computes the presentation from its current data.
+
+*Updated at: 2026-11-18*

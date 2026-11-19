@@ -3,6 +3,7 @@ import type { SessionConversationSources, SessionMessage } from "pstdio-api-cont
 import { normalizeMessageResults, projectToolResultRecovery, sessionMessageSchema } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
 import { getSessionHarness } from "./get-session-harness";
+import { latestReply } from "./session-messages";
 import { resolveSessionWorkspaceContext } from "./session-workspace-context";
 
 type HistoryDeps = Pick<SessionsRouteDeps, "sessionService" | "fileService" | "harnessRegistry"> &
@@ -60,14 +61,36 @@ export const readSessionHistorySources = async (sessionId: string, deps: History
   return { sources, session, harness, workspace };
 };
 
+const committedReplyForRecovery = (
+  sources: SessionConversationSources,
+  session: Awaited<ReturnType<HistoryDeps["sessionService"]["get"]>>,
+) => {
+  if (session?.change_positions?.reply) return session.change_positions.reply;
+  if (sources.checkpoint) return latestReply(sources.checkpoint);
+  const native = latestReply(sources.native ?? []);
+  // Older untracked history stays quiet. Only a provably new in-flight native reply is eligible.
+  const message = sources.native?.find((item) => item.id === native?.id);
+  const started = Date.parse(session?.last_request_started ?? "");
+  if (
+    !sources.checkpointError &&
+    message?.createdAt !== undefined &&
+    Number.isFinite(started) &&
+    message.createdAt >= started
+  )
+    return undefined;
+  return native;
+};
+
 // The saved conversation is what the user saw. Native history adds only what it lacks, and
 // an unreadable source is skipped, so a session always has a history it can continue from.
 export const loadSessionHistory = async (
   sessionId: string,
   deps: HistoryDeps,
   retained?: readonly SessionMessage[],
+  committedReply?: (reply: ReturnType<typeof latestReply>) => void,
 ) => {
   const { sources, session, harness, workspace } = await readSessionHistorySources(sessionId, deps);
+  if (committedReply) committedReply(committedReplyForRecovery(sources, session));
   const known = retained ? retained.map(normalizeMessageResults) : sources.checkpoint;
   if (!known) return sources.native ?? [];
   if (!sources.native) return known;

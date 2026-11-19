@@ -289,7 +289,7 @@ test(
           expect.objectContaining({
             title: "Device A history",
             target: expect.objectContaining({
-              page: expect.objectContaining({ id: "session", extensionId: "pstdio" }),
+              page: expect.objectContaining({ id: "conversation", extensionId: "pstdio.session-browser" }),
             }),
           }),
         );

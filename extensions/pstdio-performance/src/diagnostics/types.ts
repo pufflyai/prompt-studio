@@ -14,6 +14,7 @@ export interface DiagnosticRecord {
   projectId: string;
   kind: DiagnosticKind;
   seconds: number;
+  armed?: { cpuPercent: number; minutes: number };
   createdAt: string;
   automationId?: string;
   startedAt?: string;

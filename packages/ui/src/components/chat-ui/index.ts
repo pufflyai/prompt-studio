@@ -33,6 +33,7 @@ export type {
   SessionMessagePart,
   ToolPart,
 } from "./components/message-types";
+export { normalizeChatMessagesForDisplay } from "./components/message-types";
 export type { QueuedFollowUpMoveDirection } from "./components/queued-follow-up-list-state";
 export type { SendButtonProps } from "./components/send-button";
 export { SendButton } from "./components/send-button";
@@ -46,4 +47,5 @@ export {
 } from "./data/session-message-patch";
 export type { ChatLinkCandidate, ChatLinkHandler, ChatLinkProps } from "./links/chat-link";
 export { isGuessedChatLink, parseChatLink } from "./links/chat-link";
+export { resolveQuestionPrompt } from "./tool-rendering/question-prompt";
 export { createSerializedPromptState } from "./utils/editor-state";

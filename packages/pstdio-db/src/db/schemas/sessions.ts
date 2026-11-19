@@ -9,6 +9,7 @@ type HarnessParamsJson = Record<string, string | boolean>;
 export const sessions = pgTable(
   "sessions",
   {
+    change_positions: jsonb("change_positions").$type<import("pstdio-api-contracts").SessionChangePositions>(),
     usage_json: jsonb("usage_json").$type<ExtensionSessionUsage>(),
     id: text("id").primaryKey(),
     title: text("title").notNull(),

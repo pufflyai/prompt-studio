@@ -106,6 +106,24 @@ export const syncBlobs = pgTable(
 );
 
 // Payload objects that may have lost their row. Cleanup deletes those no row points at.
-export const syncObjectDeletions = pgTable("relay_sync_object_deletions", {
-  objectKey: text().primaryKey(),
+export const syncObjectDeletions = pgTable(
+  "relay_sync_object_deletions",
+  {
+    objectKey: text().primaryKey(),
+    projectKey: text(),
+    multipartId: text(),
+  },
+  (table) => [index("relay_sync_object_deletions_project").on(table.projectKey, table.objectKey)],
+);
+
+// A retirement outlives syncProjects and its cascades, so an old grant can never recreate the project.
+export const projectRetirements = pgTable("relay_project_retirements", {
+  projectKey: text().primaryKey(),
+  operationId: text().notNull(),
+  completedAt: timestamp({ withTimezone: true }),
+});
+
+export const payloadMaintenance = pgTable("relay_payload_maintenance", {
+  key: text().primaryKey(),
+  completedAt: timestamp({ withTimezone: true }).notNull(),
 });
