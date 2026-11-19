@@ -55,6 +55,8 @@ test("keeps waiting for a slow runtime and opens automatically without replacing
     await expect(slowMessage).toBeVisible();
     await expect(app.lifecyclePage.getByRole("status")).toHaveCount(1);
     await expect(app.lifecyclePage.getByRole("alert")).toHaveCount(0);
+    // Normal clicks need animation frames after the paused-clock notice assertions.
+    await app.lifecyclePage.clock.resume();
     await copyLogs.click();
     await expect(copyLogs).toHaveText("Copied");
     expect(await app.lifecyclePage.evaluate(() => window.promptStudioDesktop.getStartupState())).toMatchObject({
@@ -70,7 +72,6 @@ test("keeps waiting for a slow runtime and opens automatically without replacing
 
     resumeProcess(runtime.pid);
     suspendedPid = null;
-    await app.lifecyclePage.clock.resume();
     const workbench = await waitForWorkbenchPage(app.lifecyclePage, runtime.origin);
     await expect(workbench.locator("#root")).not.toBeEmpty();
     expect(readDescriptor(home)).toEqual(runtime);
