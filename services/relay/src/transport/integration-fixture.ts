@@ -22,6 +22,49 @@ import { defaultRelayLimits, type RelayLimits } from "../limits";
 import { migrateRelayStorage } from "../storage/database";
 import { createSyncOwners } from "./owners";
 
+type FixtureDatabase = { role: string; url: string; password: string };
+
+const initializeTransportFixture = async ({
+  admin,
+  managerDatabase,
+  relayDatabase,
+  objects,
+  bucket,
+}: {
+  admin: Client;
+  managerDatabase: FixtureDatabase;
+  relayDatabase: FixtureDatabase;
+  objects: S3Client;
+  bucket: string;
+}) => {
+  const started = performance.now();
+  const phase = (name: string) =>
+    console.log(JSON.stringify({ relayFixtureSetup: name, elapsedMs: Math.round(performance.now() - started) }));
+  phase("start");
+  await admin.connect();
+  phase("admin connected");
+  for (const target of [managerDatabase, relayDatabase]) {
+    const name = target === managerDatabase ? "manager" : "relay";
+    phase(`${name} role starting`);
+    await admin.query(`CREATE ROLE "${target.role}" LOGIN PASSWORD '${target.password}'`);
+    phase(`${name} database starting`);
+    await admin.query(`CREATE DATABASE "${target.role}" OWNER "${target.role}"`);
+    phase(`${name} permissions starting`);
+    await admin.query(`REVOKE ALL ON DATABASE "${target.role}" FROM PUBLIC`);
+    await admin.query(`GRANT CONNECT ON DATABASE "${target.role}" TO "${target.role}"`);
+  }
+  phase("manager migration starting");
+  await migrateAccountManager(
+    managerDatabase.url,
+    new URL("../drizzle/", import.meta.resolve("pstdio-account-manager")).pathname,
+  );
+  phase("relay migration starting");
+  await migrateRelayStorage(relayDatabase.url, new URL("../../drizzle/", import.meta.url).pathname);
+  phase("bucket starting");
+  await objects.send(new CreateBucketCommand({ Bucket: bucket }));
+  phase("complete");
+};
+
 export const createTransportFixture = () => {
   const input = process.env.SYNC_TEST_DATABASE_URL;
   const endpoint = process.env.SYNC_TEST_OBJECT_ENDPOINT;
@@ -90,21 +133,7 @@ export const createTransportFixture = () => {
       const uploads = await objects.send(new ListMultipartUploadsCommand({ Bucket: bucket }));
       return (uploads.Uploads ?? []).map(({ Key }) => Key!).sort();
     },
-    async initialize() {
-      await admin.connect();
-      for (const target of [managerDatabase, relayDatabase]) {
-        await admin.query(`CREATE ROLE "${target.role}" LOGIN PASSWORD '${target.password}'`);
-        await admin.query(`CREATE DATABASE "${target.role}" OWNER "${target.role}"`);
-        await admin.query(`REVOKE ALL ON DATABASE "${target.role}" FROM PUBLIC`);
-        await admin.query(`GRANT CONNECT ON DATABASE "${target.role}" TO "${target.role}"`);
-      }
-      await migrateAccountManager(
-        managerDatabase.url,
-        new URL("../drizzle/", import.meta.resolve("pstdio-account-manager")).pathname,
-      );
-      await migrateRelayStorage(relayDatabase.url, new URL("../../drizzle/", import.meta.url).pathname);
-      await objects.send(new CreateBucketCommand({ Bucket: bucket }));
-    },
+    initialize: () => initializeTransportFixture({ admin, managerDatabase, relayDatabase, objects, bucket }),
     async disconnectRelayListeners() {
       await admin.query(
         "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND application_name = 'pstdio-relay-changes'",
