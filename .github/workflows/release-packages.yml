@@ -258,6 +258,7 @@ jobs:
     timeout-minutes: 30
     outputs:
       artifact_attempt: ${{ steps.identity.outputs.attempt }}
+      build_artifact_id: ${{ steps.archive.outputs.artifact-id }}
     env:
       PSTDIO_EXTENSION_RELEASE_REF: ${{ needs.plan.outputs.extension_ref }}
     steps:
@@ -284,6 +285,7 @@ jobs:
       - name: Archive outputs once for validation and publication
         run: bun scripts/ci/production-archive.ts
       - uses: actions/upload-artifact@v4
+        id: archive
         with:
           name: release-build-attempt-${{ github.run_attempt }}
           path: |
@@ -422,13 +424,32 @@ jobs:
           previous-tag: ${{ needs.plan.outputs.previous_tag }}
           patch: ${{ inputs.channel == 'patch' }}
 
+  nightly_upgrade:
+    needs: [plan, release_build]
+    # Normal nightlies skip prepare_patch. Check the required jobs explicitly so that
+    # the skipped ancestor doesn't suppress verification of a successful nightly build.
+    if: >-
+      ${{ !cancelled() && needs.plan.result == 'success' && needs.release_build.result == 'success' &&
+      needs.plan.outputs.release == 'true' && needs.plan.outputs.channel == 'nightly' }}
+    permissions:
+      actions: read
+      contents: read
+    uses: ./.github/workflows/verify-project-upgrade.yml
+    with:
+      ref: ${{ needs.plan.outputs.commit }}
+      source_sha: ${{ needs.plan.outputs.source_sha }}
+      artifact_run_id: ${{ github.run_id }}
+      artifact_attempt: ${{ needs.release_build.outputs.artifact_attempt }}
+      build_artifact_id: ${{ needs.release_build.outputs.build_artifact_id }}
+      include_previous_nightly: true
+
   publish_nightly:
-    needs: [plan, release_build, containers, desktop]
+    needs: [plan, release_build, containers, desktop, nightly_upgrade]
     if: >-
       ${{ !cancelled() && needs.plan.outputs.release == 'true' && needs.plan.outputs.channel == 'nightly' &&
       inputs.channel != 'verify' &&
       (inputs.channel != 'patch' || inputs.publish_patch) &&
-      needs.release_build.result == 'success' &&
+      needs.release_build.result == 'success' && needs.nightly_upgrade.result == 'success' &&
       needs.containers.result == 'success' &&
       needs.desktop.result == 'success' }}
     runs-on: ubuntu-latest
@@ -453,7 +474,8 @@ jobs:
           fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
-          name: release-build-attempt-${{ needs.release_build.outputs.artifact_attempt }}
+          artifact-ids: ${{ needs.release_build.outputs.build_artifact_id }}
+          merge-multiple: true
       - uses: ./.github/actions/publish-release
         with:
           artifact-attempt: ${{ needs.release_build.outputs.artifact_attempt }}

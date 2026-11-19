@@ -168,6 +168,17 @@
         "upgradingButton": "正在升級",
         "batchFailed": "{{total}} 個升級中有 {{count}} 個失敗",
         "installingButton": "正在安裝"
+      },
+      "provenance": {
+        "filter": "擴充功能來源",
+        "all": "全部",
+        "public": "公開",
+        "mine": "我的",
+        "unknown": "可見性未知",
+        "publicHelp": "有公開的套件。本機修改可能尚未發佈。",
+        "mineHelp": "在此專案或裝置上維護的可編輯本機原始碼。",
+        "unknownHelp": "尚未驗證是否公開可用。",
+        "noMatches": "沒有符合的擴充功能"
       }
     }
   },

@@ -135,7 +135,7 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
 
 - It builds a nightly only if `main` changed since the last published nightly. If `main` did not change, it validates the last nightly's files again.
 - It versions the packages on a tag, never on `main`.
-- It builds and publishes the npm packages, containers, and signed desktop apps for Linux x64 and Apple Silicon. Nightly publishing does not wait for the deep validation.
+- It builds and publishes the npm packages, containers, and signed desktop apps for Linux x64 and Apple Silicon. Before publishing, both platforms must pass the populated-project upgrade from the latest stable release and, when available, the preceding published nightly. The other production diagnostics run independently.
 - **Production validation** runs on the same files:
   - P0, P1 and P2 on Linux, with up to twelve P2 app shards; native desktop and packaged CLI checks also run on Apple Silicon
   - P1 and P2 against the signed desktop apps. When the run validates signed release files, the source desktop jobs keep only the source Electron checks, so each packaged desktop case runs once.
@@ -147,7 +147,7 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
 - The shared Bun unit, API and database suites run on Linux. Apple Silicon runs the desktop app's own Bun tests, the native desktop and packaged CLI checks, and the Bun quarantine lane.
 - Source line coverage comes from the nightly's P0–P2 Bun jobs. The Coverage workflow publishes only a successful full nightly's measurement. Quarantined tests and P3 are not counted.
 
-A failed validation job does not unpublish the nightly. It makes the run red, `certify` reports the failed checks, and the Coverage workflow skips that nightly's measurement.
+A failed, cancelled or skipped upgrade check blocks nightly publication. A later failure in independent production diagnostics does not unpublish an existing nightly. It makes the run red, `certify` reports the failed checks, and the Coverage workflow skips that nightly's measurement.
 
 P3 budgets describe the hosted CI runners, not a developer machine. Each was set from the slowest result of several runs on the hosted ubuntu-24.04 runner, plus about 20% (see [sidenav and subnav](../../references/performance/0004-sidenav-subnav.md) and [board cold open](../../references/performance/0002-planner-board-cold-open.md)). A fast laptop passes them easily, so a P3 failure on CI is the signal to act on. To change a budget, collect several CI runs of the same candidate first and get the exact value approved (see [CI guidance](../../guidance/0004-ci.md#3-ci-timeouts-and-performance-budgets)).
 
@@ -173,13 +173,13 @@ If a stable release stops halfway, re-run the `publish` job. It skips the steps 
 
 ## Populated project upgrades
 
-**Verify a populated project upgrade** selects one version pair for Linux x64 and Apple Silicon. A manual run checks out and compiles the exact current `main` commit. It defaults to the current stable release as the source. Supply `from_tag` to start from another published stable release that supports session import. When the source release already includes the current `main` commit, the workflow records that there is no newer commit to test.
+**Verify a populated project upgrade** selects one version pair for Linux x64 and Apple Silicon. A manual run freezes the current `main` commit and runs the nightly versioning script once in a disposable checkout. Both platforms compile that same versioned source. It defaults to the current stable release as the source. Supply `from_tag` to start from another published stable release that supports session import. When the source release already includes the current `main` commit, the workflow records that there is no newer commit to test.
 
-Stable and patch certification use the previous stable release as the source and the exact packaged CLI from the candidate build. Both platform results must pass before publishing. The setup needs a published source release and the target build. Nightly availability has no effect on this check.
+Stable and patch certification use the previous stable release as the source and the exact packaged CLI from the candidate build. Both platform results must pass before publishing. The setup needs a published source release and the target build. Nightly publication uses the same packaged upgrade check against the exact archive selected for publication. It also tests the previous published nightly when one exists.
 
 Both profiles start with a temporary home and a Git project with 1,000 files, 500 Planner tickets, 150 saved conversations, and three worktrees. Each has a saved view and links between tickets, workspaces, and conversations. The long-lived profile adds an archived and a deleted ticket, larger attachments, and longer transcripts.
 
-The check verifies the source binary, records a before snapshot of the project through its APIs, and stops the source. It opens the same disposable home with the compiled target. It uses the documented extension upgrade action if Planner, Sessions, Workspaces, or the fixture's Codex harness reports an incompatible API version. It compares data and file contents, opens the upgraded workbench, and checks that a new ticket edit persists after restart. Database retirement, an unreadable attachment, or an unavailable existing worktree fails the upgrade.
+The check verifies the source binary, records a before snapshot of the project through its APIs, and stops the source. It opens the same disposable home with the compiled target. It uses the documented upgrade action for available Home, Planner, Sessions, Workspaces, and fixture harness updates. After restart each enabled tool must run at least the version in the candidate source, including when the runtime claims it is already current. Both populated profiles start with Home data under the baseline's installed identity. The aged profile includes a quota observation written by 0.47. The upgraded Home must open, preserve its observation and journal, and keep its saved documents after restart. A separate 0.47 recovery fixture starts with two independent Home journals. It checks that an attempted upgrade reports the conflict and keeps both original observations, operations, and receipts. The populated profiles also check extension instance IDs, enablement, and versions, compare project files including edited skills, and verify that a ticket edit survives restart. Opening an existing ticket cold, rendering Home and a saved conversation, reading an attachment, and using existing Git worktrees must all succeed. A retired database fails the check.
 
 For a local run, build a target binary from the commit you want to check and install Playwright Chromium. Run from the repository root:
 

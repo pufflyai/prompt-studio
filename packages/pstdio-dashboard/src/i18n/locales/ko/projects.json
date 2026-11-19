@@ -168,6 +168,17 @@
         "upgradingButton": "업그레이드 중",
         "batchFailed": "업그레이드 {{total}}개 중 {{count}}개 실패",
         "installingButton": "설치 중"
+      },
+      "provenance": {
+        "filter": "확장 기능 소스",
+        "all": "전체",
+        "public": "공개",
+        "mine": "내 확장 기능",
+        "unknown": "공개 여부 알 수 없음",
+        "publicHelp": "공개 패키지가 있습니다. 로컬 변경 사항은 게시되지 않았을 수 있습니다.",
+        "mineHelp": "이 프로젝트 또는 기기에서 관리하는 편집 가능한 로컬 소스입니다.",
+        "unknownHelp": "공개 여부가 확인되지 않았습니다.",
+        "noMatches": "일치하는 확장 기능이 없습니다"
       }
     }
   },

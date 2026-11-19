@@ -47,7 +47,7 @@ const resolve = (input: {
   requireMergedDependencies?: boolean;
   target?: string;
   activeImplementationCount?: number;
-  mainHeadSha?: string;
+  mainHeadSha?: string | null;
 }) =>
   resolveAttemptReadiness({
     requests: new Map(),
@@ -61,12 +61,29 @@ const resolve = (input: {
     activeImplementationWorkspaceIds: input.activeImplementationWorkspaceIds,
     retiredWorkspaceIds: input.retiredWorkspaceIds,
     requireMergedDependencies: input.requireMergedDependencies,
-    mainHeadSha: input.mainHeadSha ?? "main",
+    mainHeadSha: input.mainHeadSha === undefined ? "main" : input.mainHeadSha,
     activeImplementationCount: input.activeImplementationCount ?? 0,
     maxInProgress: 2,
     isAncestor: async (base, head) =>
       base === head || base === "main" || (input.ancestors ?? []).some(([a, b]) => a === base && b === head),
   });
+
+test("folder attempts wait for unfinished dependencies and accept completed folder work without commit evidence", async () => {
+  const dependency = { ...ticket("PS-1"), statusId: "ready" };
+  const folderAttempt = { ...attempt("PS-1", "folder", "unused"), base: null, revisions: [] };
+  const input = { tickets: [dependency, ticket("PS-3", ["PS-1"])], attempts: [folderAttempt], mainHeadSha: null };
+  expect(await resolve(input)).toMatchObject({
+    decision: "wait",
+    reason: "dependency-not-ready",
+    dependencyIds: ["PS-1"],
+  });
+  dependency.statusId = "done";
+  expect(await resolve(input)).toMatchObject({ decision: "ready", mode: "folder", baseHeadSha: null });
+  expect(await resolve({ ...input, activeImplementationWorkspaceIds: new Set(["folder"]) })).toMatchObject({
+    decision: "wait",
+    reason: "dependency-not-ready",
+  });
+});
 
 describe("attempt readiness", () => {
   test("a delivered PR cannot choose between ambiguous variants or replace an explicit selection", async () => {

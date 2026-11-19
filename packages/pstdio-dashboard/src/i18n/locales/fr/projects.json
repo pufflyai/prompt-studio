@@ -170,6 +170,17 @@
         "upgradingButton": "Mise à niveau",
         "batchFailed": "{{count}} mises à niveau sur {{total}} ont échoué",
         "installingButton": "Installation"
+      },
+      "provenance": {
+        "filter": "Source des extensions",
+        "all": "Toutes",
+        "public": "Publique",
+        "mine": "Les miennes",
+        "unknown": "Visibilité inconnue",
+        "publicHelp": "Un paquet public est disponible. Les modifications locales peuvent ne pas être publiées.",
+        "mineHelp": "Source locale modifiable maintenue dans ce projet ou sur cet appareil.",
+        "unknownHelp": "La disponibilité publique n’a pas été vérifiée.",
+        "noMatches": "Aucune extension correspondante"
       }
     }
   },

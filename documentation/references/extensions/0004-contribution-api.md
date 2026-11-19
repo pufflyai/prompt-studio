@@ -851,6 +851,14 @@ the bound, including nested rows. Both modes reject complete collection reads
 through storage or workspace APIs, including nested command calls. Query only
 the required projections and use database aggregates for counts. Providers without an explicit bounded mode retain their existing full-result contract.
 
+Kanban and resource-list views can set `supportsFieldsOnly: true` when their
+filter options can be read independently of their rows. For saved-view validation
+the host then invokes `query` with `fieldsOnly: true`. Return all current
+`attributes`, including dynamic enum options. The result may use `rows: []`.
+Paged providers still return their usual page metadata. The host preserves saved
+filters when field discovery fails or the attributes are missing. Older hosts
+continue to request rows.
+
 For a new resource, use `collectionViewQuery({ index, attributes, resourceKind })`
 from `@pstdio/sdk/extensions`, or `collectionTableQuery({ index, columns,
 resourceKind })`. `defineExtension` installs their collection-scoped index before

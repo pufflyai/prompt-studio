@@ -51,9 +51,9 @@ export async function checkAutoBuildProgress(ctx: CommandContext) {
       const dispatches = await autoBuildDispatches(ctx, session.id).list();
       const pullRequestReads: GithubReads = new Map();
       const progress = await Promise.all(
-        dispatches.map(async ({ workspaceId, dispatchedAt }) => {
+        dispatches.map(async ({ attemptId, workspaceId, dispatchedAt }) => {
           // Only workspace recovery retires an attempt, and it dispatches the replacement for the same ticket.
-          const attempt = await readAttempt(ctx.storage, workspaceId);
+          const attempt = await readAttempt(ctx.storage, attemptId ?? workspaceId);
           if (!attempt) return;
           const [ticket, worker] = await Promise.all([
             ticketsCollection(ctx).get(attempt.ticketId),

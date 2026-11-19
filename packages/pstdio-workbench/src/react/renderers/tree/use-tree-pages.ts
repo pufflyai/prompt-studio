@@ -72,7 +72,7 @@ const visiblePageKeys = (tree: LoadedTreeData, state: TreeRendererState) => {
   const keys = new Set<string>();
   const nodes = (items: TreeNode[]) => {
     for (const node of items) {
-      if (!state.expandedNodeIds.includes(node.id)) continue;
+      if (node.collapsible !== false && !state.expandedNodeIds.includes(node.id)) continue;
       keys.add(`node:${node.id}`);
       nodes(node.children ?? []);
     }

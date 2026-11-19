@@ -168,6 +168,17 @@
         "upgradingButton": "正在升级",
         "batchFailed": "{{total}} 个升级中有 {{count}} 个失败",
         "installingButton": "正在安装"
+      },
+      "provenance": {
+        "filter": "扩展来源",
+        "all": "全部",
+        "public": "公开",
+        "mine": "我的",
+        "unknown": "可见性未知",
+        "publicHelp": "存在公开的软件包。本地修改可能尚未发布。",
+        "mineHelp": "在此项目或设备上维护的可编辑本地源码。",
+        "unknownHelp": "尚未验证是否公开可用。",
+        "noMatches": "没有匹配的扩展"
       }
     }
   },

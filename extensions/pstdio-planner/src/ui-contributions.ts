@@ -212,7 +212,7 @@ export const createPlannerUi = (baseUrl: string) => {
   return {
     views: [
       statusSettings,
-      tickets,
+      { ...tickets, body: { ...tickets.body, supportsFieldsOnly: true } },
       timelineTickets,
       editor,
       files,

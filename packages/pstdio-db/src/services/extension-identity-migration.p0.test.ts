@@ -133,14 +133,60 @@ test("migration retains complete owner history, immutable bytes, sequence positi
   }
 });
 
-test("distinct canonical and historical data stop migration without overwriting either owner", async () => {
+test("independent saved text files keep their contents, revisions and retry history under the active owner", async () => {
+  const { db, close } = await setup();
+  try {
+    const workbench_id = "project";
+    const historical = "pstdio.pstdio-home";
+    const canonical = "pstdio.home";
+    for (const [index, extension_id] of [historical, canonical].entries()) {
+      const document_id = JSON.stringify(["text-file", `saved-${index}`]);
+      const owner = { workbench_id, extension_id, document_id };
+      const bytes = new Uint8Array([41, index]);
+      await db.insert(s.storage_documents).values({ ...owner, state: bytes, revision: 7, folded_revision: 6 });
+      await db.insert(s.storage_document_updates).values({ ...owner, revision: 7, update: bytes });
+      await db
+        .insert(s.storage_document_operations)
+        .values({ ...owner, operation_id: "edit", fingerprint: `saved-${index}` });
+    }
+    await migrateExtensionIdentities(db);
+    await migrateExtensionIdentities(db);
+    for (const [index, name] of ["saved-0", "saved-1"].entries()) {
+      const document_id = JSON.stringify(["text-file", name]);
+      const owner = { workbench_id, extension_id: canonical, document_id };
+      const bytes = new Uint8Array([41, index]);
+      expect(
+        await db.select().from(s.storage_documents).where(eq(s.storage_documents.document_id, document_id)),
+      ).toEqual([{ ...owner, state: bytes, revision: 7, folded_revision: 6 }]);
+      expect(
+        await db
+          .select()
+          .from(s.storage_document_updates)
+          .where(eq(s.storage_document_updates.document_id, document_id)),
+      ).toEqual([{ ...owner, revision: 7, update: bytes }]);
+      expect(
+        await db
+          .select()
+          .from(s.storage_document_operations)
+          .where(eq(s.storage_document_operations.document_id, document_id)),
+      ).toEqual([{ ...owner, operation_id: "edit", fingerprint: name }]);
+    }
+  } finally {
+    await close();
+  }
+});
+
+test.each([
+  "records",
+  JSON.stringify(["text-file", "same-file"]),
+])("overlapping %s histories stop migration without overwriting either owner", async (documentId) => {
   const { db, close } = await setup();
   try {
     await db.insert(s.storage_documents).values(
       [old, next].map((extension_id, index) => ({
         workbench_id: "project",
         extension_id,
-        document_id: "records",
+        document_id: documentId,
         state: new Uint8Array([index]),
       })),
     );
