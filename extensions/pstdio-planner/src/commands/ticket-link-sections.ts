@@ -3,6 +3,7 @@ import {
   l10n,
   type ResourceRef,
   resourceKey,
+  type TreeNode,
   type TreeViewSection,
 } from "@pstdio/sdk/extensions";
 import { createTicketParentLookup, ticketDisplayTitle } from "../data/mappers";
@@ -95,7 +96,7 @@ export const mergeTicketLinkSections = (
   for (const item of links) {
     const resource = item.resource;
     if (!resource || visible.has(key(resource))) continue;
-    const group = linkGroup(resource.type);
+    const group = ticketLinkGroup(resource);
     const section = groups.get(group.id) ?? { ...group, collapsible: true, nodes: [] };
     section.nodes.push({ id: `link:${item.id}`, label: item.label, icon: item.icon, resource, target: item.action });
     groups.set(group.id, section);
@@ -112,8 +113,22 @@ export const mergeTicketLinkSections = (
   return [...groups.values()].filter((section) => section.nodes.length > 0 || section.nextCursor);
 };
 
-const linkGroup = (type: string) => {
+export const ticketLinkGroup = (resource: ResourceRef) => {
+  const { type } = resource;
   if (type === "session") return { id: "sessions", label: l10n("navigation.sessions", "Sessions") };
   if (type === "workspace") return { id: "workspaces", label: l10n("navigation.workspaces", "Workspaces") };
-  return { id: "related", label: l10n("navigation.related", "Related resources") };
+  const words = type.replace(/[-_]+/g, " ");
+  const label = words.charAt(0).toUpperCase() + words.slice(1);
+  return { id: `resource-type:${resource.extensionId ?? "pstdio"}:${type}`, label: `${label}s` };
 };
+
+export const ticketLinkTypeNodes = (sections: TreeViewSection[]): TreeNode[] =>
+  sections
+    .filter((section) => section.id.startsWith("resource-type:"))
+    .map((section) => ({
+      id: section.id,
+      label: section.label ?? "",
+      icon: section.nodes[0]?.icon,
+      collapsible: false,
+      children: section.nodes,
+    }));

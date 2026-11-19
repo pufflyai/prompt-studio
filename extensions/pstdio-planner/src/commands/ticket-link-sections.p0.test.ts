@@ -108,7 +108,21 @@ test("resource links with matching ids retain distinct extension owners", () => 
     label: extensionId,
     resource: { type: "note", id: "same", extensionId, projectId: "project" },
   }));
-  expect(mergeTicketLinkSections([], links)[0].nodes).toHaveLength(2);
+  const sections = mergeTicketLinkSections([], links);
+  expect(sections.flatMap((section) => section.nodes)).toHaveLength(2);
+  expect(new Set(sections.map((section) => section.id)).size).toBe(2);
+});
+
+test("linked resources are grouped by their type without a catch-all section", () => {
+  const links = [
+    { type: "pull-request", extensionId: "pstdio.github" },
+    { type: "note", extensionId: "pstdio.notes" },
+    { type: "report", extensionId: "pstdio.reports" },
+  ].map((resource) => ({ id: resource.type, label: resource.type, resource: { ...resource, id: resource.type } }));
+  const sections = mergeTicketLinkSections([], links);
+  expect(sections).toHaveLength(3);
+  expect(sections.map((section) => section.label)).toEqual(["Pull requests", "Notes", "Reports"]);
+  expect(mergeTicketLinkSections(sections, links).flatMap((section) => section.nodes)).toHaveLength(3);
 });
 
 test("canonical ticket links retain their hierarchy and deduplicate domain relationships", () => {
@@ -132,7 +146,10 @@ test("canonical ticket links retain their hierarchy and deduplicate domain relat
     },
   ];
   const merged = mergeTicketLinkSections(sections, links, "proj-1", owner);
-  expect(merged.find((section) => section.id === "related")?.nodes.map((node) => node.resource?.extensionId)).toEqual([
-    "alice.planner",
-  ]);
+  expect(
+    merged
+      .flatMap((section) => section.nodes)
+      .filter((node) => node.resource?.extensionId === "alice.planner")
+      .map((node) => node.resource?.extensionId),
+  ).toEqual(["alice.planner"]);
 });
