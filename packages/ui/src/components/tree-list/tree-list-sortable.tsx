@@ -31,6 +31,7 @@ interface SortableSectionGroupProps {
   activeNodeId?: string | string[] | null;
   rowVariant: TreeListRowVariant;
   nodeGap: StackProps["gap"];
+  sectionGap?: StackProps["gap"];
   linkComponent?: TreeListLinkComponent;
   onNavigate?: (event: TreeListNavigateEvent) => void;
   onToggleSection?: (sectionId: string) => void;
@@ -51,6 +52,7 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
     activeNodeId,
     rowVariant,
     nodeGap,
+    sectionGap,
     linkComponent,
     onNavigate,
     onToggleSection,
@@ -111,6 +113,7 @@ const SortableSectionGroup = (props: SortableSectionGroupProps) => {
                 activeNodeId={activeNodeId}
                 rowVariant={rowVariant}
                 nodeGap={nodeGap}
+                sectionGap={sectionGap}
                 linkComponent={linkComponent}
                 onNavigate={onNavigate}
                 onToggleNode={onToggleNode}
@@ -188,6 +191,7 @@ const SortableSections = (props: SortableSectionsProps) => {
               expandedNodeIds={expandedNodeIds}
               rowVariant={rest.rowVariant ?? "tree"}
               nodeGap={rest.nodeGap}
+              sectionGap={sectionGap}
               activeNodeId={rest.activeNodeId}
               linkComponent={rest.linkComponent}
               onNavigate={rest.onNavigate}
