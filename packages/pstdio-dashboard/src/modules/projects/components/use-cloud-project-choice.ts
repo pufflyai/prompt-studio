@@ -47,7 +47,7 @@ const useCloudCopyDownload = (
     }) => {
       if (!admission.account) throw new Error("The active Cloud account changed. Choose the project again.");
       // The host may finish the download even if its response never reaches us.
-      accept(admission.owner);
+      rememberIntent(admission.owner);
       return admission.client.account.downloadCloudProject(admission.id, { expected: admission.account });
     },
     onSettled() {
@@ -69,10 +69,7 @@ const useCloudCopyDownload = (
     });
   }, [entry?.presence, id, input.instance.instanceId, input.workbench, requested, localName, deleting]);
 
-  const requestDownload = () => {
-    rememberIntent(owner);
-    download.mutate({ id, account, owner, client });
-  };
+  const requestDownload = () => download.mutate({ id, account, owner, client });
   return { sync, download, refresh, requestDownload };
 };
 
