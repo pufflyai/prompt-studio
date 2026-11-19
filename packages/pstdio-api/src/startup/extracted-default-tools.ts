@@ -1,6 +1,7 @@
 import { join, resolve } from "node:path";
 import { resolvePstdioHome } from "pstdio-paths";
 import type { RouteDeps } from "../features/deps";
+import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-provider-reconciliation";
 
 // Existing projects had these capabilities before they became installable extensions.
 export const extractedDefaultTools = ["pstdio-terminal", "git-workspaces"] as const;
@@ -17,7 +18,9 @@ export const adoptExtractedDefaultTools = async (deps: RouteDeps, projectIds: st
       continue;
     for (const projectId of projectIds) {
       signal?.throwIfAborted();
-      await deps.extensionService.adoptDefaultSourceForProject(projectId, source.id);
+      const adopted = await deps.extensionService.adoptDefaultSourceForProject(projectId, source.id);
+      // The first recovery pass can finish before the new provider is available.
+      if (adopted && name === "git-workspaces") await reconcileProviderWorkspaces(deps, projectId, { signal });
     }
   }
 };
