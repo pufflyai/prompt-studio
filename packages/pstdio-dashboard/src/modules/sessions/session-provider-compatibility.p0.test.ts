@@ -148,7 +148,7 @@ test("legacy switch and rename collect the actual provider's missing parameters"
   }
 });
 
-test("legacy saved panel and page use the installed provider's tab status and New/Switch actions", async () => {
+test("legacy saved panel and page use the installed provider's title and New/Switch actions", async () => {
   const { metadata, runtime } = await productionProvider();
   const { registerWorkbenchExtensionContributions } = await import("@pstdio/workbench/extensions");
   const { createMemoryStorage, makeCommandContext } = await import("@pstdio/sdk/testing");
@@ -195,7 +195,7 @@ test("legacy saved panel and page use the installed provider's tab status and Ne
       await new Promise((resolve) => setImmediate(resolve));
       for (const presentation of [tab, main?.kind === "view" ? main.tab : undefined]) {
         const snapshot = presentation!.getSnapshot(instance);
-        expect(snapshot).toMatchObject({ label: "Saved", indicator: { label: "Session status: completed" } });
+        expect(snapshot).toMatchObject({ label: "Saved" });
         expect(snapshot.menu?.[0]?.rows.map((row) => row.id)).toEqual(["new-session", "switch-session"]);
       }
     } finally {

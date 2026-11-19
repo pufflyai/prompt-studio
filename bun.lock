@@ -487,7 +487,7 @@
       "name": "session-browser",
       "version": "0.2.0",
       "dependencies": {
-        "@pstdio/sdk": "0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77",
+        "@pstdio/sdk": "0.48.0-preview.sha-95f860c42fc872202a03183625d8b8e9179f58d9",
       },
       "devDependencies": {
         "@types/bun": "1.4.4",
@@ -5985,7 +5985,7 @@
 
     "serialize-error/type-fest": ["type-fest@0.13.1", "", {}, "sha512-34R7HTnG0XIJcBSn5XhDd7nNFPRcXYRZrBB2O2jdKqYODldSzBAqzsWoZYYvduky73toYS/ESqxPvkDf/F0XMg=="],
 
-    "session-browser/@pstdio/sdk": ["@pstdio/sdk@0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77", "", { "dependencies": { "@noble/hashes": "^2.4.0", "@tanstack/query-core": "5.90.20", "mustache": "^4.2.0", "yjs": "^13.6.29", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "19.2.4" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-WsVD3ZxSFBddwv7u+wlTav+cURjns3hWGTNdSUfK9GbWwrhzE3qY2ngk1dgStVbVaHLLsk7ajdcTjtzxwQOl9Q=="],
+    "session-browser/@pstdio/sdk": ["@pstdio/sdk@0.48.0-preview.sha-95f860c42fc872202a03183625d8b8e9179f58d9", "", { "dependencies": { "@noble/hashes": "^2.4.0", "@tanstack/query-core": "5.90.20", "mustache": "^4.2.0", "yjs": "^13.6.29", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "19.2.4" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-b3G2CjnbiriwilSw5HW91DHmBMEWISfajSCkKGvfvHUPqO5bvlr0YDgdhgBrK9LQjT7dsNXiU1Ltl8TtBm0Xdw=="],
 
     "shape-art/@pstdio/sdk": ["@pstdio/sdk@0.47.0-preview.sha-32f3947e89f98a0abcb3ee8ddba2efe30061a893", "", { "dependencies": { "@noble/hashes": "^2.4.0", "mustache": "^4.2.0", "yjs": "^13.6.29", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-x6aZqAEhllvMlbhkq2to9LDUVCc4be8OyzNvuzL1ixQfj/rdA3JbVJ6SxrD7PBRhq8s3On06GI0pSsusQpZDmQ=="],
 
@@ -6876,6 +6876,8 @@
     "requirement-book/@pstdio/ui/lucide-react": ["lucide-react@0.564.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-JJ8GVTQqFwuliifD48U6+h7DXEHdkhJ/E87kksGByII3qHxtPciVb8T8woQONHBQgHVOl7rSMrrip3SeVNy7Fg=="],
 
     "requirement-book/@tanstack/react-query/@tanstack/query-core": ["@tanstack/query-core@5.106.1", "", {}, "sha512-erYv/UACddcdgjOL2ixmFdK6tO/AVBeUcTCOtX2N51yZpDQ2U7KJ+xgB/bCNfsF3uoCDTqGHEEbDiFsIO9YUmQ=="],
+
+    "session-browser/@pstdio/sdk/zod": ["zod@4.6.7", "", {}, "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg=="],
 
     "shape-art/@pstdio/ui/@pstdio/sdk": ["@pstdio/sdk@0.35.0", "", { "dependencies": { "mustache": "^4.2.0", "zod": "^4.3.6" }, "peerDependencies": { "@tanstack/react-query": "^5.0.0", "react": "^19.0.0" }, "optionalPeers": ["@tanstack/react-query", "react"] }, "sha512-txkUZ6NloEJwRfJF3kovdXO5yqz6LmbzXw2Jlfb/15GFKqRB0gblDDDlBwWc/VB0ju6u02rd/QhgR3kjPEzegg=="],
 
