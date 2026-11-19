@@ -4,8 +4,9 @@ import { createExtensionUpgradePool } from "pstdio-api-contracts/extension-host"
 import { extensionUpgradeConcurrency } from "pstdio-extensions/preparation-client";
 import { ExtensionUpgradeUnavailableError } from "../../../services/extension-upgrade-unavailable-error";
 import type { AppRouteHandler } from "../../../types";
+import { scheduleProjectWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
 import type { ExtensionsRouteDeps } from "../deps";
-import { extensionChangesWorkspaceProvisioning, refreshProjectSkillsInRepos } from "../extension-skill-cleanup";
+import { extensionChangesWorkspaceProvisioning } from "../extension-skill-cleanup";
 import { toProjectExtensionInstance } from "../project-extension-instance";
 
 const errorSchema = z.object({ error: z.string() });
@@ -63,7 +64,7 @@ const upgradeInstance = async (
       !before.instance.enabled ||
       hadWorkspaceContributions ||
       (await extensionChangesWorkspaceProvisioning(deps, current.installedSource));
-    if (needsWorkspaceRefresh) await refreshProjectSkillsInRepos(deps, projectId);
+    if (needsWorkspaceRefresh) scheduleProjectWorkspaceProvisioning(deps, projectId);
   }
   return {
     changed: result.changed,

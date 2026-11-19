@@ -49,6 +49,7 @@ export type SyncRepoExtensionsResult = {
   disabled: string[];
   enabled: string[];
   missing: string[];
+  newlyMissing: string[];
   skipped: string[];
 };
 
@@ -61,17 +62,21 @@ const markMissingSources = async (
   instances: Awaited<ReturnType<ExtensionService["listProjectExtensionInstances"]>>,
 ) => {
   const missing: string[] = [];
+  const newlyMissing: string[] = [];
   const sources = await input.installedExtensionSourcesService.listBySourcePathPrefix(root);
   for (const source of sources) {
     if (presentSourcePaths.has(source.source_path)) continue;
-    const updated = await input.installedExtensionSourcesService.markStatus(source.id, "missing");
+    if (source.status !== "missing") {
+      const updated = await input.installedExtensionSourcesService.markStatus(source.id, "missing");
+      if (updated) newlyMissing.push(updated.install_name);
+    }
     const instance = instances.find((record) => record.installedSource.id === source.id);
     if (instance?.instance.enabled) {
       await input.extensionService.setProjectExtensionEnabled(instance.instance.id, false);
     }
-    missing.push(updated?.install_name ?? source.install_name);
+    missing.push(source.install_name);
   }
-  return missing;
+  return { missing, newlyMissing };
 };
 
 // A host-required copy can provide the extension id even when it was enabled after the snapshot.
@@ -178,8 +183,8 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
     enabled.push(name);
   }
 
-  const missing = await markMissingSources(input, root, presentSourcePaths, instances);
-  return { conflicting, disabled, enabled, missing, skipped };
+  const { missing, newlyMissing } = await markMissingSources(input, root, presentSourcePaths, instances);
+  return { conflicting, disabled, enabled, missing, newlyMissing, skipped };
 };
 
 export const syncRepoExtensionsForProjectFolder = async (input: SyncRepoExtensionsForProjectFolderInput) => {

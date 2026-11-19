@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
 import type { StorageRecordIndex } from "pstdio-sync-contracts";
+import { analyzeMissingRecordStatistics } from "../../db/record-projection-statistics";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 import { installRecordIndexes } from "./record-index-installation";
@@ -129,7 +130,7 @@ test("indexed pages filter before limiting and retain stable record order after 
   ]);
 });
 
-test("reinstalling unchanged indexes leaves the shared table's statistics alone", async () => {
+test("maintenance collects new index statistics together after admission without repeating unchanged work", async () => {
   const f = await createExtensionStorageFixture();
   cleanup.push(f.close);
   const analyzeCount = async () => {
@@ -146,15 +147,21 @@ test("reinstalling unchanged indexes leaves the shared table's statistics alone"
   ];
   const before = await analyzeCount();
   await installRecordIndexes(f.db, owners, () => {});
-  expect(await analyzeCount()).toBe(before + 1);
-  await installRecordIndexes(f.db, owners, () => {});
-  expect(await analyzeCount()).toBe(before + 1);
+  await analyzeMissingRecordStatistics(f.db.$client);
+  expect(await analyzeCount()).toBe(before);
+  const records = createDocumentStorageDBService(f.db).open({ owner: owners[0].owner }).records;
+  await records.commit({ operationId: "seed", edits: [{ recordId: "one", replace: { status: "ready" } }] });
   const renamed = [{ ...owners[0], definitions: [{ ...indexes[0], name: "renamed" }] }, owners[1]];
   await installRecordIndexes(f.db, renamed, () => {});
-  expect(await analyzeCount()).toBe(before + 2);
-  // Removing every index drops its statistics too, so nothing needs analyzing.
+  expect(await analyzeCount()).toBe(before);
+  await analyzeMissingRecordStatistics(f.db.$client);
+  expect(await analyzeCount()).toBe(before + 1);
+  await installRecordIndexes(f.db, renamed, () => {});
+  await analyzeMissingRecordStatistics(f.db.$client);
+  expect(await analyzeCount()).toBe(before + 1);
   await installRecordIndexes(f.db, [{ ...owners[0], definitions: [] }, owners[1]], () => {});
-  expect(await analyzeCount()).toBe(before + 2);
+  await analyzeMissingRecordStatistics(f.db.$client);
+  expect(await analyzeCount()).toBe(before + 1);
   const remaining = await f.db.execute(sql`SELECT 1 FROM pg_indexes WHERE indexname LIKE 'storage_query_%'`);
   expect(remaining.rows).toHaveLength(0);
 });
