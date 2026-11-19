@@ -1,0 +1,62 @@
+diff --git a/dist/track.js b/dist/track.js
+index 073d18ef671a7c356c0b9e7e808acc70cbaefd94..a88b6057690ef868a707825c4fe31b296ef15c64 100644
+--- a/dist/track.js
++++ b/dist/track.js
+@@ -26,20 +26,15 @@ __export(track_exports, {
+ module.exports = __toCommonJS(track_exports);
+ var import_react = require("react");
+ var useTrack = (deps, effect) => {
+-  const render = (0, import_react.useRef)(false);
++  const values = (deps ?? []).map((d) => typeof d === "function" ? d() : d);
++  const previous = (0, import_react.useRef)(values);
+   const called = (0, import_react.useRef)(false);
+   (0, import_react.useEffect)(() => {
+-    const mounted = render.current;
+-    const run = mounted && called.current;
+-    if (run) return effect();
++    const changed = values.some((value, index) => !Object.is(value, previous.current[index]));
++    previous.current = values;
++    if (called.current && changed) return effect();
+     called.current = true;
+-  }, [...(deps ?? []).map((d) => typeof d === "function" ? d() : d)]);
+-  (0, import_react.useEffect)(() => {
+-    render.current = true;
+-    return () => {
+-      render.current = false;
+-    };
+-  }, []);
++  }, values);
+ };
+ // Annotate the CommonJS export names for ESM import in node:
+ 0 && (module.exports = {
+diff --git a/dist/track.mjs b/dist/track.mjs
+index 9a14a15c57b319967266283a7f067d60d91df01c..03a2998711178e5654bf867197af218a84211966 100644
+--- a/dist/track.mjs
++++ b/dist/track.mjs
+@@ -3,20 +3,15 @@
+ // src/track.ts
+ import { useEffect, useRef } from "react";
+ var useTrack = (deps, effect) => {
+-  const render = useRef(false);
++  const values = (deps ?? []).map((d) => typeof d === "function" ? d() : d);
++  const previous = useRef(values);
+   const called = useRef(false);
+   useEffect(() => {
+-    const mounted = render.current;
+-    const run = mounted && called.current;
+-    if (run) return effect();
++    const changed = values.some((value, index) => !Object.is(value, previous.current[index]));
++    previous.current = values;
++    if (called.current && changed) return effect();
+     called.current = true;
+-  }, [...(deps ?? []).map((d) => typeof d === "function" ? d() : d)]);
+-  useEffect(() => {
+-    render.current = true;
+-    return () => {
+-      render.current = false;
+-    };
+-  }, []);
++  }, values);
+ };
+ export {
+   useTrack
