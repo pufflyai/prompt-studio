@@ -1,11 +1,12 @@
 import { defineExtension } from "@pstdio/sdk/extensions";
+import { marmaladeActionBar } from "../apps/marmalade/marmalade-action-bar";
 import { marmaladeShortcuts } from "../apps/marmalade/marmalade-shortcuts";
 import { defineExample, webview } from "../definition";
 
 const views = [
   webview("marmalade-canvas", "Great Wave"),
   webview("marmalade-inspector", "Properties and layers"),
-  webview("marmalade-rail", "Marmalade tools"),
+  marmaladeActionBar,
   webview("marmalade-nav", "Marmalade"),
   webview("marmalade-status", "Document status"),
 ];
