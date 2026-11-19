@@ -19,6 +19,9 @@ export const Interactive = () => {
         <Button size="xs" onClick={example.home}>
           Open Home
         </Button>
+        <Button size="xs" onClick={example.tabs}>
+          Open tabbed page
+        </Button>
         <Button size="xs" onClick={() => example.open("A")}>
           Open A in Main
         </Button>

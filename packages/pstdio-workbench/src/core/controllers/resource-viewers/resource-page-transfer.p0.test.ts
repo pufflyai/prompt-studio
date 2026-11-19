@@ -40,8 +40,8 @@ test("opening a distinct semantic view of an existing resource reaches that rend
   });
   await openSide("a");
   await w.navigation.openPage({ page: viewerPage("history"), resource: viewerResource("a") });
-  expect(w.pages.getContent()?.viewId).toBe("history");
-  expect(w.pages.getContent()?.resource?.id).toBe("a");
+  expect(w.layout.getActivePanel("main")?.viewId).toBe("history");
+  expect(w.layout.getActivePanel("main")?.resource?.id).toBe("a");
   expect(w.layout.listPanelInstances("side")).toHaveLength(0);
 });
 
@@ -55,7 +55,7 @@ test("a page without a declared panel view can move independent resources into S
     panelView: undefined,
   });
   for (const id of ["a", "b"]) {
-    await w.navigation.openPage({ page: viewerPage("portable"), resource: viewerResource(id), open: "pin" });
+    w.pageLocations.navigate({ kind: "page", page: viewerPage("portable"), resource: viewerResource(id), open: "pin" });
     const content = w.pages.getContent()!;
     const host = viewerHostKey(w, content.widgetId);
     expect(w.getPanelDestinations(content.widgetId)).toContain("side");
@@ -304,7 +304,8 @@ test("view menus use their moved owner's page parameters after Main and params c
     panelView: undefined,
     params: { comparison: { type: "string", default: "fork_point", values: ["fork_point", "current", "provider"] } },
   });
-  await w.navigation.openPage({
+  w.pageLocations.navigate({
+    kind: "page",
     page: viewerPage("workspace"),
     resource: viewerResource("a"),
     params: { comparison: "current" },
@@ -314,7 +315,8 @@ test("view menus use their moved owner's page parameters after Main and params c
   const props = (region: "side" | "secondary") =>
     resolveWebviewPageProps(w.pages.store.getState(), w.layout.getLayout().regions[`${region}-right-menu`].widgets[0]);
   expect(props("side").pageParams?.comparison).toBe("current");
-  await w.navigation.openPage({
+  w.pageLocations.navigate({
+    kind: "page",
     page: viewerPage("workspace"),
     resource: viewerResource("b"),
     params: { comparison: "provider" },

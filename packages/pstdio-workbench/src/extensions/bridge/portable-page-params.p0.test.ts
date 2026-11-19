@@ -22,7 +22,8 @@ for (const method of ["drag", "panel"] as const)
           });
       };
       const { w, saved, locations } = createResourceViewerFixture({ registerPages });
-      await w.navigation.openPage({
+      w.pageLocations.navigate({
+        kind: "page",
         page: viewerPage("form"),
         params: { form: "rule" },
         ...(method === "panel" ? { resource: viewerResource("a") } : {}),

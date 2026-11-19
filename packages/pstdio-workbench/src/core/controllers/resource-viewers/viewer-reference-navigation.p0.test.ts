@@ -83,7 +83,8 @@ test("a denied duplicate draft replacement preserves its caller and target", asy
 
 test("selecting a retained Main document restores that viewer's source coordinates", async () => {
   const { w } = createResourceViewerFixture({ tabs: true, document: true });
-  await w.navigation.openPage({
+  w.pageLocations.navigate({
+    kind: "page",
     page: viewerPage("reader"),
     resource: document("a"),
     position: { line: 3 },
@@ -102,8 +103,9 @@ test("selecting a retained Main document restores that viewer's source coordinat
 });
 
 test("compound navigation transfers resources and selects its final page", async () => {
-  const { w, openSide } = createResourceViewerFixture();
+  const { w, openSide, other } = createResourceViewerFixture();
   await openSide("x");
+  other();
   await w.navigation.openTarget({
     kind: "compound",
     targets: [

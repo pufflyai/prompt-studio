@@ -18,7 +18,7 @@ test.beforeAll(() => {
   if (!process.env.E2E_PACKAGED_BINARY_PATH) buildBinary();
 });
 
-test("Notes creates dedicated pages and reclaims Side views separately from Artifact tabs", async () => {
+test("Notes creates dedicated pages and reclaims Side views into the current tabbed page", async () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-notes-page-")));
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;

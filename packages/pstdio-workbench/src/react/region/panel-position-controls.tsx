@@ -71,7 +71,12 @@ export const usePanelDragSurface = (workbench: WorkbenchCore, region: WorkbenchP
     data: content ? { pageContent: true } : { panelRegion: region },
     disabled,
   });
-  const empty = (event: MouseEvent | TouchEvent) => !(event.target as Element).closest(interactive);
+  const empty = (event: MouseEvent | TouchEvent) => {
+    const target = event.target as Element;
+    const control = target.closest(interactive);
+    const handle = content && target.closest("[data-workbench-page-drag-handle]");
+    return handle ? !control || !handle.contains(control) : !control;
+  };
   return {
     ref: drag.setNodeRef,
     tabIndex: 0,

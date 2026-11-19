@@ -31,6 +31,11 @@ export const createResourcePagesWorkbench = () => {
     body: { kind: "react", render: () => <Text p="md">Companion content</Text> },
   });
   workbench.views.registerView({
+    id: "home",
+    title: "Home",
+    body: { kind: "react", render: () => <Text p="md">Home content</Text> },
+  });
+  workbench.views.registerView({
     id: "properties",
     title: "Properties",
     body: { kind: "react", render: ({ instance }) => <Text p="md">Properties for {instance.resource?.id}</Text> },
@@ -47,8 +52,23 @@ export const createResourcePagesWorkbench = () => {
     title: "Home",
     path: "home",
     modeId: "project",
-    main: { kind: "panels" },
+    main: { kind: "view", view: { kind: "view", id: "home" }, cardinality: "one", presentation: "page" },
     slots: [],
+  });
+  workbench.pages.registerPage({
+    id: "tabs",
+    ref: page("tabs"),
+    title: "Collection",
+    path: "tabs",
+    modeId: "project",
+    main: { kind: "panels" },
+    slots: [
+      {
+        id: "collection",
+        region: "main",
+        item: { kind: "view", view: { kind: "view", id: "companion" }, presence: "open" },
+      },
+    ],
   });
   workbench.pages.registerPage({
     id: "record",
@@ -76,12 +96,22 @@ export const createResourcePagesWorkbench = () => {
   });
   workbench.pageLocations.setProject("preview");
   const open = (id: string) =>
-    workbench.pageLocations.navigate({
+    workbench.navigation.openTarget({
       kind: "page",
       page: page("record"),
       resource: { type: "record", id, label: `Resource ${id}` },
       open: "pin",
     });
-  open("A");
-  return { workbench, open, home: () => workbench.pageLocations.navigate({ kind: "page", page: page("home") }) };
+  workbench.pageLocations.navigate({
+    kind: "page",
+    page: page("record"),
+    resource: { type: "record", id: "A", label: "Resource A" },
+    open: "pin",
+  });
+  return {
+    workbench,
+    open,
+    home: () => workbench.pageLocations.navigate({ kind: "page", page: page("home") }),
+    tabs: () => workbench.pageLocations.navigate({ kind: "page", page: page("tabs") }),
+  };
 };

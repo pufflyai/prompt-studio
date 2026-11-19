@@ -20,6 +20,11 @@ export const verifyNotesPageIsolation = async (page: Page) => {
     if (body) await expect(editor).toContainText(body);
     await expect(header.getByRole("tab")).toHaveCount(0);
   };
+  const expectNoteTab = async (title: string, body: string) => {
+    await expect(page).toHaveURL(/\/extensions\/pstdio\.artifacts\/artifacts$/);
+    await expect(header.getByRole("tab", { name: title, exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(editor).toContainText(body);
+  };
   const renameSelected = async (title: string) => {
     await resourceActions().click();
     await page.getByRole("menuitem", { name: "Rename note", exact: true }).click();
@@ -73,17 +78,18 @@ export const verifyNotesPageIsolation = async (page: Page) => {
   await expect(main.getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
   const artifactTabs = await main.getByRole("tab").allTextContents();
   await firstRow.click();
-  await expectNote("Isolation first", bodies.first);
+  await expectNoteTab("Isolation first", bodies.first);
+  await expect(header.getByRole("tab")).toHaveText([...artifactTabs, "Isolation first"]);
   await expect(sideFirst).toHaveCount(0);
   await page.reload();
-  await expectNote("Isolation first", bodies.first);
+  await expectNoteTab("Isolation first", bodies.first);
   await nav.getByRole("option", { name: "Artifacts", exact: true }).click();
-  await expect(main.getByRole("tab")).toHaveText(artifactTabs);
+  await expect(main.getByRole("tab")).toHaveText([...artifactTabs, "Isolation first"]);
   await page.reload();
-  await expect(main.getByRole("tab")).toHaveText(artifactTabs);
+  await expect(main.getByRole("tab")).toHaveText([...artifactTabs, "Isolation first"]);
   await secondRow.click();
-  await expectNote("Isolation second", bodies.second);
+  await expectNoteTab("Isolation second", bodies.second);
   await firstRow.click();
-  await expectNote("Isolation first", bodies.first);
+  await expectNoteTab("Isolation first", bodies.first);
   await expect(sideFirst).toHaveCount(0);
 };

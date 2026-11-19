@@ -112,7 +112,12 @@ for (const operation of ["close", "switch"] as const) {
 
 test("compound navigation pins a reused Main preview before leaving its page", async () => {
   const { w } = createResourceViewerFixture({ tabs: true });
-  await w.navigation.openPage({ page: viewerPage("reader"), resource: viewerResource("x"), open: "preview" });
+  w.pageLocations.navigate({
+    kind: "page",
+    page: viewerPage("reader"),
+    resource: viewerResource("x"),
+    open: "preview",
+  });
   await w.navigation.openTarget({
     kind: "compound",
     targets: [

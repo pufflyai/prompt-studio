@@ -5,7 +5,6 @@ import { pageSlots } from "../../registries/pages/page-main";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { prepareWorkbenchNavigation } from "../navigation/compound-navigation";
-import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 import { pageLocationTarget } from "../page-location/page-location-target";
 
 export const panelResourcePageTarget = (
@@ -92,9 +91,11 @@ export const openDroppedPage = async (
   target: NavigationTargetPage | NavigationTargetCompound,
   _instanceId?: string,
 ) => {
-  if (target.kind === "compound") prepareWorkbenchNavigation(core, target.targets, { reuseViewers: false });
-  else getPageLocationPreparation(core.pageLocations).resolve(target);
-  await core.navigation.openTarget(target);
+  if (target.kind === "compound")
+    return prepareWorkbenchNavigation(core, target.targets, { reuseViewers: false }).commit();
+  const result = core.pageLocations.navigate(target);
+  if (!result.ok) throw new Error(result.diagnostic.message);
+  return result;
 };
 export const openPanelAsPage = async (core: WorkbenchCore, instanceId: string) => {
   const target = panelPageDropTarget(core, instanceId);

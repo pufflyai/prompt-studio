@@ -26,6 +26,7 @@ export const createResourceViewerFixture = (
     sideCanOpen?: boolean;
     collection?: boolean;
     browser?: WorkbenchPageLocationBrowser;
+    boot?: boolean;
     registerPages?: (core: ReturnType<typeof createWorkbench>) => void;
   } = {},
 ) => {
@@ -103,9 +104,19 @@ export const createResourceViewerFixture = (
   });
   options.registerPages?.(w);
   w.pageLocations.setProject("project");
-  w.pageLocations.navigate({ kind: "page", page: viewerPage("home") });
-  const openMain = (id: string, type = "record") =>
-    w.navigation.openPage({ page: viewerPage("reader"), resource: viewerResource(id, type), open: "pin" });
+  if (options.boot) w.pageLocations.boot("project");
+  else w.pageLocations.navigate({ kind: "page", page: viewerPage("home") });
+  // These callers exercise a dedicated page; normal resource-open presentation has its own contracts.
+  const openMain = async (id: string, type = "record") => {
+    const result = w.pageLocations.navigate({
+      kind: "page",
+      page: viewerPage("reader"),
+      resource: viewerResource(id, type),
+      open: "pin",
+    });
+    if (!result.ok) throw new Error(result.diagnostic.message);
+    return [result];
+  };
   const openSide = (id: string, type = "record") =>
     w.navigation.openPanel({ panel: viewerPanel, resource: viewerResource(id, type), region: "side", open: "pin" });
   const other = () => w.pageLocations.navigate({ kind: "page", page: viewerPage("other") });

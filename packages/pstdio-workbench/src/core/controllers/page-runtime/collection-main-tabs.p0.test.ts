@@ -151,7 +151,7 @@ const redirectPages = [
 ] as const;
 const openThroughRedirect = async (w: ReturnType<typeof modePanelFixture>["w"], id: string) => {
   const item = { type: "document", id, label: id };
-  await w.navigation.openTarget({ kind: "page", page: redirect, resource: item });
+  w.pageLocations.navigate({ kind: "page", page: redirect, resource: item });
   await w.navigation.openTarget({
     kind: "compound",
     targets: [

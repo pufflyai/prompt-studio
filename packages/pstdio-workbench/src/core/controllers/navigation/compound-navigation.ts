@@ -17,6 +17,7 @@ import { prepareMainDeparture } from "./main-page-departure";
 import { preparePageNavigation } from "./page-navigation-preparation";
 import { requireCorePanelTargets } from "./panel-target";
 import { commitPreparedNavigation } from "./prepared-navigation-commit";
+import { resolveResourceTabTarget } from "./resource-page-tab";
 import {
   finalHostTransfers,
   panelTransferLocation,
@@ -120,8 +121,9 @@ type ResourceReference = { resource: ResourceRef } & ViewLocation;
 const referenceForTarget = (
   target: NavigationOperation,
   resolve: (target: NavigationTargetPage) => ResolvedPageLocation,
+  context?: ViewLocation,
 ): ResourceReference => {
-  if (target.kind !== "page") return { resource: target.resource! };
+  if (target.kind !== "page") return { resource: target.resource!, ...context };
   const { location } = resolve(target);
   return {
     resource: target.resource!,
@@ -149,6 +151,7 @@ export const prepareWorkbenchNavigation = (
     location?: ViewLocation;
     replace?: WorkbenchWidgetPlacement;
     history?: "push" | "replace" | "none";
+    resourceTabs?: boolean;
   } = {},
 ) => {
   requireCorePanelTargets(core, targets);
@@ -170,6 +173,8 @@ export const prepareWorkbenchNavigation = (
   let modeState = originalMode;
   let shellState = originalShell;
   let proposed = original;
+  // A panel departure can stage a fallback; only a page operation chooses a new container.
+  let destination = original;
   let resourceToFocus: ({ resource: ResourceRef } & ViewLocation) | undefined;
   const references = new Map<string, { resource: ResourceRef } & ViewLocation>();
   const outgoingPins = new Map<string, PlacementIdentity>();
@@ -183,7 +188,9 @@ export const prepareWorkbenchNavigation = (
   });
 
   for (const rawTarget of targets) {
-    const target = retainTransferredPin(core, rawTarget, original);
+    const resolved = resolveResourceTabTarget(core, rawTarget, destination, options);
+    const location = resolved.location;
+    const target = retainTransferredPin(core, resolved.target, original);
     const departure = prepareMainDeparture(core, target, proposed, modeState, shellState, destinations);
     proposed = departure.page;
     modeState = departure.mode;
@@ -194,7 +201,7 @@ export const prepareWorkbenchNavigation = (
     if (reusable) {
       activate.set(reusable.region, reusable.identity);
       recordExplicitDestination(target, reusable.identity, destinations);
-      resourceToFocus = referenceForTarget(target, locations.resolve);
+      resourceToFocus = referenceForTarget(target, locations.resolve, location);
       references.set(placementIdentityKey(reusable.identity), resourceToFocus);
       if (isReusedViewerPin(target.open, proposed, reusable.identity)) {
         const identity = reusable.identity;
@@ -213,13 +220,14 @@ export const prepareWorkbenchNavigation = (
     if (target.kind === "page") {
       const page = preparePageNavigation(core, target, proposed, modeState, shellState);
       proposed = page.state;
+      destination = proposed;
       modeState = page.mode;
       shellState = page.shell;
       if (page.resolved.consumeRemembered) consumedMemory.push(page.resolved.consumeRemembered);
     } else if (target.kind === "panel") {
       const modeId = panelModeId(core, target, proposed.activeModeId);
       const panel = target.panel;
-      const location = panelTransferLocation(core, target, beforeOpen, original, options.location, departure.source);
+      const panelLocation = panelTransferLocation(core, target, beforeOpen, original, location, departure.source);
       if (panel.kind === "page-slot") {
         const page = requirePanelPage(proposed, panel);
         proposed = pages.prepare.slot(
@@ -229,13 +237,13 @@ export const prepareWorkbenchNavigation = (
             resource: target.resource,
             open: target.open,
             region: target.region,
-            ...location,
+            ...panelLocation,
           },
           proposed,
           owned(),
         );
       } else {
-        const prepared = prepareSharedPanel(core, target, modeId, modeState, shellState, location);
+        const prepared = prepareSharedPanel(core, target, modeId, modeState, shellState, panelLocation);
         modeState = prepared.modeState;
         shellState = prepared.shellState;
         const identity = prepared.identity;

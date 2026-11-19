@@ -11,7 +11,7 @@ const generatedRef = (page: WorkbenchPageContribution) => ({
 });
 
 export const portablePagePanel = (page: WorkbenchPageContribution, registry: WorkbenchModePlacementRegistry) => {
-  if (!isSingleViewPage(page) || page.main.kind !== "view") return page.panelView;
+  if (page.main.kind !== "view" || (!isSingleViewPage(page) && !page.resource)) return page.panelView;
   const declared = page.panelView && registry.getPlacement(page.panelView);
   const item = declared?.item;
   const compatible =
@@ -28,7 +28,7 @@ export const portablePagePanel = (page: WorkbenchPageContribution, registry: Wor
 };
 
 const registerMainPagePanel = (page: WorkbenchPageContribution, registry: WorkbenchModePlacementRegistry) => {
-  if (!isSingleViewPage(page) || page.main.kind !== "view") return;
+  if (page.main.kind !== "view" || (!isSingleViewPage(page) && !page.resource)) return;
   const ref = portablePagePanel(page, registry)!;
   if (registry.getPlacement(ref)) return;
   const {
