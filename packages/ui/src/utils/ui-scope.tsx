@@ -8,6 +8,8 @@ export interface UiScope {
   toaster: ReturnType<typeof createToaster>;
 }
 const UiScopeContext = createContext<UiScope | null>(null);
+const UiScopeViewActivityContext = createContext({ active: true, revision: 0 });
+const UiScopePortalContext = createContext<RefObject<HTMLDivElement | null> | null>(null);
 
 /** Keeps window overlays and imperative component feedback inside their owning surface. */
 export const UiScopeProvider = (props: { active: boolean; children: ReactNode }) => {
@@ -16,16 +18,41 @@ export const UiScopeProvider = (props: { active: boolean; children: ReactNode })
   const root = useRef<HTMLDivElement>(null);
   const [toaster] = useState(createUiToaster);
   return (
-    <UiScopeContext value={{ root, active: active && (parent?.active ?? true), toaster }}>{children}</UiScopeContext>
+    <UiScopeContext value={{ root, active: active && (parent?.active ?? true), toaster }}>
+      <UiScopePortalContext value={null}>{children}</UiScopePortalContext>
+    </UiScopeContext>
   );
 };
 
-/** Deactivates a retained view without taking ownership of its surface's theme, portals or feedback. */
+/** Retained views own overlay visibility independently of their suspended React content. */
 export const UiScopeActivity = (props: { active: boolean; children: ReactNode }) => {
   const { active, children } = props;
   const scope = useUiScope();
+  const parent = useContext(UiScopeViewActivityContext);
+  const parentPortal = useContext(UiScopePortalContext);
+  const [portal, setPortal] = useState<HTMLDivElement | null>(null);
+  const [activity, setActivity] = useState({ active, revision: 0 });
+  if (activity.active !== active) {
+    setActivity({ active, revision: activity.revision + Number(!active) });
+  }
+  const enabled = active && parent.active && (scope?.active ?? true);
   return (
-    <UiScopeContext value={scope ? { ...scope, active: scope.active && active } : null}>{children}</UiScopeContext>
+    <UiScopeViewActivityContext
+      value={{ active: parent.active && active, revision: parent.revision + activity.revision }}
+    >
+      <UiScopeContext value={scope ? { ...scope, active: enabled } : null}>
+        <UiScopePortalContext value={{ current: portal }}>{children}</UiScopePortalContext>
+      </UiScopeContext>
+      <ChakraPortal container={parentPortal ?? scope?.root}>
+        <Box
+          ref={setPortal}
+          data-ui-view-overlays=""
+          display={enabled ? "contents" : "none"}
+          hidden={!enabled}
+          inert={!enabled}
+        />
+      </ChakraPortal>
+    </UiScopeViewActivityContext>
   );
 };
 
@@ -51,8 +78,12 @@ export const UiScopeRoot = (props: { children: ReactNode }) => {
 
 export const useUiScope: () => UiScope | null = () => useContext(UiScopeContext);
 
+// View navigation dismisses overlays; suspending the whole surface preserves its unfinished work.
+export const useUiScopeViewActivity = () => useContext(UiScopeViewActivityContext);
+
 /** Defaults to the owning surface, or the document body for standalone components. */
 export const Portal = (props: PortalProps & { children?: ReactNode }) => {
   const scope = useUiScope();
-  return <ChakraPortal {...props} container={props.container ?? scope?.root} />;
+  const viewPortal = useContext(UiScopePortalContext);
+  return <ChakraPortal {...props} container={props.container ?? viewPortal ?? scope?.root} />;
 };

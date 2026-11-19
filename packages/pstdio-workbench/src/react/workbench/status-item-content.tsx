@@ -1,4 +1,4 @@
-import { ScopedPopover as Popover, Portal } from "@pstdio/ui";
+import { ScopedPopover as Popover, Portal, UiScopeActivity } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { WorkbenchCore, WorkbenchStatusBarSlot, WorkbenchWidgetPlacement } from "../../core";
 import { WorkbenchWidgetHost } from "../region/widget-host";
@@ -48,7 +48,9 @@ export const StatusItemPopover = (props: StatusItemPopoverProps) => {
             {/* Give the guest one bounded viewport to measure. The frame then uses its reported height. */}
             <Popover.Body minH="0" display="flex" flexDirection="column" css={{ "& iframe": { maxHeight: "70dvh" } }}>
               <ViewActivityContext value={open}>
-                <WorkbenchWidgetHost workbench={workbench} region="main" placement={detail} sizing="bounded-height" />
+                <UiScopeActivity active={open}>
+                  <WorkbenchWidgetHost workbench={workbench} region="main" placement={detail} sizing="bounded-height" />
+                </UiScopeActivity>
               </ViewActivityContext>
             </Popover.Body>
           </Popover.Content>
