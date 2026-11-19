@@ -1,0 +1,12 @@
+{
+  "cloud-workspaces.title": "Espaces de travail cloud",
+  "cloud-workspaces.read": "Lire les espaces de travail cloud",
+  "cloud-workspaces.open": "Ouvrir les espaces de travail cloud",
+  "cloud-workspaces.refresh": "Actualiser les espaces de travail cloud",
+  "cloud-workspaces.tests.title": "Exécuter les tests dans le cloud",
+  "cloud-workspaces.tests.description": "Exécuter les tests d’une branche sur le contrôleur PocketCoder déployé et récupérer les journaux.",
+  "cloud-workspaces.demo.title": "Lancer une démo dans le cloud",
+  "cloud-workspaces.demo.description": "Lancer Prompt Studio depuis une branche et ouvrir l’URL temporaire du tableau de bord.",
+  "cloud-workspaces.preview-helper.title": "Assistant d’URL d’aperçu",
+  "cloud-workspaces.preview-helper.description": "Script TypeScript géré par l’opérateur sur cet appareil qui renvoie une URL HTTPS temporaire."
+}
