@@ -26,8 +26,10 @@ export type WorkbenchTerminalSessionOpener = (
   request: WorkbenchTerminalSessionRequest,
   view?: TerminalViewBinding,
   signal?: AbortSignal,
-  /** Stable key of the placement that shows the session; a recreated workbench passes the same key. */
+  /** Owner-scoped binding for the current renderer generation. */
   binding?: string,
+  /** Stable placement identity, independent of a renderer owner's current generation. */
+  placementId?: string,
 ) => Promise<WorkbenchTerminalSessionAdapter>;
 
 export type WorkbenchTerminalSessionStatus = "running" | "exited" | "killed";

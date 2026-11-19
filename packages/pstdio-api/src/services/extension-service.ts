@@ -113,10 +113,12 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     deps.eventBus?.emit("extension_instances", "set", instance);
   };
 
-  const { assertOptional, claimExtensionId, setProjectExtensionEnabled } = createExtensionEnablement({
-    ...deps,
-    emitExtensionInstance,
-  });
+  const { adoptDefaultSourceForProject, assertOptional, claimExtensionId, setProjectExtensionEnabled } =
+    createExtensionEnablement({
+      ...deps,
+      emitExtensionInstance,
+      onDefaultAdopted: (sourcePath) => withRequestedPreparation(() => notifyInstalledSourcesChanged(sourcePath)),
+    });
 
   const notifyInstalledSourcesChanged = async (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => {
     await deps.onInstalledSourcesChanged?.(sourcePath, validatedSource);
@@ -312,6 +314,8 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   };
 
   return {
+    adoptDefaultSourceForProject,
+    hasDefaultSourceChoice: deps.extensionInstancesService.hasProjectDefaultChoice,
     activatePublishedExtensions: (inputs: Parameters<typeof activatePublishedExtensions>[1]) =>
       activatePublishedExtensions(
         {

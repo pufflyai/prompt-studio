@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { expect, type Page } from "@playwright/test";
 import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-host";
 import { test } from "../testing/packaged-fixture";
@@ -58,6 +59,44 @@ test("keeps performance measurements live when switching and closing project tab
     await expect(performanceMeter(app.page)).not.toContainText("– fps");
     await app.page.getByRole("button", { name: `Close ${second.name}`, exact: true }).click();
     await expect.poll(() => readSnapshot(app!.page)).toBeNull();
+  } finally {
+    await disposePackagedApp(app);
+  }
+});
+
+test("a local extension control highlights workbench renders and releases the canvas", async () => {
+  let app: PackagedApp | null = null;
+  try {
+    ({ app } = await launchProject("Workbench highlights", {
+      monitoring: true,
+      extraExtension: {
+        installName: "render-highlights",
+        source: fileURLToPath(new URL("../../../../packages/e2e/src/fixtures/render-highlights", import.meta.url)),
+      },
+    }));
+    const toggle = app.page.frameLocator('iframe[title="Render highlight control"]').getByRole("button", {
+      name: "Highlight workbench renders",
+    });
+    const canvas = app.page.locator("canvas[data-react-scan]");
+    await expect(canvas).toHaveCount(0);
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    // Opening search commits a visible update in the workbench React tree.
+    await app.page.getByRole("option", { name: "Search", exact: true }).click();
+    await expect(app.page.getByRole("dialog")).toBeVisible();
+    await expect
+      .poll(() =>
+        canvas.evaluate((element: HTMLCanvasElement) => {
+          const context = element.getContext("2d")!;
+          const pixels = context.getImageData(0, 0, element.width, element.height).data;
+          return pixels.some((value, index) => index % 4 === 3 && value > 0);
+        }),
+      )
+      .toBe(true);
+    await app.page.keyboard.press("Escape");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await expect(canvas).toHaveCount(0);
   } finally {
     await disposePackagedApp(app);
   }

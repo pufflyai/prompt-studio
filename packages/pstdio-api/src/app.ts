@@ -352,7 +352,7 @@ const buildApp = async (
         apiLogger.warn({ err, table, event: "db.dead_row_cleanup.error" }, "Database cleanup failed; it will retry"),
       );
     }
-    return connected;
+    return { ...connected, extensionsReady: extensionStartup };
   } catch (error) {
     // createApp closes the database on a failed startup; the cleanup must not outlive it.
     await stopDeadRowCleanup();

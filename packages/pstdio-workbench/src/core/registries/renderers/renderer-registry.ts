@@ -1,4 +1,5 @@
 import type { QueryChangeEnvelope } from "@pstdio/sdk/extensions";
+import type { WebviewSizing } from "pstdio-extensions/bridge/contract";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { WorkbenchCore } from "../../workbench-core";
@@ -20,7 +21,7 @@ export interface WorkbenchPanelRenderInput {
   /** Source selected by the host for a custom text presentation. Never read from guest props. */
   textTarget?: NativeDocumentTarget;
   /** Intrinsic sizing for embedded surfaces such as status details. */
-  sizing?: "content-width" | "content-height";
+  sizing?: WebviewSizing;
 }
 
 export interface WorkbenchRendererRegistration {

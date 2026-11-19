@@ -136,6 +136,7 @@ export const createWorkbenchExtensionMetadata = (
   input: CreateWorkbenchExtensionMetadataInput,
 ): WorkbenchExtensionMetadata => ({
   extensions: input.runtime.extensions.map(toExtensionRecord),
+  resourcePresentations: input.runtime.resourcePresentations ?? [],
   projectSetups: input.runtime.extensions.flatMap((extension) => {
     const setup = extension.definition.projectSetup;
     const registeredView =
