@@ -11,12 +11,15 @@ const cloudLocationKey = (state: ProjectCloudState) => {
 
 /** The picker's second line: where the project is on this device. */
 export const projectLocationKey = (folderPath: string | null, state: ProjectCloudState) => {
+  if (state.deleting) return { key: "list.cloudDeleting" } as const;
+  if (state.presence === "cloud-only") return { key: "list.cloudOnly" } as const;
+  if (state.presence === "removing") return { key: "list.cloudRemovalPending" } as const;
   if (state.cloud) {
     if (folderPath) return { key: "path", path: folderPath } as const;
     return { key: cloudLocationKey(state) } as const;
   }
   if (!folderPath) return { key: "list.noFolder" } as const;
-  return state.signedIn
+  return state.signedIn && state.membershipKnown !== false
     ? ({ key: "list.localPath", path: folderPath } as const)
     : ({ key: "path", path: folderPath } as const);
 };
