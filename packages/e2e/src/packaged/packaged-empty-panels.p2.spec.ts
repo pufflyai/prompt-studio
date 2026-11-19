@@ -29,7 +29,7 @@ test("adding a tool keeps the other empty panel open", async () => {
       startPackagedServe(root, {
         PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(
           "pstdio-home",
-          "pstdio-artifacts",
+          "packages/e2e/src/fixtures/menu",
           "pstdio-session-browser",
           "pstdio-terminal",
         ),
@@ -61,11 +61,11 @@ test("adding a tool keeps the other empty panel open", async () => {
     phase("project ready; check panel additions");
     await test.step("Add tools while preserving the other empty panel", () => verifyEmptyPanelAddition(page));
     phase("panel additions checked");
-    await page.getByRole("option", { name: "Artifacts", exact: true }).click();
+    await page.getByRole("option", { name: "Menu page", exact: true }).click();
     await page
       .locator('[data-workbench-panel="main"]')
-      .getByRole("tab", { name: "Artifacts", exact: true })
-      .getByRole("button", { name: "Close Artifacts", exact: true })
+      .getByRole("tab", { name: "Menu content", exact: true })
+      .getByRole("button", { name: "Close Menu content", exact: true })
       .click();
     await test.step("Place panels and cancel from the grab point", () => verifyPanelInsertionTargets(page));
   } finally {

@@ -59,8 +59,8 @@ const newestFirst = (a: ArtifactRevision, b: ArtifactRevision) =>
 
 export const createArtifactService = (input: ArtifactServiceInput) => {
   const { projectId, artifacts, snapshots, names, revisions: records } = input;
-  const summary = async (revision: ArtifactRevision) => {
-    const title = (await names.get(revision.artifactId))?.title ?? revision.title;
+  const summaryWithName = (revision: ArtifactRevision, name?: { title: string }) => {
+    const title = name?.title ?? revision.title;
     return {
       ...revision,
       title,
@@ -70,6 +70,7 @@ export const createArtifactService = (input: ArtifactServiceInput) => {
       target: artifactTarget(projectId, revision.artifactId, title, input.extensionId),
     };
   };
+  const summary = async (revision: ArtifactRevision) => summaryWithName(revision, await names.get(revision.artifactId));
 
   const findRevisions = async (id: string) => {
     if (!(await artifacts.get(id))) return [];
@@ -77,9 +78,11 @@ export const createArtifactService = (input: ArtifactServiceInput) => {
   };
 
   const revisions = async (url: string) => {
-    const items = await findRevisions(artifactIdFromUrl(projectId, url, input.extensionId));
+    const id = artifactIdFromUrl(projectId, url, input.extensionId);
+    const items = await findRevisions(id);
     if (!items.length) throw new Error("Artifact not found.");
-    return Promise.all(items.map(summary));
+    const name = await names.get(id);
+    return items.map((item) => summaryWithName(item, name));
   };
 
   const resolve = async (id: string) => {
@@ -97,10 +100,17 @@ export const createArtifactService = (input: ArtifactServiceInput) => {
   };
 
   const read = async (url: string, revisionId?: string) => {
-    const items = await revisions(url);
-    const revision = revisionId ? items.find((item) => item.id === revisionId) : items[0];
-    if (!revision) throw new Error("Artifact revision not found.");
-    return { ...revision, html: await snapshots.readText(`${revision.id}.html`) };
+    const id = artifactIdFromUrl(projectId, url, input.extensionId);
+    let revision: ArtifactRevision | undefined;
+    if (revisionId) {
+      if (!(await artifacts.get(id))) throw new Error("Artifact not found.");
+      revision = await records.get(revisionId);
+      if (revision?.artifactId !== id) throw new Error("Artifact revision not found.");
+    } else {
+      [revision] = await findRevisions(id);
+      if (!revision) throw new Error("Artifact not found.");
+    }
+    return { ...(await summary(revision)), html: await snapshots.readText(`${revision.id}.html`) };
   };
 
   const list = async (search = "") => {

@@ -1,10 +1,12 @@
 # Marmalade
 
-Marmalade is a small layered editor that tests the public extension API with five views of one document.
+Marmalade is a small layered editor that uses a native action bar beside isolated views of one document.
 
 ## Edit the sample
 
-Open **Examples → Marmalade**. The Great Wave document opens with canvas, properties and layers, tool rail, navigation, and status webviews.
+Open **Examples → Marmalade**. The Great Wave document opens with canvas, properties and layers, navigation, and status webviews. The host renders the tool rail, so labels and menus remain visible beside its narrow edge.
+
+Use **Document actions** at the end of the tool rail for Undo, Redo, Duplicate selection, New document, and Restore sample. Unavailable actions stay disabled. Arrow keys, Home, and End move through the rail. Escape or clicking the trigger again closes its menu. Tooltips and menu rows use shared shortcut hints.
 
 - Select a layer on the canvas or in Layers. Use Ctrl/Cmd-click to toggle several rows, or Shift-click and Shift+Up/Down to select a range of visible enabled rows.
 - Use Move to drag selected layers. Arrow keys move focused layers by one document pixel; Shift moves ten. Edit name, X/Y, dimensions, rotation, and opacity in Properties.
@@ -58,4 +60,4 @@ Each webview subscribes to the public `marmalade.changed` event before its first
 
 The bundled [Great Wave image](../assets/great-wave.jpg) is Katsushika Hokusai's *Under the Wave off Kanagawa*, ca. 1830–32, Metropolitan Museum of Art, accession JP1847, [collection object 45434](https://www.metmuseum.org/art/collection/search/45434). The museum marks it public domain. Its Open Access image is bundled so editing does not require network access.
 
-*Updated at: 2026-10-30*
+*Updated at: 2026-11-17*

@@ -5,16 +5,18 @@ import {
   defineExtensionView,
   type ExtensionViewRenderContext,
   type ResourceRef,
+  registerWebviewResourceAction,
 } from "@pstdio/sdk/extensions";
 import { useScopedQueries, useWebviewCommandQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import { AlertMessage, ChakraProvider, psTheme } from "@pstdio/ui";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import { createArtifactQueries, createArtifactRevisionSelection } from "./artifact-queries";
 import type { ArtifactSummary } from "./artifacts";
 import type { commands } from "./commands";
 import { ArtifactLibrary } from "./components/artifact-library";
 import { ArtifactReader } from "./components/artifact-reader";
+import { readPreviewTheme } from "./components/html-preview-theme";
 import type { ArtifactExample } from "./create-artifact";
 import { ArtifactTranslations } from "./translations";
 
@@ -40,9 +42,6 @@ const ArtifactsApp = (props: AppProps) => {
   const preference = useWebviewCommandQuery(selection.query, Boolean(id) && visible);
   const selected =
     typeof preference.data?.value === "string" && preference.data.value ? preference.data.value : undefined;
-  const setSelected = (revision: string) => {
-    void selection.save(revision).catch((error) => setActionError(String(error)));
-  };
   const queries = createArtifactQueries(client, hostProps.projectId);
   const index = useWebviewCommandQuery(id ? queries.revisions(id) : queries.list(), visible);
   const reads = useScopedQueries(id && preference.data !== undefined ? [queries.content(id, selected)] : [], visible);
@@ -66,19 +65,77 @@ const ArtifactsApp = (props: AppProps) => {
     }
   };
 
+  const exportLabel = context.t("reader.export", "Export HTML");
+  useEffect(() => {
+    if (!visible || !id || !content) return;
+    let active = true;
+    const action = registerWebviewResourceAction(
+      host,
+      {
+        resource: content.resource,
+        label: exportLabel,
+        icon: "download",
+      },
+      async (signal) => {
+        setActionError(undefined);
+        try {
+          const result = await client.commands.export({
+            url: content.url,
+            revisionId: content.revisionId,
+            theme: readPreviewTheme(),
+          });
+          signal.throwIfAborted();
+          if (result.html === undefined) throw new Error("The export did not return HTML.");
+          await client.files.download({
+            name: result.fileName,
+            data: new TextEncoder().encode(result.html),
+            mimeType: "text/html;charset=utf-8",
+          });
+        } catch (error) {
+          if (!signal.aborted) setActionError(String(error));
+          throw error;
+        }
+      },
+    );
+    void action.ready.catch((error) => {
+      if (active) setActionError(String(error));
+    });
+    return () => {
+      active = false;
+      void action.dispose().catch(() => {});
+    };
+  }, [client, content, exportLabel, host, id, visible]);
+
+  const chooseRevision = async (revisionId: string) => {
+    try {
+      setActionError(undefined);
+      await selection.save(revisionId);
+    } catch (error) {
+      setActionError(String(error));
+    }
+  };
+
   let body = (
     <Center flex="1">
       {readError ? (
-        <Text color="fg.muted" title={readError}>
-          Artifacts unavailable
+        <Text role="alert" color="fg.muted" title={readError}>
+          {context.t("reader.unavailable", "Artifacts unavailable")}
         </Text>
       ) : (
         <Spinner />
       )}
     </Center>
   );
-  if (id && content && items) {
-    body = <ArtifactReader content={content} revisions={items} onSelect={setSelected} />;
+  if (id && items) {
+    body = (
+      <ArtifactReader
+        content={content}
+        readError={readError}
+        revisions={items}
+        selectedId={selected ?? content?.id ?? items[0]?.id}
+        onSelect={(id) => void chooseRevision(id)}
+      />
+    );
   } else if (!id && items) {
     body = (
       <ArtifactLibrary
