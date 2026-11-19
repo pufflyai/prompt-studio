@@ -76,6 +76,53 @@ test("deprecated commands pass canonical context and parameters to public provid
   module.dispose();
 });
 
+test("keyboard New session keeps its routed workspace while explicit context takes precedence", async () => {
+  const wb = createWorkbench();
+  const workspace = { type: "workspace", extensionId: "pstdio", projectId: "p", id: "current" };
+  const primary = spyOn(wb, "getPrimaryResource").mockReturnValue(workspace);
+  const calls: unknown[] = [];
+  wb.commands.registerCommand(
+    { id: contributionRefId(sessionBrowser.commands.create), label: "New session" },
+    { execute: (_args, context) => calls.push(context?.resource) },
+  );
+  const module = wb.registerModule(createSessionsModule());
+  try {
+    await wb.navigation.openTarget({ kind: "command", commandId: dashboardCommandIds.createSession });
+    const explicit = { ...workspace, id: "explicit" };
+    await wb.commands.executeCommand(dashboardCommandIds.createSession, undefined, { resource: explicit });
+    expect(calls).toEqual([workspace, explicit]);
+  } finally {
+    primary.mockRestore();
+    module.dispose();
+  }
+});
+
+test("New session never borrows a routed device for an explicit workspace or another resource kind", async () => {
+  const wb = createWorkbench();
+  const remote = { type: "workspace", id: "remote", device: { id: "device", ownerId: "owner", name: "Laptop" } };
+  const primary = spyOn(wb, "getPrimaryResource").mockReturnValue(remote);
+  const calls: { args: unknown; resource: unknown }[] = [];
+  wb.commands.registerCommand(
+    { id: contributionRefId(sessionBrowser.commands.create), label: "New session" },
+    { execute: (args, context) => calls.push({ args, resource: context?.resource }) },
+  );
+  const module = wb.registerModule(createSessionsModule());
+  try {
+    for (const args of [{ workspace: { type: "workspace", id: "local" } }, { workspaceId: "local" }])
+      await wb.commands.executeCommand(dashboardCommandIds.createSession, args);
+    primary.mockReturnValue({ ...remote, type: "session" });
+    await wb.commands.executeCommand(dashboardCommandIds.createSession);
+    expect(calls).toEqual([
+      { resource: undefined, args: expect.objectContaining({ workspaceId: "local", deviceId: undefined }) },
+      { resource: undefined, args: expect.objectContaining({ workspaceId: "local", deviceId: undefined }) },
+      { resource: undefined, args: expect.objectContaining({ workspaceId: undefined, deviceId: undefined }) },
+    ]);
+  } finally {
+    primary.mockRestore();
+    module.dispose();
+  }
+});
+
 const productionProvider = async () => {
   const { resolve } = await import("node:path");
   const { loadExtensionSources, normalizeExtensionSources } = await import("pstdio-extensions");

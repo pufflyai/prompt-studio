@@ -309,8 +309,9 @@ test(
       const { first, second, session, foreignWorkspace } = history.value;
       const page = opened.value;
       progress("open foreign workspace history");
+      const collectionUrl = page.url();
       await page.locator(`[role="option"][id='${JSON.stringify(["resource", foreignWorkspace.id])}']`).click();
-      await expectUI(page).toHaveURL(/\/history\?/);
+      await expectUI(page).toHaveURL(collectionUrl);
       progress("open the private session from history");
       await page
         .getByRole("region", { name: "Main", exact: true })
@@ -320,7 +321,10 @@ test(
       await expectUI(
         page.getByRole("region", { name: "Main", exact: true }).getByText("Private workspace history", { exact: true }),
       ).toBeVisible();
-      await expectUI(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Device A history");
+      await expectUI(page).toHaveURL(collectionUrl);
+      await expectUI(
+        page.locator('[data-workbench-panel-header="main"]').getByRole("tab", { selected: true }),
+      ).toContainText("Device A history");
       progress("private history visible");
       progress("stop first runtime");
       if (a) await stopProcess(a.child);
