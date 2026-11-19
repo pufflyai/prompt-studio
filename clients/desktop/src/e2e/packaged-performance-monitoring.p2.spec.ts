@@ -209,9 +209,9 @@ test("keeps reporting slow frames after the workbench reloads", async () => {
 test("names the process that hosts an extension and ends its frames when paused", async () => {
   if (process.platform === "linux") test.setTimeout(40_000);
   let app: PackagedApp | null = null;
+  let diagnosticTarget: string | undefined;
   try {
     ({ app } = await launchProject("Extension processes", { monitoring: true, webview: true }));
-    await observePauseInput(app.page);
     const processes = async () => (await readSnapshot(app!.page))?.processes ?? [];
     const extensionProcesses = async () =>
       (await processes()).filter((process) => process.role === "extension-frames" && process.extensionFrames.length);
@@ -226,6 +226,8 @@ test("names the process that hosts an extension and ends its frames when paused"
     const scope = parseExtensionWebviewPath(source)?.scope;
     expect(scope).toBeDefined();
     const fixtureId = scope!.installedExtensionId;
+    diagnosticTarget = fixtureId;
+    await observePauseInput(app.page, fixtureId);
     await expect
       .poll(async () => (await extensionProcesses()).some((process) => hostedIds(process).has(fixtureId)))
       .toBe(true);
@@ -267,12 +269,15 @@ test("names the process that hosts an extension and ends its frames when paused"
     expect(await rows).toEqual([1]);
     await expect(app.page.locator('iframe[title="Host page"]')).toHaveCount(1);
   } finally {
-    if (app)
-      await test.info().attach("pause-input-diagnostic", {
-        body: JSON.stringify(await pauseInputEvidence(app.page).catch((error) => ({ error: String(error) })), null, 2),
-        contentType: "application/json",
-      });
-    await disposePackagedApp(app);
+    try {
+      if (app && diagnosticTarget)
+        await test.info().attach("pause-input-diagnostic", {
+          body: JSON.stringify(await pauseInputEvidence(app.page, diagnosticTarget), null, 2),
+          contentType: "application/json",
+        });
+    } finally {
+      await disposePackagedApp(app);
+    }
   }
 });
 
