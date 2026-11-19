@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createMemoryStorage, makeCommandArgs } from "@pstdio/sdk/testing";
@@ -26,6 +26,7 @@ test("Git reads working content and rejects replacement of a stale complete book
   };
   const [ctx] = makeCommandArgs({ storage: createMemoryStorage(), params: {}, overrides: { process } });
   await process.run({ command: ["git", "init"], cwd: root });
+  await process.run({ command: ["git", "config", "core.autocrlf", "true"], cwd: root });
   await mkdir(join(root, "documentation/requirement-book"), { recursive: true });
   const book = bookFixture();
   const before = serializeBook(book);
@@ -36,8 +37,8 @@ test("Git reads working content and rejects replacement of a stale complete book
   await writeFile(patch, replacementPatch(before, after));
   const applied = await process.run({ command: ["git", "apply", patch], cwd: root });
   expect(applied.exitCode).toBe(0);
-  expect(await readFile(join(root, BOOK_PATH), "utf8")).toBe(after);
+  expect(await readWorkingText(ctx, root, BOOK_PATH)).toBe(after);
   const stale = await process.run({ command: ["git", "apply", patch], cwd: root });
   expect(stale.exitCode).not.toBe(0);
-  expect(await readFile(join(root, BOOK_PATH), "utf8")).toBe(after);
+  expect(await readWorkingText(ctx, root, BOOK_PATH)).toBe(after);
 });
