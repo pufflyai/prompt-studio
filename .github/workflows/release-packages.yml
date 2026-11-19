@@ -426,7 +426,11 @@ jobs:
 
   nightly_upgrade:
     needs: [plan, release_build]
-    if: ${{ needs.plan.outputs.release == 'true' && needs.plan.outputs.channel == 'nightly' }}
+    # Normal nightlies skip prepare_patch. Check the required jobs explicitly so that
+    # the skipped ancestor doesn't suppress verification of a successful nightly build.
+    if: >-
+      ${{ !cancelled() && needs.plan.result == 'success' && needs.release_build.result == 'success' &&
+      needs.plan.outputs.release == 'true' && needs.plan.outputs.channel == 'nightly' }}
     permissions:
       actions: read
       contents: read
