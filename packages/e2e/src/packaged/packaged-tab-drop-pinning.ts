@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
+import { navigatePackagedPage } from "./packaged-page-navigation";
 
 const dragTab = async (page: Page, tab: Locator, target: Locator, region: "main" | "side" | "secondary") => {
   await target.click({ trial: true });
@@ -14,6 +15,14 @@ const dragTab = async (page: Page, tab: Locator, target: Locator, region: "main"
 };
 
 export const verifyRetainedTerminalDrop = async (page: Page, terminal: Locator) => {
+  const previous = page.url();
+  const home = new URL(previous);
+  home.pathname = `/projects/${home.pathname.split("/")[2]}/extensions/pstdio.home/home`;
+  home.search = "";
+  await navigatePackagedPage(page, home.href);
+  await expect(
+    page.locator('[data-workbench-panel-header="main"]').getByRole("tab", { name: "Home", exact: true }),
+  ).toBeVisible();
   await dragTab(page, terminal, page.locator('[data-workbench-panel="main"]'), "main");
   await expect(
     page.locator('[data-workbench-panel="main"]').getByRole("textbox", { name: "Terminal input" }),
@@ -26,6 +35,8 @@ export const verifyRetainedTerminalDrop = async (page: Page, terminal: Locator) 
   const showBottom = page.getByRole("button", { name: "Show Bottom Panel", exact: true });
   if (await showBottom.isVisible()) await showBottom.click();
   await dragTab(page, terminal, page.locator('[data-workbench-panel="secondary"]:visible'), "secondary");
+  await page.goBack();
+  await expect(page).toHaveURL(previous);
 };
 
 export const verifyTabDropPinning = async (page: Page, preview: Locator) => {

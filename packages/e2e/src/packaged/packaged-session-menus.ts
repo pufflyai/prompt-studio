@@ -43,18 +43,14 @@ const verifyFloatingLauncher = async (page: Page) => {
   await floating.getByRole("button", { name: "Reattach Side Panel" }).click();
 };
 
-const revealThenCloseSessionViewer = async (page: Page, row: Locator) => {
-  const sourceUrl = page.url();
+const openExistingSessionInMain = async (page: Page, row: Locator, sessionId: string) => {
   await row.click();
-  // Revealing the existing Side viewer preserves its routed page, including legacy deep links.
-  await expect(page).toHaveURL(sourceUrl);
+  await expect(page).toHaveURL(new RegExp(sessionId));
   const selected = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", {
     name: /Packaged session actions/,
   });
-  await expect(selected).toHaveAttribute("aria-selected", "true");
-  await selected.click({ button: "right" });
-  await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
   await expect(selected).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Packaged session actions");
 };
 const startNewSessionInViewer = async (page: Page, preview: Locator, workspaceName: string) => {
   await preview.focus();
@@ -133,8 +129,8 @@ export const verifyPackagedSessionMenus = async (
   await page.keyboard.press("Shift+F10");
   await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
   await expect(page.getByRole("menu")).toHaveCount(0);
-  await verifyPageSessionTab(page, createdTab, leaveWorkspace, reopenWorkspace);
-  await verifySharedPageTab(page, createdTab, leaveWorkspace, reopenWorkspace);
+  await verifyPageSessionTab(page, createdTab);
+  await verifySharedPageTab(page, createdTab, leaveWorkspace);
   const refresh = await fetch(`${baseUrl}/v1/sessions/${session.id}/title`, {
     method: "PATCH",
     headers: { ...authorization, "content-type": "application/json" },
@@ -237,9 +233,7 @@ export const verifyPackagedSessionMenus = async (
   await expect(page.getByRole("group", { name: "Sessions", exact: true })).toBeVisible();
   await expect(page.getByRole("group", { name: "Tab", exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
-  await revealThenCloseSessionViewer(page, row);
-  await row.click();
-  await expect(page).toHaveURL(new RegExp(session.id));
+  await openExistingSessionInMain(page, row, session.id);
   await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
   await page
     .locator('[role="menu"][data-state="open"]')

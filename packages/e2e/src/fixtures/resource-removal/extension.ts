@@ -65,7 +65,7 @@ const document = definePage({
   parent: home.ref,
   mode: workbenchModes.project,
   resource: { kinds: [kind.ref] },
-  main: { kind: "view", view: view.ref, cardinality: "one" },
+  main: { kind: "view", view: view.ref, cardinality: "one", presentation: "page" },
   slots: [],
 });
 export default defineExtension({

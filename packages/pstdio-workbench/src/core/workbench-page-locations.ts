@@ -29,8 +29,8 @@ export const createPageLocations = (
     getResourceRemovalEpoch: () => resolveCore().resources.getRemovalEpoch(),
     restoreLocation: (location, projectId, removalVersion) =>
       restorePageLocation(resolveCore(), location, projectId, removalVersion),
-    navigateTarget: (target) => {
-      const result = prepareWorkbenchNavigation(resolveCore(), [target]).commit();
+    navigateTarget: (target, history) => {
+      const result = prepareWorkbenchNavigation(resolveCore(), [target], { history }).commit();
       if (!result) throw new Error("Page navigation has no location");
       return result;
     },

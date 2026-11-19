@@ -78,7 +78,7 @@ export interface CreateWorkbenchPageLocationControllerInput<Value> {
   getResourceRemovalEpoch?(): string;
   restoreLocation?(location: PageLocation, projectId: string, removalVersion?: number): PageLocation;
   focusResource?(location: PageLocation, open?: import("@pstdio/sdk/extensions").PageOpenIntent): boolean;
-  navigateTarget?(target: NavigationTargetPage): WorkbenchPageNavigationResult;
+  navigateTarget?(target: NavigationTargetPage, history?: "push" | "replace" | "none"): WorkbenchPageNavigationResult;
   navigateHistory?(location: PageLocation, history: "replace" | "none"): WorkbenchPageNavigationResult;
   restoreHistoryLocation?(location: PageLocation, removalVersion: number): PageLocation;
   activateLocation?(): void;

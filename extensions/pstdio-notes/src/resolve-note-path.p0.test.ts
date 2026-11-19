@@ -44,8 +44,9 @@ test("note content paths open the note editor and other files stay workspace fil
   expect(await resolve(`${created.id}/content.md`)).toMatchObject({
     resource: { type: "note", id: created.id, label: "Launch plan", metadata: { writable: true } },
     target: {
-      kind: "compound",
-      targets: [{ kind: "page" }, { kind: "panel", resource: { type: "note", id: created.id } }],
+      kind: "page",
+      page: { kind: "page", id: "note" },
+      resource: { type: "note", id: created.id },
     },
   });
   expect(await resolve("missing/content.md")).toBeNull();

@@ -303,12 +303,15 @@ test(
         return { first, second, session, foreignWorkspace };
       });
       const [history, opened] = await Promise.allSettled([preparingHistory, openingPage]);
+      progress("history data and collection prepared");
       if (history.status === "rejected") throw history.reason;
       if (opened.status === "rejected") throw opened.reason;
       const { first, second, session, foreignWorkspace } = history.value;
       const page = opened.value;
+      progress("open foreign workspace history");
       await page.locator(`[role="option"][id='${JSON.stringify(["resource", foreignWorkspace.id])}']`).click();
       await expectUI(page).toHaveURL(/\/history\?/);
+      progress("open the private session from history");
       await page
         .getByRole("region", { name: "Main", exact: true })
         .getByRole("option")

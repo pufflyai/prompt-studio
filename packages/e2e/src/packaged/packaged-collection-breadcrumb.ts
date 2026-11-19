@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page } from "@playwright/test";
+import { navigatePackagedPage } from "./packaged-page-navigation";
 
 export const verifyPackagedCollectionBreadcrumb = async (
   page: Page,
@@ -28,11 +29,22 @@ export const verifyPackagedCollectionBreadcrumb = async (
   const libraryUrl = page.url();
   await page.frameLocator('iframe[title="Artifacts"]').getByText(title, { exact: true }).click();
   const breadcrumbs = page.getByRole("navigation", { name: "breadcrumb", exact: true });
-  await expect(breadcrumbs.getByText("Artifacts", { exact: true })).toBeVisible();
-  await expect(breadcrumbs.getByText(title, { exact: true })).toBeVisible();
-  expect(new URL(page.url()).pathname).toBe(`${new URL(libraryUrl).pathname}/view`);
+  await expect(breadcrumbs).toHaveCount(0);
   const tab = (region: string) =>
     page.locator(`[data-workbench-panel-header="${region}"]`).getByRole("tab", { name: title, exact: true });
+  await expect(tab("main")).toHaveAttribute("aria-selected", "true");
+  await expect(page).toHaveURL((url) => url.pathname === `${new URL(libraryUrl).pathname}/view`);
+  const detailUrl = page.url();
+  await tab("main").focus();
+  await page.keyboard.press("Shift+F10");
+  await page.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();
+  await expect(tab("secondary")).toBeVisible();
+  await page.reload();
+  await expect(tab("secondary")).toBeVisible();
+  await expect(tab("main")).toHaveCount(0);
+  // Reload retains auxiliary ownership; explicitly reopening the detail reclaims it.
+  await navigatePackagedPage(page, detailUrl);
+  await expect(tab("main")).toBeVisible();
   await tab("main").focus();
   await page.keyboard.press("Shift+F10");
   await page.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();
@@ -87,15 +99,21 @@ export const verifyPackagedCollectionBreadcrumb = async (
   await modeReturn.click();
   for (const frame of await returningRows) expect(frame).toEqual({ home: home!.y, sessions: sessionsEntry!.y });
   await expect(page).toHaveURL(projectReturnUrl);
+  await expect(tab("main")).toBeVisible();
+  await expect(tab("secondary")).toHaveCount(0);
+  await expect(breadcrumbs).toHaveCount(0);
   await expect(modeReturn).toHaveCount(0);
   await page.goBack();
   await expect(modeReturn).toBeVisible();
   await page.goBack();
-  await expect(tab("secondary")).toBeVisible();
-  await expect(tab("main")).toHaveCount(0);
-  await page.reload();
-  await expect(tab("secondary")).toBeVisible();
+  await expect(tab("main")).toBeVisible();
+  await expect(tab("secondary")).toHaveCount(0);
   await page.getByRole("button", { name: `Close ${title}`, exact: true }).click();
-  await expect(breadcrumbs.getByText(title, { exact: true })).toHaveCount(0);
-  await expect(breadcrumbs.getByText("Artifacts", { exact: true })).toBeVisible();
+  await expect(tab("main")).toHaveCount(0);
+  await expect(page).toHaveURL(libraryUrl);
+  await expect(
+    page.locator('[data-workbench-panel-header="main"]').getByRole("tab", { name: "Artifacts", exact: true }),
+  ).toBeVisible();
+  await expect(breadcrumbs).toHaveCount(0);
+  await expect(page.frameLocator('iframe[title="Artifacts"]:visible').getByText(title, { exact: true })).toBeVisible();
 };
