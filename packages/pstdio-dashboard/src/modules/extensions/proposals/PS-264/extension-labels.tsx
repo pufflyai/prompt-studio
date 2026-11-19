@@ -1,37 +1,34 @@
 import { Badge, Button, Icon } from "@chakra-ui/react";
 import { SearchableMenu, Tooltip } from "@pstdio/ui";
-import { ChevronDown, Folder, Globe, LockKeyhole, UserRound } from "lucide-react";
+import { Blocks, ChevronDown, Folder, Folders, UserRound } from "lucide-react";
 import type { ExtensionPreview } from "./extension-fixtures";
 
-export const visibilityLabels = {
-  public: {
-    label: "Public",
-    icon: Globe,
-    description: "A public package is available. Local changes may not be published.",
-  },
-  private: { label: "Private", icon: LockKeyhole, description: "Unpublished extension." },
+export const authorLabels = {
+  me: { label: "Me", icon: UserRound },
+  "prompt-studio": { label: "Prompt Studio", icon: Blocks },
 };
 
 export const scopeLabels = {
   repo: { label: "This Project", icon: Folder, description: "Available in this project." },
   global: {
     label: "All Projects",
-    icon: UserRound,
+    icon: Folders,
     description: "Available across projects on this computer.",
   },
 };
 
 interface ExtensionLabelProps {
   extension: ExtensionPreview;
-  kind: "visibility" | "scope";
+  kind: "author" | "scope";
 }
 
 export const ExtensionLabel = (props: ExtensionLabelProps) => {
   const { extension, kind } = props;
-  const info = kind === "visibility" ? visibilityLabels[extension.visibility] : scopeLabels[extension.scope];
+  const info = kind === "author" ? authorLabels[extension.author] : scopeLabels[extension.scope];
+  const description = kind === "scope" ? scopeLabels[extension.scope].description : undefined;
   return (
-    <Tooltip content={info.description}>
-      <Badge variant="chip" size="sm" tabIndex={0} aria-label={`${kind}: ${info.label}. ${info.description}`}>
+    <Tooltip content={description}>
+      <Badge variant="chip" size="sm" tabIndex={kind === "scope" ? 0 : undefined} aria-label={`${kind}: ${info.label}`}>
         <Icon as={info.icon} boxSize="3" />
         {info.label}
       </Badge>

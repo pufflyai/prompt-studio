@@ -16,7 +16,6 @@ interface ExtensionDetailProps {
 
 export const ExtensionDetail = (props: ExtensionDetailProps) => {
   const { extension, onBack, onToggle } = props;
-  const healthExtension = { ...extension, visibility: undefined };
   return (
     <PageContentLayout
       header={
@@ -42,14 +41,14 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
               <Text textStyle="heading/M">{extension.displayName}</Text>
               <ExtensionIdentity value={`${extension.extensionId} · v${extension.version}`} />
             </Stack>
-            <ExtensionHealthPopover extension={healthExtension} diagnostics={extension.diagnostics} />
+            <ExtensionHealthPopover extension={extension} diagnostics={extension.diagnostics} />
             <ExtensionToggle name={extension.displayName} enabled={extension.enabled} onToggle={onToggle} />
           </HStack>
           <Text textStyle="paragraph/S/regular" color="fg.muted">
             {extension.description}
           </Text>
           <HStack gap="sm">
-            <ExtensionLabel extension={extension} kind="visibility" />
+            <ExtensionLabel extension={extension} kind="author" />
             <ExtensionLabel extension={extension} kind="scope" />
           </HStack>
         </Stack>
@@ -59,9 +58,9 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
         <Text textStyle="label/S/medium">Installation</Text>
         <Stack gap="sm">
           <Text textStyle="label/XS/medium" color="fg.subtle">
-            Visibility
+            Author
           </Text>
-          <ExtensionLabel extension={extension} kind="visibility" />
+          <ExtensionLabel extension={extension} kind="author" />
         </Stack>
         <Stack gap="sm">
           <Text textStyle="label/XS/medium" color="fg.subtle">

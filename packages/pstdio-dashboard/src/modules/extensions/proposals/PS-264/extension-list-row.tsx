@@ -12,10 +12,9 @@ interface ExtensionListRowProps {
   onToggle: (enabled: boolean) => void;
 }
 
-// Proposal copy: retain the installed row's identity and toggle; separate visibility from scope.
+// Proposal copy: retain the installed row's identity and toggle; separate author from scope.
 export const ExtensionListRow = (props: ExtensionListRowProps) => {
   const { extension, onOpen, onToggle } = props;
-  const healthExtension = { ...extension, visibility: undefined };
   return (
     <Flex
       gap="md"
@@ -27,7 +26,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
       wrap={{ base: "wrap", md: "nowrap" }}
       _hover={{ bg: "bg.subtle" }}
       data-testid="extension-preview-row"
-      data-visibility={extension.visibility}
+      data-author={extension.author}
       data-scope={extension.scope}
       data-enabled={extension.enabled}
     >
@@ -53,7 +52,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
               </Text>
             </Button>
             <ExtensionIdentity value={`v${extension.version}`} />
-            <ExtensionHealthPopover extension={healthExtension} diagnostics={extension.diagnostics} />
+            <ExtensionHealthPopover extension={extension} diagnostics={extension.diagnostics} />
           </HStack>
           <Text textStyle="label/XS" color="fg.muted" truncate>
             {extension.description}
@@ -68,7 +67,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         align="center"
       >
         <Box w="28">
-          <ExtensionLabel extension={extension} kind="visibility" />
+          <ExtensionLabel extension={extension} kind="author" />
         </Box>
         <Box w="28">
           <ExtensionLabel extension={extension} kind="scope" />

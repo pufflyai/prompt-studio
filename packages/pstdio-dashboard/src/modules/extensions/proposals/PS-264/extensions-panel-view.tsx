@@ -3,7 +3,7 @@ import { Search } from "lucide-react";
 import { useState } from "react";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
 import { ExtensionDetail } from "./extension-detail";
-import { installedExtensions, type ScopeFilter, type VisibilityFilter } from "./extension-fixtures";
+import { type AuthorFilter, installedExtensions, type ScopeFilter } from "./extension-fixtures";
 import { ExtensionFilter } from "./extension-labels";
 import { ExtensionListRow } from "./extension-list-row";
 
@@ -11,7 +11,7 @@ import { ExtensionListRow } from "./extension-list-row";
 export const ExtensionsPanelView = () => {
   const [extensions, setExtensions] = useState(installedExtensions);
   const [search, setSearch] = useState("");
-  const [visibility, setVisibility] = useState<VisibilityFilter>("all");
+  const [author, setAuthor] = useState<AuthorFilter>("all");
   const [scope, setScope] = useState<ScopeFilter>("all");
   const [selectedId, setSelectedId] = useState<string>();
   const selected = extensions.find((extension) => extension.id === selectedId);
@@ -21,14 +21,14 @@ export const ExtensionsPanelView = () => {
       value.toLowerCase().includes(query),
     ),
   );
-  const matchesVisibility = searched.filter((extension) => visibility === "all" || extension.visibility === visibility);
+  const matchesAuthor = searched.filter((extension) => author === "all" || extension.author === author);
   const matchesScope = searched.filter((extension) => scope === "all" || extension.scope === scope);
-  const visible = matchesVisibility.filter((extension) => scope === "all" || extension.scope === scope);
+  const visible = matchesAuthor.filter((extension) => scope === "all" || extension.scope === scope);
   const groups = [
     { title: "Enabled", extensions: visible.filter((extension) => extension.enabled) },
     { title: "Installed", extensions: visible.filter((extension) => !extension.enabled) },
   ];
-  const filtered = visibility !== "all" || scope !== "all" || Boolean(query);
+  const filtered = author !== "all" || scope !== "all" || Boolean(query);
   const toggle = (id: string, enabled: boolean) => {
     setExtensions((current) =>
       current.map((extension) => {
@@ -40,7 +40,7 @@ export const ExtensionsPanelView = () => {
     );
   };
   const clearFilters = () => {
-    setVisibility("all");
+    setAuthor("all");
     setScope("all");
     setSearch("");
   };
@@ -57,7 +57,7 @@ export const ExtensionsPanelView = () => {
 
   return (
     <PageContentLayout
-      testId="extension-visibility-preview"
+      testId="extension-author-preview"
       header={
         <Stack bg="bg" gap="0">
           <Stack padding="lg" gap="md" borderBottomWidth="1px" borderColor="border.subtle">
@@ -75,37 +75,37 @@ export const ExtensionsPanelView = () => {
             </HStack>
             <HStack gap="sm" flexWrap="wrap">
               <ExtensionFilter
-                label="Visibility"
-                value={visibility}
+                label="Author"
+                value={author}
                 options={[
-                  { value: "all", label: "All visibility", count: matchesScope.length },
+                  { value: "all", label: "All authors", count: matchesScope.length },
                   {
-                    value: "public",
-                    label: "Public",
-                    count: matchesScope.filter((extension) => extension.visibility === "public").length,
+                    value: "me",
+                    label: "Me",
+                    count: matchesScope.filter((extension) => extension.author === "me").length,
                   },
                   {
-                    value: "private",
-                    label: "Private",
-                    count: matchesScope.filter((extension) => extension.visibility === "private").length,
+                    value: "prompt-studio",
+                    label: "Prompt Studio",
+                    count: matchesScope.filter((extension) => extension.author === "prompt-studio").length,
                   },
                 ]}
-                onChange={(value) => setVisibility(value as VisibilityFilter)}
+                onChange={(value) => setAuthor(value as AuthorFilter)}
               />
               <ExtensionFilter
                 label="Scope"
                 value={scope}
                 options={[
-                  { value: "all", label: "All scopes", count: matchesVisibility.length },
+                  { value: "all", label: "All scopes", count: matchesAuthor.length },
                   {
                     value: "repo",
                     label: "This Project",
-                    count: matchesVisibility.filter((extension) => extension.scope === "repo").length,
+                    count: matchesAuthor.filter((extension) => extension.scope === "repo").length,
                   },
                   {
                     value: "global",
                     label: "All Projects",
-                    count: matchesVisibility.filter((extension) => extension.scope === "global").length,
+                    count: matchesAuthor.filter((extension) => extension.scope === "global").length,
                   },
                 ]}
                 onChange={(value) => setScope(value as ScopeFilter)}
@@ -123,7 +123,7 @@ export const ExtensionsPanelView = () => {
             </Text>
             <HStack display={{ base: "none", md: "flex" }} gap="md" color="fg.subtle">
               <Text textStyle="label/XS/medium" w="28">
-                Visibility
+                Author
               </Text>
               <Text textStyle="label/XS/medium" w="28">
                 Scope
