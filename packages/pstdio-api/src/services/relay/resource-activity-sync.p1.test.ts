@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createResourceActivityApi } from "../../features/activity/resource-activity-api";
 import { activityStorageOwner } from "../../features/activity/resource-activity-store";
+import { seenOwnerId, seenStoreFor } from "../../features/activity/resource-seen";
 import { documentPeer } from "../../features/extensions/publication/document-peer.fixture";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createExtensionDocumentSync } from "./documents";
@@ -100,4 +101,41 @@ test("Activity and content-addressed evidence converge between devices without a
     expect(new TextDecoder().decode((await api.readAttachment(ref, first.id)).data)).toBe("First verified log");
     expect(new TextDecoder().decode((await api.readAttachment(ref, second.id)).data)).toBe("Other verified log");
   }
+});
+
+test("offline first views merge by maximum revision in the reader's personal space", async () => {
+  const projectId = crypto.randomUUID();
+  await Promise.all(apps.map((app) => app.deps.projectService.create({ id: projectId, name: "Personal baselines" })));
+  const login = { managerOrigin: peer.origin, accountId: "alice" };
+  const principal = seenOwnerId(login);
+  const resource = { extensionId: "example.publisher", type: "edition", projectId, id: "one" };
+  const head = (revision: string) => ({ resource, stamp: { lineage: "original", revision }, provider: "publisher" });
+  const stores = await Promise.all(apps.map((app) => seenStoreFor(app.deps, projectId, principal)));
+  const devices = await Promise.all(apps.map((app) => app.deps.environmentService.get()));
+  expect(devices[0]!.environmentId).not.toBe(devices[1]!.environmentId);
+  const privateSyncs = apps.map((app, i) =>
+    createExtensionDocumentSync({
+      owner: { workbenchId: projectId, extensionId: principal },
+      privateSpace: true,
+      deps: app.deps,
+      config: {
+        ...login,
+        workbenchId: projectId,
+        environmentId: devices[i]!.environmentId,
+        relayOrigin: peer.origin,
+        renewalGrant: "grant",
+      },
+      access: async () => ({ token: "device", expiresAt: new Date(Date.now() + 60000).toISOString() }),
+    }),
+  );
+  syncs.push(...privateSyncs);
+  await stores[0]!.acknowledge(head("1"), "publisher");
+  await stores[1]!.acknowledge(head("2"), "publisher");
+  expect((await stores[0]!.query([head("2")]))[0]?.changedSinceSeen).toBe(true);
+  for (const index of [0, 1, 0]) await privateSyncs[index]!.synchronize(controller.signal);
+  for (const store of stores) {
+    expect((await store.query([head("2"), head("3")])).map((x) => x.changedSinceSeen)).toEqual([false, true]);
+  }
+  const other = await seenStoreFor(apps[0]!.deps, projectId, seenOwnerId({ ...login, accountId: "bob" }));
+  expect((await other.query([head("3")]))[0]?.changedSinceSeen).toBe(false);
 });

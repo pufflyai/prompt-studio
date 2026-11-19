@@ -22,12 +22,17 @@ describe("buildWorkbenchBreadcrumbItems", () => {
   });
 });
 
-test("shows the saved session's changing status in the page breadcrumb", async () => {
+test("shows the resource owner's changing icon in the page breadcrumb", async () => {
   const workbench = createWorkbench();
   const page = { kind: "page" as const, extensionId: "test", id: "conversation" };
-  const resource = { type: "session", id: "session-1", label: "Investigate logs", icon: "message-circle" };
-  const listeners = new Set<() => void>();
-  let indicator = { icon: "loader-circle", color: "fg.info", label: "Session status: in_progress" };
+  const resource = {
+    type: "publication",
+    id: "draft-1",
+    label: "Release notes",
+    icon: "file-pen",
+    iconColor: "fg.info",
+    iconLabel: "Draft publication",
+  };
   workbench.modes.registerMode({ id: "project", activate() {} });
   workbench.views.registerView({ id: page.id, title: "Conversation", body: { kind: "react", render: () => null } });
   workbench.pages.registerPage({
@@ -46,19 +51,12 @@ test("shows the saved session's changing status in the page breadcrumb", async (
     path: "conversation",
     modeId: "project",
     parentId: "sessions",
-    resource: { kinds: [{ kind: "resource-kind", id: "session" }] },
+    resource: { kinds: [{ kind: "resource-kind", id: "publication" }] },
     main: {
       kind: "view",
       presentation: "page",
       cardinality: "one",
       view: { kind: "view", id: page.id },
-      tab: {
-        getSnapshot: () => ({ indicator }),
-        subscribe: (listener) => {
-          listeners.add(listener);
-          return () => listeners.delete(listener);
-        },
-      },
     },
     slots: [],
   });
@@ -78,13 +76,17 @@ test("shows the saved session's changing status in the page breadcrumb", async (
         </WorkbenchThemeProvider>,
       );
     });
-    expect(statusLabel()).toEqual(["Session status: in_progress"]);
+    expect(statusLabel()).toEqual(["Draft publication"]);
 
     await act(async () => {
-      indicator = { icon: "circle-check", color: "fg.success", label: "Session status: completed" };
-      for (const listener of listeners) listener();
+      workbench.pages.refreshResource({
+        ...resource,
+        icon: "book-open",
+        iconColor: "fg.success",
+        iconLabel: "Published",
+      });
     });
-    expect(statusLabel()).toEqual(["Session status: completed"]);
+    expect(statusLabel()).toEqual(["Published"]);
   } finally {
     await act(async () => renderer?.unmount());
     await workbench.dispose();

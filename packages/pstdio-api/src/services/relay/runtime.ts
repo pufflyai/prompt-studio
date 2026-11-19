@@ -1,6 +1,6 @@
-import { createLiveConnection, createRelayAccess, type LiveConnection } from "pstdio-sync/relay";
-import { canonicalJson } from "pstdio-sync-contracts";
+import type { LiveConnection } from "pstdio-sync/relay";
 import { resourceActivityOwnerId } from "../../features/activity/resource-activity-store";
+import { seenOwnerId } from "../../features/activity/resource-seen";
 import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
 import { apiLogger } from "../../lib/logger";
 import { AccountRequestError } from "../account/native-account";
@@ -19,6 +19,7 @@ import { createProjectSyncRetry } from "./project-sync-retry";
 import { startPublishedExtensions } from "./publications";
 import { createStorageChangeAnnouncer } from "./storage-changes";
 import { createWorkbenchConnections } from "./workbench-connections";
+import { type createWorkbenchAccess, createWorkbenchUpdates, drainOwnerStarts } from "./workbench-updates";
 
 export type RelayWorkbench = {
   accountId: string;
@@ -59,30 +60,6 @@ const projectEntryPoints = (
   commands: Parameters<typeof createDeviceCommandCaller>[0],
   folders: (workbenchId: string) => ReturnType<typeof startFolderRecovery> | undefined,
 ) => ({ call: createDeviceCommandCaller(commands), folders });
-
-// Drain every start before another refresh can admit owners from a newer snapshot.
-const drainOwnerStarts = async (starts: Promise<void>[]) => {
-  const results = await Promise.allSettled(starts);
-  for (const result of results) if (result.status === "rejected") throw result.reason;
-};
-
-const createWorkbenchAccess = (input: RelayWorkbench, runtime: AbortSignal, denied?: () => void) => {
-  const owner = new AbortController();
-  const signal = AbortSignal.any([runtime, owner.signal]);
-  return Object.assign(createRelayAccess({ ...input, signal, denied }), { close: () => owner.abort() });
-};
-
-const closeWorkbenchOwners = (
-  id: string,
-  owners: { remove(id: string): Promise<void> }[],
-  live: Map<string, LiveConnection>,
-) => {
-  const pending = owners.map((owner) => owner.remove(id));
-  const channel = live.get(id);
-  channel?.close();
-  live.delete(id);
-  return drainOwnerStarts([...pending, Promise.resolve(channel?.done).then(() => {})]);
-};
 
 type ExtensionConnection = Awaited<ReturnType<typeof startRelayExtension>>;
 
@@ -133,6 +110,29 @@ const createWorkbenchStatus =
     );
   };
 
+const privateChangesHandled = (
+  config: RelayWorkbench,
+  extensionId: string,
+  origin: string | undefined,
+  deps: RelayDeps,
+) => {
+  if (extensionId !== seenOwnerId(config)) return false;
+  if (origin === "relay")
+    deps.eventBus.emit("extension_events", "set", {
+      id: crypto.randomUUID(),
+      projectId: config.workbenchId,
+      eventId: "pstdio.event.resource-seen-changed",
+    });
+  return true;
+};
+
+const createSeenConnections = (
+  core: (config: RelayWorkbench) => Omit<Parameters<typeof startCoreRecordSync>[0], "ownerId">,
+) =>
+  createWorkbenchConnections((config) =>
+    startCoreRecordSync({ ...core(config), ownerId: seenOwnerId(config), privateSpace: true }),
+  );
+
 export const startRelayRuntime = async (input: RelayRuntimeInput) => {
   const workbenches = new Map<string, RelayWorkbench>();
   const access = new Map<string, ReturnType<typeof createWorkbenchAccess>>();
@@ -153,9 +153,10 @@ export const startRelayRuntime = async (input: RelayRuntimeInput) => {
   const activity = createWorkbenchConnections((config) =>
     startCoreRecordSync({ ...core(config), ownerId: resourceActivityOwnerId }),
   );
+  const seen = createSeenConnections(core);
   const personal = createWorkbenchConnections((config) => startRelayPersonalHistory(core(config)));
   const coreDocuments = createWorkbenchConnections((config) => startCoreDocumentSync(core(config)));
-  const coreOwners = [coreDocuments, publications, automations, activity, personal];
+  const coreOwners = [coreDocuments, publications, automations, activity, seen, personal];
   const commands = createWorkbenchConnections((config) => startDeviceCommands(core(config)));
   const recovery = createWorkbenchConnections((config) => startFolderRecovery(core(config)));
   const lifecycleOwners = [...coreOwners, commands, recovery];
@@ -243,7 +244,9 @@ export const startRelayRuntime = async (input: RelayRuntimeInput) => {
   };
   const stopStorage = deps.extensionStorageService.watch((owner, origin) => {
     const documentId = owner.documentId;
-    if (!workbenches.has(owner.workbenchId) || isRecoveryCatalogOwner(owner.extensionId)) return;
+    const config = workbenches.get(owner.workbenchId);
+    if (!config || isRecoveryCatalogOwner(owner.extensionId)) return;
+    if (privateChangesHandled(config, owner.extensionId, origin, deps)) return;
     if (owner.extensionId === publishedExtensionsId) {
       publications.get(owner.workbenchId)?.wake();
       statusChanged(owner.workbenchId);
@@ -263,66 +266,31 @@ export const startRelayRuntime = async (input: RelayRuntimeInput) => {
   const stopCatalog = deps.extensionRuntimeCatalog.subscribeInvalidation(() => void refresh());
   const stopNativeSources = watchNativeSources(deps, connections);
   const stopEvents = watchRuntimeChanges(deps, refresh);
-  // Replaces the synced workbenches. Only workbenches whose login changed restart their connections.
-  const update = async (next: RelayWorkbench[]) => {
-    await deps.personalHistoryService.refreshIdentity();
-    const desired = new Map(
-      next
-        .filter((connection) => !deps.projectService.work.hidden(connection.workbenchId))
-        .map((connection) => [connection.workbenchId, connection]),
-    );
-    const changed = new Set(
-      [...workbenches]
-        .filter(([id, current]) => canonicalJson(desired.get(id) ?? null) !== canonicalJson(current))
-        .map(([id]) => id),
-    );
-    // Events emitted while owners drain must not recreate them on the old shared connection.
-    for (const id of changed) {
-      workbenches.delete(id);
-      access.get(id)?.close();
-      access.delete(id);
-    }
-    const obsolete = [...connections].filter(([, active]) => changed.has(active.owner.workbenchId));
-    await drainOwnerStarts([
-      ...[...changed].map((id) => closeWorkbenchOwners(id, lifecycleOwners, live)),
-      ...obsolete.map(([key, active]) => stopConnection(key, active)),
-    ]);
-    for (const [id, connection] of desired)
-      if (!workbenches.has(id)) {
-        workbenches.set(id, connection);
-        access.set(id, createWorkbenchAccess(connection, controller.signal, input.denied));
-        const channel = createLiveConnection({
-          origin: connection.relayOrigin,
-          projectId: id,
-          access: access.get(id)!,
-          signal: controller.signal,
-          onStatusChange: () => statusChanged(id),
-        });
-        channel.discover(connection.accountId);
-        live.set(id, channel);
-      }
-    for (const id of changed) statusChanged(id);
-    await refresh();
-  };
-  let updates = Promise.resolve();
-  const queueUpdate = (connections: () => RelayWorkbench[]) => {
-    const pending = updates.then(() => update(connections()));
-    updates = pending.catch(() => {});
-    return pending;
-  };
+  const updates = createWorkbenchUpdates({
+    deps,
+    workbenches,
+    access,
+    live,
+    connections,
+    lifecycleOwners,
+    stopConnection,
+    signal: controller.signal,
+    statusChanged,
+    refresh,
+    denied: input.denied,
+  });
   await refresh();
   return {
     ...projectEntryPoints(commands.get, recovery.get),
     retry: createProjectSyncRetry({
       refresh,
-      owners: { core: coreDocuments, publications, automations, activity, personal },
+      owners: { core: coreDocuments, publications, automations, activity, seen, personal },
       folders: recovery,
       extensions: connections,
     }),
     status: createWorkbenchStatus({ deps, live, coreOwners, connections, recovery }),
-    update: (next: RelayWorkbench[]) => queueUpdate(() => next),
-    withdraw: (id: string) =>
-      queueUpdate(() => [...workbenches.values()].filter(({ workbenchId }) => workbenchId !== id)),
+    update: updates.update,
+    withdraw: updates.withdraw,
     async close() {
       stopStorage();
       stopCatalog();
@@ -333,7 +301,7 @@ export const startRelayRuntime = async (input: RelayRuntimeInput) => {
       controller.abort();
       for (const owners of lifecycleOwners) owners.close();
       for (const connection of connections.values()) connection.close();
-      await Promise.all([running, updates]);
+      await Promise.all([running, updates.done()]);
       for (const owners of lifecycleOwners) await owners.done();
       await Promise.all([...connections.values()].map((connection) => connection.done));
       await Promise.all([...live.values()].map((channel) => channel.done));

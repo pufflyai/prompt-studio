@@ -107,6 +107,7 @@ export const createAppAccount = (
             },
             drain: async (id) => {
               await recovery.suspend(id);
+              await app.deps.automationService.cancelProjectRuns(id);
               await projects.work.drain(id);
             },
             detach: (id) => relay.withdraw(id),

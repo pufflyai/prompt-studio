@@ -12,6 +12,7 @@ const requestUpgrade = async (input: {
   changed?: boolean;
   replacedDuringUpgrade?: boolean;
   sourceKind?: "git" | "registry";
+  workspaceGate?: Promise<void>;
 }) => {
   let provisions = 0;
   let reads = 0;
@@ -78,6 +79,7 @@ const requestUpgrade = async (input: {
       workspaceService: {
         list: async () => {
           provisions++;
+          await input.workspaceGate;
           return [];
         },
       },
@@ -114,4 +116,15 @@ test("repairs skills when the previous source could not be read or was enabled d
 test("acknowledges the installed Git release immediately and checks availability for a concurrent replacement", async () => {
   await requestUpgrade({ sourceKind: "git" });
   await requestUpgrade({ sourceKind: "git", replacedDuringUpgrade: true });
+});
+
+test("returns the installed version while workspace provisioning is still in progress", async () => {
+  const gate = Promise.withResolvers<void>();
+  const upgrade = requestUpgrade({ before: "skills", workspaceGate: gate.promise });
+  try {
+    expect(await Promise.race([upgrade, Bun.sleep(400).then(() => "still waiting")])).toBe(1);
+  } finally {
+    gate.resolve();
+    await upgrade;
+  }
 });

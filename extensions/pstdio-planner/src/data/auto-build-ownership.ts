@@ -8,25 +8,25 @@ import type { ReviewRequest, ReviewRequestView } from "./review-request-types";
 export async function readAutoBuildOwnership(ctx: Pick<ExtensionContextBase, "storage">, supervisorId?: string) {
   const sessionIds = new Set(supervisorId ? [supervisorId] : []);
   const dispatches = supervisorId ? await autoBuildDispatches(ctx, supervisorId).list() : [];
-  const workspaceIds = new Set(dispatches.map(({ workspaceId }) => workspaceId));
-  for (const workspaceId of workspaceIds) {
-    const attempt = await readAttempt(ctx.storage, workspaceId);
+  const attemptIds = new Set(dispatches.map(({ attemptId, workspaceId }) => attemptId ?? workspaceId));
+  for (const id of attemptIds) {
+    const attempt = await readAttempt(ctx.storage, id);
     if (!attempt) continue;
     sessionIds.add(attempt.implementationSessionId);
     const reviews = attempt.revisions.flatMap((revision) => revision.reviews);
     for (const review of reviews) if (review.sessionId) sessionIds.add(review.sessionId);
   }
-  if (workspaceIds.size) {
+  if (attemptIds.size) {
     for (const event of await attemptEventsCollection(ctx.storage).list()) {
-      if (workspaceIds.has(event.workspaceId) && event.sessionId) sessionIds.add(event.sessionId);
+      if (attemptIds.has(event.attemptId ?? event.workspaceId) && event.sessionId) sessionIds.add(event.sessionId);
     }
   }
-  return { sessionIds, workspaceIds };
+  return { sessionIds, attemptIds };
 }
 
 export function linkedAutoBuildRequests<T extends ReviewRequest>(
   requests: T[],
-  ownership: { sessionIds: ReadonlySet<string>; workspaceIds: ReadonlySet<string> },
+  ownership: { sessionIds: ReadonlySet<string>; attemptIds: ReadonlySet<string> },
 ) {
   const sessions = new Set(ownership.sessionIds);
   const linked = new Map<string, T>();
@@ -38,7 +38,7 @@ export function linkedAutoBuildRequests<T extends ReviewRequest>(
       if (
         linked.has(request.id) ||
         !(
-          ownership.workspaceIds.has(context.workspaceId ?? "") ||
+          ownership.attemptIds.has(context.attemptId ?? context.workspaceId ?? "") ||
           sessions.has(context.relatedSessionId ?? "") ||
           sessions.has(context.sessionId ?? "")
         )

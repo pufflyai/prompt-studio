@@ -88,7 +88,7 @@ export const finalizeDeviceLogin = async (
   signal.throwIfAborted();
   await input.store.save({ managerOrigin: origin, ...login, email: user.email });
   if (signal.aborted) {
-    await input.store.forget(login.token);
+    await input.store.forget(login.token, { managerOrigin: origin, ...login, email: user.email });
     signal.throwIfAborted();
   }
   // Discovery starts after credential persistence so it cannot delay successful sign-in.

@@ -1,7 +1,17 @@
 import { basename, dirname, join, resolve } from "node:path";
 import type { ProjectExtensionInstance } from "pstdio-api-contracts";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import { getExtensionApiVersionError, readExtensionIcon } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
+import { packagedExtensionCatalog } from "./extension-catalog";
+
+const publicExtensionIds = new Set(
+  packagedExtensionCatalog.extensions.flatMap((entry) =>
+    entry.extensionId ? [canonicalExtensionId(entry.extensionId)] : [],
+  ),
+);
+export const publicExtensionVisibility = (extensionId: string | undefined) =>
+  extensionId && publicExtensionIds.has(canonicalExtensionId(extensionId)) ? ("public" as const) : ("unknown" as const);
 
 type InstanceLike = {
   id: string;
@@ -97,6 +107,8 @@ export const toProjectExtensionInstance = (
     icon: instanceIcon(installedSource, manifest.icon),
     sourcePath: installedSource.source_path,
     scope: sourceScope(installedSource.source_path),
+    ownership: installedSource.source_kind === "local_path" ? "mine" : "unknown",
+    visibility: publicExtensionVisibility(installedSource.extension_id),
     status: incompatible ? "error" : installedSource.status,
     lastLoadedAt: installedSource.last_loaded_at,
     lastError: incompatible ?? ((installedSource.last_error_json ?? null) as Record<string, unknown> | null),

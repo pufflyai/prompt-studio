@@ -3,7 +3,11 @@ import { removeWorkspaceConfig } from "../workspaces/workspace-config";
 import { cleanupProviderBackedWorkspace } from "../workspaces/workspace-provider-lifecycle";
 import { rootProviderId } from "../workspaces/workspace-provider-service";
 import type { ProjectsRouteDeps } from "./deps";
-import { inspectManagedProjectFolder, removeManagedProjectFolder } from "./managed-project-folder";
+import {
+  assertManagedFolderCleanupReady,
+  inspectManagedProjectFolder,
+  removeManagedProjectFolder,
+} from "./managed-project-folder";
 import { withFolderCreation } from "./project-folder";
 
 export const cleanupProjectArtifacts = async (
@@ -53,6 +57,7 @@ export const evictProjectCopy = (
     const home = await deps.workspaceService.getDefault(id);
     return withFolderCreation(home?.root_path ?? null, () =>
       removeProjectAfterProvisioning(deps, id, async () => {
+        await assertManagedFolderCleanupReady(id, home?.root_path);
         await deps.projectService.work.readDuringCleanup(id, () =>
           cleanupProjectArtifacts(deps, id, {
             removeProjectStorage: async () => {

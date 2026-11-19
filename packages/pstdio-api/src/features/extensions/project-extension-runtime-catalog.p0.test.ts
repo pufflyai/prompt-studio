@@ -302,3 +302,24 @@ test("activates a project once even when its runtime is refreshed", async () => 
   await catalog.activate("two");
   expect(activated).toEqual(["one", "two"]);
 });
+
+test("a cold source can prepare while another source in the same project is waiting", async () => {
+  const sources = [sourceRow(makeSourceDir()), sourceRow(makeSourceDir(), "2")];
+  const release = Promise.withResolvers<void>();
+  const bothStarted = Promise.withResolvers<void>();
+  let starts = 0;
+  const harness = createHarness({
+    sourcesByProject: () => sources,
+    loadGate: () => {
+      if (++starts === 2) bothStarted.resolve();
+      return release.promise;
+    },
+  });
+  const snapshot = harness.catalog.get("p1");
+  try {
+    expect(await Promise.race([bothStarted.promise.then(() => true), Bun.sleep(1500).then(() => false)])).toBe(true);
+  } finally {
+    release.resolve();
+    await snapshot;
+  }
+});

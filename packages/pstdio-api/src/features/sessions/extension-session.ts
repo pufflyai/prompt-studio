@@ -9,6 +9,7 @@ export const toExtensionSession = (session: SessionRow, workspaceId: string | nu
   title: session.title,
   status: session.status,
   archived: session.archived,
+  changePositions: session.change_positions ?? {},
   agent: session.agent,
   lastSelectedModel: session.last_selected_model,
   workspaceId,

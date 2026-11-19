@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
+import { analyzeRecordProjection } from "../../db/record-projection-statistics";
 
 /**
  * PGlite runs no autovacuum, so storage keeps planner statistics for its query projection.
@@ -8,7 +9,7 @@ import type { DbClient } from "../../db/connection.pglite";
  * PGlite reports pg_stat change counters late, so writers count their own projected rows.
  */
 export const createProjectionStatistics = (
-  db: Pick<DbClient, "execute">,
+  db: Pick<DbClient, "execute" | "transaction">,
   table: "storage_current_records" | "storage_log_entries" = "storage_current_records",
 ) => {
   let changed = 0;
@@ -22,7 +23,11 @@ export const createProjectionStatistics = (
   const run = async () => {
     while (await stale()) {
       changed = 0;
-      await db.execute(sql`ANALYZE ${sql.identifier(table)}`);
+      if (table === "storage_current_records") {
+        await db.transaction((tx) => analyzeRecordProjection((statement) => tx.execute(sql.raw(statement))));
+      } else {
+        await db.execute(sql`ANALYZE ${sql.identifier(table)}`);
+      }
     }
   };
   return {

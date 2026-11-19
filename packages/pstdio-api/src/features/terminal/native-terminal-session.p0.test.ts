@@ -3,7 +3,7 @@ import { writeFile } from "node:fs/promises";
 import type { TerminalSessionRequest } from "pstdio-api-contracts";
 import { acceptPreparedRevision, prepareExtensionRevision } from "pstdio-extensions";
 import { createWorkspaceContextFixture } from "../extensions/workspace-context.test-fixture";
-import { openNativeTerminalSession } from "./native-terminal-session";
+import { nativeTerminalAttachmentKey, openNativeTerminalSession } from "./native-terminal-session";
 
 let fixture: Awaited<ReturnType<typeof createWorkspaceContextFixture>>;
 let requests: TerminalSessionRequest[];
@@ -67,6 +67,28 @@ test("native views reject a resource from another project before invoking it", a
   expect(fixture.values.has("native-launch-called")).toBe(false);
 });
 
+test("foreground titles preserve a terminal attachment while workspace changes use another attachment", async () => {
+  const resource = {
+    type: "terminal",
+    id: "one",
+    projectId: "project-1",
+    label: "Terminal 1",
+    metadata: { workspaceId: "root" },
+  };
+  const signal = new AbortController().signal;
+  const original = await nativeTerminalAttachmentKey(fixture.deps, { ...binding, resource }, signal);
+  expect(
+    await nativeTerminalAttachmentKey(fixture.deps, { ...binding, resource: { ...resource, label: "vim" } }, signal),
+  ).toBe(original);
+  expect(
+    await nativeTerminalAttachmentKey(
+      fixture.deps,
+      { ...binding, resource: { ...resource, metadata: { workspaceId: "other" } } },
+      signal,
+    ),
+  ).not.toBe(original);
+});
+
 test("only a terminal view in the enabled project runtime can open a native PTY", async () => {
   await expect(
     openNativeTerminalSession(
@@ -111,6 +133,20 @@ test("closing the view releases the PTY and removing its installed owner release
   expect(kills).toBe(2);
   await second.kill();
   expect(kills).toBe(2);
+});
+
+test("removing the device copy closes a retained native terminal and refuses reattachment", async () => {
+  const session = await openNativeTerminalSession(fixture.deps, binding, new AbortController().signal);
+  const work = fixture.deps.projectService.work;
+  work.suspend(binding.projectId);
+  await work.drain(binding.projectId);
+  await work.closeResources(binding.projectId);
+  expect(kills).toBe(1);
+  await expect(nativeTerminalAttachmentKey(fixture.deps, binding, new AbortController().signal)).rejects.toThrow(
+    "removing",
+  );
+  await session.kill();
+  expect(kills).toBe(1);
 });
 
 test("reloading another contribution retains the enabled terminal owner", async () => {

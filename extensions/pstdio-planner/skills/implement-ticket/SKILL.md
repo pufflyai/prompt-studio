@@ -2,7 +2,7 @@
 name: implement-ticket
 description: "Implement a ticket end-to-end. Use when asked to implement or complete a ticket."
 metadata:
-  version: 0.0.23
+  version: 0.0.24
 ---
 
 Implement Planner tickets in a Prompt Studio workspace. Produce a committed revision and an implementation Activity entry, then follow the configured review and pull request steps.
@@ -10,6 +10,8 @@ Implement Planner tickets in a Prompt Studio workspace. Produce a committed revi
 Own your assigned work through repairs, validation, PR updates, CI and ticket status. Send updates only when work is complete or a roadblock needs to be escalated to the user. Keep interim details in the ticket or report instead of sending routine progress messages, acknowledgements or repeated status requests to other agents.
 
 ## Workspace
+
+When Planner starts an attempt directly in a project folder without a Git base, reuse that execution workspace and conversation. The attempt has its own ID: read its history with `pst pstdio.planner read-attempt-history --attempt-id <attempt-id>`. Keep ticket progress and validation evidence in Planner Activity. Git workspace creation, stack updates, commit-based revision submission, PRs and merges do not apply to that attempt. Do not initialize Git to satisfy those steps. Human requests for that attempt use `--attempt-id <attempt-id>` and its owner session ID.
 
 Always work in a Prompt Studio workspace. Never use `git worktree add` or your agent's own worktree tool. Prompt Studio does not track those, so the ticket, reports, reviews and merges cannot find the work.
 
@@ -40,6 +42,8 @@ Before editing a managed attempt (see [Dependencies](https://prompt.studio/docs/
 Dependency integration is part of implementing this ticket. This assignment authorizes stack updates in your assigned workspace; run them without asking for another confirmation. It does not approve another ticket, merge into the project target, or complete a ticket. Do not recreate prerequisite code, create a replacement attempt, or use a completed status to bypass missing code. Reconcile Git conflicts yourself in this workspace: inspect both revisions, preserve their required behavior and your ticket's changes, resolve the files, commit the merge, and retry `update-stack`. Run the affected tests before submitting. Do not request review or confirmation merely because Git reports conflicts. Ask only when features, concepts, requirements, plans, or architecture conflict and the existing instructions cannot decide the intended behavior. Explain that semantic conflict and the exact choice needed; a conflicting file alone is not a decision.
 
 ## Workflow
+
+For Prompt Studio changes, check the extension-level solution before writing code, especially when the ticket does not specify how to fix the problem. Prefer the owning extension's commands, public APIs and storage. Core changes should be rare and provide a general workbench capability; explain what capability is missing before changing core. Keep extension workflow identity separate from the host resources it uses. For example, non-Git Planner attempts can reference the existing project workspace; they must not require weakening core workspace uniqueness because Planner used workspace IDs as attempt IDs.
 
 1. Identify the ticket. Pass its shorthand, such as `PS-12`, to `--id`. If it is missing or ambiguous, ask the user to confirm it.
    - For "implement the next ticket", list tickets in the project's ready status with `pst pstdio.planner list-tickets --status <ready-status>`. Use `pst pstdio.planner ticket-status read` and the workflow selections in `implementation-policy` to discover current status IDs and labels.

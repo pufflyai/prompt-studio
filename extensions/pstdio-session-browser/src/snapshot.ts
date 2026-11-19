@@ -1,4 +1,5 @@
 import type { ChatRendererSnapshot, ControlValueMap, ExtensionContextBase, ResourceRef } from "@pstdio/sdk/extensions";
+import { renderedObservation } from "./changes";
 import { composerControls, conversationOperations } from "./controls";
 import { conversationState } from "./conversation-state";
 import { draftSnapshot } from "./draft-snapshot";
@@ -97,7 +98,11 @@ export const readSessionSnapshot = async (
   // Queue/device feedback has priority; an explicit empty notice retires earlier native failures.
   snapshot.notice = notice || nativeNotice;
   if (!queued.error) snapshot.queuedFollowUps = display.queuedFollowUps;
-  if (options.messages !== false) snapshot.messages = display.messages;
+  if (options.messages !== false)
+    Object.assign(snapshot, {
+      messages: display.messages,
+      ...(await renderedObservation(ctx, id, session, display.messages, snapshot.approval?.id)),
+    });
   return {
     snapshot,
     session,

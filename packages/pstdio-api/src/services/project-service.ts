@@ -13,9 +13,14 @@ export type ProjectServiceDeps = {
 export const createProjectService = (deps: ProjectServiceDeps) => {
   const db = deps.projectsDBService;
   const work = deps.work ?? createProjectWork();
+  const initializing = new Map<string, { published: boolean }>();
   const get = async (id: string) => (!work.canRead(id) ? null : db.get(id));
-  const publish = <T extends object | null>(project: T) => {
-    if (project) deps.eventBus.emit("projects", "set", project);
+  const publish = <T extends { id: string } | null>(project: T) => {
+    if (project) {
+      const creation = initializing.get(project.id);
+      if (creation) creation.published = true;
+      deps.eventBus.emit("projects", "set", project);
+    }
     return project;
   };
   const create = async (
@@ -26,14 +31,18 @@ export const createProjectService = (deps: ProjectServiceDeps) => {
     return work.run(id, async (signal) => {
       // Hold explicit identities until initialization has either finished or rolled back.
       const project = await db.create({ ...input, id });
+      const creation = { published: false };
+      initializing.set(project.id, creation);
       try {
         await initialize?.(project);
         signal.throwIfAborted();
+        return publish(project);
       } catch (error) {
-        await db.hardDelete(project.id);
+        await deleteProject(project.id, creation.published);
         throw error;
+      } finally {
+        initializing.delete(project.id);
       }
-      return publish(project);
     });
   };
   const update: typeof db.update = (id, value) => work.run(id, async () => publish(await db.update(id, value)));
@@ -41,7 +50,7 @@ export const createProjectService = (deps: ProjectServiceDeps) => {
     work.run(id, async () => publish(await db.setDefaults(id, value)));
   // Clients drop cascaded rows only after the database has removed them. Rows that point at
   // an extension instance go first, and the project goes last.
-  const deleteProject = async (id: string) => {
+  const deleteProject = async (id: string, publishProject = true) => {
     const cascaded = await deps.syncService.cascadeDeletes("projects", id);
     const removed = await db.hardDelete(id);
     if (!removed) return false;
@@ -49,7 +58,7 @@ export const createProjectService = (deps: ProjectServiceDeps) => {
     for (const row of cascaded) deps.eventBus.emit(row.table, "delete", { id: row.id });
     // Listeners read the instance scope to find the affected project, so send the full row.
     for (const instance of removed.extensionInstances) deps.eventBus.emit("extension_instances", "delete", instance);
-    if (project) deps.eventBus.emit(project.table, "delete", { id: project.id });
+    if (project && publishProject) deps.eventBus.emit(project.table, "delete", { id: project.id });
     return true;
   };
   return {
@@ -59,7 +68,7 @@ export const createProjectService = (deps: ProjectServiceDeps) => {
     create,
     update,
     setDefaults,
-    delete: deleteProject,
+    delete: (id: string) => deleteProject(id),
     work,
   };
 };

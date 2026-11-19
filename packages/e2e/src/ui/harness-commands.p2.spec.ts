@@ -31,8 +31,9 @@ for (const [harness, modes] of [
     }, project.id);
     const resource = encodeURIComponent(`pstdio://extension-resource/session/${session.id}`);
     await page.goto(`/projects/${project.id}/session?resource=${resource}`);
-    const editor = page.locator('[data-testid="content-editable"][contenteditable="true"]').last();
-    const send = page.getByTestId("send-message-button").last();
+    const main = page.locator('[data-workbench-panel="main"]');
+    const editor = main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true });
+    const send = main.getByTestId("send-message-button").filter({ visible: true });
     await editor.fill("Finish the release notes /go");
     const menu = page.getByRole("listbox", { name: "Harness commands" });
     await expect(menu).toBeVisible();
@@ -45,7 +46,7 @@ for (const [harness, modes] of [
     expect((await (await request.get(`${url}/harness-commands`)).json()).modes).toHaveLength(0);
     await send.click();
     await expect(editor).toBeEmpty();
-    const controls = page.getByLabel("Harness controls", { exact: true });
+    const controls = main.getByLabel("Harness controls", { exact: true }).filter({ visible: true });
     const goal = controls.getByRole("button", { name: "Goal details" });
     const expectObjective = async (objective: string) => {
       await expect(goal).toHaveText("Goal");
@@ -95,19 +96,22 @@ for (const [harness, modes] of [
       await expect(controls.getByRole("button", { name: "Plan details" })).toHaveCount(0);
       await page.setViewportSize({ width: 1280, height: 720 });
     } else {
-      await expect(page.getByText("Native action completed")).toBeVisible();
+      await expect(main.getByText("Native action completed", { exact: true }).filter({ visible: true })).toBeVisible();
       await expect(controls.getByRole("button", { name: /Native status is not confirmed/ })).toBeVisible();
       expect((await (await request.get(`${url}/harness-commands`)).json()).modes).toHaveLength(0);
     }
     await editor.fill("/unknown");
     await send.click();
-    const alert = page.getByRole("alert");
+    const alert = main.getByRole("alert");
     await expect(alert.getByText("Unsupported fixture command.", { exact: true })).toBeVisible();
-    await expect(alert.getByRole("button", { name: "Retry", exact: true })).toBeEnabled();
+    await expect(editor).toHaveText("/unknown");
+    await expect(send).toBeEnabled();
+    await alert.getByRole("button", { name: "Dismiss", exact: true }).click();
+    await expect(alert).toBeHidden();
     await expect(editor).toHaveText("/unknown");
     await editor.fill("/fail");
     await send.click();
     await expect(editor).toHaveText("/fail");
-    await expect(page.getByText(/Native command \/fail failed/)).toBeVisible();
+    await expect(main.getByText(/Native command \/fail failed/).filter({ visible: true })).toBeVisible();
   });
 }
