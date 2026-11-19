@@ -62,7 +62,9 @@ const startNewSessionInViewer = async (page: Page, preview: Locator, workspaceNa
     .getByRole("tab", { name: "New session", exact: true });
   await expect(draft).toHaveAttribute("aria-selected", "true");
   await expect(page).toHaveURL(workspaceUrl);
-  await expect(page.locator('[data-workbench-panel="main"]')).toContainText(workspaceName);
+  await expect(
+    page.locator('[data-workbench-panel="main"]').getByRole("button", { name: "Select workspace", exact: true }),
+  ).toHaveText(workspaceName);
   await draft.getByRole("button", { name: "Close New session", exact: true }).click();
   await expect(preview).toBeVisible();
   await preview.focus();
