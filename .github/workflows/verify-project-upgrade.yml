@@ -98,9 +98,45 @@ jobs:
             echo "platforms=$platforms"
           } >> "$GITHUB_OUTPUT"
           echo "Project upgrade $baselines → $to" >> "$GITHUB_STEP_SUMMARY"
-  upgrade:
+  version_manual:
     needs: pair
-    if: needs.pair.outputs.run == 'true'
+    if: inputs.ref == '' && needs.pair.outputs.run == 'true'
+    runs-on: ubuntu-24.04
+    outputs:
+      artifact_id: ${{ steps.source.outputs.artifact-id }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.pair.outputs.to }}
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - run: bun scripts/ci/install-native-dependencies.ts
+      - name: Version one disposable candidate for all platforms
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          PSTDIO_STABLE_TAG=$(gh release view --json tagName --jq .tagName)
+          export PSTDIO_STABLE_TAG
+          bun run --cwd scripts release:version --nightly
+          git add -A
+          git -c user.name=validation -c user.email=validation@localhost commit -m "Version disposable upgrade candidate"
+          git bundle create "$RUNNER_TEMP/candidate.bundle" HEAD ^HEAD^
+      - uses: actions/upload-artifact@v4
+        id: source
+        with:
+          name: manual-upgrade-source-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/candidate.bundle
+  upgrade:
+    needs: [pair, version_manual]
+    if: >-
+      !cancelled() && needs.pair.result == 'success' && needs.pair.outputs.run == 'true' &&
+      (needs.version_manual.result == 'success' || (inputs.ref != '' && needs.version_manual.result == 'skipped'))
     name: Project upgrade (${{ matrix.from }} → ${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -128,6 +164,21 @@ jobs:
         with:
           ref: ${{ needs.pair.outputs.to }}
           path: __test-tmp__/upgrade-candidate
+      - name: Download the shared manual candidate
+        if: inputs.ref == ''
+        uses: actions/download-artifact@v4
+        with:
+          artifact-ids: ${{ needs.version_manual.outputs.artifact_id }}
+          merge-multiple: true
+          path: ${{ runner.temp }}
+      - name: Apply the nightly versions to the frozen main source
+        if: inputs.ref == ''
+        working-directory: __test-tmp__/upgrade-candidate
+        run: |
+          set -euo pipefail
+          git fetch "$RUNNER_TEMP/candidate.bundle" HEAD
+          test "$(git rev-parse FETCH_HEAD^)" = "$CANDIDATE_REF"
+          git checkout --detach FETCH_HEAD
       - name: Use the candidate's recorded Bun version
         uses: oven-sh/setup-bun@v2
         with:

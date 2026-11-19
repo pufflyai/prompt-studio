@@ -173,7 +173,7 @@ If a stable release stops halfway, re-run the `publish` job. It skips the steps 
 
 ## Populated project upgrades
 
-**Verify a populated project upgrade** selects one version pair for Linux x64 and Apple Silicon. A manual run checks out and compiles the exact current `main` commit. It defaults to the current stable release as the source. Supply `from_tag` to start from another published stable release that supports session import. When the source release already includes the current `main` commit, the workflow records that there is no newer commit to test.
+**Verify a populated project upgrade** selects one version pair for Linux x64 and Apple Silicon. A manual run freezes the current `main` commit and runs the nightly versioning script once in a disposable checkout. Both platforms compile that same versioned source. It defaults to the current stable release as the source. Supply `from_tag` to start from another published stable release that supports session import. When the source release already includes the current `main` commit, the workflow records that there is no newer commit to test.
 
 Stable and patch certification use the previous stable release as the source and the exact packaged CLI from the candidate build. Both platform results must pass before publishing. The setup needs a published source release and the target build. Nightly publication uses the same packaged upgrade check against the exact archive selected for publication. It also tests the previous published nightly when one exists.
 
