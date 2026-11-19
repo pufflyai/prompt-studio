@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
 import { createMemoryStorage } from "../testing/memory-storage";
 import { readCollectionPage } from "./collection-page";
+import { collectionViewSelection } from "./collection-view";
+import { collectionDateFields } from "./collection-view-date";
 
 const fixture = async () => {
   const storage = createMemoryStorage();
@@ -177,4 +179,102 @@ test("rebinding an index between counts and rows rejects the mixed selection", a
     return result;
   };
   await expect(readCollectionPage(storage, { index: "items" })).rejects.toThrow("stale");
+});
+
+test("grouped views count the same selection once when no search changes it", async () => {
+  const storage = await fixture();
+  let aggregates = 0;
+  const aggregate = storage.records.aggregate;
+  storage.records.aggregate = async (query) => {
+    aggregates++;
+    return aggregate(query);
+  };
+  const result = await readCollectionPage(storage, {
+    index: "foobar",
+    fields: ["rank"],
+    groups: [{ field: "status", indexField: "state" }],
+  });
+  expect(result.page.total).toBe(240);
+  expect(result.page.groups.map(({ count }) => count)).toEqual([120, 120]);
+  expect(aggregates).toBe(1);
+});
+
+test("empty collection selections validate the request without selecting resource rows", async () => {
+  const storage = await fixture();
+  const query = storage.records.query;
+  let limit: number | undefined;
+  storage.records.query = (input) => {
+    limit = input.limit;
+    return query(input);
+  };
+  const selection = {
+    index: "foobar",
+    fields: ["title"],
+    where: { field: "state", op: "eq" as const, value: "absent" },
+  };
+  expect((await readCollectionPage(storage, selection)).records).toEqual([]);
+  expect(limit).toBe(0);
+  await expect(readCollectionPage(storage, { ...selection, fields: ["unknown"] })).rejects.toThrow();
+  await expect(
+    readCollectionPage(storage, {
+      ...selection,
+      page: { limit: 100, offset: 0, fields: ["title"], search: "", cursor: "invalid" },
+    }),
+  ).rejects.toThrow("cursor");
+});
+
+test("empty collection selections still reject invalid page limits", async () => {
+  const storage = await fixture();
+  for (const limit of [501, -1, 1.5, Number.NaN]) {
+    await expect(
+      readCollectionPage(storage, {
+        index: "foobar",
+        where: { field: "state", op: "eq", value: "absent" },
+        page: { limit, offset: 0, fields: [], search: "" },
+      }),
+    ).rejects.toThrow("limit");
+  }
+});
+
+test("the first page counts provider choices while the renderer still has no option labels", async () => {
+  const storage = await fixture();
+  const scope = collectionViewSelection({
+    index: "foobar",
+    fields: {
+      status: { field: "state", kind: "enum", options: ["ready", "done"].map((value) => ({ value, label: value })) },
+    },
+    groups: ["status"],
+    page: {
+      limit: 50,
+      offset: 0,
+      search: "",
+      fields: ["status"],
+      presentation: { status: { emptyGroup: "No status", options: [] } },
+    },
+  });
+  const result = await readCollectionPage(storage, scope);
+  expect(result.records).toHaveLength(50);
+  expect(result.page.groups).toEqual([
+    { field: "status", value: "done", count: 120 },
+    { field: "status", value: "ready", count: 120 },
+  ]);
+});
+
+test("populated renderer choices preserve viewer-only values, labels and ordering", () => {
+  const options = [
+    { value: "new", label: "Newly created" },
+    { value: "open", label: "Open" },
+  ];
+  const result = collectionDateFields({
+    index: "foobar",
+    fields: { status: { field: "state", kind: "enum", options: [{ value: "open", label: "Original" }] } },
+    page: {
+      limit: 50,
+      offset: 0,
+      fields: ["status"],
+      search: "",
+      presentation: { status: { emptyGroup: "None", options } },
+    },
+  });
+  expect(result.fields.status.options).toEqual(options);
 });

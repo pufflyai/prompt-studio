@@ -276,3 +276,26 @@ test("a cloud schedule without a device assignment stays idle", async () => {
   await scheduler.refresh();
   expect(cron.size()).toBe(0);
 });
+
+test("publishing webview assets does not rescan schedules across projects", async () => {
+  const deps: Parameters<typeof createExtensionScheduler>[0]["deps"] = createDeps(writeScheduledExtension());
+  let scans = 0;
+  const scheduler = createExtensionScheduler({
+    deps,
+    listProjectIds: async () => {
+      scans++;
+      return [];
+    },
+    watermarkPath: join(createTempRoot(), "watermarks.json"),
+  });
+  try {
+    await scheduler.refresh();
+    const before = scans;
+    deps.extensionRuntimeCatalog.invalidate({ reason: "webviews_built" });
+    expect(scans).toBe(before);
+    deps.extensionRuntimeCatalog.invalidate({ reason: "source_changed" });
+    expect(scans).toBeGreaterThan(before);
+  } finally {
+    await scheduler.dispose();
+  }
+});

@@ -29,6 +29,7 @@ test("same-project removal waits for the latest metadata without opening stale s
   } satisfies WorkbenchExtensionMetadata;
   let initial = true;
   const refreshes: ReturnType<typeof Promise.withResolvers<WorkbenchExtensionMetadata>>[] = [];
+  const latestStarted = Promise.withResolvers<void>();
   const extensions = workbench.registerModule(
     createExtensionsModule({
       loadAppearance: async () => emptyAppearance,
@@ -39,6 +40,7 @@ test("same-project removal waits for the latest metadata without opening stale s
         }
         const request = Promise.withResolvers<WorkbenchExtensionMetadata>();
         refreshes.push(request);
+        if (refreshes.length === 2) latestStarted.resolve();
         return request.promise;
       },
     }),
@@ -60,8 +62,7 @@ test("same-project removal waits for the latest metadata without opening stale s
     writer.upsert({ id: projectId, enabled: false });
     await flushMicrotasks();
     refreshes[0]!.resolve(available);
-    await flushMicrotasks();
-    await flushMicrotasks();
+    await latestStarted.promise;
     expect(workbench.layout.getActivePanel("overlay")).toBeUndefined();
     refreshes[1]!.resolve(emptyDashboardExtensionMetadata);
     await pending;

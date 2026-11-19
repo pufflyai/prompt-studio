@@ -5,7 +5,6 @@ import {
   chatRendererActionSchema,
   chatRendererSnapshotSchema,
 } from "pstdio-api-contracts";
-import { createWorkbenchStore } from "../../core/shared/store/workbench-store";
 import {
   canReplaceRecoveredChatDraft,
   chatDraftContentKey,
@@ -21,6 +20,7 @@ import { type ChatPendingSubmission, createChatSubmissionPresentation } from "./
 import { createChatSessionDraft } from "./chat-session-draft";
 import { watchChatSession } from "./chat-session-watch";
 import { createChatSnapshot } from "./chat-snapshot";
+import { createChatProjection } from "./chat-stream-paint";
 import { createChatSubmissionRunner } from "./chat-submission";
 import { createChatSubmissionHandoff } from "./chat-submission-handoff";
 
@@ -49,6 +49,17 @@ const executeChatAction = async (
   return chatRendererActionResultSchema.parse((await handler(chatRendererActionSchema.parse(action))) ?? {});
 };
 
+const applyChatActionDraft = (
+  drafts: ReturnType<typeof createChatSessionDraft>,
+  current: ChatDraft,
+  incoming: ChatDraft | undefined,
+  expectedEdits: number,
+  capturedSave?: ChatSessionInput["saveDraft"],
+) => {
+  if (incoming)
+    drafts.change(drafts.edits() === expectedEdits ? incoming : hydrateChatDraft(current, incoming), capturedSave);
+};
+
 const initialChatState = (initial?: ChatRendererSnapshot) => ({
   conversation: {
     ...chatRendererSnapshotSchema.parse(initial ?? {}),
@@ -63,6 +74,7 @@ const initialChatState = (initial?: ChatRendererSnapshot) => ({
   initializing: true,
   sending: false,
   error: undefined as string | undefined,
+  canRefreshError: false,
 });
 
 const assertChatActionAvailable = (conversation: ChatRendererSnapshot, action: ChatRendererAction) => {
@@ -77,7 +89,7 @@ const projectChatState = (
   update: Partial<ReturnType<typeof initialChatState>>,
   present: ReturnType<typeof createChatSubmissionPresentation>,
 ) => {
-  const next = { ...state, ...update };
+  const next = { ...state, ...(Object.hasOwn(update, "error") ? { canRefreshError: false } : {}), ...update };
   const unchanged =
     next.conversation.messages === state.conversation.messages &&
     next.conversation.queuedFollowUps === state.conversation.queuedFollowUps &&
@@ -109,28 +121,51 @@ const trackChatAction = <T>(
   return running;
 };
 
+const isTranscriptUpdate = (loaded: boolean, incoming: ChatRendererSnapshot) =>
+  loaded && incoming.messages !== undefined && Object.keys(incoming).length === 1;
+
 const chatErrorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
+
+const refreshFailure = (error: unknown) => ({ error: chatErrorMessage(error), canRefreshError: true });
+
+const chatReadUpdate = <T extends { error?: string }>(update: T, draftError?: string) => {
+  const error = draftError ?? update.error;
+  return error ? { ...update, ...refreshFailure(error) } : update;
+};
+
+const captureChatWatchError =
+  (
+    read: () => Pick<ReturnType<typeof initialChatState>, "error" | "canRefreshError">,
+    revision: () => number,
+    publish: (update: Pick<ReturnType<typeof initialChatState>, "error" | "canRefreshError">) => void,
+  ) =>
+  (error: unknown) => {
+    const { error: previous, canRefreshError } = read();
+    publish(refreshFailure(error));
+    const issued = revision();
+    return (cause?: unknown) => {
+      if (revision() === issued)
+        publish(cause === undefined ? { error: previous, canRefreshError } : refreshFailure(cause));
+    };
+  };
 
 /** One owner per project/view/resource, shared across page/panel changes. */
 export const createChatSession = (input: ChatSessionInput) => {
   let state = initialChatState(input.initial);
   let errorRevision = 0;
-  const projection = createWorkbenchStore({ name: "workbench.chat", initialState: state });
+  const projection = createChatProjection(state);
   const present = createChatSubmissionPresentation();
-  const publish = (update: Partial<typeof state>) => {
+  const publish = (update: Partial<typeof state>, transcriptOnly = false) => {
     if (Object.hasOwn(update, "error")) errorRevision++;
     state = projectChatState(state, update, present);
-    if (!retired) projection.setState(state, true, "projectChat");
+    if (!retired) projection.publish(state, transcriptOnly);
   };
   const fail = (error: unknown) => publish({ error: chatErrorMessage(error) });
-  const failWatch = (error: unknown) => {
-    const previous = state.error;
-    fail(error);
-    const revision = errorRevision;
-    return (cause?: unknown) => {
-      if (errorRevision === revision) publish({ error: cause === undefined ? previous : chatErrorMessage(cause) });
-    };
-  };
+  const failWatch = captureChatWatchError(
+    () => state,
+    () => errorRevision,
+    publish,
+  );
   let holds = 0;
   let observing = false;
   let controller: AbortController | undefined;
@@ -154,11 +189,12 @@ export const createChatSession = (input: ChatSessionInput) => {
     const merged = snapshots.merge(state, incoming, issued, expectedValues, action);
     // Host control defaults do not create a new composer draft; explicit user edits still fence recovery.
     recoverableDraft = rebaseChatRecoveryKey(recoverableDraft, state.draft, merged.state.draft);
+    const transcriptOnly = isTranscriptUpdate(hasLoaded, incoming);
     hasLoaded = true;
-    publish({ ...merged.state, loading: false });
+    publish({ ...merged.state, loading: false }, transcriptOnly);
     const recovery = clearDeliveredChatRecoveries(state.draft, pending ?? [], state.pending);
     if (recovery.pending !== state.pending) publish({ pending: recovery.pending });
-    if (recovery.recovery) changeDraft(recovery.recovery);
+    if (recovery.recovery) drafts.change(recovery.recovery);
     if (expectedValues && merged.valuesChanged) {
       drafts.changed(capturedSave);
     }
@@ -168,7 +204,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     merge,
     messages: () => state.conversation.messages ?? [],
     recover: (recovered) => {
-      changeDraft(
+      drafts.change(
         recoverChatDraft(
           state.draft,
           recovered,
@@ -185,21 +221,20 @@ export const createChatSession = (input: ChatSessionInput) => {
     read: () => state.draft,
     publish: (draft) => publish({ draft }),
     values: snapshots.values,
-    fail,
+    fail: (error) => publish(refreshFailure(error)),
     clearError: (error) => {
       if (state.error === error) publish({ error: undefined });
     },
     pin,
     idle: () => input.onIdle?.(),
   });
-  const changeDraft = drafts.change;
   const finite = createChatFiniteRead({
     context: input.queryContext,
     read: (signal) => input.query(signal, state.draft.values),
     issue: () => ++clock,
     merge,
     loaded: () => hasLoaded,
-    publish: (update) => publish({ ...update, ...(drafts.error() ? { error: drafts.error() } : {}) }),
+    publish: (update) => publish(chatReadUpdate(update, drafts.error())),
   });
   const start = () => {
     observing = true;
@@ -209,7 +244,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     const current = ++generation;
     const signal = controller.signal;
     const active = () => current === generation && !signal.aborted;
-    publish({ loading: !hasLoaded, error: drafts.error() });
+    publish({ loading: !hasLoaded, error: drafts.error(), canRefreshError: Boolean(drafts.error()) });
     const query = finite.observe();
     const hydration = drafts.hydrate();
     // Control defaults can commit local ownership. Settle initial values before allowing
@@ -228,20 +263,19 @@ export const createChatSession = (input: ChatSessionInput) => {
     const issued = ++clock;
     const changed = drafts.edits();
     const expectedValues = snapshots.values.capture();
+    const removed = present.captureQueuedRemoval(action, state.pending);
     const result = await executeChatAction(action, handler, state.conversation);
+    const pending = removed(state.pending);
+    if (pending) publish({ pending });
     if (result.snapshot) merge(result.snapshot, issued, expectedValues, action, capturedSave);
-    if (result.draft)
-      drafts.change(
-        drafts.edits() === changed ? result.draft : hydrateChatDraft(state.draft, result.draft),
-        capturedSave,
-      );
+    applyChatActionDraft(drafts, state.draft, result.draft, changed, capturedSave);
     return result;
   };
   const submit = createChatSubmissionRunner({
     read: () => ({ ...state, edits: drafts.edits() }),
     execute,
     publish: (update) => publish({ ...update, ...(update.sending ? { error: drafts.error() } : {}) }),
-    changeDraft,
+    changeDraft: drafts.change,
     fail,
     markRecoverable: () => {
       recoverableDraft = chatDraftContentKey(state.draft);
@@ -277,19 +311,19 @@ export const createChatSession = (input: ChatSessionInput) => {
       if (holds && observing) start();
     },
     active: () => holds > 0 || actions.size > 0 || drafts.saving(),
-    subscribe: projection.subscribe,
+    ...projection.subscriptions,
     accept: (event: unknown) => {
       if (!retired) reader.accept(event);
     },
     changeDraft: (update: Partial<ChatDraft>) => {
-      if (!retired) changeDraft(update);
+      if (!retired) drafts.change(update);
     },
     ...createChatSubmissionHandoff(() => state.pending, publish),
     ...createChatDraftRestoration({
       active: () => !retired,
       read: () => state,
       values: snapshots.values,
-      changeDraft,
+      changeDraft: drafts.change,
       publish,
     }),
     run,
@@ -298,6 +332,7 @@ export const createChatSession = (input: ChatSessionInput) => {
       if (holds && observing) start();
     },
     reportError: fail,
+    dismissError: () => publish({ error: undefined }),
     flushDraft: drafts.flush,
     retain() {
       if (retired) throw new Error("Chat authority is closed");
@@ -315,7 +350,7 @@ export const createChatSession = (input: ChatSessionInput) => {
     retire() {
       retired = true;
       stop();
-      projection.setState(retiredState, true, "retireChat");
+      projection.retire(retiredState);
       return Promise.allSettled([...actions]).then(() => (drafts.saving() ? drafts.flush() : undefined));
     },
     dispose() {

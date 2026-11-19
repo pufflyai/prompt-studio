@@ -5,7 +5,8 @@ import { ParamEditorRow } from "./param-editor-row";
 interface HarnessModelPickerProps {
   label: string;
   description?: string;
-  harnesses: { id: string; name: string; disabled?: boolean }[];
+  /** `icon` is the harness extension's icon: an icon name or a `data:image/` URL. */
+  harnesses: { id: string; name: string; disabled?: boolean; icon?: string }[];
   models: { id: string; name: string; description?: string }[];
   harnessId: string;
   model?: string;
@@ -57,7 +58,7 @@ export const HarnessModelPicker = (props: HarnessModelPickerProps) => {
       id: "harnessId",
       name: "Harness",
       defaultValue: harnessId,
-      options: harnesses.map((harness) => ({ ...harness, icon: "Terminal" })),
+      options: harnesses.map((harness) => ({ ...harness, icon: harness.icon ?? "Terminal" })),
       placeholder: loadingHarnesses ? "Loading harnesses…" : "Select harness",
       searchable: harnesses.length > 10,
       searchPlaceholder: "Search harnesses…",

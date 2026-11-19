@@ -3,6 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createDocumentStorage } from "pstdio-sync/records";
+import { admitChangeResource } from "../../features/activity/change-resource";
 import { createResourceLinksApi } from "../../features/extensions/command-environment/resource-links";
 import { streamPersonalSession } from "../../features/sessions/endpoints/stream-personal-session";
 import { inertSessionChannelHooks } from "../../features/sessions/session-store.test-utils";
@@ -37,6 +38,25 @@ const publishTerminalPosition = async (
     new Map([[sessionId, head]]),
     new Map([[sessionId, { head, version: JSON.stringify([session.status, session.updated_at]) }]]),
   );
+};
+
+const verifyChangeDeviceAdmission = async (
+  projectId: string,
+  id: string,
+  device: { ownerId: string; id: string; name: string },
+) => {
+  const ref = { type: "session", extensionId: "pstdio", projectId, id, device };
+  expect(await destination.deps.personalHistoryService.getSession(id, projectId)).toMatchObject({ device });
+  expect(await admitChangeResource(destination.deps, projectId, ref, "pstdio")).toMatchObject({ device });
+  expect(await admitChangeResource(destination.deps, projectId, { ...ref, device: undefined }, "pstdio")).toMatchObject(
+    { device },
+  );
+  await expect(
+    admitChangeResource(destination.deps, projectId, { ...ref, device: { ...device, ownerId: "wrong" } }, "pstdio"),
+  ).rejects.toThrow("device");
+  await expect(
+    admitChangeResource(destination.deps, projectId, { ...ref, device: { ...device, id: "wrong" } }, "pstdio"),
+  ).rejects.toThrow("device");
 };
 
 const verifyMetadataOwnership = async (
@@ -241,6 +261,7 @@ test("personal history is readable offline after restart, private to the account
     const queue = await destination.app.request(`/v1/sessions/${session.id}/queued-messages`);
     expect(await queue.json()).toMatchObject({ messages: [], queue: { requests: [] } });
     await verifyOfflineInterrupt(session.id);
+    await verifyChangeDeviceAdmission(project.id, session.id, device);
     await verifyMetadataOwnership(native, login, session.id);
     const since = destination.deps.eventBus.seq;
     await destination.deps.accountService.logout();

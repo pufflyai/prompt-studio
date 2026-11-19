@@ -19,6 +19,37 @@ afterEach(async () => {
   environment.IS_REACT_ACT_ENVIRONMENT = previousEnvironment;
 });
 
+test("mutation reconciliation keeps the loaded view interactive while fresh rows arrive", async () => {
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  let read: ReturnType<typeof useRendererRead<string>> | undefined;
+  let calls = 0;
+  const refreshed = Promise.withResolvers<string>();
+  const Capture = () => {
+    read = useRendererRead({
+      workbench,
+      ownerKey: "board",
+      queryKey: "board",
+      load: async () => (++calls === 1 ? "before" : refreshed.promise),
+    });
+    return null;
+  };
+  await act(async () => {
+    renderer = create(<Capture />);
+  });
+  await act(async () => {
+    await read!.mutate(
+      (value) => value,
+      async () => {},
+    );
+  });
+  const reconciling = { value: read!.value, loading: read!.loading };
+  await act(async () => {
+    refreshed.resolve("after");
+  });
+  expect(reconciling).toEqual({ value: "before", loading: false });
+  expect(read!.value).toBe("after");
+});
+
 test("automatic shared reads keep their original scope when the first presenter changes queries", async () => {
   environment.IS_REACT_ACT_ENVIRONMENT = true;
   const values: Record<string, ReturnType<typeof useRendererRead<string>>> = {};

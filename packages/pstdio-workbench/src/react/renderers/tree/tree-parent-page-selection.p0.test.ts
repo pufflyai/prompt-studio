@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createWorkbench, type ResourceRef } from "../../../core";
 import { resolveTreeListSelection, resolveTreeSelectionIntent } from "./tree-list-selection";
 
 test("the nearest matching page wins over an ancestor", () => {
@@ -76,3 +77,59 @@ for (const resolver of ["selection", "intent"] as const) {
     expect((resolver === "selection" ? resolveTreeListSelection : resolveTreeSelectionIntent)(input)).toBe("parent");
   });
 }
+
+test("Files stays selected when the workspace opens a document", () => {
+  const files = { kind: "page", extensionId: "pstdio.workspaces", id: "files" } as const;
+  const workspaces = { ...files, id: "workspaces" };
+  const workbench = createWorkbench();
+  workbench.pages.registerPage({
+    id: "files",
+    modeId: "project",
+    ref: files,
+    path: "files",
+    resource: { kinds: [{ kind: "resource-kind", id: "workspace", extensionId: "pstdio" }] },
+    document: { metadataKey: "workspaceFilePath" },
+    main: { kind: "panels" },
+    slots: [],
+  });
+  const workspace = { type: "workspace", id: "project-folder", extensionId: "pstdio" };
+  const active = { ...workspace, metadata: { workspaceFilePath: "README.md" } };
+  const input = {
+    sections: [
+      {
+        id: "project",
+        nodes: [
+          { id: "files", label: "Files", target: { kind: "page", page: files, resource: workspace } as const },
+          { id: "workspaces", label: "Workspaces", target: { kind: "page", page: workspaces } as const },
+        ],
+      },
+    ],
+    childrenByNodeId: {},
+    activeResource: active,
+    activeLocation: { page: files, resource: active, parent: { page: workspaces } },
+    selectedNodeId: "files",
+    resourceReferenceKey: (resource: ResourceRef) => workbench.pages.resourceReferenceKey(resource),
+  };
+  expect(resolveTreeListSelection(input)).toBe("files");
+  expect(resolveTreeSelectionIntent(input)).toBe("files");
+  const document = {
+    id: "readme",
+    label: "README.md",
+    target: { kind: "page", page: files, resource: active } as const,
+  };
+  expect(
+    resolveTreeListSelection({
+      ...input,
+      sections: [{ ...input.sections[0]!, nodes: [...input.sections[0]!.nodes, document] }],
+      selectedNodeId: undefined,
+    }),
+  ).toBe("readme");
+  const other = { ...active, id: "another-workspace" };
+  expect(
+    resolveTreeListSelection({
+      ...input,
+      activeResource: other,
+      activeLocation: { ...input.activeLocation, resource: other },
+    }),
+  ).toBe("workspaces");
+});

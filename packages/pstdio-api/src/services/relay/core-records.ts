@@ -7,6 +7,7 @@ import type { RelayWorkbench } from "./runtime";
 // Core-owned records sync independently of extension enablement, including their assets.
 export const startCoreRecordSync = (input: {
   ownerId: string;
+  privateSpace?: boolean;
   live?: LiveConnection;
   config: RelayWorkbench;
   deps: ExtensionsRouteDeps;

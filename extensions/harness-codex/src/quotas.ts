@@ -81,5 +81,10 @@ export const quotasCommand = defineCommand({
     "Read remaining Codex account allowance and reset times without starting a turn.",
   ),
   cli: true,
-  run: readCodexQuotas,
+  async run(ctx) {
+    return {
+      ...(await readCodexQuotas(ctx)),
+      restartAfterQuotaReset: (await ctx.settings.get("restartAfterQuotaReset")) === true,
+    };
+  },
 });

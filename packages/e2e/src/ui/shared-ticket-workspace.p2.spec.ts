@@ -51,10 +51,18 @@ test("ticket work opens a shared non-Git folder and loads files without Git requ
     await page.unroute(providerRoute);
     await page.goto(`/projects/${projectId}/extensions/pstdio.planner/tickets`);
     await page.getByTestId("renderer-card").getByText("Plain folder ticket", { exact: true }).click();
-    await expect(page.getByRole("option", { name: "Project folder", exact: true })).toBeVisible();
-    await page.getByText("Workspaces", { exact: true }).last().hover();
-    await expect(page.getByRole("button", { name: "Create workspace", exact: true })).toHaveCount(0);
-    await page.getByRole("option", { name: "Project folder", exact: true }).click();
+    const sidenav = page.locator('[data-workbench-region="sidenav"]');
+    await expect(
+      sidenav.getByRole("option", { name: `${ticket.shorthand} ${ticket.title}`, exact: true }),
+    ).toBeVisible();
+    const projectFolder = sidenav.getByRole("option", { name: "Project folder", exact: true });
+    await expect(projectFolder).toHaveCount(0);
+    await executePlannerCommand(request, uiOrigin, projectId!, "link", { id: ticket.id, workspace: workspace.id });
+    await page.reload();
+    await expect(projectFolder).toBeVisible();
+    await sidenav.getByText("Workspaces", { exact: true }).hover();
+    await expect(sidenav.getByRole("button", { name: "Create workspace", exact: true })).toHaveCount(0);
+    await projectFolder.click();
     await expect(page.getByRole("option", { name: "notes.md", exact: true })).toBeVisible();
     // The workspace page has its own Main tab; a non-Git folder adds no Changes view.
     await expect(page.getByRole("tab", { name: "Changes" })).toHaveCount(0);
@@ -63,7 +71,12 @@ test("ticket work opens a shared non-Git folder and loads files without Git requ
     await expect(page.locator(".monaco-editor .view-lines")).toContainText("Shared notes");
     expect(gitRequests).toEqual([]);
     expect(await (await request.get(workspaceUrl)).json()).toEqual([
-      expect.objectContaining({ id: workspace.id, root_path: path, is_default: true, anchors_json: [] }),
+      expect.objectContaining({
+        id: workspace.id,
+        root_path: path,
+        is_default: true,
+        anchors_json: [expect.objectContaining({ type: "ticket", id: ticket.id })],
+      }),
     ]);
     await executePlannerCommand(request, uiOrigin, projectId!, "archive-ticket", { ticket: ticket.id });
     expect(await (await request.get(workspaceUrl)).json()).toEqual([

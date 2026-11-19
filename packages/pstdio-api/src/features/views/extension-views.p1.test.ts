@@ -24,13 +24,17 @@ test.each([
   "kanban",
   "resourceList",
   "pagedResourceList",
+  "pagedDataTable",
 ] as const)("%s extension commands manage the same saved views as the project API", async (kind) => {
-  const resourceList = kind !== "kanban";
+  const dataTable = kind === "pagedDataTable";
+  const resourceList = kind !== "kanban" && !dataTable;
   const legacy = kind === "kanban";
   const owner = legacy ? "pstdio.notes" : "test.views";
   const declaredOwner = legacy ? "pstdio.pstdio-notes" : owner;
   const name = legacy ? "pstdio-notes" : "views";
-  const paged = kind === "pagedResourceList";
+  const paged = kind.startsWith("paged");
+  const listKind = resourceList ? "resourceList" : "kanban";
+  const bodyKind = dataTable ? "dataTable" : listKind;
   root = mkdtempSync(join(tmpdir(), "extension-views-"));
   priorHome = process.env.PSTDIO_HOME;
   priorExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
@@ -52,10 +56,10 @@ test.each([
     join(source, "extension.ts"),
     `
 const board={kind:"view",id:"tasks",extensionId:${JSON.stringify(declaredOwner)}};
-const settings={viewMode:"${resourceList ? "list" : "board"}",columnGrouping:"none",rowGrouping:"none",displayProperties:[],${resourceList ? "showChildren:false" : ""}};
+const settings=${dataTable ? '{grouping:"none",rowNumbers:true,wrapRows:false,showStats:false,hiddenColumns:[],columnOrder:[]}' : `{viewMode:"${resourceList ? "list" : "board"}",columnGrouping:"none",rowGrouping:"none",displayProperties:[],${resourceList ? "showChildren:false" : ""}}`};
 const filter={conjunction:"and",rules:[{attributeId:"title",condition:"contains",value:"Ready"}]};
 export default {
- views:["tasks","other"].map(id=>({id,ref:{kind:"view",id},title:id,body:{kind:"${resourceList ? "resourceList" : "kanban"}",${paged ? 'queryMode:"paged",' : ""}query:(_ctx,{page})=>{${paged ? 'if(!page || page.limit < 1 || page.offset !== 0 || page.search !== "" || !Array.isArray(page.fields)) throw Error("Missing bounded schema request");' : ""}return {rows:[]};}}})),
+ views:["tasks","other"].map(id=>({id,ref:{kind:"view",id},title:id,body:{kind:"${bodyKind}",${dataTable ? 'columns:[{id:"title",label:"Title",type:"string"}],' : ""}${paged ? 'queryMode:"paged",' : ""}query:(_ctx,{page})=>{${paged ? 'if(!page || page.limit < 1 || page.offset !== 0 || page.search !== "" || !Array.isArray(page.fields)) throw Error("Missing bounded schema request");' : ""}return {rows:[]${paged ? ',page:{revision:"empty",cursor:null,total:0,filteredTotal:0,groups:[]}' : ""}};}}})),
  commands:[{id:"exercise",ref:{kind:"command",id:"exercise"},title:"Exercise",mutating:true,params:{},async run(ctx){
    const initial=await ctx.views.list(board);
    const created=await ctx.views.create(board,{title:"Ready",settings,filter,sorts:[]});

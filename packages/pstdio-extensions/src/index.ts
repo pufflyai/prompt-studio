@@ -33,6 +33,7 @@ export {
   type DirectoryTreeWatcher,
   type WatchDirectory,
 } from "./fs-watch/directory-tree-watcher";
+export { resourceChangeProviders } from "./resource-change-providers";
 export {
   type BuildEnvironmentInput,
   buildCliHelpTree,

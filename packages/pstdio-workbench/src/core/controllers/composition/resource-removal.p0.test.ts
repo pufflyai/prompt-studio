@@ -74,7 +74,7 @@ test("removal updates inactive page state without moving the active route", () =
 });
 
 test("deleting a resource in an inactive project clears its saved route and navigation memory", () => {
-  const { core, open } = setup({ startPage: pageRef("collection") });
+  const { core, open } = setup({ defaultPage: pageRef("collection") });
   open("a");
   core.pageLocations.switchProject("other-project");
   core.pageLocations.navigate({
@@ -97,7 +97,7 @@ test("deleting a resource in an inactive project clears its saved route and navi
 });
 
 test("inactive project deletion clears routes owned by an extension unavailable in the active project", () => {
-  const { core, open, registrations } = setup({ startPage: pageRef("collection") });
+  const { core, open, registrations } = setup({ defaultPage: pageRef("collection") });
   open("a");
   const notes = core.pages.getPage("notes")!;
   core.pageLocations.switchProject("other-project");

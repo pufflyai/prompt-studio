@@ -1,7 +1,8 @@
 import { expect, test } from "bun:test";
 import { type CollectionBadgeItem, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
-import { loadTicketLinkedResources } from "./ticket-linked-resources";
+import { mergeTicketLinkSections } from "../commands/ticket-link-sections";
+import { loadTicketLinkedResources, readTicketLinkedResourcePage } from "./ticket-linked-resources";
 
 const ticket = (id: string): ResourceRef => ({
   type: "ticket",
@@ -34,7 +35,7 @@ test("one resource list deduplicates incoming and outgoing links while keeping o
   await ctx.resources.addAnchors(workspace, [ticket("one"), ticket("two")]);
   let label = "Current artifact";
   const batches: ResourceRef[][] = [];
-  ctx.resources.resolveMany = async (refs) => {
+  ctx.resources.resolveOpenings = async (refs) => {
     batches.push(refs);
     return refs.map((resource) => ({
       resource: {
@@ -114,11 +115,27 @@ test("relationships include every page and owner resolution uses bounded batches
   const refs = Array.from({ length: 105 }, (_, index) => ({ ...artifact, id: String(index) }));
   await ctx.resources.addAnchors(ticket("one"), refs);
   const sizes: number[] = [];
-  ctx.resources.resolveMany = async (refs) => {
+  ctx.resources.resolveOpenings = async (refs) => {
     sizes.push(refs.length);
     return [];
   };
   const lookup = await loadTicketLinkedResources(ctx.resources, [ticket("one")]);
   expect(lookup.get("one")).toHaveLength(105);
   expect(sizes).toEqual([100, 5]);
+});
+
+test("unavailable labeled notes remain visible but disabled in the sidepanel", async () => {
+  const ctx = makeCommandContext({
+    storage: createMemoryStorage(),
+    params: {},
+    overrides: { extensionId: "pstdio.planner" },
+  });
+  const note = { ...artifact, type: "note", extensionId: "pstdio.notes", label: "Saved note" };
+  await ctx.resources.addAnchors(ticket("one"), [note]);
+  const page = await readTicketLinkedResourcePage(ctx.resources, ticket("one"));
+  const sections = mergeTicketLinkSections([], page.items);
+  expect(sections.flatMap((section) => section.nodes)).toMatchObject([
+    { label: "Saved note", resource: note, disabled: true, tooltip: expect.stringContaining("Unavailable") },
+  ]);
+  expect(sections[0]?.nodes[0]?.target).toBeUndefined();
 });

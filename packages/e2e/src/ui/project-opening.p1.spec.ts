@@ -3,6 +3,9 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { homePage } from "../helpers/home-loading";
 
 // Creation remains recoverable in the picker; optional setup cannot appear before eligibility is known.
+// Whole-case allowance includes cold project/tool preparation and owned cleanup (PS-1232).
+test.setTimeout(120_000);
+
 for (const ending of ["ready", "failed"] as const) {
   test(`waits for setup eligibility while project creation handles ${ending}`, async ({ page, request }) => {
     const projects = await Promise.all(

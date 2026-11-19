@@ -30,8 +30,8 @@ const browser = {
     return { dispose() { popstate = undefined; } };
   },
 };
-const first = createWorkbench({ ...firstState, startPage, pageLocationBrowser: browser });
-const second = createWorkbench({ ...secondState, startPage, pageLocationBrowser: browser, active: false });
+const first = createWorkbench({ ...firstState, defaultPage: startPage, pageLocationBrowser: browser });
+const second = createWorkbench({ ...secondState, defaultPage: startPage, pageLocationBrowser: browser, active: false });
 firstState.statusBarPersistence.setOrder(["first", "second"]);
 secondState.statusBarPersistence.setOrder(["second", "first"]);
 if (first.host.storageScope !== "first" || second.host.storageScope !== "second") throw new Error("Workbench lost storage ownership");
@@ -57,15 +57,16 @@ second.activation.setActive(true);
 if (first.activation.isActive() || !second.activation.isActive()) throw new Error("Workbench activation did not switch");
 ${
   react
-    ? `import { Portal, ScopedDialog, ScopedMenu, ScopedPopover, useScopedMenu, useToaster } from "@pstdio/ui";
-void [Portal, ScopedDialog, ScopedMenu, ScopedPopover, useScopedMenu, useToaster];`
+    ? `import { Portal, ScopedDialog, ScopedMenu, ScopedPopover, useScopedMenu, ActionErrorSlot, Toaster, toaster, useToaster } from "@pstdio/ui";
+import { WorkbenchNotificationHost } from "@pstdio/workbench/react";
+void [Portal, ScopedDialog, ScopedMenu, ScopedPopover, useScopedMenu, ActionErrorSlot, Toaster, toaster, useToaster, WorkbenchNotificationHost];`
     : ""
 }
 await first.dispose();
 await second.dispose();
 nativeEntry = nativeEditor;
-const reloaded = createWorkbench({ startPage, pageLocationBrowser: browser });
-const hidden = createWorkbench({ startPage, pageLocationBrowser: browser, active: false });
+const reloaded = createWorkbench({ defaultPage: startPage, pageLocationBrowser: browser });
+const hidden = createWorkbench({ defaultPage: startPage, pageLocationBrowser: browser, active: false });
 for (const core of [reloaded, hidden]) {
   core.modes.registerMode({ id: "project", activate() {} });
   for (const id of ["start", "editor"]) core.pages.registerPage({

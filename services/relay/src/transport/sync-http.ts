@@ -8,7 +8,7 @@ import {
   syncProtocolVersion,
   syncRoute,
 } from "pstdio-sync-contracts";
-import { projectKey, SyncRejection } from "../storage/accounts";
+import { projectKey, type SyncCaller, SyncRejection } from "../storage/accounts";
 import { verifyBearer } from "./authorization";
 import type { RelayOwners } from "./owners";
 import { relayResponse } from "./responses";
@@ -29,6 +29,9 @@ const methodFor = (route: SyncRoute) => {
   return "POST";
 };
 
+const isWrite = (route: SyncRoute) =>
+  route.kind === "part" || ((route.kind === "blob" || route.kind === "document") && route.operation !== "read");
+
 const failures: Record<SyncRoute["kind"], Parameters<ReportFailure>[0]> = {
   document: "sync_document_failed",
   state: "sync_document_failed",
@@ -36,6 +39,28 @@ const failures: Record<SyncRoute["kind"], Parameters<ReportFailure>[0]> = {
   part: "asset_operation_failed",
   live: "sync_subscription_failed",
   capabilities: "sync_document_failed",
+};
+
+const upgradeLive = (
+  owners: RelayOwners,
+  upgrade: RelayUpgrade,
+  request: Request,
+  identity: Parameters<RelayOwners["live"]["connect"]>[0],
+) => {
+  if (request.headers.get(liveProtocolHeader) !== String(liveProtocolVersion))
+    return relayResponse(
+      {
+        error: "protocol-unsupported",
+        supported: [liveProtocolVersion],
+        message: "Update Prompt Studio or the relay to use the live channel.",
+      },
+      426,
+      { [liveProtocolHeader]: String(liveProtocolVersion) },
+    );
+  const socket = owners.live.connect(identity);
+  if (upgrade(request, socket)) return;
+  socket.close();
+  return relayResponse({ error: "invalid-request" }, 426, { upgrade: "websocket" });
 };
 
 /** The blind sync protocol (PRD 0014). Every request names its protocol version and is checked from metadata alone. */
@@ -72,34 +97,18 @@ export const handleSyncRequest = async (
   )
     return syncFailure(403, "forbidden");
   if (!owners.allow(identity.environmentId)) return syncFailure(429, "rate-limited", { "retry-after": "1" });
-  if (route.kind === "live") {
-    if (request.headers.get(liveProtocolHeader) !== String(liveProtocolVersion))
-      return relayResponse(
-        {
-          error: "protocol-unsupported",
-          supported: [liveProtocolVersion],
-          message: "Update Prompt Studio or the relay to use the live channel.",
-        },
-        426,
-        { [liveProtocolHeader]: String(liveProtocolVersion) },
-      );
-    const socket = owners.live.connect({
-      projectKey: projectKey(identity.accountId, route.projectId),
-      accountId: identity.accountId,
-      deviceId: identity.environmentId,
-      expiresAt: identity.expiresAt,
-    });
-    if (upgrade(request, socket)) return;
-    socket.close();
-    return relayResponse({ error: "invalid-request" }, 426, { upgrade: "websocket" });
-  }
+  const key = projectKey(identity.accountId, route.projectId);
+  const caller: SyncCaller = { accountId: identity.accountId, deviceId: identity.environmentId };
   try {
-    return await handleSyncOperation(
-      owners,
-      route,
-      { accountId: identity.accountId, deviceId: identity.environmentId },
-      request,
-    );
+    if (route.kind === "live") {
+      await owners.sync.projectNotices.ready();
+      return await owners.sync.projectAccess.response(key, request.signal, async () =>
+        upgradeLive(owners, upgrade, request, { ...caller, projectKey: key, expiresAt: identity.expiresAt }),
+      );
+    }
+    const handle = () => handleSyncOperation(owners, route, caller, request);
+    if (isWrite(route)) return await handle();
+    return await owners.sync.projectAccess.response(key, request.signal, handle);
   } catch (error) {
     if (error instanceof SyncRejection) return relayResponse(error.body, error.status);
     if (!request.signal.aborted) report(failures[route.kind]);

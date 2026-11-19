@@ -1,10 +1,4 @@
-import {
-  type NavigationTargetPage,
-  type PageLocation,
-  type PageRef,
-  sessionBrowser,
-  workspacePages,
-} from "@pstdio/sdk/extensions";
+import { type NavigationTargetPage, type PageLocation, type PageRef, sessionBrowser } from "@pstdio/sdk/extensions";
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardExtensionsPage } from "@/shared/app/resources";
@@ -50,25 +44,6 @@ export const openSessionsPage = (ctx: WorkbenchModuleContext, resource?: Resourc
     ...(resource ? { resource } : {}),
   });
 };
-export const workspacePageForResource = (resource?: ResourceRef) => {
-  if (!resource) return workspacePages.list;
-  if (resource.device || resource.metadata?.workspaceReadOnly === true) return workspacePages.history;
-  if (resource.metadata?.workspaceExecutionKind === "remote" || resource.metadata?.workspaceSupportsFiles === false)
-    return workspacePages.overview;
-  if (resource.metadata?.workspaceIsDefault === true || resource.metadata?.workspaceSupportsDiff === false)
-    return workspacePages.files;
-  return workspacePages.workspace;
-};
-export const openWorkspacesPage = (
-  ctx: WorkbenchModuleContext,
-  resource?: ResourceRef,
-  parent?: NavigationTargetPage,
-) =>
-  navigateDashboardPage(ctx, {
-    page: workspacePageForResource(resource),
-    ...(resource ? { resource } : {}),
-    ...(parent ? { parent } : {}),
-  });
 
 export const openExtensionsPage = (ctx: WorkbenchModuleContext) =>
   navigateDashboardPage(ctx, { page: dashboardExtensionsPage });

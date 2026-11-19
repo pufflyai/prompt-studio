@@ -1,11 +1,12 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import { attemptId } from "./attempt-identity";
 import { readRetiredWorkspaceIds } from "./attempt-retirement";
 import { deriveRevisionVerdict } from "./attempt-state";
 import type { AttemptRecord, AttemptState } from "./attempt-types";
 
 // Compatibility output is evidence about the variant, never a workflow precondition.
 export const legacyAttemptOutput = async (storage: ExtensionStorageApi, variant: AttemptRecord) => {
-  const retired = (await readRetiredWorkspaceIds(storage, [variant.workspaceId])).has(variant.workspaceId);
+  const retired = (await readRetiredWorkspaceIds(storage, [attemptId(variant)])).has(attemptId(variant));
   const revision = variant.revisions.at(-1);
   const verdict = revision ? deriveRevisionVerdict(revision) : null;
   let state: AttemptState = "implementing";

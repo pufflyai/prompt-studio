@@ -23,6 +23,20 @@ const elapsed: Record<string, Record<string, number>> = {
   B8: { usable: 6_000, "first-action": 300 },
 };
 
+const approvedReleaseLimits: Record<string, Record<string, number>> = {
+  B6: {
+    actionable: 5_000,
+    filter: 250,
+    page: 250,
+    move: 250,
+    reopen: 5_000,
+    "longest-stall": 200,
+    "rows-scanned": 2_000,
+    writes: 2,
+  },
+  B7: { "rows-scanned": 1_000 },
+};
+
 // Human-approved targets use strict < for milliseconds and bytes. Retained renderer
 // share guards keep their original inclusive boundary.
 export const meetsLimit = (value: number, budget: number, unit: BenchmarkUnit) =>
@@ -33,6 +47,13 @@ export const retainedLimit = (scenario: string, metric: string, platform: string
   if (scenario === "B1" && metric === "window") return desktop.startupWindowMs;
   if (scenario === "B1" && metric === "shell") return desktop.coldStartMs;
   if (scenario === "B8" && metric === "feedback") return desktop.recoveryMs;
+  const releaseLimit = approvedReleaseLimits[scenario]?.[metric];
+  if (releaseLimit !== undefined)
+    return {
+      value: releaseLimit,
+      evidence:
+        "User-approved 2026-11-17 Planner request 01a1e8d3-92c0-725d-8622-b831b57a51a7: nine missing B6/B7 ceilings",
+    };
   const milliseconds = elapsed[scenario]?.[metric];
   if (milliseconds !== undefined) return { value: milliseconds, evidence: approval };
   if (scenario === "B4")

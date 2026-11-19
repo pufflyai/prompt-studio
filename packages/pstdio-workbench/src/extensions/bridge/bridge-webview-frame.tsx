@@ -1,10 +1,12 @@
 import { Box, Center, Stack, Text } from "@chakra-ui/react";
 import type { WebviewHostProps } from "@pstdio/sdk/extensions";
 import { useUiScope } from "@pstdio/ui";
+import { sizesToContentHeight } from "pstdio-extensions/bridge/contract";
 import { createWebviewDiagnostics, ExtensionFrame, type ExtensionFrameProps } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import type { WorkbenchCore } from "../../core";
 import { useWebviewKeyboardShortcuts } from "../../react/keybindings/use-webview-keyboard-shortcuts";
+import { useWebviewObservation } from "../../react/resource-changes/webview-observation";
 import { resolveWebviewPageProps } from "./webview-page-props";
 
 type BridgeWebviewFrameProps = Omit<ExtensionFrameProps, "onDiagnostics" | "onError" | "onReady"> & {
@@ -21,13 +23,19 @@ export const BridgeWebviewFrame = (props: BridgeWebviewFrameProps) => {
   const host = frameProps.props as Partial<WebviewHostProps> | undefined;
   const pageProps = resolveWebviewPageProps(pageState, { ...host?.viewLocation, resource: host?.resource });
   const [error, setError] = useState<string | null>(null);
+  const observed = useWebviewObservation(
+    workbench,
+    host?.resource,
+    frameProps.capabilities,
+    props.visible !== false && !error,
+  );
   const diagnostics = createWebviewDiagnostics(view);
 
   return (
     <Box
       position="relative"
       width={props.sizing === "content-width" ? "max-content" : "full"}
-      height={props.sizing === "content-height" ? "auto" : "full"}
+      height={sizesToContentHeight(props.sizing) ? "auto" : "full"}
       minH="0"
       display="flex"
       flexDirection="column"
@@ -47,6 +55,7 @@ export const BridgeWebviewFrame = (props: BridgeWebviewFrameProps) => {
       <ExtensionFrame
         view={view}
         {...frameProps}
+        capabilities={observed}
         {...keyboard}
         themeRoot={() => surface?.root.current ?? null}
         onKeyboardEvent={(event) => {

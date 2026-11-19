@@ -76,7 +76,7 @@ test(
         phase("project selected");
         const status = page.frameLocator('iframe[title="Prompt Studio Cloud"]').getByTestId("cloud-status-item");
         const details = page.frameLocator('iframe[title="Cloud details"]');
-        await status.click();
+        await page.locator("footer").getByRole("button", { name: "Prompt Studio Cloud", exact: true }).click();
         await details.getByRole("button", { name: "Retry", exact: true }).click();
         await browserExpect(details.getByText("The sync retry failed.", { exact: false })).toBeVisible();
         phase("sync retry failure checked; release download");
@@ -88,7 +88,7 @@ test(
         phase("initial setup pending; release failure");
         completeInitialSetup();
         await browserExpect.poll(() => preparationResponses).toEqual([500]);
-        await status.click();
+        await page.locator("footer").getByRole("button", { name: "Prompt Studio Cloud", exact: true }).click();
         await details.getByRole("button", { name: "Retry", exact: true }).click();
         await browserExpect
           .poll(() => preparationRequests)
@@ -103,7 +103,7 @@ test(
         await browserExpect.poll(() => preparationResponses).toEqual([500, 200]);
         expect((await b.projects.folder(project.id)).path).toBeTruthy();
         await browserExpect(status).toHaveText("Synced");
-        await status.click();
+        await page.locator("footer").getByRole("button", { name: "Prompt Studio Cloud", exact: true }).click();
         phase("project folder opened");
       } finally {
         completeInitialSetup();

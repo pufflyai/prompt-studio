@@ -69,7 +69,7 @@ const performanceMonitor = createDesktopPerformanceMonitor({
 const updateNotifications = createDesktopUpdateNotifications({
   currentVersion: app.getVersion(),
   receipt: new DesktopUpdateReceipt(join(app.getPath("userData"), "downloaded-update-version")),
-  showMessageBox: (options) => dialog.showMessageBox(options),
+  onNotice: () => windowController?.notifyUpdate(),
   logError: (error) => {
     logger.error({ event: "desktop.update.failed", message: error.message }, "Desktop update check failed");
   },
@@ -253,6 +253,8 @@ const bootstrap = async () => {
             platform: process.platform,
             arch: process.arch,
             state: state.kind,
+            startupPhase: state.kind === "starting" ? state.phase : undefined,
+            startupError: state.kind === "recovery" ? state.error.code : undefined,
             runtimeOrigin: runtime?.origin,
             runtimePid: runtime?.pid,
             ownerType: runtime?.ownerType,
@@ -264,6 +266,7 @@ const bootstrap = async () => {
       );
     },
     checkForUpdates: () => updateManager.checkForUpdates(),
+    takeUpdateNotice: updateNotifications.take,
     updateChannel: {
       choice: updateChannel.choice,
       set: (channel) => {

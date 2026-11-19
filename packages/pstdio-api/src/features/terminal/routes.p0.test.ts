@@ -301,3 +301,48 @@ describe("terminal WebSocket", () => {
     expect(closes).toEqual([{ code: 1011, reason: "Terminal session failed" }]);
   });
 });
+
+test("a native view reattaches its live shell after reload and checks its installed owner before replay", async () => {
+  const live = createLiveHandle("native-retained");
+  const retained = createRetainedTerminals();
+  let enabled = true;
+  let opened = 0;
+  const deps = {
+    retained,
+    async viewKey() {
+      if (!enabled) throw new Error("Native terminal owner is disabled");
+      return "project/installed-owner/view";
+    },
+    async openView(_request: unknown, signal: AbortSignal) {
+      opened++;
+      signal.addEventListener("abort", () => void live.handle.kill(), { once: true });
+      return live.handle;
+    },
+  };
+  const request = { projectId: "project", viewId: "tool.terminal", cols: 80, rows: 24 };
+  const first = createSocket();
+  const original = createTerminalWebSocketEvents(deps);
+  send(original, first.socket, { type: "openView", request, attachKey: "placement" });
+  await waitFor(() => first.messages.length === 1);
+  original.onClose?.({} as CloseEvent, first.socket);
+  live.output("while away");
+  await Bun.sleep(0);
+  const second = createSocket();
+  const reloaded = createTerminalWebSocketEvents(deps);
+  send(reloaded, second.socket, { type: "openView", request, attachKey: "placement" });
+  await waitFor(() => second.messages.length === 2);
+  expect(opened).toBe(1);
+  expect(live.kills).toEqual([]);
+  expect(second.messages).toEqual([
+    { type: "open", sessionId: "native-retained" },
+    { type: "data", chunk: Buffer.from("while away").toString("base64") },
+  ]);
+  reloaded.onClose?.({} as CloseEvent, second.socket);
+  enabled = false;
+  const denied = createSocket();
+  const deniedEvents = createTerminalWebSocketEvents(deps);
+  send(deniedEvents, denied.socket, { type: "openView", request, attachKey: "placement" });
+  await waitFor(() => denied.messages.length > 0);
+  expect(denied.messages).toEqual([{ type: "error", message: "Native terminal owner is disabled" }]);
+  await live.handle.kill();
+});

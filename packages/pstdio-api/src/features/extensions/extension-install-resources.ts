@@ -59,9 +59,14 @@ const localSourcePath = (input: InstallExtensionSourceInput) => {
   return input.source.startsWith("~\\") ? join(home, input.source.slice(2)) : expandHomePath(input.source, home);
 };
 
+const remoteInstallIdentity = (input: InstallExtensionSourceInput) =>
+  input.registrySource?.id ?? input.expectedIdentity;
+
 export const extensionInstallSourceResources = (input: InstallExtensionSourceInput) => {
   const path = localSourcePath(input);
-  return path ? resourcePaths(path) : undefined;
+  if (path) return resourcePaths(path);
+  // A managed download is staged in a private directory. Destination inspection only reads path metadata.
+  return remoteInstallIdentity(input) ? [] : undefined;
 };
 
 export const extensionInstallResources = (input: InstallExtensionSourceInput, identity?: string) => {
@@ -73,7 +78,13 @@ export const extensionInstallResources = (input: InstallExtensionSourceInput, id
 // including folders another install may create after this inspection.
 export const inspectExtensionInstallResources = (input: InstallExtensionSourceInput) => {
   const source = localSourcePath(input);
-  if (!source) return {};
+  if (!source) {
+    const expected = remoteInstallIdentity(input);
+    if (!expected) return {};
+    const identity = canonicalExtensionId(expected);
+    const writes = extensionInstallDestinationResources(input, identity);
+    return writes ? { identity, resources: writes, reservation: { reads: [], writes } } : {};
+  }
   const { manifest } = readPackageManifestMetadata(source);
   if (!manifest) return {};
   let name = input.installName;

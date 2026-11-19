@@ -1,9 +1,10 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { draftHarnessCommandInputSchema, harnessCommandStateSchema } from "pstdio-api-contracts";
+import { draftHarnessCommandInputSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { ProjectFolderMissingError } from "../../projects/project-folder-missing";
 import type { SessionsRouteDeps } from "../deps";
 import { getDraftHarnessCommands } from "../draft-harness-commands";
+import { harnessCommandDiscoverySchema } from "../harness-command-discovery";
 import { HarnessParamError } from "../harness-params";
 import { HarnessOperationError } from "../session-harness-commands";
 
@@ -12,7 +13,7 @@ const errorResponse = {
   content: { "application/json": { schema: z.object({ error: z.string() }) } },
 };
 const conflictResponse = {
-  description: "The workspace is not ready, or the project's folder is not on this device.",
+  description: "The project folder is not on this device, or command discovery was interrupted.",
   content: { "application/json": { schema: z.object({ error: z.string(), code: z.string().optional() }) } },
 };
 export const draftHarnessCommandsRoute = createRoute({
@@ -24,7 +25,11 @@ export const draftHarnessCommandsRoute = createRoute({
   responses: {
     200: {
       description: "Selected harness commands and modes.",
-      content: { "application/json": { schema: harnessCommandStateSchema.extend({ harnessId: z.string() }) } },
+      content: {
+        "application/json": {
+          schema: harnessCommandDiscoverySchema,
+        },
+      },
     },
     400: errorResponse,
     404: errorResponse,

@@ -31,7 +31,7 @@ interface StartPagePreviewProps {
 const StartPagePreview = (props: StartPagePreviewProps) => {
   const { setupError } = props;
   return (
-    <Stack w="full" maxW="52rem" pt="4xl" pb="3xl" gap="3xl">
+    <Stack w="full" maxW="52rem" pt="4xl" pb="3xl" gap="3xl" position="relative">
       <Stack gap="xs" minW="0">
         <Text textStyle="heading/M">Prompt Studio</Text>
         <Text textStyle="paragraph/M/regular" color="fg.muted">

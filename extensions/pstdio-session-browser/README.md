@@ -38,3 +38,9 @@ This provider has an independent version/changelog and its own changeset. It sta
 ## Current implementation checkpoint
 
 Default catalog, provider refs, production native view/list/commands, contextual workspace previews and thin legacy definitions are wired. The implementation is unfinished. Clean installed browser acceptance, complete harness/draft/stream lifetime and performance qualification, and release checks remain. The superseded dashboard chat/list implementation has been removed; retained caller tests load the production provider declarations. Existing unit checks do not establish installed parity. The consumer PR stacks on prerequisite #1762.
+
+## Quota recovery
+
+The CLI-ready `quota-availability` command accepts `harnessId` and queries that harness owner's public `quotas` command. Quota commands return `status`, `limits` with `remainingPercent` and optional ISO `resetsAt`, and optional `restartAfterQuotaReset`. Unknown or unsupported snapshots return `known: false`. Exhausted windows return `limited: true`; `resetsAt` is the latest reset only when every exhausted window has a known timestamp and the latest is in the future. Planner uses this public command before waking its supervisor.
+
+A failed conversation with a current-turn quota error can enqueue one idempotent `restart-after-quota-reset` worker when its harness enables the device setting. Durable automation waits until the reset plus 15 seconds. The worker checks current run identity, local ownership, archive state, the native quota and opt-in before sending a guarded continuation. Manual stops, completed turns and unrelated errors stay stopped; a later quota reset schedules a later worker. No application timer or transcript scan runs while the worker is waiting. This requires the host's delayed-automation support in API 0.5.0 on main.

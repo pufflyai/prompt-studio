@@ -1,10 +1,30 @@
-import { expect, test } from "bun:test";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { expect, spyOn, test } from "bun:test";
+import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WatchDirectory } from "pstdio-extensions";
 import { git } from "pstdio-wt";
 import { watchWorkspaceFiles } from "./workspace-files-observation";
+
+test("an ordinary HEAD file does not start Git discovery", async () => {
+  const root = await mkdtemp(join(tmpdir(), "pstdio-files-plain-head-"));
+  await writeFile(join(root, "HEAD"), "ordinary text");
+  const spawn = spyOn(Bun, "spawn");
+  let observation: Awaited<ReturnType<typeof watchWorkspaceFiles>> | undefined;
+  try {
+    observation = await watchWorkspaceFiles(
+      root,
+      () => {},
+      () => ({ close() {} }),
+      false,
+    );
+    expect(spawn).not.toHaveBeenCalled();
+  } finally {
+    spawn.mockRestore();
+    observation?.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test("Git ignore decorations refresh on index and exclude changes without watching object storage", async () => {
   const root = await mkdtemp(join(tmpdir(), "pstdio-files-git-watch-"));
@@ -37,6 +57,63 @@ test("Git ignore decorations refresh on index and exclude changes without watchi
     observation.close();
     expect(closed.size).toBe(listeners.size);
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+test.each([
+  "nested folder",
+  "symbolic link",
+  "Git directory file",
+  "Git environment",
+])("file explorers retain ignore changes for a %s", async (kind) => {
+  const temporary = await realpath(await mkdtemp(join(tmpdir(), "pstdio-files-git-context-")));
+  const repository = join(temporary, "repository");
+  await mkdir(repository);
+  await git(repository, ["init"]);
+  const metadata = join(repository, ".git");
+  const root = join(temporary, "presented");
+  const previousGitDirectory = process.env.GIT_DIR;
+  const previousWorkTree = process.env.GIT_WORK_TREE;
+  if (kind === "nested folder") {
+    await mkdir(join(repository, "nested"));
+    await symlink(join(repository, "nested"), root, process.platform === "win32" ? "junction" : "dir");
+  } else if (kind === "symbolic link") {
+    await symlink(repository, root, process.platform === "win32" ? "junction" : "dir");
+  } else {
+    await mkdir(root);
+    if (kind === "Git directory file") await writeFile(join(root, ".git"), `gitdir: ${metadata}\n`);
+    else {
+      process.env.GIT_DIR = metadata;
+      process.env.GIT_WORK_TREE = root;
+    }
+  }
+  const listeners = new Map<string, Parameters<WatchDirectory>[1]>();
+  const changed = Promise.withResolvers<void>();
+  let observation: Awaited<ReturnType<typeof watchWorkspaceFiles>> | undefined;
+  try {
+    observation = await watchWorkspaceFiles(
+      root,
+      () => changed.resolve(),
+      (path, listener) => {
+        listeners.set(path, listener);
+        return { close() {} };
+      },
+      false,
+    );
+    const physicalListeners = new Map(
+      await Promise.all([...listeners].map(async ([path, listener]) => [await realpath(path), listener] as const)),
+    );
+    expect(physicalListeners.has(metadata)).toBe(true);
+    expect(physicalListeners.has(join(metadata, "objects"))).toBe(false);
+    physicalListeners.get(join(metadata, "info"))!("change", "exclude");
+    await changed.promise;
+  } finally {
+    observation?.close();
+    if (previousGitDirectory === undefined) delete process.env.GIT_DIR;
+    else process.env.GIT_DIR = previousGitDirectory;
+    if (previousWorkTree === undefined) delete process.env.GIT_WORK_TREE;
+    else process.env.GIT_WORK_TREE = previousWorkTree;
+    await rm(temporary, { recursive: true, force: true });
   }
 });
 

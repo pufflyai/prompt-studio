@@ -21,7 +21,7 @@
 3. Add or update end-to-end tests for new features, update documentation, and remove tests that cover only implementation details.
 4. Keep tests green.
 5. CI runs each test once per applicable platform. Never retry unchanged failures or run repeated reliability checks to obtain a pass. Verify cause repairs and the final revision through section 9.
-6. Remove failing quarantined cases and their registry entries. Keep their failure evidence in the ticket or report so product coverage can be restored after the cause is fixed. Do not move known failures into the stable lane.
+6. Quarantine confirmed flakes with evidence, an owner, and removal criteria. Run them once in a separate lane and require its execution report. Unexpected failures, missing coverage, skipped cases and retries remain blocking. See [ADR 0101](../adrs/0101-temporary-flaky-test-quarantine.md).
 
 ## 4. Prove it works
 

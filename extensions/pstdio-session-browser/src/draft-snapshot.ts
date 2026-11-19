@@ -2,7 +2,7 @@ import type { ChatRendererSnapshot, ControlValueMap, ExtensionContextBase, Resou
 import { commandDraftTag, commandIntent, commandSuggestions } from "./command-intent";
 import { composerControls, conversationOperations } from "./controls";
 import { selectedHarness, selectedWorkspace } from "./selection";
-import { workspaceSnapshot } from "./workspace";
+import { workspaceSnapshot, workspaceUnavailableReason } from "./workspace";
 
 const initialDraftValues = (resource: ResourceRef | undefined, override?: ControlValueMap) => ({
   harness: { harnessId: typeof resource?.metadata?.agent === "string" ? resource.metadata.agent : "" },
@@ -39,12 +39,15 @@ export const draftSnapshot = async (
       name: "Workspace",
       type: "selection",
       defaultValue: workspace,
-      options: workspaces.map((workspace) => ({
-        id: workspace.id,
-        name: workspace.name ?? workspace.shorthand ?? workspace.id,
-        description: [workspace.shorthand, workspace.branch].filter(Boolean).join(" "),
-        disabled: Boolean(workspace.setupError || workspace.initializing),
-      })),
+      options: workspaces.map((workspace) => {
+        const unavailable = workspaceUnavailableReason(workspace);
+        return {
+          id: workspace.id,
+          name: workspace.name ?? workspace.shorthand ?? workspace.id,
+          description: unavailable ?? [workspace.shorthand, workspace.branch].filter(Boolean).join(" "),
+          disabled: Boolean(unavailable),
+        };
+      }),
     },
     {
       id: "device",

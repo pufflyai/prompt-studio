@@ -12,6 +12,8 @@ test("worker ownership markers are private to the user and retire with their wor
     const observed = await new Promise<string>((resolve, reject) => {
       worker.once("message", resolve);
       worker.once("error", reject);
+      // The parent owns the marker and registers it before admitting work.
+      worker.postMessage("read-marker");
     });
     expect(observed).toBe(marker);
     expect(existsSync(marker)).toBe(true);

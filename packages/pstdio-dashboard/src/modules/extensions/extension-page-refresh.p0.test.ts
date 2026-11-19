@@ -25,20 +25,21 @@ test("restores an open extension page after a transient metadata gap", async () 
     ],
   };
   let currentMetadata = surroundingMetadata;
-  const workbench = createWorkbench();
+  const fallback = { kind: "page" as const, extensionId: "example.recovery", id: "landing" };
+  const workbench = createWorkbench({ defaultPage: fallback });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-  workbench.views.registerView({ id: "start", title: "Start", body: { kind: "react", render: () => null } });
+  workbench.views.registerView({ id: "fallback", title: "Fallback", body: { kind: "react", render: () => null } });
   workbench.pages.registerPage({
-    id: "start",
-    ref: { extensionId: "pstdio", kind: "page", id: "start" },
-    title: "Start",
-    path: "",
+    id: "fallback",
+    ref: fallback,
+    title: "Fallback",
+    path: "landing",
     modeId: "project",
     main: {
       kind: "view",
       view: {
         kind: "view",
-        id: "start",
+        id: "fallback",
       },
       cardinality: "one",
     },
@@ -83,7 +84,7 @@ test("restores an open extension page after a transient metadata gap", async () 
     writer?.upsert({ id: "transient-gap" });
     await flushMicrotasks();
     await flushMicrotasks();
-    expect(workbench.pages.store.getState().activePageId).toBe("start");
+    expect(workbench.pages.store.getState().activePageId).toBe("fallback");
     currentMetadata = surroundingMetadata;
     writer?.upsert({ id: "restored-metadata" });
     await flushMicrotasks();

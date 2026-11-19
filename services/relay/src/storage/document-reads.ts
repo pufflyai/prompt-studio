@@ -1,7 +1,7 @@
 import { and, asc, count, gt } from "drizzle-orm";
 import type { ReadResult, StateInfo } from "pstdio-sync-contracts";
 import type { RelayLimits } from "../limits";
-import { rejection } from "./accounts";
+import { assertProjectActive, rejection } from "./accounts";
 import type { connectRelay } from "./database";
 import { type DocumentAddress, documentWhere, stateWhere, updateWhere } from "./document-address";
 import { syncDocuments, syncStates, syncUpdates } from "./document-schema";
@@ -44,6 +44,7 @@ export const createDocumentReads = (
       (db) =>
         db.transaction(
           async (transaction) => {
+            await assertProjectActive(transaction, address.projectKey);
             const [document] = await transaction.select().from(syncDocuments).where(documentWhere(address));
             if (document && document.spaceOwner !== address.spaceOwner) throw rejection(404, "not-found");
             const lastSequence = document?.lastSequence ?? 0;
@@ -107,6 +108,7 @@ export const createDocumentReads = (
     /** Streams one latest state's encrypted bytes. Replaced states stay readable for the grace period. */
     async readState(address: DocumentAddress, stateId: string, signal?: AbortSignal) {
       const row = await connection.run(async (db) => {
+        await assertProjectActive(db, address.projectKey);
         const [document] = await db
           .select({ spaceOwner: syncDocuments.spaceOwner })
           .from(syncDocuments)

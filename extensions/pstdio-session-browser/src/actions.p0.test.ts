@@ -1,14 +1,18 @@
 import { expect, test } from "bun:test";
-import { workspaceCommands } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { act } from "./actions";
 
-test("Open workspace delegates identity and destination policy to its public owner", async () => {
+test("Open workspace follows the configured public opener", async () => {
   const opened: unknown[] = [];
+  const target = {
+    kind: "page" as const,
+    page: { kind: "page" as const, extensionId: "example.reader", id: "inspect" },
+  };
   const ctx = makeCommandContext({
     storage: createMemoryStorage(),
     params: {},
     overrides: {
+      resources: { resolveOpenings: async () => [{ resource: { type: "workspace", id: "remote-workspace" }, target }] },
       navigation: { open: (target) => opened.push(target) },
     },
   });
@@ -17,9 +21,7 @@ test("Open workspace delegates identity and destination policy to its public own
     draftKey: "remote-session",
     action: { type: "openResource", id: "remote-workspace" },
   });
-  expect(opened).toEqual([
-    { kind: "command", target: { command: workspaceCommands.open, params: { id: "remote-workspace" } } },
-  ]);
+  expect(opened).toEqual([target]);
 });
 
 const created = {

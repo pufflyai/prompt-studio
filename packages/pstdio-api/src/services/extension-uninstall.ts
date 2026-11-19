@@ -76,6 +76,11 @@ export const uninstallProjectExtension = async (
   const instances = await deps.extensionInstancesService.list({ installed_extension_id: installedSource.id });
   let retainedData = false;
   for (const extensionInstance of instances) {
+    if (extensionInstance.scope_type === "project")
+      await deps.extensionInstancesService.recordProjectDefaultChoice(
+        extensionInstance.scope_id,
+        installedSource.extension_id,
+      );
     if (input.deleteUserData) {
       await deleteInstanceData(deps, extensionInstance);
     } else if (await deps.extensionUserDataService.hasUserData(extensionInstance.id)) {

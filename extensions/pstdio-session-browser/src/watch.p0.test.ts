@@ -593,7 +593,7 @@ test("a late queue refresh cannot overwrite a newer stream steering capability",
   }
 });
 
-test("an idle turn tells the person the agent is waiting and which background tasks still run", async () => {
+test("queue failures remain visible across background task state changes", async () => {
   const controller = new AbortController();
   const ended = Promise.withResolvers<void>();
   const notices: unknown[] = [];
@@ -625,7 +625,7 @@ test("an idle turn tells the person the agent is waiting and which background ta
           notices.length = 0;
           await onEvent({ event: "patch", data: { op: "replace", path: "/idle_turn", value: idleTurn } });
           await onEvent({ event: "patch", data: { op: "replace", path: "/idle_turn", value: null } });
-          // A later queue error stays when the next idle turn ends.
+          // Background task updates must not replace or clear an actionable queue failure.
           await onEvent({ event: "patch", data: { op: "replace", path: "/idle_turn", value: idleTurn } });
           await onEvent({ event: "queued_messages", data: { error: "Could not refresh queued messages" } });
           await onEvent({ event: "patch", data: { op: "replace", path: "/idle_turn", value: null } });
@@ -638,10 +638,7 @@ test("an idle turn tells the person the agent is waiting and which background ta
   await ended.promise;
   controller.abort();
   await watching;
-  expect(notices).toHaveLength(4);
-  expect(notices[0]).toContain("Watch the extension for changes");
-  expect(notices[1]).toBe("");
-  expect(notices[3]).toBe("Could not refresh queued messages");
+  expect(notices).toEqual(["Could not refresh queued messages"]);
 });
 
 test("a command approval names the command the person is allowing", () => {
