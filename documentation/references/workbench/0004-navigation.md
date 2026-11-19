@@ -42,6 +42,8 @@ The routed page owns its breadcrumb and page actions. A collection page uses Mai
 
 ## Mounted views
 
+Leaving a retained view dismisses its popovers, tooltips, and menus. Returning preserves document drafts and scroll position, with those overlays closed. This applies to page content, mode chrome, panel menus, and status details, including views that suspend rendering while hidden. Suspending the entire workbench still preserves unfinished overlay state for reactivation.
+
 ### Project selection
 
 Before a project is selected, the required Projects dialog appears on an empty background. Project selection hides navigation, activity, status widgets, floating panels, project tabs, and panel controls. Native window controls remain available. The dialog footer opens global Settings; closing Settings returns to the picker. System errors still use the status bar when they need attention.
