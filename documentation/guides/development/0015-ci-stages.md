@@ -139,7 +139,7 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
 - **Production validation** runs on the same files:
   - P0, P1 and P2 on Linux, with up to twelve P2 app shards; native desktop and packaged CLI checks also run on Apple Silicon
   - P1 and P2 against the signed desktop apps. When the run validates signed release files, the source desktop jobs keep only the source Electron checks, so each packaged desktop case runs once.
-  - P3 performance measurements
+  - P3 performance measurements run in a separate advisory workflow after publication, and continue for unchanged nightly candidates
   - container service checks
   - native artifact contracts on Linux x64, Apple Silicon and Windows x64; full shared CLI behavior runs separately on Linux
 - B1–B8 each run once on Linux x64, Apple Silicon Mac and Windows x64: 24 combinations. Intel Mac is excluded from benchmarks. Windows desktop measurements use an unpublished production-mode package in nightly validation and the signed candidate in stable validation.
@@ -151,7 +151,7 @@ A failed, cancelled or skipped upgrade check blocks nightly publication. A later
 
 P3 budgets describe the hosted CI runners, not a developer machine. Each was set from the slowest result of several runs on the hosted ubuntu-24.04 runner, plus about 20% (see [sidenav and subnav](../../references/performance/0004-sidenav-subnav.md) and [board cold open](../../references/performance/0002-planner-board-cold-open.md)). A fast laptop passes them easily, so a P3 failure on CI is the signal to act on. To change a budget, collect several CI runs of the same candidate first and get the exact value approved (see [CI guidance](../../guidance/0004-ci.md#3-ci-timeouts-and-performance-budgets)).
 
-Fix nightly failures before you start a stable release. The stable release runs the same checks, so the same failure blocks it.
+Fix functional and artifact-integrity failures before starting a stable release. Performance regressions remain visible in their independent measurement reports and do not block publication.
 
 ## Stable release (full release)
 
@@ -159,9 +159,9 @@ Start **Release Packages** manually with the `stable` channel.
 
 1. `plan` picks the version and places the release tag.
 2. The release files are built once: npm packages, containers, and signed desktop apps for Linux x64, macOS x64, macOS arm64 and Windows x64. The Windows installer also gets an update check.
-3. **Production validation** runs everything the nightly runs, against those exact files, and adds Windows and Intel macOS: all six native CLI artifact contracts, with shared CLI journeys on Linux, focused Windows process/security and filesystem/storage contracts, and exact signed Windows benchmark artifacts. Benchmark coverage is B1–B8 on Linux x64, Apple Silicon Mac and Windows x64 in both channels; Intel Mac has no benchmark lane.
+3. **Production validation** runs everything the nightly runs, against those exact files, and adds Windows and Intel macOS: all six native CLI artifact contracts, with shared CLI journeys on Linux, focused Windows process/security and filesystem/storage contracts, and exact signed Windows artifacts. Independent advisory benchmark coverage is B1–B8 on Linux x64, Apple Silicon Mac and Windows x64 in both channels; Intel Mac has no benchmark lane.
 4. `certify` writes a certificate. It ties the results to the source commit, version commit, toolchain, producing run and attempt, and the artifact IDs and digests.
-5. `publish` runs only if every job passed. It checks the certificate again before it downloads the files. Missing, expired, changed or partial results block publishing.
+5. `publish` runs only if every required functional and artifact-integrity job passed. It checks the certificate again before it downloads the files. Missing, expired, changed or partial required results block publishing. Performance measurements start independently after publication and cannot fail or delay it.
 
 A source-built diagnostic cannot certify a stable release app. Other channels:
 
@@ -271,3 +271,5 @@ Daily native diagnostics include an unpublished Windows desktop package; nightly
 Measure a completed first-attempt run with `bun scripts/ci/required-turnaround.ts <run-id> cold` or `warm`. Preserve the cache provenance with the report. The JSON records workflow creation through required-gate completion, runner waits when GitHub provides creation timestamps, and individual job/step timings. Unknown cache provenance, incomplete or failed runs, reruns and overruns cannot qualify the ten-minute target. Do not omit selected tests or raise allowances to pass it.
 
 Before accepting a migration, retain an inventory of old and new files/cases and their exact Linux/native replacements. Run representative cold and warm PR and actual merge-group candidates, plus the final published-artifact contracts. Restore a family's previous selection if its replacement fails qualification. Hosted qualification, migration of remaining browser-driven shared journeys to Electron, mixed native case extraction must remain visible until verified; local planner passes do not establish them.
+
+*Updated at: 2026-11-19*

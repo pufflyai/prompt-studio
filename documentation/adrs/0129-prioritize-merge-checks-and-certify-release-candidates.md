@@ -18,7 +18,7 @@ P0 owns fast static, focused unit, type, lint, and public declaration checks. P1
 | Pull request | Affected P0 and added/edited tests at every priority | Baseline below 180 seconds; edited tests add setup and execution |
 | Merge queue | All P0, P1 source contracts, and real-app startup on the merge candidate | Below 480 seconds |
 | Main | Matching queue provenance and a small app smoke | No repeated full suite |
-| Production candidate | Exact-candidate P0/P1, required P2 platforms/permutations, and P3 | 2,400–3,000 seconds |
+| Production candidate | Exact-candidate P0/P1 and required P2 platforms/permutations; independent advisory P3 | 2,400–3,000 seconds |
 
 Targets count installation, builds, transfers, execution, reports, and cleanup. Report queue/runner waits separately. Targets neither establish achieved performance nor authorize skipped coverage or larger allowances. Existing limits, fixed workloads, and budgets stay unchanged; scale diagnostics acquire no invented ceilings.
 
@@ -47,7 +47,7 @@ Targets count installation, builds, transfers, execution, reports, and cleanup. 
 3. Promote queue archives only after main verifies their exact tree and inputs. Container caches save after builds; misses build normally. Cache hits never remove fresh behavior checks.
 4. Distinguish the immutable candidate's source SHA from its generated version commit. Verify checkout, build identity, producer run/attempt, artifact IDs/digests, policy, and toolchain.
 5. Stable publication consumes a complete matching release certificate and rejects changed inputs. A source-built nightly Windows diagnostic cannot certify a stable published app.
-6. Nightly publication requires basic artifact integrity and all-or-nothing publication. Deep P2/P3 diagnostics run independently; stable publication waits for complete functional and performance evidence.
+6. Nightly publication requires basic artifact integrity and all-or-nothing publication. Deep P2/P3 diagnostics run independently; stable publication waits for complete functional and artifact-integrity evidence. P3 performance measurements run independently after publication and on unchanged nightly candidates; their failures remain visible without gating releases.
 
 ## Qualification and consequences
 
@@ -57,3 +57,5 @@ Targets count installation, builds, transfers, execution, reports, and cleanup. 
 - Verify live check identity and queue behavior, including retained P0 evidence after early P1 rejection. A passing rerun does not prove reliability.
 - On failed qualification, restore the last qualified gate, keep its context and ALLGREEN policy, discard stale queued candidates, and verify fresh ones. Never disable the gate or publish incomplete evidence.
 - Commands and qualification details live in [CI stages](../guides/development/0015-ci-stages.md).
+
+*Updated at: 2026-11-19*

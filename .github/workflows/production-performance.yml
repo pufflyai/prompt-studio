@@ -17,6 +17,9 @@ on:
       candidate_artifact_id:
         required: true
         type: string
+      candidate_artifact_run_id:
+        description: Run that produced the candidate manifest
+        type: string
       channel:
         required: true
         type: string
@@ -27,11 +30,59 @@ on:
         description: JSON family and runner rows for the release channel, from scripts/ci/production-platforms.ts
         required: true
         type: string
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Exact candidate version commit
+        required: true
+        type: string
+      source_sha:
+        description: Original source commit
+        required: true
+        type: string
+      artifact_run_id:
+        description: Release run that built the measured artifacts
+        required: true
+        type: string
+      artifact_attempt:
+        required: true
+        default: "1"
+        type: string
+      candidate_artifact_id:
+        description: Immutable production candidate identity artifact
+        required: true
+        type: string
+      candidate_artifact_run_id:
+        description: Run that produced the candidate manifest, distinct from the compiled payload producer
+        required: true
+        type: string
+      channel:
+        type: choice
+        options: [stable, nightly]
+        default: stable
 permissions:
   contents: read
   actions: read
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      desktop_platforms: ${{ inputs.desktop_platforms || steps.platforms.outputs.benchmark_desktop_matrix }}
+      workloads: ${{ inputs.workloads || steps.platforms.outputs.performance_matrix }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Select the maintained performance matrix
+        id: platforms
+        env:
+          CHANNEL: ${{ inputs.channel }}
+        run: bun scripts/ci/production-platforms.ts
   desktop:
+    needs: plan
     uses: ./.github/workflows/production-desktop.yml
     with:
       ref: ${{ inputs.ref }}
@@ -40,16 +91,18 @@ jobs:
       source_sha: ${{ inputs.source_sha }}
       artifact_attempt: ${{ inputs.artifact_attempt }}
       candidate_artifact_id: ${{ inputs.candidate_artifact_id }}
+      candidate_artifact_run_id: ${{ inputs.candidate_artifact_run_id || github.run_id }}
       kind: performance
-      platforms: ${{ inputs.desktop_platforms }}
+      platforms: ${{ needs.plan.outputs.desktop_platforms }}
   workloads:
+    needs: plan
     name: P3 ${{ matrix.family }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(inputs.workloads) }}
+        include: ${{ fromJSON(needs.plan.outputs.workloads) }}
     env:
       SOURCE_SHA: ${{ inputs.source_sha }}
       VERSION_SHA: ${{ inputs.ref }}
@@ -106,6 +159,8 @@ jobs:
         if: always()
         with:
           artifact-ids: ${{ inputs.candidate_artifact_id }}
+          run-id: ${{ inputs.candidate_artifact_run_id || github.run_id }}
+          github-token: ${{ github.token }}
           merge-multiple: true
       - name: Attest actual consumer inputs and outcome
         if: always()
