@@ -5,7 +5,6 @@ import { archiveArgs, workspaceArgs } from "./archive-context.fixture";
 import { archiveTicketCommand } from "./archive-ticket";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
-import { runAttemptCommand } from "./run-attempt";
 import { sessionQuery } from "./session-query.fixture";
 import { listTicketFilesTreeCommand } from "./ticket-files";
 
@@ -89,21 +88,6 @@ describe("ticket work in shared folders", () => {
     expect(result?.archived).toBe(true);
     expect(deleteWorkspace).toHaveBeenCalledTimes(supportsDelete ? 1 : 0);
     expect(action).not.toHaveBeenCalled();
-  });
-
-  test("managed attempts still require a usable Git base", async () => {
-    await expect(
-      runAttemptCommand.run(
-        ...(await workspaceArgs({
-          storage: createMemoryStorage(),
-          params: { ticket: "T-1" },
-          overrides: {
-            workspaces: { getDefault: async () => home },
-            process: { run: async () => ({ exitCode: 128, stdout: "", stderr: "Not a Git repository" }) },
-          },
-        })),
-      ),
-    ).rejects.toThrow("Planner attempts require a Git repository");
   });
 
   test("keeps unlinked project folders and other tickets' sessions off a ticket", async () => {

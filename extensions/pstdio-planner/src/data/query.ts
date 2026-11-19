@@ -2,8 +2,8 @@ import type { ExtensionStorageApi, KanbanRendererQueryResult, ViewFilterGroup } 
 import { attentionPanelTarget } from "../attention-panel";
 import { readStoredPlan } from "../timeline/commands/plan-store";
 import { buildPlan } from "../timeline/model/build-plan";
-import { resolvePlan } from "../timeline/model/resolve-plan";
-import { timelineTicketProperties } from "../timeline/model/ticket-properties";
+import { resolvePlan, sortedPlanDeadlines } from "../timeline/model/resolve-plan";
+import { timelineTicketAttributes, timelineTicketProperties } from "../timeline/model/ticket-properties";
 import { sortedByTicketOrder } from "../utils/sort";
 import { ticketsCollection } from "./collections";
 import {
@@ -34,6 +34,21 @@ interface TicketsQueryInput {
   filter?: ViewFilterGroup;
 }
 
+const readBoardSettings = async (storage: ExtensionStorageApi) => {
+  const [tags, statuses, storedPlan] = await Promise.all([
+    seedDefaultTags(storage),
+    seedDefaultStatuses(storage),
+    readStoredPlan(storage),
+  ]);
+  return { tags, statuses, storedPlan };
+};
+
+export const readTicketBoardFields = async (storage: ExtensionStorageApi): Promise<KanbanRendererQueryResult> => {
+  const { tags, statuses, storedPlan } = await readBoardSettings(storage);
+  const deadlines = sortedPlanDeadlines(storedPlan);
+  return { rows: [], attributes: [...buildTicketAttributes(statuses, tags), ...timelineTicketAttributes(deadlines)] };
+};
+
 // The renderer re-applies filter, sort, and grouping locally. The query returns the
 // requested archive set, enum options, and board rules from Planner storage.
 export const runTicketsQuery = async ({
@@ -45,11 +60,9 @@ export const runTicketsQuery = async ({
   filter,
   workflow = emptyWorkflowStatuses(),
 }: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {
-  const [tickets, tags, statuses, storedPlan, requests] = await Promise.all([
+  const [tickets, { tags, statuses, storedPlan }, requests] = await Promise.all([
     snapshot ?? ticketsCollection({ storage, resources }).list(),
-    seedDefaultTags(storage),
-    seedDefaultStatuses(storage),
-    readStoredPlan(storage),
+    readBoardSettings(storage),
     readTicketReviewRequests(storage),
   ]);
   const activeTickets = sortedByTicketOrder(tickets.filter((ticket) => !ticket.archived));

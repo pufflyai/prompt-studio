@@ -52,7 +52,7 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
     }
     return work;
   };
-  const sourcesByPath = new Map<string, { loadKey: string; loading: Promise<CachedSource | null> }>();
+  const sourcesByPath = new Map<string, { loadKey: string | null; loading: Promise<CachedSource | null> }>();
   // Sources an invalidation reported as possibly changed. Their load key is compared
   // on the next read, so only a changed source is imported again.
   const uncheckedPaths = new Set<string>();
@@ -75,7 +75,10 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
     const loading = (async () => {
       const accepted = await readAcceptedRevision(installedSource.source_path);
       const inspect = input.loadSources ? hashExtensionSourceAsync : inspectExtensionLoadKey;
-      const loadKey = accepted ? `${accepted.loadKey}:${accepted.id}` : await inspect(installedSource.source_path);
+      // The default loader returns the input identity it computes during preparation.
+      // Only rechecks and loaders without a prepared revision need a separate scan.
+      let loadKey = accepted ? `${accepted.loadKey}:${accepted.id}` : null;
+      if (!accepted && (cached || input.loadSources)) loadKey = await inspect(installedSource.source_path);
       if (cached?.loadKey === loadKey) return cached.loading;
       const prepared = accepted
         ? inspectCandidate(installedSource, accepted).then((cached) => ({

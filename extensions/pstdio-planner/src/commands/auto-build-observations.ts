@@ -1,4 +1,5 @@
 import type { CommandContext, SessionRunSnapshot } from "@pstdio/sdk/extensions";
+import { attemptId, selectedAttemptId } from "../data/attempt-identity";
 import type { AttemptRecord, AttemptTimelineEvent, TicketAttemptSelection } from "../data/attempt-types";
 import { hasPendingImplementationInput } from "../data/implementation-input";
 import type { GithubReads } from "../data/pull-request-resources";
@@ -208,13 +209,13 @@ export async function observeTicketWork(
   const { attempts, retired, selections, ...shared } = input;
   const candidates: WorkCandidate[] = [];
   const observations: WorkObservation[] = [];
-  const variants = attempts.filter((attempt) => attempt.ticketId === ticket.id && !retired.has(attempt.workspaceId));
+  const variants = attempts.filter((attempt) => attempt.ticketId === ticket.id && !retired.has(attemptId(attempt)));
   const selected = selections.find((selection) => selection.ticketId === ticket.id);
-  const chosen = selected ? variants.filter((attempt) => attempt.workspaceId === selected.workspaceId) : variants;
+  const chosen = selected ? variants.filter((attempt) => attemptId(attempt) === selectedAttemptId(selected)) : variants;
   for (const attempt of variants) {
     const result = await observeVariant(ctx, ticket, attempt, {
       ...shared,
-      owned: chosen.length === 1 && chosen[0]?.workspaceId === attempt.workspaceId,
+      owned: chosen.length === 1 && chosen[0] !== undefined && attemptId(chosen[0]) === attemptId(attempt),
     });
     if (result.candidate) candidates.push(result.candidate);
     if (result.observation) observations.push(result.observation);

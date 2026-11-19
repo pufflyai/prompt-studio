@@ -1,5 +1,6 @@
 import type { CommandContext, ExtensionSessionsApi, StoragePredicate } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
+import { requireGitBase } from "../data/attempt-base";
 import { appendAttemptEvent, attemptSelectionsCollection, readAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
 import { resolveImplementationBase } from "../data/implementation-targets";
@@ -33,7 +34,7 @@ export async function readRecoveryBase(ctx: CommandContext, attempt: AttemptReco
       "rev-parse",
       "--verify",
       "--end-of-options",
-      `${base ?? attempt.base.headSha}^{commit}`,
+      `${base ?? requireGitBase(attempt).headSha}^{commit}`,
     ],
   });
   if (previous.exitCode === 0) return previous.stdout.trim();
@@ -120,7 +121,7 @@ export async function recoveryPrompt(
   return [
     [
       `Recover ${old.ticketShorthand}. The old workspace ${old.workspaceShorthand} (${old.workspaceId}) is unavailable: ${recovery.detail}. This is a recovery assignment, not a reason to block the ticket or ask for permission.`,
-      `This fresh managed workspace starts at available commit ${recovery.headSha}; required dependency base: ${requiredBase}. This starting point does not prove the previous work was recovered. Keep this workspace's assigned branch. Read the ticket Activity, old attempt history, historical report compatibility links and review findings. Old implementation session: ${old.implementationSessionId}. Old recorded base: ${old.base.headSha}.`,
+      `This fresh managed workspace starts at available commit ${recovery.headSha}; required dependency base: ${requiredBase}. This starting point does not prove the previous work was recovered. Keep this workspace's assigned branch. Read the ticket Activity, old attempt history, historical report compatibility links and review findings. Old implementation session: ${old.implementationSessionId}. Old recorded base: ${requireGitBase(old).headSha}.`,
       `Old revisions: ${old.revisions.map((revision) => `R${revision.revision}: ${revision.headSha}, base ${revision.baseSha}, evidence ${revision.changeRequestActivityId ?? revision.changeRequestReportId ?? "None"}`).join("; ") || "No submitted revisions"}. Linked PRs: ${[...pullRequests.map(({ id }) => id), ...(ticket?.reviewLinks ?? []).map(({ url }) => url)].join(", ") || "None"}.`,
       "Find the previous code in the surviving Git branch, saved commits, PR branches and Activity evidence. Fetch the PR code when needed and restore it here. If no code survives, restart implementation from the ticket requirements. State what was recovered and what had to be redone; do not claim missing uncommitted files were restored. The old workspace and its review history remain available as evidence.",
       `Commit recovered changes, run update-stack with this workspace's current HEAD and your owner session, and verify the required code before continuing. Run affected checks and configured review, publish a fresh implementation Activity entry on the ticket with its exact revision and evidence, and submit the entry ID and exact new HEAD with --change-request-activity-id. Old approvals stay on old commits; recovery does not approve work or merge the target. Preserve the ticket's PR target. Request review only for a real unresolved requirements decision or missing access you cannot repair.`,

@@ -9,23 +9,15 @@ const readBundle = async (files = Bun.embeddedFiles) => {
 
 const matchesRelease = (bundle: BundledExtensionSources, ref: string) => bundle.ref === ref || bundle.commit === ref;
 
-export const hasBundledExtensionSource = async (origin: { url: string; path: string }, ref: string) => {
+export const findBundledExtensionSource = async (origin: { url: string; path: string }, ref: string) => {
   const bundle = await readBundle();
-  return Boolean(
-    bundle &&
-      matchesRelease(bundle, ref) &&
-      bundle.sources.some((source) => source.url === origin.url && source.path === origin.path),
-  );
+  if (!bundle || !matchesRelease(bundle, ref)) return null;
+  const source = bundle.sources.find((entry) => entry.url === origin.url && entry.path === origin.path);
+  return source ? { commit: bundle.commit, version: source.version } : null;
 };
 
-export const resolveBundledExtensionCommit = async (origin: { url: string; path: string }, ref: string) => {
-  const bundle = await readBundle();
-  return bundle &&
-    matchesRelease(bundle, ref) &&
-    bundle.sources.some((source) => source.url === origin.url && source.path === origin.path)
-    ? bundle.commit
-    : null;
-};
+export const resolveBundledExtensionCommit = async (origin: { url: string; path: string }, ref: string) =>
+  (await findBundledExtensionSource(origin, ref))?.commit ?? null;
 
 export const prepareBundledExtensionSource = async (
   origin: { url: string; path: string },
