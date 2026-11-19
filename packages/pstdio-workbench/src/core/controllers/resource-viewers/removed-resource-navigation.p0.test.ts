@@ -25,5 +25,5 @@ test("a fresh authoritative opening can use the identity of a recreated resource
     resource: { ...viewerResource("deleted"), label: "Recreated" },
   };
   await w.navigation.openTarget(target);
-  expect(w.pages.getContent()?.resource?.label).toBe("Recreated");
+  expect(w.layout.getActivePanel("main")?.resource?.label).toBe("Recreated");
 });

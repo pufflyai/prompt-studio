@@ -15,6 +15,7 @@ import { planTrayDrop } from "../../registries/layout/tray-tabs";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { revealPanelRegion } from "../../workbench-core-navigation";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { movePageContent, pageContentDestinations } from "./page-content-move";
 import { panelDestinations } from "./panel-destinations";
 
 const keepSourceVisible = (source: WorkbenchRegionState, region: WorkbenchRegion, tabCount: number) =>
@@ -30,11 +31,20 @@ const revealDropTarget = (target: WorkbenchRegionState, showHeader: boolean) => 
 export const createPanelArrangement = (resolve: () => WorkbenchCore) => ({
   getPanelDestinations(instanceId: string) {
     const core = resolve();
+    const pageDestinations = pageContentDestinations(core, instanceId);
+    if (pageDestinations) return pageDestinations;
     const found = findPlacementByWidgetId(core.layout.getLayout(), instanceId);
     return found ? panelDestinations(core, found.placement.contributionId) : [];
   },
   movePanel(instanceId: string, destination: WorkbenchPanelRegion, position: WorkbenchTabPosition = "end") {
     const core = resolve();
+    const pageDestinations = pageContentDestinations(core, instanceId);
+    if (pageDestinations) {
+      if (!pageDestinations.includes(destination))
+        throw new Error(`Panel cannot move to ${destination}: ${instanceId}`);
+      movePageContent(core, destination, position);
+      return;
+    }
     const initial = findPlacementByWidgetId(core.layout.getLayout(), instanceId);
     if (!initial) throw new Error(`Panel instance not found: ${instanceId}`);
     if (

@@ -58,7 +58,7 @@ test("a page can offer its renderer as an independent singleton panel view", asy
   expect(w.composition.panelsFor("side").addable).toHaveLength(1);
 });
 
-test("a tabbed page landing selects its existing independent browser without moving it", async () => {
+test("a tabbed page landing brings its existing independent browser back to Main", async () => {
   const { w } = fixture();
   const panel = { kind: "placement" as const, extensionId: "example", id: "library" };
   w.modePlacements.registerPlacement({
@@ -85,8 +85,8 @@ test("a tabbed page landing selects its existing independent browser without mov
   expect(browser?.viewId).toBe("other");
   w.movePanel(browser.instanceId, "side");
   w.pageLocations.navigate({ kind: "page", page: library });
-  expect(w.layout.getActivePanel("side")?.instanceId).toBe(browser.instanceId);
-  expect(w.layout.getLayout().regions.main.widgets).toEqual([]);
+  expect(w.layout.getActivePanel("main")?.instanceId).toBe(browser.instanceId);
+  expect(w.layout.listPanelInstances("side")).toHaveLength(0);
   expect(w.composition.panelsFor("main").addable.some((entry) => entry.panelId === browser.panelId)).toBe(false);
 });
 

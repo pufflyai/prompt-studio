@@ -62,18 +62,18 @@ const PageMenuHeaderStory = (props: PageMenuHeaderStoryProps) => {
   );
 };
 const meta = {
-  title: "Product/Workbench/Panels/Page menu header",
+  title: "Product/Workbench/Panels/Main page header",
   component: PageMenuHeaderStory,
   fullscreen: true,
 } satisfies CanvasMeta<typeof PageMenuHeaderStory>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;
-/** The breadcrumb shows the page title and the Main header holds the view-menu controls. */
+/** One Main header holds the breadcrumb, resource actions and view-menu controls. */
 export const WithClosedViewMenu: Story = {
   id: "pstdio-workbench-reference-core-api-page-menu-header--with-closed-view-menu",
   args: { withMenu: true },
 };
-/** A tabless page without view menus has no Main header at all. */
+/** A page without view menus keeps its breadcrumb and navigation in the same Main header. */
 export const WithoutViewMenus: Story = {
   id: "pstdio-workbench-reference-core-api-page-menu-header--without-view-menus",
   args: { withMenu: false },

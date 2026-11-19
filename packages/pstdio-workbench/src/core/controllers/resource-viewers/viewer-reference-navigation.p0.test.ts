@@ -4,39 +4,36 @@ import { createResourceViewerFixture, viewerPage, viewerPanel, viewerResource } 
 const section = { anchors: [{ id: "details", heading: "Details" }] };
 const document = (name: string) => ({ ...viewerResource("x"), metadata: { document: name } });
 
-test("a resource link updates the section in its existing independent viewer while preserving Main", async () => {
-  const { w, openSide, side, other } = createResourceViewerFixture();
+test("a resource link transfers its independent viewer into Main and applies its section", async () => {
+  const { w, openSide, other } = createResourceViewerFixture();
   await openSide("x");
   other();
-  const location = w.pages.store.getState().location;
   await w.navigation.openPage({ page: viewerPage("reader"), resource: viewerResource("x"), section });
-  expect(side().section).toEqual(section);
-  expect(w.pages.store.getState().location).toBe(location);
+  expect(w.pages.getContent()?.section ?? w.layout.getActivePanel("main")?.section).toEqual(section);
+  expect(w.layout.listPanelInstances("side")).toHaveLength(0);
 });
 
-test("a resource link updates a moved page viewer's section while preserving Main", async () => {
-  const { w, openMain, side } = createResourceViewerFixture({ tabs: true });
+test("a resource link brings its moved page viewer into Main with the requested section", async () => {
+  const { w, openMain } = createResourceViewerFixture({ tabs: true });
   await openMain("x");
   w.movePanel(w.layout.getActivePanel("main")!.instanceId, "side");
   await openMain("y");
-  const location = w.pages.store.getState().location;
   await w.navigation.openPage({ page: viewerPage("reader"), resource: viewerResource("x"), section });
-  expect(side().section).toEqual(section);
-  expect(w.pages.store.getState().location).toBe(location);
+  expect(w.pages.getContent()?.section ?? w.layout.getActivePanel("main")?.section).toEqual(section);
+  expect(w.layout.listPanelInstances("side")).toHaveLength(0);
 });
 
 test("a resource link applies source coordinates to the owning viewer and restores them after reload", async () => {
   const first = createResourceViewerFixture({ document: true });
   await first.w.navigation.openPanel({ panel: viewerPanel, resource: document("a"), region: "side", open: "pin" });
   first.other();
-  const location = first.w.pages.store.getState().location;
   await first.w.navigation.openPage({
     page: viewerPage("reader"),
     resource: document("a"),
     position: { line: 3, column: 2 },
   });
-  expect(first.side().position).toEqual({ line: 3, column: 2 });
-  expect(first.w.pages.store.getState().location).toBe(location);
+  expect(first.w.pages.getContent()?.position).toEqual({ line: 3, column: 2 });
+  first.w.movePanel(first.w.pages.getContent()!.widgetId, "side");
   const next = createResourceViewerFixture({ document: true, saved: first.saved, locations: first.locations });
   expect(next.side().position).toEqual({ line: 3, column: 2 });
 });
@@ -48,8 +45,8 @@ test("many viewers use complete document identity rather than only the enclosing
   expect(w.layout.listPanelInstances("side").map((viewer) => viewer.resource?.metadata?.document)).toEqual(["a", "b"]);
 });
 
-test("switching to an existing viewer applies its requested section without changing the caller", async () => {
-  const { w, openMain, openSide, side } = createResourceViewerFixture();
+test("switching to an existing resource brings it to the caller and applies its section", async () => {
+  const { w, openMain, openSide } = createResourceViewerFixture();
   await openMain("main");
   await openSide("side");
   const caller = w.pages.getContent()!.placementIdentity!;
@@ -59,8 +56,9 @@ test("switching to an existing viewer applies its requested section without chan
     resource: viewerResource("side"),
     section,
   });
-  expect(side().section).toEqual(section);
-  expect(w.pages.getContent()?.resource?.id).toBe("main");
+  expect(w.pages.getContent()?.section).toEqual(section);
+  expect(w.pages.getContent()?.resource?.id).toBe("side");
+  expect(w.layout.listPanelInstances("side")).toHaveLength(0);
 });
 
 test("a denied duplicate draft replacement preserves its caller and target", async () => {
@@ -85,7 +83,8 @@ test("a denied duplicate draft replacement preserves its caller and target", asy
 
 test("selecting a retained Main document restores that viewer's source coordinates", async () => {
   const { w } = createResourceViewerFixture({ tabs: true, document: true });
-  await w.navigation.openPage({
+  w.pageLocations.navigate({
+    kind: "page",
     page: viewerPage("reader"),
     resource: document("a"),
     position: { line: 3 },
@@ -103,9 +102,10 @@ test("selecting a retained Main document restores that viewer's source coordinat
   expect(w.layout.getActivePanel("main")?.position).toEqual({ line: 3 });
 });
 
-test("compound navigation applies each reused viewer's reference before focusing its final page", async () => {
-  const { w, openSide, side } = createResourceViewerFixture();
+test("compound navigation transfers resources and selects its final page", async () => {
+  const { w, openSide, other } = createResourceViewerFixture();
   await openSide("x");
+  other();
   await w.navigation.openTarget({
     kind: "compound",
     targets: [
@@ -113,7 +113,7 @@ test("compound navigation applies each reused viewer's reference before focusing
       { kind: "page", page: viewerPage("reader"), resource: viewerResource("y") },
     ],
   });
-  expect(side().section).toEqual(section);
+  expect(w.layout.listPanelInstances("side")).toHaveLength(0);
   expect(w.pages.getContent()?.resource?.id).toBe("y");
   expect(w.focus.getActiveRegion()).toBe("main");
 });

@@ -1,11 +1,38 @@
 import { expect, test } from "bun:test";
+import { openDroppedPage } from "../../../core/controllers/composition/panel-page-drop";
 import {
   createResourceViewerFixture,
   viewerPage,
   viewerPanel,
   viewerResource,
 } from "../../../core/controllers/resource-viewers/resource-viewer-test-fixture";
-import { treeTabTarget } from "./tree-tab-drop";
+import { treePageTarget, treeTabTarget } from "./tree-tab-drop";
+
+for (const compound of [false, true])
+  for (const header of [false, true])
+    test(`an explicit Main ${header ? "header" : "body"} drop overrides a link's Side default; compound=${compound}`, async () => {
+      const { w, openSide } = createResourceViewerFixture();
+      await openSide("linked");
+      const link = {
+        kind: "page" as const,
+        page: viewerPage("reader"),
+        resource: viewerResource("linked"),
+        region: "side" as const,
+        open: "preview" as const,
+      };
+      const input = compound ? { kind: "compound" as const, targets: [link] } : link;
+      const target = header ? treeTabTarget(w, input, "main") : treePageTarget(w, input);
+      if (header) await w.navigation.openTarget(target!);
+      else await openDroppedPage(w, target as NonNullable<ReturnType<typeof treePageTarget>>);
+      expect(w.layout.listPanelInstances("side")).toHaveLength(0);
+      if (header) {
+        expect(w.pages.store.getState().activePageId).toBe("home");
+        expect(w.layout.getActivePanel("main")).toMatchObject({
+          resource: { id: "linked" },
+          tabRetention: "persistent",
+        });
+      } else expect(w.pages.getContent()?.resource?.id).toBe("linked");
+    });
 
 test("dropping a static page on Main opens it without a resource-tab intent", async () => {
   const { w, other } = createResourceViewerFixture();
@@ -14,7 +41,7 @@ test("dropping a static page on Main opens it without a resource-tab intent", as
   expect(w.pages.store.getState().location?.page).toEqual(viewerPage("home"));
 });
 
-test("dropping a single-resource page on Main preserves its document and parent", async () => {
+test("dropping a single-resource page into Main tabs preserves its document and parent", async () => {
   const { w } = createResourceViewerFixture({ document: true });
   const page = w.pages.getPage("reader")!;
   if (page.main.kind !== "view") throw new Error("Expected reader view");
@@ -33,11 +60,70 @@ test("dropping a single-resource page on Main preserves its document and parent"
       "main",
     )!,
   );
-  expect(w.pages.store.getState().location).toMatchObject({
+  expect(w.pages.store.getState().location?.page).toEqual(viewerPage("home"));
+  expect(w.layout.getActivePanel("main")).toMatchObject({
     resource,
     position: { line: 3 },
-    parent: { page: viewerPage("home") },
+    pageContext: { page: viewerPage("reader"), parent: { page: viewerPage("home") } },
   });
+});
+
+test("dropping two one-cardinality pages onto a tab strip keeps both as pinned resource tabs", async () => {
+  const { w } = createResourceViewerFixture();
+  const page = w.pages.getPage("reader")!;
+  if (page.main.kind !== "view") throw new Error("Expected reader view");
+  page.main = { ...page.main, cardinality: "one" };
+  for (const id of ["first", "second"]) {
+    await w.navigation.openTarget(
+      treeTabTarget(w, { kind: "page", page: viewerPage("reader"), resource: viewerResource(id) }, "main")!,
+    );
+  }
+  expect(w.layout.listPanelInstances("main").map((tab) => [tab.resource?.id, tab.tabRetention])).toEqual([
+    ["first", "persistent"],
+    ["second", "persistent"],
+  ]);
+});
+
+for (const destination of ["home", "other"])
+  test(`compound resource drops honor the preceding ${destination} page's presentation`, async () => {
+    const { w } = createResourceViewerFixture();
+    const page = w.pages.getPage("reader")!;
+    if (page.main.kind !== "view") throw new Error("Expected reader view");
+    page.main = { ...page.main, cardinality: "one" };
+    w.pageLocations.navigate({ kind: "page", page: viewerPage(destination === "home" ? "other" : "home") });
+    const dropped = treeTabTarget(
+      w,
+      {
+        kind: "compound",
+        targets: [
+          { kind: "page", page: viewerPage(destination) },
+          { kind: "page", page: viewerPage("reader"), resource: viewerResource("a") },
+        ],
+      },
+      "main",
+    )!;
+    await w.navigation.openTarget(dropped);
+    if (destination === "home") {
+      expect(w.pages.store.getState().activePageId).toBe("home");
+      expect(w.layout.getActivePanel("main")?.tabRetention).toBe("persistent");
+    } else expect(w.pages.getContent()?.resource?.id).toBe("a");
+  });
+
+test("a compound Main-body drop keeps its explicit full-page resource destination", async () => {
+  const { w } = createResourceViewerFixture();
+  const page = w.pages.getPage("reader")!;
+  if (page.main.kind !== "view") throw new Error("Expected reader view");
+  page.main = { ...page.main, cardinality: "one" };
+  const dropped = treePageTarget(w, {
+    kind: "compound",
+    targets: [
+      { kind: "page", page: viewerPage("home") },
+      { kind: "page", page: viewerPage("reader"), resource: viewerResource("a") },
+    ],
+  });
+  if (dropped?.kind !== "compound") throw new Error("Expected compound body drop");
+  await openDroppedPage(w, dropped);
+  expect(w.pages.getContent()?.resource?.id).toBe("a");
 });
 
 for (const kind of ["panel", "page"] as const) {

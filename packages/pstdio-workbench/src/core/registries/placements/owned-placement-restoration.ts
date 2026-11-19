@@ -12,6 +12,7 @@ export const restoreOwnedPlacementState = (input: {
 }) => {
   const state = {
     staticOverrides: new Map(input.state.staticOverrides),
+    staticLocations: new Map(input.state.staticLocations),
     resourceInstances: new Map(input.state.resourceInstances),
   };
   for (const placement of input.declarations) {
@@ -21,6 +22,14 @@ export const restoreOwnedPlacementState = (input: {
     });
     if (placement.item.kind === "view") {
       state.staticOverrides.set(placement.id, saved.length ? "open" : "closed");
+      const current = saved[0];
+      if (current)
+        state.staticLocations.set(placement.id, {
+          section: current.section,
+          position: current.position,
+          pageContext: current.pageContext,
+        });
+      else state.staticLocations.delete(placement.id);
       continue;
     }
     const binding = placement.item.binding;

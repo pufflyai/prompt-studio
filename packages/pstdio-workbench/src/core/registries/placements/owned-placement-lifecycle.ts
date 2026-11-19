@@ -26,6 +26,7 @@ export interface OwnedResourceInstance extends ViewLocation {
 }
 export interface OwnedPlacementState {
   staticOverrides: Map<string, StaticPlacementOverride>;
+  staticLocations?: Map<string, ViewLocation>;
   resourceInstances: Map<string, readonly OwnedResourceInstance[]>;
 }
 export const createOwnedPlacementState = (): OwnedPlacementState => ({
@@ -49,12 +50,17 @@ export const openStaticPlacement = (input: {
   state: OwnedPlacementState;
   resource?: ResourceRef;
   open?: PageOpenIntent;
+  location?: ViewLocation;
 }) => {
   const { id, item, label, state } = input;
   if (item.kind !== "view") throw new Error(`${label} "${id}" is not a static placement`);
   if (input.resource) throw new Error(`${label} "${id}" does not accept a resource`);
   if (input.open) throw new Error(`${label} "${id}" does not accept an open intent`);
   if (item.presence !== "fixed") state.staticOverrides.set(id, "open");
+  if (input.location) {
+    state.staticLocations ??= new Map();
+    state.staticLocations.set(id, input.location);
+  }
 };
 export const closeStaticPlacement = (input: {
   label: string;
@@ -66,6 +72,7 @@ export const closeStaticPlacement = (input: {
   if (item.kind !== "view") throw new Error(`${label} "${id}" is not a static placement`);
   if (item.presence === "fixed") throw new Error(`${label} "${id}" is fixed and cannot close`);
   state.staticOverrides.set(id, "closed");
+  state.staticLocations?.delete(id);
 };
 const retainResourceInstances = (
   item: Extract<
@@ -164,6 +171,13 @@ export const updateResourcePlacementInstance = (input: {
   keyOfResource?(resource: ResourceRef): string;
 }) => {
   const { id, item, label, state } = input;
+  if (item.kind === "view") {
+    if (input.location) {
+      state.staticLocations ??= new Map();
+      state.staticLocations.set(id, { ...state.staticLocations.get(id), ...input.location });
+    }
+    return;
+  }
   if (input.instanceKey === "default" || item.kind !== "binding") return;
   if (input.resource && !resourceMatchesConstraint(item.binding, input.resource)) {
     throw new Error(`${label} "${id}" does not accept resource kind "${input.resource.type}"`);
@@ -198,5 +212,6 @@ export const updateResourcePlacementInstance = (input: {
 };
 export const clearOwnedPlacementState = (state: OwnedPlacementState, id: string) => {
   state.staticOverrides.delete(id);
+  state.staticLocations?.delete(id);
   state.resourceInstances.delete(id);
 };

@@ -15,7 +15,8 @@ test("a Main viewer keeps its parameters and contextual parent when switching it
     main: { kind: "view", presentation: "page", view: { kind: "view", id: "browser" }, cardinality: "one" },
     slots: [],
   });
-  await w.navigation.openPage({
+  w.pageLocations.navigate({
+    kind: "page",
     page: viewerPage("reader"),
     resource: viewerResource("x"),
     params: { filter: "mine" },
@@ -132,7 +133,8 @@ test.each([
     main: { kind: "view", presentation: "page", view: { kind: "view", id: "browser" }, cardinality: "one" },
     slots: [],
   });
-  await w.navigation.openPage({
+  w.pageLocations.navigate({
+    kind: "page",
     page: viewerPage("reader"),
     resource: viewerResource("x"),
     parent: { kind: "page", page: viewerPage("container"), resource: viewerResource("folder-a", "folder") },

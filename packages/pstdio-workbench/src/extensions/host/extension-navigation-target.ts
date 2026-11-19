@@ -52,7 +52,8 @@ export function toWorkbenchNavigationTarget(
   target = canonicalNavigationOwners(target);
   if (target.kind === "command") return toCommandTarget(target, input);
   if (target.kind === "href") return target;
-  if (target.kind === "page" || target.kind === "dialog") return target;
+  if (target.kind === "page") return target.resource && input.region ? { ...target, region: input.region } : target;
+  if (target.kind === "dialog") return target;
   if (target.kind === "viewer") return target;
   if (target.kind === "panel") return { ...target, ...(input.region ? { region: input.region } : {}) };
   return {
