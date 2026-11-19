@@ -11,7 +11,11 @@ export const isNavigableNode = (node: TreeListNode) => node.isNavigable || node.
 export const getNodeChildren = (node: TreeListNode) => (node.children as TreeListNode[] | undefined) ?? [];
 
 export const hasExpandableChildren = (node: TreeListNode) =>
-  getNodeChildren(node).length > 0 || node.isContainer === true || Boolean(node.pagination);
+  node.collapsible !== false &&
+  (getNodeChildren(node).length > 0 || node.isContainer === true || Boolean(node.pagination));
+
+export const isNodeExpanded = (node: TreeListNode, expandedNodeIds: string[]) =>
+  node.collapsible === false || isInList(node.id, expandedNodeIds);
 
 export type VirtualRow =
   | {
@@ -46,7 +50,7 @@ const appendVisibleNodeRows = (input: {
     rows.push({ kind: "node", key: `${sectionId}:${node.id}`, sectionId, node, level, parentNodeId });
 
     const children = getNodeChildren(node);
-    if (!isInList(node.id, expandedNodeIds)) continue;
+    if (!isNodeExpanded(node, expandedNodeIds)) continue;
 
     appendVisibleNodeRows({
       rows,
@@ -163,11 +167,11 @@ const resolveNodeNavigation = (input: {
   key: string;
 }) => {
   const { row, focusableRows, currentIndex, expandedNodeIds, key } = input;
-  const expanded = isInList(row.node.id, expandedNodeIds);
+  const expanded = isNodeExpanded(row.node, expandedNodeIds);
   const expandable = hasExpandableChildren(row.node);
 
   if (key === "ArrowRight") {
-    if (!expandable) return null;
+    if (!expandable && row.node.collapsible !== false) return null;
     if (!expanded) return { type: "toggle-node" as const, nodeId: row.node.id };
 
     const nextRow = focusableRows[currentIndex + 1];

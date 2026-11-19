@@ -2,7 +2,7 @@ import { Box, Stack } from "@chakra-ui/react";
 import type { ComponentProps } from "react";
 import type { TreeListNode } from "./tree-list.types";
 import type { TreeListDropIndicator } from "./tree-list-drop-indicator";
-import { getNodeChildren } from "./tree-list-model";
+import { getNodeChildren, isNodeExpanded } from "./tree-list-model";
 import { TreeListNodeRow } from "./tree-list-node-row";
 import { TreeListPageBoundary } from "./tree-list-page-boundary";
 import { TreeListReveal } from "./tree-list-reveal";
@@ -34,10 +34,10 @@ const TreeListNodeBranch = (props: TreeListNodesProps & { node: TreeListNode }) 
   );
   const descendants =
     children.length || node.pagination ? (
-      <TreeListReveal open={rowProps.expandedNodeIds.includes(node.id)}>
+      <TreeListReveal open={isNodeExpanded(node, rowProps.expandedNodeIds)}>
         <Box pt={rowProps.nodeGap}>
           <TreeListNodes {...props} nodes={children} level={level + 1} />
-          {node.pagination && rowProps.expandedNodeIds.includes(node.id) ? (
+          {node.pagination && isNodeExpanded(node, rowProps.expandedNodeIds) ? (
             <TreeListPageBoundary pagination={node.pagination} />
           ) : null}
         </Box>
