@@ -21,17 +21,27 @@ const ACTIVE = ["queued", "provisioning", "connected", "ready"];
 const ENDED = ["succeeded", "failed", "canceled", "expired", "preserved"];
 const path = (id: string) => `/v1/workspaces/${encodeURIComponent(id)}`;
 
-export async function listEnvironments(api: Api, settings: Settings, projectId: string) {
-  const page = await api<{ items: Environment[] }>({
-    method: "GET",
-    path: `/v1/workspaces?template=${encodeURIComponent(settings.templateName)}&limit=100`,
-  });
-  return page.items.filter(
-    (item) =>
-      ACTIVE.includes(item.state) &&
-      item.metadata?.purpose === PURPOSE &&
-      item.metadata.pstdio_project_id === projectId,
-  );
+export async function listEnvironments(api: Api, projectId: string) {
+  const environments: Environment[] = [];
+  let cursor: string | null = null;
+  do {
+    const query = new URLSearchParams({ limit: "100" });
+    if (cursor) query.set("cursor", cursor);
+    const page: { items: Environment[]; next_cursor: string | null } = await api({
+      method: "GET",
+      path: `/v1/workspaces?${query}`,
+    });
+    environments.push(
+      ...page.items.filter(
+        (item) =>
+          ACTIVE.includes(item.state) &&
+          item.metadata?.purpose === PURPOSE &&
+          item.metadata.pstdio_project_id === projectId,
+      ),
+    );
+    cursor = page.next_cursor;
+  } while (cursor);
+  return environments;
 }
 
 export async function createEnvironment(

@@ -134,7 +134,7 @@ export const environmentsView = defineView({
       const { api, settings, store } = await runDeps(ctx);
       return {
         rows: await Promise.all(
-          (await listEnvironments(api, settings, ctx.projectId)).map(async (environment) => ({
+          (await listEnvironments(api, ctx.projectId)).map(async (environment) => ({
             id: environment.id,
             values: environmentValues(environment, await activeRun(store, environment.id), settings.templateVersion),
           })),
