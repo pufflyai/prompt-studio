@@ -52,6 +52,23 @@ const projects = await request("/v1/projects");
 const project = projects.find((p: { name: string }) => p.name === "project");
 assert.ok(project);
 evidence.project = project.id;
+const waitForCommand = async (id: string) => {
+  const started = performance.now();
+  let inventory: { commands: { id: string }[]; diagnostics?: unknown } = { commands: [] };
+  while (performance.now() - started < 5 * 60_000) {
+    inventory = await request(`/v1/projects/${project.id}/extensions/commands`);
+    if (inventory.commands.some((command: { id: string }) => command.id === id)) {
+      const observed = evidence.commandReadiness as unknown[] | undefined;
+      evidence.commandReadiness = [...(observed ?? []), { id, ms: performance.now() - started }];
+      save();
+      return;
+    }
+    await Bun.sleep(1000);
+  }
+  throw new Error(
+    `Command did not register within existing five-minute setup allowance: ${id}; ${JSON.stringify(inventory?.diagnostics)}`,
+  );
+};
 const execute = async (id: string, params = {}, allowance = 30_000) => {
   const result = await request(`/v1/projects/${project.id}/extensions/commands/${id}/execute`, { params }, allowance);
   if (result.outcome?.status !== "success") throw new Error(JSON.stringify(result.outcome));
@@ -85,6 +102,7 @@ const measure = async <T>(name: string, run: () => Promise<T>) => {
 };
 
 const setupStart = performance.now();
+await waitForCommand("pstdio.planner.command.import-tickets");
 const ids: string[] = [];
 for (let start = 0; start < 5000; start += 100) {
   const tickets = Array.from({ length: 100 }, (_, offset) => {
@@ -150,6 +168,7 @@ const installLog = shell([
 ]);
 writeFileSync(join(output, "foobar-install.log"), installLog);
 evidence.foobarInstallMs = performance.now() - installStart;
+await waitForCommand("pstdio.ps236-demo-foobar.command.seed");
 const foobarSeedStart = performance.now();
 for (let start = 0; start < 5000; start += 100) {
   const result = await execute("pstdio.ps236-demo-foobar.command.seed", { start, count: 100 }, 20 * 60_000);
@@ -183,6 +202,8 @@ while (performance.now() - restartStart < 5 * 60_000) {
   await Bun.sleep(1000);
 }
 assert.ok(restarted, "Owned runtime did not restart within its existing five-minute setup allowance");
+await waitForCommand("pstdio.planner.command.import-tickets");
+await waitForCommand("pstdio.ps236-demo-foobar.command.seed");
 evidence.preparedRuntimeRestartMs = performance.now() - restartStart;
 save();
 
