@@ -8,6 +8,7 @@ import {
 } from "@pstdio/workbench/extensions";
 import type { NativeDocumentTarget } from "pstdio-api-contracts";
 import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-host";
+import type { WebviewSizing } from "pstdio-extensions/bridge/contract";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import i18n from "@/i18n";
@@ -41,7 +42,7 @@ import { PausedExtensionView } from "./paused-extension-view";
 
 interface ExtensionWebviewFrameProps {
   visible?: boolean;
-  sizing?: "content-width" | "content-height";
+  sizing?: WebviewSizing;
   extensionId: string;
   extensionInstanceId?: string;
   installName?: string;

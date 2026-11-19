@@ -38,12 +38,20 @@ const resourceView = defineView({
 const ticketKind = defineResourceKind({
   id: "ticket",
 });
+const overview = definePage({
+  id: "overview",
+  title: "Overview",
+  path: "overview",
+  mode: workbenchModes.project,
+  main: { kind: "view", view: pageView.ref, cardinality: "one" },
+  slots: [],
+});
 const diagnosticsFor = (definition: LoadedExtensionSource["definition"]) =>
   normalizeExtensionSources([source(definition)]).diagnostics;
 describe("page slot validation", () => {
   test("accepts one routed primary and independently addressed auxiliary panels", () => {
     const page = definePage({
-      parent: { extensionId: "pstdio", kind: "page", id: "start" },
+      parent: overview.ref,
       id: "tickets",
       title: "Tickets",
       path: "tickets",
@@ -81,7 +89,7 @@ describe("page slot validation", () => {
       ],
     });
     const diagnostics = diagnosticsFor(
-      defineExtension({ views: [pageView, resourceView], resourceKinds: [ticketKind], pages: [page] }),
+      defineExtension({ views: [pageView, resourceView], resourceKinds: [ticketKind], pages: [overview, page] }),
     );
     expect(diagnostics).toEqual([]);
     expect(page.panels.files).toEqual({ kind: "page-slot", page: page.ref, id: "files" });
@@ -149,7 +157,7 @@ describe("page slot validation", () => {
       title: "Compare",
       path: "compare",
       mode: workbenchModes.project,
-      parent: { extensionId: "pstdio", kind: "page", id: "start" },
+      parent: overview.ref,
       resource: {
         kinds: [ticketKind.ref],
       },
@@ -174,7 +182,9 @@ describe("page slot validation", () => {
       ],
     });
     expect(
-      diagnosticsFor(defineExtension({ views: [resourceView], resourceKinds: [ticketKind], pages: [page] })),
+      diagnosticsFor(
+        defineExtension({ views: [pageView, resourceView], resourceKinds: [ticketKind], pages: [overview, page] }),
+      ),
     ).toEqual([]);
   });
   test("allows a bound auxiliary to follow the matching page resource", () => {
@@ -183,7 +193,7 @@ describe("page slot validation", () => {
       title: "Ticket",
       path: "ticket",
       mode: workbenchModes.project,
-      parent: { extensionId: "pstdio", kind: "page", id: "start" },
+      parent: overview.ref,
       resource: {
         kinds: [ticketKind.ref],
       },
@@ -209,7 +219,9 @@ describe("page slot validation", () => {
       ],
     });
     expect(
-      diagnosticsFor(defineExtension({ views: [resourceView], resourceKinds: [ticketKind], pages: [page] })),
+      diagnosticsFor(
+        defineExtension({ views: [pageView, resourceView], resourceKinds: [ticketKind], pages: [overview, page] }),
+      ),
     ).toEqual([]);
   });
   test("requires a parent on a resource page", () => {
@@ -265,9 +277,9 @@ describe("page identity and hierarchy validation", () => {
   });
   test("rejects page ids reserved by the host", () => {
     const page = definePage({
-      id: "start",
-      title: "Start replacement",
-      path: "start-replacement",
+      id: "sessions",
+      title: "Sessions replacement",
+      path: "sessions-replacement",
       mode: workbenchModes.project,
       main: {
         kind: "view",
@@ -328,7 +340,7 @@ describe("page identity and hierarchy validation", () => {
   });
 });
 
-test("ordinary publishers can own workspace page names while deprecated host refs retain their owner", () => {
+test("ordinary publishers can own workspace page names", () => {
   const pages = ["workspaces", "workspace"].map((id) =>
     definePage({
       id,

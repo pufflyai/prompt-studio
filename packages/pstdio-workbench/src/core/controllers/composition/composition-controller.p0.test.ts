@@ -219,54 +219,80 @@ describe("workbench composition query", () => {
     workbench.layout.openWidget("ticket", { region: "main", resource, role: "location" });
     expect(workbench.composition.panelsFor("main").addable).toEqual([]);
   });
-  test("runs a resource binding's add action through the navigation executor", () => {
-    const workbench = createWorkbench();
-    let received: unknown;
-    let source: string | undefined;
-    workbench.commands.registerCommand(
-      { id: "create-session", label: "Create session" },
-      {
-        execute: (args, context) => {
-          received = args;
-          source = context?.source;
-        },
+});
+
+test("runs a resource binding's add action with the selected location", () => {
+  const workbench = createWorkbench();
+  let received: unknown;
+  let source: string | undefined;
+  let resource: unknown;
+  workbench.commands.registerCommand(
+    { id: "create-session", label: "Create session" },
+    {
+      execute: (args, context) => {
+        received = args;
+        source = context?.source;
+        resource = context?.resource;
       },
-    );
-    workbench.views.registerView({
-      id: "session",
-      title: "Session",
-      body: { kind: "react", render: () => null },
-    });
-    workbench.modes.registerMode({ id: "project", activate: () => undefined });
-    workbench.modePlacements.registerPlacement({
-      id: "project.session",
-      ref: { extensionId: "pstdio", kind: "placement", id: "session" },
-      modeId: "project",
-      item: {
-        kind: "binding",
-        binding: {
-          kinds: [
-            {
-              kind: "resource-kind",
-              id: "session",
-            },
-          ],
-          view: {
-            kind: "view",
+    },
+  );
+  workbench.views.registerView({
+    id: "session",
+    title: "Session",
+    body: { kind: "react", render: () => null },
+  });
+  workbench.modes.registerMode({ id: "project", activate: () => undefined });
+  workbench.modePlacements.registerPlacement({
+    id: "project.session",
+    ref: { extensionId: "pstdio", kind: "placement", id: "session" },
+    modeId: "project",
+    item: {
+      kind: "binding",
+      binding: {
+        kinds: [
+          {
+            kind: "resource-kind",
             id: "session",
           },
-          cardinality: "many",
-          add: {
-            kind: "command",
-            target: { command: { kind: "command", id: "create-session" }, params: { origin: "panel-add" } },
-          },
+        ],
+        view: {
+          kind: "view",
+          id: "session",
+        },
+        cardinality: "many",
+        add: {
+          kind: "command",
+          target: { command: { kind: "command", id: "create-session" }, params: { origin: "panel-add" } },
         },
       },
-      region: "side",
-    });
-    workbench.modes.setActiveMode("project");
-    workbench.composition.panelsFor("side").addable[0]?.open?.();
-    expect(received).toEqual({ origin: "panel-add" });
-    expect(source).toBe("panel-add");
+    },
+    region: "side",
   });
+  workbench.modes.setActiveMode("project");
+  const selected = { type: "workspace", id: "selected", projectId: "project" };
+  const page = { kind: "page" as const, id: "workspace", extensionId: "test" };
+  workbench.pages.registerPage({
+    id: "home",
+    ref: { ...page, id: "home" },
+    path: "",
+    modeId: "project",
+    main: { kind: "panels" },
+    slots: [],
+  });
+  workbench.pages.registerPage({
+    id: page.id,
+    ref: page,
+    parentId: "home",
+    path: "workspaces",
+    modeId: "project",
+    resource: { kinds: [{ kind: "resource-kind", id: "workspace" }] },
+    main: { kind: "view", view: { kind: "view", id: "session" }, cardinality: "one" },
+    slots: [],
+  });
+  workbench.pageLocations.setProject("project");
+  workbench.pageLocations.navigate({ kind: "page", page, resource: selected });
+  workbench.composition.panelsFor("side").addable[0]?.open?.();
+  expect(received).toEqual({ origin: "panel-add" });
+  expect(source).toBe("panel-add");
+  expect(resource).toEqual(selected);
 });

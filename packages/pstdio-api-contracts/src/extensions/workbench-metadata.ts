@@ -26,6 +26,7 @@ import { workbenchExtensionPageRecordSchema } from "./page-metadata";
 import { regionSettingsSchema, workbenchPlacementPresentationSchema } from "./placement-metadata";
 import { extensionFileRendererRecordSchema, extensionTreeRendererRecordSchema } from "./renderers";
 import { placementItemSchema } from "./resource-binding-metadata";
+import { resourcePresentationRecordSchema } from "./resource-presentation";
 import { extensionSettingDefinitionRecordSchema, extensionSettingsSectionRecordSchema } from "./settings";
 import { viewToolbarActionSchema } from "./view-toolbar-action";
 
@@ -109,6 +110,12 @@ const dataTableBodySchema = extensionDataTableRendererRecordSchema
   });
 
 export const workbenchExtensionViewBodySchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("actionBar"),
+    orientation: z.enum(["vertical", "horizontal"]).optional(),
+    queryHandlerId: z.string(),
+    refreshEventIds: z.array(z.string()).optional(),
+  }),
   z.object({
     kind: z.literal("terminal"),
     resourceKind: z.string().optional(),
@@ -273,6 +280,7 @@ export const workbenchExtensionMetadataSchema = z.object({
     .array(z.object({ extensionId: z.string(), type: z.string(), refreshEvents: z.array(z.string()) }))
     .optional(),
   resourceKinds: z.array(workbenchExtensionResourceKindRecordSchema),
+  resourcePresentations: z.array(resourcePresentationRecordSchema).optional(),
   resourceHierarchyProviders: z
     .array(z.object({ id: z.string(), extensionId: z.string(), resourceKind: resourceKindRefSchema }))
     .optional(),

@@ -12,6 +12,9 @@ const isQuestionReply = (request: Request, sessionId: string) => {
   return renderer.resource.id === sessionId && action.type === "submit" && Boolean(action.questionResponse);
 };
 
+// Whole-case allowance includes cold project/tool preparation and owned cleanup (PS-1232).
+test.setTimeout(120_000);
+
 test("answers a hydrated question tool call from the session composer", async ({ page, request }) => {
   const project = process.env.E2E_COMMAND_PROJECT_ID
     ? { id: process.env.E2E_COMMAND_PROJECT_ID }

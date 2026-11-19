@@ -31,6 +31,10 @@ export interface ResourceRef {
   projectId?: string;
   label?: string;
   icon?: string;
+  /** Semantic theme color for the resource icon. */
+  iconColor?: string;
+  /** Accessible description of the resource icon and its current state. */
+  iconLabel?: string;
   extensionId?: string;
   metadata?: JsonObject;
 }

@@ -64,11 +64,7 @@ export const createNativeTextPresentation = (input: NativeTextPresentationInput)
     for (const listener of listeners.get(message.scope) ?? []) listener(message.payload);
   });
   const client = createTextEditingClient(host);
-  const admit = async () => {
-    const grant = await client.current();
-    if (!grant) throw new Error("The selected file does not declare a text source");
-    return client.open({ grant });
-  };
+  const admit = () => client.open({ selected: true });
   const open = () => {
     if (lifetime.signal.aborted || closing) return Promise.reject(closed());
     opening ??= Promise.resolve().then(admit);

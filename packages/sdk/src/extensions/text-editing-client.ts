@@ -27,6 +27,20 @@ export const createTextEditingClient = (host: GuestHost, loadSession = () => imp
         },
       };
       try {
+        if ("selected" in input) {
+          const [admission, module] = await Promise.allSettled([
+            host.call("editing.text", { operation: "openSelected", memberId }),
+            Promise.resolve().then(loadSession),
+          ]);
+          if (admission.status === "rejected") throw admission.reason;
+          if (module.status === "rejected") throw module.reason;
+          return await module.value.openTextEditingSession(
+            buffered,
+            { grant: admission.value.grant },
+            memberId,
+            admission.value,
+          );
+        }
         // Both belong to this admitted open. Observe either rejection immediately,
         // and drain registration before cleanup so a late ACK cannot leak a member.
         const [registered, module] = await Promise.allSettled([

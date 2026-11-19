@@ -1,5 +1,11 @@
 import { resolve } from "node:path";
-import { CreateBucketCommand, GetObjectCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
+import {
+  CreateBucketCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { Client } from "pg";
 import { createRelayAssets } from "../assets/assets";
 import { defaultRelayLimits, type RelayLimits } from "../limits";
@@ -44,6 +50,9 @@ export const createSyncFixture = () => {
       const sync = createRelaySync({ databaseUrl, bucket, s3, assets, limits: { ...defaultRelayLimits, ...limits } });
       owners.push(sync, assets);
       return { sync, assets };
+    },
+    putLegacyObject: async (key: string, bytes: Uint8Array) => {
+      await client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: bytes }));
     },
     /** Every object key and its bytes in this run's bucket. */
     async objects() {

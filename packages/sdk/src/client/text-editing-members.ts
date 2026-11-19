@@ -49,6 +49,27 @@ export const createTextGuestMembers = (connection: TextEditingConnection, genera
     member.generation = attempt;
     return result;
   };
+  const openSelected = async (input: Extract<TextEditingRequest, { operation: "openSelected" }>, member?: Member) => {
+    const attempt = generation();
+    const admitted: Member = { ...member, handle: member?.handle ?? "", generation: attempt, source: "selected" };
+    members.set(input.memberId, admitted);
+    try {
+      const result = await connection.request(input);
+      if (attempt !== generation())
+        throw textEditingFailure("connection_reset", "This opening reply belongs to an earlier connection", true);
+      if (members.get(input.memberId) !== admitted)
+        throw textEditingFailure("session_closed", "This member has been replaced");
+      admitted.handle = result.handle;
+      admitted.grant = result.grant;
+      return result;
+    } catch (error) {
+      if (members.get(input.memberId) === admitted) {
+        if (member) members.set(input.memberId, member);
+        else members.delete(input.memberId);
+      }
+      throw error;
+    }
+  };
   const guardHandle = async (input: TextEditingRequest & { handle: string }) => {
     const entry = [...members].find(([, member]) => member.handle === input.handle);
     if (!entry || entry[1].generation === generation()) return false;
@@ -71,9 +92,8 @@ export const createTextGuestMembers = (connection: TextEditingConnection, genera
     async request(input: TextEditingRequest) {
       const attempt = generation();
       const member = "memberId" in input ? members.get(input.memberId) : undefined;
-      if (input.operation === "register") {
-        if (!members.has(input.memberId)) members.set(input.memberId, { handle: "", generation: generation() });
-      }
+      if (input.operation === "register" && !member) members.set(input.memberId, { handle: "", generation: attempt });
+      if (input.operation === "openSelected") return openSelected(input, member);
       if (input.operation === "open") return open(input);
       if ("handle" in input && (await guardHandle(input))) return;
       const result = await connection.request(input);

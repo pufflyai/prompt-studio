@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
@@ -35,9 +35,12 @@ test("batched prepared views expose their entry stylesheet to native webview met
   });
   writeFileSync(join(packagePath, "icons.woff2"), "font fixture");
   const { prepareWebviewArtifacts } = await import("./prepared-webview");
+  const { readWebviewEntryStyles } = await import("./extension-webview-entry-styles");
   const prepared = await prepareWebviewArtifacts(inputs, new AbortController().signal);
   for (const [index, artifact] of prepared.entries()) {
-    const stylesheet = Bun.file(join(artifact.distDir, "module.css"));
+    const styles = readWebviewEntryStyles(artifact.distDir);
+    expect(styles).toHaveLength(1);
+    const stylesheet = Bun.file(join(artifact.distDir, styles[0]!));
     expect(await stylesheet.exists()).toBe(true);
     expect(await stylesheet.text()).toContain(`${index === 0 ? "first" : "second"}-icons`);
   }
@@ -102,6 +105,61 @@ test("batch frontend preparation retains the actionable missing-dependency diagn
       new AbortController().signal,
     ),
   ).rejects.toThrow(`Missing extension webview dependencies: missing-view-dependency. Run \`bun install\` in ${root}.`);
+});
+
+test("prepared webviews serve their own styles and share content-addressed fonts", async () => {
+  const root = mkdtempSync(join(tmpdir(), "webview-prepared-styles-"));
+  roots.push(root);
+  process.env.PSTDIO_HOME = join(root, "home");
+  const packageName = "prepared-styles";
+  const packagePath = join(root, "source");
+  mkdirSync(packagePath);
+  writeFileSync(join(packagePath, "package.json"), JSON.stringify({ name: packageName }));
+  const font = Buffer.from("wOF2 example test font bytes");
+  writeFileSync(join(packagePath, "original.woff2"), font);
+  writeFileSync(join(packagePath, "copy.woff2"), font);
+  writeFileSync(
+    join(packagePath, "shared.css"),
+    '@font-face{font-family:Shared;src:url("./original.woff2")} .shared{font-family:Shared}',
+  );
+  writeFileSync(join(packagePath, "shared.ts"), 'import "./shared.css"; export const value = Math.random();');
+  writeFileSync(
+    join(packagePath, "extra.css"),
+    '@font-face{font-family:Extra;src:url("./copy.woff2")} .extra{color:red}',
+  );
+  const entries = [
+    'import { value } from "./shared"; export default () => value;',
+    'import { value } from "./shared"; export default () => value + 1;',
+    'import "./extra.css"; export default true;',
+    "export default false;",
+  ].map((source, index) => {
+    const entryPath = join(packagePath, `view-${index}.ts`);
+    writeFileSync(entryPath, source);
+    return { packagePath, entryPath, packageName, installName: packageName };
+  });
+  const { prepareWebviewArtifact, prepareWebviewArtifacts } = await import("./prepared-webview");
+  const { readWebviewEntryStyles } = await import("./extension-webview-entry-styles");
+  const signal = new AbortController().signal;
+  const [first, second, extra, unstyled] = await prepareWebviewArtifacts(entries, signal);
+  const single = await prepareWebviewArtifact(entries[0]!, signal);
+
+  const readStyle = (distDir: string, selector: string) => {
+    const styles = readWebviewEntryStyles(distDir);
+    expect(styles).toHaveLength(1);
+    const css = readFileSync(join(distDir, styles[0]!), "utf8");
+    expect(css).toContain(selector);
+    expect(css).not.toContain("data:font/");
+    const asset = css.match(/url\(["']?([^"')]+)["']?\)/)?.[1];
+    expect(asset).toMatch(/\.woff2$/);
+    expect(readFileSync(join(distDir, asset!))).toEqual(font);
+    return asset;
+  };
+  const fontAsset = readStyle(first!.distDir, ".shared");
+  expect(readStyle(second!.distDir, ".shared")).toBe(fontAsset);
+  expect(readStyle(extra!.distDir, ".extra")).toBe(fontAsset);
+  expect(readWebviewEntryStyles(unstyled!.distDir)).toEqual([]);
+  if (!single.success) throw new Error("Single webview preparation failed");
+  expect(readStyle(single.distDir, ".shared")).toBe(fontAsset);
 });
 
 test("batch frontend preparation uses selected repository dependencies and refreshes after their bytes change", async () => {

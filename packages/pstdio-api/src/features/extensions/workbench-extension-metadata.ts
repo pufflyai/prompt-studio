@@ -1,5 +1,3 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import type { PackageAssetDescriptor } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionRuntime } from "pstdio-extensions";
@@ -7,6 +5,7 @@ import { readPublishedWebviewRevision } from "pstdio-extensions/prepared-cache";
 import { createWorkbenchExtensionMetadata, type ResolveWorkbenchExtensionWebview } from "pstdio-extensions/workbench";
 import type { ExtensionWebviewUrlIssuer } from "./extension-webview-access";
 import { readWebviewBuildSignature } from "./extension-webview-build-cache";
+import { readWebviewEntryStyles } from "./extension-webview-entry-styles";
 import { classifyWebviewEntry, resolveManagedWebviewPaths } from "./extension-webviews";
 
 type ExtensionIdMap = Map<string, string>;
@@ -16,12 +15,6 @@ type ExtensionWebviewRecord = Extract<
   WorkbenchExtensionMetadata["views"][number]["body"],
   { kind: "webview" }
 >["webview"];
-
-const entryStyles = (installedExtensionId: string, webviewId: string, webviewCacheRoot: string) => {
-  const { distDir } = resolveManagedWebviewPaths({ installedExtensionId, webviewCacheRoot, webviewId });
-  // Bun's entry stylesheet includes the deferred modules' CSS. Loading every output repeats it.
-  return existsSync(join(distDir, "module.css")) ? ["module.css"] : [];
-};
 
 interface WebviewAssets {
   urlIssuer: ExtensionWebviewUrlIssuer;
@@ -49,7 +42,7 @@ const createResolveWebview = (assets: WebviewAssets): ResolveWorkbenchExtensionW
       readPublishedWebviewRevision(distDir) ??
       readWebviewBuildSignature(distDir) ??
       assets.assetRevisionsByExtensionId?.get(extensionId);
-    const cssFiles = entryStyles(installedExtensionId, id, assets.webviewCacheRoot);
+    const cssFiles = readWebviewEntryStyles(distDir);
     const scope = { installedExtensionId, webviewId: id };
     return {
       ...webview,

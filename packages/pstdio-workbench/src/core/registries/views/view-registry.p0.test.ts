@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { createWorkbench } from "../../workbench-core";
 import type { WorkbenchPanelContribution } from "../layout/layout-model";
 import { createViewRegistry } from "./view-registry";
 
@@ -28,6 +29,31 @@ const createHost = () => {
 };
 
 describe("createViewRegistry", () => {
+  test("refreshing a host-rendered view reloads its observed query", async () => {
+    const workbench = createWorkbench();
+    workbench.views.registerView({ id: "tools", title: "Tools", body: { kind: "react", render: () => null } });
+    const values: number[] = [];
+    let reads = 0;
+    const binding = workbench.views.reads.bind("tools");
+    await binding.request({
+      sourceId: "tools",
+      queryKey: "tools",
+      load: () => ++reads,
+      onValue: (value) => {
+        values.push(value);
+      },
+      onError(error) {
+        throw error;
+      },
+    });
+    expect(values).toEqual([1]);
+    workbench.views.refreshView("tools");
+    await Bun.sleep(0);
+    expect(values).toEqual([1, 2]);
+    binding.dispose();
+    await workbench.views.reads.dispose();
+  });
+
   test("registers reusable content without creating a panel", () => {
     const host = createHost();
     const views = createViewRegistry(host);

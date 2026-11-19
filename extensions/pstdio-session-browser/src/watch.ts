@@ -5,7 +5,6 @@ import {
   type ChatRendererSnapshot,
   type ChatRendererStreamEvent,
   type CommandContext,
-  chatRendererStreamFrames,
   defineCommand,
   type ExtensionSessionStreamEvent,
   type JsonObject,
@@ -14,6 +13,7 @@ import {
   streamOf,
 } from "@pstdio/sdk/extensions";
 import { createStreamObservation } from "./changes";
+import { diagnosticChatFrames } from "./chat-stream-diagnostics";
 import { conversationOperations } from "./controls";
 import { conversationState } from "./conversation-state";
 import { recoverNativeInputs } from "./native-recovery";
@@ -74,12 +74,6 @@ const displayConversation = (
     messages: hasTranscript ? state.messages : undefined,
   };
 };
-const writeFrames = async (ctx: CommandContext, revision: number, event: ChatWatchUpdate) => {
-  for (const frame of chatRendererStreamFrames({ revision, ...event })) {
-    if (ctx.signal.aborted) return;
-    await ctx.stream.write(JSON.parse(JSON.stringify(frame)));
-  }
-};
 
 export const watchConversation = async (ctx: CommandContext, resource?: ResourceRef) => {
   const id = sessionId(resource);
@@ -123,13 +117,19 @@ export const watchConversation = async (ctx: CommandContext, resource?: Resource
   const emittedRecovery = new Set<string>();
   const enqueue = (send: () => Promise<unknown>) => {
     writes = writes.then(send).then(() => {});
+    // Own a rejected write while other public stream callbacks are pending.
     void writes.catch((error) => {
       failure = error;
       changed();
     });
     return writes;
   };
-  const writeEvent = (event: ChatWatchUpdate) => enqueue(() => writeFrames(ctx, revision++, event));
+  const writeEvent = (event: ChatWatchUpdate) => enqueue(async () => {
+    for (const frame of diagnosticChatFrames(id, { revision: revision++, ...event })) {
+      if (ctx.signal.aborted) return;
+      await ctx.stream.write(JSON.parse(JSON.stringify(frame)));
+    }
+  });
   const observe = createStreamObservation(ctx, id, (receipt) =>
     ctx.stream.write({ revision: revision++, snapshot: { observedChange: receipt } }),
   );

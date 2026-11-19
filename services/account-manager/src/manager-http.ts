@@ -4,6 +4,7 @@ import { z } from "zod";
 import { deviceHttp } from "./device-http";
 import type { createManagerAuthentication } from "./manager-authentication";
 import { nativeLogin } from "./native-login";
+import { projectDeletionServiceHttp } from "./project-deletion-http";
 import { EnvironmentAccessDenied, EnvironmentAccessFailure } from "./renewal-errors";
 
 type Authentication = ReturnType<typeof createManagerAuthentication>;
@@ -67,6 +68,8 @@ export const createManagerHandler = (
       if (path.startsWith("/api/auth/")) return await betterAuth(auth, basePath, request, report);
       if (["/v1/native-login", "/v1/native-callback"].includes(path))
         return await nativeLogin(auth, `${canonicalOrigin}${basePath}`, request);
+      const projectDeletionResponse = await projectDeletionServiceHttp(auth, request, path);
+      if (projectDeletionResponse) return projectDeletionResponse;
       const deviceResponse = await deviceHttp(auth, canonicalOrigin, request);
       if (deviceResponse) return deviceResponse;
       if (path === "/health") return json({ ok: true });

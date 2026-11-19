@@ -32,6 +32,7 @@ import {
   buildDashboardWorkbenchWhenExpression,
   dashboardMenuTargetsById,
 } from "@/shared/extensions/workbench-extension-contributions";
+import { configuredRelatedOpenings } from "@/shared/workbench/resource-openers";
 import { workspaceTreeSources } from "@/shared/workspaces/workspace-files-source";
 import { ExtensionViewWidget } from "./components/extension-view-widget";
 import { createSharedTableViews } from "./extension-board-views";
@@ -217,6 +218,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
             uploadFile: uploadExtensionCommandFile,
           }),
         projectId: input.projectId,
+        resolveRelatedResourceOpenings: (resource, signal) => configuredRelatedOpenings(input.ctx, resource, signal),
         resolveTreeNodeResource: (resource) =>
           toDashboardExtensionResource(resource, input.projectId, input.metadata.resourceKinds)!,
         renderTreeNodeEndContent: (resource) =>

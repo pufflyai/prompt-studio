@@ -177,7 +177,9 @@ export interface KanbanRendererMove {
 
 export interface KanbanRendererContribution extends RendererContributionBase {
   /** Opt in to bounded provider-owned filtering, sorting, search and paging. */
-  queryMode?: "paged";
+  queryMode?: "paged" | "static";
+  /** Required for static providers: an explicit maximum, at most 500 rows. */
+  maxRows?: number;
   /** Requested page size for a paged board. Defaults to 100 and is capped at 500. */
   initialPageSize?: number;
   /** Saves the complete drop once. Takes precedence over legacy move callbacks. */

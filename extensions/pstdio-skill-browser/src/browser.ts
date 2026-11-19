@@ -28,7 +28,7 @@ const viewer = defineView({
       const item = await readSkill(ctx, renderer.resource?.id);
       const file = item && selectedSkillFile(item, renderer.pageParams?.file);
       if (!file) return { emptyState: { title: "No skill content" } };
-      return { fileName: file.path, content: file.content, editable: false };
+      return { fileName: file.path, filePath: file.path, content: file.content, editable: false };
     },
   },
 });

@@ -4,6 +4,7 @@ import { text } from "pstdio-extensions/workbench";
 import type { Disposable, WorkbenchCommandExecutionContext } from "../../core";
 import { workbenchCommandPaletteMenuPath } from "../../core";
 import { installResourceChanges } from "../../react/resource-changes/change-store";
+import { registerWorkbenchExtensionActionBars } from "../contributions/action-bar-contributions";
 import { registerWorkbenchExtensionChatRenderers } from "../contributions/chat-renderer-contributions";
 import { registerWorkbenchExtensionCommandPaletteResources } from "../contributions/command-palette-resource-contributions";
 import { registerWorkbenchExtensionControlsRenderers } from "../contributions/controls-renderer-contributions";
@@ -217,6 +218,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
   try {
     disposables.push(installResourceChanges(sourceInput));
     disposables.push(registerWorkbenchExtensionChatRenderers(sourceInput));
+    disposables.push(registerWorkbenchExtensionActionBars(sourceInput));
     terminals = registerWorkbenchExtensionTerminalRenderers(sourceInput);
     disposables.push(terminals);
     disposables.push(...registerCommands(context, input.metadata));

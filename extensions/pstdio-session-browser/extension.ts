@@ -13,7 +13,6 @@ import {
   workbenchModes,
   workbenchPages,
   workbenchResourceKinds,
-  workspacePages,
 } from "@pstdio/sdk/extensions";
 import { sessionBrowser } from "./refs";
 import { act } from "./src/actions";
@@ -203,13 +202,6 @@ export default defineExtension({
     defineNavigationTree({ id: "session-list", owner: session.ref, view: list.ref, resourceScope: "project" }),
     defineNavigationTree({ id: "sessions", owner: sessions.ref, view: list.ref, resourceScope: "project" }),
     defineNavigationTree({
-      id: "workspace-sessions",
-      owner: workspacePages.workspace,
-      optionalOwner: true,
-      view: list.ref,
-    }),
-    defineNavigationTree({ id: "legacy-workspace-sessions", owner: workbenchPages.workspace, view: list.ref }),
-    defineNavigationTree({
       id: "legacy-sessions",
       owner: workbenchPages.sessions,
       view: list.ref,
@@ -217,6 +209,13 @@ export default defineExtension({
     }),
   ],
   commandPaletteResources: [search],
+  resourcePresentations: [
+    {
+      resourceKind: workbenchResourceKinds.session,
+      resolve: resolve.ref,
+      refreshEvents: [viewDataEvents.sessionsChanged],
+    },
+  ],
   keybindings: [
     defineKeybinding({
       id: "new-in-viewer",

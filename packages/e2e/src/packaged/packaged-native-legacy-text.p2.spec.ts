@@ -105,9 +105,12 @@ test("legacy Markdown uses public text admission and shares edits and chrome pre
   });
   await signInBrowser(nativePage, started.descriptor);
   const route = `${started.baseUrl}/projects/${project.id}/extensions/paper.legacy-native-text-source`;
-  await nativePage.goto(`${route}/native`);
+  const [admission] = await Promise.all([
+    nativePage.waitForResponse((response) => new URL(response.url()).pathname.endsWith("/text-editing/open")),
+    nativePage.goto(`${route}/native`),
+  ]);
+  expect(await admission.json()).toMatchObject({ ok: true, value: { opened: { handle: expect.any(String) } } });
   const native = await verifyNativePublicTextEditor(nativePage, "Shared legacy text");
-  expect(operations).toContain("open");
   const peerPage = await context.newPage();
   await peerPage.goto(`${route}/custom`);
   const peer = await verifyPublicTextEditor(peerPage, true, "Shared legacy text");

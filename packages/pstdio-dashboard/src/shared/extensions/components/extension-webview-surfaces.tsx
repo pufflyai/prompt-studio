@@ -3,6 +3,7 @@ import type { LocalizableString } from "@pstdio/sdk/api";
 import { useUiScope } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { useWebviewKeyboardShortcuts, useWebviewObservation } from "@pstdio/workbench/react";
+import { sizesToContentHeight } from "pstdio-extensions/bridge/contract";
 import {
   createWebviewDiagnostics,
   ExtensionFrame,
@@ -106,7 +107,7 @@ export const BridgedWebviewSurface = (props: {
     <Box
       position="relative"
       width={props.sizing === "content-width" ? "max-content" : "full"}
-      height={props.sizing === "content-height" ? "auto" : "full"}
+      height={sizesToContentHeight(props.sizing) ? "auto" : "full"}
       minH="0"
       bg={webviewSurfaceBackground}
       display="flex"

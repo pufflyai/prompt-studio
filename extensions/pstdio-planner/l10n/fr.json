@@ -89,5 +89,6 @@
   "commands.cleanupBoard.title": "Nettoyer le tableau",
   "commands.cleanupBoard.model": "Modèle",
   "activity.context": "Lire le contexte de l’activité",
-  "activity.migrate": "Déplacer les résultats historiques vers l’activité de la tâche"
+  "activity.migrate": "Déplacer les résultats historiques vers l’activité de la tâche",
+  "commands.resolveTicketOpening": "Résoudre la destination du ticket"
 }

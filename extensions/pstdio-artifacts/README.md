@@ -43,9 +43,9 @@ The command reads the file from the agent's current workspace. Without one, it r
 
 Open **Artifacts** in the project navigation. The library shows a grid of page previews with their names and edit dates. Select a card to open the artifact. Cards also work with the keyboard.
 
-Artifacts are also searchable resources. Search by their current name to open them from global search or choose them in a resource picker. Each artifact appears once, opens its latest version, and disappears from search when deleted.
+Artifacts are also searchable resources. Search by their current name to open them from global search or choose them in a resource picker. Each artifact appears once and disappears from search when deleted.
 
-When an agent mentions a saved snapshot path, such as `.pstdio/extension-storage/pstdio.artifacts/sites/<revision-id>.html`, in a conversation, the link shows the artifact's current name and opens the artifact at its latest version instead of the raw file.
+When an agent mentions a saved snapshot path, such as `.pstdio/extension-storage/pstdio.artifacts/sites/<revision-id>.html`, in a conversation, the link shows the artifact's current name and opens its dashboard reader instead of the raw file. The reader restores your saved version selection across reloads and project returns; without a saved selection, it opens the latest version. Choose the latest entry in **Versions** to move a retained reader to the newest published version.
 
 The artifact list opens in a single Artifacts tab in Main. Opening an artifact adds its own tab, so you can return to the list without closing your previews. When the list is closed, Main's default placeholder and Add panel offer an Artifacts entry contributed by this page. Side and Bottom never offer the creation entry. The open list tab can move freely between Main, Side, and Bottom; while open anywhere, its singleton entry is omitted from all choices. Search can open another artifact while tabs are open. Switching tabs keeps each interactive preview's state. A link to a published URL opens the matching artifact tab.
 

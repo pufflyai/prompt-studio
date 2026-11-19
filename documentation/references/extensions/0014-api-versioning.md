@@ -43,6 +43,18 @@ field paths and the SDK `readCollectionRecords` helper. Extensions using these
 must require `^0.4.2` and pin a supporting published SDK. Index declarations are
 installed before commands become available. See [storage](../sdk/0004-storage.md).
 
+The unreleased API 0.5.0 step makes views using the new SDK collection-query
+helpers paged by default. Existing custom `defineView` callbacks retain their
+full-result contract, including when rebuilt with the new SDK. Custom bounded
+providers explicitly declare `queryMode: "paged"`; fixed collections explicitly
+declare `queryMode: "static"` and a row limit. The host rejects whole-collection reads from bounded view
+callbacks, including nested commands. Existing providers retain their legacy contract. This step also includes the indexed related-query,
+derived projection, column-statistics and collection-view helpers used by Planner.
+Record queries accept `limit: 0` for validated revision checks without selecting
+resource rows; empty collection pages use this path.
+Planner requires this host API. Its independent release must follow publication
+of the matching SDK and host; a local development link only proves the candidate.
+
 The [native terminal view body](0022-terminal-sessions.md#native-terminal-views)
 shares the coordinated API 0.4.0 step on `main`. It requires a published SDK exporting
 `TerminalViewBody` and a compatible host advertising `view.terminal.v1` (planned
@@ -513,4 +525,27 @@ Optional resource Activity declarations, `ctx.activity` discussion/outcome metho
 
 `NavigationTreeContribution.optionalView` lets a tool attach a tree supplied by an independently installed view provider. An absent foreign provider keeps the tree inactive; missing local views, missing views in a present provider, and non-tree views still fail validation. Publish a compatible SDK and host before consumers adopt this additive contract. The published 0.47.0 SDK does not include it. See [navigation trees](0004-contribution-api.md#dashboard-ui-contributions).
 
-*Updated at: 2026-11-17*
+## Native action bars on main
+
+`ActionBarViewBody`, `ActionBarSnapshot`, `ActionBarAction` and `ActionBarMenu`
+add native tool rails and command menus through `body.kind: "actionBar"`.
+They share the coordinated unreleased API step on main. Hosts advertise
+`view.actionBar.v1`; existing view bodies and activity items remain supported.
+Publish the supporting SDK and host before independent extension adoption.
+See [native action bars](0004-contribution-api.md#native-action-bars).
+
+## Project composition adoption in API 0.4.2
+
+The host retires its fixed Start/Home/Workspaces presentation aliases. Projects choose
+an ordinary default page and public resource openers. Paths, parents, navigation order,
+and workspace presentation decisions belong to extensions. Existing presentation links
+may become unavailable; shared workspace and session records keep their identity and
+storage. Deprecated SDK reference exports remain available during consumer migration;
+their removal belongs to a separate coordinated breaking release.
+
+`ctx.resources.resolveOpenings` and the SDK project composition client require the
+matching published SDK and host. Validate consumer PRs against that SDK and declare
+their published dependency ranges before release. See
+[project composition](0004-contribution-api.md#configure-project-composition).
+
+*Updated at: 2026-11-18*

@@ -2,15 +2,22 @@ import type { Profiler } from "node:inspector";
 import type { DiagnosticSummary } from "./types";
 
 // A CPU call tree can contain the same function under several callers.
-export const frequentFunctions = (profile?: Profiler.Profile, coverage: Profiler.ScriptCoverage[] = []) => {
-  const samples = new Map<number, number>();
-  for (const id of profile?.samples ?? []) samples.set(id, (samples.get(id) ?? 0) + 1);
-  const entries = profile
-    ? profile.nodes.map((node) => ({
-        name: node.callFrame.functionName || "(anonymous)",
-        location: `${node.callFrame.url}:${node.callFrame.lineNumber}:${node.callFrame.columnNumber}`,
-        count: samples.get(node.id) ?? 0,
-      }))
+export const frequentFunctions = (
+  profile?: Profiler.Profile | Profiler.Profile[],
+  coverage: Profiler.ScriptCoverage[] = [],
+) => {
+  let profiles: Profiler.Profile[] = [];
+  if (profile) profiles = Array.isArray(profile) ? profile : [profile];
+  const entries = profiles.length
+    ? profiles.flatMap((window) => {
+        const samples = new Map<number, number>();
+        for (const id of window.samples ?? []) samples.set(id, (samples.get(id) ?? 0) + 1);
+        return window.nodes.map((node) => ({
+          name: node.callFrame.functionName || "(anonymous)",
+          location: `${node.callFrame.url}:${node.callFrame.lineNumber}:${node.callFrame.columnNumber}`,
+          count: samples.get(node.id) ?? 0,
+        }));
+      })
     : coverage.flatMap((script) =>
         script.functions.map((entry) => ({
           name: entry.functionName || "(anonymous)",

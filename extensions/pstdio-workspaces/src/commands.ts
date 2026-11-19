@@ -11,7 +11,8 @@ import {
 } from "./actions";
 import { readChanges, readDiff } from "./diffs";
 import { createDirectory, createFile, renameEntry } from "./files";
-import { device, open, openFiles, openHistory, openSession, openTerminal } from "./navigation";
+import { device, open, openFiles, openHistory, openSession, openTerminal, resolveOpening } from "./navigation";
+import { relatedOpenings } from "./related-openings";
 import { sessionPresentation } from "./session-presentation";
 import { setLimit } from "./settings";
 export const commands = {
@@ -31,6 +32,8 @@ export const commands = {
   "create-file": createFile,
   "rename-entry": renameEntry,
   device: device,
+  "resolve-opening": resolveOpening,
+  "related-openings": relatedOpenings,
   open: open,
   "open-files": openFiles,
   "open-session": openSession,

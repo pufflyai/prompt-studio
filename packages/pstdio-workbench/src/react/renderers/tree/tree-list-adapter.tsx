@@ -83,8 +83,16 @@ const resolveTreeNodeIcon = (node: TreeNode): ReactNode | undefined => {
     icon = node.iconElement as ReactNode;
   } else if (node.fileName) {
     icon = <NativeTreeFileIcon fileName={node.fileName} />;
-  } else if (node.icon) {
-    icon = <WorkbenchIcon name={node.icon} />;
+  } else if (node.resource?.icon || node.icon) {
+    icon = (
+      <WorkbenchIcon
+        name={node.resource?.icon ?? node.icon}
+        color={node.resource?.iconColor ?? node.iconColor}
+        role={node.resource?.iconLabel ? "img" : undefined}
+        aria-label={node.resource?.iconLabel}
+        aria-hidden={node.resource?.iconLabel ? undefined : true}
+      />
+    );
   }
   return icon === undefined ? undefined : wrapTreeNodeIcon(icon, node.iconTooltip);
 };
@@ -186,7 +194,7 @@ const toTreeListNode = (
     label: node.label,
     description: node.description,
     icon: resolveTreeNodeIcon(node),
-    iconColor: node.iconColor,
+    iconColor: node.resource?.iconColor ?? node.iconColor,
     tone: node.tone,
     tooltip: node.tooltip,
     disabled: node.disabled,
