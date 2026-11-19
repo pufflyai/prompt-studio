@@ -97,14 +97,14 @@ const indexFor = (document: Y.Doc, name: string) => {
   if (!index) throw new Error(`Storage index not installed: ${name}`);
   return index;
 };
+const revisionContext = (document: Y.Doc, identities: QueryIdentities) => ({
+  identities: [...identities.entries()] as unknown as Json,
+  indexes: [...(definitions.get(document)?.values() ?? [])].sort((left, right) =>
+    compareQueryValues(left.name, right.name),
+  ) as unknown as Json,
+});
 const queryRevision = (document: Y.Doc, saved: StorageRecord[], identities: QueryIdentities) =>
-  fingerprint({
-    saved: saved as unknown as Json,
-    identities: [...identities.entries()] as unknown as Json,
-    indexes: [...(definitions.get(document)?.values() ?? [])].sort((left, right) =>
-      compareQueryValues(left.name, right.name),
-    ) as unknown as Json,
-  });
+  fingerprint({ saved: saved as unknown as Json, ...revisionContext(document, identities) });
 
 interface OrderedRecord {
   recordId: string;
@@ -129,11 +129,27 @@ export const createMemoryRecordQueries = (
   source?: {
     list(): Promise<StorageRecord[]>;
     read(id: string): Promise<StorageRecord>;
+    /** Replace whenever list() changes; the token and snapshot are read under the same owner transaction. */
+    revisionToken?(): object;
     identity?(kind: string, id: string): Promise<{ shorthand: string } | null>;
   },
 ) => {
   const records = (document: Y.Doc) =>
     source?.list() ?? Promise.all([...document.getMap("records").keys()].map((id) => readDocumentRecord(document, id)));
+  let cachedRevision: { token: object; context: string; value: Promise<string> } | undefined;
+  const revisionFor = async (
+    document: Y.Doc,
+    saved: StorageRecord[],
+    identities: QueryIdentities,
+    token: object | undefined,
+  ) => {
+    if (!token) return queryRevision(document, saved, identities);
+    const context = await fingerprint(revisionContext(document, identities));
+    if (source?.revisionToken?.() !== token) return queryRevision(document, saved, identities);
+    if (cachedRevision?.token !== token || cachedRevision.context !== context)
+      cachedRevision = { token, context, value: queryRevision(document, saved, identities) };
+    return cachedRevision.value;
+  };
   const api: StorageRecordQueries = {
     defineIndexes: async (indexes) => {
       validateIndexes(indexes);
@@ -151,13 +167,14 @@ export const createMemoryRecordQueries = (
         validateRelatedQueryFields(query);
         const index = requestedRecordIndex(indexFor(document, query.index), query);
         for (const name of relatedQueryIndexes(query.where)) indexFor(document, name);
+        const token = source?.revisionToken?.();
         const saved = await records(document);
         const dependencies = await loadQueryIndexDependencies(index, query.where, async (name) =>
           requestedRecordIndex(indexFor(document, name), query.related?.[name] ?? {}),
         );
         const identities = await memoryQueryIdentities(dependencies.definitions, saved, source?.identity);
         const predicate = memoryPredicate(saved, identities, dependencies.resolve);
-        const revision = await queryRevision(document, saved, identities);
+        const revision = await revisionFor(document, saved, identities, token);
         const page = await prepareRecordQuery(owner, index, query, revision, predicate.resolve);
         if (page.limit === 0) return { revision, records: [], cursor: null };
         const values = (record: StorageRecord) =>
@@ -202,6 +219,7 @@ export const createMemoryRecordQueries = (
         validateRelatedQueryFields(query);
         const index = requestedRecordIndex(indexFor(document, query.index), query);
         for (const name of relatedQueryIndexes(query.where)) indexFor(document, name);
+        const token = source?.revisionToken?.();
         const saved = await records(document);
         const dependencies = await loadQueryIndexDependencies(index, query.where, async (name) =>
           requestedRecordIndex(indexFor(document, name), query.related?.[name] ?? {}),
@@ -221,7 +239,7 @@ export const createMemoryRecordQueries = (
           index,
           query,
           selected,
-          await queryRevision(document, saved, identities),
+          await revisionFor(document, saved, identities, token),
           identities,
           saved,
           predicate.resolve,

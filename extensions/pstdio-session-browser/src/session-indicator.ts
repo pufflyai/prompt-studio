@@ -1,4 +1,8 @@
-const icons: Record<string, string> = {
+import type { ExtensionSession } from "@pstdio/sdk/extensions";
+
+type DisplayStatus = ExtensionSession["status"] | "pending";
+
+const icons: Record<DisplayStatus, string> = {
   pending: "circle-dashed",
   in_progress: "loader-circle",
   completed: "circle-check",
@@ -8,7 +12,7 @@ const icons: Record<string, string> = {
   queued: "clock-alert",
   awaiting_input: "circle-dot",
 };
-const colors: Record<string, string> = {
+const colors: Record<DisplayStatus, string> = {
   pending: "fg.muted",
   in_progress: "fg.info",
   queued: "fg.info",
@@ -19,15 +23,14 @@ const colors: Record<string, string> = {
   awaiting_input: "fg.warning",
 };
 export const sessionDisplayStatus = (
-  session?: { status: string; lastRequestStarted?: string | null; lastRequestEnded?: string | null } | null,
-) => {
-  if (!session) return "pending";
+  session: Pick<ExtensionSession, "status" | "lastRequestStarted" | "lastRequestEnded">,
+): DisplayStatus => {
   return session.status === "completed" && session.lastRequestStarted === null && session.lastRequestEnded === null
     ? "pending"
     : session.status;
 };
-export const sessionIndicator = (status: string) => ({
-  icon: icons[status] ?? "circle-dashed",
-  color: colors[status] ?? "fg.muted",
+export const sessionIndicator = (status: DisplayStatus) => ({
+  icon: icons[status],
+  color: colors[status],
   label: `Session status: ${status}`,
 });

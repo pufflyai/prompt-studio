@@ -24,9 +24,12 @@ import type { NativeChatHostProps, NativeChatHostServices } from "./native-chat-
 import { findQueuedChatRequest, queuedChatDraft } from "./native-chat-queue";
 import { NativeChatErrors, NativeChatNotices } from "./native-chat-status";
 import { NativeChatWorkspace } from "./native-chat-workspace";
+import { useNativeChatObservation } from "./use-native-chat-observation";
 import { type NativeChatPresentation, useNativeChatPresentation } from "./use-native-chat-presentation";
 
 interface NativeChatViewProps extends NativeChatHostServices {
+  workbench?: import("../../../core").WorkbenchModuleContext;
+  resource?: import("@pstdio/sdk/extensions").ResourceRef;
   Host?: ComponentType<NativeChatHostProps>;
   extensionId?: string;
   session: ChatSession;
@@ -109,6 +112,7 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
   const { session, conversationKey, renderParamField } = props;
   const state = useSyncExternalStore(session.subscribeToView, session.getSnapshot, session.getSnapshot);
   const { conversation, draft, messages, queuedFollowUps, pending, loading, initializing, sending } = state;
+  const observation = useNativeChatObservation(props, state);
   const run: ChatSession["run"] = (action) => runNativeChatAction(session, action, props.action, Boolean(selected));
   const [uploading, setUploading] = useState(0);
   const [selected, setSelected] = useState<ChatQueuedRequest | null>(null);
@@ -186,6 +190,8 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
         return (
           <ChatPanel
             conversationKey={conversationKey}
+            onVisibleMessageIdsChange={observation.onVisibleMessageIdsChange}
+            onVisibleQuestionChange={observation.onVisibleQuestionChange}
             linkHandler={host.linkHandler ?? props.linkHandler}
             messages={host.messages ?? messages}
             historyMessages={state.historyMessages}

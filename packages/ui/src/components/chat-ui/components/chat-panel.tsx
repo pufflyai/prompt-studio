@@ -1,6 +1,6 @@
 import { Box, Flex, useRecipe } from "@chakra-ui/react";
 import { MessageCircleIcon } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { EmptyState } from "@/components/primitives/empty-state";
 import type { PromptCommand } from "@/components/rich-text";
 import { chatPanelRecipe } from "@/theme/recipes/chat-panel";
@@ -22,6 +22,7 @@ import {
   type SessionMessage,
 } from "./message-types";
 import type { QueuedFollowUpMoveDirection } from "./queued-follow-up-list-state";
+import { useChatVisibility } from "./use-chat-visibility";
 import { WorkingIndicator } from "./working-indicator";
 
 /** Full conversation shell for agent sessions, including messages, input, attachments, and host-provided slots. */
@@ -29,6 +30,10 @@ export interface ChatPanelProps extends ChatLinkProps {
   /** Stable conversation identity used to reset ready state when switching sessions. */
   conversationKey?: string;
   messages: SessionMessage[];
+  /** IDs intersecting the settled conversation viewport, excluding virtual overscan. */
+  onVisibleMessageIdsChange?: (ids: string[]) => void;
+  /** The exact question currently mounted in the composer. */
+  onVisibleQuestionChange?: (id: string | undefined) => void;
   /** Submitted input for prompt recall while receipt handoff differs from the displayed transcript. Defaults to messages. */
   historyMessages?: SessionMessage[];
   loading?: boolean;
@@ -183,7 +188,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
   } = props;
 
   const panelStyles = useRecipe({ recipe: chatPanelRecipe })();
-  const merged = normalizeChatMessagesForDisplay(messages, { streaming });
+  const merged = useMemo(() => normalizeChatMessagesForDisplay(messages, { streaming }), [messages, streaming]);
   const hasMessages = merged.length > 0;
   const messageListKey = conversationKey ?? merged[0]?.id;
   const messageListIdentity = hasMessages ? (messageListKey ?? "active-conversation") : null;
@@ -216,6 +221,12 @@ export const ChatPanel = (props: ChatPanelProps) => {
   const hideActiveQuestionForms = Boolean(activeQuestionPrompt);
   const showThinkingIndicator = streaming && hasMessages && !workspaceInitializing && !activeQuestionPrompt;
   const isMessageViewportReady = !messageListIdentity || readyMessageListKey === messageListIdentity;
+  const onVisibleMessageIdsChange = useChatVisibility(
+    props,
+    isMessageViewportReady,
+    activeQuestionPrompt?.callId,
+    merged,
+  );
   const queuedComposer = useQueuedFollowUpComposer({
     queuedFollowUps,
     defaultValue: chatInputDefaultValue,
@@ -262,6 +273,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
                       expandedStickyMessageIds={expandedStickyMessageIds}
                       onToggleStickyMessage={toggleStickyMessageExpanded}
                       onReady={() => setReadyMessageListKey(messageListIdentity)}
+                      onVisibleMessageIdsChange={onVisibleMessageIdsChange}
                       onForkMessage={onForkMessage}
                       forkDisabledReason={forkDisabledReason}
                     />

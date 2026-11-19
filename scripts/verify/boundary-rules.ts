@@ -23,6 +23,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-logging": ["pstdio-paths"],
   "pstdio-db": [
     "@pstdio/sdk",
+    "pstdio-diagnostics",
     "pstdio-api-contracts",
     "pstdio-paths",
     "pstdio-sync",
@@ -34,11 +35,12 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-wt": ["pstdio-file-types"],
   "pstdio-storage": ["pstdio-paths", "pstdio-sync-contracts"],
   "@pstdio/sdk": ["pstdio-api-contracts", "pstdio-sync", "pstdio-sync-contracts"],
-  "pstdio-extensions": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-paths", "pstdio-theme"],
+  "pstdio-extensions": ["@pstdio/sdk", "pstdio-api-contracts", "pstdio-diagnostics", "pstdio-paths", "pstdio-theme"],
   "pstdio-api-runtime-host": ["pstdio-api-contracts", "pstdio-extensions"],
   // pstdio-api also declares the extensions and fixtures its tests install from source,
   // so changing one marks pstdio-api as affected.
   "pstdio-api": [
+    "pstdio-diagnostics",
     "github",
     "git-workspaces",
     "pstdio-sync",

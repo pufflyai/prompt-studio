@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { projectEvents } from "pstdio-api-contracts/extension-kernel";
+import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
 import { withBackgroundPreparation } from "pstdio-extensions";
 import type { RouteDeps } from "./features/deps";
 import { createArtifactMountWatchService } from "./features/extensions/artifact-mount-watch/watch-service";
@@ -80,11 +81,11 @@ export const createRuntimeRouteDeps = (input: {
 
 export const startNotificationWakeTimer = (notificationService: ReturnType<typeof createNotificationService>) => {
   const timer = setInterval(() => {
-    notificationService
-      .wakeDueSnoozed()
-      .catch((err) =>
-        apiLogger.error({ err, event: "notifications.snooze_wakeup.error" }, "Failed to wake notifications"),
-      );
+    withRuntimeOperationOrigin({ kind: "background", name: "notifications.wake-due-snoozed" }, () =>
+      notificationService.wakeDueSnoozed(),
+    ).catch((err) =>
+      apiLogger.error({ err, event: "notifications.snooze_wakeup.error" }, "Failed to wake notifications"),
+    );
   }, 30_000);
   timer.unref?.();
   return timer;

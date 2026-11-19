@@ -31,10 +31,11 @@ const saveCompletedConversation = async (
   sessionId: string,
   entry: ActiveSession | null,
   deps: TrackingDeps,
+  completed: boolean,
   submitted?: SubmittedMessages,
 ) => {
   if (entry) {
-    const messages = await checkpointConversation(sessionId, entry, deps).catch((err) => {
+    const messages = await checkpointConversation(sessionId, entry, deps, completed).catch((err) => {
       sessionLogger.error(
         {
           err,
@@ -102,7 +103,7 @@ export const trackHarnessSession = (
       entry?.questionService.dispose();
 
       if (deps.sessionService.store.get(sessionId) !== entry) return;
-      const persisted = await saveCompletedConversation(sessionId, entry, deps, submitted);
+      const persisted = await saveCompletedConversation(sessionId, entry, deps, exit.status === "completed", submitted);
 
       if (deps.sessionService.store.get(sessionId) !== entry) return;
       const current = await deps.sessionService.get(sessionId);

@@ -4,23 +4,23 @@ import { useState } from "react";
 
 const CopyIcon = createGlyphIcon("copy");
 
-export const CopyStartupLogsButton = (props: { copyStartupLogs: () => Promise<void> }) => {
-  const { copyStartupLogs } = props;
+export const CopyStartupDiagnosticsButton = (props: { copyDiagnostics: () => Promise<void> }) => {
+  const { copyDiagnostics } = props;
   const [status, setStatus] = useState<"ready" | "copying" | "copied" | "failed">("ready");
   const copy = async () => {
     setStatus("copying");
     try {
-      await copyStartupLogs();
+      await copyDiagnostics();
       setStatus("copied");
     } catch {
       setStatus("failed");
     }
   };
-  let label = "Copy logs";
+  let label = "Copy diagnostics";
   if (status === "copied") label = "Copied";
   if (status === "failed") label = "Copy failed. Try again.";
   return (
-    <Button aria-label="Copy logs" loading={status === "copying"} onClick={copy}>
+    <Button aria-label="Copy diagnostics" loading={status === "copying"} onClick={copy}>
       <CopyIcon />
       {label}
     </Button>

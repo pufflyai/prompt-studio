@@ -70,6 +70,13 @@ See [project composition](../extensions/0004-contribution-api.md#configure-proje
    depends only on payload contracts. Callers supply native process observations;
    it imports no Electron, UI, database or client code. Desktop, CLI and E2E
    declare their own dependency on it. Native sampling stays in the host.
+   It also owns process-local operation spans and asynchronous origin context.
+   `pstdio-db`, `pstdio-extensions` and `pstdio-api` depend on this primitive to
+   publish bounded query measurements and preserve command, route-pattern and
+   background-task origins before asynchronous queueing. This adds no database,
+   API or extension-runtime dependency to the diagnostics package. Backend
+   monitoring extensions consume the documented Node diagnostics channel and
+   own their bounded subscription lifetime.
 
    The private `pstdio-benchmarks` package owns benchmark measurements, suite membership,
    sampling, budget policy and shared browser helpers. It has no workspace dependencies.
@@ -303,3 +310,5 @@ The default Terminal tool lives in `extensions/pstdio-terminal` and imports only
 Desktop declares Terminal as a development dependency for native scenarios that install the extracted tool from source. This edge is restricted to test and fixture code; packaged desktop runtime code does not import the extension.
 
 The repository-owned `pstdio-scripts/testing` entry groups source-only test policy, fixture selection, and file sharding. API test workers consume its shared allocator as a development dependency; packaged runtime code does not import this test surface.
+
+*Updated at: 2026-11-18*

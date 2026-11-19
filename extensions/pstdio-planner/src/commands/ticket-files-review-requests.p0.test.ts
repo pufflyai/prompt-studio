@@ -4,7 +4,7 @@ import { reviewOutcomesCollection, reviewRequestsCollection } from "../data/revi
 import type { ReviewRequest } from "../data/review-request-types";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
-import { listTicketFilesTreeCommand } from "./ticket-files";
+import { createTicketFileCommand, listTicketFilesTreeCommand } from "./ticket-files";
 
 const request = (id: string, ticketId: string): ReviewRequest => ({
   id,
@@ -68,5 +68,15 @@ describe("review requests in the ticket navigation", () => {
     const { tree } = await setup();
 
     expect(await tree()).toBeUndefined();
+  });
+
+  test("a ticket file has no attention controls and returning to the ticket restores them", async () => {
+    const { storage, ticket, tree } = await setup();
+    const file = await createTicketFileCommand.run(
+      ...makeCommandArgs({ storage, params: { ticketId: ticket.id, name: "summary.json" } }),
+    );
+    await reviewRequestsCollection(storage).put("open", request("open", ticket.id));
+    expect(await tree(file.id)).toBeUndefined();
+    expect(await tree()).toMatchObject({ badge: { label: "1" } });
   });
 });

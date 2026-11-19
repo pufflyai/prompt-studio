@@ -26,6 +26,19 @@ export const resolveNoteCommand = defineCommand({
   },
 });
 
+export const resolveNoteOpeningCommand = defineCommand({
+  id: "notes.resolve-opening",
+  title: l10n("commands.resolveNoteOpening", "Resolve note opening"),
+  params: { noteId: params.text({ required: true, resolvedFrom: "resource" }) },
+  async run(ctx, input) {
+    const { readable, writable } = await notesFileAccess(ctx);
+    if (!readable) return null;
+    const mount = notesMount(ctx);
+    if (!(await noteExists(mount, input.noteId))) return null;
+    return noteTarget(input.noteId, await readNoteTitle(mount, input.noteId), ctx, writable);
+  },
+});
+
 export const createNoteCommand = defineCommand({
   id: "notes.create",
   title: l10n("commands.createNote", "New note"),

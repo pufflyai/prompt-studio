@@ -197,6 +197,7 @@ const finishPreparedInstall = async (
         sourceHash,
         preserveDependencies,
         replaceExisting: Boolean(input.force),
+        upgradeFromVersion: input.upgradeFromVersion,
         revision: loaded.preparedRevision,
       });
       return { snapshot, loaded, sourceHash, installation };
@@ -234,6 +235,8 @@ export const prepareAndInstallExtensionSource = async (input: InstallExtensionSo
     input.signal?.throwIfAborted();
     failIfInvalidSource(resolvedSource.path);
     const source = sourceScope(resolvedSource.path, input.allowUnsupportedApiVersion === true);
+    if (input.upgradeFromVersion && Bun.semver.order(source.manifest.version, input.upgradeFromVersion) < 0)
+      throw new Error(`Cannot downgrade extension from ${input.upgradeFromVersion} to ${source.manifest.version}.`);
     const assertReservedIdentity = (id: string) => {
       if (input.expectedIdentity && canonicalExtensionId(id) !== input.expectedIdentity)
         throw new Error("Extension identity changed after reserving its installation destination");
@@ -245,7 +248,12 @@ export const prepareAndInstallExtensionSource = async (input: InstallExtensionSo
     validateInstallName(installName);
 
     const directoryName = installName === source.manifest.id ? extensionStorageDirectory(installName) : installName;
-    const targetPath = installedIdentityPath(extensionsRoot, directoryName, source.manifest.id);
+    const targetPath = installedIdentityPath(
+      extensionsRoot,
+      directoryName,
+      source.manifest.id,
+      input.installedSourcePath,
+    );
     const targetExists = existsSync(targetPath);
     const inPlace = targetExists && isSameDirectory(resolvedSource.path, targetPath);
     if (!inPlace) assertCanCopy(resolvedSource.path, targetPath);

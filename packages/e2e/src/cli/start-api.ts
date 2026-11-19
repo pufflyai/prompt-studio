@@ -35,6 +35,7 @@ export type ApiInstance = {
   port: number;
   storagePath: string;
   homePath: string;
+  logPath: string;
   process: ChildProcess;
   stop: () => Promise<void>;
 };
@@ -54,6 +55,7 @@ export const startApi = async (options: StartApiOptions = {}) => {
   const storagePath = join(homePath, "storage");
   const evidenceRoot = join(import.meta.dirname, "../../test-results/source-runtime");
   mkdirSync(evidenceRoot, { recursive: true });
+  const logPath = options.env?.PSTDIO_LOG_PATH ?? join(evidenceRoot, `${basename(homePath)}.jsonl`);
 
   const child = spawn("bun", ["run", "../../packages/pstdio-api/src/server.ts"], {
     cwd: join(import.meta.dirname, "../.."),
@@ -66,7 +68,7 @@ export const startApi = async (options: StartApiOptions = {}) => {
       PSTDIO_EVENT_BUS_BUFFER_SIZE:
         options.eventBusBufferSize !== undefined ? String(options.eventBusBufferSize) : undefined,
       PSTDIO_HOME: homePath,
-      PSTDIO_LOG_PATH: join(evidenceRoot, `${basename(homePath)}.jsonl`),
+      PSTDIO_LOG_PATH: logPath,
       HOME: homePath,
       BUN_INSTALL_CACHE_DIR: process.env.E2E_BUN_CACHE_DIR ?? process.env.BUN_INSTALL_CACHE_DIR,
       ...options.env,
@@ -93,6 +95,7 @@ export const startApi = async (options: StartApiOptions = {}) => {
     port,
     storagePath,
     homePath,
+    logPath,
     process: child,
     stop,
   };

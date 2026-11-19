@@ -5,7 +5,9 @@ const supervisorStorage = (ctx: Pick<ExtensionContextBase, "storage">, sessionId
   ctx.storage.scope({ type: "auto-build-supervisor", id: sessionId });
 
 export const autoBuildDispatches = (ctx: Pick<ExtensionContextBase, "storage">, sessionId: string) =>
-  supervisorStorage(ctx, sessionId).collection<{ workspaceId: string; dispatchedAt: string }>("dispatches");
+  supervisorStorage(ctx, sessionId).collection<{ attemptId?: string; workspaceId: string; dispatchedAt: string }>(
+    "dispatches",
+  );
 
 // A supervisor can receive repair evidence before review input or capacity allows a repair to start.
 export const autoBuildPullRequestNotifications = (ctx: Pick<ExtensionContextBase, "storage">, sessionId: string) =>
