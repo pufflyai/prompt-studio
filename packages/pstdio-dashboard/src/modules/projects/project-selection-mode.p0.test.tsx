@@ -10,19 +10,11 @@ const pickerPlacements = (workbench: ReturnType<typeof createWorkbench>) =>
     .filter((placement) => placement.viewId === dashboardWidgetIds.projectPicker);
 
 describe("required project selection", () => {
-  test("opens a non-closable project picker while project selection is active", () => {
-    const workbench = createWorkbench();
-    workbench.registerModule(createProjectsModule());
-
-    workbench.modes.setActiveMode("project-selection");
-
-    expect(pickerPlacements(workbench)).toEqual([expect.objectContaining({ closable: false })]);
-  });
-
   test("removes the required picker when project selection is left and restores it on re-entry", () => {
     const workbench = createWorkbench();
     workbench.registerModule(createProjectsModule());
     workbench.modes.setActiveMode("project-selection");
+    expect(pickerPlacements(workbench)).toEqual([expect.objectContaining({ closable: false })]);
 
     workbench.modes.setActiveMode(undefined);
     expect(pickerPlacements(workbench)).toEqual([]);

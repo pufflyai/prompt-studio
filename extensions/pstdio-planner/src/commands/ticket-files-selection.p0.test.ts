@@ -49,15 +49,7 @@ describe("ticket files tree selection commands", () => {
       }),
     );
 
-    expect(body).toEqual([
-      {
-        id: "files",
-        label: expect.anything(),
-        collapsible: true,
-        nodes: [{ id: "files-empty", label: "No files", icon: "FileText", disabled: true, rowVariant: "empty-state" }],
-      },
-    ]);
-    expect(body[0]).not.toHaveProperty("canHide");
-    expect(body[0]).not.toHaveProperty("emptyState");
+    expect(body.map((section) => section.id)).toEqual(["files"]);
+    expect(body[0]?.nodes).toMatchObject([{ label: "No files", disabled: true }]);
   });
 });

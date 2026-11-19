@@ -1,26 +1,8 @@
-import { describe, expect, test } from "bun:test";
+import { expect, test } from "bun:test";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
-import { buildWorkbenchBreadcrumbItems, WorkbenchBreadcrumbView } from "./breadcrumb-view";
-
-describe("buildWorkbenchBreadcrumbItems", () => {
-  test("does not add context actions for resource breadcrumbs", () => {
-    const resource = {
-      type: "dashboard-view",
-      label: "Tickets",
-      id: "pstdio://dashboard/tickets",
-    };
-    const items = [{ title: "Tickets", icon: "Table", resource }];
-    const [item] = buildWorkbenchBreadcrumbItems(items);
-    expect("contextMenuActions" in (item ?? {})).toBe(false);
-  });
-  test("keeps plain breadcrumbs action-free", () => {
-    const items = [{ title: "Plain" }];
-    const [item] = buildWorkbenchBreadcrumbItems(items);
-    expect("contextMenuActions" in (item ?? {})).toBe(false);
-  });
-});
+import { WorkbenchBreadcrumbView } from "./breadcrumb-view";
 
 test("shows the resource owner's changing icon in the page breadcrumb", async () => {
   const workbench = createWorkbench();

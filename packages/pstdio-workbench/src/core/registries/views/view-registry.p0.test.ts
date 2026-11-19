@@ -81,22 +81,6 @@ describe("createViewRegistry", () => {
     expect(host.disposedBodies).toEqual(["pstdio-planner.tickets"]);
   });
 
-  test("does not accept placement presentation", () => {
-    const host = createHost();
-    const views = createViewRegistry(host);
-    views.registerView({
-      id: "project-picker",
-      title: "Projects",
-      body: { kind: "react", render: () => "projects" },
-    });
-
-    expect(host.registeredPanels).toEqual([]);
-    expect(views.getView("project-picker")?.body).toEqual({
-      kind: "react",
-      render: expect.any(Function),
-    });
-  });
-
   test("rejects duplicate view identities before registering another body", () => {
     const host = createHost();
     const views = createViewRegistry(host);

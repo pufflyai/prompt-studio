@@ -3,7 +3,8 @@ import { execSync } from "node:child_process";
 import { chmodSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { cleanupDirs, createGitRepo, runPstdio, runPstdioSafe } from "./helpers";
+import { e2eExtensions } from "../default-extensions";
+import { cleanupDirs, createGitRepo, runPstdioAsync } from "./helpers";
 import { type ApiInstance, getFreePort, startApi } from "./start-api";
 import { FLOW_TIMEOUT, SETUP_TIMEOUT } from "./timeouts";
 
@@ -27,16 +28,14 @@ const dirs: string[] = [];
 const opencodeRequests: OpencodeRequest[] = [];
 const sessionId = "opencode-e2e-session";
 
-const run = (args: string, cwd: string, timeout?: number) => runPstdio(args, cwd, { PSTDIO_API_URL: api.url }, timeout);
+const run = (args: string[], cwd: string, timeout?: number) =>
+  runPstdioAsync(args, cwd, { PSTDIO_API_URL: api.url }, timeout);
 
-const runSafe = (args: string, cwd: string, timeout?: number) =>
-  runPstdioSafe(args, cwd, { PSTDIO_API_URL: api.url }, timeout);
-
-const createInitializedRepo = (name: string) => {
+const createInitializedRepo = async (name: string) => {
   const repo = createGitRepo();
   dirs.push(repo);
   execSync("git commit --allow-empty -m init", { cwd: repo, stdio: "pipe" });
-  run(`projects create ${name}`, repo, FLOW_TIMEOUT);
+  await run(["projects", "create", name], repo, FLOW_TIMEOUT);
   return repo;
 };
 
@@ -192,6 +191,7 @@ beforeAll(async () => {
   opencodeServer = await startOpencodeServer();
   api = await startApi({
     env: {
+      PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("harness-open-code"),
       PATH: `${binDir}:${process.env.PATH ?? ""}`,
     },
   });
@@ -212,23 +212,27 @@ describe("pstdio sessions create with mocked OpenCode protocol", () => {
   test(
     "creates and completes a mocked OpenCode session from a non-prompt-studio repo with the selected model",
     async () => {
-      const repo = createInitializedRepo("external-opencode-session");
+      const repo = await createInitializedRepo("external-opencode-session");
       const repoPath = realpathSync(repo);
       const projectId = readProjectId(repo);
 
-      const result = runSafe(
-        'sessions create --agent pstdio.harness-open-code.harness.opencode --model openai/gpt-5.5 --prompt "external repo session smoke"',
+      const output = await run(
+        [
+          "sessions",
+          "create",
+          "--agent",
+          "pstdio.harness-open-code.harness.opencode",
+          "--model",
+          "openai/gpt-5.5",
+          "--prompt",
+          "external repo session smoke",
+        ],
         repo,
         FLOW_TIMEOUT,
       );
 
-      if (result.exitCode !== 0) {
-        throw new Error(
-          `sessions create exited with ${result.exitCode}\nstdout:\n${result.stdout}\nstderr:\n${result.stderr}\nopencodeRequests:\n${JSON.stringify(opencodeRequests, null, 2)}`,
-        );
-      }
-      const createdSessionId = result.stdout.match(/Created session (\S+)/)?.[1];
-      if (!createdSessionId) throw new Error(`Session id missing from CLI output: ${result.stdout}`);
+      const createdSessionId = output.match(/Created session (\S+)/)?.[1];
+      if (!createdSessionId) throw new Error(`Session id missing from CLI output: ${output}`);
 
       const session = await waitForCompletedSession(createdSessionId);
       expect(session.agent).toBe("pstdio.harness-open-code.harness.opencode");

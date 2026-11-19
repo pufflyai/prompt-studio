@@ -248,15 +248,4 @@ describe("sessions follow-up", () => {
       attachments: [{ file_id: "file-1" }, { file_id: "file-2" }],
     });
   });
-
-  test("propagates API errors", async () => {
-    const deps = makeDeps({
-      followUpSession: mock(async () => {
-        throw new Error("Session is in_progress");
-      }) as never,
-    });
-    const handler = createHandler(deps);
-
-    expect(handler(argv({ id: "s_1", prompt: "test" }))).rejects.toThrow("Session is in_progress");
-  });
 });

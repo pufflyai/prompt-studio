@@ -28,6 +28,7 @@ export const useTreeData = (
   const {
     read,
     structure,
+    groupScope,
     queryKey,
     queryScope,
     refreshKey,
@@ -118,6 +119,7 @@ export const useTreeData = (
     body: previewTreeResources(movement.body, movement.childrenByNodeId, changes),
     header: pages.header,
     footer: pages.footer,
+    groupScope,
     childrenByNodeId: NO_CHILDREN,
     loadChildren: (node: TreeNode) => loadChildren(node.id),
     error: read.error ?? null,

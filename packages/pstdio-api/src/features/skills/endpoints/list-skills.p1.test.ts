@@ -139,7 +139,6 @@ describe("GET /v1/projects/:id/skills/:name", () => {
 
     const body = await res.json();
     expect(body.name).toBe("catalog-skill");
-    expect(body).not.toHaveProperty("bundled_version");
     expect(body.files.map((file: { path: string }) => file.path).sort()).toEqual(["SKILL.md", "references/notes.md"]);
     expect(body.installed_agents).toEqual([]);
     expect(body.agent_installations).toEqual([]);

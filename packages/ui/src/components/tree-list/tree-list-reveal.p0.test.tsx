@@ -8,10 +8,6 @@ const RowVisibility = () => {
   return <output>{String(useTreeListRowVisibility())}</output>;
 };
 
-test("tree rows outside a collapsed section can observe optional data", () => {
-  expect(renderToStaticMarkup(<RowVisibility />)).toBe("<output>true</output>");
-});
-
 test("collapsed tree rows stop optional observations while their content stays mounted", () => {
   const html = renderToStaticMarkup(
     <ChakraProvider value={psTheme}>

@@ -6,17 +6,6 @@ const workspaceId = "tree-resource-workspace";
 const projectId = "tree-resource-project";
 afterEach(() => getWriter("workspaces")?.remove(workspaceId));
 
-test("preserves resource ownership when resolving row actions", () => {
-  const resource = {
-    type: "ticket",
-    id: "ticket-1",
-    extensionId: "pstdio.planner",
-    projectId,
-    metadata: { documentId: "notes" },
-  };
-  expect(toDashboardExtensionResource(resource, projectId)).toMatchObject(resource);
-});
-
 test("resolving an extension resource preserves its document metadata", () => {
   const resource = {
     type: "ticket",

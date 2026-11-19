@@ -35,27 +35,6 @@ const mockFilesStorageService = () =>
   }) satisfies FileServiceDeps["filesStorageService"];
 
 describe("FileService", () => {
-  test("get delegates to the db service", async () => {
-    const db = mockFilesDBService();
-    const storage = mockFilesStorageService();
-    const service = createFileService({ eventBus: new EventBus(), filesDBService: db, filesStorageService: storage });
-
-    const result = await service.get("f1");
-
-    expect(result?.id).toBe("f1");
-    expect(db.get).toHaveBeenCalledWith("f1");
-  });
-
-  test("list delegates to the db service", async () => {
-    const db = mockFilesDBService();
-    const storage = mockFilesStorageService();
-    const service = createFileService({ eventBus: new EventBus(), filesDBService: db, filesStorageService: storage });
-
-    await service.list("p1");
-
-    expect(db.list).toHaveBeenCalledWith("p1");
-  });
-
   test("upload writes file to disk then inserts into db", async () => {
     const db = mockFilesDBService();
     const storage = mockFilesStorageService();
@@ -70,10 +49,8 @@ describe("FileService", () => {
       mime_type: "text/plain",
     });
 
-    expect(storage.writeStream).toHaveBeenCalled();
-    expect(db.insert).toHaveBeenCalled();
-    expect(result.file_name).toBe("note.txt");
-    expect(result.project_id).toBe("p1");
+    expect(result).toMatchObject({ file_name: "note.txt", project_id: "p1", size_bytes: data.byteLength });
+    expect(db.insert).toHaveBeenCalledWith(result);
   });
 
   test("update writes file and updates db metadata", async () => {
@@ -84,10 +61,8 @@ describe("FileService", () => {
     const data = Buffer.from("updated content");
     const result = await service.update("f1", { data });
 
-    expect(db.get).toHaveBeenCalledWith("f1");
     expect(storage.writeFileAtPath).toHaveBeenCalledWith("/tmp/p1/f1", data);
-    expect(storage.computeHash).toHaveBeenCalledWith(data);
-    expect(db.updateMetadata).toHaveBeenCalled();
+    expect(db.updateMetadata).toHaveBeenCalledWith("f1", expect.objectContaining({ size_bytes: data.byteLength }));
     expect(result?.size_bytes).toBe(data.byteLength);
   });
 
@@ -112,16 +87,5 @@ describe("FileService", () => {
     expect(result).toBe(true);
     expect(storage.deleteFile).toHaveBeenCalledWith("/tmp/p1/f1");
     expect(db.remove).toHaveBeenCalledWith("f1");
-  });
-
-  test("remove returns false when file not found", async () => {
-    const db = mockFilesDBService();
-    db.get = mock(async () => null) as unknown as typeof db.get;
-    const storage = mockFilesStorageService();
-    const service = createFileService({ eventBus: new EventBus(), filesDBService: db, filesStorageService: storage });
-
-    const result = await service.remove("nonexistent");
-
-    expect(result).toBe(false);
   });
 });

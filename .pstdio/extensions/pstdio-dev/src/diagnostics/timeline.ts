@@ -183,7 +183,7 @@ const record = (launches: OpenLaunch[], line: LogLine & { phase: string }, at: n
 };
 
 /** Groups runtime phase logs into launches, each with its startup steps and project setups. */
-export const buildTimeline = (lines: Iterable<string>, limit = 60) => {
+const buildTimeline = (lines: Iterable<string>, limit = 60) => {
   const launchesByProcess = new Map<string | undefined, OpenLaunch[]>();
   for (const text of lines) {
     const parsed = parseLine(text);

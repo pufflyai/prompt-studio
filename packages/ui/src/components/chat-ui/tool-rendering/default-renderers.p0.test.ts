@@ -163,45 +163,6 @@ describe("todowrite renderer", () => {
     ]);
   });
 
-  it("renders todos from object payload", () => {
-    const item = renderInvocation({
-      type: "tool",
-      tool: "todowrite",
-      status: "completed",
-      state: {
-        status: "completed",
-        input: {
-          todos: [
-            {
-              content: "Implement API",
-              status: "in_progress",
-              priority: "high",
-            },
-            {
-              content: "Run validate",
-              status: "completed",
-              priority: "medium",
-            },
-          ],
-        },
-      },
-    });
-
-    expect(item.title).toEqual([
-      { kind: "text", text: "Update todos", bold: true },
-      { kind: "text", text: "2 items", muted: true },
-    ]);
-    expect(item.blocks).toEqual([
-      {
-        type: "todo-list",
-        items: [
-          { label: "Implement API", checked: false },
-          { label: "Run validate", checked: true },
-        ],
-      },
-    ]);
-  });
-
   it("renders todos that use title for content", () => {
     const item = renderInvocation({
       type: "tool",

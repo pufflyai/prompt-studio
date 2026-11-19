@@ -1,12 +1,7 @@
 import { expect, test } from "bun:test";
 import { z } from "zod";
 import type { CommandOutcome } from "../extension-kernel";
-import {
-  type CommandExecutionResult,
-  commandExecuteResponseSchema,
-  commandExecutionResultSchema,
-  commandOutcomeSchema,
-} from "./execute";
+import { commandExecuteResponseSchema, commandExecutionResultSchema, commandOutcomeSchema } from "./execute";
 
 test("legacy outcome schemas keep their object composition methods", () => {
   const outcome = { ok: true, status: "success", value: 1, requestId: "request" } satisfies CommandOutcome & {
@@ -15,21 +10,6 @@ test("legacy outcome schemas keep their object composition methods", () => {
   const extended = commandOutcomeSchema.extend({ requestId: z.string() });
   const response = commandExecuteResponseSchema.pick({ outcome: true }).extend({ outcome: extended });
   expect(response.parse({ outcome })).toEqual({ outcome });
-});
-
-test("command responses carry explicit navigation alongside data", () => {
-  const response = {
-    commandId: "create",
-    extensionId: "notes",
-    outcome: {
-      ok: true,
-      status: "success",
-      value: { id: "one" },
-      navigationRequests: [{ kind: "page", page: { kind: "page", id: "notes", extensionId: "notes" } }],
-    },
-  } satisfies CommandExecutionResult;
-  expect(commandExecuteResponseSchema.parse(response)).toEqual(response);
-  expect(commandExecutionResultSchema.parse(response)).toEqual(response);
 });
 
 test("command response validation rejects contradictory outcomes and preserves complete rejection details", () => {

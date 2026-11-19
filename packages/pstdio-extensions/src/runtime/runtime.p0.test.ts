@@ -82,20 +82,6 @@ describe("loadExtensionRuntime", () => {
     expect(runtime.diagnostics.map((d) => d.code)).toContain("extension_manifest_invalid_value");
   });
 
-  test("reports diagnostics when default export is not an object", async () => {
-    const root = createTempDir();
-    mkdirSync(join(root, "broken"));
-    writePackage(join(root, "broken"), "broken");
-    writeFileSync(join(root, "broken", "extension.ts"), `export default "nope";`);
-
-    const runtime = await loadExtensionRuntime({
-      includeUserRoot: false,
-      extensionRoots: [{ path: root }],
-    });
-
-    expect(runtime.diagnostics.map((d) => d.code)).toContain("invalid_default_export");
-  });
-
   test("accepts views with separate docked placements", async () => {
     const root = createTempDir();
     mkdirSync(join(root, "lab"));

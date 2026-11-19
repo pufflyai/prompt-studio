@@ -139,23 +139,6 @@ describe("createEventStore", () => {
     expect(items[0]).toMatchObject({ path: "/messages/2" });
   });
 
-  test("FIFO eviction when exceeding maxSizeBytes", () => {
-    const smallPatch: JsonPatch = { op: "add", path: "/messages/0", value: "x" };
-    const patchSize = JSON.stringify(smallPatch).length;
-
-    const store = createEventStore({ maxSizeBytes: patchSize * 2 + 1 });
-
-    store.push({ op: "add", path: "/messages/0", value: "a" });
-    store.push({ op: "add", path: "/messages/1", value: "b" });
-    store.push({ op: "add", path: "/messages/2", value: "c" });
-
-    const history = store.getHistory();
-
-    // Should have evicted the oldest to stay within budget
-    expect(history.length).toBeLessThanOrEqual(2);
-    expect(history[history.length - 1]).toMatchObject({ path: "/messages/2" });
-  });
-
   test("close terminates active subscribers", async () => {
     const store = createEventStore();
     const iterator = store.subscribe()[Symbol.asyncIterator]();

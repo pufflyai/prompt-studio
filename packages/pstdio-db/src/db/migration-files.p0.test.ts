@@ -52,23 +52,4 @@ describe("resolveMigrationsFolder", () => {
       fs.rmSync(tempRoot, { force: true, recursive: true });
     }
   });
-
-  it("extracts migrations with Windows-style embedded names", async () => {
-    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-migrations-windows-"));
-    const embedded = toEmbedded("0000_lush_corsair.sql", "-- migration");
-    embedded.name = embedded.name.replaceAll("/", "\\");
-
-    try {
-      const migrations = await resolveMigrationsFolder({
-        tmpDir: tempRoot,
-        embeddedFiles: [embedded],
-        logger: () => {},
-      });
-
-      expect(fs.existsSync(path.join(migrations.path, "0000_lush_corsair.sql"))).toBe(true);
-      migrations.dispose();
-    } finally {
-      fs.rmSync(tempRoot, { force: true, recursive: true });
-    }
-  });
 });

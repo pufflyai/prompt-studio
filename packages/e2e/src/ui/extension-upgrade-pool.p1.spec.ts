@@ -197,6 +197,7 @@ test("keeps install retries and toggle progress attached to their controls acros
   await page.goBack();
   const installedRow = page.getByTestId("extension-entry").filter({ hasText: catalog.displayName });
   await expect(installedRow).toBeVisible();
+  await expect(installedRow).toBeFocused();
   await expect(installedRow.getByTestId("extension-row-upgrade")).toHaveCount(0);
   await installedRow.click();
   await expect(detail.getByTestId("extension-upgrade")).toHaveCount(0);
