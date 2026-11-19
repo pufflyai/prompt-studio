@@ -3,7 +3,7 @@ import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { loadTicketLinkedResources } from "../data/ticket-linked-resources";
 import type { Ticket } from "../data/types";
 import { sessionRecord } from "./session-record.fixture";
-import { mergeTicketLinkSections, ticketRelationshipSections } from "./ticket-link-sections";
+import { mergeTicketLinkSections, ticketLinkGroup, ticketRelationshipSections } from "./ticket-link-sections";
 
 const ticket = (id: string, extra: Partial<Ticket> = {}): Ticket => ({
   id,
@@ -121,7 +121,11 @@ test("linked resources are grouped by their type without a catch-all section", (
   ].map((resource) => ({ id: resource.type, label: resource.type, resource: { ...resource, id: resource.type } }));
   const sections = mergeTicketLinkSections([], links);
   expect(sections).toHaveLength(3);
-  expect(sections.map((section) => section.label)).toEqual(["Pull requests", "Notes", "Reports"]);
+  expect(sections.map(({ label }) => typeof label === "object" && label !== null && "$l10n" in label)).toEqual([
+    true,
+    true,
+    true,
+  ]);
   expect(mergeTicketLinkSections(sections, links).flatMap((section) => section.nodes)).toHaveLength(3);
 });
 
@@ -152,4 +156,11 @@ test("canonical ticket links retain their hierarchy and deduplicate domain relat
       .filter((node) => node.resource?.extensionId === "alice.planner")
       .map((node) => node.resource?.extensionId),
   ).toEqual(["alice.planner"]);
+});
+
+test("unknown resource kind IDs keep readable headings even when they match object properties", () => {
+  for (const type of ["constructor", "toString"]) {
+    const group = ticketLinkGroup({ type, id: "resource", extensionId: "example.resources" });
+    expect(typeof group.label).toBe("string");
+  }
 });

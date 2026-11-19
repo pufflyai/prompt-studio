@@ -121,13 +121,24 @@ export const mergeTicketLinkSections = (
   return [...groups.values()].filter((section) => section.nodes.length > 0 || section.nextCursor);
 };
 
+const resourceTypeLabels: Record<string, ReturnType<typeof l10n>> = {
+  ticket: l10n("navigation.tickets", "Tickets"),
+  note: l10n("navigation.notes", "Notes"),
+  report: l10n("navigation.reports", "Reports"),
+  "pull-request": l10n("navigation.pullRequests", "Pull requests"),
+  artifact: l10n("navigation.artifacts", "Artifacts"),
+};
+
 export const ticketLinkGroup = (resource: ResourceRef) => {
   const { type } = resource;
   if (type === "session") return { id: "sessions", label: l10n("navigation.sessions", "Sessions") };
   if (type === "workspace") return { id: "workspaces", label: l10n("navigation.workspaces", "Workspaces") };
   const words = type.replace(/[-_]+/g, " ");
   const label = words.charAt(0).toUpperCase() + words.slice(1);
-  return { id: `resource-type:${resource.extensionId ?? "pstdio"}:${type}`, label: `${label}s` };
+  return {
+    id: `resource-type:${resource.extensionId ?? "pstdio"}:${type}`,
+    label: Object.hasOwn(resourceTypeLabels, type) ? resourceTypeLabels[type] : `${label}s`,
+  };
 };
 
 export const ticketLinkTypeNodes = (sections: TreeViewSection[]): TreeNode[] =>
