@@ -17,7 +17,7 @@ export async function readAutoBuildCandidates(
     observations,
     configurationError,
     requestSelection,
-  } = await readNextTickets(ctx, mode, input);
+  } = await readNextTickets(ctx, mode, { ...input, scan: true });
   const blockedTickets = waiting
     .filter(({ reason }) => reason !== "assigned" && reason !== "existing-attempt" && reason !== "capacity-full")
     .map(({ ticket }) => ticket);

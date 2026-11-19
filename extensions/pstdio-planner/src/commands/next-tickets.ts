@@ -5,7 +5,7 @@ import type { GithubReads } from "../data/pull-request-resources";
 import { ticketSummaryFields } from "../data/ticket-query-summary";
 import { readImplementationCapacity } from "./attempt-readiness";
 import type { WorkObservation } from "./auto-build-observations";
-import { visitNextTicketPage } from "./next-ticket-evidence";
+import { type NextPageState, visitNextTicketPage } from "./next-ticket-evidence";
 import type { NextTicketQuery } from "./next-ticket-query";
 import { readNextTicketSelection } from "./next-ticket-selection";
 import type { NextTicket, WaitingTicket } from "./next-ticket-types";
@@ -41,7 +41,7 @@ export async function readNextTickets(
     waiting: WaitingTicket[] = [],
     observations: WorkObservation[] = [];
   const deliveryReads: DependencyDeliveryReads = new Map();
-  const state = {
+  const state: NextPageState = {
     base: input.base,
     offset: input.offset ?? 0,
     examined: 0,
@@ -112,9 +112,9 @@ export async function readNextTickets(
     mode: mode.revision,
     scoped,
     capacity,
-    next,
-    waiting,
-    dependencies,
+    next: state.firstViable ? [state.firstViable.ticket] : next,
+    waiting: state.firstViable?.waiting ?? waiting,
+    dependencies: state.firstViable?.dependencies ?? dependencies,
   });
   return {
     tickets: next,

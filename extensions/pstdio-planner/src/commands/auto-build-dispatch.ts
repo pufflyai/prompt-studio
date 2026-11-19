@@ -172,12 +172,20 @@ export const autoBuildDispatchCommand = defineCommand({
           async () => {
             const supervisor = await readAutoBuildSupervisor(ctx);
             const current = await readAutoBuildMode(ctx);
-            if (!supervisor.sessionId || current.revision !== revision) return;
-            const { snapshot } = await readNextTickets(ctx, current);
+            if (!supervisor.sessionId || !current.enabled || current.revision !== revision) return;
+            const { snapshot } = await readNextTickets(ctx, current, { limit: 1, scan: true });
+            const latest = await readAutoBuildMode(ctx);
+            if (!latest.enabled || latest.revision !== revision) return;
             await saveAutoBuildSupervisor(ctx, { ...supervisor, lastWake: snapshot });
           },
           () => undefined,
-        );
+        ).catch((error: unknown) => {
+          // The attempt and its receipt are already committed. A stale readback
+          // must not report that successful dispatch as a failed start.
+          ctx.logger.warn("Could not refresh Auto Build wake state after dispatch", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        });
       }
       return result;
     });
