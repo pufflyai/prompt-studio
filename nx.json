@@ -42,6 +42,9 @@
         },
         {
           "env": "PSTDIO_TERMINAL_WEBSOCKET_URL"
+        },
+        {
+          "env": "PSTDIO_QUERY_EVENT_WINDOW_MS"
         }
       ],
       "outputs": ["{projectRoot}/canvas-test-static"]
@@ -60,6 +63,9 @@
         },
         {
           "env": "PSTDIO_TERMINAL_WEBSOCKET_URL"
+        },
+        {
+          "env": "PSTDIO_QUERY_EVENT_WINDOW_MS"
         }
       ],
       "outputs": ["{projectRoot}/dist", "{projectRoot}/.publish"]

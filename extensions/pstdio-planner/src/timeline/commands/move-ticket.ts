@@ -11,7 +11,7 @@ export const moveTicketInPlan = async (
 ) => {
   const { ticket: ticketKey, deadline, before } = input;
   return withWriteGuard(ctx, "plan", async () => {
-    const { tickets, plan } = await loadPlan(ctx);
+    const { tickets, plan, snapshot } = await loadPlan(ctx);
     // The plan holds only open tickets, so an archived ticket is unknown here.
     const planTicketId = async (key: string) => {
       const id = await resolveTicketId(ctx, key);
@@ -25,7 +25,7 @@ export const moveTicketInPlan = async (
       deadlineId: deadline === undefined ? current : deadlineOrNone(plan, deadline),
       ...(before ? { beforeId: await planTicketId(before) } : {}),
     });
-    await savePlan(ctx, moved, "move");
+    await savePlan(ctx, moved, "move", snapshot);
     return moved.order.find((entry) => entry.ticketId === ticketId);
   });
 };

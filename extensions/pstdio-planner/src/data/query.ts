@@ -2,8 +2,8 @@ import type { ExtensionStorageApi, KanbanRendererQueryResult, ViewFilterGroup } 
 import { attentionPanelTarget } from "../attention-panel";
 import { readStoredPlan } from "../timeline/commands/plan-store";
 import { buildPlan } from "../timeline/model/build-plan";
-import { resolvePlan, sortedPlanDeadlines } from "../timeline/model/resolve-plan";
-import { timelineTicketAttributes, timelineTicketProperties } from "../timeline/model/ticket-properties";
+import { resolvePlan } from "../timeline/model/resolve-plan";
+import { timelineTicketProperties } from "../timeline/model/ticket-properties";
 import { sortedByTicketOrder } from "../utils/sort";
 import { ticketsCollection } from "./collections";
 import {
@@ -41,12 +41,6 @@ const readBoardSettings = async (storage: ExtensionStorageApi) => {
     readStoredPlan(storage),
   ]);
   return { tags, statuses, storedPlan };
-};
-
-export const readTicketBoardFields = async (storage: ExtensionStorageApi): Promise<KanbanRendererQueryResult> => {
-  const { tags, statuses, storedPlan } = await readBoardSettings(storage);
-  const deadlines = sortedPlanDeadlines(storedPlan);
-  return { rows: [], attributes: [...buildTicketAttributes(statuses, tags), ...timelineTicketAttributes(deadlines)] };
 };
 
 // The renderer re-applies filter, sort, and grouping locally. The query returns the

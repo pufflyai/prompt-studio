@@ -1,6 +1,7 @@
 // Compose milestone drop targets, ticket cards, and dependency edges inside the pannable graph.
-import { Box } from "@chakra-ui/react";
+import { Box, Portal } from "@chakra-ui/react";
 import type { RefObject } from "react";
+import { PlannerReadError } from "../../views/planner-read-error";
 import type { PlanRow } from "../contracts";
 import { type DropTarget, sameTarget } from "./drag";
 import { DropHighlight } from "./drop-highlight";
@@ -9,10 +10,12 @@ import { Band } from "./graph-band";
 import { GraphCard } from "./graph-card";
 import { GraphEdges } from "./graph-edges";
 import { type geometry, gutterWidth, visibleContentLeft } from "./graph-geometry";
+import { useGraphTicketPreviews } from "./graph-ticket-previews";
 import { GraphTimeline } from "./graph-timeline";
 import { CollapsedColumns, TrackLines } from "./graph-tracks";
 import { graphWindow, visibleGraphRows } from "./graph-window";
 import type { PlanViewProps } from "./plan-view";
+import type { TicketCardInteraction } from "./ticket-card-interaction";
 import { useCanvasWindow } from "./use-canvas-window";
 
 interface GraphData {
@@ -106,12 +109,33 @@ function GraphTickets(input: Props) {
   );
 }
 
+function PreviewGraphTickets(
+  input: Props & { interaction: TicketCardInteraction; viewportRef: RefObject<HTMLDivElement | null> },
+) {
+  const previews = useGraphTicketPreviews(
+    input.interaction,
+    (input.visibleRows ?? input.graph.rows).map(({ id }) => id),
+  );
+  return (
+    <>
+      <GraphTickets
+        {...input}
+        props={{ ...input.props, cardInteraction: { ...input.interaction, rows: previews.rows } }}
+      />
+      <Portal container={input.viewportRef}>
+        <PlannerReadError error={previews.error} retry={previews.retry} />
+      </Portal>
+    </>
+  );
+}
+
 export function GraphContent(
   input: Props & {
     collapsed: ReadonlySet<string>;
     region: ReturnType<typeof dropRegion>;
     viewport: {
       ref: RefObject<HTMLDivElement | null>;
+      overlayRef: RefObject<HTMLDivElement | null>;
       width: number;
       height: number;
       canvasWidth: number;
@@ -181,7 +205,17 @@ export function GraphContent(
       <TrackLines boxes={box.tracks} height={canvasHeight} contentLeft={box.contentLeft} />
       <DropHighlight region={region} width={canvasWidth} height={canvasHeight} />
       <GraphMilestones props={props} graph={graph} width={width} zoom={zoom} headerLeft={headerLeft} />
-      <GraphTickets props={props} graph={graph} visibleRows={visibleRows} />
+      {props.cardInteraction?.displayProperties.includes("workspace") ? (
+        <PreviewGraphTickets
+          props={props}
+          graph={graph}
+          visibleRows={visibleRows}
+          interaction={props.cardInteraction}
+          viewportRef={viewport.overlayRef}
+        />
+      ) : (
+        <GraphTickets props={props} graph={graph} visibleRows={visibleRows} />
+      )}
     </Box>
   );
 }

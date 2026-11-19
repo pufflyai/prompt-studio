@@ -15,7 +15,7 @@ import { archiveTicketColumnAction } from "./commands/archive-ticket";
 import { attachTicketFileCommand } from "./commands/attach-ticket-file";
 import { createTicketCommand } from "./commands/create-ticket";
 import { moveTicketOnBoard } from "./commands/move-ticket-on-board";
-import { queryTickets } from "./commands/query-tickets";
+import { queryTicketRenderer } from "./commands/query-tickets";
 import { saveTicketContent } from "./commands/save-ticket-content";
 import { setTicketAttribute } from "./commands/set-ticket-attribute";
 import { listTicketFilesTree } from "./commands/ticket-files";
@@ -119,7 +119,8 @@ export const createPlannerUi = (baseUrl: string) => {
     body: {
       kind: "kanban",
       attributes: buildTicketAttributes([]),
-      query: queryTickets,
+      queryMode: "paged",
+      query: queryTicketRenderer,
       schemaRefreshEvents: [plannerSchemaChanged],
       refreshEvents: [
         plannerTicketsChanged,
@@ -177,6 +178,8 @@ export const createPlannerUi = (baseUrl: string) => {
     icon: "chart-no-axes-gantt",
     body: {
       ...tickets.body,
+      queryMode: "static",
+      maxRows: 1,
       query: timelineViewSchema,
       defaultSettings: { ...tickets.body.defaultSettings, displayProperties: DEFAULT_TIMELINE_DISPLAY_PROPERTIES },
     },

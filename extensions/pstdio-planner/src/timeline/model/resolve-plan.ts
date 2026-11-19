@@ -12,7 +12,7 @@ export const sortedPlanDeadlines = (stored: StoredPlan | undefined) => [...(stor
 
 export function resolvePlan(
   stored: StoredPlan | undefined,
-  tickets: PlannerTicket[],
+  tickets: Pick<PlannerTicket, "id" | "statusId" | "dependsOn">[],
   _statuses: PlannerStatus[],
   workflow: WorkflowStatusSelections = emptyWorkflowStatuses(),
 ) {

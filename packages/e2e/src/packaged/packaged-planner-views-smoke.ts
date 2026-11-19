@@ -14,7 +14,11 @@ export async function expectIndependentPlannerViews(input: {
       headers: { ...headers, "content-type": "application/json" },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
-    expect(response.ok).toBe(true);
+    if (!response.ok) {
+      throw new Error(
+        `Planner view request failed: ${method} ${url}: HTTP ${response.status}: ${await response.text()}`,
+      );
+    }
     return response.json();
   };
   const ticketView = await request(path, "POST", { title: "Ticket board only" });
