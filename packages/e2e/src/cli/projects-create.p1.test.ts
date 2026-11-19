@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { basename, join } from "node:path";
+import { waitForDefaultExtensions } from "../scripts/default-extensions-readiness";
 import { stopPendingTestProcesses, TestProcessStoppedError } from "../scripts/pending-test-processes";
 import { cleanupDirs, createGitRepo, createTempDir, runPstdio, runPstdioAsync, runPstdioSafe } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
@@ -11,6 +12,7 @@ let api: ApiInstance;
 
 beforeAll(async () => {
   api = await startApi();
+  await waitForDefaultExtensions(api.process, api.logPath);
 }, SETUP_TIMEOUT);
 
 afterAll(async () => {
