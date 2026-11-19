@@ -1,6 +1,6 @@
 # Skill Browser
 
-Install Skill Browser through the **Coding** onboarding group or the extension catalog. Open **Skills** above Settings in the project navigation footer; the first skill opens automatically. The sidebar groups skills by the extension that provides them; project skills have their own group.
+Install Skill Browser through the **Coding** onboarding group or the extension catalog. Open **Skills** above Settings in the project navigation footer; the first skill opens automatically. Opening Skills resolves the first skill before navigating, so one Back returns to the previous view and Forward restores the skill. Direct links to the Skills landing page show the first skill without redirecting. The sidebar groups skills by the extension that provides them; project skills have their own group.
 
 The native read-only file viewer shows the filename and menu toggle together in its standard header. Its attached menu uses the shared parameter editor for **Info** and the standard file tree for **Files**; both sections collapse. Drag its divider to resize it, drag to the edge or press Home on the divider to close it, and use **Open Main right menu** to reopen it without losing the selected file.
 

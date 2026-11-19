@@ -32,15 +32,6 @@ const viewer = defineView({
     },
   },
 });
-const landing = defineView({
-  id: "skill-landing",
-  title,
-  body: {
-    kind: "webview",
-    entry: packageAsset("./view.tsx", import.meta.url),
-    capabilities: ["commands.query", "navigation.open"],
-  },
-});
 const main = { kind: "view" as const, view: viewer.ref, cardinality: "one" as const, presentation: "page" as const };
 const skills = definePage({
   id: "skills",
@@ -48,7 +39,8 @@ const skills = definePage({
   icon: "sparkles",
   path: "skills",
   mode: workbenchModes.project,
-  main: { ...main, view: landing.ref },
+  params: { file: { type: "string", default: "SKILL.md" } },
+  main,
   slots: [],
 });
 const detail = definePage({
@@ -105,6 +97,29 @@ const list = defineView({
   },
 });
 export const commands = {
+  open: defineCommand({
+    id: "open",
+    title,
+    cli: true,
+    run: async (ctx) => {
+      const item = await readSkill(ctx);
+      ctx.navigation.open(
+        item
+          ? {
+              kind: "page",
+              page: detail.ref,
+              resource: {
+                type: skill.id,
+                id: item.id,
+                label: item.title || item.name,
+                extensionId: ctx.extensionId,
+                projectId: ctx.projectId,
+              },
+            }
+          : { kind: "page", page: skills.ref },
+      );
+    },
+  }),
   list: defineCommand({
     id: "list",
     title: l10n("skills.list", "List skills"),
@@ -122,7 +137,7 @@ export const commands = {
 export const browser = {
   resourceKinds: [skill],
   commands: Object.values(commands),
-  views: [viewer, landing, list, details],
+  views: [viewer, list, details],
   pages: [skills, detail],
   viewMenus: [defineViewMenu({ id: "skill-details", owner: viewer.ref, view: details.ref, side: "right" })],
   navigationItems: [
@@ -132,7 +147,7 @@ export const browser = {
       icon: "sparkles",
       owner: workbenchModes.project,
       slot: "footer",
-      action: { kind: "page", page: skills.ref },
+      action: { kind: "command", target: { command: commands.open.ref } },
     }),
   ],
   navigationTrees: [
@@ -149,7 +164,7 @@ export const browser = {
       layer: "go",
       key: "S",
       sticky: true,
-      action: { kind: "page", page: skills.ref },
+      action: { kind: "command", target: { command: commands.open.ref } },
     }),
   ],
 };
