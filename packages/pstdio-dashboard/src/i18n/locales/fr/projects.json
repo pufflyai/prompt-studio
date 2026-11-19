@@ -97,6 +97,7 @@
       "connections": {
         "title": "Connexions",
         "description": "Connectez cette extension à ses services distants. Les identifiants restent dans l’hôte Prompt Studio.",
+        "globalScope": "Partagée entre tous les projets locaux sur cet appareil.",
         "endpoint": "Point de terminaison",
         "credential": "Identifiant",
         "credentialUnchanged": "Laissez vide pour conserver l’identifiant actuel",

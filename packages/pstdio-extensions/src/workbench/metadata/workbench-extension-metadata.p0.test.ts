@@ -196,6 +196,7 @@ describe("createWorkbenchExtensionMetadata", () => {
     const connection = defineConnection({
       id: "control-plane",
       label: "Control plane",
+      scope: "global",
       transport: "http",
       auth: { type: "bearer" },
       allowedMethods: ["GET"],
@@ -212,6 +213,7 @@ describe("createWorkbenchExtensionMetadata", () => {
         label: "Control plane",
         authType: "bearer",
         supportsCheck: true,
+        scope: "global",
       },
     ]);
   });
