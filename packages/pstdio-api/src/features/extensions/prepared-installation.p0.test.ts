@@ -462,6 +462,33 @@ test("a retained replacement can roll back its source after activation fails", a
   expect((await readAcceptedRevision(first.targetPath))?.id).toBe(first.preparedRevision!.id);
 });
 
+test("an upgrade prepared before a newer version arrived cannot replace its files", async () => {
+  const { source } = fixture();
+  const { activatePreparedInstall, settlePreparedInstall } = await import("./extension-install-transaction");
+  const first = await installExtensionSource({ source, skipInstall: true });
+  const options = {
+    source,
+    skipInstall: true,
+    force: true,
+    retainBackup: true,
+    upgradeFromVersion: first.metadata.version,
+  };
+  const staged = await installExtensionSource(options);
+  const currentPath = join(first.targetPath, "package.json");
+  const current = { ...JSON.parse(readFileSync(currentPath, "utf8")), version: "1.1.0-nightly.20261119040652" };
+  writeFileSync(currentPath, JSON.stringify(current));
+  try {
+    const failure = await activatePreparedInstall(staged.installation!).then(
+      () => null,
+      (error: Error) => error.message,
+    );
+    expect(failure).toContain("Cannot downgrade extension");
+    expect(JSON.parse(readFileSync(currentPath, "utf8"))).toEqual(current);
+  } finally {
+    await settlePreparedInstall(staged.installation!, false);
+  }
+});
+
 test("an older rollback cannot undo a newer committed install with identical bytes", async () => {
   const { source } = fixture();
   const { activatePreparedInstall, settlePreparedInstall } = await import("./extension-install-transaction");
