@@ -59,6 +59,7 @@ export interface PromptStudioDesktopApi {
   getProjectTabs: () => Promise<DesktopProjectTabsState>;
   setProjectTabs: (state: DesktopProjectTabsState) => Promise<void>;
   setWorkbenchItem: (key: string, value: string | null) => Promise<void>;
+  reportWorkbenchError: (report: unknown) => Promise<void>;
   getPerformanceMonitoring: () => Promise<boolean>;
   retainPerformanceCapture: (id: string, monitoring?: boolean) => Promise<void>;
   releasePerformanceCapture: (id: string) => Promise<void>;
@@ -100,6 +101,7 @@ export const DESKTOP_CHANNELS = {
   getProjectTabs: "pstdio:desktop:get-project-tabs",
   setProjectTabs: "pstdio:desktop:set-project-tabs",
   setWorkbenchItem: "pstdio:desktop:set-workbench-item",
+  reportWorkbenchError: "pstdio:desktop:report-workbench-error",
   getPerformanceMonitoring: "pstdio:desktop:get-performance-monitoring",
   retainPerformanceCapture: "pstdio:desktop:retain-performance-capture",
   releasePerformanceCapture: "pstdio:desktop:release-performance-capture",

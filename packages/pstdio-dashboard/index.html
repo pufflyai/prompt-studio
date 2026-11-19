@@ -29,9 +29,34 @@
     <meta name="twitter:card" content="summary" />
 
     <title>Prompt Studio</title>
+    <style>
+      /* Remains available if either the app bundle or its theme fails to load. */
+      #dashboard-status {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-content: center;
+        gap: 1rem;
+        text-align: center;
+        font-family: system-ui, sans-serif;
+        background: Canvas;
+        color: CanvasText;
+      }
+      #root:not(:empty) + #dashboard-status {
+        display: none;
+      }
+      #dashboard-status a {
+        color: LinkText;
+        text-decoration: underline;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <main id="dashboard-status">
+      <p id="dashboard-status-message" role="status">Opening Prompt Studio…</p>
+      <a href="">Reload Prompt Studio</a>
+    </main>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

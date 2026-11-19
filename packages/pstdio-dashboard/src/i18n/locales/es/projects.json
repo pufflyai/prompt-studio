@@ -38,12 +38,14 @@
       "loadError": "Error al cargar las extensiones.",
       "title": "Extensiones",
       "searchPlaceholder": "Buscar extensiones…",
-      "installedGroup": "Instaladas · {{count}}",
+      "installedGroup": "Instaladas",
       "noSearchResults": "Ninguna extensión coincide con \"{{query}}\".",
       "noDescription": "Sin descripción.",
       "scope": {
-        "repo": "repo",
-        "global": "compartida"
+        "label": "Alcance",
+        "all": "Todos los alcances",
+        "repo": "Este proyecto",
+        "global": "Todos los proyectos"
       },
       "status": {
         "error": "Error al cargar"
@@ -135,7 +137,8 @@
           "templates": "Plantillas",
           "themes": "Temas",
           "navigationItems": "Elementos de navegación",
-          "commandPaletteResources": "Recursos de la paleta de comandos"
+          "commandPaletteResources": "Recursos de la paleta de comandos",
+          "workspaceTypes": "Tipos de espacio de trabajo"
         },
         "deleteHintShared": "Eliminar los archivos de esta extensión. Esto la quita de todos los proyectos que la usan."
       },
@@ -170,17 +173,19 @@
         "batchFailed": "{{count}} de {{total}} actualizaciones fallaron",
         "installingButton": "Instalando"
       },
-      "provenance": {
-        "filter": "Origen de las extensiones",
-        "all": "Todas",
-        "public": "Pública",
-        "mine": "Mías",
-        "unknown": "Visibilidad desconocida",
-        "publicHelp": "Hay un paquete público disponible. Los cambios locales pueden no estar publicados.",
-        "mineHelp": "Código local editable mantenido en este proyecto o dispositivo.",
-        "unknownHelp": "No se ha verificado la disponibilidad pública.",
-        "noMatches": "No hay extensiones coincidentes"
-      }
+      "enabledGroup": "Habilitadas",
+      "author": {
+        "label": "Autor",
+        "all": "Todos los autores",
+        "me": "Yo",
+        "promptStudio": "Prompt Studio"
+      },
+      "columns": {
+        "extension": "Extensión",
+        "enabled": "Habilitada"
+      },
+      "clearFilters": "Borrar filtros",
+      "noMatches": "No hay extensiones que coincidan con estos filtros."
     }
   },
   "list": {

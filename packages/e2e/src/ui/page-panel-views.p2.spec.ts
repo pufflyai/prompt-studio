@@ -81,8 +81,8 @@ panelTest(
     const { id } = await created.json();
     try {
       await prepare(page);
-      await page.goto(`/projects/${id}/extensions/pstdio.artifacts/artifacts`);
-      await expect(panel(page, "main").getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
+      await page.goto(`/projects/${id}/extensions/test.panel-views/collection`);
+      await expect(panel(page, "main").getByRole("tab", { name: "Letter browser", exact: true })).toBeVisible();
       await openTool(page, "side", "New letter viewer");
       const side = panel(page, "side");
       const source = side.getByRole("tab", { name: /^Letter draft-/ });
@@ -93,7 +93,7 @@ panelTest(
       const moved = main.getByRole("tab", { name: /^Letter draft-/ });
       await expect(moved).toBeVisible();
       await moved.click();
-      const collectionUrl = `/projects/${id}/extensions/pstdio.artifacts/artifacts`;
+      const collectionUrl = `/projects/${id}/extensions/test.panel-views/collection`;
       await expect(page).toHaveURL(collectionUrl);
       const reader = main.frameLocator('iframe[title="Letter viewer"]:visible');
       await reader.getByRole("button", { name: "Switch to B", exact: true }).click();

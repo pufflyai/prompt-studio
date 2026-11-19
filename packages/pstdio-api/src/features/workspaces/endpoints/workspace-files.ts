@@ -165,6 +165,12 @@ export const getWorkspaceFileHandler = (deps: WorkspacesRouteDeps): AppRouteHand
   };
 };
 
+const withWorkspaceMutation = <T>(
+  deps: WorkspacesRouteDeps,
+  workspace: { project_id: string },
+  task: () => Promise<T>,
+) => deps.projectService?.work?.run(workspace.project_id, task) ?? task();
+
 export const writeWorkspaceFileHandler = (
   deps: WorkspacesRouteDeps,
 ): AppRouteHandler<typeof writeWorkspaceFileRoute> => {
@@ -176,10 +182,12 @@ export const writeWorkspaceFileHandler = (
     if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 
     try {
-      const current = await readWorkspaceFile(context.workspace, context.mount, path);
-      if (!current.editable) throw new UnsupportedWorkspaceFileError(`Workspace file is not editable: ${path}`);
-      await context.mount.writeTextFile(path, content, MAX_FILE_BYTES);
-      return c.json(await readWorkspaceFile(context.workspace, context.mount, path), 200);
+      return await withWorkspaceMutation(deps, context.workspace, async () => {
+        const current = await readWorkspaceFile(context.workspace, context.mount, path);
+        if (!current.editable) throw new UnsupportedWorkspaceFileError(`Workspace file is not editable: ${path}`);
+        await context.mount.writeTextFile(path, content, MAX_FILE_BYTES);
+        return c.json(await readWorkspaceFile(context.workspace, context.mount, path), 200);
+      });
     } catch (error) {
       const mapped = mapFileError(error);
       return c.json({ error: mapped.message }, mapped.status);
@@ -198,8 +206,10 @@ export const createWorkspaceFileHandler = (
     if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 
     try {
-      await context.mount.createTextFile(path, content, MAX_FILE_BYTES);
-      return c.json(await readWorkspaceFile(context.workspace, context.mount, path), 201);
+      return await withWorkspaceMutation(deps, context.workspace, async () => {
+        await context.mount.createTextFile(path, content, MAX_FILE_BYTES);
+        return c.json(await readWorkspaceFile(context.workspace, context.mount, path), 201);
+      });
     } catch (error) {
       const mapped = mapWorkspaceMutationError(error);
       return c.json({ error: mapped.message }, mapped.status);
@@ -217,8 +227,10 @@ export const createWorkspaceDirectoryHandler = (
     if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 
     try {
-      await context.mount.createDirectory(path);
-      return c.json({ path, name: fileNameOf(path), type: "directory" as const }, 201);
+      return await withWorkspaceMutation(deps, context.workspace, async () => {
+        await context.mount.createDirectory(path);
+        return c.json({ path, name: fileNameOf(path), type: "directory" as const }, 201);
+      });
     } catch (error) {
       const mapped = mapWorkspaceDirectoryError(error);
       return c.json({ error: mapped.message }, mapped.status);
@@ -237,8 +249,10 @@ export const moveWorkspaceEntryHandler = (
     if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 
     try {
-      await context.mount.moveEntry(path, destinationPath);
-      return c.body(null, 204);
+      return await withWorkspaceMutation(deps, context.workspace, async () => {
+        await context.mount.moveEntry(path, destinationPath);
+        return c.body(null, 204);
+      });
     } catch (error) {
       const mapped = mapWorkspaceMutationError(error);
       return c.json({ error: mapped.message }, mapped.status);
@@ -256,8 +270,10 @@ export const deleteWorkspaceEntryHandler = (
     if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 
     try {
-      await context.mount.deleteEntry(path);
-      return c.body(null, 204);
+      return await withWorkspaceMutation(deps, context.workspace, async () => {
+        await context.mount.deleteEntry(path);
+        return c.body(null, 204);
+      });
     } catch (error) {
       const mapped = mapFileError(error);
       return c.json({ error: mapped.message }, mapped.status);

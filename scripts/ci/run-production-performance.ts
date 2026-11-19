@@ -6,7 +6,9 @@ import { runCiChecks } from "./run-ci-checks";
 
 const [family, evidence] = process.argv.slice(2);
 if (!family || !evidence) throw new Error("Expected performance family and evidence directory");
-const checks = performanceChecks(family);
+const sourceSha = process.env.CI_PLAN_SOURCE_SHA;
+if (!sourceSha) throw new Error("Expected the planned performance source revision");
+const checks = performanceChecks(family, sourceSha);
 const directory = resolve(`test-results/production-performance/${family}`);
 mkdirSync(directory, { recursive: true });
 const identity = {
@@ -20,7 +22,7 @@ await Bun.write(
     {
       ...identity,
       sourceSha: process.env.SOURCE_SHA ?? process.env.CI_PLAN_SOURCE_SHA,
-      versionSha: process.env.CI_PLAN_SOURCE_SHA,
+      versionSha: sourceSha,
       platform: platform(),
       release: release(),
       arch: process.arch,

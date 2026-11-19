@@ -38,12 +38,14 @@
       "loadError": "Échec du chargement des extensions.",
       "title": "Extensions",
       "searchPlaceholder": "Rechercher des extensions…",
-      "installedGroup": "Installées · {{count}}",
+      "installedGroup": "Installées",
       "noSearchResults": "Aucune extension ne correspond à \"{{query}}\".",
       "noDescription": "Aucune description fournie.",
       "scope": {
-        "repo": "repo",
-        "global": "partagée"
+        "label": "Portée",
+        "all": "Toutes les portées",
+        "repo": "Ce projet",
+        "global": "Tous les projets"
       },
       "status": {
         "error": "Échec du chargement"
@@ -135,7 +137,8 @@
           "templates": "Modèles",
           "themes": "Thèmes",
           "navigationItems": "Éléments de navigation",
-          "commandPaletteResources": "Ressources de la palette de commandes"
+          "commandPaletteResources": "Ressources de la palette de commandes",
+          "workspaceTypes": "Types d’espace de travail"
         },
         "deleteHintShared": "Supprimer les fichiers de cette extension. Elle est retirée de tous les projets qui l'utilisent."
       },
@@ -170,17 +173,19 @@
         "batchFailed": "{{count}} mises à niveau sur {{total}} ont échoué",
         "installingButton": "Installation"
       },
-      "provenance": {
-        "filter": "Source des extensions",
-        "all": "Toutes",
-        "public": "Publique",
-        "mine": "Les miennes",
-        "unknown": "Visibilité inconnue",
-        "publicHelp": "Un paquet public est disponible. Les modifications locales peuvent ne pas être publiées.",
-        "mineHelp": "Source locale modifiable maintenue dans ce projet ou sur cet appareil.",
-        "unknownHelp": "La disponibilité publique n’a pas été vérifiée.",
-        "noMatches": "Aucune extension correspondante"
-      }
+      "enabledGroup": "Activées",
+      "author": {
+        "label": "Auteur",
+        "all": "Tous les auteurs",
+        "me": "Moi",
+        "promptStudio": "Prompt Studio"
+      },
+      "columns": {
+        "extension": "Extension",
+        "enabled": "Activée"
+      },
+      "clearFilters": "Effacer les filtres",
+      "noMatches": "Aucune extension ne correspond à ces filtres."
     }
   },
   "list": {

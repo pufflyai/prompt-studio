@@ -5,6 +5,7 @@ import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createMemoryDocumentStore, type StorageOwner } from "pstdio-sync";
 import { createDocumentStorage } from "pstdio-sync/records";
+import { createProjectWork } from "../../services/project-work";
 import { makeWorkspace } from "../workspaces/workspace-provider.test-fixture";
 import type { ExtensionsRouteDeps } from "./deps";
 import type { ExtensionStorageIndexService } from "./extension-storage-indexes";
@@ -101,7 +102,10 @@ export const createWorkspaceContextFixture = async (identity = { name: "context"
   };
   const deps = {
     workspaceService: { get: async () => workspace, getDefault: async () => workspace, list: async () => [workspace] },
-    projectService: { get: async () => ({ id: "project-1", name: "Project", shorthand: "P" }) },
+    projectService: {
+      work: createProjectWork(),
+      get: async () => ({ id: "project-1", name: "Project", shorthand: "P" }),
+    },
     extensionService: { listEnabledSourcesForProject: async () => [source] },
     extensionStorageService: {
       open,

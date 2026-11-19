@@ -37,6 +37,7 @@ import { createBoardViewsRoutes } from "./features/views/routes";
 import { createWorkspaceRoutes } from "./features/workspaces/routes";
 import { apiLogger } from "./lib/logger";
 import { isLoopbackHost } from "./listen-host";
+import { ProjectRemovalInProgress } from "./services/project-work";
 import { swagger } from "./swagger";
 import type { AppBindings } from "./types";
 
@@ -210,6 +211,8 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps, termi
 
 const registerApiErrorHandler = (app: OpenAPIHono<AppBindings>, security: RuntimeSecurity | undefined) => {
   app.onError((err, c) => {
+    if (err instanceof ProjectRemovalInProgress)
+      return c.json({ code: "project_removal_in_progress", error: err.message }, 409);
     const secrets = security ? [security.token] : [];
     const message = redactSensitiveText(err.message || "Internal server error", secrets);
     const entry = {

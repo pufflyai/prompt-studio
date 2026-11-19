@@ -159,6 +159,11 @@ export interface TreeMoveEndpoint {
 
 export type TreeMovePolicy = (move: { source: TreeMoveEndpoint; destination: TreeMoveEndpoint }) => boolean;
 
+export interface TreeGroupScope {
+  active: string;
+  root: string;
+}
+
 export interface TreeRendererContribution {
   /** Captured host identity; never infer a hidden view's project from current selection. */
   queryEvents?: readonly string[];
@@ -173,6 +178,8 @@ export interface TreeRendererContribution {
   defaultExpandedNodeIds?: string[];
   /** Identify the navigation data scope when it differs from the current page resource. */
   getReadKey?(ctx: TreeQueryContext): string;
+  /** Identify which navigation level owns custom groups when multiple levels share a tree. */
+  getGroupScope?(): TreeGroupScope | undefined;
   /** Observe change hints only while this tree query has a mounted presentation. */
   subscribe?(ctx: TreeQueryContext, invalidate: () => void): () => void;
   /** Synchronous layout available before the first content read. */

@@ -2,6 +2,7 @@ import { createCiTestPlan } from "./ci-test-plan";
 import { resolveCiScope } from "./pull-request-ci-scope";
 import type { TestPackage } from "./runner-profiles";
 import { createTestPlan, mergeTestPlans, type SourceIdentity } from "./test-plan";
+import { quarantineFiles, quarantineRunnerForTest } from "./test-quarantine";
 
 // The review worker consumes the queue's actual runs; no matrix-to-files translation lives here.
 export const queueReviewPlan = (
@@ -14,21 +15,27 @@ export const queueReviewPlan = (
   const required = createCiTestPlan(scope, packages, tests, source);
   // Local execution proves the same selected files on its actual host. Only CI can
   // qualify the Linux artifact and ten-minute hosted result; never label a Mac pass Linux.
+  const target = { platform: process.platform, arch: process.arch };
   const testPlan = mergeTestPlans(
-    required.runs.map((run) =>
-      createTestPlan({
+    required.runs.flatMap((run) => {
+      // A native queue can quarantine a case that the local stable lane already runs.
+      const applicable =
+        run.lane === "quarantine" ? quarantineFiles(quarantineRunnerForTest(run.runner), target) : null;
+      const files = applicable ? run.files.filter((file) => applicable.includes(file)) : run.files;
+      if (!files.length) return [];
+      return createTestPlan({
         source,
         packages,
-        files: run.files,
-        target: { platform: process.platform, arch: process.arch },
+        files,
+        target,
         job: run.job,
         lane: run.lane,
         shard: run.shard,
         artifact: run.artifact,
         smoke: run.smoke,
         reason: `local ${process.platform}/${process.arch} projection of required profile`,
-      }),
-    ),
+      });
+    }),
     source,
   );
   const smoke = testPlan.runs.filter((run) => run.smoke);

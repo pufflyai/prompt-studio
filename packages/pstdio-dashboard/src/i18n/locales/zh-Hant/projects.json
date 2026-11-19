@@ -38,12 +38,14 @@
       "loadError": "載入擴充功能失敗。",
       "title": "擴充功能",
       "searchPlaceholder": "搜尋擴充功能…",
-      "installedGroup": "已安裝 · {{count}}",
+      "installedGroup": "已安裝",
       "noSearchResults": "沒有符合\"{{query}}\"的擴充功能。",
       "noDescription": "未提供描述。",
       "scope": {
-        "repo": "repo",
-        "global": "共用"
+        "label": "範圍",
+        "all": "所有範圍",
+        "repo": "此專案",
+        "global": "所有專案"
       },
       "status": {
         "error": "載入失敗"
@@ -133,7 +135,8 @@
           "templates": "範本",
           "themes": "主題",
           "navigationItems": "導覽項目",
-          "commandPaletteResources": "命令面板資源"
+          "commandPaletteResources": "命令面板資源",
+          "workspaceTypes": "工作區類型"
         },
         "deleteHintShared": "刪除此擴充功能的檔案。它將從所有使用它的專案中移除。"
       },
@@ -168,17 +171,19 @@
         "batchFailed": "{{total}} 個升級中有 {{count}} 個失敗",
         "installingButton": "正在安裝"
       },
-      "provenance": {
-        "filter": "擴充功能來源",
-        "all": "全部",
-        "public": "公開",
-        "mine": "我的",
-        "unknown": "可見性未知",
-        "publicHelp": "有公開的套件。本機修改可能尚未發佈。",
-        "mineHelp": "在此專案或裝置上維護的可編輯本機原始碼。",
-        "unknownHelp": "尚未驗證是否公開可用。",
-        "noMatches": "沒有符合的擴充功能"
-      }
+      "enabledGroup": "已啟用",
+      "author": {
+        "label": "作者",
+        "all": "所有作者",
+        "me": "我",
+        "promptStudio": "Prompt Studio"
+      },
+      "columns": {
+        "extension": "擴充功能",
+        "enabled": "啟用"
+      },
+      "clearFilters": "清除篩選",
+      "noMatches": "沒有符合的擴充功能。"
     }
   },
   "list": {

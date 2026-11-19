@@ -2,7 +2,7 @@ import type { ExtensionContextBase, RendererContext } from "@pstdio/sdk/extensio
 import { serviceFor } from "./artifact-context";
 import { artifactUrl } from "./contracts";
 
-export const queryArtifactTab = async (ctx: ExtensionContextBase, input: { renderer: RendererContext }) => {
+export const queryArtifactTitle = async (ctx: ExtensionContextBase, input: { renderer: RendererContext }) => {
   const id = input.renderer.resource?.id;
   if (!id) return {};
   const current = (await serviceFor(ctx).revisions(artifactUrl(ctx.projectId, id)))[0];
