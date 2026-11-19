@@ -171,9 +171,10 @@ export const createProjectCloudCatalog = (input: CatalogInput) => {
       const choice = (await copies.forAccount(login)).find((row) => row.projectId === id);
       return choice?.phase === "downloading" ? { state: "first-download-incomplete", offlineReady: false } : status;
     },
-    downloadCloudProject: (id: string): Promise<DownloadCloudProjectResult> =>
+    downloadCloudProject: (id: string, expected?: ProjectCopyAccount): Promise<DownloadCloudProjectResult> =>
       removal.serialize(id, async () => {
         const login = await requireDevice();
+        requireProjectCopyAccount(login, expected);
         const cloud = input.cloud(login);
         if (!input.online() || !cloud?.ids.includes(id))
           throw new AccountRequestError("Connect to Cloud before downloading this project");
