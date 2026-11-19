@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
 import { projects } from "../../db/schemas.pg";
 import { createInstalledExtensionSourcesDBService } from "../installed-extension-sources/installed-extension-sources";
+import { createProjectsDBService } from "../projects/projects";
 import { createExtensionInstancesDBService } from "./extension-instances";
 
 let close: (() => Promise<void>) | undefined;
@@ -49,6 +50,23 @@ afterEach(async () => {
 });
 
 describe("extensionInstancesService", () => {
+  test("a shared offer stays disabled and project deletion removes any concurrent offer", async () => {
+    const first = await svc.createProjectOffer(projectId, installedId);
+    expect(first?.instance.enabled).toBe(false);
+    expect(first?.created).toBe(true);
+    expect((await svc.createProjectOffer(projectId, installedId))?.instance.id).toBe(first?.instance.id);
+    await svc.update(first!.instance.id, { enabled: true, config_json: { choice: "retained" } });
+    expect((await svc.createProjectOffer(projectId, installedId))?.instance).toMatchObject({
+      enabled: true,
+      config_json: { choice: "retained" },
+    });
+    await Promise.all([
+      svc.createProjectOffer(projectId, installedId),
+      createProjectsDBService(db).hardDelete(projectId),
+    ]);
+    expect(await svc.createProjectOffer(projectId, installedId)).toBeNull();
+    expect(await svc.list({ scope_id: projectId })).toEqual([]);
+  });
   test("adopts an extracted default after discovery and preserves later disable and uninstall choices", async () => {
     const discovered = await svc.create({
       installed_extension_id: installedId,

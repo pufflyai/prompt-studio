@@ -1,6 +1,6 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { extension_instances, installed_extension_sources } from "../../db/schemas.pg";
+import { extension_instances, installed_extension_sources, projects } from "../../db/schemas.pg";
 import { type ActivationInput, activateProjectSources as activateProjectSourcesImpl } from "./activate-project-sources";
 import { adoptProjectDefault, hasProjectDefaultChoice, recordProjectDefaultChoice } from "./project-defaults";
 
@@ -85,6 +85,39 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
     return updated ?? null;
   };
 
+  const createProjectOffer = (projectId: string, installedSourceId: string, signal?: AbortSignal) =>
+    db.transaction(async (tx) => {
+      const [project] = await tx
+        .select({ id: projects.id })
+        .from(projects)
+        .where(and(eq(projects.id, projectId), isNull(projects.deleted_at)))
+        .for("update");
+      signal?.throwIfAborted();
+      if (!project) return null;
+      const identity = and(
+        eq(extension_instances.scope_type, "project"),
+        eq(extension_instances.scope_id, projectId),
+        eq(extension_instances.installed_extension_id, installedSourceId),
+      );
+      const [existing] = await tx.select().from(extension_instances).where(identity);
+      signal?.throwIfAborted();
+      if (existing) return { instance: existing, created: false };
+      const timestamp = nowTimestamp();
+      const [created] = await tx
+        .insert(extension_instances)
+        .values({
+          id: crypto.randomUUID(),
+          installed_extension_id: installedSourceId,
+          scope_type: "project",
+          scope_id: projectId,
+          enabled: false,
+          created_at: timestamp,
+          updated_at: timestamp,
+        })
+        .returning();
+      return { instance: created!, created: true };
+    });
+
   const claimProjectExtensionProvider = async (input: {
     extensionId: string;
     instanceId: string;
@@ -125,6 +158,7 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
     get,
     findByScopeInstalledSource,
     create,
+    createProjectOffer,
     update,
     claimProjectExtensionProvider,
     activateProjectSources,

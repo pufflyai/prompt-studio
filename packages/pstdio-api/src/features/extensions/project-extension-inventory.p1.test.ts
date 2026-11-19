@@ -9,11 +9,36 @@ import { folderProjectInput } from "../../test-utils/folder-project-input";
 import { writeExtension } from "./default-extensions-test-fixtures";
 import { listProjectExtensionInventory } from "./project-extension-inventory";
 
-test("existing projects can choose a shared installed tool before background discovery attaches it", async () => {
+test.each([
+  false,
+  true,
+])("existing projects receive a disabled shared offer before discovery (required: %s)", async (alwaysEnabled) => {
   const root = await mkdtemp(join(tmpdir(), "extension-inventory-shared-"));
-  const previous = { home: process.env.PSTDIO_HOME, defaults: process.env.PSTDIO_DEFAULT_EXTENSIONS };
+  const previous = {
+    home: process.env.PSTDIO_HOME,
+    defaults: process.env.PSTDIO_DEFAULT_EXTENSIONS,
+    catalog: process.env.PSTDIO_EXTENSION_CATALOG,
+  };
   process.env.PSTDIO_HOME = join(root, "home");
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  process.env.PSTDIO_EXTENSION_CATALOG = join(root, "catalog.json");
+  await writeFile(
+    process.env.PSTDIO_EXTENSION_CATALOG,
+    JSON.stringify({
+      version: 1,
+      extensions: [
+        {
+          installName: "shared-tool",
+          extensionId: "pstdio.shared-tool",
+          displayName: "Shared tool",
+          description: "",
+          default: false,
+          alwaysEnabled,
+          origin: { kind: "git", url: "https://example.com/tools", path: "tool", ref: "main" },
+        },
+      ],
+    }),
+  );
   const handle = await createTestApp({ databasePath: ":memory:", storageRoot: join(root, "storage") });
   try {
     const first = await handle.deps.projectService.create({ name: "Installed here" });
@@ -56,6 +81,8 @@ test("existing projects can choose a shared installed tool before background dis
     else process.env.PSTDIO_HOME = previous.home;
     if (previous.defaults === undefined) delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
     else process.env.PSTDIO_DEFAULT_EXTENSIONS = previous.defaults;
+    if (previous.catalog === undefined) delete process.env.PSTDIO_EXTENSION_CATALOG;
+    else process.env.PSTDIO_EXTENSION_CATALOG = previous.catalog;
     await rm(root, { recursive: true, force: true });
   }
 });

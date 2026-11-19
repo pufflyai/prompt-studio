@@ -22,9 +22,10 @@ export const listProjectExtensionInventory = async (
   for (const source of await deps.extensionService.listInstalledUserSources()) {
     signal?.throwIfAborted();
     if (attached.has(source.id)) continue;
-    const record = await deps.extensionService.attachRegisteredSourceForProject({
+    const record = await deps.extensionService.offerInstalledUserSourceForProject({
       projectId,
       installedSourceId: source.id,
+      signal,
     });
     if (record) records.push(record);
   }

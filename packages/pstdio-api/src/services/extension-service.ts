@@ -33,6 +33,7 @@ import { createExtensionSourceMutations, createExtensionSourceRefresh } from "./
 import { createInstalledSourceRegistrar } from "./extension-source-registration";
 import { uninstallProjectExtension as uninstallProjectExtensionImpl } from "./extension-uninstall";
 import type { createProjectService } from "./project-service";
+import { createSharedExtensionOffers } from "./shared-extension-offers";
 
 export type { PruneProjectExtensionInstancesInput } from "./extension-prune";
 
@@ -141,9 +142,6 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   // adoption from inheriting startup priority and being repeatedly retired by readers.
   const registerInstalledSource = (input: RegisterInstalledSourceInput) =>
     withRequestedPreparation(() => registerSource(input, notifyInstalledSourcesChanged));
-
-  const getInstalledSource = (installName: string) =>
-    deps.installedExtensionSourcesService.getByInstallName(installName);
 
   const findProjectInstanceForSource = async (
     input: Pick<EnableInstalledSourceInput, "projectId">,
@@ -292,8 +290,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
 
   const getProjectExtensionInstance = async (projectId: string, instanceId: string) => {
     const instance = await deps.extensionInstancesService.get(instanceId);
-    if (!instance) return null;
-    if (instance.scope_type !== "project" || instance.scope_id !== projectId) return null;
+    if (!instance || instance.scope_type !== "project" || instance.scope_id !== projectId) return null;
 
     const installedSource = await deps.installedExtensionSourcesService.get(instance.installed_extension_id);
     if (!installedSource) return null;
@@ -331,12 +328,18 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
       ),
     enableInstalledSourceForProject,
     attachRegisteredSourceForProject,
-    getInstalledSource,
+    getInstalledSource: deps.installedExtensionSourcesService.getByInstallName,
     getInstalledSourceById: deps.installedExtensionSourcesService.get,
     getProjectExtensionInstance,
     hasEnabledProjectSource,
     listEnabledSourcesForProject,
     listInstalledUserSources: () => getInstalledUserSources(deps.installedExtensionSourcesService),
+    offerInstalledUserSourceForProject: createSharedExtensionOffers({
+      sources: deps.installedExtensionSourcesService,
+      instances: deps.extensionInstancesService,
+      mutateSource,
+      emit: emitExtensionInstance,
+    }),
     listProjectExtensionInstances: listProjectInstances,
     reloadInstalledSourceBySourcePath: (sourcePath: string) =>
       reloadInstalledSourceBySourcePathImpl(reloadDeps, sourcePath),
