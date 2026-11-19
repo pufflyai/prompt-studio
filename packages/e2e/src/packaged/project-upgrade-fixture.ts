@@ -55,19 +55,52 @@ interface ProjectExtension {
   lastError?: { code?: string };
 }
 
+export const installedProjectTools = async (api: StackApi, project: string) => {
+  const { extensions } = await api.get<{ extensions: ProjectExtension[] }>(`/projects/${project}/extensions`);
+  return extensions.map(({ id, enabled, version }) => ({ id, enabled, version }));
+};
+
+export const assertProjectToolsRetained = async (
+  api: StackApi,
+  project: string,
+  before: Awaited<ReturnType<typeof installedProjectTools>>,
+) => {
+  const current = new Map((await installedProjectTools(api, project)).map((tool) => [tool.id, tool]));
+  for (const previous of before) {
+    const tool = current.get(previous.id);
+    assert(tool, `Upgrade lost extension instance ${previous.id}`);
+    assert.equal(tool.enabled, previous.enabled, `Enablement changed for ${tool.id}`);
+    if (previous.version && tool.version !== previous.version)
+      assert(
+        tool.version && Bun.semver.order(tool.version, previous.version) >= 0,
+        `Downgrade for ${tool.id}: ${previous.version} → ${tool.version}`,
+      );
+  }
+};
+
 export const upgradeCoreProjectTools = async (api: StackApi, project: string) => {
   const path = `/projects/${project}/extensions`;
   const { extensions } = await api.get<{ extensions: ProjectExtension[] }>(path);
   const changes: { extension: string; version: string | null; next: string | null }[] = [];
   for (const tool of extensions) {
     if (
-      !/^pstdio\.((pstdio-)?(planner|session-browser)|harness-codex|git-workspaces)$/.test(tool.extensionId) ||
+      !/^pstdio\.((pstdio-)?(home|planner|session-browser)|harness-codex|git-workspaces)$/.test(tool.extensionId) ||
       !tool.enabled
     )
       continue;
-    if (tool.lastError?.code !== "extension_manifest_unsupported_api_version") continue;
+    assert.notEqual(
+      tool.lastError?.code,
+      "extension_identity_conflict",
+      `${tool.extensionId} has conflicting histories`,
+    );
+    if (tool.lastError?.code !== "extension_manifest_unsupported_api_version") {
+      assert.notEqual(tool.status, "error", `${tool.extensionId}: ${tool.lastError?.code ?? "load error"}`);
+      continue;
+    }
     assert(tool.canUpgrade, `${tool.extensionId} is incompatible and has no supported upgrade`);
     const { extension } = await api.post<{ extension: ProjectExtension }>(`${path}/${tool.id}/upgrade`, {});
+    assert.equal(extension.id, tool.id, "Upgrade replaced the registered instance");
+    assert.equal(extension.enabled, true, "Upgrade disabled an enabled extension");
     assert.equal(extension.status, "loaded", `${tool.extensionId} upgrade failed`);
     changes.push({ extension: tool.extensionId, version: tool.version, next: extension.version });
   }
@@ -257,7 +290,7 @@ export const seedUpgradeProject = async (api: StackApi, input: ProjectUpgradeInp
     await Bun.write(join(folder, "handoff.txt"), "Historical handoff · 修正\n".repeat(6000));
   const project = await api.post<{ id: string; name: string }>("/projects", folderProjectInput({ name }, folder));
   const prefix = `/projects/${project.id}`;
-  console.log("[upgrade fixture] Preparing Planner, Git Workspaces, and the conversation harness");
+  console.log("[upgrade fixture] Preparing Home, Planner, Git Workspaces, and the conversation harness");
   const { marketplace, extensions } = await api.get<{
     marketplace: { installName: string }[];
     extensions: ProjectExtension[];
@@ -267,6 +300,11 @@ export const seedUpgradeProject = async (api: StackApi, input: ProjectUpgradeInp
   await api.post(`${prefix}/extensions/install`, { source: { kind: "catalog", name: plannerEntry.installName } });
   // The generated history belongs to the Codex harness. The reader needs its declaration to open it.
   const enabled = new Set(extensions.filter(({ enabled }) => enabled).map(({ extensionId }) => extensionId));
+  if (![...enabled].some((id) => /^pstdio\.(pstdio-)?home$/.test(id))) {
+    const entry = marketplace.find(({ installName }) => /^(pstdio-)?home$/.test(installName));
+    assert(entry, "The published baseline must offer Home");
+    await api.post(`${prefix}/extensions/install`, { source: { kind: "catalog", name: entry.installName } });
+  }
   if (!enabled.has("pstdio.harness-codex"))
     await api.post(`${prefix}/extensions/install`, { source: { kind: "catalog", name: "harness-codex" } });
   // Older releases supply the Git provider directly.

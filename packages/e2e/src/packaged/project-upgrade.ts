@@ -9,14 +9,17 @@ import { PROVISIONED_CHROMIUM } from "./packaged-chromium";
 import { signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 import { PACKAGED_TEST_TIMEOUT } from "./packaged-test-timeout";
 import {
+  assertProjectToolsRetained,
   assertUpgradeEdit,
   editUpgradeProject,
+  installedProjectTools,
   type ProjectUpgradeInput,
   readUpgradeProject,
   seedUpgradeProject,
   upgradeApi,
   upgradeCoreProjectTools,
 } from "./project-upgrade-fixture";
+import { assertHomeOpens, checkHomeHistory } from "./project-upgrade-home";
 import { preparePublishedHost, versionFromTag } from "./published-host-binary";
 
 type Seed = Awaited<ReturnType<typeof seedUpgradeProject>>;
@@ -46,17 +49,21 @@ const seed = async (descriptor: { origin: string; token: string }, input: Projec
   const fixture = await seedUpgradeProject(api, input);
   const manifest = await readUpgradeProject(api, fixture);
   await record(input.evidence, "before", manifest);
-  return { fixture, manifest };
+  const tools = await installedProjectTools(api, fixture.id);
+  await record(input.evidence, "installed-before", tools);
+  return { fixture, manifest, tools };
 };
 
 const verify = async (
   descriptor: { origin: string; token: string },
   evidence: string,
-  state: { fixture: Seed; manifest: Snapshot },
+  state: Awaited<ReturnType<typeof seed>>,
 ) => {
   const upgrade = upgradeApi(descriptor);
   const changes = await upgradeCoreProjectTools(upgrade, state.fixture.id);
   await record(evidence, "extension-upgrades", changes);
+  await assertProjectToolsRetained(upgrade, state.fixture.id, state.tools);
+  await assertHomeOpens(upgrade, state.fixture.id);
   const after = await readUpgradeProject(upgrade, state.fixture);
   await record(evidence, "after", after);
   compare(state.manifest, after);
@@ -81,6 +88,8 @@ const openSavedWork = async (descriptor: Runtime["descriptor"], fixture: Seed, e
     const project = `${descriptor.origin}/projects/${fixture.id}/extensions`;
     await page.goto(`${project}/${plannerId}/tickets`);
     await expect(page.getByTestId("renderer-card").first()).toBeVisible();
+    await page.getByTestId("renderer-card").first().click();
+    await expect(page.locator('[contenteditable="true"]:visible').first()).toBeVisible();
     const resource = encodeURIComponent(`pstdio://extension-resource/session/${fixture.linkedSession}`);
     await page.goto(`${project}/${sessionsId}/conversation?resource=${resource}`);
     await expect(page.getByText("Keep the change small.", { exact: false }).first()).toBeVisible();
@@ -107,6 +116,7 @@ const verifyRestart = async (
   edited: Snapshot,
 ) => {
   const api = upgradeApi(descriptor);
+  await assertHomeOpens(api, fixture.id);
   await assertUpgradeEdit(api, fixture);
   const restarted = await readUpgradeProject(api, fixture);
   await record(evidence, "restarted", restarted);
@@ -185,13 +195,18 @@ const run = async (
     const state = await seed(runtime.descriptor, input);
     await stopProcess(runtime.child);
     runtime = undefined;
+    await checkHomeHistory(input, state.fixture.id, "seed");
     runtime = await launch(candidate, "upgrade");
     await assertCurrentDatabase(input.home);
     const edited = await verify(runtime.descriptor, input.evidence, state);
     await stopProcess(runtime.child);
     runtime = await launch(candidate, "restart");
+    await assertProjectToolsRetained(upgradeApi(runtime.descriptor), state.fixture.id, state.tools);
     await verifyRestart(runtime.descriptor, input.evidence, state.fixture, edited);
     await openSavedWork(runtime.descriptor, state.fixture, input.evidence);
+    await stopProcess(runtime.child);
+    runtime = undefined;
+    await checkHomeHistory(input, state.fixture.id, "verify");
   } finally {
     if (runtime) await stopProcess(runtime.child);
   }
