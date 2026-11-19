@@ -8,13 +8,14 @@ import { ExtensionLabel } from "./extension-labels";
 
 interface ExtensionListRowProps {
   extension: ExtensionPreview;
+  nameButtonRef?: (button: HTMLButtonElement | null) => void;
   onOpen: () => void;
   onToggle: (enabled: boolean) => void;
 }
 
 // Proposal copy: retain the installed row's identity and toggle; separate author from scope.
 export const ExtensionListRow = (props: ExtensionListRowProps) => {
-  const { extension, onOpen, onToggle } = props;
+  const { extension, nameButtonRef, onOpen, onToggle } = props;
   return (
     <Flex
       gap="md"
@@ -46,7 +47,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         </Flex>
         <Stack gap="2xs" flex="1" minW="0">
           <HStack gap="sm" minW="0">
-            <Button variant="ghost" size="xs" p="0" h="auto" minW="0" onClick={onOpen}>
+            <Button ref={nameButtonRef} variant="ghost" size="xs" p="0" h="auto" minW="0" onClick={onOpen}>
               <Text textStyle="label/S/medium" color={extension.enabled ? "fg" : "fg.muted"} truncate>
                 {extension.displayName}
               </Text>

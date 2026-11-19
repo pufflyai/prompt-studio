@@ -20,7 +20,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
     <PageContentLayout
       header={
         <Stack padding="lg" gap="md" borderBottomWidth="1px" borderColor="border.subtle">
-          <Button variant="ghost" size="xs" alignSelf="start" onClick={onBack}>
+          <Button autoFocus variant="ghost" size="xs" alignSelf="start" onClick={onBack}>
             <Icon as={ArrowLeft} boxSize="3.5" />
             Extensions
           </Button>

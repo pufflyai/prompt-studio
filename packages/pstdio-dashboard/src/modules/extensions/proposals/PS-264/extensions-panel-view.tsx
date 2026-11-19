@@ -1,6 +1,6 @@
 import { Badge, Button, HStack, Icon, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
 import { Search } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
 import { ExtensionDetail } from "./extension-detail";
 import { type AuthorFilter, installedExtensions, type ScopeFilter } from "./extension-fixtures";
@@ -14,6 +14,7 @@ export const ExtensionsPanelView = () => {
   const [author, setAuthor] = useState<AuthorFilter>("all");
   const [scope, setScope] = useState<ScopeFilter>("all");
   const [selectedId, setSelectedId] = useState<string>();
+  const returnFocusId = useRef<string | undefined>(undefined);
   const selected = extensions.find((extension) => extension.id === selectedId);
   const query = search.trim().toLowerCase();
   const searched = extensions.filter((extension) =>
@@ -49,7 +50,10 @@ export const ExtensionsPanelView = () => {
     return (
       <ExtensionDetail
         extension={selected}
-        onBack={() => setSelectedId(undefined)}
+        onBack={() => {
+          returnFocusId.current = selected.id;
+          setSelectedId(undefined);
+        }}
         onToggle={(enabled) => toggle(selected.id, enabled)}
       />
     );
@@ -161,6 +165,11 @@ export const ExtensionsPanelView = () => {
               <ExtensionListRow
                 key={extension.id}
                 extension={extension}
+                nameButtonRef={(button) => {
+                  if (!button || returnFocusId.current !== extension.id) return;
+                  returnFocusId.current = undefined;
+                  button.focus();
+                }}
                 onOpen={() => setSelectedId(extension.id)}
                 onToggle={(enabled) => toggle(extension.id, enabled)}
               />
