@@ -100,6 +100,25 @@ const installedExtensions: ProjectExtensionInstance[] = [
     canUpgrade: false,
     updateAvailable: false,
   },
+  {
+    id: "skills-instance",
+    projectId: "project-1",
+    extensionId: "pstdio.skills",
+    installedExtensionId: "installed-skills",
+    installName: "pstdio-skills",
+    name: "pstdio-skills",
+    displayName: "Skills",
+    description: "Reusable instructions across projects.",
+    icon: "Sparkles",
+    sourcePath: "/home/user/.pstdio/extensions/pstdio-skills",
+    author: { kind: "publisher", publisher: "pstdio" },
+    scope: "global",
+    status: "loaded",
+    enabled: true,
+    config: {},
+    canUpgrade: false,
+    updateAvailable: false,
+  },
 ];
 const automations: WorkbenchExtensionAutomationRecord[] = [
   {
@@ -127,6 +146,13 @@ const diagnostics: ExtensionDiagnostic[] = [
   {
     code: "stale-template",
     severity: "warning",
+    message: "A note template needs an update.",
+    extensionId: "personal.notes",
+    sourcePath: "templates/note.md",
+  },
+  {
+    code: "stale-template",
+    severity: "warning",
     message: "Bundled template is older than the installed copy.",
     extensionId: "pstdio.planner",
     sourcePath: "templates/ticket.md",
@@ -136,6 +162,7 @@ const marketplace = [
   {
     installName: "pstdio-reports",
     extensionId: "pstdio.reports",
+    author: { kind: "publisher" as const, publisher: "pstdio" },
     icon: "FileChartColumn",
     displayName: "Agent Reports",
     description: "Workspace reports for agent handoffs.",

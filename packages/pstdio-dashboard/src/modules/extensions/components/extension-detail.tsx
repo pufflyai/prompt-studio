@@ -35,6 +35,7 @@ export interface ExtensionDetailProps {
   workbench?: WorkbenchCore;
   extension: ProjectExtensionInstance;
   onBack?: () => void;
+  visible?: boolean;
   metadata: DashboardExtensionMetadata | undefined;
   automations: WorkbenchExtensionAutomationRecord[];
   diagnostics: ExtensionDiagnostic[];
@@ -122,7 +123,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
         header={
           <Stack gap="md">
             <Stack gap="md" paddingX="lg" paddingTop="lg">
-              <ExtensionBackButton onBack={props.onBack} />
+              <ExtensionBackButton onBack={props.onBack} visible={props.visible} />
               <HStack gap="md" alignItems="center" flexWrap="wrap">
                 <Flex
                   alignItems="center"

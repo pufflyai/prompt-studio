@@ -111,6 +111,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         projectId={projectId}
         extension={extension}
         onBack={onBack}
+        visible={settingsInput?.visible}
         metadata={contributions}
         unavailableHarnesses={unavailableExtensionHarnesses(
           extension,

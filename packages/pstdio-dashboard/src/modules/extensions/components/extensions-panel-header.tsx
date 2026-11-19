@@ -40,10 +40,16 @@ export const ExtensionsPanelHeader = ({
   const searched = extensions.filter((extension) => matchesExtensionSearch(extension, filters.search));
   const scoped = searched.filter((extension) => matchesExtensionScope(extension, filters.scope));
   const authored = searched.filter((extension) => matchesExtensionAuthor(extension, filters.author));
+  const selectedPublisher = filters.author.startsWith("publisher:")
+    ? filters.author.slice("publisher:".length)
+    : undefined;
   const publishers = [
-    ...new Set(
-      extensions.flatMap((extension) => (extension.author?.kind === "publisher" ? [extension.author.publisher] : [])),
-    ),
+    ...new Set([
+      ...extensions.flatMap((extension) =>
+        extension.author?.kind === "publisher" ? [extension.author.publisher] : [],
+      ),
+      ...(selectedPublisher ? [selectedPublisher] : []),
+    ]),
   ]
     .filter((publisher) => publisher !== "pstdio")
     .sort();

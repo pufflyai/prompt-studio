@@ -15,6 +15,7 @@ import { ExtensionAuthorBadge } from "./extension-labels";
 interface AvailableExtensionDetailProps {
   extension: MarketplaceExtension;
   onBack?: () => void;
+  visible?: boolean;
   metadata: DashboardExtensionMetadata | undefined;
   contributionsError?: string;
   loadingContributions: boolean;
@@ -49,7 +50,7 @@ export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) =
         header={
           <Stack gap="md">
             <Stack gap="md" paddingX="lg" paddingTop="lg">
-              <ExtensionBackButton onBack={props.onBack} />
+              <ExtensionBackButton onBack={props.onBack} visible={props.visible} />
               <HStack gap="md" alignItems="center">
                 <Flex
                   alignItems="center"

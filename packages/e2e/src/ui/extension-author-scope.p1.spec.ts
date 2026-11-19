@@ -55,6 +55,13 @@ test("retains extension filters and keyboard focus through details and enabled r
   await expect(panel.getByRole("button", { name: "Author: Me", exact: true })).toBeVisible();
   await expect(panel.getByRole("button", { name: "Scope: This Project", exact: true })).toBeVisible();
   await expect(row).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(back).toBeFocused();
+  await page
+    .getByRole("navigation", { name: "breadcrumb" })
+    .getByRole("button", { name: "Extensions", exact: true })
+    .click();
+  await expect(row).toBeFocused();
   const toggle = row.getByRole("checkbox");
   await toggle.focus();
   await page.keyboard.press("Space");

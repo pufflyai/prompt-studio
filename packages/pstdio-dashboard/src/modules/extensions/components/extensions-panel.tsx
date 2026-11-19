@@ -39,6 +39,14 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const [filters, setFilters] = useState(defaultExtensionFilters);
   const returnFocus = useRef<{ id: string; left: boolean } | undefined>(undefined);
   const focusTargets = useRef(new Map<string, HTMLElement>());
+  // React Activity disconnects effects while a cached page is hidden. Its cleanup
+  // records the departure even though an effect cannot observe visible=false.
+  useEffect(
+    () => () => {
+      if (returnFocus.current) returnFocus.current.left = true;
+    },
+    [],
+  );
   const selection = settingsInput.instance.resource?.id;
   const selectedInstanceId = selectedExtension(selection, "installed");
   const selectedMarketplaceName = selectedExtension(selection, "marketplace");
@@ -149,6 +157,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       <>
         {replacementDialog}
         <AvailableExtensionDetail
+          visible={settingsInput.visible}
           extension={selectedMarketplace}
           metadata={marketplaceContributions.data}
           contributionsError={
