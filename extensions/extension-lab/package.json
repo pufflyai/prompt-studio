@@ -19,8 +19,8 @@
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "0.48.0-preview.sha-3a1c8b6a5129223411b5d02538550d097802c8fc",
-    "@pstdio/ui": "0.48.0-preview.sha-3a1c8b6a5129223411b5d02538550d097802c8fc",
+    "@pstdio/sdk": "0.48.0-preview.sha-4fdcf6bf5629fe96c39a997b44962df4c29e7f0f",
+    "@pstdio/ui": "0.48.0-preview.sha-4fdcf6bf5629fe96c39a997b44962df4c29e7f0f",
     "lucide-react": "^0.556.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
