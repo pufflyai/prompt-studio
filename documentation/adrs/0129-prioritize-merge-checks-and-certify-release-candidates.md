@@ -47,7 +47,7 @@ Targets count installation, builds, transfers, execution, reports, and cleanup. 
 3. Promote queue archives only after main verifies their exact tree and inputs. Container caches save after builds; misses build normally. Cache hits never remove fresh behavior checks.
 4. Distinguish the immutable candidate's source SHA from its generated version commit. Verify checkout, build identity, producer run/attempt, artifact IDs/digests, policy, and toolchain.
 5. Stable publication consumes a complete matching release certificate and rejects changed inputs. A source-built nightly Windows diagnostic cannot certify a stable published app.
-6. Nightly publication requires basic artifact integrity and all-or-nothing publication. Deep P2/P3 diagnostics run independently; stable publication waits for complete functional and artifact-integrity evidence. P3 performance measurements run independently after publication and on unchanged nightly candidates; their failures remain visible without gating releases.
+6. Nightly publication requires basic artifact integrity and all-or-nothing publication. Deep P2/P3 diagnostics run independently; stable publication waits for complete functional and artifact-integrity evidence. P3 performance measurements run independently after publication and on unchanged nightly or non-publishing verify candidates; their failures remain visible without gating releases.
 
 ## Qualification and consequences
 

@@ -139,7 +139,7 @@ A red `main` usually means a startup smoke failure or a cache problem. Fix it be
 - **Production validation** runs on the same files:
   - P0, P1 and P2 on Linux, with up to twelve P2 app shards; native desktop and packaged CLI checks also run on Apple Silicon
   - P1 and P2 against the signed desktop apps. When the run validates signed release files, the source desktop jobs keep only the source Electron checks, so each packaged desktop case runs once.
-  - P3 performance measurements run in a separate advisory workflow after publication, and continue for unchanged nightly candidates
+  - P3 performance measurements run in a separate advisory workflow after publication, and continue for unchanged nightly and non-publishing verify candidates
   - container service checks
   - native artifact contracts on Linux x64, Apple Silicon and Windows x64; full shared CLI behavior runs separately on Linux
 - B1–B8 each run once on Linux x64, Apple Silicon Mac and Windows x64: 24 combinations. Intel Mac is excluded from benchmarks. Windows desktop measurements use an unpublished production-mode package in nightly validation and the signed candidate in stable validation.
