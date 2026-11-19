@@ -15,6 +15,19 @@ export const listProjectExtensionInventory = async (
   const key = (source: { id: string; source_path: string }) => `${source.id}\0${source.source_path}`;
   const hashes = new Map<string, string | null>();
   let records = await deps.extensionService.listProjectExtensionInstances(projectId);
+  // A completed host install is already available to every project. Root watching
+  // may still be attaching its disabled offers; listing must not wait for that
+  // background admission, execute the tool, or import another project's folders.
+  const attached = new Set(records.map(({ installedSource }) => installedSource.id));
+  for (const source of await deps.extensionService.listInstalledUserSources()) {
+    signal?.throwIfAborted();
+    if (attached.has(source.id)) continue;
+    const record = await deps.extensionService.attachRegisteredSourceForProject({
+      projectId,
+      installedSourceId: source.id,
+    });
+    if (record) records.push(record);
+  }
   let installedRecords = records.filter(({ installedSource }) => existsSync(installedSource.source_path));
   while (true) {
     const missing = installedRecords.filter(({ installedSource }) => !hashes.has(key(installedSource)));

@@ -16,6 +16,7 @@ import type {
   hashExtensionSource,
   LoadedExtensionSnapshot,
 } from "../features/extensions/extension-runtime";
+import { getInstalledUserSources } from "../features/extensions/installed-user-extensions";
 import type { EventBus } from "../features/sync/event-bus";
 import { activatePublishedExtensions } from "./activate-published-extension";
 import { createExtensionEnablement } from "./extension-enablement";
@@ -335,6 +336,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     getProjectExtensionInstance,
     hasEnabledProjectSource,
     listEnabledSourcesForProject,
+    listInstalledUserSources: () => getInstalledUserSources(deps.installedExtensionSourcesService),
     listProjectExtensionInstances: listProjectInstances,
     reloadInstalledSourceBySourcePath: (sourcePath: string) =>
       reloadInstalledSourceBySourcePathImpl(reloadDeps, sourcePath),
