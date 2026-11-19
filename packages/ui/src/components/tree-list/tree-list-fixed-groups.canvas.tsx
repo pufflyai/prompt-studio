@@ -5,10 +5,23 @@ export default { title: "Design system/Components/Data display/Tree list/Fixed r
 export const ResourceGroups = () => (
   <ScrollArea h="md">
     <TreeList
+      expandedSectionIds={["workspaces"]}
       sections={[
+        {
+          id: "workspaces",
+          label: "Workspaces",
+          collapsible: false,
+          nodes: [{ id: "ws", label: "WS-42 Fix navigation" }],
+        },
         {
           id: "resources",
           nodes: [
+            {
+              id: "tickets",
+              label: "Tickets",
+              collapsible: false,
+              children: [{ id: "ticket", label: "PS-1258 Fix navigation" }],
+            },
             {
               id: "pull-requests",
               label: "Pull requests",

@@ -28,7 +28,8 @@ const VirtualRowContent = (props: {
   children: ReactNode;
 }) => {
   const { sortable, row, indicator, children } = props;
-  if (!sortable || row.kind === "section-empty" || row.kind === "continuation") return children;
+  if (!sortable || row.kind === "group-header" || row.kind === "section-empty" || row.kind === "continuation")
+    return children;
   if (row.kind === "node" && row.level > 0)
     return (
       <Box position="relative" minW="0">
