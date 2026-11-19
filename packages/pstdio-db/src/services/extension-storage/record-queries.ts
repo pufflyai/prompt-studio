@@ -194,65 +194,65 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
       .where(and(ownerWhere(indexes), sql`NOT starts_with(${indexes.database_name}, ${formatDatabasePrefix})`));
     return row.revision + identityRevision;
   };
+  const queryIn = async (tx: Parameters<Parameters<DbClient["transaction"]>[0]>[0], query: StorageRecordQuery) => {
+    traceStorageQuery("query-start", query.index);
+    const { declared, index, related } = await prepareQueryMetadata(tx, owner, query, getIndex, diagnostics);
+    const revision = await getRevision(tx, related.hasIdentity);
+    traceStorageQuery("query-execute", query.index);
+    const page = await prepareRecordQuery(owner, index, query, revision, related);
+    if (page.limit === 0) return emptyQueryResult(owner, revision, diagnostics);
+    const visible = await recordVisibilitySql(owner, index, declared, physicalNames.get(declared));
+    const result = await tx.execute<QueryRow>(
+      query.dependencyOrder
+        ? dependencyOrderedPageSql(
+            owner,
+            index,
+            query.dependencyOrder,
+            page.fields,
+            sql`${visible} AND ${relatedRecordPredicateSql(owner, index, query.where, related)}`,
+            page.limit,
+            related,
+          )
+        : recordPageSql(
+            index,
+            page.fields,
+            sql`${visible} AND ${relatedRecordPredicateSql(owner, index, query.where, related)} AND ${pageAfterSql(index, page.after, related, owner)}`,
+            // One extra row shows whether a next page exists without a second scan.
+            page.limit + 1,
+            page.offset,
+            related,
+            owner,
+            query.orderBy === undefined || JSON.stringify(query.orderBy) === JSON.stringify(declared.orderBy)
+              ? query.where
+              : undefined,
+          ),
+    );
+    const rows = result.rows.slice(0, page.limit);
+    traceStorageQuery("query-complete", query.index);
+    const last = rows.at(-1);
+    const cursor =
+      !query.dependencyOrder && last && result.rows.length > page.limit
+        ? encodeQueryCursor({
+            recordId: last.record_id,
+            values: last.sort_values.map(decodeProjectionValue),
+            identity: page.identity,
+            revision,
+          })
+        : null;
+    diagnostics?.({ phase: "records-queried", owner, records: rows.length, materialized: result.rows.length });
+    return {
+      revision,
+      cursor,
+      records: rows.map((row) => ({
+        recordId: row.record_id,
+        revision: row.revision,
+        fields: decodeProjectionValue(row.fields) as Record<string, Json>,
+      })),
+    };
+  };
   const api: StorageRecordQueries = {
     defineIndexes: (definitions) => defineRecordIndexes(db, owner, definitions, "immediate", diagnostics),
-    query: (query) =>
-      db.transaction(async (tx) => {
-        traceStorageQuery("query-start", query.index);
-        const { declared, index, related } = await prepareQueryMetadata(tx, owner, query, getIndex, diagnostics);
-        const revision = await getRevision(tx, related.hasIdentity);
-        traceStorageQuery("query-execute", query.index);
-        const page = await prepareRecordQuery(owner, index, query, revision, related);
-        if (page.limit === 0) return emptyQueryResult(owner, revision, diagnostics);
-        const visible = await recordVisibilitySql(owner, index, declared, physicalNames.get(declared));
-        const result = await tx.execute<QueryRow>(
-          query.dependencyOrder
-            ? dependencyOrderedPageSql(
-                owner,
-                index,
-                query.dependencyOrder,
-                page.fields,
-                sql`${visible} AND ${relatedRecordPredicateSql(owner, index, query.where, related)}`,
-                page.limit,
-                related,
-              )
-            : recordPageSql(
-                index,
-                page.fields,
-                sql`${visible} AND ${relatedRecordPredicateSql(owner, index, query.where, related)} AND ${pageAfterSql(index, page.after, related, owner)}`,
-                // One extra row shows whether a next page exists without a second scan.
-                page.limit + 1,
-                page.offset,
-                related,
-                owner,
-                query.orderBy === undefined || JSON.stringify(query.orderBy) === JSON.stringify(declared.orderBy)
-                  ? query.where
-                  : undefined,
-              ),
-        );
-        const rows = result.rows.slice(0, page.limit);
-        traceStorageQuery("query-complete", query.index);
-        const last = rows.at(-1);
-        const cursor =
-          !query.dependencyOrder && last && result.rows.length > page.limit
-            ? encodeQueryCursor({
-                recordId: last.record_id,
-                values: last.sort_values.map(decodeProjectionValue),
-                identity: page.identity,
-                revision,
-              })
-            : null;
-        diagnostics?.({ phase: "records-queried", owner, records: rows.length, materialized: result.rows.length });
-        return {
-          revision,
-          cursor,
-          records: rows.map((row) => ({
-            recordId: row.record_id,
-            revision: row.revision,
-            fields: decodeProjectionValue(row.fields) as Record<string, Json>,
-          })),
-        };
-      }),
+    query: (query) => db.transaction((tx) => queryIn(tx, query)),
     aggregate: (query) =>
       db.transaction(async (tx) => {
         traceStorageQuery("aggregate-start", query.index);
@@ -318,6 +318,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
   };
   return {
     ...api,
+    queryIn,
     hasProjection: async () => (await db.select().from(projections).where(ownerWhere(projections))).length > 0,
   };
 };

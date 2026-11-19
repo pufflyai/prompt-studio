@@ -105,7 +105,7 @@ export const createOrderedResourceRecords = (
   deps: Parameters<typeof createLegacyResourceRecords>[2] & { textFields?: StorageTextDeclaration[] },
 ) => {
   type LegacyRecords = ReturnType<typeof createLegacyResourceRecords>;
-  const queries = createRecordQueries(db, owner, deps.diagnostics);
+  const { queryIn, ...queries } = createRecordQueries(db, owner, deps.diagnostics);
   const commitCache = createOrderedCommitCache(db, owner);
   let initialized: Promise<void> | undefined;
   const ready = () =>
@@ -209,6 +209,7 @@ export const createOrderedResourceRecords = (
         read: (id: string) => ReturnType<LegacyRecords["read"]>;
         readMany: (ids: string[]) => ReturnType<LegacyRecords["readMany"]>;
         readCurrentMany: (ids: string[]) => ReturnType<typeof readProjectedRevisions>;
+        query: typeof queries.query;
         commit: (group: StorageGroup) => Promise<StorageSaveOutcome>;
         outcome: (id: string) => Promise<StorageSaveOutcome | undefined>;
       },
@@ -225,6 +226,7 @@ export const createOrderedResourceRecords = (
             read: async (id) => (await readOrderedRecords(tx, owner, [id], deps.observer))[0]!,
             readMany: (ids) => readOrderedRecords(tx, owner, ids, deps.observer),
             readCurrentMany: (ids) => readProjectedRevisions(tx, owner, ids),
+            query: (query) => queryIn(tx, query),
             outcome: async (id) => ((await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined),
             commit: (group) =>
               queue.run(async () => {
