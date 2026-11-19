@@ -3,6 +3,13 @@ import { dirname, join } from "node:path";
 import { resolvePstdioHome } from "pstdio-paths";
 import { z } from "zod";
 import { acquireRecoveryJournalLease } from "../../services/project-recovery/journal";
+import {
+  discardFolderCreation,
+  hasPendingFolderCreation,
+  managedDirectoryIdentity as identity,
+  prepareFolderCreation,
+  readCreationIdentity,
+} from "./managed-folder-creation";
 
 const folder = (id: string) => join(resolvePstdioHome(), "projects", `project-${encodeURIComponent(id)}`);
 const marker = (id: string) =>
@@ -25,39 +32,36 @@ const missing = (error: NodeJS.ErrnoException) => {
   throw error;
 };
 
-const identity = async (path: string) => {
-  const stat = await lstat(path, { bigint: true }).catch(missing);
-  return stat?.isDirectory() ? `${stat.dev}:${stat.ino}` : null;
-};
-
 export const prepareManagedProjectFolder = (id: string) =>
   withManagedFolderLease(id, async () => {
     if (await lstat(`${marker(id)}.removal`).catch(missing))
       throw new Error("Managed folder cleanup is incomplete. Retry removing the project copy first.");
-    const path = folder(id);
-    if (await mkdir(path, { recursive: true })) {
-      const owned = await identity(path);
-      if (!owned) throw new Error("The managed project directory changed during setup.");
-      try {
-        const record = marker(id);
-        await mkdir(dirname(record), { recursive: true, mode: 0o700 });
-        await writeFile(record, owned, { mode: 0o600 });
-      } catch (error) {
-        if ((await identity(path).catch(() => null)) === owned) await rmdir(path).catch(() => {});
-        throw error;
-      }
-    }
-    return realpath(path);
+    return prepareFolderCreation(folder(id), marker(id));
   });
 
-export const inspectManagedProjectFolder = async (id: string, root: string | null | undefined) => {
+const inspectOwnership = async (id: string, root: string | null | undefined) => {
   const path = folder(id);
-  if (!root || root !== (await realpath(path).catch(missing))) return { removesManagedFolder: false };
+  const matchesRoot = !root || root === (await realpath(path).catch(missing));
   const found = await identity(path);
-  if (!found) return { removesManagedFolder: false };
+  if (!found) return { identity: null };
   const recorded = await readFile(marker(id), "utf8").catch(missing);
-  if (recorded === found) return { removesManagedFolder: true };
-  return { removesManagedFolder: false, retainsUnverifiedFolder: true as const };
+  // An unfinished creation receipt proves this private app-owned object even if
+  // the user subsequently selected a different workspace folder.
+  if ((matchesRoot && recorded === found) || (await readCreationIdentity(marker(id))) === found)
+    return { identity: found };
+  return { identity: null, ...(matchesRoot ? { retainsUnverifiedFolder: true as const } : {}) };
+};
+
+export const inspectManagedProjectFolder = async (id: string, root: string | null | undefined) => {
+  if (!root) return { removesManagedFolder: false };
+  const proof = await inspectOwnership(id, root);
+  if (proof.identity) return { removesManagedFolder: true };
+  return {
+    removesManagedFolder: false,
+    ...("retainsUnverifiedFolder" in proof && proof.retainsUnverifiedFolder
+      ? { retainsUnverifiedFolder: true as const }
+      : {}),
+  };
 };
 
 const removalSchema = z.strictObject({
@@ -96,6 +100,34 @@ const claimManagedFolder = async (
   }
 };
 
+const requireCompletedCreation = async (
+  id: string,
+  root: string | null | undefined,
+  proof: Awaited<ReturnType<typeof inspectOwnership>>,
+) => {
+  const pending = await hasPendingFolderCreation(marker(id));
+  if (root && pending && !proof.identity) {
+    // Before anything is deleted, reclaim only an empty private reservation.
+    // Nonempty or replaced stages retain their receipt and report their path.
+    await discardFolderCreation(folder(id), marker(id));
+    return;
+  }
+  if (!root && (proof.identity || pending))
+    throw new Error("Managed folder setup is incomplete. Retry opening the project before removing this copy.");
+};
+
+// Check before eviction deletes provider resources, content or secrets. Removal
+// repeats the proof under its own lease before claiming the filesystem object.
+export const assertManagedFolderCleanupReady = (id: string, root: string | null | undefined) =>
+  withManagedFolderLease(id, async () => {
+    const saved = await readFile(`${marker(id)}.removal`, "utf8").catch(missing);
+    if (saved) {
+      removalSchema.parse(JSON.parse(saved));
+      return;
+    }
+    await requireCompletedCreation(id, root, await inspectOwnership(id, root));
+  });
+
 export const removeManagedProjectFolder = (id: string, root: string | null | undefined) =>
   withManagedFolderLease(id, async () => {
     const path = folder(id);
@@ -104,12 +136,15 @@ export const removeManagedProjectFolder = (id: string, root: string | null | und
     const saved = await readFile(journal, "utf8").catch(missing);
     let removal = saved ? removalSchema.parse(JSON.parse(saved)) : null;
     if (!removal) {
-      if (!(await inspectManagedProjectFolder(id, root)).removesManagedFolder) {
+      const proof = await inspectOwnership(id, root);
+      await requireCompletedCreation(id, root, proof);
+      if (!proof.identity) {
+        await discardFolderCreation(path, record);
         await rm(record, { force: true });
         return;
       }
       removal = removalSchema.parse({
-        identity: await readFile(record, "utf8"),
+        identity: proof.identity,
         directory: crypto.randomUUID(),
         claimed: false,
       });
@@ -128,6 +163,7 @@ export const removeManagedProjectFolder = (id: string, root: string | null | und
     // Only this verified object in the private claim directory can be removed recursively.
     await rm(claimed, { recursive: true, force: true });
     await rmdir(directory).catch(missing);
+    await discardFolderCreation(path, record);
     await rm(record, { force: true });
     await rm(journal, { force: true });
   });

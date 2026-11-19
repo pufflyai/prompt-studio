@@ -198,3 +198,45 @@ test("another process holds managed preparation and removal until its claim leas
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("ownership survives a failed marker publication when rollback also fails", async () => {
+  const root = await mkdtemp(join(tmpdir(), "managed-folder-create-receipt-"));
+  const previous = process.env.PSTDIO_HOME;
+  process.env.PSTDIO_HOME = root;
+  const id = "creation-retry";
+  const folder = join(root, "projects", `project-${id}`);
+  const record = join(root, "project-folder-ownership", `project-${id}`);
+  const write = fs.writeFile;
+  const move = fs.rename;
+  const remove = fs.rmdir;
+  const denied = () => Object.assign(new Error("Marker publication denied"), { code: "EROFS" });
+  const writing = spyOn(fs, "writeFile").mockImplementation(async (path, ...args) => {
+    if (path === record) throw denied();
+    return write(path, ...args);
+  });
+  const moving = spyOn(fs, "rename").mockImplementation(async (from, to) => {
+    if (to === record) throw denied();
+    return move(from, to);
+  });
+  const removing = spyOn(fs, "rmdir").mockImplementation(async (path, ...args) => {
+    if (path === folder) throw denied();
+    return remove(path, ...args);
+  });
+  try {
+    await expect(prepareManagedProjectFolder(id)).rejects.toThrow("Marker publication denied");
+    writing.mockRestore();
+    moving.mockRestore();
+    removing.mockRestore();
+    const prepared = await prepareManagedProjectFolder(id);
+    expect(await inspectManagedProjectFolder(id, prepared)).toEqual({ removesManagedFolder: true });
+    await removeManagedProjectFolder(id, prepared);
+    await expect(lstat(folder)).rejects.toMatchObject({ code: "ENOENT" });
+  } finally {
+    writing.mockRestore();
+    moving.mockRestore();
+    removing.mockRestore();
+    if (previous === undefined) delete process.env.PSTDIO_HOME;
+    else process.env.PSTDIO_HOME = previous;
+    await rm(root, { recursive: true, force: true });
+  }
+});
