@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
+import { archiveColumn, moveLateTicket, moveVisiblePair } from "./ps236-comparison-mutations";
 import {
   browserTools,
   evidence,
@@ -41,6 +42,7 @@ page.on("response", async (response: any) => {
       status: response.status(),
       rows: value?.rows?.length ?? value?.ticketRows?.length,
       total: value?.page?.total,
+      error: result.outcome?.status === "error" ? result.outcome.error : undefined,
       bytes: JSON.stringify(result).length,
     });
   } catch {}
@@ -186,34 +188,7 @@ try {
     });
     await page.screenshot({ path: join(output, "timeline.png"), fullPage: true });
   });
-  await attempt("timeline-browser-move", async () => {
-    const frame = page.frameLocator('iframe[title="Project Timeline"]'),
-      source = ids[1];
-    const order = (value: any) => value.sections.flatMap((s: any) => s.rows.map((r: any) => r.id));
-    const before = order(await planner("timeline.plan.read", { page: pageRequest() }));
-    assert.equal(before.indexOf(ids[1]), before.indexOf(ids[0]) + 1);
-    const moved = page.waitForResponse((reply: any) =>
-      reply.url().endsWith("pstdio.planner.command.timeline.plan.move/execute"),
-    );
-    await measure("timeline-browser-drag", async () => {
-      await frame
-        .locator(`[data-ticket="${ids[1]}"]`)
-        .getByTestId("renderer-card")
-        .dragTo(frame.locator(`[data-ticket="${ids[0]}"]`).getByTestId("renderer-card"));
-      const reply = await moved;
-      assert.ok(reply.ok());
-      const result = await reply.json();
-      assert.equal(result.outcome?.status, "success");
-      assert.equal(result.outcome.value.ticketId, source);
-    });
-    evidence.browserTimelineMoved = source;
-    await page.screenshot({ path: join(output, "timeline-after-drag.png"), fullPage: true });
-    const after = order(await planner("timeline.plan.read", { page: pageRequest() }));
-    assert.ok(after.indexOf(ids[1]) < after.indexOf(ids[0]));
-    await planner("timeline.plan.move", { ticket: ids[0], before: ids[1] });
-    assert.deepEqual(order(await planner("timeline.plan.read", { page: pageRequest() })), before);
-    evidence.browserDragStateRestored = true;
-  });
+  await attempt("timeline-browser-move", () => moveVisiblePair(page));
   await attempt("timeline-pages", async () => {
     const first = await measure("timeline-first-page", () => planner("timeline.plan.read", { page: pageRequest() }));
     if (!first.page) {
@@ -233,33 +208,7 @@ try {
     assert.equal(next.ticketRows.length, 50);
     evidence.timeline = { first: first.page, next: next.page };
   });
-  await attempt("timeline-move-unloaded", async () => {
-    assert.equal(evidence.browserDragStateRestored, true, "Skip mutation because prior fixture restore is unverified");
-    const before = await planner("timeline.plan.read", { ticketId: ids[4998] });
-    const deadline = await planner("timeline.deadline.create", { date: "2027-01-15", name: "Demo milestone" });
-    await measure("timeline-move-late", () =>
-      planner("timeline.plan.move", { ticket: ids[4999], deadline: deadline.id }),
-    );
-    const moved = await planner("timeline.plan.read", { ticketId: ids[4999] });
-    assert.ok(
-      moved.sections.some(
-        (s: any) =>
-          s.deadline?.id === deadline.id && s.rows.some((r: any) => r.ticketId === ids[4999] || r.id === ids[4999]),
-      ),
-    );
-    const after = await planner("timeline.plan.read", { ticketId: ids[4998] });
-    const sentinel = (value: any) => value.sections.flatMap((s: any) => s.rows).find((r: any) => r.id === ids[4998]);
-    assert.ok(sentinel(before));
-    assert.ok(sentinel(after));
-    for (const key of ["id", "title", "deadlineId", "status"])
-      assert.deepEqual(sentinel(after)[key], sentinel(before)[key]);
-    evidence.timelineMove = { moved: ids[4999], untouched: ids[4998] };
-    await planner("timeline.plan.move", { ticket: ids[4999], deadline: "none" });
-    await planner("timeline.deadline.delete", { deadline: deadline.id });
-    const restored = await planner("timeline.plan.read", { ticketId: ids[4999] });
-    assert.ok(restored.sections.some((s: any) => !s.deadline && s.rows.some((r: any) => r.id === ids[4999])));
-    evidence.lateMoveStateRestored = true;
-  });
+  await attempt("timeline-move-unloaded", moveLateTicket);
   await attempt("foobar-defaults", async () => {
     await measure("foobar-browser", async () => {
       await page.goto(`${uiOrigin}/projects/${project.id}/extensions/pstdio.ps236-demo-foobar/foobars`, {
@@ -304,33 +253,7 @@ try {
     assert.equal(filtered.rows[0].title, "Foobar 04999");
     evidence.foobar = { first: first.page, filtered: filtered.page };
   });
-  await attempt("bulk-archive-unloaded", async () => {
-    assert.equal(evidence.lateMoveStateRestored, true, "Skip mutation because prior fixture restore is unverified");
-    const untouched = await planner("get-ticket", { id: ids[4998] });
-    await page.goto(boardUrl, { waitUntil: "commit" });
-    const box = page.getByRole("textbox", { name: "Search this view" });
-    if (await box.isVisible()) await box.fill("");
-    await page.getByRole("button", { name: "Column actions for Todo", exact: true }).click();
-    const result = page.waitForResponse((reply: any) =>
-      reply.url().endsWith("pstdio.planner.view.tickets.kanban.onColumnAction/execute"),
-    );
-    const archived = await measure("bulk-archive-browser", async () => {
-      await page.getByRole("menuitem", { name: "Archive all", exact: true }).click();
-      const reply = await result;
-      assert.ok(reply.ok());
-      const body = await reply.json();
-      assert.equal(body.outcome?.status, "success");
-      return body.outcome.value;
-    });
-    assert.equal(archived.archivedCount, 1667);
-    const after = await planner("get-ticket", { id: ids[4998] });
-    assert.equal(after.archived, false);
-    assert.equal(after.content, untouched.content);
-    const lateArchived = await planner("get-ticket", { id: ids[4996] });
-    assert.equal(lateArchived.archived, true);
-    evidence.archived = archived;
-    await page.screenshot({ path: join(output, "after-bulk-archive.png"), fullPage: true });
-  });
+  await attempt("bulk-archive-unloaded", () => archiveColumn(page, boardUrl));
 } finally {
   evidence.browserErrors = browserErrors;
   writeFileSync(join(output, "browser-command-responses.json"), JSON.stringify(responses, null, 2));

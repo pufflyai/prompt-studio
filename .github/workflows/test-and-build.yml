@@ -1,31 +1,28 @@
-name: Temporary PS236 isolated comparison
+name: Temporary PS236 paired isolated comparison
 on:
   workflow_dispatch: {}
 permissions:
   contents: read
 jobs:
   comparison:
-    name: Isolated 5000-ticket and 5000-foobar comparison (${{ matrix.variant }})
+    name: Same-host 5000-ticket and 5000-foobar comparison
     runs-on: ubuntu-24.04
     timeout-minutes: 45
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - variant: main
-            source: f22e64bc0abd740b9944efd0c6cf51d16a81d8db
-          - variant: candidate
-            source: 1fee1c61ecb20243ddd199ef114f1f49bbf58327
     env:
       PSTDIO_ISOLATED_AGENT_CREDENTIALS: "0"
+      PSTDIO_ISOLATED_COMPOSE_FILE: __test-tmp__/ps236-counters.compose.json
     steps:
       - uses: actions/checkout@v5
         with:
           path: driver
       - uses: actions/checkout@v5
         with:
-          ref: ${{ matrix.source }}
-          path: app
+          ref: f22e64bc0abd740b9944efd0c6cf51d16a81d8db
+          path: app-main
+      - uses: actions/checkout@v5
+        with:
+          ref: 7c8b4682b1626a7538c55b105f76b4761e534159
+          path: app-candidate
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
@@ -39,33 +36,46 @@ jobs:
           bun init -y
           bun add --exact @playwright/test@1.60.0
           bunx playwright install --with-deps chromium
-          cd ../app
-          mkdir -p __test-tmp__
-          cat > __test-tmp__/ps236-counters.compose.json <<'JSON'
+          cd ..
+          for app in app-main app-candidate; do
+            mkdir -p "$app/__test-tmp__"
+            cat > "$app/__test-tmp__/ps236-counters.compose.json" <<'JSON'
           {"services":{"prompt-studio":{"environment":{"PSTDIO_BENCHMARK_COUNTERS":"1"}}}}
           JSON
-      - name: Start the owned Docker runtime
-        working-directory: app
-        env:
-          PSTDIO_ISOLATED_COMPOSE_FILE: __test-tmp__/ps236-counters.compose.json
-        run: bun run dev:isolated -- --name ps236-${{ matrix.variant }}-${{ github.run_id }} --desktop
-      - name: Run the complete comparison scenarios
-        run: bun driver/scripts/diagnostics/ps236-isolated-comparison.ts app ps236-${{ matrix.variant }}-${{ github.run_id }} ${{ matrix.variant }} browser-tools
-      - name: Capture owned stack logs
+          done
+      - name: Start the owned main Docker runtime
+        working-directory: app-main
+        run: bun run dev:isolated -- --name ps236-main-${{ github.run_id }} --desktop
+      - name: Observe the baseline, preserving original failures
+        id: baseline
+        continue-on-error: true
+        run: bun driver/scripts/diagnostics/ps236-isolated-comparison.ts app-main ps236-main-${{ github.run_id }} main browser-tools
+      - name: Capture and remove only the owned main stack
+        if: always()
+        working-directory: app-main
+        run: |
+          mkdir -p ../comparison-evidence/main
+          docker logs ps236-main-${{ github.run_id }}-prompt-studio-1 > ../comparison-evidence/main/container.log 2>&1 || true
+          bun run dev:isolated -- --name ps236-main-${{ github.run_id }} --down
+      - name: Start the owned candidate Docker runtime
+        working-directory: app-candidate
+        run: bun run dev:isolated -- --name ps236-candidate-${{ github.run_id }} --desktop
+      - name: Verify every candidate scenario on the same machine
+        id: candidate
+        run: bun driver/scripts/diagnostics/ps236-isolated-comparison.ts app-candidate ps236-candidate-${{ github.run_id }} candidate browser-tools
+      - name: Capture candidate logs and comparison outcomes
         if: always()
         run: |
-          mkdir -p comparison-evidence/${{ matrix.variant }}
-          docker logs ps236-${{ matrix.variant }}-${{ github.run_id }}-prompt-studio-1 > comparison-evidence/${{ matrix.variant }}/container.log 2>&1 || true
-          docker ps -a --filter label=com.docker.compose.project=ps236-${{ matrix.variant }}-${{ github.run_id }} > comparison-evidence/${{ matrix.variant }}/owned-containers.txt
-          df -h > comparison-evidence/${{ matrix.variant }}/disk.txt
+          mkdir -p comparison-evidence/candidate
+          docker logs ps236-candidate-${{ github.run_id }}-prompt-studio-1 > comparison-evidence/candidate/container.log 2>&1 || true
+          printf 'baseline=%s\ncandidate=%s\n' '${{ steps.baseline.outcome }}' '${{ steps.candidate.outcome }}' > comparison-evidence/step-outcomes.txt
+          df -h > comparison-evidence/disk.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ps236-isolated-${{ matrix.variant }}-${{ github.run_id }}
+          name: ps236-paired-${{ github.run_id }}
           path: comparison-evidence
-      - name: Remove only the owned stack
+      - name: Remove only the owned candidate stack
         if: always()
-        working-directory: app
-        env:
-          PSTDIO_ISOLATED_COMPOSE_FILE: __test-tmp__/ps236-counters.compose.json
-        run: bun run dev:isolated -- --name ps236-${{ matrix.variant }}-${{ github.run_id }} --down
+        working-directory: app-candidate
+        run: bun run dev:isolated -- --name ps236-candidate-${{ github.run_id }} --down
