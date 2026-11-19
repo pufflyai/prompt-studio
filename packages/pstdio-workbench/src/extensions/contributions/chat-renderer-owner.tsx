@@ -53,6 +53,17 @@ const createQueryRootKeys = () => {
   };
 };
 
+const trimInactiveSlots = (slots: Map<string, { active: number }>) => {
+  let inactive = [...slots.values()].filter((slot) => !slot.active).length;
+  for (const [id, slot] of slots) {
+    if (inactive <= 128) break;
+    if (!slot.active) {
+      slots.delete(id);
+      inactive--;
+    }
+  }
+};
+
 export const createChatRendererOwner = (
   initialInput: RegisterWorkbenchExtensionContributionsInput,
   view: ChatRecord,
@@ -167,16 +178,7 @@ export const createChatRendererOwner = (
           resolve(): ReturnType<typeof sessionFor> | undefined;
         }
       >();
-      const trimSlots = () => {
-        let inactive = [...slots.values()].filter((slot) => !slot.active).length;
-        for (const [id, slot] of slots) {
-          if (inactive <= 128) break;
-          if (!slot.active) {
-            slots.delete(id);
-            inactive--;
-          }
-        }
-      };
+      const trimSlots = () => trimInactiveSlots(slots);
       const stopEvents = observeChatRendererRefresh(nextInput, view, () =>
         [...sessions.values()].filter((owner) => owner.registration === nextInput),
       );

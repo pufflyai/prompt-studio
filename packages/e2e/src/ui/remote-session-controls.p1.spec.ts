@@ -225,11 +225,11 @@ test.describe(() => {
       main.getByRole("button", { name: "Edit queued message: Readable offline queue", exact: true }),
     ).toHaveCount(0);
     await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
-    await expect(
-      page
-        .locator('[data-testid="content-editable"][contenteditable]:not([contenteditable="false"])')
-        .filter({ visible: true }),
-    ).toHaveCount(0);
+    const offlineDraft = main
+      .locator('[data-testid="content-editable"][contenteditable="true"]')
+      .filter({ visible: true });
+    await offlineDraft.fill("Draft while Laptop is offline");
+    await expect(main.getByTestId("send-message-button").filter({ visible: true })).toBeDisabled();
     await expect(main.getByRole("button", { name: "Stop Response", exact: true })).toHaveCount(0);
     await page.screenshot({ path: test.info().outputPath("offline-readable.png") });
     // Preserve the reconnect/presence race at the actual server-side owner boundary.
@@ -243,6 +243,7 @@ test.describe(() => {
     await expect(
       main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
     ).toHaveAttribute("contenteditable", "true");
+    await expect(offlineDraft).toHaveText("Draft while Laptop is offline");
     await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toBeVisible();
     await expect(
       main.getByRole("button", { name: "Edit queued message: Readable offline queue", exact: true }),
