@@ -1,4 +1,5 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import { attemptId } from "./attempt-identity";
 import type {
   AttemptRecord,
   AttemptTimelineEvent,
@@ -89,6 +90,7 @@ export const isAttemptRecord = (value: unknown): value is AttemptRecord => {
   const record = value as Partial<AttemptRecord>;
   return (
     record.schemaVersion === 2 &&
+    (record.id === undefined || isString(record.id)) &&
     isString(record.workspaceId) &&
     isString(record.workspaceShorthand) &&
     isString(record.ticketId) &&
@@ -96,9 +98,8 @@ export const isAttemptRecord = (value: unknown): value is AttemptRecord => {
     isString(record.implementationSessionId) &&
     Array.isArray(record.revisions) &&
     record.revisions.every(isRevision) &&
-    isRecord(record.base) &&
-    isNullableString(record.base.workspaceId) &&
-    isString(record.base.headSha) &&
+    (record.base === null ||
+      (isRecord(record.base) && isNullableString(record.base.workspaceId) && isString(record.base.headSha))) &&
     Number.isInteger(record.implementationDisconnectRetries) &&
     Number.isInteger(record.reviewDisconnectRetries) &&
     isBlocker(record.blocker) &&
@@ -118,7 +119,7 @@ export const readAttempt = async (storage: ExtensionStorageApi, workspaceId: str
 export const putAttempt = async (storage: ExtensionStorageApi, attempt: AttemptRecord) => {
   if (!isAttemptRecord(attempt)) throw new Error("Invalid Planner attempt record");
   const { state: _deprecatedState, ...variant } = attempt as AttemptRecord & { state?: string };
-  await attemptsCollection(storage).put(variant.workspaceId, variant);
+  await attemptsCollection(storage).put(attemptId(variant), variant);
   return variant;
 };
 

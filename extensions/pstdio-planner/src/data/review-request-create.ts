@@ -1,6 +1,7 @@
 // Save review requests without starting or continuing an agent session.
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "./attempt-actors";
+import { attemptId } from "./attempt-identity";
 import { readAttempt } from "./attempt-storage";
 import type { AttemptState } from "./attempt-types";
 import { findTicket } from "./resolve";
@@ -18,6 +19,7 @@ export interface CreateReviewRequestInput {
   request: unknown;
   reason?: ReviewRequestReason;
   affectedAction?: "implementation" | "merge";
+  attemptId?: string;
   workspaceId?: string;
   revision?: number;
   sessionId?: string;
@@ -33,9 +35,14 @@ export const handoffRequest = {
 } as const;
 
 const readHandoffAttempt = async (ctx: CommandContext, input: CreateReviewRequestInput, ticketId: string) => {
-  if (!input.workspaceId) return null;
-  const attempt = await readAttempt(ctx.storage, input.workspaceId);
-  if (!attempt || attempt.ticketId !== ticketId) {
+  const id = input.attemptId ?? input.workspaceId;
+  if (!id) return null;
+  const attempt = await readAttempt(ctx.storage, id);
+  if (
+    !attempt ||
+    attempt.ticketId !== ticketId ||
+    (input.attemptId && input.workspaceId && attempt.workspaceId !== input.workspaceId)
+  ) {
     throw new Error("The workspace does not own this ticket handoff.");
   }
   if (input.revision !== undefined && attempt.revisions.at(-1)?.revision !== input.revision) {
@@ -56,7 +63,7 @@ export const createReviewRequest = async (ctx: CommandContext, input: CreateRevi
   if (input.expectedTicketStatusId !== undefined && ticket.statusId !== input.expectedTicketStatusId) {
     throw new Error("Ticket status changed before the handoff.");
   }
-  await readHandoffAttempt(ctx, input, ticket.id);
+  const attempt = await readHandoffAttempt(ctx, input, ticket.id);
   const body = parseRequestBody(input.request);
   if (!input.title.trim() || !input.instructions.trim()) throw new Error("A title and instructions are required.");
 
@@ -76,7 +83,23 @@ export const createReviewRequest = async (ctx: CommandContext, input: CreateRevi
           { field: "ticketId", op: "eq", value: ticket.id },
           { field: "valid", op: "eq", value: true },
           { field: "reason", op: "eq", value: input.reason },
-          { field: "workspaceId", op: "eq", value: input.workspaceId ?? null },
+          { field: "workspaceId", op: "eq", value: attempt?.workspaceId ?? input.workspaceId ?? null },
+          {
+            any: [
+              { field: "attemptId", op: "eq", value: input.attemptId ?? input.workspaceId ?? null },
+              {
+                all: [
+                  {
+                    any: [
+                      { field: "attemptId", op: "missing" },
+                      { field: "attemptId", op: "eq", value: null },
+                    ],
+                  },
+                  { field: "workspaceId", op: "eq", value: input.attemptId ?? input.workspaceId ?? null },
+                ],
+              },
+            ],
+          },
           { field: "attemptRevision", op: "eq", value: input.revision ?? null },
           { field: "relatedSessionId", op: "eq", value: input.sessionId ?? null },
           {
@@ -101,8 +124,9 @@ export const createReviewRequest = async (ctx: CommandContext, input: CreateRevi
     requestedBy: actorFromSource(ctx.source, ctx.invocationId),
     context: {
       reason: input.reason ?? null,
+      ...(attempt?.id ? { attemptId: attemptId(attempt) } : {}),
       ...(input.affectedAction ? { affectedAction: input.affectedAction } : {}),
-      workspaceId: input.workspaceId ?? null,
+      workspaceId: attempt?.workspaceId ?? input.workspaceId ?? null,
       attemptRevision: input.revision ?? null,
       sessionId: null,
       relatedSessionId: input.sessionId ?? null,

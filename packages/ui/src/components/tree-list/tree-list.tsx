@@ -155,6 +155,7 @@ const StackTreeList = (props: TreeListProps) => {
                 onRowFocus={keyboard.onRowFocus}
                 rowVariant={rowVariant}
                 nodeGap={nodeGap}
+                sectionGap={sectionGap}
                 linkComponent={linkComponent}
                 onNavigate={onNavigate}
                 onToggleNode={onToggleNode}

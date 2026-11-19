@@ -26,6 +26,8 @@ export interface TreeListInlineInput {
 /** Tree node data rendered by `TreeList`; extends the row API used by `ListRow`. */
 export type TreeListNode = ListRowItem & {
   id: string;
+  /** False keeps group children visible without a collapse control. */
+  collapsible?: boolean;
   /** Opaque host scope passed to a configurable move policy. */
   moveScope?: string;
   children?: TreeListNode[];

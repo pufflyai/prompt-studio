@@ -24,19 +24,19 @@ async function stopLinkedSessions(ctx: CommandContext, supervisorId: string | un
     }
   };
   await stop(supervisorId);
-  const workspaces = new Set<string>();
+  const attemptIds = new Set<string>();
   for await (const dispatches of autoBuildDispatchPages(ctx, supervisorId))
-    for (const { workspaceId } of dispatches) {
-      workspaces.add(workspaceId);
-      const attempt = await readAttempt(ctx.storage, workspaceId);
+    for (const { attemptId } of dispatches) {
+      attemptIds.add(attemptId);
+      const attempt = await readAttempt(ctx.storage, attemptId);
       await stop(attempt?.implementationSessionId);
       // An implementation can have requested a review just before it acknowledged cancellation.
-      await withQueuedWriteGuard(ctx, `attempt:${workspaceId}`, async () => {
-        const latest = await readAttempt(ctx.storage, workspaceId);
+      await withQueuedWriteGuard(ctx, `attempt:${attemptId}`, async () => {
+        const latest = await readAttempt(ctx.storage, attemptId);
         for (const revision of latest?.revisions ?? []) {
           for (const review of revision.reviews) await stop(review.sessionId);
         }
-        for await (const ids of workspaceEventSessionPages(ctx.storage, [workspaceId]))
+        for await (const ids of workspaceEventSessionPages(ctx.storage, [attemptId]))
           for (const id of ids) await stop(id);
       });
     }
@@ -46,7 +46,7 @@ async function stopLinkedSessions(ctx: CommandContext, supervisorId: string | un
   while (found) {
     found = false;
     for await (const requests of linkedAutoBuildRequestPages(ctx.storage, {
-      workspaceIds: workspaces,
+      attemptIds,
       sessionIds: linked,
     }))
       for (const request of requests) {

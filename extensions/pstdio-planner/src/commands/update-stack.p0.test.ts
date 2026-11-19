@@ -84,7 +84,7 @@ test("next tickets exposes stack recovery even when no new implementation can st
       revisions: [
         {
           revision: 1,
-          baseSha: attempt!.base.headSha,
+          baseSha: attempt!.base!.headSha,
           headSha: f.head,
           changeRequestReportId: "old-report",
           submittedAt: new Date().toISOString(),
@@ -111,7 +111,7 @@ test("Auto Build assigns recovery to the existing implementation owner without a
       revisions: [
         {
           revision: 1,
-          baseSha: attempt.base.headSha,
+          baseSha: attempt.base!.headSha,
           headSha: f.head,
           changeRequestReportId: "old-report",
           submittedAt: new Date().toISOString(),

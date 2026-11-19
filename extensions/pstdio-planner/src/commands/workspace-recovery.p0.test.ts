@@ -115,7 +115,7 @@ test.each([
   const result = await autoBuildDispatchCommand.run(f.ctx, { ticket: f.ticket.id, revision: "test" });
   expect(result).toMatchObject({ decision: "started", workspaceId: "workspace-2", sessionId: "session-2" });
   const replacement = await readAttempt(f.storage, "workspace-2");
-  expect(replacement?.base.headSha).toBe("main-sha");
+  expect(replacement?.base?.headSha).toBe("main-sha");
   expect(replacement?.revisions).toEqual([]);
   expect(await readAttempt(f.storage, f.old.workspace.id)).toMatchObject({ revisions: f.previous.revisions });
   expect(await readRetiredWorkspaceIds(f.storage, [f.old.workspace.id])).toContain(f.old.workspace.id);
@@ -193,7 +193,7 @@ test("a missing old base restarts on the project target and keeps the unavailabl
     decision: "started",
   });
   expect(f.created[0]?.prompt).toContain("old-report");
-  expect((await readAttempt(f.storage, "workspace-2"))?.base.headSha).toBe("main-sha");
+  expect((await readAttempt(f.storage, "workspace-2"))?.base?.headSha).toBe("main-sha");
 });
 
 test("a recovery capacity change during workspace setup prevents replacing the old attempt", async () => {
@@ -222,7 +222,7 @@ test("recovery honors an explicit feature target without changing project settin
   expect(
     await autoBuildDispatchCommand.run(f.ctx, { ticket: f.ticket.id, revision: "test", base: "feature" }),
   ).toMatchObject({ decision: "started" });
-  expect((await readAttempt(f.storage, "workspace-2"))?.base.headSha).toBe("feature-head");
+  expect((await readAttempt(f.storage, "workspace-2"))?.base?.headSha).toBe("feature-head");
   expect(await f.ctx.settings.all()).toEqual(settings);
 });
 

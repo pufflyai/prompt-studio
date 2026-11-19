@@ -2,6 +2,32 @@ import { expect, test } from "bun:test";
 import type { TreeNodePage, TreeViewSection } from "../../../core";
 import { createTreePages } from "./tree-pages";
 
+test("later pages extend existing resource groups and introduce new types", async () => {
+  const first = { id: "pr-1", label: "First pull request" };
+  const sections: TreeViewSection[] = [
+    {
+      id: "resources",
+      nodes: [{ id: "pull-requests", label: "Pull requests", children: [first] }],
+      nextPage: async () => ({
+        nodes: [
+          {
+            id: "pull-requests",
+            label: "Pull requests",
+            children: [first, { id: "pr-2", label: "Second pull request" }],
+          },
+          { id: "notes", label: "Notes", children: [{ id: "note-1", label: "Checklist" }] },
+        ],
+      }),
+    },
+  ];
+  const pages = createTreePages(new AbortController().signal, () => {});
+  await pages.sections(sections)[0]!.pagination!.loadMore();
+  const groups = pages.sections(sections)[0]!.nodes;
+  expect(groups.map((group) => group.id)).toEqual(["pull-requests", "notes"]);
+  expect(groups[0]!.children!.map((node) => node.id)).toEqual(["pr-1", "pr-2"]);
+  expect(groups[0]!.children![0]).toBe(first);
+});
+
 test("visible collections append siblings once, retain rows on failure, and retry the same page", async () => {
   let finish!: (page: TreeNodePage) => void;
   let calls = 0;
