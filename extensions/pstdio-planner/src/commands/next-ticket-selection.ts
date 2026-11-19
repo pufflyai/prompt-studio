@@ -42,7 +42,7 @@ export const readNextTicketSelection = async (
         not: {
           exists: {
             index: "attempt-events-workspace",
-            on: [{ sourceField: "workspaceId", relatedField: "workspaceId" }],
+            on: [{ sourceField: "attemptId", relatedField: "ownerAttemptId" }],
             where: { field: "type", op: "eq", value: "attempt_abandoned" },
           },
         },

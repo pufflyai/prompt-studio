@@ -53,6 +53,7 @@ export interface NextPageState {
   dependencies: string;
   more: boolean;
   pullRequestReads: GithubReads;
+  firstViable?: { ticket: NextTicket; waiting: WaitingTicket[]; dependencies: string };
 }
 export const visitNextTicketPage = async (
   ctx: CommandContext,
@@ -119,6 +120,10 @@ export const visitNextTicketPage = async (
     // Wake checks may search past waiting pages; keep only a bounded explanation window.
     if (waiting.length > 100) waiting.length = 100;
     if (observations.length > 100) observations.length = 100;
+    // Wake checks stop at the first viable ticket. Wider result windows must
+    // retain that same digest so unchanged work does not produce another wake.
+    if (!state.firstViable && next.length)
+      state.firstViable = { ticket: next[0]!, waiting: [...waiting], dependencies: state.dependencies };
     if (next.length >= limit) break;
   }
 };

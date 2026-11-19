@@ -6,6 +6,7 @@ import { upgradeAttemptStorage } from "./attempt-upgrade";
 import { preparePlannerIndexes } from "./storage-indexes";
 
 const attemptFields: StorageRecordIndex["fields"] = {
+  attemptId: { path: [], type: "string", derive: { kind: "collectionKey" } },
   workspaceId: { path: ["workspaceId"], type: "string" },
   ticketId: { path: ["ticketId"], type: "string" },
   implementationSessionId: { path: ["implementationSessionId"], type: "string" },
@@ -88,13 +89,34 @@ export const attemptQueryIndexes: StorageRecordIndex[] = [
     fields: {
       workspaceId: { path: ["workspaceId"], type: "string" },
       attemptId: { path: ["attemptId"], type: "string" },
+      ownerAttemptId: {
+        path: [],
+        type: "string",
+        derive: {
+          kind: "expression",
+          expression: {
+            op: "if",
+            args: [
+              {
+                op: "or",
+                args: [
+                  { op: "missing", args: [{ get: { variable: "value" }, key: "attemptId" }] },
+                  { op: "eq", args: [{ get: { variable: "value" }, key: "attemptId" }, { literal: null }] },
+                ],
+              },
+              { get: { variable: "value" }, key: "workspaceId" },
+              { get: { variable: "value" }, key: "attemptId" },
+            ],
+          },
+        },
+      },
       id: { path: ["id"], type: "string" },
       evidenceKey: { path: ["metadata", "evidenceKey"], type: "string" },
       reviewRequestId: { path: ["metadata", "reviewRequestId"], type: "string" },
       sessionId: { path: ["sessionId"], type: "string" },
       type: { path: ["type"], type: "string" },
     },
-    equality: ["workspaceId", "attemptId", "type"],
+    equality: ["workspaceId", "attemptId", "ownerAttemptId", "type"],
     orderBy: [{ field: "id", direction: "asc" }],
   },
 ];
