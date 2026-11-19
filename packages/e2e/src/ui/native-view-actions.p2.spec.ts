@@ -149,9 +149,24 @@ test("native view actions load dependent options and submit explicit values", as
     await expect(dialog.getByRole("button", { name: "Start experiment" })).toBeDisabled();
     await dialog.getByRole("button", { name: /Select locale|German|English/ }).click();
     await page.getByRole("menuitemradio", { name: "English", exact: true }).click();
+    const submission = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        response.url().includes("/commands/e2e.native-actions.command.run/execute"),
+    );
     await dialog.getByRole("button", { name: "Start experiment" }).click();
+    const response = await submission;
+    expect(response.ok()).toBe(true);
+    const { outcome } = await response.json();
+    expect(outcome.ok).toBe(true);
+    expect(outcome.value).toEqual({
+      source: "toolbar",
+      tags: ["a,b", "new,tag"],
+      search: "Ger",
+      region: "us",
+      locale: "en",
+    });
     await expect(dialog).toHaveCount(0);
-    await expect(page.getByText('toolbar: us/en ["a,b","new,tag"]', { exact: true }).last()).toBeVisible();
     await testInfo.attach(`${view}-action`, { body: await page.screenshot(), contentType: "image/png" });
   }
 });
