@@ -39,7 +39,10 @@ test("finds published artifacts as resources and opens the latest version", asyn
     const result = palette.getByText("Launch report", { exact: true });
     await expect(result).toHaveCount(1);
     await result.click();
-    await expect(page.getByRole("tab", { name: "Launch report", exact: true })).toBeVisible();
+    // Artifacts open as single-resource pages: the breadcrumb names the latest revision.
+    await expect(
+      page.getByRole("navigation", { name: "breadcrumb" }).getByRole("link", { name: "Launch report", exact: true }),
+    ).toBeVisible();
     const frame = page.frameLocator('iframe[title="Artifacts"]:visible').last();
     const preview = frame.frameLocator('iframe[title^="Preview: "]').frameLocator("iframe");
     await expect(preview.getByRole("heading", { name: "Latest report" })).toBeVisible();

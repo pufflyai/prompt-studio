@@ -57,7 +57,10 @@ test("opens note and artifact paths from chat in their own pages", async ({ page
     await expect(message.getByText("Launch report", { exact: true })).toBeVisible();
     await message.getByText("Launch report", { exact: true }).click();
     await expect(page).toHaveURL(/\/extensions\/pstdio\.artifacts\//);
-    await expect(page.getByRole("tab", { name: "Launch report" })).toBeVisible();
+    // Artifacts open as single-resource pages, so the breadcrumb names the artifact.
+    await expect(
+      page.getByRole("navigation", { name: "breadcrumb" }).getByRole("link", { name: "Launch report", exact: true }),
+    ).toBeVisible();
   } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
     rmSync(root, { recursive: true, force: true });
