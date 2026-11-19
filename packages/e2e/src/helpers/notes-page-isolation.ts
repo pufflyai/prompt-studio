@@ -38,8 +38,10 @@ export const verifyNotesPageIsolation = async (page: Page) => {
   await expect(breadcrumbs).toContainText("Notes");
   await header.getByRole("button", { name: "Page actions", exact: true }).click();
   await page.getByRole("menuitem", { name: "New note", exact: true }).click();
-  await expectNote("New note");
-  await renameSelected("Isolation second");
+  const createDialog = page.getByRole("dialog", { name: "New note", exact: true });
+  await createDialog.getByRole("textbox", { name: "Title", exact: true }).fill("Isolation second");
+  await createDialog.getByRole("button", { name: "Run", exact: true }).click();
+  await expectNote("Isolation second");
   await editor.fill(bodies.second);
   await expect(sideFirst).toBeVisible();
   await expect(notes).toHaveAttribute("aria-expanded", "true");
