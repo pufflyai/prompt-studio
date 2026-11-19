@@ -18,7 +18,7 @@ test.beforeAll(() => {
   if (!process.env.E2E_PACKAGED_BINARY_PATH) buildBinary();
 });
 
-test("Notes offers note creation and restores its Main tabs separately from Artifacts", async () => {
+test("Notes creates dedicated pages and reclaims Side views separately from Artifact tabs", async () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-notes-page-")));
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
@@ -58,11 +58,9 @@ test("Notes offers note creation and restores its Main tabs separately from Arti
     await page.keyboard.press("Alt+Shift+K");
     const palette = page.getByRole("dialog", { name: "Command palette" });
     await palette.getByRole("textbox").fill(">New note");
-    await palette.getByRole("option", { name: /New note/ }).click();
-    const main = page.locator('[data-workbench-panel="main"]');
-    await expect(main.getByRole("tab", { name: "New note", exact: true })).toBeVisible();
+    await palette.getByRole("option", { name: /New note/, selected: true }).click();
+    await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("New note");
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await main.getByRole("button", { name: "Close New note", exact: true }).click();
     await verifyNotesPageIsolation(page);
     failed = false;
   } finally {

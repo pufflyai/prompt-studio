@@ -28,12 +28,17 @@ export const verifyPackagedCollectionBreadcrumb = async (
   await page.goto(`${baseUrl}/projects/${projectId}/extensions/pstdio.artifacts/artifacts`);
   const libraryUrl = page.url();
   await page.frameLocator('iframe[title="Artifacts"]').getByText(title, { exact: true }).click();
-  const breadcrumbs = page.getByRole("navigation", { name: "breadcrumb", exact: true });
-  await expect(breadcrumbs).toHaveCount(0);
+  const breadcrumbs = page
+    .locator('[data-workbench-panel-header="main"]')
+    .getByRole("navigation", { name: "breadcrumb", exact: true });
   const tab = (region: string) =>
     page.locator(`[data-workbench-panel-header="${region}"]`).getByRole("tab", { name: title, exact: true });
   await expect(tab("main")).toHaveAttribute("aria-selected", "true");
+  await expect(
+    page.locator('[data-workbench-panel-header="main"]').getByRole("button", { name: "Switch project", exact: true }),
+  ).toBeVisible();
   await expect(page).toHaveURL((url) => url.pathname === `${new URL(libraryUrl).pathname}/view`);
+  await expect(breadcrumbs).toHaveCount(0);
   const detailUrl = page.url();
   await tab("main").focus();
   await page.keyboard.press("Shift+F10");
