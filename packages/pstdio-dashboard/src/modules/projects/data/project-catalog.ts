@@ -49,6 +49,8 @@ export const useCloudProjectCatalog = () => {
   return {
     ...catalog,
     signedIn,
+    signInRequired: Boolean(status?.signInRequired),
+    scope: JSON.stringify([String(runtime.id), login?.managerOrigin, login?.accountId, login?.deviceId]),
     accountKnown: Boolean(status),
     membershipKnown: catalog.data?.membershipKnown ?? status?.cloudProjectsLoaded,
   };

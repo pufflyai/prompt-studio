@@ -7,6 +7,7 @@ import { getAccountQuerySources } from "@/shared/extensions/account-queries";
 export interface ProjectCloudState {
   /** This device is signed in to a Cloud account. */
   signedIn: boolean;
+  membershipKnown?: boolean;
   /** The project syncs with the account. */
   cloud: boolean;
   /** Its sync state on this device, once read. */
@@ -33,6 +34,7 @@ export const useCloudProjectStates = (projectIds: string[], catalog?: CloudProje
     const deleting = deletions.has(projectId);
     return {
       signedIn,
+      membershipKnown: catalog?.membershipKnown ?? account.data?.cloudProjectsLoaded,
       cloud: Boolean(presence || deleting || index !== -1),
       sync: statuses[index]?.data,
       presence,

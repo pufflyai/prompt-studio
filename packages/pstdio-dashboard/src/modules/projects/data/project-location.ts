@@ -19,7 +19,7 @@ export const projectLocationKey = (folderPath: string | null, state: ProjectClou
     return { key: cloudLocationKey(state) } as const;
   }
   if (!folderPath) return { key: "list.noFolder" } as const;
-  return state.signedIn
+  return state.signedIn && state.membershipKnown !== false
     ? ({ key: "list.localPath", path: folderPath } as const)
     : ({ key: "path", path: folderPath } as const);
 };

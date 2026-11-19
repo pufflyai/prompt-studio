@@ -69,7 +69,10 @@ test("a removed local copy stays Cloud only until the user explicitly downloads 
     cloudDeleteCalls += 1;
     await route.abort();
   });
-  await page.route(`**${endpoint}/download`, async (route) => {
+  await page.route(`**${endpoint}/download*`, async (route) => {
+    const url = new URL(route.request().url());
+    expect(url.searchParams.get("accountId")).toBe(account.accountId);
+    expect(url.searchParams.get("managerOrigin")).toBe(account.managerOrigin);
     downloadCalls += 1;
     const restored = await request.put(`${uiOrigin}/v1/projects/${id}/environment-binding`, {
       data: { environmentId, ...initial },

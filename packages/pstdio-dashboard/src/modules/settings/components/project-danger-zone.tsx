@@ -109,7 +109,11 @@ export const ProjectDangerZone = (props: ProjectDangerZoneProps) => {
       ? observed
       : undefined;
   const project = entry ?? deletion ?? retained;
-  if (!cloud.accountKnown || (cloud.signedIn && !project && (!cloud.data || !cloud.membershipKnown)))
+  if (
+    !cloud.accountKnown ||
+    cloud.signInRequired ||
+    (cloud.signedIn && !project && (!cloud.data || !cloud.membershipKnown))
+  )
     return (
       <AlertMessage status="warning" role="status">
         {cloud.error?.message ?? "Connect to Cloud to check this project's copy before deleting it."}
