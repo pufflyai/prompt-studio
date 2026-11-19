@@ -1,5 +1,6 @@
 import { Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAgents } from "@/shared/agents/use-agents";
 import { dashboardExtensionDetailPage, dashboardExtensionsPage } from "@/shared/app/resources";
@@ -13,6 +14,7 @@ import {
 import { AvailableExtensionDetail } from "./available-extension-detail";
 import { marketplaceActionKey } from "./extension-actions";
 import { ExtensionDetailContainer } from "./extension-detail-container";
+import { defaultExtensionFilters } from "./extension-filters";
 import { ExtensionReplacementConfirmation } from "./extension-replacement-confirmation";
 import { ExtensionsPanelView } from "./extensions-panel-view";
 import { useExtensionPanelActions } from "./use-extension-panel-actions";
@@ -34,17 +36,22 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const agentsQuery = useAgents(projectId);
   const agents = projectId && agentsQuery.isSuccess ? agentsQuery.data : undefined;
   const setAutomationEnabled = useSetExtensionAutomationEnabled(projectId);
+  const [filters, setFilters] = useState(defaultExtensionFilters);
+  const returnFocusId = useRef<string | undefined>(undefined);
   const selection = settingsInput.instance.resource?.id;
   const selectedInstanceId = selectedExtension(selection, "installed");
   const selectedMarketplaceName = selectedExtension(selection, "marketplace");
-  const openList = () =>
+  const openList = () => {
     settingsInput.workbench.pageLocations.navigate({ kind: "page", page: dashboardExtensionsPage });
-  const openDetail = (id: string, displayName: string) =>
+  };
+  const openDetail = (id: string, displayName: string) => {
+    returnFocusId.current = id;
     settingsInput.workbench.pageLocations.navigate({
       kind: "page",
       page: dashboardExtensionDetailPage,
       resource: { type: "extension", extensionId: "pstdio", id, label: displayName },
     });
+  };
   const actions = useExtensionPanelActions(projectId, extensionsQuery.data?.upgradeConcurrency);
   const replacementDialog = settingsInput.visible !== false && (
     <ExtensionReplacementConfirmation replacement={actions.replacement} onClose={() => actions.setReplacement(null)} />
@@ -122,6 +129,7 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
             actions.dismiss(marketplaceActionKey(selectedMarketplace.installName), expected)
           }
           onRetryAction={() => actions.retry(marketplaceActionKey(selectedMarketplace.installName))}
+          onBack={openList}
           onInstall={() => void actions.handleInstall(selectedMarketplace)}
         />
       </>
@@ -133,6 +141,13 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       {replacementDialog}
       <ExtensionsPanelView
         projectId={projectId}
+        filters={filters}
+        onFiltersChange={setFilters}
+        rowRef={(id, node) => {
+          if (!node || returnFocusId.current !== id) return;
+          returnFocusId.current = undefined;
+          node.focus();
+        }}
         extensions={extensions}
         marketplace={marketplace}
         diagnostics={metadataQuery.data?.diagnostics ?? []}

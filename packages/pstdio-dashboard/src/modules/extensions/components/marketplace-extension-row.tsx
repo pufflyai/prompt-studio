@@ -5,10 +5,11 @@ import { useTranslation } from "react-i18next";
 import { ExtensionActionButton } from "./extension-action-button";
 import type { ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionIcon } from "./extension-icon";
-import { ExtensionProvenance } from "./extension-provenance";
+import { ExtensionAuthorBadge } from "./extension-labels";
 
 interface MarketplaceExtensionRowProps {
   extension: MarketplaceExtension;
+  rowRef?: (node: HTMLDivElement | null) => void;
   action?: ExtensionActionState;
   onDismissAction?: (action: ExtensionActionState) => void;
   onRetryAction?: () => void;
@@ -22,7 +23,9 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
 
   return (
     <HStack
+      ref={props.rowRef}
       data-testid="marketplace-extension-entry"
+      flexWrap={{ base: "wrap", md: "nowrap" }}
       gap="md"
       paddingX="lg"
       paddingY="sm"
@@ -35,7 +38,10 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
       onClick={onOpen}
       onKeyDown={(event) => {
         if (event.currentTarget !== event.target) return;
-        if (event.key === "Enter" || event.key === " ") onOpen();
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen();
+        }
       }}
     >
       <Flex
@@ -51,19 +57,22 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
       >
         <ExtensionIcon name={extension.icon} />
       </Flex>
-      <Stack gap="0" flex="1" minW="0">
+      <Stack gap="0" flex="1" minW="0" flexBasis={{ base: "60%", md: "0" }}>
         <Text textStyle="label/S/medium" truncate>
           {extension.displayName}
         </Text>
         <Text textStyle="label/XS" color="fg.muted" truncate>
           {extension.description}
         </Text>
-        <ExtensionProvenance extension={extension} />
         <Text textStyle="label/XS" color="fg.subtle" fontFamily="mono" truncate>
           {extension.publisher ? `${extension.publisher} · ` : ""}
           {extension.origin.url}@{extension.origin.ref}#{extension.origin.path}
         </Text>
       </Stack>
+      <Box w={{ md: "28" }} maxW="full" minW="0">
+        <ExtensionAuthorBadge author={extension.author} />
+      </Box>
+      <Box w="28" display={{ base: "none", md: "block" }} />
       <Box onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
         <ExtensionActionButton
           variant="outline"

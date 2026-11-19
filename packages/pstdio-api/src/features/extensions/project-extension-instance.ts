@@ -13,6 +13,15 @@ const publicExtensionIds = new Set(
 export const publicExtensionVisibility = (extensionId: string | undefined) =>
   extensionId && publicExtensionIds.has(canonicalExtensionId(extensionId)) ? ("public" as const) : ("unknown" as const);
 
+export const extensionSourceAuthor = (extensionId: string, sourceKind: string) => {
+  const id = canonicalExtensionId(extensionId);
+  // A checkout of a bundled first-party extension retains its publisher identity.
+  if (id.startsWith("pstdio.") && publicExtensionIds.has(id))
+    return { kind: "publisher" as const, publisher: "pstdio" };
+  if (sourceKind === "local_path") return { kind: "self" as const };
+  return { kind: "publisher" as const, publisher: id.split(".")[0]! };
+};
+
 type InstanceLike = {
   id: string;
   scope_id: string;
@@ -107,6 +116,7 @@ export const toProjectExtensionInstance = (
     icon: instanceIcon(installedSource, manifest.icon),
     sourcePath: installedSource.source_path,
     scope: sourceScope(installedSource.source_path),
+    author: extensionSourceAuthor(installedSource.extension_id, installedSource.source_kind),
     ownership: installedSource.source_kind === "local_path" ? "mine" : "unknown",
     visibility: publicExtensionVisibility(installedSource.extension_id),
     status: incompatible ? "error" : installedSource.status,
