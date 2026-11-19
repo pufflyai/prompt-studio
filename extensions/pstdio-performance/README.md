@@ -31,7 +31,9 @@ Only the workbench is scanned; extension frames and other windows are separate. 
 
 ## For agents
 
-Agents read the same measurements without this extension's views:
+To investigate repeated workbench renders, enable **Highlight React renders** in the Performance popover, close it, and reproduce the interaction. Turn highlighting off when finished. The overlay is visual; the CLI snapshot and saved recordings contain device measurements, without component render counts or rankings.
+
+Run these supported commands on the same device as the desktop app to read its measurements without this extension's views:
 
 ```sh
 pst performance
