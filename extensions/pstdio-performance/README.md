@@ -20,9 +20,14 @@ Monitoring runs while this extension is enabled. Disable the extension to stop i
 
 - **Status bar meter**: the last 12 seconds of frame rate, the current fps, and, in the desktop app, the backend's recent response times, CPU and memory. **Reconnecting** replaces the response time while the backend does not answer. The meter shows **Off** while monitoring is off; select it to find the switch.
 - **Details**: select the meter to see the frame rate, aligned response-time, CPU and memory charts for the backend and the workbench, and the CPU of each extension process. Pause an extension's views from its row, and copy the current snapshot as JSON with the copy button.
-- **Backend diagnostics**: choose 1–60 seconds (default 15), then **Record CPU** for a sampled CPU profile or **Count calls** for precise function-call coverage. Read status, backend hostname/PID, elapsed time and frequent functions. Cancel active work or copy a completed result as JSON. These captures describe the backend, including a remote backend, rather than the desktop renderer.
 
 Missing readings are shown as unavailable, never as zero. Memory uses the most precise measurement the platform reports; hover the memory values to see which one. See the [Developer tools guide](../../documentation/guides/0003-developer-tools.md) for every field and limit.
+
+## React Scan
+
+Open the Performance popover and enable **Highlight React renders**. Close the popover to use the workbench while React Scan highlights renders. Reopen it to turn highlighting off. The choice belongs to this window, starts off after reload, and stops when monitoring is disabled.
+
+Only the workbench is scanned; extension frames and other windows are separate. Unsupported hosts show an unavailable control. Production names may be shortened. Scanning adds overhead, and its early hook and idle infrastructure remain after pausing. It does not diagnose backend work or add render details to copied snapshots.
 
 ## For agents
 
@@ -33,7 +38,7 @@ pst performance
 pst performance recordings /absolute/path/to/performance-recordings
 ```
 
-Backend diagnostics have the same actions and capture IDs in the panel and CLI. Use a linked project with this extension enabled:
+Backend diagnostics are available through the CLI. Use a linked project with this extension enabled:
 
 ```sh
 pst pstdio.performance diagnostics start --kind cpu --seconds 15
