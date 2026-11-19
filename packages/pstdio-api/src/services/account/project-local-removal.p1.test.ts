@@ -41,11 +41,13 @@ test("an offline saved roster cannot authorize deletion of a project another dev
   const id = crypto.randomUUID();
   let enabled = false;
   let offline = false;
+  let revoked = false;
   const manager = Bun.serve({
     hostname: "127.0.0.1",
     port: 0,
     fetch(input) {
       const path = new URL(input.url).pathname;
+      if (revoked) return Response.json({ error: "Device removed" }, { status: 401 });
       if (offline) return Response.json({ error: "offline" }, { status: 503 });
       if (path === "/v1/account") return Response.json({ features: { relay: true } });
       if (path === "/v1/workbenches") return Response.json(enabled ? [{ workbenchId: id }] : []);
@@ -84,6 +86,12 @@ test("an offline saved roster cannot authorize deletion of a project another dev
     expect(await host.deps.projectService.get(id)).not.toBeNull();
     expect(await readFile(file.storage_path, "utf8")).toBe("Unpublished work");
     expect((await host.deps.accountService.status()).cloudProjectsLoaded).toBe(false);
+    offline = false;
+    revoked = true;
+    expect((await host.app.request(`/v1/projects/${id}`, { method: "DELETE" })).status).toBe(409);
+    expect(await host.deps.accountService.status()).toMatchObject({ login: null, signInRequired: true });
+    expect(await host.deps.projectService.get(id)).not.toBeNull();
+    expect(await readFile(file.storage_path, "utf8")).toBe("Unpublished work");
   } finally {
     try {
       await settleCleanup([host?.close(), manager.stop(true)]);
