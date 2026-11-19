@@ -86,6 +86,9 @@ const matchesCatalogOrigin = (
   source: ReturnType<typeof parseExtensionSourceRef>,
 ) => !entry || !source || (entry.origin.url === source.url && entry.origin.path === source.path);
 
+const upgradeRef = (entry: ExtensionCatalogEntry | undefined, release: ExtensionRelease | null) =>
+  entry && entry.origin.ref !== "{hostRelease}" ? entry.origin.ref : release?.ref;
+
 const releaseCommitKey = (origin: { url: string; path: string }, ref: string) =>
   `${origin.url}\0${origin.path}\0${ref}`;
 
@@ -97,8 +100,8 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const previewSources = new Map<string, ReturnType<typeof install>>();
   const catalogEntry = async (installName: string) => selectExtensionCatalogEntry(await catalog, installName);
   const releaseRefFor = (entry: ExtensionCatalogEntry) => {
-    if (entry.origin.ref !== "{hostRelease}") return entry.origin.ref;
-    if (deps.release) return deps.release.ref;
+    const ref = upgradeRef(entry, deps.release);
+    if (ref !== undefined) return ref;
     throw new ExtensionUpgradeUnavailableError("This extension requires a Prompt Studio host release ref.");
   };
   const currentReleaseCommit = (origin: { url: string; path: string }, releaseRef: string) => {
@@ -125,24 +128,13 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     if (!entry || !parsed || !version || !matchesCatalogOrigin(entry, parsed)) return false;
     return registry.canUpgradeCatalog(entry, version);
   };
-  const upgradeRef = (entry: ExtensionCatalogEntry | undefined) => {
-    try {
-      return entry ? releaseRefFor(entry) : deps.release?.ref;
-    } catch {
-      return undefined;
-    }
-  };
-  const canUpgrade = async (source: UpgradeSource) => {
-    if (registry.matches(source)) return registry.canUpgrade(source);
-    const entry = await catalogEntry(source.install_name);
-    const parsed = parseExtensionSourceRef(source.source_ref);
-    if (deps.release?.source === "registry") return canMoveToRegistry(entry, parsed, source.version);
-    if (!entry && !parsed) return false;
-    if (!matchesCatalogOrigin(entry, parsed)) return false;
-    const releaseRef = upgradeRef(entry);
-    if (!releaseRef) return false;
-    const origin = parsed ?? entry?.origin;
-    const bundled = origin && (await findBundledExtensionSource(origin, releaseRef));
+  const canUpgradeGitSource = async (
+    source: UpgradeSource,
+    parsed: ReturnType<typeof parseExtensionSourceRef>,
+    origin: { url: string; path: string },
+    releaseRef: string,
+  ) => {
+    const bundled = await findBundledExtensionSource(origin, releaseRef);
     if (bundled && source.version && Bun.semver.order(bundled.version, source.version) < 0) return false;
     if (parsed?.commit === (bundled?.commit ?? releaseRef.toLowerCase())) return false;
     if (!bundled && deps.release?.source !== "workspace" && !(await isGitAvailable())) return false;
@@ -153,6 +145,16 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
       // Keep the recovery action available when the release ref cannot be checked yet.
       return !(error instanceof GitUnavailableError);
     }
+  };
+  const canUpgrade = async (source: UpgradeSource) => {
+    if (registry.matches(source)) return registry.canUpgrade(source);
+    const entry = await catalogEntry(source.install_name);
+    const parsed = parseExtensionSourceRef(source.source_ref);
+    if (deps.release?.source === "registry") return canMoveToRegistry(entry, parsed, source.version);
+    const origin = parsed ?? entry?.origin;
+    const releaseRef = upgradeRef(entry, deps.release);
+    if (!origin || !releaseRef || !matchesCatalogOrigin(entry, parsed)) return false;
+    return canUpgradeGitSource(source, parsed, origin, releaseRef);
   };
 
   const requireCatalogEntry = async (installName: string) => {
@@ -251,13 +253,14 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     if (!registrySource && !(await canUpgrade(existing.installedSource)))
       throw new ExtensionUpgradeUnavailableError("This extension is already up to date.");
     const repoPath = await repoForSource(deps, projectId, existing.installedSource.source_path);
+    const upgradeFromVersion = existing.installedSource.version ?? null;
     let installed: Awaited<ReturnType<typeof install>>;
     if (registrySource) {
       installed = await install({
         source: registrySource.id,
         registrySource,
         installedSourcePath: existing.installedSource.source_path,
-        upgradeFromVersion: existing.installedSource.version ?? null,
+        upgradeFromVersion,
         installName: existing.installedSource.install_name,
         force: true,
         retainBackup: true,
@@ -268,7 +271,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
         existing.installedSource.install_name,
         existing.installedSource.extension_id,
         existing.installedSource.source_path,
-        existing.installedSource.version ?? null,
+        upgradeFromVersion,
         repoPath,
       );
     } else if (parsed && deps.release?.ref) {
@@ -279,7 +282,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
         origin,
         identity: existing.installedSource.extension_id,
         installedSourcePath: existing.installedSource.source_path,
-        upgradeFromVersion: existing.installedSource.version ?? null,
+        upgradeFromVersion,
         repoPath,
       });
     } else {
