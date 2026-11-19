@@ -184,16 +184,18 @@ try {
   });
   await attempt("timeline-browser-move", async () => {
     const frame = page.frameLocator("iframe"),
-      cards = frame.getByTestId("renderer-card");
-    const text = await cards.nth(1).innerText(),
-      match = text.match(/Scale ticket (\d{5})/);
-    assert.ok(match);
-    const source = ids[Number(match[1])];
+      source = ids[1];
+    const order = (value: any) => value.sections.flatMap((s: any) => s.rows.map((r: any) => r.id));
+    const before = order(await planner("timeline.plan.read", { page: pageRequest() }));
+    assert.equal(before.indexOf(ids[1]), before.indexOf(ids[0]) + 1);
     const moved = page.waitForResponse((reply: any) =>
       reply.url().endsWith("pstdio.planner.command.timeline.plan.move/execute"),
     );
     await measure("timeline-browser-drag", async () => {
-      await cards.nth(1).dragTo(cards.first());
+      await frame
+        .locator(`[data-ticket="${ids[1]}"]`)
+        .getByTestId("renderer-card")
+        .dragTo(frame.locator(`[data-ticket="${ids[0]}"]`).getByTestId("renderer-card"));
       const reply = await moved;
       assert.ok(reply.ok());
       const result = await reply.json();
@@ -202,6 +204,11 @@ try {
     });
     evidence.browserTimelineMoved = source;
     await page.screenshot({ path: join(output, "timeline-after-drag.png"), fullPage: true });
+    const after = order(await planner("timeline.plan.read", { page: pageRequest() }));
+    assert.ok(after.indexOf(ids[1]) < after.indexOf(ids[0]));
+    await planner("timeline.plan.move", { ticket: ids[0], before: ids[1] });
+    assert.deepEqual(order(await planner("timeline.plan.read", { page: pageRequest() })), before);
+    evidence.browserDragStateRestored = true;
   });
   await attempt("timeline-pages", async () => {
     const first = await measure("timeline-first-page", () => planner("timeline.plan.read", { page: pageRequest() }));
@@ -223,6 +230,7 @@ try {
     evidence.timeline = { first: first.page, next: next.page };
   });
   await attempt("timeline-move-unloaded", async () => {
+    assert.equal(evidence.browserDragStateRestored, true, "Skip mutation because prior fixture restore is unverified");
     const before = await planner("timeline.plan.read", { ticketId: ids[4998] });
     const deadline = await planner("timeline.deadline.create", { date: "2027-01-15", name: "Demo milestone" });
     await measure("timeline-move-late", () =>
@@ -242,6 +250,11 @@ try {
     for (const key of ["id", "title", "deadlineId", "status"])
       assert.deepEqual(sentinel(after)[key], sentinel(before)[key]);
     evidence.timelineMove = { moved: ids[4999], untouched: ids[4998] };
+    await planner("timeline.plan.move", { ticket: ids[4999], deadline: "none" });
+    await planner("timeline.deadline.delete", { deadline: deadline.id });
+    const restored = await planner("timeline.plan.read", { ticketId: ids[4999] });
+    assert.ok(restored.sections.some((s: any) => !s.deadline && s.rows.some((r: any) => r.id === ids[4999])));
+    evidence.lateMoveStateRestored = true;
   });
   await attempt("foobar-defaults", async () => {
     await measure("foobar-browser", async () => {
@@ -259,8 +272,18 @@ try {
     await page.getByRole("button", { name: "Ordering", exact: true }).click();
     await page.getByRole("menuitem", { name: "Title", exact: true }).click();
     await page.getByRole("button", { name: "Sort direction", exact: true }).click();
+    const sorted = page.waitForResponse(
+      (reply: any) =>
+        reply.url().endsWith(`${foobarCommand}/execute`) &&
+        reply.request().postDataJSON()?.params?.sorts?.[0]?.direction === "desc",
+    );
     await page.getByRole("menuitem", { name: /Z.*A|Descending/ }).click();
+    assert.ok((await sorted).ok());
     await page.getByRole("button", { name: "Display settings" }).click();
+    await page.waitForFunction(() =>
+      document.querySelector('[data-testid="renderer-card"]')?.textContent?.includes("Foobar 04999"),
+    );
+    await page.screenshot({ path: join(output, "foobars-filtered-sorted.png"), fullPage: true });
     await page.screenshot({ path: join(output, "foobars-filtered-sorted.png"), fullPage: true });
     const first = await measure("foobar-default-page", () => execute(foobarCommand));
     assert.equal(first.rows.length, 100);
@@ -278,6 +301,7 @@ try {
     evidence.foobar = { first: first.page, filtered: filtered.page };
   });
   await attempt("bulk-archive-unloaded", async () => {
+    assert.equal(evidence.lateMoveStateRestored, true, "Skip mutation because prior fixture restore is unverified");
     const untouched = await planner("get-ticket", { id: ids[4998] });
     await page.goto(boardUrl, { waitUntil: "commit" });
     const box = page.getByRole("textbox", { name: "Search this view" });

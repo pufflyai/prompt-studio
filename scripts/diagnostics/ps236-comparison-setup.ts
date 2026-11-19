@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpus, totalmem } from "node:os";
 import { join, resolve } from "node:path";
 
 const [appArgument, stack, variant, browserTools] = process.argv.slice(2);
@@ -22,7 +23,15 @@ const shell = (args: string[], cwd = app) => {
   return result.stdout.trim();
 };
 evidence.source = shell(["git", "rev-parse", "HEAD"]);
-evidence.environment = { platform: process.platform, arch: process.arch, node: process.version, bun: Bun.version };
+evidence.environment = {
+  platform: process.platform,
+  arch: process.arch,
+  node: process.version,
+  bun: Bun.version,
+  cpu: cpus()[0]?.model,
+  cores: cpus().length,
+  ramBytes: totalmem(),
+};
 const connection = JSON.parse(
   readFileSync(join(app, "__test-tmp__", "dev-isolated", stack!, "connection.json"), "utf8"),
 );
@@ -36,7 +45,7 @@ const request = async (path: string, body?: unknown, allowance = 30_000) => {
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     signal: AbortSignal.timeout(allowance),
   });
-  assert.ok(response.ok, `${path}: ${response.status} ${(await response.clone().text()).slice(0, 200)}`);
+  if (!response.ok) throw new Error(`${path}: ${response.status} ${(await response.text()).slice(0, 200)}`);
   return response.json();
 };
 const projects = await request("/v1/projects");
@@ -45,7 +54,7 @@ assert.ok(project);
 evidence.project = project.id;
 const execute = async (id: string, params = {}, allowance = 30_000) => {
   const result = await request(`/v1/projects/${project.id}/extensions/commands/${id}/execute`, { params }, allowance);
-  assert.equal(result.outcome?.status, "success", JSON.stringify(result.outcome));
+  if (result.outcome?.status !== "success") throw new Error(JSON.stringify(result.outcome));
   return result.outcome.value;
 };
 const planner = (name: string, params = {}) => execute(`pstdio.planner.command.${name}`, params);
@@ -56,11 +65,23 @@ const measurements = evidence.measurements as unknown[];
 const measure = async <T>(name: string, run: () => Promise<T>) => {
   const before = await counters(),
     started = performance.now();
-  const value = await run();
-  const ms = performance.now() - started;
-  measurements.push({ name, ms, counters: delta(before, await counters()) });
-  save();
-  return value;
+  let outcome = "passed";
+  try {
+    return await run();
+  } catch (error) {
+    outcome = String(error);
+    throw error;
+  } finally {
+    const ms = performance.now() - started;
+    let observed: unknown;
+    try {
+      observed = delta(before, await counters());
+    } catch (error) {
+      observed = { error: String(error) };
+    }
+    measurements.push({ name, ms, outcome, counters: observed });
+    save();
+  }
 };
 
 const setupStart = performance.now();
@@ -137,6 +158,33 @@ for (let start = 0; start < 5000; start += 100) {
   save();
 }
 evidence.foobarSeedMs = performance.now() - foobarSeedStart;
+const prepareStart = performance.now();
+await execute(
+  "pstdio.planner.command.timeline.plan.read",
+  { page: { limit: 0, offset: 0, search: "", fields: [] } },
+  20 * 60_000,
+);
+evidence.timelinePreparationMs = performance.now() - prepareStart;
+// Restart this disposable runtime after index/placement preparation; no view is prewarmed.
+const priorToken = connection.apiToken,
+  restartStart = performance.now();
+shell(["docker", "restart", container]);
+let restarted = false;
+while (performance.now() - restartStart < 5 * 60_000) {
+  try {
+    const descriptor = JSON.parse(readFileSync(join(connection.pstdioHome, "runtime.json"), "utf8"));
+    if (descriptor.token !== priorToken) {
+      headers.authorization = `Bearer ${descriptor.token}`;
+      await request("/runtime/ready");
+      restarted = true;
+      break;
+    }
+  } catch {}
+  await Bun.sleep(1000);
+}
+assert.ok(restarted, "Owned runtime did not restart within its existing five-minute setup allowance");
+evidence.preparedRuntimeRestartMs = performance.now() - restartStart;
+save();
 
 export {
   app,
