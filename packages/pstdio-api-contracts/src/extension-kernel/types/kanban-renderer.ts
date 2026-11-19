@@ -90,6 +90,8 @@ export interface KanbanRendererSavedView {
 }
 
 export interface KanbanRendererQueryParams {
+  /** Return all current attributes and options. The host ignores rows. Only sent to opted-in providers. */
+  fieldsOnly?: true;
   /** Present for queryMode: "paged". Apply all view controls before selecting these rows. */
   page?: CollectionPageRequest;
   renderer: RendererContext;
@@ -176,6 +178,8 @@ export interface KanbanRendererMove {
 }
 
 export interface KanbanRendererContribution extends RendererContributionBase {
+  /** Accept fieldsOnly queries for saved view validation. Paged providers still return valid page metadata. */
+  supportsFieldsOnly?: boolean;
   /** Opt in to bounded provider-owned filtering, sorting, search and paging. */
   queryMode?: "paged" | "static";
   /** Required for static providers: an explicit maximum, at most 500 rows. */
