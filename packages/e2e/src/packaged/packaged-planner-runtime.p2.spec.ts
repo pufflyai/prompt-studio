@@ -195,6 +195,36 @@ const expectAutoBuildFilter = async (timeline: FrameLocator) => {
   await autoBuild.getByRole("button", { name: "Cancel", exact: true }).click();
 };
 
+const expectCachedPlannerRecovery = async (page: Page, host: Host, projectId: string) => {
+  // An asset request republishes a module that disappeared while its signature remained.
+  rmSync(join(timelineCache(host), "module.js"));
+  expect(await moduleStatus(host, projectId, "timeline")).toEqual({ status: 200, body: "" });
+  expect(await moduleStatus(host, projectId, "ticket-tags-settings")).toEqual({ status: 200, body: "" });
+  rmSync(join(timelineCache(host), ".."), { recursive: true });
+  expect(await moduleStatus(host, projectId, "timeline")).toEqual({ status: 200, body: "" });
+
+  // A failed candidate reports its build error while the accepted view remains usable.
+  // Reload, not the file watcher, decides when the repaired version is adopted.
+  const entry = join(host.home, "extensions", "pstdio-planner", "src", "timeline", "view", "entry.tsx");
+  const original = readFileSync(entry, "utf8");
+  const acceptedView = await plannerWebview(host, projectId, "timeline");
+  const acceptedModule = await (await fetch(`${host.baseUrl}${acceptedView!.moduleUrl}`)).text();
+  writeFileSync(entry, `${original}\nexport const broken = ;\n`);
+  expect(await reloadPlanner(host, projectId)).toMatchObject({
+    status: "error",
+    lastError: { code: "extension_webview_build_failed" },
+  });
+  const webview = await plannerWebview(host, projectId, "timeline");
+  const workingModule = await fetch(`${host.baseUrl}${webview!.moduleUrl}`);
+  expect(workingModule.status).toBe(200);
+  expect(await workingModule.text()).toBe(acceptedModule);
+  const timeline = await openTimeline(page, host, projectId);
+  await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible({ timeout: 30_000 });
+  writeFileSync(entry, original);
+  expect(await reloadPlanner(host, projectId)).toMatchObject({ status: "loaded", lastError: null });
+  await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible({ timeout: 30_000 });
+};
+
 browserTest("serves populated Planner projects and recovers cached webviews", async () => {
   // Two project installs, populated migrations and repeated cold module rebuilds share this allowance.
   test.setTimeout(300_000);
@@ -372,33 +402,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     await expect(timeline.getByText("Platform", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
 
     phase("reload complete; asset recovery start");
-    // An asset request republishes a module that disappeared while its signature remained.
-    rmSync(join(timelineCache(host), "module.js"));
-    expect(await moduleStatus(host, valid.id, "timeline")).toEqual({ status: 200, body: "" });
-    expect(await moduleStatus(host, valid.id, "ticket-tags-settings")).toEqual({ status: 200, body: "" });
-    rmSync(join(timelineCache(host), ".."), { recursive: true });
-    expect(await moduleStatus(host, valid.id, "timeline")).toEqual({ status: 200, body: "" });
-
-    // A failed candidate reports its build error while the accepted view remains usable.
-    // Reload, not the file watcher, decides when the repaired version is adopted.
-    const entry = join(home, "extensions", "pstdio-planner", "src", "timeline", "view", "entry.tsx");
-    const original = readFileSync(entry, "utf8");
-    const acceptedView = await plannerWebview(host, valid.id, "timeline");
-    const acceptedModule = await (await fetch(`${host.baseUrl}${acceptedView!.moduleUrl}`)).text();
-    writeFileSync(entry, `${original}\nexport const broken = ;\n`);
-    expect(await reloadPlanner(host, valid.id)).toMatchObject({
-      status: "error",
-      lastError: { code: "extension_webview_build_failed" },
-    });
-    const webview = await plannerWebview(host, valid.id, "timeline");
-    const workingModule = await fetch(`${host.baseUrl}${webview!.moduleUrl}`);
-    expect(workingModule.status).toBe(200);
-    expect(await workingModule.text()).toBe(acceptedModule);
-    timeline = await openTimeline(page, host, valid.id);
-    await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible({ timeout: 30_000 });
-    writeFileSync(entry, original);
-    expect(await reloadPlanner(host, valid.id)).toMatchObject({ status: "loaded", lastError: null });
-    await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible({ timeout: 30_000 });
+    await expectCachedPlannerRecovery(page, host, valid.id);
     phase("checks complete");
   } catch (error) {
     console.error(`Planner runtime: exit=${child?.exitCode}, signal=${child?.signalCode}`);
