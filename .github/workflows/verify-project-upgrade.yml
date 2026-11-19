@@ -38,115 +38,20 @@ permissions:
   contents: read
   actions: read
 jobs:
-  pair:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      to: ${{ steps.select.outputs.to }}
-      run: ${{ steps.select.outputs.run }}
-      platforms: ${{ steps.select.outputs.platforms }}
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ github.workflow_sha }}
-          fetch-depth: ${{ inputs.ref != '' && 1 || 0 }}
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-      - name: Freeze the published baseline and target revision
-        id: select
-        env:
-          GH_TOKEN: ${{ github.token }}
-          FROM_TAG: ${{ inputs.from_tag }}
-          CANDIDATE_REF: ${{ inputs.ref }}
-          INCLUDE_PREVIOUS_NIGHTLY: ${{ inputs.include_previous_nightly }}
-          PRODUCER_RUN: ${{ inputs.artifact_run_id }}
-          BUILD_ID: ${{ inputs.build_artifact_id }}
-          MANIFEST_ID: ${{ inputs.candidate_artifact_id }}
-        run: |
-          set -euo pipefail
-          from="${FROM_TAG:-$(gh release view --json tagName --jq .tagName)}"
-          [[ "$from" =~ ^pstdio@[0-9]+\.[0-9]+\.[0-9]+$ ]]
-          to="${CANDIDATE_REF:-1499cdb507c55c363bf4bd83636fec95be62721b}"
-          [[ "$to" =~ ^[a-f0-9]{40}$ ]]
-          if [[ -n "$PRODUCER_RUN" ]]; then
-            [[ "$CANDIDATE_REF" =~ ^[a-f0-9]{40}$ ]]
-            # A release call must use an immutable artifact, never the manual source-build path.
-            [[ "$BUILD_ID$MANIFEST_ID" =~ ^[0-9]+$ && ( -z "$BUILD_ID" || -z "$MANIFEST_ID" ) ]]
-          fi
-          run=true
-          if [[ -z "${CANDIDATE_REF:-}" ]]; then
-            baseline_commit=$(git rev-parse --verify "refs/tags/$from^{commit}")
-            if git merge-base --is-ancestor "$to" "$baseline_commit"; then
-              run=false
-              echo "Current main is already included in $from." >> "$GITHUB_STEP_SUMMARY"
-            fi
-          fi
-          platforms=$(bun -e 'import { projectUpgradePlatforms } from "./scripts/ci/production-candidate"; console.log(JSON.stringify(projectUpgradePlatforms()))')
-          baselines=$(jq -cn --arg stable "$from" '[$stable]')
-          if [[ "$INCLUDE_PREVIOUS_NIGHTLY" == "true" ]]; then
-            previous=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/releases?per_page=100" |
-              jq -r '[.[][] | select(.prerelease and (.draft | not)) | select(.tag_name | test("^pstdio@[0-9]+\\.[0-9]+\\.[0-9]+-nightly\\.[0-9]+$"))] | max_by(.published_at).tag_name // empty')
-            if [[ -n "$previous" ]]; then
-              baselines=$(jq -c --arg tag "$previous" '. + [$tag]' <<< "$baselines")
-            fi
-          fi
-          platforms=$(jq -c --argjson tags "$baselines" '[.[] as $p | $tags[] | $p + {from: .}]' <<< "$platforms")
-          {
-            echo "to=$to"
-            echo "run=$run"
-            echo "platforms=$platforms"
-          } >> "$GITHUB_OUTPUT"
-          echo "Project upgrade $baselines → $to" >> "$GITHUB_STEP_SUMMARY"
-  version_manual:
-    needs: pair
-    if: inputs.ref == '' && needs.pair.outputs.run == 'true'
-    runs-on: ubuntu-24.04
-    outputs:
-      artifact_id: ${{ steps.source.outputs.artifact-id }}
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ needs.pair.outputs.to }}
-          fetch-depth: 0
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "26.7.0"
-      - run: bun scripts/ci/install-native-dependencies.ts
-      - name: Version one disposable candidate for all platforms
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          PSTDIO_STABLE_TAG=$(gh release view --json tagName --jq .tagName)
-          export PSTDIO_STABLE_TAG
-          bun run --cwd scripts release:version --nightly
-          git add -A
-          git -c user.name=validation -c user.email=validation@localhost commit -m "Version disposable upgrade candidate"
-          git bundle create "$RUNNER_TEMP/candidate.bundle" HEAD ^HEAD^
-      - uses: actions/upload-artifact@v4
-        id: source
-        with:
-          name: manual-upgrade-source-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/candidate.bundle
   upgrade:
-    needs: [pair, version_manual]
-    if: >-
-      !cancelled() && needs.pair.result == 'success' && needs.pair.outputs.run == 'true' &&
-      (needs.version_manual.result == 'success' || (inputs.ref != '' && needs.version_manual.result == 'skipped'))
     name: Project upgrade (${{ matrix.from }} → ${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.pair.outputs.platforms) }}
+        include:
+          - from: pstdio@0.48.0-nightly.20261119040652
+            target: linux-x64
+            os: ubuntu-24.04
     env:
       FROM_TAG: ${{ matrix.from }}
-      CANDIDATE_REF: ${{ needs.pair.outputs.to }}
+      CANDIDATE_REF: 1499cdb507c55c363bf4bd83636fec95be62721b
       TARGET: ${{ matrix.target }}
       SOURCE_SHA: ${{ inputs.source_sha }}
     steps:
@@ -162,23 +67,8 @@ jobs:
       - name: Check out the frozen candidate
         uses: actions/checkout@v5
         with:
-          ref: ${{ needs.pair.outputs.to }}
+          ref: e5fc4b1fdc90209e5c5632d7af1238501c9e5f3e
           path: __test-tmp__/upgrade-candidate
-      - name: Download the shared manual candidate
-        if: inputs.ref == ''
-        uses: actions/download-artifact@v4
-        with:
-          artifact-ids: ${{ needs.version_manual.outputs.artifact_id }}
-          merge-multiple: true
-          path: ${{ runner.temp }}
-      - name: Apply the nightly versions to the frozen main source
-        if: inputs.ref == ''
-        working-directory: __test-tmp__/upgrade-candidate
-        run: |
-          set -euo pipefail
-          git fetch "$RUNNER_TEMP/candidate.bundle" HEAD
-          test "$(git rev-parse FETCH_HEAD^)" = "$CANDIDATE_REF"
-          git checkout --detach FETCH_HEAD
       - name: Use the candidate's recorded Bun version
         uses: oven-sh/setup-bun@v2
         with:
@@ -195,7 +85,7 @@ jobs:
         if: inputs.ref == ''
         working-directory: __test-tmp__/upgrade-candidate
         env:
-          PSTDIO_EXTENSION_RELEASE_REF: ${{ needs.pair.outputs.to }}
+          PSTDIO_EXTENSION_RELEASE_REF: 1499cdb507c55c363bf4bd83636fec95be62721b
         run: |
           set -euo pipefail
           bun run build -- --scope pstdio --include-dependencies
@@ -252,7 +142,7 @@ jobs:
           echo "CANDIDATE_BINARY=$PWD/$binary" >> "$GITHUB_ENV"
       - name: Install Chromium for the upgraded workbench
         working-directory: packages/e2e
-        run: bun x --no-install playwright install chromium --with-deps --no-shell
+        run: bun x --no-install playwright install chromium --no-shell
       - name: Upgrade both populated projects
         run: |
           bun --no-env-file packages/e2e/src/packaged/project-upgrade.ts \
