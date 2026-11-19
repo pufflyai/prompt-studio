@@ -46,7 +46,8 @@
     "storage-scale-fixture",
     "canvas-tests",
     "pstdio-theme",
-    "design-studies"
+    "design-studies",
+    "remote-testing"
   ],
   "snapshot": {
     "useCalculatedVersion": true,
