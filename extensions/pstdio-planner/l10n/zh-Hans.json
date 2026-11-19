@@ -67,5 +67,7 @@
   "commands.requestReview.title": "请求审核",
   "commands.requestReview.description": "创建审核请求，并将工单标记为需要关注。",
   "commands.cleanupBoard.title": "清理看板",
-  "commands.cleanupBoard.model": "模型"
+  "commands.cleanupBoard.model": "模型",
+  "activity.context": "读取活动上下文",
+  "activity.migrate": "将历史结果移至工单活动"
 }

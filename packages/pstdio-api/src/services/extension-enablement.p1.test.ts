@@ -102,6 +102,7 @@ test("a required provider wins when it appears while an optional copy is being e
     },
     installedExtensionSourcesService: sources,
     emitExtensionInstance: () => {},
+    onDefaultAdopted: async () => {},
   });
 
   const optionalClaim = enablement.setProjectExtensionEnabled(optional.id, true);
@@ -114,4 +115,37 @@ test("a required provider wins when it appears while an optional copy is being e
 
   expect((await instances.get(required.id))?.enabled).toBe(true);
   expect((await instances.get(optional.id))?.enabled).toBe(false);
+});
+
+test("a saved disable skips default adoption before resource-prefix validation", async () => {
+  const database = await createDb({ path: ":memory:" });
+  close = database.close;
+  const instances = createExtensionInstancesDBService(database.db);
+  const sources = createInstalledExtensionSourcesDBService(database.db);
+  const project = await createProjectsDBService(database.db).create({ name: "Explicit choice" });
+  const source = await sources.register({
+    install_name: "optional-tool",
+    extension_id: "example.optional-tool",
+    display_name: "Optional tool",
+    source_kind: "local_path",
+    source_path: join(root, "optional-tool"),
+  });
+  const instance = await instances.create({
+    installed_extension_id: source.id,
+    scope_id: project.id,
+    scope_type: "project",
+    enabled: false,
+  });
+  const enablement = createExtensionEnablement({
+    extensionInstancesService: instances,
+    installedExtensionSourcesService: sources,
+    emitExtensionInstance: () => {},
+    onDefaultAdopted: async () => {},
+    validateResourcePrefixes: async () => {
+      throw new Error("The user enabled another tool with this prefix");
+    },
+  });
+  await enablement.setProjectExtensionEnabled(instance.id, false);
+  expect(await enablement.adoptDefaultSourceForProject(project.id, source.id)).toBeNull();
+  expect((await instances.get(instance.id))?.enabled).toBe(false);
 });

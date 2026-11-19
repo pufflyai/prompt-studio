@@ -41,7 +41,7 @@ export const runTicketsQuery = async ({
   storage,
   resources,
   projectId,
-  extensionId = "pstdio.pstdio-planner",
+  extensionId = "pstdio.planner",
   filter,
   workflow = emptyWorkflowStatuses(),
 }: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {

@@ -24,7 +24,7 @@ test("Files opens without Home and workspace creation stays in a keyboard-access
     const inventory = (await (
       await request.get(`${uiOrigin}/v1/projects/${project.id}/extensions`)
     ).json()) as ListProjectExtensionsResponse;
-    const home = inventory.extensions.find((extension) => extension.extensionId === "pstdio.pstdio-home");
+    const home = inventory.extensions.find((extension) => extension.extensionId === "pstdio.home");
     expect(home).toBeDefined();
     expect(
       (
@@ -34,7 +34,7 @@ test("Files opens without Home and workspace creation stays in a keyboard-access
       ).ok(),
     ).toBe(true);
     await prepareDashboard(page, project.id);
-    await page.goto(`/projects/${project.id}/workspaces`);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
     const files = await getSidenavEntry(page, "Files");
     await files.click();
     await expect(page.getByRole("textbox", { name: "Search files" })).toBeVisible();
@@ -67,11 +67,11 @@ test("Files opens without Home and workspace creation stays in a keyboard-access
     await expect(page.getByRole("dialog")).toHaveCount(0);
     expect(page.url()).toBe(location);
     await expect(device.locator("xpath=ancestor::*[@role='option'][1]")).toBeFocused();
-    await page.goto(`/projects/${project.id}/workspaces`);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-workspaces/workspaces`);
     await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
     await page.getByRole("menuitem", { name: "Create workspace", exact: true }).click();
     await form.getByRole("button", { name: "Create workspace", exact: true }).click();
-    await expect(page).toHaveURL(/extensions\/pstdio\.pstdio-workspaces\/workspace\?/);
+    await expect(page).toHaveURL(/extensions\/pstdio\.workspaces\/workspace\?/);
     await expect(page.getByRole("dialog")).toHaveCount(0);
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${project.id}`);

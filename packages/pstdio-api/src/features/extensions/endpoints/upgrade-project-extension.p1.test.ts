@@ -103,9 +103,12 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
     });
     expect(installExtensionSource).toHaveBeenCalledWith({
       force: true,
+      expectedIdentity: loaded.metadata.id,
+      installedSourcePath: sourcePath,
       hostReleaseRef: "f".repeat(40),
       installName: "pstdio-planner",
       reuseInstalledDependencies: true,
+      retainBackup: true,
       source: "pstdio-planner",
     });
   });

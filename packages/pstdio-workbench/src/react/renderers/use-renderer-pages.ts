@@ -16,6 +16,8 @@ export const useRendererPages = <TRow>(input: {
   identity: string;
   scope: string;
   fields: string[];
+  searchFields?: string[];
+  presentation?: CollectionPageRequest["presentation"];
   /** A growing list, such as a board, appends each page to the rows it already shows. */
   rowId?: (row: TRow) => string;
   initialPageSize?: number;
@@ -25,7 +27,15 @@ export const useRendererPages = <TRow>(input: {
   const collapsedGroups = collapse.scope === input.scope ? collapse.groups : [];
   const setCollapsedGroups = (groups: string[]) => setCollapse({ scope: input.scope, groups });
   const [limit, setLimit] = useState(clampCollectionPageSize(input.initialPageSize ?? defaultCollectionPageSize));
-  const identity = JSON.stringify([input.identity, input.fields, search, collapsedGroups, limit]);
+  const identity = JSON.stringify([
+    input.identity,
+    input.fields,
+    input.searchFields,
+    input.presentation,
+    search,
+    collapsedGroups,
+    limit,
+  ]);
   const [position, setPosition] = useState<PagePosition>({ identity, offset: 0 });
   const current = position.identity === identity ? position : { identity, offset: 0 };
   if (position.identity !== identity) setPosition(current);
@@ -38,8 +48,15 @@ export const useRendererPages = <TRow>(input: {
     cursor: current.offset ? current.cursor : undefined,
     revision: current.offset ? current.revision : undefined,
     fields: input.fields,
+    searchFields: input.searchFields,
+    presentation: input.presentation,
     search,
     collapsedGroups,
+    viewer: {
+      locale: navigator.language,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      now: new Date().toISOString(),
+    },
   };
   const reset = () => {
     previous.current = undefined;

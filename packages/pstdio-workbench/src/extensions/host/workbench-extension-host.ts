@@ -3,6 +3,8 @@ import { matchesResourceWhen } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, WorkbenchCommandExecutionContext } from "../../core";
 import { workbenchCommandPaletteMenuPath } from "../../core";
+import { installResourceChanges } from "../../react/resource-changes/change-store";
+import { registerWorkbenchExtensionActionBars } from "../contributions/action-bar-contributions";
 import { registerWorkbenchExtensionChatRenderers } from "../contributions/chat-renderer-contributions";
 import { registerWorkbenchExtensionCommandPaletteResources } from "../contributions/command-palette-resource-contributions";
 import { registerWorkbenchExtensionControlsRenderers } from "../contributions/controls-renderer-contributions";
@@ -35,6 +37,7 @@ import { toInternalWorkbenchExtensionMetadata } from "./workbench-extension-meta
 import { registerWorkbenchExtensionRendererRefreshEvents } from "./workbench-extension-refresh";
 import { registerSettings, registerViewMenus, registerWebviewPanels } from "./workbench-extension-surfaces";
 import { createWorkbenchExtensionTabPresentation } from "./workbench-extension-tab-presentation";
+import { registerWorkbenchIdentityAliases } from "./workbench-identity-aliases";
 
 const disposeAll = (disposables: Disposable[]) => {
   for (let index = disposables.length - 1; index >= 0; index -= 1) disposables[index]?.dispose();
@@ -196,8 +199,9 @@ const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInp
   );
 const registerModePlacements = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.placements.map((placement) => input.workbench.modePlacements.registerPlacement(placement));
+
 export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWorkbenchExtensionContributionsInput) => {
-  const disposables: Disposable[] = [];
+  const disposables: Disposable[] = registerWorkbenchIdentityAliases(sourceInput);
   const input: InternalRegisterWorkbenchExtensionContributionsInput = {
     ...sourceInput,
     metadata: toInternalWorkbenchExtensionMetadata(sourceInput.metadata, {
@@ -212,7 +216,9 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
   let terminals: ReturnType<typeof registerWorkbenchExtensionTerminalRenderers> | undefined;
   const context: WorkbenchExtensionCommandContext = input;
   try {
+    disposables.push(installResourceChanges(sourceInput));
     disposables.push(registerWorkbenchExtensionChatRenderers(sourceInput));
+    disposables.push(registerWorkbenchExtensionActionBars(sourceInput));
     terminals = registerWorkbenchExtensionTerminalRenderers(sourceInput);
     disposables.push(terminals);
     disposables.push(...registerCommands(context, input.metadata));
@@ -227,7 +233,11 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     disposables.push(...registerMenus(input, context));
     disposables.push(...registerCommandPaletteContributions(input, context));
     disposables.push(
-      registerWorkbenchExtensionTreeRenderers({ ...input, resolveNodeResource: input.resolveTreeNodeResource }),
+      registerWorkbenchExtensionTreeRenderers({
+        ...input,
+        resolveNodeResource: input.resolveTreeNodeResource,
+        renderNodeEndContent: input.renderTreeNodeEndContent,
+      }),
     );
     disposables.push(registerWorkbenchExtensionFileRenderers(input));
     disposables.push(registerWorkbenchExtensionControlsRenderers(context, input.metadata.controlsRenderers ?? []));

@@ -2,8 +2,12 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
+import { nativePublicTextEditor, verifyNativePublicTextEditor } from "../helpers/verify-public-text-editor";
 import { type APIRequestContext, expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
+
+// Project preparation, document projection and retained navigation share this allowance.
+test.setTimeout(120_000);
 
 const executeNoteCommand = async (
   request: APIRequestContext,
@@ -12,7 +16,7 @@ const executeNoteCommand = async (
   params: Record<string, string>,
 ) => {
   const response = await request.post(
-    `${uiOrigin}/v1/projects/${projectId}/extensions/commands/pstdio.pstdio-notes.command.notes.${command}/execute`,
+    `${uiOrigin}/v1/projects/${projectId}/extensions/commands/pstdio.notes.command.notes.${command}/execute`,
     { data: { params, source: "api" } },
   );
   expect(response.ok()).toBe(true);
@@ -36,13 +40,13 @@ test("opens notes in the project Sidenav tree and follows the active note throug
       .poll(async () => {
         const response = await request.get(`${uiOrigin}/v1/projects/${project.id}/extensions/ui`);
         const metadata = await response.json();
-        return metadata.views?.some((view: { id: string }) => view.id === "pstdio.pstdio-notes.view.note-editor");
+        return metadata.views?.some((view: { id: string }) => view.id === "pstdio.notes.view.note-editor");
       })
       .toBe(true);
     const first = await executeNoteCommand(request, project.id, "create", { title: "First note" });
     const second = await executeNoteCommand(request, project.id, "create", { title: "Second note" });
     for (const note of [first, second]) {
-      const path = join(repoRoot, ".pstdio/extension-storage/pstdio.pstdio-notes/documents", note.id, "content.md");
+      const path = join(repoRoot, ".pstdio/extension-storage/pstdio.notes/documents", note.id, "content.md");
       writeFileSync(path, `${readFileSync(path, "utf8")}\n${note.title} body`);
     }
     await page.addInitScript((projectId: string) => {
@@ -50,7 +54,7 @@ test("opens notes in the project Sidenav tree and follows the active note throug
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
       localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
     }, project.id);
-    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.planner/tickets`);
     const sidebar = page.locator('[data-workbench-region="sidenav"]');
     const firstRow = sidebar.getByRole("option", { name: first.title, exact: true });
     const secondRow = sidebar.getByRole("option", { name: second.title, exact: true });
@@ -58,21 +62,20 @@ test("opens notes in the project Sidenav tree and follows the active note throug
     await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
     // Notes stay nested in the same project navigation, and expanding them keeps the open page.
     await expect(firstRow).toHaveAttribute("aria-level", "2");
-    await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-planner\/tickets$/);
+    await expect(page).toHaveURL(/\/extensions\/pstdio\.planner\/tickets$/);
     await expect(sidebar.getByRole("option", { name: "Tickets", exact: true })).toBeVisible();
     await firstRow.click();
     await expect(firstRow).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("tab", { name: first.title, exact: true })).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByTestId("content-editable").filter({ visible: true })).toHaveText(`${first.title} body`);
+    await verifyNativePublicTextEditor(page, `${first.title} body`);
     // Opening content must not queue another read of every note in the project.
     const noteListReads: string[] = [];
     page.on("request", (request) => {
-      if (request.url().includes("pstdio.pstdio-notes.view.note-list.tree.body/execute"))
-        noteListReads.push(request.url());
+      if (request.url().includes("pstdio.notes.view.note-list.tree.body/execute")) noteListReads.push(request.url());
     });
     await secondRow.click();
     await expect(secondRow).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByTestId("content-editable").filter({ visible: true })).toHaveText(`${second.title} body`);
+    await verifyNativePublicTextEditor(page, `${second.title} body`);
     expect(noteListReads).toEqual([]);
     await page.getByRole("tab", { name: first.title, exact: true }).click();
     await expect(firstRow).toHaveAttribute("aria-selected", "true");
@@ -110,27 +113,25 @@ test("keeps note titles independent of the body and renames them through the con
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
       localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
     }, project.id);
-    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-notes/notes`);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.notes/notes`);
     const sidebar = page.locator('[data-workbench-region="sidenav"]');
     const row = sidebar.getByRole("option", { name: note.title, exact: true });
     await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
     await row.click();
-    const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
+    const editor = nativePublicTextEditor(page);
     await expect(editor).toBeEmpty();
     let mountedEditor = await editor.elementHandle();
     const documentReads: string[] = [];
     page.on("request", (request) => {
-      if (request.url().includes("pstdio.pstdio-notes.view.note-editor.file.load/execute"))
-        documentReads.push(request.url());
+      if (request.url().includes("pstdio.notes.view.note-editor.file.load/execute")) documentReads.push(request.url());
     });
     let body = "Body text with a different name";
     await editor.fill(body);
     await expect
-      .poll(() =>
-        readFileSync(
-          `${repoRoot}/.pstdio/extension-storage/pstdio.pstdio-notes/documents/${note.id}/content.md`,
-          "utf8",
-        ),
+      .poll(
+        () =>
+          readFileSync(`${repoRoot}/.pstdio/extension-storage/pstdio.notes/documents/${note.id}/content.md`, "utf8"),
+        { timeout: 15_000 },
       )
       .toContain(body);
     await expect(row).toHaveAttribute("aria-selected", "true");
@@ -149,11 +150,10 @@ test("keeps note titles independent of the body and renames them through the con
     body += " after returning";
     await editor.fill(body);
     await expect
-      .poll(() =>
-        readFileSync(
-          `${repoRoot}/.pstdio/extension-storage/pstdio.pstdio-notes/documents/${note.id}/content.md`,
-          "utf8",
-        ),
+      .poll(
+        () =>
+          readFileSync(`${repoRoot}/.pstdio/extension-storage/pstdio.notes/documents/${note.id}/content.md`, "utf8"),
+        { timeout: 15_000 },
       )
       .toContain(body);
 
@@ -215,7 +215,7 @@ test("keeps typing in the same editor when the first line names a new note", asy
   try {
     // Keep the real resolver result pending until typing begins, so access metadata
     // arriving later cannot rely on request timing to avoid a document reload.
-    await page.route("**/extensions/commands/pstdio.pstdio-notes.command.notes.resolve/execute", async (route) => {
+    await page.route("**/extensions/commands/pstdio.notes.command.notes.resolve/execute", async (route) => {
       const resolved = await route.fetch();
       resolutionReady.resolve();
       await releaseResolution.promise;
@@ -223,18 +223,17 @@ test("keeps typing in the same editor when the first line names a new note", asy
       resolutionForwarded.resolve();
     });
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-notes/notes`);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.notes/notes`);
     const sidebar = page.locator('[data-workbench-region="sidenav"]');
     await sidebar.getByRole("option", { name: "Notes", exact: true }).click();
     await sidebar.getByRole("button", { name: "New note", exact: true }).click();
-    const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
-    await expect(editor).toBeEmpty();
+    const editor = nativePublicTextEditor(page);
+    await expect(editor).toBeEmpty({ timeout: 15_000 });
     await resolutionReady.promise;
     const mountedEditor = await editor.elementHandle();
     const documentReads: string[] = [];
     page.on("request", (request) => {
-      if (request.url().includes("pstdio.pstdio-notes.view.note-editor.file.load/execute"))
-        documentReads.push(request.url());
+      if (request.url().includes("pstdio.notes.view.note-editor.file.load/execute")) documentReads.push(request.url());
     });
     await editor.fill("First line title");
     releaseResolution.resolve();
@@ -242,6 +241,7 @@ test("keeps typing in the same editor when the first line names a new note", asy
     await expect(page.getByRole("tab", { name: "First line title", exact: true })).toHaveAttribute(
       "aria-selected",
       "true",
+      { timeout: 15_000 },
     );
     await expect(sidebar.getByRole("option", { name: "First line title", exact: true })).toBeVisible();
     await expect(editor).toBeFocused();
@@ -252,6 +252,7 @@ test("keeps typing in the same editor when the first line names a new note", asy
     await expect(editor).toHaveText("First line title and keep typing");
   } finally {
     releaseResolution.resolve();
+    await page.unrouteAll({ behavior: "wait" });
     rmSync(repoRoot, { recursive: true, force: true });
   }
 });

@@ -25,7 +25,7 @@ The form starts with the column's status and editable properties that match the 
 
 Clicking the background keeps the form open. **Cancel** and Escape close it and keep your draft, including attachments, while this dashboard stays open. Reopen the same view and filter to continue, even after visiting another page. Each view and filter keeps its own draft, so new filtered forms inherit matching properties without replacing earlier drafts. The **X** discards the current draft. Successful creation clears it.
 
-You can also create tickets from a terminal with [`pst pstdio.pstdio-planner create-ticket`](0004-cli.md#tickets), or let an agent do it with Planner's `create-ticket` skill.
+You can also create tickets from a terminal with [`pst pstdio.planner create-ticket`](0004-cli.md#tickets), or let an agent do it with Planner's `create-ticket` skill.
 
 ### Move and change tickets
 
@@ -61,7 +61,7 @@ The sidebar lists, from top to bottom:
 - **Needs attention** collects ticket actions that need a person. It currently shows review requests and their open count. Select it to answer them while the sidebar stays visible. See [Needs attention](0006-review-requests.md).
 - The **Files** section lists extra Markdown files that belong to the ticket, and its image attachments. Choose **New file** to add a file. Right-click a file to rename or delete it. Images open in a read-only preview.
 - The **Sub-tickets** section appears when the ticket has sub-tickets.
-- The **Workspaces** section lists the project workspace and every workspace linked to the ticket. Choose **Create workspace** to add one. See [Attempts](0002-attempts.md#workspaces-on-a-ticket).
+- The **Workspaces** section lists only workspaces explicitly linked to the ticket. The project folder appears only when linked. Tickets without linked workspaces hide this section. Choose **Create workspace** from the ticket menu to add one. See [Attempts](0002-attempts.md#workspaces-on-a-ticket).
 - The **Sessions** section lists the agent sessions linked to the ticket, including attempt, review, refine, and sub-ticket sessions.
 
 ### Editor
@@ -70,7 +70,7 @@ The editor shows the document you selected in the sidebar: the description, a ti
 
 Selecting a saved document puts it in the page URL. Open the menu after the ticket name in the header and choose **Copy link** to copy that URL. Reload, Back, and Forward restore that document. File links keep working after a rename. A deleted document shows an unavailable error.
 
-Chat links to `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<ticket>/ticket.md` open the exact workspace draft. They do not open or save the Planner document.
+Chat links to `.pstdio/extension-storage/pstdio.planner/tickets/<ticket>/ticket.md` open the exact workspace draft. They do not open or save the Planner document.
 
 ### Properties
 

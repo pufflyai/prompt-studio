@@ -84,8 +84,19 @@ const imports = defineView({
 | --- | --- | --- | --- |
 | `files.pick(options?)` | None | `{ accept?, multiple? }` | Browser `File[]`; an empty array means the user cancelled. |
 | `files.upload(input)` | `files.upload` | `{ name, data, mimeType?, scope? }` | The stored `ExtensionBlobRef`. `data` accepts `Uint8Array` or `ArrayBuffer`. |
+| `files.download(input)` | `files.download` | `{ name, data, mimeType? }` | Starts a download on the user's device. `data` accepts `Uint8Array` or `ArrayBuffer`; `name` is a filename, without a directory. |
 | `files.list(input?)` | `files.list` | `{ scope? }` | `ExtensionBlobRef[]` for the exact scope. |
 | `files.delete(id)` | `files.delete` | A file id returned by upload or list. | Resolves after the host deletes the owned file. |
+
+On `main`, the API 0.5.0 host and SDK add `client.files.download`. Read or generate
+the bytes through the extension's existing commands, then pass them to this
+method. The host initiates the download outside the sandbox; extension and
+artifact frames retain their existing sandbox permissions. No URL or filesystem
+path is accepted, and this capability grants no additional file read access.
+The promise resolves after initiation. The browser's download UI owns completion,
+cancellation and the final location; it does not report a successful disk save to
+the extension. A rejected bridge call can be shown beside the export control and
+retried. Publish the supporting SDK and host before releasing a consumer.
 
 ```ts
 import { createWebviewClient, defineExtensionView } from "@pstdio/sdk/extensions";
@@ -156,6 +167,53 @@ On `main`, extension API 0.2.1 adds two declared webview capabilities. Use `harn
 
 Use `resources.actions` with `{ operation: "list", resource }` to read the same current menu actions as a native resource card. Pass the resource's own `extensionId` for extension resource kinds; the host does not fill it in with the calling extension. Each action has a `label`, a workbench `icon` name or an `iconSrc` image URL, `isDisabled`, and a `description` that explains a disabled action. Render those actions with `ResourceContextMenu`. Invoke one with `{ operation: "execute", resource, key }`. The host resolves the menu again before execution, applies its availability rules, and opens the normal parameter form when an action needs input. The call rejects when the action is no longer available or its command fails, so the webview reports the error. A listed snapshot does not update by itself. After the first list, the host sends `{ type: "changed" }` on the `resources.actions` event scope whenever the actions may have changed. Listen with `host.onEvent("resources.actions", ...)` and list again. Declare each named capability on the view.
 
+### Live reader actions in native resource menus
+
+On `main`, API 0.5.0 adds `registerWebviewResourceAction(host, action, run)`.
+Declare `resources.actions.register` on the view. Pass its current resource,
+label and optional icon. The host adds the action to that reader's breadcrumb
+and tab resource menus, beside persistent resource commands such as Rename and
+Delete. It is scoped to the exact project, placement, extension and resource;
+it is omitted from other readers and unopened-resource menus.
+
+The returned `ready` promise reports registration errors. Await `dispose()` when
+the view unmounts or changes resource. The callback receives an `AbortSignal`;
+check it after awaited work and before downloading or another external effect.
+The native action awaits completion and reports callback failures normally.
+Disconnect removes the action and rejects pending invocations. Invocations are
+never queued for a later frame. Declare `files.download` separately to export.
+
+```ts
+import { createWebviewClient, registerWebviewResourceAction } from "@pstdio/sdk/extensions";
+
+const action = registerWebviewResourceAction(host, {
+  resource,
+  label: "Export report",
+  icon: "download",
+}, async (signal) => {
+  const data = new TextEncoder().encode("Report contents");
+  signal.throwIfAborted();
+  await createWebviewClient(host).files.download({ name: "report.txt", data, mimeType: "text/plain" });
+});
+await action.ready;
+// Dispose when this reader's owner changes or unmounts.
+await action.dispose();
+```
+
+A reader can supply `choices: [{ id, label, selected?, disabled? }]` on the same
+registration to contribute a mutually exclusive group to that resource dropdown.
+The callback receives `(signal, choiceId)`. A group counts as one of the view's
+32 leases and accepts up to 1024 choices with unique IDs and at most one selected
+value. The host validates the selected ID and renders checked radio menu items.
+Use `await action.updateChoices(nextChoices, { label? })` when the available or selected
+values change. This updates the menu without cancelling an accepted callback;
+replacing or disconnecting the owning view still cancels it normally.
+Choice IDs retain their native menu identity across updates. An optional
+`kind: "action"` row renders as an ordinary action in the same group and cannot
+be selected. Set `closeOnSelect: false` for paging controls that keep the menu
+open. Page large collections before registering them and keep labels within
+1000 characters.
+
 ### Cloud account and sync status
 
 On `main`, extension API 0.2.1 also adds `account.read` and `account.manage`. `client.account` has the same methods as [`ctx.account`](0003-command-and-process-api.md#cloud-account-and-sync-status). Declare `account.read` for `client.account.status`, `loginStatus`, `devices`, and `projectSyncStatus`. Declare `account.manage` for `client.account.login`, `cancelLogin`, `logout`, `renameDevice`, `removeDevice`, `syncProject`, `stopProjectSync`, and `resolveReturnedChanges`. Without a project ID, a call uses the webview's project.
@@ -166,6 +224,8 @@ const refresh = async () => render(await client.account.projectSyncStatus());
 await refresh();
 const stop = client.events.subscribe(accountEvents.projectSyncChanged, refresh);
 ```
+
+On `main`, API 0.4.2 adds `client.account.query(source)`, a readonly retained query for `{service:"status"}`, `{service:"projectSyncStatus", projectId}` or `{service:"devices", accountId, managerOrigin}`. Declare `account.read` and observe it with `useWebviewCommandQuery(query, useWebviewVisibility())`. The runtime identity guard owns status; project and device reads are fenced by account and server identity. Optional view cancellation preserves another reader and the mandatory guard. Publish the matching host and SDK before independent adoption.
 
 The dashboard delivers `accountEvents.projectSyncChanged` only to webviews of the project that changed. The extension testbench does not provide an account; both capabilities answer `unsupported` there.
 
@@ -270,8 +330,9 @@ their separate `CommandOutcomeError.outcome` contract.
 
 Declare bare capability names. Versioned declarations such as `"clipboard.write@1"` remain
 accepted but are deprecated through 0.44. Typed clients still require the declarations they use.
-`client.placement.close()` needs `placement.close`; `client.notify.toast({ type, title?, message })`
-needs `notification.show`. The old `{ level, title, message? }` toast shape is deprecated.
+`client.placement.close()` needs `placement.close`. Use `notification.show` for system notices in the status bar.
+The compatibility method `client.notify.toast({ type, title?, message })` uses the same host routing.
+The older `{ level, title, message? }` input shape is deprecated.
 
 ## Terminal sessions
 
@@ -457,7 +518,7 @@ Shared text uses `editing.text` and `client.editing.text`, separately from the
 structured editing sessions above. A source owner declares a `defineTextSource`
 provider and returns its `textDocument` reference from a file view. The view can
 select an installed text editor with `textEditor`; omission selects native Markdown.
-An editor opens its own source reference or the opaque grant from
+An editor can open the selected document with `await client.editing.text.open({ selected: true })`. This admits the member and returns the initial collaborative snapshot in one request on a new placement. The host checks the selection and current write permission. An editor can also open its own source reference or the opaque grant from
 `client.editing.text.current()`. A grant cannot open an unselected foreign source.
 
 `client.editing.text.open(input)` returns a public text session. Its snapshot contains
@@ -528,6 +589,8 @@ Declare `preferences.get` and `preferences.set` to save small view choices:
 await client.preferences.set("lastRange", "now-6h");
 const range = await client.preferences.get("lastRange");
 ```
+
+On `main`, API 0.4.2 adds `client.preferences.query(name, scope?)` under `preferences.get`. Its readonly query data is `{value}`: a loaded missing choice has `value: undefined`, while unread data is `undefined`. The host retains accepted choices across guest recreation, scopes invalidation to the effective preference project and keeps required `client.preferences.set` writes ordered after the guest closes. Observe through `useWebviewCommandQuery`; save through `set`, without publishing a second local snapshot. Publish the supporting host and SDK before independent adoption.
 
 An undeclared name belongs to the calling extension. Other extensions have separate values under the same name. Dashboard webviews store these values on the server, so browser reloads and Desktop restarts keep them, and other clients read the same values. `set` returns only after storage succeeds.
 

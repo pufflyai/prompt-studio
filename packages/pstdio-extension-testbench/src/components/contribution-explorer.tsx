@@ -1,7 +1,7 @@
 import { Box, Button } from "@chakra-ui/react";
 import type { ResourceRef, WorkbenchCore } from "@pstdio/workbench";
 import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
-import { formatForDisplay } from "@tanstack/hotkeys";
+import { formatForDisplay, type HotkeyChord } from "@tanstack/hotkeys";
 import { text } from "pstdio-extensions/workbench";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
 import { isViewForResourceKind } from "../lib/resource-bindings";
@@ -144,13 +144,15 @@ const keybindingItems = (props: ContributionExplorerProps) => {
     (candidate) => candidate !== platform,
   );
 
+  // Layered bindings are space-separated sequences; display formats each step.
+  const steps = (chord: string) => chord.trim().split(/\s+/) as HotkeyChord[];
   return (props.bench.metadata.keybindings ?? []).map((binding) => {
     const sourceChord = binding.platformOverrides?.[platform === "windows" ? "win" : platform] ?? binding.key;
-    const primary = formatForDisplay(sourceChord, { platform, useSymbols: false });
+    const primary = formatForDisplay(steps(sourceChord), { platform, useSymbols: false });
     const secondary = otherPlatforms
       .map((other) => {
         const otherChord = binding.platformOverrides?.[other === "windows" ? "win" : other] ?? binding.key;
-        return `${other}: ${formatForDisplay(otherChord, { platform: other, useSymbols: false })}`;
+        return `${other}: ${formatForDisplay(steps(otherChord), { platform: other, useSymbols: false })}`;
       })
       .join(" · ");
 

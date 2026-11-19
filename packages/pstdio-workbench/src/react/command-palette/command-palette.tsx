@@ -1,3 +1,4 @@
+import { Box } from "@chakra-ui/react";
 import { Palette, type PaletteEntry, PaletteShortcut, useThemePreference } from "@pstdio/ui";
 import { type ReactNode, useEffect, useState } from "react";
 import {
@@ -10,6 +11,7 @@ import {
   type WorkbenchCommandExecutionContext,
   type WorkbenchCore,
   workbenchCommandPaletteMenuPath,
+  workbenchPanelRegions,
 } from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { useShortcutCatalog } from "../keybindings/use-shortcut-catalog";
@@ -230,7 +232,7 @@ const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
     open,
     onClose,
   });
-  const compositionPanels = useWorkbenchCompositionPanels(workbench);
+  const compositionPanels = useWorkbenchCompositionPanels(workbench, workbenchPanelRegions);
 
   // A theme preview is never saved, so leaving the picker in any way shows the chosen theme again.
   const closePalette = () => {
@@ -300,7 +302,11 @@ const WorkbenchMainCommandPalette = (props: WorkbenchCommandPaletteProps) => {
         inputIcon={({ mode }) => getPaletteInputIcon({ view, mode })}
         placeholder={({ mode }) => getPalettePlaceholder({ view, mode })}
         emptyLabel="No results found."
-        footerStart={<WorkbenchActionErrors workbench={workbench} target="command-palette" />}
+        footerStart={
+          <Box position="relative" width="full" minW="2xs">
+            <WorkbenchActionErrors workbench={workbench} target="command-palette" edge="above" />
+          </Box>
+        }
         onActiveEntryChange={(entry) => {
           if (!open || !isThemeView) return;
           const themeEntry = entry as WorkbenchThemePaletteEntry | null;

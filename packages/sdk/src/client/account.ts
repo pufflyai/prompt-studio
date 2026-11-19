@@ -12,6 +12,11 @@ import type { RequestFn } from "./request";
 export type { AccountDevice, AccountStatus, DeviceLogin } from "pstdio-api-contracts";
 
 type Ok = { ok: boolean };
+export type AccountReadIdentity = { accountId: string; managerOrigin: string };
+const expectedIdentityQuery = (expected?: AccountReadIdentity | null) => {
+  const query = new URLSearchParams(expected === null ? { local: "true" } : expected);
+  return query.size ? "?" + query.toString() : "";
+};
 
 export const createAccountClient = (request: RequestFn) => {
   const device = (id: string) => `/v1/account/devices/${encodeURIComponent(id)}`;
@@ -31,8 +36,11 @@ export const createAccountClient = (request: RequestFn) => {
     /** Cancels a pending sign-in. A sign-in that already completed stays complete. */
     cancelLogin: (id: string) =>
       request<Ok & { status: Exclude<AccountLoginStatus, "pending"> }>(login(id), { method: "DELETE" }),
-    projectSyncStatus: (projectId: string, options?: { signal?: AbortSignal }) =>
-      request<ProjectSyncStatus>(`${project(projectId)}/sync`, options),
+    /** An explicit null expectation means signed out; omission preserves unspecified caller authority. */
+    projectSyncStatus: (projectId: string, options?: { signal?: AbortSignal; expected?: AccountReadIdentity | null }) =>
+      request<ProjectSyncStatus>(`${project(projectId)}/sync${expectedIdentityQuery(options?.expected)}`, {
+        signal: options?.signal,
+      }),
     retryProjectSyncSource: (projectId: string, sourceId: string) =>
       request<Ok>(`${project(projectId)}/sync/sources/${encodeURIComponent(sourceId)}/retry`, { method: "POST" }),
     /** Retries project discovery, downloads, and activation of its synced extensions immediately. */
@@ -41,7 +49,10 @@ export const createAccountClient = (request: RequestFn) => {
     status: (options?: { signal?: AbortSignal }) => request<AccountStatus>("/v1/account", options),
     /** `removed` is false when the account service could not be reached; remove the device from another one. */
     logout: () => request<Ok & { removed: boolean }>("/v1/account/logout", { method: "POST" }),
-    devices: (options?: { signal?: AbortSignal }) => request<AccountDevice[]>("/v1/account/devices", options),
+    devices: (options?: { signal?: AbortSignal; expected?: AccountReadIdentity }) =>
+      request<AccountDevice[]>("/v1/account/devices" + expectedIdentityQuery(options?.expected), {
+        signal: options?.signal,
+      }),
     renameDevice: (id: string, name: string) => request<Ok>(`${device(id)}/rename`, { method: "POST", body: { name } }),
     removeDevice: (id: string) => request<Ok>(`${device(id)}/remove`, { method: "POST" }),
     /** Makes a local project a cloud project of the logged-in account. */

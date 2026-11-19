@@ -1,6 +1,6 @@
 import type { ChatDraft } from "@pstdio/sdk/extensions";
 import { chatDraftContentKey, hydrateChatDraft, restoreChatDraft } from "./chat-draft-recovery";
-import type { ChatPendingSubmission } from "./chat-pending-submission";
+import { type ChatPendingSubmission, visibleChatDraftAttachments } from "./chat-pending-submission";
 
 export const restoreFailedChatSubmission = (
   draft: ChatDraft,
@@ -9,11 +9,12 @@ export const restoreFailedChatSubmission = (
 ) => {
   const failed = pending?.find((item) => item.message.id === id && item.failure);
   if (!failed) return;
+  const visibleDraft = { ...draft, attachments: visibleChatDraftAttachments(draft.attachments, failed) };
   const index = draft.recovered?.findIndex((saved) => chatDraftContentKey(saved) === chatDraftContentKey(failed)) ?? -1;
   const restored =
     index < 0
-      ? hydrateChatDraft({ text: failed.text, attachments: failed.attachments, values: failed.values }, draft)
-      : restoreChatDraft(draft, index);
+      ? hydrateChatDraft({ text: failed.text, attachments: failed.attachments, values: failed.values }, visibleDraft)
+      : restoreChatDraft(visibleDraft, index);
   return { draft: restored, pending: pending?.filter((item) => item !== failed) };
 };
 

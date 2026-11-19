@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
-import { serializePageUrl, workspacePages } from "@pstdio/sdk/extensions";
+import { serializePageUrl } from "@pstdio/sdk/extensions";
+import { workspacePages } from "../helpers/installed-workspaces";
 import { isSessionChatAction } from "../helpers/session-chat-actions";
 import { verifyExtensionModeSessionRestore, verifyModePanelState } from "./packaged-mode-panel-state";
 import { verifyPageSessionTab } from "./packaged-page-session-tab";
@@ -255,7 +256,7 @@ export const verifyPackagedSessionMenus = async (
     .click();
   await page.getByRole("button", { name: "Delete session", exact: true }).click();
   await expect(page).toHaveURL(
-    new RegExp(`/projects/${projectId}/extensions/pstdio.pstdio-session-browser/conversations/compose$`),
+    new RegExp(`/projects/${projectId}/extensions/pstdio.session-browser/conversations/compose$`),
   );
   const deleted = await fetch(`${baseUrl}/v1/sessions/${session.id}`, { headers: authorization });
   expect(deleted.status).toBe(404);

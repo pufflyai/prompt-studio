@@ -2,7 +2,7 @@
 
 Developer tools helps you find out which part of Prompt Studio is using your computer's CPU and memory, and whether the backend still answers. Use it when the app feels slow, a fan spins up, or an extension seems to do too much work.
 
-The **Prompt Studio Performance Monitoring** extension (`pstdio.pstdio-performance`) provides the status bar meter and its details. It is installed by default and uses only the public extension API. The host keeps the measurements: process sampling, the frame counter, the slow-frame observer, recordings and `pst performance`. Monitoring runs while the extension is loaded, so enabling the extension turns it on and disabling or removing it turns it off. There is no separate switch.
+The **Prompt Studio Performance Monitoring** extension (`pstdio.performance`) provides the status bar meter and its details. It is installed by default and uses only the public extension API. The host keeps the measurements: process sampling, the frame counter, the slow-frame observer, recordings and `pst performance`. Monitoring runs while the extension is loaded, so enabling the extension turns it on and disabling or removing it turns it off. There is no separate switch.
 
 ## Reorder status bar items
 
@@ -112,6 +112,9 @@ The packaged desktop benchmarks measure the idle workbench with monitoring off a
 ## Runtime capture
 
 For explicit CPU profiling and function-call counts, use **Backend diagnostics** in the Performance details or the matching `pst pstdio.pstdio-performance diagnostics` commands. See the [Performance Monitoring README](../../extensions/pstdio-performance/README.md#for-agents) for start, list, read, cancel and export. These short captures run inside the backend as cancellable automation jobs. They keep raw profiles and memory readings on the runtime machine, including source paths, separately from the sanitized device capture below. Reading or opening the tool does not start a profiler. The temporary repository `runtime-diagnostic` extension has been retired; its previously saved files are preserved.
+
+For an intermittent backend CPU spike, run `pst pstdio.performance diagnostics arm --cpu-percent 60 --minutes 60` before it happens. Save the returned capture ID. The recorder keeps recent CPU profiles, bounded database and chat operation metadata, and aligned CPU readings. It completes on the threshold or expiry. Export with `pst pstdio.performance diagnostics export --id <capture-id> > backend-spike.json` and attach that file alongside the device snapshot. Completed windows are saved every 30 seconds so the last checkpoint remains exportable after a hang or termination. The current unfinished window can be lost. Arming adds profiling overhead and ends on cancellation, expiry or runtime shutdown. See the [Performance Monitoring README](../../extensions/pstdio-performance/README.md#for-agents) for bounds and interrupted-capture status.
+
 
 Desktop snapshots use schema version 2 and keep the version-1 fields used by the existing meter. The `capture` field adds a capture id, host version, platform, timestamps, actual sample gaps, and a rolling history of at most 150 samples and 512 KiB. `pst performance` prints this same capture.
 

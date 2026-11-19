@@ -31,6 +31,10 @@ export interface ResourceRef {
   projectId?: string;
   label?: string;
   icon?: string;
+  /** Semantic theme color for the resource icon. */
+  iconColor?: string;
+  /** Accessible description of the resource icon and its current state. */
+  iconLabel?: string;
   extensionId?: string;
   metadata?: JsonObject;
 }
@@ -85,9 +89,23 @@ export type ResourceAnchorValidationResult = { allowed: true } | { allowed: fals
 
 export type ResourceAnchorQueryPage = Page<ResourceAnchorPage["items"][number]>;
 
+export interface RelatedResourceQuery extends Omit<ResourceAnchorQuery, "resource"> {
+  resources: ResourceRef[];
+  /** Restrict the related endpoint before pagination. */
+  kind?: string;
+  owner?: string;
+  excludeKinds?: string[];
+}
+
 export interface ExtensionResourcesApi {
+  /** One indexed page of distinct shared project links, deduplicated across directions and selected resources. Maximum 100. Use workspace/session queries for private history. */
+  queryRelated(input: RelatedResourceQuery): Promise<Page<ResourceRef>>;
   /** Resolve up to 100 references through enabled owners. Missing resources are omitted. */
+  /** Seal the exact committed change represented by content this owner has authorized and read. */
+  observeChange?(resource: ResourceRef, stamp: import("../../resource-changes").ChangeStamp): Promise<string>;
   resolveMany(resources: ResourceRef[]): Promise<ResourceResolution[]>;
+  /** Resolve bare-resource navigation through the project's configured public openers. */
+  resolveOpenings(resources: ResourceRef[]): Promise<ResourceResolution[]>;
   addAnchors(resource: ResourceRef, anchors: ResourceAnchor[]): Promise<void>;
   removeAnchors(resource: ResourceRef, refs: ResourceRef[]): Promise<void>;
   queryAnchors(input: ResourceAnchorQuery): Promise<ResourceAnchorQueryPage>;
@@ -101,6 +119,8 @@ export interface ExtensionResourcesApi {
   removed(resource: ResourceRef): Promise<void>;
   /** Allocate an ID and shorthand. idPrefix selects the same compact ID format as storage.ids.create. */
   allocate(input: { kind: string; idPrefix?: string }): Promise<{ id: string; shorthand: string }>;
+  /** Allocate 1–100 IDs and consecutive shorthands for one kind in one save, in order. Later allocations continue after them. */
+  allocateMany(input: { kind: string; count: number; idPrefix?: string }): Promise<{ id: string; shorthand: string }[]>;
   /** Read the core-owned current number. Returns null for an unknown resource. */
   identity(input: { kind: string; id: string }): Promise<ResourceIdentity | null>;
   /** Read at most 100 current identities in input order. Unknown IDs return null. */

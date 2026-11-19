@@ -75,7 +75,8 @@ test("Cloud settings respect early access and manage devices and project sync th
   const openSettings = async () => {
     const button = details.getByRole("button", { name: "Cloud settings" });
     // Closing settings can reveal the still-open status popover. Its trigger toggles it closed.
-    if (!(await button.isVisible())) await status.click();
+    if (!(await button.isVisible()))
+      await page.locator("footer").getByRole("button", { name: "Prompt Studio Cloud", exact: true }).click();
     await expect(button).toBeVisible();
     await button.click();
     await expect(settingsFrame).toBeVisible();
@@ -115,6 +116,10 @@ test("Cloud settings respect early access and manage devices and project sync th
   await settings.getByRole("button", { name: "Cancel sign-in" }).click();
   await expect(settings.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
   await expect(fetch(cancelled)).rejects.toThrow();
+  const cancelledNotice = settings.getByRole("alert").filter({ hasText: "Sign-in did not complete." });
+  await expect(cancelledNotice).toBeVisible();
+  await cancelledNotice.getByRole("button", { name: "Dismiss", exact: true }).click();
+  await expect(cancelledNotice).toBeHidden();
   const callback = await startSignIn();
   await closeSettings();
   await openSettings();
@@ -127,7 +132,8 @@ test("Cloud settings respect early access and manage devices and project sync th
   await expect(status).toHaveText("Signed in");
   await closeSettings();
   const detailsButton = details.getByRole("button", { name: "Cloud settings" });
-  if (!(await detailsButton.isVisible())) await status.click();
+  if (!(await detailsButton.isVisible()))
+    await page.locator("footer").getByRole("button", { name: "Prompt Studio Cloud", exact: true }).click();
   await expect(details.getByText("Devices", { exact: true })).toHaveCount(0);
   await details.getByRole("button", { name: "Cloud settings" }).click();
   await expect(settings.getByText("Coming soon", { exact: true })).toBeVisible();
@@ -135,14 +141,13 @@ test("Cloud settings respect early access and manage devices and project sync th
   await expect(settings.getByRole("button", { name: "Sync with Cloud" })).toHaveCount(0);
   await settings.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(status).toHaveText("Sign in");
-  // Account changes retire old private views; enter settings under the current authority.
-  await expect(settingsFrame).toBeHidden();
-  await openSettings();
+  // Critical: retiring the account popover must keep the independently owned settings surface open.
+  await expect(settingsFrame).toBeVisible();
+  await expect(settings.getByRole("button", { name: "Sign in", exact: true })).toBeVisible();
   await fixture.peer.setEarlyAccess(true);
   expect((await fetch(await startSignIn())).status).toBe(200);
   await expect(status).toHaveText("Local");
-  await expect(settingsFrame).toBeHidden();
-  await openSettings();
+  await expect(settingsFrame).toBeVisible();
   await expect(settings.getByText("Early access enabled", { exact: true })).toBeVisible();
   await settings.getByRole("button", { name: "Sync with Cloud", exact: true }).click();
   await expect(status).toHaveText("Synced");
@@ -196,9 +201,8 @@ test("Cloud settings respect early access and manage devices and project sync th
   await expect(confirmation.getByText("Make this project local?", { exact: true })).toBeVisible();
   await confirmation.getByRole("button", { name: "Make local", exact: true }).click();
   await expect(status).toHaveText("Local");
-  // Removing Cloud membership also retires this project's private query scope.
-  await expect(settingsFrame).toBeHidden();
-  await openSettings();
+  // Retire private project data while preserving the independently owned global settings destination.
+  await expect(settingsFrame).toBeVisible();
   await expect(settings.getByRole("button", { name: "Sync with Cloud", exact: true })).toBeVisible();
   // Account membership is discovered on refresh; issued access remains valid until renewal.
   // Exercise the public explicit refresh here; native-account tests cover the idle scheduled refresh.

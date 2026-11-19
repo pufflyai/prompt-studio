@@ -1,11 +1,14 @@
 import { createLiveConnection, createRelayAccess, type LiveConnection } from "pstdio-sync/relay";
 import { canonicalJson } from "pstdio-sync-contracts";
+import { resourceActivityOwnerId } from "../../features/activity/resource-activity-store";
+import { seenOwnerId } from "../../features/activity/resource-seen";
 import { publishedExtensionsId } from "../../features/extensions/publication/catalog";
 import { apiLogger } from "../../lib/logger";
 import { AccountRequestError } from "../account/native-account";
 import { isRecoveryCatalogOwner } from "../project-recovery/catalog";
 import { startAutomationSync } from "./automations";
 import { startCoreDocumentSync } from "./core-documents";
+import { startCoreRecordSync } from "./core-records";
 import type { RelayDeps } from "./deps";
 import { createDeviceCommandCaller } from "./device-command-call";
 import { startDeviceCommands } from "./device-commands";
@@ -84,6 +87,29 @@ interface RelayRuntimeInput {
   statusChanged?: (workbenchId: string) => void;
 }
 
+const privateChangesHandled = (
+  config: RelayWorkbench,
+  extensionId: string,
+  origin: string | undefined,
+  deps: RelayDeps,
+) => {
+  if (extensionId !== seenOwnerId(config)) return false;
+  if (origin === "relay")
+    deps.eventBus.emit("extension_events", "set", {
+      id: crypto.randomUUID(),
+      projectId: config.workbenchId,
+      eventId: "pstdio.event.resource-seen-changed",
+    });
+  return true;
+};
+
+const createSeenConnections = (
+  core: (config: RelayWorkbench) => Omit<Parameters<typeof startCoreRecordSync>[0], "ownerId">,
+) =>
+  createWorkbenchConnections((config) =>
+    startCoreRecordSync({ ...core(config), ownerId: seenOwnerId(config), privateSpace: true }),
+  );
+
 export const startRelayRuntime = async (input: RelayRuntimeInput) => {
   const workbenches = new Map<string, RelayWorkbench>();
   const access = new Map<string, ReturnType<typeof createRelayAccess>>();
@@ -101,9 +127,13 @@ export const startRelayRuntime = async (input: RelayRuntimeInput) => {
   });
   const publications = createWorkbenchConnections((config) => startPublishedExtensions(core(config)));
   const automations = createWorkbenchConnections((config) => startAutomationSync(core(config)));
+  const activity = createWorkbenchConnections((config) =>
+    startCoreRecordSync({ ...core(config), ownerId: resourceActivityOwnerId }),
+  );
+  const seen = createSeenConnections(core);
   const personal = createWorkbenchConnections((config) => startRelayPersonalHistory(core(config)));
   const coreDocuments = createWorkbenchConnections((config) => startCoreDocumentSync(core(config)));
-  const coreOwners = [publications, automations, personal, coreDocuments];
+  const coreOwners = [coreDocuments, publications, automations, activity, seen, personal];
   const commands = createWorkbenchConnections((config) => startDeviceCommands(core(config)));
   const recovery = createWorkbenchConnections((config) => startFolderRecovery(core(config)));
   const lifecycleOwners = [...coreOwners, commands, recovery];
@@ -191,7 +221,9 @@ export const startRelayRuntime = async (input: RelayRuntimeInput) => {
   };
   const stopStorage = deps.extensionStorageService.watch((owner, origin) => {
     const documentId = owner.documentId;
-    if (!workbenches.has(owner.workbenchId) || isRecoveryCatalogOwner(owner.extensionId)) return;
+    const config = workbenches.get(owner.workbenchId);
+    if (!config || isRecoveryCatalogOwner(owner.extensionId)) return;
+    if (privateChangesHandled(config, owner.extensionId, origin, deps)) return;
     if (owner.extensionId === publishedExtensionsId) {
       publications.get(owner.workbenchId)?.wake();
       statusChanged(owner.workbenchId);
@@ -216,7 +248,7 @@ export const startRelayRuntime = async (input: RelayRuntimeInput) => {
     ...projectEntryPoints(commands.get, recovery.get),
     retry: createProjectSyncRetry({
       refresh,
-      owners: { core: coreDocuments, publications, automations, personal },
+      owners: { core: coreDocuments, publications, automations, activity, seen, personal },
       folders: recovery,
       extensions: connections,
     }),
@@ -226,10 +258,7 @@ export const startRelayRuntime = async (input: RelayRuntimeInput) => {
       assertLiveAvailable(live.get(workbenchId));
       const snapshot = await deps.extensionRuntimeCatalog.get(workbenchId);
       const owners = [
-        coreDocuments.get(workbenchId),
-        publications.get(workbenchId),
-        automations.get(workbenchId),
-        personal.get(workbenchId),
+        ...coreOwners.map((owner) => owner.get(workbenchId)),
         ...snapshot.enabledSources.map(({ installedSource }) =>
           connections.get(JSON.stringify([workbenchId, installedSource.extension_id])),
         ),

@@ -1,4 +1,5 @@
 import { join, resolve, sep } from "node:path";
+import { canonicalExtensionId, canonicalInstallName } from "pstdio-api-contracts/extension-host";
 import type { ExtensionDiagnostic, ExtensionRuntime, NormalizedExtension } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import { createAccumulator, createRegistryIndex } from "./accumulator";
@@ -20,8 +21,10 @@ import { registerPages } from "./pages";
 import { validateParamOptions } from "./param-options";
 import { registerProviders } from "./providers";
 import { validateResourcePrefixes } from "./resource-prefixes";
+import { normalizeResourcePresentations } from "./resource-presentations";
 import { registerSchedules } from "./schedules";
 import { registerSettings, validateSettingOptions } from "./settings";
+import { normalizeTemplateParamIdentities } from "./template-param-identities";
 import { registerTextSources } from "./text-sources";
 import { registerTranslations } from "./translations";
 import { registerUiModel } from "./ui-model";
@@ -34,7 +37,9 @@ type NormalizeExtensionSourcesOptions = {
 
 const isRepoLocalSource = (source: LoadedExtensionSource, projectFolder: string | undefined) =>
   projectFolder !== undefined &&
-  resolve(source.packagePath).startsWith(`${resolve(join(projectFolder, ".pstdio", "extensions"))}${sep}`);
+  resolve(source.originalPackagePath ?? source.packagePath).startsWith(
+    `${resolve(join(projectFolder, ".pstdio", "extensions"))}${sep}`,
+  );
 
 const createOverrideDiagnostic = (source: LoadedExtensionSource, override: LoadedExtensionSource) => ({
   code: "extension_overridden_by_local",
@@ -89,7 +94,16 @@ export const normalizeExtensionSources = (
   const index = createRegistryIndex();
   const extensionsById = new Map<string, NormalizedExtension>();
 
-  for (const source of resolveSources(sources, runtime, options)) {
+  const canonicalSources = sources.map((source) => {
+    const id = canonicalExtensionId(source.manifest.id);
+    return id === source.manifest.id
+      ? source
+      : {
+          ...source,
+          manifest: { ...source.manifest, id, name: canonicalInstallName(source.manifest.id) },
+        };
+  });
+  for (const source of resolveSources(canonicalSources, runtime, options)) {
     const ext = registerExtension(source, runtime, extensionsById);
     if (!validateExtensionDefinition(ext, source, runtime)) continue;
 
@@ -113,12 +127,14 @@ export const normalizeExtensionSources = (
     registerWebviewValidation(ext, source, runtime);
   }
 
+  normalizeTemplateParamIdentities(runtime);
   validateParamOptions(runtime);
   validateSettingOptions(runtime);
   validateCompositionRelationships(runtime);
   validateResourcePrefixes(runtime);
   validatePageDefinitions(runtime);
   validatePageNavigationTargets(runtime);
+  normalizeResourcePresentations(runtime);
 
   return runtime;
 };

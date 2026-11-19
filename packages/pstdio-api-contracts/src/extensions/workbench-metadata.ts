@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { dockedWorkbenchRegions, extensionPanelRegions } from "../extension-kernel/types/composition";
+import { projectCompositionSchema } from "../project-composition";
+import { resourceActivityCapabilitiesSchema } from "../resource-activity";
 import { chatRendererSnapshotSchema } from "./chat-renderer";
 import {
   extensionCommandPaletteContributionSchema,
@@ -24,8 +26,10 @@ import { workbenchExtensionPageRecordSchema } from "./page-metadata";
 import { regionSettingsSchema, workbenchPlacementPresentationSchema } from "./placement-metadata";
 import { extensionFileRendererRecordSchema, extensionTreeRendererRecordSchema } from "./renderers";
 import { placementItemSchema } from "./resource-binding-metadata";
+import { resourcePresentationRecordSchema } from "./resource-presentation";
 import { extensionSettingDefinitionRecordSchema, extensionSettingsSectionRecordSchema } from "./settings";
 import { viewToolbarActionSchema } from "./view-toolbar-action";
+import { resourceChangeProviderMetadataSchema } from "./workbench-resource-changes";
 
 const contributionRefSchema = <Kind extends string>(kind: Kind) =>
   z.object({ extensionId: z.string(), kind: z.literal(kind), id: z.string() });
@@ -107,6 +111,12 @@ const dataTableBodySchema = extensionDataTableRendererRecordSchema
   });
 
 export const workbenchExtensionViewBodySchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("actionBar"),
+    orientation: z.enum(["vertical", "horizontal"]).optional(),
+    queryHandlerId: z.string(),
+    refreshEventIds: z.array(z.string()).optional(),
+  }),
   z.object({
     kind: z.literal("terminal"),
     resourceKind: z.string().optional(),
@@ -210,6 +220,8 @@ const workbenchExtensionNavigationTreeRecordSchema = z.object({
 });
 
 const workbenchExtensionResourceKindRecordSchema = z.object({
+  activity: resourceActivityCapabilitiesSchema.optional(),
+  activityHandoff: z.boolean().optional(),
   id: z.string(),
   localId: z.string(),
   extensionId: z.string(),
@@ -234,6 +246,7 @@ const workbenchExtensionResourceKindRecordSchema = z.object({
 
 const workbenchExtensionSettingsPanelRecordSchema = z.object({
   id: z.string(),
+  localId: z.string().optional(),
   extensionId: z.string(),
   view: viewRefSchema,
   slot: z.object({ id: z.string() }),
@@ -251,6 +264,7 @@ const workbenchExtensionStatusBarItemRecordSchema = z.object({
 });
 
 export const workbenchExtensionMetadataSchema = z.object({
+  composition: projectCompositionSchema.optional(),
   projectSetups: z
     .array(z.object({ extensionId: z.string(), view: viewRefSchema, hiddenSetting: z.string().optional() }))
     .optional(),
@@ -263,7 +277,9 @@ export const workbenchExtensionMetadataSchema = z.object({
   views: z.array(workbenchExtensionViewRecordSchema),
   viewMenus: z.array(workbenchExtensionViewMenuRecordSchema),
   placements: z.array(workbenchExtensionPlacementRecordSchema),
+  resourceChangeProviders: z.array(resourceChangeProviderMetadataSchema).optional(),
   resourceKinds: z.array(workbenchExtensionResourceKindRecordSchema),
+  resourcePresentations: z.array(resourcePresentationRecordSchema).optional(),
   resourceHierarchyProviders: z
     .array(z.object({ id: z.string(), extensionId: z.string(), resourceKind: resourceKindRefSchema }))
     .optional(),

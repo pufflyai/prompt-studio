@@ -1,9 +1,9 @@
-import { Box } from "@chakra-ui/react";
+import { Box, useSlotRecipe } from "@chakra-ui/react";
 import { type ResourceContextAction, ResourceContextMenu } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
-import { WorkbenchSystemErrors } from "../notifications/system-errors";
-import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
+import { useSystemActivityStatusItem } from "../notifications/system-errors";
+import { useModeChrome } from "../region/mode-chrome";
 import { usePanelDragSurface, usePanelPositionActions } from "../region/panel-position-controls";
 import { WorkbenchRegion } from "../region/region";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -89,44 +89,38 @@ export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
   );
 };
 
-export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
-  const { workbench } = props;
+interface WorkbenchStatusBarProps extends WorkbenchRegionPanelProps {
+  leftInset?: "0" | "panel-gap";
+  floating?: boolean;
+}
+
+export const WorkbenchStatusBar = (props: WorkbenchStatusBarProps) => {
+  const { workbench, leftInset = "panel-gap", floating = false, visible = true } = props;
   const chrome = useModeChrome(workbench, "status");
+  useSystemActivityStatusItem(workbench, visible);
+  const styles = useSlotRecipe({ key: "statusBar" })();
 
   return (
     <WorkbenchFocusRegion
       workbench={workbench}
       region="status"
       data-workbench-region="status"
-      display={props.visible === false ? "none" : "block"}
+      display={visible ? "block" : "none"}
       as="footer"
+      bg={floating ? undefined : "bg"}
+      position={floating ? "absolute" : "relative"}
+      bottom={floating ? "0" : undefined}
+      insetInline={floating ? "0" : undefined}
+      zIndex={floating ? "docked" : undefined}
+      pointerEvents={floating ? "none" : undefined}
       flexShrink={0}
       h={WORKBENCH_STATUS_BAR_HEIGHT}
       minH="0"
       minW="0"
       overflow="hidden"
     >
-      <Box display="flex" alignItems="stretch" justifyContent="space-between" px="sm" h="full" minW="0" w="full">
-        <Box display="flex" alignItems="center" minW="0">
-          <WorkbenchSystemErrors workbench={workbench} />
-        </Box>
-        <Box flex="1" minW="0" h="full" display={chrome ? "block" : "none"}>
-          <ModeChromeView workbench={workbench} region="status" viewId={chrome || undefined} />
-        </Box>
-        <Box display={chrome === undefined ? "flex" : "none"} alignItems="stretch" minW="0" h="full">
-          <WorkbenchStatusBarItems
-            workbench={workbench}
-            slot="leading"
-            visible={props.visible !== false && chrome === undefined}
-          />
-        </Box>
-        <Box display={chrome === undefined ? "flex" : "none"} alignItems="stretch" minW="0" h="full" marginLeft="auto">
-          <WorkbenchStatusBarItems
-            workbench={workbench}
-            slot="trailing"
-            visible={props.visible !== false && chrome === undefined}
-          />
-        </Box>
+      <Box css={styles.root} ml={leftInset}>
+        <WorkbenchStatusBarItems workbench={workbench} chrome={chrome} visible={visible} />
       </Box>
     </WorkbenchFocusRegion>
   );

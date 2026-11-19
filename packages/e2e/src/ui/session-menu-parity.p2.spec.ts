@@ -22,10 +22,12 @@ test("Session menus share resource actions and switch through the full history",
     ).toBe(true);
   }
   await prepareResourceActionsDashboard(page, project.id);
-  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-session-browser/conversations`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.session-browser/conversations`);
   const nav = page.locator('[data-workbench-region="sidenav"]');
   await expect(nav.getByRole("option", { name: "History 64", exact: true })).toBeVisible();
   const revealOldestSessions = async () => {
+    // Navigation retains the previous rows while the new owner's first page loads.
+    await expect(nav.locator("section[aria-busy]").filter({ visible: true })).toHaveAttribute("aria-busy", "false");
     // Reaching the visible end fetches the next page before scrolling its rows into view.
     await nav.locator('[data-scope="scroll-area"][data-part="viewport"]').evaluateAll((elements) => {
       for (const element of elements) element.scrollTop = element.scrollHeight;
@@ -92,6 +94,7 @@ test("Session menus share resource actions and switch through the full history",
   await expect(search).toHaveValue("");
   await expect.poll(() => options.count()).toBeGreaterThan(1);
   await search.fill("History 00");
+  await expect(picker.getByRole("option", { name: "History 00", exact: true })).toBeVisible();
   await search.press("Enter");
   await expect(picker).toBeHidden();
   await expect(side.getByRole("tab", { name: "History 00", exact: true })).toBeVisible();
@@ -101,6 +104,7 @@ test("Session menus share resource actions and switch through the full history",
   await expect(page.getByRole("menuitem", { name: "Copy link", exact: true })).toBeVisible();
   await page.getByRole("menuitem", { name: "Switch session", exact: true }).click();
   await picker.getByRole("textbox").fill("History 01");
+  await expect(picker.getByRole("option", { name: "History 01", exact: true })).toBeVisible();
   await picker.getByRole("textbox").press("Enter");
   await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("History 01");
   await expect(side.getByRole("tab", { name: "History 00", exact: true })).toBeVisible();

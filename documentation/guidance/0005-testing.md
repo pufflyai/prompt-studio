@@ -21,7 +21,7 @@
 3. Add or update end-to-end tests for new features, update documentation, and remove tests that cover only implementation details.
 4. Keep tests green.
 5. CI runs each test once per applicable platform. Never retry unchanged failures or run repeated reliability checks to obtain a pass. Verify cause repairs and the final revision through section 9.
-6. Remove failing quarantined cases and their registry entries. Keep their failure evidence in the ticket or report so product coverage can be restored after the cause is fixed. Do not move known failures into the stable lane.
+6. Quarantine confirmed flakes with evidence, an owner, and removal criteria. Run them once in a separate lane and require its execution report. Unexpected failures, missing coverage, skipped cases and retries remain blocking. See [ADR 0101](../adrs/0101-temporary-flaky-test-quarantine.md).
 
 ## 4. Prove it works
 
@@ -46,7 +46,7 @@
 3. Put each test next to the file it tests.
 4. Avoid mocks. Test real behavior when possible.
 5. Test behavior users can use and rules the product still supports.
-6. When removing a feature, delete or update its tests. Do not add tests that only prove a removed feature, command, or setting stays absent.
+6. When removing a feature, delete or update its tests and their workflow, package-script and runner callers. Preview affected selectors through existing test discovery so an empty selection cannot break release validation. Do not add tests that only prove a removed feature, command, or setting stays absent.
 7. Write failure-case tests only for supported rules such as validation, permissions, and error handling.
 8. Do not write exhaustive UI permutations or cosmetic-only assertions. Use Canvas for exploration. Automate browser checks only for a critical behavior and name the risk in the test.
 9. Do not write tests for changes that only affect configuration or documentation.

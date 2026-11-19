@@ -1,5 +1,7 @@
+import { resolveCollectionIndexes } from "pstdio-api-contracts";
 import { createMemoryDocumentStore, type DocumentStore } from "pstdio-sync";
 import {
+  commitCurrentBatch,
   createDocumentStorage,
   createLegacyRecordStorage,
   createMemoryRecordQueries,
@@ -7,8 +9,9 @@ import {
   scopeRecordStorage,
   storageRecordId,
 } from "pstdio-sync/records";
-import type { StorageRecordIndex, StorageTextDeclaration } from "pstdio-sync-contracts";
+import type { StorageCurrentGroup, StorageRecordIndex, StorageTextDeclaration } from "pstdio-sync-contracts";
 import type { createMemoryAssets } from "./memory-assets";
+import { readMemoryQueryIdentity } from "./memory-query-resources";
 import { createOrderedMemoryRecords, type OrderedMemoryState } from "./ordered-memory-records";
 
 export interface MemoryStorageSeed {
@@ -46,8 +49,11 @@ export const createMemoryRecordOwner = (
     for (const [id, value] of Object.entries(items))
       add(["project", owner.workbenchId, "collection", name], id, { value, sortOrder: null });
   ordered.seed(initial);
-  const queries = createMemoryRecordQueries(owner, baseStore, ordered);
-  const initialized = queries.defineIndexes(seed.indexes ?? []);
+  const queries = createMemoryRecordQueries(owner, baseStore, {
+    ...ordered,
+    identity: (kind, id) => readMemoryQueryIdentity(queries.query, kind, id),
+  });
+  const initialized = queries.defineIndexes(resolveCollectionIndexes(seed.indexes ?? [], "project", owner.workbenchId));
   const store: DocumentStore = {
     transaction: async (target, action) => {
       await initialized;
@@ -65,6 +71,8 @@ export const createMemoryRecordOwner = (
       throw new Error("Records merge automatically; there are no conflicts to resolve");
     },
   };
+  const transaction = <T>(run: (value: typeof locked) => Promise<T>) =>
+    store.transaction(owner, async () => run(locked));
   const records = {
     ...queries,
     read: (id: string) => store.transaction(owner, async () => locked.read(id)),
@@ -77,7 +85,8 @@ export const createMemoryRecordOwner = (
     conflicts: locked.conflicts,
     inspect: locked.inspect,
     resolve: locked.resolve,
-    transaction: <T>(run: (value: typeof locked) => Promise<T>) => store.transaction(owner, async () => run(locked)),
+    transaction,
+    commitIfCurrent: (group: StorageCurrentGroup) => commitCurrentBatch({ transaction }, group),
   };
   const legacy = createLegacyRecordStorage({ records });
   return {
@@ -103,6 +112,12 @@ export const createMemoryRecordOwner = (
     duringMigration: async <T>(key: string, run: () => Promise<T>) => {
       await initialized;
       return baseStore.duringMigration(key, run);
+    },
+    /** Records for a host collection move; callers hold no other owner transaction. */
+    movable: {
+      read: records.read,
+      list: records.list,
+      move: (input: Parameters<typeof ordered.move>[0]) => store.transaction(owner, async () => locked.move(input)),
     },
     scope: (type: string, id: string) => ({
       records: scopeRecordStorage(records, [type, id, "kv"]),

@@ -1,6 +1,7 @@
 // Compose the feature-branch graph with its milestone timeline and the selected ticket's details.
-import { Box, Flex } from "@chakra-ui/react";
-import type { GuestHost } from "@pstdio/sdk/extensions";
+import { Box, Flex, Stack } from "@chakra-ui/react";
+import { createWebviewQueryClient, type GuestHost } from "@pstdio/sdk/extensions";
+import { useWebviewScope } from "@pstdio/sdk/extensions/react";
 import { type HostStorage, HostStorageProvider, installPrismGlobal } from "@pstdio/ui";
 import {
   type CollectionViewsSource,
@@ -10,6 +11,7 @@ import {
 } from "@pstdio/ui/collection-view";
 import type { KanbanRendererSettings } from "@pstdio/ui/kanban-renderer";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { PlannerReadError } from "../../views/planner-read-error";
 import { AutoBuildControl } from "./auto-build-control";
 import { BackgroundMenu } from "./background-menu";
 import { formatDay } from "./flags";
@@ -18,7 +20,6 @@ import { PlanHeader } from "./plan-header";
 import { PlanLoading } from "./plan-loading";
 import { useViewSections } from "./plan-state";
 import { TicketRequestsDialog } from "./ticket-requests-dialog";
-import { reportPlannerError } from "./timeline-notice";
 import { TimelinePresentationProvider } from "./timeline-presentation";
 import { timelineInitialState, timelineQueryData } from "./timeline-query";
 import { createTimelineStorage } from "./timeline-storage";
@@ -43,32 +44,50 @@ interface PlanRootProps {
 }
 
 export function PlanRoot(props: PlanRootProps) {
+  const scope = useWebviewScope(createWebviewQueryClient(props.host));
+  return <ProjectPlanRoot key={scope} {...props} />;
+}
+
+function ProjectPlanRoot(props: PlanRootProps) {
   const { host, t } = props;
-  const { client, plan } = usePlan(host);
+  const { client, plan, error, retry } = usePlan(host);
   // Restore project presentation before mounting controls or applying collapsed geometry.
   const [storage, setStorage] = useState<HostStorage>();
+  const [storageError, setStorageError] = useState<Error>();
+  const [storageAttempt, retryStorage] = useState(0);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Retry reloads storage on the same host.
   useEffect(() => {
     let active = true;
-    const reportError = (reason: unknown) => {
-      if (active) void reportPlannerError(client, reason);
-    };
-    void createTimelineStorage(host, reportError)
+    setStorageError(undefined);
+    void createTimelineStorage(host, (error) => console.warn("Could not save Timeline preferences", error))
       .then((next) => {
         if (active) setStorage(next);
       })
-      .catch(reportError);
+      .catch((reason: unknown) => {
+        if (active) setStorageError(reason instanceof Error ? reason : new Error(String(reason)));
+      });
     return () => {
       active = false;
     };
-  }, [client, host]);
-  if (!plan || !storage) return <PlanLoading t={t} />;
-  const viewsSource = timelineViewsSource(client, plan.savedViews);
+  }, [host, storageAttempt]);
+  const viewsSource = plan ? timelineViewsSource(client, plan.savedViews) : undefined;
   return (
-    <HostStorageProvider storage={storage}>
-      <TimelinePresentationProvider key={plan.projectId} projectId={plan.projectId} storage={storage}>
-        <PlanContent host={host} t={t} client={client} plan={plan} viewsSource={viewsSource} />
-      </TimelinePresentationProvider>
-    </HostStorageProvider>
+    <Stack h="full" minH="0" gap="0" position="relative">
+      <PlannerReadError
+        error={error ?? storageError}
+        retry={error ? retry : () => retryStorage((attempt) => attempt + 1)}
+      />
+      <Box flex="1" minH="0">
+        {plan && storage && viewsSource ? (
+          <HostStorageProvider storage={storage}>
+            <TimelinePresentationProvider key={plan.projectId} projectId={plan.projectId} storage={storage}>
+              <PlanContent host={host} t={t} client={client} plan={plan} viewsSource={viewsSource} />
+            </TimelinePresentationProvider>
+          </HostStorageProvider>
+        ) : null}
+        {(!plan || !storage) && !error && !storageError ? <PlanLoading t={t} /> : null}
+      </Box>
+    </Stack>
   );
 }
 
@@ -99,7 +118,7 @@ function PlanContent(props: PlanContentProps) {
       ? (attentionSection?.deadline?.name ??
         (attentionSection?.deadline ? formatDay(attentionSection.deadline.date) : "Unscheduled"))
       : attentionRows.map(({ shorthand, title }) => `${shorthand} · ${title}`).join("");
-  const queryData = timelineQueryData(plan, t);
+  const queryData = timelineQueryData(plan, t, (target) => void host.call("navigation.open", { target }));
   const filter = useCollectionViewStore(queryData.storageKey, timelineInitialState, (state) => state.filter);
   const displayProperties = useCollectionViewStore(
     queryData.storageKey,

@@ -1,9 +1,14 @@
-import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { getExtensionApiVersionError } from "pstdio-extensions";
 import type { PruneProjectExtensionInstancesInput, SyncInstalledSourceInput } from "../../services/extension-service";
-import { hashExtensionSource, loadExtensionSource, readExtensionSourceMetadata } from "./extension-runtime";
-import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
+import { listExtensionSources } from "./discover-extension-sources";
+import {
+  type hashExtensionSource,
+  hashExtensionSourceAsync,
+  loadExtensionSource,
+  readExtensionSourceMetadata,
+} from "./extension-runtime";
+import { resolvePstdioHome } from "./install-extension-source";
 
 type InstalledExtensionDiscoveryDeps = {
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
@@ -53,18 +58,17 @@ type PrunedExtensionInstance = {
 
 const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps) => {
   const root = deps.extensionsRoot ?? join(resolvePstdioHome({ env: deps.env, homedir: deps.homedir }), "extensions");
-  if (!existsSync(root)) return { discovered: [], presentSourcePaths: [], root, rootExists: false };
+  const listing = await listExtensionSources(root);
+  if (!listing.rootExists) return { discovered: [], presentSourcePaths: [], root, rootExists: false };
 
-  const load = deps.loadExtension ?? loadExtensionSource;
-  const hash = deps.hashExtension ?? hashExtensionSource;
-  const discovered: DiscoveredInstalledExtension[] = [];
-  const presentSourcePaths: string[] = [];
+  const load = deps.loadExtension ?? ((path: string) => loadExtensionSource(path, { accepted: true }));
+  const hash = deps.hashExtension ?? hashExtensionSourceAsync;
+  const discovered = new Array<DiscoveredInstalledExtension | undefined>(listing.paths.length);
+  let next = 0;
+  let failure: { index: number; error: unknown } | undefined;
 
-  for (const entry of readdirSync(root, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
-    if (!entry.isDirectory()) continue;
-    const sourcePath = join(root, entry.name);
-    if (existsSync(join(sourcePath, EXTENSION_INSTALLING_MARKER))) continue;
-
+  const read = async (sourcePath: string): Promise<DiscoveredInstalledExtension | undefined> => {
+    const installName = basename(sourcePath);
     let loaded: Awaited<ReturnType<typeof loadExtensionSource>>;
     try {
       loaded = await load(sourcePath);
@@ -74,26 +78,47 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
         if (!getExtensionApiVersionError(metadataOnly.metadata.name, metadataOnly.metadata.enginesPstdio)) throw error;
         loaded = metadataOnly;
       } catch {
-        deps.onLoadFailure?.({ error, installName: entry.name, sourcePath });
+        deps.onLoadFailure?.({ error, installName, sourcePath });
         // User-edited installed sources can become invalid; project creation should still sync healthy extensions.
-        continue;
+        return;
       }
     }
-
-    presentSourcePaths.push(sourcePath);
-    discovered.push({
-      installName: entry.name,
+    return {
+      installName,
       displayName: loaded.metadata.displayName,
       extensionId: loaded.metadata.id,
       manifest: loaded.manifest,
       name: loaded.metadata.name,
-      sourceHash: hash(sourcePath),
+      sourceHash: await hash(sourcePath),
       sourcePath,
       version: loaded.metadata.version,
-    });
-  }
+    };
+  };
+  const fail = (index: number, error: unknown) => {
+    if (!failure || index < failure.index) failure = { index, error };
+  };
+  const inspect = async () => {
+    while (!failure && next < listing.paths.length) {
+      const index = next++;
+      try {
+        discovered[index] = await read(listing.paths[index]!);
+      } catch (error) {
+        fail(index, error);
+      }
+    }
+  };
+  // Independent fresh reads may overlap, while registration retains disk order.
+  // Drain admitted reads on failure before callers can tear down their source folders.
+  await Promise.all(Array.from({ length: Math.min(2, listing.paths.length) }, inspect));
+  if (failure) throw failure.error;
+  const healthy = discovered.filter((extension): extension is DiscoveredInstalledExtension => extension !== undefined);
 
-  return { discovered, presentSourcePaths, root, rootExists: true };
+  return {
+    discovered: healthy,
+    presentSourcePaths: healthy.map((extension) => extension.sourcePath),
+    root,
+    rootExists: true,
+  };
 };
 
 type InstalledExtensionSnapshot = Awaited<ReturnType<typeof discoverInstalledExtensions>>;
@@ -142,17 +167,21 @@ export const syncInstalledExtensionsForProject = async (deps: SyncInstalledExten
 export const syncInstalledExtensionsForProjects = async (deps: SyncInstalledExtensionsForProjectsDeps) => {
   const snapshotStartedAt = new Date().toISOString();
   const snapshot = await discoverInstalledExtensions(deps);
-  const synced: Array<SyncedInstalledExtension & { projectId: string }> = [];
-
-  for (const project of await deps.projectService.list()) {
-    const projectSynced = await syncSnapshotForProject({
-      ...deps,
-      projectId: project.id,
-      snapshot,
-      snapshotStartedAt,
-    });
-    synced.push(...projectSynced.map((entry) => ({ ...entry, projectId: project.id })));
-  }
-
-  return synced;
+  const projects = await deps.projectService.list();
+  const synced: Array<Array<SyncedInstalledExtension & { projectId: string }>> = [];
+  let next = 0;
+  const sync = async () => {
+    while (next < projects.length) {
+      const index = next++;
+      const projectId = projects[index]!.id;
+      const projectSynced = await syncSnapshotForProject({ ...deps, projectId, snapshot, snapshotStartedAt });
+      synced[index] = projectSynced.map((entry) => ({ ...entry, projectId }));
+    }
+  };
+  // A project's frontend refresh must not hold every other project's disabled
+  // registration behind it. Bound admission and drain work before returning.
+  const results = await Promise.allSettled(Array.from({ length: Math.min(2, projects.length) }, sync));
+  const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+  if (failures.length) throw new AggregateError(failures, "Installed extension discovery failed");
+  return synced.flat();
 };

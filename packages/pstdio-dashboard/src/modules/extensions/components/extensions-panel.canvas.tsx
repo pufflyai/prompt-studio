@@ -12,7 +12,7 @@ const installedExtensions: ProjectExtensionInstance[] = [
   {
     id: "planner-instance",
     projectId: "project-1",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     icon: "Kanban",
     installedExtensionId: "installed-planner",
     installName: "pstdio-planner",
@@ -77,7 +77,7 @@ const automations: WorkbenchExtensionAutomationRecord[] = [
   {
     id: "pstdio-planner.refine-tickets",
     localId: "refine-tickets",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     extensionInstanceId: "planner-instance",
     title: "Refine open tickets",
     cron: "0 6 * * *",
@@ -87,7 +87,7 @@ const automations: WorkbenchExtensionAutomationRecord[] = [
   {
     id: "pstdio-planner.stuck-work-sweep",
     localId: "stuck-work-sweep",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     extensionInstanceId: "planner-instance",
     title: "Sweep stuck work",
     cron: "*/30 * * * *",
@@ -100,14 +100,14 @@ const diagnostics: ExtensionDiagnostic[] = [
     code: "stale-template",
     severity: "warning",
     message: "Bundled template is older than the installed copy.",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     sourcePath: "templates/ticket.md",
   },
 ];
 const marketplace = [
   {
     installName: "pstdio-reports",
-    extensionId: "pstdio.pstdio-reports",
+    extensionId: "pstdio.reports",
     icon: "FileChartColumn",
     displayName: "Agent Reports",
     description: "Workspace reports for agent handoffs.",
@@ -122,7 +122,7 @@ const marketplace = [
   },
   {
     installName: "pstdio-planner",
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     icon: "Kanban",
     displayName: "Project Planner",
     description: "Tickets, managed attempts, reviews, and templates.",
@@ -217,7 +217,7 @@ export const Mutating: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    togglingInstanceId: "planner-instance",
+    actionStates: { "planner-instance": { operation: "toggle", status: "running", label: "Updating Project Planner" } },
   },
 };
 export const InstallingMultipleAvailableExtensions: Story = {
@@ -227,7 +227,10 @@ export const InstallingMultipleAvailableExtensions: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    installingMarketplaceNames: ["pstdio-reports", "pstdio-planner"],
+    actionStates: {
+      "marketplace:pstdio-reports": { status: "running", label: "Installing" },
+      "marketplace:pstdio-planner": { status: "running", label: "Installing" },
+    },
   },
 };
 export const HealthPopoverOpen: Story = {
@@ -285,10 +288,12 @@ export const UpgradingOneExtension: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    upgradingInstanceIds: ["planner-instance"],
+    actionStates: {
+      "planner-instance": { status: "running", label: "Upgrading Project Planner" },
+    },
   },
 };
-// Upgrade all marks every row it will upgrade, so rows still waiting their turn show a spinner too.
+// Two installs can run at once; each active row identifies the extension and elapsed time.
 export const UpgradingAll: Story = {
   id: "projectsettings-extensionspanel--upgrading-all",
   args: {
@@ -296,10 +301,11 @@ export const UpgradingAll: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    upgradingAll: true,
-    upgradingInstanceIds: installedExtensions
-      .filter((extension) => extension.canUpgrade)
-      .map((extension) => extension.id),
+    batch: { ids: ["pstdio-planner", "extension-lab"], running: true, completed: 0, failed: 0 },
+    actionStates: {
+      "planner-instance": { status: "running", label: "Upgrading Project Planner" },
+      "lab-instance": { status: "running", label: "Upgrading Extension Lab" },
+    },
   },
 };
 // No row can take a newer release, so there are no row upgrade buttons and no Upgrade all.
@@ -319,7 +325,7 @@ export const AddingLocalFolder: Story = {
     marketplace,
     diagnostics: [],
     automations,
-    addingFolderName: "my-extension",
+    actionStates: { $folder: { status: "running", label: "Adding my-extension…" } },
   },
 };
 

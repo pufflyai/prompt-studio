@@ -1,23 +1,30 @@
+import { createStore } from "zustand/vanilla";
+
 export const createFrameSelection = (ids: readonly string[]) => {
   const sourceIds = new Set(ids);
-  const listeners = new Set<() => void>();
-  let selected: string | undefined;
+  const state = createStore<{ selected?: string }>(() => ({}));
+  const releases = new Set<() => void>();
+  let disposed = false;
   return {
-    get: () => selected,
+    get: () => state.getState().selected,
     select: (id?: string) => {
-      if ((id !== undefined && !sourceIds.has(id)) || selected === id) return;
-      selected = id;
-      for (const listener of listeners) listener();
+      if (disposed || (id !== undefined && !sourceIds.has(id)) || state.getState().selected === id) return;
+      state.setState({ selected: id });
     },
     subscribe: (listener: () => void) => {
-      listeners.add(listener);
+      if (disposed) return () => {};
+      const stop = state.subscribe(listener);
+      releases.add(stop);
       return () => {
-        listeners.delete(listener);
+        releases.delete(stop);
+        stop();
       };
     },
     dispose: () => {
-      selected = undefined;
-      listeners.clear();
+      disposed = true;
+      for (const stop of releases) stop();
+      releases.clear();
+      state.setState({ selected: undefined });
     },
   };
 };

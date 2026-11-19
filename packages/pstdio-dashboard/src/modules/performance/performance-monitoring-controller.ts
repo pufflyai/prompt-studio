@@ -1,41 +1,56 @@
-import type { PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
+import type { PerformanceControlOwner, PerformanceSnapshot } from "pstdio-api-contracts/performance-diagnostics";
 import { pausedExtensions } from "@/shared/extensions/paused-extensions";
 import { createFrameRateCounter } from "./frame-rate";
 import type { PerformanceHost } from "./performance-host";
+import type { ReactRenderOverlay } from "./react-render-overlay";
 import { observeSlowFrames } from "./slow-frame-observer";
 
 // Owns this renderer's slow-frame observer and frame counter. Both run exactly
 // while monitoring is on, so a second reader never starts a second one.
-export const createPerformanceMonitoringController = (host: PerformanceHost) => {
+export const createPerformanceMonitoringController = (host: PerformanceHost, renderOverlay?: ReactRenderOverlay) => {
   const frameRate = createFrameRateCounter();
   let enabled: boolean | undefined;
+  let releaseOverlayOwner: (() => void) | undefined;
+  const stopOverlay = () => {
+    releaseOverlayOwner?.();
+    releaseOverlayOwner = undefined;
+    void renderOverlay?.setEnabled(false);
+  };
   let stopObserver: (() => void) | undefined;
   let stopStateReports: (() => void) | undefined;
   let disposed = false;
   let releaseCapture: (() => Promise<void>) | undefined;
-  const snapshotListeners = new Set<(snapshot: PerformanceSnapshot | null) => void>();
+  let observingSnapshots = false;
   let stopSnapshots: (() => void) | undefined;
+  const snapshots = createScopedQueryClient(
+    { runtimeId: crypto.randomUUID(), extensionId: "pstdio.performance" },
+    { maxInactive: 1 },
+  );
+  const snapshotQuery = snapshots.query<PerformanceSnapshot | null>({
+    id: "performance.snapshot",
+    async read(signal) {
+      signal.throwIfAborted();
+      if (!enabled) return null;
+      const value = await host.snapshot();
+      signal.throwIfAborted();
+      return value;
+    },
+    subscribe(invalidate) {
+      invalidate();
+      observingSnapshots = true;
+      if (enabled && !disposed) stopSnapshots ??= startSnapshots();
+      return () => {
+        observingSnapshots = false;
+        stopSnapshots?.();
+        stopSnapshots = undefined;
+      };
+    },
+  });
+  // Keep the established host cadence. Reading the source joins this owner, never another collector.
   const startSnapshots = () => {
-    let active = true;
-    let pending = false;
-    const poll = async () => {
-      if (pending) return;
-      pending = true;
-      try {
-        const snapshot = await host.snapshot();
-        if (active) for (const listener of snapshotListeners) listener(snapshot);
-      } finally {
-        pending = false;
-      }
-    };
-    const timer = setInterval(() => {
-      void poll().catch(() => {});
-    }, 2000);
-    void poll().catch(() => {});
-    return () => {
-      active = false;
-      clearInterval(timer);
-    };
+    const timer = setInterval(() => snapshotQuery.invalidate(), 2000);
+    return () => clearInterval(timer);
   };
 
   // The snapshot that people copy and agents read includes this window's state.
@@ -59,15 +74,17 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
     if (next) {
       stopObserver ??= observeSlowFrames(host.reportFrames);
       stopStateReports ??= reportStateChanges();
-      if (snapshotListeners.size) stopSnapshots ??= startSnapshots();
+      if (observingSnapshots) stopSnapshots ??= startSnapshots();
+      void snapshotQuery.refreshObserved().catch(() => {});
     } else {
+      stopOverlay();
       stopObserver?.();
       stopObserver = undefined;
       stopStateReports?.();
       stopStateReports = undefined;
       stopSnapshots?.();
       stopSnapshots = undefined;
-      for (const listener of snapshotListeners) listener(null);
+      snapshotQuery.accept(null);
     }
   };
 
@@ -87,6 +104,24 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
 
   return {
     host,
+    getRenderOverlay: () => renderOverlay?.state(),
+    setRenderOverlayEnabled: async (next: boolean, owner?: PerformanceControlOwner) => {
+      if (!renderOverlay) throw new Error("React Scan is unavailable in this build");
+      if (next && !enabled) throw new Error("Enable performance monitoring before highlighting renders");
+      releaseOverlayOwner?.();
+      const release = next ? owner?.onDisconnect(stopOverlay) : undefined;
+      releaseOverlayOwner = release;
+      try {
+        await renderOverlay.setEnabled(next);
+      } catch (error) {
+        if (releaseOverlayOwner === release) {
+          release?.();
+          releaseOverlayOwner = undefined;
+        }
+        throw error;
+      }
+    },
+    snapshotQuery,
     // A loaded monitoring extension is the person's choice to measure, so monitoring runs exactly
     // while one holds a capture, and stops when the last one is disabled or unloaded.
     retainCapture: async () => {
@@ -103,6 +138,7 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
         if (released) return;
         released = true;
         leases -= 1;
+        if (leases === 0) stopOverlay();
         await release();
         if (leases === 0 && !disposed) {
           if (host.kind === "desktop") {
@@ -125,17 +161,19 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
     getEnabled: () => enabled,
     setEnabled,
     subscribeSnapshots: (listener: (snapshot: PerformanceSnapshot | null) => void) => {
-      snapshotListeners.add(listener);
-      if (enabled && !disposed) stopSnapshots ??= startSnapshots();
-      return () => {
-        snapshotListeners.delete(listener);
-        if (!snapshotListeners.size) {
-          stopSnapshots?.();
-          stopSnapshots = undefined;
-        }
+      let previous: PerformanceSnapshot | null | undefined;
+      const changed = () => {
+        const data = snapshotQuery.getSnapshot().data;
+        if (data === undefined || data === previous) return;
+        previous = data;
+        listener(data);
       };
+      const stop = snapshotQuery.subscribe(changed);
+      changed();
+      return stop;
     },
     dispose: () => {
+      stopOverlay();
       disposed = true;
       void releaseCapture?.().catch(() => {});
       releaseCapture = undefined;
@@ -144,7 +182,7 @@ export const createPerformanceMonitoringController = (host: PerformanceHost) => 
       stopObserver?.();
       stopObserver = undefined;
       stopSnapshots?.();
-      snapshotListeners.clear();
+      snapshots.dispose();
     },
   };
 };

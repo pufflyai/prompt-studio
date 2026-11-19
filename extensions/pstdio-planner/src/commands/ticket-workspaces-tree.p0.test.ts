@@ -1,13 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { workspaceCommands, workspacePages } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { workspaceArgs } from "./archive-context.fixture";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { listTicketFilesTreeCommand } from "./ticket-files";
+import { createWorkspaceCommand } from "./ticket-workspaces-tree";
 
 const ticketRendererParams = (ticket: { id: string; shorthand: string }, documentId?: string) => ({
   renderer: {
-    rendererId: "pstdio.pstdio-planner.view.ticket-files",
+    rendererId: "pstdio.planner.view.ticket-files",
     resource: {
       type: "ticket",
       id: ticket.id,
@@ -18,9 +19,41 @@ const ticketRendererParams = (ticket: { id: string; shorthand: string }, documen
 });
 
 describe("ticket files tree workspace commands", () => {
-  test("appends a Workspaces section for linked workspaces and excludes unrelated ones", async () => {
+  test("keeps the configured opener's explicit parent chain", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
+    const parent = {
+      kind: "page" as const,
+      page: { kind: "page" as const, extensionId: "example.reader", id: "collection" },
+      params: { grouping: "device" },
+    };
+    const sections = await listTicketFilesTreeCommand.run(
+      ...(await workspaceArgs({
+        storage,
+        params: ticketRendererParams(ticket),
+        overrides: {
+          workspaces: { list: async () => [{ id: "ws-1", anchors_json: [{ type: "ticket", id: ticket.id }] }] },
+          resources: {
+            resolveOpenings: async (resources) =>
+              resources.map((resource) => ({
+                resource,
+                target: {
+                  kind: "page" as const,
+                  page: { kind: "page" as const, extensionId: "example.reader", id: "inspect" },
+                  resource,
+                  parent,
+                },
+              })),
+          },
+        },
+      })),
+    );
+    expect(sections.find((section) => section.id === "workspaces")?.nodes[0]).toHaveProperty("target.parent", parent);
+  });
+
+  test("appends a Workspaces section for linked workspaces and excludes unrelated ones", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(...(await workspaceArgs({ storage, params: { title: "Ticket" } })));
 
     const linked = {
       id: "ws-1",
@@ -42,18 +75,18 @@ describe("ticket files tree workspace commands", () => {
           label: "PS-999",
           shorthand: "PS-999",
           metadata: {
-            resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+            resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
           },
         },
       ],
     };
 
     const sections = await listTicketFilesTreeCommand.run(
-      ...makeCommandArgs({
+      ...(await workspaceArgs({
         storage,
         params: ticketRendererParams(ticket),
         overrides: { workspaces: { list: async () => [linked, unrelated] } },
-      }),
+      })),
     );
 
     expect(sections.map((section) => section.id)).toEqual(["ticket", "workspaces"]);
@@ -64,7 +97,7 @@ describe("ticket files tree workspace commands", () => {
       actions: [
         expect.objectContaining({
           id: "create-workspace",
-          command: workspaceCommands.create,
+          command: createWorkspaceCommand,
           params: {
             shorthand_base: ticket.shorthand,
             anchors: [expect.objectContaining({ type: "ticket", id: ticket.id, role: "primary" })],
@@ -78,20 +111,20 @@ describe("ticket files tree workspace commands", () => {
           icon: "GitBranch",
           target: {
             kind: "page",
-            page: workspacePages.workspace,
+            page: { kind: "page", extensionId: "example.reader", id: "inspect" },
             parent: {
               kind: "page",
-              page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },
+              page: { kind: "page", id: "ticket", extensionId: "pstdio.planner" },
               resource: {
                 type: "ticket",
                 id: ticket.id,
                 label: `${ticket.shorthand} ${ticket.title}`,
                 shorthand: ticket.shorthand,
                 metadata: {
-                  resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+                  resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
                 },
               },
-              parent: { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.pstdio-planner" } },
+              parent: { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.planner" } },
             },
             resource: {
               type: "workspace",
@@ -105,7 +138,7 @@ describe("ticket files tree workspace commands", () => {
                   label: `${ticket.shorthand} ${ticket.title}`,
                   shorthand: ticket.shorthand,
                   metadata: {
-                    resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+                    resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
                   },
                 },
                 workspaceId: "ws-1",
@@ -121,10 +154,10 @@ describe("ticket files tree workspace commands", () => {
 
   test("sorts linked workspaces by latest workspace activity before shorthand", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...(await workspaceArgs({ storage, params: { title: "Ticket" } })));
 
     const sections = await listTicketFilesTreeCommand.run(
-      ...makeCommandArgs({
+      ...(await workspaceArgs({
         storage,
         params: ticketRendererParams(ticket),
         overrides: {
@@ -149,7 +182,7 @@ describe("ticket files tree workspace commands", () => {
             ],
           },
         },
-      }),
+      })),
     );
 
     expect(sections.find((section) => section.id === "workspaces")?.nodes.map((node) => node.id)).toEqual([
@@ -160,19 +193,19 @@ describe("ticket files tree workspace commands", () => {
 
   test("keeps workspace creation on the ticket when its empty group is hidden", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...(await workspaceArgs({ storage, params: { title: "Ticket" } })));
     const sections = await listTicketFilesTreeCommand.run(
-      ...makeCommandArgs({
+      ...(await workspaceArgs({
         storage,
         params: ticketRendererParams(ticket),
         overrides: { workspaces: { list: async () => [] } },
-      }),
+      })),
     );
     expect(sections.map((section) => section.id)).toEqual(["ticket"]);
     expect(sections[0].nodes[0].contextMenuActions).toContainEqual(
       expect.objectContaining({
         id: "create-workspace",
-        command: workspaceCommands.create,
+        command: createWorkspaceCommand,
         params: expect.objectContaining({ anchors: [expect.objectContaining({ type: "ticket", id: ticket.id })] }),
       }),
     );

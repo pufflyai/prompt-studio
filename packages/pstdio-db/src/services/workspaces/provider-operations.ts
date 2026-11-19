@@ -54,8 +54,9 @@ export const updateProviderOperationProjection = async (
   db: DbClient,
   id: string,
   input: {
-    operationId: string;
-    operationKind: "create" | "cancel" | "archive" | "delete";
+    operationId: string | null;
+    operationKind: "create" | "cancel" | "archive" | "delete" | null;
+    expectedState?: WorkspaceProviderState;
     patch: ProviderProjectionInput;
   },
 ) => {
@@ -66,8 +67,13 @@ export const updateProviderOperationProjection = async (
       and(
         eq(workspaces.id, id),
         isNull(workspaces.deleted_at),
-        eq(workspaces.provider_operation_id, input.operationId),
-        eq(workspaces.provider_operation_kind, input.operationKind),
+        input.operationId === null
+          ? isNull(workspaces.provider_operation_id)
+          : eq(workspaces.provider_operation_id, input.operationId),
+        input.operationKind === null
+          ? isNull(workspaces.provider_operation_kind)
+          : eq(workspaces.provider_operation_kind, input.operationKind),
+        input.expectedState === undefined ? undefined : eq(workspaces.provider_state, input.expectedState),
       ),
     )
     .returning(workspaceColumns);

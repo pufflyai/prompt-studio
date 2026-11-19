@@ -15,7 +15,7 @@ const RetainedDocumentPresence = () => {
   const [closed, setClosed] = useState(0);
   const [fixture] = useState(() => {
     const page = { kind: "page" as const, extensionId: "storybook", id: "notes" };
-    const workbench = createWorkbench({ startPage: page });
+    const workbench = createWorkbench({ defaultPage: page });
     const resource = (id: string) => ({
       type: "note",
       id,

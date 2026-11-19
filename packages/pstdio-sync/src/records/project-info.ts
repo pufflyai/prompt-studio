@@ -7,19 +7,26 @@ export interface ProjectInfo {
   name?: string;
   /** The `origin` remote of the project's folder. A new device offers to clone it. */
   gitRemote?: string;
+  /** Serialized project workbench configuration. Kept opaque to the sync transport. */
+  composition?: string;
 }
 
 const info = (document: Y.Doc) => document.getMap<string>("project");
 
 export const readProjectInfo = (document: Y.Doc) => {
   const map = info(document);
-  return { name: map.get("name"), gitRemote: map.get("gitRemote") } satisfies ProjectInfo;
+  const composition = map.get("composition");
+  return {
+    name: map.get("name"),
+    gitRemote: map.get("gitRemote"),
+    ...(composition === undefined ? {} : { composition }),
+  } satisfies ProjectInfo;
 };
 
 export const writeProjectInfo = (document: Y.Doc, next: ProjectInfo) => {
   const map = info(document);
   document.transact(() => {
-    for (const key of ["name", "gitRemote"] as const) {
+    for (const key of ["name", "gitRemote", "composition"] as const) {
       const value = next[key];
       if (value === undefined) continue;
       if (map.get(key) !== value) map.set(key, value);

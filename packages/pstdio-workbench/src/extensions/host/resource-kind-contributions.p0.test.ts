@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import type { CommandResponse } from "@pstdio/sdk/extensions";
+import { createMemoryActivity } from "@pstdio/sdk/testing";
 import { createWorkbench } from "../../core";
 import { emptyWorkbenchExtensionMetadata } from "../contributions/extension-contributions";
 import { registerWorkbenchExtensionContributions } from "./workbench-extension-host";
@@ -68,5 +69,55 @@ test("related opening results reject malformed resources, regions, and opt-in va
       ),
     ).toBe(true);
     s.registration.dispose();
+  }
+});
+
+test("comments-only owners expose handoff controls only when they provide a snapshot", () => {
+  for (const activityHandoff of [false, true]) {
+    const workbench = createWorkbench();
+    const targets = async () => [];
+    const registration = registerWorkbenchExtensionContributions({
+      workbench,
+      projectId: "project",
+      executeCommand: () => ({ outcome: { ok: true, status: "success", value: null } }),
+      resourceActivity: { api: createMemoryActivity(), watch: async () => {}, targets },
+      metadata: {
+        ...emptyWorkbenchExtensionMetadata,
+        resourceKinds: [
+          { id: "note", localId: "note", extensionId: "example.notes", activity: { comments: true }, activityHandoff },
+        ],
+      },
+    });
+    expect(Boolean(workbench.resources.getKind("note", "example.notes")!.activity?.targets)).toBe(activityHandoff);
+    registration.dispose();
+  }
+});
+
+test("host composition supplies related openings for an extension-owned kind", async () => {
+  const workbench = createWorkbench();
+  const calls: unknown[] = [];
+  const openings = [{ resource: { ...source, id: "two" }, autoOpen: true, region: "side" as const }];
+  const registration = registerWorkbenchExtensionContributions({
+    workbench,
+    projectId: "project",
+    executeCommand() {
+      throw new Error("The data owner does not choose the project's related opener");
+    },
+    resolveRelatedResourceOpenings: async (resource, signal) => {
+      calls.push({ resource, signal });
+      return openings;
+    },
+    metadata: {
+      ...emptyWorkbenchExtensionMetadata,
+      resourceKinds: [{ id: "note", localId: "note", extensionId: "example.notes" }],
+    },
+  });
+  try {
+    const signal = new AbortController().signal;
+    expect(await workbench.resources.getKind("note")!.relatedOpenings!(source, signal)).toEqual(openings);
+    expect(calls).toEqual([{ resource: source, signal }]);
+  } finally {
+    registration.dispose();
+    await workbench.dispose();
   }
 });

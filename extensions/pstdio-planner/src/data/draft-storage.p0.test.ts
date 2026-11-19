@@ -5,10 +5,8 @@ import { join } from "node:path";
 import { createMemoryRepoFiles } from "@pstdio/sdk/testing";
 import { ensureTicketDraftsIgnored } from "./draft-storage";
 
-test.each([
-  "pstdio.pstdio-planner",
-  "pstdio.planner",
-])("ignoring %s drafts leaves another extension's project files trackable", async (extensionId) => {
+test("ignoring canonical Planner drafts leaves another extension's project files trackable", async () => {
+  const extensionId = "pstdio.planner";
   const root = await mkdtemp(join(tmpdir(), "planner-draft-ignore-"));
   try {
     expect(Bun.spawnSync(["git", "init", "--quiet", root]).exitCode).toBe(0);

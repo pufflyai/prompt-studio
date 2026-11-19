@@ -17,7 +17,6 @@ import {
   waitForExit,
 } from "./packaged-app-helpers";
 import { crashPackagedRuntime, waitForAutomaticRecovery } from "./packaged-runtime-recovery";
-import { waitForVisibleElement } from "./visible-element-timing";
 
 // Startup recovery does not use an agent harness.
 const recoveryEnvironment = { PSTDIO_DEFAULT_EXTENSIONS: "[]" };
@@ -41,13 +40,23 @@ test("keeps waiting for a slow runtime and opens automatically without replacing
     // Advance the renderer's notice timer without delaying process startup or changing the test allowance.
     const now = Date.now();
     await app.lifecyclePage.clock.install({ time: now });
-    await app.lifecyclePage.clock.pauseAt(now + 100);
+    await app.lifecyclePage.clock.pauseAt(now + 1_000);
     await app.lifecyclePage.reload();
     await expect(app.lifecyclePage.getByRole("status")).toContainText("Opening Prompt Studio");
-    await app.lifecyclePage.clock.runFor(19_000);
-    await expect(app.lifecyclePage.getByText(/This is taking longer than usual/)).not.toBeVisible();
+    const copyLogs = app.lifecyclePage
+      .getByRole("status")
+      .getByRole("button", { name: "Copy diagnostics", exact: true });
+    const slowMessage = app.lifecyclePage.getByText("This is taking longer than usual", { exact: true });
+    await app.lifecyclePage.clock.runFor(9_000);
+    await expect(copyLogs).not.toBeVisible();
+    await expect(slowMessage).not.toBeVisible();
     await app.lifecyclePage.clock.runFor(2_000);
-    await expect(app.lifecyclePage.getByText(/This is taking longer than usual/)).toBeVisible();
+    await expect(copyLogs).toBeVisible();
+    await expect(slowMessage).toBeVisible();
+    await expect(app.lifecyclePage.getByRole("status")).toHaveCount(1);
+    await expect(app.lifecyclePage.getByRole("alert")).toHaveCount(0);
+    await copyLogs.click();
+    await expect(copyLogs).toHaveText("Copied");
     expect(await app.lifecyclePage.evaluate(() => window.promptStudioDesktop.getStartupState())).toMatchObject({
       kind: "starting",
     });
@@ -88,7 +97,11 @@ test("quits from recovery after the runtime crashes", async () => {
     crashPackagedRuntime(launched.runtime.pid);
     await waitForAutomaticRecovery(launched);
     process.kill(launched.runtime.pid, process.platform === "win32" ? undefined : "SIGKILL");
-    await waitForVisibleElement(app.lifecyclePage, '[role="alert"] :is(h1, h2, h3)', "Prompt Studio needs attention");
+    await expect(app.lifecyclePage.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
+    await expect(
+      app.lifecyclePage.getByRole("alert").getByRole("button", { name: "Retry", exact: true }),
+    ).toBeVisible();
+    await expect(app.lifecyclePage.getByRole("button", { name: "Copy diagnostics", exact: true })).toBeVisible();
 
     await app.lifecyclePage.getByRole("button", { name: "Quit", exact: true }).click();
 

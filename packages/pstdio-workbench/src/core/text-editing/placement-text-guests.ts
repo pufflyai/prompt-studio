@@ -39,6 +39,7 @@ export interface PlacementTextGuestInput {
   transport: TextEditingTransportClient;
   events: HostEventPublisher;
   /** Native SDK sessions drain before their enclosing guest connection is released. */
+  initialMemberId?: string;
   prepareSessionClose?: () => Promise<void>;
 }
 const scopeKey = (scope: Scope) =>
@@ -92,7 +93,13 @@ const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
   const connection = Promise.resolve()
     .then(() => {
       assertCurrent();
-      return input.transport.connect({ projectId, scope: input.scope });
+      return input.transport.connect({
+        projectId,
+        scope: input.scope,
+        ...(input.initialMemberId && {
+          initial: { memberId: input.initialMemberId, active: workbench.activation.isActive() },
+        }),
+      });
     })
     .catch((error) => {
       owner.detach();
@@ -158,7 +165,7 @@ const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
         })
         .catch((error) => {
           if (owner.current() && error?.code !== "connection_reset")
-            workbench.notifications.captureActionError("Update text editor presence", placement.instanceId)(error);
+            console.warn("Could not update text editor presence", error);
         });
     }),
     events.onDisconnect(() => {
@@ -175,14 +182,21 @@ const createOwner = (input: PlacementTextGuestInput, state: Ownership) => {
         ) {
           // Explicit close discards this removed resource's recovery view, never its admitted durability.
           await retire(state, owner);
-        } else await owner.close();
+        } else {
+          try {
+            await owner.close();
+          } catch (error) {
+            if (owner.current() || (error as { code?: unknown })?.code !== "session_closed") throw error;
+            await retire(state, owner);
+          }
+        }
       }),
     );
   return owner;
 };
 
 /** One public guest belongs to one live presentation, including while its connection opens. */
-const placementTextOwner = (input: PlacementTextGuestInput) => {
+const placementTextOwner = (input: PlacementTextGuestInput, removalVersion: number) => {
   if (isWorkbenchRetiring(input.workbench)) throw closed();
   const state = getOwnership(input.workbench);
   // Failed forced cleanup stays owned. A later request or Workbench disposal retries it.
@@ -194,7 +208,11 @@ const placementTextOwner = (input: PlacementTextGuestInput) => {
     owner = undefined;
   }
   if (!owner) {
-    if (state.disposal) throw closed();
+    if (
+      state.disposal ||
+      (input.placement.resource && input.workbench.resources.wasRemovedSince(input.placement.resource, removalVersion))
+    )
+      throw closed();
     owner = createOwner(input, state);
   }
   return owner;
@@ -217,11 +235,17 @@ export const createPlacementTextRequester = (input: PlacementTextGuestInput) => 
       const guest = await owner.guest;
       return owner.presence.request(request, () => guest.host.call("editing.text", request));
     }
-    const owner = placementTextOwner(input);
+    // A retained owner can drain after removal; its old requester cannot admit another member.
+    const owner = placementTextOwner(
+      request.operation === "openSelected" ? { ...input, initialMemberId: request.memberId } : input,
+      invocation.removalVersion ?? 0,
+    );
     admittedOwner = owner;
-    const guest = await owner.guest;
-    if (!owner.current(input.scope)) throw closed();
-    return owner.presence.request(request, () => guest.host.call("editing.text", request));
+    return owner.presence.request(request, async () => {
+      const guest = await owner.guest;
+      if (!owner.current(input.scope)) throw closed();
+      return guest.host.call("editing.text", request);
+    });
   };
 };
 

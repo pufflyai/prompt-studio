@@ -330,9 +330,9 @@ test("user bindings persist through the preference adapter and reset removes the
     },
   };
   const first = createWorkbench({ preferencePersistence: persistence });
-  await first.keyboard.setAssignment("test", { keybinding: "U" });
+  await first.keyboard.setAssignment("test", { keybinding: "Alt+Shift+U" });
   const second = createWorkbench({ preferencePersistence: persistence });
-  expect(second.keyboard.getAssignment("test")).toEqual({ keybinding: "U" });
+  expect(second.keyboard.getAssignment("test")).toEqual({ keybinding: "Alt+Shift+U" });
   await second.keyboard.resetAssignment("test");
   expect(second.keyboard.getAssignment("test")).toBeUndefined();
 });
@@ -379,6 +379,17 @@ test("hints match typed arguments and show the remaining layer path", async () =
   expect(core.keyboard.hint({ kind: "command", commandId: "open", args: { id: "one" } })).toBe("G → P");
   await core.keyboard.press("g");
   expect(core.keyboard.hint({ kind: "command", commandId: "open", args: { id: "one" } })).toBe("P");
+});
+
+test("tooltips can request a shared layered hint without activating keyboard mode", () => {
+  const { core } = setup();
+  core.commands.registerCommand({ id: "move", label: "Move" }, { execute() {} });
+  const action = { kind: "command" as const, commandId: "move", args: { tool: "move" } };
+  core.keybindings.registerKeybinding({ action, keybinding: "V", layer: "go" });
+  const state = core.keyboard.store.getState();
+  expect(core.keyboard.hint(action, { includeLayers: true })).toBe("Alt+Shift+Space → G → V");
+  expect(core.keyboard.store.getState()).toBe(state);
+  expect(core.keyboard.hint(action)).toBeUndefined();
 });
 
 test("Option preview includes the complete entry chord for layered shortcuts", () => {

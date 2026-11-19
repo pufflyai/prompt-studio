@@ -13,24 +13,22 @@ export async function expectPackagedPlannerTimeline(input: {
   const { metadata } = input;
   expect(metadata.pages).toContainEqual(
     expect.objectContaining({
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       localId: "ticket-requests",
       path: "ticket-requests",
     }),
   );
   expect(metadata.pages).toContainEqual(
     expect.objectContaining({
-      extensionId: "pstdio.pstdio-planner",
+      extensionId: "pstdio.planner",
       localId: "timeline",
       path: "ticket-timeline",
     }),
   );
-  const view = metadata.views.find(
-    (view) => view.extensionId === "pstdio.pstdio-planner" && view.localId === "timeline",
-  );
+  const view = metadata.views.find((view) => view.extensionId === "pstdio.planner" && view.localId === "timeline");
   expect(view?.body.kind).toBe("webview");
   const planningNavigation = metadata.navigationItems.filter((item) => {
-    if (item.extensionId !== "pstdio.pstdio-planner" || item.action.kind !== "page") return false;
+    if (item.extensionId !== "pstdio.planner" || item.action.kind !== "page") return false;
     return ["tickets", "timeline"].includes(item.action.page.id);
   });
   expect(planningNavigation).toHaveLength(2);
@@ -245,7 +243,7 @@ async function expectReviewRequests(execute: Execute, deadlineId: string) {
     },
   ]);
   const tree = await execute("ticket-files.tree.body", {
-    renderer: { rendererId: "pstdio.pstdio-planner.view.ticket-files", resource: { type: "ticket", id: ticket.id } },
+    renderer: { rendererId: "pstdio.planner.view.ticket-files", resource: { type: "ticket", id: ticket.id } },
   });
   expect(tree[0].nodes.find((node: { id: string }) => node.id === "review-requests")).toMatchObject({
     icon: "message-circle-warning",

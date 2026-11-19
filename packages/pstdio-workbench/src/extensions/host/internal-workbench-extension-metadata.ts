@@ -80,6 +80,8 @@ export interface InternalWorkbenchExtensionMetadata {
   >;
   panels: InternalWorkbenchExtensionPanel[];
   resourceKinds: Array<{
+    activity?: import("@pstdio/sdk/extensions").ResourceActivityCapabilities;
+    activityHandoff?: boolean;
     id: string;
     relatedOpeningsCommand?: string;
     extensionId: string;
@@ -116,7 +118,7 @@ export interface InternalWorkbenchExtensionMetadata {
     extensionId: string;
     viewId: string;
     popoverViewId?: string;
-    slot: "leading" | "trailing";
+    slot: "leading" | "center" | "trailing";
     order?: number;
     when?: {
       mode?: string | string[];

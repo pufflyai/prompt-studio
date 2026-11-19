@@ -1,4 +1,4 @@
-import type { QueryChangeEnvelope, TextFilePresentation } from "@pstdio/sdk/extensions";
+import type { QueryChangeEnvelope, QueryScope, TextFilePresentation } from "@pstdio/sdk/extensions";
 import type { NativeDocumentSource } from "pstdio-api-contracts";
 import type { NativeTextPresentation } from "../../../extensions/bridge/native-text-presentation";
 import type { NativeDocumentSession } from "../../native-documents/native-document-session";
@@ -55,6 +55,8 @@ export interface FileRendererContribution {
   id: string;
   title: string;
   resourceKind?: string;
+  /** Owner of catalog changes that can affect this file's presentation. */
+  queryScope?: Partial<QueryScope>;
   /** Host adapter for a native presentation of a declared public text source. */
   connectText?(
     input: WorkbenchPanelRenderInput,

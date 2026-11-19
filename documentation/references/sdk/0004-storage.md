@@ -119,13 +119,81 @@ If a newer source arrives after acceptance, the accepted candidate owns those
 definitions while the host retries the newer load; a failed retry falls back to
 that matching candidate rather than the earlier handlers.
 
-Each definition names fields by paths within `record.value`, optional leading
-`equality` fields and a fixed `orderBy`. Field types are `string`, `number`,
-`boolean` and `array` (strings only). Timestamps use consistently formatted strings.
+Each definition names fields by paths within `record.value` (`path: []` selects the complete value), optional leading
+`equality` fields and a default `orderBy`. Field types are `string`, `number`,
+`boolean`, `array` (strings only), and `object` (JSON objects only). Timestamps use consistently formatted strings.
 Selectable fields are not implicitly equality keys. Omitted `equality` means none.
 An optional complete-address `prefix` restricts the index to a namespace or
 collection. Record methods otherwise cover the whole extension owner across scopes.
 The host supplies the owner; callers cannot query another extension or workbench.
+
+For an existing collection, set `collection` on its index definition. Its field
+paths are relative to the collection item. The host resolves addresses in the
+selected storage scope, keeping other collections and scopes out of the index.
+Declare these in `storageIndexes` to install them before commands become available;
+the first action must not build indexes. Do not parse opaque record addresses.
+This addition requires extension API 0.4.2 and a matching SDK build.
+
+For records saved at `records.id(keyPrefix + key)`, such as a collection moved with
+`migration.moveCollection`, set `keyPrefix` instead. Field paths are relative to the
+record value, and the host resolves the prefix in the selected storage scope, so a
+manifest can declare it without knowing the project ID. `keyPrefix` cannot be combined
+with `collection` or `prefix`. It requires extension API 0.5.0.
+
+`readCollectionRecords` reads up to 100 opaque addresses from a query page and
+returns collection values in request order, with `undefined` for missing or
+deleted rows. It requires an SDK build that exports this helper.
+
+```ts
+import { readCollectionRecords } from "@pstdio/sdk/data";
+import type { StorageRecordIndex } from "@pstdio/sdk/extensions";
+
+const index: StorageRecordIndex = {
+  name: "requests-by-ticket",
+  collection: "requests",
+  fields: { ticketId: { path: ["ticketId"], type: "string" } },
+  equality: ["ticketId"],
+};
+await ctx.storage.records.defineIndexes([index]);
+const page = await ctx.storage.records.query({
+  index: index.name,
+  where: { field: "ticketId", op: "eq", value: ticketId },
+  fields: [],
+  limit: 100,
+});
+const values = await readCollectionRecords(ctx.storage, page.records.map(({ recordId }) => recordId));
+```
+
+A storage index can declare `alternateOrders` for common nondefault page sorts, such as newest first with a stable position tie-breaker. The host maintains each order on writes. Use `countBy` for up to four low-cardinality derived scalar fields, such as archived state and status. Core maintains exact counts for their combinations, including changes to resource identity membership. Eligible count and group queries read those combinations at the same revision as the page. Other filters, metrics and oversized group values use the ordinary aggregate. Index installation builds this data once for existing records. Additional orders and count dimensions consume disk space and increase write work.
+
+`readCollectionPage(ctx.storage, selection)` from `@pstdio/sdk/data` combines a
+bounded indexed page with global view counts. Declare `index`, selected `fields`,
+the complete filter as `where`, optional `search` and collapsed-group exclusion
+as `visible`, and the requested `orderBy`. Pass the renderer's `page` request;
+omitting it selects 100 projections. Hydrate only those addresses afterward.
+
+The result contains `records` and renderer `page` metadata. `total` counts the
+filter before search; `filteredTotal` includes search and collapsed-group
+exclusions. Up to two `groups: [{ field, indexField }]` describe global group
+counts before exclusions, with at most 500 combinations. Counts and selected rows
+must share a revision; concurrent edits or installed index-definition changes
+fail visibly and the view restarts. Revisions are opaque, not record counters.
+Nonempty search or collapsed groups require their translated predicate. This
+helper does not translate field-specific display semantics or silently discard
+unsupported controls. Declare those mappings in the provider before calling it.
+
+For bulk field changes, `patchCollectionRecords(ctx.storage, page.records, fields)`
+saves 1–100 selected collection rows in one bounded operation. It changes only
+the named top-level fields and escapes field names as literal JSON pointer keys.
+It returns `null` if any selected revision changed or disappeared: query the
+original selection again before retrying. Inspect an accepted save's state before
+continuing. Do not replace complete records from an earlier query snapshot.
+
+The lower-level `records.commitIfCurrent(group)` takes 1–100 distinct existing
+record edits, each with `expectedRevision`. It checks all observations under the
+local owner lock before saving anything. Accepted field edits merge with later
+unrelated edits; a delete/recreate lifetime remains fenced. Reuse an operation ID
+only with the identical request. These additions require extension API 0.4.2.
 
 Predicates use `{ field, op, value }`, nested `{ all: [...] }`, `{ any: [...] }`,
 or `{ not: predicate }`. Negation is the boolean complement, including for missing
@@ -152,14 +220,46 @@ floating-point representation. This is scalar text, not a cell formatter: date
 labels, custom display labels, and diff summaries need their provider's matching
 rules. `contains` keeps its existing string and string-array behavior.
 
+On unreleased API 0.5.0, `overlaps` tests whether a string-array field contains any
+requested member, and `containsAll` tests every requested member. Duplicates do
+not change membership. Missing and null arrays fail both predicates; negation
+includes those records. Both predicates accept one string array, so a large
+selection does not need a separate predicate branch per option.
+
+`query.textOrder: { field, locale }` applies numeric, case- and accent-insensitive
+viewer ordering to one sorted string projection. Other keys and record IDs keep
+their stable order. It is query-local and participates in cursor identity.
+Strings containing NUL or unpaired UTF-16 surrogates retain their original value
+and use a separate binary-ordered partition after valid text in ascending order
+(before it in descending order). Missing values remain last. Top-value label ties
+use the same fallback, so these strings cannot break a whole view.
+
+`query.dependencyOrder: { idField, dependenciesField }` selects at most 100 rows
+in stable first-ready order within the query's `where` selection. Dependencies
+outside that selection are satisfied; cycles select the next sorted row. This
+mode accepts neither cursors nor offsets. Consume a bounded batch, then query the
+remaining records after saving it. Graph metadata stays inside the database.
+
+`aggregate.statistics` requests up to 16 named scalar summaries: `unique`,
+`histogram` (1–100 bins), or `top-values` (1–100 values, plus an Other remainder).
+Results share the aggregate revision. Empty values are excluded. Histograms use
+equal-width decimal intervals, with the maximum in the last bin. Only bounded
+summaries cross the database boundary; resource bodies are not selected.
+
+`hasKey` matches a key in a declared `object` field, including keys whose value is
+false or null. Arrays and strings do not match. It accepts one string key and
+uses the index's object membership projection.
+
 `fields` selects declared field names. Each result has `recordId`, the record's
 content `revision`, and a `fields` object; it does not include the complete body,
 asset or shared content. Unset selected fields are null. Omit `fields` to select
 all declared fields. Use `readMany` when complete selected records are needed.
 
-The page limit is 1–500 and defaults to 100. The host exposes these bounds as
-`storageLimits.queryLimit` and `storageLimits.queryDefaultLimit`. SQL filters
-and sorts before the
+The page limit defaults to 100 and accepts up to 500. The host exposes these
+bounds as `storageLimits.queryLimit` and `storageLimits.queryDefaultLimit`.
+Unreleased API 0.5.0 also accepts `limit: 0` for a revision-only check: it validates
+the index, fields, predicate, revision and cursor, then returns no records and a
+null cursor without selecting resource rows. SQL filters and sorts before the
 limit and field materialization. Sorting uses the definition's order, with nulls
 last in either direction and a final ascending complete-record-ID tie breaker.
 Strings use Unicode code point order, independent of locale. Equality keys use
@@ -183,6 +283,119 @@ and writes fail with an out-of-date projection error. Installing the same index
 definitions again explicitly rebuilds the projection. This repair is atomic: a
 failed rebuild leaves source records and operation identities intact, and the next
 installation can retry it. Normal reads never perform this backfill.
+
+### Bounded selection across relationships
+
+The following additions require the host and SDK containing the PS-236 query
+support. Their presence in documentation does not imply that support has shipped.
+
+`records.query` accepts an `orderBy` override of at most eight declared scalar
+fields. The database sorts the matching set before selecting the page. An empty
+order uses record ID alone. Every order ends with record ID as a stable tie breaker;
+changing order, index definitions, selection or owner revision invalidates a cursor.
+
+An `exists` predicate selects records with a matching related row. Both indexes
+belong to the calling extension and workbench. The related index's prefix and typed
+fields still apply. Null or missing join keys do not match. Several matching
+related rows select the source once; no related record bodies enter the result.
+Negation and nesting can describe unanswered requests without reading all requests.
+Join fields use equality by default. `op: "contains"` joins a source string-array
+field to a related string; `op: "containedBy"` joins a source string to a related
+string-array field. These select prerequisites or dependents without reading each
+candidate. Missing/null endpoints never match, including membership joins.
+
+Declarative expressions also provide `flatten` with one array argument. It flattens
+one level in source order, preserves scalar members, and returns missing for a
+non-array source. Combine nested `map` expressions with `flatten` and a string
+filter to maintain a relationship-ID projection from nested revision or history
+data. Membership checks can then use that projection without loading the history.
+
+```ts
+const page = await ctx.storage.records.query({
+  index: "items",
+  where: { exists: {
+    index: "requests",
+    on: [{ sourceField: "id", relatedField: "itemId" }],
+    where: { not: { exists: {
+      index: "answers",
+      on: [{ sourceField: "id", relatedField: "requestId" }],
+    } } },
+  } },
+  orderBy: [{ field: "updated", direction: "desc" }],
+  fields: ["id", "title"],
+  limit: 100,
+});
+```
+
+Predicates allow at most sixteen related indexes, eight join fields per relation,
+eight levels and 256 nodes. Declare related equality keys so correlation can use
+their indexes. These limits bound the request and materialized results; arbitrary
+filtering, sorting and aggregates can still require database work across a set.
+
+`records.aggregate` accepts up to sixteen named numeric `metrics`, each with
+`{ operation: "sum" | "min" | "max", field }`. Missing, null and incorrectly typed
+values do not contribute. Sums use exact decimal arithmetic over saved JSON numbers
+and round once to a JavaScript number; a result outside the finite number range
+fails visibly. Empty sums are zero; empty minimum and maximum are null.
+`groupBy` can name one field or up to eight fields. Multi-field group values are
+arrays in the requested field order. Overall and per-group metrics cover the full
+matching selection rather than the current page.
+
+`groupLimit` bounds a grouped response to 1–500 groups. An oversized result fails;
+it is never silently truncated. Numeric and multi-field grouping default to 500.
+The existing count-only, single-field aggregate retains its public behavior when
+no limit is supplied; bounded view providers must supply a limit for that form.
+
+### Titles derived from canonical Markdown
+
+A string field may declare
+`derive: { kind: "markdownTitle", fallbackPath?: string[], empty?: string }`.
+Its `path` selects canonical Markdown; a missing or empty source uses the optional
+fallback path. Nonempty Markdown yields its first visible text, stripping inline
+markup and skipping fenced code and image-only lines. `empty` supplies the result
+when that nonempty Markdown contains no visible text. Both paths are relative to
+the record value, or to the item when the index declares a collection.
+
+Index installation computes these values in bounded pages. Ordinary record and
+native-text edits update them in the same transaction as the canonical projection;
+querying never scans bodies to rebuild them. This is a local database index, not
+another editable source of record data. Point reads keep their original value.
+The public `deriveMarkdownTitle(content, empty?)` helper uses the same text rules.
+
+### Resolved selection fields
+
+Choice properties may retain legacy scalar/array values while independent edits
+merge through `StorageSelection`. `resolveSelectedValues(legacy, selection?)`
+returns the canonical selected IDs without discarding concurrent choices. A
+`single` selection has `value`; a `multi` selection may retain `value` and
+`replacedValue` from conversion. `options` stores individual booleans, including
+false for removals. A single conversion's `replacedOptions` records the option
+writes it consumed, so a later independent change stays visible. Base value order
+is retained; concurrently added option keys use deterministic UTF-16 order.
+
+An index can select these resolved values directly:
+
+```ts
+const fields = {
+  priority: {
+    path: ["tags", "priority"],
+    type: "string",
+    derive: {
+      kind: "selection",
+      selectionPath: ["tagSelections", "priority"],
+      knownValues: ["high", "medium", "low"],
+    },
+  },
+};
+```
+
+Both paths are relative to the canonical record or collection item. An array
+field exposes all resolved choices; a string field exposes the first. Optional
+`knownValues` removes IDs that are no longer declared, matching displayed option
+properties. Use the same resolver for point reads and indexed views. Ordinary
+edits update the local query projection in their commit transaction. Changing an
+unrelated index field does not reread bodies; changed derived definitions rebuild
+only their affected old/new prefixes and retain other indexes' query values.
 
 ## Edits and outcomes
 
@@ -340,8 +553,9 @@ when incidental timestamps overlap. They still require the observed record
 lifetime: a save from before deletion cannot modify a recreated record. Explicit
 `records.commit` conditions keep their written-path and lifetime checks.
 
-Legacy collections retain their own names and ordering. Continue their supported
-access while planning an explicit extension data migration to domain record IDs.
+Legacy collections retain their own names and ordering until the extension moves
+them. Move a collection to domain record IDs with `migration.moveCollection` inside
+`storage.migrate`; see [data migrations](../extensions/0018-data-migrations.md#move-a-collection-to-records).
 Do not change stored data formats merely by renaming method calls. Blob files and
 collection attachments also keep their existing contract; asset references are a
 separate contract.
@@ -388,4 +602,4 @@ the synced extension owns migrations, or a published extension's Cloud membershi
 This is a fresh policy read, not a stored flag. Ordinary edits still use the
 existing publication write permissions.
 
-*Updated at: 2026-11-07*
+*Updated at: 2026-11-14*

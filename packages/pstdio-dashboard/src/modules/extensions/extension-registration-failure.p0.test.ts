@@ -32,15 +32,15 @@ describe("extension contribution registration failures", () => {
       ],
       templateTypes: [
         {
-          id: "pstdio.pstdio-planner.template-type.prompt",
+          id: "pstdio.planner.template-type.prompt",
           localId: "prompt",
-          extensionId: "pstdio.pstdio-planner",
+          extensionId: "pstdio.planner",
           label: "Prompt",
           commands: {
-            list: "pstdio.pstdio-planner.command.templates-list",
-            read: "pstdio.pstdio-planner.command.templates-read",
-            save: "pstdio.pstdio-planner.command.templates-save",
-            delete: "pstdio.pstdio-planner.command.templates-delete",
+            list: "pstdio.planner.command.templates-list",
+            read: "pstdio.planner.command.templates-read",
+            save: "pstdio.planner.command.templates-save",
+            delete: "pstdio.planner.command.templates-delete",
           },
         },
       ],
@@ -67,23 +67,23 @@ describe("extension contribution registration failures", () => {
       ...metadata,
       templates: [
         {
-          id: "pstdio.pstdio-planner.template.implement-ticket",
+          id: "pstdio.planner.template.implement-ticket",
           localId: "implement-ticket",
-          extensionId: "pstdio.pstdio-planner",
+          extensionId: "pstdio.planner",
           title: "Implement ticket",
         },
       ],
       templateTypes: [
         {
-          id: "pstdio.pstdio-planner.template-type.prompt",
+          id: "pstdio.planner.template-type.prompt",
           localId: "prompt",
-          extensionId: "pstdio.pstdio-planner",
+          extensionId: "pstdio.planner",
           label: "Prompt",
           commands: {
-            list: "pstdio.pstdio-planner.command.templates-list",
-            read: "pstdio.pstdio-planner.command.templates-read",
-            save: "pstdio.pstdio-planner.command.templates-save",
-            delete: "pstdio.pstdio-planner.command.templates-delete",
+            list: "pstdio.planner.command.templates-list",
+            read: "pstdio.planner.command.templates-read",
+            save: "pstdio.planner.command.templates-save",
+            delete: "pstdio.planner.command.templates-delete",
           },
         },
       ],

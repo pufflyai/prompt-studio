@@ -1,17 +1,21 @@
 import { defineCommand, type ExtensionContextBase, params } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
-import { readMigratedTickets } from "../data/read-migrated-tickets";
-import { ticketOrderChanges } from "../data/ticket-order";
+import { readTicketOrderChange } from "../data/indexed-ticket-order";
+import { ensureTicketStorage } from "../data/read-migrated-tickets";
 import { withWriteGuard } from "../data/write-guard";
-import { plannerTicketsChanged } from "../events";
+import { emitPlannerTicketsChanged } from "../events";
 
 export const reorderTicket = async (
-  ctx: Pick<ExtensionContextBase, "events" | "storage" | "projectId" | "extensionId" | "resources" | "files">,
+  ctx: Pick<
+    ExtensionContextBase,
+    "events" | "storage" | "projectId" | "extensionId" | "resources" | "commands" | "extensionId" | "files"
+  >,
   input: { rowId: string; beforeRowId?: string },
 ) =>
   withWriteGuard(ctx, "ticket-order", async () => {
     const collection = ticketsCollection(ctx);
-    const changes = ticketOrderChanges(ctx.storage, await readMigratedTickets(ctx), input.rowId, input.beforeRowId);
+    await ensureTicketStorage(ctx);
+    const changes = await readTicketOrderChange(ctx, input.rowId, input.beforeRowId);
     const now = new Date().toISOString();
     for (const ticket of changes)
       await collection.change(ticket.id, async (current) => ({
@@ -19,7 +23,7 @@ export const reorderTicket = async (
         position: ticket.position,
         updatedAt: now,
       }));
-    if (changes.length) await ctx.events.emit(plannerTicketsChanged, { ticketId: input.rowId });
+    if (changes.length) await emitPlannerTicketsChanged(ctx, { ticketId: input.rowId });
     return { changed: changes.length };
   });
 

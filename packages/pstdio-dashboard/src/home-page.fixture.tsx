@@ -1,5 +1,6 @@
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
-import { dashboardHomePage } from "@/shared/app/resources";
+export const dashboardHomePage = { kind: "page", extensionId: "pstdio.home", id: "home" } as const;
+
 import {
   dashboardNavigationSections,
   registerDashboardNavigationContribution,
@@ -22,7 +23,7 @@ export const createHomeModule = () =>
     activate(ctx) {
       registerHomeWidget(ctx);
       ctx.pages.registerPage({
-        id: "pstdio.pstdio-home.page.home",
+        id: "pstdio.home.page.home",
         ref: dashboardHomePage,
         title: "Home",
         icon: "house",
@@ -53,7 +54,7 @@ export const createHomeModule = () =>
             ...dashboardNavigationSections.root,
             nodes: [
               {
-                id: "pstdio.pstdio-home.page.home",
+                id: "pstdio.home.page.home",
                 label: "Home",
                 icon: "house",
                 target: { kind: "page", page: dashboardHomePage },
@@ -65,7 +66,7 @@ export const createHomeModule = () =>
       const unsubscribe = ctx.pages.store.subscribeSelector(
         (state) => state.activePageId,
         (pageId) => {
-          if (pageId === "pstdio.pstdio-home.page.home") setDashboardSidenavSelection(ctx, undefined);
+          if (pageId === "pstdio.home.page.home") setDashboardSidenavSelection(ctx, undefined);
         },
       );
       return [{ dispose: unsubscribe }];

@@ -13,11 +13,11 @@ import type { TicketContext } from "../data/ticket-identity";
 import { withTicketTagIds } from "../data/ticket-tags";
 import type { Ticket } from "../data/types";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
-import { plannerTicketsChanged } from "../events";
+import { emitPlannerTicketsChanged } from "../events";
 import { notifyBlocked, resolveBlockedNotification } from "../planner-notifications";
 import { deriveTitle } from "../utils/derive-title";
 
-// Powers the markdown editor's save-on-edit autosave and the `pst pstdio.pstdio-planner update-ticket`
+// Powers the markdown editor's save-on-edit autosave and the `pst pstdio.planner update-ticket`
 // CLI path. The board passes ids; the CLI passes display names/shorthands, so the
 // status, tags, parent, and dependency inputs are resolved server-side
 // (Decision 3). The ticket title is the start of the body, so a content save
@@ -27,8 +27,7 @@ export const updateTicketCommand = defineCommand({
   mutating: true,
   title: "Update ticket",
   cli: {
-    globalAliases: [["tickets", "update"]],
-    examples: ["pstdio pstdio.pstdio-planner update-ticket --id PS-1 --status 'In Progress' --tags High --tags Bug"],
+    examples: ["pstdio pstdio.planner update-ticket --id PS-1 --status 'In Progress' --tags High --tags Bug"],
   },
   params: {
     id: params.text({ required: true }),
@@ -78,7 +77,7 @@ export const updateTicketCommand = defineCommand({
       updatedAt: new Date().toISOString(),
     };
     const next = await updateTicket(ctx, draft);
-    await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
+    await emitPlannerTicketsChanged(ctx, { ticketId: existing.id });
     await syncBlockedNotificationSafely(ctx, existing, next);
     return withTicketTagIds(next);
   },
@@ -110,10 +109,7 @@ const syncBlockedNotification = async (
   if (wasBlocked) await resolveBlockedNotification(ctx, next);
 };
 
-// The ticket has already been persisted before this runs, so both the
-// notification sync AND the warning toast must be best-effort: any failure
-// inside this helper must not surface as a failed ticket update to callers
-// (autosave, CLI). Swallow toast failures too, even if delivery is unavailable.
+// The ticket is already saved. A side-effect failure belongs in the extension log.
 const syncBlockedNotificationSafely = async (
   ctx: Parameters<typeof updateTicketCommand.run>[0],
   previous: Ticket,
@@ -122,15 +118,10 @@ const syncBlockedNotificationSafely = async (
   try {
     await syncBlockedNotification(ctx, previous, next);
   } catch (error) {
-    try {
-      await ctx.notify.toast({
-        type: "warning",
-        title: "Ticket saved",
-        message: `Notification sync failed: ${error instanceof Error ? error.message : String(error)}`,
-      });
-    } catch {
-      // Best-effort: the ticket save already succeeded.
-    }
+    ctx.logger.warn("Could not sync the ticket's blocked notification", {
+      ticketId: next.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 };
 

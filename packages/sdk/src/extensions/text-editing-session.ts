@@ -1,4 +1,9 @@
-import type { TextEditingEvent, TextOpenInput, TextWireSnapshot } from "pstdio-api-contracts/extension-kernel";
+import type {
+  TextEditingEvent,
+  TextEditingOpened,
+  TextOpenInput,
+  TextWireSnapshot,
+} from "pstdio-api-contracts/extension-kernel";
 import * as Y from "yjs";
 import type { GuestHost } from "./guest-host";
 import {
@@ -22,22 +27,40 @@ const sessionReplica = (
   editable: () => boolean,
 ) => createTextEditingReplica(decodeTextSnapshot(snapshot), receive.run, editable);
 
-export const openTextEditingSession = async (host: GuestHost, input: TextOpenInput, memberId: string) => {
+const bufferMemberEvents = (host: GuestHost, memberId: string) => {
+  const early: TextEditingEvent[] = [];
+  let receive: ((event: TextEditingEvent) => void) | undefined;
+  const stop = host.onEvent("editing.text", (value) => {
+    const event = value as TextEditingEvent;
+    if (event.type !== "prepareClose" && event.memberId !== memberId) return;
+    if (receive) receive(event);
+    else early.push(event);
+  });
+  return {
+    stop,
+    start(listener: (event: TextEditingEvent) => void) {
+      receive = listener;
+      for (const event of early.splice(0)) listener(event);
+    },
+  };
+};
+
+export const openTextEditingSession = async (
+  host: GuestHost,
+  input: TextOpenInput,
+  memberId: string,
+  admitted?: TextEditingOpened,
+) => {
   const origin = {};
   const listeners = new Set<() => void>();
   const receiveHandlers = createTextReceiveHandlers();
-  const early: TextEditingEvent[] = [];
-  let receiveEvent: ((event: TextEditingEvent) => void) | undefined;
-  const stopEvents = host.onEvent("editing.text", (value) => {
-    const event = value as TextEditingEvent;
-    if (event.type !== "prepareClose" && event.memberId !== memberId) return;
-    if (receiveEvent) receiveEvent(event);
-    else early.push(event);
-  });
-  const opened = await host.call("editing.text", { operation: "open", memberId, input }).catch((error) => {
-    stopEvents();
-    throw error;
-  });
+  const events = bufferMemberEvents(host, memberId);
+  const opened =
+    admitted ??
+    (await host.call("editing.text", { operation: "open", memberId, input }).catch((error) => {
+      events.stop();
+      throw error;
+    }));
   input = { grant: opened.grant };
   const generation = opened.snapshot.generation;
   let handle = opened.handle;
@@ -171,14 +194,14 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
       await writing;
       await host.call("editing.text", { operation: "close", handle });
       clearTimeout(retryTimer);
-      stopEvents();
+      events.stop();
       stopLocal();
       replica.dispose();
       listeners.clear();
       receiveHandlers.clear();
     },
   });
-  receiveEvent = createTextEditingReceiver({
+  const receiveEvent = createTextEditingReceiver({
     host,
     memberId,
     handle: () => handle,
@@ -189,7 +212,7 @@ export const openTextEditingSession = async (host: GuestHost, input: TextOpenInp
     failed,
     publish,
   });
-  for (const event of early) receiveEvent(event);
+  events.start(receiveEvent);
   const operations = createTextEditingOperations({
     host,
     handle: () => handle,

@@ -2,7 +2,7 @@ import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
 import type { ResourceHierarchyProvider, ResourceKindDefinition } from "./composition";
 import type { CommandMiddlewareHandler, CommandRunHandler, EventContext, ExtensionContextBase } from "./context";
-import type { ContributionDefinition, ViewRef } from "./contribution-identity";
+import type { ContributionDefinition, ResourceKindRef, ViewRef } from "./contribution-identity";
 import type {
   ActivityItemContribution,
   ArtifactMountContribution,
@@ -41,7 +41,7 @@ import type {
 /** Current host extension API version. `engines.pstdio` declares caret ranges, such as `^0.1.0`. */
 // Stays on 0.x until the API is settled, so a breaking change moves the minor. The version moves at
 // most one step per release; the manifest reference has the change levels.
-export const EXTENSION_API_VERSION = "0.4.2";
+export const EXTENSION_API_VERSION = "0.5.0";
 
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema
   ? ParamsOf<TSchema>
@@ -271,6 +271,12 @@ export interface UiContributions {
   modes?: readonly ModeContribution[];
   pages?: readonly PageContribution[];
   resourceKinds?: readonly ResourceKindDefinition[];
+  /** Supply current presentation for a resource kind. Only one enabled provider may claim each kind. */
+  resourcePresentations?: readonly {
+    resourceKind: ResourceKindRef;
+    resolve: CommandRef;
+    refreshEvents?: readonly import("./renderer-base").RendererEventReference[];
+  }[];
   activityItems?: readonly ActivityItemContribution[];
   settingsSections?: readonly SettingsSectionContribution[];
   settingsPanels?: readonly SettingsPanelContribution[];

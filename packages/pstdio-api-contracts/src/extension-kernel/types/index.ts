@@ -1,4 +1,6 @@
+export type * from "../../resource-activity";
 export type * from "./account";
+export type * from "./action-bar";
 export type * from "./assets";
 export type * from "./automation";
 export type * from "./chat-renderer";
@@ -23,6 +25,7 @@ export type * from "./navigation-target";
 export type * from "./pages";
 export type * from "./params";
 export type * from "./renderer-base";
+export type * from "./resource-activity";
 export type * from "./resource-binding";
 export type * from "./resource-list-renderer";
 export type * from "./resources";

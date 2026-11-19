@@ -1,4 +1,6 @@
 import type { ScopedQueryClient } from "@pstdio/sdk/extensions";
+import { queryChangeEnvelopeSchema } from "pstdio-api-contracts/extension-kernel";
+import { canonicalRegistryId } from "../../shared/contributions/identity-aliases";
 import {
   type ContributionMetadata,
   normalizeContributionMetadata,
@@ -127,7 +129,7 @@ export const createViewRegistry = (input: CreateWorkbenchViewRegistryInput): Wor
     },
 
     getView(viewId) {
-      return store.getState().views[viewId];
+      return store.getState().views[canonicalRegistryId(store, viewId)];
     },
 
     listViews() {
@@ -135,7 +137,15 @@ export const createViewRegistry = (input: CreateWorkbenchViewRegistryInput): Wor
     },
 
     refreshView(viewId, refreshInput) {
-      if (!store.getState().views[viewId]) throw new Error(`View is not registered: ${viewId}`);
+      viewId = canonicalRegistryId(store, viewId);
+      const view = store.getState().views[viewId];
+      if (!view) throw new Error(`View is not registered: ${viewId}`);
+      // Native renderer registries forward their query invalidation. Host-rendered
+      // views have no such registry, so the view owner refreshes their reads here.
+      if ("render" in view.body) {
+        const envelope = queryChangeEnvelopeSchema.safeParse(refreshInput);
+        reads.invalidate(viewId, envelope.success ? envelope.data : undefined);
+      }
       bodies.get(viewId)?.refresh?.(refreshInput);
     },
   };

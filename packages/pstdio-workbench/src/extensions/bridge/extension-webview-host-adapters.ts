@@ -12,6 +12,7 @@ import type {
   WebviewEditingSnapshot,
   WebviewExtensionSettingSetParams,
   WebviewFilesDeleteParams,
+  WebviewFilesDownloadParams,
   WebviewFilesListParams,
   WebviewFilesUploadParams,
   WebviewHostCapabilityParams,
@@ -43,7 +44,7 @@ export interface ExtensionWebviewPreferencesAdapter {
   get(
     name: string,
     scope?: WebviewPreferencesGetParams["scope"],
-  ): MaybePromise<WebviewHostCapabilityResults["preferences.get"]>;
+  ): MaybePromise<WebviewPreferencesSetParams["value"] | undefined>;
   set(
     name: string,
     value: WebviewPreferencesSetParams["value"],
@@ -52,12 +53,31 @@ export interface ExtensionWebviewPreferencesAdapter {
 }
 
 export interface ExtensionWebviewFilesAdapter {
+  download?(input: WebviewFilesDownloadParams): MaybePromise<void>;
   upload(input: WebviewFilesUploadParams): MaybePromise<WebviewHostCapabilityResults["files.upload"]>;
   list(input: WebviewFilesListParams): MaybePromise<WebviewHostCapabilityResults["files.list"]>;
   delete(input: WebviewFilesDeleteParams): MaybePromise<void>;
 }
 
 export interface ExtensionWebviewHostAdapters {
+  preferenceQueries?: Pick<
+    ReturnType<typeof import("./webview-preference-queries").createWebviewPreferenceQueries>,
+    "request" | "seeds"
+  >;
+  accountQueries?: {
+    request(
+      input: import("pstdio-api-contracts/extension-kernel").WebviewServiceQueryRequest<
+        import("pstdio-api-contracts/extension-kernel").WebviewAccountQuery
+      >,
+    ): Promise<import("pstdio-api-contracts/extension-kernel").WebviewCommandQuerySnapshot | undefined>;
+  };
+  performanceQueries?: {
+    request(
+      input: import("pstdio-api-contracts/extension-kernel").WebviewServiceQueryRequest<
+        import("pstdio-api-contracts/extension-kernel").WebviewPerformanceQuery
+      >,
+    ): Promise<import("pstdio-api-contracts/extension-kernel").WebviewCommandQuerySnapshot | undefined>;
+  };
   commandQueries?: Pick<
     ReturnType<typeof import("./webview-command-queries").createWebviewCommandQueryAdapter>,
     "request"
@@ -74,6 +94,7 @@ export interface ExtensionWebviewHostAdapters {
   resourceActions?: (
     input: WebviewHostCapabilityParams["resources.actions"],
   ) => MaybePromise<WebviewHostCapabilityResults["resources.actions"]>;
+  registerResourceAction?: (input: WebviewHostCapabilityParams["resources.actions.register"]) => MaybePromise<void>;
   executeCommand?(
     input: WebviewCommandsExecuteParams,
     signal?: AbortSignal,

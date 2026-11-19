@@ -155,7 +155,8 @@ const PageContentViewHosts = (props: {
     () => releaseViewerHosts(workbench, new Set(retained.map((placement) => placement.widgetId))),
     [workbench, retained],
   );
-  if (content) hosts.set(viewerHostKey(workbench, content.widgetId), content);
+  // Retention already includes current content. Resolve its host key only in that
+  // pass: a released view gets a new key when it returns after retention expires.
   return [...hosts].map(([key, placement]) => (
     <PanelViewPortal
       key={key}

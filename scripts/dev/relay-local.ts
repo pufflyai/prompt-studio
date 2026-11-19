@@ -222,7 +222,7 @@ if (process.argv.includes("--down")) {
       await chmod(accountPath, 0o600);
     }
     if (enroll || trustChanged) await run(["docker", "restart", `${app}-prompt-studio-1`]);
-    const url = `${connection.dashboardUrl}projects/${scope.workbenchId}/extensions/pstdio.pstdio-notes/notes`;
+    const url = `${connection.dashboardUrl}projects/${scope.workbenchId}/extensions/pstdio.notes/notes`;
     await writeFile(
       join(directory, `${app}.json`),
       JSON.stringify({ ...connection, environmentId: identity.environmentId, url }),

@@ -22,6 +22,7 @@ interface WorkbenchBodyProps {
   workbench: WorkbenchCore;
   hasNav: boolean;
   panelControls: boolean;
+  fullscreenControlsInTitleBar: boolean;
 }
 
 const SECONDARY_PANEL_SIZE = { defaultPx: 240, minPx: 128, maxPx: 420 };
@@ -78,7 +79,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
 };
 
 export const WorkbenchBody = (props: WorkbenchBodyProps) => {
-  const { workbench, hasNav, panelControls } = props;
+  const { workbench, hasNav, panelControls, fullscreenControlsInTitleBar } = props;
   const position = useWorkbenchStore(workbench.layout.store, () => workbench.shell.getArrangement().secondary);
   const policy = usePanelPolicy(workbench, "secondary");
   const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
@@ -131,7 +132,12 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       layerStyle="panel"
       position="relative"
     >
-      <WorkbenchNavChrome workbench={workbench} hasNav={hasNav} panelControls={panelControls} />
+      <WorkbenchNavChrome
+        workbench={workbench}
+        hasNav={hasNav}
+        panelControls={panelControls}
+        fullscreenControlsInTitleBar={fullscreenControlsInTitleBar}
+      />
       <Box display={fullscreen ? "none" : "flex"} flexDirection="column" minW="0">
         <MainHeaderBar workbench={workbench} hasMainHeader={hasMainHeader} />
         <WorkbenchPageMenuHeader workbench={workbench} />

@@ -4,9 +4,10 @@ import { retiredWorkspaceIds } from "../data/attempt-retirement";
 import { attemptEventsCollection, attemptSelectionsCollection, listAttempts } from "../data/attempt-storage";
 import type { AttemptRecord, TicketAttemptSelection } from "../data/attempt-types";
 import { type AutoBuildMode, readAutoBuildMode } from "../data/auto-build-mode";
-import { ticketsCollection } from "../data/collections";
 import type { DependencyDeliveryReads } from "../data/dependency-deliveries";
 import { resolveImplementationBase } from "../data/implementation-targets";
+import type { GithubReads } from "../data/pull-request-resources";
+import { readMigratedTickets } from "../data/read-migrated-tickets";
 import { readTicketReviewRequests } from "../data/review-request-storage";
 import { readWorkflowStatuses, usableWorkflowStatuses } from "../data/workflow-statuses";
 import { readPlanCommand } from "../timeline/commands/read-plan";
@@ -111,7 +112,7 @@ export async function readNextTickets(
     await Promise.all([
       readPlanCommand.run(ctx, {}),
       listAttempts(ctx.storage),
-      ticketsCollection(ctx).list(),
+      readMigratedTickets(ctx),
       readAutoBuildResumptions(ctx),
       readImplementationCapacity(ctx),
       readAutoBuildAssignments(ctx),
@@ -145,6 +146,7 @@ export async function readNextTickets(
   const observations: WorkObservation[] = [];
   // Share GitHub reads within this query; dispatch rechecks create a fresh query.
   const deliveryReads: DependencyDeliveryReads = new Map();
+  const pullRequestReads: GithubReads = new Map();
   let base = input.base;
   const limit = input.limit ?? Infinity;
   for (const row of selected) {
@@ -182,6 +184,7 @@ export async function readNextTickets(
         retired,
         selections,
         events,
+        pullRequestReads,
       });
       observations.push(...work.observations);
       appendObservedWork(work, { ...summary, ...wait }, capacity, next, waiting);
@@ -230,11 +233,10 @@ export const nextTicketsCommand = defineCommand({
   id: "next-tickets",
   title: "Read next tickets",
   cli: {
-    globalAliases: [["tickets", "next"]],
     description: "Query launchable tickets and waiting reasons using current Auto Build rules.",
     examples: [
-      "pst pstdio.pstdio-planner next-tickets --track Workbench",
-      "pst pstdio.pstdio-planner next-tickets --status Todo --tags High",
+      "pst pstdio.planner next-tickets --track Workbench",
+      "pst pstdio.planner next-tickets --status Todo --tags High",
     ],
   },
   params: {

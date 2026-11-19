@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
 import { automation_principals, automation_runs } from "../../db/schemas.pg";
@@ -56,6 +56,35 @@ const createRun = (idempotencyKey: string) =>
   });
 
 describe("automation run persistence", () => {
+  test("extension activity selects the latest matching command inside its database limit", async () => {
+    const owner = { projectId, extensionId: "example.worker" };
+    const principal = await service.getOrCreateExtensionPrincipal(owner);
+    const ids: string[] = [];
+    for (let i = 0; i < 4; i++) {
+      const commandId = i === 3 ? "example.worker.command.other" : "example.worker.command.run";
+      const result = await service.createRun({
+        projectId,
+        principalId: principal.id,
+        tokenId: null,
+        commandId,
+        idempotencyKey: String(i),
+        inputHash: String(i),
+        inputJson: { commandId, input: {} },
+      });
+      await db
+        .update(automation_runs)
+        .set({ created_at: `2026-11-15T00:00:0${i}Z` })
+        .where(eq(automation_runs.id, result.run.id));
+      ids.push(result.run.id);
+    }
+    const page = await service.listExtensionRuns(owner, {
+      commandId: "example.worker.command.run",
+      limit: 1,
+      order: "newest",
+    } as never);
+    expect(page.map(({ id }) => id)).toEqual([ids[2]]);
+    expect(await service.listExtensionRuns({ ...owner, extensionId: "peer" }, { limit: 1 } as never)).toEqual([]);
+  });
   test("preserves idempotency across token rotation for one principal", async () => {
     const first = await createRun("rotation-safe");
     const rotatedTokenId = crypto.randomUUID();
@@ -152,22 +181,49 @@ describe("automation run persistence", () => {
     expect((await service.listRunEvents(queued.id)).map((event) => event.type)).toEqual(["queued", "running"]);
   });
 
-  test("rolls back a status transition when its matching event cannot be stored", async () => {
-    const queued = (await createRun("atomic-terminal-event")).run;
-    await db.execute(
-      sql`alter table automation_run_events add constraint reject_succeeded_event check (type <> 'succeeded')`,
-    );
+  test("reads each run step as an event after the given cursor", async () => {
+    const queued = (await createRun("stepped")).run;
+    await service.claimQueuedRun(queued.id);
+    const error = { code: "boom", message: "Command failed.", retryable: false };
+    await service.transitionRun(queued.id, { status: "failed", error });
 
-    await expect(service.transitionRun(queued.id, { status: "succeeded", result: { ok: true } })).rejects.toThrow();
-
-    expect((await service.getRunById(queued.id))?.status).toBe("queued");
-    expect((await service.listRunEvents(queued.id)).map((event) => event.type)).toEqual(["queued"]);
+    const events = await service.listRunEvents(queued.id);
+    expect(events.map((event) => event.type)).toEqual(["queued", "running", "failed"]);
+    expect(events.map((event) => event.cursor)).toEqual(events.map((event) => event.cursor).sort((a, b) => a - b));
+    expect(new Set(events.map((event) => event.cursor)).size).toBe(3);
+    expect(events.at(-1)?.payload_json).toEqual({ error });
+    expect((await service.listRunEvents(queued.id, events[1]!.cursor)).map((event) => event.type)).toEqual(["failed"]);
   });
 
-  test("bounds stored event payloads by UTF-8 bytes", async () => {
+  test("returns a run's later steps to a reader holding a cursor from the former event table", async () => {
+    const queued = (await createRun("upgraded-reader")).run;
+    await service.transitionRun(queued.id, { status: "cancelled" });
+
+    expect((await service.listRunEvents(queued.id, 4_127)).map((event) => event.type)).toEqual(["queued", "cancelled"]);
+  });
+
+  test("keeps each step's cursor above the previous one when the clock steps back", async () => {
+    const run = (await createRun("clock-step")).run;
+    await service.claimQueuedRun(run.id);
+    await service.transitionRun(run.id, { status: "succeeded", result: { ok: true } });
+    await db
+      .update(automation_runs)
+      .set({ started_at: "2026-11-16T10:00:00.000Z", finished_at: "2026-11-16T09:59:59.000Z" })
+      .where(eq(automation_runs.id, run.id));
+
+    const events = await service.listRunEvents(run.id);
+    const running = events.find((event) => event.type === "running")!;
+    expect(events.at(-1)!.cursor).toBeGreaterThan(running.cursor);
+    expect((await service.listRunEvents(run.id, running.cursor)).map((event) => event.type)).toEqual(["succeeded"]);
+  });
+
+  test("bounds event payloads by UTF-8 bytes", async () => {
     const queued = (await createRun("bounded-event")).run;
 
-    await service.appendEvent(queued.id, "diagnostic", { detail: "å".repeat(9_000) });
+    await service.transitionRun(queued.id, {
+      status: "failed",
+      error: { code: "large", message: "å".repeat(9_000), retryable: false },
+    });
 
     const events = await service.listRunEvents(queued.id);
     expect(events.at(-1)?.payload_json).toEqual({ truncated: true });

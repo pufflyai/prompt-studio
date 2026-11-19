@@ -5,7 +5,9 @@ import type {
   CommandSource,
   JsonObject,
 } from "@pstdio/sdk/extensions";
+import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
 import type { RuntimeCommandRecord, RuntimeMiddlewareRecord } from "../../types/runtime";
+import { validateCollectionQueryRequest, validateCollectionQueryResult } from "./collection-query";
 import { createCommandStreamWriter } from "./command-stream";
 import type { RunnerState } from "./context";
 import { lifecycleEventId } from "./dispatch";
@@ -43,8 +45,12 @@ export const executeExtensionCommand = async (
   input: InternalExecuteInput,
 ): Promise<CommandOutcome> => {
   const scope = createInvocationScope({ logger: state.logger, parent: input.signal });
+  scope.collectionQuery = input.collectionQuery;
   try {
-    return await runExtensionCommand(state, input, scope);
+    return await withRuntimeOperationOrigin(
+      { kind: "command", name: input.commandId, projectId: input.projectId },
+      () => runExtensionCommand(state, input, scope),
+    );
   } finally {
     await scope.close();
   }
@@ -229,6 +235,7 @@ const executePrivateHandler = async (
   handler: NonNullable<ReturnType<typeof findPrivateHandler>>,
   scope: InvocationScope,
 ): Promise<CommandOutcome> => {
+  scope.collectionQuery ??= handler.collectionQuery;
   const notices: CommandNotice[] = [];
   const envFor = createEnvironmentCache(state.deps, input.projectId, notices, {
     workspaceDir: input.workspaceDir,
@@ -258,6 +265,7 @@ const executePrivateHandler = async (
 
   const start = Date.now();
   try {
+    validateCollectionQueryRequest(handler.collectionQuery, params);
     const ctx = state.factory.buildExtensionContext(
       env,
       {
@@ -271,7 +279,9 @@ const executePrivateHandler = async (
       scope,
       input.navigationScope,
     );
+    ctx.activity = env.activityForInvocation?.(input.source) ?? ctx.activity;
     const value = await handler.handler(ctx, params);
+    validateCollectionQueryResult(handler.collectionQuery, params, value);
     const elapsedMs = Date.now() - start;
     await state.dispatcher.dispatch(
       lifecycleEventId("completed", handler.id),

@@ -89,6 +89,7 @@ export type WorkbenchTreeViews = Pick<
 >;
 
 export interface WorkbenchCoreContributionContext {
+  activation: WorkbenchActivation;
   viewers: WorkbenchViewerController;
   pinPlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity, pinned?: boolean): void;
   getPanelDestinations(instanceId: string): import("./registries/layout/layout-types").WorkbenchPanelRegion[];
@@ -172,7 +173,6 @@ export interface WorkbenchHost {
 }
 
 export interface WorkbenchCore extends WorkbenchCoreContributionContext {
-  activation: WorkbenchActivation;
   dispose(): Promise<void>;
   host: WorkbenchHost;
   layout: WorkbenchLayoutModel;
@@ -219,7 +219,8 @@ export interface createWorkbenchInput {
   /** Default floating policy. The active mode may override it. */
   floatingPanels?: "visible" | "hidden";
   initialSidePanelMode?: WorkbenchSidePanelMode;
-  startPage?: PageRef;
+  /** Project composition chooses a resource-free page. Missing choices leave an empty workbench. */
+  defaultPage?: PageRef | (() => PageRef | undefined);
 }
 
 type WorkbenchModuleActivationResult = Disposable | readonly Disposable[] | undefined;

@@ -13,7 +13,7 @@ const createHost = () => {
   const listeners = new Set<(payload: unknown) => void>();
   const lists: PendingList[] = [];
   const host = {
-    extensionId: "pstdio.pstdio-planner",
+    extensionId: "pstdio.planner",
     call: ((method: string, params: PendingList["params"]) => {
       if (method !== "resources.actions") throw new Error(`Unexpected ${method}`);
       return new Promise<WebviewResourceAction[]>((resolve, reject) => lists.push({ params, resolve, reject }));
@@ -30,7 +30,7 @@ const createHost = () => {
   return { host, lists, listeners, emitChanged };
 };
 
-const ticket = (id: string) => ({ type: "ticket", id, extensionId: "pstdio.pstdio-planner" });
+const ticket = (id: string) => ({ type: "ticket", id, extensionId: "pstdio.planner" });
 const actions = (label: string) => [{ key: label, label }];
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 

@@ -8,8 +8,8 @@ import type { TicketContext } from "./ticket-identity";
 import { ticketTagIds } from "./ticket-tags";
 import type { Ticket } from "./types";
 
-export const TICKETS_DIR = ".pstdio/extension-storage/pstdio.pstdio-planner/tickets";
-export const ticketPathPrefixes = [`${TICKETS_DIR}/`, ".pstdio/extension-storage/pstdio.planner/tickets/"];
+export const TICKETS_DIR = ".pstdio/extension-storage/pstdio.planner/tickets";
+export const ticketPathPrefixes = [`${TICKETS_DIR}/`, ".pstdio/extension-storage/pstdio.pstdio-planner/tickets/"];
 
 const layout = createDraftLayout(TICKETS_DIR, "ticket");
 export const ticketMarkdownPath = layout.markdown;
@@ -48,7 +48,7 @@ const parentShorthandForId = async (ctx: TicketContext, parentId: string | null 
 const dependencyShorthandsForIds = async (ctx: TicketContext, dependencyIds: string[]) =>
   Promise.all(dependencyIds.map(async (id) => (await ticketsCollection(ctx).get(id))?.shorthand ?? id));
 
-// Renders a stored ticket to its `.pstdio/extension-storage/pstdio.pstdio-planner/tickets/<shorthand>/ticket.md` content:
+// Renders a stored ticket to its `.pstdio/extension-storage/pstdio.planner/tickets/<shorthand>/ticket.md` content:
 // the YAML frontmatter (with tag ids resolved to names, parent id to shorthand)
 // applied over the ticket body.
 export const ticketToMarkdown = async (ctx: TicketContext, ticket: Ticket) => {

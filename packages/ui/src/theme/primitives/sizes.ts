@@ -24,6 +24,7 @@ export const sp = {
 };
 
 export const spacing = {
+  "status-widget-inset": { value: "2px" },
   "shortcut-key-gap": { value: "1px" },
   "window-tab-gap": { value: "0.4375rem" },
   "window-controls-mac": { value: "5.625rem" },
@@ -51,6 +52,7 @@ export const spacing = {
 export const sizes = {
   "dashboard-grid-row": { value: `${dashboardGeometry.row}px` },
   "dashboard-guide": { value: sp[50] },
+  "document-content": { value: "45rem" },
   "alert-max-height": { value: "min(24rem, 50dvh)" },
   "kanban-create-editor-min": { value: "min(9rem, 40dvh)" },
   "kanban-create-editor-max": { value: "min(20rem, 40dvh)" },

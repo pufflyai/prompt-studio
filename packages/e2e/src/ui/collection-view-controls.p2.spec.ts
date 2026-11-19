@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { folderProjectInput } from "../helpers/folder-project";
 
-const ticketsBoard = "pstdio.pstdio-planner.view.tickets";
+const ticketsBoard = "pstdio.planner.view.tickets";
 
 interface BoardField {
   id: string;
@@ -49,7 +49,7 @@ test("boards search, edit filter parts, and save one sort that agents can build 
   const project = await createProject(request, page, "Collection view controls");
   try {
     for (const title of ["Filter pills read as sentences", "Saved filters for views", "Chat scroll jumps"])
-      await execute(request, project.id, "pstdio.pstdio-planner.command.create-ticket", {
+      await execute(request, project.id, "pstdio.planner.command.create-ticket", {
         title,
         content: `# ${title}`,
       });
@@ -60,7 +60,7 @@ test("boards search, edit filter parts, and save one sort that agents can build 
     expect(board.kind).toBe("kanban");
     const status = board.fields.find((field) => field.id === "status")!;
     expect(status.conditions).toContain("is-none-of");
-    await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+    await page.goto(`/projects/${project.id}/extensions/pstdio.planner/tickets`);
     const cards = page.getByTestId("renderer-card");
     await expect(cards).toHaveCount(3);
 

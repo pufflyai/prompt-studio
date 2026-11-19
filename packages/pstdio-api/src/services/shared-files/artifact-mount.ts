@@ -1,4 +1,5 @@
-import { posix, resolve } from "node:path";
+import { dirname, join, posix, resolve } from "node:path";
+import { historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
 import {
   createFileMount,
@@ -14,7 +15,7 @@ import { PublicationUpdateRequiredError } from "../../features/extensions/public
 import { artifactTreeReader } from "./artifact-tree-reader";
 import { createFileProjectionIO, sameFile } from "./file-io";
 import { createFileReconciler } from "./file-reconciliation";
-import { fileProjection, serializeFiles } from "./file-state";
+import { artifactProjectionKey, fileProjection, serializeFiles } from "./file-state";
 import { createFileTree, type FileNode, fileRecordId, within } from "./file-tree";
 import { withoutStorageObservation } from "./storage-observation";
 
@@ -50,7 +51,7 @@ export const createSharedArtifactMount = (
     }
   };
   const packageRoot = root.slice(0, -prefix.length - 1);
-  const key = JSON.stringify([owner, packageRoot]);
+  const key = artifactProjectionKey(owner, input.repoRoot);
   const projection = fileProjection(key, deps.extensionStorageService.fileProjections);
   const assets = deps.assetTransferService;
   const fullPath = (path: string) => posix.join(prefix, normalizeMountRelativePath(path));
@@ -231,7 +232,8 @@ export const createSharedArtifactMount = (
       for (const copy of copies) {
         if (!copy.startsWith('["artifact-file",')) continue;
         const [, savedRoot, path] = JSON.parse(copy) as [string, string, string];
-        if (savedRoot === packageRoot && within(path, prefix)) await run(async () => {}, path);
+        if (savedRoot === join(dirname(packageRoot), historicalExtensionId(owner.extensionId)) && within(path, prefix))
+          await run(async () => {}, path);
       }
     },
   };

@@ -1,5 +1,6 @@
 import type { PageLocation, PageParams, PageRef } from "@pstdio/sdk/extensions";
-import { parseWorkbenchPageUrl } from "pstdio-api-contracts";
+import { isWorkbenchProjectUrl, parseWorkbenchPageUrl } from "pstdio-api-contracts";
+import { historicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { WorkbenchPageContribution, WorkbenchPageResourceCodec } from "../../registries/pages/page-registry";
 import {
   normalizeDirectWorkbenchPageLocation,
@@ -31,6 +32,12 @@ const locationWithUrlParams = (
   const parent = contextual.parent && locationWithUrlParams(contextual.parent, page, params);
   return parent ? { ...contextual, parent } : undefined;
 };
+export const isProjectRootUrl = (url: string, projectId: string) =>
+  new URL(url, "http://workbench.local").pathname.replace(/\/$/, "") === `/projects/${encodeURIComponent(projectId)}`;
+
+export const isExplicitPageUrl = (url: string, projectId: string) =>
+  isWorkbenchProjectUrl(url, projectId) && !isProjectRootUrl(url, projectId);
+
 export const createPageUrlResolver =
   (input: {
     pages(): WorkbenchPageContribution[];
@@ -39,14 +46,15 @@ export const createPageUrlResolver =
     root?(): ResolvedPageLocation;
   }) =>
   (projectId: string, entry: WorkbenchPageBrowserEntry) => {
-    if (
-      input.root &&
-      new URL(entry.url, "http://workbench.local").pathname.replace(/\/$/, "") ===
-        `/projects/${encodeURIComponent(projectId)}`
-    )
-      return input.root();
+    if (input.root && isProjectRootUrl(entry.url, projectId)) return input.root();
     const pages = input.pages();
-    const parsed = parseWorkbenchPageUrl({ url: entry.url, projectId, pages, resources: input.resources });
+    const routes = pages.flatMap((page) => {
+      const previous = page.ref.extensionId && historicalExtensionId(page.ref.extensionId);
+      return previous && previous !== page.ref.extensionId
+        ? [page, { ...page, ref: { ...page.ref, extensionId: previous } }]
+        : [page];
+    });
+    const parsed = parseWorkbenchPageUrl({ url: entry.url, projectId, pages: routes, resources: input.resources });
     if (!parsed) return undefined;
     const direct = normalizeDirectWorkbenchPageLocation({ ...parsed, pages, resources: input.resources });
     if (!isPageHistoryState(entry.state) || entry.state.projectId !== projectId || !entry.state.location) return direct;

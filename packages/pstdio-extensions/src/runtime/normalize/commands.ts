@@ -1,4 +1,5 @@
 import { type CommandDefinition, contributionRefId } from "@pstdio/sdk/extensions";
+import { canonicalCliPath, historicalCliPaths } from "pstdio-api-contracts/extension-host";
 import { normalizeCliPath } from "../../artifacts/path-normalization";
 import type { NormalizedExtension, RuntimeCliContribution, RuntimeCommandRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
@@ -51,7 +52,7 @@ const validateCliExamples = (
   const routes = [
     [ext.id, ...contribution.path],
     [ext.name, ...contribution.path],
-    ...(contribution.globalAliases ?? []),
+    ...(contribution.deprecatedPaths ?? []),
   ];
   for (const example of contribution.examples ?? []) {
     if (exampleUsesCommandPath(example, routes)) continue;
@@ -68,6 +69,16 @@ const validateCliExamples = (
   }
 };
 
+const canonicalExamples = (examples: string[] | undefined, canonical: string, aliases: string[][]) =>
+  examples?.map((example) => {
+    const match = /^(pst|pstdio)\s+(.+)$/.exec(example);
+    if (!match) return example;
+    const previous = aliases
+      .map((parts) => parts.join(" "))
+      .find((path) => match[2] === path || match[2]!.startsWith(`${path} `));
+    return previous ? `${match[1]} ${canonical}${match[2]!.slice(previous.length)}` : example;
+  });
+
 const normalizeCommandCli = (
   ext: NormalizedExtension,
   source: LoadedExtensionSource,
@@ -81,7 +92,7 @@ const normalizeCommandCli = (
   const options = cli === true ? {} : cli;
 
   const customPath = Array.isArray(options.path) ? (options.path as string[]) : splitCommandKey(localId);
-  const normalized = normalizeCliPath(customPath);
+  const normalized = normalizeCliPath(canonicalCliPath(ext.id, localId, customPath));
   if (!normalized) return undefined;
 
   const pathKey = [ext.id, ...normalized.segments].join(" ");
@@ -97,10 +108,14 @@ const normalizeCommandCli = (
       ? options.examples.filter((example): example is string => typeof example === "string")
       : undefined,
     hidden: typeof options.hidden === "boolean" ? options.hidden : undefined,
-    globalAliases: Array.isArray(options.globalAliases)
-      ? (options.globalAliases as string[][]).filter((alias) => Array.isArray(alias))
-      : undefined,
+    deprecatedPaths: historicalCliPaths(ext.id, localId, normalized.segments),
   };
+  contribution.examples = canonicalExamples(contribution.examples, pathKey, [
+    ...(contribution.deprecatedPaths ?? []),
+    // Older SDKs authored examples with root shortcuts. Rewrite that help text
+    // without registering those declarations as routes or rejecting the source.
+    ...(Array.isArray(options.globalAliases) ? options.globalAliases.filter(Array.isArray) : []),
+  ]);
   validateCliExamples(ext, source, commandId, contribution, runtime);
 
   const existing = cliKeys.get(pathKey);

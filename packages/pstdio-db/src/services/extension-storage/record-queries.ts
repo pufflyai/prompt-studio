@@ -1,11 +1,13 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import {
-  compareQueryValues,
+  aggregateOptions,
   encodeQueryCursor,
   prepareRecordQuery,
-  validateIndexes,
+  requestedRecordIndex,
+  validateComputedConditions,
   validatePredicate,
+  validateRelatedQueryFields,
 } from "pstdio-sync/records";
 import {
   fingerprint,
@@ -13,30 +15,32 @@ import {
   type StorageRecord,
   type StorageRecordIndex,
   type StorageRecordQueries,
+  type StorageRecordQuery,
 } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import {
   storage_current_records as current,
   storage_record_indexes as indexes,
   storage_record_projections as projections,
+  storage_resource_projections,
 } from "../../db/schemas.pg";
-import { dropRecordIndexes } from "./record-index-lifecycle";
-import { decodeProjectionValue, encodeProjectionValue } from "./record-projection-codec";
-import {
-  arrayIndexFields,
-  pageAfterSql,
-  predicateSql,
-  recordFieldSql,
-  recordIndexKeys,
-  recordPageSql,
-  recordScopeSql,
-} from "./record-query-sql";
+import { traceStorageQuery } from "./query-trace";
+import { aggregateRecordQuery } from "./record-aggregate-query";
+import { countIndexSource } from "./record-count-query";
+import { prepareDateFormatIndexes, pruneDateFormatIndexes } from "./record-date-format";
+import { dependencyOrderedPageSql } from "./record-dependency-order";
+import { formatDatabasePrefix } from "./record-format-key";
+import { defineRecordIndexes } from "./record-index-definition";
+import { recordIndexName } from "./record-index-lifecycle";
+import { decodeProjectionValue } from "./record-projection-codec";
+import { pageAfterSql, recordPageSql, recordScopeSql } from "./record-query-sql";
+import { loadRelatedQueryIndexes, relatedRecordPredicateSql } from "./record-related-query";
+import { prepareTextOrder } from "./record-text-order";
+import { identityQueryVersion, prepareResourceQueryValues } from "./resource-query-values";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
 type QueryRow = { record_id: string; revision: string; fields: Record<string, Json>; sort_values: Json[] };
 type Current = typeof current.$inferSelect;
-const orderDefinitions = (definitions: StorageRecordIndex[]) =>
-  definitions.sort((left, right) => compareQueryValues(left.name, right.name));
 const missingRecord = async (recordId: string) => ({
   recordId,
   exists: false,
@@ -76,6 +80,22 @@ export const readProjectedRecords = async (connection: Reader, owner: StorageOwn
   return Promise.all(ids.map((id) => byId.get(id) ?? missingRecord(id)));
 };
 
+/** Conditional saves compare state under the owner lock without loading projected bodies. */
+export const readProjectedRevisions = async (connection: Reader, owner: StorageOwner, ids: string[]) => {
+  if (!ids.length) return [];
+  const rows = await connection
+    .select({ recordId: current.record_id, deleted: current.deleted, revision: current.revision })
+    .from(current)
+    .where(and(currentWhere(owner), inArray(current.record_id, ids)));
+  const byId = new Map(rows.map((row) => [row.recordId, row]));
+  return ids.map((id) => {
+    const row = byId.get(id);
+    return row
+      ? { exists: true, deleted: row.deleted, revision: row.revision }
+      : { exists: false, deleted: false, revision: "" };
+  });
+};
+
 /** Live records under an address prefix, in UTF-16 record ID order like the in-memory storage. */
 export const listProjectedRecords = async (connection: Reader, owner: StorageOwner, prefix = "") =>
   (
@@ -90,86 +110,130 @@ export const listProjectedRecords = async (connection: Reader, owner: StorageOwn
       return left.recordId < right.recordId ? -1 : 1;
     });
 
+const emptyQueryResult = (owner: StorageOwner, revision: string, diagnostics?: StorageDiagnostics) => {
+  diagnostics?.({ phase: "records-queried", owner, records: 0, materialized: 0 });
+  return { revision, records: [], cursor: null };
+};
+
+const prepareQueryMetadata = async (
+  tx: Pick<DbClient, "select" | "execute" | "insert" | "delete">,
+  owner: StorageOwner,
+  query: StorageRecordQuery,
+  getIndex: (connection: Reader, name: string) => Promise<StorageRecordIndex>,
+  diagnostics?: StorageDiagnostics,
+) => {
+  validateRelatedQueryFields(query);
+  const declared = await getIndex(tx, query.index);
+  const index = requestedRecordIndex(declared, query);
+  const revisionOnly = query.limit === 0;
+  if (!revisionOnly) {
+    await prepareTextOrder(tx, index);
+    await prepareDateFormatIndexes(tx, owner, declared, index, diagnostics);
+  }
+  const related = await loadRelatedQueryIndexes(
+    query.where,
+    async (name) => {
+      const declared = await getIndex(tx, name);
+      const target = requestedRecordIndex(declared, query.related?.[name] ?? {});
+      if (!revisionOnly) await prepareDateFormatIndexes(tx, owner, declared, target, diagnostics);
+      return target;
+    },
+    index,
+  );
+  traceStorageQuery("query-metadata", query.index);
+  if (!revisionOnly) {
+    await pruneDateFormatIndexes(tx, owner, related.definitions);
+    if (related.hasIdentity) await prepareResourceQueryValues(tx, owner);
+  }
+  return { declared, index, related };
+};
+
 export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnostics?: StorageDiagnostics) => {
-  const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId };
   const ownerWhere = (table: typeof current | typeof indexes | typeof projections) =>
     and(eq(table.workbench_id, owner.workbenchId), eq(table.extension_id, owner.extensionId));
   const visible = (index: StorageRecordIndex) => recordScopeSql(owner, index);
+  const physicalNames = new WeakMap<StorageRecordIndex, string>();
   const getIndex = async (connection: Pick<DbClient, "select">, name: string) => {
     const [index] = await connection
       .select()
       .from(indexes)
-      .where(and(ownerWhere(indexes), eq(indexes.name, name)));
+      .where(
+        and(
+          ownerWhere(indexes),
+          eq(indexes.name, name),
+          sql`NOT starts_with(${indexes.database_name}, ${formatDatabasePrefix})`,
+        ),
+      );
     if (!index) throw new Error(`Storage index not installed: ${name}`);
-    return decodeProjectionValue(index.definition as unknown as Json) as unknown as StorageRecordIndex;
+    const declaration = decodeProjectionValue(index.definition as unknown as Json) as unknown as StorageRecordIndex;
+    physicalNames.set(declaration, index.database_name);
+    return declaration;
   };
-  // The projection row is the owner's revision; an owner without one has no records yet.
-  const getRevision = async (connection: Reader) => {
-    const [projection] = await connection.select().from(projections).where(ownerWhere(projections));
-    return String(projection?.revision ?? 0);
+  // Index replacement can change selection without editing records. Both belong to a query snapshot.
+  const getRevision = async (connection: Reader, identities = false) => {
+    let identityRevision = "";
+    if (identities) {
+      const [core] = await connection
+        .select({ current: projections.revision, projected: storage_resource_projections.revision })
+        .from(projections)
+        .leftJoin(storage_resource_projections, eq(storage_resource_projections.workbench_id, projections.workbench_id))
+        .where(and(eq(projections.workbench_id, owner.workbenchId), eq(projections.extension_id, "pstdio")));
+      if (core && core.current !== (core.projected ?? 0))
+        throw new Error("Resource identity projection is stale; upgrade before reading");
+      identityRevision = `:${core?.projected ?? 0}:${identityQueryVersion}`;
+    }
+    const projection = connection
+      .select({ revision: projections.revision })
+      .from(projections)
+      .where(ownerWhere(projections));
+    const [row] = await connection
+      .select({
+        revision: sql<string>`coalesce((${projection}), 0)::text || ':' || md5(coalesce(string_agg(${indexes.database_name}, ',' ORDER BY ${indexes.database_name} COLLATE "C"), ''))`,
+      })
+      .from(indexes)
+      .where(and(ownerWhere(indexes), sql`NOT starts_with(${indexes.database_name}, ${formatDatabasePrefix})`));
+    return row.revision + identityRevision;
   };
   const api: StorageRecordQueries = {
-    defineIndexes: async (definitions) => {
-      validateIndexes(definitions);
-      const desired = orderDefinitions(structuredClone(definitions));
-      const previous = await db.select().from(indexes).where(ownerWhere(indexes));
-      const installed = orderDefinitions(
-        decodeProjectionValue(
-          previous.map((row) => row.definition) as unknown as Json,
-        ) as unknown as StorageRecordIndex[],
-      );
-      // Every project runtime reload calls this for each extension, records or not.
-      if ((await fingerprint(installed as unknown as Json)) === (await fingerprint(desired as unknown as Json))) return;
-      await db.transaction(async (tx) => {
-        await dropRecordIndexes(tx, ownerWhere(indexes)!);
-        await tx.delete(indexes).where(ownerWhere(indexes));
-        for (const index of desired) {
-          const name = `storage_query_${(await fingerprint({ owner: { ...owner }, definition: index as unknown as Json })).slice(0, 32)}`;
-          const keys = recordIndexKeys(index);
-          await tx.execute(
-            sql`CREATE INDEX ${sql.identifier(name)} ON storage_current_records (${sql.join(keys, sql`, `)}) WHERE ${visible(index)}`,
-          );
-          // Postgres ignores partial-index statistics when estimating rows. Without these,
-          // an in-list looks like half the owner and the planner scans every row.
-          for (const [position, key] of keys.slice(0, index.equality?.length ?? 0).entries())
-            await tx.execute(
-              sql`CREATE STATISTICS ${sql.identifier(`${name}_s${position}`)} ON ${key} FROM storage_current_records`,
-            );
-          for (const [position, [field]] of arrayIndexFields(index).entries())
-            await tx.execute(
-              sql`CREATE INDEX ${sql.identifier(`${name}_g${position}`)} ON storage_current_records USING gin ((${recordFieldSql(index, field)})) WHERE ${visible(index)}`,
-            );
-          await tx.insert(indexes).values({
-            ...address,
-            name: index.name,
-            database_name: name,
-            definition: encodeProjectionValue(index as unknown as Json) as unknown as StorageRecordIndex,
-          });
-        }
-        // Expression indexes get planner statistics only from ANALYZE, not from CREATE INDEX.
-        // Dropping indexes needs none, and analyzing the table shared by all owners is slow.
-        if (desired.length) await tx.execute(sql`ANALYZE storage_current_records`);
-      });
-    },
+    defineIndexes: (definitions) => defineRecordIndexes(db, owner, definitions, "immediate", diagnostics),
     query: (query) =>
       db.transaction(async (tx) => {
-        const index = await getIndex(tx, query.index);
-        const revision = await getRevision(tx);
-        const page = await prepareRecordQuery(owner, index, query, revision);
+        traceStorageQuery("query-start", query.index);
+        const { declared, index, related } = await prepareQueryMetadata(tx, owner, query, getIndex, diagnostics);
+        const revision = await getRevision(tx, related.hasIdentity);
+        traceStorageQuery("query-execute", query.index);
+        const page = await prepareRecordQuery(owner, index, query, revision, related);
+        if (page.limit === 0) return emptyQueryResult(owner, revision, diagnostics);
         const result = await tx.execute<QueryRow>(
-          recordPageSql(
-            index,
-            page.fields,
-            sql`${visible(index)} AND ${predicateSql(index, query.where)} AND ${pageAfterSql(index, page.after)}`,
-            // One extra row shows whether a next page exists without a second scan.
-            page.limit + 1,
-            page.offset,
-          ),
+          query.dependencyOrder
+            ? dependencyOrderedPageSql(
+                owner,
+                index,
+                query.dependencyOrder,
+                page.fields,
+                sql`${visible(index)} AND ${relatedRecordPredicateSql(owner, index, query.where, related)}`,
+                page.limit,
+                related,
+              )
+            : recordPageSql(
+                index,
+                page.fields,
+                sql`${visible(index)} AND ${relatedRecordPredicateSql(owner, index, query.where, related)} AND ${pageAfterSql(index, page.after, related, owner)}`,
+                // One extra row shows whether a next page exists without a second scan.
+                page.limit + 1,
+                page.offset,
+                related,
+                owner,
+                query.orderBy === undefined || JSON.stringify(query.orderBy) === JSON.stringify(declared.orderBy)
+                  ? query.where
+                  : undefined,
+              ),
         );
         const rows = result.rows.slice(0, page.limit);
+        traceStorageQuery("query-complete", query.index);
         const last = rows.at(-1);
         const cursor =
-          last && result.rows.length > page.limit
+          !query.dependencyOrder && last && result.rows.length > page.limit
             ? encodeQueryCursor({
                 recordId: last.record_id,
                 values: last.sort_values.map(decodeProjectionValue),
@@ -177,7 +241,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
                 revision,
               })
             : null;
-        diagnostics?.({ phase: "records-queried", owner, records: rows.length });
+        diagnostics?.({ phase: "records-queried", owner, records: rows.length, materialized: result.rows.length });
         return {
           revision,
           cursor,
@@ -190,30 +254,60 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
       }),
     aggregate: (query) =>
       db.transaction(async (tx) => {
-        const index = await getIndex(tx, query.index);
-        const revision = await getRevision(tx);
-        validatePredicate(index, query.where);
-        if (query.where === undefined && query.groupBy === undefined && index.prefix === undefined) {
+        traceStorageQuery("aggregate-start", query.index);
+        validateRelatedQueryFields(query);
+        const declared = await getIndex(tx, query.index);
+        const index = requestedRecordIndex(declared, query);
+        await prepareDateFormatIndexes(tx, owner, declared, index, diagnostics);
+        aggregateOptions(index, query);
+        const related = await loadRelatedQueryIndexes(
+          query.where,
+          async (name) => {
+            const declared = await getIndex(tx, name);
+            const target = requestedRecordIndex(declared, query.related?.[name] ?? {});
+            await prepareDateFormatIndexes(tx, owner, declared, target, diagnostics);
+            return target;
+          },
+          index,
+        );
+        traceStorageQuery("aggregate-metadata", query.index);
+        await pruneDateFormatIndexes(tx, owner, related.definitions);
+        if (related.hasIdentity) await prepareResourceQueryValues(tx, owner);
+        const revision = await getRevision(tx, related.hasIdentity);
+        traceStorageQuery("aggregate-execute", query.index);
+        validatePredicate(index, query.where, 0, related);
+        validateComputedConditions(index, related);
+        if (
+          query.where === undefined &&
+          query.groupBy === undefined &&
+          query.metrics === undefined &&
+          query.statistics === undefined &&
+          query.fingerprint === undefined &&
+          index.prefix === undefined &&
+          !index.identity
+        ) {
           const [projection] = await tx.select().from(projections).where(ownerWhere(projections));
           return { revision, count: projection?.live_count ?? 0, groups: [] };
         }
-        const group =
-          query.groupBy === undefined
-            ? sql`NULL::jsonb`
-            : sql`coalesce(${recordFieldSql(index, query.groupBy)}, 'null'::jsonb)`;
-        const result = await tx.execute<{ value: Json; count: string }>(
-          sql`SELECT ${group} AS value, count(*)::text AS count FROM storage_current_records WHERE ${visible(index)} AND ${predicateSql(index, query.where)} GROUP BY 1`,
-        );
-        return {
+        const predicate = relatedRecordPredicateSql(owner, index, query.where, related);
+        const name = physicalNames.get(declared);
+        // An owner rename moves declarations before the new owner installs its count tables.
+        const counted =
+          name?.startsWith("storage_query_v4_") &&
+          declared.countBy?.length &&
+          name === (await recordIndexName(owner, declared))
+            ? await countIndexSource(tx, index, query, name, predicate)
+            : undefined;
+        return aggregateRecordQuery(
+          tx,
+          index,
+          query,
           revision,
-          count: result.rows.reduce((sum, row) => sum + Number(row.count), 0),
-          groups:
-            query.groupBy === undefined
-              ? []
-              : result.rows
-                  .map((row) => ({ value: decodeProjectionValue(row.value ?? null), count: Number(row.count) }))
-                  .sort((a, b) => compareQueryValues(a.value, b.value)),
-        };
+          sql`${visible(index)} AND ${predicate}`,
+          related,
+          owner,
+          counted,
+        );
       }),
     readMany: async (ids) => {
       if (ids.length > 100) throw new Error("A batch can read at most 100 records");

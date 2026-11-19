@@ -1,15 +1,13 @@
 import type { JsonObject, WorkspaceProviderRef, WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
 import type { WorkspacesRouteDeps } from "./deps";
-import { getAcceptedProviderOperation } from "./workspace-provider-accepted-operation";
-import { removeInactiveWorkspaceProviderDirectory } from "./workspace-provider-directory";
+import { getAcceptedProviderOperation, getLiveProviderWorkspace } from "./workspace-provider-accepted-operation";
 import { finalizeWorkspaceDelete } from "./workspace-provider-lifecycle";
+import { missingProviderPatch, projectionBase, type WorkspaceRecord } from "./workspace-provider-projection";
 import {
-  failedOperationPatch,
-  missingProviderPatch,
-  projectionBase,
-  type WorkspaceProviderOperationKind,
-  type WorkspaceRecord,
-} from "./workspace-provider-projection";
+  pendingStateFor,
+  recordProviderRecoveryFailure,
+  updateReconciledProjection,
+} from "./workspace-provider-recovery-projection";
 import {
   findWorkspaceProvider,
   runWorkspaceProviderOperation,
@@ -30,22 +28,14 @@ const listReconciliationWorkspaces = async (deps: WorkspacesRouteDeps, projectId
   return workspaceId ? workspaces.filter((workspace) => workspace.id === workspaceId) : workspaces;
 };
 
-const pendingStateFor = (kind: WorkspaceProviderOperationKind) => {
-  if (kind === "archive") return "archiving" as const;
-  if (kind === "delete") return "deleting" as const;
-  if (kind === "create") return "failed" as const;
-  return "provisioning" as const;
-};
-
 const updateResult = async (deps: WorkspacesRouteDeps, workspace: WorkspaceRecord, result: WorkspaceProviderResult) => {
-  const updated =
-    (await deps.workspaceService.updateProviderProjection(
-      workspace.id,
-      normalizeResult(workspace.provider_id, result, {
-        providerRef: workspace.provider_ref_json as unknown as WorkspaceProviderRef,
-      }),
-    )) ?? workspace;
-  if (updated.provider_state === "archived") await finalizeWorkspaceDelete(deps, updated);
+  const updated = await updateReconciledProjection(deps, workspace, {
+    ...normalizeResult(workspace.provider_id, result, {
+      providerRef: workspace.provider_ref_json as unknown as WorkspaceProviderRef,
+    }),
+    ...(result.state === "cancelled" ? { root_path: null, branch: null, display_path: null } : {}),
+  });
+  if (updated?.provider_state === "archived") await finalizeWorkspaceDelete(deps, updated);
 };
 
 const settleWithoutProviderMethod = async (
@@ -53,15 +43,15 @@ const settleWithoutProviderMethod = async (
   workspace: WorkspaceRecord,
   state: "cancelled" | "archived",
 ) => {
-  const updated =
-    (await deps.workspaceService.updateProviderProjection(workspace.id, {
-      ...projectionBase(workspace),
-      provider_state: state,
-      provider_operation_id: null,
-      provider_operation_kind: null,
-      provider_error_json: null,
-    })) ?? workspace;
-  if (state === "archived") await finalizeWorkspaceDelete(deps, updated);
+  const updated = await updateReconciledProjection(deps, workspace, {
+    ...projectionBase(workspace),
+    provider_state: state,
+    provider_operation_id: null,
+    provider_operation_kind: null,
+    provider_error_json: null,
+    ...(state === "cancelled" ? { root_path: null, branch: null, display_path: null } : {}),
+  });
+  if (updated && state === "archived") await finalizeWorkspaceDelete(deps, updated);
 };
 
 const reconcileCancellation = async (
@@ -156,12 +146,6 @@ const reconcileStoredOperation = async (
   const operationId = workspace.provider_operation_id;
   if (!kind || !operationId) return false;
 
-  if (!workspace.provider_ref_json) {
-    const recovered = await recoverProviderReference(deps, workspace, handle, options);
-    if (!recovered?.provider_ref_json) return true;
-    return reconcileStoredOperation(deps, recovered, handle, options);
-  }
-
   if (kind === "cancel") {
     await reconcileCancellation(deps, workspace, handle, operationId, options);
     return true;
@@ -186,23 +170,12 @@ const reconcileStoredOperation = async (
   return true;
 };
 
-const reconcileWorkspace = async (
+const resolveReadyWorkspace = async (
   deps: WorkspacesRouteDeps,
   workspace: WorkspaceRecord,
+  handle: WorkspaceProviderHandle,
   options: ReconciliationOptions,
 ) => {
-  const handle = await findWorkspaceProvider(deps, {
-    projectId: workspace.project_id,
-    providerId: workspace.provider_id,
-    workspaceId: workspace.id,
-    workspaceDir: workspace.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined,
-  });
-  if (!handle) {
-    await deps.workspaceService.updateProviderProjection(workspace.id, missingProviderPatch(workspace));
-    return;
-  }
-
-  if (await reconcileStoredOperation(deps, workspace, handle, options)) return;
   if (!workspace.provider_ref_json) return;
   const result = await runWorkspaceProviderOperation(
     handle,
@@ -214,7 +187,50 @@ const reconcileWorkspace = async (
       }),
     { signal: options.signal, timeoutMs: options.providerTimeoutMs },
   );
+  // The provider may have been disabled while its resolve callback was running.
+  // A late ready result must not restore execution through that old handle.
+  if (
+    !(await findWorkspaceProvider(deps, {
+      projectId: workspace.project_id,
+      providerId: workspace.provider_id,
+      workspaceId: workspace.id,
+    }))
+  ) {
+    await updateReconciledProjection(deps, workspace, missingProviderPatch(workspace));
+    return;
+  }
   await updateResult(deps, workspace, result);
+};
+
+const reconcileWorkspace = async (
+  deps: WorkspacesRouteDeps,
+  initial: WorkspaceRecord,
+  options: ReconciliationOptions,
+) => {
+  let workspace = initial;
+  try {
+    const handle = await findWorkspaceProvider(deps, {
+      projectId: workspace.project_id,
+      providerId: workspace.provider_id,
+      workspaceId: workspace.id,
+      workspaceDir: workspace.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined,
+    });
+    if (!handle) {
+      await updateReconciledProjection(deps, workspace, missingProviderPatch(workspace));
+      return;
+    }
+    if (workspace.provider_operation_kind && workspace.provider_operation_id && !workspace.provider_ref_json) {
+      const recovered = await recoverProviderReference(deps, workspace, handle, options);
+      if (!recovered?.provider_ref_json) return;
+      // Capture only the operation this pass actually obtained. Recovery can
+      // rotate the ID, and unrelated lifecycle changes must remain fenced out.
+      workspace = recovered;
+    }
+    if (!(await reconcileStoredOperation(deps, workspace, handle, options)))
+      await resolveReadyWorkspace(deps, workspace, handle, options);
+  } catch (error) {
+    await recordProviderRecoveryFailure(deps, workspace, error);
+  }
 };
 
 const needsRecoveryRetry = (workspace: WorkspaceRecord) =>
@@ -224,6 +240,10 @@ const needsRecoveryRetry = (workspace: WorkspaceRecord) =>
   workspace.provider_state === "deleting" ||
   (workspace.provider_error_json?.retryable === true &&
     (workspace.provider_state === "failed" || workspace.provider_state === "provider_missing"));
+
+const needsProviderReconciliation = (workspace: WorkspaceRecord) =>
+  !isBuiltInProviderId(workspace.provider_id) &&
+  ((workspace.provider_state === "ready" && workspace.provider_ref_json !== null) || needsRecoveryRetry(workspace));
 
 const waitForRecoveryRetry = (delayMs: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
@@ -244,55 +264,19 @@ const reconcileProviderWorkspacePass = async (
   options: ReconciliationOptions,
 ) => {
   const workspaces = await listReconciliationWorkspaces(deps, projectId, options.workspaceId);
-  const pending = workspaces.filter(
-    (workspace) =>
-      !isBuiltInProviderId(workspace.provider_id) &&
-      (workspace.provider_operation_id !== null ||
-        (workspace.provider_state === "ready" && workspace.provider_ref_json !== null) ||
-        workspace.provider_state === "provisioning" ||
-        workspace.provider_state === "archiving" ||
-        workspace.provider_state === "deleting" ||
-        (workspace.provider_error_json?.retryable === true &&
-          (workspace.provider_state === "failed" || workspace.provider_state === "provider_missing"))),
-  );
+  const pending = workspaces.filter(needsProviderReconciliation);
 
   await Promise.allSettled(
-    pending.map(async (workspace) => {
-      if (options.signal?.aborted) return;
-      try {
+    pending.map((candidate) =>
+      deps.workspaceService.maintenance.runExclusive(candidate.id, async () => {
+        if (options.signal?.aborted) return;
+        // Deletion and file provisioning own this same gate. Re-read after waiting so a
+        // previously discovered ready target cannot allocate files after its deletion.
+        const workspace = await getLiveProviderWorkspace(deps, { id: candidate.id, project_id: projectId });
+        if (!workspace || !needsProviderReconciliation(workspace)) return;
         await reconcileWorkspace(deps, workspace, options);
-      } catch (error) {
-        let failure = error;
-        const kind = workspace.provider_operation_kind ?? "create";
-        if (kind === "delete" && !workspace.provider_ref_json && workspace.provider_operation_id) {
-          try {
-            await removeInactiveWorkspaceProviderDirectory(
-              deps,
-              {
-                projectId: workspace.project_id,
-                providerId: workspace.provider_id,
-                workspaceId: workspace.id,
-              },
-              workspace.provider_operation_id,
-            );
-          } catch (cleanupError) {
-            failure = new AggregateError(
-              [error, cleanupError],
-              "Provider recovery and owned-directory cleanup failed.",
-            );
-          }
-        }
-        await deps.workspaceService.updateProviderProjection(
-          workspace.id,
-          failedOperationPatch(workspace, {
-            kind,
-            operationId: workspace.provider_operation_id ?? crypto.randomUUID(),
-            state: pendingStateFor(kind),
-            error: failure,
-          }),
-        );
-      }
-    }),
+      }),
+    ),
   );
 };
 

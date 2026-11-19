@@ -84,7 +84,9 @@ export {
   workspaceSlots,
   worktreeEvents,
 } from "pstdio-api-contracts/extension-kernel";
+export { deriveMarkdownTitle, resolveSelectedValues } from "pstdio-sync-contracts";
 export { SDK_VERSION } from "../version";
+export { collectionTableQuery, collectionViewQuery } from "./collection-view";
 export { CommandOutcomeError, type CommandResponse, getCommandValue, unwrapCommandOutcome } from "./command-outcome";
 export { commandRefId, contributionRefId } from "./contribution-reference";
 export { defineCommand, defineHook, defineMiddleware, streamOf } from "./define-command";
@@ -175,6 +177,7 @@ export type {
   WebviewEditingSession,
 } from "./webview-editing";
 export { EXTENSION_EVENTS_SCOPE, type WebviewEventsClient, type WebviewExtensionEvent } from "./webview-events";
+export { registerWebviewResourceAction } from "./webview-resource-action";
 export { matchesResourceWhen } from "./when";
 export const projectPrefix = () => ({ $prefix: "project" as const });
 
@@ -237,4 +240,5 @@ export type { WebviewCommandQuery, WebviewCommandQueryOptions } from "./webview-
 export type { WebviewPageClient } from "./webview-page-client";
 export type { WebviewPerformanceClient } from "./webview-performance-client";
 export { createWebviewQueryClient, type WebviewQueryDescriptor } from "./webview-query";
+export type { WebviewServiceQuery } from "./webview-service-query";
 export type { CommandStream, CommandStreamOptions, WebviewStreamsClient } from "./webview-streams";

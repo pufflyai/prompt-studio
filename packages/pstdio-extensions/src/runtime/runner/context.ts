@@ -14,7 +14,10 @@ import type {
   Struct,
 } from "@pstdio/sdk/extensions";
 import { qualifyNavigationTarget, queryChangeEnvelopeSchema } from "pstdio-api-contracts";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { ExtensionRuntime } from "../../types/runtime";
+import { canonicalNavigationOwners } from "../canonical-navigation-owners";
+import { boundedQueryAutomation, boundedQueryStorage, rejectUnboundedCollectionRead } from "./collection-query";
 import { type EventDispatcher, refId } from "./dispatch";
 import type { NavigationScope } from "./navigation-scope";
 import type { InvocationScope } from "./scope";
@@ -61,6 +64,7 @@ export interface RunnerState {
 
 /** Where a nested `ctx.commands.execute()` runs from. */
 interface NestedExecuteOrigin {
+  collectionQuery?: InvocationScope["collectionQuery"];
   navigationScope?: NavigationScope;
   depth: number;
   extensionId: string;
@@ -110,10 +114,22 @@ const unavailableViewsApi: ExtensionViewsApi = {
   setDefault: unavailableViews,
 };
 
-const buildEventsApi = (dispatcher: EventDispatcher, origin: BuildEnvironmentInput): ExtensionEventsApi => ({
+const buildEventsApi = (
+  dispatcher: EventDispatcher,
+  origin: BuildEnvironmentInput,
+  runtime: ExtensionRuntime,
+): ExtensionEventsApi => ({
   emit: async (event, payload, options) =>
     dispatcher.dispatch(
-      refId(event, origin.extensionId),
+      refId(
+        typeof event !== "string" &&
+          runtime.extensions.some(
+            (provider) => provider.id === canonicalExtensionId(event.extensionId ?? origin.extensionId),
+          )
+          ? { ...event, extensionId: canonicalExtensionId(event.extensionId ?? origin.extensionId) }
+          : event,
+        origin.extensionId,
+      ),
       payload as Struct,
       origin,
       options?.refresh ? queryChangeEnvelopeSchema.parse(options.refresh) : undefined,
@@ -138,6 +154,7 @@ export const createExecuteBuilder = (runRef: {
   return (origin) => async (command, invocation) => {
     const id = refId(command, origin.extensionId);
     const outcome = await runRef.run({
+      collectionQuery: origin.collectionQuery,
       commandId: id,
       projectId: origin.projectId,
       params: (invocation?.params ?? {}) as JsonObject,
@@ -160,10 +177,12 @@ export const createContextFactory = (
   dispatcher: EventDispatcher,
   createLogger: (extensionId: string) => ExtensionLoggerApi,
   createExecute: (origin: NestedExecuteOrigin) => CommandHelpersApi["execute"],
+  runtime: ExtensionRuntime,
 ): ContextFactory => ({
   buildExtensionContext(env, ids, depth, scope, navigationScope) {
     const hostApis: ScopedHostApis = scope ? env.withScope(scope) : env;
     const origin = {
+      collectionQuery: scope?.collectionQuery,
       navigationScope,
       depth,
       extensionId: ids.extensionId,
@@ -179,12 +198,15 @@ export const createContextFactory = (
       project: env.project,
       extensionId: ids.extensionId,
       name: ids.name,
-      storage: hostApis.storage,
-      resources: env.resources,
+      storage: scope?.collectionQuery ? boundedQueryStorage(hostApis.storage) : hostApis.storage,
+      resources: hostApis.resources,
       views: env.views ?? unavailableViewsApi,
       navigation: {
         open: (target) => {
-          if (navigationScope) navigationScope.open(qualifyNavigationTarget(target, ids.extensionId, ids.projectId));
+          if (navigationScope)
+            navigationScope.open(
+              canonicalNavigationOwners(qualifyNavigationTarget(target, ids.extensionId, ids.projectId)),
+            );
         },
       },
       artifacts: hostApis.artifacts,
@@ -196,19 +218,21 @@ export const createContextFactory = (
       skills: hostApis.skills,
       extensions: hostApis.extensions,
       sessions: hostApis.sessions,
-      workspaces: hostApis.workspaces,
+      workspaces: scope?.collectionQuery
+        ? { ...hostApis.workspaces, list: rejectUnboundedCollectionRead }
+        : hostApis.workspaces,
       commands: buildCommandsApi(createExecute, origin),
-      events: buildEventsApi(dispatcher, ids),
+      events: buildEventsApi(dispatcher, ids, runtime),
       activity: env.activity,
       notify: env.notify,
-      automation: env.automation,
+      automation: scope?.collectionQuery ? boundedQueryAutomation(env.automation) : env.automation,
       process: hostApis.process,
       net: env.net,
       connections: hostApis.connections ?? unavailableConnections,
       terminal: hostApis.terminal,
       logger: createLogger(ids.extensionId),
       settings: hostApis.settings,
-      account: env.account ?? unavailableAccount,
+      account: hostApis.account ?? unavailableAccount,
     };
   },
 
@@ -240,6 +264,7 @@ export const createContextFactory = (
     );
     return {
       ...base,
+      activity: env.activityForInvocation?.(source) ?? base.activity,
       stream: { write: async () => {} },
       commandId,
       invocationId,

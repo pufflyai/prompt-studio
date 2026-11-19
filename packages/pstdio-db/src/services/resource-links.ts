@@ -1,26 +1,27 @@
-import { and, eq, or, sql } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 import type { ResourceAnchor, ResourceRef, ResourceRole } from "pstdio-api-contracts/extension-kernel";
 import type { DbClient } from "../db/connection.pglite";
 import { resource_anchors as edges } from "../db/schemas/resource-anchors";
+import { queryRelatedResources } from "./related-resource-query";
 import { lockResourceLinkSource } from "./resource-link-source";
 
-type Database = Pick<DbClient, "select" | "insert" | "delete" | "update" | "transaction">;
+type Database = Pick<DbClient, "select" | "insert" | "delete" | "update" | "transaction" | "execute">;
 export type CanonicalResource = ResourceRef & { projectId: string; extensionId: string };
 type Edge = typeof edges.$inferSelect;
 
-const sourceMatch = (ref: CanonicalResource) =>
+const sourceMatch = (ref: CanonicalResource, ids?: string[]) =>
   and(
     eq(edges.project_id, ref.projectId),
     eq(edges.source_owner, ref.extensionId),
     eq(edges.source_kind, ref.type),
-    eq(edges.source_id, ref.id),
+    ids ? inArray(edges.source_id, ids) : eq(edges.source_id, ref.id),
   );
-const targetMatch = (ref: CanonicalResource) =>
+const targetMatch = (ref: CanonicalResource, ids?: string[]) =>
   and(
     eq(edges.project_id, ref.projectId),
     eq(edges.target_owner, ref.extensionId),
     eq(edges.target_kind, ref.type),
-    eq(edges.target_id, ref.id),
+    ids ? inArray(edges.target_id, ids) : eq(edges.target_id, ref.id),
   );
 const keyColumns = [
   edges.source_owner,
@@ -128,6 +129,7 @@ const refsMatch = (resource: CanonicalResource, refs: ResourceRef[]) =>
   );
 
 export const createResourceLinksDBService = (db: Database) => ({
+  related: (input: Parameters<typeof queryRelatedResources>[1]) => queryRelatedResources(db, input),
   add: (resource: CanonicalResource, anchors: ResourceAnchor[], details = anchors) =>
     db.transaction(async (tx) => {
       const touchSource = await lockResourceLinkSource(tx, resource);
@@ -233,11 +235,20 @@ const listResourceLinks = async (
   const limit = input.limit ?? 50;
   if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error("Limit must be between 1 and 100.");
   if (!input.resources.length) return { items: [] };
+  // A batch from one collection shares its project, owner and kind. Match that
+  // scope once instead of asking Postgres to plan a separate branch for each ID.
+  const scopes = new Map<string, { resource: CanonicalResource; ids: string[] }>();
+  for (const resource of input.resources) {
+    const key = JSON.stringify([resource.projectId, resource.extensionId, resource.type]);
+    const group = scopes.get(key);
+    if (group) group.ids.push(resource.id);
+    else scopes.set(key, { resource, ids: [resource.id] });
+  }
   const match = or(
-    ...input.resources.map((resource) => {
-      if (direction === "incoming") return targetMatch(resource);
-      if (direction === "both") return or(sourceMatch(resource), targetMatch(resource));
-      return sourceMatch(resource);
+    ...Array.from(scopes.values(), ({ resource, ids }) => {
+      if (direction === "incoming") return targetMatch(resource, ids);
+      if (direction === "both") return or(sourceMatch(resource, ids), targetMatch(resource, ids));
+      return sourceMatch(resource, ids);
     }),
   );
   const conditions = [match];

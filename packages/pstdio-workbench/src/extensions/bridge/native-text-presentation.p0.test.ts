@@ -1,152 +1,7 @@
 import { expect, test } from "bun:test";
-import { createClient } from "@pstdio/sdk/client";
-import * as Y from "yjs";
-import { harness, navigate, openFile } from "../../core/controllers/composition/placement-lifecycle-test-support";
-import { createNativeTextPresentation } from "./native-text-presentation";
+import { navigate } from "../../core/controllers/composition/placement-lifecycle-test-support";
+import { nativeTextFixture as fixture } from "./native-text-presentation.test-fixture";
 import { createRetainedTextPresentation } from "./retained-text-presentation";
-
-// A controlled HTTP peer. SDK, capability dispatch, placement ownership and close are production code.
-const fixture = () => {
-  const document = new Y.Doc();
-  document.getText("content").insert(0, "source");
-  const calls: string[] = [];
-  const entered = Promise.withResolvers<void>();
-  const connectionEntered = Promise.withResolvers<void>();
-  const release = Promise.withResolvers<void>();
-  let holdOpen = false;
-  let holdConnection = false;
-  let refuseConnection = false;
-  let refuseSubmit = false;
-  let revision = 1;
-  const snapshot = () => ({
-    state: Buffer.from(Y.encodeStateAsUpdate(document)).toString("base64"),
-    seedId: "history",
-    sourceSeedId: "history",
-    revision,
-    editable: true,
-  });
-  const reply = (value?: unknown) => Response.json({ ok: true, value });
-  type WireRequest = { operation: string; memberId: string; update?: string };
-  const call = async (input: WireRequest) => {
-    const operation = input.operation;
-    calls.push(operation);
-    if (operation === "current") return reply({ token: "selected" });
-    if (operation === "open") {
-      entered.resolve();
-      if (holdOpen) await release.promise;
-      return reply({
-        handle: input.memberId,
-        grant: { token: "selected" },
-        sourceIdentity: "a".repeat(64),
-        snapshot: snapshot(),
-      });
-    }
-    if (operation === "submit") {
-      if (refuseSubmit)
-        return Response.json({
-          ok: false,
-          error: { code: "source_unavailable", message: "Write interrupted", retryable: true },
-        });
-      Y.applyUpdate(document, Buffer.from(input.update!, "base64"));
-      revision++;
-      return reply(snapshot());
-    }
-    if (operation === "snapshot") return reply(snapshot());
-    if (operation === "project") return reply({ revision });
-    return reply();
-  };
-  const streams = new Set<ReadableStreamDefaultController<Uint8Array>>();
-  const server = Bun.serve({
-    hostname: "127.0.0.1",
-    port: 0,
-    async fetch(request) {
-      const path = new URL(request.url).pathname;
-      if (path.includes("/session-stream/") && path.includes("/subscriptions"))
-        return new Response(null, { status: 204 });
-      const input = (request.method === "POST" ? await request.json() : {}) as {
-        request?: WireRequest;
-        active?: boolean;
-      };
-      if (path.endsWith("/text-editing")) {
-        calls.push("connect");
-        connectionEntered.resolve();
-        if (holdConnection) await release.promise;
-        if (refuseConnection) {
-          refuseConnection = false;
-          return Response.json({
-            ok: false,
-            error: { code: "source_unavailable", message: "Opening interrupted", retryable: true },
-          });
-        }
-        return reply({ token: "connection" });
-      }
-      if (path === "/v1/session-stream")
-        return new Response(
-          new ReadableStream({
-            start(controller) {
-              streams.add(controller);
-              controller.enqueue(new TextEncoder().encode('event: connected\ndata: {"connection_id":"shared"}\n\n'));
-            },
-            cancel() {},
-          }),
-          { headers: { "content-type": "text/event-stream" } },
-        );
-      if (path.endsWith("/request")) return call(input.request!);
-      calls.push(path.split("/").at(-1)!);
-      return reply();
-    },
-  });
-  const workbench = harness();
-  workbench.navigation.openTarget(navigate("workspace"));
-  workbench.navigation.openTarget(openFile("document"));
-  const placement = workbench.layout.getActivePanel("main")!;
-  const connect = () =>
-    createNativeTextPresentation({
-      workbench,
-      placement,
-      projectId: "project",
-      textEditing: createClient({ baseUrl: server.url.href }).textEditing,
-      textTarget: { fileRendererId: "paper.source.view.markdown", resource: placement.resource },
-    });
-  const presentation = connect();
-  return {
-    connect,
-    workbench,
-    placement,
-    presentation,
-    calls,
-    document,
-    entered: entered.promise,
-    connectionEntered: connectionEntered.promise,
-    holdConnection() {
-      holdConnection = true;
-    },
-    holdOpen() {
-      holdOpen = true;
-    },
-    refuseConnection() {
-      refuseConnection = true;
-    },
-    refuseSubmit(value: boolean) {
-      refuseSubmit = value;
-    },
-    resume() {
-      release.resolve();
-    },
-    async stop() {
-      release.resolve();
-      await presentation.close();
-      await workbench.dispose();
-      for (const stream of streams) {
-        try {
-          stream.close();
-        } catch {}
-      }
-      await server.stop(true);
-      document.destroy();
-    },
-  };
-};
 
 test("native Markdown uses the selected public session and drains its close handlers before removing the placement", async () => {
   const f = fixture();
@@ -169,7 +24,9 @@ test("native Markdown uses the selected public session and drains its close hand
     await closing;
     stop();
     expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(false);
-    expect(f.calls.indexOf("current")).toBeLessThan(f.calls.indexOf("open"));
+    expect(f.calls.filter((op) => op === "initial")).toHaveLength(1);
+    expect(f.calls).not.toContain("current");
+    expect(f.calls).not.toContain("register");
     expect(f.calls.indexOf("close")).toBeLessThan(f.calls.indexOf("disconnect"));
     await f.presentation.close();
     await expect(f.presentation.open()).rejects.toMatchObject({ code: "session_closed" });
@@ -425,6 +282,30 @@ test("retained native reopening waits for the admitted close finalizer before su
     await owner.close();
   } finally {
     release.resolve();
+    await f.stop();
+  }
+});
+
+test("ordinary close drains both an opening native editor and its replacement presentation", async () => {
+  const f = fixture();
+  f.holdOpen();
+  const replacement = f.connect();
+  try {
+    const opening = f.presentation.open();
+    await f.entered;
+    const closing = Promise.resolve(f.workbench.closePlacement(f.placement.placementIdentity!));
+    const successor = replacement.open();
+    const disposing = f.presentation.close();
+    const completed = Promise.allSettled([opening, successor, disposing, closing]);
+    await f.waitConnections(2);
+    f.resume();
+    const results = await completed;
+    expect(results.map((result) => result.status)).toEqual(["fulfilled", "fulfilled", "fulfilled", "fulfilled"]);
+    expect(f.workbench.host.getOpenPlacementIds().has(f.placement.instanceId)).toBe(false);
+    expect(f.calls.filter((call) => call === "close")).toHaveLength(2);
+  } finally {
+    f.resume();
+    await replacement.close();
     await f.stop();
   }
 });

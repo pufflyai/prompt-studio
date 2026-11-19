@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { createTicketFile, deleteTicketFile } from "./file-operations";
+import { ticketIdOfRecord } from "./storage-reads.fixture";
 import {
   applyTagDraft,
   createTagOption,
@@ -200,19 +201,13 @@ describe("tag operations", () => {
     await readTicketTags(storage);
     const created = await putTicket(storage, ticket({ tags: { "default-priority": "default-priority-high" } }));
     const records = storage.collection<Ticket>(TICKETS_COLLECTION);
-    const list = records.list.bind(records);
-    records.list = async () => {
-      const listed = await list();
+    const query = storage.records.query.bind(storage.records);
+    storage.records.query = async (input) => {
+      const selected = await query(input);
       await records.put(created.id, { ...(await records.get(created.id))!, content: "Edited elsewhere" });
-      return listed;
+      return selected;
     };
-    const ctx = {
-      ...ticketContext(storage),
-      storage: {
-        ...storage,
-        collection: (name: string) => (name === TICKETS_COLLECTION ? records : storage.collection(name)),
-      },
-    } as ReturnType<typeof ticketContext>;
+    const ctx = ticketContext(storage);
 
     if (change === "changing the tag type") {
       await updateTicketTag({ ...ctx, tagId: "default-priority", type: "multi_select" });
@@ -235,22 +230,23 @@ describe("tag operations", () => {
     const created = await putTicket(storage, ticket({ tags: { "default-priority": "default-priority-high" } }));
     const ctx = ticketContext(storage);
     const file = await createTicketFile({ ...ctx, ticketId: created.id, name: "plan.md" });
-    const records = storage.collection<Ticket>(TICKETS_COLLECTION);
-    const get = records.get.bind(records);
     let deletion: Promise<unknown> | undefined;
-    records.get = async (id) => {
-      const record = await get(id);
-      if (!deletion) {
-        deletion = deleteTicketFile({ ...ctx, ticketId: created.id, fileId: file.id });
-        await Promise.race([deletion, Bun.sleep(20)]);
-      }
-      return record;
-    };
+    // Tickets are records since storage version 5: the file deletion starts right after the first ticket read.
     const observed = {
       ...ctx,
       storage: {
         ...storage,
-        collection: (name: string) => (name === TICKETS_COLLECTION ? records : storage.collection(name)),
+        records: {
+          ...storage.records,
+          async read(recordId, ...rest) {
+            const record = await storage.records.read(recordId, ...rest);
+            if (!deletion && ticketIdOfRecord(recordId)) {
+              deletion = deleteTicketFile({ ...ctx, ticketId: created.id, fileId: file.id });
+              await Promise.race([deletion, Bun.sleep(20)]);
+            }
+            return record;
+          },
+        },
       },
     } as ReturnType<typeof ticketContext>;
 

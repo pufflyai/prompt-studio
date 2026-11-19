@@ -13,7 +13,7 @@ An extension is a TypeScript package: a folder with a `package.json` and an entr
 - templates, skills, and themes
 - agent harnesses and workspace providers
 
-The package's `publisher` and `name` form the extension ID, such as `pstdio.pstdio-notes`. The entry file never repeats them.
+The package's `publisher` and `name` form the extension ID, such as `pstdio.notes`. The entry file never repeats them.
 
 ## Who does what
 
@@ -36,9 +36,9 @@ A CLI-ready action is an operation you can run from a terminal with explicit inp
 For example, with Notes installed and enabled, run these commands from your project folder:
 
 ```sh
-pst pstdio-notes --help
-pst pstdio-notes notes create --help
-pst pstdio-notes notes create --title "Meeting notes"
+pst pstdio.notes --help
+pst pstdio.notes notes create --help
+pst pstdio.notes notes create --title "Meeting notes"
 ```
 
 The last line runs Notes' **New note** command. The sidebar action and CLI command use the same handler; you can open the resulting note in the workbench.
@@ -81,4 +81,4 @@ Some limits still apply. A webview, which is a custom web page inside the dashbo
 - [Make actions CLI-ready](../extensions/0007-cli-ready-actions.md)
 - [Extension API reference](../../references/extensions/0001-api.md)
 
-*Updated at: 2026-10-18*
+*Updated at: 2026-11-12*

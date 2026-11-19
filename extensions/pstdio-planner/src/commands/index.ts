@@ -30,10 +30,12 @@ import { getTicketContentCommand } from "./get-ticket-content";
 import { implementTicketCommand } from "./implement-ticket";
 import { implementationPolicyCommand } from "./implementation-policy";
 import { implementationTargetsCommand, setImplementationTargetCommand } from "./implementation-targets";
+import { importTicketsCommand } from "./import-tickets";
 import { linkReviewCommand } from "./link-review";
 import { listTicketFilesCommand } from "./list-ticket-files";
 import { listTicketTemplatesCommand } from "./list-ticket-templates";
 import { listTicketsCommand } from "./list-tickets";
+import { migrateTicketOutcomesCommand } from "./migrate-ticket-outcomes";
 import { nextTicketsCommand } from "./next-tickets";
 import { openTicketsCommand } from "./open-tickets";
 import { pullTicketCommand } from "./pull-ticket";
@@ -45,7 +47,7 @@ import { refinementPolicyCommand } from "./refinement-policy";
 import { reorderTicketCommand } from "./reorder-ticket";
 import { repairAttemptCommand } from "./repair-attempt";
 import { resolveTicketPathCommand } from "./resolve-ticket-path";
-import { resolveTicketResourcesCommand } from "./resolve-ticket-resources";
+import { resolveTicketOpeningCommand, resolveTicketResourcesCommand } from "./resolve-ticket-resources";
 import {
   cancelReviewRequestCommand,
   listReviewRequestsCommand,
@@ -74,6 +76,7 @@ import {
   proposalRefinedCommand,
   refineTicketCommand,
 } from "./ticket-actions";
+import { ticketActivityContextCommand } from "./ticket-activity";
 import {
   createTicketFileCommand,
   deleteTicketFileCommand,
@@ -104,6 +107,7 @@ import {
   updateTagOptionCommand,
   updateTicketTagCommand,
 } from "./ticket-tags";
+import { cleanupTicketWorkspacesCommand } from "./ticket-workspace-cleanup";
 import {
   ticketWorkspacesCommand,
   ticketWorktreesListCommand,
@@ -118,6 +122,8 @@ import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = [
   cleanupBoardCommand,
+  migrateTicketOutcomesCommand,
+  ticketActivityContextCommand,
   ticketRelatedOpeningsCommand,
   resolveTicketPathCommand,
   submitRevisionCommand,
@@ -137,6 +143,7 @@ export const plannerCommands = [
   checkAutoBuildCommand,
   documentLinkCommand,
   resolveTicketResourcesCommand,
+  resolveTicketOpeningCommand,
   checkMergedPullRequestsCommand,
   openTicketsCommand,
   linkTicketCommand,
@@ -180,6 +187,7 @@ export const plannerCommands = [
   nextTicketsCommand,
   updateStackCommand,
   createTicketCommand,
+  importTicketsCommand,
   attachTicketFileCommand,
   detachTicketFileCommand,
   getTicketCommand,
@@ -200,6 +208,7 @@ export const plannerCommands = [
   archiveTicketCommand,
   unarchiveTicketCommand,
   archiveTicketColumnActionCommand,
+  cleanupTicketWorkspacesCommand,
   deleteTicketCommand,
   writeTicketCommand,
   saveTicketCommand,

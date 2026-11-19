@@ -11,8 +11,8 @@ import {
   getDashboardExtensionsReadyProjectId,
   subscribeDashboardExtensionsReadyProject,
 } from "@/shared/extensions/extension-readiness";
-import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
-import { registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
+import { openSessionsPage } from "@/shared/workbench/page-navigation";
+import { openWorkspaceFixture, registerWorkspaceProviderViews } from "@/workspaces-provider.test-support";
 import { registerHomePage } from "./home-page.test-support";
 import { flushMicrotasks } from "./modules/extensions/module-test-fixtures";
 import { registerSessionProvider } from "./modules/sessions/session-provider.fixture";
@@ -249,7 +249,7 @@ describe("createDashboardWorkbench restoration", () => {
     const first = createDashboardWorkbench({ storage });
     await selectProject(first);
     await flushMicrotasks();
-    openWorkspacesPage(first);
+    openWorkspaceFixture(first);
     await flushMicrotasks();
     await first.commands.executeCommand("dashboard.openSessionPanel", { resource: sessionResource });
     await first.dispose();
@@ -257,7 +257,7 @@ describe("createDashboardWorkbench restoration", () => {
     await flushMicrotasks();
     expect(second.pages.store.getState().location?.page).toEqual({
       kind: "page",
-      extensionId: "pstdio.pstdio-workspaces",
+      extensionId: "pstdio.workspaces",
       id: "workspaces",
     });
     expect(sidePanelSessionUris(second)).toEqual([resourceKey(sessionResource)]);

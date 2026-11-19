@@ -21,6 +21,7 @@ import { createWebviewFilesClient, type WebviewFilesClient } from "./webview-fil
 import { createWebviewPageClient, type WebviewPageClient } from "./webview-page-client";
 import { createWebviewPerformanceClient, type WebviewPerformanceClient } from "./webview-performance-client";
 import { createWebviewQueryClient } from "./webview-query";
+import { getWebviewServiceQueries } from "./webview-service-query";
 import { type CommandStreamOptions, openWebviewCommandStream, type WebviewStreamsClient } from "./webview-streams";
 
 // Command types derive from a record of `defineCommand` values (the extension's
@@ -80,6 +81,12 @@ export type WebviewClient<TCommands, TSettings = undefined> = {
   placement: { close(): Promise<void> };
   notify: { toast(notice: CommandNotice): Promise<void> };
   preferences: {
+    query(
+      name: string,
+      scope?: WebviewPreferencesGetParams["scope"],
+    ): import("./webview-service-query").WebviewServiceQuery<
+      import("pstdio-api-contracts/extension-kernel").WebviewPreferenceQueryValue
+    >;
     get(
       name: string,
       scope?: WebviewPreferencesGetParams["scope"],
@@ -203,6 +210,12 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
     placement: { close: () => host.call("placement.close", {}) },
     notify: { toast: (notice) => host.call("notification.show", notice) },
     preferences: {
+      query: (name, scope) =>
+        getWebviewServiceQueries(host, "preferences").query({
+          service: "preference",
+          name,
+          scope: scope ?? { scope: "user" },
+        }),
       get: (name, scope) => host.call("preferences.get", { name, scope }),
       set: (name, value, scope) => host.call("preferences.set", { name, value, scope }),
     },

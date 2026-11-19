@@ -14,6 +14,7 @@ export const textEditingFixture = async (
     beforeDocumentLoad?: () => Promise<void>;
     onDocumentLoadError?: (error: unknown) => void;
     beforeDocumentAccess?: () => Promise<void>;
+    onGrantAccess?: () => void;
     beforeProjection?: () => Promise<void>;
     afterProjection?: () => void;
   } = {},
@@ -111,7 +112,15 @@ export const textEditingFixture = async (
     deviceId: "device",
     presenceIdentity: async () => ({ label: "Person", deviceName: "Device" }),
   });
-  const createText = () => createTextEditingService({ documents, access, catalog: deps.extensionRuntimeCatalog });
+  const createText = () =>
+    createTextEditingService({
+      documents,
+      access: (input) => {
+        options.onGrantAccess?.();
+        return access(input);
+      },
+      catalog: deps.extensionRuntimeCatalog,
+    });
   let text = createText();
   return {
     get text() {

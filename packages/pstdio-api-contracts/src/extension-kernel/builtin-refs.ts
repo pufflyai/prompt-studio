@@ -132,11 +132,15 @@ export const workbenchSlots = {
   /** Custom controls shown in the owner's extension detail Settings tab. */
   extensionSettings: hostRef("settings-panel", "extension.settings"),
   statusBarLeading: hostRef("status-bar-item", "status-bar.leading"),
+  statusBarCenter: hostRef("status-bar-item", "status-bar.center"),
   statusBarTrailing: hostRef("status-bar-item", "status-bar.trailing"),
 };
 
 /** Dashboard commands available through a webview's commands.execute capability. */
 export const workbenchCommands = {
+  /** Open the project's configured ordinary default page. */
+  openDefaultPage: commandRef<Record<string, never>, void>({ extensionId: "pstdio", id: "workbench.page.openDefault" }),
+
   /** Attach this project to a folder on the serving device through the host's folder picker. */
   chooseProjectFolder: commandRef<Record<string, never>, void>({
     extensionId: "pstdio",

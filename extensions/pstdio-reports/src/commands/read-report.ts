@@ -14,15 +14,14 @@ export const readReportCommand = defineCommand({
   id: "reports.read",
   title: "Read report",
   cli: {
-    globalAliases: [["reports", "read"]],
-    examples: ["pstdio pstdio.pstdio-reports reports read --id <report-id>"],
+    examples: ["pstdio pstdio.reports reports read --id <report-id>"],
   },
   params: {
     id: params.text({ label: l10n("reports.read.id.label", "Report ID or number"), required: true }),
   },
   async run(ctx, commandParams) {
     const value = commandParams.id;
-    const report = await readReportWithBody(ctx.storage, value);
+    const report = await readReportWithBody(ctx.storage, value, ctx.activity);
     if (report) {
       const identity = await ctx.resources.identity({ kind: "report", id: report.id });
       if (!identity) throw new Error(`Core identity is missing for report "${report.id}"`);
@@ -32,7 +31,7 @@ export const readReportCommand = defineCommand({
     const identities = await ctx.resources.findByShorthand({ kind: "report", shorthand: value.trim().toUpperCase() });
     const matches = await Promise.all(
       identities.map(async (identity) => {
-        const report = await readReportWithBody(ctx.storage, identity.id);
+        const report = await readReportWithBody(ctx.storage, identity.id, ctx.activity);
         return report ? withIdentity(report, identity) : undefined;
       }),
     );

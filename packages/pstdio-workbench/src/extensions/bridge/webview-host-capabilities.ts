@@ -4,13 +4,16 @@ import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adap
 import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
 import { updateOverlayPageParams } from "./overlay-page-params";
 import { createWorkbenchEditingSessionAdapter } from "./webview-editing-adapter";
+import { createWebviewPreferenceQueries } from "./webview-preference-queries";
 import { createWebviewPreferencesAdapter, type WebviewOwnedPreferences } from "./webview-preferences-capability";
+import { createWebviewResourceActionRegistrations } from "./webview-resource-action-registrations";
 import { createWebviewResourceActions } from "./webview-resource-actions";
 import { createWorkbenchTextEditingAdapter, type WorkbenchTextEditingInput } from "./webview-text-editing";
 
 interface CreateWorkbenchWebviewHostAdaptersInput extends WorkbenchTextEditingInput {
   extensionId?: string;
   ownedPreferences?: WebviewOwnedPreferences;
+  queryAuthority?: { id: string; assertCurrent(): void };
   warn?: (message: string) => void;
   executeCommand?: ExtensionWebviewHostAdapters["executeCommand"];
 }
@@ -55,7 +58,22 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
       },
     };
   };
+  const preferences = createWebviewPreferencesAdapter(input);
+  const preferenceQueries =
+    hostEvents && extensionId
+      ? createWebviewPreferenceQueries({
+          workbench,
+          extensionId,
+          projectId,
+          events: hostEvents,
+          identity: input.ownedPreferences?.identity,
+          authority: input.queryAuthority,
+          preferences,
+        })
+      : undefined;
   return {
+    preferenceQueries,
+    registerResourceAction: createWebviewResourceActionRegistrations(input, requireCurrentViewer),
     resourceActions: async (request) => {
       requireCurrentViewer();
       return resourceActions(request);
@@ -122,7 +140,7 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
         });
       },
     },
-    preferences: createWebviewPreferencesAdapter(input),
+    preferences: preferenceQueries ? { ...preferences, set: preferenceQueries.set } : preferences,
     terminal: workbench.terminal,
   } satisfies ExtensionWebviewHostAdapters;
 };

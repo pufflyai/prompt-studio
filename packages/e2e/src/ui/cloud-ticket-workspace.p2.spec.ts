@@ -40,11 +40,13 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
     page.on("request", (request) => {
       if (/\/v1\/workspaces\/[^/]+\/diff/.test(request.url())) gitRequests.push(request.url());
     });
-    await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
+    await page.goto(`/projects/${projectId}/extensions/pstdio.planner/tickets`);
     await page.getByTestId("renderer-card").getByText("Cloud workspace ticket", { exact: true }).click();
-    await expect(page.getByRole("option", { name: "Project folder", exact: true })).toBeVisible();
-    await page.getByText("Workspaces", { exact: true }).last().hover();
-    await page.getByRole("button", { name: "Create workspace", exact: true }).click();
+    const sidenav = page.locator('[data-workbench-region="sidenav"]');
+    const ticketRow = sidenav.getByRole("option", { name: `${ticket.shorthand} ${ticket.title}`, exact: true });
+    await ticketRow.click({ button: "right" });
+    await expect(sidenav.getByRole("option", { name: "Project folder", exact: true })).toHaveCount(0);
+    await page.getByRole("menuitem", { name: "Create workspace", exact: true }).click();
     const dialog = page.frameLocator('iframe[title="Workspace action"]');
     await expect(dialog.getByText("Test cloud workspace", { exact: true })).toBeVisible();
     const params = { source: "blank-documents", provider_id: "eu-small" };
@@ -61,9 +63,9 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
         id: ticket.id,
         shorthand: ticket.shorthand,
         label: `${ticket.shorthand} ${ticket.title}`,
-        metadata: { resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" } },
+        metadata: { resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" } },
         projectId,
-        extensionId: "pstdio.pstdio-planner",
+        extensionId: "pstdio.planner",
         role: "primary",
       },
     ];
@@ -80,6 +82,7 @@ test("a plain-folder ticket creates a linked cloud workspace through its provide
     });
     expect(workspace.provider_ref_json).toEqual({ version: 1, data: { environment: workspace.id, params } });
     await expect(page.locator('iframe[title="Workspace action"]')).toBeHidden();
+    await page.getByRole("button", { name: "Back to project", exact: true }).click();
     await (await showSidenavEntry(page, "Workspaces")).click();
     await expect(
       page

@@ -1,3 +1,19 @@
+import type {
+  WebviewAccountManageParams,
+  WebviewAccountReadParams,
+  WebviewAccountResult,
+} from "./webview-account-params";
+
+export type {
+  WebviewAccountManageParams,
+  WebviewAccountReadParams,
+  WebviewAccountResult,
+} from "./webview-account-params";
+
+import type { WebviewPreferencesGetParams, WebviewPreferencesSetParams } from "./webview-preferences";
+
+export type { WebviewPreferencesGetParams, WebviewPreferencesSetParams } from "./webview-preferences";
+
 import type { AgentInfo, AgentModel, HarnessParamsInfo } from "../../agents";
 import type { TerminalSessionOperation, TerminalSessionResult } from "../../extensions.terminal";
 import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
@@ -6,7 +22,7 @@ import type {
   PerformanceReadRequest,
   PerformanceReadResult,
 } from "../../performance-control";
-import type { ExtensionAccountApi, ProjectReturnAction } from "./account";
+import type { ExtensionAccountApi } from "./account";
 import type { CommandNotice, CommandOutcome } from "./commands";
 import type { ExtensionBlobRef } from "./context";
 import type { JsonObject, JsonValue } from "./json";
@@ -17,6 +33,7 @@ import type { ExtensionHarnessInput } from "./sessions";
 import type { TextEditingRequest, TextEditingResult } from "./text-editing";
 import type { WebviewCommandQueryRequest, WebviewCommandQuerySnapshot } from "./webview-command-query";
 import type { WebviewEditingSessionParams, WebviewEditingSnapshot } from "./webview-editing";
+import type { WebviewPreferenceQuery, WebviewServiceQueryRequest } from "./webview-service-query";
 
 export type { ExtensionBlobRef } from "./context";
 
@@ -32,6 +49,8 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "editing.text",
   "harnesses.read",
   "resources.actions",
+  "resources.changes.observed",
+  "resources.actions.register",
   "navigation.open",
   "page.params.update",
   "placement.close",
@@ -47,6 +66,7 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "extension.settings.delete",
   "terminal.session",
   "files.upload",
+  "files.download",
   "files.list",
   "files.delete",
   "account.read",
@@ -119,19 +139,6 @@ export interface WebviewNotificationResolveParams {
 /** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
 export type WebviewNotificationDismissParams = Pick<WebviewNotificationResolveParams, "id" | "dedupeKey">;
 
-export interface WebviewPreferencesGetParams {
-  /** Access to another extension's registered names is deprecated. Use names owned by the caller. */
-  name: string;
-  scope?: {
-    scope: "default" | "user" | "project" | "workspace" | "extension" | "session";
-    scopeId?: string;
-  };
-}
-
-export interface WebviewPreferencesSetParams extends WebviewPreferencesGetParams {
-  value: boolean | number | string | string[] | number[] | boolean[] | Record<string, unknown>;
-}
-
 export interface WebviewPageParamsUpdateParams {
   /** Merge overrides into the active page. Null resets a name to its declared default. */
   params: Readonly<Record<string, PageParamValue | null>>;
@@ -158,6 +165,9 @@ export interface WebviewFilesListParams {
   scope?: WebviewFileScope;
 }
 
+/** Download bytes already available to the extension onto the user's device. */
+export type WebviewFilesDownloadParams = Pick<WebviewFilesUploadParams, "name" | "data" | "mimeType">;
+
 export interface WebviewFilesDeleteParams {
   id: string;
 }
@@ -176,28 +186,6 @@ export interface WebviewArtifactFile {
 }
 
 /** Reads mirror `ctx.account`. A missing project id means the webview's project. */
-export type WebviewAccountReadParams =
-  | { op: "status" }
-  | { op: "loginStatus"; id: string }
-  | { op: "devices" }
-  | { op: "projectSyncStatus"; projectId?: string };
-
-/** Changes mirror `ctx.account`. A missing project id means the webview's project. */
-export type WebviewAccountManageParams =
-  | { op: "login"; managerOrigin?: string }
-  | { op: "cancelLogin"; id: string }
-  | { op: "logout" }
-  | { op: "renameDevice"; id: string; name: string }
-  | { op: "removeDevice"; id: string }
-  | { op: "syncProject"; projectId?: string }
-  | { op: "retryProjectSyncSource"; sourceId: string; projectId?: string }
-  | { op: "stopProjectSync"; projectId?: string }
-  | { op: "resolveReturnedChanges"; action: ProjectReturnAction; projectId?: string };
-
-export type WebviewAccountResult<Params extends { op: keyof ExtensionAccountApi }> = Awaited<
-  ReturnType<ExtensionAccountApi[Params["op"]]>
->;
-
 export interface WebviewKeyboardEventParams {
   key?: string;
   code?: string;
@@ -230,6 +218,16 @@ export interface WebviewKeyboardShortcutRequest {
   inputFocus?: boolean;
 }
 
+export interface WebviewResourceActionChoice {
+  /** Omit for a radio choice; action rows can navigate a paged list without changing its value. */
+  kind?: "action";
+  closeOnSelect?: boolean;
+  id: string;
+  label: string;
+  selected?: boolean;
+  disabled?: boolean;
+}
+
 export interface WebviewHostCapabilityParams {
   "performance.read": PerformanceReadRequest;
   "performance.control": PerformanceControlRequest;
@@ -237,6 +235,25 @@ export interface WebviewHostCapabilityParams {
   "resources.actions":
     | { operation: "list"; resource: ResourceRef }
     | { operation: "execute"; resource: ResourceRef; key: string };
+  "resources.changes.observed": { receipt: string | null };
+  "resources.actions.register":
+    | {
+        operation: "register";
+        registrationId: string;
+        resource: ResourceRef;
+        label: string;
+        icon?: string;
+        /** One mutually exclusive native menu group, sharing a single live-view lease. */
+        choices?: readonly WebviewResourceActionChoice[];
+      }
+    | {
+        operation: "update-choices";
+        registrationId: string;
+        choices: readonly WebviewResourceActionChoice[];
+        label?: string;
+      }
+    | { operation: "unregister"; registrationId: string }
+    | { operation: "complete"; requestId: string; error?: string };
   "commands.execute": WebviewCommandsExecuteParams;
   "commands.query": WebviewCommandQueryRequest;
   "commands.stream": WebviewCommandsStreamParams;
@@ -252,7 +269,9 @@ export interface WebviewHostCapabilityParams {
   "notification.resolve": WebviewNotificationResolveParams;
   /** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
   "notification.dismiss": WebviewNotificationDismissParams;
-  "preferences.get": WebviewPreferencesGetParams;
+  "preferences.get":
+    | WebviewPreferencesGetParams
+    | { op: "query"; query: WebviewServiceQueryRequest<WebviewPreferenceQuery> };
   "preferences.set": WebviewPreferencesSetParams;
   "extension.settings.all": Record<string, never>;
   "extension.settings.get": WebviewExtensionSettingKeyParams;
@@ -261,6 +280,7 @@ export interface WebviewHostCapabilityParams {
   /** @deprecated Use the host terminal surface. */
   "terminal.session": TerminalSessionOperation;
   "files.upload": WebviewFilesUploadParams;
+  "files.download": WebviewFilesDownloadParams;
   /** @deprecated Use extension commands and owned storage. */
   "files.list": WebviewFilesListParams;
   /** @deprecated Use extension commands and owned storage. */
@@ -272,7 +292,7 @@ export interface WebviewHostCapabilityParams {
 }
 
 export interface WebviewHostCapabilityResults {
-  "performance.read": PerformanceReadResult;
+  "performance.read": PerformanceReadResult | WebviewCommandQuerySnapshot;
   "performance.control": void;
   "harnesses.read": {
     harnesses: AgentInfo[];
@@ -282,6 +302,8 @@ export interface WebviewHostCapabilityResults {
     selection?: ExtensionHarnessInput;
   };
   "resources.actions": WebviewResourceAction[];
+  "resources.actions.register": void;
+  "resources.changes.observed": void;
   "commands.execute": { outcome: CommandOutcome };
   "commands.query": WebviewCommandQuerySnapshot | undefined;
   "commands.stream": { operation: "start" | "cancel" | "ack"; accepted: true };
@@ -297,7 +319,7 @@ export interface WebviewHostCapabilityResults {
   "notification.resolve": Notification | { resolved: number; notifications: Notification[] };
   /** @deprecated Invoke a command using ctx.notify.setStatus or setStatusByKey. */
   "notification.dismiss": Notification | { resolved: number; notifications: Notification[] };
-  "preferences.get": WebviewPreferencesSetParams["value"] | undefined;
+  "preferences.get": WebviewPreferencesSetParams["value"] | WebviewCommandQuerySnapshot | undefined;
   "preferences.set": { name: string; value: WebviewPreferencesSetParams["value"] };
   "extension.settings.all": Record<string, unknown>;
   "extension.settings.get": unknown;
@@ -306,12 +328,17 @@ export interface WebviewHostCapabilityResults {
   /** @deprecated Use the host terminal surface. */
   "terminal.session": TerminalSessionResult;
   "files.upload": ExtensionBlobRef;
+  /** The browser accepted the download; completion and cancellation belong to its download UI. */
+  "files.download": void;
   /** @deprecated Use extension commands and owned storage. */
   "files.list": { files: ExtensionBlobRef[] };
   /** @deprecated Use extension commands and owned storage. */
   "files.delete": void;
   "artifacts.read": WebviewArtifactFile[] | string;
-  "account.read": WebviewAccountResult<WebviewAccountReadParams>;
+  "account.read":
+    | WebviewAccountResult<Exclude<WebviewAccountReadParams, { op: "query" }>>
+    | WebviewCommandQuerySnapshot
+    | undefined;
   "account.manage": WebviewAccountResult<WebviewAccountManageParams>;
   "host.dispatchKeyboardEvent": void;
 }
@@ -334,22 +361,32 @@ export interface WebviewResourceAction {
 export type WebviewHostCapabilityResult<
   Capability extends WebviewHostCapability,
   Params extends WebviewHostCapabilityParams[Capability] = WebviewHostCapabilityParams[Capability],
-> = Capability extends "editing.text"
-  ? TextEditingResult<Extract<Params, TextEditingRequest>>
-  : Capability extends "account.read" | "account.manage"
-    ? Params extends { op: keyof ExtensionAccountApi }
-      ? WebviewAccountResult<Params>
-      : WebviewHostCapabilityResults[Capability]
-    : Capability extends "artifacts.read"
-      ? Params extends { op: "list" }
-        ? WebviewArtifactFile[]
-        : Params extends { op: "readText" | "imageUrl" }
-          ? string
-          : WebviewHostCapabilityResults[Capability]
-      : Capability extends "terminal.session"
-        ? Params extends { operation: "open" }
-          ? Extract<TerminalSessionResult, { operation: "open" }>
-          : Params extends { operation: "write" | "resize" | "kill" | "subscribe" }
-            ? Exclude<TerminalSessionResult, { operation: "open" }>
-            : TerminalSessionResult
-        : WebviewHostCapabilityResults[Capability];
+> = Capability extends "performance.read"
+  ? Params extends { operation: "query" }
+    ? WebviewCommandQuerySnapshot | undefined
+    : PerformanceReadResult
+  : Capability extends "preferences.get"
+    ? Params extends { op: "query" }
+      ? WebviewCommandQuerySnapshot | undefined
+      : WebviewPreferencesSetParams["value"] | undefined
+    : Capability extends "editing.text"
+      ? TextEditingResult<Extract<Params, TextEditingRequest>>
+      : Capability extends "account.read" | "account.manage"
+        ? Params extends { op: "query" }
+          ? WebviewCommandQuerySnapshot | undefined
+          : Params extends { op: keyof ExtensionAccountApi }
+            ? WebviewAccountResult<Params>
+            : WebviewHostCapabilityResults[Capability]
+        : Capability extends "artifacts.read"
+          ? Params extends { op: "list" }
+            ? WebviewArtifactFile[]
+            : Params extends { op: "readText" | "imageUrl" }
+              ? string
+              : WebviewHostCapabilityResults[Capability]
+          : Capability extends "terminal.session"
+            ? Params extends { operation: "open" }
+              ? Extract<TerminalSessionResult, { operation: "open" }>
+              : Params extends { operation: "write" | "resize" | "kill" | "subscribe" }
+                ? Exclude<TerminalSessionResult, { operation: "open" }>
+                : TerminalSessionResult
+            : WebviewHostCapabilityResults[Capability];

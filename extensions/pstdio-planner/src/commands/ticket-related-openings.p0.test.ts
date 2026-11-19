@@ -54,7 +54,7 @@ test("ticket opening selects its latest non-archived linked session as a Side pr
   ]);
   expect(queries).toEqual([
     {
-      anchor: { type: "ticket", id: "ticket-1", extensionId: "pstdio-planner", projectId: "proj-1" },
+      anchor: { type: "ticket", id: "ticket-1", extensionId: "planner", projectId: "proj-1" },
       orderBy: "lastActivity",
       limit: 1,
     },

@@ -26,6 +26,42 @@ afterEach(async () => {
 });
 
 describe("workspace provider operations", () => {
+  test("reconciliation only updates the lifecycle state it observed", async () => {
+    const workspace = await workspacesService.createStandalone({
+      project_id: projectId,
+      provider_id: "example.git",
+      provider_state: "ready",
+      root_path: "/owned/workspace",
+    });
+    const observed = {
+      operationId: null,
+      operationKind: null,
+      expectedState: "ready" as const,
+      patch: { provider_state: "ready" as const, root_path: "/owned/workspace" },
+    };
+    expect(await workspacesService.updateProviderOperationProjection(workspace.id, observed)).not.toBeNull();
+    const pending = await workspacesService.beginProviderOperation(workspace.id, {
+      operationId: "remove-backing",
+      kind: "cancel",
+      state: "provisioning",
+    });
+    expect(await workspacesService.updateProviderOperationProjection(workspace.id, observed)).toBeNull();
+    await workspacesService.updateProviderOperationProjection(workspace.id, {
+      operationId: pending!.provider_operation_id,
+      operationKind: "cancel",
+      expectedState: "provisioning",
+      patch: {
+        provider_state: "cancelled",
+        root_path: null,
+        branch: null,
+        provider_operation_id: null,
+        provider_operation_kind: null,
+      },
+    });
+    expect(await workspacesService.updateProviderOperationProjection(workspace.id, observed)).toBeNull();
+    expect(await workspacesService.get(workspace.id)).toMatchObject({ provider_state: "cancelled", root_path: null });
+  });
+
   test.each([
     { provider_ref_json: { version: 1 as const, data: { remoteId: "recovered" } } },
     { provider_state: "ready" as const },

@@ -1,4 +1,5 @@
 import { validatePageParamDefinitions } from "pstdio-api-contracts";
+import { canonicalRegistryId } from "../../shared/contributions/identity-aliases";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import { createDisposable } from "../../shared/disposable";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
@@ -90,7 +91,7 @@ export const createWorkbenchPageRegistry = <Value>(
     });
 
   const requirePage = (pageId: string) => {
-    const page = store.getState().pages[pageId];
+    const page = store.getState().pages[canonicalRegistryId(store, pageId)];
     if (!page) throw new Error(`Unknown page: ${pageId}`);
     return page;
   };
@@ -120,7 +121,7 @@ export const createWorkbenchPageRegistry = <Value>(
     },
 
     getPage(pageId) {
-      return store.getState().pages[pageId];
+      return store.getState().pages[canonicalRegistryId(store, pageId)];
     },
 
     listPages() {

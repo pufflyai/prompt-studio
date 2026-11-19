@@ -4,40 +4,63 @@ import {
   type createWorkbenchExtensionTerminalRendererOwners,
   reconcileBridgeWebviewHostEventPublishers,
 } from "@pstdio/workbench/extensions";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { emptyDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { omitExtensionMetadata, registerHealthyExtensions } from "./extension-contribution-isolation";
-import { registerExtensionContributions } from "./extension-contribution-registration";
+import { disposeExtensionContributions, registerExtensionContributions } from "./extension-contribution-registration";
+import { independentExtensionAdditions } from "./independent-extension-additions";
 
 const extensionContributionModuleId = "dashboard.extensions.contributions";
 
 export const createExtensionContributionReplacement = (input: {
+  owner?: ReturnType<typeof getRuntimeCollections>;
   ctx: WorkbenchModuleContext;
   chatRendererOwners: ReturnType<typeof createWorkbenchExtensionChatRendererOwners>;
   terminalRendererOwners: ReturnType<typeof createWorkbenchExtensionTerminalRendererOwners>;
   executeCommand: ExecuteDashboardExtensionCommand;
-  clear(): void;
-  accept(disposable: Disposable): void;
   registrationError(projectId: string, error: unknown, extensionId?: string): void;
 }) => {
-  const { ctx, chatRendererOwners, terminalRendererOwners, executeCommand, clear, accept, registrationError } = input;
+  const owner = input.owner ?? getRuntimeCollections();
+  const { ctx, chatRendererOwners, terminalRendererOwners, executeCommand, registrationError } = input;
+  let registered:
+    | { projectId: string; locale: string; authority: object; metadata: ResolvedWorkbenchExtensionMetadata }
+    | undefined;
+  let registrations: Disposable[] = [];
+  const clear = () => {
+    registered = undefined;
+    const previous = registrations;
+    registrations = [];
+    disposeExtensionContributions(previous);
+  };
+  let revision = 0;
   // Returns what is registered now; a failed extension is left out so the next refresh retries it.
-  return (nextProjectId: string, nextMetadata: ResolvedWorkbenchExtensionMetadata) => {
+  const replace = (
+    nextProjectId: string,
+    nextMetadata: ResolvedWorkbenchExtensionMetadata,
+    locale: string,
+    authority: object,
+  ) => {
+    const addition =
+      registered?.projectId === nextProjectId && registered.locale === locale && registered.authority === authority
+        ? independentExtensionAdditions(registered.metadata, nextMetadata)
+        : undefined;
     chatRendererOwners.reconcile(nextProjectId, nextMetadata);
     terminalRendererOwners.reconcile(nextProjectId, nextMetadata);
     return chatRendererOwners.replaceRegistrations(() => {
-      clear();
+      if (!addition) clear();
       try {
         const registration = registerHealthyExtensions({
-          metadata: nextMetadata,
+          metadata: addition?.metadata ?? nextMetadata,
           register: (metadata) =>
             ctx.registerChildModule({
-              id: extensionContributionModuleId,
+              id: `${extensionContributionModuleId}.${++revision}`,
               ownerId: "dashboard.extensions",
               source: "extension",
               activate: (contributionCtx) =>
                 registerExtensionContributions({
+                  owner,
                   ctx: contributionCtx,
                   chatRendererOwners,
                   terminalRendererOwners,
@@ -48,22 +71,43 @@ export const createExtensionContributionReplacement = (input: {
             }),
           onFailure: (extensionId, error) => registrationError(nextProjectId, error, extensionId),
         });
-        accept(registration.disposable);
-        chatRendererOwners.reconcile(nextProjectId, registration.metadata);
-        terminalRendererOwners.reconcile(nextProjectId, registration.metadata);
+        if (registration.metadata.extensions.length) registrations.push(registration.disposable);
+        else registration.disposable.dispose();
+        const accepted = addition
+          ? omitExtensionMetadata(
+              nextMetadata,
+              new Set(
+                [...addition.added].filter(
+                  (id) => !registration.metadata.extensions.some((extension) => extension.id === id),
+                ),
+              ),
+            )
+          : registration.metadata;
+        registered = { projectId: nextProjectId, locale, authority, metadata: accepted };
+        chatRendererOwners.reconcile(nextProjectId, accepted);
+        terminalRendererOwners.reconcile(nextProjectId, accepted);
         reconcileBridgeWebviewHostEventPublishers(
           ctx,
           nextProjectId,
-          new Set(registration.metadata.views.filter((view) => view.body.kind === "webview").map((view) => view.id)),
+          new Set(accepted.views.filter((view) => view.body.kind === "webview").map((view) => view.id)),
         );
-        return registration.metadata;
+        return { metadata: accepted, displaced: !addition };
       } catch (error) {
         registrationError(nextProjectId, error);
+        if (addition && registered) return { metadata: registered.metadata, displaced: false };
+        registered = undefined;
         chatRendererOwners.dispose();
         terminalRendererOwners.reconcile(nextProjectId, emptyDashboardExtensionMetadata);
         reconcileBridgeWebviewHostEventPublishers(ctx, nextProjectId, new Set());
-        return omitExtensionMetadata(nextMetadata, new Set(nextMetadata.extensions.map((extension) => extension.id)));
+        return {
+          metadata: omitExtensionMetadata(
+            nextMetadata,
+            new Set(nextMetadata.extensions.map((extension) => extension.id)),
+          ),
+          displaced: true,
+        };
       }
     });
   };
+  return { replace, dispose: clear };
 };

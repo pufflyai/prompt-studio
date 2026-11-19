@@ -8,7 +8,7 @@ import type {
 import type { HostCapability } from "pstdio-extensions/bridge/contract";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
 import { z } from "zod";
-import { createAccountCapability } from "./account-capability";
+import { createAccountCapability, createAccountReadCapability } from "./account-capability";
 import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
 import { createPerformanceReadCapability } from "./performance-capability";
 import { createTerminalSessionCapability } from "./terminal-session-capability";
@@ -112,6 +112,7 @@ export const createExtensionWebviewHostCapabilities = (
     pageParams,
     placement,
     notifications,
+    performance,
     settings,
     preferences,
     files,
@@ -123,7 +124,9 @@ export const createExtensionWebviewHostCapabilities = (
   const account = createAccountCapability(adapters.account);
   return {
     "harnesses.read": capability("harnesses.read", readHarnesses),
+    "resources.changes.observed": capability("resources.changes.observed", undefined),
     "resources.actions": capability("resources.actions", adapters.resourceActions),
+    "resources.actions.register": capability("resources.actions.register", adapters.registerResourceAction),
     "commands.execute": capability("commands.execute", commandExecution(adapters)),
     "commands.query": capability("commands.query", adapters.commandQueries?.request.bind(adapters.commandQueries)),
     "commands.stream": capability("commands.stream", commandStreaming(adapters)),
@@ -173,7 +176,12 @@ export const createExtensionWebviewHostCapabilities = (
     ),
     "preferences.get": capability(
       "preferences.get",
-      preferences && ((request) => preferences.get(request.name, request.scope)),
+      preferences &&
+        ((request) =>
+          "op" in request
+            ? (adapters.preferenceQueries?.request(request.query) ??
+              Promise.reject(new Error("Retained preference queries are unavailable")))
+            : preferences.get(request.name, request.scope)),
     ),
     "preferences.set": capability(
       "preferences.set",
@@ -211,15 +219,19 @@ export const createExtensionWebviewHostCapabilities = (
       terminalCapability && ((request) => terminalCapability(request)),
     ),
     "files.upload": capability("files.upload", files && ((request) => files.upload(request))),
+    "files.download": capability("files.download", files?.download?.bind(files)),
     "files.list": capability("files.list", files && ((request) => files.list(request))),
     "files.delete": capability("files.delete", files && ((request) => files.delete(request))),
     "artifacts.read": capability("artifacts.read", artifacts && ((request) => artifacts.read(request))),
     "performance.read": capability(
       "performance.read",
-      createPerformanceReadCapability(adapters.performance, hostEvents),
+      createPerformanceReadCapability(performance, hostEvents, adapters.performanceQueries),
     ),
-    "performance.control": capability("performance.control", adapters.performance?.control),
-    "account.read": capability("account.read", account),
+    "performance.control": capability(
+      "performance.control",
+      performance && ((request) => performance.control(request, hostEvents)),
+    ),
+    "account.read": capability("account.read", createAccountReadCapability(account, adapters.accountQueries)),
     "account.manage": capability("account.manage", account),
   } satisfies Record<WebviewHostCapability, HostCapability>;
 };

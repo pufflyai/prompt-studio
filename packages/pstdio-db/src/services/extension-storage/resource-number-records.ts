@@ -1,4 +1,5 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId, type NumberedResource, retainedResourceValue } from "pstdio-sync/records";
 import type { StorageRecord } from "pstdio-sync-contracts";
@@ -11,6 +12,7 @@ import {
 } from "../../db/schemas.pg";
 import { jsonBatches } from "./json-batches";
 import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
+import { writeResourceQueryValues } from "./resource-query-values";
 
 export type NumberRecord = NumberedResource & { aliases: string[] };
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
@@ -51,7 +53,10 @@ const hasNumberValue = (record: StorageRecord) => {
 
 export const isNumberRecord = (record: StorageRecord) => !record.deleted && hasNumberValue(record);
 
-export const numberValue = (record: StorageRecord) => record.value as unknown as NumberRecord;
+export const numberValue = (record: StorageRecord) => {
+  const value = record.value as unknown as NumberRecord;
+  return { ...value, extensionId: canonicalExtensionId(value.extensionId) };
+};
 
 /** Both indexes include numeric values: a large former alias must never be allocated again. */
 export const indexedNumberCandidate = async (tx: Transaction, projectId: string, prefix: string) => {
@@ -169,6 +174,21 @@ export const projectNumberRecords = async (
       SELECT ${owner.workbenchId}, i.resource_id, i.shorthand, i.prefix, i.value
       FROM jsonb_to_recordset(${batch}::jsonb) AS i(resource_id text, shorthand text, prefix text, value bigint)`);
   }
+  const aliasesById = new Map<string, string[]>();
+  for (const entry of uniqueHistory) {
+    const values = aliasesById.get(entry.resource_id) ?? [];
+    values.push(entry.shorthand);
+    aliasesById.set(entry.resource_id, values);
+  }
+  await writeResourceQueryValues(
+    tx,
+    owner.workbenchId,
+    live.map((record) => ({
+      id: record.id,
+      shorthand: `${record.prefix}-${record.value}`,
+      aliases: aliasesById.get(record.id) ?? [],
+    })),
+  );
   const timestamp = new Date().toISOString();
   for (const batch of jsonBatches(
     [...live, ...retainedNumbers].map((r) => ({

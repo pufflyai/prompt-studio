@@ -1,5 +1,6 @@
 import { mock } from "bun:test";
 import type { WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
+import { createWorkspaceMaintenance } from "../../services/workspace-maintenance";
 import { makeWorkspace, remoteWorkspaceCapabilities } from "./workspace-provider.test-fixture";
 
 export const readyRemoteResult = (state: WorkspaceProviderResult["state"]): WorkspaceProviderResult => ({
@@ -42,14 +43,22 @@ export const makeDeps = (provider: Record<string, unknown>, workspace = makeWork
   return {
     deps: {
       workspaceService: {
+        maintenance: createWorkspaceMaintenance(),
         get: async () => stored,
         listForProviderReconciliation: async () => [stored],
         updateProviderProjection,
         updateProviderOperationProjection: async (
           id: string,
-          input: { operationId: string; operationKind: string; patch: Record<string, unknown> },
+          input: {
+            operationId: string | null;
+            operationKind: string | null;
+            expectedState?: string;
+            patch: Record<string, unknown>;
+          },
         ) =>
-          stored.provider_operation_id === input.operationId && stored.provider_operation_kind === input.operationKind
+          stored.provider_operation_id === input.operationId &&
+          stored.provider_operation_kind === input.operationKind &&
+          (input.expectedState === undefined || stored.provider_state === input.expectedState)
             ? updateProviderProjection(id, input.patch)
             : null,
         beginProviderOperation,
@@ -70,6 +79,7 @@ export const makeDeps = (provider: Record<string, unknown>, workspace = makeWork
       },
     } as never,
     updateProviderProjection,
+    getWorkspace: async () => stored,
     beginProviderOperation,
     listByProject,
     softDelete,

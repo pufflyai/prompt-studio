@@ -1,5 +1,10 @@
 import { createContext, useContext, useState } from "react";
-import { getQuestionRequestKey, resolveQuestionPrompt } from "../tool-rendering/question-prompt";
+import {
+  getQuestionRequestKey,
+  resolveActiveQuestionPrompt,
+  resolveQuestionPrompt,
+} from "../tool-rendering/question-prompt";
+import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 import type { SessionMessage, ToolPart } from "./message-types";
 
 interface QuestionSelection {
@@ -20,12 +25,21 @@ interface QuestionNavigation {
 export const ChatQuestionNavigationContext = createContext<QuestionNavigation | undefined>(undefined);
 export const useQuestionNavigation = () => useContext(ChatQuestionNavigationContext);
 
-export const useChatQuestionNavigation = (messages: SessionMessage[], conversationKey?: string) => {
+interface QuestionNavigationOptions {
+  conversationKey?: string;
+  disabled?: boolean;
+  hostPrompt?: ChatInputQuestionPrompt;
+}
+
+export const useChatQuestionNavigation = (messages: SessionMessage[], options: QuestionNavigationOptions) => {
+  const { conversationKey, disabled, hostPrompt } = options;
   const [selection, setSelection] = useState<QuestionSelection>();
+  if (disabled) return { prompt: undefined, activePrompt: undefined, value: undefined };
   const current = selection?.conversationKey === conversationKey ? selection : undefined;
   const prompt = current ? resolveQuestionPrompt(messages, current.key) : undefined;
   return {
     prompt,
+    activePrompt: prompt ?? hostPrompt ?? resolveActiveQuestionPrompt(messages),
     value: {
       activeKey: prompt ? current?.key : undefined,
       selection: prompt ? current : undefined,

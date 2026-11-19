@@ -1,7 +1,7 @@
 ---
 "pstdio": patch
-"pstdio-session-browser": patch
-"pstdio-workspaces": patch
+"session-browser": patch
+"workspaces": patch
 "@pstdio/workbench": patch
 ---
 

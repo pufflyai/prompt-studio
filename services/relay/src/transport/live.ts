@@ -46,7 +46,9 @@ const parse = (data: string | Buffer, limits: RelayLimits, identity: LiveIdentit
 };
 
 /** Connection-owned state only. No persisted payloads, delivery queues or heartbeat polling (R31). */
-export const createLiveHub = (limits: RelayLimits, allow: RateLimit) => {
+type LiveAccess = (projectKey: string, dispatch: () => void) => Promise<void>;
+
+export const createLiveHub = (limits: RelayLimits, allow: RateLimit, access?: LiveAccess) => {
   const projects = new Map<string, Set<LiveConnection>>();
   const members = (project: string) => projects.get(project) ?? new Set<LiveConnection>();
   const calls = createLiveCalls(limits.maxLiveCalls, members);
@@ -63,21 +65,35 @@ export const createLiveHub = (limits: RelayLimits, allow: RateLimit) => {
       }
     }
   };
+  const retire = (projectKey: string) => {
+    for (const connection of members(projectKey)) connection.close(1008);
+  };
+  const deliver = (projectKey: string, dispatch: () => void) => {
+    if (!access) return dispatch();
+    void access(projectKey, dispatch).catch(() => retire(projectKey));
+  };
   return {
+    retire,
+    closeAll() {
+      for (const group of projects.values()) for (const connection of group) connection.close();
+    },
     changed({ projectKey, spaceOwner, documentId, lastSequence, stateId, created }: DocumentChange) {
-      const key = liveKey(spaceOwner, documentId);
-      for (const connection of members(projectKey))
-        if (
-          canRead(connection, spaceOwner) &&
-          (connection.subscriptions.has(key) || (created && connection.discovery.has(spaceOwner)))
-        )
-          connection.send({
-            type: connection.subscriptions.has(key) ? "changed" : "discovered",
-            spaceOwner,
-            documentId,
-            lastSequence,
-            stateId,
-          });
+      if (!projects.has(projectKey)) return;
+      deliver(projectKey, () => {
+        const key = liveKey(spaceOwner, documentId);
+        for (const connection of members(projectKey))
+          if (
+            canRead(connection, spaceOwner) &&
+            (connection.subscriptions.has(key) || (created && connection.discovery.has(spaceOwner)))
+          )
+            connection.send({
+              type: connection.subscriptions.has(key) ? "changed" : "discovered",
+              spaceOwner,
+              documentId,
+              lastSequence,
+              stateId,
+            });
+      });
     },
     connect(identity: LiveIdentity) {
       let socket: Socket | undefined;
@@ -156,18 +172,40 @@ export const createLiveHub = (limits: RelayLimits, allow: RateLimit) => {
         } else if (!calls.message(connection, message)) close(1008);
         bound();
       };
+      // Maintain delivery order on a socket and bound messages awaiting the database fence.
+      let queued = 0;
+      let dispatching = Promise.resolve();
+      const dispatchAdmitted = (action: () => void) => {
+        if (!access) return action();
+        if (queued >= limits.requestBurst) return close(1013);
+        queued++;
+        dispatching = dispatching
+          .then(async () => {
+            if (!stopped)
+              await access(identity.projectKey, () => {
+                if (Date.now() >= expiry) return close(1008);
+                if (!stopped) action();
+              });
+          })
+          .catch(() => close(1008))
+          .finally(() => {
+            queued--;
+          });
+      };
+      const group = members(identity.projectKey);
+      group.add(connection);
+      projects.set(identity.projectKey, group);
       return {
         open(connected: Socket) {
           socket = connected;
           if (stopped) return connected.close(1011, "Live connection ended");
           // Renewals replace the old device connection before accepting traffic.
-          for (const previous of members(identity.projectKey))
-            if (previous.deviceId === identity.deviceId) previous.close();
-          const group = members(identity.projectKey);
-          group.add(connection);
-          projects.set(identity.projectKey, group);
-          scheduleExpiry();
-          connection.send({ type: "ready", protocolVersion: liveProtocolVersion });
+          dispatchAdmitted(() => {
+            for (const previous of members(identity.projectKey))
+              if (previous !== connection && previous.deviceId === identity.deviceId) previous.close();
+            scheduleExpiry();
+            connection.send({ type: "ready", protocolVersion: liveProtocolVersion });
+          });
         },
         message(data: string | Buffer) {
           if (stopped) return;
@@ -175,9 +213,11 @@ export const createLiveHub = (limits: RelayLimits, allow: RateLimit) => {
           const message = parse(data, limits, identity);
           if (typeof message === "number") return close(message);
           const requestId = "requestId" in message ? message.requestId : undefined;
-          if (!admit(message)) return;
-          dispatch(message);
-          if (requestId && !stopped) connection.send({ type: "control-result", requestId, retryAfterMs: 0 });
+          dispatchAdmitted(() => {
+            if (!admit(message)) return;
+            dispatch(message);
+            if (requestId && !stopped) connection.send({ type: "control-result", requestId, retryAfterMs: 0 });
+          });
         },
         close,
       };

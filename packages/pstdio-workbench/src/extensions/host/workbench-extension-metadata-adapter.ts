@@ -7,6 +7,10 @@ import { toInternalWorkbenchPages } from "./workbench-extension-page-metadata";
 import type { WorkbenchExtensionTabMetadata } from "./workbench-extension-tab-presentation";
 
 type MetadataView = WorkbenchExtensionMetadata["views"][number];
+const statusBarSlot = (id: string) => {
+  const slot = id.split(".").at(-1);
+  return slot === "leading" || slot === "center" ? slot : "trailing";
+};
 const resourceKindForView = (metadata: WorkbenchExtensionMetadata, viewId: string) => {
   const bindings = metadata.pages.flatMap((page) => [
     ...(page.main.kind === "view" && page.resource ? [{ ...page.resource, view: page.main.view }] : []),
@@ -229,6 +233,8 @@ export const toInternalWorkbenchExtensionMetadata = (
     })),
     panels: adaptedPanels,
     resourceKinds: metadata.resourceKinds.map((kind) => ({
+      activity: kind.activity,
+      activityHandoff: kind.activityHandoff,
       id: kind.localId,
       relatedOpeningsCommand: kind.relatedOpeningsCommand,
       extensionId: kind.extensionId,
@@ -283,7 +289,7 @@ export const toInternalWorkbenchExtensionMetadata = (
       extensionId: item.extensionId,
       viewId: contributionRefId(item.view),
       popoverViewId: item.popover ? contributionRefId(item.popover) : undefined,
-      slot: item.slot.id.endsWith("leading") ? "leading" : "trailing",
+      slot: statusBarSlot(item.slot.id),
       order: item.order,
       when: toWorkbenchWhenExpression(item.when),
     })),

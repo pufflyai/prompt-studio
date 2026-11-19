@@ -1,71 +1,54 @@
+import { validateRelatedFields } from "./record-index-validation";
+
+export { validateIndexes } from "./record-index-validation";
+
 import {
   canonicalJson,
+  evaluateStorageExpression,
   fingerprint,
   type Json,
   type StorageIndexField,
   type StoragePredicate,
   type StorageRecordIndex,
   type StorageRecordQuery,
+  type StorageRelatedSelection,
   storageLimits,
+  validateStorageExpression,
 } from "pstdio-sync-contracts";
+import { validateDependencyOrder } from "./record-dependency-order";
+import { queryField, typedFieldValue } from "./record-query-field";
+import { compareQueryStrings as compareStrings } from "./record-query-string-order";
 
-export const fieldValue = (value: Json, path: string[]) => {
-  let current: Json | undefined = value;
-  for (const key of path) {
-    if (current === null || typeof current !== "object" || Array.isArray(current)) return undefined;
-    current = current[key];
-  }
-  return current;
-};
-
-export const typedFieldValue = (value: Json, field: StorageIndexField) => {
-  const current = fieldValue(value, field.path);
-  if (current == null) return current;
-  if (field.type === "array")
-    return Array.isArray(current) && current.every((item) => typeof item === "string") ? current : undefined;
-  return typeof current === field.type ? current : undefined;
-};
-
-const validateIndex = (index: StorageRecordIndex) => {
-  if (!Object.keys(index.fields).length) throw new Error("An index needs fields");
-  for (const [name, field] of Object.entries(index.fields)) {
-    if (!name || !["string", "number", "boolean", "array"].includes(field.type)) throw new Error("Invalid index field");
-    if (!field.path.length || field.path.some((part) => typeof part !== "string" || !part))
-      throw new Error("Invalid field path");
-  }
-  for (const name of [...(index.equality ?? []), ...(index.orderBy ?? []).map((sort) => sort.field)]) {
-    if (!Object.hasOwn(index.fields, name)) throw new Error(`Unknown index field: ${name}`);
-    if (index.fields[name].type === "array") throw new Error("Array fields cannot order a page");
-  }
-  for (const sort of index.orderBy ?? [])
-    if (sort.direction !== "asc" && sort.direction !== "desc") throw new Error("Invalid sort direction");
-};
-
-export const validateIndexes = (indexes: StorageRecordIndex[]) => {
-  const names = new Set<string>();
-  for (const index of indexes) {
-    if (!index.name || names.has(index.name)) throw new Error("Index names must be unique and nonempty");
-    names.add(index.name);
-    validateIndex(index);
-  }
-};
-
-export const queryField = (index: StorageRecordIndex, name: string) => {
-  if (!Object.hasOwn(index.fields, name)) throw new Error(`Unknown index field: ${name}`);
-  return index.fields[name];
-};
+export { fieldValue, queryField, typedFieldValue } from "./record-query-field";
 
 const validateOperator = (field: StorageIndexField, predicate: Extract<StoragePredicate, { value: Json }>) => {
   if (predicate.op === "equalsIgnoreCase" && field.type !== "string")
     throw new Error("Case-insensitive equality requires a string field");
   if (predicate.op === "contains" && field.type !== "string" && field.type !== "array")
     throw new Error("Contains requires a string or array field");
-  if (field.type === "array" && ["gt", "gte", "lt", "lte"].includes(predicate.op))
-    throw new Error("Array fields do not support ordering predicates");
+  if (predicate.op === "hasKey" && field.type !== "object") throw new Error("Key existence requires an object field");
+  if (predicate.op === "overlaps" && field.type !== "array") throw new Error("Overlap requires an array field");
+  if (predicate.op === "containsAll" && (field.type !== "array" || !Array.isArray(predicate.value)))
+    throw new Error("Contains-all requires an array field and string array value");
+  if (["array", "object"].includes(field.type) && ["gt", "gte", "lt", "lte"].includes(predicate.op))
+    throw new Error("Array and object fields do not support ordering predicates");
   if (
-    !["eq", "ne", "gt", "gte", "lt", "lte", "contains", "equalsIgnoreCase", "textContains", "in", "notIn"].includes(
-      predicate.op,
-    )
+    ![
+      "eq",
+      "ne",
+      "gt",
+      "gte",
+      "lt",
+      "lte",
+      "contains",
+      "overlaps",
+      "containsAll",
+      "equalsIgnoreCase",
+      "textContains",
+      "in",
+      "notIn",
+      "hasKey",
+    ].includes(predicate.op)
   )
     throw new Error("Unsupported query predicate");
 };
@@ -76,7 +59,8 @@ const validatePredicateValues = (field: StorageIndexField, predicate: Extract<St
   for (const value of values) {
     if (value === null && predicate.op !== "contains" && predicate.op !== "equalsIgnoreCase") continue;
     const type = Array.isArray(value) ? "array" : typeof value;
-    const expected = predicate.op === "contains" && field.type === "array" ? "string" : field.type;
+    const expected =
+      predicate.op === "hasKey" || (predicate.op === "contains" && field.type === "array") ? "string" : field.type;
     if (type !== expected) throw new Error(`Query value must be ${expected}`);
     if (Array.isArray(value) && value.some((item) => typeof item !== "string"))
       throw new Error("Query arrays contain strings");
@@ -85,21 +69,46 @@ const validatePredicateValues = (field: StorageIndexField, predicate: Extract<St
 };
 
 const validateScalarTextPredicate = (field: StorageIndexField, value: Json) => {
-  if (field.type === "array") throw new Error("Text contains requires a scalar field");
+  if (["array", "object"].includes(field.type)) throw new Error("Text contains requires a scalar field");
   if (typeof value !== "string") throw new Error("Query value must be string");
 };
 
-export const validatePredicate = (index: StorageRecordIndex, predicate?: StoragePredicate, depth = 0) => {
+export const validatePredicate = (
+  index: StorageRecordIndex,
+  predicate?: StoragePredicate,
+  depth = 0,
+  resolveIndex?: (name: string) => StorageRecordIndex,
+  ancestors: StorageRecordIndex[] = [],
+  variables = new Set<string>(),
+) => {
   if (!predicate) return;
   if (depth > 8) throw new Error("Query predicate is too deep");
+  if ("exists" in predicate) {
+    const related = validateRelatedFields(index, predicate.exists, resolveIndex);
+    const names = relatedVariables(index, predicate.exists, variables);
+    validatePredicate(related, predicate.exists.where, depth + 1, resolveIndex, [index, ...ancestors], names);
+    return;
+  }
   if ("not" in predicate) {
-    validatePredicate(index, predicate.not, depth + 1);
+    validatePredicate(index, predicate.not, depth + 1, resolveIndex, ancestors, variables);
     return;
   }
   if ("all" in predicate || "any" in predicate) {
     const children = "all" in predicate ? predicate.all : predicate.any;
     if (children.length > 100) throw new Error("Too many query predicates");
-    for (const child of children) validatePredicate(index, child, depth + 1);
+    for (const child of children) validatePredicate(index, child, depth + 1, resolveIndex, ancestors, variables);
+    return;
+  }
+  if ("test" in predicate) {
+    validateStorageExpression(
+      predicate.test,
+      (name, up) => {
+        const source = [index, ...ancestors][up];
+        if (!source) throw new Error("Invalid expression ancestor scope");
+        queryField(source, name);
+      },
+      variables,
+    );
     return;
   }
   const field = queryField(index, predicate.field);
@@ -107,14 +116,6 @@ export const validatePredicate = (index: StorageRecordIndex, predicate?: Storage
   if (!("value" in predicate)) throw new Error("Query predicate needs a value");
   if (predicate.op === "textContains") return validateScalarTextPredicate(field, predicate.value);
   validatePredicateValues(field, predicate);
-};
-
-const compareStrings = (left: string, right: string) => {
-  const a = Array.from(left, (character) => character.codePointAt(0)!);
-  const b = Array.from(right, (character) => character.codePointAt(0)!);
-  for (let position = 0; position < Math.min(a.length, b.length); position++)
-    if (a[position] !== b[position]) return a[position] - b[position];
-  return a.length - b.length;
 };
 
 export const compareQueryValues = (left: Json | undefined, right: Json | undefined) => {
@@ -133,31 +134,53 @@ export const compareQueryValues = (left: Json | undefined, right: Json | undefin
   return left < right ? -1 : 1;
 };
 
-export const matchesPredicate = (index: StorageRecordIndex, value: Json, predicate?: StoragePredicate) => {
+export const matchesPredicate = (
+  index: StorageRecordIndex,
+  value: Json,
+  predicate?: StoragePredicate,
+  related?: (index: StorageRecordIndex, value: Json, selection: StorageRelatedSelection) => boolean,
+  fields?: (name: string, up: number) => Json | undefined,
+  variables: Record<string, Json | undefined> = {},
+) => {
   if (!predicate) return true;
+  if ("exists" in predicate) {
+    if (!related) throw new Error("Related query needs installed indexes");
+    return related(index, value, predicate.exists);
+  }
   if ("not" in predicate) {
-    if (matchesPredicate(index, value, predicate.not)) return false;
+    if (matchesPredicate(index, value, predicate.not, related, fields, variables)) return false;
     return true;
   }
   if ("all" in predicate) {
-    for (const child of predicate.all) if (!matchesPredicate(index, value, child)) return false;
+    for (const child of predicate.all)
+      if (!matchesPredicate(index, value, child, related, fields, variables)) return false;
     return true;
   }
   if ("any" in predicate) {
-    for (const child of predicate.any) if (matchesPredicate(index, value, child)) return true;
+    for (const child of predicate.any)
+      if (matchesPredicate(index, value, child, related, fields, variables)) return true;
     return false;
   }
-  return matchesFieldPredicate(index, value, predicate);
+  if ("test" in predicate) return evaluateStorageExpression(predicate.test, fields, variables) === true;
+  return matchesFieldPredicate(index, value, predicate, fields);
 };
 
 const matchesFieldPredicate = (
   index: StorageRecordIndex,
   value: Json,
   predicate: Extract<StoragePredicate, { field: string }>,
+  fields?: (name: string, up: number) => Json | undefined,
 ) => {
-  const actual = typedFieldValue(value, queryField(index, predicate.field));
+  const actual = fields ? fields(predicate.field, 0) : typedFieldValue(value, queryField(index, predicate.field));
   const empty = actual == null || actual === "" || (Array.isArray(actual) && !actual.length);
   switch (predicate.op) {
+    case "hasKey":
+      return (
+        actual !== null &&
+        typeof actual === "object" &&
+        !Array.isArray(actual) &&
+        Object.hasOwn(actual, String(predicate.value))
+      );
     case "exists":
       return actual !== undefined;
     case "missing":
@@ -179,11 +202,16 @@ const matchesFieldPredicate = (
     case "notIn":
       return !predicate.value.some((item) => canonicalJson(actual ?? null) === canonicalJson(item));
     case "contains":
-      if (Array.isArray(actual)) return actual.some((item) => canonicalJson(item) === canonicalJson(predicate.value));
+      return containsValue(actual, predicate.value);
+    case "overlaps": {
+      const values = predicate.value;
+      return Array.isArray(actual) && Array.isArray(values) && actual.some((value) => values.includes(value));
+    }
+    case "containsAll":
       return (
-        typeof actual === "string" &&
-        typeof predicate.value === "string" &&
-        actual.toLowerCase().includes(predicate.value.toLowerCase())
+        Array.isArray(actual) &&
+        Array.isArray(predicate.value) &&
+        predicate.value.every((value) => actual.includes(value))
       );
     default: {
       if (actual == null || predicate.value === null) return false;
@@ -206,8 +234,8 @@ export const encodeQueryCursor = (cursor: QueryCursor) => btoa(unescape(encodeUR
 
 const queryWindow = (query: StorageRecordQuery, revision: string) => {
   const limit = query.limit ?? storageLimits.queryDefaultLimit;
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > storageLimits.queryLimit)
-    throw new Error(`Query limit must be between 1 and ${storageLimits.queryLimit}`);
+  if (!Number.isSafeInteger(limit) || limit < 0 || limit > storageLimits.queryLimit)
+    throw new Error(`Query limit must be between 0 and ${storageLimits.queryLimit}`);
   const offset = query.offset ?? 0;
   if (!Number.isSafeInteger(offset) || offset < 0 || (offset > 0 && query.cursor))
     throw new Error("Query offset must be a nonnegative integer without a cursor");
@@ -221,8 +249,23 @@ export const prepareRecordQuery = async (
   index: StorageRecordIndex,
   query: StorageRecordQuery,
   revision: string,
+  resolveIndex?: (name: string) => StorageRecordIndex,
 ) => {
-  validatePredicate(index, query.where);
+  validateDependencyOrder(index, query);
+  validateComputedConditions(index, resolveIndex);
+  const related = new Map<string, StorageRecordIndex>();
+  validatePredicate(
+    index,
+    query.where,
+    0,
+    resolveIndex
+      ? (name) => {
+          const definition = resolveIndex(name);
+          related.set(name, definition);
+          return definition;
+        }
+      : undefined,
+  );
   const fields = query.fields ?? Object.keys(index.fields);
   for (const name of fields) queryField(index, name);
   const { limit, offset } = queryWindow(query, revision);
@@ -231,6 +274,9 @@ export const prepareRecordQuery = async (
     index: index as unknown as Json,
     where: (query.where as unknown as Json) ?? null,
     fields,
+    textOrder: query.textOrder ?? null,
+    bindings: (query.related as unknown as Json) ?? null,
+    ...(related.size ? { related: [...related.values()] as unknown as Json } : {}),
   });
   let after: QueryCursor | undefined;
   if (query.cursor) {
@@ -249,4 +295,39 @@ export const prepareRecordQuery = async (
       throw new Error("Invalid query cursor");
   }
   return { fields, limit, offset, identity, after };
+};
+
+export const validateComputedConditions = (
+  index: StorageRecordIndex,
+  resolve?: (name: string) => StorageRecordIndex,
+) => {
+  const declared = (index: StorageRecordIndex) => ({
+    ...index,
+    fields: Object.fromEntries(Object.entries(index.fields).filter(([, field]) => !field.cases && !field.expression)),
+  });
+  for (const field of Object.values(index.fields))
+    for (const entry of field.cases ?? [])
+      validatePredicate(declared(index), entry.when, 0, resolve ? (name) => declared(resolve(name)) : undefined);
+};
+
+const relatedVariables = (index: StorageRecordIndex, selection: StorageRelatedSelection, variables: Set<string>) => {
+  const each = selection.every;
+  const names = new Set(variables);
+  if (each) {
+    if (
+      queryField(index, each.field).type !== "array" ||
+      !each.as ||
+      names.has(each.as) ||
+      !["one", "some"].includes(each.matches)
+    )
+      throw new Error("Invalid related quantifier");
+    names.add(each.as);
+  }
+
+  return names;
+};
+
+const containsValue = (actual: Json | undefined, value: Json) => {
+  if (Array.isArray(actual)) return actual.some((item) => canonicalJson(item) === canonicalJson(value));
+  return typeof actual === "string" && typeof value === "string" && actual.toLowerCase().includes(value.toLowerCase());
 };

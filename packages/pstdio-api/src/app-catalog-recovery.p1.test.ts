@@ -32,7 +32,7 @@ test("restored catalog work completes after deferred app dependencies are ready"
     await handle.deps.extensionService.enableInstalledSourceForProject({
       projectId: project.id,
       installName: "pstdio-base-themes",
-      extensionId: "pstdio.pstdio-base-themes",
+      extensionId: "pstdio.base-themes",
       displayName: "Themes",
       name: "pstdio-base-themes",
       sourcePath: source,
@@ -48,7 +48,7 @@ test("restored catalog work completes after deferred app dependencies are ready"
           installName: "pstdio-base-themes",
           displayName: "Themes",
           projectId: project.id,
-          extensionId: "pstdio.pstdio-base-themes",
+          extensionId: "pstdio.base-themes",
           status: "queued",
           queuedAt: new Date().toISOString(),
         },

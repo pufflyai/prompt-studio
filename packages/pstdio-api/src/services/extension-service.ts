@@ -5,7 +5,12 @@ import type {
   createExtensionUserDataDBService,
   createInstalledExtensionSourcesDBService,
 } from "pstdio-db";
+import { type PreparedExtensionRevision, withRequestedPreparation } from "pstdio-extensions";
 import { isAlwaysEnabledExtensionSource } from "../features/extensions/always-on-extensions";
+import {
+  type ExtensionInstallTransaction,
+  settlePreparedInstall,
+} from "../features/extensions/extension-install-transaction";
 import type {
   checkExtensionSource,
   hashExtensionSource,
@@ -35,6 +40,8 @@ type JsonRecord = Record<string, unknown>;
 export type SourceKind = "git" | "local_path" | "registry";
 
 export type EnableInstalledSourceInput = {
+  installation?: ExtensionInstallTransaction;
+  preparedRevision?: PreparedExtensionRevision;
   displayName: string;
   extensionId: string;
   installName: string;
@@ -87,7 +94,12 @@ type ExtensionServiceDeps = {
   projectService: ReturnType<typeof createProjectService>;
   validateResourcePrefixes?: (
     projectId: string,
-    source: { extension_id: string; source_kind: SourceKind; source_path: string },
+    source: {
+      extension_id: string;
+      source_kind: SourceKind;
+      source_path: string;
+      preparedRevision?: PreparedExtensionRevision;
+    },
   ) => Promise<void>;
 };
 
@@ -101,10 +113,12 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     deps.eventBus?.emit("extension_instances", "set", instance);
   };
 
-  const { assertOptional, claimExtensionId, setProjectExtensionEnabled } = createExtensionEnablement({
-    ...deps,
-    emitExtensionInstance,
-  });
+  const { adoptDefaultSourceForProject, assertOptional, claimExtensionId, setProjectExtensionEnabled } =
+    createExtensionEnablement({
+      ...deps,
+      emitExtensionInstance,
+      onDefaultAdopted: (sourcePath) => withRequestedPreparation(() => notifyInstalledSourcesChanged(sourcePath)),
+    });
 
   const notifyInstalledSourcesChanged = async (sourcePath?: string, validatedSource?: LoadedExtensionSnapshot) => {
     await deps.onInstalledSourcesChanged?.(sourcePath, validatedSource);
@@ -122,8 +136,10 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     sources: deps.installedExtensionSourcesService,
     emitInstalledSource,
   });
+  // Publishing a prepared tool includes its live notification/imports. Keep that
+  // adoption from inheriting startup priority and being repeatedly retired by readers.
   const registerInstalledSource = (input: RegisterInstalledSourceInput) =>
-    registerSource(input, notifyInstalledSourcesChanged);
+    withRequestedPreparation(() => registerSource(input, notifyInstalledSourcesChanged));
 
   const getInstalledSource = (installName: string) =>
     deps.installedExtensionSourcesService.getByInstallName(installName);
@@ -185,18 +201,28 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   const enableInstalledSourceForProject = async (input: EnableInstalledSourceInput) => {
     // Prefix ownership is checked before the source and instance rows exist, so a
     // rejected enable leaves nothing behind to clean up.
-    await deps.validateResourcePrefixes?.(input.projectId, {
-      extension_id: input.extensionId,
-      source_kind: input.sourceKind ?? "local_path",
-      source_path: input.sourcePath,
-    });
-    const { existing, installedSource } = await resolveProjectInstalledSource(input, registerInstalledSource);
+    try {
+      await deps.validateResourcePrefixes?.(input.projectId, {
+        extension_id: input.extensionId,
+        source_kind: input.sourceKind ?? "local_path",
+        source_path: input.sourcePath,
+        preparedRevision: input.preparedRevision,
+      });
+      const { existing, installedSource } = await resolveProjectInstalledSource(input, registerInstalledSource);
 
-    const candidate = existing ?? (await createProjectInstance(input, installedSource));
-    const instance = await claimExtensionId(candidate, installedSource);
-    if (!instance) throw new Error(`Failed to enable extension: ${input.name}`);
+      const candidate = existing ?? (await createProjectInstance(input, installedSource));
+      const instance = await claimExtensionId(candidate, installedSource);
+      if (!instance) throw new Error(`Failed to enable extension: ${input.name}`);
+      // Registration precedes the first enabled owner, so its execution-gated
+      // notification cannot finish this source's frontend until the claim exists.
+      if (!existing?.enabled)
+        await withRequestedPreparation(() => notifyInstalledSourcesChanged(installedSource.source_path));
 
-    return { installedSource, instance };
+      return { installedSource, instance };
+    } catch (error) {
+      if (input.installation) await settlePreparedInstall(input.installation, false);
+      throw error;
+    }
   };
 
   const mutateSourceAndRefresh = createExtensionSourceRefresh(mutateSource, notifyInstalledSourcesChanged);
@@ -241,6 +267,13 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     return records.filter(({ instance }) => instance.enabled);
   };
 
+  const hasEnabledProjectSource = async (sourcePath: string) => {
+    const source = await deps.installedExtensionSourcesService.getBySourcePath(sourcePath);
+    if (!source) return false;
+    const filters = { installed_extension_id: source.id, scope_type: "project" };
+    return (await deps.extensionInstancesService.list(filters)).some((instance) => instance.enabled);
+  };
+
   const listProjectInstances = async (projectId: string) => {
     const project = await deps.projectService.get(projectId);
     if (!project) throw new ProjectNotFoundError(projectId);
@@ -281,6 +314,8 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   };
 
   return {
+    adoptDefaultSourceForProject,
+    hasDefaultSourceChoice: deps.extensionInstancesService.hasProjectDefaultChoice,
     activatePublishedExtensions: (inputs: Parameters<typeof activatePublishedExtensions>[1]) =>
       activatePublishedExtensions(
         {
@@ -298,6 +333,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     getInstalledSource,
     getInstalledSourceById: deps.installedExtensionSourcesService.get,
     getProjectExtensionInstance,
+    hasEnabledProjectSource,
     listEnabledSourcesForProject,
     listProjectExtensionInstances: listProjectInstances,
     reloadInstalledSourceBySourcePath: (sourcePath: string) =>

@@ -1,7 +1,8 @@
 import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { basename, join } from "node:path";
-import { readPackageManifestMetadata } from "pstdio-extensions";
+import { canonicalExtensionId, extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
+import { readPackageManifestMetadata, withRequestedPreparation } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
 import { traceSetupPhase } from "../../lib/setup-phase";
 import {
@@ -17,13 +18,18 @@ import {
   resolveDefaultExtensionsConfig,
 } from "./default-extensions-config";
 import { loadExtensionCatalog } from "./extension-catalog";
+import { boundExtensionInstalls, createExtensionInstallBatch } from "./extension-install-batch";
+import { activatePreparedInstall, settlePreparedInstall } from "./extension-install-transaction";
 import { shouldInstallDependencies } from "./install-extension-dependencies";
 import {
   type createSharedNamedSourceCheckout,
+  ExtensionAlreadyInstalledError,
   type InstallExtensionSourceInput,
   type InstalledExtensionSource,
   installExtensionSource,
+  isLocalExtensionSource,
 } from "./install-extension-source";
+import { installedIdentityPath } from "./installed-identity-path";
 
 export {
   type DefaultExtensionEntry,
@@ -34,6 +40,7 @@ export { syncInstalledExtensionsForProject, syncInstalledExtensionsForProjects }
 
 type InstallDefaultExtensionsDeps = {
   config?: DefaultExtensionsConfig;
+  registerInstalledSources?: (installed: InstalledExtensionSource[]) => Promise<void>;
   env?: Record<string, string | undefined>;
   forceSourceDefaults?: boolean;
   installNames?: string[];
@@ -54,7 +61,7 @@ const needsDefaultExtensionInstall = (
   if (mode === "refresh" && typeof entry !== "string" && entry.force) return true;
   if (!isInstalledUserExtension(entry, extensionsRoot)) return true;
   const installName = typeof entry === "string" ? entry : (entry.installName ?? basename(entry.source));
-  const targetPath = join(extensionsRoot, installName);
+  const targetPath = defaultInstalledPath(entry, extensionsRoot, installName);
   const { manifest } = readPackageManifestMetadata(targetPath);
   if (!manifest || manifest.pstdio?.scope === "repo") return true;
   if (typeof entry !== "string" && entry.skipInstall) return false;
@@ -68,8 +75,9 @@ const runDefaultExtensionInstall = async (
     env: Record<string, string | undefined>;
   },
 ) => {
-  const install = deps.installExtensionSource ?? installExtensionSource;
   const installed: InstalledExtensionSource[] = [];
+  const pending: Promise<InstalledExtensionSource | undefined>[] = [];
+  let complete = false;
   const reportFailure = (failure: {
     entry?: DefaultExtensionEntry;
     error: unknown;
@@ -83,66 +91,94 @@ const runDefaultExtensionInstall = async (
     deps.onInstallFailure?.({ error: failure.error, installName, source: failure.source });
   };
 
-  await withResolvedDefaultEntries(
-    {
-      config: context.config,
-      onEntryFailure: deps.onInstallFailure
-        ? ({ entry, error, source }) => reportFailure({ entry, error, source })
-        : undefined,
-      prepareSharedCheckout: deps.prepareSharedCheckout,
-      forceSourceDefaults: deps.forceSourceDefaults,
-      releaseRef: deps.releaseRef,
-      signal: deps.signal,
-    },
-    async (entries, prepareNamedSource) => {
-      const pendingByName = new Map<string, Promise<InstalledExtensionSource | undefined>>();
-      const pending: Promise<InstalledExtensionSource | undefined>[] = [];
-      const active = new Set<Promise<void>>();
-      for (const resolved of entries.filter((entry) => entry.scope === "user")) {
-        // Leave capacity for the database and foreground UI while dependencies prepare.
-        if (active.size >= 2) await Promise.race(active);
-        const previous = pendingByName.get(resolved.installName);
-        const request = (async () => {
-          // Two entries for one target must not promote source trees over each other.
-          if (previous) await previous;
-          deps.signal?.throwIfAborted();
-          try {
-            return await traceSetupPhase("default_extensions.install", { extension: resolved.installName }, () =>
-              install({
-                ...toInstallInput(resolved.entry, deps.releaseRef),
-                env: context.env,
-                existsOk: true,
-                prepareNamedSource,
-                signal: deps.signal,
-              }),
-            );
-          } catch (error) {
-            if (!deps.onInstallFailure) throw error;
-            reportFailure({ error, installName: resolved.installName, source: resolved.source });
-            return undefined;
-          }
-        })();
-        pendingByName.set(resolved.installName, request);
-        pending.push(request);
-        const complete = request
-          .then(
-            () => undefined,
-            () => undefined,
-          )
-          .finally(() => active.delete(complete));
-        active.add(complete);
-      }
-      // Every install must settle before the shared checkout can be removed.
-      for (const result of await Promise.allSettled(pending)) {
-        if (result.status === "rejected") throw result.reason;
-        if (result.value) installed.push(result.value);
-      }
-    },
-  );
+  try {
+    await withResolvedDefaultEntries(
+      {
+        config: context.config,
+        onEntryFailure: deps.onInstallFailure
+          ? ({ entry, error, source }) => reportFailure({ entry, error, source })
+          : undefined,
+        prepareSharedCheckout: deps.prepareSharedCheckout,
+        forceSourceDefaults: deps.forceSourceDefaults,
+        releaseRef: deps.releaseRef,
+        signal: deps.signal,
+      },
+      async (entries, prepareNamedSource) => {
+        // A configured target has one final owner. Later entries override earlier defaults
+        // before preparation, so deferred activation cannot register a superseded intent.
+        const sources = [
+          ...new Map(
+            entries.filter((entry) => entry.scope === "user").map((entry) => [entry.installName, entry]),
+          ).values(),
+        ];
+        const install = deps.installExtensionSource
+          ? boundExtensionInstalls(deps.installExtensionSource)
+          : createExtensionInstallBatch(sources.length);
+        for (const resolved of sources) {
+          const request = (async () => {
+            deps.signal?.throwIfAborted();
+            try {
+              return await traceSetupPhase("default_extensions.install", { extension: resolved.installName }, () =>
+                install({
+                  ...toInstallInput(resolved.entry, deps.releaseRef),
+                  env: context.env,
+                  existsOk: true,
+                  retainBackup: Boolean(deps.registerInstalledSources),
+                  prepareNamedSource,
+                  signal: deps.signal,
+                }),
+              );
+            } catch (error) {
+              if (!deps.onInstallFailure) throw error;
+              reportFailure({ error, installName: resolved.installName, source: resolved.source });
+              return undefined;
+            }
+          })();
+          pending.push(request);
+        }
+        // Every install must settle before the shared checkout can be removed.
+        for (const result of await Promise.allSettled(pending)) {
+          if (result.status === "rejected") throw result.reason;
+          if (result.value) installed.push(result.value);
+        }
+      },
+    );
 
-  deps.signal?.throwIfAborted();
-  return installed;
+    deps.signal?.throwIfAborted();
+    complete = true;
+    return installed;
+  } finally {
+    if (!complete) {
+      // Some paired results may already be API-owned when a sibling fails or the
+      // default request is cancelled. They will never reach registration.
+      const results = await Promise.allSettled(pending);
+      await Promise.allSettled(
+        results.map((result) =>
+          result.status === "fulfilled" && result.value?.installation
+            ? settlePreparedInstall(result.value.installation, false)
+            : Promise.resolve(),
+        ),
+      );
+    }
+  }
 };
+
+const registerPreparedDefaults = (deps: InstallDefaultExtensionsDeps, installed: InstalledExtensionSource[]) =>
+  withRequestedPreparation(async () => {
+    if (!deps.registerInstalledSources) return;
+    try {
+      // Registration can ask for missing harness defaults. Nested reads must see this batch.
+      for (const source of installed) if (source.installation) await activatePreparedInstall(source.installation);
+      await deps.registerInstalledSources(installed);
+    } catch (error) {
+      await Promise.allSettled(
+        installed.map((source) =>
+          source.installation ? settlePreparedInstall(source.installation, false) : Promise.resolve(),
+        ),
+      );
+      throw error;
+    }
+  });
 
 const prepareDefaultExtensions = (deps: InstallDefaultExtensionsDeps, mode: DefaultExtensionInstallMode) => {
   const env = { ...(deps.env ?? process.env) };
@@ -174,7 +210,10 @@ const prepareDefaultExtensions = (deps: InstallDefaultExtensionsDeps, mode: Defa
           config: { defaultExtensions },
           env,
         };
-        return runDefaultExtensionInstall(deps, context);
+        const installed = await runDefaultExtensionInstall(deps, context);
+        deps.signal?.throwIfAborted();
+        await registerPreparedDefaults(deps, installed);
+        return installed;
       });
     }, deps.signal),
   );
@@ -195,6 +234,17 @@ type InstallRepoDefaultExtensionsInput = {
   env?: Record<string, string | undefined>;
   releaseRef?: string;
   prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
+  registerInstalledSources?: InstallDefaultExtensionsDeps["registerInstalledSources"];
+};
+
+const defaultInstalledPath = (entry: DefaultExtensionEntry, root: string, name: string) => {
+  const rename = extensionIdentityRenames.find(({ from, to }) =>
+    [from.name, to.name, `${from.publisher}.${from.name}`, `${to.publisher}.${to.name}`].includes(name),
+  );
+  let owner: string | undefined;
+  if (typeof entry === "string") owner = rename && `${rename.to.publisher}.${rename.to.name}`;
+  else if (isLocalExtensionSource(entry.source)) owner = readPackageManifestMetadata(entry.source).manifest?.id;
+  return installedIdentityPath(root, name, owner ? canonicalExtensionId(owner) : undefined);
 };
 
 // A user install refuses repo-scoped sources, so an installed user copy proves the default is
@@ -202,17 +252,33 @@ type InstallRepoDefaultExtensionsInput = {
 const isInstalledUserExtension = (entry: DefaultExtensionEntry, extensionsRoot: string) => {
   const installName = typeof entry === "string" ? entry : (entry.installName ?? basename(entry.source));
   if (!installName || installName === "." || installName === ".." || /[\\/:]/.test(installName)) return false;
-  return existsSync(join(extensionsRoot, installName, "package.json"));
+  return existsSync(join(defaultInstalledPath(entry, extensionsRoot, installName), "package.json"));
+};
+
+const materializeRepoDefault = async (input: InstallExtensionSourceInput) => {
+  let installed: InstalledExtensionSource | undefined;
+  try {
+    installed = await installExtensionSource(input);
+    if (installed.installation) await activatePreparedInstall(installed.installation);
+    return installed;
+  } catch (error) {
+    if (installed?.installation) await settlePreparedInstall(installed.installation, false);
+    // The installer also resolves historical directory names and checks for concurrent installs.
+    if (!(error instanceof Error) || error.name !== ExtensionAlreadyInstalledError.name) throw error;
+  }
 };
 
 export const installRepoDefaultExtensions = async (input: InstallRepoDefaultExtensionsInput) => {
   const materialized: string[] = [];
   const skipped: string[] = [];
+  const prepared: InstalledExtensionSource[] = [];
 
   const rollback = async () => {
     const results = await Promise.allSettled(
-      materialized.map((name) =>
-        rm(join(input.repoPath, ".pstdio", "extensions", name), { recursive: true, force: true }),
+      prepared.map((source) =>
+        source.installation
+          ? settlePreparedInstall(source.installation, false)
+          : rm(source.targetPath, { recursive: true, force: true }),
       ),
     );
     for (const result of results) {
@@ -244,14 +310,20 @@ export const installRepoDefaultExtensions = async (input: InstallRepoDefaultExte
           }
 
           const installInput = toInstallInput(resolved.entry, input.releaseRef);
-          await installExtensionSource({
+          const installed = await materializeRepoDefault({
             ...installInput,
             existsOk: false,
             force: false,
             prepareNamedSource,
             repoPath: input.repoPath,
+            retainBackup: Boolean(input.registerInstalledSources),
           });
-          materialized.push(resolved.installName);
+          if (installed) {
+            prepared.push(installed);
+            materialized.push(resolved.installName);
+          } else {
+            skipped.push(resolved.installName);
+          }
         }
       },
     );
@@ -259,5 +331,9 @@ export const installRepoDefaultExtensions = async (input: InstallRepoDefaultExte
     await rollback();
     throw error;
   }
+  // Carry the validated output through the existing registration owner before discovery
+  // imports the promoted folder. Otherwise discovery accepts a runtime-only revision and
+  // the first metadata request repeats the already completed frontend preparation.
+  await registerPreparedDefaults(input, prepared);
   return { materialized, skipped, rollback };
 };

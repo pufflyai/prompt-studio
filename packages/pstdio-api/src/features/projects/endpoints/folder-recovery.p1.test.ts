@@ -27,6 +27,7 @@ test("a new device restores another device's folder copy while that device is of
   const peer = documentPeer();
   const controller = new AbortController();
   const owners: ReturnType<typeof startFolderRecovery>[] = [];
+  let sourceClosed: Promise<void> | undefined;
   try {
     const folder = join(root, "laptop");
     await mkdir(join(folder, "src"), { recursive: true });
@@ -50,7 +51,7 @@ test("a new device restores another device's folder copy while that device is of
     );
     await writeFile(
       join(folder, ".pstdio/extensions/local-tool/extension.ts"),
-      `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(marker)}, "ran");\nexport default {};\n`,
+      `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(marker)}, import.meta.url);\nexport default {};\n`,
     );
     const project = await source.deps.projectService.create({ name: "Recovered folder" });
     await source.deps.workspaceService.ensureDefault({ project_id: project.id, root_path: folder, name: "Folder" });
@@ -96,6 +97,11 @@ test("a new device restores another device's folder copy while that device is of
     });
     laptop.close();
     await laptop.done;
+    // The source device may run its own trusted local tool. Stop it before testing
+    // whether the offline copy's code runs on the destination.
+    sourceClosed = source.close();
+    await sourceClosed;
+    await rm(marker, { force: true });
 
     const listed = (await laptopCopy())!;
     const copy = { deviceId: listed.deviceId, sourceId: listed.sourceId };
@@ -123,6 +129,8 @@ test("a new device restores another device's folder copy while that device is of
       (record) => record.installedSource.source_path.startsWith(restored),
     );
     expect(restoredExtension?.instance.enabled ?? false).toBe(false);
+    if (await Bun.file(marker).exists())
+      console.log("Recovery fixture module executed at", await readFile(marker, "utf8"));
     await expect(lstat(marker)).rejects.toThrow();
 
     // The restored folder is now this device's source and keeps the copy's policy.
@@ -148,7 +156,7 @@ test("a new device restores another device's folder copy while that device is of
     controller.abort();
     await Promise.all(owners.map((owner) => owner.done));
     peer.close();
-    await source.close();
+    await (sourceClosed ?? source.close());
     await destination.close();
     await rm(root, { recursive: true, force: true });
   }

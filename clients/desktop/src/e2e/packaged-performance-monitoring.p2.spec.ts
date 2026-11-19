@@ -1,5 +1,6 @@
+import { fileURLToPath } from "node:url";
 import { expect, type Page } from "@playwright/test";
-import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-webview-path";
+import { parseExtensionWebviewPath } from "pstdio-api-contracts/extension-host";
 import { test } from "../testing/packaged-fixture";
 import {
   createPackagedHome,
@@ -15,12 +16,16 @@ import {
   type PerformanceSnapshot,
   performanceDetails,
   performanceMeter,
+  performanceTrigger,
   readSnapshot,
   stopMonitoring,
 } from "./packaged-performance-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
 // Renderer CPU budgets are benchmarks in packaged-renderer.p3.bench.ts.
+
+// Whole-case allowance includes cold project/tool preparation and owned cleanup (PS-1232).
+test.setTimeout(120_000);
 
 test("keeps performance measurements live when switching and closing project tabs", async () => {
   let app: PackagedApp | null = null;
@@ -54,6 +59,44 @@ test("keeps performance measurements live when switching and closing project tab
     await expect(performanceMeter(app.page)).not.toContainText("– fps");
     await app.page.getByRole("button", { name: `Close ${second.name}`, exact: true }).click();
     await expect.poll(() => readSnapshot(app!.page)).toBeNull();
+  } finally {
+    await disposePackagedApp(app);
+  }
+});
+
+test("a local extension control highlights workbench renders and releases the canvas", async () => {
+  let app: PackagedApp | null = null;
+  try {
+    ({ app } = await launchProject("Workbench highlights", {
+      monitoring: true,
+      extraExtension: {
+        installName: "render-highlights",
+        source: fileURLToPath(new URL("../../../../packages/e2e/src/fixtures/render-highlights", import.meta.url)),
+      },
+    }));
+    const toggle = app.page.frameLocator('iframe[title="Render highlight control"]').getByRole("button", {
+      name: "Highlight workbench renders",
+    });
+    const canvas = app.page.locator("canvas[data-react-scan]");
+    await expect(canvas).toHaveCount(0);
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
+    // Opening search commits a visible update in the workbench React tree.
+    await app.page.getByRole("option", { name: "Search", exact: true }).click();
+    await expect(app.page.getByRole("dialog")).toBeVisible();
+    await expect
+      .poll(() =>
+        canvas.evaluate((element: HTMLCanvasElement) => {
+          const context = element.getContext("2d")!;
+          const pixels = context.getImageData(0, 0, element.width, element.height).data;
+          return pixels.some((value, index) => index % 4 === 3 && value > 0);
+        }),
+      )
+      .toBe(true);
+    await app.page.keyboard.press("Escape");
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    await expect(canvas).toHaveCount(0);
   } finally {
     await disposePackagedApp(app);
   }
@@ -150,6 +193,7 @@ test("keeps reporting slow frames after the workbench reloads", async () => {
 });
 
 test("names the process that hosts an extension and ends its frames when paused", async () => {
+  if (process.platform === "linux") test.setTimeout(40_000);
   let app: PackagedApp | null = null;
   try {
     ({ app } = await launchProject("Extension processes", { monitoring: true, webview: true }));
@@ -175,17 +219,17 @@ test("names the process that hosts an extension and ends its frames when paused"
     expect(fixtureProcess.pid).not.toBe(workbench?.pid);
 
     await expect(app.page.locator('iframe[title="Host page"]')).toHaveCount(1);
-    await performanceMeter(app.page).click();
+    await performanceTrigger(app.page).click();
     // Each extension has its own row, named from its webview ids, even in a shared process.
     const row = performanceDetails(app.page).getByTestId("performance-cpu-row").filter({ hasText: "webview-host" });
     await expect(row).toBeVisible();
     // Closing the popover must retain its loaded webview for the next opening.
     const detailsFrame = app.page.locator('iframe[title="Performance details"]');
     const loadedFrame = await detailsFrame.elementHandle();
-    await performanceMeter(app.page).click();
+    await performanceTrigger(app.page).click();
     await expect(detailsFrame).toBeHidden();
     expect(await loadedFrame!.evaluate((frame) => frame.isConnected)).toBe(true);
-    await performanceMeter(app.page).click();
+    await performanceTrigger(app.page).click();
     await expect(row).toBeVisible();
     expect(await detailsFrame.evaluate((frame, original) => frame === original, loadedFrame)).toBe(true);
     const pause = row.getByRole("button", { name: "Pause webview-host", exact: true });

@@ -1,5 +1,5 @@
 import { type CommandContext, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
-import { listAttempts } from "../data/attempt-storage";
+import { readTicketAttempts } from "../data/attempt-queries";
 import { findTicket } from "../data/resolve";
 import { resolveTicketAnchor } from "./ticket-actions";
 
@@ -26,7 +26,7 @@ const changeLink = async (ctx: CommandContext, input: LinkParams, unlink: boolea
   const api = workspace ? ctx.workspaces : ctx.sessions;
 
   if (unlink) {
-    const managed = (await listAttempts(ctx.storage)).some((attempt) => {
+    const managed = (await readTicketAttempts(ctx.storage, [ticket.id])).some((attempt) => {
       if (attempt.ticketId !== ticket.id) return false;
       if (workspace) return attempt.workspaceId === workspace.id;
       return (
@@ -62,8 +62,7 @@ export const linkTicketCommand = defineCommand({
   title: l10n("commands.linkTicket", "Link ticket"),
   mutating: true,
   cli: {
-    globalAliases: [["tickets", "link"]],
-    examples: ["pst pstdio.pstdio-planner link --id PS-1 --workspace WS-19"],
+    examples: ["pst pstdio.planner link --id PS-1 --workspace WS-19"],
   },
   params: linkParams,
   run: (ctx, input) => changeLink(ctx, input, false),
@@ -74,8 +73,7 @@ export const unlinkTicketCommand = defineCommand({
   title: l10n("commands.unlinkTicket", "Unlink ticket"),
   mutating: true,
   cli: {
-    globalAliases: [["tickets", "unlink"]],
-    examples: ["pst pstdio.pstdio-planner unlink --id PS-1 --session <session-id>"],
+    examples: ["pst pstdio.planner unlink --id PS-1 --session <session-id>"],
   },
   params: linkParams,
   run: (ctx, input) => changeLink(ctx, input, true),

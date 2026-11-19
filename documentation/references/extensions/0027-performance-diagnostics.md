@@ -6,6 +6,10 @@ The device host owns monitoring state and collection. An extension uses `createW
 
 Declare `performance.read` to read state, a snapshot, or subscribe to snapshots. Declare `performance.control` to change monitoring or pause and resume an installed extension's views. The host additionally requires a local user interaction for controls. A runtime command cannot enable monitoring on another device.
 
+On hosts with React Scan support, `state().renderOverlay` reports `{ supported, enabled, scope: "workbench" }`. Older hosts omit this field; absence means unsupported. A local interaction can call `setRenderOverlayEnabled(enabled)` or the public `performance.control` operation `{ operation: "set-render-overlay", enabled }`. This controls only the current window's workbench. It does not scan extension frames or other windows. Monitoring must be enabled. Releasing the last monitoring owner or disposing the window controller stops active scanning. Hiding the details popover does not stop it. Disconnecting its controlling view releases that view's overlay even when other monitoring readers remain.
+
+Highlighting starts off after each reload. The host installs a small renderer hook before React and loads React Scan 0.5.3 only when a person requests highlighting. Turning it off releases the commit subscription, cancels drawing and removes the canvas. The hook stays installed and the browser caches the loaded module. Production builds can shorten component names. Render data stays inside the workbench window. [React Scan lifecycle](../../adrs/0157-temporary-react-scan-overlay-lifecycle.md)
+
 `state()` returns the host kind and enabled state. `snapshot()` returns `null` while disabled. `subscribe(listener)` returns an asynchronous disposer. Concurrent consumers share the host's collector and polling; the bridge releases its listener on disconnect. Call the disposer when the view unmounts.
 
 Use `await client.performance.retain()` to hold capture ownership while your monitoring view is loaded. It returns a disposer. In the Prompt Studio dashboard, the first retained capture turns monitoring on, so a loaded monitoring extension is the device opt-in. The desktop host counts monitoring owners across all projects, separately from passive renderer observers. Switching or closing one project cannot disable another project's monitoring view. Releasing the last monitoring owner restores the saved device choice without changing it. The host shares one capture across owners and releases ownership on disconnect. The host's own renderer observers also hold a passive owner for the window's lifetime; they do not keep monitoring enabled after the last monitoring view leaves when the saved choice is off.
@@ -13,6 +17,8 @@ Use `await client.performance.retain()` to hold capture ownership while your mon
 `recordings()` explicitly exports the protected recording directory and bounded saved JSONL files, including after disable. Browser hosts return `null`. Read access never starts a recorder.
 
 `setEnabled(boolean)` controls the existing device preference. `pauseExtension(installedExtensionId)` and `resumeExtension(installedExtensionId)` use the host's paused-view state, which the snapshot reports as `pausedExtensionIds`. They do not stop backend commands or sessions.
+
+On `main`, API 0.4.2 adds `client.performance.query()` under `performance.read`. It returns the readonly retained snapshot of the same window controller and collector. Observe it with `useWebviewCommandQuery(query, useWebviewVisibility())`; hiding a view releases optional sampling observation. Accepted `null` means monitoring is off, while initial failure remains unread with an error and failed refresh retains accepted data. Capture ownership still uses `retain()`. Existing `snapshot()` and `subscribe()` stay supported. Publish the matching host and SDK before separately released consumers adopt `query()`.
 
 ## Developer settings
 
@@ -43,4 +49,17 @@ These are gaps in the published API, not choices of the Performance Monitoring e
 - `extensionFrames` identify an extension only by its install id and webview id. Consumers cannot show the extension's display name.
 - Extension contributions load with a project. With no project open, no extension control or meter exists, although the device switch may still be on.
 
-*Updated at: 2026-11-04*
+
+## Backend operation instrumentation
+
+The host publishes bounded operation metadata to the process-local Node `diagnostics_channel` named `pstdio.diagnostics.operation` while it has subscribers. Backend monitoring extensions may subscribe using Node's public diagnostics-channel API. Subscriptions belong to the explicit diagnostic capture and must be released when it ends. Opening a monitoring view does not subscribe. These backend events are separate from the device snapshot and its sanitized recordings.
+
+The event has `kind`, `startedAt` in UTC, and `durationMs`. Host database events also have `id`, optional `parentId`, an optional `origin` with `kind`, `name`, `id` and `projectId`, and a bounded `caller` stack. Command origins identify the canonical command, request origins use the matched route pattern, and instrumented background owners use a static task name. Capture the origin before asynchronous queueing so concurrent callers retain their own identity.
+
+- `database.query` includes a SHA-256 `queryHash`, a statement kind such as `SELECT`, result `rows`, and `failed`. Its duration includes queueing. SQL text and parameters are excluded.
+- `database.execute` includes protocol-result `bytes` and `failed`. Its `parentId` links engine work to its enclosing query when the query API supplies that context.
+- `chat.encode` includes a stable `id`, a `complete` flag, `sessionId`, `revision`, `logicalBytes`, `wireBytes`, `fragments` and `failed`. Its duration measures the chat-event generator's synchronous work. It excludes awaited transport delivery. Cumulative progress is emitted before every fragment yield, and the final update marks completion or failure. Retain the latest update per ID to include encoding work still awaiting delivery. Conversation contents are excluded.
+
+Subscribers must bound their own retention and handle malformed events without throwing. The Performance extension's CPU captures retain the latest 60 seconds subject to a 1,000-event and 512 KiB limit and export the dropped-event count. Raw backend evidence can include source paths and runtime identifiers and stays in its protected local capture store. See the [armed recording commands](../../../extensions/pstdio-performance/README.md#for-agents) for collecting and exporting a spike.
+
+*Updated at: 2026-11-18*

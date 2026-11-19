@@ -1,7 +1,7 @@
 import { and, eq, type SQL, sql } from "drizzle-orm";
 import type { SyncError } from "pstdio-sync-contracts";
 import type { RelayTransaction } from "./database";
-import { syncBlobs, syncProjects } from "./document-schema";
+import { projectRetirements, syncBlobs, syncProjects } from "./document-schema";
 
 /** A request the relay refuses. The transport returns its status and body unchanged. */
 export class SyncRejection extends Error {
@@ -26,6 +26,14 @@ export interface SyncCaller {
 export const projectKey = (accountId: string, projectId: string) =>
   new Bun.CryptoHasher("sha256").update(`${accountId}\n${projectId}`).digest("hex");
 
+export const assertProjectActive = async (db: Pick<RelayTransaction, "select">, key: string) => {
+  const [retirement] = await db
+    .select({ id: projectRetirements.operationId })
+    .from(projectRetirements)
+    .where(eq(projectRetirements.projectKey, key));
+  if (retirement) throw rejection(410, "project-retired");
+};
+
 export const lockAccount = (transaction: RelayTransaction, accountId: string) =>
   transaction.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`relay-account:${accountId}`}, 0))`);
 
@@ -35,6 +43,7 @@ export const lockAccount = (transaction: RelayTransaction, accountId: string) =>
  */
 export const admitWrite = async (transaction: RelayTransaction, key: string, accountId: string, now: Date) => {
   await lockAccount(transaction, accountId);
+  await assertProjectActive(transaction, key);
   await transaction.insert(syncProjects).values({ projectKey: key, accountId, createdAt: now }).onConflictDoNothing();
 };
 
@@ -73,7 +82,8 @@ export const removeRows = (table: "relay_sync_updates" | "relay_sync_states", wh
   WITH RECURSIVE gone AS (
     DELETE FROM ${sql.identifier(table)} WHERE ${where} RETURNING "projectKey", "objectKey", "blobIds"
   ), queued AS (
-    INSERT INTO relay_sync_object_deletions SELECT "objectKey" FROM gone ON CONFLICT DO NOTHING
+    INSERT INTO relay_sync_object_deletions ("objectKey", "projectKey")
+    SELECT "objectKey", "projectKey" FROM gone ON CONFLICT DO NOTHING
   ), descendants("projectKey", "blobId") AS (
     SELECT "projectKey", unnest("blobIds") FROM gone
     UNION

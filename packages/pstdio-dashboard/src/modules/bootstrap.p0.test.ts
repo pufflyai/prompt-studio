@@ -1,9 +1,8 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createWorkbench, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
-import { createHomeModule } from "@/home-page.fixture";
+import { createHomeModule, dashboardHomePage } from "@/home-page.fixture";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardHomePage } from "@/shared/app/resources";
 import {
   getDashboardExtensionsReadyProjectId,
   setDashboardExtensionsRegisteredProject,
@@ -37,7 +36,7 @@ const browserAt = (url: string): WorkbenchPageLocationBrowser => {
 
 describe("createBootstrapModule", () => {
   test("waits for project contributions before opening the configured default page", async () => {
-    const workbench = createWorkbench({ startPage: dashboardHomePage });
+    const workbench = createWorkbench({ defaultPage: dashboardHomePage });
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const start = workbench.registerModule(createHomeModule());
@@ -49,7 +48,7 @@ describe("createBootstrapModule", () => {
 
       setDashboardExtensionsRegisteredProject(workbench, "project-1");
       await flushMicrotasks();
-      expect(workbench.pages.store.getState().activePageId).toBe("pstdio.pstdio-home.page.home");
+      expect(workbench.pages.store.getState().activePageId).toBe("pstdio.home.page.home");
     } finally {
       bootstrap.dispose();
       start.dispose();
@@ -57,7 +56,7 @@ describe("createBootstrapModule", () => {
   });
 
   test("does not open project selection while a persisted project is still loading", () => {
-    const workbench = createWorkbench({ startPage: dashboardHomePage });
+    const workbench = createWorkbench({ defaultPage: dashboardHomePage });
     workbench.modes.registerMode({ id: "project-selection", label: "Projects", activate: () => undefined });
 
     const bootstrap = workbench.registerModule(
@@ -82,7 +81,7 @@ describe("createBootstrapModule", () => {
       const loading = Promise.withResolvers<typeof metadata>();
       const browser = browserAt("/projects/project-1/extensions/pstdio.extension-lab/lab");
       const workbench = createWorkbench({
-        startPage: dashboardHomePage,
+        defaultPage: dashboardHomePage,
         pageLocationBrowser: browser,
       });
       workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
@@ -109,7 +108,7 @@ describe("createBootstrapModule", () => {
         loading.resolve(metadata);
         await flushMicrotasks();
         await flushMicrotasks();
-        if (navigateAway) expect(workbench.pages.store.getState().activePageId).toBe("pstdio.pstdio-home.page.home");
+        if (navigateAway) expect(workbench.pages.store.getState().activePageId).toBe("pstdio.home.page.home");
         else expect(activeViewId(workbench)).toBe("pstdio.extension-lab.view.labPage");
       } finally {
         bootstrap.dispose();
@@ -124,7 +123,7 @@ describe("createBootstrapModule", () => {
 test("restores an accepted extension URL while a newer catalog read is pending", async () => {
   const loads: ReturnType<typeof Promise.withResolvers<typeof metadata>>[] = [];
   const browser = browserAt("/projects/project-1/extensions/pstdio.extension-lab/lab");
-  const workbench = createWorkbench({ startPage: dashboardHomePage, pageLocationBrowser: browser });
+  const workbench = createWorkbench({ defaultPage: dashboardHomePage, pageLocationBrowser: browser });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
   const start = workbench.registerModule(createHomeModule());
@@ -168,8 +167,9 @@ test.each([
   "failure",
 ])("an extension URL waits for the latest catalog after a superseded initial %s", async (outcome) => {
   const loads: ReturnType<typeof Promise.withResolvers<typeof metadata>>[] = [];
+  const latestStarted = Promise.withResolvers<void>();
   const browser = browserAt("/projects/project-1/extensions/pstdio.extension-lab/lab");
-  const workbench = createWorkbench({ startPage: dashboardHomePage, pageLocationBrowser: browser });
+  const workbench = createWorkbench({ defaultPage: dashboardHomePage, pageLocationBrowser: browser });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
   const start = workbench.registerModule(createHomeModule());
@@ -179,6 +179,7 @@ test.each([
       loadMetadata: () => {
         const load = Promise.withResolvers<typeof metadata>();
         loads.push(load);
+        if (loads.length === 2) latestStarted.resolve();
         return load.promise;
       },
     }),
@@ -191,8 +192,7 @@ test.each([
     await flushMicrotasks();
     if (outcome === "success") loads[0]!.resolve(metadata);
     else loads[0]!.reject(new Error("Catalog unavailable"));
-    await flushMicrotasks();
-    await flushMicrotasks();
+    await latestStarted.promise;
     expect(loads).toHaveLength(2);
     expect(getDashboardExtensionsReadyProjectId(workbench)).toBeUndefined();
     expect(workbench.pages.store.getState().activePageId).toBeUndefined();
@@ -213,7 +213,7 @@ test.each([
 
 test("delayed boot preserves the active project recovery overlay", () => {
   const workbench = createWorkbench({
-    startPage: { kind: "page", extensionId: "pstdio", id: "tools" },
+    defaultPage: { kind: "page", extensionId: "pstdio", id: "tools" },
     resolvePagePersistenceScope: resolveDashboardPersistenceScope,
   });
   workbench.modes.registerMode({ id: "project", activate: () => undefined });

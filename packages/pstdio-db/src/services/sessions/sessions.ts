@@ -5,6 +5,7 @@ import { session_queue_entries, sessions } from "../../db/schemas.pg";
 import { createLegacyAnchorMutations, sessionColumns, writeLegacyResourceLinks } from "../legacy-resource-links";
 import { createSessionImportOperations } from "./session-import";
 import { createSessionQuery } from "./session-query";
+import { createSessionRead } from "./session-read";
 import { removeSession } from "./session-removal";
 import { type SessionStatusGuards, updateSessionStatus } from "./session-status";
 import {
@@ -78,7 +79,7 @@ type UpdateInput = Partial<
     | "usage_json"
     | "params_json"
   >
->;
+> & { contentEvent?: { kind: "reply"; id: string; textDigest: string } | { kind: "input"; id: string } };
 
 const nowTimestamp = () => new Date().toISOString();
 
@@ -98,6 +99,7 @@ const buildRecord = (input: CreateInput) => {
     agent_session_id: null,
     session_file_id: null,
     usage_json: null,
+    change_positions: null,
     original_session_id: input.original_session_id ?? null,
     cwd: input.cwd ?? null,
     params_json: input.params_json ?? null,
@@ -106,6 +108,45 @@ const buildRecord = (input: CreateInput) => {
   };
 
   return record;
+};
+
+const updateSession = async (db: DbClient, id: string, input: UpdateInput) => {
+  const { contentEvent, ...fields } = input;
+  if (contentEvent) {
+    return db.transaction(async (tx) => {
+      const [current] = await tx
+        .select({ positions: sessions.change_positions })
+        .from(sessions)
+        .where(eq(sessions.id, id))
+        .for("update");
+      if (!current) return null;
+      const previous = current.positions ?? {};
+      const positions =
+        previous[contentEvent.kind]?.id === contentEvent.id &&
+        (contentEvent.kind !== "reply" || previous.reply?.textDigest === contentEvent.textDigest)
+          ? previous
+          : {
+              ...previous,
+              [contentEvent.kind]: {
+                id: contentEvent.id,
+                ...(contentEvent.kind === "reply" && { textDigest: contentEvent.textDigest }),
+                position: 1 + Math.max(previous.reply?.position ?? 0, previous.input?.position ?? 0),
+              },
+            };
+      const [row] = await tx
+        .update(sessions)
+        .set({ ...fields, change_positions: positions, updated_at: nowTimestamp() })
+        .where(eq(sessions.id, id))
+        .returning(sessionColumns);
+      return row!;
+    });
+  }
+  const [updated] = await db
+    .update(sessions)
+    .set({ ...fields, updated_at: nowTimestamp() })
+    .where(eq(sessions.id, id))
+    .returning(sessionColumns);
+  return updated ?? null;
 };
 
 export const createSessionsDBService = (db: DbClient) => {
@@ -232,10 +273,7 @@ export const createSessionsDBService = (db: DbClient) => {
     });
   };
 
-  const get = async (id: string) => {
-    const [row] = await db.select(sessionColumns).from(sessions).where(eq(sessions.id, id));
-    return row ?? null;
-  };
+  const get = createSessionRead(db);
 
   const list = async (projectId: string, filters?: ListFilters) => {
     const conditions = [eq(sessions.project_id, projectId)];
@@ -261,14 +299,7 @@ export const createSessionsDBService = (db: DbClient) => {
     return rows;
   };
 
-  const update = async (id: string, input: UpdateInput) => {
-    const [updated] = await db
-      .update(sessions)
-      .set({ ...input, updated_at: nowTimestamp() })
-      .where(eq(sessions.id, id))
-      .returning(sessionColumns);
-    return updated ?? null;
-  };
+  const update = (id: string, input: UpdateInput) => updateSession(db, id, input);
 
   const archive = async (id: string) => {
     const [updated] = await db

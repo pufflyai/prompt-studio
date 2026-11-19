@@ -29,6 +29,7 @@ export {
   localContributionIdGrammar,
   localContributionIdPattern,
 } from "./contribution-id";
+export { dataTableImageText, readDataTableImageValue } from "./data-table-image-values";
 export { resolveDataTableComparableValue, resolveDataTableFieldKind } from "./data-table-values";
 export { applyEditingChanges, diffEditingState, rebaseEditingChanges } from "./editing-state";
 export * from "./event-reference";
@@ -90,5 +91,6 @@ export {
   WEBVIEW_HOST_CAPABILITY_VERSION,
   WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
 } from "./types/webview-capabilities";
+export type * from "./types/webview-service-query";
 export { artifactMountId, EXTENSION_EVENTS_SCOPE, RESOURCE_ACTIONS_EVENTS_SCOPE } from "./webview-protocol";
 export { workspaceCommands, workspacePages, workspaceViews } from "./workspace-refs";

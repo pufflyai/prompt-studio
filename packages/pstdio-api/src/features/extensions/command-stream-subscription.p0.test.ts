@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
+import { readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { EventBus } from "../sync/event-bus";
 import { prepareCommandSubscription } from "./command-stream-subscription";
 import { createWorkspaceContextFixture } from "./workspace-context.test-fixture";
@@ -11,6 +13,64 @@ afterEach(async () => {
   await fixture.cleanup();
 });
 const input = { project_id: "project-1", command_id: "example.context.command.inspect", body: {} };
+
+test.each(["dashboard", "cli"] as const)("%s historical stream guests refresh before completion", async (source) => {
+  const legacy = await createWorkspaceContextFixture({ publisher: "pstdio", name: "pstdio-notes" });
+  const eventBus = new EventBus();
+  const path = join(legacy.root, "extension.ts");
+  await writeFile(
+    path,
+    (await readFile(path, "utf8")).replace(
+      "export default {",
+      `export default {
+    views:[{id:"reader",ref:{kind:"view",id:"reader"},title:"Reader",body:{kind:"controls",refreshEvents:[{kind:"event",extensionId:"pstdio.pstdio-notes",id:"changed"}],query:async()=>({fields:[],values:{}})}}],`,
+    ),
+  );
+  const ready = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  let pending: Promise<void> | undefined;
+  try {
+    const snapshot = await legacy.deps.extensionRuntimeCatalog.get("project-1");
+    const command = snapshot.runtime.commands.find((entry) => entry.localId === "inspect")!;
+    command.stream = { kind: "stream" };
+    let calls = 0;
+    command.run = async (ctx) => {
+      calls++;
+      for (let i = 0; i < 2; i++)
+        await ctx.events.emit({ kind: "event", id: "changed" }, {}, { refresh: { resourceIds: ["note"] } });
+      ready.resolve();
+      await release.promise;
+    };
+    const prepared = await prepareCommandSubscription(
+      { ...legacy.deps, eventBus },
+      {
+        ...input,
+        command_id: "pstdio.pstdio-notes.command.inspect",
+        body: { source },
+      },
+    );
+    if ("error" in prepared) throw new Error(prepared.error);
+    pending = prepared.run({ aborted: false, onAbort() {}, sleep: async () => {}, write: async () => {} });
+    await ready.promise;
+    const notifications = (eventId: string) =>
+      eventBus
+        .getSince(0)
+        .filter(
+          (event) => event.table === "extension_events" && (event.data as { eventId?: string }).eventId === eventId,
+        );
+    expect(notifications("pstdio.notes.event.changed")).toHaveLength(2);
+    expect(notifications("pstdio.pstdio-notes.event.changed")).toHaveLength(2);
+    release.resolve();
+    await pending;
+    expect(notifications("pstdio.notes.event.changed")).toHaveLength(2);
+    expect(notifications("pstdio.pstdio-notes.event.changed")).toHaveLength(2);
+    expect(calls).toBe(1);
+  } finally {
+    release.resolve();
+    await pending;
+    await legacy.cleanup();
+  }
+});
 
 test("refuses non-streaming commands before starting a subscription", async () => {
   expect(await prepareCommandSubscription(fixture.deps, input)).toMatchObject({
@@ -80,6 +140,41 @@ test("a handler returning after cancellation still reports a cancelled outcome",
   cancel();
   await pending;
   expect(events).toMatchObject([{ event: "end", data: { outcome: { ok: false, code: "command_stream_cancelled" } } }]);
+});
+
+test("a historical stream command subscribes once through its canonical enabled provider", async () => {
+  const legacy = await createWorkspaceContextFixture({ publisher: "pstdio", name: "pstdio-notes" });
+  try {
+    const snapshot = await legacy.deps.extensionRuntimeCatalog.get("project-1");
+    const command = snapshot.runtime.commands.find((entry) => entry.localId === "inspect")!;
+    command.stream = { kind: "stream" };
+    let calls = 0;
+    command.run = async (ctx) => {
+      calls++;
+      await ctx.stream.write("same");
+    };
+    const prepared = await prepareCommandSubscription(legacy.deps, {
+      ...input,
+      command_id: "pstdio.pstdio-notes.command.inspect",
+    });
+    if ("error" in prepared) throw new Error(prepared.error);
+    const events: { event: string; data: unknown }[] = [];
+    await prepared.run({
+      aborted: false,
+      onAbort() {},
+      sleep: async () => {},
+      write: async (event, data) => {
+        events.push({ event, data });
+      },
+    });
+    expect(calls).toBe(1);
+    expect(events).toMatchObject([
+      { event: "chunk", data: "same" },
+      { event: "end", data: { commandId: "pstdio.notes.command.inspect", extensionId: "pstdio.notes" } },
+    ]);
+  } finally {
+    await legacy.cleanup();
+  }
 });
 
 test.each([

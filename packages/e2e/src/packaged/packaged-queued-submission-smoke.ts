@@ -17,7 +17,7 @@ export const expectPackagedQueuedSubmission = async (page: Page, sessionId: stri
     await route.fulfill({
       json: {
         commandId: sessionChatActionCommandId,
-        extensionId: "pstdio.pstdio-session-browser",
+        extensionId: "pstdio.session-browser",
         outcome: {
           ok: false,
           status: "error",
@@ -71,7 +71,7 @@ export const expectPackagedQueuedSubmission = async (page: Page, sessionId: stri
     held.resolve();
   }
   await expect(page.getByText("Message not sent", { exact: true }).filter({ visible: true })).toBeVisible();
-  await page.getByRole("button", { name: "Dismiss", exact: true }).click();
+  await page.getByRole("button", { name: "Restore draft", exact: true }).click();
   await expect(editor).toHaveText(prompt);
   await page.unroute(path);
 };

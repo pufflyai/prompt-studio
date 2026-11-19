@@ -26,7 +26,7 @@ const createRepository = (root: string) => {
       displayName: "Example tool 0",
       version: "1.0.0",
       main: "extension.ts",
-      engines: { pstdio: "^0.4.0" },
+      engines: { pstdio: "^0.4.0 || ^0.5.0" },
     }),
   );
   const commands = Array.from({ length: 50 }, (_, index) => ({
@@ -183,13 +183,16 @@ test("extension pages keep headers reachable and restore nested navigation", asy
     await expect(page).toHaveURL(listUrl);
     await row.click();
     await availableDetail.getByTestId("available-extension-install").click();
+    const installedDetail = page.getByTestId("extension-detail").filter({ visible: true });
+    await expect(installedDetail).toBeVisible();
+    await parent.click();
+    await expect(page).toHaveURL(listUrl);
     const installed = page
       .getByTestId("extension-entry")
       .filter({ visible: true })
       .filter({ has: page.getByText("Example tool 0", { exact: true }) });
     await expect(installed).toBeVisible();
     await installed.click();
-    const installedDetail = page.getByTestId("extension-detail");
     await expect(installedDetail).toBeVisible();
     const installedUrl = page.url();
     await expect(page).toHaveURL(/extensions\/detail\?resource=/);

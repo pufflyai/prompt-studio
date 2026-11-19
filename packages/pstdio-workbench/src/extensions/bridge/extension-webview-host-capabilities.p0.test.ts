@@ -6,6 +6,7 @@ const requests = {
   "performance.read": { operation: "state" },
   "performance.control": { operation: "set-enabled", enabled: true },
   "harnesses.read": {},
+  "resources.changes.observed": { receipt: null },
   "resources.actions": { operation: "list", resource: { type: "ticket", id: "one" } },
   "commands.execute": { commandId: "notes.read" },
   "commands.query": { operation: "close", owner: "owner", requestId: "read" },
@@ -27,6 +28,8 @@ const requests = {
   "extension.settings.delete": { key: "density" },
   "terminal.session": { operation: "kill", sessionId: "terminal" },
   "files.upload": { name: "note.txt", data: new Uint8Array([1]) },
+  "files.download": { name: "page.html", data: new Uint8Array([1]) },
+  "resources.actions.register": { operation: "unregister", registrationId: "49cd7198-aa2c-41c1-8080-453bff23d6e0" },
   "files.list": {},
   "files.delete": { id: "file" },
   "artifacts.read": { op: "readText", mount: "notes", path: "note.md" },
@@ -72,6 +75,39 @@ test("command execution preserves the complete outcome and validates input befor
     code: "invalid_params",
   });
   expect(executions).toBe(1);
+});
+
+test("downloads validate filenames and binary input before reaching the host", async () => {
+  const downloads: unknown[] = [];
+  const capabilities = createExtensionWebviewHostCapabilities({
+    files: {
+      download: (input) => {
+        downloads.push(input);
+      },
+      upload: () => {
+        throw new Error("Unexpected upload");
+      },
+      list: () => ({ files: [] }),
+      delete: () => {},
+    },
+  });
+  for (const data of [new Uint8Array([0, 255, 1]), new Uint8Array([2, 3]).buffer]) {
+    const input = { name: "résumé.html", mimeType: "text/html", data };
+    await capabilities["files.download"](input);
+    expect(downloads.at(-1)).toEqual(input);
+  }
+  for (const input of [
+    { name: "../page.html", data: new Uint8Array() },
+    { name: "folder\\page.html", data: new Uint8Array() },
+    { name: "", data: new Uint8Array() },
+    { name: ".", data: new Uint8Array() },
+    { name: "page.html", data: "https://example.com/page.html" },
+  ]) {
+    await expect(Promise.resolve().then(() => capabilities["files.download"](input))).rejects.toMatchObject({
+      code: "invalid_params",
+    });
+  }
+  expect(downloads).toHaveLength(2);
 });
 
 test("native workbench commands return a full rejection through the same factory", async () => {
@@ -399,4 +435,39 @@ test("text editing validates scoped operations before passing them to the host a
     Promise.resolve().then(() => capabilities["editing.text"]({ operation: "current", extensionId: "foreign.owner" })),
   ).rejects.toMatchObject({ code: "invalid_params" });
   expect(calls).toEqual([{ operation: "current" }]);
+});
+
+test("partial account services reject unavailable operations instead of resolving undefined", async () => {
+  const unexpected = async (): Promise<never> => {
+    throw new Error("Unexpected legacy account operation");
+  };
+  const legacy: NonNullable<Parameters<typeof createExtensionWebviewHostCapabilities>[0]["account"]> = {
+    status: async () => ({ login: null, features: null, cloudProjects: [], cloudProjectsLoaded: false }),
+    login: unexpected,
+    loginStatus: unexpected,
+    cancelLogin: unexpected,
+    logout: unexpected,
+    devices: unexpected,
+    renameDevice: unexpected,
+    removeDevice: unexpected,
+    resolveReturnedChanges: unexpected,
+    projectSyncStatus: unexpected,
+    retryProjectSyncSource: unexpected,
+    syncProject: unexpected,
+    stopProjectSync: unexpected,
+  };
+  const snapshot = { generation: 1, version: 1, stale: false, fetching: false, data: { login: null } };
+  const queries = { request: async () => snapshot, seeds: () => ({ owner: "owner", values: [] }) };
+  const query = { operation: "read", owner: "owner", requestId: "read", source: { service: "status" } };
+  const unsupported = { code: "unsupported", data: { capability: "account.read" } };
+  const read = (adapters: Parameters<typeof createExtensionWebviewHostCapabilities>[0], request: unknown) =>
+    Promise.resolve().then(() => createExtensionWebviewHostCapabilities(adapters)["account.read"](request));
+  await expect(read({}, { op: "status" })).rejects.toMatchObject(unsupported);
+  await expect(read({}, null)).rejects.toMatchObject(unsupported);
+  expect(await read({ accountQueries: queries }, { op: "query", query })).toEqual(snapshot);
+  await expect(read({ accountQueries: queries }, { op: "status" })).rejects.toMatchObject(unsupported);
+  expect(await read({ account: legacy }, { op: "status" })).toMatchObject({ login: null });
+  await expect(read({ account: legacy }, { op: "query", query })).rejects.toMatchObject(unsupported);
+  expect(await read({ account: legacy, accountQueries: queries }, { op: "status" })).toMatchObject({ login: null });
+  expect(await read({ account: legacy, accountQueries: queries }, { op: "query", query })).toEqual(snapshot);
 });

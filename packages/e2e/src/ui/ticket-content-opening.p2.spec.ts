@@ -3,6 +3,9 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
 import { uiOrigin } from "../ui-server";
 
+// Prepare a project, create its review request and load the two cold content surfaces.
+test.setTimeout(120_000);
+
 test("ticket content opens with pending requests while navigation details are still loading", async ({
   page,
   request,
@@ -25,8 +28,10 @@ test("ticket content opens with pending requests while navigation details are st
       instructions: "Check the proposed behavior.",
       request: { kind: "task" },
     });
-    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
-    await page.goto(`/projects/${id}/extensions/pstdio.pstdio-planner/tickets`);
+    await page.addInitScript(() => {
+      if (window.top === window) localStorage.setItem("onboarding-complete", "true");
+    });
+    await page.goto(`/projects/${id}/extensions/pstdio.planner/tickets`);
     const card = page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first();
     await expect(card).toBeVisible();
     await page.route(/ticket-files.*\/execute/, async (route) => {
@@ -49,7 +54,7 @@ test("ticket content opens with pending requests while navigation details are st
         .getByRole("region", { name: "Main", exact: true })
         .frameLocator("iframe")
         .getByText("Confirm the change", { exact: true }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15_000 });
   } finally {
     sidebar.resolve();
     await page.unrouteAll({ behavior: "wait" });

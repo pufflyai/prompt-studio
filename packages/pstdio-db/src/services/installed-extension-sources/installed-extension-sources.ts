@@ -1,11 +1,17 @@
 import { sep } from "node:path";
-import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, eq, gte, lt } from "drizzle-orm";
+import {
+  canonicalExtensionId,
+  canonicalInstallName,
+  historicalExtensionId,
+  matchesExtensionInstallName,
+} from "pstdio-api-contracts/extension-host";
 import type { DbClient } from "../../db/connection.pglite";
-import { extension_reload_events, installed_extension_sources } from "../../db/schemas.pg";
+import { installed_extension_sources } from "../../db/schemas.pg";
+import { migrateExtensionIdentities } from "../extension-identity-migration";
 
 type InstalledSourceRow = typeof installed_extension_sources.$inferSelect;
 type InstalledSourceInsert = typeof installed_extension_sources.$inferInsert;
-type ReloadEventRow = typeof extension_reload_events.$inferSelect;
 
 let lastTimestampMs = 0;
 const nowTimestamp = () => {
@@ -13,7 +19,6 @@ const nowTimestamp = () => {
   lastTimestampMs = nextTimestampMs;
   return new Date(nextTimestampMs).toISOString();
 };
-const RELOAD_EVENT_RETENTION = 100;
 
 export type RegisterInput = Omit<InstalledSourceInsert, "id" | "created_at" | "updated_at" | "status"> & {
   status?: InstalledSourceRow["status"];
@@ -36,16 +41,6 @@ export type UpdateRegistrationInput = Partial<
 > &
   UpdateLoadStateInput;
 
-export type RecordReloadInput = {
-  installed_extension_id: string;
-  previous_source_hash?: string | null;
-  next_source_hash?: string | null;
-  previous_revision?: string | null;
-  next_revision?: string | null;
-  status: ReloadEventRow["status"];
-  error_json?: ReloadEventRow["error_json"];
-};
-
 export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
   const list = async () =>
     db.select().from(installed_extension_sources).orderBy(installed_extension_sources.install_name);
@@ -56,11 +51,12 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
   };
 
   const getByInstallName = async (installName: string) => {
-    const [row] = await db
-      .select()
-      .from(installed_extension_sources)
-      .where(eq(installed_extension_sources.install_name, installName));
-    return row ?? null;
+    const rows = (await list()).filter((row) =>
+      matchesExtensionInstallName({ extensionId: row.extension_id, installName: row.install_name }, installName),
+    );
+    if (new Set(rows.map((row) => row.extension_id)).size > 1)
+      throw new Error(`Extension install name is ambiguous: ${installName}. Use its publisher-qualified ID.`);
+    return rows[0] ?? null;
   };
 
   const getBySourcePath = async (sourcePath: string) => {
@@ -88,6 +84,28 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
   };
 
   const register = async (input: RegisterInput) => {
+    await migrateExtensionIdentities(db, { extensionId: input.extension_id });
+    const extension_id = canonicalExtensionId(input.extension_id);
+    if (historicalExtensionId(extension_id) !== extension_id)
+      input = {
+        ...input,
+        extension_id,
+        install_name: matchesExtensionInstallName(
+          { extensionId: extension_id, installName: canonicalInstallName(extension_id) },
+          input.install_name,
+        )
+          ? canonicalInstallName(extension_id)
+          : input.install_name,
+        manifest_json:
+          input.manifest_json &&
+          typeof input.manifest_json.name === "string" &&
+          matchesExtensionInstallName(
+            { extensionId: extension_id, installName: canonicalInstallName(extension_id) },
+            input.manifest_json.name,
+          )
+            ? { ...input.manifest_json, name: canonicalInstallName(input.extension_id) }
+            : input.manifest_json,
+      };
     const timestamp = nowTimestamp();
     const row: InstalledSourceInsert = {
       id: crypto.randomUUID(),
@@ -101,6 +119,9 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
   };
 
   const updateLoadState = async (id: string, input: UpdateLoadStateInput) => {
+    const current = await get(id);
+    if (current?.last_error_json?.code === "extension_identity_conflict")
+      await migrateExtensionIdentities(db, { extensionId: current.extension_id });
     const timestamp = nowTimestamp();
     const [updated] = await db
       .update(installed_extension_sources)
@@ -111,6 +132,24 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
   };
 
   const updateRegistration = async (id: string, input: UpdateRegistrationInput) => {
+    const current = await get(id);
+    if (input.extension_id || current?.last_error_json?.code === "extension_identity_conflict")
+      await migrateExtensionIdentities(db, { extensionId: input.extension_id ?? current!.extension_id });
+    const owner = input.extension_id ?? current?.extension_id;
+    if (owner) {
+      const extension_id = canonicalExtensionId(owner);
+      input = { ...input, extension_id };
+      if (
+        input.manifest_json &&
+        typeof input.manifest_json.name === "string" &&
+        historicalExtensionId(extension_id) !== extension_id &&
+        matchesExtensionInstallName(
+          { extensionId: extension_id, installName: canonicalInstallName(extension_id) },
+          input.manifest_json.name,
+        )
+      )
+        input.manifest_json = { ...input.manifest_json, name: canonicalInstallName(owner) };
+    }
     const timestamp = nowTimestamp();
     const [updated] = await db
       .update(installed_extension_sources)
@@ -121,6 +160,9 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
   };
 
   const updateLoadStateIfUnchanged = async (id: string, updatedAt: string, input: UpdateLoadStateInput) => {
+    const current = await get(id);
+    if (current?.last_error_json?.code === "extension_identity_conflict")
+      await migrateExtensionIdentities(db, { extensionId: current.extension_id });
     const [updated] = await db
       .update(installed_extension_sources)
       .set({ ...input, updated_at: nowTimestamp() })
@@ -143,47 +185,6 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
     return deleted.length > 0;
   };
 
-  const recordReload = async (input: RecordReloadInput) => {
-    const row: typeof extension_reload_events.$inferInsert = {
-      id: crypto.randomUUID(),
-      installed_extension_id: input.installed_extension_id,
-      previous_source_hash: input.previous_source_hash ?? null,
-      next_source_hash: input.next_source_hash ?? null,
-      previous_revision: input.previous_revision ?? null,
-      next_revision: input.next_revision ?? null,
-      status: input.status,
-      error_json: input.error_json ?? null,
-      created_at: nowTimestamp(),
-    };
-    await db.transaction(async (tx) => {
-      await tx.insert(extension_reload_events).values(row);
-      const retained = await tx
-        .select({ id: extension_reload_events.id })
-        .from(extension_reload_events)
-        .where(eq(extension_reload_events.installed_extension_id, input.installed_extension_id))
-        .orderBy(desc(extension_reload_events.created_at))
-        .limit(RELOAD_EVENT_RETENTION);
-      const retainedIds = new Set(retained.map((event) => event.id));
-      const stale = await tx
-        .select({ id: extension_reload_events.id })
-        .from(extension_reload_events)
-        .where(eq(extension_reload_events.installed_extension_id, input.installed_extension_id));
-      const staleIds = stale.map((event) => event.id).filter((id) => !retainedIds.has(id));
-      if (staleIds.length > 0) {
-        await tx.delete(extension_reload_events).where(inArray(extension_reload_events.id, staleIds));
-      }
-    });
-    return row as ReloadEventRow;
-  };
-
-  const listReloadEvents = async (installedExtensionId: string, limit = 50) =>
-    db
-      .select()
-      .from(extension_reload_events)
-      .where(eq(extension_reload_events.installed_extension_id, installedExtensionId))
-      .orderBy(extension_reload_events.created_at)
-      .limit(limit);
-
   return {
     list,
     get,
@@ -196,7 +197,5 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
     updateRegistration,
     markStatus,
     remove,
-    recordReload,
-    listReloadEvents,
   };
 };

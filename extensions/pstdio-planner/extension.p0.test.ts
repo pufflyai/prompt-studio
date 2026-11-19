@@ -97,8 +97,8 @@ describe("pstdio planner extension contributions", () => {
     });
   });
   test("declares each native ticket view's data dependencies", () => {
-    const tickets = { extensionId: "pstdio.pstdio-planner", id: "tickets.changed", kind: "event" };
-    const plan = { extensionId: "pstdio.pstdio-planner", id: "timeline.plan.changed", kind: "event" };
+    const tickets = { extensionId: "pstdio.planner", id: "tickets.changed", kind: "event" };
+    const plan = { extensionId: "pstdio.planner", id: "timeline.plan.changed", kind: "event" };
     const linkedResources = [viewDataEvents.sessionsChanged, viewDataEvents.workspacesChanged];
     const dependencies = {
       "ticket-editor": [tickets],
@@ -132,37 +132,32 @@ describe("pstdio planner extension contributions", () => {
   test("registers the link review ticket command", () => {
     expect(command("link-review")).toMatchObject({
       title: "Link review",
-      cli: { globalAliases: [["tickets", "link-review"]] },
+      params: { id: { required: true }, url: { required: true } },
     });
+    expect(command("link-review")?.cli).toBeTruthy();
   });
   test("exposes manual planner settings commands through the CLI", () => {
     expect(command("ticket-status.update")?.cli).toEqual({
-      globalAliases: [["statuses", "update"]],
-      examples: ["pstdio pstdio.pstdio-planner ticket-status update --status-id backlog --label Backlog"],
+      examples: ["pstdio pstdio.planner ticket-status update --status-id backlog --label Backlog"],
     });
     expect(command("ticket-status.reorder")?.cli).toEqual({
-      globalAliases: [["statuses", "reorder"]],
-      examples: ['pstdio pstdio.pstdio-planner ticket-status reorder --status-ids \'["backlog","ready"]\''],
+      examples: ['pstdio pstdio.planner ticket-status reorder --status-ids \'["backlog","ready"]\''],
     });
     expect(command("ticket-tag.update")).toMatchObject({
       cli: {
-        globalAliases: [["tags", "update"]],
-        examples: ["pstdio pstdio.pstdio-planner ticket-tag update --tag-id default-priority --sort-order 0"],
+        examples: ["pstdio pstdio.planner ticket-tag update --tag-id default-priority --sort-order 0"],
       },
       params: { sortOrder: { type: "number" } },
     });
-    expect(command("ticket-tag.create-option")?.cli).toMatchObject({
-      globalAliases: [["tags", "options", "create"]],
-    });
-    expect(command("ticket-tag.update-option")?.cli).toMatchObject({
-      globalAliases: [["tags", "options", "update"]],
-    });
-    expect(command("ticket-tag.delete-option")?.cli).toMatchObject({
-      globalAliases: [["tags", "options", "delete"]],
-    });
-    expect(command("ticket-tag.apply-draft")?.cli).toMatchObject({
-      globalAliases: [["tags", "apply-draft"]],
-    });
+    for (const id of [
+      "ticket-tag.create-option",
+      "ticket-tag.update-option",
+      "ticket-tag.delete-option",
+      "ticket-tag.apply-draft",
+    ]) {
+      expect(command(id)?.cli).toBeTruthy();
+      expect(command(id)?.params).toMatchObject({ tagId: { required: true } });
+    }
   });
   test("owns planner translation bundles and localizable contribution copy", () => {
     expect(extension.defaultLocale).toBe("en");
@@ -242,7 +237,7 @@ describe("pstdio planner workspace contributions", () => {
     const worktreePath = mkdtempSync(join(tmpdir(), "planner-worktree-"));
     const repoTicketPath = join(repoPath, ticketMarkdownPath(ticket.shorthand));
     const localContent = "# Local ticket edits\n";
-    mkdirSync(join(repoPath, ".pstdio", "extension-storage", "pstdio.pstdio-planner", "tickets", ticket.shorthand), {
+    mkdirSync(join(repoPath, ".pstdio", "extension-storage", "pstdio.planner", "tickets", ticket.shorthand), {
       recursive: true,
     });
     writeFileSync(repoTicketPath, localContent);
@@ -349,8 +344,8 @@ describe("pstdio planner workspace contributions", () => {
     );
     expect(detailTarget).toEqual({
       kind: "page",
-      page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },
-      parent: { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.pstdio-planner" } },
+      page: { kind: "page", id: "ticket", extensionId: "pstdio.planner" },
+      parent: { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.planner" } },
       resource: { type: "ticket", id: "ticket-1", label: "PS-1 Ticket one" },
     });
     expect(extension.navigationItems?.find((item) => item.id === "tickets")).toMatchObject({

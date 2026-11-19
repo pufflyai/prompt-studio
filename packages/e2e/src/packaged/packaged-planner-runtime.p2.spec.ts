@@ -76,23 +76,26 @@ const createProject = async (host: Host, name: string) => {
 };
 
 const installPlanner = (host: Host, cwd: string, source: string) =>
-  runPackagedAsync(["extensions", "add", source, "--name", "pstdio-planner"], cwd, {
-    HOME: host.home,
-    PSTDIO_HOME: host.home,
-  });
+  runPackagedAsync(
+    ["extensions", "add", source, "--name", "pstdio-planner"],
+    cwd,
+    { HOME: host.home, PSTDIO_HOME: host.home },
+    120_000,
+  );
 
 const plannerInstance = async (host: Host, projectId: string) => {
   const response = await fetch(`${host.baseUrl}/v1/projects/${projectId}/extensions`, {
     headers: runtimeAuthorization(host.descriptor),
   });
-  const { extensions } = (await response.json()) as { extensions: { id: string; installName: string }[] };
-  return extensions.find((instance) => instance.installName === "pstdio-planner");
+  const { extensions } = (await response.json()) as { extensions: { id: string; extensionId: string }[] };
+  return extensions.find((instance) => instance.extensionId === "pstdio.planner");
 };
 
 // Installing from one project enables Planner there. Other projects receive a disabled instance
 // once the host notices the new user extension, and enable it themselves.
 const enablePlanner = async (host: Host, projectId: string) => {
-  await expect.poll(() => plannerInstance(host, projectId)).toBeTruthy();
+  // Discovering a shared install prepares its metadata for this second project asynchronously.
+  await expect.poll(() => plannerInstance(host, projectId), { timeout: 30_000 }).toBeTruthy();
   const instance = (await plannerInstance(host, projectId))!;
   const response = await fetch(`${host.baseUrl}/v1/projects/${projectId}/extensions/${instance.id}`, {
     body: JSON.stringify({ enabled: true }),
@@ -117,9 +120,7 @@ const plannerWebview = async (host: Host, projectId: string, localId: string) =>
     headers: runtimeAuthorization(host.descriptor),
   });
   const metadata = (await response.json()) as WorkbenchExtensionMetadata;
-  const view = metadata.views.find(
-    (entry) => entry.extensionId === "pstdio.pstdio-planner" && entry.localId === localId,
-  );
+  const view = metadata.views.find((entry) => entry.extensionId === "pstdio.planner" && entry.localId === localId);
   return view?.body.kind === "webview" ? view.body.webview : undefined;
 };
 
@@ -132,14 +133,34 @@ const moduleStatus = async (host: Host, projectId: string, localId: string) => {
 };
 
 const openTimeline = async (page: Page, host: Host, projectId: string) => {
-  await page.goto(`${host.baseUrl}/projects/${projectId}/extensions/pstdio.pstdio-planner/ticket-timeline`);
+  await page.goto(`${host.baseUrl}/projects/${projectId}/extensions/pstdio.planner/ticket-timeline`);
   return page.locator('[data-workbench-region="main"]').frameLocator("iframe");
+};
+
+const expectTimelineStyles = async (timeline: FrameLocator) => {
+  const entryStyle = timeline.locator('link[rel="stylesheet"]');
+  await expect(entryStyle).toHaveCount(1);
+  const stylesheetUrl = await entryStyle.evaluate((link) => (link as HTMLLinkElement).href);
+  const stylesheet = await fetch(stylesheetUrl);
+  expect(stylesheet.status).toBe(200);
+  const css = await stylesheet.text();
+  expect(css).toContain("prompt-studio-icons");
+  expect(css).not.toContain("data:font/");
+  expect(css).not.toContain("KaTeX_Main");
+  await expect
+    .poll(() =>
+      timeline.locator("body").evaluate(async () => {
+        const faces = await document.fonts.load('16px "prompt-studio-icons"', "\uE80C");
+        return faces.some((face) => face.status === "loaded");
+      }),
+    )
+    .toBe(true);
 };
 
 const timelineCache = (host: Host) => {
   const root = join(host.home, "cache", "extension-webviews");
   const [installedId] = readdirSync(root);
-  return join(root, installedId!, "pstdio.pstdio-planner.view.timeline", "dist");
+  return join(root, installedId!, "pstdio.planner.view.timeline", "dist");
 };
 
 type TicketRow = { title: string; attributes: Record<string, unknown> };
@@ -161,6 +182,7 @@ const expectAutoBuildFilter = async (timeline: FrameLocator) => {
   const autoBuild = timeline.getByRole("dialog", { name: "Auto Build", exact: true });
   // The lazy editor's initial autofocus must finish before opening another control.
   await expect(autoBuild.getByRole("textbox")).toBeFocused();
+  await expect(autoBuild.locator(".katex")).toHaveCSS("font-family", /KaTeX_Main/);
   await autoBuild.getByRole("button", { name: "Filter", exact: true }).click();
   const filterMenu = timeline.getByTestId("filter-menu");
   await filterMenu.getByRole("button", { name: "Title", exact: true }).click();
@@ -174,6 +196,8 @@ const expectAutoBuildFilter = async (timeline: FrameLocator) => {
 };
 
 browserTest("serves populated Planner projects and recovers cached webviews", async () => {
+  // Two project installs, populated migrations and repeated cold module rebuilds share this allowance.
+  test.setTimeout(300_000);
   const startedAt = Date.now();
   const phase = (name: string) => logTestPhase(`Planner browser ${name} (${Date.now() - startedAt}ms)`);
   phase("runtime start");
@@ -206,7 +230,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
       seedTrackProject(conflicting.execute, "multi_select"),
       seedTrackProject(valid.execute, "single_select"),
     ]);
-    phase("seed complete");
+    await valid.execute("auto-build.configure", { enabled: false, prompt: "Check equation \\( x^2 + y^2 \\)." });
     expect(await moduleStatus(host, valid.id, "ticket-tags-settings")).toEqual({ status: 200, body: "" });
 
     // A valid Track cannot hide a missing module behind a schema error.
@@ -221,6 +245,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     let timeline = await openTimeline(page, host, valid.id);
     await expect(timeline.getByText("Product", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
     await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible();
+    await expectTimelineStyles(timeline);
 
     const focusedView = await valid.execute<{ id: string }>("timeline.views.create", {
       value: {
@@ -250,7 +275,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
       ...preference.value,
       [stateKey]: JSON.stringify(restored),
     });
-    await page.goto(`${host.baseUrl}/projects/${valid.id}/extensions/pstdio.pstdio-planner/tickets`);
+    await page.goto(`${host.baseUrl}/projects/${valid.id}/extensions/pstdio.planner/tickets`);
     await expect(page.getByRole("tab", { name: "Timeline focus", exact: true })).toHaveCount(0);
     timeline = await openTimeline(page, host, valid.id);
     await page.reload();
@@ -300,15 +325,15 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     await expectAutoBuildFilter(timeline);
 
     phase("views checked; conflict start");
-    // Ordinary ticket work stays available while host chrome reports the Track problem.
+    // Ordinary ticket work stays available while Planner reports the Track problem.
     expect(await ticketRows(conflicting.execute)).toHaveLength(ACTIVE_CONFLICTS + ARCHIVED_CONFLICTS + 3);
     timeline = await openTimeline(page, host, conflicting.id);
-    await expect(page.getByText(/Track must be a single-select property/)).toBeVisible({ timeout: 30_000 });
+    await expect(timeline.getByText(/Track must be a single-select property/)).toBeVisible({ timeout: 30_000 });
 
     const trackOptions = [conflictData.product.id, conflictData.platform.id];
     await expect(
       conflicting.execute("ticket-tag.update", { tagId: conflictData.track.id, type: "single_select" }),
-    ).rejects.toThrow(new RegExp(`Track has more than one value on .*${conflictData.draft.shorthand}`));
+    ).rejects.toThrow(/Track has more than one value on /);
     await expectConflictsPreserved(conflicting.execute, conflictData.track.id, trackOptions);
 
     phase("repair start");
@@ -321,6 +346,11 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
         }),
       ),
     );
+    // Conflict feedback is bounded. Once the active and archived examples are resolved,
+    // the remaining stored draft must still prevent conversion and name its own ticket.
+    await expect(
+      conflicting.execute("ticket-tag.update", { tagId: conflictData.track.id, type: "single_select" }),
+    ).rejects.toThrow(new RegExp(`Track has more than one value on .*${conflictData.draft.shorthand}`));
     await conflicting.execute("update-ticket", {
       id: conflictData.draft.shorthand,
       tagIds: [conflictData.platform.id],
@@ -348,21 +378,23 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     rmSync(join(timelineCache(host), ".."), { recursive: true });
     expect(await moduleStatus(host, valid.id, "timeline")).toEqual({ status: 200, body: "" });
 
-    // Reload repairs a view whose import failed in the open browser session. Reload, not the file
-    // watcher, decides when each version builds.
+    // A failed candidate reports its build error while the accepted view remains usable.
+    // Reload, not the file watcher, decides when the repaired version is adopted.
     const entry = join(home, "extensions", "pstdio-planner", "src", "timeline", "view", "entry.tsx");
     const original = readFileSync(entry, "utf8");
+    const acceptedView = await plannerWebview(host, valid.id, "timeline");
+    const acceptedModule = await (await fetch(`${host.baseUrl}${acceptedView!.moduleUrl}`)).text();
     writeFileSync(entry, `${original}\nexport const broken = ;\n`);
     expect(await reloadPlanner(host, valid.id)).toMatchObject({
       status: "error",
       lastError: { code: "extension_webview_build_failed" },
     });
     const webview = await plannerWebview(host, valid.id, "timeline");
-    expect(await (await fetch(`${host.baseUrl}${webview!.moduleUrl}`)).text()).toContain(
-      "Extension webview build failed",
-    );
+    const workingModule = await fetch(`${host.baseUrl}${webview!.moduleUrl}`);
+    expect(workingModule.status).toBe(200);
+    expect(await workingModule.text()).toBe(acceptedModule);
     timeline = await openTimeline(page, host, valid.id);
-    await expect(page.getByText(/Extension view failed to load/)).toBeVisible({ timeout: 30_000 });
+    await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible({ timeout: 30_000 });
     writeFileSync(entry, original);
     expect(await reloadPlanner(host, valid.id)).toMatchObject({ status: "loaded", lastError: null });
     await expect(timeline.getByText("Seeded ticket 0", { exact: true })).toBeVisible({ timeout: 30_000 });

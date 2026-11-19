@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import type { ChatAttachment, ChatQueuedRequest } from "@pstdio/sdk/extensions";
+import type { ChatAttachment, ChatQueuedRequest, ChatRendererSnapshot } from "@pstdio/sdk/extensions";
 import { type ChatLinkHandler, ChatPanel } from "@pstdio/ui/chat-ui";
 import { type ComponentProps, type ComponentType, useState, useSyncExternalStore } from "react";
 import { visibleChatDraftAttachments } from "../../../extensions/contributions/chat-pending-submission";
@@ -14,19 +14,22 @@ import {
   uploadNativeChatAttachments,
 } from "./native-chat-attachments";
 import {
-  NativeChatApproval,
   NativeChatControls,
   NativeChatHarnessControls,
+  nativeChatApproval,
   nativeChatCommands,
   nativeChatDecision,
 } from "./native-chat-controls";
 import type { NativeChatHostProps, NativeChatHostServices } from "./native-chat-host";
 import { findQueuedChatRequest, queuedChatDraft } from "./native-chat-queue";
-import { NativeChatNotices } from "./native-chat-status";
+import { NativeChatErrors, NativeChatNotices } from "./native-chat-status";
 import { NativeChatWorkspace } from "./native-chat-workspace";
+import { useNativeChatObservation } from "./use-native-chat-observation";
 import { type NativeChatPresentation, useNativeChatPresentation } from "./use-native-chat-presentation";
 
 interface NativeChatViewProps extends NativeChatHostServices {
+  workbench?: import("../../../core").WorkbenchModuleContext;
+  resource?: import("@pstdio/sdk/extensions").ResourceRef;
   Host?: ComponentType<NativeChatHostProps>;
   extensionId?: string;
   session: ChatSession;
@@ -42,8 +45,42 @@ interface NativeChatViewProps extends NativeChatHostServices {
   renderParamField?: CommandParamFieldRenderer;
 }
 
-const accountBlocksSubmission = (account: NativeChatHostServices["account"], text: string) =>
-  Boolean(account?.blocked && !account.isCommand(text));
+interface NativeChatComposerAvailability {
+  conversation: ChatRendererSnapshot;
+  account?: NativeChatHostServices["account"];
+  text: string;
+  sending: boolean;
+  uploading: boolean;
+  editingQueue: boolean;
+}
+
+const nativeChatComposerAvailability = (props: NativeChatComposerAvailability) => {
+  const { conversation, account, text, sending, uploading, editingQueue } = props;
+  const composerRequestsDisabled = Boolean(conversation.readOnly || account?.progress);
+  const inputDisabled = sending || uploading;
+  return {
+    inputDisabled,
+    composerRequestsDisabled,
+    showAgentQuestionAlongsideDraft: Boolean(
+      account?.progress && !conversation.readOnly && !editingQueue && !conversation.approval,
+    ),
+    agentQuestionSubmitDisabled: Boolean(account?.blocked || account?.progress),
+    submitDisabled:
+      composerRequestsDisabled ||
+      conversation.submitDisabled ||
+      (editingQueue && conversation.queueReadOnly) ||
+      inputDisabled ||
+      Boolean(account?.blocked && !account.isCommand(text)),
+  };
+};
+
+const nativeChatAttachmentHandlers = (readOnly: boolean | undefined, upload: (files: File[]) => Promise<void>) =>
+  readOnly
+    ? {}
+    : {
+        onAttachFiles: (files: File[]) => void upload(files).catch(() => undefined),
+        onAttachText: nativeChatTextAttachment(upload),
+      };
 
 const PassthroughChatHost = ({ children }: NativeChatHostProps) => children({});
 
@@ -73,8 +110,9 @@ const NativeChatContent = (props: NativeChatViewProps) => {
 
 const NativeChatConversation = (props: NativeChatViewProps) => {
   const { session, conversationKey, renderParamField } = props;
-  const state = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot);
+  const state = useSyncExternalStore(session.subscribeToView, session.getSnapshot, session.getSnapshot);
   const { conversation, draft, messages, queuedFollowUps, pending, loading, initializing, sending } = state;
+  const observation = useNativeChatObservation(props, state);
   const run: ChatSession["run"] = (action) => runNativeChatAction(session, action, props.action, Boolean(selected));
   const [uploading, setUploading] = useState(0);
   const [selected, setSelected] = useState<ChatQueuedRequest | null>(null);
@@ -120,6 +158,7 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
     ? (messageId: string) => run({ type: "fork", messageId }).then(() => undefined)
     : undefined;
   const Host = props.Host ?? PassthroughChatHost;
+  const approval = nativeChatApproval(conversation, run, session.reportError);
   return (
     <Host
       session={session}
@@ -129,6 +168,14 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
       linkHandler={props.linkHandler}
     >
       {(host) => {
+        const availability = nativeChatComposerAvailability({
+          conversation,
+          account: host.account,
+          text: draft.text,
+          sending,
+          uploading: uploading > 0,
+          editingQueue: Boolean(selected),
+        });
         const controlProps = {
           run,
           reconnect: session.reconnect,
@@ -143,6 +190,8 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
         return (
           <ChatPanel
             conversationKey={conversationKey}
+            onVisibleMessageIdsChange={observation.onVisibleMessageIdsChange}
+            onVisibleQuestionChange={observation.onVisibleQuestionChange}
             linkHandler={host.linkHandler ?? props.linkHandler}
             messages={host.messages ?? messages}
             historyMessages={state.historyMessages}
@@ -161,22 +210,18 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
             onChatInputChange={(text) => session.changeDraft({ text })}
             streaming={conversation.streaming}
             streamingStartedAt={conversation.streamingStartedAt}
-            inputDisabled={sending || conversation.readOnly || uploading > 0 || Boolean(host.account?.progress)}
-            submitDisabled={
-              conversation.submitDisabled ||
-              Boolean(selected && conversation.queueReadOnly) ||
-              sending ||
-              uploading > 0 ||
-              accountBlocksSubmission(host.account, draft.text)
-            }
+            {...availability}
             readOnlyQueue={conversation.readOnly || conversation.queueReadOnly}
             queueSteeringUnavailableReason={conversation.queueSteeringUnavailableReason}
-            onSubmitMessage={nativeChatInputHandler({
-              account: host.account,
-              session,
-              run,
-              draft: { attachments, values },
-            })}
+            onSubmitMessage={(text, files, questionResponse) =>
+              approval && questionResponse && questionResponse.callId === approval.prompt.callId
+                ? approval.answer(questionResponse)
+                : nativeChatInputHandler({ account: host.account, session, run, draft: { attachments, values } })(
+                    text,
+                    files,
+                    questionResponse,
+                  )
+            }
             onInterrupt={
               conversation.streaming && !conversation.readOnly
                 ? () => {
@@ -184,8 +229,10 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
                   }
                 : undefined
             }
-            approvalPrompt={<NativeChatApproval run={run} conversation={conversation} />}
-            chatInputCommands={nativeChatCommands(conversation, host.account, run, values)}
+            chatInputQuestionPrompt={approval?.prompt}
+            chatInputCommands={
+              availability.composerRequestsDisabled ? [] : nativeChatCommands(conversation, host.account, run, values)
+            }
             composerDecision={nativeChatDecision(
               conversation,
               <NativeChatHarnessControls {...controlProps} />,
@@ -205,11 +252,9 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
               />
             }
             actions={<NativeChatControls {...controlProps} />}
+            composerHeader={<NativeChatErrors state={state} session={session} />}
             conversationNotices={<NativeChatNotices host={host} state={state} session={session} />}
-            onAttachFiles={(files) => {
-              void upload(files).catch(() => undefined);
-            }}
-            onAttachText={nativeChatTextAttachment(upload)}
+            {...nativeChatAttachmentHandlers(conversation.readOnly, upload)}
             attachmentActions={
               <NativeChatAttachmentActions disabled={Boolean(conversation.readOnly) || uploading > 0} upload={upload} />
             }

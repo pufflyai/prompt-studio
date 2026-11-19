@@ -32,6 +32,7 @@ export {
   createWorkbenchWebviewHostCapabilities,
 } from "./bridge/webview-host-capabilities";
 export { resolveWebviewPageProps } from "./bridge/webview-page-props";
+export { createWebviewServiceQueryAdapter } from "./bridge/webview-service-queries";
 export { createWorkbenchExtensionChatRendererOwners } from "./contributions/chat-renderer-contributions";
 export { registerWorkbenchExtensionCommandPaletteResources } from "./contributions/command-palette-resource-contributions";
 export {

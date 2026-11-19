@@ -127,6 +127,7 @@ export type PerformanceSnapshot =
   | (Omit<PerformanceSnapshotV1, "version"> & { version: 2; capture: PerformanceCapture });
 
 export type {
+  PerformanceControlOwner,
   PerformanceControlRequest,
   PerformanceDiagnosticsAdapter,
   PerformanceMonitoringState,

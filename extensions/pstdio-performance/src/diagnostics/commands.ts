@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { hostname } from "node:os";
 import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
+import { captureArmedProfile } from "./armed-profile";
 import { diagnosticsChanged } from "./events";
 import { captureFiles, diagnosticDirectory, missingCapture } from "./files";
 import { captureProfile } from "./profile";
@@ -20,7 +21,7 @@ export const readDiagnostic = async (ctx: Context, id: string, directory = diagn
   const run = record.automationId ? await ctx.automation.get(record.automationId) : undefined;
   if (run?.finishedAt && !record.finishedAt) record = await files.update(id, { finishedAt: run.finishedAt });
   const hasResult = await files.hasResult(id);
-  let status: DiagnosticView["status"] = hasResult ? "succeeded" : "unavailable";
+  let status: DiagnosticView["status"] = hasResult && (!record.armed || record.summary) ? "succeeded" : "unavailable";
   if (record.admissionError && !hasResult) status = "failed";
   if (diagnosticRuntime.active === id) status = "running";
   if (run) status = run.status;
@@ -65,12 +66,15 @@ export const createDiagnosticCommands = (directory = diagnosticDirectory()) => {
           admissionError: undefined,
         });
         await changed(ctx);
-        const result = await captureProfile({
-          id,
-          kind: record.kind,
-          durationMs: record.seconds * 1000,
-          signal: ctx.signal,
-        });
+        const result = record.armed
+          ? await captureArmedProfile({
+              id,
+              durationMs: record.armed.minutes * 60_000,
+              thresholdCpuPercent: record.armed.cpuPercent,
+              signal: ctx.signal,
+              checkpoint: (data) => files.writeResult(id, data),
+            })
+          : await captureProfile({ id, kind: record.kind, durationMs: record.seconds * 1000, signal: ctx.signal });
         ctx.signal?.throwIfAborted();
         await files.writeResult(id, result.data);
         await files.update(id, { summary: result.summary });
@@ -82,6 +86,41 @@ export const createDiagnosticCommands = (directory = diagnosticDirectory()) => {
       }
     },
   });
+
+  const startDiagnostic = async (ctx: Context, input: Pick<DiagnosticRecord, "kind" | "seconds" | "armed">) => {
+    const files = filesOf(ctx, directory);
+    await listDiagnostics(ctx, directory);
+    const record: DiagnosticRecord = {
+      id: randomUUID(),
+      projectId: ctx.projectId!,
+      createdAt: new Date().toISOString(),
+      ...input,
+    };
+    await files.create(record);
+    const run = await ctx.automation
+      .enqueue({
+        command: worker.ref,
+        input: { params: { id: record.id } },
+        key: `diagnostic:${record.id}`,
+      })
+      .catch(async (error: unknown) => {
+        await files.update(record.id, {
+          finishedAt: new Date().toISOString(),
+          admissionError: error instanceof Error ? error.message : String(error),
+        });
+        await files.prune();
+        await changed(ctx);
+        throw error;
+      });
+    try {
+      await files.update(record.id, { automationId: run.id });
+    } catch (error) {
+      await ctx.automation.cancel(run.id);
+      throw error;
+    }
+    await changed(ctx);
+    return readDiagnostic(ctx, record.id, directory);
+  };
 
   const captureId = { id: params.text({ label: l10n("diagnostics.params.id", "Capture ID"), required: true }) };
 
@@ -105,39 +144,27 @@ export const createDiagnosticCommands = (directory = diagnosticDirectory()) => {
         if (kind !== "cpu" && kind !== "coverage") throw new Error("Evidence must be cpu or coverage.");
         if (!Number.isInteger(seconds) || seconds < 1 || seconds > 60)
           throw new Error("Capture duration must be an integer from 1 to 60 seconds.");
-        const files = filesOf(ctx, directory);
-        await listDiagnostics(ctx, directory);
-        const record: DiagnosticRecord = {
-          id: randomUUID(),
-          projectId: ctx.projectId!,
-          kind: kind as DiagnosticKind,
-          seconds,
-          createdAt: new Date().toISOString(),
-        };
-        await files.create(record);
-        const run = await ctx.automation
-          .enqueue({
-            command: worker.ref,
-            input: { params: { id: record.id } },
-            key: `diagnostic:${record.id}`,
-          })
-          .catch(async (error: unknown) => {
-            await files.update(record.id, {
-              finishedAt: new Date().toISOString(),
-              admissionError: error instanceof Error ? error.message : String(error),
-            });
-            await files.prune();
-            await changed(ctx);
-            throw error;
-          });
-        try {
-          await files.update(record.id, { automationId: run.id });
-        } catch (error) {
-          await ctx.automation.cancel(run.id);
-          throw error;
-        }
-        await changed(ctx);
-        return readDiagnostic(ctx, record.id, directory);
+        return startDiagnostic(ctx, { kind: kind as DiagnosticKind, seconds });
+      },
+    }),
+    "diagnostics.arm": defineCommand({
+      id: "diagnostics.arm",
+      title: l10n("diagnostics.commands.arm", "Record the next backend CPU spike"),
+      cli: true,
+      params: {
+        cpuPercent: params.number({
+          label: l10n("diagnostics.params.cpuPercent", "CPU threshold (% of one core, default 60)"),
+        }),
+        minutes: params.number({
+          label: l10n("diagnostics.params.minutes", "Watch duration (1–1440 minutes, default 60)"),
+        }),
+      },
+      async run(ctx, { cpuPercent = 60, minutes = 60 }) {
+        if (!Number.isFinite(cpuPercent) || cpuPercent <= 0 || cpuPercent > 10_000)
+          throw new Error("CPU threshold must be greater than zero and at most 10000%.");
+        if (!Number.isInteger(minutes) || minutes < 1 || minutes > 1440)
+          throw new Error("Watch duration must be an integer from 1 to 1440 minutes.");
+        return startDiagnostic(ctx, { kind: "cpu", seconds: 30, armed: { cpuPercent, minutes } });
       },
     }),
     "diagnostics.list": defineCommand({

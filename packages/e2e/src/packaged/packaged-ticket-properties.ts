@@ -26,7 +26,7 @@ export const expectImmediateTicketProperty = async (
     await route.continue();
   });
   try {
-    await page.goto(`${baseUrl}/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
+    await page.goto(`${baseUrl}/projects/${projectId}/extensions/pstdio.planner/tickets`);
     const card = page.getByTestId("renderer-card").filter({ has: page.getByText(ticket.shorthand, { exact: true }) });
     await card.getByRole("button", { name: "Priority", exact: true }).click();
     await page.getByRole("menuitemradio", { name: "High", exact: true }).click();

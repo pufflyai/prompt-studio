@@ -61,13 +61,14 @@ export const ActiveWorkInWorkbench: Story = {
 };
 export const Recovery: Story = {
   id: "patterns-desktop-lifecycle--recovery",
+  description: "An error icon and message stay visible with the recovery actions supplied by the runtime.",
   args: {
     state: {
       kind: "recovery",
       error: {
         code: "pglite_recovery_failure",
         message: "Prompt Studio could not open its database safely.",
-        actions: ["retry", "open_logs", "copy_diagnostics", "quit"],
+        actions: ["retry", "open_logs", "quit"],
       },
     },
   },
@@ -88,7 +89,7 @@ export const LongRecoveryDetails: Story = {
           (_, index) =>
             `Startup log ${index}: ENOENT: /project/.pstdio/extensions/example/src/workbench/src/views/notebook.tsx`,
         ).join("\n"),
-        actions: ["retry", "open_logs", "copy_diagnostics", "quit"],
+        actions: ["retry", "open_logs", "quit"],
       },
     },
   },

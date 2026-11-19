@@ -6,9 +6,9 @@ import { createPackagedHome, launchPackagedApp } from "./packaged-app-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
 const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
-const homePath = dirname(fileURLToPath(import.meta.resolve("pstdio-home/package.json")));
-const performancePath = dirname(fileURLToPath(import.meta.resolve("pstdio-performance/package.json")));
-const sessionsPath = dirname(fileURLToPath(import.meta.resolve("pstdio-session-browser/refs")));
+const homePath = dirname(fileURLToPath(import.meta.resolve("home/package.json")));
+const performancePath = dirname(fileURLToPath(import.meta.resolve("performance/package.json")));
+const sessionsPath = dirname(fileURLToPath(import.meta.resolve("session-browser/refs")));
 const preparedSources = JSON.parse(process.env.E2E_EXTENSION_SOURCES ?? "{}") as Record<string, string>;
 const benchmarkExtension = (installName: string, fallback: string) => ({
   installName,
@@ -27,12 +27,18 @@ type MonitoringBridge = {
 // measures with monitoring off launches without it.
 export const launchProject = async (
   name: string,
-  options: { monitoring?: boolean; webview?: boolean; harness?: boolean } = {},
+  options: {
+    monitoring?: boolean;
+    webview?: boolean;
+    harness?: boolean;
+    extraExtension?: { installName: string; source: string };
+  } = {},
 ) => {
   const home = createPackagedHome();
   const app = await launchPackagedApp(home, {
     PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
       defaultExtensions: [
+        ...(options.extraExtension ? [options.extraExtension] : []),
         ...(options.harness ? [benchmarkExtension("workbench-fixture", fixturePath)] : []),
         ...(options.webview
           ? [{ source: join(fixturePath, "fixtures/webview-host"), installName: "webview-host" }]
@@ -58,6 +64,8 @@ export const readSnapshot = (page: Page) =>
 // The Performance extension's status meter and the details view it opens.
 export const performanceMeter = (page: Page) =>
   page.frameLocator('iframe[title="Performance"]:visible').getByTestId("performance-status-item");
+export const performanceTrigger = (page: Page) =>
+  page.locator("footer").getByRole("button", { name: "Performance", exact: true });
 export const performanceDetails = (page: Page) =>
   page.frameLocator('iframe[title="Performance details"]').getByTestId("performance-popover");
 

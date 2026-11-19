@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { workspacePages } from "@pstdio/sdk/extensions";
+
 import { createMemoryStorage } from "@pstdio/sdk/testing";
-import { makeCommandArgs } from "./command-context.fixture";
+import { workspaceArgs } from "./archive-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { listTicketFilesTreeCommand } from "./ticket-files";
 
 const treeParams = (ticket: { id: string; shorthand: string }) => ({
   renderer: {
-    rendererId: "pstdio.pstdio-planner.view.ticket-files",
+    rendererId: "pstdio.planner.view.ticket-files",
     resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
   },
 });
@@ -15,14 +15,14 @@ const treeParams = (ticket: { id: string; shorthand: string }) => ({
 describe("ticket files tree empty sections", () => {
   test("keeps creation available while hiding empty linked-resource groups", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...(await workspaceArgs({ storage, params: { title: "Ticket" } })));
 
     const sections = await listTicketFilesTreeCommand.run(
-      ...makeCommandArgs({
+      ...(await workspaceArgs({
         storage,
         params: treeParams(ticket),
         overrides: { workspaces: { list: async () => [] } },
-      }),
+      })),
     );
 
     expect(sections.map((section) => section.id)).toEqual(["ticket"]);
@@ -31,19 +31,49 @@ describe("ticket files tree empty sections", () => {
 });
 
 describe("ticket files tree workspace metadata", () => {
+  test.each([
+    false,
+    true,
+  ])("shows only explicit workspace links when the default folder is linked: %s", async (linked) => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(...(await workspaceArgs({ storage, params: { title: "Ticket" } })));
+    const home = {
+      id: "project-folder",
+      name: "Project folder",
+      is_default: true,
+      provider_id: "pstdio.root",
+      root_path: "/tmp/project",
+      anchors_json: linked ? [{ type: "ticket", id: ticket.id }] : [],
+    };
+    const sections = await listTicketFilesTreeCommand.run(
+      ...(await workspaceArgs({
+        storage,
+        params: treeParams(ticket),
+        overrides: { workspaces: { list: async () => [home], getDefault: async () => home } },
+      })),
+    );
+    const section = sections.find(({ id }) => id === "workspaces");
+    if (linked) {
+      expect(section?.nodes.map(({ id }) => id)).toEqual(["workspace-project-folder"]);
+    } else {
+      expect(section).toBeUndefined();
+    }
+  });
+
   test("adds workspace metadata to ticket-linked workspace resource nodes", async () => {
     const storage = createMemoryStorage();
-    const parent = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Parent" } }));
+    const parent = await createTicketCommand.run(...(await workspaceArgs({ storage, params: { title: "Parent" } })));
     const ticket = await createTicketCommand.run(
-      ...makeCommandArgs({ storage, params: { title: "Child", parentId: parent.id } }),
+      ...(await workspaceArgs({ storage, params: { title: "Child", parentId: parent.id } })),
     );
 
     const sections = await listTicketFilesTreeCommand.run(
-      ...makeCommandArgs({
+      ...(await workspaceArgs({
         storage,
         params: treeParams(ticket),
         overrides: {
           workspaces: {
+            getDefault: async () => ({ id: "unlinked-project-folder", is_default: true, provider_id: "pstdio.root" }),
             list: async () => [
               {
                 id: "ws-1",
@@ -57,13 +87,15 @@ describe("ticket files tree workspace metadata", () => {
             ],
           },
         },
-      }),
+      })),
     );
 
-    expect(sections.find((section) => section.id === "workspaces")?.nodes[0]).toMatchObject({
+    const workspaceNodes = sections.find((section) => section.id === "workspaces")?.nodes;
+    expect(workspaceNodes).toHaveLength(1);
+    expect(workspaceNodes?.[0]).toMatchObject({
       target: {
         kind: "page",
-        page: workspacePages.workspace,
+        page: { kind: "page", extensionId: "example.reader", id: "inspect" },
         resource: {
           metadata: {
             workspaceId: "ws-1",
@@ -81,7 +113,7 @@ describe("ticket files tree workspace metadata", () => {
                   label: `${parent.shorthand} Parent`,
                   shorthand: parent.shorthand,
                   metadata: {
-                    resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+                    resourceParent: { type: "view", viewId: "pstdio.planner.view.tickets" },
                   },
                 },
               },

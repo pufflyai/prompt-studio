@@ -1,5 +1,7 @@
 import { Box, Center, Text } from "@chakra-ui/react";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
+import { sizesToContentHeight } from "pstdio-extensions/bridge/contract";
+import { getRuntimeCollections } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { ExtensionWebviewFrame } from "@/shared/extensions/components/extension-webview-frame";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
@@ -60,7 +62,7 @@ export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput })
   let sizing = input.sizing;
   if (status) sizing = "content-width";
   if (embeddedSettings) sizing = "content-height";
-  const contentHeight = sizing === "content-height";
+  const contentHeight = sizesToContentHeight(sizing);
 
   return (
     <Box position="relative" w={status ? "max-content" : "full"} h={contentHeight ? "auto" : "full"} minH="0">
@@ -81,7 +83,7 @@ export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput })
           placement={input.instance}
           textTarget={input.textTarget}
           terminal={input.workbench.terminal}
-          title={resolveLocalizableString(view.title, view.extensionId)}
+          title={resolveLocalizableString(view.title, view.extensionId, undefined, getRuntimeCollections(), projectId)}
           webview={webview}
           webviewId={view.id}
           slotKind={slotKind}

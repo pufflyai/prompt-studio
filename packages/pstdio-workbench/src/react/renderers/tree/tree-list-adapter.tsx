@@ -1,9 +1,10 @@
-import { Badge, Box, Spinner } from "@chakra-ui/react";
+import { Box, Spinner } from "@chakra-ui/react";
 import {
   resolveFileIconElement,
   Tooltip,
   type TreeListActionMenuItem,
   type TreeListNode,
+  TreeRowTags,
   useFileIconThemePreference,
 } from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
@@ -21,6 +22,8 @@ import {
 } from "../../../core/registries/navigation/navigation-tree-node-source";
 import { WorkbenchShortcutHint } from "../../keybindings/shortcut-hint";
 import { createWorkbenchResourceActions } from "../../menus/resource-actions";
+import { ActivityDot } from "../../resource-changes/activity-dot";
+import { resourceChangesFor } from "../../resource-changes/change-store";
 import { WorkbenchIcon } from "../../shared/icon";
 import { createTreeActionItems, createTreeContextMenuItems, type TreeActionParamsRequest } from "./tree-actions";
 
@@ -80,8 +83,16 @@ const resolveTreeNodeIcon = (node: TreeNode): ReactNode | undefined => {
     icon = node.iconElement as ReactNode;
   } else if (node.fileName) {
     icon = <NativeTreeFileIcon fileName={node.fileName} />;
-  } else if (node.icon) {
-    icon = <WorkbenchIcon name={node.icon} />;
+  } else if (node.resource?.icon || node.icon) {
+    icon = (
+      <WorkbenchIcon
+        name={node.resource?.icon ?? node.icon}
+        color={node.resource?.iconColor ?? node.iconColor}
+        role={node.resource?.iconLabel ? "img" : undefined}
+        aria-label={node.resource?.iconLabel}
+        aria-hidden={node.resource?.iconLabel ? undefined : true}
+      />
+    );
   }
   return icon === undefined ? undefined : wrapTreeNodeIcon(icon, node.iconTooltip);
 };
@@ -94,15 +105,10 @@ const resolveTreeNodeResource = (node: TreeNode): ResourceRef | undefined => {
   if (node.resource) return node.resource;
   return undefined;
 };
+
 const resolveTreeNodeEndContent = (node: TreeNode, resource: ResourceRef | undefined) => {
   if (node.endContent !== undefined) return node.endContent as ReactNode;
-  if (node.badge) {
-    return (
-      <Badge size="sm" variant="subtle" colorPalette={node.badge.color ?? "gray"} flexShrink={0}>
-        {node.badge.label}
-      </Badge>
-    );
-  }
+  if (node.badge || node.tags?.length) return <TreeRowTags tags={node.tags} badge={node.badge} />;
   const additions = resource?.metadata?.diffAdditions;
   const deletions = resource?.metadata?.diffDeletions;
   if (resource?.type !== "workspace" || typeof additions !== "number" || typeof deletions !== "number") {
@@ -188,7 +194,7 @@ const toTreeListNode = (
     label: node.label,
     description: node.description,
     icon: resolveTreeNodeIcon(node),
-    iconColor: node.iconColor,
+    iconColor: node.resource?.iconColor ?? node.iconColor,
     tone: node.tone,
     tooltip: node.tooltip,
     disabled: node.disabled,
@@ -208,7 +214,16 @@ const toTreeListNode = (
       onRequestParams: context.onRequestParams,
     }),
     get endContent() {
-      const existing = resolveTreeNodeEndContent(node, resource);
+      const original = resolveTreeNodeEndContent(node, resource);
+      const existing =
+        resource && resourceChangesFor(context.workbench)?.tracks(resource) ? (
+          <>
+            {original}
+            <ActivityDot workbench={context.workbench} resource={resource} />
+          </>
+        ) : (
+          original
+        );
       const action =
         node.target ?? (node.commandId ? { kind: "command" as const, commandId: node.commandId } : undefined);
       return action ? (

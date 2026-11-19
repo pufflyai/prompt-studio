@@ -88,7 +88,7 @@ test("shows each quit confirmation over the workbench and recovers from refused 
   await electronApp.evaluate(({ app }) => app.quit());
   await expectConfirmationInWorkbench();
   void window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.confirmQuit());
-  await expect(lifecycle.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
+  await expect(lifecycle.getByRole("heading", { name: "Prompt Studio encountered an error" })).toBeVisible();
   expect(await workbenchVisible()).toBe(false);
   expect(
     await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].contentView.children.length),

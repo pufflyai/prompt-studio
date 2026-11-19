@@ -179,7 +179,7 @@ describe("dashboard workbench extension ticket menu contributions", () => {
         {
           id: "ticket",
           localId: "ticket",
-          extensionId: "pstdio.pstdio-planner",
+          extensionId: "pstdio.planner",
           menuSlots: [{ id: "headerPrimary", placement: "header-primary", access: "owner" }],
         },
       ],
@@ -187,7 +187,7 @@ describe("dashboard workbench extension ticket menu contributions", () => {
         ...metadata.commands,
         {
           id: "pstdio-planner.run-attempt",
-          extensionId: "pstdio.pstdio-planner",
+          extensionId: "pstdio.planner",
           title: "Run attempt",
           params: {
             ticket: { type: "text", label: "Ticket", resolvedFrom: "resource" },
@@ -200,9 +200,9 @@ describe("dashboard workbench extension ticket menu contributions", () => {
       menuContributions: [
         {
           id: "pstdio-planner.run-attempt.menu.0",
-          extensionId: "pstdio.pstdio-planner",
+          extensionId: "pstdio.planner",
           commandId: "pstdio-planner.run-attempt",
-          slotId: "pstdio.pstdio-planner.resource-kind.ticket.headerPrimary",
+          slotId: "pstdio.planner.resource-kind.ticket.headerPrimary",
           label: "Run attempt",
         },
       ],
@@ -223,32 +223,32 @@ describe("dashboard workbench extension ticket menu contributions", () => {
         {
           id: "ticket",
           localId: "ticket",
-          extensionId: "pstdio.pstdio-planner",
+          extensionId: "pstdio.planner",
           menuSlots: [{ id: "headerOverflow", placement: "context-menu", access: "owner", label: "Ticket actions" }],
         },
       ],
       commands: [
         ...metadata.commands,
-        { id: "pstdio-planner.refine-ticket", extensionId: "pstdio.pstdio-planner", title: "Refine ticket" },
+        { id: "pstdio-planner.refine-ticket", extensionId: "pstdio.planner", title: "Refine ticket" },
         {
           id: "pstdio-planner.break-into-sub-tickets",
-          extensionId: "pstdio.pstdio-planner",
+          extensionId: "pstdio.planner",
           title: "Break into sub-tickets",
         },
       ],
       menuContributions: [
         {
           id: "pstdio-planner.refine-ticket.menu.0",
-          extensionId: "pstdio.pstdio-planner",
+          extensionId: "pstdio.planner",
           commandId: "pstdio-planner.refine-ticket",
-          slotId: "pstdio.pstdio-planner.resource-kind.ticket.headerOverflow",
+          slotId: "pstdio.planner.resource-kind.ticket.headerOverflow",
           label: "Refine ticket",
         },
         {
           id: "pstdio-planner.break-into-sub-tickets.menu.0",
-          extensionId: "pstdio.pstdio-planner",
+          extensionId: "pstdio.planner",
           commandId: "pstdio-planner.break-into-sub-tickets",
-          slotId: "pstdio.pstdio-planner.resource-kind.ticket.headerOverflow",
+          slotId: "pstdio.planner.resource-kind.ticket.headerOverflow",
           label: "Break into sub-tickets",
         },
       ],
@@ -263,7 +263,7 @@ describe("dashboard workbench extension ticket menu contributions", () => {
               group: "overflow",
               label: "Refine ticket",
               overflowLabel: "Ticket actions",
-              when: 'workbench.resource.type == "ticket" && workbench.resource.extensionId == "pstdio.pstdio-planner"',
+              when: 'workbench.resource.type == "ticket" && workbench.resource.extensionId == "pstdio.planner"',
             }),
           }),
         ],
@@ -276,7 +276,7 @@ describe("dashboard workbench extension ticket menu contributions", () => {
               group: "overflow",
               label: "Break into sub-tickets",
               overflowLabel: "Ticket actions",
-              when: 'workbench.resource.type == "ticket" && workbench.resource.extensionId == "pstdio.pstdio-planner"',
+              when: 'workbench.resource.type == "ticket" && workbench.resource.extensionId == "pstdio.planner"',
             }),
           }),
         ],

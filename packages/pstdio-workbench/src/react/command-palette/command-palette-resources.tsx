@@ -45,7 +45,14 @@ export const useWorkbenchCommandPaletteResourceEntries = (input: UseWorkbenchCom
               searchText: `${query} ${result.label} ${(result.keywords ?? []).join(" ")}`.trim(),
               description: result.description,
               group: result.group ?? group.title,
-              icon: <WorkbenchResourcePaletteIcon icon={result.icon} indicator={result.indicator} />,
+              icon: (
+                <WorkbenchResourcePaletteIcon
+                  icon={result.resource?.icon ?? result.icon}
+                  iconColor={result.resource?.iconColor}
+                  iconLabel={result.resource?.iconLabel}
+                  indicator={result.indicator}
+                />
+              ),
               onActivate: () => {
                 void runUserAction(workbench, result.label, () => result.activate(), {
                   inlineTarget: "command-palette",

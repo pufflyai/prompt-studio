@@ -18,13 +18,13 @@ export const timelineView = defineView({
     entry: packageAsset("./view/entry.tsx", import.meta.url),
     capabilities: [
       "commands.execute",
+      "commands.query",
       "navigation.open",
       "harnesses.read",
       "resources.actions",
       "files.upload",
       "preferences.get",
       "preferences.set",
-      "notification.show",
     ],
   },
 });

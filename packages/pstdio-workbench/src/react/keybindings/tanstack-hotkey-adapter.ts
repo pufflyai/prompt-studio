@@ -1,9 +1,9 @@
-import { type UseHotkeyDefinition, useHotkeys } from "@tanstack/react-hotkeys";
+import { type RegisterableHotkey, type UseHotkeyDefinition, useHotkeys } from "@tanstack/react-hotkeys";
 import type { WorkbenchHotkeyRegistration } from "./workbench-hotkey-registrations";
 
 export const useTanStackWorkbenchHotkeys = (registrations: WorkbenchHotkeyRegistration[]) => {
   const hotkeys: UseHotkeyDefinition[] = registrations.map((registration) => ({
-    hotkey: registration.hotkey as UseHotkeyDefinition["hotkey"],
+    hotkey: registration.hotkey as RegisterableHotkey,
     callback: (event) => {
       if (!registration.enabled) return;
       event.preventDefault();

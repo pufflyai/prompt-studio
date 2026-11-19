@@ -198,10 +198,19 @@ describe("registerDashboardSidenav", () => {
   });
 });
 
-test("the default project header puts ordinary Home before Search and keeps Search when Home is removed", async () => {
+test("the project header preserves contribution order and retains unrelated entries when a contribution is removed", async () => {
   const core = createWorkbench();
   core.modes.registerMode({ id: "project", activate() {} });
   const page = registerModePage(core, "project", "home-order");
+  const homeRef = { kind: "page" as const, extensionId: "example.welcome", id: "welcome" };
+  core.pages.registerPage({
+    id: "welcome",
+    ref: homeRef,
+    path: "home",
+    modeId: "project",
+    main: { kind: "panels" },
+    slots: [],
+  });
   registerDashboardSidenav(core);
   core.pageLocations.setProject("one");
   core.pageLocations.navigate({ kind: "page", page });
@@ -219,7 +228,7 @@ test("the default project header puts ordinary Home before Search and keeps Sear
     id: "home",
     owner,
     slot: "header",
-    sourceExtensionId: "pstdio.pstdio-home",
+    sourceExtensionId: "example.welcome",
     declarationIndex: 0,
     getSections: () => [
       {
@@ -228,7 +237,7 @@ test("the default project header puts ordinary Home before Search and keeps Sear
           {
             id: "home",
             label: "Home",
-            target: { kind: "page", page: { kind: "page", extensionId: "pstdio.pstdio-home", id: "home" } },
+            target: { kind: "page", page: homeRef },
           },
         ],
       },
@@ -242,7 +251,7 @@ test("the default project header puts ordinary Home before Search and keeps Sear
       refresh() {},
       setSelectedNode() {},
     });
-  expect((await header()).flatMap((section) => section.nodes).map((node) => node.id)).toEqual(["home", "search"]);
+  expect((await header()).flatMap((section) => section.nodes).map((node) => node.id)).toEqual(["search", "home"]);
   home.dispose();
   expect((await header()).flatMap((section) => section.nodes).map((node) => node.id)).toEqual(["search"]);
 });

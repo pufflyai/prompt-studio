@@ -1,16 +1,20 @@
+import { basename } from "node:path";
 import type { RouteDeps } from "../features/deps";
 import {
   installDefaultExtensions,
   registerInstalledExtensionSources,
   syncInstalledExtensionsForProjects,
 } from "../features/extensions/default-extensions";
+import { resolveDefaultExtensionsConfig } from "../features/extensions/default-extensions-config";
 import { refreshProjectSkillsInRepos } from "../features/extensions/extension-skill-cleanup";
 import { syncRepoExtensionsForProjectFolder } from "../features/extensions/repo-extensions";
+import { resumeRestoredFolderSetup } from "../features/projects/project-folder";
 import { resolveOrphanedSessions } from "../features/sessions/startup";
 import { provisionProjectWorkspaces } from "../features/workspaces/provision-coordinator";
 import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-provider-reconciliation";
 import { apiLogger } from "../lib/logger";
 import { traceSetupPhase } from "../lib/setup-phase";
+import { adoptTerminalTool } from "./terminal-tool-upgrade";
 
 interface StartupTaskOptions {
   onBackgroundTask?: (task: Promise<void>) => void;
@@ -53,16 +57,46 @@ const provisionRecoveredWorkspaces = (deps: RouteDeps, projectIds: string[], sig
   Promise.allSettled(
     projectIds.map(async (projectId) => {
       if (signal?.aborted) return;
-      await provisionProjectWorkspaces(deps, projectId);
+      const restored = await resumeRestoredFolderSetup(deps, projectId);
+      if (signal?.aborted) return;
+      await provisionProjectWorkspaces(deps, projectId, undefined, { skipWorkspaceId: restored?.id });
     }),
   ).then(() => undefined);
 
 const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortSignal) => {
   const sourceMode = process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1";
-  if (!sourceMode && (await deps.projectService.list()).length > 0) return;
+  const projects = await deps.projectService.list();
+  const existingProjects = !sourceMode && projects.length > 0;
 
   try {
-    const installed = await installDefaultExtensions({
+    if (
+      existingProjects &&
+      (
+        await Promise.all(
+          projects.map(({ id }) => deps.extensionService.hasDefaultSourceChoice(id, "pstdio.pstdio-terminal")),
+        )
+      ).every(Boolean)
+    )
+      return;
+    await installDefaultExtensions({
+      ...(existingProjects
+        ? {
+            env: {
+              ...process.env,
+              PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(
+                (await resolveDefaultExtensionsConfig()).defaultExtensions.filter(
+                  (entry) =>
+                    (typeof entry === "string" ? basename(entry) : (entry.installName ?? basename(entry.source))) ===
+                    "pstdio-terminal",
+                ),
+              ),
+            },
+          }
+        : {}),
+      registerInstalledSources: (installed) =>
+        traceSetupPhase("default_extensions.register", {}, () =>
+          registerInstalledExtensionSources(deps.extensionService, installed),
+        ),
       forceSourceDefaults: sourceMode,
       onInstallFailure: ({ error, installName, source }) => {
         if (signal?.aborted) return;
@@ -79,10 +113,6 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
       releaseRef: deps.extensionUpgradeService.releaseRef,
       signal,
     });
-    signal?.throwIfAborted();
-    await traceSetupPhase("default_extensions.register", {}, () =>
-      registerInstalledExtensionSources(deps.extensionService, installed),
-    );
   } catch (err) {
     if (signal?.aborted) return;
     apiLogger.warn(
@@ -137,6 +167,7 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
   }
   registerBackgroundTask(
     defaultExtensionPreparation.then(async () => {
+      await adoptTerminalTool(deps, projectIds, signal);
       await provisionRecoveredWorkspaces(deps, projectIds, signal);
       for (const projectId of projectIds) {
         signal?.throwIfAborted();

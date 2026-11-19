@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, mock, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -32,7 +32,7 @@ test("resource batches use enabled owners, preserve identity, and resolve host w
         }));
       }}],
       views: [{id:"notes",ref:{kind:"view",id:"notes"},title:"Notes",body:{kind:"controls",query:async()=>({fields:[],values:{}})}}],
-      pages: [{id:"notes",ref:{kind:"page",id:"notes"},title:"Notes",path:"notes",slots:[],panels:{},parent:{extensionId:"pstdio",kind:"page",id:"start"},mode:{extensionId:"pstdio",kind:"mode",id:"project"},resource:{kinds:[{kind:"resource-kind",id:"note"},{kind:"resource-kind",id:"draft"}]},main:{kind:"view",view:{kind:"view",id:"notes"},cardinality:"one"}}],
+      pages: [{id:"collection",ref:{kind:"page",id:"collection"},title:"Notes",path:"collection",slots:[],panels:{},mode:{extensionId:"pstdio",kind:"mode",id:"project"},main:{kind:"panels"}}, {id:"notes",ref:{kind:"page",id:"notes"},title:"Notes",path:"notes",slots:[],panels:{},parent:{kind:"page",id:"collection"},mode:{extensionId:"pstdio",kind:"mode",id:"project"},resource:{kinds:[{kind:"resource-kind",id:"note"},{kind:"resource-kind",id:"draft"}]},main:{kind:"view",view:{kind:"view",id:"notes"},cardinality:"one"}}],
       resourceKinds: ["note","draft"].map(id => ({id,ref:{kind:"resource-kind",id},resolveMany:{kind:"command",id:"resolve"}}))
     };`,
     );
@@ -59,7 +59,13 @@ test("resource batches use enabled owners, preserve identity, and resolve host w
       name: "Current workspace",
     });
     await api.addAnchors(ref("one"), [ref("two", "draft")]);
-    const linked = await api.queryAnchorsMany({ resources: [ref("one"), ref("two", "draft")], direction: "both" });
+    const catalogReads = mock(app.deps.extensionRuntimeCatalog.get);
+    const reader = createResourcesApi(
+      { ...app.deps, extensionRuntimeCatalog: { ...app.deps.extensionRuntimeCatalog, get: catalogReads } },
+      { projectId: project.id, extensionId: "example.caller" },
+    );
+    const linked = await reader.queryAnchorsMany({ resources: [ref("one"), ref("two", "draft")], direction: "both" });
+    expect(catalogReads).not.toHaveBeenCalled();
     expect(linked.items).toHaveLength(1);
     expect(linked.nextCursor).toBeNull();
     const debug = await app.deps.extensionRuntimeCatalog.get(project.id);
@@ -80,7 +86,6 @@ test("resource batches use enabled owners, preserve identity, and resolve host w
     });
     expect(result.find((r) => r.resource.id === workspace.id)).toMatchObject({
       resource: { label: "Current workspace", extensionId: "pstdio" },
-      target: { kind: "page", page: { id: "files", extensionId: "pstdio.pstdio-workspaces" } },
     });
     const worktree = await app.deps.workspaceService.createStandalone({
       project_id: project.id,
@@ -93,13 +98,54 @@ test("resource batches use enabled owners, preserve identity, and resolve host w
       resource: {
         metadata: { workspaceProviderState: "ready", workspaceSupportsDiff: true, workspaceType: "worktree" },
       },
-      target: { page: { id: "workspace", extensionId: "pstdio.pstdio-workspaces" } },
     });
     expect(result.find((r) => r.resource.id === "no-destination")?.target).toBeUndefined();
     await expect(api.resolveMany([{ ...ref("one"), projectId: "another-project" }])).rejects.toThrow("another project");
     await expect(api.resolveMany(Array.from({ length: 101 }, () => ref("one")))).rejects.toThrow("100");
     await app.deps.extensionService.setProjectExtensionEnabled(installed.instance.id, false);
     expect(await api.resolveMany([ref("one")])).toEqual([]);
+  } finally {
+    await app.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("published historical resource resolver declarations and outputs expose canonical owned refs", async () => {
+  const root = mkdtempSync(join(tmpdir(), "resource-rename-"));
+  const app = await createTestApp();
+  try {
+    const project = await app.deps.projectService.create({ name: "Resources" });
+    const manifest = {
+      name: "pstdio-notes",
+      publisher: "pstdio",
+      version: "1.0.0",
+      main: "extension.ts",
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+    };
+    writeFileSync(join(root, "package.json"), JSON.stringify(manifest));
+    writeFileSync(
+      join(root, "extension.ts"),
+      `export default {
+      commands:[{ id:"resolve",ref:{kind:"command",id:"resolve"},title:"Resolve",run:async(ctx,p)=>p.resources.map(r=>({resource:{...r,extensionId:"pstdio.pstdio-notes",label:"Retained"}})) }],
+      resourceKinds:[{id:"note",ref:{kind:"resource-kind",id:"note"},resolveMany:{kind:"command",extensionId:"pstdio.pstdio-notes",id:"resolve"}}]
+    }`,
+    );
+    await app.deps.extensionService.enableInstalledSourceForProject({
+      projectId: project.id,
+      sourcePath: root,
+      sourceKind: "local_path",
+      name: "pstdio-notes",
+      installName: "pstdio-notes",
+      extensionId: "pstdio.pstdio-notes",
+      displayName: "Notes",
+      manifest,
+    });
+    const api = createResourcesApi(app.deps, { projectId: project.id, extensionId: "example.caller" });
+    expect(
+      await api.resolveMany([
+        { extensionId: "pstdio.pstdio-notes", projectId: project.id, type: "note", id: "stable" },
+      ]),
+    ).toMatchObject([{ resource: { extensionId: "pstdio.notes", id: "stable", label: "Retained" } }]);
   } finally {
     await app.close();
     rmSync(root, { recursive: true, force: true });

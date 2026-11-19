@@ -20,7 +20,7 @@ export interface AutoBuildMode {
   requireMergedDependencies: boolean;
 }
 
-export const autoBuildChanged = eventRef({ extensionId: "pstdio.pstdio-planner", id: "auto-build.changed" });
+export const autoBuildChanged = eventRef({ extensionId: "pstdio.planner", id: "auto-build.changed" });
 
 export const readAutoBuildMode = async (ctx: Pick<ExtensionContextBase, "storage">) => {
   const mode = await ctx.storage.get<AutoBuildMode>("auto-build");

@@ -1,4 +1,5 @@
 import { expect, mock, test } from "bun:test";
+import { createWorkspaceMaintenance } from "../../../services/workspace-maintenance";
 import { createCommandEnvironment } from "./index";
 
 const makeEnabledSources = () => [
@@ -35,6 +36,7 @@ test("deletion archives the workspace's active sessions", async () => {
       extensionStorageService: makeStorageService(),
 
       workspaceService: {
+        maintenance: createWorkspaceMaintenance(),
         setInitializing: async () => null,
         getDefault: async () => ({
           id: "home",
@@ -50,7 +52,7 @@ test("deletion archives the workspace's active sessions", async () => {
           workspace_shorthand: "T-1_A1",
           branch: null,
           root_path: null,
-          provider_id: "pstdio.worktree",
+          provider_id: "pstdio.root",
           provider_ref_json: null,
           execution_kind: "local",
           provider_capabilities_json: {
@@ -121,7 +123,12 @@ test("fires worktree.removed after extension-initiated deletion", async () => {
   const env = createCommandEnvironment(
     {
       extensionStorageService: makeStorageService(),
-      workspaceService: { setInitializing: async () => null, get: async () => workspace, softDelete },
+      workspaceService: {
+        maintenance: createWorkspaceMaintenance(),
+        setInitializing: async () => null,
+        get: async () => workspace,
+        softDelete,
+      },
       workspaceSessionService: { listByWorkspace: async () => [] },
     } as never,
     makeEnabledSources() as never,
@@ -135,13 +142,6 @@ test("fires worktree.removed after extension-initiated deletion", async () => {
       deleteProviderBackedWorkspace: remove as never,
       fireExtensionEventAsync: fireRemoved as never,
       runWorkspaceProvisioning: async (_deps, input) => input.workspace,
-      setupWorkspaceWorktree: async () => ({
-        branch: "unused",
-        worktreePath: "/unused",
-        rootPath: "/unused",
-        sourceRoot: "/repo",
-        relativePath: "",
-      }),
     },
   );
 
@@ -177,7 +177,13 @@ test("removes a worktree without deleting its workspace", async () => {
   const env = createCommandEnvironment(
     {
       extensionStorageService: makeStorageService(),
-      workspaceService: { setInitializing: async () => null, clearWorktree, get: async () => workspace, softDelete },
+      workspaceService: {
+        maintenance: createWorkspaceMaintenance(),
+        setInitializing: async () => null,
+        clearWorktree,
+        get: async () => workspace,
+        softDelete,
+      },
     } as never,
     makeEnabledSources() as never,
     {
@@ -187,16 +193,9 @@ test("removes a worktree without deleting its workspace", async () => {
       projectId: "project-1",
     },
     {
-      cleanupWorkspaceWorktree: cleanup as never,
+      deleteProviderBackedWorkspace: cleanup as never,
       fireExtensionEventAsync: fireRemoved as never,
       runWorkspaceProvisioning: async (_deps, input) => input.workspace,
-      setupWorkspaceWorktree: async () => ({
-        branch: "unused",
-        worktreePath: "/unused",
-        rootPath: "/unused",
-        sourceRoot: "/repo",
-        relativePath: "",
-      }),
     },
   );
 
@@ -231,7 +230,12 @@ test("does not expose or mutate a workspace owned by another project", async () 
     {
       extensionStorageService: makeStorageService(),
       personalHistoryService: { getWorkspace: async () => null },
-      workspaceService: { setInitializing: async () => null, get: async () => workspace, softDelete },
+      workspaceService: {
+        maintenance: createWorkspaceMaintenance(),
+        setInitializing: async () => null,
+        get: async () => workspace,
+        softDelete,
+      },
     } as never,
     makeEnabledSources() as never,
     {
@@ -241,15 +245,8 @@ test("does not expose or mutate a workspace owned by another project", async () 
       projectId: "project-1",
     },
     {
-      cleanupWorkspaceWorktree: cleanup as never,
+      deleteProviderBackedWorkspace: cleanup as never,
       runWorkspaceProvisioning: async (_deps, input) => input.workspace,
-      setupWorkspaceWorktree: async () => ({
-        branch: "unused",
-        worktreePath: "/unused",
-        rootPath: "/unused",
-        sourceRoot: "/repo",
-        relativePath: "",
-      }),
     },
   );
 

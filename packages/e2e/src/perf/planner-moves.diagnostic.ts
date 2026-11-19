@@ -108,7 +108,7 @@ try {
       await cdp.send("Emulation.setCPUThrottlingRate", { rate: cpuRate });
       await cdp.send("Profiler.enable");
       const network = recordPlannerRequests(page);
-      await page.goto(`${connection.dashboardUrl}projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
+      await page.goto(`${connection.dashboardUrl}projects/${project.id}/extensions/pstdio.planner/tickets`);
       await page.getByTestId("renderer-card").first().waitFor();
       await network.settle();
       const cards = await page.getByTestId("renderer-card").count();

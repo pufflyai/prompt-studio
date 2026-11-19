@@ -53,7 +53,7 @@ test("reuses one shared connection while switching observed sessions", async ({ 
         const command = subscription.command;
         const resource = command?.body.resource;
         const connection = /^\/v1\/session-stream\/([^/]+)\/subscriptions$/.exec(path)?.[1];
-        if (command?.command_id === "pstdio.pstdio-session-browser.command.watch" && resource?.type === "session") {
+        if (command?.command_id === "pstdio.session-browser.command.watch" && resource?.type === "session") {
           subscribed.push(resource.id);
           watchConnections.push(connection);
         }

@@ -1,30 +1,24 @@
-import { isCancelledError, type QueryClient, type QueryKey, QueryObserver } from "@tanstack/query-core";
+import { CancelledError, isCancelledError, type QueryClient, type QueryKey, QueryObserver } from "@tanstack/query-core";
 import { runQueryCleanup } from "./query-cleanup";
 import { createQueryReadScheduler } from "./query-read-scheduler";
 import { createQueryReadSignals } from "./query-read-signals";
-import type { ScopedQueryDescriptor, ScopedQuerySnapshot } from "./scoped-query";
+import { createQueryReadYield } from "./query-read-yield";
+import type { ScopedQuery, ScopedQueryDescriptor } from "./scoped-query";
 import { createQueryLedger } from "./scoped-query-ledger";
+import { createQueryPublication } from "./scoped-query-publication";
+import { runScopedQueryRead } from "./scoped-query-read-cycle";
+import { readScopedQueryMembership } from "./scoped-query-read-membership";
 import { createQueryReadOptions } from "./scoped-query-read-options";
-import { shareQueryValue } from "./share-query-value";
 
-const sameSnapshot = <T>(a: ScopedQuerySnapshot<T>, b: ScopedQuerySnapshot<T>) =>
-  a.data === b.data && a.loading === b.loading && a.fetching === b.fetching && a.error === b.error;
+const refreshMembership = <T>(owner: Pick<ScopedQuery<T>, "read" | "invalidate">, signal?: AbortSignal) => {
+  if (signal?.aborted) return Promise.reject(signal.reason);
+  owner.invalidate();
+  return owner.read(signal);
+};
 
-const restoreQueryError = (
-  client: QueryClient,
-  queryKey: QueryKey,
-  expected: Error | undefined,
-  actual: Error | null,
-) => {
-  if (actual === (expected ?? null)) return;
-  client
-    .getQueryCache()
-    .find({ queryKey, exact: true })
-    ?.setState({
-      error: expected ?? null,
-      status: expected ? "error" : "success",
-      fetchStatus: "idle",
-    });
+const cancelQueryRequest = (client: QueryClient, queryKey: QueryKey) => {
+  void client.cancelQueries({ queryKey, exact: true }, { revert: false, silent: true });
+  client.getQueryCache().find({ queryKey, exact: true })?.setState({ fetchStatus: "idle" });
 };
 
 export const createQueryOwner = <T>(
@@ -40,6 +34,8 @@ export const createQueryOwner = <T>(
   let stopObserver: (() => void) | undefined;
   let sourceDetached = false;
   let requiredRead = false;
+  let cycle: AbortController | undefined;
+  let cancelledRevision: number | undefined;
   const listeners = new Map<symbol, { notify(): void; automatic: boolean }>();
   const invalidationListeners = new Map<symbol, () => void>();
   const signals = createQueryReadSignals(() => disposed);
@@ -51,75 +47,53 @@ export const createQueryOwner = <T>(
   const assertOpen = () => {
     if (disposed) throw new Error("Query owner is disposed");
   };
+  const repeat = createQueryReadYield(() => requiredRead, assertOpen);
   const options = createQueryReadOptions({
     client,
     queryKey,
     ledger,
     read: (signal) => signals.read(signal, descriptor.read),
     assertOpen,
+    beforeRepeat: repeat.wait,
   });
   const observer = new QueryObserver<T, Error>(client, { ...options, enabled: false });
-  let snapshotRevision = ledger.revision();
-  let snapshot: ScopedQuerySnapshot<T> = { data: client.getQueryData<T>(queryKey), loading: false, fetching: false };
-  const cancelRequest = () => {
-    void client.cancelQueries({ queryKey, exact: true }, { revert: false, silent: true });
-    client.getQueryCache().find({ queryKey, exact: true })?.setState({ fetchStatus: "idle" });
-  };
+  const publication = createQueryPublication({
+    client,
+    queryKey,
+    observer,
+    ledger,
+    disposed: () => disposed,
+    running: () => Boolean(running),
+    cancelRequest: () => cancelRequest(),
+    resume: repeat.resume,
+    notify: () => {
+      for (const listener of listeners.values()) listener.notify();
+    },
+  });
+  const { publish } = publication;
+  const cancelRequest = () => cancelQueryRequest(client, queryKey);
 
-  const publish = () => {
-    if (disposed) return;
-    const result = observer.getCurrentResult();
-    const stale = ledger.dirty();
-    const accepted = ledger.current();
-    if (accepted) restoreQueryError(client, queryKey, accepted.error, result.error);
-    const selected = accepted ?? (stale ? snapshot : result);
-    const fetching = result.isFetching || (ledger.dirty() && Boolean(running));
-    const next = {
-      data: selected.data,
-      loading: selected.data === undefined && fetching,
-      fetching,
-      error: selected.error ?? undefined,
-    };
-    // A successful new revision must wake lifetime adapters even when its data structurally shares every value.
-    const revision = !stale && !fetching ? ledger.revision() : snapshotRevision;
-    if (sameSnapshot(next, snapshot) && revision === snapshotRevision) return;
-    snapshotRevision = revision;
-    snapshot = next;
-    for (const listener of listeners.values()) listener.notify();
-  };
   const read = (automatic = false) => {
     if (disposed) return Promise.reject(new Error("Query owner is disposed"));
-    if (!automatic) requiredRead = true;
+    if (!automatic) {
+      requiredRead = true;
+      repeat.resume();
+    }
     if (running) return running;
+    const controller = new AbortController();
+    cycle = controller;
     const needsFollowUp = (error?: unknown) =>
       ledger.dirty() && (requiredRead || automaticReaders > 0) && !isCancelledError(error);
-    const run = async () => {
-      // Explicit readers also reconcile a custom source that lost its cursor.
-      // Keep that gap until observation resumes; further unobserved reads may miss changes too.
-      if (sourceDetached) invalidate();
-      for (;;) {
-        assertOpen();
-        try {
-          const value = await client.fetchQuery<T>(options);
-          assertOpen();
-          if (!needsFollowUp()) return ledger.resolve(value);
-          // Invalidation can arrive after queryFn returns, before TanStack commits its result.
-          await client.invalidateQueries({ queryKey, exact: true, refetchType: "none" });
-        } catch (error) {
-          assertOpen();
-          if (needsFollowUp(error)) continue;
-          return ledger.recover(error);
-        }
-      }
-    };
     const completed = Promise.withResolvers<T>();
     const pending = completed.promise.finally(() => {
       running = undefined;
+      cycle = undefined;
       requiredRead = false;
       if (disposed) return;
       observer.updateResult();
       publish();
-      if (!disposed && ledger.dirty() && automaticReaders) scheduleRead();
+      if (ledger.dirty() && automaticReaders && (!controller.signal.aborted || ledger.revision() !== cancelledRevision))
+        scheduleRead();
       if (!disposed && !listeners.size && !running) {
         stopObserver?.();
         stopObserver = undefined;
@@ -127,7 +101,18 @@ export const createQueryOwner = <T>(
       }
     });
     running = pending;
-    void run().then(completed.resolve, completed.reject);
+    // Explicit readers reconcile a custom source that lost its cursor.
+    if (sourceDetached) invalidate();
+    void runScopedQueryRead({
+      client,
+      queryKey,
+      options,
+      ledger,
+      assertOpen,
+      needsFollowUp,
+      beforeRepeat: repeat.wait,
+      signal: controller.signal,
+    }).then(completed.resolve, completed.reject);
     return pending;
   };
   const invalidate = () => {
@@ -141,10 +126,11 @@ export const createQueryOwner = <T>(
       },
     ]);
   };
-  return {
+  const owner = {
     key: queryKey,
-    getSnapshot: () => snapshot,
-    read: () => read(),
+    getSnapshot: publication.getSnapshot,
+    read: (signal?: AbortSignal): Promise<T> => (signal ? readScopedQueryMembership(owner, signal) : read()),
+    refresh: (signal?: AbortSignal): Promise<T> => refreshMembership(owner, signal),
     /** Refresh visible data without giving the awaiting caller a required-read lease. */
     async refreshObserved() {
       invalidate();
@@ -163,17 +149,13 @@ export const createQueryOwner = <T>(
     cancel() {
       if (disposed) return;
       ledger.invalidate();
+      cancelledRevision = ledger.revision();
+      cycle?.abort(new CancelledError());
       cancelRequest();
+      repeat.resume();
     },
     accept(value: T) {
-      if (disposed) return;
-      if (value === undefined) throw new Error("A scoped query must accept a value; use null for an empty result.");
-      const accepted = ledger.accept(shareQueryValue(client.getQueryData<T>(queryKey), value));
-      // Cancel work and guard cache publication even if its retryer has already resolved.
-      cancelRequest();
-      client.setQueryData(queryKey, accepted.data);
-      observer.updateResult();
-      publish();
+      publication.accept(value);
     },
     /** Schedulers may observe passively while retaining control of read admission. */
     subscribe(listener: () => void, input: { automatic?: boolean } = {}) {
@@ -215,18 +197,7 @@ export const createQueryOwner = <T>(
         retire();
       };
     },
-    reportError(cause: unknown) {
-      if (disposed) return;
-      const accepted = ledger.accept(snapshot.data, cause instanceof Error ? cause : new Error(String(cause)));
-      cancelRequest();
-      client.getQueryCache().find({ queryKey, exact: true })?.setState({
-        error: accepted.error,
-        status: "error",
-        fetchStatus: "idle",
-      });
-      observer.updateResult();
-      publish();
-    },
+    reportError: publication.reportError,
     isDisposed: () => disposed,
     active: () => listeners.size > 0 || Boolean(running),
     inspect: () => ({
@@ -238,10 +209,11 @@ export const createQueryOwner = <T>(
     dispose() {
       if (disposed) return;
       disposed = true;
+      repeat.resume();
       ledger.invalidate();
       const query = observer.getCurrentQuery();
       const notices = [...listeners.values()];
-      snapshot = { data: undefined, loading: false, fetching: false };
+      publication.clear();
       listeners.clear();
       invalidationListeners.clear();
       automaticReaders = 0;
@@ -256,4 +228,5 @@ export const createQueryOwner = <T>(
       ]);
     },
   };
+  return owner;
 };

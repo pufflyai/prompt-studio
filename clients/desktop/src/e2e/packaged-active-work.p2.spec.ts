@@ -17,7 +17,8 @@ import {
 import { homePage } from "./packaged-performance-helpers";
 import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
-const homePath = dirname(fileURLToPath(import.meta.resolve("pstdio-home/package.json")));
+const homePath = dirname(fileURLToPath(import.meta.resolve("home/package.json")));
+const terminalPath = dirname(fileURLToPath(import.meta.resolve("pstdio-terminal/package.json")));
 
 for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
   test(`protects a running terminal before ${shutdown}`, async () => {
@@ -26,7 +27,10 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
     try {
       app = await launchPackagedApp(home, {
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-          defaultExtensions: [{ source: homePath, installName: "pstdio-home", skipInstall: true }],
+          defaultExtensions: [
+            { source: homePath, installName: "pstdio-home", skipInstall: true },
+            { source: terminalPath, installName: "pstdio-terminal", skipInstall: false },
+          ],
         }),
       });
       const created = await createPackagedProject(app, "Active terminal work");

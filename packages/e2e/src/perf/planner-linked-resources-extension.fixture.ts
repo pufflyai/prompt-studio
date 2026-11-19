@@ -37,7 +37,7 @@ const link = defineCommand({
   mutating: true,
   params: { ticket: params.text({ required: true }), number: params.text({ required: true }) },
   async run(ctx, input) {
-    const ticket = { type: "ticket", extensionId: "pstdio.pstdio-planner", id: input.ticket };
+    const ticket = { type: "ticket", extensionId: "pstdio.planner", id: input.ticket };
     // Exercise outgoing and incoming links on every card, alongside incoming workspace anchors.
     await ctx.resources.addAnchors(ticket, [{ type: "pull-request", id: input.number, label: `PR #${input.number}` }]);
     await ctx.resources.addAnchors({ type: "build", id: input.number, label: `Build #${input.number}` }, [ticket]);

@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { installDefaultExtensions, syncInstalledExtensionsForProject } from "../../extensions/default-extensions";
+import { provisionProjectWorkspaces } from "../../workspaces/provision-coordinator";
 import { retryProjectExtensions, setupProjectExtensions } from "../project-extension-setup";
 import { initializeProjectWorkspace } from "../project-folder";
 
@@ -57,6 +58,8 @@ test("setup retry preserves a disabled provider when its default moves to user s
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
   const fixture = await extension("shared-fixture");
   const project = await handle.deps.projectService.create({ name: "Existing project" });
+  const previousPath = join(root, "project/.pstdio/extensions/shared-fixture");
+  await cp(fixture.source, previousPath, { recursive: true });
   const previous = await handle.deps.extensionService.enableInstalledSourceForProject({
     displayName: "Shared fixture",
     extensionId: "example.shared-fixture",
@@ -64,7 +67,7 @@ test("setup retry preserves a disabled provider when its default moves to user s
     manifest: { id: "example.shared-fixture" },
     name: "shared-fixture",
     projectId: project.id,
-    sourcePath: join(root, "project/.pstdio/extensions/shared-fixture"),
+    sourcePath: previousPath,
   });
   await handle.deps.extensionService.setProjectExtensionEnabled(previous.instance.id, false);
   process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([fixture]);
@@ -83,6 +86,41 @@ test("setup retry preserves a disabled provider when its default moves to user s
   expect(
     (await handle.deps.extensionService.getProjectExtensionInstance(project.id, shared.instance.id))?.instance.enabled,
   ).toBe(true);
+});
+
+test("an interrupted restored folder still registers copied tools as disabled when setup is retried", async () => {
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  const fixture = await extension("copied-tool");
+  const project = await handle.deps.projectService.create({ name: "Restored project" });
+  const folder = join(root, "restored");
+  await cp(fixture.source, join(folder, ".pstdio/extensions/copied-tool"), { recursive: true });
+  const marker = join(root, "copied-tool-ran");
+  await writeFile(
+    join(folder, ".pstdio/extensions/copied-tool/extension.ts"),
+    `import { writeFileSync } from "node:fs";\nwriteFileSync(${JSON.stringify(marker)}, "ran");\nexport default {};\n`,
+  );
+  const initial = { provider_id: "pstdio.root", params: { path: folder } };
+  const failed = await initializeProjectWorkspace(
+    handle.deps,
+    project.id,
+    initial,
+    async () => {
+      throw new Error("Interrupted before repo discovery");
+    },
+    { restored: true },
+  );
+  expect(failed.setup_error).toBe("Interrupted before repo discovery");
+
+  await provisionProjectWorkspaces(handle.deps, project.id);
+  expect((await handle.deps.workspaceService.getDefault(project.id))?.setup_error).toBe(
+    "Interrupted before repo discovery",
+  );
+
+  const retried = await initializeProjectWorkspace(handle.deps, project.id, initial);
+  expect(retried.setup_error).toBeNull();
+  const instances = await handle.deps.extensionService.listProjectExtensionInstances(project.id);
+  expect(instances.map(({ instance }) => instance.enabled)).toEqual([false]);
+  expect(await Bun.file(marker).exists()).toBe(false);
 });
 
 test.each([

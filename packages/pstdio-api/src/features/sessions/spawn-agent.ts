@@ -82,6 +82,7 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
       workspace,
       sessionId: input.sessionId,
       events: conversation,
+      approvals: entry.approvalService,
       questions: entry.questionService,
       turns: entry.turns,
       signal: input.signal,
@@ -253,6 +254,7 @@ export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps
       workspace = await resolveHarnessWorkspace(deps, input, harness);
     },
     input.signal,
+    "reattach",
   );
   const conversation = await entry.conversationReady;
   input.signal?.throwIfAborted();

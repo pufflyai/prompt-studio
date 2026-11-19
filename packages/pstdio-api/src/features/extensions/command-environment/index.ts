@@ -14,7 +14,6 @@ import {
 import { resolvePstdioHome } from "pstdio-paths";
 import { apiLogger } from "../../../lib/logger";
 import { runWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
-import { setupWorkspaceWorktree } from "../../workspaces/worktree-setup";
 import { enqueueCatalogExtensions } from "../catalog-installation";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createExtensionConnectionsApi } from "../extension-connection-service";
@@ -29,6 +28,7 @@ import { createExtensionFilesApi } from "./extension-files";
 import { createFilesApi } from "./files";
 import { createNotifyApi } from "./notifications";
 import { createExtensionPackageFilesApi } from "./package-files";
+import { restrictResourceLinkMutations } from "./resource-link-mutation";
 import { createResourcesApi } from "./resources";
 import { createScopedHostApis } from "./scoped-host-apis";
 import { createSettingsApi } from "./settings";
@@ -65,11 +65,12 @@ export const createCommandEnvironment = (
     name: string;
     project: ExtensionProjectContext;
     projectId: string;
+    resourceLinksReadOnly?: boolean;
     settings?: RuntimeExtensionSettingRecord[];
     workspaceDir?: string;
     workspaceId?: string;
   },
-  runtimeDeps: CommandEnvironmentRuntimeDeps = { setupWorkspaceWorktree, runWorkspaceProvisioning },
+  runtimeDeps: CommandEnvironmentRuntimeDeps = { runWorkspaceProvisioning },
 ): CommandRunnerEnvironment => {
   const enabledSource = findEnabledSource(enabledSources, input.extensionId);
   if (!enabledSource) throw new Error(`Enabled extension instance not found: ${input.extensionId}`);
@@ -85,6 +86,11 @@ export const createCommandEnvironment = (
 
   const scopedHostApis = (scope?: InvocationScope) => {
     const signal = scope?.signal;
+    // Presentation lookups may dispatch another tool. They must stop when their caller returns,
+    // without aborting ctx.signal that durable host work can keep using after that return.
+    const resourceReads = new AbortController();
+    scope?.register(() => resourceReads.abort());
+    const resourceSignal = signal ? AbortSignal.any([signal, resourceReads.signal]) : undefined;
     const provisioningWorkspaceId = input.eventId === workspaceEvents.provision.id ? input.workspaceId : undefined;
     const resolveWorkingPath = (access: FileAccess) =>
       resolveWorkspaceFilesPath(
@@ -123,8 +129,10 @@ export const createCommandEnvironment = (
       signal,
     });
 
-    return {
+    const apis = {
+      resources: createResourcesApi(deps, { ...input, signal: resourceSignal }),
       storage,
+      account: createAccountApi(deps.accountService, input.projectId, signal),
       artifacts: createArtifactsApi(
         resolveProjectPath,
         {
@@ -166,7 +174,7 @@ export const createCommandEnvironment = (
       skills: { list: () => createReadBoundary(signal)(() => deps.skillService.list(input.projectId)) },
       settings,
       extensions: {
-        list: () => createReadBoundary(signal)(() => listProjectExtensionInventory(deps, input.projectId)),
+        list: () => createReadBoundary(signal)(() => listProjectExtensionInventory(deps, input.projectId, signal)),
         // Accepted selections continue after the command ends, so cancellation applies only before acceptance.
         install: async (names: string[]) => {
           signal?.throwIfAborted();
@@ -175,15 +183,16 @@ export const createCommandEnvironment = (
       },
       ...createScopedHostApis(deps, input, { connections, terminal }, runtimeDeps, scope),
     } satisfies ScopedHostApis;
+    return input.resourceLinksReadOnly ? restrictResourceLinkMutations(apis) : apis;
   };
   const hostApis = scopedHostApis();
   return {
     project: input.project,
     workspaceId: input.workspaceId,
     ...hostApis,
-    resources: createResourcesApi(deps, input),
     views: createViewsApi(deps, input),
     activity: createActivityApi(deps, { projectId: input.projectId, enabledSource }),
+    activityForInvocation: (source) => createActivityApi(deps, { projectId: input.projectId, enabledSource, source }),
     notify: createNotifyApi(deps, { projectId: input.projectId, enabledSource }),
     automation: createAutomationApi(() => deps.automationService, {
       projectId: input.projectId,
@@ -193,7 +202,6 @@ export const createCommandEnvironment = (
     net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
     connections: hostApis.connections,
     terminal: hostApis.terminal,
-    account: createAccountApi(deps.accountService, input.projectId),
     withScope: (scope) => scopedHostApis(scope),
   };
 };

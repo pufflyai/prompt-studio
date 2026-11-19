@@ -3,6 +3,37 @@ import { createMemoryRepoFiles, createMemoryStorage, makeCommandArgs } from "@ps
 import { resolveResources } from "./artifact-actions";
 import { commands } from "./commands";
 
+test("artifact mutations identify their changed resource for scoped query invalidation", async () => {
+  const storage = createMemoryStorage();
+  const projectFiles = createMemoryRepoFiles();
+  const snapshots = createMemoryRepoFiles();
+  const changes: unknown[] = [];
+  await projectFiles.writeText("page.html", "<title>Scoped artifact</title>");
+  const [ctx] = makeCommandArgs({
+    storage,
+    params: {},
+    overrides: {
+      projectFiles,
+      artifacts: { mount: () => snapshots },
+      events: {
+        emit: async (_event, _payload, options) => {
+          changes.push(options?.refresh);
+          return { delivered: 0 };
+        },
+      },
+    },
+  });
+  const published = await commands.publish.run(ctx, { file_path: "page.html" });
+  await commands.rename.run(ctx, { url: published.url, name: "Renamed" });
+  await commands.delete.run(ctx, { url: published.url });
+  expect(changes).toEqual(
+    Array.from({ length: 3 }, () => ({
+      extensionId: "pstdio.artifacts",
+      resourceIds: [published.artifactId],
+    })),
+  );
+});
+
 test("publishing allocates artifact and revision identities through core", async () => {
   const storage = createMemoryStorage();
   const allocate = storage.ids.create;
@@ -131,6 +162,31 @@ test("publishing returns a usable URL for the host-provided owner", async () => 
     ...makeCommandArgs({ storage, params: { resources: [first.resource] }, overrides }),
   );
   expect(resolved).toMatchObject([{ resource: { extensionId: "pstdio.artifacts", id: first.artifactId } }]);
+});
+
+// Existing consumers subscribe to this exported raw key independently of package names.
+test("publishing notifies historical artifact subscribers once", async () => {
+  const files = createMemoryRepoFiles();
+  await files.writeText("page.html", "<title>Retained event</title>");
+  const received: unknown[] = [];
+  const published = await commands.publish.run(
+    ...makeCommandArgs({
+      storage: createMemoryStorage(),
+      params: { file_path: "page.html" },
+      overrides: {
+        extensionId: "pstdio.artifacts",
+        projectFiles: files,
+        artifacts: { mount: () => createMemoryRepoFiles() },
+        events: {
+          emit: async (event, payload) => {
+            if (event === "pstdio.pstdio-artifacts.artifacts.changed") received.push(payload);
+            return { delivered: received.length };
+          },
+        },
+      },
+    }),
+  );
+  expect(received).toEqual([{ artifactId: published.artifactId }]);
 });
 
 test("canonical and historical allocated snapshots resolve the same artifact", async () => {

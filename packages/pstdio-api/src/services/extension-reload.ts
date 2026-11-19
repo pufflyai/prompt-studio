@@ -1,9 +1,18 @@
 import { dirname } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
-import { extensionLoadKey } from "pstdio-extensions";
 import {
-  checkExtensionSource,
-  hashExtensionSource,
+  acceptPreparedRevision,
+  inspectExtensionLoadKey,
+  type PreparedExtensionRevision,
+  preparedRevisionState,
+  readAcceptedRevision,
+} from "pstdio-extensions";
+import { checkCandidateSource } from "../features/extensions/extension-candidate";
+import { runExtensionPreparation } from "../features/extensions/extension-preparation";
+import {
+  type checkExtensionSource,
+  type hashExtensionSource,
+  hashExtensionSourceAsync,
   type LoadedExtensionSnapshot,
 } from "../features/extensions/extension-runtime";
 import type { createExtensionSourceMutations } from "./extension-source-mutations";
@@ -63,16 +72,32 @@ const validationError = (diagnostics: Array<{ code: string; message: string; sev
   );
 };
 
+const restoreFailedReload = async (
+  deps: ReloadDeps,
+  existing: InstalledSource,
+  previous: PreparedExtensionRevision | null,
+  adopted?: PreparedExtensionRevision,
+) => {
+  if (adopted && (await readAcceptedRevision(existing.source_path))?.id === adopted.id) {
+    if (previous)
+      await acceptPreparedRevision(existing.source_path, previous, { expectedState: preparedRevisionState(adopted) });
+    else await runExtensionPreparation("runtime.forget", { sourcePath: existing.source_path });
+    await deps.installedExtensionSourcesService.updateRegistration(existing.id, { ...existing });
+  }
+};
+
 const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSource) => {
-  const hash = deps.hashExtension ?? hashExtensionSource;
-  const check = deps.checkExtension ?? checkExtensionSource;
+  const hash = deps.hashExtension ?? hashExtensionSourceAsync;
+  const check = deps.checkExtension ?? checkCandidateSource;
+  const previous = await readAcceptedRevision(existing.source_path);
+  let adopted: PreparedExtensionRevision | undefined;
   let nextSourceHash: string | null = null;
 
   try {
-    nextSourceHash = hash(existing.source_path);
-    const loadKey = extensionLoadKey(existing.source_path);
+    nextSourceHash = await hash(existing.source_path);
     const result = await check(existing.source_path, dirname(existing.source_path));
     if (!result.loaded || result.check.errorCount > 0) throw validationError(result.check.diagnostics);
+    const loadKey = await inspectExtensionLoadKey(existing.source_path);
 
     const nextRevision = crypto.randomUUID();
     const updated = await deps.installedExtensionSourcesService.updateRegistration(existing.id, {
@@ -86,6 +111,12 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
     });
     if (!updated) throw new Error(`Installed extension not found: ${existing.id}`);
 
+    if (result.loaded.preparedRevision) {
+      await acceptPreparedRevision(existing.source_path, result.loaded.preparedRevision, {
+        expectedState: preparedRevisionState(previous),
+      });
+      adopted = result.loaded.preparedRevision;
+    }
     await deps.notifyInstalledSourcesChanged(existing.source_path, { loaded: result.loaded, loadKey });
     const refreshed = await deps.installedExtensionSourcesService.get(existing.id);
     if (!refreshed) throw new Error(`Installed extension not found: ${existing.id}`);
@@ -102,19 +133,10 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
         : refreshed;
     if (!completed) throw new Error(`Installed extension not found: ${existing.id}`);
 
-    await deps.installedExtensionSourcesService.recordReload({
-      installed_extension_id: existing.id,
-      previous_source_hash: existing.source_hash,
-      next_source_hash: nextSourceHash,
-      previous_revision: existing.loaded_revision,
-      next_revision: completed.loaded_revision,
-      status: completed.status === "error" ? "error" : "success",
-      ...(completed.status === "error" ? { error_json: completed.last_error_json } : {}),
-    });
-
     deps.emitInstalledSource(completed);
     return { installedSource: completed, check: result.check };
   } catch (error) {
+    await restoreFailedReload(deps, existing, previous, adopted);
     const code = error instanceof ExtensionValidationError ? error.code : "extension_reload_failed";
     const currentErrorJson = buildErrorJson(code, error);
     // Source that failed validation is never adopted: keep the hash the project accepted so the
@@ -125,16 +147,6 @@ const reloadInstalledSourceRow = async (deps: ReloadDeps, existing: InstalledSou
       last_error_json: currentErrorJson,
     });
     if (!updated) throw new Error(`Installed extension not found: ${existing.id}`);
-
-    await deps.installedExtensionSourcesService.recordReload({
-      installed_extension_id: existing.id,
-      previous_source_hash: existing.source_hash,
-      next_source_hash: nextSourceHash ?? existing.source_hash,
-      previous_revision: existing.loaded_revision,
-      next_revision: existing.loaded_revision,
-      status: "error",
-      error_json: currentErrorJson,
-    });
 
     deps.emitInstalledSource(updated);
     await deps.notifyInstalledSourcesChanged(existing.source_path);
@@ -171,16 +183,6 @@ export const reportWebviewBuildFailure = async (
     },
   );
   if (!updated) return { status: "source-changed" as const };
-
-  await deps.installedExtensionSourcesService.recordReload({
-    installed_extension_id: existing.id,
-    previous_source_hash: existing.source_hash,
-    next_source_hash: existing.source_hash,
-    previous_revision: existing.loaded_revision,
-    next_revision: existing.loaded_revision,
-    status: "error",
-    error_json: currentErrorJson,
-  });
 
   deps.emitInstalledSource(updated);
   return { status: "reported" as const, source: updated };
@@ -224,6 +226,25 @@ export const createWebviewBuildReports = (
   deps: ReloadDeps,
   mutateSource: ReturnType<typeof createExtensionSourceMutations>,
 ) => ({
+  reportWebviewPublication: (
+    installedExtensionId: string,
+    publicationId: string,
+    expectedSource: ExpectedWebviewBuildSource,
+  ) =>
+    mutateSource(expectedSource.sourcePath, async () => {
+      const existing = await deps.installedExtensionSourcesService.get(installedExtensionId);
+      if (!existing || existing.source_path !== expectedSource.sourcePath) return { status: "obsolete" as const };
+      if (existing.source_hash !== (expectedSource.sourceHash ?? null)) return { status: "source-changed" as const };
+      if (existing.loaded_revision === publicationId) return { status: "reported" as const };
+      const updated = await deps.installedExtensionSourcesService.updateLoadStateIfUnchanged(
+        existing.id,
+        expectedSource.updatedAt,
+        { loaded_revision: publicationId },
+      );
+      if (!updated) return { status: "source-changed" as const };
+      deps.emitInstalledSource(updated);
+      return { status: "reported" as const };
+    }),
   // Compilation happens outside source ownership. Its database result and reload
   // history still commit together before an uninstall can remove their source.
   reportWebviewBuildFailure: (

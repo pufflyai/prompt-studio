@@ -1,6 +1,7 @@
 import { relative, sep } from "node:path";
 import { createDirectoryTreeWatcher, type WatchDirectory } from "pstdio-extensions";
 import { watchWorkspaceDiffFiles } from "./workspace-diff-filesystem";
+import { hasGitDiscoveryContext } from "./workspace-git-discovery";
 
 /** Change hints only; finite tree reads remain the authority. Coverage recovery follows ADR 0140. */
 export const watchWorkspaceFiles = async (
@@ -8,11 +9,14 @@ export const watchWorkspaceFiles = async (
   changed: () => void,
   watch?: WatchDirectory,
   startupGap = process.platform === "darwin",
+  signal?: AbortSignal,
 ) => {
+  signal?.throwIfAborted();
   try {
     // Ignore decorations depend on the index and excludes, including linked-worktree metadata.
-    return await watchWorkspaceDiffFiles(root, changed, watch, startupGap);
+    if (hasGitDiscoveryContext(root)) return await watchWorkspaceDiffFiles(root, changed, watch, startupGap, signal);
   } catch {
+    signal?.throwIfAborted();
     // Plain folders and machines without Git still observe working files.
   }
   let closed = false;
@@ -46,14 +50,17 @@ export const watchWorkspaceFiles = async (
   });
   const startup = startupGap ? setTimeout(hint, 100) : undefined;
   startup?.unref?.();
-  return {
-    close() {
-      if (closed) return;
-      closed = true;
-      clearTimeout(timer);
-      clearTimeout(startup);
-      clearInterval(recovery);
-      observer.close();
-    },
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    clearTimeout(timer);
+    clearTimeout(startup);
+    clearInterval(recovery);
+    observer.close();
+    signal?.removeEventListener("abort", close);
   };
+  signal?.addEventListener("abort", close, { once: true });
+  if (signal?.aborted) close();
+  signal?.throwIfAborted();
+  return { close };
 };

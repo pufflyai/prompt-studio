@@ -31,7 +31,7 @@ test("explains a database ownership conflict and retries after its owner stops",
       ...recoveryEnvironment,
       PSTDIO_DB_PATH: join(ownerHome, "pstdio.db"),
     });
-    await expect(app.lifecyclePage.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
+    await expect(app.lifecyclePage.getByRole("alert")).toBeVisible();
     await testInfo.attach("database-ownership-recovery", {
       body: await app.lifecyclePage.screenshot(),
       contentType: "image/png",
@@ -46,9 +46,7 @@ test("explains a database ownership conflict and retries after its owner stops",
       (await fetch(`${owner.origin}/runtime/ready`, { headers: { authorization: `Bearer ${owner.token}` } })).ok,
     ).toBe(true);
 
-    const previousRecovery = await app.lifecyclePage
-      .getByRole("heading", { name: "Prompt Studio needs attention", exact: true })
-      .elementHandle();
+    const previousRecovery = await app.lifecyclePage.getByRole("alert").elementHandle();
     expect(await runPackagedCli(ownerHome, ["close"])).toMatchObject({ exitCode: 0 });
     await app.lifecyclePage.getByRole("button", { name: "Retry", exact: true }).click();
     await previousRecovery!.waitForElementState("hidden");
@@ -81,7 +79,7 @@ test("keeps a damaged database intact and retries after its control file is rest
     writeFileSync(controlPath, damagedControl);
 
     app = await launchPackagedRecovery(home, recoveryEnvironment);
-    await expect(app.lifecyclePage.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
+    await expect(app.lifecyclePage.getByRole("alert")).toBeVisible();
     await testInfo.attach("damaged-database-recovery", {
       body: await app.lifecyclePage.screenshot(),
       contentType: "image/png",
@@ -94,9 +92,7 @@ test("keeps a damaged database intact and retries after its control file is rest
     const failedRuntime = readDescriptor(home);
     if (failedRuntime) expect(() => process.kill(failedRuntime.pid, 0)).toThrow();
 
-    const previousRecovery = await app.lifecyclePage
-      .getByRole("heading", { name: "Prompt Studio needs attention", exact: true })
-      .elementHandle();
+    const previousRecovery = await app.lifecyclePage.getByRole("alert").elementHandle();
     writeFileSync(controlPath, originalControl);
     await app.lifecyclePage.getByRole("button", { name: "Retry", exact: true }).click();
     await previousRecovery!.waitForElementState("hidden");

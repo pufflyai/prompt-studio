@@ -6,6 +6,7 @@ import { useMessageAnimationKeys } from "./chat-message-animation";
 import { ChatMessageRowLayout } from "./chat-message-row-layout";
 import { buildChatMessageRows, getChatStickyRowIndex, hasChatRowGap } from "./chat-message-rows";
 import type { MessageGroup, SessionMessage } from "./message-types";
+import { useChatMessageVisibility } from "./use-chat-message-visibility";
 import { useTailReady } from "./use-chat-tail-ready";
 
 interface ChatMessageListProps {
@@ -16,6 +17,7 @@ interface ChatMessageListProps {
   expandedStickyMessageIds: Set<string>;
   onToggleStickyMessage: (messageId: string) => void;
   onReady?: () => void;
+  onVisibleMessageIdsChange?: (ids: string[]) => void;
   onForkMessage?: (messageId: string) => void | Promise<void>;
   forkDisabledReason?: string;
 }
@@ -38,7 +40,7 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
     forkDisabledReason,
   } = props;
   const { scrollRef, state } = useStickToBottomContext();
-  const rows = buildChatMessageRows(leadingResponses, groups);
+  const rows = buildChatMessageRows(leadingResponses, groups, streaming);
   const animatedKeys = useMessageAnimationKeys(rows.map((row) => row.message.animationKey ?? row.key));
   const initialHeight = scrollRef.current?.clientHeight || 1;
   const gapCount = Math.max(leadingResponses.length + groups.length - 1, 0);
@@ -66,9 +68,11 @@ export const ChatMessageList = (props: ChatMessageListProps) => {
   });
 
   useTailReady({ onReady, scrollRef });
+  const visibleRows = virtualItems.map((item) => rows[item.index].key).join("\0");
+  const list = useChatMessageVisibility(scrollRef, visibleRows, props.onVisibleMessageIdsChange);
 
   return (
-    <Box px="xs">
+    <Box px="xs" ref={list}>
       <Box position="relative" width="100%" style={{ height: totalSize }}>
         {virtualItems.map((virtualItem) => {
           const row = rows[virtualItem.index];

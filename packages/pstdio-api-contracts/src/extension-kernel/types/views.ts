@@ -1,4 +1,5 @@
 import type { Localizable } from "../l10n";
+import type { ActionBarViewBody } from "./action-bar";
 import type { ChatRendererContribution } from "./chat-renderer";
 import type { ExtensionPanelRegion } from "./composition";
 import type { RendererCallback } from "./context";
@@ -46,6 +47,7 @@ export interface TerminalViewBody {
 }
 
 export type ViewBody =
+  | ActionBarViewBody
   | TerminalViewBody
   | ChatViewBody
   | WebviewViewBody
@@ -81,6 +83,8 @@ export interface NavigationTreeContribution extends ContributionDefinition<"navi
   readonly optionalOwner?: boolean;
   readonly slot?: NavigationTreeSlot;
   readonly view: ViewRef;
+  /** Stay inactive while the foreign view provider is absent; local or present-provider typos still fail. */
+  readonly optionalView?: boolean;
   /** Project-scoped trees read without a selected resource. Defaults to selection. */
   readonly resourceScope?: "project" | "selection";
 }

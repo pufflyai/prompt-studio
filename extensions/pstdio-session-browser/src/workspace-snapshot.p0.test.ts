@@ -10,6 +10,7 @@ const presentation = {
   additions: 12,
   deletions: 3,
 };
+const workspaces = [{ id: "a", name: "Workspace A", isDefault: true }];
 const snapshotContext = () =>
   makeCommandContext({
     storage: createMemoryStorage({ indexes: [nativeSubmissionIndex] }),
@@ -23,7 +24,10 @@ const snapshotContext = () =>
         },
         install: async () => {},
       },
-      workspaces: { list: async () => [{ id: "a", name: "Workspace A", isDefault: true }] },
+      workspaces: {
+        list: async () => workspaces,
+        get: async (id) => workspaces.find((workspace) => workspace.id === id) ?? null,
+      },
       commands: {
         execute: async () =>
           ({ ok: false, status: "error", code: "command_not_found", reason: "Workspaces not installed" }) as never,
@@ -79,7 +83,7 @@ test("a failed optional workspace presentation leaves the transcript and device 
 test("available Workspaces supplies header presentation without changing execution", async () => {
   const ctx = snapshotContext();
   ctx.commands.execute = async (command, invocation) => {
-    expect(command).toEqual({ kind: "command", extensionId: "pstdio.pstdio-workspaces", id: "session-presentation" });
+    expect(command).toEqual({ kind: "command", extensionId: "pstdio.workspaces", id: "session-presentation" });
     expect(invocation.params).toMatchObject({ id: "a", available: true });
     return { ok: true, status: "success", value: presentation } as never;
   };
@@ -89,4 +93,22 @@ test("available Workspaces supplies header presentation without changing executi
     expect(snapshot.workspace).toEqual(presentation);
     expect(snapshot.workspaceId).toBe("a");
   }
+});
+
+test("workspace setup disables unavailable choices and reply forks without hiding the conversation", async () => {
+  const ctx = snapshotContext();
+  const workspace = { ...workspaces[0]!, providerState: "provisioning" as const };
+  ctx.workspaces.list = async () => [workspace];
+  ctx.workspaces.get = async () => workspace;
+  ctx.commands.execute = async () => ({ ok: true, status: "success", value: presentation }) as never;
+
+  const draft = await readSnapshot(ctx);
+  const selector = draft.controls?.find((control) => control.id === "workspace");
+  expect(selector?.type === "selection" ? selector.options : undefined).toMatchObject([{ id: "a", disabled: true }]);
+
+  const saved = await readSnapshot(ctx, resource);
+  expect(saved.messages).toEqual([]);
+  expect(saved.fork?.disabledReason).toBeTruthy();
+  ctx.workspaces.get = async () => ({ ...workspace, providerState: "ready" });
+  expect((await readSnapshot(ctx, resource)).fork?.disabledReason).toBeNull();
 });

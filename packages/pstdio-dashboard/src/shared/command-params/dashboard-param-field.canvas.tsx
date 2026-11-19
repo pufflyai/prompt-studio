@@ -43,7 +43,7 @@ queryClient.setQueryData<ProjectTemplateAsset[]>(projectTemplateAssetsQueryKey(p
     projectId,
     name: "bug-fix",
     title: "Bug fix",
-    templateType: "pstdio.pstdio-planner.template-type.ticket",
+    templateType: "pstdio.planner.template-type.ticket",
     localType: "ticket",
     groupLabel: "Ticket",
     groupOrder: 10,
@@ -54,7 +54,7 @@ queryClient.setQueryData<ProjectTemplateAsset[]>(projectTemplateAssetsQueryKey(p
     projectId,
     name: "proposal",
     title: "Proposal",
-    templateType: "pstdio.pstdio-planner.template-type.ticket",
+    templateType: "pstdio.planner.template-type.ticket",
     localType: "ticket",
     groupLabel: "Ticket",
     groupOrder: 10,
@@ -66,7 +66,7 @@ const templateEntry = {
   type: "template",
   label: "Ticket template",
   required: false,
-  templateType: "pstdio.pstdio-planner.template-type.ticket",
+  templateType: "pstdio.planner.template-type.ticket",
 } satisfies CommandParamEntry;
 const workspaceEntry = {
   key: "workspace",

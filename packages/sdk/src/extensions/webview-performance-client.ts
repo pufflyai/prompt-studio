@@ -4,14 +4,18 @@ import type {
   PerformanceSnapshot,
 } from "pstdio-api-contracts/performance-diagnostics";
 import type { GuestHost } from "./guest-host";
+import { getWebviewServiceQueries, type WebviewServiceQuery } from "./webview-service-query";
 
 export interface WebviewPerformanceClient {
+  query(): WebviewServiceQuery<PerformanceSnapshot | null>;
   state(): Promise<PerformanceMonitoringState>;
   recordings(): Promise<PerformanceRecordingExport | null>;
   /** Keep one shared capture owner until this view releases it or disconnects. Does not enable monitoring. */
   retain(): Promise<() => Promise<void>>;
   snapshot(): Promise<PerformanceSnapshot | null>;
   setEnabled(enabled: boolean): Promise<void>;
+  /** Requires a local user action. Read state().renderOverlay before using this on older hosts. */
+  setRenderOverlayEnabled(enabled: boolean): Promise<void>;
   pauseExtension(installedExtensionId: string): Promise<void>;
   resumeExtension(installedExtensionId: string): Promise<void>;
   /** Listener lifetime belongs to this view. Does not start a collector. */
@@ -23,11 +27,14 @@ const subscribers = new WeakMap<GuestHost, { count: number; starting: Promise<un
 
 export const createWebviewPerformanceClient = (host: GuestHost) =>
   ({
+    query: () => getWebviewServiceQueries(host, "performance").query({ service: "snapshot" }),
     state: () => host.call("performance.read", { operation: "state" }) as Promise<PerformanceMonitoringState>,
     recordings: () =>
       host.call("performance.read", { operation: "recordings" }) as Promise<PerformanceRecordingExport | null>,
     snapshot: () => host.call("performance.read", { operation: "snapshot" }) as Promise<PerformanceSnapshot | null>,
     setEnabled: (enabled) => host.call("performance.control", { operation: "set-enabled", enabled }),
+    setRenderOverlayEnabled: (enabled) =>
+      host.call("performance.control", { operation: "set-render-overlay", enabled }),
     pauseExtension: (installedExtensionId) =>
       host.call("performance.control", { operation: "pause-extension", installedExtensionId }),
     resumeExtension: (installedExtensionId) =>

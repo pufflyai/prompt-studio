@@ -38,8 +38,8 @@ test("Home reads quota commands independently and leaves disabled providers out"
     },
   } as unknown as CommandContext;
   const reports = await readQuotas(context);
-  expect(seen).toHaveLength(4);
-  expect(reports.map((report) => report.label)).toEqual(["Codex", "Claude Code", "Pi"]);
+  expect(seen).toHaveLength(5);
+  expect(reports.map((report) => report.label)).toEqual(["Codex", "Claude Code", "Pi", "GitHub Copilot"]);
   expect(reports[0]?.limits[0]?.remainingPercent).toBe(0);
   expect(reports[0]?.icon).toBe("installed-codex-icon");
   expect(reports[1]?.status).toBe("unavailable");
