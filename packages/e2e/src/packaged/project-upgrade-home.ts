@@ -24,6 +24,37 @@ const loadSavedQuota = async (db: PGlite, project: string, owners: string[]) => 
     "storage_ordered_receipts",
   ] as const;
   await db.transaction(async (tx) => {
+    // Home's hourly read may already have initialized an empty journal on the released host.
+    // Seed only an unused stream. The three empty rows are the defaults produced by records.list().
+    for (const table of [
+      "storage_current_records",
+      "storage_ordered_records",
+      "storage_ordered_operations",
+      "storage_ordered_receipts",
+    ]) {
+      const existing = await tx.query(
+        `SELECT 1 FROM ${table} WHERE workbench_id = $1 AND extension_id = ANY($2::text[]) LIMIT 1`,
+        [project, owners],
+      );
+      assert.equal(existing.rows.length, 0, "Expected an unused synthetic Home journal");
+    }
+    const emptyRows = [
+      [
+        "storage_documents",
+        "document_id = 'records' AND revision = 0 AND folded_revision = 0 AND state = decode('0000', 'hex')",
+      ],
+      ["storage_record_projections", "document_id = 'records' AND revision = 0 AND live_count = 0"],
+      [
+        "storage_ordered_owners",
+        "epoch IS NULL AND NOT joined AND NOT skipped AND after = 0 AND through = 0 AND pending_bytes = 0 AND state_id IS NULL AND state_bytes = 0 AND receipt_root IS NULL",
+      ],
+    ] as const;
+    for (const [table, empty] of emptyRows) {
+      await tx.query(`DELETE FROM ${table} WHERE workbench_id = $1 AND extension_id = ANY($2::text[]) AND ${empty}`, [
+        project,
+        owners,
+      ]);
+    }
     for (const table of tables) {
       const columns = Object.keys(savedQuota[table][0]!)
         .filter((name) => name !== "local_sequence")
