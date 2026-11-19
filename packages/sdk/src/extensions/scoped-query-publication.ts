@@ -32,6 +32,7 @@ export const createQueryPublication = <T>(input: {
   running(): boolean;
   notify(): void;
   cancelRequest(): void;
+  cancelAutomatic(): void;
   resume(): void;
 }) => {
   const { client, queryKey, observer, ledger } = input;
@@ -63,6 +64,7 @@ export const createQueryPublication = <T>(input: {
       if (input.disposed()) return;
       if (value === undefined) throw new Error("A scoped query must accept a value; use null for an empty result.");
       const accepted = ledger.accept(shareQueryValue(client.getQueryData<T>(queryKey), value));
+      input.cancelAutomatic();
       input.resume();
       // Cancel work and guard cache publication even if its retryer has already resolved.
       input.cancelRequest();
@@ -73,6 +75,7 @@ export const createQueryPublication = <T>(input: {
     reportError(cause: unknown) {
       if (input.disposed()) return;
       const accepted = ledger.accept(snapshot.data, cause instanceof Error ? cause : new Error(String(cause)));
+      input.cancelAutomatic();
       input.cancelRequest();
       client.getQueryCache().find({ queryKey, exact: true })?.setState({
         error: accepted.error,

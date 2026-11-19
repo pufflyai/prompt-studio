@@ -65,6 +65,7 @@ export const createQueryOwner = <T>(
     disposed: () => disposed,
     running: () => Boolean(running),
     cancelRequest: () => cancelRequest(),
+    cancelAutomatic: scheduleRead.cancel,
     resume: repeat.resume,
     notify: () => {
       for (const listener of listeners.values()) listener.notify();
@@ -75,6 +76,7 @@ export const createQueryOwner = <T>(
 
   const read = (automatic = false) => {
     if (disposed) return Promise.reject(new Error("Query owner is disposed"));
+    scheduleRead.cancel();
     if (!automatic) {
       requiredRead = true;
       repeat.resume();
@@ -126,6 +128,10 @@ export const createQueryOwner = <T>(
       },
     ]);
   };
+  const releaseAutomaticReader = (automatic: boolean) => {
+    if (automatic) automaticReaders--;
+    if (!automaticReaders) scheduleRead.cancel();
+  };
   const owner = {
     key: queryKey,
     getSnapshot: publication.getSnapshot,
@@ -148,15 +154,14 @@ export const createQueryOwner = <T>(
     },
     cancel() {
       if (disposed) return;
+      scheduleRead.cancel();
       ledger.invalidate();
       cancelledRevision = ledger.revision();
       cycle?.abort(new CancelledError());
       cancelRequest();
       repeat.resume();
     },
-    accept(value: T) {
-      publication.accept(value);
-    },
+    accept: publication.accept,
     /** Schedulers may observe passively while retaining control of read admission. */
     subscribe(listener: () => void, input: { automatic?: boolean } = {}) {
       if (disposed) throw new Error("Query owner is disposed");
@@ -180,7 +185,7 @@ export const createQueryOwner = <T>(
         if (released) return;
         released = true;
         if (!listeners.delete(token)) return;
-        if (automatic) automaticReaders--;
+        releaseAutomaticReader(automatic);
         if (listeners.size) return;
         const interruptedRead = observer.getCurrentResult().isFetching && !ledger.current();
         sourceDetached = Boolean(descriptor.subscribe);
@@ -209,6 +214,7 @@ export const createQueryOwner = <T>(
     dispose() {
       if (disposed) return;
       disposed = true;
+      scheduleRead.cancel();
       repeat.resume();
       ledger.invalidate();
       const query = observer.getCurrentQuery();
