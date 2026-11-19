@@ -378,6 +378,49 @@ test("accepting a runtime retires an earlier frontend snapshot at the same mutab
   }
 });
 
+test("first use serves the accepted frontend while checking offline edits", async () => {
+  const { root, source } = fixture();
+  const installed = await installExtensionSource({ source, skipInstall: true });
+  await acceptPreparedRevision(source, installed.preparedRevision!);
+  const row = { id: "offline", source_path: source, install_name: installed.installName, updated_at: "initial" };
+  const viewId = "test.prepared-install.view.page";
+  const dist = join(root, "views", row.id, viewId, "dist", "module.js");
+  const release = Promise.withResolvers<void>();
+  const publication = Promise.withResolvers<void>();
+  let successes = 0;
+  const manager = createExtensionWebviewBuildManager({
+    listInstalledSources: async () => [row],
+    webviewCacheRoot: join(root, "views"),
+    reportBuildFailure: async (_id, _view, error) => {
+      throw error;
+    },
+    reportBuildSuccess: async () => {
+      successes++;
+      await release.promise;
+      return "reported";
+    },
+    reportPublication: async () => {
+      publication.resolve();
+      return "reported";
+    },
+    onError: publication.reject,
+  });
+  try {
+    writeFileSync(join(source, "main.ts"), 'console.log("offline edit");');
+    await manager.refresh(source, "attachment");
+    await manager.reconcile();
+    await Promise.all([manager.ensure(row.id, viewId), manager.ensure(row.id, viewId)]);
+    expect(readFileSync(dist, "utf8")).toContain("prepared UI");
+    release.resolve();
+    await publication.promise;
+    expect(readFileSync(dist, "utf8")).toContain("offline edit");
+    expect(successes).toBe(1);
+  } finally {
+    release.resolve();
+    manager.dispose();
+  }
+});
+
 test("registration reconciliation repairs accepted output without reinspecting unchanged sources", async () => {
   const { root, source } = fixture();
   const installed = await installExtensionSource({ source, skipInstall: true });
