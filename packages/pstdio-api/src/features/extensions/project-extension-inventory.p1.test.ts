@@ -46,6 +46,7 @@ test("inventory change checks leave a live frontend continuation admitted and st
     );
     expect((await inventory).extensions[0]).toMatchObject({
       status: "error",
+      author: { kind: "publisher", publisher: "pstdio" },
       lastError: { message: "Current frontend diagnostic" },
     });
     const cancelled = new AbortController();
