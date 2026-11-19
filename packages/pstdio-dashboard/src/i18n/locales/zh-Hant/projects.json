@@ -133,7 +133,8 @@
           "templates": "範本",
           "themes": "主題",
           "navigationItems": "導覽項目",
-          "commandPaletteResources": "命令面板資源"
+          "commandPaletteResources": "命令面板資源",
+          "workspaceTypes": "工作區類型"
         },
         "deleteHintShared": "刪除此擴充功能的檔案。它將從所有使用它的專案中移除。"
       },
