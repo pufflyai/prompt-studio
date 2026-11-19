@@ -21,11 +21,11 @@ const useCloudCopyDownload = (
     entry?: CloudProjectCatalogEntry;
     account?: ProjectCopyAccount;
     owner: DownloadOwner;
-    accept: (owner: DownloadOwner) => void;
+    rememberIntent: (owner: DownloadOwner) => void;
     scope: string;
   },
 ) => {
-  const { id, downloading, requested, deleting, entry, account, owner, accept, scope } = options;
+  const { id, downloading, requested, deleting, entry, account, owner, rememberIntent, scope } = options;
   const client = getRuntimeApiClient(getRuntimeCollections());
   const queryClient = useQueryClient();
   useCollectionSelection({ tables: ["projects", "workspaces"] });
@@ -48,8 +48,7 @@ const useCloudCopyDownload = (
       if (!admission.account) throw new Error("The active Cloud account changed. Choose the project again.");
       return admission.client.account.downloadCloudProject(admission.id, { expected: admission.account });
     },
-    onSuccess(_result, admission) {
-      accept(admission.owner);
+    onSettled() {
       void refresh();
     },
   });
@@ -68,7 +67,11 @@ const useCloudCopyDownload = (
     });
   }, [entry?.presence, id, input.instance.instanceId, input.workbench, requested, localName, deleting]);
 
-  return { sync, download, refresh, requestDownload: () => download.mutate({ id, account, owner, client }) };
+  const requestDownload = () => {
+    rememberIntent(owner);
+    download.mutate({ id, account, owner, client });
+  };
+  return { sync, download, refresh, requestDownload };
 };
 
 const downloadMessage = (error: Error | null, entry?: CloudProjectCatalogEntry, syncState?: string) => {
@@ -112,9 +115,18 @@ export const useCloudProjectChoice = (input: WorkbenchPanelRenderInput) => {
     entry,
     account,
     owner,
-    accept: (admitted) => setOwner((current) => (current === admitted ? { ...current, requested: true } : current)),
+    rememberIntent: (admitted) =>
+      setOwner((current) => (current === admitted ? { ...current, requested: true } : current)),
     scope,
   });
+  const refetchCatalog = cloud.refetch;
+  useEffect(() => {
+    if (!requested || invalidated || deleting || entry?.presence !== "cloud-only") return;
+    const timer = setInterval(() => {
+      void refetchCatalog({ cancelRefetch: false });
+    }, 1500);
+    return () => clearInterval(timer);
+  }, [requested, invalidated, deleting, entry?.presence, refetchCatalog]);
   const back = () => {
     input.workbench.overlays.closeOverlay(input.instance.instanceId);
     void input.workbench.commands.executeCommand(dashboardCommandIds.openProjects);
