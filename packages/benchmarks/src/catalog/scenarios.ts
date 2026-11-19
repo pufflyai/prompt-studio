@@ -145,12 +145,12 @@ export const scenarios = [
     filter: { archived: false, status: ["ready", "in-progress"], excludePriority: "default-priority-low" },
     actions: ["cold actionable content", "filter/search", "next page", "move ticket", "reopen persisted result"],
     metrics: [
-      elapsed("actionable"),
-      elapsed("filter"),
-      elapsed("page"),
-      elapsed("move"),
-      elapsed("reopen"),
-      elapsed("longest-stall"),
+      metric("actionable", "ms", "advisory"),
+      metric("filter", "ms", "advisory"),
+      metric("page", "ms", "advisory"),
+      metric("move", "ms", "advisory"),
+      metric("reopen", "ms", "advisory"),
+      metric("longest-stall", "ms", "advisory"),
     ],
   },
   {

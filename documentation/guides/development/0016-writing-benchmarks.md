@@ -44,13 +44,13 @@ Timing and average-memory targets use strict **<**, including equality as a fail
 | B3 | Runtime attachment <1,800ms; usable <5,000ms; first interaction <250ms |
 | B4 | Input/history/stream-to-paint <250ms; file <1,500ms; terminal <250ms; panel <500ms; project/session switch <2,000ms; longest stall <200ms; completion <10,000ms; cancellation <500ms |
 | B5 | Average native memory <2.5GB on Linux, <2GB on macOS, <3GB on Windows; complete ten-minute coverage, no missing samples, maximum gap ≤1,000ms |
-| B6 | Actionable/reopen <5,000ms; filter/page/move <250ms; longest stall <200ms. Correctness requires bounded query pages and mounted rows ≤100, and persisted edits. |
+| B6 | Advisory targets for benchmark qualification: actionable/reopen <5,000ms, filter/page/move <250ms, longest stall <200ms. Correctness requires bounded query pages, at most 100 mounted rows and persisted edits. |
 | B7 | Cold read <300ms; warm read <180ms; one-record edit <120ms; read during maintenance <120ms. Correct page contents, persisted edits and maintenance results remain required. |
 | B8 | Recovery feedback <480ms; restored usable state <6,000ms; first action <300ms |
 
 The user raised the Linux B5 average native-memory limit to 2.5GB on 2026-11-17. Earlier measurements retain their recorded limits and outcomes.
 
-The nine B6/B7 ceilings were approved by the user on 2026-11-17 in Planner decision `01a1e8d3-92c0-725d-8622-b831b57a51a7`. On 2026-11-19 the user instructed that benchmarks measure milliseconds rather than read/write counts. B6 and B7 version 2 keep only elapsed-time metrics and gates; storage counts and other supporting values remain raw diagnostics. Their former scan/write ceilings and count-based scan/write assertions are retired. Fixtures, actions, platforms, throttling, timing limits and functional correctness checks are unchanged. Earlier failed or unqualified results retain their original limits and status.
+The user approved the original nine B6/B7 ceilings on 2026-11-17 in Planner decision `01a1e8d3-92c0-725d-8622-b831b57a51a7`. On 2026-11-19 the user selected milliseconds as the benchmark metric and made completed B6 timing misses advisory. B6 and B7 version 2 retain elapsed-time metrics and report storage counts and other supporting values as raw diagnostics. The former scan/write ceilings and count-based scan/write assertions are retired. B6 continues to require successful actions, complete measurements and passing correctness checks for benchmark qualification. Earlier failed or unqualified results retain their original limits and status.
 
 B4's chosen limits bound immediate foreground feedback, allow file/tool initialization separately, and keep the ten-second completion target above the fixed six-second replay schedule without extending that schedule. Retained renderer guards are idle script ≤2% and task ≤5%, streaming script ≤85% and task ≤120%. The last task-share guard alone does not constrain responsiveness; paint and stall targets do.
 
