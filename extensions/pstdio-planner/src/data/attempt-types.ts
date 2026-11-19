@@ -56,12 +56,14 @@ export interface AttemptBlocker {
 
 export interface AttemptRecord {
   schemaVersion: 2;
+  id?: string;
   workspaceId: string;
   workspaceShorthand: string;
   ticketId: string;
   ticketShorthand: string;
   implementationSessionId: string;
-  base: { workspaceId: string | null; headSha: string };
+  /** Folder attempts have no Git base. */
+  base: { workspaceId: string | null; headSha: string } | null;
   revisions: AttemptRevision[];
   implementationDisconnectRetries: number;
   reviewDisconnectRetries: number;
@@ -101,6 +103,7 @@ export interface ReviewComment {
 
 export interface TicketAttemptSelection {
   ticketId: string;
+  attemptId?: string;
   workspaceId: string;
   selectedBy: ActorRef;
   reviewRequestId: string | null;
@@ -135,6 +138,7 @@ export type AttemptEventType =
   | "stack_updated";
 
 export interface AttemptTimelineEvent {
+  attemptId?: string;
   activityId?: string;
   id: string;
   workspaceId: string;

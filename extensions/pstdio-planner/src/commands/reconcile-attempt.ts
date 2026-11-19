@@ -1,9 +1,11 @@
 import { type CommandContext, defineCommand, params, type SessionRunSnapshot } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { legacyAttemptOutput } from "../data/attempt-compatibility";
+import { attemptId, resolveAttemptId } from "../data/attempt-identity";
 import { readRetiredWorkspaceIds } from "../data/attempt-retirement";
 import { appendAttemptEvent, listAttempts, putAttempt, readAttempt } from "../data/attempt-storage";
 import type { AttemptRecord } from "../data/attempt-types";
+import { hasFolderWriter } from "../data/folder-writers";
 import { readSessionHistory } from "../data/session-history";
 import { withWriteGuard } from "../data/write-guard";
 import { readImplementationCapacity } from "./attempt-readiness";
@@ -19,9 +21,11 @@ const retryImplementation = async (ctx: CommandContext, attempt: AttemptRecord, 
   const capacity = await readImplementationCapacity(ctx);
   if (capacity.running >= capacity.limit) throw new Error("Implementation capacity is full.");
   if (
-    (await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId })).some(
-      (other) => other.id !== session.id && isLiveSession(other),
-    )
+    attempt.base === null
+      ? await hasFolderWriter(ctx, attempt.workspaceId, session.id)
+      : (await readSessionHistory(ctx.sessions, { workspaceId: attempt.workspaceId })).some(
+          (other) => other.id !== session.id && isLiveSession(other),
+        )
   )
     throw new Error("Another session is executing in this workspace.");
   await ctx.sessions.followup({
@@ -35,6 +39,7 @@ const retryImplementation = async (ctx: CommandContext, attempt: AttemptRecord, 
     updatedAt: new Date().toISOString(),
   });
   await appendAttemptEvent(ctx.storage, {
+    attemptId: attemptId(attempt),
     workspaceId: attempt.workspaceId,
     revision: attempt.revisions.at(-1)?.revision ?? null,
     type: "implementation_resumed",
@@ -80,7 +85,10 @@ const reconcileImplementation = async (
     return { decision: "blocked" as const, attempt: blocked };
   }
   if (session?.status === "cancelled") return { decision: "stopped" as const, attempt };
-  return { decision: "awaiting-change-request" as const, attempt };
+  return {
+    decision: attempt.base === null ? ("awaiting-progress" as const) : ("awaiting-change-request" as const),
+    attempt,
+  };
 };
 
 export const reconcileAttempt = async (
@@ -90,7 +98,7 @@ export const reconcileAttempt = async (
   return withWriteGuard(ctx, `attempt:${commandParams.workspaceId}`, async () => {
     const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
     if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
-    const retired = (await readRetiredWorkspaceIds(ctx.storage, [attempt.workspaceId])).has(attempt.workspaceId);
+    const retired = (await readRetiredWorkspaceIds(ctx.storage, [attemptId(attempt)])).has(attemptId(attempt));
     if (retired) return { decision: "unchanged" as const, attempt };
     const session = await ctx.sessions.get(attempt.implementationSessionId);
     if (liveStatuses.has(session?.status ?? "")) return { decision: "active" as const, attempt };
@@ -109,9 +117,11 @@ export const reconcileAttemptCommand = defineCommand({
   id: "reconcile-attempt",
   title: "Reconcile managed attempt",
   cli: true,
-  params: { workspaceId: params.text({ required: true }) },
+  params: { attemptId: params.text(), workspaceId: params.text() },
   async run(ctx, input) {
-    const result = await withWriteGuard(ctx, "attempt-launch", () => reconcileAttempt(ctx, input));
+    const result = await withWriteGuard(ctx, "attempt-launch", () =>
+      reconcileAttempt(ctx, { workspaceId: resolveAttemptId(input) }),
+    );
     return { ...result, attempt: await legacyAttemptOutput(ctx.storage, result.attempt) };
   },
 });

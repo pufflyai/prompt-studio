@@ -30,8 +30,8 @@ test("maintained counts follow both identity halves, field changes, overlong gro
   const group = async () => {
     const selection = { index: "view", groupBy: [category] };
     const actual = await rows.aggregate(selection);
-    // A fingerprint requires the canonical aggregate and independently checks the maintained groups.
-    const reference = await rows.aggregate({ ...selection, fingerprint: ["id"] });
+    // A separate index without count metadata independently checks both visibility and groups.
+    const reference = await rows.aggregate({ ...selection, index: "reference", fingerprint: ["id"] });
     expect(actual.count).toEqual(reference.count);
     expect(actual.groups).toEqual(reference.groups);
     return actual.count;
@@ -42,7 +42,10 @@ test("maintained counts follow both identity halves, field changes, overlong gro
       operationId: "before-index",
       edits: [{ recordId: "1", replace: { id: "a", group: "first" } }],
     });
-    await rows.defineIndexes([definition]);
+    await rows.defineIndexes([
+      definition,
+      { ...definition, name: "reference", countBy: undefined, alternateOrders: undefined },
+    ]);
     expect(await group()).toBe(0);
     await core.commit({ operationId: "identity-arrives", edits: [{ recordId: "a", replace: allocated }] });
     expect(await group()).toBe(1);

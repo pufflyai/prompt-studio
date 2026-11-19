@@ -14,6 +14,7 @@ const attemptFields: StorageRecordIndex["fields"] = {
 export const attemptQueryIndexes: StorageRecordIndex[] = [
   ...[
     { name: "attempt-events-history", collection: "planner-attempt-events", scope: "workspaceId", direction: "asc" },
+    { name: "attempt-events-by-attempt", collection: "planner-attempt-events", scope: "attemptId", direction: "asc" },
     { name: "attempt-comments-history", collection: "planner-review-comments", scope: "threadId", direction: "asc" },
     { name: "attempt-recovery-commits", collection: "planner-attempt-events", scope: "workspaceId", direction: "desc" },
   ].map(({ name, collection, scope, direction }) => ({
@@ -44,6 +45,7 @@ export const attemptQueryIndexes: StorageRecordIndex[] = [
     collection: "planner-attempt-events",
     fields: {
       workspaceId: { path: ["workspaceId"], type: "string" },
+      attemptId: { path: ["attemptId"], type: "string" },
       id: { path: ["id"], type: "string" },
       evidenceKey: { path: ["metadata", "evidenceKey"], type: "string" },
       type: { path: ["type"], type: "string" },
@@ -87,9 +89,10 @@ export const readWorkspaceEvents = async (storage: ExtensionStorageApi, workspac
   const records: AttemptTimelineEvent[] = [];
   for (let offset = 0; offset < workspaceIds.length; offset += 100) {
     const workspace: StoragePredicate = {
-      field: "workspaceId",
-      op: "in",
-      value: workspaceIds.slice(offset, offset + 100),
+      any: [
+        { field: "workspaceId", op: "in", value: workspaceIds.slice(offset, offset + 100) },
+        { field: "attemptId", op: "in", value: workspaceIds.slice(offset, offset + 100) },
+      ],
     };
     const where: StoragePredicate = type ? { all: [workspace, { field: "type", op: "eq", value: type }] } : workspace;
     for await (const page of attemptQueryPages<AttemptTimelineEvent>(storage, "attempt-events-workspace", where))
