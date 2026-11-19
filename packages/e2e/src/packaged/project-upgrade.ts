@@ -15,11 +15,12 @@ import {
   installedProjectTools,
   type ProjectUpgradeInput,
   readUpgradeProject,
+  seedConflictedProject,
   seedUpgradeProject,
   upgradeApi,
   upgradeCoreProjectTools,
 } from "./project-upgrade-fixture";
-import { assertHomeOpens, checkHomeHistory } from "./project-upgrade-home";
+import { assertHomeConflict, assertHomeOpens, checkHomeHistory } from "./project-upgrade-home";
 import { preparePublishedHost, versionFromTag } from "./published-host-binary";
 
 type Seed = Awaited<ReturnType<typeof seedUpgradeProject>>;
@@ -208,10 +209,23 @@ const run = async (
   let runtime: Runtime | undefined;
   try {
     runtime = await launch(baseline, "baseline");
+    if (input.profile === "conflicted") {
+      const id = await seedConflictedProject(upgradeApi(runtime.descriptor), input.home);
+      await stopProcess(runtime.child);
+      runtime = undefined;
+      const before = await checkHomeHistory(input, id);
+      runtime = await launch(candidate, "upgrade");
+      await assertCurrentDatabase(input.home);
+      await assertHomeConflict(upgradeApi(runtime.descriptor), id);
+      await stopProcess(runtime.child);
+      runtime = undefined;
+      await checkHomeHistory(input, id, before);
+      return;
+    }
     const state = await seed(runtime.descriptor, input);
     await stopProcess(runtime.child);
     runtime = undefined;
-    await checkHomeHistory(input, state.fixture.id, "seed");
+    const home = await checkHomeHistory(input, state.fixture.id);
     runtime = await launch(candidate, "upgrade");
     await assertCurrentDatabase(input.home);
     const edited = await verify(runtime.descriptor, input.evidence, state);
@@ -223,7 +237,7 @@ const run = async (
     await verifyRestart(runtime.descriptor, input.evidence, state.fixture, edited);
     await stopProcess(runtime.child);
     runtime = undefined;
-    await checkHomeHistory(input, state.fixture.id, "verify");
+    await checkHomeHistory(input, state.fixture.id, home);
   } finally {
     if (runtime) await stopProcess(runtime.child);
   }
@@ -241,7 +255,10 @@ if (import.meta.main) {
     },
   });
   const profile = values.profile;
-  assert(profile === undefined || profile === "active" || profile === "aged", "Choose --profile active or aged");
+  assert(
+    profile === undefined || profile === "active" || profile === "aged" || profile === "conflicted",
+    "Choose --profile active, aged or conflicted",
+  );
   const { from, candidate, "candidate-ref": candidateRef, "baseline-binary": baselinePath } = values;
   assert(from, "Supply the published release tag with --from");
   versionFromTag(from);
@@ -256,6 +273,7 @@ if (import.meta.main) {
   const pair = { from, candidateRef, baseline, candidate: resolve(candidate) };
   const failures: unknown[] = [];
   const profiles: ProjectUpgradeInput["profile"][] = profile ? [profile] : ["active", "aged"];
+  if (!profile && from === "pstdio@0.47.0") profiles.push("conflicted");
   for (const variant of profiles) {
     const output = join(evidence, variant);
     await mkdir(output);

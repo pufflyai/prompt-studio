@@ -13,7 +13,7 @@ const canonical = "pstdio.home";
 // A released 0.47 record writer authored these two disjoint synthetic quota samples in
 // separate Home streams. Keep the original operations and receipts. The observation date
 // is beyond the retention cutoff so opening Home cannot legitimately expire the samples.
-const loadSavedQuota = async (db: PGlite, project: string) => {
+const loadSavedQuota = async (db: PGlite, project: string, owners: string[]) => {
   const tables = [
     "storage_documents",
     "storage_record_projections",
@@ -33,29 +33,40 @@ const loadSavedQuota = async (db: PGlite, project: string) => {
       await tx.query(
         `INSERT INTO ${table} (workbench_id, ${columns})
          SELECT $1, ${columns} FROM jsonb_populate_recordset(NULL::${table}, $2::jsonb)`,
-        [project, JSON.stringify(savedQuota[table])],
+        [project, JSON.stringify(savedQuota[table].filter((row) => owners.includes(row.extension_id)))],
       );
     }
   });
 };
 
-const assertSavedQuota = async (db: PGlite, project: string, migrated: boolean) => {
-  for (const sample of savedQuota.storage_current_records) {
+const assertSavedQuota = async (db: PGlite, project: string, owners: string[], migrated: boolean) => {
+  for (const sample of savedQuota.storage_current_records.filter((row) => owners.includes(row.extension_id))) {
+    const owner = migrated ? canonical : sample.extension_id;
     const { rows } = await db.query<{ value: unknown }>(
       "SELECT value FROM storage_current_records WHERE workbench_id = $1 AND extension_id = $2 AND record_id = $3 AND NOT deleted",
-      [project, migrated ? canonical : sample.extension_id, sample.record_id],
+      [project, owner, sample.record_id],
     );
     assert.deepEqual(
       rows.map((row) => row.value),
       [sample.value],
       "Home must retain each saved quota observation",
     );
+    for (const table of ["storage_ordered_operations", "storage_ordered_receipts"] as const) {
+      for (const entry of savedQuota[table].filter((row) => row.extension_id === sample.extension_id)) {
+        // local_sequence is assigned by the receiving database on insert.
+        const data = { ...entry, extension_id: owner };
+        const matches = await db.query(
+          `SELECT 1 FROM ${table} t WHERE workbench_id = $1 AND extension_id = $2 AND operation_id = $3 AND to_jsonb(t) @> ($4::jsonb - 'local_sequence')`,
+          [project, owner, entry.operation_id, JSON.stringify(data)],
+        );
+        assert.equal(matches.rows.length, 1, `Home lost or changed ${table} for ${sample.record_id}`);
+      }
+    }
   }
 };
 
-// Only open the disposable baseline after its process exits. Opening via createDb would run
-// the checkout's migrations before the candidate binary got to see the original history.
-export const checkHomeHistory = async (input: ProjectUpgradeInput, project: string, phase: "seed" | "verify") => {
+// Open only the stopped disposable profile. The candidate must run the migrations itself.
+export const checkHomeHistory = async (input: ProjectUpgradeInput, project: string, before?: { owner: string }) => {
   const path = join(input.home, "pstdio.db");
   await access(join(path, "PG_VERSION"));
   const icu = join(dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz");
@@ -66,27 +77,30 @@ export const checkHomeHistory = async (input: ProjectUpgradeInput, project: stri
       [project, historical, canonical],
     );
     assert.equal(source.rows.length, 1, "Expected one enabled Home identity in the upgrade fixture");
-    if (phase === "verify") assert.equal(source.rows[0]!.extension_id, canonical, "Home must use its active identity");
-    if (input.profile === "aged") {
-      if (phase === "seed") await loadSavedQuota(db, project);
-      await assertSavedQuota(db, project, phase === "verify");
+    const owner = before?.owner ?? source.rows[0]!.extension_id;
+    const conflicted = input.profile === "conflicted";
+    const owners = conflicted ? [historical, canonical] : [owner];
+    if (before && !conflicted)
+      assert.equal(source.rows[0]!.extension_id, canonical, "Home must use its active identity");
+    if (input.profile !== "active") {
+      if (!before) await loadSavedQuota(db, project, owners);
+      await assertSavedQuota(db, project, owners, Boolean(before && !conflicted));
     }
-    const owners = input.profile === "aged" ? [historical, canonical] : [source.rows[0]!.extension_id];
-    for (const [index, owner] of owners.entries()) {
+    for (const [index, original] of owners.entries()) {
       const key = JSON.stringify(["text-file", `upgrade-home-${index}`]);
       const content = `Saved Home history ${index} — résumé`;
       const document = new Y.Doc();
       try {
-        if (phase === "seed") {
+        if (!before) {
           document.getText("content").insert(0, content);
           await db.query(
             "INSERT INTO storage_documents (workbench_id, extension_id, document_id, state, revision) VALUES ($1, $2, $3, $4, 1)",
-            [project, owner, key, Y.encodeStateAsUpdate(document)],
+            [project, original, key, Y.encodeStateAsUpdate(document)],
           );
         } else {
           const { rows } = await db.query<{ state: Uint8Array }>(
             "SELECT state FROM storage_documents WHERE workbench_id = $1 AND extension_id = $2 AND document_id = $3",
-            [project, canonical, key],
+            [project, conflicted ? original : canonical, key],
           );
           assert.equal(rows.length, 1, `Active Home lost access to ${key} after upgrade`);
           Y.applyUpdate(document, rows[0]!.state);
@@ -96,6 +110,7 @@ export const checkHomeHistory = async (input: ProjectUpgradeInput, project: stri
         document.destroy();
       }
     }
+    return { owner };
   } finally {
     await db.close();
   }
@@ -104,4 +119,18 @@ export const checkHomeHistory = async (input: ProjectUpgradeInput, project: stri
 export const assertHomeOpens = async (api: StackApi, project: string) => {
   const home = await api.command<{ project: { id: string } }>(project, "pstdio.home.command.read");
   assert.equal(home.project.id, project, "Home must open the upgraded project");
+};
+
+// A profile already containing two independent ordered streams is a separate recovery case.
+// The release must identify the conflict and preserve both originals through the failed upgrade.
+export const assertHomeConflict = async (api: StackApi, project: string) => {
+  const path = `/projects/${project}/extensions`;
+  const { extensions } = await api.get<{
+    extensions: { id: string; extensionId: string; enabled: boolean; lastError?: { code?: string } }[];
+  }>(path);
+  const home = extensions.find((tool) => tool.enabled && [historical, canonical].includes(tool.extensionId));
+  assert(home, "The original Home instance is missing");
+  if (home.lastError?.code !== "extension_identity_conflict") {
+    await assert.rejects(api.post(`${path}/${home.id}/upgrade`, {}), /extension.identity.conflict/i);
+  }
 };
