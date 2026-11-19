@@ -217,6 +217,8 @@ describe("createWorkbenchExtensionMetadata", () => {
       },
     ]);
   });
+});
+describe("createWorkbenchExtensionMetadata navigation", () => {
   test("publishes alpha.4 view, placement, and navigation arrays without renderer records", () => {
     const mode = defineMode({ id: "review", label: "Review", regions: ["main", "side"] });
     const open = defineCommand({ id: "open", title: "Open", run: async () => undefined });
