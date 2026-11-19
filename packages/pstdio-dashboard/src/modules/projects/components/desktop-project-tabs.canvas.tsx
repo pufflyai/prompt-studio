@@ -1,5 +1,6 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Center, Flex } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { EmptyState, WindowTabs, WindowTitleBar } from "@pstdio/ui";
 import { createWorkbench } from "@pstdio/workbench";
 import { WorkbenchThemeProvider } from "@pstdio/workbench/react";
 import { useState } from "react";
@@ -7,6 +8,7 @@ import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { DashboardWorkbenchView } from "@/shared/workbench/dashboard-workbench-view";
 import { DesktopProjectTabsController } from "../desktop-project-tabs-controller";
+import { ProjectRecoveryMessage } from "./desktop-project-recovery";
 import { DesktopProjectTabs } from "./desktop-project-tabs";
 
 const ProjectTabsStory = () => {
@@ -75,4 +77,37 @@ export const OpenProjectFocus: Story = {
 export const WindowControlsOverlay: Story = {
   name: "Window controls overlay",
   render: () => <WindowControlsOverlayStory />,
+};
+
+const ProjectRecoveryPreview = () => {
+  const [project, setProject] = useState("lab");
+  const [failed, setFailed] = useState(true);
+  return (
+    <Flex direction="column" h="100dvh" minW="0" bg="bg">
+      <WindowTitleBar platform="darwin">
+        <WindowTabs
+          aria-label="Project tabs"
+          tabs={[
+            { id: "lab", label: "Lab", closable: false },
+            { id: "notes", label: "Notes", closable: false },
+          ]}
+          selectedId={project}
+          onSelect={setProject}
+          onClose={() => {}}
+        />
+      </WindowTitleBar>
+      {project === "lab" && failed ? (
+        <ProjectRecoveryMessage canSwitch retry={() => setFailed(false)} />
+      ) : (
+        <Center flex="1" p="md">
+          <EmptyState title={project === "lab" ? "Lab" : "Notes"} />
+        </Center>
+      )}
+    </Flex>
+  );
+};
+
+export const ProjectRecovery: Story = {
+  name: "Project recovery",
+  render: () => <ProjectRecoveryPreview />,
 };
