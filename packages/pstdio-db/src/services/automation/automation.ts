@@ -224,6 +224,12 @@ const createAutomationRunDBService = (db: DbClient) => {
 
   const listQueuedRuns = () => db.select().from(automation_runs).where(eq(automation_runs.status, "queued"));
 
+  const listActiveProjectRuns = (id: string) =>
+    db
+      .select({ id: automation_runs.id })
+      .from(automation_runs)
+      .where(and(eq(automation_runs.project_id, id), inArray(automation_runs.status, ["queued", "running"])));
+
   const pruneTerminalRuns = (before: string) =>
     db
       .delete(automation_runs)
@@ -239,6 +245,7 @@ const createAutomationRunDBService = (db: DbClient) => {
     getRunByIdempotency,
     listRunEvents,
     listQueuedRuns,
+    listActiveProjectRuns,
     pruneTerminalRuns,
     recoverInterruptedRuns,
     transitionRun,

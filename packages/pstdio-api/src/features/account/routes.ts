@@ -8,6 +8,7 @@ import {
 } from "../../services/account/native-account";
 import type { AppBindings } from "../../types";
 import { enforceDeviceCommandBodyLimit } from "./device-command-body";
+import { registerCloudProjectRoutes } from "./project-cloud-routes";
 import { expectedAccountQuery, expectedProjectAccountQuery, readExpectedAccount } from "./read-identity";
 
 const json = <T extends z.ZodType>(schema: T) => ({ content: { "application/json": { schema } } });
@@ -154,5 +155,6 @@ export const createAccountRoutes = (service: ReturnType<typeof createNativeAccou
     }),
     async (c) => c.json(await service.resolveReturnedChanges(c.req.valid("param").id, c.req.valid("json").action), 200),
   );
+  registerCloudProjectRoutes(routes, service);
   return routes;
 };

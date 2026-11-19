@@ -2,6 +2,7 @@ import { afterAll, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createProjectWork } from "../../services/project-work";
 import { createSessionQueueLifecycle } from "../sessions/session-queue-lifecycle";
 import { createTrackedSessionStore } from "../sessions/session-store.test-utils";
 import { createCommandEnvironment } from "./command-environment";
@@ -84,6 +85,7 @@ const createSessionEnvironment = (
       },
       workspaceSessionService: { link: async () => {}, getWorkspaceBySessionId: async () => workspace },
       projectService: {
+        work: createProjectWork(),
         get: async () => ({ id: "project-1", default_agent_id: null, default_agent_model: null }),
       },
       fileService: {

@@ -1,6 +1,7 @@
 import type { createFilesDBService } from "pstdio-db";
 import type { createFilesStorageService } from "pstdio-storage";
 import type { EventBus } from "../features/sync/event-bus";
+import type { createProjectWork } from "./project-work";
 
 export type FileServiceDeps = {
   filesDBService: ReturnType<typeof createFilesDBService>;
@@ -9,11 +10,15 @@ export type FileServiceDeps = {
     "writeStream" | "writeFileAtPath" | "deleteFile" | "computeHash" | "discardUpload"
   >;
   eventBus: EventBus;
+  projectWork?: ReturnType<typeof createProjectWork>;
+  removeOwnedBytes?: (id: string) => Promise<void>;
 };
 
 export const createFileService = (deps: FileServiceDeps) => {
   const db = deps.filesDBService;
   const storage = deps.filesStorageService;
+  const withProject = <T>(id: string, task: (signal?: AbortSignal) => Promise<T>, signal?: AbortSignal) =>
+    deps.projectWork ? deps.projectWork.run(id, task, signal) : task(signal);
 
   const get = db.get;
   const list = db.list;
@@ -21,7 +26,7 @@ export const createFileService = (deps: FileServiceDeps) => {
     for (const file of await db.list(projectId)) storage.deleteFile(file.storage_path);
   };
 
-  const upload = async (
+  const uploadFile = async (
     input: {
       project_id: string;
       id?: string;
@@ -73,40 +78,47 @@ export const createFileService = (deps: FileServiceDeps) => {
     return file;
   };
 
+  const upload = (input: Parameters<typeof uploadFile>[0], initialize?: Parameters<typeof uploadFile>[1]) =>
+    withProject(input.project_id, (signal) => uploadFile({ ...input, signal }, initialize), input.signal);
+
   const update = async (fileId: string, input: { data: Buffer }) => {
     const existing = await db.get(fileId);
     if (!existing) return null;
 
-    // Overwrite the file at the existing storage path
-    storage.writeFileAtPath(existing.storage_path, input.data);
+    return withProject(existing.project_id, async () => {
+      // Overwrite the file at the existing storage path
+      storage.writeFileAtPath(existing.storage_path, input.data);
 
-    const hash = storage.computeHash(input.data);
-    const updated = {
-      ...existing,
-      size_bytes: input.data.byteLength,
-      hash,
-      updated_at: new Date().toISOString(),
-    };
+      const hash = storage.computeHash(input.data);
+      const updated = {
+        ...existing,
+        size_bytes: input.data.byteLength,
+        hash,
+        updated_at: new Date().toISOString(),
+      };
 
-    await db.updateMetadata(fileId, {
-      size_bytes: updated.size_bytes,
-      hash: updated.hash,
-      updated_at: updated.updated_at,
+      await db.updateMetadata(fileId, {
+        size_bytes: updated.size_bytes,
+        hash: updated.hash,
+        updated_at: updated.updated_at,
+      });
+
+      deps.eventBus.emit("files", "set", updated);
+      return updated;
     });
-
-    deps.eventBus.emit("files", "set", updated);
-    return updated;
   };
 
   const remove = async (fileId: string) => {
     const existing = await db.get(fileId);
     if (!existing) return false;
 
-    storage.deleteFile(existing.storage_path);
-    await db.remove(fileId);
-    deps.eventBus.emit("files", "delete", { id: fileId });
+    return withProject(existing.project_id, async () => {
+      storage.deleteFile(existing.storage_path);
+      await db.remove(fileId);
+      deps.eventBus.emit("files", "delete", { id: fileId });
 
-    return true;
+      return true;
+    });
   };
 
   return {
@@ -144,6 +156,7 @@ export const createFileService = (deps: FileServiceDeps) => {
       else storage.discardUpload(projectId, fileId);
     },
     removeProjectStorage,
+    removeOwnedBytes: (id: string) => deps.removeOwnedBytes?.(id),
   };
 };
 

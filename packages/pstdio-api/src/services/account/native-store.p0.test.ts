@@ -102,3 +102,21 @@ test("independent in-memory hosts keep separate device logins", async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("a late rejection cannot clear a replacement manager login with the same token", async () => {
+  const root = await mkdtemp(join(tmpdir(), "native-equal-token-rejection-"));
+  const store = createNativeStore(join(root, "native-account.json"));
+  try {
+    await store.save(login);
+    const replacement = { ...login, managerOrigin: "https://other-manager.test", accountId: "other-account" };
+    await Promise.all([store.save(replacement), store.reject(login.token, login)]);
+    expect(await store.read()).toEqual(replacement);
+    await store.forget(login.token, login);
+    expect(await store.read()).toEqual(replacement);
+    expect(await store.signInRequired(login.deviceId)).toBe(false);
+    await store.reject(replacement.token, replacement);
+    expect(await store.read()).toBeNull();
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
