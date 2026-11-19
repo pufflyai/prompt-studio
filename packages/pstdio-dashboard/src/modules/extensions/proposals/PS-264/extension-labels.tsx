@@ -1,4 +1,4 @@
-import { Badge, Button, Icon, Stack, Text } from "@chakra-ui/react";
+import { Badge, Button, Icon } from "@chakra-ui/react";
 import { SearchableMenu, Tooltip } from "@pstdio/ui";
 import { ChevronDown, Folder, Globe, LockKeyhole, UserRound } from "lucide-react";
 import type { ExtensionPreview } from "./extension-fixtures";
@@ -9,43 +9,33 @@ export const visibilityLabels = {
     icon: Globe,
     description: "A public package is available. Local changes may not be published.",
   },
-  private: { label: "Private", icon: LockKeyhole, description: "Local only. This extension has not been published." },
+  private: { label: "Private", icon: LockKeyhole, description: "Unpublished extension." },
 };
 
 export const scopeLabels = {
-  repo: { label: "Project", icon: Folder, description: "Installed for this project only." },
+  repo: { label: "This Project", icon: Folder, description: "Available in this project." },
   global: {
-    label: "User",
+    label: "All Projects",
     icon: UserRound,
-    description: "Shared across your projects on this computer. Enable it separately in each project.",
+    description: "Available across projects on this computer.",
   },
 };
 
 interface ExtensionLabelProps {
   extension: ExtensionPreview;
   kind: "visibility" | "scope";
-  showHint?: boolean;
 }
 
 export const ExtensionLabel = (props: ExtensionLabelProps) => {
-  const { extension, kind, showHint = false } = props;
+  const { extension, kind } = props;
   const info = kind === "visibility" ? visibilityLabels[extension.visibility] : scopeLabels[extension.scope];
-  const hint = kind === "visibility" && extension.visibility === "private" ? "Local only" : undefined;
-  const scopeHint = kind === "scope" && extension.scope === "global" ? "Shared locally" : undefined;
   return (
-    <Stack gap="2xs" align="start">
-      <Tooltip content={info.description}>
-        <Badge variant="chip" size="sm" tabIndex={0} aria-label={`${kind}: ${info.label}. ${info.description}`}>
-          <Icon as={info.icon} boxSize="3" />
-          {info.label}
-        </Badge>
-      </Tooltip>
-      {showHint && (hint || scopeHint) && (
-        <Text textStyle="label/XS" color="fg.subtle">
-          {hint || scopeHint}
-        </Text>
-      )}
-    </Stack>
+    <Tooltip content={info.description}>
+      <Badge variant="chip" size="sm" tabIndex={0} aria-label={`${kind}: ${info.label}. ${info.description}`}>
+        <Icon as={info.icon} boxSize="3" />
+        {info.label}
+      </Badge>
+    </Tooltip>
   );
 };
 

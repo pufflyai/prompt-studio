@@ -1,4 +1,5 @@
 import { Box, Button, Flex, HStack, Stack, Text } from "@chakra-ui/react";
+import { ExtensionHealthPopover } from "../../components/extension-health-popover";
 import { ExtensionIcon } from "../../components/extension-icon";
 import { ExtensionIdentity } from "../../components/extension-identity";
 import { ExtensionToggle } from "../../components/extension-toggle";
@@ -14,6 +15,7 @@ interface ExtensionListRowProps {
 // Proposal copy: retain the installed row's identity and toggle; separate visibility from scope.
 export const ExtensionListRow = (props: ExtensionListRowProps) => {
   const { extension, onOpen, onToggle } = props;
+  const healthExtension = { ...extension, visibility: undefined };
   return (
     <Flex
       gap="md"
@@ -27,6 +29,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
       data-testid="extension-preview-row"
       data-visibility={extension.visibility}
       data-scope={extension.scope}
+      data-enabled={extension.enabled}
     >
       <HStack gap="md" flex="1" minW={{ base: "full", md: "0" }}>
         <Flex
@@ -50,6 +53,7 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
               </Text>
             </Button>
             <ExtensionIdentity value={`v${extension.version}`} />
+            <ExtensionHealthPopover extension={healthExtension} diagnostics={extension.diagnostics} />
           </HStack>
           <Text textStyle="label/XS" color="fg.muted" truncate>
             {extension.description}
@@ -61,13 +65,13 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         flexShrink="0"
         w={{ base: "full", md: "auto" }}
         paddingStart={{ base: "12", md: "0" }}
-        align="start"
+        align="center"
       >
-        <Box w="28" minH="10">
-          <ExtensionLabel extension={extension} kind="visibility" showHint />
+        <Box w="28">
+          <ExtensionLabel extension={extension} kind="visibility" />
         </Box>
-        <Box w="28" minH="10">
-          <ExtensionLabel extension={extension} kind="scope" showHint />
+        <Box w="28">
+          <ExtensionLabel extension={extension} kind="scope" />
         </Box>
         <Box w="16" display="flex" justifyContent="flex-end">
           <ExtensionToggle name={extension.displayName} enabled={extension.enabled} onToggle={onToggle} />

@@ -1,11 +1,12 @@
 import { Button, Flex, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { ArrowLeft } from "lucide-react";
 import { PageContentLayout } from "@/shared/components/page-content-layout";
+import { ExtensionHealthPopover } from "../../components/extension-health-popover";
 import { ExtensionIcon } from "../../components/extension-icon";
 import { ExtensionIdentity } from "../../components/extension-identity";
 import { ExtensionToggle } from "../../components/extension-toggle";
 import type { ExtensionPreview } from "./extension-fixtures";
-import { ExtensionLabel, scopeLabels, visibilityLabels } from "./extension-labels";
+import { ExtensionLabel } from "./extension-labels";
 
 interface ExtensionDetailProps {
   extension: ExtensionPreview;
@@ -15,6 +16,7 @@ interface ExtensionDetailProps {
 
 export const ExtensionDetail = (props: ExtensionDetailProps) => {
   const { extension, onBack, onToggle } = props;
+  const healthExtension = { ...extension, visibility: undefined };
   return (
     <PageContentLayout
       header={
@@ -40,6 +42,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
               <Text textStyle="heading/M">{extension.displayName}</Text>
               <ExtensionIdentity value={`${extension.extensionId} · v${extension.version}`} />
             </Stack>
+            <ExtensionHealthPopover extension={healthExtension} diagnostics={extension.diagnostics} />
             <ExtensionToggle name={extension.displayName} enabled={extension.enabled} onToggle={onToggle} />
           </HStack>
           <Text textStyle="paragraph/S/regular" color="fg.muted">
@@ -59,23 +62,12 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
             Visibility
           </Text>
           <ExtensionLabel extension={extension} kind="visibility" />
-          <Text textStyle="paragraph/S/regular" color="fg.muted">
-            {visibilityLabels[extension.visibility].description}
-          </Text>
         </Stack>
         <Stack gap="sm">
           <Text textStyle="label/XS/medium" color="fg.subtle">
             Scope
           </Text>
           <ExtensionLabel extension={extension} kind="scope" />
-          <Text textStyle="paragraph/S/regular" color="fg.muted">
-            {scopeLabels[extension.scope].description}
-          </Text>
-          {extension.scope === "global" && extension.visibility === "private" && (
-            <Text textStyle="paragraph/S/regular" color="fg.muted">
-              Other projects on this computer can use this extension while it stays private.
-            </Text>
-          )}
         </Stack>
         <Stack gap="sm">
           <Text textStyle="label/XS/medium" color="fg.subtle">
@@ -83,12 +75,6 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
           </Text>
           <ExtensionIdentity value={extension.sourcePath} />
         </Stack>
-        <HStack justify="space-between" gap="md" borderTopWidth="1px" borderColor="border.subtle" paddingTop="md">
-          <Text textStyle="label/S/regular">Enabled in this project</Text>
-          <Text textStyle="label/S/regular" color="fg.muted" role="status">
-            {extension.enabled ? "On" : "Off"}
-          </Text>
-        </HStack>
       </Stack>
     </PageContentLayout>
   );
