@@ -1,5 +1,5 @@
-import { Box, Button, HStack, Text } from "@chakra-ui/react";
-import { BUILDING_BLOCKS, blockFor } from "../../content/building-block-content";
+import { Box, Text } from "@chakra-ui/react";
+import { BUILDING_BLOCKS } from "../../content/building-block-content";
 import type { ToolShapeKind } from "../../content/tool-shapes";
 import { useStoryStyles } from "../../hooks/use-landing-styles";
 import { ToolShape } from "../shapes/tool-shapes";
@@ -18,29 +18,6 @@ export const BlockSymbol = (props: { kind: ToolShapeKind; large?: boolean }) => 
   );
 };
 
-interface BlockChipProps {
-  kind: ToolShapeKind;
-  selected?: boolean;
-  onClick?: () => void;
-}
-
-export const BlockChip = (props: BlockChipProps) => {
-  const { kind, selected, onClick } = props;
-  const content = (
-    <>
-      <BlockSymbol kind={kind} />
-      <Text textStyle="label/S/medium">{blockFor(kind).name}</Text>
-    </>
-  );
-  if (onClick)
-    return (
-      <Button variant="ghost" size="sm" aria-pressed={selected} onClick={onClick}>
-        {content}
-      </Button>
-    );
-  return <HStack gap="xs">{content}</HStack>;
-};
-
 export const BuildingBlocks = () => {
   const styles = useStoryStyles();
   return (
@@ -50,7 +27,7 @@ export const BuildingBlocks = () => {
           <Box css={styles.blockSymbol}>
             <BlockSymbol kind={block.kind} large />
           </Box>
-          <Text as="h2" textStyle="heading/S">
+          <Text as="h3" textStyle="heading/S">
             {block.name}
           </Text>
           <Text textStyle="paragraph/M/regular">{block.detail}</Text>

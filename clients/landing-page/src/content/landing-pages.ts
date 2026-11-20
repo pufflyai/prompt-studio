@@ -46,9 +46,9 @@ export const LANDING_PAGES: LandingPage[] = [
     path: "/what-is-prompt-studio/",
     view: "what-is-prompt-studio",
     label: VIEW_META["what-is-prompt-studio"].label,
-    title: "What is Prompt Studio? | A workbench for your agents",
+    title: "What is Prompt Studio? | An agentic workbench",
     description:
-      "Give the tools you build a place to live. Combine pages, editors, commands, skills, hooks, and workflows in your own workbench.",
+      "Your agents can build the tools you need. Prompt Studio gives them one place to live, change shape, and work together on your computer.",
   },
   ...TOOL_EXAMPLES.map((example) => ({
     path: `/examples/${example.slug}/`,

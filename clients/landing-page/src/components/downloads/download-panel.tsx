@@ -1,6 +1,6 @@
-import { Badge, Box, HStack, Icon, Stack, Text } from "@chakra-ui/react";
+import { Badge, Box, HStack, Icon, Link, Stack, Text } from "@chakra-ui/react";
 import { OpenAiLogo } from "@phosphor-icons/react";
-import { SquareTerminal } from "lucide-react";
+import { ArrowRight, SquareTerminal } from "lucide-react";
 import { SITE_LINKS } from "../../content/landing-content";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
 import { AnthropicLogo } from "../icons/anthropic-logo";
@@ -9,7 +9,7 @@ import { DownloadPicker } from "./download-picker";
 
 export const START_HERE_TITLE = "A workbench for your agents.";
 export const START_HERE_INTRO =
-  "Coding agents can build tools to help with your work. Prompt Studio gives them a place to live, with the shared infrastructure they need to work together.";
+  "Coding agents can build tools to help with your work. Prompt Studio gives these tools a place to live, with the shared infrastructure they need to work together.";
 
 export const DownloadPanel = (props: { headingLevel: "h1" | "h2" }) => {
   const { headingLevel } = props;
@@ -54,6 +54,10 @@ export const DownloadPanel = (props: { headingLevel: "h1" | "h2" }) => {
           />
         </HStack>
       </Stack>
+      <Link href="/what-is-prompt-studio/" textStyle="label/M/medium" alignSelf="start">
+        What is an agentic workbench?
+        <ArrowRight />
+      </Link>
     </Box>
   );
 };

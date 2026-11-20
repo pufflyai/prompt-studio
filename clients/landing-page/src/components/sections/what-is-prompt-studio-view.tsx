@@ -1,68 +1,94 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
-import { useState } from "react";
-import { useStoryStyles } from "../../hooks/use-landing-styles";
-import { ChangeToolDemo, ConnectedToolsDemo, WorkbenchOverviewDemo } from "../examples/why-story-demos";
-import { BuildingBlocks } from "./building-blocks";
-import { ChapterCarousel } from "./chapter-carousel";
+import { Box, Text, useSlotRecipe } from "@chakra-ui/react";
+import type { ReactNode } from "react";
+import { landingChaptersSlotRecipe } from "../../theme/recipes/landing-chapters";
+import { DownloadPicker } from "../downloads/download-picker";
+import { ShapesScene, TogetherScene, WhyScene, YoursScene } from "../iso/iso-scenes";
+import { PageScroll } from "../workbench/page-scroll";
 
-const REASONS = [
+const CHAPTERS: { id: string; eyebrow: string; title: string; body: string[]; Scene: () => ReactNode }[] = [
   {
-    id: "building-blocks",
-    label: "Building blocks",
-    title: "The right building blocks to create extensions.",
-    subtitle: "Give your agents the pieces they need to build useful tools.",
-    Demo: BuildingBlocks,
+    id: "why",
+    eyebrow: "Why",
+    title: "Your agents build great tools. Then you lose them.",
+    body: [
+      "A script in a folder. A page in Downloads. A dashboard on a localhost port you no longer remember. Each one worked once, and none of them are around when you need them next week.",
+      "Prompt Studio gives every tool your agents build a place to live, so it's still there the next time you need it.",
+    ],
+    Scene: WhyScene,
   },
   {
-    id: "editor",
-    label: "A clean editor",
-    title: "A clean editor out of the box.",
-    subtitle: "Give your tools a consistent UI, with panels, navigation, and themes included.",
-    Demo: WorkbenchOverviewDemo,
+    id: "any-shape",
+    eyebrow: "One app, any shape",
+    title: "The app takes the shape of the work.",
+    body: [
+      "Today it's a ticket board. Tomorrow you need an image editor, a 3D viewer, or a dashboard. Describe it and your agent reshapes the workbench around it.",
+    ],
+    Scene: ShapesScene,
   },
   {
-    id: "connected-tools",
-    label: "Connected tools",
-    title: "Connect the tools you build.",
-    subtitle: "Use shared files and commands to connect your tools into workflows.",
-    Demo: ConnectedToolsDemo,
+    id: "together",
+    eyebrow: "Tools that work together",
+    title: "Your tools share what they make.",
+    body: [
+      "Drag a chart out of a dashboard and into your notes. It stays live, because both tools read the same data. Add a schedule and the note turns into a report that updates itself every Monday.",
+    ],
+    Scene: TogetherScene,
   },
   {
-    id: "make-it-yours",
-    label: "Make it yours",
-    title: "Tweak things to work your way.",
-    subtitle: "Ask your coding agent to add a view or change how your tool works.",
-    Demo: ChangeToolDemo,
+    id: "yours",
+    eyebrow: "Yours",
+    title: "It all stays yours.",
+    body: [
+      "Your tools run on your computer and your files stay in your folders. Prompt Studio is open source and works with the harness of your choice.",
+    ],
+    Scene: YoursScene,
   },
 ];
 
 export const WhatIsPromptStudioView = () => {
-  const [chapter, setChapter] = useState(REASONS[0].id);
-  const styles = useStoryStyles();
+  const styles = useSlotRecipe({ recipe: landingChaptersSlotRecipe })({});
   return (
-    <ChapterCarousel
-      label="What is Prompt Studio"
-      value={chapter}
-      onChange={setChapter}
-      chapters={REASONS.map(({ id, label, title, subtitle, Demo }) => ({
-        id,
-        label,
-        content: (
-          <Box css={styles.page}>
-            <Box as="section" css={styles.section}>
-              <Stack css={styles.intro}>
-                <Text as="h1" textStyle={{ base: "heading/M", md: "heading/L" }}>
-                  {title}
+    <PageScroll>
+      <Box css={styles.page}>
+        <Box css={styles.intro}>
+          <Text textStyle="label/S/medium" color="fg.muted">
+            What is Prompt Studio
+          </Text>
+          <Text as="h1" textStyle={{ base: "heading/L", md: "heading/XL" }}>
+            An agentic workbench.
+          </Text>
+          <Text textStyle="paragraph/L/regular" color="fg.muted">
+            One app where the tools your agents build live, run, and work together. You describe a tool, your agent
+            builds it, and it stays next to everything else you've made.
+          </Text>
+        </Box>
+        {CHAPTERS.map(({ id, eyebrow, title, body, Scene }) => (
+          <Box as="section" key={id} id={id} css={styles.chapter} aria-labelledby={`${id}-title`}>
+            <Box css={styles.copy} data-part="copy">
+              <Text textStyle="label/S/medium" color="fg.muted">
+                {eyebrow}
+              </Text>
+              <Text as="h2" id={`${id}-title`} textStyle={{ base: "heading/M", md: "heading/L" }}>
+                {title}
+              </Text>
+              {body.map((paragraph) => (
+                <Text key={paragraph} textStyle="paragraph/M/regular" color="fg.muted">
+                  {paragraph}
                 </Text>
-                <Text textStyle="paragraph/L/regular" color="fg.muted">
-                  {subtitle}
-                </Text>
-              </Stack>
-              <Demo />
+              ))}
+            </Box>
+            <Box css={styles.scene}>
+              <Scene />
             </Box>
           </Box>
-        ),
-      }))}
-    />
+        ))}
+        <Box css={styles.cta}>
+          <Text as="h2" textStyle={{ base: "heading/M", md: "heading/L" }}>
+            Try the agentic workbench.
+          </Text>
+          <DownloadPicker />
+        </Box>
+      </Box>
+    </PageScroll>
   );
 };

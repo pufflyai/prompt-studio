@@ -15,35 +15,30 @@ export const DownloadPicker = () => {
   let description = "Finding a desktop build for your platform.";
   if (release) description = "The desktop app is not available on this platform yet.";
   if (selected && release) {
-    description = `${selected.platform} · ${selected.architecture} · ${downloadDescription(selected)} · v${release.version} · ${Math.round(selected.size / 1024 / 1024)} MB`;
+    description = `${selected.architecture} · ${downloadDescription(selected)} · v${release.version} · ${Math.round(selected.size / 1024 / 1024)} MB`;
   }
-  if (failed) description = "Desktop downloads could not be loaded. Use the CLI instructions or browse releases.";
+  if (failed) description = "Desktop downloads could not be loaded.";
+  const buttonLabel = selected ? `Download for ${selected.platform}` : "Use via CLI";
 
   return (
     <Box css={styles.download}>
       {loading ? (
-        <Button variant="primary" size="lg" width="full" disabled aria-describedby="download-build">
+        <Button variant="primary" size="lg" disabled aria-describedby="download-build">
           <Download />
           Checking downloads…
         </Button>
       ) : (
-        <Button asChild variant="primary" size="lg" width="full">
+        <Button asChild variant="primary" size="lg">
           <a href={selected?.url ?? SITE_LINKS.installCli} aria-describedby="download-build">
             {selected ? <Download /> : <SquareTerminal />}
-            {selected ? "Download Prompt Studio" : "Use via CLI"}
+            {buttonLabel}
           </a>
         </Button>
       )}
-      <Text
-        css={styles.downloadDescription}
-        id="download-build"
-        textStyle="label/S/regular"
-        color="fg.muted"
-        aria-live="polite"
-      >
-        {description}
-      </Text>
       <HStack css={styles.downloadPlatforms}>
+        <Text id="download-build" textStyle="label/S/regular" color="fg.muted" aria-live="polite">
+          {description}
+        </Text>
         {release && (
           <SearchableMenu
             searchPlaceholder="Find a build"
@@ -51,30 +46,30 @@ export const DownloadPicker = () => {
             showSearch={false}
             width="20rem"
             trigger={
-              <Button variant="ghost" size="sm">
-                Other platforms
+              <Button variant="ghost" size="xs">
+                Other platforms and CLI
                 <ChevronDown />
               </Button>
             }
-            items={release.downloads.map((download) => ({
-              id: download.id,
-              label: `${download.platform} · ${download.architecture} · ${download.format.toUpperCase()}`,
-              icon: platformIcon(download.platform),
-              isSelected: download.id === selected?.id,
-              onSelect: () => selectDownload(download.id),
-            }))}
+            items={[
+              ...release.downloads.map((download) => ({
+                id: download.id,
+                label: `${download.platform} · ${download.architecture} · ${download.format.toUpperCase()}`,
+                icon: platformIcon(download.platform),
+                isSelected: download.id === selected?.id,
+                onSelect: () => selectDownload(download.id),
+              })),
+              {
+                id: "cli",
+                label: "Use via CLI",
+                icon: SquareTerminal,
+                onSelect: () => window.location.assign(SITE_LINKS.installCli),
+              },
+            ]}
           />
         )}
-        {selected && (
-          <Button asChild variant="ghost" size="sm">
-            <a href={SITE_LINKS.installCli}>
-              <SquareTerminal />
-              Use via CLI
-            </a>
-          </Button>
-        )}
         {failed && (
-          <Button asChild variant="ghost" size="sm">
+          <Button asChild variant="ghost" size="xs">
             <a href={DESKTOP_RELEASES_URL}>Browse releases</a>
           </Button>
         )}
