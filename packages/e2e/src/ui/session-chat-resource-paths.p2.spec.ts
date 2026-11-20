@@ -1,9 +1,9 @@
 import { rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
+import { isSessionUrl } from "./helpers/resource-actions";
 import { prepareDashboard } from "./helpers/workspace-files";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
@@ -56,11 +56,7 @@ test("previews note and artifact paths from chat beside the conversation", async
       .locator('[data-workbench-panel-header="main"]')
       .getByRole("navigation", { name: "breadcrumb" });
     const expectConversationInMain = async () => {
-      await expect(page).toHaveURL(
-        (url) =>
-          url.pathname === `/projects/${project.id}/session` &&
-          defaultPageResourceCodec.fromUri(url.searchParams.get("resource") ?? "")?.id === session.id,
-      );
+      await expect(page).toHaveURL(isSessionUrl(project.id, session.id));
       await expect(mainBreadcrumb).toContainText("Resource path review");
     };
     await message.getByText("Launch plan", { exact: true }).click();
