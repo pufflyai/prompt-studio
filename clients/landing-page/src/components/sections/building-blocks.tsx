@@ -1,4 +1,5 @@
-import { Box, Text } from "@chakra-ui/react";
+import { Box, chakra, Text } from "@chakra-ui/react";
+import { ArrowRight } from "lucide-react";
 import { BUILDING_BLOCKS } from "../../content/building-block-content";
 import type { ToolShapeKind } from "../../content/tool-shapes";
 import { useStoryStyles } from "../../hooks/use-landing-styles";
@@ -18,12 +19,23 @@ export const BlockSymbol = (props: { kind: ToolShapeKind; large?: boolean }) => 
   );
 };
 
+/** The small "Docs" cue at the bottom of a feature card that links to its documentation. */
+export const DocsHint = () => {
+  const styles = useStoryStyles();
+  return (
+    <Text as="span" css={styles.docsHint}>
+      Docs
+      <ArrowRight size={14} />
+    </Text>
+  );
+};
+
 export const BuildingBlocks = () => {
   const styles = useStoryStyles();
   return (
     <Box css={styles.blockGrid}>
       {BUILDING_BLOCKS.map((block) => (
-        <Box key={block.kind} css={styles.block}>
+        <chakra.a key={block.kind} href={block.docs} css={styles.block}>
           <Box css={styles.blockSymbol}>
             <BlockSymbol kind={block.kind} large />
           </Box>
@@ -34,7 +46,8 @@ export const BuildingBlocks = () => {
           <Text textStyle="paragraph/S/regular" color="fg.muted">
             {block.example}
           </Text>
-        </Box>
+          <DocsHint />
+        </chakra.a>
       ))}
     </Box>
   );

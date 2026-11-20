@@ -1,5 +1,6 @@
-import { clamp, wait } from "./motion";
-import { COS, type Origin, paintOrder, project, SIN, topMatrix, unproject } from "./projection";
+import { wait } from "./motion";
+import { bindPointer, pressBox } from "./pointer";
+import { COS, type Origin, paintOrder, project, SIN, topMatrix } from "./projection";
 import { renderAgent, renderBox } from "./render";
 import { type Agent, type BoxSpec, DISPOSED, type DropTarget, div, type IsoBox, shade, type World } from "./types";
 
@@ -25,15 +26,17 @@ export class IsoScene implements Origin {
   onRelease?: (box: IsoBox) => void;
   onFree?: (box: IsoBox) => void;
   onHome?: (box: IsoBox) => void;
-  private stage: HTMLElement;
+  onAction?: (action: string) => void;
+  press: { box: IsoBox; at: readonly [number, number] } | null = null;
+  readonly stage: HTMLElement;
   private shadows: HTMLElement;
   private solids: HTMLElement;
-  private scale = 1;
+  scale = 1;
   private visible = false;
   private running = false;
   private readonly still = matchMedia("(prefers-reduced-motion: reduce)").matches;
   private timers: number[] = [];
-  private cleanups: (() => void)[] = [];
+  readonly cleanups: (() => void)[] = [];
 
   constructor(
     private host: HTMLElement,
@@ -67,7 +70,7 @@ export class IsoScene implements Origin {
       if (this.visible) this.loop();
     });
     seen.observe(host);
-    this.bindPointer();
+    bindPointer(this);
     this.cleanups.push(
       () => resize.disconnect(),
       () => seen.disconnect(),
@@ -155,7 +158,7 @@ export class IsoScene implements Origin {
       shadow,
     }) as IsoBox & Omit<T, keyof BoxSpec>;
     if (spec.label !== undefined) this.label(box, spec.label);
-    el.addEventListener("pointerdown", (event) => this.grab(box, event));
+    el.addEventListener("pointerdown", (event) => pressBox(this, box, event));
     this.paint(box);
     this.boxes.push(box);
     return box;
@@ -245,97 +248,6 @@ export class IsoScene implements Origin {
     this.shadows.append(agent.shadow);
     this.ui.append(agent.el);
     this.agents.push(agent);
-  }
-
-  private stagePoint(event: PointerEvent) {
-    const rect = this.stage.getBoundingClientRect();
-    return [(event.clientX - rect.left) / this.scale, (event.clientY - rect.top) / this.scale] as const;
-  }
-
-  private bindPointer() {
-    this.stage.addEventListener("pointermove", (event) => {
-      const [sx, sy] = this.stagePoint(event);
-      this.pointer = [sx, sy];
-      this.hand.style.transform = `translate(${sx}px,${sy}px)`;
-      this.hand.classList.add("iso-on");
-      const box = this.held;
-      if (!box) return;
-      this.lastUser = performance.now();
-      const [wx, wy] = unproject(this, sx, sy, box.t.z + box.liftT + box.t.h);
-      box.t.x = clamp(wx + box.grab[0], -30, this.world.W - box.t.w + 30);
-      box.t.y = clamp(wy + box.grab[1], -30, this.world.D - box.t.d + 30);
-    });
-    this.stage.addEventListener("pointerleave", () => this.hand.classList.remove("iso-on"));
-    const up = () => this.release();
-    window.addEventListener("pointerup", up);
-    this.cleanups.push(() => window.removeEventListener("pointerup", up));
-  }
-
-  private grab(source: IsoBox, event: PointerEvent) {
-    if (!source.drag || this.held) return;
-    event.preventDefault();
-    this.lastUser = performance.now();
-    let box = source;
-    if (source.copy) {
-      box = this.add({
-        ...source.copy,
-        x: source.x,
-        y: source.y,
-        z: source.z,
-        w: source.w,
-        d: source.d,
-        h: source.h,
-        drag: true,
-        className: "iso-pop",
-      });
-      box.isCopy = true;
-    }
-    const [sx, sy] = this.stagePoint(event);
-    const [wx, wy] = unproject(this, sx, sy, box.z + box.lift + box.h);
-    box.grab = [box.x - wx, box.y - wy];
-    box.held = true;
-    // Taking a box from an agent's hand: the agent's motion stops applying (see agents.ts).
-    box.carried = false;
-    box.liftT = 26;
-    this.held = box;
-    this.setHand("🤏");
-    this.onGrab?.(box);
-  }
-
-  private release() {
-    const box = this.held;
-    if (!box) return;
-    this.held = null;
-    box.held = false;
-    box.liftT = box.restLift;
-    this.lastUser = performance.now();
-    this.setHand("🖐️");
-    this.onRelease?.(box);
-    const cx = box.t.x + box.t.w / 2;
-    const cy = box.t.y + box.t.d / 2;
-    const target = this.targets.find(
-      (t) => t.accept(box) && cx >= t.x && cx <= t.x + t.w && cy >= t.y && cy <= t.y + t.d,
-    );
-    if (target) target.drop(box);
-    else if (box.isCopy) this.fadeOut(box);
-    else if (box.home) {
-      Object.assign(box.t, box.home);
-      this.onHome?.(box);
-    } else {
-      box.t.z = this.supportHeight(box);
-      this.onFree?.(box);
-    }
-  }
-
-  private supportHeight(box: IsoBox) {
-    const cx = box.t.x + box.t.w / 2;
-    const cy = box.t.y + box.t.d / 2;
-    let z = 0;
-    for (const o of this.boxes) {
-      if (o === box || o.held || o.carried || o.float) continue;
-      if (cx >= o.t.x && cx <= o.t.x + o.t.w && cy >= o.t.y && cy <= o.t.y + o.t.d) z = Math.max(z, o.t.z + o.t.h);
-    }
-    return z;
   }
 
   setHand(icon: string) {

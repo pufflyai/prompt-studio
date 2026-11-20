@@ -245,3 +245,40 @@ const scene: Recording = {
 };
 
 export const RECORDINGS: Record<ToolExampleId, Recording> = { board, image, canvas, scene };
+
+const moveCardOn = (d: Director, card: HTMLElement) => {
+  const column = Number(card.closest<HTMLElement>("[data-column]")?.dataset.column ?? 0);
+  d.flip(card, () => d.find(`[data-column="${(column + 1) % 3}"]`).append(card));
+  countCards(d);
+};
+
+const togglePlay = (d: Director) => {
+  const turn = spin(d);
+  const playing = d.find("[data-rec=play]").textContent === "❚❚";
+  if (turn) turn.playbackRate = playing ? 1 : 6;
+  d.find("[data-rec=play]").textContent = playing ? "▶" : "❚❚";
+};
+
+/** Lets the visitor click what the recorded cursor clicks. */
+export const interact = (d: Director, target: Element) => {
+  const layer = target.closest<HTMLElement>("[data-layer-row], [data-layer]");
+  const name = layer?.dataset.layerRow ?? layer?.dataset.layer;
+  if (name && d.root.querySelector(`[data-layer="${name}"]`)) return selectLayer(d, name);
+  const option = target.closest<HTMLElement>("[data-theme-option]");
+  const picked = d.root.querySelector<HTMLElement>('[data-frame][data-selected="true"]');
+  if (option && picked) {
+    picked.dataset.theme = option.dataset.themeOption;
+    return selectFrame(d, picked.dataset.frame!);
+  }
+  const frame = target.closest<HTMLElement>("[data-frame]");
+  if (frame) return selectFrame(d, frame.dataset.frame!);
+  if (target.closest("[data-rec=play]")) return togglePlay(d);
+  const key = target.closest<HTMLElement>("[data-keyframe]");
+  if (key) {
+    for (const other of d.root.querySelectorAll<HTMLElement>("[data-keyframe]"))
+      other.dataset.selected = String(other === key);
+    return;
+  }
+  const card = target.closest<HTMLElement>("[data-card]");
+  if (card) moveCardOn(d, card);
+};

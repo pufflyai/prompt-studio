@@ -1,6 +1,8 @@
-// Styles for what each recorded tool shows inside its panes. The scripts in
+// Styles for what each recorded tool shows inside its panes. Things the cursor clicks are clickable. The scripts in
 // services/recording build some of this DOM, so it uses `rec-*` classes and data attributes.
 export const recordingContentStyles = {
+  "& [data-layer-row], & [data-layer], & [data-frame], & [data-theme-option], & [data-rec=play], & [data-keyframe], & [data-card]":
+    { cursor: "pointer" },
   "& .rec-heading": { px: "sm", py: "sm", textStyle: "label/XS", textTransform: "uppercase", color: "fg.subtle" },
   "& .rec-row": {
     display: "flex",

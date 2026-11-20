@@ -18,7 +18,7 @@ export const ISO_TINT = "color-mix(in oklab, var(--chakra-colors-bg-panel), var(
 
 export const workbench = (tabs = 0) => {
   const tabBar = tabs
-    ? `<span class="g-tabs">${Array.from({ length: tabs }, (_, i) => `<b${i === tabs - 1 ? ' class="g-on"' : ""}></b>`).join("")}<b class="g-plus"></b></span>`
+    ? `<span class="g-tabs">${Array.from({ length: tabs }, (_, i) => `<b${i === tabs - 1 ? ' class="g-on"' : ""}></b>`).join("")}<b class="g-plus" data-iso-action="new-tab"></b></span>`
     : "";
   return `<div class="g-wb"><i class="g-title"></i>${tabBar}<i class="g-side"></i><i class="g-main"></i><i class="g-status"></i></div>`;
 };

@@ -1,25 +1,12 @@
 import { addAgent, agentFive, agentSays, carry, code, job, moveAgent, pat, puff, toss } from "../agents";
-import { ISO_SURFACE, kindColor, type ToolKind, tool, workbench } from "../greek";
+import { kindColor, type ToolKind, workbench } from "../greek";
 import { pick } from "../motion";
-import type { Agent, IsoBox, IsoScene } from "../scene";
+import type { Agent, IsoScene } from "../scene";
+import { BLOCK, type Piece, type Slot, type State, shapePieces } from "./home-pieces";
 
 export const HOME_WORLD = { W: 330, D: 300, top: 70, bottom: 24 };
 
-// block: made, on its way to its slot · seated: on its slot, waiting to be patted · tool: finished
-// held: in the visitor's hand · dropped: let go off the workbench, waiting for an agent to fetch it
-type State = "block" | "seated" | "tool" | "held" | "dropped";
-type Piece = IsoBox & { kind: ToolKind; state: State; slot: number; claimed: boolean };
-interface Slot {
-  x: number;
-  y: number;
-  w: number;
-  d: number;
-  piece: Piece | null;
-  reserved: boolean;
-}
-
 const PLATE = { x: 70, y: 70, w: 190, d: 160 };
-const BLOCK = { w: 26, d: 26, h: 22 };
 const SPOTS: [number, number][] = [
   [18, 30],
   [252, 22],
@@ -62,41 +49,32 @@ export const setupHomeScene = (scene: IsoScene) => {
     addAgent(scene, { name: "OpenCode", color: "var(--chakra-colors-agent-opencode)", x: 170, y: 280, z: 50 }),
   ];
 
-  const center = (piece: Piece, w: number, d: number) => {
-    const slot = slots[piece.slot];
-    Object.assign(piece.t, { x: slot.x + slot.w / 2 - w / 2, y: slot.y + slot.d / 2 - d / 2, w, d });
-  };
-  const seat = (piece: Piece) => {
-    piece.state = "seated";
-    center(piece, BLOCK.w, BLOCK.d);
-    piece.t.z = 10;
-  };
-  const toBlock = (piece: Piece) => {
-    piece.color = kindColor(piece.kind);
-    scene.paint(piece);
-    piece.top.innerHTML = "";
-    Object.assign(piece.t, BLOCK);
-  };
-  // Two pats: the block flattens into a slab, then becomes a working tool.
-  const stages = [
-    (piece: Piece) => {
-      center(piece, 52, 46);
-      piece.t.h = 9;
-    },
-    (piece: Piece) => {
-      center(piece, 66, 60);
-      piece.t.h = 3;
-      piece.color = ISO_SURFACE;
-      scene.paint(piece);
-      piece.top.innerHTML = tool(piece.kind);
-      piece.state = "tool";
-    },
-  ];
+  const { seat, toBlock, advance, patByHand, stageCount } = shapePieces(scene, slots);
   const finish = async (agent: Agent, piece: Piece) => {
-    for (const stage of stages) {
-      if (piece.state !== "seated") return;
-      await pat(scene, agent, piece, () => stage(piece));
+    while (piece.state === "seated" && piece.stage < stageCount) await pat(scene, agent, piece, () => advance(piece));
+  };
+
+  // Turning to a new tab leaves the finished tools in the old tab and empties the workbench.
+  let generation = 0;
+  const turnPage = () => {
+    generation++;
+    const plus = { x: PLATE.x + 30 + tabs * 25 + 4, y: PLATE.y + 5 };
+    puff(scene, plus.x, plus.y, 10);
+    tabs = tabs >= MAX_TABS ? 1 : tabs + 1;
+    plate.top.innerHTML = workbench(tabs);
+    const old = pieces.splice(0);
+    for (const piece of old) {
+      piece.drag = false;
+      piece.t.z = 24;
+      piece.el.classList.add("iso-fade");
     }
+    setTimeout(() => {
+      for (const piece of old) scene.remove(piece);
+    }, 450);
+    for (const slot of slots) Object.assign(slot, { piece: null, reserved: false });
+  };
+  scene.onAction = (action) => {
+    if (action === "new-tab" && !scene.held) turnPage();
   };
 
   scene.onGrab = (box) => {
@@ -146,6 +124,7 @@ export const setupHomeScene = (scene: IsoScene) => {
   };
 
   const build = async (agent: Agent, index: number) => {
+    const page = generation;
     const slot = slots[index];
     const [kind, fileName, lines] = BUILDS[next++ % BUILDS.length];
     const spot = pick(SPOTS.filter((candidate) => !taken.has(candidate))) ?? SPOTS[0];
@@ -153,6 +132,9 @@ export const setupHomeScene = (scene: IsoScene) => {
     const [x, y] = spot;
     await moveAgent(agent, x + 13, y + 13, 46, 650);
     await code(scene, agent, fileName, lines);
+    taken.delete(spot);
+    // The visitor opened a new tab while the agent was coding; this tool belongs to the old one.
+    if (page !== generation) return;
     const piece = scene.add({
       x,
       y,
@@ -164,12 +146,13 @@ export const setupHomeScene = (scene: IsoScene) => {
       state: "block" as State,
       slot: index,
       claimed: true,
+      stage: 0,
     });
+    piece.click = () => patByHand(piece);
     piece.z = 30;
     pieces.push(piece);
     slot.piece = piece;
     slot.reserved = false;
-    taken.delete(spot);
     puff(scene, x + 13, y + 13, 0);
     await scene.wait(250);
     const dest = { x: slot.x + slot.w / 2 - BLOCK.w / 2, y: slot.y + slot.d / 2 - BLOCK.d / 2, z: 10 };
@@ -180,6 +163,7 @@ export const setupHomeScene = (scene: IsoScene) => {
       piece.claimed = false;
       return;
     }
+    if (page !== generation) return;
     seat(piece);
     await finish(agent, piece);
     piece.claimed = false;
@@ -213,18 +197,12 @@ export const setupHomeScene = (scene: IsoScene) => {
 
   const complete = () => slots.every((slot) => slot.piece?.state === "tool");
 
-  // Clicking "+" moves the finished tools into the old tab and leaves the workbench empty.
+  // An agent clicks "+" in the tab bar, just as the visitor can.
   const openTab = async (agent: Agent) => {
     const plus = { x: PLATE.x + 30 + tabs * 25 + 4, y: PLATE.y + 5 };
     await moveAgent(agent, plus.x, plus.y, 34, 700);
     await moveAgent(agent, plus.x, plus.y, 14, 110);
-    puff(scene, plus.x, plus.y, 10);
-    tabs = tabs >= MAX_TABS ? 1 : tabs + 1;
-    plate.top.innerHTML = workbench(tabs);
-    for (const piece of pieces) {
-      piece.t.z = 24;
-      piece.el.classList.add("iso-fade");
-    }
+    if (complete()) turnPage();
     await moveAgent(agent, plus.x, plus.y, 34, 160);
   };
 
@@ -243,8 +221,6 @@ export const setupHomeScene = (scene: IsoScene) => {
     const agent = pick(agents);
     await job(agent, () => openTab(agent));
     await scene.wait(450);
-    for (const piece of pieces.splice(0)) scene.remove(piece);
-    for (const slot of slots) Object.assign(slot, { piece: null, reserved: false });
     building = true;
   };
   const restart = async () => {

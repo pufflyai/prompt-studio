@@ -29,6 +29,8 @@ export const setupTogetherScene = (scene: IsoScene) => {
   const chart = scene.add({ x: 32, y: 76, ...chartSpec, html: live(values), drag: true });
   scene.onGrab = (box) => {
     if ("chart" in box) box.top.innerHTML = live(values);
+    // Lifting the clock off the note cancels the schedule.
+    if (box === schedule && scheduled) unschedule();
   };
   chart.copy = { ...chartSpec, html: live(values) };
   scene.add({ x: 130, y: 76, w: 58, d: 84, h: 4, z: 10, html: lines() });
@@ -66,8 +68,21 @@ export const setupTogetherScene = (scene: IsoScene) => {
   };
   const placeClock = () => {
     scheduled = true;
-    schedule.drag = false;
     Object.assign(schedule.t, CORNER, { w: 20, d: 20, h: 16 });
+  };
+  const unschedule = () => {
+    scheduled = false;
+    scene.label(schedule, "");
+    Object.assign(schedule.t, CLOCK_HOME, { w: 28, d: 28, h: 24 });
+  };
+  // Clicking does what Codex does: copy the chart into the note, then schedule it.
+  chart.click = () => {
+    if (copy) return;
+    placeChart(scene.add({ ...chartSpec, x: chart.x, y: chart.y, html: live(values), className: "iso-pop" }));
+  };
+  schedule.click = () => {
+    if (scheduled) unschedule();
+    else if (copy) placeClock();
   };
   const flash = () => {
     notes.el.classList.remove("iso-flash");
@@ -109,10 +124,12 @@ export const setupTogetherScene = (scene: IsoScene) => {
   };
   const countdown = async () => {
     for (let left = 5; left > 0; left--) {
+      if (!scheduled) return false;
       scene.label(schedule, `<small>next report in</small>0:0${left}`);
       await scene.wait(1000);
     }
     scene.label(schedule, "");
+    return scheduled;
   };
   scene.targets.push({
     ...SLOT,
@@ -151,7 +168,7 @@ export const setupTogetherScene = (scene: IsoScene) => {
   // Two scheduled runs, then Claude puts the clock back and the scene starts over.
   const runReports = async () => {
     for (let report = 0; report < 2; report++) {
-      await countdown();
+      if (!(await countdown())) return;
       await run();
     }
     await scene.wait(1200);

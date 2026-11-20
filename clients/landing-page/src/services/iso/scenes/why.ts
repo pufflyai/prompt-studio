@@ -126,6 +126,10 @@ export const setupWhyScene = (scene: IsoScene) => {
         });
         island.born = performance.now();
         island.drag = true;
+        // Once the workbench is up, clicking a file moves it there, as the agents do.
+        island.click = () => {
+          if (open && !island.placed && freeSlot() >= 0) place(island, freeSlot());
+        };
         islands.push(island);
       });
     }

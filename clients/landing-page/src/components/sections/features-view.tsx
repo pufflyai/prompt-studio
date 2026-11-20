@@ -1,8 +1,8 @@
-import { Box, Icon, Stack, Text } from "@chakra-ui/react";
+import { Box, chakra, Icon, Stack, Text } from "@chakra-ui/react";
 import { WORKBENCH_SERVICES } from "../../content/workbench-services";
 import { useStoryStyles } from "../../hooks/use-landing-styles";
 import { PageScroll } from "../workbench/page-scroll";
-import { BuildingBlocks } from "./building-blocks";
+import { BuildingBlocks, DocsHint } from "./building-blocks";
 
 export const FeaturesView = () => {
   const styles = useStoryStyles();
@@ -29,7 +29,7 @@ export const FeaturesView = () => {
           </Text>
           <Box css={styles.blockGrid}>
             {WORKBENCH_SERVICES.map((service) => (
-              <Box key={service.id} css={styles.block}>
+              <chakra.a key={service.id} href={service.docs} css={styles.block}>
                 <Icon as={service.icon} boxSize="6" color="fg.muted" />
                 <Text as="h3" textStyle="heading/S">
                   {service.name}
@@ -37,7 +37,8 @@ export const FeaturesView = () => {
                 <Text textStyle="paragraph/M/regular" color="fg.muted">
                   {service.description}
                 </Text>
-              </Box>
+                <DocsHint />
+              </chakra.a>
             ))}
           </Box>
         </Box>

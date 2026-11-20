@@ -83,6 +83,7 @@ export const landingRecordingSlotRecipe = defineSlotRecipe({
       bg: "bg.subtle",
     },
     railItem: {
+      cursor: "pointer",
       boxSize: "8",
       display: "grid",
       placeItems: "center",
@@ -109,7 +110,7 @@ export const landingRecordingSlotRecipe = defineSlotRecipe({
       transform: "scale(.985)",
       transition: "opacity 0.35s, transform 0.5s",
       pointerEvents: "none",
-      "&[data-active=true]": { opacity: 1, transform: "none", transitionDelay: "0.18s" },
+      "&[data-active=true]": { opacity: 1, transform: "none", transitionDelay: "0.18s", pointerEvents: "auto" },
       ...recordingContentStyles,
     },
     status: {

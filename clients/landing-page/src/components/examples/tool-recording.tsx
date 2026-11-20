@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { RECORDING_LAYOUT, RECORDING_SIZE } from "../../content/recording-content";
 import { TOOL_EXAMPLES, type ToolExampleId } from "../../content/tool-examples-content";
 import { CANCELLED, Director } from "../../services/recording/director";
-import { RECORDINGS } from "../../services/recording/recordings";
+import { interact, RECORDINGS } from "../../services/recording/recordings";
 import { landingRecordingSlotRecipe } from "../../theme/recipes/landing-recording";
 import { RECORDING_PANES } from "./recording-panes";
 
@@ -15,6 +15,7 @@ interface ToolRecordingProps {
 
 const ORDER = TOOL_EXAMPLES.map((example) => example.id);
 const REGIONS = ["left", "main", "right", "bottom"] as const;
+const RESUME_AFTER_MS = 8000;
 const RAIL_ICONS: Record<ToolExampleId, LucideIcon> = {
   board: SquareKanban,
   image: ImageIcon,
@@ -69,9 +70,31 @@ export const ToolRecording = (props: ToolRecordingProps) => {
     }
   };
 
+  const resumeRef = useRef(0);
   const select = (id: ToolExampleId) => {
     onSelect(id);
+    window.clearTimeout(resumeRef.current);
+    cursorRef.current!.style.opacity = "";
     if (directorRef.current) void play(directorRef.current, id, true);
+  };
+  // The visitor can use the tools themselves; the recording pauses and picks up again once they stop.
+  const takeOver = () => {
+    const director = directorRef.current;
+    if (!director) return;
+    director.stop();
+    cursorRef.current!.style.opacity = "0";
+    window.clearTimeout(resumeRef.current);
+    resumeRef.current = window.setTimeout(() => {
+      cursorRef.current!.style.opacity = "";
+      void play(director, modeRef.current, true);
+    }, RESUME_AFTER_MS);
+  };
+  const switchTool = (id: ToolExampleId) => {
+    const director = directorRef.current;
+    if (!director || id === modeRef.current) return;
+    RECORDINGS[id].reset(director);
+    show(id);
+    onSelect(id);
   };
 
   // The recording starts once per mount; later restarts come from the tab buttons.
@@ -100,6 +123,7 @@ export const ToolRecording = (props: ToolRecordingProps) => {
     void play(director, modeRef.current, true);
     return () => {
       director.stop();
+      window.clearTimeout(resumeRef.current);
       resize.disconnect();
       seen.disconnect();
     };
@@ -138,6 +162,8 @@ export const ToolRecording = (props: ToolRecordingProps) => {
         <Box
           ref={windowRef}
           css={styles.window}
+          onPointerDown={takeOver}
+          onClick={(event) => directorRef.current && interact(directorRef.current, event.target as Element)}
           style={{ width: RECORDING_SIZE.width, height: RECORDING_SIZE.height }}
           aria-hidden="true"
         >
@@ -151,7 +177,13 @@ export const ToolRecording = (props: ToolRecordingProps) => {
             {/* The rail is the mode switcher: the recorded cursor clicks it to change tools. */}
             <Box css={styles.rail}>
               {ORDER.map((id) => (
-                <Box key={id} css={styles.railItem} data-mode-button={id} data-active={id === mode}>
+                <Box
+                  key={id}
+                  css={styles.railItem}
+                  data-mode-button={id}
+                  data-active={id === mode}
+                  onClick={() => switchTool(id)}
+                >
                   <Icon as={RAIL_ICONS[id]} boxSize="icon-sm" />
                 </Box>
               ))}

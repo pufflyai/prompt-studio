@@ -17,6 +17,8 @@ export interface BoxSpec extends Partial<Dims> {
   restLift?: number;
   label?: string;
   home?: Pick<Dims, "x" | "y" | "z">;
+  /** Runs when the visitor clicks the box without dragging it. */
+  click?: () => void;
   /** Grabbing creates a copy from this spec and leaves the original in place. */
   copy?: BoxSpec;
 }
@@ -35,6 +37,7 @@ export interface IsoBox extends Dims {
   isCopy: boolean;
   home?: Pick<Dims, "x" | "y" | "z">;
   copy?: BoxSpec;
+  click?: () => void;
   grab: [number, number];
   el: HTMLElement;
   top: HTMLElement;

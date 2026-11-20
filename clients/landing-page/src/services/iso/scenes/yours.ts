@@ -13,16 +13,21 @@ export const setupYoursScene = (scene: IsoScene) => {
   scene.add({ x: 40, y: 34, w: 220, d: 6, h: 150, z: 6, color: METAL, sideHtml: screen() });
   scene.add({ x: 40, y: 40, w: 220, d: 170, h: 6, color: METAL });
   const plate = scene.add({ ...HOME, w: 176, d: 124, h: 8, html: workbench(), drag: true, home: HOME });
-  const agent = addAgent(scene, {
-    name: "OpenCode",
-    color: "var(--chakra-colors-agent-opencode)",
-    x: 280,
-    y: 120,
-    z: 60,
-  });
+  const agent = addAgent(
+    scene,
+    { name: "OpenCode", color: "var(--chakra-colors-agent-opencode)", x: 280, y: 120, z: 60 },
+    false,
+  );
   const springBack = () => {
     Object.assign(plate.t, HOME);
     puff(scene, HOME.x + 88, HOME.y + 62, 14);
+  };
+  // A click makes the workbench hop, but it stays put.
+  plate.click = () => {
+    plate.liftT = 18;
+    setTimeout(() => {
+      plate.liftT = plate.restLift;
+    }, 220);
   };
   scene.onHome = () => {
     springBack();

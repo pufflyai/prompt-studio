@@ -59,6 +59,11 @@ export const setupShapesScene = (scene: IsoScene) => {
       html: shape === "viewer" ? wire() : "",
     }),
   ) as Token[];
+  for (const token of tokens) {
+    token.click = () => {
+      if (token !== active && !changing) void apply(token, "visitor");
+    };
+  }
   // The token for the current shape sits in a socket on the workbench, so it reads as applied.
   const socket = (token: Token) => ({
     x: PLATE.x + 14 - token.t.w / 2,
@@ -82,6 +87,7 @@ export const setupShapesScene = (scene: IsoScene) => {
         () => {
           const part = scene.add({ ...spec, className: "iso-pop" }) as Part;
           part.z = (spec.z ?? 0) + 50;
+          part.click = () => clickPart(part);
           parts.push(part);
         },
         160 + i * 45,
@@ -178,6 +184,25 @@ export const setupShapesScene = (scene: IsoScene) => {
     await pat(scene, agent, bar, () => {
       bar.t.h = 92;
     });
+  };
+  // Clicking does by hand what the agents do: advance a card, recolor a layer, bounce the cube, raise a bar.
+  const clickPart = (part: Part) => {
+    if (part.card) {
+      const from = part.column ?? 0;
+      const to = (from + 1) % 3;
+      const row = parts.filter((other) => other.card && other.column === to).length;
+      Object.assign(part.t, { x: columnX(AREA, to) + 4, y: cardY(AREA, row), z: 12 });
+      part.column = to;
+      restack(from);
+    } else if (part.layer) {
+      part.color = pick(LAYER_COLORS.filter((color) => color !== part.color));
+      scene.paint(part);
+    } else if (part.cube) {
+      part.liftT = 34;
+      setTimeout(() => {
+        part.liftT = part.restLift;
+      }, 260);
+    } else if (part.bar) part.t.h = 92;
   };
   const JOBS: Record<Shape, (agent: Agent) => Promise<void>> = {
     board: moveCard,

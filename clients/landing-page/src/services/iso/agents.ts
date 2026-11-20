@@ -25,10 +25,11 @@ export const setIcon = (agent: Agent, icon: string) => {
   agent.icon.textContent = icon;
 };
 
-export const addAgent = (scene: IsoScene, spec: Pick<Agent, "name" | "color" | "x" | "y" | "z">) => {
+/** Adds an agent hand. `showName: false` hides the name tag for a hand that plays an unnamed part. */
+export const addAgent = (scene: IsoScene, spec: Pick<Agent, "name" | "color" | "x" | "y" | "z">, showName = true) => {
   const el = div(
     "iso-hand iso-agent",
-    `<span class="iso-ring"></span><span class="iso-icon">${OPEN}</span><span class="iso-tag">${spec.name}</span><span class="iso-bubble"></span>`,
+    `<span class="iso-ring"></span><span class="iso-icon">${OPEN}</span>${showName ? `<span class="iso-tag">${spec.name}</span>` : ""}<span class="iso-bubble"></span>`,
   );
   el.style.setProperty("--iso-agent", spec.color);
   const agent: Agent = {

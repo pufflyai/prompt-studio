@@ -55,3 +55,15 @@ export const renderAgent = (scene: Placer, agent: Agent, time: number) => {
     ? "0"
     : String(clamp(0.9 - agent.z * 0.008, 0.25, 0.9));
 };
+
+/** Height of whatever the box's center rests on, so a dropped box lands on top of it. */
+export const supportHeight = (boxes: IsoBox[], box: IsoBox) => {
+  const cx = box.t.x + box.t.w / 2;
+  const cy = box.t.y + box.t.d / 2;
+  let z = 0;
+  for (const o of boxes) {
+    if (o === box || o.held || o.carried || o.float) continue;
+    if (cx >= o.t.x && cx <= o.t.x + o.t.w && cy >= o.t.y && cy <= o.t.y + o.t.d) z = Math.max(z, o.t.z + o.t.h);
+  }
+  return z;
+};
