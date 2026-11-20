@@ -22,6 +22,9 @@ const terminalPath = dirname(fileURLToPath(import.meta.resolve("pstdio-terminal/
 
 for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
   test(`protects a running terminal before ${shutdown}`, async () => {
+    // User-approved 2026-11-20 (#2241): the cold terminal tool install alone took 14 s on a macOS
+    // release runner (run 44751172598), so 30 s left too little for the shutdown steps.
+    test.setTimeout(60_000);
     const home = createPackagedHome();
     let app: PackagedApp | null = null;
     try {

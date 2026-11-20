@@ -38,10 +38,13 @@ test("keeps performance measurements live when switching and closing project tab
     await expect(highlighting).toBeEnabled();
     await expect(highlighting).not.toBeChecked();
     await performanceDetails(app.page).getByText("Highlight React renders", { exact: true }).click();
+    await expect(highlighting).toBeChecked();
     await expect(app.page.locator("canvas[data-react-scan]")).toBeVisible();
     await performanceTrigger(app.page).click();
     await expect(app.page.locator("canvas[data-react-scan]")).toBeVisible();
     await performanceTrigger(app.page).click();
+    // The reopened popover reads the overlay state before its switch accepts a click.
+    await expect(highlighting).toBeChecked();
     await performanceDetails(app.page).getByText("Highlight React renders", { exact: true }).click();
     await expect(app.page.locator("canvas[data-react-scan]")).toBeHidden();
     await performanceTrigger(app.page).click();

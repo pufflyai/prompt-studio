@@ -166,6 +166,12 @@ test("a removed note's pending draft stays recoverable until its page is explici
   try {
     await editor.fill("Recover this removed note.");
     await expect.poll(() => held.length).toBe(1);
+    // After removal the note's tab query answers without a title; the page must keep the title it showed.
+    const tabRefresh = page.waitForResponse(async (response) => {
+      if (!response.url().includes("/pstdio.notes.page.note.%24main.tab.query/") || !response.ok()) return false;
+      const body = await response.json().catch(() => undefined);
+      return body?.outcome?.status === "success" && JSON.stringify(body.outcome.value) === "{}";
+    });
     await noteCommand("delete", { noteId: note.id });
     await expect(page.getByText("This resource was removed.", { exact: false })).toBeVisible();
     const saveResponse = page.waitForResponse((response) => response.request() === held[0].request());
@@ -177,6 +183,7 @@ test("a removed note's pending draft stays recoverable until its page is explici
     });
     held.length = 0;
     await expect(editor).toContainText("Recover this removed note.");
+    await tabRefresh;
     await expect(breadcrumb.getByText(note.title, { exact: true })).toBeVisible();
     await breadcrumb.getByText("Notes", { exact: true }).click();
     await expect(breadcrumb.getByText(note.title, { exact: true })).toHaveCount(0);
