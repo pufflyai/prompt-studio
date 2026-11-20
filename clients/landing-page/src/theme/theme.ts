@@ -13,6 +13,7 @@ const config = defineConfig({
         "25%": { transform: "translate(-50%, -90%) scale(1.15)", opacity: 1 },
         "100%": { transform: "translate(-50%, -190%) scale(1)", opacity: 0 },
       },
+      "iso-blink": { "50%": { opacity: 0 } },
       "iso-flash": { "30%": { filter: "brightness(1.35)" } },
       "rec-spin": { to: { transform: "rotate(360deg)" } },
       "rec-turn": {
@@ -34,6 +35,14 @@ const config = defineConfig({
           automation: { value: "#F7931E" },
           accent: { value: "{colors.blue.500}" },
           ok: { value: "{colors.green.500}" },
+        },
+        // Agents write code in a terminal, which stays dark in both color modes.
+        terminal: {
+          bg: { value: "{colors.gray.900}" },
+          bar: { value: "{colors.gray.800}" },
+          fg: { value: "{colors.gray.100}" },
+          muted: { value: "{colors.gray.400}" },
+          prompt: { value: "{colors.green.400}" },
         },
         agent: {
           claude: { value: "{colors.orange.500}" },

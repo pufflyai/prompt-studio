@@ -249,7 +249,7 @@ export const pat = async (scene: IsoScene, agent: Agent, box: IsoBox, change: (b
   await wait(220);
 };
 
-/** The agent's hand gives way to a small code window while it writes `lines`. */
+/** The agent's hand gives way to a small terminal while it writes `lines`. */
 export const code = async (
   scene: IsoScene,
   agent: Agent,
@@ -258,8 +258,10 @@ export const code = async (
   progress?: (k: number) => void,
 ) => {
   const [sx, sy] = scene.P(agent.x, agent.y, agent.z);
-  const editor = div("iso-code", `<div class="iso-code-head"><i></i>${agent.name} · ${file}</div><pre></pre>`);
-  editor.style.setProperty("--iso-agent", agent.color);
+  const editor = div(
+    "iso-code",
+    `<div class="iso-code-head"><span><i></i><i></i><i></i></span>${agent.name.toLowerCase()} — zsh</div><div class="iso-code-cmd"><b>❯</b> ${agent.name.toLowerCase()} write ${file}</div><pre></pre>`,
+  );
   editor.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-60%)`;
   scene.ui.append(editor);
   agent.el.classList.add("iso-coding");

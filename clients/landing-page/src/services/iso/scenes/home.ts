@@ -202,7 +202,7 @@ export const setupHomeScene = (scene: IsoScene) => {
     const plus = { x: PLATE.x + 30 + tabs * 25 + 4, y: PLATE.y + 5 };
     await moveAgent(agent, plus.x, plus.y, 34, 700);
     await moveAgent(agent, plus.x, plus.y, 14, 110);
-    if (complete()) turnPage();
+    if (complete() && !scene.held) turnPage();
     await moveAgent(agent, plus.x, plus.y, 34, 160);
   };
 
@@ -212,15 +212,17 @@ export const setupHomeScene = (scene: IsoScene) => {
     await scene.wait(2000);
     while (agents.some((agent) => agent.task)) await scene.wait(150);
     // The visitor may have taken a tool while the agents finished up.
+    // Tools stay draggable throughout; taking one cancels the celebration and the agents fetch it.
     building = !complete();
     if (building) return;
-    for (const piece of pieces) piece.drag = false;
     const [first, second] = pick([agents.slice(0, 2), agents.slice(1), [agents[0], agents[2]]]);
     await agentFive(scene, first, second);
     await scene.wait(500);
-    const agent = pick(agents);
-    await job(agent, () => openTab(agent));
-    await scene.wait(450);
+    if (complete()) {
+      const agent = pick(agents);
+      await job(agent, () => openTab(agent));
+      await scene.wait(450);
+    }
     building = true;
   };
   const restart = async () => {
