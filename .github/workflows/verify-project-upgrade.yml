@@ -243,8 +243,11 @@ jobs:
         run: |
           bun --no-env-file packages/e2e/src/packaged/project-upgrade.ts \
             --from "$FROM_TAG" --candidate "$CANDIDATE_BINARY" --candidate-ref "$CANDIDATE_REF" --candidate-root __test-tmp__/upgrade-candidate
+      # Diagnostics only (maintainer decision 2026-11-20, #2241): a GitHub artifact outage must not fail a
+      # passed upgrade. The attested certification evidence below still fails the job if it can't upload.
       - name: Preserve the pair, manifests and startup logs
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: project-upgrade-${{ matrix.from }}-${{ matrix.target }}-attempt-${{ github.run_attempt }}
