@@ -19,6 +19,8 @@ export type WorkbenchExtensionTabMetadata = NonNullable<MetadataPlacement["tab"]
   extensionId: string;
   placementId: string;
 };
+// An absent or empty label leaves the title to the resource, so a tab never shows an empty name.
+const optionalText = (value: unknown) => text(value as Parameters<typeof text>[0]) || undefined;
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === "object" && !Array.isArray(value));
 const navigationAction = (value: unknown, extensionId: string, projectId?: string) =>
@@ -51,7 +53,7 @@ export const toWorkbenchPresentationSnapshot = (
     ? {
         icon: String(value.indicator.icon ?? ""),
         color: typeof value.indicator.color === "string" ? value.indicator.color : undefined,
-        label: text(value.indicator.label as Parameters<typeof text>[0]),
+        label: optionalText(value.indicator.label),
       }
     : undefined;
   const menu = Array.isArray(value.menu)
@@ -60,16 +62,14 @@ export const toWorkbenchPresentationSnapshot = (
         return [
           {
             id: candidate.id,
-            label: text(candidate.label as Parameters<typeof text>[0]),
+            label: optionalText(candidate.label),
             rows: toRows(candidate.rows, extensionId, projectId),
           },
         ];
       })
     : undefined;
   return {
-    // A tab without its own label keeps its resource's label instead of showing an empty title.
-    label:
-      value.label === undefined || value.label === null ? undefined : text(value.label as Parameters<typeof text>[0]),
+    label: optionalText(value.label),
     icon: typeof value.icon === "string" ? value.icon : undefined,
     indicator: indicator?.icon ? indicator : undefined,
     menu,
@@ -96,6 +96,7 @@ export const createWorkbenchExtensionTabPresentation = (
     );
   const scoped = root.forScope({ projectId: input.projectId, extensionId: metadata.extensionId });
   const queries = new Map<string, { resourceKey: string; query: ScopedQuery<WorkbenchTabSnapshot> }>();
+  const labels = new Map<string, string>();
   const legacy = new Map<() => void, Map<string, () => void>>();
   const releases = new Set<() => void>();
   let disposed = false;
@@ -131,8 +132,8 @@ export const createWorkbenchExtensionTabPresentation = (
           ...(metadata.refreshEventIds ?? []),
         ],
         dependency: { resourceKey: resourceKey(resource), resourceId: resource?.id },
-        read: async (signal) =>
-          toWorkbenchPresentationSnapshot(
+        read: async (signal) => {
+          const snapshot = toWorkbenchPresentationSnapshot(
             await executeWorkbenchExtensionCommand(input, metadata.queryHandlerId, {
               resource,
               signal,
@@ -148,12 +149,20 @@ export const createWorkbenchExtensionTabPresentation = (
             }),
             metadata.extensionId,
             input.projectId,
-          ),
+          );
+          // A removed resource's tab answers without a label; keep the title it last showed.
+          if (snapshot.label) labels.set(key, snapshot.label);
+          const label = snapshot.label ?? labels.get(key);
+          return label ? { ...snapshot, label } : snapshot;
+        },
       });
       queries.set(key, { resourceKey: resourceIdentity, query });
       for (const [listener, bindings] of legacy) bindings.set(key, observe(query, listener));
       for (const [oldKey, old] of queries)
-        if (oldKey !== key && queries.size > 128 && !old.query.active()) queries.delete(oldKey);
+        if (oldKey !== key && queries.size > 128 && !old.query.active()) {
+          queries.delete(oldKey);
+          labels.delete(oldKey);
+        }
     }
     return query;
   };

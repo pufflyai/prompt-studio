@@ -355,11 +355,69 @@ test("an active page's tab presentation rebinds when route parameters change", a
   }
 });
 
-test("a tab without its own label keeps its resource's label", () => {
-  // A removed note's tab query returns no presentation; its last known title must stay visible.
-  expect(toWorkbenchPresentationSnapshot({}, "example.notes").label).toBeUndefined();
-  expect(toWorkbenchPresentationSnapshot({ label: null }, "example.notes").label).toBeUndefined();
+test("a tab without its own label leaves the title to its resource", () => {
+  for (const label of [undefined, null, "", { $l10n: "note.title", default: "" }])
+    expect(
+      toWorkbenchPresentationSnapshot(
+        { label, indicator: { icon: "dot", label }, menu: [{ id: "views", label, rows: [] }] },
+        "example.notes",
+      ),
+    ).toEqual({
+      label: undefined,
+      icon: undefined,
+      indicator: { icon: "dot", color: undefined, label: undefined },
+      menu: [{ id: "views", label: undefined, rows: [] }],
+    });
   expect(toWorkbenchPresentationSnapshot({ label: "Recover before closing" }, "example.notes").label).toBe(
     "Recover before closing",
   );
+});
+
+test("a removed resource's tab keeps the title it last showed", async () => {
+  let presentation: Record<string, unknown> = { label: "Recover before closing" };
+  let reset: (() => void) | undefined;
+  const answeredWithoutLabel = Promise.withResolvers<void>();
+  const workbench = createWorkbench();
+  const tab = createWorkbenchExtensionTabPresentation(
+    {
+      workbench,
+      projectId: "project",
+      metadata: emptyWorkbenchExtensionMetadata,
+      executeCommand: async () => {
+        if (!presentation.label) queueMicrotask(answeredWithoutLabel.resolve);
+        return presentation;
+      },
+      subscribeRefreshReset: (listener) => {
+        reset = listener;
+        return { dispose() {} };
+      },
+    },
+    { extensionId: "notes", placementId: "note", queryHandlerId: "note.title", refreshEventIds: ["notes.changed"] },
+  );
+  const instance: WorkbenchPanelInstance = {
+    instanceId: "one",
+    panelId: "note",
+    closable: true,
+    resource: { type: "note", id: "one", label: "Stale resource label" },
+  };
+  const changes: Array<() => void> = [];
+  const subscription = tab.subscribe!(() => changes.shift()?.());
+  try {
+    const loaded = Promise.withResolvers<void>();
+    changes.push(loaded.resolve);
+    tab.getSnapshot(instance);
+    await loaded.promise;
+    expect(tab.getSnapshot(instance).label).toBe("Recover before closing");
+    // The note is removed: its tab query now answers without a label.
+    presentation = {};
+    reset!();
+    await answeredWithoutLabel.promise;
+    // The label-less answer settles to the same title, so observers see no change.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(tab.getSnapshot(instance).label).toBe("Recover before closing");
+  } finally {
+    if (typeof subscription === "function") subscription();
+    else subscription.dispose();
+    await workbench.dispose();
+  }
 });
