@@ -113,3 +113,27 @@ test("a failed evicted load preserves the replacement for the same revision", as
   await expect(pending).rejects.toThrow("Old load failed");
   expect(await load("a", "1")).toBe(replacement);
 });
+
+test("different designs reuse archived fonts and keep their own self-contained styles", async () => {
+  const font = `${"a".repeat(64)}.woff2`;
+  const data = btoa("project font bytes");
+  const requests: FrameAssetRequest[] = [];
+  const load = createFrameAssetLoader(async (request) => {
+    requests.push(request);
+    const style = `${request.source}.css`;
+    const css = `@font-face { font-family: ${request.source}; src: url("canvas-font:${font}"); }`;
+    return {
+      entry: "entry.js",
+      modules: [],
+      styles: [style],
+      fonts: [font],
+      files: { [style]: encoded(css), ...(request.cached.includes(font) ? {} : { [font]: data }) },
+    };
+  });
+  await load("First");
+  const next = await load("Second");
+  expect(requests[1].cached).toContain(font);
+  expect(await next.styles[0].text()).toBe(
+    `@font-face { font-family: Second; src: url("data:font/woff2;base64,${data}"); }`,
+  );
+});

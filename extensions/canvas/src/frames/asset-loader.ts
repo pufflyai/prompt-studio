@@ -1,4 +1,5 @@
 import type { FrameBootstrap } from "@pstdio/canvas";
+import { restoreFontStyle } from "./font-styles";
 import type { FrameAssetRequest, FrameAssetResponse } from "./module-graph";
 
 /** Loads the code for one canvas; a new revision of that canvas loads its new modules. */
@@ -17,12 +18,18 @@ export const createFrameAssetLoader = (fetchAssets: (request: FrameAssetRequest)
     pending += 1;
     try {
       const response = await fetchAssets({ source, cached: [...available.keys()] });
+      const fonts = new Set(response.fonts);
       for (const [name, encoded] of Object.entries(response.files)) {
         if (available.has(name)) continue;
         const decode = async () => {
-          const binary = atob(encoded);
-          const bytes = new Uint8Array(binary.length);
-          for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+          if (fonts.has(name)) {
+            const extension = name.slice(name.lastIndexOf(".") + 1);
+            const mime = extension === "eot" ? "application/vnd.ms-fontobject" : `font/${extension}`;
+            return new Blob([`data:${mime};base64,`, encoded]);
+          }
+          const bytes = Uint8Array.fromBase64
+            ? Uint8Array.fromBase64(encoded)
+            : Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0));
           const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
           return new Blob([await new Response(stream).arrayBuffer()], {
             type: name.endsWith(".css") ? "text/css" : "text/javascript",
@@ -43,9 +50,14 @@ export const createFrameAssetLoader = (fetchAssets: (request: FrameAssetRequest)
       const bootstrap = {
         entry: response.entry,
         scripts: Object.fromEntries(await Promise.all(response.modules.map(async (name) => [name, await read(name)]))),
-        styles: await Promise.all(response.styles.map(read)),
+        styles: await Promise.all(
+          response.styles.map(async (name) => {
+            const style = await read(name);
+            return fonts.size ? restoreFontStyle(style, read) : style;
+          }),
+        ),
       };
-      if ((current.get(source) ?? "") === key) graphs.set(source, [...response.modules, ...response.styles]);
+      if ((current.get(source) ?? "") === key) graphs.set(source, [...response.modules, ...response.styles, ...fonts]);
       return bootstrap;
     } finally {
       pending -= 1;

@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
@@ -11,7 +11,7 @@ const repoRoot = resolve(import.meta.dirname, "../../../..");
 const writeProject = (root: string, label: string, color = "rgb(0, 128, 0)") => {
   const files: Record<string, string> = {
     "package.json": `{ "name": "canvas-project", "private": true }\n`,
-    "src/button.css": `.button { color: ${color}; }\n`,
+    "src/button.css": `@font-face { font-family: CanvasFixture; src: url(./fixture.woff2); } .button { color: ${color}; font-family: CanvasFixture; }\n`,
     "src/button.tsx": `import "./button.css";\nexport const Button = (props: { label: string }) => <button className="button">${label}: {props.label}</button>;\n`,
     "src/default.json": '{"name":"Default","values":{"label":"Save"}}',
     "src/button.canvas.tsx": `import { Button } from "./button";
@@ -22,6 +22,11 @@ export default { title: "Components/Button", component: Button, args: config.val
 export const Primary = {};
 `,
   };
+  mkdirSync(join(root, "src"), { recursive: true });
+  copyFileSync(
+    join(repoRoot, "packages/ui/node_modules/@fontsource/inter/files/inter-latin-400-normal.woff2"),
+    join(root, "src/fixture.woff2"),
+  );
   for (const [path, content] of Object.entries(files)) {
     mkdirSync(dirname(join(root, path)), { recursive: true });
     writeFileSync(join(root, path), content);
@@ -79,6 +84,11 @@ test("UI Canvas shows a project's own canvas and follows edits to its component 
     const frame = viewer.frameLocator('iframe[data-frame-ready="true"]');
     await expect(frame.getByRole("button", { name: "Version 1: Save" })).toBeVisible({ timeout: 30_000 });
 
+    // A project font must load inside the opaque preview from its own offline build.
+    const faces = await frame
+      .locator("body")
+      .evaluate(async () => (await document.fonts.load("16px CanvasFixture")).map((font) => font.status));
+    expect(faces).toEqual(["loaded"]);
     writeProject(root, "Version 2");
     const button = frame.getByRole("button", { name: "Version 2: Save" });
     await expect(button).toBeVisible({ timeout: 30_000 });

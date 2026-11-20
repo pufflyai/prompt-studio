@@ -115,3 +115,5 @@ settings belong to the timeline menu. Existing source-code animations advertise 
 markers; the timeline displays an animation lane without inventing property keys.
 The reusable UI timeline also supports editable property tracks for tools that own
 keyframe data.
+
+The viewer reads both original canvas builds and format 2 builds. Format 2 packages shared project fonts once. The viewer assembles self-contained stylesheets for each sandbox from the cached font bytes. Update the viewer before updating the project’s canvas builder.
