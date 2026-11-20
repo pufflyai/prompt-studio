@@ -1,4 +1,5 @@
 import { type APIRequestContext, expect, type Page } from "@playwright/test";
+import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../../helpers/folder-project";
 import { switchSession } from "../../helpers/session-side-panel";
 import { uiOrigin as apiBase } from "../../ui-server";
@@ -74,4 +75,11 @@ export const openSessionSidePanel = async (page: Page, title: string) => {
     await page.keyboard.press("Escape");
   }
   await expect(tab).toHaveCSS("font-style", "normal");
+};
+
+/** Matches a page URL that still routes this conversation. Owners may canonicalise the reference, so compare what it names. */
+export const isSessionUrl = (projectId: string, sessionId: string) => (url: URL) => {
+  if (url.pathname !== `/projects/${projectId}/session`) return false;
+  const resource = defaultPageResourceCodec.fromUri(url.searchParams.get("resource") ?? "");
+  return resource?.type === "session" && resource.id === sessionId;
 };

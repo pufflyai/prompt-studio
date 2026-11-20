@@ -1,10 +1,9 @@
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
-import { openSessionSidePanel } from "./helpers/resource-actions";
+import { isSessionUrl, openSessionSidePanel } from "./helpers/resource-actions";
 import { prepareDashboard } from "./helpers/workspace-files";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
@@ -262,15 +261,21 @@ test("opens a same-origin canonical document in another project and returns to i
     await page.goBack();
     await expect(page.getByRole("link", { name: "Source file", exact: true }).last()).toBeVisible();
     await page.getByRole("link", { name: "Source file", exact: true }).last().click();
-    // A link in the same project previews beside its conversation instead of leaving it.
-    await expect(page.locator('[data-workbench-region="side"] .monaco-editor .view-lines:visible')).toContainText(
-      /Source\s+project/,
-    );
-    await expect(page).toHaveURL(
-      (url) =>
-        url.pathname === `/projects/${source!.id}/session` &&
-        defaultPageResourceCodec.fromUri(url.searchParams.get("resource") ?? "")?.id === session.id,
-    );
+    // Intended since #2252: a source file in the same project previews in Side, and its conversation stays in Main.
+    const sidePreview = page.locator('[data-workbench-panel="side"] .monaco-editor .view-lines:visible');
+    const conversation = page
+      .locator('[data-workbench-panel="main"]')
+      .getByRole("link", { name: "Other project", exact: true })
+      .last();
+    const expectSourcePreview = async () => {
+      await expect(sidePreview).toContainText(/Source\s+project/);
+      await expect(page).toHaveURL(isSessionUrl(source!.id, session.id));
+      await expect(conversation).toBeVisible();
+    };
+    await expectSourcePreview();
+    // The preview survives a reload beside the same conversation.
+    await page.reload();
+    await expectSourcePreview();
   } catch (error) {
     failures.push(error);
   } finally {
