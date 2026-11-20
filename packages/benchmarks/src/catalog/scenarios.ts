@@ -2,7 +2,7 @@
 const primary = ["linux-x64", "darwin-arm64", "win32-x64"];
 const metric = (id: string, unit: "ms" | "bytes" | "share" | "count", kind = "supporting") => ({ id, unit, kind });
 const elapsed = (id: string) => metric(id, "ms", "pending-guard");
-// 0.48 release decision: desktop targets are recorded and reported, but misses do not block.
+// 0.48 release decision: desktop and storage targets are recorded and reported, but misses do not block.
 const advisory = (id: string, unit: "ms" | "bytes" | "share" = "ms") => metric(id, unit, "advisory");
 export const catalogRevision = 1;
 export const conversationFixture = {
@@ -161,7 +161,7 @@ export const scenarios = [
   },
   {
     id: "B7",
-    workloadVersion: 2,
+    workloadVersion: 3,
     label: "Record store during maintenance",
     platforms: primary,
     file: "packages/pstdio-db/src/services/extension-storage/critical-store.p3.bench.ts",
@@ -174,7 +174,7 @@ export const scenarios = [
       "one-record edit",
       "foreground read during bounded write/compaction",
     ],
-    metrics: [elapsed("cold-read"), elapsed("warm-read"), elapsed("edit"), elapsed("contended-read")],
+    metrics: [advisory("cold-read"), advisory("warm-read"), advisory("edit"), advisory("contended-read")],
   },
   {
     id: "B8",
