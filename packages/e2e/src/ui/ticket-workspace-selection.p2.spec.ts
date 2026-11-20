@@ -1,5 +1,4 @@
 import { existsSync, rmSync } from "node:fs";
-import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, createPlannerTicketFile, executePlannerCommand } from "../helpers/planner-api";
 import { observeTreeRows } from "../helpers/tree-continuity";
@@ -7,7 +6,10 @@ import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
 import { enableCloudWorkspaceProvider } from "./helpers/cloud-workspace-provider";
 
-test("workspace navigation owns selection while keeping ticket document context", async ({ page, request }) => {
+test("a ticket keeps selection and document context while its workspaces preview in Side", async ({
+  page,
+  request,
+}) => {
   const home = await (await request.get(`${uiOrigin}/v1/filesystem/list`)).json();
   const directory = await request.post(`${uiOrigin}/v1/filesystem/directories`, {
     data: { parent_path: home.currentPath, name: `workspace-selection-${crypto.randomUUID()}` },
@@ -82,39 +84,34 @@ test("workspace navigation owns selection while keeping ticket document context"
       sidenav.getByRole("option", { name: "Search", exact: true }),
       sidenav.getByRole("option", { name: "Settings", exact: true }),
     ]);
+    // Rows under a ticket preview in Side and keep the ticket selected in Main.
+    const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
+    const sideTab = (name: string) =>
+      page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name, exact: true });
     await rootRow.click();
-    await expect(rootRow).toHaveAttribute("aria-selected", "true");
-    await expect(body).toHaveAttribute("aria-selected", "false");
-    await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(ticket.shorthand);
+    await expect(sideTab("Project folder")).toHaveAttribute("aria-selected", "true");
+    await expect(body).toHaveAttribute("aria-selected", "true");
+    await expect(rootRow).toHaveAttribute("aria-selected", "false");
+    await expect(breadcrumb).toContainText(ticket.shorthand);
     await sidenav.getByRole("option", { name: "Workspace conversation", exact: true }).click();
     await expect(page.locator('[data-workbench-region="side"]')).toBeVisible();
-    await expect(rootRow).toHaveAttribute("aria-selected", "true");
-    await expect(body).toHaveAttribute("aria-selected", "false");
+    await expect(sideTab("Workspace conversation")).toHaveAttribute("aria-selected", "true");
+    await expect(body).toHaveAttribute("aria-selected", "true");
     await page.getByRole("button", { name: "Hide Side Panel" }).click();
     expect(await finishObservingRows()).toEqual([]);
     await linkedRow.click();
-    const expectLinkedWorkspace = async () => {
-      await expect(page).toHaveURL(
-        (url) => defaultPageResourceCodec.fromUri(url.searchParams.get("resource") ?? "")?.id === linkedWorkspace.id,
-      );
-      await expect(page.getByRole("button", { name: "Back to project", exact: true })).toBeVisible();
-      await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(ticket.shorthand);
-    };
-    await expectLinkedWorkspace();
-    await page.goBack();
-    await expect(rootRow).toHaveAttribute("aria-selected", "true");
-    await page.goForward();
-    await expectLinkedWorkspace();
-    await page.goBack();
-    await expect(rootRow).toHaveAttribute("aria-selected", "true");
+    await expect(sideTab(linkedWorkspace.workspace_shorthand)).toHaveAttribute("aria-selected", "true");
+    await expect(body).toHaveAttribute("aria-selected", "true");
+    await expect(page).toHaveURL(/\/ticket\?resource=/);
+    await expect(breadcrumb).toContainText(ticket.shorthand);
     const finishObservingProjectRows = await observeTreeRows(sidenav, [body, file, rootRow]);
     await file.click();
     await expect(file).toHaveAttribute("aria-selected", "true");
+    // Previewing a workspace keeps the open ticket document selected.
     await rootRow.click();
-    await expect(rootRow).toHaveAttribute("aria-selected", "true");
-    await expect(file).toHaveAttribute("aria-selected", "false");
-    await page.goBack();
+    await expect(sideTab("Project folder")).toHaveAttribute("aria-selected", "true");
     await expect(file).toHaveAttribute("aria-selected", "true");
+    await expect(rootRow).toHaveAttribute("aria-selected", "false");
     await body.click();
     await expect(body).toHaveAttribute("aria-selected", "true");
     await expect(file).toHaveAttribute("aria-selected", "false");

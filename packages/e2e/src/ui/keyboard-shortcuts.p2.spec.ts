@@ -356,8 +356,10 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("c");
   await page.keyboard.press("n");
-  await expect(page).toHaveURL(/\/notes$/);
-  await expect(page.getByRole("tab", { name: /New note/ }).first()).toBeVisible();
+  // Created notes and tickets open as their own pages, named by the breadcrumb.
+  const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
+  await expect(page).toHaveURL(/\/notes\/note\?resource=/);
+  await expect(breadcrumb).toContainText("New note");
   await page.keyboard.press("Alt+Shift+Space");
   await page.keyboard.press("c");
   await page.keyboard.press("t");
@@ -369,7 +371,8 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await ticketForm.getByRole("button", { name: "Create ticket", exact: true }).click();
   causalEvidence.mark("ticket-create:clicked");
   await expect(ticketForm).not.toBeVisible();
-  await expect(page.getByRole("tab", { name: /Shortcut ticket/ }).first()).toBeVisible();
+  await expect(page).toHaveURL(/\/ticket\?resource=/);
+  await expect(breadcrumb).toContainText("Shortcut ticket");
   await page.getByRole("button", { name: "Help", exact: true }).focus();
   causalEvidence.mark("workspace-shortcut:started");
   await page.keyboard.press("Alt+Shift+Space");
