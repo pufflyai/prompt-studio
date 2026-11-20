@@ -52,7 +52,7 @@ test("saved ticket document links survive copy, reload, history and rename", asy
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.getByRole("button", { name: /^Actions for / }).click();
     await page.getByRole("menuitem", { name: "Copy link", exact: true }).click();
-    await expect(page.getByText("Link copied")).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Link copied" })).toBeVisible();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(fileUrl);
     await page.reload();
     await expect(page.getByText("Saved research bytes", { exact: false }).first()).toBeVisible();
