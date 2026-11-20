@@ -107,7 +107,13 @@ const openSavedWork = async (
     // Open Tickets as the first project request after restart, before API checks can warm it.
     await signInBrowser(page, descriptor, routes.tickets);
     await expect(page.getByTestId("renderer-card").first()).toBeVisible(firstOpen);
-    await page.getByTestId("renderer-card").first().click();
+    // Click the eyebrow text: the card ignores clicks that start on its session chips, which can fill its centre.
+    await page
+      .getByTestId("renderer-card")
+      .first()
+      .getByText(/^[A-Z]+-\d+( \/ [A-Z]+-\d+)*$/)
+      .first()
+      .click();
     await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).toBeVisible(firstOpen);
     await page.goto(new URL(routes.home, descriptor.origin).href);
     await expect(
