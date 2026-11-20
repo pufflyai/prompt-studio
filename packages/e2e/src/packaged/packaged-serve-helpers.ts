@@ -124,6 +124,9 @@ export const startPackagedServe = async (
   signal?.throwIfAborted();
   stagePackagedPackageCache(tempRoot);
   const descriptorPath = join(tempRoot, "runtime.json");
+  const logPath =
+    env.PSTDIO_LOG_PATH ??
+    join(import.meta.dirname, "../../test-results/packaged-runtime", `${basename(tempRoot)}.jsonl`);
   const {
     PSTDIO_EXTENSION_SOURCE_ROOT: _sourceRoot,
     PSTDIO_EXTENSION_RELEASE_REF: _releaseRef,
@@ -143,11 +146,7 @@ export const startPackagedServe = async (
         PSTDIO_DEFAULT_EXTENSIONS: "[]",
         PSTDIO_STORAGE_PATH: join(tempRoot, "storage"),
         // Retain setup/shutdown phases after the fixture removes its disposable home.
-        PSTDIO_LOG_PATH: join(
-          import.meta.dirname,
-          "../../test-results/packaged-runtime",
-          `${basename(tempRoot)}.jsonl`,
-        ),
+        PSTDIO_LOG_PATH: logPath,
         ...env,
       },
       stdio: "pipe",
@@ -167,7 +166,7 @@ export const startPackagedServe = async (
     const descriptor = await waitForPackagedReady(descriptorPath, child, observe);
     child.stdout!.resume();
     child.stderr!.resume();
-    return { child, baseUrl: descriptor.origin, descriptor };
+    return { child, baseUrl: descriptor.origin, descriptor, logPath };
   } catch (error) {
     await stopProcess(child);
     throw error;

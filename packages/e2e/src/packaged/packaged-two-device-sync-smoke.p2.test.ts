@@ -9,6 +9,7 @@ import { createSyncSpace } from "pstdio-sync/encryption";
 import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync/records";
 import { e2eExtension } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { waitForDefaultExtensions } from "../scripts/default-extensions-readiness";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { openCloudProjectInPicker, reopenPreparedProjectOffline } from "./packaged-cloud-project-picker";
@@ -235,6 +236,9 @@ test(
       await mkdir(local);
       await second.client.projects.create(folderProjectInput({ name: "Local scratchpad" }, local));
       phase("local picker choice created");
+      // The Cloud status item belongs to a default tool; open the browser once the device has installed it.
+      await waitForDefaultExtensions(second.host.child, second.host.logPath);
+      phase("new device default tools installed");
       picker = await openCloudProjectInPicker({
         browser,
         baseUrl: second.host.baseUrl,
