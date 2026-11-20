@@ -3,7 +3,7 @@ import { type ChatLinkCandidate, type ChatLinkHandler, isGuessedChatLink, parseC
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
 import { defaultPageResourceCodec, parseWorkbenchPageUrl, serializeWorkbenchPageUrl } from "pstdio-api-contracts";
-import { resourceLinkTarget } from "pstdio-api-contracts/extension-kernel";
+import { type ResourceLinkSource, resourceLinkTarget } from "pstdio-api-contracts/extension-kernel";
 import { getApiClient } from "@/lib/api";
 import { getDashboardQueryClient } from "@/lib/query-client";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
@@ -26,7 +26,7 @@ interface SessionLinkHandlerInput {
   workspace?: DashboardWorkspaceOption;
   origin: string;
   /** The panel showing the conversation; its links preview beside it. */
-  sourceRegion?: () => "main" | "side" | "secondary" | undefined;
+  sourceRegion?: () => ResourceLinkSource["region"];
   onError(message: string): void;
 }
 

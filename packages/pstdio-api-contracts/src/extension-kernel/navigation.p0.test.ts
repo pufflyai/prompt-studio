@@ -40,6 +40,43 @@ test("a resource link followed from Side previews in Main so its source stays vi
   expect(resourceLinkTarget(target, { region: "main" })).toEqual({ ...target, region: "side", open: "preview" });
 });
 
+test("panel and compound links from Side keep panels in Side and open pages in Main", () => {
+  const resource = { type: "record", id: "a" };
+  const panel = {
+    kind: "panel" as const,
+    panel: { kind: "placement" as const, extensionId: "example.records", id: "records" },
+    resource,
+    open: "pin" as const,
+  };
+  // Main does not accept panels in every mode, so a panel link stays in Side whatever its source.
+  const { open: _open, ...unpinned } = panel;
+  expect(resourceLinkTarget(panel, { region: "side" })).toEqual({ ...unpinned, region: "side" });
+  const page = {
+    kind: "page" as const,
+    page: { kind: "page" as const, extensionId: "example.records", id: "record" },
+    resource,
+  };
+  const single = resourceLinkTarget({ kind: "compound", targets: [panel] }, { region: "side" });
+  expect(single).toEqual({ kind: "compound", targets: [{ ...unpinned, region: "side" }] });
+  expect(single).toEqual(navigationTargetSchema.parse(single));
+  const many = resourceLinkTarget({ kind: "compound", targets: [page, panel] }, { region: "side" });
+  expect(many).toEqual({
+    kind: "compound",
+    targets: [
+      { ...page, region: "main" },
+      { ...panel, region: "side" },
+    ],
+  });
+  expect(many).toEqual(navigationTargetSchema.parse(many));
+  expect(resourceLinkTarget({ kind: "compound", targets: [page, panel] })).toEqual({
+    kind: "compound",
+    targets: [
+      { ...page, region: "side" },
+      { ...panel, region: "side" },
+    ],
+  });
+});
+
 test.each([
   "overlay",
   "sidenav",

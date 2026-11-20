@@ -2,7 +2,13 @@ import type { ScopedQueryClient } from "@pstdio/sdk/extensions";
 import { type ChatRendererAction, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import { type ComponentType, createElement } from "react";
-import type { WorkbenchCore, WorkbenchPanelRenderInput } from "../../core";
+import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchPanelRenderInput } from "../../core";
+import {
+  getWorkbenchPanelForMenuRegion,
+  type WorkbenchPanelMenuRegion,
+  workbenchPanelMenuRegions,
+  workbenchPanelRegions,
+} from "../../core/registries/layout/layout-regions";
 import { getWorkbenchQueries } from "../../core/workbench-queries";
 import type { NativeChatHostProps } from "../../react/renderers/chat/native-chat-host";
 import { NativeChatView } from "../../react/renderers/chat/native-chat-view";
@@ -84,13 +90,21 @@ const createChatSlot = <Current,>(input: {
   return created;
 };
 
+const isPanelMenuRegion = (region: string): region is WorkbenchPanelMenuRegion =>
+  Object.values(workbenchPanelMenuRegions).some((menus) => menus.left === region || menus.right === region);
 // Read when a link opens, because a conversation can move between panels while it is shown.
-const conversationRegion = (render: WorkbenchPanelRenderInput) =>
-  (["side", "secondary"] as const).find((region) =>
-    render.workbench.layout
-      .listPanelInstances(region)
-      .some((instance) => instance.instanceId === render.instance.instanceId),
-  ) ?? "main";
+const conversationRegion = (render: WorkbenchPanelRenderInput): WorkbenchPanelRegion | undefined => {
+  const { workbench, instance } = render;
+  if (workbench.pages.getContent()?.widgetId === instance.instanceId) return "main";
+  for (const [region, state] of Object.entries(workbench.layout.getLayout().regions)) {
+    if (!state.widgets.some((widget) => widget.widgetId === instance.instanceId)) continue;
+    if ((workbenchPanelRegions as readonly string[]).includes(region)) return region as WorkbenchPanelRegion;
+    // A conversation in a panel menu sits beside that panel's content.
+    if (isPanelMenuRegion(region)) return getWorkbenchPanelForMenuRegion(region);
+    return undefined;
+  }
+  return undefined;
+};
 
 export const createChatRendererOwner = (
   initialInput: RegisterWorkbenchExtensionContributionsInput,
