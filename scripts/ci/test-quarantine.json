@@ -71,5 +71,19 @@
       "https://github.com/pufflyai/prompt-studio/pull/2187"
     ],
     "removalCriteria": "Find why the retried remove-local returns 503 (LocalRemovalPending) only on Windows, likely a folder or lease still held open during cleanup, and fix it. Then restore this unchanged case to the stable lane with first-attempt native Windows evidence. Keep every assertion."
+  },
+  {
+    "runner": "playwright-ui",
+    "file": "packages/e2e/src/ui/harness-commands.p2.spec.ts",
+    "name": "uses native-modes native command state across submission and reconnect",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-1270",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/44721919615",
+      "https://github.com/pufflyai/prompt-studio/issues/2241"
+    ],
+    "removalCriteria": "Fix the draft-sync race in the native chat: in nightly 44721919615 (artifact ui-e2e-results-P2-3-attempt-1, trace) the saved draft \"/fail\" (saveDraft 11:03:46.980) and the failed /fail submit (11:03:47.125, cleared by saveDraft 11:03:47.212) left the composer empty and showed 'A saved draft arrived while you were typing' with Restore saved draft, instead of restoring /fail to the composer. Passed 6 of 6 locally. Then restore this unchanged case to the stable lane with first-attempt evidence. Keep every assertion.",
+    "failureMessageIncludes": ["/fail"]
   }
 ]
