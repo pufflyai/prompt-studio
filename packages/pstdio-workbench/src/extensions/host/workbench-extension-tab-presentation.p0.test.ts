@@ -2,7 +2,10 @@ import { expect, test } from "bun:test";
 import { createWorkbench, type WorkbenchPanelInstance } from "../../core";
 import { emptyWorkbenchExtensionMetadata } from "../contributions/extension-contributions";
 import type { RegisterWorkbenchExtensionContributionsInput } from "./workbench-extension-host-types";
-import { createWorkbenchExtensionTabPresentation } from "./workbench-extension-tab-presentation";
+import {
+  createWorkbenchExtensionTabPresentation,
+  toWorkbenchPresentationSnapshot,
+} from "./workbench-extension-tab-presentation";
 
 test("preparing a tab snapshot starts optional work only when its presentation subscribes", async () => {
   let reads = 0;
@@ -350,4 +353,13 @@ test("an active page's tab presentation rebinds when route parameters change", a
     tab.dispose();
     await workbench.dispose();
   }
+});
+
+test("a tab without its own label keeps its resource's label", () => {
+  // A removed note's tab query returns no presentation; its last known title must stay visible.
+  expect(toWorkbenchPresentationSnapshot({}, "example.notes").label).toBeUndefined();
+  expect(toWorkbenchPresentationSnapshot({ label: null }, "example.notes").label).toBeUndefined();
+  expect(toWorkbenchPresentationSnapshot({ label: "Recover before closing" }, "example.notes").label).toBe(
+    "Recover before closing",
+  );
 });

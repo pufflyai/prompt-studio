@@ -67,7 +67,9 @@ export const toWorkbenchPresentationSnapshot = (
       })
     : undefined;
   return {
-    label: text(value.label as Parameters<typeof text>[0]),
+    // A tab without its own label keeps its resource's label instead of showing an empty title.
+    label:
+      value.label === undefined || value.label === null ? undefined : text(value.label as Parameters<typeof text>[0]),
     icon: typeof value.icon === "string" ? value.icon : undefined,
     indicator: indicator?.icon ? indicator : undefined,
     menu,
