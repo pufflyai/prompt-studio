@@ -44,14 +44,13 @@ export const canvasPage = definePage({
   mode: workbenchModes.project,
   resource: { kinds: [canvasResource.ref] },
   parent: homePage.ref,
-  main: { kind: "view", view: canvasView.ref, cardinality: "many", presentation: "page" },
+  main: { kind: "view", view: canvasView.ref, cardinality: "one", presentation: "page" },
   panelView: canvasPanel.ref,
   slots: [],
 });
 export const canvasTarget = (id: string, label: string, projectId?: string) => ({
   kind: "page" as const,
   page: canvasPage.ref,
-  open: "preview" as const,
   resource: {
     type: canvasResource.id,
     id,

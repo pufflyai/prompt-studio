@@ -66,3 +66,51 @@ test("new builds release obsolete cached module bytes and preview revisions", as
   await load("button", "1");
   expect(requests.length).toBeGreaterThan(count);
 });
+
+test("switching designs reuses common bytes and releases older designs", async () => {
+  const requests: FrameAssetRequest[] = [];
+  const load = createFrameAssetLoader(async (request) => {
+    requests.push(request);
+    const modules = request.source === "$runtime" ? ["runtime.js"] : ["runtime.js", "ui.js", request.source];
+    return {
+      entry: "runtime.js",
+      modules,
+      styles: [],
+      files: Object.fromEntries(
+        modules.filter((name) => !request.cached.includes(name)).map((name) => [name, encoded(name)]),
+      ),
+    };
+  });
+  const a = await load("a.js");
+  await load("b.js");
+  expect(requests.at(-1)?.cached).toContain("ui.js");
+  expect(await load("a.js")).toBe(a);
+  await load("c.js");
+  await load("d.js");
+  expect(requests.at(-1)?.cached).not.toContain("b.js");
+  expect(requests.at(-1)?.cached).toContain("ui.js");
+  expect(await load("a.js")).not.toBe(a);
+});
+
+test("a failed evicted load preserves the replacement for the same revision", async () => {
+  const entered = Promise.withResolvers<void>();
+  const interrupted = Promise.withResolvers<never>();
+  let first = true;
+  const load = createFrameAssetLoader(async ({ source, cached }) => {
+    if (source === "a" && first) {
+      first = false;
+      entered.resolve();
+      await interrupted.promise;
+    }
+    const name = `${source}.js`;
+    return { entry: name, modules: [name], styles: [], files: cached.includes(name) ? {} : { [name]: encoded(name) } };
+  });
+  const pending = load("a", "1");
+  await entered.promise;
+  await load("b");
+  await load("c");
+  const replacement = await load("a", "1");
+  interrupted.reject(new Error("Old load failed"));
+  await expect(pending).rejects.toThrow("Old load failed");
+  expect(await load("a", "1")).toBe(replacement);
+});

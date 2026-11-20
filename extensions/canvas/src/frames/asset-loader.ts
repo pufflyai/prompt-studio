@@ -8,6 +8,8 @@ export const createFrameAssetLoader = (fetchAssets: (request: FrameAssetRequest)
   const previews = new Map<string, Promise<FrameBootstrap>>();
   const current = new Map<string, string>();
   const graphs = new Map<string, string[]>();
+  // Keep the current and previous source warm as the shared viewer follows navigation.
+  const retainedSources = 2;
   let pending = 0;
   const prepare = async (source: string, key = "") => {
     // An in-flight request owns its snapshot even if another source finishes a new build.
@@ -27,7 +29,7 @@ export const createFrameAssetLoader = (fetchAssets: (request: FrameAssetRequest)
           });
         };
         const decoded = decode().catch((error) => {
-          files.delete(name);
+          if (files.get(name) === decoded) files.delete(name);
           throw error;
         });
         files.set(name, decoded);
@@ -68,7 +70,14 @@ export const createFrameAssetLoader = (fetchAssets: (request: FrameAssetRequest)
     if (previous !== key) {
       if (previous) previews.delete(previous);
       graphs.delete(source);
-      current.set(source, key);
+    }
+    current.delete(source);
+    current.set(source, key);
+    if (current.size > retainedSources) {
+      const [oldestSource, oldestKey] = current.entries().next().value!;
+      current.delete(oldestSource);
+      previews.delete(oldestKey);
+      graphs.delete(oldestSource);
     }
     let prepared = previews.get(key);
     if (!prepared) {
@@ -77,7 +86,7 @@ export const createFrameAssetLoader = (fetchAssets: (request: FrameAssetRequest)
         await prepareRuntime();
         return prepare(source, key);
       })().catch((error) => {
-        previews.delete(key);
+        if (previews.get(key) === prepared) previews.delete(key);
         throw error;
       });
       previews.set(key, prepared);

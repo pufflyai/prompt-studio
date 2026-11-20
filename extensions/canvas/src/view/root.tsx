@@ -97,13 +97,15 @@ const ConnectedCanvas = (props: ConnectedCanvasProps) => {
 type CanvasRead = { status: BuildStatus | "ready"; canvas?: CanvasDefinition; message?: string };
 
 const useCanvasBuild = (host: GuestHost, id: string | undefined, selected: boolean) => {
-  const [read, setRead] = useState<CanvasRead>();
+  const [result, setResult] = useState<{ id?: string; read: CanvasRead }>();
+
   useEffect(() => {
     const client = createWebviewClient<typeof commands>(host);
     let active = true;
     // Build changes can start reads that overlap; only the latest read may update the view.
     let latest = 0;
     const refresh = () => {
+      const setRead = (read: CanvasRead) => setResult({ id, read });
       const request = ++latest;
       const current = () => active && request === latest;
       void client.commands["canvas.read"]({ canvas: id })
@@ -125,7 +127,7 @@ const useCanvasBuild = (host: GuestHost, id: string | undefined, selected: boole
       unsubscribe();
     };
   }, [host, id, selected]);
-  return read;
+  return result?.id === id ? result?.read : undefined;
 };
 
 export const CanvasRoot = (props: RootProps) => {
@@ -136,8 +138,9 @@ export const CanvasRoot = (props: RootProps) => {
     const frame = requestAnimationFrame(() => setTheme(readCanvasTheme(current.themePreference ?? "pstdio-light")));
     return () => cancelAnimationFrame(frame);
   }, [current.themePreference]);
-  const id = current.resource?.id;
   const location = current.pageLocation;
+  const onDesign = location?.page.extensionId === "pstdio.canvas" && location.page.id === canvasPage.id;
+  const id = current.resource?.id ?? (onDesign ? location.resource?.id : undefined);
   const active =
     location?.page.extensionId === "pstdio.canvas" &&
     ((location.page.id === homePage.id && !id) || (location.page.id === canvasPage.id && location.resource?.id === id));

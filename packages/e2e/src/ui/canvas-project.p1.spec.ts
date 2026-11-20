@@ -137,7 +137,7 @@ test("UI Canvas shows a project's own canvas and follows edits to its component 
 });
 
 // Critical: the Canvas entry must always show a design or setup guidance, including after a
-// remembered pinned design is removed while the person is on another page.
+// remembered design is removed while the person is on another page.
 test("UI Canvas opens the last design or the first available canvas without a blank page", async ({
   page,
   request,
@@ -173,10 +173,15 @@ export const Default = () => <button>Secondary canvas</button>;
     await expect(page).toHaveURL(/canvases\/design/);
     const frame = viewer.frameLocator('iframe[data-frame-ready="true"]');
     await expect(frame.getByRole("button", { name: "Startup: Save" })).toBeVisible();
+    const viewerDocument = await viewer.locator("html").elementHandle();
     await page.getByText("Secondary", { exact: true }).first().click();
     await expect(frame.getByRole("button", { name: "Secondary canvas", exact: true })).toBeVisible();
-    await page.getByRole("tab", { name: "Secondary", exact: true }).click({ button: "right" });
-    await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
+    // The same live viewer owns the shared asset cache, while each example has its own sandbox.
+    expect(await viewer.locator("html").evaluate((element, previous) => element === previous, viewerDocument)).toBe(
+      true,
+    );
+    await expect(viewer.locator("iframe[data-frame-ready]")).toHaveAttribute("sandbox", "allow-scripts allow-forms");
+    await viewerDocument.dispose();
     await page.getByRole("button", { name: "Back to project", exact: true }).click();
     await page.reload();
     await page.getByText("UI Canvas", { exact: true }).first().click();
