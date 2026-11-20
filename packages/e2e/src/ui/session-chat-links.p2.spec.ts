@@ -88,7 +88,7 @@ test("opens chat workspace files and restores selected documents through history
     await expect(source).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(side.locator(".monaco-editor .view-lines")).toContainText("chatLinkedFile");
-    await expect(page).toHaveURL(/\/session\?resource=/);
+    await expect(page).toHaveURL(isSessionUrl(project.id, session.id));
     await expectSideTreeSelection("app.ts");
     await page.reload();
     await expect(side.locator(".monaco-editor .view-lines")).toContainText("chatLinkedFile");
@@ -96,7 +96,7 @@ test("opens chat workspace files and restores selected documents through history
     // A row in the preview's Files menu opens beside the conversation as well.
     await sideTree.getByRole("option", { name: "README.md", exact: true }).click();
     await expect(side.locator(".monaco-editor .view-lines:visible")).toContainText(/Workspace\s+README/);
-    await expect(page).toHaveURL(/\/session\?resource=/);
+    await expect(page).toHaveURL(isSessionUrl(project.id, session.id));
     await expectSideTreeSelection("README.md");
     await expect(page.getByRole("link", { name: "README", exact: true }).last()).toBeVisible();
     await page.getByRole("link", { name: "README", exact: true }).last().click();
