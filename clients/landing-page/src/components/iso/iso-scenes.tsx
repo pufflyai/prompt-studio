@@ -30,7 +30,7 @@ export const TogetherScene = () => (
   <IsoSceneView
     world={TOGETHER_WORLD}
     setup={setupTogetherScene}
-    label="A live chart is copied from a dashboard into notes and scheduled as a weekly report."
+    label="Agents move tickets on a board while a dashboard chart follows along, and a schedule fills in a weekly report."
   />
 );
 export const YoursScene = () => (

@@ -123,8 +123,6 @@ const greekStyles = {
     borderRadius: "1px 1px 0 0",
     transition: "height 0.8s cubic-bezier(.3,1.2,.5,1)",
   },
-  "& .g-note .g-top": { top: "20px", bottom: "auto", height: "30px" },
-  "& .g-note .g-bottom": { top: "132px", bottom: "8px" },
   "& .g-slot": {
     position: "absolute",
     insetInline: "16px",
@@ -134,7 +132,7 @@ const greekStyles = {
     borderRadius: "xs",
     transition: "opacity 0.3s",
   },
-  "& .g-note.g-filled .g-slot": { opacity: 0 },
+  "& .g-slot.g-lower": { top: "88px", height: "70px", right: "34px" },
   "& .g-clockface": { position: "absolute", inset: "3px", borderRadius: "full", bg: "bg.panel" },
   "& .g-stripes": {
     position: "absolute",

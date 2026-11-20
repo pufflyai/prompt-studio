@@ -27,7 +27,7 @@ const CHAPTERS: { id: string; title: string; body: string[]; Scene: () => ReactN
     id: "together",
     title: "Your tools share what they make.",
     body: [
-      "Drag a chart out of a dashboard and into your notes. It stays live, because both tools read the same data. Add a schedule and the note turns into a report that updates itself every Monday.",
+      "Move a ticket on your board and your dashboard updates with it, because both read the same tickets. Put a schedule on the dashboard and a weekly report fills itself in.",
     ],
     Scene: TogetherScene,
   },
@@ -46,12 +46,24 @@ export const WhatIsPromptStudioView = () => {
   return (
     <PageScroll>
       <Box css={styles.page}>
-        <Box css={styles.intro}>
-          <Text as="h1" textStyle={{ base: "heading/L", md: "heading/XL" }}>
-            An agentic workbench.
+        {/* Set like a dictionary entry: headword, pronunciation and part of speech, numbered sense, example. */}
+        <Box as="dl" css={styles.intro}>
+          <Text as="dt">
+            <Text as="h1" css={styles.headword}>
+              agentic workbench
+            </Text>
+            <Text as="span" css={styles.pronunciation}>
+              /əˈdʒen.tɪk ˈwɜːk.bentʃ/ <em>noun</em>
+            </Text>
           </Text>
-          <Text textStyle="paragraph/L/regular" color="fg.muted">
+          <Text as="dd" css={styles.sense}>
+            <Text as="span" css={styles.senseNumber}>
+              1.
+            </Text>
             One app where the tools your agents build live, run, and work together.
+          </Text>
+          <Text as="dd" css={styles.example}>
+            “Prompt Studio is the agentic workbench where our release dashboard lives.”
           </Text>
         </Box>
         {CHAPTERS.map(({ id, title, body, Scene }) => (

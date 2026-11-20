@@ -1,7 +1,19 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
 
 export const landingChaptersSlotRecipe = defineSlotRecipe({
-  slots: ["page", "intro", "chapter", "copy", "scene", "cta"],
+  slots: [
+    "page",
+    "intro",
+    "headword",
+    "pronunciation",
+    "sense",
+    "senseNumber",
+    "example",
+    "chapter",
+    "copy",
+    "scene",
+    "cta",
+  ],
   base: {
     page: {
       display: "flex",
@@ -13,7 +25,22 @@ export const landingChaptersSlotRecipe = defineSlotRecipe({
       py: "3xl",
       containerType: "inline-size",
     },
-    intro: { display: "flex", flexDirection: "column", gap: "sm", maxWidth: "3xl", pb: "2xl" },
+    intro: { display: "flex", flexDirection: "column", gap: "sm", maxWidth: "3xl", pb: "2xl", "& dt, & dd": { m: 0 } },
+    headword: {
+      display: "inline",
+      fontFamily: "heading",
+      textStyle: { base: "heading/L", md: "heading/XL" },
+      me: "md",
+    },
+    pronunciation: {
+      display: "inline",
+      textStyle: "paragraph/L/regular",
+      color: "fg.muted",
+      "& em": { fontStyle: "italic", ms: "xs" },
+    },
+    sense: { display: "flex", gap: "sm", textStyle: "paragraph/L/regular", maxWidth: "2xl" },
+    senseNumber: { fontWeight: "semibold", color: "fg.muted" },
+    example: { ps: "lg", textStyle: "paragraph/M/regular", fontStyle: "italic", color: "fg.muted" },
     chapter: {
       display: "grid",
       gridTemplateColumns: "minmax(0, 1fr)",

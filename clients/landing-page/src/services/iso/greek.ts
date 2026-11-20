@@ -30,8 +30,8 @@ export const file = () => '<div class="g-file"><i></i><span class="g-lines g-gro
 export const lines = () => '<span class="g-lines g-tight"></span>';
 export const card = () => '<span class="g-lines g-card"></span>';
 export const kpi = () => '<div class="g-kpi"><b></b><i></i></div>';
-export const note = () =>
-  '<div class="g-note"><i class="g-title"></i><span class="g-lines g-top"></span><div class="g-slot"></div><span class="g-lines g-bottom"></span></div>';
+/** A dashboard panel: a title bar and a dashed slot below the first chart for a scheduled report. */
+export const dashboard = () => '<div class="g-note"><i class="g-title"></i><div class="g-slot g-lower"></div></div>';
 export const clock = () => '<div class="g-clockface"></div>';
 export const wave = () => '<div class="g-wave"></div>';
 export const grid = () => '<div class="g-grid"></div>';

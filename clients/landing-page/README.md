@@ -164,8 +164,8 @@ Each tab is a link to a prerendered page:
 
 - `/examples/ticket-board/`
 - `/examples/image-editor/`
-- `/examples/canvas-editor/`
-- `/examples/icon-set-editor/`
+- `/examples/ui-editor/`
+- `/examples/3d-preview/`
 
 The selected example comes from the URL. Reloading, opening a link in another tab,
 and browser history preserve that selection. Automatic changes replace the current

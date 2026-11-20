@@ -21,8 +21,8 @@ export const ExamplesView = (props: ExamplesViewProps) => {
               What will you build?
             </Text>
             <Text textStyle="paragraph/L/regular" color="fg.muted">
-              A ticket board, an image editor, a canvas for your components, a 3D editor. Each one is a request away,
-              and they all live in one app.
+              A ticket board, an image editor, a UI editor, a 3D preview. Each one is a request away, and they all live
+              in one app.
             </Text>
           </Stack>
           <ToolRecording start={exampleId} onSelect={(id) => onNavigate(id, true)} />

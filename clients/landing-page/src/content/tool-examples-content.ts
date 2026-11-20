@@ -16,14 +16,14 @@ export const TOOL_EXAMPLES: { id: ToolExampleId; slug: string; name: string; des
   },
   {
     id: "canvas",
-    slug: "canvas-editor",
-    name: "Canvas editor",
-    description: "A canvas of your components: select frames, switch themes, and pan around.",
+    slug: "ui-editor",
+    name: "UI editor",
+    description: "A UI editor for your components: select frames, switch themes, and pan around.",
   },
   {
     id: "scene",
-    slug: "3d-editor",
-    name: "3D editor",
-    description: "A 3D scene editor: play an animation on a timeline and pick keyframes.",
+    slug: "3d-preview",
+    name: "3D preview",
+    description: "A 3D preview: play an animation on a timeline and pick keyframes.",
   },
 ];
