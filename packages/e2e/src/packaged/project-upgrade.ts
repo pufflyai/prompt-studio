@@ -93,9 +93,10 @@ const workbenchRoutes = async (descriptor: Runtime["descriptor"], fixture: Seed)
 const openSavedWork = async (
   descriptor: Runtime["descriptor"],
   fixture: Seed,
-  evidence: string,
+  input: ProjectUpgradeInput,
   routes: Awaited<ReturnType<typeof workbenchRoutes>>,
 ) => {
+  const { evidence, profile } = input;
   const browser = await chromium.launch(PROVISIONED_CHROMIUM);
   let page: Page | undefined;
   let ticketEditorQuarantined = false;
@@ -110,6 +111,7 @@ const openSavedWork = async (
       await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).toBeVisible();
     } catch (error) {
       if (
+        profile !== "active" ||
         process.env.PSTDIO_QUARANTINE_UPGRADE_TICKET_EDITOR !== "true" ||
         !(error instanceof Error) ||
         !error.message.includes("Locator: getByTestId('content-editable')") ||
@@ -255,7 +257,7 @@ const run = async (
     const routes = await workbenchRoutes(runtime.descriptor, state.fixture);
     await stopProcess(runtime.child);
     runtime = await launch(candidate, "restart");
-    const ticketEditorQuarantined = await openSavedWork(runtime.descriptor, state.fixture, input.evidence, routes);
+    const ticketEditorQuarantined = await openSavedWork(runtime.descriptor, state.fixture, input, routes);
     await assertProjectToolsRetained(
       upgradeApi(runtime.descriptor),
       state.fixture.id,
