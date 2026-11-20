@@ -127,7 +127,7 @@ test("remote deletion closes a clean dashboard while keeping another dashboard's
   }
 });
 
-test("a removed note's pending draft stays recoverable until its tab is explicitly closed", async ({
+test("a removed note's pending draft stays recoverable until its page is explicitly left", async ({
   page,
   request,
 }) => {
@@ -148,12 +148,9 @@ test("a removed note's pending draft stays recoverable until its tab is explicit
   await page.goto(`${apiBase}/projects/${project.id}/extensions/pstdio.planner/tickets`);
   await page.getByRole("option", { name: "Notes", exact: true }).click();
   await page.getByRole("option", { name: note.title, exact: true }).click();
-  const tabId = await page
-    .getByRole("tab", { name: note.title, exact: true })
-    .locator("..")
-    .getAttribute("data-workbench-tab");
-  expect(tabId).toBeTruthy();
-  const tab = page.locator(`[data-workbench-tab="${tabId}"]`);
+  // Notes open as single-resource pages; the breadcrumb names the open note.
+  const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
+  await expect(breadcrumb.getByText(note.title, { exact: true })).toBeVisible();
   // The note body loads after the page's Activity composer, so select the body editor itself.
   const editor = nativePublicTextEditor(page);
   await expect(editor).toBeVisible();
@@ -176,10 +173,10 @@ test("a removed note's pending draft stays recoverable until its tab is explicit
     expect(refused.ok).toBe(false);
     held.length = 0;
     await expect(editor).toContainText("Recover this removed note.");
-    await expect(tab).toBeVisible();
-    await tab.getByRole("button", { name: /^Close/ }).click();
-    await expect(tab).toHaveCount(0);
-    await expect(page.getByTestId("content-editable")).toHaveCount(0);
+    await expect(breadcrumb.getByText(note.title, { exact: true })).toBeVisible();
+    await breadcrumb.getByText("Notes", { exact: true }).click();
+    await expect(breadcrumb.getByText(note.title, { exact: true })).toHaveCount(0);
+    await expect(editor).not.toBeVisible();
   } finally {
     await Promise.all(held.map((route) => route.abort().catch(() => undefined)));
   }
