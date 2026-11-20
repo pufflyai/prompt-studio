@@ -1,4 +1,9 @@
-import { createWorkbench, type SettingsRegistry, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
+import {
+  createWorkbench,
+  defaultPageResourceCodec,
+  type SettingsRegistry,
+  type WorkbenchPageLocationBrowser,
+} from "@pstdio/workbench";
 import { WORKBENCH_TERMINAL_PANEL_SIZE } from "@pstdio/workbench/react";
 import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { getDashboardScopedQueries } from "@/lib/scoped-queries";
@@ -33,6 +38,7 @@ import { createTerminalModule } from "./modules/terminal/module";
 import { createUpdatesModule } from "./modules/updates/module";
 import { createWorkspacesModule } from "./modules/workspaces/module";
 import { getDashboardSelectedProjectId } from "./shared/app/project-context";
+import { canonicalDashboardResource } from "./shared/extensions/resource-identity";
 import { getCachedDashboardExtensionMetadata } from "./shared/extensions/workbench-extension-contributions";
 import { resolveDashboardPersistenceScope } from "./shared/workbench/dashboard-persistence-scope";
 import { DASHBOARD_SIDENAV_REGION_SIZE } from "./shared/workbench/dashboard-sidenav";
@@ -119,7 +125,18 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     ? undefined
     : pageLocationBrowser && readPageUrlProjectId(pageLocationBrowser.current().url);
   if (urlProjectId) projectSelectionPersistence.setSelectedProjectId(urlProjectId);
+  let created: ReturnType<typeof createWorkbench> | undefined;
   const workbench: ReturnType<typeof createWorkbench> = createWorkbench({
+    // A link may name only a resource's type and id, while its owner returns it with its project
+    // and extension. Every open-resource check must treat both as the same resource.
+    pageResources: {
+      ...defaultPageResourceCodec,
+      normalize: (resource) => {
+        const projectId =
+          resource.projectId ?? (created && getDashboardSelectedProjectId(created)) ?? input.projectId ?? urlProjectId;
+        return projectId ? canonicalDashboardResource(resource, projectId) : { ...resource };
+      },
+    },
     active: input.active,
     queries: getDashboardScopedQueries(),
     defaultPage: () => {
@@ -138,6 +155,7 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     ...persistence,
     ...(pageLocationBrowser ? { pageLocationBrowser } : {}),
   });
+  created = workbench;
 
   try {
     workbench.preferences.registerSchema({
