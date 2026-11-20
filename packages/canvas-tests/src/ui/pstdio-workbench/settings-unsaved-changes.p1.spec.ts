@@ -19,10 +19,14 @@ test("settings preserve edits on Stay and guard both navigation and closing", as
   await expect(preview.getByRole("heading", { name: "Appearance", exact: true })).toBeVisible();
   await preview.getByText("Runtime", { exact: true }).click();
   await limit.fill("12");
-  await preview.getByRole("button", { name: /^Close / }).click();
+  // The example's empty Side Panel has its own Close button, so act on the Settings overlay itself.
+  const settings = preview.getByRole("dialog").filter({ has: limit });
+  await expect(settings).toHaveCount(1);
+  await settings.getByRole("button", { name: /^Close / }).click();
   await expect(preview.getByRole("dialog", { name: "Unsaved changes" })).toBeVisible();
   await preview.getByRole("button", { name: "Discard changes", exact: true }).click();
-  await expect(preview.getByRole("button", { name: /^Close / })).toHaveCount(0);
+  await expect(settings).toHaveCount(0);
+  await expect(limit).toHaveCount(0);
 });
 
 // Critical: unlimited concurrency must be an explicit, reversible draft rather than an empty number field.
