@@ -60,7 +60,7 @@ export const WhatIsPromptStudioView = () => {
             <Text as="span" css={styles.senseNumber}>
               1.
             </Text>
-            One app where the tools your agents build live, run, and work together.
+            An app for the tools your agents build.
           </Text>
           <Text as="dd" css={styles.example}>
             “Prompt Studio is the agentic workbench where our release dashboard lives.”
