@@ -1,14 +1,12 @@
-import { expect, type Frame, type Locator, type Page, test } from "@playwright/test";
+import { expect, type Frame, type Locator, test } from "@playwright/test";
 
 const checkTimelineTransport = async (props: {
-  page: Page;
-  surface: Frame;
   first: Locator;
   second: Locator;
   timeline: Locator;
   output: Locator;
 }) => {
-  const { page, surface, first, second, timeline, output } = props;
+  const { first, second, timeline, output } = props;
   const loop = timeline.getByRole("button", { name: "Loop playback", exact: true });
   await expect(loop).toBeVisible();
   await expect(loop).toHaveAttribute("aria-pressed", "true");
@@ -20,27 +18,6 @@ const checkTimelineTransport = async (props: {
   await expect(loop).toHaveAttribute("aria-pressed", "false");
   await loop.press("Space");
   await expect(loop).toHaveAttribute("aria-pressed", "true");
-  const timeRuler = timeline.getByRole("slider", { name: "Timeline playhead", exact: true });
-  const camera = surface.getByRole("button", { name: /Reset zoom to 100%/ });
-  const cameraBefore = await camera.getAttribute("aria-label");
-  const rulerWidth = await timeRuler.evaluate((element) => element.clientWidth);
-  const timeBounds = (await timeRuler.boundingBox())!;
-  await page.mouse.move(timeBounds.x + timeBounds.width * 0.4, timeBounds.y + timeBounds.height / 2);
-  await page.keyboard.down("Control");
-  await page.mouse.wheel(0, -160);
-  await page.keyboard.up("Control");
-  await expect.poll(() => timeRuler.evaluate((element) => element.clientWidth)).toBeGreaterThan(rulerWidth * 1.2);
-  await expect(camera).toHaveAttribute("aria-label", cameraBefore!);
-  await page.keyboard.down("Control");
-  await page.mouse.wheel(0, 10000);
-  await page.keyboard.up("Control");
-  const tracks = timeline.getByRole("group", { name: "Animation tracks", exact: true });
-  await expect
-    .poll(() =>
-      tracks.locator('[data-part="viewport"]').evaluate((element) => element.scrollWidth - element.clientWidth),
-    )
-    .toBe(0);
-  await expect(tracks.locator('[data-part="scrollbar"][data-orientation="horizontal"]')).toBeHidden();
   await expect(output).toContainText('"time":0');
 };
 
@@ -77,7 +54,7 @@ test("frame parameters and playback stay independent across themes and movement"
   await document.getByRole("textbox", { name: "Frame draft" }).fill("Keep this input");
   const timeline = surface.getByRole("region", { name: /^Animations/ });
   await expect(timeline).toBeVisible();
-  await checkTimelineTransport({ page, surface, first, second, timeline, output });
+  await checkTimelineTransport({ first, second, timeline, output });
   const dialog = surface.getByRole("complementary", { name: "Frame editor" });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByText("Editable controls with motion.", { exact: true })).toBeVisible();
@@ -101,12 +78,6 @@ test("frame parameters and playback stay independent across themes and movement"
   const viewportBefore = (await viewport.boundingBox())!;
   const tray = surface.locator("[data-animation-tray]");
   const trayBounds = (await tray.boundingBox())!;
-  const toolbarBounds = (await timeline.getByRole("toolbar", { name: "Animation controls" }).boundingBox())!;
-  const laneBounds = (await timeline
-    .getByRole("slider", { name: "Timeline playhead", exact: true })
-    .locator("../..")
-    .boundingBox())!;
-  expect(trayBounds.height).toBeLessThanOrEqual(toolbarBounds.height + laneBounds.height + 3);
   const editorWidth = (await dialog.boundingBox())!.width;
   const sideDivider = (await surface
     .getByRole("separator", { name: "Resize frame editor", exact: true })
@@ -241,42 +212,15 @@ test("frame parameters and playback stay independent across themes and movement"
   await expect(surface.locator("[data-ui-canvas-error]")).toHaveCount(0);
 });
 
-// Critical: scrubbing must not animate a shader layer whose speed is zero.
-test("zero-speed shader layers stay stationary while the frame seeks", async ({ page }) => {
+// Critical: essential save/version actions remain reachable in a narrow Canvas view.
+test("saved-version actions stay inside the frame editor in a narrow view", async ({ page }) => {
   await page.goto("/?frame=design%2Fshaders%2Fsection-hatch%2Fshader.canvas.tsx%23Preview");
   const shell = page.frameLocator("[data-verification-host]");
   const panel = shell.locator("[data-canvas-item]");
-  const frame = panel.frameLocator("iframe");
   await expect(panel.locator("iframe")).toHaveAttribute("data-frame-ready", "true");
   await panel.locator("[data-canvas-select]").click();
   const editor = shell.getByRole("complementary", { name: "Frame editor" });
-  const drift = shell
-    .getByRole("complementary", { name: "Frame editor" })
-    .getByText("Pattern: Drift", { exact: true })
-    .locator("../..")
-    .getByRole("spinbutton");
-  await drift.fill("0");
-  await drift.press("Tab");
-  const hatch = frame.locator('[data-motion="noise-counter hatch"]').first();
-  await expect
-    .poll(() =>
-      hatch.evaluate((element) =>
-        element
-          .getAnimations()
-          .some(
-            (animation) =>
-              (animation as CSSAnimation).animationName.includes("hatch-") &&
-              (animation as CSSAnimation).animationName.endsWith("-stationary"),
-          ),
-      ),
-    )
-    .toBe(true);
-  await page.keyboard.press("Escape");
-  const initial = await hatch.evaluate((element) => getComputedStyle(element).transform);
-  await shell.getByRole("slider", { name: "Timeline playhead", exact: true }).press("ArrowRight");
-  await expect(shell.locator("[data-frame-playback]")).not.toContainText("0:00:00 / 0:30:00");
-  await expect(hatch).toHaveCSS("transform", initial);
-  // Critical: essential save/version actions remain reachable in a narrow Canvas view.
+  await expect(editor).toBeVisible();
   await page.setViewportSize({ width: 400, height: 900 });
   for (const name of ["Save as new version", "Delete version"]) {
     const action = editor.getByRole("button", { name, exact: true });

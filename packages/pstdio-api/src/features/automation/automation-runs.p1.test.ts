@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
+import { createNativeStore } from "../../services/account/native-store";
 import { createTestApp } from "../../test-utils/create-test-app";
 import type { AppBindings } from "../../types";
 import {
@@ -326,4 +327,69 @@ describe("automation run cancellation and credentials", () => {
     });
     expect(revoked.status).toBe(401);
   });
+});
+
+test("removing a Cloud copy cancels a blocking automation before draining finite command work", async () => {
+  const manager = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch(request) {
+      const path = new URL(request.url).pathname;
+      if (path === "/v1/account") return Response.json({ features: { relay: true } });
+      if (path === "/v1/workbenches") return Response.json([{ workbenchId: projectId }]);
+      return Response.json({ ok: true });
+    },
+  });
+  const work = appDeps.projectService.work;
+  const original = work.run;
+  const entered = Promise.withResolvers<void>();
+  let pending: Promise<Response> | undefined;
+  let runId: string | undefined;
+  try {
+    const { environmentId } = await appDeps.environmentService.get();
+    await createNativeStore(join(tempRoot, "storage", "native-account.json")).save({
+      managerOrigin: manager.url.origin,
+      relayOrigin: manager.url.origin,
+      deviceId: environmentId,
+      accountId: "account",
+      token: "device-credential",
+    });
+    await appDeps.accountService.refresh();
+    work.run = (id, task, signal, options) =>
+      original(
+        id,
+        async (admitted) => {
+          if (signal) entered.resolve();
+          return task(admitted);
+        },
+        signal,
+        options,
+      );
+    const { token } = await issueToken([BLOCKING_COMMAND_ID]);
+    const created = await machineRequest(token, `/v1/projects/${projectId}/automation-runs`, {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": "remove-blocking" },
+      body: JSON.stringify({ commandId: BLOCKING_COMMAND_ID, input: { params: {} } }),
+    });
+    expect(created.status).toBe(202);
+    runId = (await created.json()).id;
+    await entered.promise;
+    pending = Promise.resolve(
+      runtimeRequest(`/v1/account/projects/${projectId}/remove-local`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ discardUnsynced: true }),
+      }),
+    );
+    expect(
+      await Promise.race([pending.then((response) => response.status), Bun.sleep(500).then(() => "blocked")]),
+    ).toBe(200);
+    expect(await appDeps.projectService.get(projectId)).toBeNull();
+  } finally {
+    if (runId && (await appDeps.projectService.get(projectId)))
+      await appDeps.automationService.cancelProjectRuns(projectId);
+    await pending;
+    work.run = original;
+    await manager.stop(true);
+  }
 });

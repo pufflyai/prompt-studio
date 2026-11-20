@@ -10,6 +10,7 @@ export class PstdioApiError extends Error {
     message: string,
     status: number,
     readonly code?: string,
+    readonly details?: unknown,
   ) {
     super(message);
     this.name = "PstdioApiError";
@@ -127,7 +128,8 @@ export const responseError = async (response: Response) => {
     errorBody && typeof errorBody === "object" && "code" in errorBody && typeof errorBody.code === "string"
       ? errorBody.code
       : undefined;
-  return new PstdioApiError(message, response.status, code);
+  const details = errorBody && typeof errorBody === "object" && "details" in errorBody ? errorBody.details : undefined;
+  return new PstdioApiError(message, response.status, code, details);
 };
 
 export const createRequest = (options: ClientOptions): RequestFn => {

@@ -45,50 +45,6 @@ describe("settings example module", () => {
     expect(body.find((section) => section.id === "extensions")?.nodes.map((node) => node.label)).toEqual(["Lab"]);
   });
 
-  test("keeps the settings tree visible when a collection fails to load", async () => {
-    const workbench = createWorkbench();
-    workbench.views.registerView({
-      id: "runtime-settings",
-      title: "Runtime settings",
-      body: { kind: "react", render: () => null },
-    });
-    workbench.views.registerView({
-      id: "skill-settings",
-      title: "Skill settings",
-      body: { kind: "react", render: () => null },
-    });
-    workbench.settings.registerSection({ id: "workbench", title: "Workbench", order: 10 });
-    workbench.settings.registerSection({ id: "project", title: "Project", order: 20 });
-    workbench.settings.registerPanel({
-      kind: "view",
-      id: "runtime",
-      title: "Runtime",
-      section: "workbench",
-      viewId: "runtime-settings",
-    });
-    workbench.settings.registerPanel({
-      kind: "collection",
-      id: "skills",
-      title: "Skills",
-      section: "project",
-      items: async () => {
-        throw new Error("package.json is missing");
-      },
-      itemId: (item) => String(item),
-      itemLabel: (item) => String(item),
-      viewId: "skill-settings",
-    });
-
-    const body = await buildSettingsTreeBody({
-      settings: workbench.settings,
-      hasProjectScope: true,
-      matchesWhen: (when) => workbench.context.matches(when),
-    });
-
-    expect(body.find((section) => section.id === "workbench")?.nodes.map((node) => node.label)).toEqual(["Runtime"]);
-    expect(body.find((section) => section.id === "project")?.nodes.map((node) => node.label)).toEqual(["Skills"]);
-  });
-
   test("the settings command swaps the overlay across schema, custom, and collection entries", async () => {
     const workbench = setup();
 

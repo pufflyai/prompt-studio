@@ -137,38 +137,6 @@ const PanelViewPortal = (props: {
   );
 };
 
-const PageContentViewHosts = (props: {
-  workbench: WorkbenchCore;
-  content?: WorkbenchWidgetPlacement;
-  slot?: HTMLElement;
-  open: ReadonlySet<string>;
-}) => {
-  const { workbench, content, slot, open } = props;
-  const retained = useRetainedViewPlacements(workbench, content ? [content] : [], open);
-  if (content) reopenViewerHost(workbench, content.widgetId);
-  const hosts = new Map(
-    retained
-      .filter((placement) => !isRetiredViewerHost(workbench, placement.widgetId))
-      .map((placement) => [viewerHostKey(workbench, placement.widgetId), placement]),
-  );
-  useEffect(
-    () => releaseViewerHosts(workbench, new Set(retained.map((placement) => placement.widgetId))),
-    [workbench, retained],
-  );
-  // Retention already includes current content. Resolve its host key only in that
-  // pass: a released view gets a new key when it returns after retention expires.
-  return [...hosts].map(([key, placement]) => (
-    <PanelViewPortal
-      key={key}
-      workbench={workbench}
-      placement={placement}
-      region="main"
-      slot={slot}
-      active={content?.widgetId === placement.widgetId}
-    />
-  ));
-};
-
 // Retained views belong to the project that opened them. Keying this host by project
 // releases them on a switch, while the shell and its view slots stay mounted.
 const ProjectViewHosts = (props: {
@@ -182,24 +150,39 @@ const ProjectViewHosts = (props: {
   const content = resolvePageContent(pageState);
   const open = useOpenPlacementIds(workbench);
   useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
-  const current = workbenchPanelRegions.flatMap((region) => {
-    const state = layout.regions[region];
-    const eligible = state.widgets.filter(
-      (p) =>
-        (!p.resource || Boolean(resolveResourcePreview(p.resource, changes))) &&
-        isPlacementEligibleForRegion(workbench, region, p),
-    );
-    const selected = eligible.find((p) => p.widgetId === state.activeWidgetId) ?? eligible[0];
-    return eligible.filter((p) => p.widgetId === selected?.widgetId || p.mountStrategy === "keep-mounted");
-  });
+  const current = [
+    ...(content ? [content] : []),
+    ...workbenchPanelRegions.flatMap((region) => {
+      const state = layout.regions[region];
+      const eligible = state.widgets.filter(
+        (p) =>
+          (!p.resource || Boolean(resolveResourcePreview(p.resource, changes))) &&
+          isPlacementEligibleForRegion(workbench, region, p),
+      );
+      const selected = eligible.find((p) => p.widgetId === state.activeWidgetId) ?? eligible[0];
+      return eligible.filter((p) => p.widgetId === selected?.widgetId || p.mountStrategy === "keep-mounted");
+    }),
+  ];
+  for (const placement of current) reopenViewerHost(workbench, placement.widgetId);
   const retained = useRetainedViewPlacements(workbench, current, open);
+  const hosts = new Map(
+    retained
+      .filter((placement) => !isRetiredViewerHost(workbench, placement.widgetId))
+      .map((placement) => [viewerHostKey(workbench, placement.widgetId), placement]),
+  );
+  useEffect(
+    () => releaseViewerHosts(workbench, new Set(retained.map((placement) => placement.widgetId))),
+    [workbench, retained],
+  );
   return (
     <>
-      <PageContentViewHosts workbench={workbench} content={content} slot={slots.main} open={open} />
-      {retained.map((placement) => {
-        const region = workbenchPanelRegions.find((id) =>
-          layout.regions[id].widgets.some((p) => p.widgetId === placement.widgetId),
-        );
+      {[...hosts].map(([key, placement]) => {
+        const region =
+          content?.widgetId === placement.widgetId
+            ? "main"
+            : workbenchPanelRegions.find((id) =>
+                layout.regions[id].widgets.some((p) => p.widgetId === placement.widgetId),
+              );
         const peers = region
           ? layout.regions[region].widgets.filter(
               (p) =>
@@ -212,12 +195,12 @@ const ProjectViewHosts = (props: {
           : undefined;
         return (
           <PanelViewPortal
-            key={placement.widgetId}
+            key={key}
             workbench={workbench}
             placement={placement}
             region={region}
             slot={region ? slots[region] : undefined}
-            active={selected?.widgetId === placement.widgetId}
+            active={content?.widgetId === placement.widgetId || selected?.widgetId === placement.widgetId}
           />
         );
       })}

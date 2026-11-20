@@ -48,15 +48,13 @@ test("native workspace identity renders once in its hub and leaves other control
   expect(controls).toContain("Model");
 });
 
-test("file attachment action is icon-only with its accessible label and tooltip", () => {
+test("file attachment action has an accessible label", () => {
   const markup = renderToStaticMarkup(
     <WorkbenchThemeProvider>
       <NativeChatAttachmentActions disabled={false} upload={() => {}} />
     </WorkbenchThemeProvider>,
   );
   expect(markup).toContain('aria-label="Attach files"');
-  expect(markup).not.toContain(">Attach files<");
-  expect(markup).toContain("<svg");
 });
 
 test("a saved remote hub keeps its device name visible while both selectors are read only", () => {

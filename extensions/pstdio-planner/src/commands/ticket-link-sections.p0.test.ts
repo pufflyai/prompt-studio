@@ -57,7 +57,7 @@ test("ticket resource navigation merges bidirectional session links without empt
     links,
   );
   expect(sections.map((section) => section.id)).toEqual(["sessions"]);
-  expect(sections[0].nodes[0].target).toMatchObject({ resource: session });
+  expect(sections[0].nodes[0].target).toMatchObject({ resource: session, region: "side", open: "preview" });
   expect(mergeTicketLinkSections(sections, links)[0].nodes).toHaveLength(1);
 });
 

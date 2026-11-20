@@ -151,7 +151,7 @@ const redirectPages = [
 ] as const;
 const openThroughRedirect = async (w: ReturnType<typeof modePanelFixture>["w"], id: string) => {
   const item = { type: "document", id, label: id };
-  await w.navigation.openTarget({ kind: "page", page: redirect, resource: item });
+  w.pageLocations.navigate({ kind: "page", page: redirect, resource: item });
   await w.navigation.openTarget({
     kind: "compound",
     targets: [
@@ -177,7 +177,7 @@ const visibleMainTabs = (w: ReturnType<typeof modePanelFixture>["w"]) => {
 test("a collection shows its own resource tabs after a detail route redirects into it", async () => {
   const s = modePanelFixture(undefined, true, [...redirectPages], "library");
   await openThroughRedirect(s.w, "a");
-  expect(visibleMainTabs(s.w)).toEqual(["redirect:$main:a", "library:item:a", "library:list:"]);
+  expect(visibleMainTabs(s.w)).toEqual(["library:item:a", "library:list:"]);
   expect(s.w.layout.getActivePanel("main")?.placementIdentity).toMatchObject({ pageId: "library", slotId: "item" });
 });
 

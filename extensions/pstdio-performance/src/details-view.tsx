@@ -1,23 +1,27 @@
 import "@pstdio/ui/style.css";
-import { createWebviewClient, defineExtensionView, type WebviewClient } from "@pstdio/sdk/extensions";
+import {
+  createWebviewClient,
+  defineExtensionView,
+  type GuestHost,
+  type PerformanceMonitoringState,
+} from "@pstdio/sdk/extensions";
 import { useWebviewCommandQuery, useWebviewVisibility } from "@pstdio/sdk/extensions/react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { PerformancePopoverContent } from "./components/performance-popover-content";
+import {
+  PerformancePopoverContent,
+  type PerformancePopoverContentProps,
+} from "./components/performance-popover-content";
 import { PerformanceRoot } from "./components/performance-root";
-import { RuntimeDiagnostics } from "./components/runtime-diagnostics";
-import type { diagnosticCommands } from "./diagnostics/commands";
-import { createDiagnosticsStore, type DiagnosticsStore } from "./diagnostics/store";
 import { createSnapshotQuery } from "./snapshot-query";
 
 interface DetailsProps {
-  client: WebviewClient<typeof diagnosticCommands>;
-  diagnostics: DiagnosticsStore;
+  client: ReturnType<typeof createWebviewClient>;
+  host: GuestHost;
 }
 
 const Details = (props: DetailsProps) => {
-  const { client, diagnostics } = props;
-  const captures = useSyncExternalStore(diagnostics.subscribe, diagnostics.get);
+  const { client, host } = props;
   const { performance } = client;
   const { data: snapshot, error: readError } = useWebviewCommandQuery(
     createSnapshotQuery(client),
@@ -30,10 +34,37 @@ const Details = (props: DetailsProps) => {
     const timer = setTimeout(() => setCopied(false), 2_000);
     return () => clearTimeout(timer);
   }, [copied]);
-  const [error, setError] = useState<string>();
-  const run = (action: Promise<unknown>) => {
+  const [error, setError] = useState<PerformancePopoverContentProps["actionError"]>();
+  const [renderOverlay, setRenderOverlay] = useState<PerformanceMonitoringState["renderOverlay"]>();
+  const [changingOverlay, setChangingOverlay] = useState(false);
+  const visible = useWebviewVisibility();
+  useEffect(() => {
+    if (!visible || snapshot === undefined) return;
+    let active = true;
+    void performance.state().then(
+      (state) => {
+        if (active) setRenderOverlay(state.renderOverlay);
+      },
+      () => {
+        if (active) setRenderOverlay(undefined);
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [performance, visible, snapshot]);
+  const changeOverlay = async (enabled: boolean) => {
+    setChangingOverlay(true);
+    try {
+      await host.call("performance.control", { operation: "set-render-overlay", enabled });
+      setRenderOverlay((await performance.state()).renderOverlay);
+    } finally {
+      setChangingOverlay(false);
+    }
+  };
+  const run = (action: Promise<unknown>, source: NonNullable<typeof error>["source"] = "metrics") => {
     setError(undefined);
-    action.catch((cause) => setError(String(cause)));
+    action.catch((cause) => setError({ message: String(cause), source }));
   };
   const copy = async () => {
     // Copy the latest reading, not the one this view last drew.
@@ -48,32 +79,27 @@ const Details = (props: DetailsProps) => {
       snapshot={snapshot}
       error={readError?.message}
       copied={copied}
+      renderOverlay={{
+        state: renderOverlay,
+        pending: changingOverlay,
+        onEnabledChange: (enabled) => run(changeOverlay(enabled), "render-overlay"),
+      }}
       actionError={error}
       onCopy={() => run(copy())}
       onDismissActionError={() => setError(undefined)}
       onPause={(installedExtensionId) => run(performance.pauseExtension(installedExtensionId))}
       onResume={(installedExtensionId) => run(performance.resumeExtension(installedExtensionId))}
-      diagnostics={
-        <RuntimeDiagnostics
-          {...captures}
-          onStart={(kind, seconds) => void diagnostics.start(kind, seconds)}
-          onCancel={(id) => void diagnostics.cancel(id)}
-          onExport={(id) =>
-            run(diagnostics.export(id).then((result) => navigator.clipboard.writeText(JSON.stringify(result, null, 2))))
-          }
-        />
-      }
     />
   );
 };
 
 export default defineExtensionView({
   render(context) {
-    const client = createWebviewClient<typeof diagnosticCommands>(context.host);
+    const client = createWebviewClient(context.host);
     const root = createRoot(context.mount);
     root.render(
       <PerformanceRoot context={context}>
-        <Details client={client} diagnostics={createDiagnosticsStore(client)} />
+        <Details client={client} host={context.host} />
       </PerformanceRoot>,
     );
     return () => {

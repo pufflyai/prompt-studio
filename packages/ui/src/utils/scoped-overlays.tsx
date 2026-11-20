@@ -1,19 +1,36 @@
-import { Dialog, Menu, Popover, useMenu, useMenuContext, usePopoverContext } from "@chakra-ui/react";
-import { forwardRef } from "react";
+import { Dialog, Menu, mergeRefs, Popover, useMenu, useMenuContext, usePopoverContext } from "@chakra-ui/react";
+import { forwardRef, useRef } from "react";
 import { TriggerTooltip } from "../components/overlays/trigger-tooltip";
 import { MenuContent } from "./menu-content";
 import { OverlayTriggerContext, useOverlayTriggerId, useOverlayTriggerRef } from "./overlay-trigger";
+import { PortalContainerContext, usePortalPositioning } from "./portal-container";
 import { useUiScope } from "./ui-scope";
 import { useScopedOpen } from "./use-scoped-open";
 
 export { ScopedTooltip } from "./scoped-tooltip";
 
-const DialogRoot = (props: Dialog.RootProps) => <Dialog.Root {...useScopedOpen(props)} />;
+const DialogRoot = (props: Dialog.RootProps) => (
+  <PortalContainerContext value={undefined}>
+    <Dialog.Root {...useScopedOpen(props)} />
+  </PortalContainerContext>
+);
+const DialogContent = forwardRef<HTMLDivElement, Dialog.ContentProps>((props, ref) => {
+  const container = useRef<HTMLDivElement>(null);
+  return (
+    <PortalContainerContext value={container}>
+      <Dialog.Content {...props} ref={mergeRefs(ref, container)} />
+    </PortalContainerContext>
+  );
+});
 const MenuRoot = (props: Menu.RootProps) => {
   const { triggerId, setTriggerId } = useOverlayTriggerId();
   return (
     <OverlayTriggerContext value={setTriggerId}>
-      <Menu.Root {...useScopedOpen(props)} ids={{ ...props.ids, trigger: triggerId ?? props.ids?.trigger }} />
+      <Menu.Root
+        {...useScopedOpen(props)}
+        positioning={usePortalPositioning(props.positioning)}
+        ids={{ ...props.ids, trigger: triggerId ?? props.ids?.trigger }}
+      />
     </OverlayTriggerContext>
   );
 };
@@ -21,7 +38,11 @@ const PopoverRoot = (props: Popover.RootProps) => {
   const { triggerId, setTriggerId } = useOverlayTriggerId();
   return (
     <OverlayTriggerContext value={setTriggerId}>
-      <Popover.Root {...useScopedOpen(props)} ids={{ ...props.ids, trigger: triggerId ?? props.ids?.trigger }} />
+      <Popover.Root
+        {...useScopedOpen(props)}
+        positioning={usePortalPositioning(props.positioning)}
+        ids={{ ...props.ids, trigger: triggerId ?? props.ids?.trigger }}
+      />
     </OverlayTriggerContext>
   );
 };
@@ -57,7 +78,7 @@ const PopoverRootProvider = (props: Popover.RootProviderProps) => (
   </OverlayTriggerContext>
 );
 
-export const ScopedDialog: typeof Dialog = { ...Dialog, Root: DialogRoot };
+export const ScopedDialog: typeof Dialog = { ...Dialog, Root: DialogRoot, Content: DialogContent };
 export const ScopedMenu: typeof Menu = {
   ...Menu,
   Root: MenuRoot,

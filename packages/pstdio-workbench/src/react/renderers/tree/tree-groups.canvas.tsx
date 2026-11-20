@@ -64,8 +64,8 @@ const TreeGroups = (props: { counts?: boolean; chrome?: boolean }) => {
         kind: "react",
         render: () => (
           <Text p="md">
-            Right-click the Sidenav to create a group. Drag rows into its header. Use the group menu to rename or remove
-            it.
+            Right-click the Sidenav to create a group for this navigation level. Drag rows into its header. Use the
+            group menu to rename or remove it.
           </Text>
         ),
       },

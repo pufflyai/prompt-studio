@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createServer, type Server } from "node:http";
-import { bridgeApiWebSockets, createApiProxy } from "./vite-api-credential";
+import { bridgeApiWebSockets } from "./vite-api-credential";
 
 const paths = ["/v1/terminal", "/v1/agents/authentication"];
 const cleanups: Array<() => void> = [];
@@ -70,12 +70,5 @@ describe("dev server API credential", () => {
     });
 
     expect(opened).toBe(false);
-  });
-
-  test("adds the token to proxied API requests", () => {
-    const proxy = createApiProxy("http://127.0.0.1:19841", "api-token");
-
-    expect(proxy["/v1"]?.headers).toEqual({ authorization: "Bearer api-token" });
-    expect(proxy["/healthz"]?.target).toBe("http://127.0.0.1:19841");
   });
 });

@@ -1,37 +1,56 @@
 import type { createProjectsDBService } from "pstdio-db";
 import type { EventBus } from "../features/sync/event-bus";
+import { createProjectWork } from "./project-work";
 import type { createSyncService } from "./sync-service";
 
 export type ProjectServiceDeps = {
   projectsDBService: ReturnType<typeof createProjectsDBService>;
   syncService: Pick<ReturnType<typeof createSyncService>, "cascadeDeletes">;
   eventBus: EventBus;
+  work?: ReturnType<typeof createProjectWork>;
 };
 
 export const createProjectService = (deps: ProjectServiceDeps) => {
   const db = deps.projectsDBService;
-  const publish = <T extends object | null>(project: T) => {
-    if (project) deps.eventBus.emit("projects", "set", project);
+  const work = deps.work ?? createProjectWork();
+  const initializing = new Map<string, { published: boolean }>();
+  const get = async (id: string) => (!work.canRead(id) ? null : db.get(id));
+  const publish = <T extends { id: string } | null>(project: T) => {
+    if (project) {
+      const creation = initializing.get(project.id);
+      if (creation) creation.published = true;
+      deps.eventBus.emit("projects", "set", project);
+    }
     return project;
   };
   const create = async (
     input: Parameters<typeof db.create>[0],
     initialize?: (project: Awaited<ReturnType<typeof db.create>>) => Promise<void>,
   ) => {
-    const project = await db.create(input);
-    try {
-      await initialize?.(project);
-    } catch (error) {
-      await db.hardDelete(project.id);
-      throw error;
-    }
-    return publish(project);
+    const id = input.id ?? crypto.randomUUID();
+    return work.run(id, async (signal) => {
+      // Hold explicit identities until initialization has either finished or rolled back.
+      const project = await db.create({ ...input, id });
+      const creation = { published: false };
+      initializing.set(project.id, creation);
+      try {
+        await initialize?.(project);
+        signal.throwIfAborted();
+        return publish(project);
+      } catch (error) {
+        await deleteProject(project.id, creation.published);
+        throw error;
+      } finally {
+        initializing.delete(project.id);
+      }
+    });
   };
-  const update = async (...args: Parameters<typeof db.update>) => publish(await db.update(...args));
-  const setDefaults = async (...args: Parameters<typeof db.setDefaults>) => publish(await db.setDefaults(...args));
+  const update: typeof db.update = (id, value) => work.run(id, async () => publish(await db.update(id, value)));
+  const setDefaults: typeof db.setDefaults = (id, value) =>
+    work.run(id, async () => publish(await db.setDefaults(id, value)));
   // Clients drop cascaded rows only after the database has removed them. Rows that point at
   // an extension instance go first, and the project goes last.
-  const deleteProject = async (id: string) => {
+  const deleteProject = async (id: string, publishProject = true) => {
     const cascaded = await deps.syncService.cascadeDeletes("projects", id);
     const removed = await db.hardDelete(id);
     if (!removed) return false;
@@ -39,8 +58,17 @@ export const createProjectService = (deps: ProjectServiceDeps) => {
     for (const row of cascaded) deps.eventBus.emit(row.table, "delete", { id: row.id });
     // Listeners read the instance scope to find the affected project, so send the full row.
     for (const instance of removed.extensionInstances) deps.eventBus.emit("extension_instances", "delete", instance);
-    if (project) deps.eventBus.emit(project.table, "delete", { id: project.id });
+    if (project && publishProject) deps.eventBus.emit(project.table, "delete", { id: project.id });
     return true;
   };
-  return { query: db.query, list: db.list, get: db.get, create, update, setDefaults, delete: deleteProject };
+  return {
+    query: (input?: Parameters<typeof db.query>[0]) => db.query(input, work.hiddenIds()),
+    list: async () => (await db.list()).filter(({ id }) => !work.hidden(id)),
+    get,
+    create,
+    update,
+    setDefaults,
+    delete: (id: string) => deleteProject(id),
+    work,
+  };
 };

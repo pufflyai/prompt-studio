@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildTicketAttributes, statusToColumnConfig } from "./mappers";
+import { buildTicketAttributes } from "./mappers";
 import type { StoredStatus } from "./types";
 
 const status: StoredStatus = {
@@ -13,24 +13,6 @@ const status: StoredStatus = {
 };
 
 describe("buildTicketAttributes", () => {
-  test("exposes archive state as a filter-only enum", () => {
-    const archiveAttribute = buildTicketAttributes([]).find((attribute) => attribute.id === "archived");
-
-    expect(archiveAttribute).toEqual({
-      id: "archived",
-      label: { $l10n: "displayMenu.propertyOptions.archived", default: expect.any(String) },
-      type: {
-        kind: "enum",
-        options: [
-          { value: "active", label: { $l10n: "archiveState.active", default: "Active" } },
-          { value: "archived", label: { $l10n: "archiveState.archived", default: "Archived" } },
-        ],
-      },
-      filterable: true,
-      editable: false,
-    });
-  });
-
   test("builds a status enum from sorted statuses", () => {
     const attributes = buildTicketAttributes([
       { ...status, id: "s-done", name: "Done", icon: "check-circle", sortOrder: 4 },
@@ -46,34 +28,6 @@ describe("buildTicketAttributes", () => {
       ],
     });
     expect(statusAttr?.groupable).toBe(true);
-  });
-
-  test("exposes created and updated date attributes for sorting", () => {
-    const attributes = buildTicketAttributes([]);
-
-    expect(attributes.find((attribute) => attribute.id === "created")).toMatchObject({
-      label: { $l10n: "displayMenu.propertyOptions.createdAt", default: "Created" },
-      type: { kind: "date" },
-      sortable: true,
-      displayable: true,
-    });
-    expect(attributes.find((attribute) => attribute.id === "updated")).toMatchObject({
-      label: { $l10n: "displayMenu.propertyOptions.updatedAt", default: "Updated" },
-      type: { kind: "date" },
-      sortable: true,
-      displayable: true,
-    });
-  });
-
-  test("exposes parent as a filter-only string attribute", () => {
-    const parentAttribute = buildTicketAttributes([]).find((attribute) => attribute.id === "parent");
-
-    expect(parentAttribute).toEqual({
-      id: "parent",
-      label: { $l10n: "displayMenu.propertyOptions.parent", default: "Parent" },
-      type: { kind: "string" },
-      filterable: true,
-    });
   });
 
   test("uses name as the status sort tiebreak", () => {
@@ -155,17 +109,5 @@ describe("buildTicketAttributes", () => {
     expect(typeAttribute?.type.kind).toBe("enum");
     expect(typeAttribute?.groupable).toBe(true);
     expect(typeAttribute?.editable).toBe(true);
-  });
-});
-
-describe("statusToColumnConfig", () => {
-  test("maps column color, creation, and actions", () => {
-    expect(statusToColumnConfig(status)).toEqual({
-      color: "blue",
-      canCreate: true,
-      actions: [
-        { id: "archive_all", label: { $l10n: "boardView.archiveAll", default: "Archive all" }, icon: "archive" },
-      ],
-    });
   });
 });

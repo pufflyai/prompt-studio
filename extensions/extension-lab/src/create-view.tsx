@@ -11,7 +11,7 @@ export const viewBackgrounds = {
   sidenav: "var(--chakra-colors-vscode-sideBar-background, var(--chakra-colors-bg-panel))",
   activity: "var(--chakra-colors-vscode-activityBar-background, var(--chakra-colors-bg-muted))",
   panel: "var(--chakra-colors-vscode-panel-background, var(--chakra-colors-bg-panel))",
-  status: "var(--chakra-colors-vscode-statusBar-background, var(--chakra-colors-bg-subtle))",
+  status: "transparent",
   widget: "var(--chakra-colors-vscode-editorWidget-background, var(--chakra-colors-bg-panel))",
 };
 

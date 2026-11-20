@@ -95,6 +95,7 @@ export const createDocumentStorageDBService = (
   db: DbClient,
   observer?: StorageObserver,
   diagnostics?: StorageDiagnostics,
+  withProjectWork?: <T>(id: string, task: () => Promise<T>) => Promise<T>,
 ) => {
   const cache = createDocumentCache();
   const listeners = new Set<(owner: StorageChange, origin?: "relay") => void>();
@@ -152,6 +153,7 @@ export const createDocumentStorageDBService = (
     },
   });
   const cloudReturn = createOrderedCloudReturn(db, {
+    withProjectWork,
     changed: (owner) => {
       notifyOwnerNative(owner);
       for (const listener of listeners) listener(owner);
@@ -159,7 +161,8 @@ export const createDocumentStorageDBService = (
   });
   return {
     transaction,
-    convertLegacyOwners: (options: Parameters<typeof convertLegacyOwners>[1]) => convertLegacyOwners(db, options),
+    convertLegacyOwners: (options: Omit<Parameters<typeof convertLegacyOwners>[1], "withProjectWork">) =>
+      convertLegacyOwners(db, { ...options, withProjectWork }),
     logs,
     cloudReturn,
     observer,
@@ -230,6 +233,7 @@ export const createDocumentStorageDBService = (
           assets: input.assets,
           textFields: input.textFields,
           diagnostics,
+          withProjectWork,
           nativeChanged: (keys) => {
             notifyNativeRecords(documentListeners, input.owner, keys);
             for (const key of keys)

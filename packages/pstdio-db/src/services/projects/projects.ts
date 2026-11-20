@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, isNull } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, notInArray } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { extension_instances, projects, storage_record_indexes } from "../../db/schemas.pg";
 import { dropRecordIndexes } from "../extension-storage/record-index-lifecycle";
@@ -12,13 +12,19 @@ const nowTimestamp = () => new Date().toISOString();
 export const createProjectsDBService = (db: DbClient) => {
   const list = async () => db.select().from(projects).where(isNull(projects.deleted_at)).orderBy(projects.created_at);
 
-  const query = async (input: PageQuery = {}) => {
+  const query = async (input: PageQuery = {}, excludedIds: string[] = []) => {
     const limit = pageLimit(input);
     const boundary = pageBoundary(input.cursor, "projects");
     const rows = await db
       .select()
       .from(projects)
-      .where(and(isNull(projects.deleted_at), boundary ? gt(projects.id, boundary) : undefined))
+      .where(
+        and(
+          isNull(projects.deleted_at),
+          boundary ? gt(projects.id, boundary) : undefined,
+          excludedIds.length ? notInArray(projects.id, excludedIds) : undefined,
+        ),
+      )
       .orderBy(asc(projects.id))
       .limit(limit + 1);
     return queryPage(rows, limit, "projects");

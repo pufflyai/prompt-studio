@@ -3,7 +3,7 @@ import { createWorkbench, type WorkbenchModuleContext } from "@pstdio/workbench"
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { resolveLinkedResources } from "./resource-link-resolution";
 
-test("bare links use the public configured-opener API once and preserve its ordinary navigation target", async () => {
+test("bare links resolve once and preview in Side without leaving their source page", async () => {
   const calls: unknown[] = [];
   const refs = ["one", "two"].map((id) => ({ type: "workspace", id, extensionId: "pstdio", projectId: "project" }));
   const target = {
@@ -45,6 +45,7 @@ test("bare links use the public configured-opener API once and preserve its ordi
     });
     ctx.pageLocations.setProject("project");
     selectDashboardProject(ctx, { id: "project", name: "Project" });
+    ctx.pageLocations.navigate({ kind: "page", page: ctx.pages.getPage("collection")!.ref });
     const result = await resolveLinkedResources(ctx as WorkbenchModuleContext, "project", [
       refs[0]!,
       refs[1]!,
@@ -55,6 +56,10 @@ test("bare links use the public configured-opener API once and preserve its ordi
       { resource: refs[0], target },
       { resource: refs[1], target: undefined, open: undefined },
     ]);
+    const source = ctx.pages.store.getState().location;
+    await result[0]!.open!();
+    expect(ctx.pages.store.getState().location).toEqual(source);
+    expect(ctx.layout.getActivePanel("side")).toMatchObject({ resource: refs[0], tabRetention: "preview" });
     selectDashboardProject(ctx, { id: "another", name: "Another project" });
     const before = ctx.pages.store.getState().location;
     await result[0]!.open!();

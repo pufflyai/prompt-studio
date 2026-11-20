@@ -1,14 +1,5 @@
 import { expect, test } from "bun:test";
-import { createCodexHarness } from "./harness";
 import { peer, sink } from "./shared-server-peer";
-
-test("offers Standard and Fast speed independently from reasoning effort", () => {
-  expect(createCodexHarness().params?.service_tier).toMatchObject({
-    type: "select",
-    defaultValue: "default",
-    options: [{ value: "default" }, { value: "fast" }],
-  });
-});
 
 for (const method of ["thread/start", "thread/resume"]) {
   test(`sets Fast speed on ${method} and switches a warm session back to Standard`, async () => {

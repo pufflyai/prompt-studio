@@ -243,6 +243,7 @@ export const createWorkbenchShellPlacementRegistry = (
       state = next;
     },
     publish: emitChange,
+    notify: observation.publish,
     resolve(_modeId, current = state) {
       return [...placements.values()].flatMap((placement) => {
         if (placement.item.kind === "view") {

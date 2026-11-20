@@ -46,7 +46,7 @@ const resolveEventContext = async <TPayload extends Struct>(
   return { trustedPayload, workspaceDir, workspaceId: workspace?.id };
 };
 
-export const fireExtensionEvent = async <TPayload extends Struct>(
+const dispatchExtensionEvent = async <TPayload extends Struct>(
   deps: ExtensionEventDeps,
   projectId: string,
   event: EventRef<TPayload> | string,
@@ -86,6 +86,19 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
     payload: context.trustedPayload,
     refresh,
   });
+};
+
+export const fireExtensionEvent = <TPayload extends Struct>(
+  deps: ExtensionEventDeps,
+  projectId: string,
+  event: EventRef<TPayload> | string,
+  payload: TPayload,
+  workspaceSnapshot?: WorkspaceSnapshot,
+  refresh?: Omit<QueryChangeEnvelope, "projectId">,
+  options?: { broadcast?: boolean },
+) => {
+  const dispatch = () => dispatchExtensionEvent(deps, projectId, event, payload, workspaceSnapshot, refresh, options);
+  return deps.projectService?.work?.run(projectId, dispatch) ?? dispatch();
 };
 
 export const fireExtensionEventAsync = <TPayload extends Struct>(

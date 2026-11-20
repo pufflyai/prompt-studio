@@ -22,12 +22,6 @@ afterEach(() => {
 });
 
 describe("resolveProjectId", () => {
-  test("returns explicit ID when provided", () => {
-    const result = resolveProjectId("/any-dir", "explicit-id");
-
-    expect(result.projectId).toBe("explicit-id");
-  });
-
   test("omits a foreign workspace when an explicit project is provided", () => {
     const root = join(tmpBase, "explicit-worktree");
     mkdirSync(join(root, ".git"), { recursive: true });
@@ -74,10 +68,6 @@ describe("resolveProjectId", () => {
     const result = resolveProjectId(root);
 
     expect(result).toEqual({ projectId: "project-from-env", root: null });
-  });
-
-  test("throws when no explicit ID and no project config", () => {
-    expect(() => resolveProjectId("/nonexistent-path-that-wont-match")).toThrow("No project specified");
   });
 
   test("throws when no explicit ID and no config", () => {

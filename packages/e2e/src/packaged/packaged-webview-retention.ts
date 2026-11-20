@@ -21,9 +21,9 @@ export const verifyPackagedWebviewDisposal = async (
   headers: Record<string, string>,
 ) => {
   await page.goto(`${baseUrl}/projects/${projectId}/extensions/test.webview-host/host`);
-  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Host page");
   const tab = page.getByRole("tab", { name: "Host page", exact: true });
-  if (await tab.isVisible()) await tab.click();
+  await expect(tab).toBeVisible();
+  await tab.click();
   const iframe = page.locator('iframe[title="Host page"]');
   await expect(iframe.contentFrame().getByRole("heading", { name: "Host contract" })).toBeVisible();
   const host = await iframe.evaluateHandle((element) => element.closest("[data-workbench-instance]")!.parentElement!);

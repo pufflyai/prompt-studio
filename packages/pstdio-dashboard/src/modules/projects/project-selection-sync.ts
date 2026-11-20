@@ -121,11 +121,16 @@ export const registerInitialProjectSelection = (
   selectedProjectContext: DashboardProjectSelectionContext,
   persistence: DashboardProjectSelectionPersistence | undefined,
   initialProjectId?: string,
+  onMissing?: (id: string) => void,
 ) => {
+  const notifyMissing = () => {
+    if (initialProjectId) onMissing?.(initialProjectId);
+    persistence?.setSelectedProjectId(undefined);
+  };
   if (!initialProjectId && !persistence?.getSelectedProjectId()) return undefined;
   if (selectInitialProject(ctx, selectedProjectContext, persistence, initialProjectId)) return undefined;
   if (isInitialCollectionsSyncComplete()) {
-    persistence?.setSelectedProjectId(undefined);
+    notifyMissing();
     return undefined;
   }
 
@@ -141,7 +146,7 @@ export const registerInitialProjectSelection = (
     }
 
     if (isInitialCollectionsSyncComplete()) {
-      persistence?.setSelectedProjectId(undefined);
+      notifyMissing();
       unsubscribeDashboardData();
     }
   });

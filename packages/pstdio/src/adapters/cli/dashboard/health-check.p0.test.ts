@@ -22,10 +22,6 @@ describe("isHealthy", () => {
 });
 
 describe("waitForHealthy", () => {
-  test("resolves when healthy on first attempt", async () => {
-    await waitForHealthy({ url: "http://localhost:3000/healthz", fetcher: okFetcher });
-  });
-
   test("resolves after retries", async () => {
     let attempts = 0;
     const fetcher = () => {

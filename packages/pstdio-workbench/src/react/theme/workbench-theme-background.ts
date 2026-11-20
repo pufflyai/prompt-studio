@@ -35,8 +35,6 @@ const workbenchRegionBackgrounds = {
   "side-right-menu": workbenchBackgrounds.main,
 } as const satisfies Record<WorkbenchRegion, string>;
 
-export const workbenchFocusBorder = vscodeColor("focusBorder", "var(--chakra-colors-color-palette-focus-ring)");
-
 export const workbenchCommandPaletteBackground = workbenchBackgrounds.widget;
 
 export const getWorkbenchRegionBackground = (region: WorkbenchRegion) => workbenchRegionBackgrounds[region];

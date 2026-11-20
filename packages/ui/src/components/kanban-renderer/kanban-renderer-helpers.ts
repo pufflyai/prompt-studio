@@ -11,7 +11,6 @@ import type { AttributeDescriptor, CollectionBadgeItem, KanbanRendererRow } from
 import { findAttribute, NO_GROUPING } from "./types";
 
 export type { AttributeBadge } from "./kanban-renderer-badge-helpers";
-export { getAttributeBadgeColorPalette } from "./kanban-renderer-badge-helpers";
 export { enumOptionLabel, findEnumOption, getEnumOptions, toTitleCase } from "./kanban-renderer-enum-helpers";
 
 const formatDateValue = (value: unknown) => {

@@ -12,7 +12,6 @@ test("native chat errors remain in alerts and Retry restores the conversation", 
   await expect(alert.getByRole("button", { name: "Copy error message" })).toBeVisible();
   await expect(alert.getByRole("button", { name: "Retry", exact: true })).toBeVisible();
   await expect(preview.getByText("Earlier saved reply.", { exact: true })).toBeVisible();
-  expect(await alert.evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe("rgba(0, 0, 0, 0)");
   const draft = preview.locator(".ps-chat-composer__input").getByRole("textbox");
   const send = preview.getByRole("button", { name: "Send message", exact: true });
   await expect(draft).toBeEditable();

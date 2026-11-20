@@ -26,6 +26,7 @@ export interface MetadataPageTarget {
   page: z.infer<typeof pageRefSchema>;
   resource?: z.infer<typeof extensionResourceRefSchema>;
   open?: "preview" | "pin";
+  region?: "main" | "side" | "secondary";
   section?: z.infer<typeof sectionSchema>;
   position?: FileSourcePosition;
   params?: PageParams;
@@ -41,13 +42,18 @@ const pageTargetSchema: z.ZodType<MetadataPageTarget> = z
         page: pageRefSchema,
         resource: extensionResourceRefSchema.optional(),
         open: z.enum(["preview", "pin"]).optional(),
+        region: z.enum(["main", "side", "secondary"]).optional(),
         section: sectionSchema.optional(),
         position: sourcePositionSchema.optional(),
         params: z.record(z.string(), pageParamValueSchema).optional(),
         parent: pageTargetSchema.optional(),
         intent: z.enum(["open", "restore"]).optional(),
       })
-      .refine((value) => !(value.position && value.section), "Choose a source position or a heading section"),
+      .refine((value) => !(value.position && value.section), "Choose a source position or a heading section")
+      .refine(
+        (value) => !value.region || value.region === "main" || value.resource !== undefined,
+        "A panel page target requires a resource",
+      ),
   )
   .meta({ id: "WorkbenchMetadataPageTarget" });
 
@@ -58,6 +64,7 @@ type MetadataNavigationOperation =
       panel: z.infer<typeof panelRefSchema>;
       resource?: z.infer<typeof extensionResourceRefSchema>;
       open?: "preview" | "pin";
+      region?: "main" | "side" | "secondary";
     };
 
 // Keep declaration emission from expanding each nested navigation schema until it loses reference fields.
@@ -68,6 +75,7 @@ const navigationOperationSchema: z.ZodType<MetadataNavigationOperation> = z.unio
     panel: panelRefSchema,
     resource: extensionResourceRefSchema.optional(),
     open: z.enum(["preview", "pin"]).optional(),
+    region: z.enum(["main", "side", "secondary"]).optional(),
   }),
 ]);
 

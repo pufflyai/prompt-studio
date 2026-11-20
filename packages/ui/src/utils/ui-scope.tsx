@@ -1,6 +1,7 @@
 import { Box, Portal as ChakraPortal, type createToaster, type PortalProps } from "@chakra-ui/react";
 import { createContext, type ReactNode, type RefObject, useContext, useRef, useState } from "react";
 import { createUiToaster } from "./create-ui-toaster";
+import { PortalContainerContext } from "./portal-container";
 
 export interface UiScope {
   root: RefObject<HTMLDivElement | null>;
@@ -54,5 +55,6 @@ export const useUiScope: () => UiScope | null = () => useContext(UiScopeContext)
 /** Defaults to the owning surface, or the document body for standalone components. */
 export const Portal = (props: PortalProps & { children?: ReactNode }) => {
   const scope = useUiScope();
-  return <ChakraPortal {...props} container={props.container ?? scope?.root} />;
+  const modalContainer = useContext(PortalContainerContext);
+  return <ChakraPortal {...props} container={props.container ?? modalContainer ?? scope?.root} />;
 };

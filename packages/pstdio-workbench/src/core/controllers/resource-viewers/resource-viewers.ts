@@ -1,7 +1,6 @@
 import type {
   NavigationTargetViewer,
   PageLocation,
-  PageOpenIntent,
   PlacementIdentity,
   ResourceRef,
   ViewLocation,
@@ -29,6 +28,8 @@ import { replaceMainViewerTab } from "./replace-main-viewer-tab";
 import { retainedViewerSource } from "./retained-viewer-source";
 import { createViewerCaptures } from "./viewer-captures";
 import { replaceViewerHost } from "./viewer-host-continuity";
+import { navigatePanelViewer } from "./viewer-panel-navigation";
+import { currentViewerSource } from "./viewer-source";
 
 export interface WorkbenchViewerController {
   captureContext(identity?: PlacementIdentity): NavigationInvocationContext;
@@ -90,26 +91,6 @@ export const restorePageLocation = (
     return landing;
   }
   return location.parent ? restorePageLocation(core, location.parent, projectId) : { page: location.page };
-};
-export const focusPageResource = (core: WorkbenchCore, location: PageLocation, open?: PageOpenIntent) => {
-  if (!location.resource) return false;
-  const page = core.pages
-    .listPages()
-    .find((page) => page.ref.id === location.page.id && page.ref.extensionId === location.page.extensionId);
-  if (!page?.resource) return false;
-  if (!page.resource || !resourceMatchesConstraint(page.resource, location.resource))
-    throw new Error("Page does not accept this resource kind");
-  if (page.modeId !== core.pages.store.getState().activeModeId) return false;
-  const existing = findDisplayedResource(core, location.resource);
-  if (existing?.region === "main" && existing.identity.kind === "page" && existing.identity.pageId === page.id)
-    return false;
-  const focused = core.viewers.focusResource(location.resource, {
-    section: location.section,
-    position: location.position,
-    pageContext: { page: location.page, parent: location.parent, params: location.params },
-  });
-  if (focused && existing && open === "pin") core.pinPlacement(existing.identity);
-  return focused;
 };
 const validateViewerFocus = (core: WorkbenchCore, viewer: DisplayedResourceViewer) => {
   if (core.pages.getContent()?.widgetId !== viewer.widget.widgetId)
@@ -192,9 +173,21 @@ const validateViewerChange = (core: WorkbenchCore, identity: PlacementIdentity, 
   const item = resourceViewerBinding(core, identity);
   const page = identity.kind === "page" ? core.pages.getPage(identity.pageId) : undefined;
   const content = isPageContent(page, identity);
-  const landingChange = content && request.page && !request.from;
+  const hinted =
+    request.page &&
+    core.pages
+      .listPages()
+      .find((page) => page.ref.id === request.page!.id && page.ref.extensionId === request.page!.extensionId);
+  const compatibleHint =
+    hinted &&
+    hinted.modeId === core.modes.getActiveModeId() &&
+    hinted.main.kind === "view" &&
+    hinted.resource &&
+    resourceMatchesConstraint(hinted.resource, request.resource);
+  const landingChange = request.page && !request.from && (content || (item?.kind === "view" && compatibleHint));
   if (item?.kind !== "binding" && !landingChange) throw new Error("Only a resource viewer can switch resources");
-  if (request.page && !content) throw new Error("Only current Main page content can change its page");
+  if (request.page && !content && !compatibleHint)
+    throw new Error("Viewer page hint must name a compatible resource page");
   if (!request.page && item?.kind === "binding" && !resourceMatchesConstraint(item.binding, request.resource))
     throw new Error("Viewer does not accept this resource kind");
   if (content) validateMainPage(core, request);
@@ -231,6 +224,13 @@ const reuseExistingViewer = (
 };
 const updateViewerResource = (core: WorkbenchCore, viewer: ViewerSource, request: ViewerChange, content: boolean) => {
   const identity = viewer.identity;
+  if (
+    !content &&
+    resourceViewerBinding(core, identity)?.kind === "view" &&
+    request.page &&
+    navigatePanelViewer(core, viewer, request)
+  )
+    return;
   if (content) replaceMainResource(core, request);
   else if (identity.kind === "page" && identity.slotId === PAGE_MAIN_SLOT_ID && viewer.region === "main")
     replaceMainViewerTab(core, { ...viewer, identity }, request);
@@ -252,20 +252,6 @@ const updateViewerResource = (core: WorkbenchCore, viewer: ViewerSource, request
     displayedResourceViewers(core).find((candidate) => sameViewer(candidate.identity, identity)) ??
     findDisplayedResource(core, request.resource);
   if (next) focusViewer(core, next);
-};
-const currentViewerSource = (core: WorkbenchCore, identity: PlacementIdentity) => {
-  const content = core.pages.getContent();
-  if (content?.placementIdentity && sameViewer(content.placementIdentity, identity))
-    return { region: "main" as const, widget: content, identity, resource: content.resource };
-  for (const region of ["main", "side", "secondary"] as const) {
-    const widget = core.layout
-      .getLayout()
-      .regions[region].widgets.find(
-        (widget) => widget.placementIdentity && sameViewer(widget.placementIdentity, identity),
-      );
-    if (widget) return { region, widget, identity, resource: widget.resource };
-  }
-  return undefined;
 };
 const viewerInvocationCurrent = (core: WorkbenchCore, request: ViewerChange, context?: NavigationInvocationContext) => {
   if (context?.isViewerCurrent?.() === false) return false;
@@ -323,6 +309,7 @@ export const createWorkbenchViewerController = (resolveCore: () => WorkbenchCore
       const currentKey = viewer?.resource ? core.pages.resourceReferenceKey(viewer.resource) : undefined;
       const expectedKey = request.from ? core.pages.resourceReferenceKey(request.from) : undefined;
       if (!viewer || currentKey !== expectedKey) return "stale";
+      identity = viewer.identity;
       const content = validateViewerChange(core, identity, request);
       if (!request.page && currentKey === core.pages.resourceReferenceKey(request.resource)) {
         return batchWorkbenchChanges(() => {
@@ -333,6 +320,12 @@ export const createWorkbenchViewerController = (resolveCore: () => WorkbenchCore
       }
       const existing = findDisplayedResource(core, request.resource, identity);
       if (existing) {
+        if (request.operation === "switch")
+          return batchWorkbenchChanges(() => {
+            if (content || !navigatePanelViewer(core, viewer, request))
+              updateViewerResource(core, viewer, request, content);
+            return "changed" as const;
+          });
         reuseExistingViewer(core, viewer, existing, request, content);
         return "focused";
       }

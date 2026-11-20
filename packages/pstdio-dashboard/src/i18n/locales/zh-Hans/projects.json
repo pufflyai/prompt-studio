@@ -38,12 +38,14 @@
       "loadError": "加载扩展失败。",
       "title": "扩展",
       "searchPlaceholder": "搜索扩展…",
-      "installedGroup": "已安装 · {{count}}",
+      "installedGroup": "已安装",
       "noSearchResults": "没有与\"{{query}}\"匹配的扩展。",
       "noDescription": "未提供描述。",
       "scope": {
-        "repo": "repo",
-        "global": "共享"
+        "label": "范围",
+        "all": "所有范围",
+        "repo": "此项目",
+        "global": "所有项目"
       },
       "status": {
         "error": "加载失败"
@@ -169,17 +171,19 @@
         "batchFailed": "{{total}} 个升级中有 {{count}} 个失败",
         "installingButton": "正在安装"
       },
-      "provenance": {
-        "filter": "扩展来源",
-        "all": "全部",
-        "public": "公开",
-        "mine": "我的",
-        "unknown": "可见性未知",
-        "publicHelp": "存在公开的软件包。本地修改可能尚未发布。",
-        "mineHelp": "在此项目或设备上维护的可编辑本地源码。",
-        "unknownHelp": "尚未验证是否公开可用。",
-        "noMatches": "没有匹配的扩展"
-      }
+      "enabledGroup": "已启用",
+      "author": {
+        "label": "作者",
+        "all": "所有作者",
+        "me": "我",
+        "promptStudio": "Prompt Studio"
+      },
+      "columns": {
+        "extension": "扩展",
+        "enabled": "启用"
+      },
+      "clearFilters": "清除筛选",
+      "noMatches": "没有匹配的扩展。"
     }
   },
   "list": {

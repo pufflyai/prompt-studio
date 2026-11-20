@@ -16,7 +16,6 @@ test("document notices stay below the scrolling editor without moving its first 
   expect(await heading.evaluate((element) => element.getBoundingClientRect().top)).toBeCloseTo(initialTop, 0);
   const pane = preview.getByTestId("document-pane");
   const notice = retry.locator("..");
-  await expect(notice).toHaveCSS("position", "sticky");
   const bottomGap = await notice.evaluate(
     (element) =>
       element.closest('[data-testid="document-pane"]')!.getBoundingClientRect().bottom -

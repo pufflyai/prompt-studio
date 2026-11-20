@@ -17,6 +17,7 @@ export const textEditingFixture = async (
     onGrantAccess?: () => void;
     beforeProjection?: () => Promise<void>;
     afterProjection?: () => void;
+    projectWork?: Parameters<typeof createNativeDocumentService>[0]["projectWork"];
   } = {},
 ) => {
   const extension = await createWorkspaceContextFixture();
@@ -110,6 +111,7 @@ export const textEditingFixture = async (
     },
     initialize: (loaded) => initializeNativeSource(deps, loaded),
     deviceId: "device",
+    projectWork: options.projectWork,
     presenceIdentity: async () => ({ label: "Person", deviceName: "Device" }),
   });
   const createText = () =>

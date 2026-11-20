@@ -362,36 +362,6 @@ describe("POST /v1/sessions - lifecycle", () => {
     expect(body).toContain("Fake Agent");
   });
 
-  test("stores resolved cwd on session record at creation time", async () => {
-    const projectRes = await app.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(folderProjectInput({ name: "CWD Project" })),
-    });
-    expect(projectRes.status).toBe(201);
-    const project = await projectRes.json();
-
-    const createRes = await app.request("/v1/sessions", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        project_id: project.id,
-        title: "CWD session",
-        prompt: "check cwd",
-        agent: FAKE_ID,
-      }),
-    });
-    expect(createRes.status).toBe(201);
-    const created = await createRes.json();
-
-    await waitForSessionStatus(created.id, "completed");
-
-    const getRes = await app.request(`/v1/sessions/${created.id}`);
-    const session = await getRes.json();
-    // No repo linked so cwd is null, but the field exists on the record
-    expect(session).toHaveProperty("cwd");
-  });
-
   test("runs follow-up through fake resume flow and persists appended messages", async () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",

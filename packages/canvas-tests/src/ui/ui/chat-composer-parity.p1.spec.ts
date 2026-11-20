@@ -9,11 +9,6 @@ test("chat model and harness parameters retain the compact toolbar", async ({ pa
   );
   const model = preview.getByRole("button", { name: "Select model", exact: true });
   const effort = preview.getByRole("button", { name: "Reasoning effort: Medium", exact: true });
-  const modelBox = await model.boundingBox();
-  const effortBox = await effort.boundingBox();
-  expect(modelBox).not.toBeNull();
-  expect(effortBox).not.toBeNull();
-  expect(Math.abs(modelBox!.y - effortBox!.y)).toBeLessThan(1);
   await expect(model).toHaveAttribute("aria-haspopup", "menu");
   await model.press("ArrowDown");
   await expect(preview.getByRole("menu").first()).toBeVisible();

@@ -46,6 +46,10 @@ const reconcileMainRoute = (core: WorkbenchCore) => {
   if (!state.location || isSingleViewPage(page)) return;
   const main = core.layout.getLayout().regions.main;
   const widget = main.widgets.find((widget) => widget.widgetId === main.activeWidgetId) ?? main.widgets[0];
+  const context = widget?.pageContext?.page;
+  // A foreign viewer is a tab within this container, not a request to leave it.
+  if (context && (context.id !== state.location.page.id || context.extensionId !== state.location.page.extensionId))
+    return;
   if (widget && pageForMainPlacement(core, widget)) return routeSelectedMain(core, widget);
   const landing = page?.main.kind === "panels" ? page.main.landing : undefined;
   const resourceLanding =

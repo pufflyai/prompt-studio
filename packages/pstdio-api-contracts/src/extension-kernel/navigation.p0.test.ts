@@ -1,6 +1,54 @@
 import { describe, expect, test } from "bun:test";
 import { navigationTargetSchema } from "../extensions/navigation-target-metadata";
 import { isNavigationTarget, qualifyNavigationTarget } from "./navigation";
+import { resourceLinkTarget } from "./resource-link-target";
+
+test("resource links retain semantic context while requesting an unpinned Side preview", () => {
+  const target = {
+    kind: "page" as const,
+    page: { kind: "page" as const, extensionId: "example.records", id: "record" },
+    resource: { type: "record", id: "a", metadata: { document: "body" } },
+    params: { filter: "mine" },
+    section: { anchors: [{ id: "intro", heading: "Introduction" }] },
+    parent: { kind: "page" as const, page: { kind: "page" as const, id: "records", extensionId: "example.records" } },
+    open: "pin" as const,
+  };
+  const preview = resourceLinkTarget(target);
+  expect(preview).toEqual({ ...target, region: "side", open: "preview" });
+  expect(isNavigationTarget(preview)).toBe(true);
+  expect(preview).toEqual(navigationTargetSchema.parse(preview));
+  const panel = {
+    kind: "panel" as const,
+    panel: { kind: "placement" as const, extensionId: "example.records", id: "records" },
+    resource: target.resource,
+  };
+  const compound = resourceLinkTarget({ kind: "compound", targets: [target.parent, panel] });
+  expect(compound).toEqual({ kind: "compound", targets: [{ ...panel, region: "side" }] });
+  expect(compound).toEqual(navigationTargetSchema.parse(compound));
+});
+
+test.each([
+  "overlay",
+  "sidenav",
+  "invalid",
+])("resource navigation rejects an invalid panel destination: %s", (region) => {
+  for (const kind of ["page", "panel"]) {
+    const target = {
+      kind,
+      [kind]: { kind: kind === "page" ? "page" : "placement", id: "record" },
+      resource: { type: "record", id: "a" },
+      region,
+    };
+    expect(isNavigationTarget(target)).toBe(false);
+    expect(navigationTargetSchema.safeParse(target).success).toBe(false);
+  }
+});
+
+test("an auxiliary page target requires a resource", () => {
+  const target = { kind: "page", page: { kind: "page", id: "collection" }, region: "side" };
+  expect(isNavigationTarget(target)).toBe(false);
+  expect(navigationTargetSchema.safeParse(target).success).toBe(false);
+});
 
 test("viewer navigation is caller-relative and qualifies both resource identities", () => {
   const target = {
