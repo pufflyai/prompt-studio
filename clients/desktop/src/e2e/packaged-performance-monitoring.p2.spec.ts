@@ -42,6 +42,9 @@ test("keeps performance measurements live when switching and closing project tab
     await performanceTrigger(app.page).click();
     await expect(app.page.locator("canvas[data-react-scan]")).toBeVisible();
     await performanceTrigger(app.page).click();
+    // Reopening can precede the guest's asynchronous control-state update.
+    await expect(highlighting).toBeEnabled();
+    await expect(highlighting).toBeChecked();
     await performanceDetails(app.page).getByText("Highlight React renders", { exact: true }).click();
     await expect(app.page.locator("canvas[data-react-scan]")).toBeHidden();
     await performanceTrigger(app.page).click();
