@@ -486,11 +486,11 @@ jobs:
           previous-tag: ${{ needs.plan.outputs.previous_tag }}
           patch: ${{ inputs.channel == 'patch' }}
 
-  # Performance measurements start in independent workflows after publication.
+  # Performance measurements start independently when a candidate exists or after publication.
   # A dispatch failure remains advisory and cannot fail an otherwise delivered release.
   benchmarks:
     needs: [plan, release_build, production, production_unchanged, publish, publish_nightly]
-    if: ${{ !cancelled() && (needs.publish.result == 'success' || needs.publish_nightly.result == 'success' || (needs.plan.outputs.channel == 'nightly' && needs.plan.outputs.release != 'true') || (inputs.channel == 'verify' && needs.production.outputs.candidate_artifact_id != '')) }}
+    if: ${{ !cancelled() && (needs.publish.result == 'success' || needs.publish_nightly.result == 'success' || (needs.plan.outputs.channel == 'nightly' && needs.plan.outputs.release != 'true') || needs.production.outputs.candidate_artifact_id != '') }}
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -511,7 +511,7 @@ jobs:
       WORKFLOW_REF: ${{ github.event.repository.default_branch }}
     steps:
       - name: Start the release benchmarks
-        if: ${{ !cancelled() && needs.plan.outputs.channel != 'nightly' && inputs.channel != 'verify' }}
+        if: ${{ !cancelled() && needs.plan.outputs.channel != 'nightly' && inputs.channel != 'verify' && needs.publish.result == 'success' }}
         run: |
           set -euo pipefail
           gh workflow run benchmarks.yml --ref "$TAG" \

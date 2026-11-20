@@ -6,7 +6,7 @@ on:
     outputs:
       candidate_artifact_id:
         description: Exact candidate identity for independent post-release measurements
-        value: ${{ jobs.candidate.outputs.artifact_id }}
+        value: ${{ jobs.candidate.outputs.validated_artifact_id }}
       certificate_name:
         description: Immutable decision artifact produced by this complete validation
         value: ${{ jobs.certify.outputs.certificate_name }}
@@ -62,6 +62,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       artifact_id: ${{ steps.identity.outputs.artifact-id }}
+      validated_artifact_id: ${{ steps.record.outcome == 'success' && steps.identity.outputs.artifact-id || '' }}
       desktop_matrix: ${{ steps.platforms.outputs.desktop_matrix }}
       benchmark_desktop_matrix: ${{ steps.platforms.outputs.benchmark_desktop_matrix }}
       performance_matrix: ${{ steps.platforms.outputs.performance_matrix }}
@@ -92,6 +93,7 @@ jobs:
           run-id: ${{ inputs.artifact_run_id }}
           github-token: ${{ github.token }}
       - name: Record immutable candidate artifact identities
+        id: record
         env:
           GH_TOKEN: ${{ github.token }}
           ARTIFACT_RUN_ID: ${{ inputs.artifact_run_id }}
@@ -181,6 +183,7 @@ jobs:
             /scripts/ci/production-platforms.ts
           sparse-checkout-cone-mode: false
       - uses: actions/download-artifact@v4
+        if: ${{ needs.candidate.outputs.artifact_id != '' }}
         with:
           artifact-ids: ${{ needs.candidate.outputs.artifact_id }}
           merge-multiple: true
