@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { observeEventConnectionBudget } from "../helpers/event-connection-budget";
 import { expect, test } from "../scripts/session-test";
 import {
@@ -24,6 +25,17 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     });
     expect(created.ok()).toBe(true);
     sessionId = (await created.json()).id;
+    // One session opens in one panel at a time, so Side keeps a different conversation.
+    const sideCreated = await request.post("/v1/sessions", {
+      data: {
+        project_id: project.id,
+        title: "Side conversation",
+        prompt: "Side conversation",
+        agent: "pstdio.workbench-fixture.harness.fake",
+      },
+    });
+    expect(sideCreated.ok()).toBe(true);
+    const sideSessionId = (await sideCreated.json()).id;
     const readSession = async () => (await request.get(`/v1/sessions/${sessionId}`)).json();
     await expect.poll(async () => (await readSession()).status).toBe("in_progress");
     await expect.poll(async () => Boolean((await readSession()).agent_session_id)).toBe(true);
@@ -47,7 +59,8 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
           body.command.body.resource?.id === sessionId
         )
           watches.push(body.subscription_id);
-        if (body.retain_session_id === sessionId) holds.push(body.subscription_id);
+        // Side keeps the saved resource membership, so its session owns the shared hold.
+        if (body.retain_session_id === sideSessionId) holds.push(body.subscription_id);
       }
       if (sent.method() === "DELETE" && path.includes("/session-stream/")) deleted.push(path.split("/").at(-1)!);
       if (path.endsWith("chat.onAction/execute") && sent.postDataJSON()?.params?.action?.type === "stop") stops++;
@@ -59,13 +72,21 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
     const side = page.locator('[data-workbench-region="side"]');
     const editor = main.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true });
     await expect(editor).toBeVisible();
-    await openSessionSidePanel(page, "Retained execution");
-    await expect(
-      side.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
-    ).toBeVisible();
+    await openSessionSidePanel(page, "Side conversation");
+    const sideEditor = side
+      .locator('[data-testid="content-editable"][contenteditable="true"]')
+      .filter({ visible: true });
+    await expect(sideEditor).toBeVisible();
     await expect.poll(() => watches.length).toBe(1);
     await expect.poll(() => holds.length).toBe(1);
     expect(budget.state().active.some((url) => new URL(url).pathname === "/v1/session-stream")).toBe(true);
+    const sideSaved = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("conversation.chat.saveDraft/execute") &&
+        response.request().postDataJSON()?.params?.draft?.text?.includes("Side work survives provider disablement"),
+    );
+    await sideEditor.fill("Side work survives provider disablement");
+    expect((await sideSaved).ok()).toBe(true);
     const saved = page.waitForResponse(
       (response) =>
         response.url().endsWith("conversation.chat.saveDraft/execute") &&
@@ -80,7 +101,7 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
       buffer: Buffer.from("Durable attachment"),
     });
     expect((await saved).ok()).toBe(true);
-    await expect(side.getByRole("button", { name: "Remove retained.txt", exact: true })).toBeVisible();
+    await expect(main.getByRole("button", { name: "Remove retained.txt", exact: true })).toBeVisible();
     const tabs = await side
       .locator("[data-workbench-tab]")
       .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-workbench-tab")));
@@ -124,10 +145,7 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
       .getByRole("dialog", { name: "Side Panel", exact: true })
       .getByRole("button", { name: "Reattach Side Panel", exact: true })
       .click();
-    await expect(
-      side.locator('[data-testid="content-editable"][contenteditable="true"]').filter({ visible: true }),
-    ).toContainText("Unsent work survives provider disablement");
-    await expect(side.getByRole("button", { name: "Remove retained.txt", exact: true })).toBeVisible();
+    await expect(sideEditor).toContainText("Side work survives provider disablement");
     expect(
       await side
         .locator("[data-workbench-tab]")
@@ -139,7 +157,12 @@ test("Sessions can be disabled and restored without losing drafts or stopping it
       history.pushState(null, "", url);
       dispatchEvent(new PopStateEvent("popstate"));
     }, target);
-    await expect(page).toHaveURL(new URL(target, page.url()).href);
+    // The owner refreshes a linked reference to its canonical form, so compare the resource it names.
+    await expect(page).toHaveURL(
+      (url) =>
+        url.pathname.endsWith("/extensions/pstdio.session-browser/conversation") &&
+        defaultPageResourceCodec.fromUri(url.searchParams.get("resource") ?? "")?.id === sessionId,
+    );
     await expect(editor).toContainText("Unsent work survives provider disablement");
     await expect(main.getByRole("button", { name: "Remove retained.txt", exact: true })).toBeVisible();
     await expect.poll(() => watches.length).toBe(2);
