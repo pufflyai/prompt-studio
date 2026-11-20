@@ -1,4 +1,5 @@
 import { rmSync } from "node:fs";
+import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { createPlannerAttempt, createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
@@ -10,7 +11,7 @@ import {
 import { openProjectHome, showSidenavEntry } from "./helpers/sidenav-navigation";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
-test("shows the same ticket and workspace actions on rows and breadcrumbs", async ({ page, request }) => {
+test("shows the same ticket and workspace actions on rows and open page headers", async ({ page, request }) => {
   test.slow();
   const repoRoot = createGitRepo("pstdio-resource-actions-", "resource actions e2e");
   let projectId: string | undefined;
@@ -116,10 +117,17 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
     await expect(page.getByRole("menuitem", { name: "Open terminal", exact: true })).toBeHidden();
 
     await workspaceRow.click();
-    await expect(breadcrumbAction).toBeVisible();
-    await breadcrumbAction.click();
+    // A workspace page keeps its Files and Changes tabs, so its open tab carries the workspace actions.
+    const workspaceTab = page
+      .locator('[data-workbench-panel-header="main"]')
+      .getByRole("tab", { name: "Files", exact: true });
+    await expect(workspaceTab).toHaveAttribute("aria-selected", "true");
+    await expect(page).toHaveURL(
+      (url) => defaultPageResourceCodec.fromUri(url.searchParams.get("resource") ?? "")?.id === attempt.workspace.id,
+    );
+    await workspaceTab.click({ button: "right" });
     await expectMenuItems(page, ["Open terminal", "Rename workspace", "Delete workspace"]);
-    await breadcrumbAction.click();
+    await page.keyboard.press("Escape");
     await expect(page.getByRole("menuitem", { name: "Open terminal", exact: true })).toBeHidden();
   } finally {
     await page.close();
@@ -129,40 +137,4 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
     }
     rmSync(repoRoot, { recursive: true, force: true });
   }
-});
-
-test("keeps ticket creation and ticket status settings available", async ({ page, request }) => {
-  const project = await createProject(request);
-  await prepareDashboard(page, project.id, "");
-  await page.goto(`/projects/${project.id}/tickets`);
-
-  const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
-
-  await page.getByRole("button", { name: "Create row", exact: true }).first().click();
-  const createDialog = page.getByRole("dialog").last();
-  await expect(createDialog).toBeVisible();
-  await createDialog.getByRole("textbox").first().fill("Create flow remains available");
-
-  const createResponse = page.waitForResponse(
-    (response) =>
-      response.request().method() === "POST" &&
-      new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio.planner.command.create-ticket/execute"),
-  );
-  await createDialog.getByRole("button", { name: "Create ticket", exact: true }).click();
-  expect((await createResponse).ok()).toBe(true);
-  await expect(createDialog).toBeHidden();
-  await expect(sidenav.getByRole("option").filter({ hasText: "Create flow remains available" })).toBeVisible();
-  await openProjectHome(page, "Resource Actions");
-  await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
-  await expect(page.getByTestId("renderer-card").filter({ hasText: "Create flow remains available" })).toBeVisible();
-
-  const settingsNavigation = sidenav.getByRole("option", { name: "Settings", exact: true });
-  await expect(settingsNavigation).toBeVisible();
-  await settingsNavigation.click();
-  const settingsDialog = page.getByRole("dialog").last();
-  await expect(settingsDialog.getByRole("option", { name: "Ticket status", exact: true })).toBeVisible();
-  await expect(settingsDialog.getByRole("option", { name: "Ticket tags", exact: true })).toBeVisible();
-  await settingsDialog.getByRole("option", { name: "Ticket status", exact: true }).click();
-  await expect(settingsDialog.getByRole("heading", { name: "Ticket status", exact: true })).toBeVisible();
 });

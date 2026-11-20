@@ -32,7 +32,6 @@ const selectProjectAndDisplayTicketProperties = async (
     projectId: string;
     showProperties: string[];
     hideProperties: string[];
-    viewMode?: "board" | "list";
   },
 ) => {
   await page.addInitScript(
@@ -70,16 +69,8 @@ const selectProjectAndDisplayTicketProperties = async (
     const button = displayDialog.getByRole("button", { name: label, exact: true });
     if ((await button.getAttribute("aria-pressed")) === "true") await button.click();
   }
-  if (input.viewMode === "list") await displayDialog.getByRole("button", { name: "List", exact: true }).click();
   await page.keyboard.press("Escape");
   await expect(displayDialog).toBeHidden();
-};
-
-const closeFloatingSessionBubble = async (page: import("@playwright/test").Page) => {
-  const bubble = page.getByTestId("workbench-side-panel-floating");
-  if (!(await bubble.isVisible().catch(() => false))) return;
-  await bubble.getByRole("button", { name: "Close Side Panel" }).click();
-  await expect(bubble).toBeHidden();
 };
 
 test("ticket card tag badges update selected values without opening the card", async ({ page, request }) => {
@@ -221,87 +212,4 @@ test("ticket card single-select tag badges update and clear selected values", as
 
   await expect(card.getByRole("button", { name: "Type", exact: true })).toBeVisible();
   await expect(card.getByRole("button", { name: "Simple", exact: true })).toBeVisible();
-});
-
-test("ticket list tag badges update and clear selected values", async ({ page, request }) => {
-  await deleteAllProjects(request);
-  const project = await createProjectViaApi(request, "Kanban renderer list tag dropdowns");
-  const tags = await getPlannerTicketTags(request, apiBase, project.id);
-  const typeTag = tags.find((tag) => tag.id === "default-type")!;
-  const priorityTag = tags.find((tag) => tag.id === "default-priority")!;
-  const bugOption = typeTag.options.find((option) => option.id === "default-type-bug")!;
-  const featureOption = typeTag.options.find((option) => option.id === "default-type-feature")!;
-  const highOption = priorityTag.options.find((option) => option.id === "default-priority-high")!;
-  const ticket = await createPlannerTicket(request, apiBase, project.id, {
-    content: "# List tag dropdown regression",
-    tagIds: [bugOption.id, highOption.id],
-  });
-
-  await selectProjectAndDisplayTicketProperties(page, {
-    projectId: project.id,
-    showProperties: ["ID", "Type", "Priority"],
-    hideProperties: ["Linked resources"],
-    viewMode: "list",
-  });
-
-  const row = page.getByRole("option").filter({ hasText: "List tag dropdown regression" }).first();
-  await expect(row).toBeVisible({ timeout: 15_000 });
-  await closeFloatingSessionBubble(page);
-  await expect(row.getByRole("button", { name: "Bug", exact: true })).toBeVisible();
-  await expect(row.getByRole("button", { name: "High", exact: true })).toBeVisible();
-
-  await row.getByRole("button", { name: "Bug", exact: true }).click();
-  const selectFeatureRequest = page.waitForRequest(
-    (request) =>
-      request.method() === "POST" &&
-      new URL(request.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.planner.view.tickets.kanban.onAttributeChange/execute",
-      ),
-  );
-  const selectFeatureResponse = page.waitForResponse(
-    (response) =>
-      response.request().method() === "POST" &&
-      new URL(response.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.planner.view.tickets.kanban.onAttributeChange/execute",
-      ) &&
-      response.status() === 200,
-  );
-  await page.getByRole("menuitemradio", { name: "Feature", exact: true }).click();
-  await expect(selectFeatureRequest.then((request) => request.postDataJSON().params.value)).resolves.toBe(
-    featureOption.id,
-  );
-  await selectFeatureResponse;
-
-  await expect(row).toBeVisible();
-  await expect(row.getByRole("button", { name: "Feature", exact: true })).toBeVisible();
-
-  await row.getByRole("button", { name: "High", exact: true }).click();
-  const clearPriorityRequest = page.waitForRequest(
-    (request) =>
-      request.method() === "POST" &&
-      new URL(request.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.planner.view.tickets.kanban.onAttributeChange/execute",
-      ),
-  );
-  const clearPriorityResponse = page.waitForResponse(
-    (response) =>
-      response.request().method() === "POST" &&
-      new URL(response.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.planner.view.tickets.kanban.onAttributeChange/execute",
-      ) &&
-      response.status() === 200,
-  );
-  await page.getByRole("menuitemradio", { name: "High", exact: true }).click();
-  await expect(clearPriorityRequest.then((request) => request.postDataJSON().params.value)).resolves.toBe("");
-  await clearPriorityResponse;
-
-  await expect
-    .poll(async () => {
-      const tickets = await listPlannerTickets(request, apiBase, project.id);
-      return tickets.find((candidate) => candidate.id === ticket.id)?.tagIds ?? [];
-    })
-    .toEqual([featureOption.id]);
-
-  await expect(row.getByRole("button", { name: "Feature", exact: true })).toBeVisible();
-  await expect(row.getByRole("button", { name: "Priority", exact: true })).toBeVisible();
 });

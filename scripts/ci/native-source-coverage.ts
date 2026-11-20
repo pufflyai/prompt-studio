@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { priorityFromFile, testRunner } from "./test-discovery";
 
-export const nativeSourceGroups = ["process-security", "filesystem-storage"] as const;
+export const nativeSourceGroups = ["process-security", "filesystem-storage-1", "filesystem-storage-2"] as const;
 export const windowsSourceContract = (file: string, root = resolve(import.meta.dir, "../..")) => {
   if (file.startsWith("packages/e2e/") || file.startsWith("scripts/")) return;
   if (!priorityFromFile(file) || priorityFromFile(file) === "P3" || !["bun", "api"].includes(testRunner(file))) return;
@@ -31,5 +31,11 @@ export const windowsSourceContract = (file: string, root = resolve(import.meta.d
     return { group: "process-security", reason: "Retain existing Windows-specific assertions until split" };
 };
 
-export const selectWindowsSourceContracts = (files: string[], group: string) =>
-  files.filter((file) => windowsSourceContract(file)?.group === group);
+export const selectWindowsSourceContracts = (files: string[], group: string) => {
+  const shard = /^filesystem-storage-([12])$/.exec(group);
+  const selected = files.filter(
+    (file) => windowsSourceContract(file)?.group === (shard ? "filesystem-storage" : group),
+  );
+  // Mixed filesystem contracts run one file at a time; alternate the sorted files across two Windows jobs.
+  return shard ? selected.sort().filter((_, index) => index % 2 === Number(shard[1]) - 1) : selected;
+};

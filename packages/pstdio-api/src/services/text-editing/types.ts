@@ -42,6 +42,7 @@ export interface TextConnection {
   grants: Map<string, TextGrant>;
   selected?: string;
   members: Map<string, TextMember>;
+  releasing: Map<TextMember, Promise<void> | undefined>;
   pending: Set<Promise<unknown>>;
   active: boolean;
   disposed: boolean;

@@ -79,3 +79,27 @@ test("failed initialization leaves no project or file mutation event", async () 
     await app.close();
   }
 });
+
+test("failed initialization withdraws a published workspace without inventing a project event", async () => {
+  const app = await createTestApp();
+  let workspaceId = "";
+  try {
+    await expect(
+      app.deps.projectService.create({ name: "Failed workspace setup" }, async (project) => {
+        workspaceId = (
+          await app.deps.workspaceService.ensureDefault({ project_id: project.id, name: "Project folder" })
+        ).id;
+        throw new Error("Workspace initialization failed");
+      }),
+    ).rejects.toThrow("Workspace initialization failed");
+    const events = app.deps.eventBus.getSince(0);
+    expect(events.filter((event) => event.table === "projects")).toEqual([]);
+    expect(
+      events
+        .filter((event) => event.table === "workspaces" && (event.data as { id: string }).id === workspaceId)
+        .map((event) => event.op),
+    ).toEqual(["set", "delete"]);
+  } finally {
+    await app.close();
+  }
+});

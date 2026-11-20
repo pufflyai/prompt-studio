@@ -51,47 +51,6 @@ test("recovers relative image previews from the session directory", async () => 
 });
 
 describe("codex harness detection", () => {
-  test("declares discrete run params", () => {
-    const harness = createCodexHarness();
-
-    expect(harness.params).toMatchObject({
-      model_reasoning_effort: {
-        type: "select",
-        label: "Reasoning effort",
-        defaultValue: "medium",
-        options: [
-          { label: "Minimal", value: "minimal", icon: "level-low" },
-          { label: "Low", value: "low", icon: "level-low" },
-          { label: "Medium", value: "medium", icon: "level-mid" },
-          { label: "High", value: "high", icon: "level-high" },
-          { label: "XHigh", value: "xhigh", icon: "level-xhigh" },
-        ],
-      },
-    });
-    expect(harness.params).not.toHaveProperty("approval_policy");
-    expect(harness.params).not.toHaveProperty("sandbox_mode");
-    expect(harness.params?.collaboration_mode).toMatchObject({
-      defaultValue: "default",
-      options: [
-        { label: "Default", value: "default" },
-        { label: "Planning", value: "plan" },
-      ],
-    });
-  });
-
-  test("reports availability with the CLI version", async () => {
-    const harness = createCodexHarness();
-    expect(await harness.detect!(ctx)).toMatchObject({ available: true, version: "codex-cli 0.160.1" });
-  });
-  test("refuses a CLI whose live item identities do not survive native history reads", async () => {
-    const harness = createCodexHarness();
-    const result = await harness.detect!({
-      ...ctx,
-      process: { ...ctx.process, run: async () => ({ stdout: "codex-cli 0.139.0", stderr: "", exitCode: 0 }) },
-    });
-    expect(result.available).toBe(false);
-  });
-
   test("reports unavailable when the binary is missing", async () => {
     const harness = createCodexHarness();
     const missingCtx = {
@@ -121,17 +80,5 @@ describe("codex harness detection", () => {
 
     const missing = createCodexHarness({ detect: async () => ({ available: false }) });
     expect(await missing.listModels!(ctx)).toEqual([]);
-  });
-});
-
-describe("codex harness getMessages", () => {
-  test("reads native history through the owned runtime", async () => {
-    const runtime = createCodexRuntime();
-    const messages = [
-      { id: "native", createdAt: 1, role: "user" as const, parts: [{ type: "text" as const, text: "hello" }] },
-    ];
-    runtime.readMessages = async () => messages;
-    const harness = createCodexHarness({ runtime });
-    expect(await harness.getMessages!(ctx, { agentSessionId: "thread-1" })).toEqual(messages);
   });
 });

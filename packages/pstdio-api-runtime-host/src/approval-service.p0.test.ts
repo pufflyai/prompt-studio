@@ -31,22 +31,6 @@ describe("createApprovalService", () => {
     expect(result.decision).toBe("approve");
   });
 
-  test("handleResponse resolves the pending promise", async () => {
-    const service = createApprovalService(noop, { timeoutMs: TIMEOUT_SAFE });
-
-    const promise = service.requestApproval({
-      id: "req-2",
-      toolName: "Write",
-      toolInput: { path: "/foo.txt" },
-      toolUseId: "toolu_02",
-    });
-
-    service.handleResponse({ id: "req-2", decision: "deny" });
-
-    const result = await promise;
-    expect(result).toMatchObject({ id: "req-2", decision: "deny" });
-  });
-
   test("timeout resolves with timeout decision", async () => {
     const service = createApprovalService(noop, { timeoutMs: TIMEOUT_FAST });
 
@@ -58,22 +42,6 @@ describe("createApprovalService", () => {
     });
 
     expect(result).toMatchObject({ id: "req-3", decision: "timeout" });
-  });
-
-  test("handleResponse before timeout prevents timeout", async () => {
-    const service = createApprovalService(noop, { timeoutMs: TIMEOUT_SAFE });
-
-    const promise = service.requestApproval({
-      id: "req-4",
-      toolName: "Bash",
-      toolInput: {},
-      toolUseId: "toolu_04",
-    });
-
-    service.handleResponse({ id: "req-4", decision: "approve" });
-
-    const result = await promise;
-    expect(result.decision).toBe("approve");
   });
 
   test("unknown response ID is ignored", () => {

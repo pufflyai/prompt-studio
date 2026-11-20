@@ -1,5 +1,11 @@
 // Synthetic public inventory metadata keeps Canvas independent of host/network state.
 export const previewExtensions = [
+  {
+    installName: "pstdio-terminal",
+    extensionId: "pstdio.pstdio-terminal",
+    displayName: "Terminal",
+    icon: "square-terminal",
+  },
   { installName: "home", extensionId: "pstdio.home", displayName: "Home", icon: "house" },
   {
     installName: "onboarding",

@@ -22,7 +22,8 @@ for (const collection of [false, true])
         resource: viewerResource("one", "folder"),
         params: { filter: "mine" },
       };
-      await w.navigation.openPage({
+      w.pageLocations.navigate({
+        kind: "page",
         page: viewerPage("reader"),
         resource: { ...viewerResource("x"), metadata: { document: "x.ts" } },
         position: { line: 3 },

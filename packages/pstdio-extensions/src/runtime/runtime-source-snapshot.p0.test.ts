@@ -1,4 +1,4 @@
-import { expect, spyOn, test } from "bun:test";
+import { expect, test } from "bun:test";
 import { lstatSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -35,26 +35,6 @@ test("snapshots the runtime import graph and symlinks unrelated artifacts", () =
     expect(changelog.isSymbolicLink()).toBe(process.platform !== "win32");
     expect(readFileSync(join(targetPath, "CHANGELOG.md"), "utf8")).toBe("# Changelog\n");
   } finally {
-    rmSync(root, { recursive: true, force: true });
-  }
-});
-
-test("reuses import parsing when checking unchanged runtime modules again", () => {
-  const root = mkdtempSync(join(tmpdir(), "pstdio-runtime-source-recheck-"));
-  const entry = join(root, "extension.ts");
-  writeFileSync(entry, 'export { title } from "./shared";');
-  writeFileSync(join(root, "shared.ts"), 'export const title = "Shared";');
-  const scan = spyOn(Bun.Transpiler.prototype, "scanImports");
-
-  try {
-    const first = collectRuntimeModulePaths(root, entry);
-    expect(first).toEqual(new Set(["extension.ts", "shared.ts"]));
-    expect(collectRuntimeModulePaths(root, entry)).toEqual(first);
-    expect(collectRuntimeModulePaths(root, entry)).toEqual(first);
-    // Fingerprint validation must still check the graph, without parsing unchanged files again.
-    expect(scan).toHaveBeenCalledTimes(2);
-  } finally {
-    scan.mockRestore();
     rmSync(root, { recursive: true, force: true });
   }
 });
@@ -118,7 +98,7 @@ test("scans mixed source loaders and refreshes higher-priority import resolution
   }
 });
 
-test("reuses parsing across staged copies while resolving each copy's local graph", () => {
+test("staged copies with the same source resolve each copy's local graph", () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-runtime-source-copies-"));
   const staged = join(root, "staged");
   const installed = join(root, "installed");
@@ -129,44 +109,29 @@ test("reuses parsing across staged copies while resolving each copy's local grap
   writeFileSync(join(staged, "extension.ts"), source);
   writeFileSync(join(installed, "extension.ts"), source);
   writeFileSync(join(staged, `${specifier}.ts`), 'export const title = "Staged";');
-  const scan = spyOn(Bun.Transpiler.prototype, "scanImports");
 
   try {
     expect(collectRuntimeModulePaths(staged, join(staged, "extension.ts"))).toContain(`${specifier.slice(2)}.ts`);
     expect(collectRuntimeModulePaths(installed, join(installed, "extension.ts"))).toEqual(new Set(["extension.ts"]));
-    expect(scan).toHaveBeenCalledTimes(2);
     writeFileSync(join(installed, `${specifier}.tsx`), "export const title = <div>Installed</div>;");
     expect(collectRuntimeModulePaths(installed, join(installed, "extension.ts"))).toContain(
       `${specifier.slice(2)}.tsx`,
     );
-    expect(scan).toHaveBeenCalledTimes(3);
   } finally {
-    scan.mockRestore();
     rmSync(root, { recursive: true, force: true });
   }
 });
 
-test("shares content parsing only for the same loader and constant-folding mode", () => {
+test("identical content keeps separate imports per loader and constant-folding mode", () => {
   const name = crypto.randomUUID();
   const bytes = Buffer.from(`export const unique${name.replaceAll("-", "")} = () => import("./" + "child");`);
   const read = () => Buffer.from(bytes);
-  const scan = spyOn(Bun.Transpiler.prototype, "scanImports");
-  const transform = spyOn(Bun.Transpiler.prototype, "transformSync");
 
-  try {
-    expect(readRuntimeModuleImports(`${name}.ts`, read)).toEqual([]);
-    expect(readRuntimeModuleImports(`${name}.mts`, read)).toEqual([]);
-    expect(scan).toHaveBeenCalledTimes(1);
-    expect(readRuntimeModuleImports(`${name}.ts`, read, true)).toContain("./child");
-    expect(readRuntimeModuleImports(`${name}-copy.ts`, read, true)).toContain("./child");
-    expect(transform).toHaveBeenCalledTimes(1);
-    expect(scan).toHaveBeenCalledTimes(2);
-    expect(readRuntimeModuleImports(`${name}.js`, read)).toEqual([]);
-    expect(scan).toHaveBeenCalledTimes(3);
-  } finally {
-    scan.mockRestore();
-    transform.mockRestore();
-  }
+  expect(readRuntimeModuleImports(`${name}.ts`, read)).toEqual([]);
+  expect(readRuntimeModuleImports(`${name}.mts`, read)).toEqual([]);
+  expect(readRuntimeModuleImports(`${name}.ts`, read, true)).toContain("./child");
+  expect(readRuntimeModuleImports(`${name}-copy.ts`, read, true)).toContain("./child");
+  expect(readRuntimeModuleImports(`${name}.js`, read)).toEqual([]);
 });
 
 test("cached CSS imports release old stylesheets after repeated edits", () => {

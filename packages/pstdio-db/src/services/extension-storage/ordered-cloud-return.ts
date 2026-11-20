@@ -7,7 +7,9 @@ import {
   storage_ordered_owners as owners,
 } from "../../db/schemas.pg";
 import { ensureOrderedOwner } from "./ordered-conversion";
+import { readConversion } from "./ordered-conversion-state";
 import { createOrderedJournal, withOrderedOwner } from "./ordered-journal";
+import { pendingOrderedOperations } from "./ordered-pending";
 import { rebaseOrderedProjection } from "./ordered-rebase";
 import {
   foldOrderedRecords,
@@ -84,7 +86,13 @@ const labels = async (db: Pick<DbClient, "select">, projectId: string, recordIds
  * Sign-out ends sync on this device. Joined owners fold their unsent saves into one save per record
  * and keep folding every later save, so nothing grows until the device returns. Local data stays.
  */
-export const createOrderedCloudReturn = (db: DbClient, deps: { changed: (owner: StorageOwner) => void }) => {
+export const createOrderedCloudReturn = (
+  db: DbClient,
+  deps: {
+    changed: (owner: StorageOwner) => void;
+    withProjectWork?: (id: string, task: () => Promise<void>) => Promise<void>;
+  },
+) => {
   const run = <T>(owner: StorageOwner, action: Parameters<typeof withOrderedOwner<T>>[2]) =>
     withOrderedOwner(db, owner, action);
   const each = async (
@@ -152,13 +160,31 @@ export const createOrderedCloudReturn = (db: DbClient, deps: { changed: (owner: 
         leave,
       );
     },
+    async removalState(projectId: string): Promise<"verified" | "pending" | "unknown"> {
+      return db.transaction(async (tx) => {
+        const rows = await withStates(tx, await joinedOwners(tx, [projectId]));
+        let state: "verified" | "unknown" = "verified";
+        for (const row of rows) {
+          if (await readConversion(tx, row)) {
+            state = "unknown";
+            continue;
+          }
+          if (!row.state) continue;
+          for await (const entry of pendingOrderedOperations(createOrderedJournal(tx, row))) {
+            if (entry.operation.edits.length) return "pending";
+          }
+        }
+        return state;
+      });
+    },
     async status(projectId: string): Promise<CloudReturnStatus> {
       const rows = (await withStates(db, await joinedOwners(db, [projectId]))).filter((row) => row.state);
       const changed: CloudReturnStatus["changed"] = { total: 0, deletions: 0, records: [] };
       for (const row of rows) {
         const owner = { workbenchId: row.workbenchId, extensionId: row.extensionId };
         // Status reads never take the owner's write lock that synchronization holds, but wait for conversion.
-        await ensureOrderedOwner(db, owner);
+        const convert = () => ensureOrderedOwner(db, owner);
+        await (deps.withProjectWork?.(projectId, convert) ?? convert());
         const summary = await db.transaction((tx) => orderedReturnSummary(createOrderedJournal(tx, owner)));
         changed.total += summary.records.length;
         changed.deletions += summary.deletions;

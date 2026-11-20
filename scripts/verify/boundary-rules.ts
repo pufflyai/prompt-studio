@@ -42,7 +42,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-api": [
     "pstdio-diagnostics",
     "github",
-    "git-workspaces",
+    "workspaces",
     "pstdio-sync",
     "pstdio-sync-contracts",
     "@pstdio/sdk",
@@ -106,7 +106,7 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   // so changing one marks e2e as affected.
   e2e: [
     "github",
-    "git-workspaces",
+    "workspaces",
     "@pstdio/ui",
     "@pstdio/sdk",
     "@pstdio/workbench",
@@ -130,7 +130,6 @@ export const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "artifacts",
     "home",
     "session-browser",
-    "workspaces",
     "pstdio-terminal",
     "base-themes",
     "pstdio-dashboard",

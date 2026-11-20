@@ -37,14 +37,3 @@ test("Files is unavailable when the default workspace cannot expose project file
     (await nodes({ ...workspace, device: { ownerId: "owner", id: "other", name: "Other" } })).map((node) => node.id),
   ).toEqual(["workspaces"]);
 });
-
-test("Workspaces offers the shared creation flow in its menu", async () => {
-  const entry = (await nodes(workspace)).find((node) => node.id === "workspaces")!;
-  expect(entry.contextMenuActions).toContainEqual(
-    expect.objectContaining({
-      id: "create-workspace",
-      icon: "plus",
-      command: { kind: "command", extensionId: "pstdio.workspaces", id: "show-create" },
-    }),
-  );
-});

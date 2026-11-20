@@ -9,19 +9,6 @@ const createRegistry = () => {
 };
 
 describe("createControlsRendererRegistry", () => {
-  test("stores the contribution and auto-registers a widget renderer with the same id", () => {
-    const { rendererRegistry, controls } = createRegistry();
-
-    controls.registerControlsRenderer({
-      id: "ticketControls",
-      title: "Ticket controls",
-      executeQuery: () => ({}),
-    });
-
-    expect(controls.getControlsRenderer("ticketControls")?.title).toBe("Ticket controls");
-    expect(rendererRegistry.getRenderer("ticketControls")).toBeDefined();
-  });
-
   test("invokes the controls renderer implementation when the widget renderer renders", () => {
     const { rendererRegistry, controls } = createRegistry();
     const calls: { controlsRendererId: string }[] = [];

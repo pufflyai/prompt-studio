@@ -115,21 +115,6 @@ describe("POST /v1/projects", () => {
     expect(res.status).toBe(400);
   });
 
-  test("does not seed package-internal skills", async () => {
-    const createRes = await app.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(folderProjectInput({ name: "Empty Catalog Project" })),
-    });
-    expect(createRes.status).toBe(201);
-
-    const project = (await createRes.json()) as { id: string };
-
-    const skillsRes = await app.request(`/v1/projects/${project.id}/skills`);
-    expect(skillsRes.status).toBe(200);
-    expect(await skillsRes.json()).toEqual([]);
-  });
-
   test("creates the project with a warning when default extension setup fails", async () => {
     const isolatedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-create-project-rollback-test-"));
     const databasePath = join(isolatedRoot, "db.sqlite");

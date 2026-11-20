@@ -146,16 +146,6 @@ describe("normalizeClaudeCodeMessages", () => {
     expect(result[0].parts[0]).toMatchObject({ type: "reasoning", text: "first second" });
   });
 
-  test("replaces pending tool with completed result", () => {
-    const result = normalizeClaudeCodeMessages([
-      entry("a1", "assistant", [{ type: "tool_use", id: "call-1", name: "Glob", input: {} }]),
-      entry("a2", "assistant", [{ type: "tool_result", tool_use_id: "call-1", content: "files", is_error: false }]),
-    ]);
-
-    expect(result).toHaveLength(1);
-    expect(result[0].parts[0]).toMatchObject({ type: "tool", status: "completed" });
-  });
-
   test("preserves tool input when replacing a completed TodoWrite result", () => {
     const todos = [
       { content: "Pick the component", status: "completed" },

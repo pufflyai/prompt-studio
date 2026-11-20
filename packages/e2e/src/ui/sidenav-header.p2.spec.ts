@@ -1,5 +1,4 @@
 import { folderProjectInput } from "../helpers/folder-project";
-import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { revealTreeEntry } from "../helpers/tree-entry";
 import { expect, type Locator, mergeTests, type Page, test as sessionTest } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
@@ -9,6 +8,7 @@ import { showSidenavEntry } from "./helpers/sidenav-navigation";
 const test = mergeTests(notificationTest, sessionTest);
 test.use({ notificationsEnabled: true });
 
+// Host rows lead each slot; Home is an ordinary extension row after them.
 const allSectionRowNames = ["Search", "Home", "Notifications", "Sessions", "Tickets", "Files", "Workspaces"] as const;
 const withoutWorkspaces = allSectionRowNames.filter((name) => name !== "Workspaces");
 
@@ -133,7 +133,7 @@ test("removes and restores owner-scoped collections across project and session p
   ).toBeVisible();
   await expect(sidenav.locator('[data-tree-list-node-id="sessions"]')).toHaveCount(0);
   await expect(sidenav.locator("[data-tree-list-node-id]").first()).toHaveAccessibleName("Search");
-  await expect(row(sidenav, "Search")).toBeVisible();
+  await expect(row(sidenav, "Home")).toBeVisible();
   await expect(sidenav.getByText("Today", { exact: true })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: "Existing sidenav session", exact: true })).toBeVisible();
   await expect(sidenav.getByRole("button", { name: "Help", exact: true })).toBeVisible();
@@ -210,35 +210,6 @@ test("customizes the Sidenav from any point and persists section visibility", as
     [row(sidenav, "Search"), row(sidenav, "Notifications")].map(async (item) => (await item.boundingBox())!.y),
   );
   expect(resetTopEdges[0]).toBeLessThan(resetTopEdges[1]);
-});
-
-test("renders the ticket tree inside the Sidenav resource section", async ({ page, request }) => {
-  test.setTimeout(45_000);
-  const project = await createProject(request);
-  await waitForTicketsExtension(request, project.id);
-  const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
-  const defaultStatus = statuses.find((status) => status.isDefault) ?? statuses[0];
-  expect(defaultStatus).toBeTruthy();
-  const ticket = await createPlannerTicket(request, apiBase, project.id, {
-    content: "Sidenav resource ticket",
-    statusId: defaultStatus!.id,
-  });
-  await createPlannerTicketFile(request, apiBase, project.id, ticket.id, {
-    name: "research.md",
-    content: "# Research",
-  });
-  await prepareDashboard(page, project.id);
-  await page.goto("/");
-  await page.getByRole("option", { name: "Tickets", exact: true }).click();
-
-  const card = page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first();
-  await expect(card).toBeVisible({ timeout: 30_000 });
-  await card.getByText(ticket.title, { exact: true }).click();
-
-  const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  await expect(row(sidenav, "Search")).toBeVisible();
-  await expect(sidenav.getByRole("option", { name: new RegExp(`^${ticket.shorthand}(?:\\s|$)`) })).toBeVisible();
-  await expect(sidenav.getByRole("option", { name: /research/ })).toBeVisible();
 });
 
 test("moves rows back into an emptied header or footer", async ({ page, request }) => {

@@ -29,11 +29,24 @@ const WorkbenchBreadcrumbIcon = (props: { item: WorkbenchBreadcrumbItem }) => {
     />
   );
 };
-const WorkbenchBreadcrumbTitle = (props: { item: WorkbenchBreadcrumbItem }) => {
-  const { item } = props;
+const WorkbenchBreadcrumbTitle = (props: { item: WorkbenchBreadcrumbItem; draggable?: boolean }) => {
+  const { item, draggable } = props;
   const title = item.title as ReactNode;
   return (
-    <HStack as="span" gap="2xs" minW="0">
+    <HStack
+      as="span"
+      gap="2xs"
+      minW="0"
+      data-workbench-page-drag-handle={draggable || undefined}
+      css={
+        draggable
+          ? {
+              "[data-workbench-page-drag][data-panel-draggable] &": { cursor: "grab", userSelect: "none" },
+              "[data-workbench-page-drag][data-panel-dragging] &": { cursor: "grabbing" },
+            }
+          : undefined
+      }
+    >
       <WorkbenchBreadcrumbIcon item={item} />
       <Text as="span" minW="0" maxW="15rem" truncate>
         {title}
@@ -44,11 +57,12 @@ const WorkbenchBreadcrumbTitle = (props: { item: WorkbenchBreadcrumbItem }) => {
 export const buildWorkbenchBreadcrumbItems = (
   items: WorkbenchBreadcrumbItem[] | undefined,
   actionsForResource?: (item: WorkbenchBreadcrumbItem) => ResourceContextAction[] | undefined,
+  draggable = false,
 ) =>
-  (items ?? []).map((item) => {
+  (items ?? []).map((item, index) => {
     const actions = actionsForResource?.(item);
     return {
-      title: <WorkbenchBreadcrumbTitle item={item} />,
+      title: <WorkbenchBreadcrumbTitle item={item} draggable={draggable && index === items!.length - 1} />,
       url: item.url,
       onClick: item.onClick,
       ...(actions?.length ? { contextMenuActions: actions } : {}),
@@ -105,24 +119,33 @@ export const WorkbenchBreadcrumbView = (props: WorkbenchBreadcrumbViewProps) => 
   }
   return (
     <Breadcrumb
-      items={buildWorkbenchBreadcrumbItems(crumbs, (item) => [
-        ...(item.resource || item === crumbs.at(-1)
-          ? createWorkbenchResourceMenu(
-              workbench,
-              item.resource,
-              !resource && item === crumbs.at(-1)
-                ? snapshot
-                : breadcrumbSnapshot(item, crumbs.at(-1), resource, snapshot, workbench.pages.resourceReferenceKey),
-              item === crumbs.at(-1) ? placement : undefined,
-            )
-          : []),
-        ...placementMenuActions(
-          workbench,
-          { menu: item.menu },
-          item.resource,
-          item === crumbs.at(-1) ? placement : undefined,
-        ),
-      ])}
+      onDragStartCapture={(event) => {
+        const target = event.target as Element;
+        const handle = "[data-workbench-page-drag-handle]";
+        if (target.closest(handle) || target.querySelector(handle)) event.preventDefault();
+      }}
+      items={buildWorkbenchBreadcrumbItems(
+        crumbs,
+        (item) => [
+          ...(item.resource || item === crumbs.at(-1)
+            ? createWorkbenchResourceMenu(
+                workbench,
+                item.resource,
+                !resource && item === crumbs.at(-1)
+                  ? snapshot
+                  : breadcrumbSnapshot(item, crumbs.at(-1), resource, snapshot, workbench.pages.resourceReferenceKey),
+                item === crumbs.at(-1) ? placement : undefined,
+              )
+            : []),
+          ...placementMenuActions(
+            workbench,
+            { menu: item.menu },
+            item.resource,
+            item === crumbs.at(-1) ? placement : undefined,
+          ),
+        ],
+        Boolean(content),
+      )}
       separator="/"
       separatorGap="xs"
       display="flex"

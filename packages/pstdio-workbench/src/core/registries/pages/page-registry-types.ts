@@ -88,7 +88,7 @@ export interface WorkbenchPageOpenInput {
   open?: PageOpenIntent;
 }
 
-export interface WorkbenchPageSlotOpenInput {
+export interface WorkbenchPageSlotOpenInput extends ViewLocation {
   pageId: string;
   slotId: string;
   resource?: ResourceRef;

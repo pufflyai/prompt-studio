@@ -4,6 +4,14 @@ import { canonicalPublicationRecords } from "./identity-records";
 import { type Publication, PublicationChangedError, packageMetadataSchema, selectionSchema } from "./types";
 
 type CatalogLockedRecords = Pick<CatalogRecords, "read" | "commit">;
+type Replacement = { extensionId: string; expectedRevision: string; beforeCommit?: () => Promise<void> };
+
+const checkReplacement = async (records: CatalogLockedRecords, extensionId: string, replacement?: Replacement) => {
+  if (!replacement) return;
+  if (replacement.extensionId === extensionId) throw new Error("A replacement must retire a different extension.");
+  const previous = await records.read(replacement.extensionId);
+  if (previous.revision !== replacement.expectedRevision) throw new PublicationChangedError();
+};
 
 /** The publication catalog shares one ordered record owner and transaction lock. */
 export interface CatalogRecords {
@@ -66,11 +74,15 @@ export const createPublicationCatalog = (input: {
           .filter((record) => !record.recordId.startsWith("package:") && !record.deleted)
           .map((record) => resolve(record, records)),
       ),
-    select: async (publication: Publication, asset: Asset, expectedRevision?: string) => {
+    select: async (publication: Publication, asset: Asset, expectedRevision?: string, replacement?: Replacement) => {
       if (asset.sha256 !== publication.revision) throw new Error("Published package identity mismatch");
       // Hashing package bytes stays outside the owner lock.
       await input.verifyComplete([asset]);
+      // Local extension choices use the database lock too; read them before taking the catalog lock.
+      // Both shared selectors are still compared and replaced together inside the transaction.
+      await replacement?.beforeCommit?.();
       return change(publication.extensionId, expectedRevision, async ({ records }) => {
+        await checkReplacement(records, publication.extensionId, replacement);
         const packageId = `package:${publication.revision}`;
         const existing = await records.read(packageId);
         if (
@@ -103,6 +115,15 @@ export const createPublicationCatalog = (input: {
               replace: { revision: publication.revision, enabled: publication.enabled },
               deleted: false,
             },
+            ...(replacement
+              ? [
+                  {
+                    recordId: replacement.extensionId,
+                    expectedRevision: replacement.expectedRevision,
+                    deleted: true,
+                  },
+                ]
+              : []),
           ],
         });
       });

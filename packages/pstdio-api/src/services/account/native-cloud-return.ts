@@ -41,6 +41,7 @@ export const createNativeCloudReturn = () => {
       const { state, changed, replaced } = returned;
       return { ...(state ? { away: { state, ...changed } } : {}), ...(replaced.total ? { replaced } : {}) };
     },
+    removalState: (projectId: string) => cloud?.removalState(projectId) ?? Promise.resolve("unknown" as const),
     async resolve(
       projectId: string,
       action: ProjectReturnAction,

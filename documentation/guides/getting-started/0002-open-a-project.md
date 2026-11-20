@@ -43,7 +43,7 @@ Other `pst` commands find the project from the folder you run them in. See [CLI 
 
 Opening the same folder again reopens its project. A subfolder is a separate project, even inside a Git repository. Deleting a project keeps your chosen folder and your own files, but removes the project's matching `.pstdio/config.json` link and saved host data. Provider-created workspaces follow their provider's cleanup rules.
 
-Onboarding opens after creating a project in the dashboard. Choose **Skip setup** to enter the project without installing unsubmitted choices. To stop offering it for future projects, enable **Extensions → Onboarding → Settings → Don’t show onboarding**. You can also disable the extension for a project. Agent harnesses and optional tools stay off in new projects until selected, even when another project already uses them.
+Onboarding opens after creating a project in the dashboard. Choosing **Coding** installs Workspaces, Terminal, Planner, Reports, Artifacts, and Skill Browser when available. Choose **Skip setup** to enter the project without installing unsubmitted choices. To stop offering it for future projects, enable **Extensions → Onboarding → Settings → Don’t show onboarding**. You can also disable the extension for a project. Agent harnesses and optional tools stay off in new projects until selected, even when another project already uses them.
 
 To learn how projects, workspaces, and Git worktrees fit together, read [Projects and workspaces](../concepts/0001-projects-and-workspaces.md).
 

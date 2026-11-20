@@ -3,6 +3,7 @@ import type { JsonObject } from "pstdio-api-contracts/extension-kernel";
 import type { WorkspacesRouteDeps } from "./deps";
 import { provisionProviderWorkspace } from "./workspace-provider-creation";
 import {
+  catalogProviderId,
   isBuiltInProviderId,
   remoteReadOnlyCapabilities,
   restoredFolderSetupPending,
@@ -51,7 +52,7 @@ export const createProviderBackedWorkspace = async (
 ) => {
   input.signal?.throwIfAborted();
   if (input.shorthandBase !== undefined) assertWorkspaceShorthand(input.shorthandBase);
-  const providerId = input.providerId;
+  const providerId = catalogProviderId(input.providerId);
   const params = await resolveWorkspaceParams(deps, input.projectId, providerId, input.params ?? {}, {
     signal: input.signal,
   });

@@ -14,6 +14,7 @@ import {
   type ExtensionRuntime,
   isRuntimeNavigationTargetAvailable,
 } from "pstdio-extensions";
+import { catalogProviderId, worktreeProviderId } from "../../workspaces/workspace-provider-identity";
 import type { ExtensionsRouteDeps } from "../deps";
 import { executeProjectExtensionCommand } from "../execute-project-extension-command";
 import { canonicalResource } from "./resource-link-policy";
@@ -38,7 +39,7 @@ const resolveHostResource = async (deps: ExtensionsRouteDeps, ref: ResourceRef, 
         workspaceSupportsFiles:
           record.execution_kind === "local" && record.provider_capabilities_json?.files !== "none",
         workspaceSupportsDiff: !record.is_default && record.provider_capabilities_json?.diff === true,
-        workspaceType: record.provider_id === "pstdio.worktree" ? "worktree" : "folder",
+        workspaceType: catalogProviderId(record.provider_id) === worktreeProviderId ? "worktree" : "folder",
         workspaceError: record.setup_error,
       },
     };

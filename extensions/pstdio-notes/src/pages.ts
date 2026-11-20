@@ -1,5 +1,6 @@
 import {
   definePage,
+  definePlacement,
   defineView,
   type ExtensionContextBase,
   l10n,
@@ -67,48 +68,88 @@ export const editor = defineView({
   },
 });
 
+const noteTab = {
+  refreshEvents: [notesChanged, viewDataEvents.workspacesChanged],
+  query: async (ctx: ExtensionContextBase, { renderer }: { renderer: { resource?: ResourceRef } }) => {
+    const id = renderer.resource?.id;
+    const { readable } = await notesFileAccess(ctx);
+    if (!readable || !id) return {};
+    const mount = notesMount(ctx);
+    if (!(await noteExists(mount, id))) return {};
+    try {
+      return { label: await readNoteTitle(mount, id) };
+    } catch (error) {
+      if (await noteExists(mount, id)) throw error;
+      return {};
+    }
+  },
+};
 export const notesPage = definePage({
   id: "notes",
   title: l10n("pages.notes", "Notes"),
   path: "notes",
   icon: "notebook-pen",
   mode: workbenchModes.project,
-  main: { kind: "panels" },
-  slots: [
-    {
-      id: "note",
-      region: "main",
-      addableIn: ["main"],
-      order: 0,
-      mountStrategy: "keep-mounted",
-      tab: {
-        refreshEvents: [notesChanged, viewDataEvents.workspacesChanged],
-        query: async (ctx, { renderer }) => {
-          const id = renderer.resource?.id;
-          const { readable } = await notesFileAccess(ctx);
-          if (!readable) return {};
-          const mount = notesMount(ctx);
-          if (!id || !(await noteExists(mount, id))) return {};
-          try {
-            const label = await readNoteTitle(mount, id);
-            return { label };
-          } catch (error) {
-            if (await noteExists(mount, id)) throw error;
-            return {};
-          }
-        },
-      },
-      item: {
-        kind: "binding",
-        binding: {
-          kinds: [note.ref],
-          view: editor.ref,
-          cardinality: "many",
-          add: { kind: "command", target: { command: { kind: "command", id: "notes.create" } } },
-        },
-      },
+  main: {
+    kind: "view",
+    presentation: "page",
+    view: editor.ref,
+    cardinality: "one",
+    tab: {
+      query: () => ({
+        menu: [
+          {
+            id: "notes",
+            rows: [
+              {
+                id: "create",
+                label: l10n("commands.create", "New note"),
+                icon: "plus",
+                action: { kind: "command", target: { command: { kind: "command", id: "notes.create" } } },
+              },
+            ],
+          },
+        ],
+      }),
     },
-  ],
+  },
+  slots: [],
+});
+export const notesViewer = definePlacement({
+  id: "note",
+  mode: workbenchModes.project,
+  region: "side",
+  mountStrategy: "keep-mounted",
+  tab: noteTab,
+  replaces: [{ kind: "page-slot", page: notesPage.ref, id: "note" }],
+  item: {
+    kind: "binding",
+    binding: {
+      kinds: [note.ref],
+      view: editor.ref,
+      cardinality: "many",
+      add: { kind: "command", target: { command: { kind: "command", id: "notes.create" } } },
+    },
+  },
+});
+export const notePage = definePage({
+  id: "note",
+  title: l10n("views.noteEditor", "Note"),
+  path: "notes/note",
+  icon: "file-text",
+  mode: workbenchModes.project,
+  parent: notesPage.ref,
+  resource: { kinds: [note.ref] },
+  panelView: notesViewer.ref,
+  main: {
+    kind: "view",
+    presentation: "page",
+    view: editor.ref,
+    cardinality: "one",
+    mountStrategy: "keep-mounted",
+    tab: noteTab,
+  },
+  slots: [],
 });
 
 export const noteResource = (
@@ -132,14 +173,7 @@ export const noteTarget = (
   context?: Pick<ExtensionContextBase, "extensionId" | "projectId">,
   writable?: boolean,
 ) => ({
-  kind: "compound" as const,
-  targets: [
-    { kind: "page" as const, page: notesPage.ref },
-    {
-      kind: "panel" as const,
-      panel: notesPage.panels.note,
-      resource: noteResource(id, label, context, writable),
-      open: "pin" as const,
-    },
-  ],
+  kind: "page" as const,
+  page: notePage.ref,
+  resource: noteResource(id, label, context, writable),
 });

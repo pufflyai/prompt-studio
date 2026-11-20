@@ -84,24 +84,6 @@ test("reopening an existing project's folder does not replay setup", async () =>
   }
 });
 
-test("disabled, removed or hidden setup contributes no dialog after opening", async () => {
-  const { workbench, opening, registration, ready } = fixture();
-  try {
-    const project = Promise.withResolvers<{ id: string; created: boolean }>();
-    const pending = opening.open(project.promise);
-    expect(workbench.layout.getActivePanel("overlay")).toBeUndefined();
-    project.resolve({ id: "created", created: true });
-    await Promise.resolve();
-    selectDashboardProject(workbench, { id: "created", name: "Created" });
-    expect(workbench.layout.getActivePanel("overlay")).toBeUndefined();
-    ready([]);
-    await pending;
-    expect(workbench.layout.getActivePanel("overlay")).toBeUndefined();
-  } finally {
-    registration.dispose();
-  }
-});
-
 test("a dismissed eligible setup never reopens on later metadata refresh", async () => {
   const { workbench, opening, registration, ready } = fixture();
   try {

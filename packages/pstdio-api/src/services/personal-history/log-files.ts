@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { createLineReader } from "./log-entries";
 import { createLogPayloads } from "./log-payloads";
@@ -56,6 +56,8 @@ export const createSessionLogFiles = (root: string) => {
   const genericPosition = (namespace: string, id: string) =>
     readJson<GenericPosition>(path(namespace, id, "generic-position.json"), { cursor: "", head: 0, ordinal: 0 });
   return {
+    removeProject: (project: Parameters<typeof historyNamespace>[0]) =>
+      rm(folder(historyNamespace(project)), { recursive: true, force: true }),
     async *iterateIndexPages(namespace: string, id: string) {
       for (const page of await pages(namespace, id))
         yield {

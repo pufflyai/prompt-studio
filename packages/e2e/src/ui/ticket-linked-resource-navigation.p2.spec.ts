@@ -1,8 +1,8 @@
 import { rmSync } from "node:fs";
-import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin } from "../ui-server";
+import { expectResourceMenuItems } from "./helpers/resource-actions";
 import { createAttemptWithSessionViaApi, createGitRepo, createTicketViaApi } from "./helpers/workspace-session-attempt";
 
 test("ticket resource badges keep keyboard navigation after a linked session is removed", async ({ page, request }) => {
@@ -20,34 +20,42 @@ test("ticket resource badges keep keyboard navigation after a linked session is 
     await page.goto(board);
     const card = page.getByTestId("renderer-card").filter({ hasText: "Linked resource navigation" });
     await card.getByRole("button", { name: `pstdio · ${session.title}`, exact: true }).focus();
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(
-      (url) => defaultPageResourceCodec.fromUri(url.searchParams.get("resource") ?? "")?.id === attempt.session.id,
+    // The preview watches exactly the linked session.
+    const sessionWatched = page.waitForRequest(
+      (sent) =>
+        sent.method() === "POST" &&
+        sent.url().endsWith("/subscriptions") &&
+        sent.postDataJSON()?.command?.body?.resource?.id === attempt.session.id,
     );
-    expect(defaultPageResourceCodec.fromUri(new URL(page.url()).searchParams.get("resource")!)).toMatchObject({
-      type: "session",
-      id: attempt.session.id,
-      extensionId: "pstdio",
-      projectId,
-    });
+    await page.keyboard.press("Enter");
+    // Linked resources preview in Side and keep the board in Main.
+    const sideTabs = page.locator('[data-workbench-panel-header="side"]');
+    await expect(sideTabs.getByRole("tab", { name: session.title, exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await sessionWatched;
+    await expect(page).toHaveURL(new URL(board, uiOrigin).href);
 
     await page.goto(board);
     const removed = await request.delete(`${uiOrigin}/v1/sessions/${attempt.session.id}`);
     expect(removed.ok()).toBe(true);
     await expect(card.getByTestId("collection-badge")).toHaveCount(1);
     await card.getByRole("button", { name: `pstdio · ${attempt.workspace.workspace_shorthand}`, exact: true }).focus();
-    await page.keyboard.press("Space");
-    await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(
-      attempt.workspace.workspace_shorthand,
+    // The preview's file tree reads exactly the linked workspace.
+    const workspaceTree = page.waitForRequest(
+      (sent) =>
+        sent.url().includes("file-tree.tree.body/execute") && (sent.postData() ?? "").includes(attempt.workspace.id),
     );
-    await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(ticket.shorthand);
-    expect(defaultPageResourceCodec.fromUri(new URL(page.url()).searchParams.get("resource")!)).toMatchObject({
-      type: "workspace",
-      id: attempt.workspace.id,
-      extensionId: "pstdio",
-      projectId,
-    });
-    await expect(page.getByRole("button", { name: "Back to project", exact: true })).toBeVisible();
+    await page.keyboard.press("Space");
+    // A workspace previews its declared Files landing in Side, and that tab carries the workspace actions.
+    const workspaceTab = sideTabs.getByRole("tab", { name: "Files", exact: true });
+    await expect(workspaceTab).toHaveAttribute("aria-selected", "true");
+    await expect(page).toHaveURL(new URL(board, uiOrigin).href);
+    await workspaceTab.click({ button: "right" });
+    await expectResourceMenuItems(page, ["Open terminal", "Rename workspace", "Delete workspace"]);
+    await page.keyboard.press("Escape");
+    await workspaceTree;
   } finally {
     if (projectId) await request.delete(`${uiOrigin}/v1/projects/${projectId}`);
     rmSync(folder, { recursive: true, force: true });

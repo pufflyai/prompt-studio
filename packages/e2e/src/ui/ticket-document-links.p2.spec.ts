@@ -1,5 +1,6 @@
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
 import { expect, test } from "../scripts/session-test";
@@ -51,7 +52,7 @@ test("saved ticket document links survive copy, reload, history and rename", asy
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.getByRole("button", { name: /^Actions for / }).click();
     await page.getByRole("menuitem", { name: "Copy link", exact: true }).click();
-    await expect(page.getByText("Link copied")).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Link copied" })).toBeVisible();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(fileUrl);
     await page.reload();
     await expect(page.getByText("Saved research bytes", { exact: false }).first()).toBeVisible();
@@ -107,7 +108,12 @@ test("saved ticket document links survive copy, reload, history and rename", asy
     );
     await page.getByRole("link", { name: "Draft", exact: true }).last().click();
     await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Exact\s+unsaved\s+draft\s+bytes/);
-    await page.goBack();
+    // Chat links preview beside the conversation, so it stays open for the next link.
+    await expect(page).toHaveURL(
+      (url) =>
+        url.pathname === `/projects/${project.id}/session` &&
+        defaultPageResourceCodec.fromUri(url.searchParams.get("resource") ?? "")?.id === session.id,
+    );
     await page.getByRole("link", { name: "Saved", exact: true }).last().click();
     await expect(page.getByText("Saved body bytes", { exact: false }).first()).toBeVisible();
   } finally {

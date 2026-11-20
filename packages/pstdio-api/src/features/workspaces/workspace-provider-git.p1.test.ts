@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { enableGitWorkspaceProvider } from "../../test-utils/git-workspace-provider.fixture";
 import { createProjectExtensionLifecycle } from "../extensions/project-extension-lifecycle";
+import { provisionProviderWorkspace } from "./workspace-provider-creation";
 import { resolveWorkspaceExecutionTarget } from "./workspace-provider-execution-target";
 import { deleteProviderBackedWorkspace } from "./workspace-provider-lifecycle";
 import { reconcileProviderWorkspaces } from "./workspace-provider-reconciliation";
@@ -53,7 +54,7 @@ beforeAll(async () => {
     name: "Git provider",
     initial_workspace: { provider_id: "pstdio.root", params: { path: sourceFolder } },
   });
-  expect(created.status).toBe(201);
+  expect(created.status, await created.clone().text()).toBe(201);
   projectId = (await created.json()).id;
 });
 
@@ -112,12 +113,12 @@ test("installed Git lifecycle uses the public provider for existing IDs and pres
   const providers = async () =>
     await (await handle.app.request(`/v1/projects/${projectId}/workspace-providers`)).json();
   expect(await providers()).toEqual([]);
-  const extensionPath = fileURLToPath(new URL("../../../../../extensions/git-workspaces/", import.meta.url));
+  const extensionPath = fileURLToPath(new URL("../../../../../extensions/pstdio-workspaces/", import.meta.url));
   const manifest = JSON.parse(await readFile(join(extensionPath, "package.json"), "utf8"));
-  const enabled = await post(`/v1/projects/${projectId}/extensions/installed/git-workspaces/enable`, {
-    name: "git-workspaces",
+  const enabled = await post(`/v1/projects/${projectId}/extensions/installed/workspaces/enable`, {
+    name: "workspaces",
     displayName: "Git workspaces",
-    extensionId: "pstdio.git-workspaces",
+    extensionId: "pstdio.workspaces",
     manifest,
     sourcePath: extensionPath,
     sourceHash: null,
@@ -183,4 +184,55 @@ test("installed Git lifecycle uses the public provider for existing IDs and pres
   expect(existsSync(workspace.root_path)).toBe(false);
   expect(existsSync(sourceFolder)).toBe(true);
   expect(await git("branch", "--list", workspace.branch)).toBe("");
+});
+
+test.each([
+  "pstdio.git-workspaces.workspace-type.git",
+  "pstdio.workspaces.workspace-type.git",
+])("%s remains usable for fresh and historical workspaces", async (providerId) => {
+  const created = await post("/v1/workspaces", {
+    project_id: projectId,
+    provider_id: providerId,
+    params: { base: "HEAD" },
+  });
+  expect(created.status, await created.clone().text()).toBe(201);
+  const fresh = await created.json();
+  expect(fresh).toMatchObject({ provider_id: "pstdio.worktree", provider_state: "ready" });
+  await deleteProviderBackedWorkspace(handle.deps, fresh);
+
+  const operationId = crypto.randomUUID();
+  const legacy = await handle.deps.workspaceService.create({
+    project_id: projectId,
+    shorthand_base: "LEGACY",
+    provider_id: providerId,
+    provider_params_json: { base: "HEAD" },
+    provider_state: "provisioning",
+    provider_operation_id: operationId,
+    provider_operation_kind: "create",
+  });
+  const ready = await provisionProviderWorkspace(handle.deps, {
+    operationId,
+    projectId,
+    providerId: "pstdio.worktree",
+    params: { base: "HEAD" },
+    sourcePath: null,
+    workspace: legacy,
+  });
+  expect(ready).toMatchObject({ id: legacy.id, provider_id: "pstdio.worktree", provider_state: "ready" });
+  const ref = ready.provider_ref_json;
+  await reconcileProviderWorkspaces(handle.deps, projectId, { workspaceId: legacy.id });
+  const reopened = await handle.deps.workspaceService.get(legacy.id);
+  expect(reopened).toMatchObject({
+    id: legacy.id,
+    root_path: ready.root_path,
+    branch: ready.branch,
+    provider_ref_json: ref,
+    provider_state: "ready",
+    provider_id: "pstdio.worktree",
+  });
+  expect(await resolveWorkspaceExecutionTarget(handle.deps, legacy.id)).toBeDefined();
+  expect(await readFile(join(ready.root_path!, "README.md"), "utf8")).toBe("Original project\n");
+  await deleteProviderBackedWorkspace(handle.deps, reopened!);
+  expect(existsSync(ready.root_path!)).toBe(false);
+  expect(await readFile(join(sourceFolder, "README.md"), "utf8")).toBe("Original project\n");
 });

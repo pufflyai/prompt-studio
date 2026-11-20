@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { link, mkdir, open, rm, stat } from "node:fs/promises";
 import { dirname } from "node:path";
 import type { Asset } from "pstdio-sync-contracts";
-import { type AssetBytesOwner, assetBytePaths } from "../storage/asset-byte-paths";
+import { type AssetBytesOwner, assetBytePaths, projectAssetByteRoot } from "../storage/asset-byte-paths";
 
 const hasCode = (error: unknown, code: string) => (error as NodeJS.ErrnoException).code === code;
 
@@ -167,5 +167,13 @@ export const createAssetBytesStorage = (root: string, historicalExtensionId?: (i
     if (previous) await rm(previous, { force: true });
   };
 
-  return { append, progress, publish, open: openVersion, verify, removeTransfer };
+  return {
+    append,
+    progress,
+    publish,
+    open: openVersion,
+    verify,
+    removeTransfer,
+    removeProject: (id: string) => rm(projectAssetByteRoot(root, id), { recursive: true, force: true }),
+  };
 };

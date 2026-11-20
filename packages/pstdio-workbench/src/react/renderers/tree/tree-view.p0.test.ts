@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchSelectionResourceMetadata, type ResourceRef } from "../../../core";
-import { resolveTreeListActiveNodeId, resolveTreeListSelection } from "./tree-list-adapter";
+import { resolveTreeListSelection } from "./tree-list-adapter";
 
 const ticketsResource = {
   type: "dashboard-view",
@@ -12,14 +12,6 @@ const workspacesResource = {
   label: "Workspaces",
   id: "pstdio://dashboard/workspaces",
 } satisfies ResourceRef;
-describe("resolveTreeListActiveNodeId", () => {
-  test("does not keep a stale selected node when an active node is available", () => {
-    expect(resolveTreeListActiveNodeId("tickets", "workspaces")).toBe("tickets");
-  });
-  test("falls back to selected node when there is no active resource", () => {
-    expect(resolveTreeListActiveNodeId(undefined, "session:session-1")).toBe("session:session-1");
-  });
-});
 describe("resolveTreeListSelection", () => {
   test("selects a page target when that page is the current location", () => {
     expect(
@@ -70,27 +62,6 @@ describe("resolveTreeListSelection", () => {
             nodes: [
               { id: "tickets", label: "Tickets", resource: ticketsResource },
               { id: "workspaces", label: "Workspaces", resource: workspacesResource },
-            ],
-          },
-        ],
-        selectedNodeId: "workspaces",
-      }),
-    ).toBe("tickets");
-  });
-  test("matches active resources through resource navigation targets", () => {
-    expect(
-      resolveTreeListSelection({
-        activeResource: ticketsResource,
-        childrenByNodeId: {},
-        sections: [
-          {
-            id: "navigation",
-            nodes: [
-              {
-                id: "tickets",
-                label: "Tickets",
-                resource: ticketsResource,
-              },
             ],
           },
         ],

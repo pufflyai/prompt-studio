@@ -250,7 +250,7 @@ bun run build -- --scope pstdio-dashboard --include-dependencies
 bun run --cwd scripts build:host
 export PLAYWRIGHT_BROWSERS_PATH="$(mktemp -d)" PSTDIO_HOME="$(mktemp -d)" E2E_PACKAGED_BINARY_PATH="$PWD/dist/pstdio"
 dist/pstdio extensions install-browser
-cd packages/e2e && bun test src/packaged/packaged-serve-helpers.p2.test.ts src/packaged/extension-browser-install.p1.test.ts
+cd packages/e2e && bun test src/packaged/packaged-page-params-smoke.p2.test.ts src/packaged/extension-browser-install.p1.test.ts
 ```
 
 Copy `dist/pstdio` to a private path and point `E2E_PACKAGED_BINARY_PATH` at the copy when another task may rebuild the binary at the same time.

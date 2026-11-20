@@ -20,11 +20,12 @@ const fixture = () => {
   return w;
 };
 
-test("Home and Sessions own tabless Main content while Sessions offers independent viewer tabs", () => {
+test("Home uses tabs while Sessions owns tabless Main content and independent viewer tabs", () => {
   const w = fixture();
   navigateDashboardPage(w, { page: dashboardHomePage });
-  expect(w.pages.getContent()?.viewId).toBe("test.home");
-  expect(w.shell.getPanelPolicy("main").showHeader).toBe(false);
+  expect(w.pages.getContent()).toBeUndefined();
+  expect(w.layout.getActivePanel("main")?.viewId).toBe("test.home");
+  expect(w.shell.getPanelPolicy("main").showHeader).toBe(true);
   openSessionsPage(w);
   expect(w.pages.getContent()?.viewId).toBe(contributionRefId(sessionBrowser.views.conversation));
   expect(w.layout.listPanelInstances("main")).toEqual([]);
@@ -36,7 +37,7 @@ test("Home and Sessions own tabless Main content while Sessions offers independe
   ).toBe(true);
 });
 
-test("session page navigation replaces Main while a matching panel viewer keeps its owner", async () => {
+test("session page navigation reclaims its matching Side viewer into Main", async () => {
   const w = fixture();
   const session = (id: string) => createDashboardSessionResource(id, id, "project-1");
   openSessionsPage(w, session("main"));
@@ -44,11 +45,10 @@ test("session page navigation replaces Main while a matching panel viewer keeps 
   expect(w.pages.getContent()?.resource?.id).toBe("next");
   expect(w.layout.listPanelInstances("main")).toEqual([]);
   await w.navigation.openPanel({ panel: sessionBrowser.panels.conversation, resource: session("side"), open: "pin" });
-  const side = w.layout.getActivePanel("side")!;
-  const location = w.pages.store.getState().location;
   openSessionsPage(w, session("side"));
-  expect(w.layout.getActivePanel("side")?.instanceId).toBe(side.instanceId);
-  expect(w.pages.store.getState().location).toBe(location);
+  expect(w.layout.listPanelInstances("side")).toEqual([]);
+  expect(w.pages.getContent()?.resource?.id).toBe("side");
+  expect(w.pages.store.getState().location?.resource?.id).toBe("side");
 });
 
 test("returning to Sessions uses its landing when Side now owns the remembered session", async () => {

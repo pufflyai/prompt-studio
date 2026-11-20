@@ -32,7 +32,7 @@ export const createHomeModule = () =>
         main: {
           kind: "view",
           cardinality: "one",
-          presentation: "page",
+          presentation: "tabs",
           view: {
             kind: "view",
             id: "test.home",

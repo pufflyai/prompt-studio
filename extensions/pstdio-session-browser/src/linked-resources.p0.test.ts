@@ -22,6 +22,14 @@ test("sessions show incoming and outgoing ticket links once and hide empty group
   await ctx.resources.addAnchors(ticket, [session]);
   expect((await read()).map((section) => section.id)).toEqual(["tickets"]);
   expect((await read())[0].nodes[0].target).toMatchObject({ resource: ticket });
+  const expected = {
+    kind: "page" as const,
+    page: { kind: "page" as const, extensionId: ticket.extensionId, id: "detail" },
+    resource: ticket,
+    region: "side" as const,
+    open: "preview" as const,
+  };
+  expect((await read())[0].nodes[0].target).toEqual(expected);
   await ctx.resources.addAnchors(session, [ticket]);
   expect((await read())[0].nodes).toHaveLength(1);
   await ctx.resources.removeAnchors(ticket, [session]);

@@ -1,6 +1,11 @@
 export const workspaceKind = (workspace: Record<string, unknown>) => {
   if (workspace.execution_kind === "remote") return "remote";
-  if (workspace.provider_id === "pstdio.worktree") return "worktree";
+  if (
+    workspace.provider_id === "pstdio.worktree" ||
+    workspace.provider_id === "pstdio.git-workspaces.workspace-type.git" ||
+    workspace.provider_id === "pstdio.workspaces.workspace-type.git"
+  )
+    return "worktree";
   return "folder";
 };
 

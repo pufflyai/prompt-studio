@@ -62,20 +62,7 @@ describe("buildSessionsSection", () => {
       ticketId: "ticket-1",
     });
 
-    expect(section).toEqual({
-      id: "sessions",
-      label: expect.anything(),
-      collapsible: true,
-      nodes: [
-        {
-          id: "sessions-empty",
-          label: "No sessions",
-          icon: "MessageCircle",
-          disabled: true,
-          rowVariant: "empty-state",
-        },
-      ],
-    });
+    expect(section?.nodes).toMatchObject([{ label: "No sessions", disabled: true }]);
   });
 
   test("opens each session in the Sessions provider panel", () => {
@@ -84,11 +71,12 @@ describe("buildSessionsSection", () => {
     const node = buildSessionsSection({ sessions, ticketId: "ticket-1" })?.nodes[0];
 
     expect(node?.resource).toEqual({ type: "session", extensionId: "pstdio", id: "a", label: "Refine ticket: PS-1" });
-    expect(node?.target).toEqual({
+    const target = {
       kind: "panel",
+      region: "side",
       panel: { extensionId: "pstdio.session-browser", kind: "placement", id: "conversation" },
       resource: { type: "session", extensionId: "pstdio", id: "a", label: "Refine ticket: PS-1" },
-      open: "preview",
-    });
+    } as const;
+    expect(node?.target).toEqual(target);
   });
 });

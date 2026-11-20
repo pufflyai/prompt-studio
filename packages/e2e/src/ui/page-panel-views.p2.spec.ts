@@ -4,7 +4,6 @@ import { expect, type Page, test } from "../scripts/playwright-test";
 const panelTest = fixtureTest("panels", test);
 
 import { folderProjectInput } from "../helpers/folder-project";
-import { homePage } from "../helpers/home-loading";
 import { uiOrigin } from "../ui-server";
 
 const panel = (page: Page, id: string) => page.locator(`[data-workbench-panel="${id}"]`);
@@ -23,45 +22,6 @@ const prepare = async (page: Page) => {
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
 };
-
-test("tabless pages render their content without tab headers", async ({ page, request }) => {
-  const created = await request.post(`${uiOrigin}/v1/projects`, {
-    data: folderProjectInput({ name: "Page presentation" }),
-  });
-  expect(created.ok()).toBe(true);
-  const { id } = await created.json();
-  try {
-    await prepare(page);
-    await page.goto(`/projects/${id}`);
-    await expect(homePage(page)).toBeVisible();
-    await expect(page.locator('[data-workbench-panel-header="main"]')).toHaveCount(0);
-    await expect(panel(page, "main").getByRole("group", { name: "Available tabs" })).toHaveCount(0);
-    await page.getByRole("option", { name: "Sessions", exact: true }).click();
-    await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("New session");
-    await expect(panel(page, "main").getByRole("tab")).toHaveCount(0);
-    await expect(panel(page, "main").getByRole("button", { name: "Add panel", exact: true })).toHaveCount(0);
-    await page.goBack();
-    await expect(homePage(page)).toBeVisible();
-    await expect(page.locator('[data-workbench-panel-header="main"]')).toHaveCount(0);
-    for (const path of ["tickets", "ticket-timeline"]) {
-      await page.goto(`/projects/${id}/extensions/pstdio.planner/${path}`);
-      await expect(page.getByRole("navigation", { name: "breadcrumb" })).toBeVisible();
-      await expect(panel(page, "main").getByRole("tab")).toHaveCount(0);
-      await expect(panel(page, "main").getByRole("button", { name: "Add panel", exact: true })).toHaveCount(0);
-      await expect(page.locator('[data-workbench-tab-strip="main"]')).toHaveCount(0);
-      await expect(page.locator('[data-workbench-panel-header="main"]')).toHaveCount(0);
-      if (path === "ticket-timeline") {
-        await expect(
-          page
-            .frameLocator('iframe[title="Project Timeline"]')
-            .getByRole("button", { name: "Auto Build", exact: true }),
-        ).toBeVisible();
-      }
-    }
-  } finally {
-    await request.delete(`${uiOrigin}/v1/projects/${id}`);
-  }
-});
 
 panelTest(
   "an SDK-only viewer switches locally, reuses resources, replaces drafts and closes on deletion",
@@ -85,15 +45,24 @@ panelTest(
       const sideReader = side.frameLocator('iframe[title="Letter viewer"]:visible');
       await sideReader.getByRole("button", { name: "Switch to B", exact: true }).click();
       await expect(sideReader.getByText("Viewing B", { exact: true })).toBeVisible();
-      await sideReader.getByRole("button", { name: "Switch to A", exact: true }).click();
-      await expect(sideReader.getByText("Viewing B", { exact: true })).toBeVisible();
       await expect(page).toHaveURL(mainUrl);
       await expect(mainReader.getByText("Viewing A", { exact: true })).toBeVisible();
+      // A resource opens in one panel: switching to the one in Main moves it into the requesting viewer.
+      await sideReader.getByRole("button", { name: "Switch to A", exact: true }).click();
+      await expect(sideReader.getByText("Viewing A", { exact: true })).toBeVisible();
+      await expect(
+        page.getByRole("navigation", { name: "breadcrumb" }).getByText("Home", { exact: true }),
+      ).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`/projects/${id}/extensions/pstdio\\.home/home$`));
+      await expect(main.locator('iframe[title="Letter viewer"]:visible')).toHaveCount(0);
       await openTool(page, "secondary", "Letter browser");
       const browser = panel(page, "secondary").frameLocator('iframe[title="Letter browser"]:visible');
-      await browser.getByRole("button", { name: "Open B in Main", exact: true }).click();
+      // Opening it in Main from a browser moves it back instead of opening a second copy.
+      await browser.getByRole("button", { name: "Open A in Main", exact: true }).click();
+      await expect(mainReader.getByText("Viewing A", { exact: true })).toBeVisible();
       await expect(page).toHaveURL(mainUrl);
-      await expect(side.getByRole("tab", { name: "Letter B", exact: true })).toHaveAttribute("aria-selected", "true");
+      await expect(side.getByRole("tab", { name: "Letter A", exact: true })).toHaveCount(0);
+      await openTool(page, "side", "New letter viewer");
       await sideReader.getByRole("button", { name: "Save letter", exact: true }).click();
       await expect(sideReader.getByText(/^Viewing saved-/)).toBeVisible();
       await expect(page).toHaveURL(mainUrl);

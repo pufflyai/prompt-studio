@@ -8,6 +8,7 @@ test("Open workspace follows the configured public opener", async () => {
   const target = {
     kind: "page" as const,
     page: { kind: "page" as const, extensionId: "example.reader", id: "inspect" },
+    resource: { type: "workspace", id: "remote-workspace" },
   };
   const ctx = makeCommandContext({
     storage: createMemoryStorage(),
@@ -22,7 +23,7 @@ test("Open workspace follows the configured public opener", async () => {
     draftKey: "remote-session",
     action: { type: "openResource", id: "remote-workspace" },
   });
-  expect(opened).toEqual([target]);
+  expect(opened).toEqual([{ ...target, region: "side", open: "preview" }]);
 });
 
 const created = {

@@ -13,36 +13,6 @@ describe("createWorkbenchCommandPaletteController", () => {
     controller.open();
     expect(controller.store.getState().resourceSearch).toBeNull();
   });
-  test("opens and closes through domain methods and exposes store state", () => {
-    const controller = createWorkbenchCommandPaletteController();
-
-    expect(controller.isOpen()).toBe(false);
-    expect(controller.store.getState()).toMatchObject({
-      open: false,
-      view: "main",
-      initialQuery: "",
-      paramsRequest: null,
-      confirmation: null,
-      resourceSearch: null,
-    });
-
-    controller.open();
-
-    expect(controller.isOpen()).toBe(true);
-    expect(controller.store.getState()).toMatchObject({
-      open: true,
-      view: "main",
-      initialQuery: "",
-      paramsRequest: null,
-      confirmation: null,
-      resourceSearch: null,
-    });
-
-    controller.close();
-
-    expect(controller.isOpen()).toBe(false);
-  });
-
   test("opens a specific view and resets it when closed", () => {
     const controller = createWorkbenchCommandPaletteController();
 

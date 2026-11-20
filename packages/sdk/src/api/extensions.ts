@@ -4,6 +4,7 @@ export type {
   CommandExecuteResponse,
   CommandExecutionResult,
   ConfigureExtensionConnectionInput,
+  ExtensionAuthor,
   ExtensionCommandPaletteContribution,
   ExtensionCommandPaletteResourceRecord,
   ExtensionCommandRecord,

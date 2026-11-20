@@ -1,6 +1,7 @@
 import { defineExtension, defineKeybinding, defineViewMenu, packageAsset } from "@pstdio/sdk/extensions";
 import { commands } from "./src/commands";
 import { filesTree, fileView } from "./src/files";
+import { gitWorkspace } from "./src/git/provider";
 import { action, createPage, devicePage, files, history, overview, workspace, workspaces } from "./src/pages";
 import { fileSearch } from "./src/search";
 import { sidebar, sidebarView } from "./src/sidebar";
@@ -11,6 +12,7 @@ const target = { kind: "page" as const, page: workspaces.ref };
 export default defineExtension({
   defaultLocale: "en",
   translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
+  workspaceTypes: [gitWorkspace],
   commands: Object.values(commands),
   commandPaletteResources: [fileSearch],
   views: [fileView, filesTree, workspacesView, historyView, summaryView, changesView, actionView, sidebarView],
