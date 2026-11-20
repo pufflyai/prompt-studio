@@ -125,10 +125,12 @@ for (const action of ["Delete workspace"]) {
       .getByRole("option")
       .filter({ has: page.getByText(workspace.workspace_shorthand, { exact: true }) });
     await workspaceRow.click();
-    await expect(page).toHaveURL(/\/workspace\?resource=/);
-    await expect(page.getByRole("tab", { name: "Changes", exact: true })).toBeVisible();
+    // A ticket's linked workspace previews in Side, so the ticket stays open in Main.
+    const workspaceTab = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { selected: true });
+    await expect(workspaceTab).toBeVisible();
+    await expect(page).toHaveURL(/\/ticket\?resource=/);
     await expect(page.getByRole("tab", { name: "Workspaces", exact: true })).toHaveCount(0);
-    await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
+    await workspaceTab.click({ button: "right" });
     await expect(page.getByRole("menuitem", { name: "Delete workspace", exact: true })).toBeVisible();
     const response = page.waitForResponse(
       (response) => response.url().includes(".command.show-delete/execute") && response.request().method() === "POST",

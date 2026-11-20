@@ -75,9 +75,9 @@ test("keeps history, breadcrumbs and panel controls in the navigation header", a
   // Side Panel exactly as the Workspaces view does. Global controls stay in host chrome.
   await expect(controls.getByRole("button", { name: "Show Side Panel" })).toHaveAttribute("aria-pressed", "false");
 
-  const mainHeader = page.locator('[data-workbench-panel-header="main"]');
-  await expect(mainHeader.getByRole("button", { name: /Navigate (back|forward)/ })).toHaveCount(0);
-  await expect(mainHeader.getByRole("button", { name: /Bottom Panel|Side Panel|Sidenav/ })).toHaveCount(0);
+  // Navigation and Main share one header, so history and panel controls appear exactly once.
+  await expect(page.getByRole("button", { name: /Navigate (back|forward)/ })).toHaveCount(2);
+  await expect(page.getByRole("group", { name: "Panel controls" })).toHaveCount(1);
 
   const sidenavSeparator = page.getByRole("separator", { name: "Resize sidenav" });
   await expect(sidenavSeparator).toBeVisible();
