@@ -21,12 +21,3 @@ export const crossPath = (width: number, height: number) => {
 
 export const halfDiscPath = (width: number, height: number) =>
   `M0 ${height}A${width / 2} ${height} 0 0 1 ${width} ${height}Z`;
-
-export const halfDiscVertices = (width: number, height: number) => {
-  // At the largest tool size, 32 segments stay within a tenth of a pixel of the SVG arc.
-  const segments = 32;
-  return Array.from({ length: segments + 1 }, (_, index) => {
-    const angle = (index * Math.PI) / segments;
-    return { x: (width / 2) * (1 - Math.cos(angle)), y: height * (1 - Math.sin(angle)) };
-  });
-};
