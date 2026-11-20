@@ -9,7 +9,7 @@ import { DownloadPicker } from "./download-picker";
 
 export const START_HERE_TITLE = "A workbench for your agents.";
 export const START_HERE_INTRO =
-  "Coding agents can build tools to help with your work. Prompt Studio gives these tools a place to live, with the shared infrastructure they need to work together.";
+  "Coding agents can build tools to help with your work. Prompt Studio gives these tools a place to live and work together.";
 
 export const DownloadPanel = (props: { headingLevel: "h1" | "h2" }) => {
   const { headingLevel } = props;

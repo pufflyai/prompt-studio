@@ -58,8 +58,7 @@ export const WhatIsPromptStudioView = () => {
             An agentic workbench.
           </Text>
           <Text textStyle="paragraph/L/regular" color="fg.muted">
-            One app where the tools your agents build live, run, and work together. You describe a tool, your agent
-            builds it, and it stays next to everything else you've made.
+            One app where the tools your agents build live, run, and work together.
           </Text>
         </Box>
         {CHAPTERS.map(({ id, eyebrow, title, body, Scene }) => (
