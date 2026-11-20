@@ -110,6 +110,7 @@ test("recovery removal closes its own source leases before deleting their folder
   const owned = projectRecoveryRoot(root, "project");
   const source = ["project", "account", "workspace"];
   const release = await openRecoveryJournal({ root: owned, source }).acquire();
+  expect(release).not.toBeNull();
   await release!();
   const leasePath = join(owned, "sources", `${recoveryJournalKey(source)}.lock.sqlite`);
   expect((await stat(leasePath)).isFile()).toBe(true);
