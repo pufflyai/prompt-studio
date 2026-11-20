@@ -8,7 +8,7 @@ import { createGitRepo } from "./helpers/workspace-session-attempt";
 
 const agent = "pstdio.workbench-fixture.harness.fake";
 
-test("opens note and artifact paths from chat in their own pages", async ({ page, request }) => {
+test("previews note and artifact paths from chat beside the conversation", async ({ page, request }) => {
   const root = createGitRepo("pstdio-chat-resource-paths-", "Chat resource paths");
   writeFileSync(join(root, "report.html"), "<title>Launch report</title><h1>Launch report</h1>");
   const created = await request.post(`${apiBase}/v1/projects`, {
@@ -49,18 +49,15 @@ test("opens note and artifact paths from chat in their own pages", async ({ page
     const message = page.locator("p").filter({ hasText: /^Read / });
     await page.goto(sessionUrl);
     await expect(message.getByText("Launch plan", { exact: true })).toBeVisible();
+    // Resource links preview in Side and keep the conversation in Main.
+    const side = page.locator('[data-workbench-panel-header="side"]');
     await message.getByText("Launch plan", { exact: true }).click();
-    await expect(page).toHaveURL(/\/extensions\/pstdio\.notes\//);
-    await expect(page.getByRole("tab", { name: "Launch plan" })).toBeVisible();
+    await expect(side.getByRole("tab", { name: "Launch plan", exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/session\?resource=/);
 
-    await page.goto(sessionUrl);
-    await expect(message.getByText("Launch report", { exact: true })).toBeVisible();
     await message.getByText("Launch report", { exact: true }).click();
-    await expect(page).toHaveURL(/\/extensions\/pstdio\.artifacts\//);
-    // Artifacts open as single-resource pages, so the breadcrumb names the artifact.
-    await expect(
-      page.getByRole("navigation", { name: "breadcrumb" }).getByRole("link", { name: "Launch report", exact: true }),
-    ).toBeVisible();
+    await expect(side.getByRole("tab", { name: "Launch report", exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/session\?resource=/);
   } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
     rmSync(root, { recursive: true, force: true });
