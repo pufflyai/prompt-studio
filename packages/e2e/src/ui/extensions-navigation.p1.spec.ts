@@ -5,8 +5,8 @@ import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 
-// Critical risk: regrouping and actual page navigation must preserve keyboard access and selected filters.
-test("retains extension filters and keyboard focus through details and enabled regrouping", async ({
+// Critical risk: regrouping and actual page navigation must preserve keyboard access and the search query.
+test("retains extension search and keyboard focus through details and enabled regrouping", async ({
   page,
   request,
 }) => {
@@ -37,10 +37,6 @@ test("retains extension filters and keyboard focus through details and enabled r
   await page.goto(`/projects/${project.id}`);
   await page.getByRole("option", { name: "Extensions", exact: true }).click();
   const panel = page.getByTestId("extensions-panel");
-  await panel.getByRole("button", { name: "Author: All authors", exact: true }).click();
-  await page.getByRole("menuitem", { name: /^Me ·/ }).click();
-  await panel.getByRole("button", { name: "Scope: All scopes", exact: true }).click();
-  await page.getByRole("menuitem", { name: /^This Project ·/ }).click();
   await panel.getByTestId("extensions-search").fill("Personal");
   const row = panel.getByTestId("extension-entry");
   await expect(row).toHaveCount(1);
@@ -48,19 +44,15 @@ test("retains extension filters and keyboard focus through details and enabled r
   await expect(row.locator('[data-extension-scope="repo"]')).toContainText("This Project");
   await row.focus();
   await page.keyboard.press("Enter");
-  const back = page.getByTestId("extension-detail").getByRole("button", { name: "Extensions", exact: true });
-  await expect(back).toBeFocused();
-  await page.keyboard.press("Enter");
-  await expect(panel.getByTestId("extensions-search")).toHaveValue("Personal");
-  await expect(panel.getByRole("button", { name: "Author: Me", exact: true })).toBeVisible();
-  await expect(panel.getByRole("button", { name: "Scope: This Project", exact: true })).toBeVisible();
-  await expect(row).toBeFocused();
-  await page.keyboard.press("Enter");
-  await expect(back).toBeFocused();
+  const detail = page.getByTestId("extension-detail");
+  await expect(detail).toBeVisible();
+  await page.keyboard.press("Tab");
+  await expect(detail.getByRole("checkbox")).toBeFocused();
   await page
     .getByRole("navigation", { name: "breadcrumb" })
     .getByRole("button", { name: "Extensions", exact: true })
     .click();
+  await expect(panel.getByTestId("extensions-search")).toHaveValue("Personal");
   await expect(row).toBeFocused();
   const toggle = row.getByRole("checkbox");
   await toggle.focus();

@@ -3,7 +3,6 @@ import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { ScopedPopover as Popover, ResourceContextMenu } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { WorkbenchCore, WorkbenchStatusBarItem, WorkbenchWidgetPlacement } from "../../core";
-import { systemActivityItemId } from "../notifications/system-errors";
 import { WorkbenchWidgetHost } from "../region/widget-host";
 import { ViewActivityContext } from "../shared/view-activity-context";
 import { statusBarSlotLabels, statusBarSlots } from "./status-bar-layout";
@@ -24,8 +23,7 @@ export const StatusBarItem = (props: StatusBarItemProps) => {
   const styles = useSlotRecipe({ key: "statusBar" })();
   const id = placement.widgetId;
   const item = items.find((entry) => entry.id === id);
-  const pinned = id === systemActivityItemId;
-  const sortable = Boolean(item) && !pinned;
+  const sortable = Boolean(item);
   const registered = workbench.statusBar.getItem(id);
   const popoverId = registered?.popoverViewId;
   const shown = visible && Boolean(item);
@@ -34,9 +32,7 @@ export const StatusBarItem = (props: StatusBarItemProps) => {
   useEffect(() => {
     if (!shown || isDragging) setOpen(false);
   }, [shown, isDragging]);
-  const ids = items
-    .filter((entry) => entry.slot === item?.slot && entry.id !== systemActivityItemId)
-    .map((entry) => entry.id);
+  const ids = items.filter((entry) => entry.slot === item?.slot).map((entry) => entry.id);
   const drag = useDraggable({ id, disabled: !sortable });
   const target = useDroppable({ id, disabled: !sortable, data: { slot: item?.slot, itemId: id } });
   const title = placement.title ?? id;
@@ -83,7 +79,7 @@ export const StatusBarItem = (props: StatusBarItemProps) => {
       left={`${left}px`}
       // dnd-kit measures the original hit areas while the neighbors make room visually.
       transform={previewLeft !== undefined && previewLeft !== left ? `translateX(${previewLeft - left}px)` : undefined}
-      pointerEvents={pinned ? "auto" : undefined}
+      pointerEvents="auto"
       touchAction={sortable ? "pan-y" : undefined}
       onKeyDown={(event) => {
         if (!sortable || !item || !event.altKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
@@ -111,7 +107,6 @@ export const StatusBarItem = (props: StatusBarItemProps) => {
       </ViewActivityContext>
     </Box>
   );
-  if (pinned) return surface;
   const trigger = (
     <ResourceContextMenu
       actions={statusBarSlots.map((slot) => ({

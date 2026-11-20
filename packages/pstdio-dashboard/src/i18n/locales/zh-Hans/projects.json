@@ -43,7 +43,6 @@
       "noDescription": "未提供描述。",
       "scope": {
         "label": "范围",
-        "all": "所有范围",
         "repo": "此项目",
         "global": "所有项目"
       },
@@ -174,7 +173,6 @@
       "enabledGroup": "已启用",
       "author": {
         "label": "作者",
-        "all": "所有作者",
         "me": "我",
         "promptStudio": "Prompt Studio"
       },
@@ -182,8 +180,8 @@
         "extension": "扩展",
         "enabled": "启用"
       },
-      "clearFilters": "清除筛选",
-      "noMatches": "没有匹配的扩展。"
+      "noMatches": "没有与搜索匹配的扩展。",
+      "clearSearch": "清除搜索"
     }
   },
   "list": {

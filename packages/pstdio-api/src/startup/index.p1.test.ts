@@ -106,10 +106,8 @@ describe("startup default extensions", () => {
     }
   });
 
-  test.each([
-    "pstdio-terminal",
-    "git-workspaces",
-  ])("an existing project adopts %s once and preserves disable and uninstall choices", async (name) => {
+  test("an existing project adopts Terminal once and preserves disable and uninstall choices", async () => {
+    const name = "pstdio-terminal";
     process.env.PSTDIO_HOME = join(tempRoot, `home-${name}-upgrade`);
     delete process.env.PSTDIO_DISABLE_EMBED_MANIFEST;
     process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";

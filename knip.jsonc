@@ -167,7 +167,7 @@
         "github",
         "canvas",
         "extension-lab",
-        "git-workspaces",
+        "workspaces",
         "harness-claude-code",
         "harness-codex",
         "harness-open-code",
@@ -180,7 +180,6 @@
         "pstdio-dashboard",
         "home",
         "session-browser",
-        "workspaces",
         "notes",
         "performance",
         "planner",
@@ -218,7 +217,7 @@
         "planner",
         "skills",
         "workbench-fixture",
-        "git-workspaces"
+        "workspaces"
       ]
     },
     "packages/pstdio-db": {

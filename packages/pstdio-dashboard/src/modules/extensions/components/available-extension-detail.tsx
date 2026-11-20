@@ -6,7 +6,6 @@ import { PageContentLayout } from "@/shared/components/page-content-layout";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import { ExtensionActionButton } from "./extension-action-button";
 import type { ExtensionActionState } from "./extension-action-feedback";
-import { ExtensionBackButton } from "./extension-back-button";
 import { ExtensionContributions } from "./extension-contributions";
 import { ExtensionIcon } from "./extension-icon";
 import { ExtensionIdentity } from "./extension-identity";
@@ -14,8 +13,6 @@ import { ExtensionAuthorBadge } from "./extension-labels";
 
 interface AvailableExtensionDetailProps {
   extension: MarketplaceExtension;
-  onBack?: () => void;
-  visible?: boolean;
   metadata: DashboardExtensionMetadata | undefined;
   contributionsError?: string;
   loadingContributions: boolean;
@@ -50,7 +47,6 @@ export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) =
         header={
           <Stack gap="md">
             <Stack gap="md" paddingX="lg" paddingTop="lg">
-              <ExtensionBackButton onBack={props.onBack} visible={props.visible} />
               <HStack gap="md" alignItems="center">
                 <Flex
                   alignItems="center"

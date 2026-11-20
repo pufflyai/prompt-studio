@@ -50,7 +50,16 @@ test("Coding installs Workspaces with its selected tools", async () => {
   const { context, state, selected } = fixture();
   await state.update(context, { step: "complete", workAreas: ["coding"] });
   expect(selected).toEqual([
-    ["workspaces", "planner", "reports", "artifacts", "pstdio-skill-browser", "base-themes", "skills"],
+    [
+      "workspaces",
+      "pstdio-terminal",
+      "planner",
+      "reports",
+      "artifacts",
+      "pstdio-skill-browser",
+      "base-themes",
+      "skills",
+    ],
   ]);
 });
 test("Project planning installs its selected tools", async () => {
@@ -83,7 +92,9 @@ test("Coding completion survives a host catalog without the optional Skill Brows
   const { context, state, selected } = fixture();
   context.extensions!.list = async () => ({ extensions: [], marketplace: [] });
   await state.update(context, { step: "complete", workAreas: ["coding"] });
-  expect(selected).toEqual([["workspaces", "planner", "reports", "artifacts", "base-themes", "skills"]]);
+  expect(selected).toEqual([
+    ["workspaces", "pstdio-terminal", "planner", "reports", "artifacts", "base-themes", "skills"],
+  ]);
   expect(await state.read(context)).toMatchObject({ completed: true, workAreas: ["coding"] });
 });
 
@@ -115,6 +126,8 @@ test.each([
     await install(names);
   };
   await state.update(context, { step: "complete", workAreas: ["coding"] });
-  expect(selected).toEqual([["workspaces", "planner", "reports", "artifacts", "base-themes", "skills"]]);
+  expect(selected).toEqual([
+    ["workspaces", "pstdio-terminal", "planner", "reports", "artifacts", "base-themes", "skills"],
+  ]);
   expect(await state.read(context)).toMatchObject({ completed: true, workAreas: ["coding"] });
 });
