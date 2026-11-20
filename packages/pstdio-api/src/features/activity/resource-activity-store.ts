@@ -20,14 +20,15 @@ export const activityStorageOwner = (projectId: string) => ({
   workbenchId: projectId,
   extensionId: resourceActivityOwnerId,
 });
-const indexes: StorageRecordIndex[] = [
+export const resourceActivityIndexes: StorageRecordIndex[] = [
   {
     name: "activity",
     prefix: "entry/",
-    equality: ["scope"],
+    equality: ["scope", "retryKey"],
     fields: {
       id: { path: ["id"], type: "string" },
       scope: { path: ["scope"], type: "string" },
+      retryKey: { path: ["retryKey"], type: "string" },
       sourceOwner: { path: ["sourceOwner"], type: "string" },
       kind: { path: ["kind"], type: "string" },
       root: { path: ["root"], type: "boolean" },
@@ -43,6 +44,36 @@ const indexes: StorageRecordIndex[] = [
 const hash = (value: string) => createHash("sha256").update(value).digest("hex");
 const json = (value: unknown) => JSON.parse(JSON.stringify(value)) as Json;
 export type ActivityStore = ReturnType<typeof createResourceActivityStore>;
+
+type ActivityRecords = Awaited<ReturnType<ReturnType<typeof createExtensionStorageDBService>["open"]>>["records"];
+type LockedActivityRecords = Parameters<Parameters<ActivityRecords["transaction"]>[0]>[0];
+
+const replayActivity = async (
+  locked: LockedActivityRecords,
+  input: { receiptId: string; request: string; recordId: string; scope: string; retryKey: string },
+) => {
+  const receipt = await locked.read(input.receiptId);
+  if (receipt.exists) {
+    const previous = receipt.value as { request: string; id: string };
+    if (previous.request !== input.request) throw new Error("Activity key was reused with changed content.");
+    return locked.read(`entry/${previous.id}`);
+  }
+  // Content-derived IDs preserve both pieces of evidence after offline key reuse.
+  const existing = await locked.read(input.recordId);
+  if (existing.exists) return existing;
+  const previous = await locked.query({
+    index: "activity",
+    fields: [],
+    where: {
+      all: [
+        { field: "scope", op: "eq", value: input.scope },
+        { field: "retryKey", op: "eq", value: input.retryKey },
+      ],
+    },
+    limit: 1,
+  });
+  if (previous.records.length) throw new Error("Activity key was reused with changed content.");
+};
 
 /** Core-owned records use the same durable journals, indexed queries and Cloud sync as other shared resources. */
 export const createResourceActivityStore = (
@@ -60,7 +91,7 @@ export const createResourceActivityStore = (
   const records = async () => {
     opened ??= service.open({ owner, assets: content?.assets });
     const store = (await opened).records;
-    ready ??= store.defineIndexes(indexes);
+    ready ??= store.defineIndexes(resourceActivityIndexes);
     await ready;
     return store;
   };
@@ -100,17 +131,14 @@ export const createResourceActivityStore = (
     );
     const id = hash(JSON.stringify([scope, input.key, request]));
     const recordId = `entry/${id}`;
-    const receiptId = `key/${hash(JSON.stringify([scope, input.key]))}`;
+    const retryKey = hash(JSON.stringify([scope, input.key]));
+    const receiptId = `key/${retryKey}`;
     const bodyAsset = input.body.length > 32000 ? await content?.stage(`body:${id}`, input.body) : undefined;
     if (input.body.length > 32000 && !bodyAsset) throw new Error("Activity body storage is unavailable.");
     const store = await records();
     const result = await store.transaction(async (locked) => {
-      const receipt = await locked.read(receiptId);
-      if (receipt.exists) {
-        const previous = receipt.value as { request: string; id: string };
-        if (previous.request !== request) throw new Error("Activity key was reused with changed content.");
-        return locked.read(`entry/${previous.id}`);
-      }
+      const previous = await replayActivity(locked, { receiptId, request, recordId, scope, retryKey });
+      if (previous) return previous;
       const attachments = await activityEntryLinks(locked, resource, input, author);
       const { key: _key, attachmentIds: _ids, ...content } = input;
       const entry = resourceActivityEntrySchema.parse({
@@ -134,13 +162,13 @@ export const createResourceActivityStore = (
               ...entry,
               body: bodyAsset ? "" : entry.body,
               scope,
+              retryKey,
               root: !input.replyToId,
               sourceOwner: preserved?.source?.extensionId ?? "",
             }),
             asset: bodyAsset,
             deleted: false,
           },
-          { recordId: receiptId, expectedRevision: initialRecordRevision(), replace: { id, request }, deleted: false },
         ],
       });
       return { value: entry };
