@@ -1,8 +1,20 @@
 import { resourceKey } from "@pstdio/sdk/extensions";
 import type { KanbanRendererPlacementBinding } from "./kanban-renderer-registry";
 
-// One bound renderer per placement and resource, so views and dialogs keep a stable contribution.
-const bindings = new WeakMap<object, Map<string, object>>();
+// Bound bodies belong to the renderer's binder, which survives wrappers that copy the contribution.
+// Each placement and resource keeps one body, so its query state and query-supplied columns persist.
+const bodies = new WeakMap<object, Map<string, object>>();
+// The merged contribution is stable while its source object is.
+const merged = new WeakMap<object, Map<string, object>>();
+
+const entry = (cache: WeakMap<object, Map<string, object>>, owner: object) => {
+  let map = cache.get(owner);
+  if (!map) {
+    map = new Map();
+    cache.set(owner, map);
+  }
+  return map;
+};
 
 /** Returns the renderer bound to this placement, or the renderer itself when it does not bind. */
 export const bindKanbanRendererContribution = <
@@ -11,16 +23,19 @@ export const bindKanbanRendererContribution = <
   contribution: Contribution,
   binding: KanbanRendererPlacementBinding,
 ): Contribution => {
-  if (!contribution.forPlacement) return contribution;
+  const forPlacement = contribution.forPlacement;
+  if (!forPlacement) return contribution;
   const key = JSON.stringify([binding.instanceId, binding.resource ? resourceKey(binding.resource) : null]);
-  let bound = bindings.get(contribution);
-  if (!bound) {
-    bound = new Map();
-    bindings.set(contribution, bound);
-  }
-  const cached = bound.get(key);
+  const mergedByKey = entry(merged, contribution);
+  const cached = mergedByKey.get(key);
   if (cached) return cached as Contribution;
-  const next = { ...contribution, ...contribution.forPlacement(binding) } as Contribution;
-  bound.set(key, next);
+  const bodiesByKey = entry(bodies, forPlacement);
+  let body = bodiesByKey.get(key);
+  if (!body) {
+    body = forPlacement.call(contribution, binding);
+    bodiesByKey.set(key, body);
+  }
+  const next = { ...contribution, ...body } as Contribution;
+  mergedByKey.set(key, next);
   return next;
 };
