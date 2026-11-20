@@ -129,6 +129,17 @@ export const ToolRecording = (props: ToolRecordingProps) => {
     };
   }, []);
 
+  // Navigating to another example's URL without a reload restarts the recording on that tool.
+  // Switches made by the recording or the visitor already updated `modeRef`, so they skip this.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `play` only reads refs and state setters.
+  useEffect(() => {
+    const director = directorRef.current;
+    if (!director || start === modeRef.current) return;
+    window.clearTimeout(resumeRef.current);
+    cursorRef.current!.style.opacity = "";
+    void play(director, start, true);
+  }, [start]);
+
   const layout = RECORDING_LAYOUT[mode];
   return (
     <Box css={styles.root}>
