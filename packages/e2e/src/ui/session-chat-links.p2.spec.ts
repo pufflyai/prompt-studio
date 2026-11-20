@@ -74,29 +74,37 @@ test("opens chat workspace files and restores selected documents through history
       return html;
     });
     expect(copiedHtml).toContain("<code>src/nested/app.ts</code>");
+    // Workspace file links preview beside the conversation and keep it in Main.
+    const side = page.locator('[data-workbench-region="side"]');
     await source.focus();
     await expect(source).toBeFocused();
     await page.keyboard.press("Enter");
-    await expect(page.locator(".monaco-editor .view-lines")).toContainText("chatLinkedFile");
-    await expect(page.getByRole("option").filter({ hasText: "app.ts" }).first()).toHaveAttribute(
+    await expect(side.locator(".monaco-editor .view-lines")).toContainText("chatLinkedFile");
+    await expect(page).toHaveURL(/\/session\?resource=/);
+    await side.getByRole("button", { name: "Open Side left menu", exact: true }).click();
+    // The preview's Files menu reveals and selects the previewed document.
+    const sideTree = page.getByRole("region", { name: "Side left menu", exact: true });
+    await expect(sideTree.getByRole("option", { name: "app.ts", exact: true })).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    const fileUrl = page.url();
     await page.reload();
-    await expect(page.locator(".monaco-editor .view-lines")).toContainText("chatLinkedFile");
-    await page.goBack();
+    await expect(side.locator(".monaco-editor .view-lines")).toContainText("chatLinkedFile");
     await expect(page.getByRole("link", { name: "README", exact: true }).last()).toBeVisible();
     await page.getByRole("link", { name: "README", exact: true }).last().click();
-    await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Workspace\s+README/);
-    await page.goto(fileUrl);
-    await expect(page.locator(".monaco-editor .view-lines")).toContainText("secondLine");
-    await page.goto(`/projects/${project.id}/session?resource=${encodeURIComponent(resource)}`);
-    await page.getByRole("link", { name: "Draft", exact: true }).last().click();
-    await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Exact\s+workspace\s+draft\s+bytes/);
-    await expect(page).toHaveURL(
+    await expect(side.locator(".monaco-editor .view-lines:visible")).toContainText(/Workspace\s+README/);
+    // The link's own page URL restores the same document, and history returns to the conversation.
+    await page.goto(sourceHref!);
+    await expect(page.locator('[data-workbench-region="main"] .monaco-editor .view-lines')).toContainText("secondLine");
+    await page.goBack();
+    await expect(page.getByRole("link", { name: "Draft", exact: true }).last()).toBeVisible();
+    const draft = page.getByRole("link", { name: "Draft", exact: true }).last();
+    await expect(draft).toHaveAttribute(
+      "href",
       /document=.pstdio%2Fextension-storage%2Fpstdio.planner%2Ftickets%2FPS-105%2Fticket.md/,
     );
+    await draft.click();
+    await expect(side.locator(".monaco-editor .view-lines:visible")).toContainText(/Exact\s+workspace\s+draft\s+bytes/);
   } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
     rmSync(root, { recursive: true, force: true });
