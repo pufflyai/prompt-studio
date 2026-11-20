@@ -107,9 +107,11 @@ const openSavedWork = async (
     await page.getByTestId("renderer-card").first().click();
     await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).toBeVisible();
     await page.goto(new URL(routes.home, descriptor.origin).href);
+    // User-approved 2026-11-20 (#2241): Home's first open after an upgrade waits for the runtime to
+    // install the Workspaces tool that adopts Git Workspaces, which exceeded the 5 s default locally.
     await expect(
       page.frameLocator('iframe[title="Home"]:visible').getByText(fixture.name, { exact: true }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 30_000 });
     await page.goto(new URL(routes.conversation, descriptor.origin).href);
     await expect(page.getByText("Keep the change small.", { exact: false }).first()).toBeVisible();
     await page.screenshot({ path: join(evidence, "saved-conversation.png") });
