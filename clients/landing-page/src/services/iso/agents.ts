@@ -161,9 +161,13 @@ export const carry = async (agent: Agent, box: IsoBox, dest: Point, arc = 0) => 
   box.float = false;
   box.liftT = 22;
   setIcon(agent, PINCH);
+  let lost = false;
   const [x0, y0, z0] = [box.t.x, box.t.y, box.t.z];
   const z1 = dest.z ?? z0;
   await tween(dest.ms ?? 950, (k) => {
+    // The visitor can snatch the box out of the hand; the hand then stops where it is.
+    lost ||= box.held;
+    if (lost) return;
     box.t.x = x0 + (dest.x - x0) * k;
     box.t.y = y0 + (dest.y - y0) * k;
     box.t.z = z0 + (z1 - z0) * k + arc * 4 * k * (1 - k);
@@ -172,9 +176,10 @@ export const carry = async (agent: Agent, box: IsoBox, dest: Point, arc = 0) => 
     agent.z = box.t.z + box.liftT + box.t.h + 12;
   });
   setIcon(agent, OPEN);
+  box.float = floated;
+  if (lost) return false;
   box.liftT = box.restLift;
   box.carried = false;
-  box.float = floated;
   return true;
 };
 
@@ -185,6 +190,7 @@ export const toss = async (scene: IsoScene, agent: Agent, box: IsoBox, dest: Poi
   box.carried = true;
   box.liftT = 14;
   setIcon(agent, PINCH);
+  let lost = false;
   await wait(180);
   const [ax, ay] = [agent.x, agent.y];
   const dx = dest.x + box.t.w / 2 - ax;
@@ -192,6 +198,8 @@ export const toss = async (scene: IsoScene, agent: Agent, box: IsoBox, dest: Poi
   const length = Math.hypot(dx, dy) || 1;
   const [ux, uy] = [dx / length, dy / length];
   await tween(170, (k) => {
+    lost ||= box.held;
+    if (lost) return;
     agent.x = ax - ux * 10 * k;
     agent.y = ay - uy * 10 * k;
     box.t.x = agent.x - box.t.w / 2;
@@ -205,10 +213,13 @@ export const toss = async (scene: IsoScene, agent: Agent, box: IsoBox, dest: Poi
   const [x0, y0, z0] = [box.t.x, box.t.y, box.t.z];
   const z1 = dest.z ?? 0;
   await tween(dest.ms ?? 760, (k) => {
+    lost ||= box.held;
+    if (lost) return;
     box.t.x = x0 + (dest.x - x0) * k;
     box.t.y = y0 + (dest.y - y0) * k;
     box.t.z = z0 + (z1 - z0) * k + arc * 4 * k * (1 - k);
   });
+  if (lost) return false;
   box.carried = false;
   box.liftT = box.restLift;
   box.lift = box.restLift;
@@ -222,9 +233,12 @@ export const pat = async (scene: IsoScene, agent: Agent, box: IsoBox, change: (b
   const top = () => box.t.z + box.t.h;
   await moveAgent(agent, box.t.x + box.t.w / 2, box.t.y + box.t.d / 2, top() + 26, 380);
   await moveAgent(agent, agent.x, agent.y, top() + 7, 90);
-  change(box);
-  box.h = Math.max(1, box.h * 0.55);
-  puff(scene, agent.x, agent.y, top());
+  // A box pulled out from under the hand keeps its shape.
+  if (!box.held) {
+    change(box);
+    box.h = Math.max(1, box.h * 0.55);
+    puff(scene, agent.x, agent.y, top());
+  }
   await moveAgent(agent, agent.x, agent.y, top() + 26, 160);
   await wait(220);
 };

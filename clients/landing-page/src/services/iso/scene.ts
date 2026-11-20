@@ -271,7 +271,7 @@ export class IsoScene implements Origin {
   }
 
   private grab(source: IsoBox, event: PointerEvent) {
-    if (!source.drag || source.carried || this.held) return;
+    if (!source.drag || this.held) return;
     event.preventDefault();
     this.lastUser = performance.now();
     let box = source;
@@ -293,6 +293,8 @@ export class IsoScene implements Origin {
     const [wx, wy] = unproject(this, sx, sy, box.z + box.lift + box.h);
     box.grab = [box.x - wx, box.y - wy];
     box.held = true;
+    // Taking a box from an agent's hand: the agent's motion stops applying (see agents.ts).
+    box.carried = false;
     box.liftT = 26;
     this.held = box;
     this.setHand("🤏");
