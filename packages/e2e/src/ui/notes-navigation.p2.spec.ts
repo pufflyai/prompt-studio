@@ -11,7 +11,9 @@ test.setTimeout(120_000);
 
 // Notes open as single-resource pages: the breadcrumb names the open note and Main shows no tabs.
 const expectOpenNote = async (page: import("@playwright/test").Page, title: string) => {
-  await expect(page.getByRole("navigation", { name: "breadcrumb" }).getByText(title, { exact: true })).toBeVisible();
+  const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
+  await expect(breadcrumb.getByRole("link", { name: title, exact: true })).toBeVisible();
+  await expect(nativePublicTextEditor(page)).toBeVisible();
   await expect(page.locator('[data-workbench-panel-header="main"]').getByRole("tab")).toHaveCount(0);
 };
 
@@ -93,7 +95,7 @@ test("opens notes in the project Sidenav tree and follows the active note throug
     await executeNoteCommand(request, project.id, "delete", { noteId: second.id });
     await expect(secondRow).toHaveCount(0);
     // Deleting the open note returns to its Notes page, which selects no note and still offers a new one.
-    await expect(page).toHaveURL(/\/extensions\/pstdio\.notes\/notes$/);
+    await expect(page).toHaveURL(/\/extensions\/pstdio\.notes\/notes(?:\?.*)?$/);
     await expect(firstRow).toHaveAttribute("aria-selected", "false");
     await page
       .locator('[data-workbench-panel-header="main"]')
@@ -101,6 +103,7 @@ test("opens notes in the project Sidenav tree and follows the active note throug
       .click();
     await expect(page.getByRole("menuitem", { name: "New note", exact: true })).toBeVisible();
   } finally {
+    await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
     rmSync(repoRoot, { recursive: true, force: true });
   }
 });
@@ -151,7 +154,7 @@ test("keeps note titles independent of the body and renames them through the con
     await expect(page.getByRole("dialog", { name: "Command palette" })).toBeVisible();
     await page.keyboard.press("Escape");
 
-    // Critical: a retained note keeps its edit permission when its page is temporarily hidden.
+    // Critical: a note keeps its edit permission after leaving its page and opening it again.
     await sidebar.getByRole("option", { name: "Home", exact: true }).click();
     await row.click();
     await expect(editor).toHaveText(body);
@@ -197,6 +200,7 @@ test("keeps note titles independent of the body and renames them through the con
     expect(await reloadedEditor!.evaluate((node) => node.isConnected)).toBe(true);
     expect(documentReads).toEqual([]);
   } finally {
+    await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
     rmSync(repoRoot, { recursive: true, force: true });
   }
 });
@@ -248,6 +252,7 @@ test("keeps typing in the same editor when the first line names a new note", asy
   } finally {
     releaseResolution.resolve();
     await page.unrouteAll({ behavior: "wait" });
+    await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
     rmSync(repoRoot, { recursive: true, force: true });
   }
 });

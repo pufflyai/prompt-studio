@@ -1,4 +1,5 @@
 import { rmSync } from "node:fs";
+import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { createPlannerAttempt, createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
@@ -117,8 +118,13 @@ test("shows the same ticket and workspace actions on rows and open page headers"
 
     await workspaceRow.click();
     // A workspace page keeps its Files and Changes tabs, so its open tab carries the workspace actions.
-    const workspaceTab = page.locator('[data-workbench-panel-header="main"]').getByRole("tab", { selected: true });
-    await expect(workspaceTab).toBeVisible();
+    const workspaceTab = page
+      .locator('[data-workbench-panel-header="main"]')
+      .getByRole("tab", { name: "Files", exact: true });
+    await expect(workspaceTab).toHaveAttribute("aria-selected", "true");
+    await expect(page).toHaveURL(
+      (url) => defaultPageResourceCodec.fromUri(url.searchParams.get("resource") ?? "")?.id === attempt.workspace.id,
+    );
     await workspaceTab.click({ button: "right" });
     await expectMenuItems(page, ["Open terminal", "Rename workspace", "Delete workspace"]);
     await page.keyboard.press("Escape");

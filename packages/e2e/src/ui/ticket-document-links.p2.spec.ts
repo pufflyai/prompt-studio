@@ -1,5 +1,6 @@
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
 import { expect, test } from "../scripts/session-test";
@@ -108,7 +109,11 @@ test("saved ticket document links survive copy, reload, history and rename", asy
     await page.getByRole("link", { name: "Draft", exact: true }).last().click();
     await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Exact\s+unsaved\s+draft\s+bytes/);
     // Chat links preview beside the conversation, so it stays open for the next link.
-    await expect(page).toHaveURL(/\/session\?resource=/);
+    await expect(page).toHaveURL(
+      (url) =>
+        url.pathname === `/projects/${project.id}/session` &&
+        defaultPageResourceCodec.fromUri(url.searchParams.get("resource") ?? "")?.id === session.id,
+    );
     await page.getByRole("link", { name: "Saved", exact: true }).last().click();
     await expect(page.getByText("Saved body bytes", { exact: false }).first()).toBeVisible();
   } finally {
