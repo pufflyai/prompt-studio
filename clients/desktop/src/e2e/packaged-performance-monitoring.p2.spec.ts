@@ -13,6 +13,7 @@ import {
   homePage,
   launchProject,
   openHostPreview,
+  openPerformanceDetails,
   type PerformanceSnapshot,
   performanceDetails,
   performanceMeter,
@@ -33,7 +34,7 @@ test("keeps performance measurements live when switching and closing project tab
     const launched = await launchProject("First monitored project", { monitoring: true });
     app = launched.app;
     // Critical: the production bootstrap must instrument the workbench before React starts.
-    await performanceTrigger(app.page).click();
+    await openPerformanceDetails(app.page);
     const highlighting = performanceDetails(app.page).getByRole("checkbox", { name: "Highlight React renders" });
     await expect(highlighting).toBeEnabled();
     await expect(highlighting).not.toBeChecked();
@@ -42,8 +43,7 @@ test("keeps performance measurements live when switching and closing project tab
     await expect(app.page.locator("canvas[data-react-scan]")).toBeVisible();
     await performanceTrigger(app.page).click();
     await expect(app.page.locator("canvas[data-react-scan]")).toBeVisible();
-    await performanceTrigger(app.page).click();
-    // The reopened popover reads the overlay state before its switch accepts a click.
+    await openPerformanceDetails(app.page);
     await expect(highlighting).toBeChecked();
     await performanceDetails(app.page).getByText("Highlight React renders", { exact: true }).click();
     await expect(app.page.locator("canvas[data-react-scan]")).toBeHidden();
@@ -235,7 +235,7 @@ test("names the process that hosts an extension and ends its frames when paused"
     expect(fixtureProcess.pid).not.toBe(workbench?.pid);
 
     await expect(app.page.locator('iframe[title="Host page"]')).toHaveCount(1);
-    await performanceTrigger(app.page).click();
+    await openPerformanceDetails(app.page);
     // Each extension has its own row, named from its webview ids, even in a shared process.
     const row = performanceDetails(app.page).getByTestId("performance-cpu-row").filter({ hasText: "webview-host" });
     await expect(row).toBeVisible();
@@ -245,7 +245,7 @@ test("names the process that hosts an extension and ends its frames when paused"
     await performanceTrigger(app.page).click();
     await expect(detailsFrame).toBeHidden();
     expect(await loadedFrame!.evaluate((frame) => frame.isConnected)).toBe(true);
-    await performanceTrigger(app.page).click();
+    await openPerformanceDetails(app.page);
     await expect(row).toBeVisible();
     expect(await detailsFrame.evaluate((frame, original) => frame === original, loadedFrame)).toBe(true);
     const pause = row.getByRole("button", { name: "Pause webview-host", exact: true });
