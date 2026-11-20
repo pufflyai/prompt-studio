@@ -119,7 +119,6 @@ describe("extension catalog", () => {
       "workspaces",
       "base-themes",
       "skills",
-      "github",
       "pstdio-terminal",
     ]);
   });

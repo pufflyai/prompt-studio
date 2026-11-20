@@ -108,3 +108,5 @@ PSX image with isolated PostgreSQL and S3.
 Before stable hosts switch to PSX, repeat the UI and CLI upgrade checks against
 deployed PSX. Record the registry address, unchanged host version and changed
 extension version.
+
+GitHub (`extensions/github`) is an internal extension. It stays out of public discovery, default installs, bundled sources, and registry publication until it is ready for public use.

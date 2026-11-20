@@ -206,6 +206,25 @@ describe("project extension lifecycle", () => {
     expect(deps.extensionService.uninstallProjectExtension).not.toHaveBeenCalled();
   });
 
+  test.each([
+    "pstdio.worktree",
+    "pstdio.git-workspaces.workspace-type.git",
+  ])("keeps a disabled legacy Git provider installed while %s workspaces depend on it", async (providerId) => {
+    const { deps } = createDeps();
+    deps.extensionService.getProjectExtensionInstance.mockResolvedValue({
+      instance: extensionInstance(false),
+      installedSource: { ...installedSource, extension_id: "pstdio.git-workspaces" },
+    });
+    deps.workspaceService.listForProviderReconciliation.mockResolvedValue([
+      { id: "workspace-1", provider_id: providerId },
+    ]);
+    const lifecycle = createProjectExtensionLifecycle(deps as never);
+    await expect(
+      lifecycle.uninstall({ projectId: "project-1", instanceId: "instance-1", deleteUserData: true }),
+    ).rejects.toThrow("provider-backed workspace");
+    expect(deps.extensionService.uninstallProjectExtension).not.toHaveBeenCalled();
+  });
+
   test("keeps connection credentials when extension uninstall fails", async () => {
     const { deps } = createDeps();
     deps.extensionService.uninstallProjectExtension.mockRejectedValue(new Error("extension uninstall failed"));

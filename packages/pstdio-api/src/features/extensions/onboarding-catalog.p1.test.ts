@@ -28,7 +28,7 @@ test.each([
       }),
     }),
   );
-  const names = ["workspaces", "planner", "reports", "artifacts", "base-themes", "skills"];
+  const names = ["workspaces", "pstdio-terminal", "planner", "reports", "artifacts", "base-themes", "skills"];
   for (const name of [...names, "pstdio-skill-browser"]) writeExtension(join(root, "home/extensions", name), name);
   const handle = await createTestApp({ databasePath: ":memory:", storageRoot: join(root, "storage") });
   try {

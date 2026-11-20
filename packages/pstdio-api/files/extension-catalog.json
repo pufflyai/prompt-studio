@@ -310,8 +310,10 @@
         "path": "extensions/github",
         "ref": "{hostRelease}"
       },
-      "default": true,
-      "icon": "Github"
+      "default": false,
+      "icon": "Github",
+      "listed": false,
+      "bundleSource": false
     },
     {
       "installName": "pstdio-terminal",

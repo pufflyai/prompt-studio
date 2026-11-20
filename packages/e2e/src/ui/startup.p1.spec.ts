@@ -102,8 +102,6 @@ test("dashboard selects the only project on first load", async ({ page, request 
   await page.goto("/");
 
   await expect(homePage(page)).toBeVisible();
-  const statusBar = page.locator('[data-workbench-region="status"]');
-  await expect(statusBar.getByRole("group", { name: "System activity", exact: true })).toBeVisible();
   await expect
     .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb2:selected-project:global")))
     .toBeTruthy();

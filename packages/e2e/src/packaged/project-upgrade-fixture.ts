@@ -80,7 +80,15 @@ export const assertProjectToolsRetained = async (
 ) => {
   const current = new Map((await installedProjectTools(api, project)).map((tool) => [tool.id, tool]));
   for (const previous of before) {
-    const tool = current.get(previous.id);
+    let tool = current.get(previous.id);
+    if (!tool && canonicalExtensionId(previous.extensionId) === "pstdio.git-workspaces") {
+      tool = [...current.values()].find(
+        (candidate) => canonicalExtensionId(candidate.extensionId) === "pstdio.workspaces",
+      );
+      assert(tool, "Git Workspaces must migrate to Workspaces");
+      if (previous.enabled) assert(tool.enabled, "Migration disabled the Git workspace provider");
+      continue;
+    }
     assert(tool, `Upgrade lost extension instance ${previous.id}`);
     assert.equal(tool.enabled, previous.enabled, `Enablement changed for ${tool.id}`);
     if (previous.version && tool.version !== previous.version)

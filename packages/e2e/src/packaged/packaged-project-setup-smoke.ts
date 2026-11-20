@@ -22,7 +22,7 @@ const writePackagedChoiceSource = (root: string, name: string) => {
 };
 
 export const writePackagedChoiceSources = (root: string) => {
-  const names = ["harness-codex", "pstdio-planner", "pstdio-base-themes", "pstdio-skills"];
+  const names = ["harness-codex", "pstdio-planner", "pstdio-terminal", "pstdio-base-themes", "pstdio-skills"];
   for (const name of names) writePackagedChoiceSource(root, name);
   const client = writePackagedChoiceSource(root, "catalog-client");
   writeFileSync(
@@ -98,11 +98,13 @@ export const expectPackagedProjectChoices = async (
     {
       method: "POST",
       headers: { ...headers, "content-type": "application/json" },
-      body: JSON.stringify({ params: { names: ["harness-codex"] } }),
+      body: JSON.stringify({ params: { names: ["harness-codex", "pstdio-terminal"] } }),
     },
   );
   expect(harness.status).toBe(200);
   await waitForEnabled(projectId, "pstdio.harness-codex");
+  await waitForEnabled(projectId, "pstdio.pstdio-terminal");
+  expect(await enabled(peerId, "pstdio.pstdio-terminal")).toBe(false);
   expect(await enabled(peerId, "pstdio.harness-codex")).toBe(false);
   const empty = await fetch(
     `${baseUrl}/v1/projects/${peerId}/extensions/commands/pstdio.catalog-client.command.select/execute`,

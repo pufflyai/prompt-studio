@@ -9,7 +9,7 @@ import { apiLogger } from "../../lib/logger";
 import { ExtensionUpgradeUnavailableError } from "../../services/extension-upgrade-unavailable-error";
 import type { RouteDeps } from "../deps";
 import { provisionProjectWorkspaces } from "../workspaces/provision-coordinator";
-import { runtimeProviderId } from "../workspaces/workspace-provider-identity";
+import { legacyGitProviderId, runtimeProviderId, worktreeProviderId } from "../workspaces/workspace-provider-identity";
 import { reconcileProviderWorkspaces } from "../workspaces/workspace-provider-reconciliation";
 import { findWorkspaceProviderRecord } from "../workspaces/workspace-provider-runtime";
 import { adoptWorkspacesTool } from "./adopt-workspaces-tool";
@@ -42,9 +42,14 @@ const extensionProviderWorkspaces = async (deps: LifecycleDeps, projectId: strin
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
   return (await deps.workspaceService.listForProviderReconciliation(projectId)).filter((workspace) => {
     const provider = findWorkspaceProviderRecord(snapshot.runtime, workspace.provider_id);
-    return provider
-      ? provider.extensionId === extensionId
-      : runtimeProviderId(workspace.provider_id).startsWith(prefix);
+    if (provider) return provider.extensionId === extensionId;
+    // A disabled predecessor still owns its checkouts until an active successor takes over.
+    if (
+      extensionId === "pstdio.git-workspaces" &&
+      [worktreeProviderId, legacyGitProviderId].includes(workspace.provider_id)
+    )
+      return true;
+    return runtimeProviderId(workspace.provider_id).startsWith(prefix);
   });
 };
 

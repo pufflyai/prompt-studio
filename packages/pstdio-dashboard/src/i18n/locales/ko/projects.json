@@ -43,7 +43,6 @@
       "noDescription": "설명이 없습니다.",
       "scope": {
         "label": "범위",
-        "all": "모든 범위",
         "repo": "이 프로젝트",
         "global": "모든 프로젝트"
       },
@@ -174,7 +173,6 @@
       "enabledGroup": "활성화됨",
       "author": {
         "label": "작성자",
-        "all": "모든 작성자",
         "me": "나",
         "promptStudio": "Prompt Studio"
       },
@@ -182,8 +180,8 @@
         "extension": "확장 기능",
         "enabled": "활성화"
       },
-      "clearFilters": "필터 지우기",
-      "noMatches": "일치하는 확장 기능이 없습니다."
+      "noMatches": "검색과 일치하는 확장 기능이 없습니다.",
+      "clearSearch": "검색 지우기"
     }
   },
   "list": {

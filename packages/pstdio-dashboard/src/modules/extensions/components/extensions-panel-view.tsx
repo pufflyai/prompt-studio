@@ -13,13 +13,7 @@ import { PageContentLayout } from "@/shared/components/page-content-layout";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
 import { type ExtensionUpgradeBatch, marketplaceActionKey } from "./extension-actions";
-import {
-  defaultExtensionFilters,
-  type ExtensionFilters,
-  matchesExtensionAuthor,
-  matchesExtensionScope,
-  matchesExtensionSearch,
-} from "./extension-filters";
+import { defaultExtensionFilters, type ExtensionFilters, matchesExtensionSearch } from "./extension-filters";
 import { ExtensionFolderDropZone } from "./extension-folder-drop-zone";
 import { unavailableExtensionHarnesses } from "./extension-harness-availability";
 import { ExtensionListRow } from "./extension-list-row";
@@ -106,11 +100,9 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
   const [localFilters, setLocalFilters] = useState(defaultExtensionFilters);
   const filters = props.filters ?? localFilters;
   const onFiltersChange = props.onFiltersChange ?? setLocalFilters;
-  const clearFilters = () => onFiltersChange(defaultExtensionFilters);
+  const clearSearch = () => onFiltersChange(defaultExtensionFilters);
   const matches = (extension: ProjectExtensionInstance | MarketplaceExtension) =>
-    matchesExtensionSearch(extension, filters.search) &&
-    matchesExtensionAuthor(extension, filters.author) &&
-    matchesExtensionScope(extension, filters.scope);
+    matchesExtensionSearch(extension, filters.search);
 
   const diagnosticsByExtensionId = getDiagnosticsByExtensionId(extensions, diagnostics);
   const sortedExtensions = [...extensions].sort(compareDisplayName);
@@ -133,7 +125,6 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
             searchRef={props.searchRef}
             filters={filters}
             onFiltersChange={onFiltersChange}
-            extensions={[...extensions, ...availableMarketplace]}
             upgrade={
               (upgradable.length > 0 || batch) && (
                 <ExtensionUpgradeProgress
@@ -154,9 +145,9 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
                 ? t("projectSettings.extensionsPanel.empty")
                 : t("projectSettings.extensionsPanel.noMatches")}
             </Text>
-            {(filters.search || filters.author !== "all" || filters.scope !== "all") && (
-              <Button variant="outline" size="xs" onClick={clearFilters}>
-                {t("projectSettings.extensionsPanel.clearFilters")}
+            {filters.search && (
+              <Button variant="outline" size="xs" onClick={clearSearch}>
+                {t("projectSettings.extensionsPanel.clearSearch")}
               </Button>
             )}
           </Stack>
@@ -207,35 +198,31 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
             ])}
         </Stack>
 
-        {filters.scope === "all" && (
-          <>
-            <Text paddingX="lg" paddingTop="md" paddingBottom="2xs" textStyle="label/XS/medium" color="fg.subtle">
-              {t("projectSettings.extensionsPanel.marketplace.group", { count: availableMarketplace.length })}
-            </Text>
-            {availableMarketplace.length === 0 && (
-              <Text paddingX="lg" paddingY="md" textStyle="paragraph/S/regular" color="fg.muted">
-                {t("projectSettings.extensionsPanel.marketplace.allInstalled")}
-              </Text>
-            )}
-            {availableMarketplace.length > 0 && visibleMarketplace.length === 0 && (
-              <Text paddingX="lg" paddingY="md" textStyle="paragraph/S/regular" color="fg.muted">
-                {t("projectSettings.extensionsPanel.noMatches")}
-              </Text>
-            )}
-            {visibleMarketplace.map((extension) => (
-              <MarketplaceExtensionRow
-                key={extension.installName}
-                rowRef={(node) => props.rowRef?.(`marketplace:${extension.installName}`, node)}
-                extension={extension}
-                action={actionStates[marketplaceActionKey(extension.installName)]}
-                onDismissAction={(expected) => onDismissAction?.(marketplaceActionKey(extension.installName), expected)}
-                onRetryAction={() => onRetryAction?.(marketplaceActionKey(extension.installName))}
-                onInstall={() => onInstallMarketplace?.(extension)}
-                onOpen={() => onOpenMarketplace?.(extension)}
-              />
-            ))}
-          </>
+        <Text paddingX="lg" paddingTop="md" paddingBottom="2xs" textStyle="label/XS/medium" color="fg.subtle">
+          {t("projectSettings.extensionsPanel.marketplace.group", { count: availableMarketplace.length })}
+        </Text>
+        {availableMarketplace.length === 0 && (
+          <Text paddingX="lg" paddingY="md" textStyle="paragraph/S/regular" color="fg.muted">
+            {t("projectSettings.extensionsPanel.marketplace.allInstalled")}
+          </Text>
         )}
+        {availableMarketplace.length > 0 && visibleMarketplace.length === 0 && (
+          <Text paddingX="lg" paddingY="md" textStyle="paragraph/S/regular" color="fg.muted">
+            {t("projectSettings.extensionsPanel.noMatches")}
+          </Text>
+        )}
+        {visibleMarketplace.map((extension) => (
+          <MarketplaceExtensionRow
+            key={extension.installName}
+            rowRef={(node) => props.rowRef?.(`marketplace:${extension.installName}`, node)}
+            extension={extension}
+            action={actionStates[marketplaceActionKey(extension.installName)]}
+            onDismissAction={(expected) => onDismissAction?.(marketplaceActionKey(extension.installName), expected)}
+            onRetryAction={() => onRetryAction?.(marketplaceActionKey(extension.installName))}
+            onInstall={() => onInstallMarketplace?.(extension)}
+            onOpen={() => onOpenMarketplace?.(extension)}
+          />
+        ))}
 
         <Stack padding="lg" position="relative">
           <ExtensionActionFeedback
