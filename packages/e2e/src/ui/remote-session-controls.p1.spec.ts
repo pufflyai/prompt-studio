@@ -3,6 +3,7 @@ import {
   type RemoteSessionBrowserFixture,
   startRemoteSessionBrowserFixture,
 } from "../helpers/remote-session-browser-fixture";
+import { isSessionUrl } from "./helpers/resource-actions";
 
 let fixture: RemoteSessionBrowserFixture;
 let fixtureProcess: ReturnType<typeof startRemoteSessionBrowserFixture>;
@@ -145,13 +146,13 @@ test("remote workspaces open synced history; offline sessions stay readable and 
       fileRequests.push(request.url());
   });
   await main.getByRole("button", { name: "Open workspace", exact: true }).click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.workspaces\/history\?/);
+  // Workspace links preview beside their conversation; a remote workspace previews its synced history.
+  const side = page.locator('[data-workbench-panel="side"]');
   await expect(
-    page
-      .getByRole("region", { name: "Main", exact: true })
-      .getByRole("option")
-      .filter({ hasText: "Remote conversation" }),
-  ).toBeVisible();
+    page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: "Session history", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(side.getByRole("option").filter({ hasText: "Remote conversation" })).toBeVisible();
+  await expect(page).toHaveURL(isSessionUrl(fixture.projectId, fixture.sessionId));
   await expect(page.getByRole("tab", { name: "Changes", exact: true })).toHaveCount(0);
   expect(fileRequests).toEqual([]);
   const queuedResponse = await request.post(`${fixture.origin}/v1/sessions/${fixture.sessionId}/follow-up`, {
@@ -197,11 +198,13 @@ test("remote workspaces open synced history; offline sessions stay readable and 
     main.getByRole("button", { name: "Edit queued message: Readable offline queue", exact: true }),
   ).toHaveCount(0);
   await expect(main.getByRole("button", { name: "Open workspace", exact: true })).toHaveCount(0);
-  await expect(
-    page
-      .locator('[data-testid="content-editable"][contenteditable]:not([contenteditable="false"])')
-      .filter({ visible: true }),
-  ).toHaveCount(0);
+  // Drafts stay editable while the owner is offline; only sending waits for it to reconnect.
+  const offlineDraft = main
+    .locator('[data-testid="content-editable"][contenteditable="true"]')
+    .filter({ visible: true });
+  await offlineDraft.fill("Drafted while offline");
+  await expect(main.getByTestId("send-message-button").filter({ visible: true })).toBeDisabled();
+  await offlineDraft.fill("");
   await expect(main.getByRole("button", { name: "Stop Response", exact: true })).toHaveCount(0);
   await page.screenshot({ path: test.info().outputPath("offline-readable.png") });
   // Preserve the reconnect/presence race at the actual server-side owner boundary.

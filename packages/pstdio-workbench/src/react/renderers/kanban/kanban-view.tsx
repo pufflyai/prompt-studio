@@ -17,6 +17,7 @@ import type {
   WorkbenchPanelInstance,
 } from "../../../core";
 import { rendererReadKey } from "../../../core";
+import { bindKanbanRendererContribution } from "../../../core/registries/renderers/kanban-renderer-binding";
 import { rendererResourceDependency } from "../../../core/registries/renderers/renderer-refresh-key";
 import { reportUserActionError, runUserAction } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
@@ -128,7 +129,11 @@ const createRowWithRefreshHold = (
 export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const { workbench, placement, Renderer = KanbanRenderer } = props;
   const pageParams = usePageParams(workbench, placement);
-  const contribution = props.contribution as ReactRegisteredKanbanRendererContribution;
+  // Queries, writes and metadata belong to this placement's resource, not to the page routed in Main.
+  const contribution = bindKanbanRendererContribution(props.contribution as ReactRegisteredKanbanRendererContribution, {
+    instanceId: placement.instanceId,
+    resource: placement.resource,
+  });
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
   const attributes = useKanbanAttributes(contribution.attributes);
   const storageKey = resolveKanbanRendererStorageKey(contribution.id, placement, contribution.storageScope);
@@ -187,7 +192,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     refreshKey: rendererQueryKey([settings, filter, sorts, pageParams, ...(paged ? [pages.refreshKey] : [])]),
 
     load: async (signal) => {
-      const state = { settings, filter, sorts, pageParams };
+      const state = { settings, filter, sorts, pageParams, resource: placement.resource };
       const loaded = await loadKanbanRows(contribution, state, pages, signal);
       // Rows equal to the last loaded board keep their objects, so a reload that changed nothing,
       // such as returning to the page, renders no cards again.
