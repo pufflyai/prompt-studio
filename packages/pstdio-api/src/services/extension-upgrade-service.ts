@@ -95,6 +95,15 @@ const repositoryKey = (url: string) =>
     .replace(/\.git$/, "")
     .toLowerCase();
 
+// A host folder a newer release merged into another tool has no source at that release.
+// Its successor's adoption replaces it, so it never offers an upgrade.
+const isRetiredHostSource = (catalog: ExtensionCatalog, parsed: ReturnType<typeof parseExtensionSourceRef>) => {
+  const successor = parsed && retiredHostFolders.get(parsed.path);
+  if (!successor) return false;
+  const entry = selectExtensionCatalogEntry(catalog, successor);
+  return Boolean(entry && repositoryKey(entry.origin.url) === repositoryKey(parsed.url));
+};
+
 const upgradeRef = (entry: ExtensionCatalogEntry | undefined, release: ExtensionRelease | null) =>
   entry && entry.origin.ref !== "{hostRelease}" ? entry.origin.ref : release?.ref;
 
@@ -155,19 +164,11 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
       return !(error instanceof GitUnavailableError);
     }
   };
-  // A host folder a newer release merged into another tool has no source at that release.
-  // Its successor's adoption replaces it, so it never offers an upgrade.
-  const isRetiredHostSource = async (parsed: ReturnType<typeof parseExtensionSourceRef>) => {
-    const successor = parsed && retiredHostFolders.get(parsed.path);
-    if (!successor) return false;
-    const entry = selectExtensionCatalogEntry(await catalog, successor);
-    return Boolean(entry && repositoryKey(entry.origin.url) === repositoryKey(parsed.url));
-  };
   const canUpgrade = async (source: UpgradeSource) => {
     if (registry.matches(source)) return registry.canUpgrade(source);
     const entry = await catalogEntry(source.install_name);
     const parsed = parseExtensionSourceRef(source.source_ref);
-    if (await isRetiredHostSource(parsed)) return false;
+    if (isRetiredHostSource(await catalog, parsed)) return false;
     if (deps.release?.source === "registry") return canMoveToRegistry(entry, parsed, source.version);
     const origin = parsed ?? entry?.origin;
     const releaseRef = upgradeRef(entry, deps.release);
