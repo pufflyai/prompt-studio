@@ -1,5 +1,6 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { createInvocationScope } from "pstdio-extensions";
+import { apiLogger } from "../../lib/logger";
 import { createProcessApi, PROCESS_OUTPUT_LIMIT_BYTES } from "./extension-process-api";
 
 const silentLogger = { info: () => {}, warn: () => {}, error: () => {} };
@@ -33,6 +34,22 @@ const survivors = async (marker: string) => {
 };
 
 describe("createProcessApi", () => {
+  test("logs the child exit code and redacted stderr for failed extension processes", async () => {
+    const log = spyOn(apiLogger, "error").mockImplementation(() => {});
+    try {
+      const result = await createProcessApi({ extensionId: "example.check" }).run({
+        command: [process.execPath, "-e", "console.error('login failed', process.env.GH_TOKEN); process.exit(4)"],
+        env: { GH_TOKEN: "fixture-token" },
+      });
+      expect(result.exitCode).toBe(4);
+      expect(log).toHaveBeenCalledWith(
+        expect.objectContaining({ extensionId: "example.check", exitCode: 4, stderr: "login failed [Redacted]" }),
+        expect.any(String),
+      );
+    } finally {
+      log.mockRestore();
+    }
+  });
   for (const method of ["run", "spawnDetached"] as const) {
     test(`does not ${method} after cleanup queued between target lookup and spawn`, async () => {
       const scope = createInvocationScope({ logger: silentLogger });
