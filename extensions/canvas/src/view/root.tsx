@@ -7,7 +7,7 @@ import {
   type PropsStore,
   type ResourceRef,
 } from "@pstdio/sdk/extensions";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { buildMount } from "../build-mount";
 import type { CanvasDefinition } from "../canvas-model";
 import type { commands } from "../commands";
@@ -31,13 +31,18 @@ interface RootProps {
   propsStore: PropsStore<CanvasProps>;
 }
 interface ConnectedCanvasProps {
+  visible: boolean;
   canvas: CanvasDefinition;
   host: GuestHost;
 }
 // The runtime owns positions and selection; a new build of the same frames only refreshes them.
 const ConnectedCanvas = (props: ConnectedCanvasProps) => {
-  const { canvas, host } = props;
+  const { canvas, host, visible } = props;
   const [runtime, setRuntime] = useState<CanvasRuntime>();
+  useLayoutEffect(() => {
+    runtime?.startup.setPaused(!visible);
+    if (!visible) runtime?.flush();
+  }, [runtime, visible]);
   const [error, setError] = useState("");
   const connection = useRef<ReturnType<typeof createLayoutSession> | undefined>(undefined);
   const latest = useRef(canvas);
@@ -82,7 +87,7 @@ const ConnectedCanvas = (props: ConnectedCanvasProps) => {
       <Box flex="1" minH="0" minW="0">
         {runtime ? (
           <FrameHostContext.Provider value={host}>
-            <CanvasStage canvas={canvas} runtime={runtime} />
+            <CanvasStage canvas={canvas} runtime={runtime} visible={visible} />
           </FrameHostContext.Provider>
         ) : (
           <Text p="sm" textStyle="paragraph/S/regular">
@@ -96,36 +101,75 @@ const ConnectedCanvas = (props: ConnectedCanvasProps) => {
 
 type CanvasRead = { status: BuildStatus | "ready"; canvas?: CanvasDefinition; message?: string };
 
-const useCanvasBuild = (host: GuestHost, id: string | undefined, selected: boolean) => {
+const useCanvasBuild = (host: GuestHost, id: string | undefined) => {
   const [read, setRead] = useState<CanvasRead>();
   useEffect(() => {
     const client = createWebviewClient<typeof commands>(host);
-    let active = true;
-    // Build changes can start reads that overlap; only the latest read may update the view.
     let latest = 0;
     const refresh = () => {
       const request = ++latest;
-      const current = () => active && request === latest;
       void client.commands["canvas.read"]({ canvas: id })
-        .then(async (next) => {
-          if (!current()) return;
-          if (next.status === "ready" && next.canvas && next.canvas.id !== id) {
-            if (selected) await client.navigation.open(canvasTarget(next.canvas.id, next.canvas.name));
-            else if (id) setRead({ status: "removed" });
-            return;
-          }
-          setRead(next as CanvasRead);
+        .then((next) => {
+          if (request === latest) setRead(next as CanvasRead);
         })
-        .catch((error) => current() && setRead({ status: "error", message: String(error) }));
+        .catch((error) => {
+          if (request === latest) setRead({ status: "error", message: String(error) });
+        });
     };
     refresh();
     const unsubscribe = client.events.subscribe(artifactChanged(buildMount), refresh);
     return () => {
-      active = false;
+      latest++;
       unsubscribe();
     };
-  }, [host, id, selected]);
+  }, [host, id]);
   return read;
+};
+
+interface CanvasPaneProps {
+  host: GuestHost;
+  id?: string;
+  visible: boolean;
+  selected: boolean;
+}
+
+const CanvasPane = ({ host, id, visible, selected }: CanvasPaneProps) => {
+  const read = useCanvasBuild(host, id);
+  const canvas = read?.canvas;
+  const fallback = canvas && canvas.id !== id ? canvas : undefined;
+  const [navigationError, setNavigationError] = useState("");
+  useEffect(() => {
+    if (!visible || !selected || !fallback) return;
+    let active = true;
+    const client = createWebviewClient<typeof commands>(host);
+    setNavigationError("");
+    void client.navigation.open(canvasTarget(fallback.id, fallback.name)).catch((error) => {
+      if (active) setNavigationError(String(error));
+    });
+    return () => {
+      active = false;
+    };
+  }, [fallback, host, selected, visible]);
+  if (fallback && navigationError) return <BuildNotice status="error" message={navigationError} />;
+  if (fallback) return <BuildNotice status={selected ? "loading" : "removed"} />;
+  if (!read) return <BuildNotice status="loading" />;
+  if (read.status !== "ready") return <BuildNotice status={read.status} message={read.message} />;
+  if (!canvas) return <BuildNotice status="removed" />;
+  if (canvas.error) return <BuildNotice status="failed" message={canvas.error} name={canvas.name} />;
+  const frames = canvas.items.map((item) => `${item.id}:${item.width}x${item.height}`).join("\n");
+  return <ConnectedCanvas key={frames} canvas={canvas} host={host} visible={visible} />;
+};
+
+const RecentCanvases = ({ host, id, selected }: { host: GuestHost; id: string; selected: boolean }) => {
+  const [recent, setRecent] = useState([id]);
+  if (recent.at(-1) !== id) setRecent([recent[recent.length - 1], id]);
+
+  // Keep DOM order stable on a return visit. Moving an iframe can restart its document.
+  return [...recent].sort().map((source) => (
+    <Box key={source} display={source === id ? "block" : "none"} h="full" minH="0">
+      <CanvasPane host={host} id={source} visible={source === id} selected={source === id && selected} />
+    </Box>
+  ));
 };
 
 export const CanvasRoot = (props: RootProps) => {
@@ -136,26 +180,26 @@ export const CanvasRoot = (props: RootProps) => {
     const frame = requestAnimationFrame(() => setTheme(readCanvasTheme(current.themePreference ?? "pstdio-light")));
     return () => cancelAnimationFrame(frame);
   }, [current.themePreference]);
-  const id = current.resource?.id;
   const location = current.pageLocation;
+  const onDesign = location?.page.extensionId === "pstdio.canvas" && location.page.id === canvasPage.id;
+  const id = current.resource?.id ?? (onDesign ? location.resource?.id : undefined);
   const active =
     location?.page.extensionId === "pstdio.canvas" &&
     ((location.page.id === homePage.id && !id) || (location.page.id === canvasPage.id && location.resource?.id === id));
-  const read = useCanvasBuild(host, id, active);
-  let body = <BuildNotice status="loading" />;
-  if (read?.status === "ready" && read.canvas) {
-    // Frames that appear, disappear or change size start a new runtime, which owns their layout.
-    const frames = read.canvas.items.map((item) => `${item.id}:${item.width}x${item.height}`).join("\n");
-    body = read.canvas.error ? (
-      <BuildNotice status="failed" message={read.canvas.error} name={read.canvas.name} />
-    ) : (
-      <ConnectedCanvas key={`${read.canvas.id}\n${frames}`} canvas={read.canvas} host={host} />
-    );
-  } else if (read?.status === "ready") body = <BuildNotice status="removed" />;
-  else if (read) body = <BuildNotice status={read.status} message={read.message} />;
   return (
     <CanvasThemeContext value={theme}>
-      <CanvasThemeProvider>{body}</CanvasThemeProvider>
+      <CanvasThemeProvider>
+        {id ? (
+          <RecentCanvases
+            key={current.resource?.projectId ?? location?.resource?.projectId}
+            host={host}
+            id={id}
+            selected={active}
+          />
+        ) : (
+          <CanvasPane host={host} visible selected={active} />
+        )}
+      </CanvasThemeProvider>
     </CanvasThemeContext>
   );
 };

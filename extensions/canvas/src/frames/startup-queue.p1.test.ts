@@ -8,10 +8,10 @@ test("selected and visible frames start first while startup concurrency stays bo
   jobs[5].prioritize(0);
   jobs[4].prioritize(1);
   await Bun.sleep(5);
-  expect(starts).toEqual([5, 4, 0, 1]);
+  expect(starts).toEqual([5]);
   jobs[5].finish();
   await Bun.sleep(5);
-  expect(starts).toEqual([5, 4, 0, 1, 2]);
+  expect(starts).toEqual([5, 4]);
   queue.dispose();
 });
 
@@ -24,9 +24,25 @@ test("cancelled frames do not start and releasing a slot is idempotent", async (
   jobs[0].finish();
   jobs[0].finish();
   await Bun.sleep(5);
-  expect(starts).toEqual([0, 1, 2, 3, 5]);
+  expect(starts).toEqual([0, 1]);
   queue.dispose();
   jobs[1].finish();
   await Bun.sleep(5);
   expect(starts).not.toContain(6);
+});
+
+test("a hidden design holds pending imports until it becomes visible again", async () => {
+  const queue = createFrameStartupQueue();
+  const starts: number[] = [];
+  const first = queue.enqueue(() => starts.push(1), 1);
+  queue.enqueue(() => starts.push(2), 1);
+  await Bun.sleep(5);
+  queue.setPaused(true);
+  first.finish();
+  await Bun.sleep(5);
+  expect(starts).toEqual([1]);
+  queue.setPaused(false);
+  await Bun.sleep(5);
+  expect(starts).toEqual([1, 2]);
+  queue.dispose();
 });

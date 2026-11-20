@@ -48,7 +48,7 @@ The title's part before the last `/` is the navigation group. A `.canvas/preview
 
 ## Work with a design
 
-Open **UI Canvas** in the project navigation to return to the last opened canvas, or the first available canvas if none was opened or the previous one was removed. If no build is available, setup guidance appears. Canvases are grouped by their titles. Selecting one opens an unpinned preview tab; the next unpinned selection replaces it. Pin a tab to keep it. A canvas whose build failed shows its error; the others still work.
+Open **UI Canvas** in the project navigation to return to the last opened canvas, or the first available canvas if none was opened or the previous one was removed. If no build is available, setup guidance appears. Canvases are grouped by their titles. Selecting a design opens it in the shared UI Canvas viewer. The viewer keeps the current and previous designs live, including their temporary inputs and selection. Opening a third design releases the least recently used one. New previews reuse cached package assets and start their imports one at a time. Each design has its own link and saved layout. A canvas whose build failed shows its error; the others still work.
 
 Select a frame before using its contents: the first click selects it without activating a control. Clicking another frame or empty canvas space changes or clears selection; Escape clears it when the canvas has focus. Changing selection keeps mounted frames and their input.
 
@@ -115,3 +115,5 @@ settings belong to the timeline menu. Existing source-code animations advertise 
 markers; the timeline displays an animation lane without inventing property keys.
 The reusable UI timeline also supports editable property tracks for tools that own
 keyframe data.
+
+The viewer reads both original canvas builds and format 2 builds. Format 2 packages shared project fonts once. The viewer assembles self-contained stylesheets for each sandbox from the cached font bytes. Update the viewer before updating the project’s canvas builder.
