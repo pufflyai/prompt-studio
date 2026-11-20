@@ -4,6 +4,7 @@ import { kanbanBuiltInViews, type WorkbenchExtensionKanbanRendererRecord } from 
 import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
 import type { Disposable, KanbanRendererCreateSubmission, ResourceRef } from "../../core";
+import type { KanbanRendererPlacementBinding } from "../../core/registries/renderers/kanban-renderer-registry";
 import { acceptRendererPage } from "../../core/registries/renderers/renderer-page";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { WorkbenchIcon } from "../../react";
@@ -174,8 +175,9 @@ export const registerWorkbenchExtensionKanbanRenderers = (
     record: WorkbenchExtensionKanbanRendererRecord,
     commandId: string,
     params: Record<string, unknown>,
+    resource?: ResourceRef,
   ) =>
-    executeKanbanRendererCommand(context, record, commandId, params).then((result) => {
+    executeKanbanRendererCommand(context, record, commandId, params, resource).then((result) => {
       afterMutation(record);
       return result;
     });
@@ -188,38 +190,81 @@ export const registerWorkbenchExtensionKanbanRenderers = (
         title: "Extension display is not available",
         message: `Attribute "${attributeId}" in renderer "${record.id}" uses unknown display kind "${kind}".`,
       });
-    const attributes = createMutableAttributeSource(
-      record,
-      record.attributes,
-      localize,
-      decorate,
-      reportUnknownDisplay,
-      (target) => {
-        const mapped = toWorkbenchNavigationTarget(target, {
-          extensionId: record.extensionId,
-          projectId: context.projectId,
-        });
-        void runUserAction(context.workbench, "Open group action", () =>
-          context.workbench.navigation.openTarget(mapped, { projectId: context.projectId }),
-        );
-      },
-    );
-    let wireAttributes = record.attributes;
+    // Each placement reads and writes its own resource and keeps its own query metadata.
+    const createBody = (resource?: ResourceRef) => {
+      const attributes = createMutableAttributeSource(
+        record,
+        record.attributes,
+        localize,
+        decorate,
+        reportUnknownDisplay,
+        (target) => {
+          const mapped = toWorkbenchNavigationTarget(target, {
+            extensionId: record.extensionId,
+            projectId: context.projectId,
+          });
+          void runUserAction(context.workbench, "Open group action", () =>
+            context.workbench.navigation.openTarget(mapped, { projectId: context.projectId }),
+          );
+        },
+      );
+      let wireAttributes = record.attributes;
+      let columnConfigs: ColumnConfigRecord | undefined;
+      const query = createKanbanRendererQuery({
+        context,
+        record,
+        resource,
+        rowResource: (row) => resolveRowResource(record, row),
+        onMetadata: (value) => {
+          wireAttributes = value.attributes ?? wireAttributes;
+          attributes.set(wireAttributes);
+          columnConfigs = value.boardColumnConfigs;
+        },
+      });
+      const mutate = (
+        target: WorkbenchExtensionKanbanRendererRecord,
+        commandId: string,
+        params: Record<string, unknown>,
+      ) => runMutation(target, commandId, params, resource);
+      const onRowActivate = toRowClick(context, record, adapter, resolveRowResource, query.original);
+      return {
+        attributes: attributes.source,
+        getBoardColumnConfig: (groupKey: string) => toWorkbenchBoardColumnConfig(columnConfigs?.[groupKey], localize),
+        onRowActivate,
+        executeQuery: async (state: import("../../core").KanbanRendererQueryState, signal: AbortSignal) =>
+          (await query.read(state, signal)).rows,
+        executePage:
+          record.queryMode === "paged"
+            ? async (
+                state: import("../../core").KanbanRendererQueryState & {
+                  page: import("@pstdio/sdk/extensions").CollectionPageRequest;
+                },
+                signal: AbortSignal,
+              ) => acceptRendererPage(await query.read(state, signal), state.page)
+            : undefined,
+        onAttributeChange: record.attributeChangeHandlerId
+          ? (rowId: string, attributeId: string, value: unknown) =>
+              mutate(record, record.attributeChangeHandlerId!, { rowId, attributeId, value }).then(() => undefined)
+          : undefined,
+        onMove: record.moveHandlerId
+          ? (move: import("@pstdio/sdk/extensions").KanbanRendererMove) =>
+              mutate(record, record.moveHandlerId!, { ...move }).then(() => undefined)
+          : undefined,
+        onCreateRow: toCreateRowHandler(
+          record,
+          adapter,
+          mutate,
+          record.rowActivationHandlerId ? onRowActivate : undefined,
+        ),
+        onColumnAction: record.columnActionHandlerId
+          ? async (columnId: string, actionId: string) => {
+              await mutate(record, record.columnActionHandlerId!, { columnId, actionId });
+            }
+          : undefined,
+      };
+    };
+    const body = createBody();
     const builtIns = kanbanBuiltInViews(record);
-    let columnConfigs: ColumnConfigRecord | undefined;
-    const rowResource = (row: KanbanRendererRow) => resolveRowResource(record, row);
-    const query = createKanbanRendererQuery({
-      context,
-      record,
-      rowResource,
-      onMetadata: (value) => {
-        wireAttributes = value.attributes ?? wireAttributes;
-        attributes.set(wireAttributes);
-        columnConfigs = value.boardColumnConfigs;
-      },
-    });
-    const toActivatedRow = query.original;
-    const onRowActivate = toRowClick(context, record, adapter, resolveRowResource, toActivatedRow);
 
     disposables.push(...registerRowActionCommands(context, record, localize));
     disposables.push(
@@ -240,7 +285,6 @@ export const registerWorkbenchExtensionKanbanRenderers = (
               label: localize(action.label, action.id),
             })),
           storageScope: context.projectId,
-          attributes: attributes.source,
           defaultSettings: builtIns.settings,
           defaultFilter: record.defaultFilter,
           defaultSorts: record.defaultSorts,
@@ -252,41 +296,8 @@ export const registerWorkbenchExtensionKanbanRenderers = (
           hideToolbar: record.hideToolbar,
           createCommandId: record.createRow?.commandId,
           createRow: toCreateRowConfig(record, localize),
-          getBoardColumnConfig: (groupKey) => toWorkbenchBoardColumnConfig(columnConfigs?.[groupKey], localize),
-          onRowActivate,
-          executeQuery: async (state: import("../../core").KanbanRendererQueryState, signal: AbortSignal) =>
-            (await query.read(state, signal)).rows,
-          executePage:
-            record.queryMode === "paged"
-              ? async (
-                  state: import("../../core").KanbanRendererQueryState & {
-                    page: import("@pstdio/sdk/extensions").CollectionPageRequest;
-                  },
-                  signal: AbortSignal,
-                ) => acceptRendererPage(await query.read(state, signal), state.page)
-              : undefined,
-          onAttributeChange: record.attributeChangeHandlerId
-            ? (rowId, attributeId, value) =>
-                runMutation(record, record.attributeChangeHandlerId!, {
-                  rowId,
-                  attributeId,
-                  value,
-                }).then(() => undefined)
-            : undefined,
-          onMove: record.moveHandlerId
-            ? (move) => runMutation(record, record.moveHandlerId!, { ...move }).then(() => undefined)
-            : undefined,
-          onCreateRow: toCreateRowHandler(
-            record,
-            adapter,
-            runMutation,
-            record.rowActivationHandlerId ? onRowActivate : undefined,
-          ),
-          onColumnAction: record.columnActionHandlerId
-            ? async (columnId, actionId) => {
-                await runMutation(record, record.columnActionHandlerId!, { columnId, actionId });
-              }
-            : undefined,
+          ...body,
+          forPlacement: (binding: KanbanRendererPlacementBinding) => createBody(binding.resource),
           getRowContextMenuActions: toRowContextMenuActions(
             context,
             record,

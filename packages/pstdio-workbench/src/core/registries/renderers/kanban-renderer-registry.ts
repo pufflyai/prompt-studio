@@ -36,11 +36,19 @@ export interface KanbanRendererQueryState {
   sorts: ViewSort[];
 }
 
+/** The placement a renderer serves. Its reads and writes target this resource rather than Main's. */
+export interface KanbanRendererPlacementBinding {
+  instanceId: string;
+  resource?: ResourceRef;
+}
+
 export interface KanbanRendererContribution<
   TRow extends KanbanRendererRow = KanbanRendererRow,
   TNode = unknown,
   TIcon = unknown,
 > {
+  /** Binds this renderer to one placement, so its queries, writes and metadata stay with that placement. */
+  forPlacement?(binding: KanbanRendererPlacementBinding): Partial<KanbanRendererContribution<TRow, TNode, TIcon>>;
   /** Captured host identity; never infer a hidden view's project from current selection. */
   queryEvents?: readonly string[];
   queryScope?: Partial<import("@pstdio/sdk/extensions").QueryScope>;

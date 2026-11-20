@@ -17,6 +17,7 @@ import type {
   WorkbenchPanelInstance,
 } from "../../../core";
 import { rendererReadKey } from "../../../core";
+import { bindKanbanRendererContribution } from "../../../core/registries/renderers/kanban-renderer-binding";
 import { rendererResourceDependency } from "../../../core/registries/renderers/renderer-refresh-key";
 import { reportUserActionError, runUserAction } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
@@ -128,7 +129,11 @@ const createRowWithRefreshHold = (
 export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   const { workbench, placement, Renderer = KanbanRenderer } = props;
   const pageParams = usePageParams(workbench, placement);
-  const contribution = props.contribution as ReactRegisteredKanbanRendererContribution;
+  // Queries, writes and metadata belong to this placement's resource, not to the page routed in Main.
+  const contribution = bindKanbanRendererContribution(props.contribution as ReactRegisteredKanbanRendererContribution, {
+    instanceId: placement.instanceId,
+    resource: placement.resource,
+  });
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
   const attributes = useKanbanAttributes(contribution.attributes);
   const storageKey = resolveKanbanRendererStorageKey(contribution.id, placement, contribution.storageScope);

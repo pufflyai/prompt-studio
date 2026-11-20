@@ -16,8 +16,10 @@ export const createKanbanRendererQuery = (input: {
   record: WorkbenchExtensionKanbanRendererRecord;
   rowResource: (row: KanbanRendererRow) => ResourceRef | undefined;
   onMetadata: (result: QueryResult) => void;
+  /** The placement's resource. Without one, the query follows Main's resource. */
+  resource?: ResourceRef;
 }) => {
-  const { context, record, rowResource, onMetadata } = input;
+  const { context, record, rowResource, onMetadata, resource } = input;
   const originalRows = new WeakMap<KanbanRendererRow, KanbanRendererRow>();
   let latestQueryId = 0;
   let rowCache = new Map<string, { signature: string; row: KanbanRendererRow }>();
@@ -35,7 +37,7 @@ export const createKanbanRendererQuery = (input: {
           sorts: state.sorts,
           ...(state.page && { page: state.page }),
         },
-        state.resource,
+        state.resource ?? resource,
         signal,
         state.pageParams,
       );
