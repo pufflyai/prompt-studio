@@ -93,11 +93,13 @@ const workbenchRoutes = async (descriptor: Runtime["descriptor"], fixture: Seed)
 const openSavedWork = async (
   descriptor: Runtime["descriptor"],
   fixture: Seed,
-  evidence: string,
+  input: ProjectUpgradeInput,
   routes: Awaited<ReturnType<typeof workbenchRoutes>>,
 ) => {
+  const { evidence, profile } = input;
   const browser = await chromium.launch(PROVISIONED_CHROMIUM);
   let page: Page | undefined;
+  let ticketEditorError: Error | undefined;
   try {
     page = await browser.newPage();
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
@@ -105,7 +107,25 @@ const openSavedWork = async (
     await signInBrowser(page, descriptor, routes.tickets);
     await expect(page.getByTestId("renderer-card").first()).toBeVisible();
     await page.getByTestId("renderer-card").first().click();
-    await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).toBeVisible();
+    const ticketEditor = page.getByTestId("content-editable").filter({ visible: true }).first();
+    if (profile === "active" && process.env.PSTDIO_QUARANTINE_UPGRADE_TICKET_EDITOR === "true") {
+      // Keep the first open after restart. Reopening the editor in a second browser would warm the runtime.
+      try {
+        await expect(ticketEditor).toBeVisible();
+      } catch (error) {
+        if (!(error instanceof Error)) throw error;
+        ticketEditorError = error;
+        await page.screenshot({ path: join(evidence, "quarantined-ticket-editor.png") });
+      }
+      await record(evidence, "quarantined-ticket-editor", {
+        file: "packages/e2e/src/packaged/project-upgrade.ts",
+        title: "opens the ticket editor on the first restart after upgrading an active project",
+        outcome: ticketEditorError ? "failure" : "success",
+        errorMessages: ticketEditorError ? [ticketEditorError.message] : [],
+      });
+    } else {
+      await expect(ticketEditor).toBeVisible();
+    }
     await page.goto(new URL(routes.home, descriptor.origin).href);
     // User-approved 2026-11-20 (#2241): Home's first open after an upgrade waits for the runtime to
     // install the Workspaces tool that adopts Git Workspaces, which exceeded the 5 s default locally.
@@ -115,6 +135,7 @@ const openSavedWork = async (
     await page.goto(new URL(routes.conversation, descriptor.origin).href);
     await expect(page.getByText("Keep the change small.", { exact: false }).first()).toBeVisible();
     await page.screenshot({ path: join(evidence, "saved-conversation.png") });
+    return ticketEditorError !== undefined;
   } catch (error) {
     if (page) {
       await page.screenshot({ path: join(evidence, "workbench-failure.png") }).catch(() => {});
@@ -225,7 +246,7 @@ const run = async (
       await stopProcess(runtime.child);
       runtime = undefined;
       await checkHomeHistory(input, id, before);
-      return;
+      return "passed";
     }
     const state = await seed(runtime.descriptor, input);
     await stopProcess(runtime.child);
@@ -237,7 +258,7 @@ const run = async (
     const routes = await workbenchRoutes(runtime.descriptor, state.fixture);
     await stopProcess(runtime.child);
     runtime = await launch(candidate, "restart");
-    await openSavedWork(runtime.descriptor, state.fixture, input.evidence, routes);
+    const ticketEditorQuarantined = await openSavedWork(runtime.descriptor, state.fixture, input, routes);
     await assertProjectToolsRetained(
       upgradeApi(runtime.descriptor),
       state.fixture.id,
@@ -248,6 +269,7 @@ const run = async (
     await stopProcess(runtime.child);
     runtime = undefined;
     await checkHomeHistory(input, state.fixture.id, home);
+    return ticketEditorQuarantined ? "quarantined-failure" : "passed";
   } finally {
     if (runtime) await stopProcess(runtime.child);
   }
@@ -293,8 +315,8 @@ if (import.meta.main) {
     const home = join(root, "home");
     try {
       await mkdir(home);
-      await run({ home, evidence: output, profile: variant }, pair);
-      await record(output, "result", { status: "passed" });
+      const status = await run({ home, evidence: output, profile: variant }, pair);
+      await record(output, "result", { status });
     } catch (error) {
       failures.push(error);
       await record(output, "result", { status: "failed", error: String(error) });

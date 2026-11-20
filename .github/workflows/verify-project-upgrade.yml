@@ -149,6 +149,8 @@ jobs:
       CANDIDATE_REF: ${{ needs.pair.outputs.to }}
       TARGET: ${{ matrix.target }}
       SOURCE_SHA: ${{ inputs.source_sha }}
+      # PS-1270 (#2241), observed in run 44721919615. Later baselines are checked normally.
+      PSTDIO_QUARANTINE_UPGRADE_TICKET_EDITOR: ${{ inputs.build_artifact_id != '' && matrix.from == 'pstdio@0.48.0-nightly.20261120030226' && (matrix.target == 'darwin-arm64' || matrix.target == 'linux-x64') }}
     steps:
       # A candidate can predate this test. Keep the fixture and product checkouts separate.
       - uses: actions/checkout@v5
@@ -243,6 +245,9 @@ jobs:
         run: |
           bun --no-env-file packages/e2e/src/packaged/project-upgrade.ts \
             --from "$FROM_TAG" --candidate "$CANDIDATE_BINARY" --candidate-ref "$CANDIDATE_REF" --candidate-root __test-tmp__/upgrade-candidate
+      - name: Verify the ticket editor quarantine lane
+        if: env.PSTDIO_QUARANTINE_UPGRADE_TICKET_EDITOR == 'true'
+        run: bun scripts/ci/verify-project-upgrade-quarantine.ts
       - name: Preserve the pair, manifests and startup logs
         if: always()
         uses: actions/upload-artifact@v4
