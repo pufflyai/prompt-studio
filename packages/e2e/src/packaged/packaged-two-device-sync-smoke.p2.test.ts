@@ -167,6 +167,10 @@ const retireDeviceHome = async (child: Parameters<typeof stopProcess>[0], home: 
 // Two real hosts, synchronization and browser preparation share this whole-case allowance.
 const TWO_DEVICE_TEST_TIMEOUT = 180_000;
 
+// The picker's second device keeps its own log with the run's evidence: another test reuses the "second" home name.
+const pickerSecondLog = (root: string) =>
+  join(import.meta.dirname, "../../test-results/packaged-runtime", `picker-second-${basename(root)}.jsonl`);
+
 setupPackagedSmokeTests();
 test(
   "a new device opens its cloud project from the picker, prepares its folder, and restores shared files",
@@ -182,12 +186,7 @@ test(
     try {
       const source = await writeSharedNotesExtension(root);
       const env = deviceEnvironments(source, cert);
-      // Its own log, kept with the run's evidence: another test reuses the "second" home name.
-      const secondLog = join(
-        import.meta.dirname,
-        "../../test-results/packaged-runtime",
-        `picker-second-${basename(root)}.jsonl`,
-      );
+      const secondLog = pickerSecondLog(root);
       Object.assign(env.second, { PSTDIO_LOG_PATH: secondLog });
       const started = await startPickerDevices(root, env, prepareRepository(root), async (first, repository) => {
         phase("first device and checkout ready");
