@@ -15,11 +15,11 @@ Prompt Studio 0.48 adds rearrangeable toolbars, HTML exports for artifacts, a br
 
 Drag toolbar buttons into the order you use them. Prompt Studio remembers the order, and toolbars adapt when docked along a different edge.
 
-![Moving the Brush tool up the toolbar in a demo image editor](../../../../../documentation/images/prompt-studio-0-48-toolbar-light.gif)
+![Moving the Brush tool up the toolbar in this image editor built on Prompt Studio](../../../../../documentation/images/prompt-studio-0-48-toolbar-light.gif)
 
-![Moving the Brush tool up the toolbar in a demo image editor](../../../../../documentation/images/prompt-studio-0-48-toolbar-dark.gif)
+![Moving the Brush tool up the toolbar in this image editor built on Prompt Studio](../../../../../documentation/images/prompt-studio-0-48-toolbar-dark.gif)
 
-Reorder the tools in a demo image editor.
+Reorder the tools in this image editor built on Prompt Studio.
 
 You can also reorder buttons with the keyboard using **Alt + Arrow Up** or **Alt + Arrow Down**. The status bar’s compact widgets can be dragged into place, too.
 
@@ -37,7 +37,7 @@ Open the downloaded file in a browser or send it to someone who needs the result
 
 ## Browse your agents’ skills
 
-The new **Skill Browser** shows the instructions available to agents in your project. Skills are grouped by the extension that provides them, with project skills in their own group.
+The new **Skill Browser** shows the instructions available to agents in your project.
 
 ![Skill Browser showing the publish-artifact instructions, skill information, and supporting files](../../../../../documentation/images/prompt-studio-0-48-skills-light.svg)
 

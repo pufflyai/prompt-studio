@@ -1,8 +1,8 @@
 import { Badge, Box, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { OpenAiLogo } from "@phosphor-icons/react";
-import { SquareTerminal } from "lucide-react";
 import { SITE_LINKS } from "../../content/landing-content";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
+import { CopilotLogo, OpenCodeLogo, PiLogo } from "../icons/agent-logos";
 import { AnthropicLogo } from "../icons/anthropic-logo";
 import { DashedTag } from "./dashed-tag";
 import { DownloadPicker } from "./download-picker";
@@ -48,9 +48,16 @@ export const DownloadPanel = (props: { headingLevel: "h1" | "h2" }) => {
           />
           <DashedTag
             href={SITE_LINKS.harnessOpenCode}
-            icon={<Icon as={SquareTerminal} boxSize="icon-xs" />}
+            icon={<OpenCodeLogo size={14} />}
             label="opencode"
             tone="opencode"
+          />
+          <DashedTag href={SITE_LINKS.harnessPi} icon={<PiLogo size={14} />} label="pi" tone="pi" />
+          <DashedTag
+            href={SITE_LINKS.harnessCopilot}
+            icon={<CopilotLogo size={14} />}
+            label="github copilot"
+            tone="copilot"
           />
         </HStack>
       </Stack>

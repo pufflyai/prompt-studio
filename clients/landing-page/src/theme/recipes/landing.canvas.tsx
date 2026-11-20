@@ -13,7 +13,8 @@ export default meta;
 type Story = CanvasFrame<typeof meta>;
 export const Desktop: Story = {
   id: "theme-landing-pages--desktop",
-  description: "The download copy and editor stay vertically centered in the main area on wide desktops.",
+  description:
+    "The download copy and editor stay vertically centered on wide desktops. Agent badges show Claude Code, Codex, OpenCode, Pi and GitHub Copilot with their own symbols.",
 };
 export const CompactDesktop: Story = {
   id: "theme-landing-pages--compact-desktop",
@@ -33,6 +34,7 @@ export const SingleColumn: Story = {
 };
 export const Mobile: Story = {
   id: "theme-landing-pages--mobile",
+  description: "All five agent badges wrap within the narrow download panel and link to their documentation.",
   decorators: [
     (Story) => (
       <Box width="sm" maxWidth="full">

@@ -5,7 +5,7 @@ interface DashedTagProps {
   icon: ReactNode;
   label: string;
   href?: string;
-  tone?: "anthropic" | "openai" | "opencode";
+  tone?: "anthropic" | "openai" | "opencode" | "pi" | "copilot";
   invertedOnHover?: boolean;
 }
 
@@ -16,6 +16,8 @@ export const DashedTag = (props: DashedTagProps) => {
     anthropic: "orange",
     openai: "green",
     opencode: "blue",
+    pi: "orange",
+    copilot: "purple",
   }[tone ?? "openai"];
 
   const content = (
