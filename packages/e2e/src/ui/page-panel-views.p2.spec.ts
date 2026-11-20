@@ -45,15 +45,24 @@ panelTest(
       const sideReader = side.frameLocator('iframe[title="Letter viewer"]:visible');
       await sideReader.getByRole("button", { name: "Switch to B", exact: true }).click();
       await expect(sideReader.getByText("Viewing B", { exact: true })).toBeVisible();
-      await sideReader.getByRole("button", { name: "Switch to A", exact: true }).click();
-      await expect(sideReader.getByText("Viewing B", { exact: true })).toBeVisible();
       await expect(page).toHaveURL(mainUrl);
       await expect(mainReader.getByText("Viewing A", { exact: true })).toBeVisible();
+      // A resource opens in one panel: switching to the one in Main moves it into the requesting viewer.
+      await sideReader.getByRole("button", { name: "Switch to A", exact: true }).click();
+      await expect(sideReader.getByText("Viewing A", { exact: true })).toBeVisible();
+      await expect(
+        page.getByRole("navigation", { name: "breadcrumb" }).getByText("Home", { exact: true }),
+      ).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`/projects/${id}/extensions/pstdio\\.home/home$`));
+      await expect(main.locator('iframe[title="Letter viewer"]:visible')).toHaveCount(0);
       await openTool(page, "secondary", "Letter browser");
       const browser = panel(page, "secondary").frameLocator('iframe[title="Letter browser"]:visible');
-      await browser.getByRole("button", { name: "Open B in Main", exact: true }).click();
+      // Opening it in Main from a browser moves it back instead of opening a second copy.
+      await browser.getByRole("button", { name: "Open A in Main", exact: true }).click();
+      await expect(mainReader.getByText("Viewing A", { exact: true })).toBeVisible();
       await expect(page).toHaveURL(mainUrl);
-      await expect(side.getByRole("tab", { name: "Letter B", exact: true })).toHaveAttribute("aria-selected", "true");
+      await expect(side.getByRole("tab", { name: "Letter A", exact: true })).toHaveCount(0);
+      await openTool(page, "side", "New letter viewer");
       await sideReader.getByRole("button", { name: "Save letter", exact: true }).click();
       await expect(sideReader.getByText(/^Viewing saved-/)).toBeVisible();
       await expect(page).toHaveURL(mainUrl);
