@@ -5,7 +5,6 @@ import { SITE_LINKS } from "../../content/landing-content";
 import { useDesktopDownloads } from "../../hooks/use-desktop-downloads";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
 import { DESKTOP_RELEASES_URL } from "../../services/desktop-releases";
-import { downloadDescription } from "../../services/release-assets";
 import { platformIcon } from "../icons/os-logo";
 
 export const DownloadPicker = () => {
@@ -15,7 +14,7 @@ export const DownloadPicker = () => {
   let description = "Finding a desktop build for your platform.";
   if (release) description = "The desktop app is not available on this platform yet.";
   if (selected && release) {
-    description = `${selected.architecture} · ${downloadDescription(selected)} · v${release.version} · ${Math.round(selected.size / 1024 / 1024)} MB`;
+    description = `v${release.version} · ${selected.architecture} · ${Math.round(selected.size / 1024 / 1024)} MB`;
   }
   if (failed) description = "Desktop downloads could not be loaded.";
   const buttonLabel = selected ? `Download for ${selected.platform}` : "Use via CLI";

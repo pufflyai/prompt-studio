@@ -159,7 +159,8 @@ export const landingIsoRecipe = defineRecipe({
     position: "relative",
     width: "full",
     userSelect: "none",
-    touchAction: "none",
+    // Page scrolling keeps working over the scene; only things you can grab capture touch.
+    touchAction: "pan-y",
     "& .iso-stage": { position: "absolute", top: 0, transformOrigin: "0 0", cursor: "none" },
     "& .iso-layer": { position: "absolute", inset: 0, zIndex: 1 },
     "& .iso-ui": { pointerEvents: "none", zIndex: 2 },
@@ -184,7 +185,7 @@ export const landingIsoRecipe = defineRecipe({
       boxShadow: "none",
       background: "radial-gradient(circle, rgba(0,0,0,.5), transparent 70%)",
     },
-    "& .iso-box": { position: "absolute", left: 0, top: 0, transition: "opacity 0.4s" },
+    "& .iso-box": { position: "absolute", left: 0, top: 0, transition: "opacity 0.4s", touchAction: "none" },
     "& .iso-box.iso-fade, & .iso-box.iso-hidden, & .iso-plate.iso-fade": { opacity: 0 },
     "& .iso-pop": { animation: "iso-fade-in 0.45s ease-out" },
     "& .iso-island .iso-face:last-of-type": { boxShadow: `inset 0 0 0 1px ${greekStrong}`, borderRadius: "2px" },
@@ -218,7 +219,13 @@ export const landingIsoRecipe = defineRecipe({
     },
     "& .iso-user": { opacity: 0, zIndex: 5 },
     "& .iso-user.iso-on": { opacity: 1 },
-    "& .iso-agent": { pointerEvents: "auto", cursor: "none", zIndex: 4, transition: "opacity 0.25s" },
+    "& .iso-agent": {
+      pointerEvents: "auto",
+      cursor: "none",
+      zIndex: 4,
+      transition: "opacity 0.25s",
+      touchAction: "none",
+    },
     "& .iso-agent.iso-coding": { opacity: 0, pointerEvents: "none" },
     "& .iso-ring": {
       position: "absolute",

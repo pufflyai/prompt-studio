@@ -162,10 +162,10 @@ area fills the space beside its preview.
 Shader canvases and formula plots have bounded heights on the example pages.
 Each tab is a link to a prerendered page:
 
-- `/examples/coding-agent-dashboard/`
+- `/examples/ticket-board/`
+- `/examples/image-editor/`
+- `/examples/canvas-editor/`
 - `/examples/icon-set-editor/`
-- `/examples/shader-editor/`
-- `/examples/financial-formulas/`
 
 The selected example comes from the URL. Reloading, opening a link in another tab,
 and browser history preserve that selection. Automatic changes replace the current

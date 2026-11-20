@@ -1,6 +1,6 @@
 import { addAgent, agentFive, carry, job, moveAgent, pat, raise, toss } from "../agents";
 import { clock, kindColor, kpi, lines, live, note, slab } from "../greek";
-import { clamp, wait } from "../motion";
+import { clamp } from "../motion";
 import type { IsoBox, IsoScene } from "../scene";
 
 export const TOGETHER_WORLD = { W: 420, D: 320, top: 80, bottom: 28 };
@@ -85,11 +85,11 @@ export const setupTogetherScene = (scene: IsoScene) => {
   });
 
   scene.run(async () => {
-    await wait(1000);
+    await scene.wait(1000);
     for (;;) {
       await scene.awake();
       if (scene.userBusy(PAUSE_AFTER_USER_MS)) {
-        await wait(500);
+        await scene.wait(500);
         continue;
       }
       if (!copy) {
@@ -103,14 +103,14 @@ export const setupTogetherScene = (scene: IsoScene) => {
         await job(codex, async () => {
           if (await carry(codex, schedule, CORNER, 40)) placeClock();
         });
-        await wait(400);
+        await scene.wait(400);
         await agentFive(scene, codex, claude);
       } else {
         await job(claude, async () => {
-          await wait(1200);
+          await scene.wait(1200);
           await pat(scene, claude, notes);
           await pat(scene, claude, notes);
-          await wait(1600);
+          await scene.wait(1600);
         });
         if (scene.userBusy(PAUSE_AFTER_USER_MS)) continue;
         await job(claude, async () => {
@@ -123,7 +123,7 @@ export const setupTogetherScene = (scene: IsoScene) => {
         scheduled = false;
         notes.top.querySelector(".g-note")!.classList.remove("g-filled");
       }
-      await wait(1100);
+      await scene.wait(1100);
     }
   });
 };

@@ -1,6 +1,6 @@
 import { addAgent, agentFive, carry, code, job, moveAgent, raise } from "../agents";
 import { file, type ToolKind, tool, workbench } from "../greek";
-import { pick, shuffle, wait } from "../motion";
+import { pick, shuffle } from "../motion";
 import type { Agent, IsoBox, IsoScene } from "../scene";
 
 export const WHY_WORLD = { W: 420, D: 360, top: 90, bottom: 28 };
@@ -138,6 +138,11 @@ export const setupWhyScene = (scene: IsoScene) => {
       );
       const index = freeSlot();
       if (!island || index < 0) return;
+      // Leave the files alone while the visitor is carrying one.
+      if (scene.userBusy(3000)) {
+        await scene.wait(300);
+        continue;
+      }
       island.claimed = true;
       slots[index].reserved = true;
       const moved = await job(agent, () => carry(agent, island, { x: slots[index].x, y: slots[index].y, z: 10 }, 30));
@@ -153,27 +158,27 @@ export const setupWhyScene = (scene: IsoScene) => {
       islands = [];
       const queue = shuffle(FILES);
       const spots = shuffle(SPOTS);
-      await Promise.all([write(agents[0], queue, spots), wait(350).then(() => write(agents[1], queue, spots))]);
-      await wait(2400);
+      await Promise.all([write(agents[0], queue, spots), scene.wait(350).then(() => write(agents[1], queue, spots))]);
+      await scene.wait(2400);
       open = true;
       plate.t.h = 10;
       plate.el.classList.remove("iso-hidden");
-      await wait(700);
+      await scene.wait(700);
       while (islands.some((island) => !island.placed)) {
-        await Promise.all([gather(agents[0]), wait(450).then(() => gather(agents[1]))]);
-        await wait(300);
+        await Promise.all([gather(agents[0]), scene.wait(450).then(() => gather(agents[1]))]);
+        await scene.wait(300);
       }
-      await wait(500);
+      await scene.wait(500);
       await agentFive(scene, agents[0], agents[1]);
-      await wait(3000);
+      await scene.wait(3000);
       open = false;
       for (const island of islands) island.el.classList.add("iso-fade");
       plate.t.h = 0;
       plate.el.classList.add("iso-hidden");
-      await wait(900);
+      await scene.wait(900);
       for (const island of islands) scene.remove(island);
       for (const slot of slots) slot.island = null;
-      await wait(500);
+      await scene.wait(500);
     }
   });
 };

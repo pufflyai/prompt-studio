@@ -1,4 +1,4 @@
-import { clamp } from "./motion";
+import { clamp, wait } from "./motion";
 import { COS, type Origin, paintOrder, project, SIN, topMatrix, unproject } from "./projection";
 import { renderAgent, renderBox } from "./render";
 import { type Agent, type BoxSpec, DISPOSED, type DropTarget, div, type IsoBox, shade, type World } from "./types";
@@ -62,8 +62,8 @@ export class IsoScene implements Origin {
     this.fit();
     const resize = new ResizeObserver(() => this.fit());
     resize.observe(host);
-    const seen = new IntersectionObserver(([entry]) => {
-      this.visible = entry.isIntersecting;
+    const seen = new IntersectionObserver((entries) => {
+      this.visible = entries[entries.length - 1].isIntersecting;
       if (this.visible) this.loop();
     });
     seen.observe(host);
@@ -86,6 +86,7 @@ export class IsoScene implements Origin {
 
   dispose() {
     this.disposed = true;
+    this.held = null;
     for (const timer of this.timers) clearInterval(timer);
     for (const cleanup of this.cleanups) cleanup();
     this.host.replaceChildren();
@@ -101,6 +102,12 @@ export class IsoScene implements Origin {
       };
       check();
     });
+  }
+
+  /** Like `wait`, but ends the calling loop once the scene is gone. */
+  async wait(ms: number) {
+    await wait(ms);
+    if (this.disposed) throw DISPOSED;
   }
 
   run(loop: () => Promise<unknown>) {
@@ -200,9 +207,9 @@ export class IsoScene implements Origin {
         this.running = false;
         return;
       }
+      // Reduced motion pauses the scene loops (see `awake`) but keeps drawing, so dragging still works.
       this.tick(time);
-      if (this.still) this.running = false;
-      else requestAnimationFrame(frame);
+      requestAnimationFrame(frame);
     };
     requestAnimationFrame(frame);
   }

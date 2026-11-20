@@ -47,7 +47,7 @@ export const WhatIsPromptStudio: Story = {
 };
 export const Examples: Story = {
   id: "theme-landing-pages--examples",
-  args: { initialPath: "/examples/coding-agent-dashboard/" },
+  args: { initialPath: "/examples/ticket-board/" },
 };
 export const Features: Story = {
   id: "theme-landing-pages--features",

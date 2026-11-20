@@ -81,8 +81,11 @@ export const ToolRecording = (props: ToolRecordingProps) => {
       fit.style.height = `${RECORDING_SIZE.height * scale}px`;
     });
     resize.observe(fit);
-    const seen = new IntersectionObserver(([entry]) => {
-      director.visible = entry.isIntersecting;
+    // Reduced motion keeps the first frame of each tool; the tabs still switch tools.
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const seen = new IntersectionObserver((entries) => {
+      director.visible = entries[entries.length - 1].isIntersecting && !still;
+      fit.parentElement!.style.setProperty("--rec-play", director.visible ? "running" : "paused");
     });
     seen.observe(fit);
     for (const id of ORDER) RECORDINGS[id].reset(director);
@@ -97,13 +100,12 @@ export const ToolRecording = (props: ToolRecordingProps) => {
   const layout = RECORDING_LAYOUT[mode];
   return (
     <Box css={styles.root}>
-      <Box css={styles.tabs} role="tablist" aria-label="Example tools">
+      <Box css={styles.tabs} role="group" aria-label="Example tools">
         {TOOL_EXAMPLES.map((example) => (
           <chakra.button
             key={example.id}
             css={styles.tab}
-            role="tab"
-            aria-selected={example.id === mode}
+            aria-pressed={example.id === mode}
             data-active={example.id === mode}
             onClick={() => select(example.id)}
           >

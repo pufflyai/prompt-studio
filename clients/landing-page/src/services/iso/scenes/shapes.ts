@@ -1,6 +1,6 @@
 import { addAgent, agentSays, carry, job, pat, raise, say, toss } from "../agents";
 import { bars, cardFront, kindColor, stripes, wire, workbench } from "../greek";
-import { clamp, pick, wait } from "../motion";
+import { clamp, pick } from "../motion";
 import type { Agent, IsoBox, IsoScene } from "../scene";
 import {
   type Area,
@@ -103,7 +103,7 @@ export const setupShapesScene = (scene: IsoScene) => {
       say(scene.hand.querySelector(".iso-bubble")!, PROMPTS[token.shape], 1800);
       agentSays(claude, "on it", 1100);
     } else agentSays(by, PROMPTS[token.shape], 1500);
-    await wait(900);
+    await scene.wait(900);
     changing = false;
     if (by === "visitor") raise(opencode);
   };
@@ -188,24 +188,30 @@ export const setupShapesScene = (scene: IsoScene) => {
   const tinker = (agent: Agent) => JOBS[current](agent);
 
   scene.run(async () => {
-    await wait(1200);
+    await scene.wait(1200);
     for (;;) {
       await scene.awake();
       if (scene.userBusy(PAUSE_AFTER_USER_MS) || changing) {
-        await wait(400);
+        await scene.wait(400);
         continue;
       }
       const [first, second] = Math.random() < 0.5 ? [claude, opencode] : [opencode, claude];
-      await Promise.all([job(first, () => tinker(first)), wait(600).then(() => job(second, () => tinker(second)))]);
-      await wait(500);
-      await Promise.all([job(second, () => tinker(second)), wait(500).then(() => job(first, () => tinker(first)))]);
-      await wait(700);
+      await Promise.all([
+        job(first, () => tinker(first)),
+        scene.wait(600).then(() => job(second, () => tinker(second))),
+      ]);
+      await scene.wait(500);
+      await Promise.all([
+        job(second, () => tinker(second)),
+        scene.wait(500).then(() => job(first, () => tinker(first))),
+      ]);
+      await scene.wait(700);
       if (scene.userBusy(PAUSE_AFTER_USER_MS)) continue;
       const next = tokens.find((token) => token.shape === ORDER[(ORDER.indexOf(current) + 1) % ORDER.length])!;
       await job(first, async () => {
         if (await carry(first, next, socket(next), 40)) await apply(next, first);
       });
-      await wait(700);
+      await scene.wait(700);
     }
   });
 };

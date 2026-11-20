@@ -46,8 +46,8 @@ export const NarrowChapters: Story = {
   ],
 };
 export const NarrowExamples: Story = {
+  ...NarrowChapters,
   id: "theme-landing-chapters--narrow-examples",
   description: "The recording window scales like a video to fit a phone-width panel.",
-  ...NarrowChapters,
   render: () => <Examples />,
 };

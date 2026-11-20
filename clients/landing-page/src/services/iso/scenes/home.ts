@@ -1,6 +1,6 @@
 import { addAgent, agentFive, agentSays, carry, code, job, moveAgent, pat, puff, toss } from "../agents";
 import { ISO_SURFACE, kindColor, type ToolKind, tool, workbench } from "../greek";
-import { pick, wait } from "../motion";
+import { pick } from "../motion";
 import type { Agent, IsoBox, IsoScene } from "../scene";
 
 export const HOME_WORLD = { W: 330, D: 300, top: 70, bottom: 24 };
@@ -150,7 +150,7 @@ export const setupHomeScene = (scene: IsoScene) => {
     piece.z = 30;
     pieces.push(piece);
     puff(scene, x + 13, y + 13, 0);
-    await wait(250);
+    await scene.wait(250);
     const dest = { x: slot.x + slot.w / 2 - 13, y: slot.y + slot.d / 2 - 13, z: 10 };
     if (Math.random() < 0.5) await toss(scene, agent, piece, dest, 80);
     else await carry(agent, piece, dest, 24);
@@ -161,11 +161,11 @@ export const setupHomeScene = (scene: IsoScene) => {
   };
 
   const work = async (agent: Agent) => {
-    await wait(300 + Math.random() * 900);
+    await scene.wait(300 + Math.random() * 900);
     for (;;) {
       await scene.awake();
       if (agent === chaser || !building) {
-        await wait(250);
+        await scene.wait(250);
         continue;
       }
       const stolen = pieces.find((piece) => piece.state === "stolen" && !piece.held);
@@ -179,7 +179,7 @@ export const setupHomeScene = (scene: IsoScene) => {
       }
       const free = slots.findIndex((slot) => !slot.piece && !slot.reserved);
       if (free < 0) {
-        await wait(300);
+        await scene.wait(300);
         continue;
       }
       slots[free].reserved = true;
@@ -191,13 +191,13 @@ export const setupHomeScene = (scene: IsoScene) => {
   const restart = async () => {
     for (;;) {
       await scene.awake();
-      await wait(400);
+      await scene.wait(400);
       if (!building || scene.held || !slots.every((slot) => slot.piece?.state === "tool")) continue;
       building = false;
-      await wait(2000);
-      while (agents.some((agent) => agent.task)) await wait(150);
+      await scene.wait(2000);
+      while (agents.some((agent) => agent.task)) await scene.wait(150);
       await agentFive(scene, agents[0], agents[1]);
-      await wait(500);
+      await scene.wait(500);
       const agent = pick(agents);
       const plus = { x: PLATE.x + 30 + tabs * 25 + 4, y: PLATE.y + 5 };
       await job(agent, async () => {
@@ -212,7 +212,7 @@ export const setupHomeScene = (scene: IsoScene) => {
         }
         await moveAgent(agent, plus.x, plus.y, 34, 160);
       });
-      await wait(450);
+      await scene.wait(450);
       for (const piece of pieces.splice(0)) scene.remove(piece);
       for (const slot of slots) Object.assign(slot, { piece: null, reserved: false });
       building = true;

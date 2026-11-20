@@ -45,10 +45,13 @@ export const landingRecordingSlotRecipe = defineSlotRecipe({
       height: "full",
       width: "0",
       bg: "fg",
+      // Paused while the recording is off screen so the bar stays in step with it.
+      animationPlayState: "var(--rec-play, running)",
       "&[data-active=true]": {
         animationName: "rec-progress",
         animationTimingFunction: "linear",
         animationFillMode: "forwards",
+        _motionReduce: { animationName: "none", width: "full" },
       },
     },
     fit: { position: "relative", width: "full" },

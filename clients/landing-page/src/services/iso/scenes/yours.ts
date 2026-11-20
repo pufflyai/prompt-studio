@@ -1,6 +1,6 @@
 import { addAgent, agentSays, carry, job, puff } from "../agents";
 import { screen, workbench } from "../greek";
-import { pick, wait } from "../motion";
+import { pick } from "../motion";
 import type { IsoScene } from "../scene";
 
 export const YOURS_WORLD = { W: 300, D: 240, top: 180, bottom: 30 };
@@ -29,7 +29,7 @@ export const setupYoursScene = (scene: IsoScene) => {
     agentSays(agent, "it stays here", 1400);
   };
   scene.run(async () => {
-    await wait(2000);
+    await scene.wait(2000);
     for (;;) {
       await scene.awake();
       if (!scene.userBusy(4000)) {
@@ -45,7 +45,7 @@ export const setupYoursScene = (scene: IsoScene) => {
           }
         });
       }
-      await wait(4500 + Math.random() * 2000);
+      await scene.wait(4500 + Math.random() * 2000);
     }
   });
 };
