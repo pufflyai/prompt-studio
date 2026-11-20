@@ -84,6 +84,11 @@ export const agentSays = (agent: Agent, text: string, ms?: number) =>
 
 export const puff = (scene: IsoScene, x: number, y: number, z: number) => {
   const [sx, sy] = scene.P(x, y, z);
+  dust(scene, sx, sy);
+};
+
+/** A small dust puff at a point on the stage. */
+export const dust = (scene: IsoScene, sx: number, sy: number) => {
   const fx = div(
     "iso-fx",
     Array.from({ length: 5 }, (_, i) => {

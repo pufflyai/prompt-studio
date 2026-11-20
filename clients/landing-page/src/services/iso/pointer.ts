@@ -1,3 +1,4 @@
+import { dust } from "./agents";
 import { clamp } from "./motion";
 import { unproject } from "./projection";
 import { supportHeight } from "./render";
@@ -91,6 +92,22 @@ export const bindPointer = (scene: IsoScene) => {
     box.t.y = clamp(wy + box.grab[1], -30, scene.world.D - box.t.d + 30);
   });
   stage.addEventListener("pointerleave", () => hand.classList.remove("iso-on"));
+  // Clicking empty space (not a box you can use, not another hand) makes the visitor's hand pat the floor.
+  stage.addEventListener("pointerdown", (event) => {
+    if (scene.press || scene.held) return;
+    const [sx, sy] = stagePoint(scene, event);
+    hand
+      .querySelector(".iso-icon")!
+      .animate(
+        [
+          { transform: "translate(-50%,-55%)" },
+          { transform: "translate(-50%,-35%) scale(.9)", offset: 0.4 },
+          { transform: "translate(-50%,-55%)" },
+        ],
+        { duration: 260, easing: "ease-out" },
+      );
+    setTimeout(() => dust(scene, sx, sy + 6), 100);
+  });
   // Buttons drawn inside a box's placeholder UI, such as a workbench's "+" tab.
   stage.addEventListener(
     "pointerdown",
