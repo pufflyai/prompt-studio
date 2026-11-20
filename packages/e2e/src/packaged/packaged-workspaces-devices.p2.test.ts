@@ -153,9 +153,8 @@ const connectDevice = async (
 
 const openForeignWorkspaceHistory = async (page: Page, workspaceId: string, progress: (phase: string) => void) => {
   progress("open foreign workspace history");
-  const collectionUrl = page.url();
   await page.locator(`[role="option"][id='${JSON.stringify(["resource", workspaceId])}']`).click();
-  await expectUI(page).toHaveURL(collectionUrl);
+  await expectUI(page).toHaveURL(/\/history\?/);
   progress("open the private session from history");
   await page
     .getByRole("region", { name: "Main", exact: true })
@@ -165,10 +164,7 @@ const openForeignWorkspaceHistory = async (page: Page, workspaceId: string, prog
   await expectUI(
     page.getByRole("region", { name: "Main", exact: true }).getByText("Private workspace history", { exact: true }),
   ).toBeVisible();
-  await expectUI(page).toHaveURL(collectionUrl);
-  await expectUI(
-    page.locator('[data-workbench-panel-header="main"]').getByRole("tab", { selected: true }),
-  ).toContainText("Device A history");
+  await expectUI(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Device A history");
 };
 
 test(

@@ -37,9 +37,7 @@ test("the palette creates and opens an empty note immediately", async () => {
   expect(await listNotes(mount)).toMatchObject([{ ...note, folderId: undefined }]);
   expect(await readNote(mount, note.id)).toBe("");
   expect(opened).toEqual([noteTarget(note.id, note.title, ctx, true)]);
-  expect(opened).toMatchObject([
-    { targets: [{ kind: "page" }, { kind: "panel", resource: { id: note.id, metadata: { writable: true } } }] },
-  ]);
+  expect(opened).toMatchObject([{ kind: "page", resource: { id: note.id, metadata: { writable: true } } }]);
 });
 
 for (const files of ["read", "write"] as const) {

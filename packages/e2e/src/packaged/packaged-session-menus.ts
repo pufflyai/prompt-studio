@@ -137,7 +137,7 @@ export const verifyPackagedSessionMenus = async (
   await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
   await expect(page.getByRole("menu")).toHaveCount(0);
   await verifyPageSessionTab(page, createdTab);
-  await verifySharedPageTab(page, createdTab, leaveWorkspace, reopenWorkspace);
+  await verifySharedPageTab(page, createdTab, leaveWorkspace);
   const refresh = await fetch(`${baseUrl}/v1/sessions/${session.id}/title`, {
     method: "PATCH",
     headers: { ...authorization, "content-type": "application/json" },
