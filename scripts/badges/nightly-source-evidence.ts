@@ -35,6 +35,7 @@ interface ApiFileResult {
 
 // The shared test-plan runner records each planned run's files in plan.json and its outcome in execution.json.
 const plannedSelections = (documents: Map<string, Evidence>, path: string, execution: PlannedExecution) => {
+  if (!execution.planDigest) throw new Error(`Invalid nightly source selection: ${path} has no plan digest`);
   const plan = [...documents.values()].find(
     (document) => (document as { digest?: string }).digest === execution.planDigest,
   ) as { runs?: PlannedRun[] } | undefined;
