@@ -1,22 +1,5 @@
 [
   {
-    "runner": "project-upgrade",
-    "file": "packages/e2e/src/packaged/project-upgrade.ts",
-    "name": "opens the ticket editor on the first restart after upgrading an active project",
-    "platforms": ["darwin", "linux"],
-    "owner": "PS-1270",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/44721919615/job/136242281552",
-      "https://github.com/pufflyai/prompt-studio/actions/runs/44721919615/job/136242281561"
-    ],
-    "removalCriteria": "Restore the active project's ticket-editor assertion to the strict upgrade checks after it passes on the first attempt on both platforms.",
-    "failureMessageIncludes": [
-      "Locator: getByTestId('content-editable')",
-      "Expected: visible",
-      "Error: element(s) not found"
-    ]
-  },
-  {
     "runner": "playwright",
     "file": "packages/e2e/src/packaged/packaged-notes-page.p2.spec.ts",
     "name": "Notes creates dedicated pages and reclaims Side views into the current tabbed page",
