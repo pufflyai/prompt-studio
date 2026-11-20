@@ -38,5 +38,3 @@ export const BUILDING_BLOCKS = [
     example: "A morning brief, a weekly report, or a regular check.",
   },
 ] satisfies { kind: ToolShapeKind; name: string; detail: string; example: string }[];
-
-export const blockFor = (kind: ToolShapeKind) => BUILDING_BLOCKS.find((block) => block.kind === kind)!;

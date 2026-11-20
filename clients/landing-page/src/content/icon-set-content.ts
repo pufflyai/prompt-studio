@@ -16,5 +16,3 @@ export const EXAMPLE_ICONS = [
 ].map((item) => ({ ...item, id: item.name, icon: createGlyphIcon(item.name) }));
 
 export type ExampleIcon = (typeof EXAMPLE_ICONS)[number];
-
-export const LANDING_PREVIEW_ICON_IDS = ["cloud-add", "folder", "component", "star"];
