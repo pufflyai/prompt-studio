@@ -73,11 +73,11 @@ const DEFAULT_REDACT_PATHS = [
 
 export const redactSensitiveText = (value: string, secrets: string[] = []) => {
   let redacted = value;
-  for (const secret of secrets.filter(Boolean).sort((left, right) => right.length - left.length)) {
-    redacted = redacted.replaceAll(secret, REDACTED);
-  }
   for (const pattern of SENSITIVE_TEXT_PATTERNS) {
     redacted = redacted.replace(pattern, `$1${REDACTED}`);
+  }
+  for (const secret of secrets.filter(Boolean).sort((left, right) => right.length - left.length)) {
+    redacted = redacted.replaceAll(secret, REDACTED);
   }
   return redacted;
 };
