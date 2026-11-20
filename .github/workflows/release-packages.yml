@@ -443,13 +443,15 @@ jobs:
       build_artifact_id: ${{ needs.release_build.outputs.build_artifact_id }}
       include_previous_nightly: true
 
+  # TEMPORARY (0.48, maintainer override 2026-11-20, #2241): nightly_upgrade reports but does not gate
+  # publication. Restore `needs.nightly_upgrade.result == 'success'` before the stable release.
   publish_nightly:
     needs: [plan, release_build, containers, desktop, nightly_upgrade]
     if: >-
       ${{ !cancelled() && needs.plan.outputs.release == 'true' && needs.plan.outputs.channel == 'nightly' &&
       inputs.channel != 'verify' &&
       (inputs.channel != 'patch' || inputs.publish_patch) &&
-      needs.release_build.result == 'success' && needs.nightly_upgrade.result == 'success' &&
+      needs.release_build.result == 'success' &&
       needs.containers.result == 'success' &&
       needs.desktop.result == 'success' }}
     runs-on: ubuntu-latest
