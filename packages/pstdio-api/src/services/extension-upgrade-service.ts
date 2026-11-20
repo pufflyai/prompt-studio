@@ -86,6 +86,15 @@ const matchesCatalogOrigin = (
   source: ReturnType<typeof parseExtensionSourceRef>,
 ) => !entry || !source || (entry.origin.url === source.url && entry.origin.path === source.path);
 
+/** Retired host extension folders and the catalog extension that adopts their projects. */
+const retiredHostFolders = new Map([["extensions/git-workspaces", "pstdio.workspaces"]]);
+const repositoryKey = (url: string) =>
+  url
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\.git$/, "")
+    .toLowerCase();
+
 const upgradeRef = (entry: ExtensionCatalogEntry | undefined, release: ExtensionRelease | null) =>
   entry && entry.origin.ref !== "{hostRelease}" ? entry.origin.ref : release?.ref;
 
@@ -146,13 +155,19 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
       return !(error instanceof GitUnavailableError);
     }
   };
+  // A host folder a newer release merged into another tool has no source at that release.
+  // Its successor's adoption replaces it, so it never offers an upgrade.
+  const isRetiredHostSource = async (parsed: ReturnType<typeof parseExtensionSourceRef>) => {
+    const successor = parsed && retiredHostFolders.get(parsed.path);
+    if (!successor) return false;
+    const entry = selectExtensionCatalogEntry(await catalog, successor);
+    return Boolean(entry && repositoryKey(entry.origin.url) === repositoryKey(parsed.url));
+  };
   const canUpgrade = async (source: UpgradeSource) => {
     if (registry.matches(source)) return registry.canUpgrade(source);
     const entry = await catalogEntry(source.install_name);
     const parsed = parseExtensionSourceRef(source.source_ref);
-    // A host extension the release catalog no longer lists, for example one merged into another
-    // tool, has no source at the release. Its successor replaces it instead.
-    if (!entry && parsed && (await catalog).extensions.some(({ origin }) => origin.url === parsed.url)) return false;
+    if (await isRetiredHostSource(parsed)) return false;
     if (deps.release?.source === "registry") return canMoveToRegistry(entry, parsed, source.version);
     const origin = parsed ?? entry?.origin;
     const releaseRef = upgradeRef(entry, deps.release);

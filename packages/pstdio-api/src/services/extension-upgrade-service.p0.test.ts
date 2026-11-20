@@ -73,14 +73,21 @@ describe("extension upgrade service", () => {
     const retired = {
       ...installedSource,
       install_name: "git-workspaces",
-      extension_id: "pstdio.git-workspaces",
       source_ref: namedSourceRef("0".repeat(40), "pstdio-planner").replace(
         "#extensions/pstdio-planner",
         "#extensions/git-workspaces",
       ),
     };
     expect(await service.canUpgrade(retired)).toBe(false);
+    expect(await service.canUpgrade({ ...retired, source_ref: retired.source_ref.replace("#", ".git#") })).toBe(false);
     expect(resolveReleaseCommit).not.toHaveBeenCalled();
+    // A host folder that still exists keeps its upgrade even without a catalog entry.
+    const unlisted = {
+      ...retired,
+      install_name: "requirement-book",
+      source_ref: retired.source_ref.replace("#extensions/git-workspaces", "#extensions/requirement-book"),
+    };
+    expect(await service.canUpgrade(unlisted)).toBe(true);
   });
 
   test("resolves an annotated release tag to its commit", async () => {
