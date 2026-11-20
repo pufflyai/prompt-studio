@@ -59,12 +59,10 @@ test("a board bound to a Side placement reads and writes its own resource, not M
 });
 
 test("two placements of one board keep their own query metadata and overlapping reads", async () => {
-  const pending = new Map<string, PromiseWithResolvers<unknown>>();
-  const { workbench, renderer } = setup((_commandId, resource) => {
-    const deferred = Promise.withResolvers<unknown>();
-    pending.set(resource!.id, deferred);
-    return deferred.promise;
-  });
+  const pending = new Map<string, (value: unknown) => void>();
+  const { workbench, renderer } = setup(
+    (_commandId, resource) => new Promise((resolve) => pending.set(resource!.id, resolve)),
+  );
   const first = bindKanbanRendererContribution(renderer, {
     instanceId: "main",
     resource: { type: "workspace", id: "a" },
@@ -80,8 +78,8 @@ test("two placements of one board keep their own query metadata and overlapping 
     rows: [{ id: `${id}-row`, title: id, attributes: {} }],
     attributes: [{ id: `${id}-field`, label: id, type: { kind: "string" } }],
   });
-  pending.get("b")!.resolve(result("b"));
-  pending.get("a")!.resolve(result("a"));
+  pending.get("b")!(result("b"));
+  pending.get("a")!(result("a"));
   expect((await firstRead).map((row) => row.id)).toEqual(["a-row"]);
   expect((await secondRead).map((row) => row.id)).toEqual(["b-row"]);
   const fields = (contribution: typeof first) => {
