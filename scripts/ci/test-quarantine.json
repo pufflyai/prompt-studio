@@ -68,5 +68,19 @@
     ],
     "removalCriteria": "Fix the draft-sync race in the native chat: in nightly 44721919615 (artifact ui-e2e-results-P2-3-attempt-1, trace) the saved draft \"/fail\" (saveDraft 11:03:46.980) and the failed /fail submit (11:03:47.125, cleared by saveDraft 11:03:47.212) left the composer empty and showed 'A saved draft arrived while you were typing' with Restore saved draft, instead of restoring /fail to the composer. Passed 6 of 6 locally. Then restore this unchanged case to the stable lane with first-attempt evidence. Keep every assertion.",
     "failureMessageIncludes": ["/fail"]
+  },
+  {
+    "runner": "bun",
+    "file": "packages/pstdio-api/src/features/extensions/process-command.windows.exclusive.p1.test.ts",
+    "name": "runs a standalone PowerShell script",
+    "platforms": ["win32"],
+    "arch": "x64",
+    "owner": "PS-1270",
+    "evidence": [
+      "https://github.com/pufflyai/prompt-studio/actions/runs/44775675600",
+      "https://github.com/pufflyai/prompt-studio/pull/1660"
+    ],
+    "removalCriteria": "Find why PowerShell sometimes never starts the script on hosted Windows runners: in release run 44775675600 the probe reported scriptStarted=false after 30217 ms (the case previously failed at a 3 s deadline, see #1660), while the five preceding release runs passed. Fix the launch or the runner condition, then restore this unchanged case to the stable lane with first-attempt native Windows evidence. Keep every assertion.",
+    "failureMessageIncludes": ["Command timed out after"]
   }
 ]
