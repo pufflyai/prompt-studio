@@ -61,15 +61,15 @@ test("Note actions share identity and rename the inactive subject across navigat
     await page.getByRole("menuitem", { name: "Rename note", exact: true }).click();
     const title = page.getByRole("textbox", { name: "Title", exact: true });
     await expect(title).toHaveValue(b.title);
-    await title.fill("Renamed from inactive tab");
+    await title.fill("Renamed while inactive");
     await page.getByRole("button", { name: "Run", exact: true }).click();
-    const renamed = nav.getByRole("option", { name: "Renamed from inactive tab", exact: true });
+    const renamed = nav.getByRole("option", { name: "Renamed while inactive", exact: true });
     await expect(renamed).toBeVisible();
     const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
     await expect(breadcrumb.getByText(a.title, { exact: true })).toBeVisible();
     await expect(page).toHaveURL(route);
     await renamed.click();
-    await expect(breadcrumb.getByText("Renamed from inactive tab", { exact: true })).toBeVisible();
+    await expect(breadcrumb.getByText("Renamed while inactive", { exact: true })).toBeVisible();
     await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
     expect(await menuValues(page, "Note")).toEqual(expected);
     await page.screenshot({ path: testInfo.outputPath("note-menu-parity.png") });

@@ -76,7 +76,8 @@ test("keeps history, breadcrumbs and panel controls in the navigation header", a
   await expect(controls.getByRole("button", { name: "Show Side Panel" })).toHaveAttribute("aria-pressed", "false");
 
   // Navigation and Main share one header, so history and panel controls appear exactly once.
-  await expect(page.getByRole("button", { name: /Navigate (back|forward)/ })).toHaveCount(2);
+  await expect(page.getByRole("button", { name: "Navigate back", exact: true })).toHaveCount(1);
+  await expect(page.getByRole("button", { name: "Navigate forward", exact: true })).toHaveCount(1);
   await expect(page.getByRole("group", { name: "Panel controls" })).toHaveCount(1);
 
   const sidenavSeparator = page.getByRole("separator", { name: "Resize sidenav" });

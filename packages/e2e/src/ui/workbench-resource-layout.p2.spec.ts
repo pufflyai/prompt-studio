@@ -1,4 +1,5 @@
 import { rmSync } from "node:fs";
+import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
 import { type APIRequestContext, expect, type Page, test } from "../scripts/session-test";
@@ -94,8 +95,9 @@ test("keeps the mode's secondary panel preference across resources and reload", 
     await page.reload();
     await expect(separator).toBeVisible();
     await expect(separator).toHaveAttribute("aria-valuenow", workspaceASize!);
-    await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(
-      attemptA.workspace.workspace_shorthand,
+    // A tabbed workspace page has no breadcrumb; its route still names workspace A.
+    await expect(page).toHaveURL(
+      (url) => defaultPageResourceCodec.fromUri(url.searchParams.get("resource") ?? "")?.id === attemptA.workspace.id,
     );
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });

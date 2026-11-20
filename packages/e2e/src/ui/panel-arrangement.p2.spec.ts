@@ -44,9 +44,9 @@ test("an invalid drop onto Home preserves the terminal's live view and shell sta
   await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 12 });
   await expect(page.locator('[data-workbench-tab-drop="main"][data-drop-active]')).toHaveCount(0);
   await page.mouse.up();
-  await expect(mainTabs).toHaveCount(0);
   const retained = secondary.locator(`[data-workbench-tab="${instanceId}"]`).getByRole("tab");
   await expect(retained).toHaveAttribute("aria-selected", "true");
+  await expect(mainTabs).toHaveCount(0);
   expect(
     await terminal.evaluate(
       (element) => element === (window as Window & { retainedTerminal?: Element }).retainedTerminal,

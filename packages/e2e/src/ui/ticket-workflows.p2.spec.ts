@@ -124,10 +124,13 @@ for (const action of ["Delete workspace"]) {
     const workspaceRow = page
       .getByRole("option")
       .filter({ has: page.getByText(workspace.workspace_shorthand, { exact: true }) });
+    // A ticket's linked workspace previews its Files landing in Side, so the ticket stays open in Main.
+    // Deleting from that tab must remove exactly this workspace from the ticket (checked at the end).
     await workspaceRow.click();
-    // A ticket's linked workspace previews in Side, so the ticket stays open in Main.
-    const workspaceTab = page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { selected: true });
-    await expect(workspaceTab).toBeVisible();
+    const workspaceTab = page
+      .locator('[data-workbench-panel-header="side"]')
+      .getByRole("tab", { name: "Files", exact: true });
+    await expect(workspaceTab).toHaveAttribute("aria-selected", "true");
     await expect(page).toHaveURL(/\/ticket\?resource=/);
     await expect(page.getByRole("tab", { name: "Workspaces", exact: true })).toHaveCount(0);
     await workspaceTab.click({ button: "right" });

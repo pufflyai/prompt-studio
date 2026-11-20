@@ -368,6 +368,7 @@ test("main shortcuts navigate and open creation forms", { tag: "@smoke" }, async
   await ticketForm.getByRole("button", { name: "Create ticket", exact: true }).click();
   causalEvidence.mark("ticket-create:clicked");
   await expect(ticketForm).not.toBeVisible();
+  await expect(page).toHaveURL(/\/ticket\?resource=/);
   await expect(breadcrumb).toContainText("Shortcut ticket");
   await page.getByRole("button", { name: "Help", exact: true }).focus();
   causalEvidence.mark("workspace-shortcut:started");

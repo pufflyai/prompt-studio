@@ -33,7 +33,11 @@ const openWorkspace = async (page: import("@playwright/test").Page, workspaceNam
     .first();
   await expect(workspaceRow).toBeVisible({ timeout: 30_000 });
   await workspaceRow.click();
-  await expect(page.getByRole("link", { name: workspaceName, exact: true })).toBeVisible();
+  // A workspace opens as a tabbed page, which shows its tabs instead of a breadcrumb.
+  await expect(page).toHaveURL(/\/workspace\?resource=/);
+  await expect(
+    page.locator('[data-workbench-panel-header="main"]').getByRole("tab", { name: "Files", exact: true }),
+  ).toBeVisible();
 };
 
 const showSecondaryPanel = async (page: import("@playwright/test").Page) => {
