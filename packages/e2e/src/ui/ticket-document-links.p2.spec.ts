@@ -107,7 +107,8 @@ test("saved ticket document links survive copy, reload, history and rename", asy
     );
     await page.getByRole("link", { name: "Draft", exact: true }).last().click();
     await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Exact\s+unsaved\s+draft\s+bytes/);
-    await page.goBack();
+    // Chat links preview beside the conversation, so it stays open for the next link.
+    await expect(page).toHaveURL(/\/session\?resource=/);
     await page.getByRole("link", { name: "Saved", exact: true }).last().click();
     await expect(page.getByText("Saved body bytes", { exact: false }).first()).toBeVisible();
   } finally {

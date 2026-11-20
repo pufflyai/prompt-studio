@@ -10,7 +10,7 @@ import {
 import { openProjectHome, showSidenavEntry } from "./helpers/sidenav-navigation";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
-test("shows the same ticket and workspace actions on rows and breadcrumbs", async ({ page, request }) => {
+test("shows the same ticket and workspace actions on rows and open page headers", async ({ page, request }) => {
   test.slow();
   const repoRoot = createGitRepo("pstdio-resource-actions-", "resource actions e2e");
   let projectId: string | undefined;
@@ -116,10 +116,12 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
     await expect(page.getByRole("menuitem", { name: "Open terminal", exact: true })).toBeHidden();
 
     await workspaceRow.click();
-    await expect(breadcrumbAction).toBeVisible();
-    await breadcrumbAction.click();
+    // A workspace page keeps its Files and Changes tabs, so its open tab carries the workspace actions.
+    const workspaceTab = page.locator('[data-workbench-panel-header="main"]').getByRole("tab", { selected: true });
+    await expect(workspaceTab).toBeVisible();
+    await workspaceTab.click({ button: "right" });
     await expectMenuItems(page, ["Open terminal", "Rename workspace", "Delete workspace"]);
-    await breadcrumbAction.click();
+    await page.keyboard.press("Escape");
     await expect(page.getByRole("menuitem", { name: "Open terminal", exact: true })).toBeHidden();
   } finally {
     await page.close();

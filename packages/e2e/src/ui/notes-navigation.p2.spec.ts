@@ -9,6 +9,12 @@ import { uiOrigin } from "../ui-server";
 // Project preparation, document projection and retained navigation share this allowance.
 test.setTimeout(120_000);
 
+// Notes open as single-resource pages: the breadcrumb names the open note and Main shows no tabs.
+const expectOpenNote = async (page: import("@playwright/test").Page, title: string) => {
+  await expect(page.getByRole("navigation", { name: "breadcrumb" }).getByText(title, { exact: true })).toBeVisible();
+  await expect(page.locator('[data-workbench-panel-header="main"]').getByRole("tab")).toHaveCount(0);
+};
+
 const executeNoteCommand = async (
   request: APIRequestContext,
   projectId: string,
@@ -66,7 +72,7 @@ test("opens notes in the project Sidenav tree and follows the active note throug
     await expect(sidebar.getByRole("option", { name: "Tickets", exact: true })).toBeVisible();
     await firstRow.click();
     await expect(firstRow).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("tab", { name: first.title, exact: true })).toHaveAttribute("aria-selected", "true");
+    await expectOpenNote(page, first.title);
     await verifyNativePublicTextEditor(page, `${first.title} body`);
     // Opening content must not queue another read of every note in the project.
     const noteListReads: string[] = [];
@@ -77,7 +83,8 @@ test("opens notes in the project Sidenav tree and follows the active note throug
     await expect(secondRow).toHaveAttribute("aria-selected", "true");
     await verifyNativePublicTextEditor(page, `${second.title} body`);
     expect(noteListReads).toEqual([]);
-    await page.getByRole("tab", { name: first.title, exact: true }).click();
+    await page.getByRole("button", { name: "Navigate back", exact: true }).click();
+    await expectOpenNote(page, first.title);
     await expect(firstRow).toHaveAttribute("aria-selected", "true");
     await expect(secondRow).toHaveAttribute("aria-selected", "false");
 
@@ -85,12 +92,14 @@ test("opens notes in the project Sidenav tree and follows the active note throug
     await expect(secondRow).toHaveAttribute("aria-selected", "true");
     await executeNoteCommand(request, project.id, "delete", { noteId: second.id });
     await expect(secondRow).toHaveCount(0);
-    await expect(firstRow).toHaveAttribute("aria-selected", "true");
-    await page.getByRole("button", { name: `Close ${first.title}`, exact: true }).click();
+    // Deleting the open note returns to its Notes page, which selects no note and still offers a new one.
+    await expect(page).toHaveURL(/\/extensions\/pstdio\.notes\/notes$/);
     await expect(firstRow).toHaveAttribute("aria-selected", "false");
-    await expect(
-      page.getByRole("group", { name: "Available tabs" }).getByRole("button", { name: "New note", exact: true }),
-    ).toBeVisible();
+    await page
+      .locator('[data-workbench-panel-header="main"]')
+      .getByRole("button", { name: "Page actions", exact: true })
+      .click();
+    await expect(page.getByRole("menuitem", { name: "New note", exact: true })).toBeVisible();
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }
@@ -135,7 +144,7 @@ test("keeps note titles independent of the body and renames them through the con
       )
       .toContain(body);
     await expect(row).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("tab", { name: note.title, exact: true })).toHaveAttribute("aria-selected", "true");
+    await expectOpenNote(page, note.title);
 
     // Critical: editing must not capture the host command-palette shortcut.
     await editor.press("ControlOrMeta+p");
@@ -143,7 +152,6 @@ test("keeps note titles independent of the body and renames them through the con
     await page.keyboard.press("Escape");
 
     // Critical: a retained note keeps its edit permission when its page is temporarily hidden.
-    await page.getByRole("tab", { name: note.title, exact: true }).dblclick();
     await sidebar.getByRole("option", { name: "Home", exact: true }).click();
     await row.click();
     await expect(editor).toHaveText(body);
@@ -169,20 +177,14 @@ test("keeps note titles independent of the body and renames them through the con
     await dialog.getByRole("button", { name: "Run", exact: true }).click();
     const renamed = sidebar.getByRole("option", { name: "Renamed title", exact: true });
     await expect(renamed).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("tab", { name: "Renamed title", exact: true })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    await expectOpenNote(page, "Renamed title");
     await expect(editor).toHaveText(body);
     expect(await mountedEditor!.evaluate((node) => node.isConnected)).toBe(true);
     expect(documentReads).toEqual([]);
 
     await page.reload();
     await expect(renamed).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("tab", { name: "Renamed title", exact: true })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    await expectOpenNote(page, "Renamed title");
     await expect(editor).toHaveText(body);
     documentReads.length = 0;
     const reloadedEditor = await editor.elementHandle();
@@ -191,10 +193,7 @@ test("keeps note titles independent of the body and renames them through the con
       "aria-selected",
       "true",
     );
-    await expect(page.getByRole("tab", { name: "Renamed remotely", exact: true })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    await expectOpenNote(page, "Renamed remotely");
     expect(await reloadedEditor!.evaluate((node) => node.isConnected)).toBe(true);
     expect(documentReads).toEqual([]);
   } finally {
@@ -238,11 +237,7 @@ test("keeps typing in the same editor when the first line names a new note", asy
     await editor.fill("First line title");
     releaseResolution.resolve();
     await resolutionForwarded.promise;
-    await expect(page.getByRole("tab", { name: "First line title", exact: true })).toHaveAttribute(
-      "aria-selected",
-      "true",
-      { timeout: 15_000 },
-    );
+    await expectOpenNote(page, "First line title");
     await expect(sidebar.getByRole("option", { name: "First line title", exact: true })).toBeVisible();
     await expect(editor).toBeFocused();
     expect(await mountedEditor!.evaluate((node) => node.isConnected)).toBe(true);
