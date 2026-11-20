@@ -150,6 +150,9 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     if (registry.matches(source)) return registry.canUpgrade(source);
     const entry = await catalogEntry(source.install_name);
     const parsed = parseExtensionSourceRef(source.source_ref);
+    // A host extension the release catalog no longer lists, for example one merged into another
+    // tool, has no source at the release. Its successor replaces it instead.
+    if (!entry && parsed && (await catalog).extensions.some(({ origin }) => origin.url === parsed.url)) return false;
     if (deps.release?.source === "registry") return canMoveToRegistry(entry, parsed, source.version);
     const origin = parsed ?? entry?.origin;
     const releaseRef = upgradeRef(entry, deps.release);

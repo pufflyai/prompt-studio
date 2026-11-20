@@ -61,6 +61,28 @@ const idleExtensionService = {
 const emptyWorkspaceService = { getDefault: async () => null };
 
 describe("extension upgrade service", () => {
+  test("a host extension the release catalog no longer lists has no upgrade", async () => {
+    const resolveReleaseCommit = mock(async () => "f".repeat(40));
+    const service = createExtensionUpgradeService({
+      extensionService: idleExtensionService,
+      release: { source: "git", ref: "pstdio@0.48.0" },
+      resolveReleaseCommit,
+      workspaceService: emptyWorkspaceService,
+    });
+    // Git Workspaces was merged into Workspaces; its folder no longer exists at the release.
+    const retired = {
+      ...installedSource,
+      install_name: "git-workspaces",
+      extension_id: "pstdio.git-workspaces",
+      source_ref: namedSourceRef("0".repeat(40), "pstdio-planner").replace(
+        "#extensions/pstdio-planner",
+        "#extensions/git-workspaces",
+      ),
+    };
+    expect(await service.canUpgrade(retired)).toBe(false);
+    expect(resolveReleaseCommit).not.toHaveBeenCalled();
+  });
+
   test("resolves an annotated release tag to its commit", async () => {
     const releaseCommit = "b".repeat(40);
     const run = mock(async () => ({
