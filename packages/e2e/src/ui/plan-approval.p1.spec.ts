@@ -87,12 +87,14 @@ test("plan actions take over the composer and restore its draft without sending 
   };
   await page.route(sessionChatActionRoute, failApproval);
   await decision.getByRole("button", { name: "Approve and implement", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("Provider unavailable");
+  const failedAction = page.getByRole("alert").filter({ hasText: "Provider unavailable" });
+  await expect(failedAction).toBeVisible();
   expect(rejectedApprovals).toBe(1);
   await expect(decision).toBeVisible();
   await page.unroute(sessionChatActionRoute, failApproval);
-  // A failed conversation action is dismissed; the plan decision stays available to try again.
-  await page.getByRole("alert").getByRole("button", { name: "Dismiss", exact: true }).click();
+  // A failed conversation action offers no Retry; dismissing it leaves the plan decision to try again.
+  await expect(failedAction.getByRole("button", { name: "Retry", exact: true })).toHaveCount(0);
+  await failedAction.getByRole("button", { name: "Dismiss", exact: true }).click();
   await expect(page.getByRole("alert")).toHaveCount(0);
   await expect(decision).toBeVisible();
   await propose("# Revised workflow\n\nUse the revised native plan.");
