@@ -1,5 +1,6 @@
 import { rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
@@ -49,15 +50,45 @@ test("previews note and artifact paths from chat beside the conversation", async
     const message = page.locator("p").filter({ hasText: /^Read / });
     await page.goto(sessionUrl);
     await expect(message.getByText("Launch plan", { exact: true })).toBeVisible();
-    // Resource links preview in Side and keep the conversation in Main.
-    const side = page.locator('[data-workbench-panel-header="side"]');
+    // Resource links preview in Side and keep this conversation open in Main.
+    const sideHeader = page.locator('[data-workbench-panel-header="side"]');
+    const mainBreadcrumb = page
+      .locator('[data-workbench-panel-header="main"]')
+      .getByRole("navigation", { name: "breadcrumb" });
+    const expectConversationInMain = async () => {
+      await expect(page).toHaveURL(
+        (url) =>
+          url.pathname === `/projects/${project.id}/session` &&
+          defaultPageResourceCodec.fromUri(url.searchParams.get("resource") ?? "")?.id === session.id,
+      );
+      await expect(mainBreadcrumb).toContainText("Resource path review");
+    };
     await message.getByText("Launch plan", { exact: true }).click();
-    await expect(side.getByRole("tab", { name: "Launch plan", exact: true })).toBeVisible();
-    await expect(page).toHaveURL(/\/session\?resource=/);
+    const noteTab = sideHeader.getByRole("tab", { name: "Launch plan", exact: true });
+    await expect(noteTab).toHaveAttribute("aria-selected", "true");
+    await expectConversationInMain();
+    // The path resolved to the note: its preview offers the note's own actions.
+    await noteTab.click({ button: "right" });
+    await expect(page.getByRole("menuitem", { name: "Rename note", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
 
     await message.getByText("Launch report", { exact: true }).click();
-    await expect(side.getByRole("tab", { name: "Launch report", exact: true })).toBeVisible();
-    await expect(page).toHaveURL(/\/session\?resource=/);
+    const artifactTab = sideHeader.getByRole("tab", { name: "Launch report", exact: true });
+    await expect(artifactTab).toHaveAttribute("aria-selected", "true");
+    // The unpinned artifact preview replaces the note preview.
+    await expect(noteTab).toHaveCount(0);
+    await expectConversationInMain();
+    const preview = page
+      .locator('[data-workbench-region="side"]')
+      .frameLocator('iframe[title="Artifacts"]:visible')
+      .last()
+      .frameLocator('iframe[title^="Preview: "]')
+      .frameLocator("iframe");
+    await expect(preview.getByRole("heading", { name: "Launch report" })).toBeVisible();
+    // The path resolved to the artifact: its preview offers the artifact's own actions.
+    await artifactTab.click({ button: "right" });
+    await expect(page.getByRole("menuitem", { name: "Rename artifact…", exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
   } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
     rmSync(root, { recursive: true, force: true });

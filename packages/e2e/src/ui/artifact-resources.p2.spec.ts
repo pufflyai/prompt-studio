@@ -41,7 +41,10 @@ test("finds published artifacts as resources and opens the latest version", asyn
     await result.click();
     // Artifacts open as single-resource pages: the breadcrumb names the latest revision.
     await expect(
-      page.getByRole("navigation", { name: "breadcrumb" }).getByRole("link", { name: "Launch report", exact: true }),
+      page
+        .locator('[data-workbench-panel-header="main"]')
+        .getByRole("navigation", { name: "breadcrumb" })
+        .getByRole("link", { name: "Launch report", exact: true }),
     ).toBeVisible();
     const frame = page.frameLocator('iframe[title="Artifacts"]:visible').last();
     const preview = frame.frameLocator('iframe[title^="Preview: "]').frameLocator("iframe");
