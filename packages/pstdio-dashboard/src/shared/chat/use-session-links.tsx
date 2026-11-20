@@ -1,6 +1,7 @@
 import { AlertMessage } from "@pstdio/ui";
 import type { ChatLinkHandler } from "@pstdio/ui/chat-ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
+import type { NativeChatHostProps } from "@pstdio/workbench/extensions";
 import { useState } from "react";
 import { asSyncedRows, eq, getCollection, useLiveQuery } from "@/lib/sync/collections";
 import { buildDashboardWorkspaceOptionsFromRows } from "@/shared/workspaces/workspace-options";
@@ -12,6 +13,7 @@ export const useSessionLinks = (
   projectId: string | undefined,
   workspaceId: string | null | undefined,
   provider: ChatLinkHandler | undefined,
+  sourceRegion?: NativeChatHostProps["sourceRegion"],
 ) => {
   const [error, setError] = useState<string | null>(null);
   // Messages can render before the workspace syncs. A new row makes a new handler, so paths resolve again.
@@ -31,6 +33,7 @@ export const useSessionLinks = (
     projectId,
     workspace,
     origin: window.location.origin,
+    sourceRegion,
     onError: setError,
   });
   return {
