@@ -81,11 +81,8 @@ export const createFrameAssetLoader = (fetchAssets: (request: FrameAssetRequest)
     }
     let prepared = previews.get(key);
     if (!prepared) {
-      prepared = (async () => {
-        // Decode the common runtime once before concurrent previews request their own modules.
-        await prepareRuntime();
-        return prepare(source, key);
-      })().catch((error) => {
+      // A source graph already includes the runtime; the first frame can fetch both in one request.
+      prepared = prepare(source, key).catch((error) => {
         if (previews.get(key) === prepared) previews.delete(key);
         throw error;
       });

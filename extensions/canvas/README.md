@@ -48,7 +48,7 @@ The title's part before the last `/` is the navigation group. A `.canvas/preview
 
 ## Work with a design
 
-Open **UI Canvas** in the project navigation to return to the last opened canvas, or the first available canvas if none was opened or the previous one was removed. If no build is available, setup guidance appears. Canvases are grouped by their titles. Selecting a design opens it in the shared UI Canvas viewer. Switching designs loads the selected frames in fresh sandboxes and reuses recently loaded package assets. Each design has its own link and saved layout. A canvas whose build failed shows its error; the others still work.
+Open **UI Canvas** in the project navigation to return to the last opened canvas, or the first available canvas if none was opened or the previous one was removed. If no build is available, setup guidance appears. Canvases are grouped by their titles. Selecting a design opens it in the shared UI Canvas viewer. The viewer keeps the current and previous designs live, including their temporary inputs and selection. Opening a third design releases the least recently used one. New previews reuse cached package assets and start their imports one at a time. Each design has its own link and saved layout. A canvas whose build failed shows its error; the others still work.
 
 Select a frame before using its contents: the first click selects it without activating a control. Clicking another frame or empty canvas space changes or clears selection; Escape clears it when the canvas has focus. Changing selection keeps mounted frames and their input.
 

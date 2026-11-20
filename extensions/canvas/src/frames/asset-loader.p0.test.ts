@@ -19,8 +19,7 @@ test("concurrent frames reuse immutable runtime assets without sharing frame sta
     };
   });
   const [first, second] = await Promise.all([load("button"), load("button")]);
-  expect(requests).toHaveLength(2);
-  expect(requests[1].cached).toEqual(["runtime.js", "theme.css"]);
+  expect(requests).toEqual([{ source: "button", cached: [] }]);
   expect(first).toBe(second);
   expect(await first.scripts["example.js"].text()).toBe("example.js");
   expect(first.styles[0].type.split(";")[0]).toBe("text/css");
