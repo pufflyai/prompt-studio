@@ -114,6 +114,7 @@ export const addSideNewSession = async (page: Page) => {
   // Preview tabs are italic; + opens a pinned tab.
   await expect(added).toHaveCSS("font-style", "normal");
   return added;
+};
 
 /** Matches a page URL that still routes this conversation. Owners may canonicalise the reference, so compare what it names. */
 export const isSessionUrl = (projectId: string, sessionId: string) => (url: URL) => {
