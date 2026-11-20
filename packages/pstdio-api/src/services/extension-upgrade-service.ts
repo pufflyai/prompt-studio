@@ -175,7 +175,6 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     if (!origin || !releaseRef || !matchesCatalogOrigin(entry, parsed)) return false;
     return canUpgradeGitSource(source, parsed, origin, releaseRef);
   };
-
   const requireCatalogEntry = async (installName: string) => {
     const entry = await catalogEntry(installName);
     if (!entry) throw new ExtensionUpgradeUnavailableError(`No catalog entry for extension: ${installName}`);
