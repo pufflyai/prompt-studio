@@ -226,7 +226,7 @@ export const landingIsoRecipe = defineRecipe({
       transition: "opacity 0.25s",
       touchAction: "none",
     },
-    "& .iso-agent.iso-coding": { opacity: 0, pointerEvents: "none" },
+    "& .iso-agent.iso-coding, & .iso-agent.iso-away": { opacity: 0, pointerEvents: "none" },
     "& .iso-ring": {
       position: "absolute",
       left: "-14px",

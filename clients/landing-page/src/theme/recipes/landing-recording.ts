@@ -83,12 +83,13 @@ export const landingRecordingSlotRecipe = defineSlotRecipe({
       bg: "bg.subtle",
     },
     railItem: {
-      boxSize: "4.5",
+      boxSize: "8",
+      display: "grid",
+      placeItems: "center",
       borderRadius: "xs",
-      borderWidth: "1.5px",
-      borderColor: "fg.subtle",
+      color: "fg.subtle",
       transition: "all 0.3s",
-      "&[data-active=true]": { borderColor: "fg", bg: "bg.hover" },
+      "&[data-active=true]": { color: "fg", bg: "bg.hover" },
     },
     region: {
       position: "relative",

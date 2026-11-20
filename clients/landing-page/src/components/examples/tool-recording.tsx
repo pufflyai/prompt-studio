@@ -1,4 +1,5 @@
-import { Box, chakra, useSlotRecipe } from "@chakra-ui/react";
+import { Box, chakra, Icon, useSlotRecipe } from "@chakra-ui/react";
+import { Box as Box3D, Frame, Image as ImageIcon, type LucideIcon, SquareKanban } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { RECORDING_LAYOUT, RECORDING_SIZE } from "../../content/recording-content";
 import { TOOL_EXAMPLES, type ToolExampleId } from "../../content/tool-examples-content";
@@ -14,6 +15,12 @@ interface ToolRecordingProps {
 
 const ORDER = TOOL_EXAMPLES.map((example) => example.id);
 const REGIONS = ["left", "main", "right", "bottom"] as const;
+const RAIL_ICONS: Record<ToolExampleId, LucideIcon> = {
+  board: SquareKanban,
+  image: ImageIcon,
+  canvas: Frame,
+  scene: Box3D,
+};
 
 /**
  * A scripted recording of the workbench switching between tools. The window keeps its frame
@@ -78,6 +85,7 @@ export const ToolRecording = (props: ToolRecordingProps) => {
       const scale = Math.min(1, fit.clientWidth / RECORDING_SIZE.width);
       director.scale = scale;
       frame.style.transform = `scale(${scale})`;
+      frame.style.left = `${Math.max(0, (fit.clientWidth - RECORDING_SIZE.width * scale) / 2)}px`;
       fit.style.height = `${RECORDING_SIZE.height * scale}px`;
     });
     resize.observe(fit);
@@ -143,7 +151,9 @@ export const ToolRecording = (props: ToolRecordingProps) => {
             {/* The rail is the mode switcher: the recorded cursor clicks it to change tools. */}
             <Box css={styles.rail}>
               {ORDER.map((id) => (
-                <Box key={id} css={styles.railItem} data-mode-button={id} data-active={id === mode} />
+                <Box key={id} css={styles.railItem} data-mode-button={id} data-active={id === mode}>
+                  <Icon as={RAIL_ICONS[id]} boxSize="icon-sm" />
+                </Box>
               ))}
             </Box>
             {REGIONS.map((region) => (

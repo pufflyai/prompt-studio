@@ -1,3 +1,4 @@
+import { Brush, Circle, Hand, MousePointer2, Square, Type } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import type { ToolExampleId } from "../../content/tool-examples-content";
 
@@ -85,9 +86,18 @@ export const RECORDING_PANES: Record<
   image: {
     left: (
       <div className="rec-tools">
-        {["V", "T", "R", "E", "B", "H"].map((key, i) => (
-          <span key={key} className={i === 0 ? "rec-tool rec-on" : "rec-tool"}>
-            {key}
+        {(
+          [
+            ["select", MousePointer2],
+            ["text", Type],
+            ["rectangle", Square],
+            ["ellipse", Circle],
+            ["brush", Brush],
+            ["pan", Hand],
+          ] as const
+        ).map(([name, ToolIcon], i) => (
+          <span key={name} className={i === 0 ? "rec-tool rec-on" : "rec-tool"}>
+            <ToolIcon size={14} />
           </span>
         ))}
       </div>

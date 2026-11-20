@@ -51,5 +51,7 @@ export const renderAgent = (scene: Placer, agent: Agent, time: number) => {
   const [sx, sy] = project(scene, agent.x, agent.y, agent.z + bob + (agent.raised ? 8 : 0));
   agent.el.style.transform = `translate(${sx}px,${sy}px)`;
   scene.place(agent.shadow, agent.x - 9, agent.y - 9, 0, 18, 18);
-  agent.shadow.style.opacity = String(clamp(0.9 - agent.z * 0.008, 0.25, 0.9));
+  agent.shadow.style.opacity = agent.el.classList.contains("iso-away")
+    ? "0"
+    : String(clamp(0.9 - agent.z * 0.008, 0.25, 0.9));
 };
