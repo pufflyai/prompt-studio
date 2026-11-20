@@ -63,7 +63,12 @@ const registerDocuments = (w: ReturnType<typeof createWorkbench>) => {
 const SessionNavigation = ({ composer = false }: { composer?: boolean }) => {
   const [fixture] = useState(() => {
     const storage = createStoryStorage();
-    const w = createWorkbench({ defaultPage: page("sessions"), initialSidePanelMode: "attached" });
+    // Match the dashboard: Bottom starts closed, so pages that become addable there don't open an empty panel.
+    const w = createWorkbench({
+      defaultPage: page("sessions"),
+      initialSidePanelMode: "attached",
+      defaultPanelOpenByRegionId: { secondary: false },
+    });
     w.modes.registerMode({ id: "project", chrome: { sidenav: "navigation" }, activate() {} });
     w.views.registerView({
       id: "session",
