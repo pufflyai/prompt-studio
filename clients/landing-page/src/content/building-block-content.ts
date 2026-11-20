@@ -3,14 +3,14 @@ import type { ToolShapeKind } from "./tool-shapes";
 export const BUILDING_BLOCKS = [
   {
     kind: "page",
-    docs: "/docs/references/extensions/contribution-api/",
+    docs: "/docs/references/workbench/overview/#pages",
     name: "Pages",
     detail: "Give your tool an interface.",
     example: "Dashboards, boards, forms, and custom views.",
   },
   {
     kind: "editor",
-    docs: "/docs/guides/extensions/workbench-cookbook/",
+    docs: "/docs/guides/extensions/workbench-cookbook/#editor-collections",
     name: "Editors",
     detail: "Work with files your way.",
     example: "A storyboard, a CSV editor, or a document review tool.",
@@ -24,21 +24,21 @@ export const BUILDING_BLOCKS = [
   },
   {
     kind: "skill",
-    docs: "/docs/guides/extensions/authoring/",
+    docs: "/docs/guides/concepts/agents/#skills",
     name: "Skills",
     detail: "Teach your agent how you work.",
     example: "Your review checklist, writing style, or research method.",
   },
   {
     kind: "hook",
-    docs: "/docs/references/extensions/lifecycle-automation/",
+    docs: "/docs/references/extensions/command-and-process-api/#middlewares-and-hooks",
     name: "Hooks",
     detail: "Run an action when something happens.",
     example: "Check a result when an agent finishes its work.",
   },
   {
     kind: "automation",
-    docs: "/docs/guides/extensions/automation/",
+    docs: "/docs/guides/extensions/automation/#run-a-command-on-a-schedule",
     name: "Schedules",
     detail: "Give repeated work a time to run.",
     example: "A morning brief, a weekly report, or a regular check.",
