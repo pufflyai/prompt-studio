@@ -180,6 +180,7 @@ export const Default = () => <label>Secondary canvas<input aria-label="Preview n
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await page.goto(`/projects/${project.id}/extensions/pstdio.canvas/canvases`);
     const viewer = page.frameLocator('iframe[title="UI Canvas"]:visible');
+    const openCanvas = page.getByRole("option", { name: "UI Canvas", exact: true });
     await expect(viewer.locator("[data-ui-canvas-setup]")).toBeVisible();
     watcher = spawn("bun", [join(repoRoot, "packages/canvas/bin/pstdio-canvas.ts"), "watch", "--root", root], {
       stdio: "inherit",
@@ -228,16 +229,18 @@ export const Default = () => <label>Secondary canvas<input aria-label="Preview n
       await loading.promise;
       await page.getByRole("button", { name: "Back to project", exact: true }).click();
       await expect(page).not.toHaveURL(/canvases/);
-      await page.getByText("UI Canvas", { exact: true }).first().click();
+      await openCanvas.click();
     } finally {
       resume.resolve();
     }
     await expect(frame.getByRole("button", { name: "Startup: Save" })).toBeVisible();
     await page.getByText("Secondary", { exact: true }).first().click();
     await expect(frame.getByRole("textbox", { name: "Preview note" })).toBeVisible();
-    await page.getByRole("button", { name: "Back to project", exact: true }).click();
+    // Reload the chosen design, then reopen Canvas through project navigation.
     await page.reload();
-    await page.getByText("UI Canvas", { exact: true }).first().click();
+    await expect(frame.getByRole("textbox", { name: "Preview note" })).toBeVisible();
+    await page.getByRole("button", { name: "Back to project", exact: true }).click();
+    await openCanvas.click();
     await expect(frame.getByRole("textbox", { name: "Preview note" })).toBeVisible();
     await page.getByRole("button", { name: "Back to project", exact: true }).click();
     rmSync(join(root, "src/secondary.canvas.tsx"));
@@ -252,7 +255,7 @@ export const Default = () => <label>Secondary canvas<input aria-label="Preview n
       })
       .toEqual(["src/button.canvas.tsx", "src/third.canvas.tsx"]);
     await expect(page).not.toHaveURL(/canvases/);
-    await page.getByText("UI Canvas", { exact: true }).first().click();
+    await openCanvas.click();
     await expect(frame.getByRole("button", { name: "Startup: Save" })).toBeVisible();
   } finally {
     await stopChildProcess(watcher);
