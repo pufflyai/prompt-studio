@@ -211,6 +211,30 @@ export const Default = () => <label>Secondary canvas<input aria-label="Preview n
     await expect(viewer.locator('iframe[data-frame-story^="src/button.canvas.tsx#"]')).toHaveCount(0);
     await page.getByText("Secondary", { exact: true }).first().click();
     await expect(frame.getByRole("textbox", { name: "Preview note" })).toHaveValue("Keep this draft");
+    // Button was evicted. Leave during its next asset request and reopen the design.
+    const loading = Promise.withResolvers<void>();
+    const resume = Promise.withResolvers<void>();
+    await page.route(
+      "**/pstdio.canvas.command.preview.assets/execute",
+      async (route) => {
+        loading.resolve();
+        await resume.promise;
+        await route.continue();
+      },
+      { times: 1 },
+    );
+    try {
+      await page.getByText("Button", { exact: true }).first().click();
+      await loading.promise;
+      await page.getByRole("button", { name: "Back to project", exact: true }).click();
+      await expect(page).not.toHaveURL(/canvases/);
+      await page.getByText("UI Canvas", { exact: true }).first().click();
+    } finally {
+      resume.resolve();
+    }
+    await expect(frame.getByRole("button", { name: "Startup: Save" })).toBeVisible();
+    await page.getByText("Secondary", { exact: true }).first().click();
+    await expect(frame.getByRole("textbox", { name: "Preview note" })).toBeVisible();
     await page.getByRole("button", { name: "Back to project", exact: true }).click();
     await page.reload();
     await page.getByText("UI Canvas", { exact: true }).first().click();
