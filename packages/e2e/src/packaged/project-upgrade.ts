@@ -101,19 +101,20 @@ const openSavedWork = async (
   try {
     page = await browser.newPage();
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    // User-approved 2026-11-20 (#2241): first opens after an upgrade wait for the runtime to install
+    // the Workspaces tool that adopts Git Workspaces, which exceeded the 5 s default.
+    const firstOpen = { timeout: 30_000 };
     // Open Tickets as the first project request after restart, before API checks can warm it.
     await signInBrowser(page, descriptor, routes.tickets);
-    await expect(page.getByTestId("renderer-card").first()).toBeVisible();
+    await expect(page.getByTestId("renderer-card").first()).toBeVisible(firstOpen);
     await page.getByTestId("renderer-card").first().click();
-    await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).toBeVisible();
+    await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).toBeVisible(firstOpen);
     await page.goto(new URL(routes.home, descriptor.origin).href);
-    // User-approved 2026-11-20 (#2241): Home's first open after an upgrade waits for the runtime to
-    // install the Workspaces tool that adopts Git Workspaces, which exceeded the 5 s default locally.
     await expect(
       page.frameLocator('iframe[title="Home"]:visible').getByText(fixture.name, { exact: true }),
-    ).toBeVisible({ timeout: 30_000 });
+    ).toBeVisible(firstOpen);
     await page.goto(new URL(routes.conversation, descriptor.origin).href);
-    await expect(page.getByText("Keep the change small.", { exact: false }).first()).toBeVisible();
+    await expect(page.getByText("Keep the change small.", { exact: false }).first()).toBeVisible(firstOpen);
     await page.screenshot({ path: join(evidence, "saved-conversation.png") });
   } catch (error) {
     if (page) {
