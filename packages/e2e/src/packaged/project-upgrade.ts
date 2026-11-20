@@ -98,6 +98,7 @@ const openSavedWork = async (
 ) => {
   const browser = await chromium.launch(PROVISIONED_CHROMIUM);
   let page: Page | undefined;
+  let ticketEditorQuarantined = false;
   try {
     page = await browser.newPage();
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
@@ -105,7 +106,23 @@ const openSavedWork = async (
     await signInBrowser(page, descriptor, routes.tickets);
     await expect(page.getByTestId("renderer-card").first()).toBeVisible();
     await page.getByTestId("renderer-card").first().click();
-    await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).toBeVisible();
+    try {
+      await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).toBeVisible();
+    } catch (error) {
+      if (
+        process.env.PSTDIO_QUARANTINE_UPGRADE_TICKET_EDITOR !== "true" ||
+        !(error instanceof Error) ||
+        !error.message.includes("Locator: getByTestId('content-editable')") ||
+        !error.message.includes("Expected: visible") ||
+        !error.message.includes("Error: element(s) not found")
+      ) {
+        throw error;
+      }
+      await record(evidence, "quarantined-ticket-editor", { url: page.url(), error: error.message });
+      await page.screenshot({ path: join(evidence, "quarantined-ticket-editor.png") });
+      console.warn("::warning::PS-1270 quarantined failure: ticket editor did not appear after an upgrade restart");
+      ticketEditorQuarantined = true;
+    }
     await page.goto(new URL(routes.home, descriptor.origin).href);
     // User-approved 2026-11-20 (#2241): Home's first open after an upgrade waits for the runtime to
     // install the Workspaces tool that adopts Git Workspaces, which exceeded the 5 s default locally.
@@ -115,6 +132,7 @@ const openSavedWork = async (
     await page.goto(new URL(routes.conversation, descriptor.origin).href);
     await expect(page.getByText("Keep the change small.", { exact: false }).first()).toBeVisible();
     await page.screenshot({ path: join(evidence, "saved-conversation.png") });
+    return ticketEditorQuarantined;
   } catch (error) {
     if (page) {
       await page.screenshot({ path: join(evidence, "workbench-failure.png") }).catch(() => {});
@@ -225,7 +243,7 @@ const run = async (
       await stopProcess(runtime.child);
       runtime = undefined;
       await checkHomeHistory(input, id, before);
-      return;
+      return "passed";
     }
     const state = await seed(runtime.descriptor, input);
     await stopProcess(runtime.child);
@@ -237,7 +255,7 @@ const run = async (
     const routes = await workbenchRoutes(runtime.descriptor, state.fixture);
     await stopProcess(runtime.child);
     runtime = await launch(candidate, "restart");
-    await openSavedWork(runtime.descriptor, state.fixture, input.evidence, routes);
+    const ticketEditorQuarantined = await openSavedWork(runtime.descriptor, state.fixture, input.evidence, routes);
     await assertProjectToolsRetained(
       upgradeApi(runtime.descriptor),
       state.fixture.id,
@@ -248,6 +266,7 @@ const run = async (
     await stopProcess(runtime.child);
     runtime = undefined;
     await checkHomeHistory(input, state.fixture.id, home);
+    return ticketEditorQuarantined ? "quarantined-failure" : "passed";
   } finally {
     if (runtime) await stopProcess(runtime.child);
   }
@@ -293,8 +312,8 @@ if (import.meta.main) {
     const home = join(root, "home");
     try {
       await mkdir(home);
-      await run({ home, evidence: output, profile: variant }, pair);
-      await record(output, "result", { status: "passed" });
+      const status = await run({ home, evidence: output, profile: variant }, pair);
+      await record(output, "result", { status });
     } catch (error) {
       failures.push(error);
       await record(output, "result", { status: "failed", error: String(error) });

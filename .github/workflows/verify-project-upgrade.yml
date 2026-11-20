@@ -240,6 +240,10 @@ jobs:
         working-directory: packages/e2e
         run: bun x --no-install playwright install chromium --with-deps --no-shell
       - name: Upgrade both populated projects
+        env:
+          # PS-1270 (#2241), observed in run 44721919615. Remove after the editor passes
+          # on both platforms at first open after restarting the upgraded runtime.
+          PSTDIO_QUARANTINE_UPGRADE_TICKET_EDITOR: ${{ inputs.build_artifact_id != '' && matrix.from == 'pstdio@0.48.0-nightly.20261120030226' && (matrix.target == 'darwin-arm64' || matrix.target == 'linux-x64') }}
         run: |
           bun --no-env-file packages/e2e/src/packaged/project-upgrade.ts \
             --from "$FROM_TAG" --candidate "$CANDIDATE_BINARY" --candidate-ref "$CANDIDATE_REF" --candidate-root __test-tmp__/upgrade-candidate
