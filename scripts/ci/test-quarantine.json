@@ -47,19 +47,6 @@
   },
   {
     "runner": "playwright-ui",
-    "file": "packages/e2e/src/ui/session-chat-links.p2.spec.ts",
-    "name": "opens chat workspace files and restores selected documents through history and reload",
-    "platforms": ["linux"],
-    "arch": "x64",
-    "owner": "PS-1270",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/44664852770",
-      "https://github.com/pufflyai/prompt-studio/issues/2241"
-    ],
-    "removalCriteria": "Pass the previewed document into the Side preview's menus so its Files tree reveals the open file (#2241 group 16, session-chat-links:10). Then restore this unchanged case to the stable lane with first-attempt evidence. Keep every assertion."
-  },
-  {
-    "runner": "playwright-ui",
     "file": "packages/e2e/src/ui/sidenav-levels.p2.spec.ts",
     "name": "Notes and Sidenav levels keep rows users pinned to the header",
     "platforms": ["linux"],
