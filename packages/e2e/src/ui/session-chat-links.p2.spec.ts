@@ -75,8 +75,8 @@ test("opens chat workspace files and restores selected documents through history
     });
     expect(copiedHtml).toContain("<code>src/nested/app.ts</code>");
     // Workspace file links preview beside the conversation and keep it in Main.
-    const side = page.locator('[data-workbench-region="side"]');
-    const main = page.locator('[data-workbench-region="main"]');
+    const side = page.locator('[data-workbench-panel="side"]');
+    const main = page.locator('[data-workbench-panel="main"]');
     const sideTree = page.getByRole("region", { name: "Side left menu", exact: true });
     // The preview's Files menu reveals and selects the previewed document.
     const expectSideTreeSelection = async (name: string) => {
