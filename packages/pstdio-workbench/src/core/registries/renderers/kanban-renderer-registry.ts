@@ -10,6 +10,7 @@ import type { ContributionMetadata, RegisteredContributionMetadata } from "../..
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import type { ResourceRef } from "../resources/resource-registry";
 import type {
   AttributeDescriptor,
   AttributesSource,
@@ -28,6 +29,8 @@ import type { ViewToolbarAction } from "./view-toolbar-action";
 export interface KanbanRendererQueryState {
   page?: CollectionPageRequest;
   pageParams?: import("@pstdio/sdk/extensions").PageParams;
+  /** The resource bound to the rendering placement. A board outside Main does not query Main's resource. */
+  resource?: ResourceRef;
   settings: KanbanRendererSettings;
   filter: ViewFilterGroup;
   sorts: ViewSort[];

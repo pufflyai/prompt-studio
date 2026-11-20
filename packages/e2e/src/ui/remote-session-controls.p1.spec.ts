@@ -3,6 +3,7 @@ import {
   type RemoteSessionBrowserFixture,
   startRemoteSessionBrowserFixture,
 } from "../helpers/remote-session-browser-fixture";
+import { isSessionUrl } from "./helpers/resource-actions";
 
 let fixture: RemoteSessionBrowserFixture;
 let fixtureProcess: ReturnType<typeof startRemoteSessionBrowserFixture>;
@@ -145,13 +146,13 @@ test("remote workspaces open synced history; offline sessions stay readable and 
       fileRequests.push(request.url());
   });
   await main.getByRole("button", { name: "Open workspace", exact: true }).click();
-  await expect(page).toHaveURL(/\/extensions\/pstdio\.workspaces\/history\?/);
+  // Workspace links preview beside their conversation; a remote workspace previews its synced history.
+  const side = page.locator('[data-workbench-panel="side"]');
   await expect(
-    page
-      .getByRole("region", { name: "Main", exact: true })
-      .getByRole("option")
-      .filter({ hasText: "Remote conversation" }),
-  ).toBeVisible();
+    page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: "Session history", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(side.getByRole("option").filter({ hasText: "Remote conversation" })).toBeVisible();
+  await expect(page).toHaveURL(isSessionUrl(fixture.projectId, fixture.sessionId));
   await expect(page.getByRole("tab", { name: "Changes", exact: true })).toHaveCount(0);
   expect(fileRequests).toEqual([]);
   const queuedResponse = await request.post(`${fixture.origin}/v1/sessions/${fixture.sessionId}/follow-up`, {

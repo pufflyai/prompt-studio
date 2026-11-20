@@ -35,7 +35,7 @@ export const createKanbanRendererQuery = (input: {
           sorts: state.sorts,
           ...(state.page && { page: state.page }),
         },
-        undefined,
+        state.resource,
         signal,
         state.pageParams,
       );
