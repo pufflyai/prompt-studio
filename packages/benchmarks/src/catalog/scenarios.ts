@@ -1,7 +1,6 @@
 // PS-233 authorizes this one-time catalog. Later semantic changes require human approval.
 const primary = ["linux-x64", "darwin-arm64", "win32-x64"];
 const metric = (id: string, unit: "ms" | "bytes" | "share" | "count", kind = "supporting") => ({ id, unit, kind });
-const elapsed = (id: string) => metric(id, "ms", "pending-guard");
 // 0.48 release decision: desktop and storage targets are recorded and reported, but misses do not block.
 const advisory = (id: string, unit: "ms" | "bytes" | "share" = "ms") => metric(id, unit, "advisory");
 export const catalogRevision = 1;
