@@ -23,7 +23,7 @@ A self-edited lock is not human authorization. Add the `benchmark` label to PRs 
 | B7 | 10,000 deterministic records with three history edits; cold/warm page of 100, one edit, read during 100-record write/maintenance | Linux x64, Apple Silicon Mac, Windows x64 |
 | B8 | One idle-session runtime crash; feedback, restored authenticated API/tools/content, first action, persisted data and cleanup | Linux x64, Apple Silicon Mac, Windows x64 |
 
-Every B1–B8 scenario runs once on each of the three hosts in nightly and stable validation: **24 scenario/host combinations** per candidate. Intel Mac is excluded. The manual workflow and Performance run form default to all three hosts. Stable consumers keep signed release artifact identities; nightly Windows builds an unpublished production-mode desktop package and labels it source-diagnostic.
+Every B1–B8 scenario is defined for three hosts. For the 0.48 release, on 2026-11-19, the maintainer decided to skip Windows performance for now (issue #2241). Nightly and stable validation run each scenario once on Linux x64 and Apple Silicon: **16 scenario/host combinations** per candidate. Intel Mac is excluded. The manual workflow and Performance run form default to all three hosts. Stable consumers keep signed release artifact identities; nightly Windows builds an unpublished production-mode desktop package and labels it source-diagnostic.
 
 ## Record before checking
 

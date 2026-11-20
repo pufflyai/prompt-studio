@@ -50,8 +50,9 @@ export const productionToolchainPlatforms = (channel: string) =>
     });
 
 // Benchmark ownership is the same on nightly and stable, independent of published installers.
+// 0.48 maintainer decision (#2241): skip Windows performance for now; Windows functional checks still run.
 export const productionBenchmarkPlatforms = () =>
-  productionDesktopPlatforms("stable").filter((row) => ["linux-x64", "darwin-arm64", "win32-x64"].includes(row.target));
+  productionDesktopPlatforms("stable").filter((row) => ["linux-x64", "darwin-arm64"].includes(row.target));
 
 export const productionPerformanceWorkloads = (_channel: string) =>
   ["storage", "planner"].flatMap((family) =>
