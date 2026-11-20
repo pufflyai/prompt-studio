@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { chromium } from "@playwright/test";
 import { createClient } from "@pstdio/sdk/client";
 import type { ProjectSyncState, StorageRecord } from "@pstdio/sdk/extensions";
@@ -182,6 +182,13 @@ test(
     try {
       const source = await writeSharedNotesExtension(root);
       const env = deviceEnvironments(source, cert);
+      // Its own log, kept with the run's evidence: another test reuses the "second" home name.
+      const secondLog = join(
+        import.meta.dirname,
+        "../../test-results/packaged-runtime",
+        `picker-second-${basename(root)}.jsonl`,
+      );
+      Object.assign(env.second, { PSTDIO_LOG_PATH: secondLog });
       const started = await startPickerDevices(root, env, prepareRepository(root), async (first, repository) => {
         phase("first device and checkout ready");
         const project = await first.client.projects.create(
@@ -237,7 +244,7 @@ test(
       await second.client.projects.create(folderProjectInput({ name: "Local scratchpad" }, local));
       phase("local picker choice created");
       // The Cloud status item belongs to a default tool; open the browser once the device has installed it.
-      await waitForDefaultExtensions(second.host.child, second.host.logPath);
+      await waitForDefaultExtensions(second.host.child, secondLog);
       phase("new device default tools installed");
       picker = await openCloudProjectInPicker({
         browser,
