@@ -64,7 +64,7 @@ export const LANDING_PAGES: LandingPage[] = [
     label: VIEW_META.features.label,
     title: "What your tools get for free | Prompt Studio",
     description:
-      "Try shared search, notifications, navigation, extension management, and themes. Build tools on the features already included in Prompt Studio.",
+      "Every tool your agent builds gets agents, a command line, workspaces, search, notifications, links between tools, safety limits, shortcuts, settings, and themes.",
   },
   // Legal pages read as documents. Their text lives in `src/content/legal/<slug>.md`.
   {
