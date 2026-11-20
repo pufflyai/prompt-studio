@@ -1,4 +1,4 @@
-import { Button, Flex, useSlotRecipe } from "@chakra-ui/react";
+import { Badge, Button, Flex, useSlotRecipe } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { ChatMessage } from "./ai-message";
 import { useMessageFadeIn } from "./chat-message-animation";
@@ -8,6 +8,7 @@ import { getMessageOrigin, type SessionMessage } from "./message-types";
 
 interface ChatMessageListResponseProps {
   message: SessionMessage;
+  occurrences?: number;
   streaming: boolean;
   hideQuestionForms?: boolean;
   animatedKeys: Set<string>;
@@ -38,6 +39,7 @@ export const ChatMessageListResponse = (props: ChatMessageListResponseProps) => 
           streaming={streaming && from === "assistant"}
           hideQuestionForms={hideQuestionForms}
         />
+        <MessageOccurrences count={props.occurrences} />
         {showActions ? (
           <MessageActionPanel
             message={message}
@@ -51,6 +53,13 @@ export const ChatMessageListResponse = (props: ChatMessageListResponseProps) => 
     </ChatMessage.Root>
   );
 };
+
+export const MessageOccurrences = ({ count = 1 }: { count?: number }) =>
+  count > 1 ? (
+    <Badge size="sm" title={`${count} occurrences`} aria-label={`${count} occurrences`}>
+      ×{count}
+    </Badge>
+  ) : null;
 
 interface StickyMessageToggleProps {
   expanded: boolean;

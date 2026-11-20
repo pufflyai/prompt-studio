@@ -59,3 +59,25 @@ describe("chat rendering rows", () => {
     expect(getChatStickyRowIndex(rows, 1)).toBeNull();
   });
 });
+
+test("counts repeated polling prompts and errors until the conversation moves on", () => {
+  const poll = (id: string) => ({ ...message("Check for work", "user"), id });
+  const error = (id: string, detail = "Limit reached"): SessionMessage => ({
+    id,
+    role: "system",
+    parts: [{ type: "error", errorType: "other", message: detail }],
+  });
+  const rows = buildChatMessageRows(
+    [],
+    [
+      { userMessage: poll("first"), responses: [error("a"), error("b")] },
+      { userMessage: poll("retry"), responses: [error("c"), error("d"), error("changed", "Reset time changed")] },
+      { userMessage: poll("success"), responses: [message("Work completed")] },
+      { userMessage: poll("later"), responses: [error("e")] },
+    ],
+  );
+  expect(rows.map((row) => row.key)).toEqual(["first", "a", "changed", "success", "Work completed", "later", "e"]);
+  expect(rows[0]).toMatchObject({ messageIds: ["first", "retry"], endIndex: 2 });
+  expect(rows[1]).toMatchObject({ messageIds: ["a", "b", "c", "d"], userIndex: 0 });
+  expect(rows[6]).toMatchObject({ userIndex: 5, isActiveTurn: true });
+});
