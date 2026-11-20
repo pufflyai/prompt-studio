@@ -15,11 +15,11 @@ Prompt Studio 0.48 adds rearrangeable toolbars, HTML exports for artifacts, a br
 
 Drag toolbar buttons into the order you use them. Prompt Studio remembers the order, and toolbars adapt when docked along a different edge.
 
-![Moving the Brush tool up the toolbar in Marmalade](../../../../../documentation/images/prompt-studio-0-48-toolbar-light.gif)
+![Moving the Brush tool up the toolbar in a demo image editor](../../../../../documentation/images/prompt-studio-0-48-toolbar-light.gif)
 
-![Moving the Brush tool up the toolbar in Marmalade](../../../../../documentation/images/prompt-studio-0-48-toolbar-dark.gif)
+![Moving the Brush tool up the toolbar in a demo image editor](../../../../../documentation/images/prompt-studio-0-48-toolbar-dark.gif)
 
-Reorder the tools in Marmalade, the image editor example in Extension Lab.
+Reorder the tools in a demo image editor.
 
 You can also reorder buttons with the keyboard using **Alt + Arrow Up** or **Alt + Arrow Down**. The status bar’s compact widgets can be dragged into place, too.
 
