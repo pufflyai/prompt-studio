@@ -72,7 +72,7 @@ test("does not resolve a missing document as the ticket body", async () => {
   ).toEqual([]);
 });
 
-test("batch resolution reads a shared ancestor once and stops at cycles", async () => {
+test("batch resolution uses bounded metadata and stops at shared ancestor cycles", async () => {
   const storage = createMemoryStorage();
   const parent = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Parent" } }));
   const child = await createTicketCommand.run(
@@ -95,11 +95,11 @@ test("batch resolution reads a shared ancestor once and stops at cycles", async 
   );
 
   expect(resolved.map(({ resource }) => resource.id)).toEqual([child.id, parent.id, child.id]);
-  // Concurrent reads finish in any order; each ticket is read once.
-  expect(observed.reads.toSorted()).toEqual([`tickets/${child.id}`, `tickets/${parent.id}`].toSorted());
+  expect(observed.reads).toEqual([]);
+  expect(resolved[0]).toMatchObject({ target: { parent: { resource: { id: parent.id } } } });
 });
 
-test("batch resolution reads a missing ancestor once across different branch depths", async () => {
+test("batch resolution queries a missing ancestor once across different branch depths", async () => {
   const storage = createMemoryStorage();
   for (const [id, parentId] of [
     ["a", "missing"],
@@ -121,15 +121,25 @@ test("batch resolution reads a missing ancestor once across different branch dep
   }
   const observed = observeStorageReads(storage);
   const resources = ["a", "b", "a", "missing"].map((id) => ({ type: "ticket", id }));
-  const resolved = await resolveTicketResourcesCommand.run(
-    ...makeCommandArgs({
-      storage: observed.storage,
-      params: { resources },
-      overrides: { resources: ticketContext(storage).resources },
-    }),
-  );
+  const args = makeCommandArgs({
+    storage: observed.storage,
+    params: { resources },
+    overrides: { resources: ticketContext(storage).resources },
+  });
+  const query = observed.storage.records.query;
+  const queried: string[] = [];
+  observed.storage.records.query = (input) => {
+    const where = input.where;
+    if (where && "field" in where && where.field === "id" && where.op === "in") {
+      queried.push(...(where.value as string[]));
+    }
+    return query(input);
+  };
+  const resolved = await resolveTicketResourcesCommand.run(...args);
 
   expect(resolved.map(({ resource }) => resource.id)).toEqual(["a", "b", "a"]);
   expect(resolved[0].resource.metadata?.archived).toBe(true);
-  expect(observed.reads.toSorted()).toEqual(["tickets/a", "tickets/b", "tickets/c", "tickets/missing"]);
+  expect(observed.reads).toEqual([]);
+  expect(resolved[1]).toMatchObject({ target: { parent: { resource: { id: "c" } } } });
+  expect(queried.toSorted()).toEqual(["a", "b", "c", "missing"]);
 });

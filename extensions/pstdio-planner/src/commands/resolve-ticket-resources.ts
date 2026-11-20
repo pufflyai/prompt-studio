@@ -2,6 +2,7 @@ import { defineCommand, l10n, params, type ResourceRef, type ResourceResolution 
 import { ticketsCollection } from "../data/collections";
 import { selectedDocumentFromResource, TICKET_BODY_DOCUMENT } from "../data/document-selection";
 import { TICKET_RESOURCE_ICON } from "../data/mappers";
+import { readTicketOpeningSummaries } from "../data/ticket-opening-summaries";
 import {
   REVIEW_REQUESTS_DOCUMENT,
   ticketFileTarget,
@@ -18,11 +19,17 @@ export const resolveTicketResourcesCommand = defineCommand({
   async run(ctx, input) {
     const resources = input.resources ?? [];
     const ids = new Set(resources.filter((resource) => resource.type === "ticket").map((resource) => resource.id));
-    const collection = ticketsCollection(ctx);
     const selected = [...ids];
-    const tickets = await collection.getMany(selected);
-    const byId = new Map(selected.map((id, index) => [id, tickets[index]]));
-    const parentLookup = await readTicketParentLookup(ctx, byId);
+    const summaryOnly = resources.every(
+      (resource) =>
+        resource.type !== "ticket" ||
+        [TICKET_BODY_DOCUMENT, REVIEW_REQUESTS_DOCUMENT].includes(selectedDocumentFromResource(resource)),
+    );
+    const tickets = summaryOnly ? undefined : await ticketsCollection(ctx).getMany(selected);
+    const fullById = tickets && new Map(selected.map((id, index) => [id, tickets[index]]));
+    const { byId, parentLookup } = fullById
+      ? { byId: fullById, parentLookup: await readTicketParentLookup(ctx, fullById) }
+      : await readTicketOpeningSummaries(ctx, selected);
     return resources.flatMap<ResourceResolution>((resource) => {
       const ticket = resource.type === "ticket" ? byId.get(resource.id) : undefined;
       if (!ticket) return [];
@@ -38,7 +45,8 @@ export const resolveTicketResourcesCommand = defineCommand({
         const target = ticketRequestsTarget(reference);
         return [{ resource: target.resource!, target }];
       }
-      const document = [...(ticket.files ?? []), ...(ticket.attachments ?? [])].find((file) => file.id === documentId);
+      const full = fullById?.get(resource.id);
+      const document = [...(full?.files ?? []), ...(full?.attachments ?? [])].find((file) => file.id === documentId);
       if (!document) return [];
       const target = ticketFileTarget(reference, document, isImageAttachment(document) ? "Image" : "FileText");
       return [{ resource: target.resource, target }];

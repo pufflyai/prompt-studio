@@ -4,7 +4,7 @@ import { resolveTicketResourcesCommand } from "../commands/resolve-ticket-resour
 import { ticketsCollection } from "./collections";
 
 for (const surface of ["list", "resources"] as const) {
-  test(`${surface} reads current identities in batches of at most 100`, async () => {
+  test(`${surface} canonical reads use current identities in batches of at most 100`, async () => {
     const storage = createMemoryStorage();
     const ctx = makeCommandContext({ storage, params: {} });
     const records = storage.collection("tickets");
@@ -22,9 +22,16 @@ for (const surface of ["list", "resources"] as const) {
     const tickets =
       surface === "list"
         ? await ticketsCollection(ctx).list()
-        : (await resolveTicketResourcesCommand.run(ctx, { resources: ids.map((id) => ({ type: "ticket", id })) })).map(
-            (result) => result.resource,
-          );
+        : (
+            await resolveTicketResourcesCommand.run(ctx, {
+              resources: [
+                ...ids.map((id) => ({ type: "ticket", id })),
+                // Exercise canonical file inventory resolution too. Body-only openings have a
+                // separate bounded projection/identity test and do not materialize documents.
+                { type: "ticket", id: ids[0], metadata: { documentId: "missing-file" } },
+              ],
+            })
+          ).map((result) => result.resource);
 
     expect(batches.map((batch) => batch.length)).toEqual([100, 100, 5]);
     expect(tickets.map((ticket) => ticket.id)).toEqual(surface === "list" ? [...ids].sort() : ids);

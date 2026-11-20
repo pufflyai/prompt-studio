@@ -34,6 +34,7 @@ import {
   startPackagedServe,
   stopProcess,
 } from "./packaged-serve-helpers";
+import { expectIndependentTicketOpening } from "./packaged-ticket-opening";
 import { expectImmediateTicketProperty } from "./packaged-ticket-properties";
 
 test.afterEach(stopPendingTestProcesses);
@@ -288,6 +289,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
       if (window.top === window) localStorage.setItem("onboarding-complete", "true");
     });
     await signInBrowser(page, started.descriptor);
+    await expectIndependentTicketOpening(page, valid.execute, host.baseUrl, valid.id, host.descriptor);
     await expectImmediateTicketProperty(page, valid.execute, host.baseUrl, valid.id);
     let timeline = await openTimeline(page, host, valid.id);
     await expect(timeline.getByText("Product", { exact: true }).first()).toBeVisible({ timeout: 30_000 });
