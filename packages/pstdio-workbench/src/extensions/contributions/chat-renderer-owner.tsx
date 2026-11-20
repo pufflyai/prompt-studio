@@ -231,6 +231,12 @@ export const createChatRendererOwner = (
                 session,
                 action,
                 linkHandler,
+                sourceRegion: () =>
+                  (["side", "secondary"] as const).find((region) =>
+                    render.workbench.layout
+                      .listPanelInstances(region)
+                      .some((instance) => instance.instanceId === render.instance.instanceId),
+                  ) ?? "main",
                 conversationKey: key,
                 observe: slot.observe,
                 resolve: slot.resolve,

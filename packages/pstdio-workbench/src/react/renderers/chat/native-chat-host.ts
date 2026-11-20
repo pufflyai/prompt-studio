@@ -30,5 +30,7 @@ export interface NativeChatHostProps {
   /** Files in the visible draft, including an active queued-request edit. */
   attachments?: ChatAttachment[];
   linkHandler?: ChatLinkHandler;
+  /** The panel showing this conversation when a link opens, so references can preview beside it. */
+  sourceRegion?: () => "main" | "side" | "secondary" | undefined;
   children(services: NativeChatHostServices): ReactNode;
 }

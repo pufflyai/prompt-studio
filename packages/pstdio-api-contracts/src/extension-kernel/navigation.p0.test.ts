@@ -27,6 +27,19 @@ test("resource links retain semantic context while requesting an unpinned Side p
   expect(compound).toEqual(navigationTargetSchema.parse(compound));
 });
 
+test("a resource link followed from Side previews in Main so its source stays visible", () => {
+  const target = {
+    kind: "page" as const,
+    page: { kind: "page" as const, extensionId: "example.records", id: "record" },
+    resource: { type: "record", id: "a" },
+    params: { filter: "mine" },
+  };
+  const preview = resourceLinkTarget(target, { region: "side" });
+  expect(preview).toEqual({ ...target, region: "main" });
+  expect(preview).toEqual(navigationTargetSchema.parse(preview));
+  expect(resourceLinkTarget(target, { region: "main" })).toEqual({ ...target, region: "side", open: "preview" });
+});
+
 test.each([
   "overlay",
   "sidenav",

@@ -25,6 +25,8 @@ interface SessionLinkHandlerInput {
   projectId?: string;
   workspace?: DashboardWorkspaceOption;
   origin: string;
+  /** The panel showing the conversation; its links preview beside it. */
+  sourceRegion?: () => "main" | "side" | "secondary" | undefined;
   onError(message: string): void;
 }
 
@@ -233,7 +235,7 @@ export const createSessionLinkHandler = (input: SessionLinkHandlerInput): ChatLi
           return;
         }
         await input.workbench.navigation.openTarget(
-          toWorkbenchNavigationTarget(resourceLinkTarget(destination.target)),
+          toWorkbenchNavigationTarget(resourceLinkTarget(destination.target, { region: input.sourceRegion?.() })),
         );
       } catch (error) {
         if (!request.isCurrent()) return;
