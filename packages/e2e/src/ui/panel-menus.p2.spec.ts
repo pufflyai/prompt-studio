@@ -202,13 +202,22 @@ test("updates a New session Sub Panel in place after the first message", async (
     );
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
-  // Session panels come from the Sessions extension, so the Side Panel opens once its provider has loaded.
   await page.goto(`/projects/${project.id}/`);
+  // Project boot can still apply its saved panel layout after the shell mounts.
+  await expect(homeFrame(page).getByText("Project home", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Open Side Panel" }).click();
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
   const sidePanel = page.locator('[data-workbench-panel="side"]');
-  await expect(sideHeader.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
+  // The Side shell can open before the Sessions provider places its New session tab; it then offers that tab.
+  const initialSession = sideHeader.getByRole("tab", { name: "New session", exact: true });
+  const provider = page
+    .getByRole("region", { name: "Side Panel", exact: true })
+    .getByRole("group", { name: "Available tabs" })
+    .getByRole("button", { name: "New session", exact: true });
+  await expect(initialSession.or(provider)).toBeVisible();
+  if (await provider.isVisible()) await provider.click();
+  await expect(initialSession).toBeVisible();
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   const sessionChoice = page
     .getByRole("menu", { name: "Add panel" })
