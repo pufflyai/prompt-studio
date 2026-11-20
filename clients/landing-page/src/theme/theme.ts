@@ -15,6 +15,10 @@ const config = defineConfig({
       },
       "iso-flash": { "30%": { filter: "brightness(1.35)" } },
       "rec-spin": { to: { transform: "rotate(360deg)" } },
+      "rec-turn": {
+        from: { transform: "rotateX(-22deg) rotateY(0deg)" },
+        to: { transform: "rotateX(-22deg) rotateY(360deg)" },
+      },
       "rec-progress": { from: { width: "0%" }, to: { width: "100%" } },
       "rec-ripple": { from: { opacity: 0.9, transform: "scale(.3)" }, to: { opacity: 0, transform: "scale(1.4)" } },
     },

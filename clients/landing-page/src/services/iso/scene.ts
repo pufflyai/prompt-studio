@@ -192,7 +192,8 @@ export class IsoScene implements Origin {
   private fit() {
     const available = this.host.clientWidth;
     if (!available) return;
-    this.scale = Math.min(1.05, available / this.width);
+    // Scenes grow with their column so they read well on large screens too.
+    this.scale = Math.min(1.8, available / this.width);
     this.stage.style.transform = `scale(${this.scale})`;
     this.stage.style.left = `${(available - this.width * this.scale) / 2}px`;
     this.stage.style.setProperty("--iso-inverse", Math.min(1.45, 1 / this.scale).toFixed(3));

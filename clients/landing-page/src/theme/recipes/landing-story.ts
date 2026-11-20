@@ -105,16 +105,4 @@ export const landingStorySlotRecipe = defineSlotRecipe({
       pt: "lg",
     },
   },
-  variants: {
-    compact: {
-      true: {
-        panelHeader: { p: "xs", textStyle: "label/S/medium" },
-        panelBody: { p: "xs", gap: "xs", overflowY: "hidden" },
-        panel: {
-          animation: "slide-from-bottom 420ms ease-out",
-          "@media (prefers-reduced-motion: reduce)": { animation: "none" },
-        },
-      },
-    },
-  },
 });

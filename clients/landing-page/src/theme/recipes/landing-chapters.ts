@@ -7,7 +7,7 @@ export const landingChaptersSlotRecipe = defineSlotRecipe({
       display: "flex",
       flexDirection: "column",
       width: "full",
-      maxWidth: "6xl",
+      maxWidth: "8xl",
       mx: "auto",
       px: { base: "lg", md: "xl" },
       py: "3xl",
@@ -20,8 +20,6 @@ export const landingChaptersSlotRecipe = defineSlotRecipe({
       gap: "xl",
       alignItems: "center",
       py: "2xl",
-      borderTopWidth: "1px",
-      borderColor: "border.subtle",
       // Chapters alternate scene and text on wide screens.
       "@container (min-width: 52rem)": {
         gridTemplateColumns: "minmax(15rem, 18rem) minmax(0, 1fr)",
@@ -36,8 +34,6 @@ export const landingChaptersSlotRecipe = defineSlotRecipe({
       flexDirection: "column",
       gap: "md",
       pt: "2xl",
-      borderTopWidth: "1px",
-      borderColor: "border.subtle",
     },
   },
 });

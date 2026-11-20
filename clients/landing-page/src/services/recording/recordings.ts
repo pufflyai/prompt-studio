@@ -1,4 +1,3 @@
-import { ICON_NAMES, iconSvg } from "../../content/recording-content";
 import type { ToolExampleId } from "../../content/tool-examples-content";
 import type { Director } from "./director";
 
@@ -203,34 +202,46 @@ const canvas: Recording = {
   },
 };
 
-const selectIcon = (d: Director, index: number) => {
-  for (const el of d.root.querySelectorAll<HTMLElement>("[data-icon]"))
-    el.dataset.selected = String(Number(el.dataset.icon) === index);
-  const name = ICON_NAMES[index];
-  d.find("[data-rec=icon-preview]").innerHTML = [16, 24, 48]
-    .map((size) => `<div>${iconSvg(name, size)}<span>${size}</span></div>`)
-    .join("");
-  d.find("[data-rec=icon-name]").textContent = name;
-  d.find("[data-rec=icon-code]").textContent = `U+E0${index.toString(16).toUpperCase().padStart(2, "0")}`;
-};
+const spin = (d: Director) => d.find("[data-rec=cube]").getAnimations()[0];
+const formatTime = (frame: number) =>
+  `00:${String(Math.floor(frame / 30)).padStart(2, "0")}:${String(frame % 30).padStart(2, "0")}`;
 
-const icons: Recording = {
+const scene: Recording = {
   reset: (d) => {
-    selectIcon(d, 0);
-    d.find("[data-rec=export]").textContent = "Export SVG";
+    const turn = spin(d);
+    if (turn) turn.playbackRate = 1;
+    const playhead = d.find("[data-rec=playhead]");
+    playhead.style.transition = "none";
+    playhead.style.left = "0%";
+    d.find("[data-rec=play]").textContent = "▶";
+    d.find("[data-rec=time]").textContent = formatTime(0);
+    d.find("[data-rec=rotate-y]").textContent = "0°";
+    for (const key of d.root.querySelectorAll<HTMLElement>("[data-keyframe]")) key.dataset.selected = "false";
   },
   play: async (d, id) => {
-    for (const index of [4, 10, 17]) {
-      await d.moveTo(id, d.find(`[data-icon="${index}"]`));
-      await d.click(id);
-      selectIcon(d, index);
-      await d.step(id, 550);
-    }
-    await d.moveTo(id, d.find("[data-rec=export]"));
+    await d.moveTo(id, d.find("[data-rec=play]"));
     await d.click(id);
-    d.find("[data-rec=export]").textContent = `Exported ${ICON_NAMES.length} glyphs`;
-    await d.step(id, 1500);
+    d.find("[data-rec=play]").textContent = "❚❚";
+    const turn = spin(d);
+    if (turn) turn.playbackRate = 6;
+    const playhead = d.find("[data-rec=playhead]");
+    void playhead.offsetWidth;
+    playhead.style.transition = "left 3.2s linear";
+    playhead.style.left = "86%";
+    for (let frame = 0; frame <= 96; frame += 3) {
+      d.find("[data-rec=time]").textContent = formatTime(frame);
+      d.find("[data-rec=rotate-y]").textContent = `${Math.round((frame / 96) * 360)}°`;
+      await d.step(id, 100);
+    }
+    if (turn) turn.playbackRate = 1;
+    d.find("[data-rec=play]").textContent = "▶";
+    const key = d.find('[data-keyframe="2"]');
+    await d.moveTo(id, key);
+    await d.click(id);
+    key.dataset.selected = "true";
+    d.find("[data-rec=rotate-y]").textContent = "180°";
+    await d.step(id, 1300);
   },
 };
 
-export const RECORDINGS: Record<ToolExampleId, Recording> = { board, image, canvas, icons };
+export const RECORDINGS: Record<ToolExampleId, Recording> = { board, image, canvas, scene };

@@ -1,5 +1,4 @@
 import type { CSSProperties, ReactNode } from "react";
-import { ICON_NAMES, iconSvg } from "../../content/recording-content";
 import type { ToolExampleId } from "../../content/tool-examples-content";
 
 const Row = (props: { swatch?: string; on?: boolean; children: ReactNode }) => {
@@ -44,7 +43,10 @@ const Frame = (props: {
 const agent = (name: string) => `var(--chakra-colors-agent-${name})`;
 
 /** Left, main, and right panel content for each recorded tool. */
-export const RECORDING_PANES: Record<ToolExampleId, { left: ReactNode; main: ReactNode; right: ReactNode }> = {
+export const RECORDING_PANES: Record<
+  ToolExampleId,
+  { left: ReactNode; main: ReactNode; right: ReactNode; bottom?: ReactNode }
+> = {
   board: {
     left: (
       <>
@@ -186,38 +188,72 @@ export const RECORDING_PANES: Record<ToolExampleId, { left: ReactNode; main: Rea
       </>
     ),
   },
-  icons: {
+  scene: {
     left: (
       <>
-        <Heading>Glyphs · {ICON_NAMES.length}</Heading>
-        <Row swatch="var(--chakra-colors-illustration-page)" on>
-          Interface
+        <Heading>Scene</Heading>
+        <Row>Camera</Row>
+        <Row>Key light</Row>
+        <Row swatch="var(--chakra-colors-illustration-editor)" on>
+          Cube
         </Row>
-        <Row>Files</Row>
-        <Row>Media</Row>
-        <Row>Weather</Row>
+        <Row>Floor</Row>
       </>
     ),
     main: (
-      <div className="rec-icons">
-        {ICON_NAMES.map((name, i) => (
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: the glyphs are static paths from recording-content.
-          <div key={name} className="rec-icon" data-icon={i} dangerouslySetInnerHTML={{ __html: iconSvg(name, 26) }} />
-        ))}
+      <div className="rec-viewport">
+        <div className="rec-floor" />
+        <div className="rec-cube" data-rec="cube">
+          {["front", "back", "right", "left", "top", "bottom"].map((face) => (
+            <i key={face} data-face={face} />
+          ))}
+        </div>
       </div>
     ),
     right: (
       <>
-        <Heading>Preview</Heading>
-        <div className="rec-preview" data-rec="icon-preview" />
+        <Heading>Inspector · Cube</Heading>
         <div className="rec-props">
-          <Prop label="Name" value="home" rec="icon-name" />
-          <Prop label="Code" value="U+E000" rec="icon-code" />
-        </div>
-        <div className="rec-export" data-rec="export">
-          Export SVG
+          <Prop label="Rotate X" value="-22°" />
+          <Prop label="Rotate Y" value="0°" rec="rotate-y" />
+          <Prop label="Scale" value="1.00" />
+          <Prop label="Material" value="Glass" />
         </div>
       </>
+    ),
+    bottom: (
+      <div className="rec-timeline">
+        <div className="rec-timeline-controls">
+          <span className="rec-play" data-rec="play">
+            ▶
+          </span>
+          <span className="rec-muted" data-rec="time" />
+        </div>
+        <div className="rec-ruler" />
+        <div className="rec-tracks-names">
+          <span>Cube · rotate</span>
+          <span>Key light</span>
+        </div>
+        <div className="rec-tracks">
+          {[
+            [10, 0],
+            [32, 0],
+            [58, 0],
+            [84, 0],
+            [20, 1],
+            [70, 1],
+          ].map(([left, track], i) => (
+            <span
+              key={`${left}-${track}`}
+              className="rec-keyframe"
+              data-keyframe={i}
+              data-track={track}
+              style={{ left: `${left}%` }}
+            />
+          ))}
+          <span className="rec-playhead" data-rec="playhead" />
+        </div>
+      </div>
     ),
   },
 };

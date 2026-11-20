@@ -1,4 +1,4 @@
-import { Badge, Box, HStack, Icon, Link, Stack, Text } from "@chakra-ui/react";
+import { Badge, Box, Button, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { OpenAiLogo } from "@phosphor-icons/react";
 import { ArrowRight, SquareTerminal } from "lucide-react";
 import { SITE_LINKS } from "../../content/landing-content";
@@ -54,10 +54,12 @@ export const DownloadPanel = (props: { headingLevel: "h1" | "h2" }) => {
           />
         </HStack>
       </Stack>
-      <Link href="/what-is-prompt-studio/" textStyle="label/M/medium" alignSelf="start">
-        What is an agentic workbench?
-        <ArrowRight />
-      </Link>
+      <Button asChild variant="ghost" size="sm" alignSelf="start">
+        <a href="/what-is-prompt-studio/">
+          What is an agentic workbench?
+          <ArrowRight />
+        </a>
+      </Button>
     </Box>
   );
 };

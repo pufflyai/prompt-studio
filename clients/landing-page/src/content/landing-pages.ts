@@ -62,7 +62,7 @@ export const LANDING_PAGES: LandingPage[] = [
     path: "/features/",
     view: "features",
     label: VIEW_META.features.label,
-    title: "Shared features for your tools | Prompt Studio",
+    title: "What your tools get for free | Prompt Studio",
     description:
       "Try shared search, notifications, navigation, extension management, and themes. Build tools on the features already included in Prompt Studio.",
   },

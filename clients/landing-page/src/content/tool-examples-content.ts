@@ -1,4 +1,4 @@
-export type ToolExampleId = "board" | "image" | "canvas" | "icons";
+export type ToolExampleId = "board" | "image" | "canvas" | "scene";
 
 /** The tools the Examples page records, in reel order. Each gets its own page path. */
 export const TOOL_EXAMPLES: { id: ToolExampleId; slug: string; name: string; description: string }[] = [
@@ -21,9 +21,9 @@ export const TOOL_EXAMPLES: { id: ToolExampleId; slug: string; name: string; des
     description: "A canvas of your components: select frames, switch themes, and pan around.",
   },
   {
-    id: "icons",
-    slug: "icon-set-editor",
-    name: "Icon set editor",
-    description: "Browse an icon set, preview glyphs at every size, and export them as SVG.",
+    id: "scene",
+    slug: "3d-editor",
+    name: "3D editor",
+    description: "A 3D scene editor: play an animation on a timeline and pick keyframes.",
   },
 ];

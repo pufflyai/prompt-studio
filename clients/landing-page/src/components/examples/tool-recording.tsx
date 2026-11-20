@@ -13,7 +13,7 @@ interface ToolRecordingProps {
 }
 
 const ORDER = TOOL_EXAMPLES.map((example) => example.id);
-const REGIONS = ["left", "main", "right"] as const;
+const REGIONS = ["left", "main", "right", "bottom"] as const;
 
 /**
  * A scripted recording of the workbench switching between tools. The window keeps its frame
@@ -133,24 +133,17 @@ export const ToolRecording = (props: ToolRecordingProps) => {
           style={{ width: RECORDING_SIZE.width, height: RECORDING_SIZE.height }}
           aria-hidden="true"
         >
-          <Box css={styles.top}>
-            <Box css={styles.project}>Prompt Studio</Box>
-            <Box css={styles.modes}>
-              {TOOL_EXAMPLES.map((example) => (
-                <Box key={example.id} css={styles.mode} data-mode-button={example.id} data-active={example.id === mode}>
-                  {example.name}
-                </Box>
-              ))}
-            </Box>
-            <Box css={styles.search}>Search ⌘K</Box>
-          </Box>
           <Box
             css={styles.body}
-            style={{ gridTemplateColumns: `44px ${layout.left}px minmax(0, 1fr) ${layout.right}px` }}
+            style={{
+              gridTemplateColumns: `44px ${layout.left}px minmax(0, 1fr) ${layout.right}px`,
+              gridTemplateRows: `minmax(0, 1fr) ${layout.bottom}px`,
+            }}
           >
+            {/* The rail is the mode switcher: the recorded cursor clicks it to change tools. */}
             <Box css={styles.rail}>
               {ORDER.map((id) => (
-                <Box key={id} css={styles.railItem} data-active={id === mode} />
+                <Box key={id} css={styles.railItem} data-mode-button={id} data-active={id === mode} />
               ))}
             </Box>
             {REGIONS.map((region) => (

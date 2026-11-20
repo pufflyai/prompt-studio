@@ -1,7 +1,8 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
 import { recordingContentStyles } from "./landing-recording-content";
 
-const panelTransition = "grid-template-columns 0.65s cubic-bezier(.5,0,.2,1)";
+const panelTransition =
+  "grid-template-columns 0.65s cubic-bezier(.5,0,.2,1), grid-template-rows 0.65s cubic-bezier(.5,0,.2,1)";
 
 export const landingRecordingSlotRecipe = defineSlotRecipe({
   slots: [
@@ -12,11 +13,6 @@ export const landingRecordingSlotRecipe = defineSlotRecipe({
     "fill",
     "fit",
     "window",
-    "top",
-    "project",
-    "modes",
-    "mode",
-    "search",
     "body",
     "rail",
     "railItem",
@@ -68,64 +64,15 @@ export const landingRecordingSlotRecipe = defineSlotRecipe({
       textStyle: "label/S/regular",
       boxShadow: "lg",
     },
-    top: {
-      height: "9",
-      flex: "none",
-      display: "flex",
-      alignItems: "center",
-      gap: "md",
-      px: "sm",
-      borderBottomWidth: "1px",
-      borderColor: "border",
-      bg: "bg.subtle",
-    },
-    project: {
-      display: "flex",
-      alignItems: "center",
-      gap: "xs",
-      px: "sm",
-      py: "2xs",
-      borderRadius: "xs",
-      borderWidth: "1px",
-      borderColor: "border",
-      bg: "bg",
-      textStyle: "label/S/medium",
-    },
-    modes: {
-      display: "flex",
-      gap: "2xs",
-      p: "2xs",
-      borderRadius: "xs",
-      borderWidth: "1px",
-      borderColor: "border",
-      bg: "bg",
-    },
-    mode: {
-      px: "sm",
-      py: "2xs",
-      borderRadius: "xs",
-      color: "fg.muted",
-      cursor: "pointer",
-      transition: "background 0.2s, color 0.2s",
-      "&[data-active=true]": { bg: "bg.hover", color: "fg" },
-    },
-    search: {
-      marginInlineStart: "auto",
-      color: "fg.muted",
-      borderWidth: "1px",
-      borderColor: "border",
-      borderRadius: "xs",
-      px: "sm",
-      py: "2xs",
-    },
     body: {
       flex: 1,
       minHeight: 0,
       display: "grid",
-      gridTemplateRows: "minmax(0, 1fr)",
+      gridTemplateAreas: '"rail left main right" "rail left bottom right"',
       transition: panelTransition,
     },
     rail: {
+      gridArea: "rail",
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
@@ -147,8 +94,10 @@ export const landingRecordingSlotRecipe = defineSlotRecipe({
       position: "relative",
       overflow: "hidden",
       minWidth: 0,
-      "&[data-region=left]": { borderRightWidth: "1px", borderColor: "border", bg: "bg.subtle" },
-      "&[data-region=right]": { borderLeftWidth: "1px", borderColor: "border", bg: "bg.subtle" },
+      "&[data-region=left]": { gridArea: "left", borderRightWidth: "1px", borderColor: "border", bg: "bg.subtle" },
+      "&[data-region=main]": { gridArea: "main" },
+      "&[data-region=right]": { gridArea: "right", borderLeftWidth: "1px", borderColor: "border", bg: "bg.subtle" },
+      "&[data-region=bottom]": { gridArea: "bottom", borderTopWidth: "1px", borderColor: "border", bg: "bg.subtle" },
     },
     // Panes crossfade while the grid tracks resize, which reads as a mode change.
     pane: {
