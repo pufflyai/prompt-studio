@@ -1,5 +1,6 @@
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../helpers/folder-project";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
@@ -261,8 +262,15 @@ test("opens a same-origin canonical document in another project and returns to i
     await page.goBack();
     await expect(page.getByRole("link", { name: "Source file", exact: true }).last()).toBeVisible();
     await page.getByRole("link", { name: "Source file", exact: true }).last().click();
-    await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Source\s+project/);
-    await expect(page).toHaveURL(new RegExp(`/projects/${source!.id}/extensions/pstdio.workspaces/files`));
+    // A link in the same project previews beside its conversation instead of leaving it.
+    await expect(page.locator('[data-workbench-region="side"] .monaco-editor .view-lines:visible')).toContainText(
+      /Source\s+project/,
+    );
+    await expect(page).toHaveURL(
+      (url) =>
+        url.pathname === `/projects/${source!.id}/session` &&
+        defaultPageResourceCodec.fromUri(url.searchParams.get("resource") ?? "")?.id === session.id,
+    );
   } catch (error) {
     failures.push(error);
   } finally {
