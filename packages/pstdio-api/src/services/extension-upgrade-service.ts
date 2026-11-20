@@ -104,6 +104,12 @@ const isRetiredHostSource = (catalog: ExtensionCatalog, parsed: ReturnType<typeo
   return Boolean(entry && repositoryKey(entry.origin.url) === repositoryKey(parsed.url));
 };
 
+const upgradableOrigin = (
+  catalog: ExtensionCatalog,
+  entry: ExtensionCatalogEntry | undefined,
+  parsed: ReturnType<typeof parseExtensionSourceRef>,
+) => matchesCatalogOrigin(entry, parsed) && !isRetiredHostSource(catalog, parsed);
+
 const upgradeRef = (entry: ExtensionCatalogEntry | undefined, release: ExtensionRelease | null) =>
   entry && entry.origin.ref !== "{hostRelease}" ? entry.origin.ref : release?.ref;
 
@@ -168,11 +174,10 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     if (registry.matches(source)) return registry.canUpgrade(source);
     const entry = await catalogEntry(source.install_name);
     const parsed = parseExtensionSourceRef(source.source_ref);
-    if (isRetiredHostSource(await catalog, parsed)) return false;
     if (deps.release?.source === "registry") return canMoveToRegistry(entry, parsed, source.version);
     const origin = parsed ?? entry?.origin;
     const releaseRef = upgradeRef(entry, deps.release);
-    if (!origin || !releaseRef || !matchesCatalogOrigin(entry, parsed)) return false;
+    if (!origin || !releaseRef || !upgradableOrigin(await catalog, entry, parsed)) return false;
     return canUpgradeGitSource(source, parsed, origin, releaseRef);
   };
   const requireCatalogEntry = async (installName: string) => {
