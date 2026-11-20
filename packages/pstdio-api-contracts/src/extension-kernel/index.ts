@@ -73,7 +73,7 @@ export * from "./page-url";
 export { type QueryDependency, queryChangeEnvelopeSchema } from "./query-change";
 export { commandRef, eventRef } from "./refs";
 export { resourceKey } from "./resource-key";
-export { resourceLinkTarget } from "./resource-link-target";
+export { type ResourceLinkSource, resourceLinkTarget } from "./resource-link-target";
 export { serializeCommandError } from "./serialize-error";
 export { sessionBrowser, sessionBrowserId } from "./session-browser-refs";
 export { defineSlot } from "./slots";
