@@ -1,4 +1,5 @@
 import { type SQL, sql } from "drizzle-orm";
+import type { StorageOwner } from "pstdio-sync";
 import {
   type StorageAggregateQuery,
   type StorageExpression,
@@ -7,6 +8,7 @@ import {
   validateStorageExpression,
 } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
+import { recordIndexName } from "./record-index-lifecycle";
 import { projectionKey } from "./record-projection-codec";
 
 /** Only operations whose results depend entirely on the stored count dimensions
@@ -15,9 +17,16 @@ export const countIndexSource = async (
   tx: Pick<DbClient, "execute">,
   index: StorageRecordIndex,
   query: StorageAggregateQuery,
-  name: string,
+  candidate: { name: string | undefined; declared: StorageRecordIndex; owner: StorageOwner },
   predicateSql: SQL,
 ) => {
+  const { name, declared, owner } = candidate;
+  if (
+    !name?.startsWith("storage_query_v4_") ||
+    !declared.countBy?.length ||
+    name !== (await recordIndexName(owner, declared))
+  )
+    return;
   if (!index.countBy?.length || query.metrics || query.statistics || query.fingerprint) return;
   const supportedExpression = (expression: StorageExpression, visited: Set<string>) => {
     let valid = true;
