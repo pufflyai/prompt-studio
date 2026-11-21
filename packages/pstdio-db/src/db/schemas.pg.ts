@@ -26,5 +26,4 @@ export * from "./schemas/storage-record-sync";
 export * from "./schemas/storage-records";
 export * from "./schemas/storage-resource-identities";
 export type { JsonObject, ResourceRef } from "./schemas/types";
-export * from "./schemas/webview-preferences";
 export * from "./schemas/workspaces";

@@ -1,86 +1,71 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { extension_settings } from "../../db/schemas.pg";
+import { preferences } from "../../db/schemas/preferences";
+import { getExtensionStorageOwner } from "../extension-storage/storage-owner";
+import { type ExtensionSettingOwner, extensionSettingPreferenceOwner } from "../preferences/preference-owners";
+import { preferenceOwnerWhere } from "../preferences/preferences";
 
-const nowTimestamp = () => new Date().toISOString();
+export type { ExtensionSettingOwner, ExtensionSettingOwnerType } from "../preferences/preference-owners";
 
-export type ExtensionSettingOwnerType = "installed_extension" | "extension_instance" | "device_extension";
-
-export type ExtensionSettingOwner = {
-  owner_type: ExtensionSettingOwnerType;
-  owner_id: string;
-  extension_id: string;
-};
-
-export type ExtensionSettingKey = ExtensionSettingOwner & {
-  key: string;
-};
-
-export type SetExtensionSettingInput = ExtensionSettingKey & {
-  value_json: unknown;
-};
-
+export type ExtensionSettingKey = ExtensionSettingOwner & { key: string };
+export type SetExtensionSettingInput = ExtensionSettingKey & { value_json: unknown };
+interface StoredSetting {
+  value: unknown;
+  created_at: string;
+}
+const result = (row: typeof preferences.$inferSelect, owner: ExtensionSettingOwner) => ({
+  ...owner,
+  key: row.key.slice("setting:".length),
+  value_json: (row.value as StoredSetting).value,
+  created_at: (row.value as StoredSetting).created_at,
+  updated_at: row.updated_at,
+});
 export const createExtensionSettingsDBService = (db: DbClient) => {
-  const whereKey = (input: ExtensionSettingKey) =>
-    and(
-      eq(extension_settings.owner_type, input.owner_type),
-      eq(extension_settings.owner_id, input.owner_id),
-      eq(extension_settings.extension_id, input.extension_id),
-      eq(extension_settings.key, input.key),
-    );
-
-  const getValue = async (input: ExtensionSettingKey) => {
-    const [row] = await db.select().from(extension_settings).where(whereKey(input));
-    return row ?? null;
+  const ownerWhere = (owner: ExtensionSettingOwner) => preferenceOwnerWhere(extensionSettingPreferenceOwner(owner));
+  const whereKey = (input: ExtensionSettingKey) => and(ownerWhere(input), eq(preferences.key, `setting:${input.key}`));
+  return {
+    async getValue(input: ExtensionSettingKey) {
+      const [row] = await db.select().from(preferences).where(whereKey(input));
+      return row ? result(row, input) : null;
+    },
+    async listValues(owner: ExtensionSettingOwner) {
+      const rows = await db
+        .select()
+        .from(preferences)
+        .where(and(ownerWhere(owner), sql`starts_with(${preferences.key}, 'setting:')`))
+        .orderBy(preferences.key);
+      return rows.map((row) => result(row, owner));
+    },
+    async setValue(input: SetExtensionSettingInput) {
+      const stamp = new Date().toISOString();
+      let projectId: string | null = null;
+      if (input.owner_type === "extension_instance")
+        projectId = (await getExtensionStorageOwner(db, input.owner_id))?.workbenchId ?? null;
+      let sync: "team" | "personal" | "device" = "personal";
+      if (input.owner_type === "extension_instance") sync = "team";
+      if (input.owner_type === "device_extension") sync = "device";
+      const [row] = await db
+        .insert(preferences)
+        .values({
+          ...extensionSettingPreferenceOwner(input),
+          key: `setting:${input.key}`,
+          project_id: projectId,
+          sync,
+          value: { value: input.value_json, created_at: stamp },
+          updated_at: stamp,
+        })
+        .onConflictDoUpdate({
+          target: [preferences.scope, preferences.scope_id, preferences.extension_id, preferences.key],
+          set: {
+            value: sql`jsonb_build_object('value', excluded.value->'value', 'created_at', ${preferences.value}->'created_at')`,
+            updated_at: stamp,
+          },
+        })
+        .returning();
+      return result(row!, input);
+    },
+    async deleteValue(input: ExtensionSettingKey) {
+      return (await db.delete(preferences).where(whereKey(input)).returning({ key: preferences.key })).length > 0;
+    },
   };
-
-  const listValues = async (owner: ExtensionSettingOwner) =>
-    db
-      .select()
-      .from(extension_settings)
-      .where(
-        and(
-          eq(extension_settings.owner_type, owner.owner_type),
-          eq(extension_settings.owner_id, owner.owner_id),
-          eq(extension_settings.extension_id, owner.extension_id),
-        ),
-      )
-      .orderBy(extension_settings.key);
-
-  const setValue = async (input: SetExtensionSettingInput) => {
-    const timestamp = nowTimestamp();
-    const row = {
-      owner_type: input.owner_type,
-      owner_id: input.owner_id,
-      extension_id: input.extension_id,
-      key: input.key,
-      value_json: input.value_json,
-      created_at: timestamp,
-      updated_at: timestamp,
-    };
-    const [stored] = await db
-      .insert(extension_settings)
-      .values(row)
-      .onConflictDoUpdate({
-        target: [
-          extension_settings.owner_type,
-          extension_settings.owner_id,
-          extension_settings.extension_id,
-          extension_settings.key,
-        ],
-        set: { value_json: input.value_json, updated_at: timestamp },
-      })
-      .returning();
-    return stored;
-  };
-
-  const deleteValue = async (input: ExtensionSettingKey) => {
-    const deleted = await db
-      .delete(extension_settings)
-      .where(whereKey(input))
-      .returning({ key: extension_settings.key });
-    return deleted.length > 0;
-  };
-
-  return { getValue, listValues, setValue, deleteValue };
 };

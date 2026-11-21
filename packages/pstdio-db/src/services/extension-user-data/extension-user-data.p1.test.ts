@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
-import { extension_files, extension_skill_preferences, files, projects } from "../../db/schemas.pg";
+import { extension_files, files, projects } from "../../db/schemas.pg";
 import { createExtensionInstancesDBService } from "../extension-instances/extension-instances";
+import { createExtensionSkillPreferencesDBService } from "../extension-preferences/extension-preferences";
 import { createDocumentStorageDBService } from "../extension-storage/document-storage";
 import { createExtensionStorageDBService } from "../extension-storage/extension-storage";
 import { createInstalledExtensionSourcesDBService } from "../installed-extension-sources/installed-extension-sources";
@@ -37,12 +38,10 @@ const seedAllTables = async () => {
     scope_id: projectId,
     created_at: timestamp,
   });
-  await db.insert(extension_skill_preferences).values({
+  await createExtensionSkillPreferencesDBService(db).set({
     project_id: projectId,
     extension_instance_id: instanceId,
     skill_key: "skill",
-    created_at: timestamp,
-    updated_at: timestamp,
   });
 };
 

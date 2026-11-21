@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { board_default_views, board_views, extension_files, extension_skill_preferences } from "../../db/schemas.pg";
+import { board_default_views, board_views, extension_files, preferences } from "../../db/schemas.pg";
 import { clearOwnerDocuments } from "../extension-storage/clear-documents";
 import { createDocumentStorageDBService } from "../extension-storage/document-storage";
 import { indexNodeFilesFor } from "../extension-storage/index-node-files";
@@ -9,13 +9,33 @@ import { getExtensionStorageOwner, hasOtherStorageProvider } from "../extension-
 // Every table that anchors user-owned data to an extension instance. The instance row is a
 // disposable install artifact, so destroying these rows must be an explicit decision rather than a
 // silent FK cascade.
-const userDataTables = [board_default_views, board_views, extension_files, extension_skill_preferences] as const;
+const userDataTables = [board_default_views, board_views, extension_files] as const;
+const instancePreferences = (instanceId: string) =>
+  and(
+    eq(preferences.scope, "project"),
+    eq(preferences.scope_id, instanceId),
+    sql`(starts_with(${preferences.key}, 'setting:') OR starts_with(${preferences.key}, 'skill:') OR starts_with(${preferences.key}, 'automation:'))`,
+  );
 
 export const createExtensionUserDataDBService = (db: DbClient) => {
   const documents = createDocumentStorageDBService(db);
   const hasUserData = async (extensionInstanceId: string) => {
     const owner = await getExtensionStorageOwner(db, extensionInstanceId);
     if (owner && (await documents.hasData(owner))) return true;
+    const [savedPreference] = await db
+      .select({ key: preferences.key })
+      .from(preferences)
+      .where(instancePreferences(extensionInstanceId))
+      .limit(1);
+    if (savedPreference) return true;
+    if (owner) {
+      const [sharedPreference] = await db
+        .select({ key: preferences.key })
+        .from(preferences)
+        .where(and(eq(preferences.project_id, owner.workbenchId), eq(preferences.extension_id, owner.extensionId)))
+        .limit(1);
+      if (sharedPreference) return true;
+    }
     for (const table of userDataTables) {
       const [row] = await db
         .select({ instance: table.extension_instance_id })
@@ -33,8 +53,12 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
       const owner = await getExtensionStorageOwner(tx, extensionInstanceId);
       if (owner && !(await hasOtherStorageProvider(tx, owner, extensionInstanceId))) {
         await clearOwnerDocuments(tx, owner);
+        await tx
+          .delete(preferences)
+          .where(and(eq(preferences.project_id, owner.workbenchId), eq(preferences.extension_id, owner.extensionId)));
         cleared = owner;
       }
+      await tx.delete(preferences).where(instancePreferences(extensionInstanceId));
       const boardDefaults = await tx
         .delete(board_default_views)
         .where(eq(board_default_views.extension_instance_id, extensionInstanceId))

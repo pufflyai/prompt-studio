@@ -1,4 +1,4 @@
-import { boolean, index, jsonb, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { boolean, index, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { extensionLoadStatusEnum, extensionSourceKindEnum } from "./enums";
 import { files } from "./files";
 import { projects } from "./projects";
@@ -59,24 +59,6 @@ export const extension_instances = pgTable(
   ],
 );
 
-export const extension_settings = pgTable(
-  "extension_settings",
-  {
-    owner_type: text("owner_type").notNull(),
-    owner_id: text("owner_id").notNull(),
-    extension_id: text("extension_id").notNull(),
-    key: text("key").notNull(),
-    value_json: jsonb("value_json").$type<unknown>().notNull(),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.owner_type, table.owner_id, table.extension_id, table.key] }),
-    index("extension_settings_owner_idx").on(table.owner_type, table.owner_id),
-    index("extension_settings_extension_idx").on(table.extension_id),
-  ],
-);
-
 export const extension_files = pgTable(
   "extension_files",
   {
@@ -99,48 +81,5 @@ export const extension_files = pgTable(
     index("extension_files_instance_scope_idx").on(table.extension_instance_id, table.scope_type, table.scope_id),
     index("extension_files_project_idx").on(table.project_id),
     index("extension_files_file_idx").on(table.file_id),
-  ],
-);
-
-export const extension_automation_preferences = pgTable(
-  "extension_automation_preferences",
-  {
-    project_id: text("project_id")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    extension_instance_id: text("extension_instance_id")
-      .notNull()
-      .references(() => extension_instances.id, { onDelete: "restrict" }),
-    automation_id: text("automation_id").notNull(),
-    enabled: boolean("enabled").notNull().default(true),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.project_id, table.extension_instance_id, table.automation_id] }),
-    index("extension_automation_prefs_instance_idx").on(table.extension_instance_id),
-  ],
-);
-
-export const extension_skill_preferences = pgTable(
-  "extension_skill_preferences",
-  {
-    project_id: text("project_id")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    extension_instance_id: text("extension_instance_id")
-      .notNull()
-      .references(() => extension_instances.id, { onDelete: "restrict" }),
-    skill_key: text("skill_key").notNull(),
-    enabled: boolean("enabled").notNull().default(true),
-    display_name_override: text("display_name_override"),
-    description_override: text("description_override"),
-    metadata_json: jsonb("metadata_json").$type<JsonObject>().notNull().default({}),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.project_id, table.extension_instance_id, table.skill_key] }),
-    index("extension_skill_prefs_instance_idx").on(table.extension_instance_id),
   ],
 );

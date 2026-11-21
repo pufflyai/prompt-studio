@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { createDb } from "../db/connection.pglite";
 import * as s from "../db/schemas.pg";
 import { migrateExtensionIdentities } from "./extension-identity-migration";
+import { createExtensionSettingsDBService } from "./extension-settings/extension-settings";
 
 const old = "pstdio.pstdio-notes";
 const next = "pstdio.notes";
@@ -74,14 +75,20 @@ test("migration retains complete owner history, immutable bytes, sequence positi
       state: "accepted",
       indexed: true,
     });
-    await db.insert(s.extension_settings).values({
-      owner_type: "project",
-      owner_id: "project",
+    const settings = createExtensionSettingsDBService(db);
+    await settings.setValue({
+      owner_type: "installed_extension",
+      owner_id: "source",
       extension_id: old,
       key: "folder",
       value_json: { text: old },
-      created_at: now,
-      updated_at: now,
+    });
+    await settings.setValue({
+      owner_type: "device_extension",
+      owner_id: old,
+      extension_id: old,
+      key: "device-choice",
+      value_json: "retained",
     });
     await migrateExtensionIdentities(db);
     expect((await db.select().from(s.storage_documents))[0]).toMatchObject({
@@ -124,7 +131,26 @@ test("migration retains complete owner history, immutable bytes, sequence positi
     expect(
       (await db.select().from(s.installed_extension_sources)).find((row) => row.id === "custom-source"),
     ).toMatchObject({ install_name: "my-notes", extension_id: next, manifest_json: { version: "1.0.0" } });
-    expect((await db.select().from(s.extension_settings))[0]?.value_json).toEqual({ text: old });
+    expect(
+      (
+        await settings.getValue({
+          owner_type: "installed_extension",
+          owner_id: "source",
+          extension_id: next,
+          key: "folder",
+        })
+      )?.value_json,
+    ).toEqual({ text: old });
+    expect(
+      (
+        await settings.getValue({
+          owner_type: "device_extension",
+          owner_id: next,
+          extension_id: next,
+          key: "device-choice",
+        })
+      )?.value_json,
+    ).toBe("retained");
     const before = await db.select().from(s.storage_ordered_operations);
     await migrateExtensionIdentities(db);
     expect(await db.select().from(s.storage_ordered_operations)).toEqual(before);
@@ -315,6 +341,34 @@ test.each([
       id: "retained-principal",
       name: `pstdio.${name}`,
     });
+  } finally {
+    await close();
+  }
+});
+
+test("conflicting device settings keep both values and report a recoverable identity conflict", async () => {
+  const { db, close } = await setup();
+  try {
+    const settings = createExtensionSettingsDBService(db);
+    const key = (id: string) => ({
+      owner_type: "device_extension" as const,
+      owner_id: id,
+      extension_id: id,
+      key: "selection",
+    });
+    await settings.setValue({ ...key(old), value_json: "old choice" });
+    await settings.setValue({ ...key(next), value_json: "new choice" });
+    const conflicts: string[] = [];
+    await expect(
+      migrateExtensionIdentities(db, {
+        onConflict: async (error) => {
+          conflicts.push(error.code);
+        },
+      }),
+    ).resolves.toBe(false);
+    expect(conflicts).toEqual(["extension_identity_conflict"]);
+    expect((await settings.getValue(key(old)))?.value_json).toBe("old choice");
+    expect((await settings.getValue(key(next)))?.value_json).toBe("new choice");
   } finally {
     await close();
   }

@@ -36,8 +36,7 @@ const projectTables = [
   s.recovery_point_owners,
 ];
 const otherTables = [
-  s.extension_settings,
-  s.webview_preferences,
+  s.preferences,
   s.extension_connections,
   s.assetTransfers,
   s.extension_resource_sequences,
@@ -80,15 +79,19 @@ const assertNoConflicts = async (tx: Transaction, from: string, to: string) => {
     ) LIMIT 1`);
   if (scopes.rows[0]) throw new ExtensionIdentityConflictError(from, to, String(scopes.rows[0].scope));
   for (const [table, scope] of [
-    [s.extension_settings, sql`jsonb_build_array(owner_type, owner_id)`],
-    [s.webview_preferences, sql`jsonb_build_array(scope_type, scope_id)`],
+    [
+      s.preferences,
+      sql`jsonb_build_array(scope,
+      CASE WHEN scope = 'user' AND scope_id = ${from} AND starts_with(key, 'setting:')
+        THEN ${to} ELSE scope_id END)`,
+    ],
     [s.extension_connections, sql`to_jsonb(project_id)`],
     [s.assetTransfers, sql`to_jsonb(project_id)`],
     [s.extension_resource_sequences, sql`to_jsonb(project_id)`],
     [s.storage_resource_identities, sql`to_jsonb(workbench_id)`],
   ] as const) {
     const result = await tx.execute(sql`SELECT ${scope} AS scope FROM ${table} WHERE ${ownerColumn} IN (${from}, ${to})
-      GROUP BY ${scope} HAVING count(DISTINCT extension_id) > 1 LIMIT 1`);
+      GROUP BY 1 HAVING count(DISTINCT extension_id) > 1 LIMIT 1`);
     if (result.rows[0]) throw new ExtensionIdentityConflictError(from, to, JSON.stringify(result.rows[0].scope));
   }
   const anchors = await tx.execute(sql`SELECT project_id AS scope FROM ${s.resource_anchors}
@@ -186,6 +189,9 @@ export const migrateExtensionIdentities = async (
           ...otherTables,
         ])
           await tx.execute(sql`UPDATE ${table} SET ${ownerColumn} = ${to} WHERE ${ownerColumn} = ${from}`);
+        // Device settings use the stable extension identity as their local owner key too.
+        await tx.execute(sql`UPDATE ${s.preferences} SET scope_id = ${to}
+          WHERE extension_id = ${to} AND scope = 'user' AND scope_id = ${from} AND starts_with(key, 'setting:')`);
         for (const table of [...parents].reverse())
           await tx.execute(sql`DELETE FROM ${table} WHERE ${ownerColumn} = ${from}`);
         await tx.execute(sql`UPDATE ${s.installed_extension_sources} SET extension_id = ${to},

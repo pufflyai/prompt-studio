@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Preserve device identity and global settings while consolidating their storage into scoped preferences.
+Preserve device identity, settings and extension preferences while consolidating their storage into scoped preferences.

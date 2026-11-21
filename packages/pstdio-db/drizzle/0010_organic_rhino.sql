@@ -11,7 +11,11 @@ CREATE TABLE "preferences" (
 );
 --> statement-breakpoint
 DROP TABLE "local_environment" CASCADE;--> statement-breakpoint
+DROP TABLE "extension_automation_preferences" CASCADE;--> statement-breakpoint
+DROP TABLE "extension_settings" CASCADE;--> statement-breakpoint
+DROP TABLE "extension_skill_preferences" CASCADE;--> statement-breakpoint
 DROP TABLE "settings" CASCADE;--> statement-breakpoint
+DROP TABLE "webview_preferences" CASCADE;--> statement-breakpoint
 ALTER TABLE "preferences" ADD CONSTRAINT "preferences_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "preferences_extension_idx" ON "preferences" USING btree ("extension_id");--> statement-breakpoint
 CREATE INDEX "preferences_project_idx" ON "preferences" USING btree ("project_id");
