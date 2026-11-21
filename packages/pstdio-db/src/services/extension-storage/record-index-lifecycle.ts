@@ -26,7 +26,7 @@ export const dropRecordIndexes = async (db: Pick<DbClient, "select" | "execute">
 };
 
 export const recordIndexName = async (owner: StorageOwner, index: StorageRecordIndex) =>
-  `storage_query_${index.countBy?.length || index.alternateOrders?.length ? "v4" : "v3"}_${(await fingerprint({ owner: { ...owner }, definition: index as unknown as Json })).slice(0, 32)}`;
+  `storage_query_${index.countBy?.length || index.alternateOrders?.length ? "v4" : "v3"}_${(await fingerprint({ owner: { ...owner }, definition: index as unknown as Json, recordIdentityOrder: "prefix-v1" })).slice(0, 32)}`;
 
 export const installRecordIndex = async (
   tx: Pick<DbClient, "execute" | "insert">,

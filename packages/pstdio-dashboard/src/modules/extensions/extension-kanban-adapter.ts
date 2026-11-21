@@ -13,7 +13,10 @@ import { getRuntimeCollections } from "@/lib/sync/collections";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
-import { buildDashboardExtensionMenuRegistrations } from "@/shared/extensions/workbench-extension-contributions";
+import {
+  buildDashboardExtensionMenuRegistrations,
+  getCachedDashboardExtensionMetadata,
+} from "@/shared/extensions/workbench-extension-contributions";
 import { createDashboardWorkspaces } from "@/shared/workspaces/dashboard-workspaces";
 import { createSharedBoardViews } from "./extension-board-views";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
@@ -23,7 +26,9 @@ type MenuRegistration = ReturnType<typeof buildDashboardExtensionMenuRegistratio
 export const toDashboardExtensionResource = (
   resource: unknown,
   projectId: string,
-  kinds?: Parameters<typeof canonicalDashboardResource>[2],
+  kinds: Parameters<typeof canonicalDashboardResource>[2] = getCachedDashboardExtensionMetadata(
+    projectId,
+  )?.resourceKinds,
 ): ResourceRef | undefined => {
   if (!resource || typeof resource !== "object") return undefined;
   const ref = resource as KanbanRendererResourceRef & {
@@ -31,6 +36,10 @@ export const toDashboardExtensionResource = (
   };
   const workspace =
     ref.type === "workspace" ? createDashboardWorkspaces(projectId).find((entry) => entry.id === ref.id) : undefined;
+  const resolved = canonicalDashboardResource(ref, projectId, kinds);
+  const kind = kinds?.find(
+    (kind) => (kind.localId ?? kind.id) === resolved.type && kind.extensionId === resolved.extensionId,
+  );
   // Ownership stays on the resource; adding it to metadata would change a file's read key after navigation.
   const metadata =
     ref.metadata || workspace?.resource.metadata
@@ -41,9 +50,9 @@ export const toDashboardExtensionResource = (
         }
       : undefined;
   return {
-    ...canonicalDashboardResource(ref, projectId, kinds),
+    ...resolved,
     label: workspace?.resource.label ?? ref.label ?? ref.id,
-    icon: workspace?.resource.icon ?? ref.icon ?? standardResourceIcons.kanbanRenderer,
+    icon: workspace?.resource.icon ?? ref.icon ?? kind?.icon ?? standardResourceIcons.kanbanRenderer,
     ...(metadata ? { metadata } : {}),
   };
 };
