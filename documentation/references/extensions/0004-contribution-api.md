@@ -445,7 +445,7 @@ extensions that adopt it. Older view kinds and activity items stay supported.
 
 ## View-owned page and tab headers
 
-On unreleased extension API 0.5.0, declare `header: { view: toolbar.ref }` on a view
+On unreleased extension API 0.5.1, declare `header: { view: toolbar.ref }` on a view
 alongside its `body`. The toolbar is another declared view, using a native body or
 a bounded webview. Header references must name an available view and cannot form
 cycles.

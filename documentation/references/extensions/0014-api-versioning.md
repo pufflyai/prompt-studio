@@ -549,3 +549,7 @@ their published dependency ranges before release. See
 [project composition](0004-contribution-api.md#configure-project-composition).
 
 *Updated at: 2026-11-18*
+
+## View-owned header controls (API 0.5.1)
+
+The optional `ViewContribution.header.view` adds a companion view for page controls and tab subheaders in API 0.5.1. Existing declarations remain supported. Extensions using this field require `engines.pstdio: "^0.5.1"`; publish supporting host and SDK versions before releasing consumers. See [view-owned page and tab headers](0004-contribution-api.md#view-owned-page-and-tab-headers).
