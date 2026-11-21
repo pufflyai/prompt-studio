@@ -16,6 +16,24 @@ if (window.location.protocol === "pstdio:" && window.location.hostname === "life
   window.addEventListener("unload", stopPaint, { once: true });
 }
 
+// Bundle failures happen before the dashboard can install its own error reporting.
+if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+  let reportedStartupFailure = false;
+  window.addEventListener(
+    "error",
+    (event) => {
+      if (reportedStartupFailure || document.getElementById("root")?.hasChildNodes()) return;
+      const scriptFailed = event.target instanceof HTMLScriptElement;
+      if (!scriptFailed && !(event instanceof ErrorEvent)) return;
+      reportedStartupFailure = true;
+      void ipcRenderer.invoke(DESKTOP_CHANNELS.reportWorkbenchError, {
+        message: scriptFailed ? "The workbench app files could not load." : event.message,
+      });
+    },
+    true,
+  );
+}
+
 if (process.platform === "darwin") {
   const applyFullScreen = (fullScreen: boolean) => {
     document.documentElement.toggleAttribute("data-window-full-screen", fullScreen);
