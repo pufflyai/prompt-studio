@@ -29,19 +29,6 @@
     "failureMessageIncludes": ["the gesture starts on the group header (target: null)"]
   },
   {
-    "runner": "playwright-ui",
-    "file": "packages/e2e/src/ui/sidenav-levels.p2.spec.ts",
-    "name": "Notes and Sidenav levels keep rows users pinned to the header",
-    "platforms": ["linux"],
-    "arch": "x64",
-    "owner": "PS-1270",
-    "evidence": [
-      "https://github.com/pufflyai/prompt-studio/actions/runs/44664852770",
-      "https://github.com/pufflyai/prompt-studio/issues/2241"
-    ],
-    "removalCriteria": "Reproduce the late Sidenav level update after note creation (submit at +0s, level row after 12.5s while webviews re-prepare) and fix its cause (#2241). Then restore this unchanged case to the stable lane with first-attempt evidence. Keep every assertion."
-  },
-  {
     "runner": "bun",
     "file": "packages/pstdio-api/src/services/account/project-local-removal.p1.test.ts",
     "name": "provider failure leaves removal resumable and keeps the managed folder until retry succeeds",
