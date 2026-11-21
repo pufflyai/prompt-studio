@@ -1,4 +1,5 @@
-import { type CommandContext, defineCommand, l10n, params, workbenchPages } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params, workbenchPages } from "@pstdio/sdk/extensions";
+import { collectRun, startCollection, waitForCollection } from "./collection";
 import { connectionApi } from "./connection";
 import { changed, googleToken, projectRoot, runDeps } from "./context";
 import { cleanupEnvironmentCommand } from "./environment-cleanup";
@@ -50,46 +51,6 @@ export const status = defineCommand({
     }
   },
 });
-
-const collectRun = defineCommand({
-  id: "runs.collect",
-  title: l10n("remote-testing.collect-remote-test-result", "Collect remote test result"),
-  automation: true,
-  params: { runId: params.text({ label: l10n("remote-testing.run-id", "Run ID"), required: true }) },
-  async run(ctx, { runId }) {
-    return awaitRun(await runDeps(ctx), await readRun(ctx.storage, runId), ctx.signal);
-  },
-});
-
-export async function startCollection(ctx: CommandContext, runId: string) {
-  const key = `collector:${runId}`;
-  const priorId = await ctx.storage.get<string>(key);
-  const prior = priorId ? await ctx.automation.get(priorId) : undefined;
-  if (prior && ["queued", "running", "succeeded"].includes(prior.status)) return prior.id;
-  const job = await ctx.automation.enqueue({
-    command: collectRun.ref,
-    input: { params: { runId } },
-    key: `remote-tests:collect:${runId}:${priorId ?? "first"}`,
-  });
-  await ctx.storage.set(key, job.id);
-  return job.id;
-}
-
-async function waitForCollection(ctx: CommandContext, runId: string, jobId: string) {
-  while (true) {
-    ctx.signal.throwIfAborted();
-    const job = await ctx.automation.get(jobId);
-    if (!job) throw new Error("The remote test collector is unavailable.");
-    if (job.status === "succeeded") {
-      const result = (await readRun(ctx.storage, runId)).summary;
-      if (!result) throw new Error("The remote test collector did not save a result.");
-      return result;
-    }
-    if (job.status !== "queued" && job.status !== "running")
-      throw new Error(job.error?.message ?? `Could not collect the remote test result. Status ${job.status}.`);
-    await Bun.sleep(1000);
-  }
-}
 
 export const run = defineCommand({
   id: "run",

@@ -9,6 +9,7 @@ import {
   workbenchPages,
 } from "@pstdio/sdk/extensions";
 import { runPromptStudio } from "./branch-commands";
+import { resumeCollection } from "./collection";
 import {
   cancelRunCommand,
   createEnvironmentCommand,
@@ -101,6 +102,7 @@ export const runsView = defineView({
       return {
         rows: await Promise.all(
           records.map(async (record) => {
+            await resumeCollection(ctx, record);
             const summary =
               deps && !record.summary && record.stopAfterRun === undefined
                 ? await checkRun(deps, record).catch(() => null)

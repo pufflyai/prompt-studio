@@ -1,6 +1,6 @@
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { publishBranchTemplate } from "./branch-templates";
-import { startCollection } from "./commands";
+import { startCollection } from "./collection";
 import { projectRoot, runDeps } from "./context";
 import { requirePreviewBridge } from "./preview-bridge";
 import { previewCommand } from "./prompt-studio-preview";
