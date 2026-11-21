@@ -19,15 +19,26 @@ export const LetterToolbarControls = (props: {
       value={props.search}
       onChange={(event) => props.onSearchChange(event.target.value)}
     />
-    <Button aria-label="Read header context" size="xs" variant="outline" flexShrink="0" onClick={props.onReadContext}>
-      {props.result ? `Context: ${props.result}` : "Check context"}
+    <Button
+      aria-label="Read header context"
+      size="xs"
+      variant="outline"
+      maxW="40"
+      flexShrink="0"
+      onClick={props.onReadContext}
+    >
+      <Text as="span" truncate>
+        {props.result ? `Context: ${props.result}` : "Check context"}
+      </Text>
     </Button>
     <Text
       aria-label={`Header for ${props.resource}`}
       textStyle="label/XS"
       color="fg.muted"
-      whiteSpace="nowrap"
-      flexShrink="0"
+      truncate
+      maxW="24"
+      minW="0"
+      flexShrink="1"
     >
       {props.resource === "landing" ? "New letter" : `Letter ${props.resource}`}
     </Text>
