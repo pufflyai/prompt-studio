@@ -142,3 +142,27 @@ test("native views keep one default and survive extension data deletion", async 
   expect(await service.list(native)).toEqual([]);
   expect(await service.getDefault(native)).toBeNull();
 });
+
+test("saved defaults remain unique and built-in defaults stay scoped", async () => {
+  const { board_views } = await import("../../db/schemas.pg");
+  const first = await service.create({ ...scope, title: "First", settings, ...unfiltered });
+  const second = await service.create({ ...scope, title: "Second", settings, ...unfiltered });
+  await service.setDefault(scope, first.id);
+  expect(await connection.db.select().from(board_views).where(eq(board_views.id, first.id))).toMatchObject([
+    { is_default: true },
+  ]);
+  await expect(
+    connection.db.update(board_views).set({ is_default: true }).where(eq(board_views.id, second.id)).execute(),
+  ).rejects.toThrow();
+  await service.setDefault(scope, second.id);
+  expect(await connection.db.select().from(board_views).where(eq(board_views.id, first.id))).toMatchObject([
+    { is_default: false },
+  ]);
+  expect(await service.getDefault(scope)).toMatchObject({ default_view_id: second.id });
+  await service.setDefault(scope, "builtin");
+  expect(await connection.db.select().from(board_views).where(eq(board_views.id, second.id))).toMatchObject([
+    { is_default: false },
+  ]);
+  expect(await service.getDefault(scope)).toMatchObject({ default_view_id: "builtin" });
+  expect(await service.getDefault({ ...scope, board_id: "other" })).toBeNull();
+});

@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { board_default_views, board_views, extension_files, preferences } from "../../db/schemas.pg";
+import { board_views, extension_files, preferences } from "../../db/schemas.pg";
+import { listBoardDefaults } from "../board-views/board-defaults";
 import { clearOwnerDocuments } from "../extension-storage/clear-documents";
 import { createDocumentStorageDBService } from "../extension-storage/document-storage";
 import { indexNodeFilesFor } from "../extension-storage/index-node-files";
@@ -9,12 +10,12 @@ import { getExtensionStorageOwner, hasOtherStorageProvider } from "../extension-
 // Every table that anchors user-owned data to an extension instance. The instance row is a
 // disposable install artifact, so destroying these rows must be an explicit decision rather than a
 // silent FK cascade.
-const userDataTables = [board_default_views, board_views, extension_files] as const;
+const userDataTables = [board_views, extension_files] as const;
 const instancePreferences = (instanceId: string) =>
   and(
     eq(preferences.scope, "project"),
     eq(preferences.scope_id, instanceId),
-    sql`(starts_with(${preferences.key}, 'setting:') OR starts_with(${preferences.key}, 'skill:') OR starts_with(${preferences.key}, 'automation:'))`,
+    sql`(starts_with(${preferences.key}, 'setting:') OR starts_with(${preferences.key}, 'skill:') OR starts_with(${preferences.key}, 'automation:') OR starts_with(${preferences.key}, 'board-default:extension:'))`,
   );
 
 export const createExtensionUserDataDBService = (db: DbClient) => {
@@ -51,6 +52,9 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
     let cleared: Awaited<ReturnType<typeof getExtensionStorageOwner>> = null;
     const result = await db.transaction(async (tx) => {
       const owner = await getExtensionStorageOwner(tx, extensionInstanceId);
+      const boardDefaults = (await listBoardDefaults(tx, owner?.workbenchId)).filter(
+        (row) => row.extension_instance_id === extensionInstanceId,
+      );
       if (owner && !(await hasOtherStorageProvider(tx, owner, extensionInstanceId))) {
         await clearOwnerDocuments(tx, owner);
         await tx
@@ -59,16 +63,12 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
         cleared = owner;
       }
       await tx.delete(preferences).where(instancePreferences(extensionInstanceId));
-      const boardDefaults = await tx
-        .delete(board_default_views)
-        .where(eq(board_default_views.extension_instance_id, extensionInstanceId))
-        .returning();
       const boardViews = await tx
         .delete(board_views)
         .where(eq(board_views.extension_instance_id, extensionInstanceId))
         .returning();
       for (const table of userDataTables) {
-        if (table === board_views || table === board_default_views) continue;
+        if (table === board_views) continue;
         await tx.delete(table).where(eq(table.extension_instance_id, extensionInstanceId));
       }
       return { boardViews, boardDefaults };

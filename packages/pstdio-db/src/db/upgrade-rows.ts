@@ -3,9 +3,12 @@ import type { DbClient } from "./connection.pglite";
 
 const captureBytes = 4 * 1024 * 1024;
 type SourcePosition = Record<string, unknown> & { encoded_bytes: number };
-const keyTuple = (keys: readonly string[]) =>
+export type UpgradeSource = { table: string; keys: readonly string[]; nullableKeys?: readonly string[] };
+const keyColumn = (key: string, nullable: readonly string[] = []) =>
+  nullable.includes(key) ? sql`coalesce(${sql.identifier(key)}, '')` : sql`${sql.identifier(key)}`;
+const keyTuple = (keys: readonly string[], nullable?: readonly string[]) =>
   sql`(${sql.join(
-    keys.map((key) => sql.identifier(key)),
+    keys.map((key) => keyColumn(key, nullable)),
     sql`, `,
   )})`;
 const positionTuple = (keys: readonly string[], position: Record<string, unknown>) =>
@@ -25,21 +28,21 @@ function* byteBoundedGroups(positions: SourcePosition[]) {
     start = end;
   }
 }
-export async function* readUpgradeRows(db: DbClient, source: { table: string; keys: readonly string[] }) {
+export async function* readUpgradeRows(db: DbClient, source: UpgradeSource) {
   let after: Record<string, unknown> | undefined;
   for (;;) {
-    const key = keyTuple(source.keys);
+    const key = keyTuple(source.keys, source.nullableKeys);
     const boundary = after ? sql`WHERE ${key} > ${positionTuple(source.keys, after)}` : sql``;
     // Fetch keys/sizes first, not 200 potentially huge settings values. The metadata page
     // is reused across byte groups, so oversized values are not repeatedly measured.
     const { rows: positions } = await db.execute<SourcePosition>(sql`
       SELECT ${sql.join(
-        source.keys.map((key) => sql.identifier(key)),
+        source.keys.map((key) => sql`${keyColumn(key, source.nullableKeys)} AS ${sql.identifier(key)}`),
         sql`, `,
       )},
         octet_length(row_to_json(t)::text) AS encoded_bytes
       FROM ${sql.identifier(source.table)} t ${boundary} ORDER BY ${sql.join(
-        source.keys.map((key) => sql.identifier(key)),
+        source.keys.map((key) => keyColumn(key, source.nullableKeys)),
         sql`, `,
       )} LIMIT 200
     `);
@@ -50,7 +53,7 @@ export async function* readUpgradeRows(db: DbClient, source: { table: string; ke
       const { rows } = await db.execute<Record<string, unknown>>(sql`SELECT * FROM ${sql.identifier(source.table)}
         WHERE ${start} ${key} <= ${positionTuple(source.keys, group.last)}
         ORDER BY ${sql.join(
-          source.keys.map((key) => sql.identifier(key)),
+          source.keys.map((key) => keyColumn(key, source.nullableKeys)),
           sql`, `,
         )} LIMIT 200`);
       for (const row of rows) yield row;

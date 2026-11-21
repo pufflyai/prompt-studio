@@ -29,7 +29,10 @@ const deleteInstanceData = async (deps: UninstallProjectExtensionDeps, instance:
   const deleted = await deps.recovery.exclusive(instance.scope_id, () =>
     deps.extensionUserDataService.deleteForInstance(instance.id),
   );
-  for (const row of deleted.boardViews) deps.eventBus?.emit("board_views", "delete", row);
+  for (const row of deleted.boardViews) {
+    const { is_default, ...view } = row;
+    deps.eventBus?.emit("board_views", "delete", view);
+  }
   for (const row of deleted.boardDefaults)
     deps.eventBus?.emit("board_default_views", "delete", boardDefaultSyncRow(row));
 };

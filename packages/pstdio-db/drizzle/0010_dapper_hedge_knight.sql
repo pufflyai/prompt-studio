@@ -28,6 +28,15 @@ CREATE TABLE "preferences" (
 	CONSTRAINT "preferences_scope_scope_id_extension_id_key_pk" PRIMARY KEY("scope","scope_id","extension_id","key")
 );
 --> statement-breakpoint
+ALTER TABLE "board_default_views" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "local_environment" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "extension_connections" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "extension_automation_preferences" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "extension_settings" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "extension_skill_preferences" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "settings" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "webview_preferences" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+DROP TABLE "board_default_views" CASCADE;--> statement-breakpoint
 DROP TABLE "local_environment" CASCADE;--> statement-breakpoint
 DROP TABLE "extension_connections" CASCADE;--> statement-breakpoint
 DROP TABLE "extension_automation_preferences" CASCADE;--> statement-breakpoint
@@ -35,8 +44,10 @@ DROP TABLE "extension_settings" CASCADE;--> statement-breakpoint
 DROP TABLE "extension_skill_preferences" CASCADE;--> statement-breakpoint
 DROP TABLE "settings" CASCADE;--> statement-breakpoint
 DROP TABLE "webview_preferences" CASCADE;--> statement-breakpoint
+ALTER TABLE "board_views" ADD COLUMN "is_default" boolean DEFAULT false NOT NULL;--> statement-breakpoint
 ALTER TABLE "credentials" ADD CONSTRAINT "credentials_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "preferences" ADD CONSTRAINT "preferences_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "credentials_project_idx" ON "credentials" USING btree ("project_id");--> statement-breakpoint
 CREATE INDEX "preferences_extension_idx" ON "preferences" USING btree ("extension_id");--> statement-breakpoint
-CREATE INDEX "preferences_project_idx" ON "preferences" USING btree ("project_id");
+CREATE INDEX "preferences_project_idx" ON "preferences" USING btree ("project_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "board_views_default_scope_idx" ON "board_views" USING btree ("project_id",coalesce("extension_instance_id", ''),"board_id") WHERE "board_views"."is_default" = true;

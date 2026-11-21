@@ -1,7 +1,7 @@
 import { eq, getTableColumns, inArray } from "drizzle-orm";
 import { getTableConfig, type PgColumn, type PgTable } from "drizzle-orm/pg-core";
 import { boardDefaultSyncRow } from "pstdio-api-contracts";
-import type { board_default_views, DbClient } from "pstdio-db";
+import { createBoardViewsDBService, type DbClient } from "pstdio-db";
 import { PHYSICAL_SYNCED_TABLES, tableMap } from "./get-full-state";
 
 type SyncedTable = keyof typeof tableMap;
@@ -38,10 +38,7 @@ const visit = (table: SyncedTable) => {
 };
 for (const table of PHYSICAL_SYNCED_TABLES) visit(table);
 
-const syncId = (table: SyncedTable, row: Row) =>
-  table === "board_default_views"
-    ? boardDefaultSyncRow(row as typeof board_default_views.$inferSelect).id
-    : (row.id as string);
+const syncId = (_table: SyncedTable, row: Row) => row.id as string;
 
 /** Lists the synced rows a delete removes, children before their parents and the root last. */
 export const collectCascadeDeletes = async (db: DbClient, root: RootTable, id: string) => {
@@ -66,5 +63,15 @@ export const collectCascadeDeletes = async (db: DbClient, root: RootTable, id: s
     }
   }
 
-  return childrenFirst.flatMap((table) => [...(rows.get(table)?.keys() ?? [])].map((rowId) => ({ table, id: rowId })));
+  const defaults =
+    root === "projects"
+      ? (await createBoardViewsDBService(db).listDefaults(id)).map((row) => ({
+          table: "board_default_views" as const,
+          id: boardDefaultSyncRow(row).id,
+        }))
+      : [];
+  return [
+    ...defaults,
+    ...childrenFirst.flatMap((table) => [...(rows.get(table)?.keys() ?? [])].map((rowId) => ({ table, id: rowId }))),
+  ];
 };

@@ -1,5 +1,5 @@
 {
-  "id": "22e9f470-1b01-4a94-9c61-50308f56b027",
+  "id": "4c57ae8b-2dfb-4fb5-9708-43828f06be8c",
   "prevId": "e22b1e43-5e44-4e7c-b676-5be106a4f0ab",
   "version": "7",
   "dialect": "postgresql",
@@ -716,86 +716,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.board_default_views": {
-      "name": "board_default_views",
-      "schema": "",
-      "columns": {
-        "project_id": {
-          "name": "project_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "extension_instance_id": {
-          "name": "extension_instance_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "board_id": {
-          "name": "board_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "default_view_id": {
-          "name": "default_view_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "board_default_views_project_id_projects_id_fk": {
-          "name": "board_default_views_project_id_projects_id_fk",
-          "tableFrom": "board_default_views",
-          "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "board_default_views_extension_instance_id_extension_instances_id_fk": {
-          "name": "board_default_views_extension_instance_id_extension_instances_id_fk",
-          "tableFrom": "board_default_views",
-          "tableTo": "extension_instances",
-          "columnsFrom": [
-            "extension_instance_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "board_default_views_scope_unique": {
-          "name": "board_default_views_scope_unique",
-          "nullsNotDistinct": true,
-          "columns": [
-            "project_id",
-            "extension_instance_id",
-            "board_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.board_views": {
       "name": "board_views",
       "schema": "",
@@ -805,6 +725,13 @@
           "type": "text",
           "primaryKey": true,
           "notNull": true
+        },
+        "is_default": {
+          "name": "is_default",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "project_id": {
           "name": "project_id",
@@ -869,6 +796,34 @@
         }
       },
       "indexes": {
+        "board_views_default_scope_idx": {
+          "name": "board_views_default_scope_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "coalesce(\"extension_instance_id\", '')",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "board_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"board_views\".\"is_default\" = true",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "board_views_scope_order_idx": {
           "name": "board_views_scope_order_idx",
           "columns": [

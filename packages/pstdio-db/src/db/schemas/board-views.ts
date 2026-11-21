@@ -1,4 +1,5 @@
-import { index, integer, jsonb, pgTable, text, unique } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, index, integer, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
 import type { BoardViewSettings } from "pstdio-api-contracts";
 import type { ViewFilterGroup, ViewSort } from "pstdio-api-contracts/extension-kernel";
 import { extension_instances } from "./extensions";
@@ -18,6 +19,7 @@ export const board_views = pgTable(
   "board_views",
   {
     id: text("id").primaryKey(),
+    is_default: boolean("is_default").notNull().default(false),
     ...boardScope(),
     title: text("title").notNull(),
     settings: jsonb("settings").$type<BoardViewSettings>().notNull(),
@@ -28,25 +30,14 @@ export const board_views = pgTable(
     updated_at: text("updated_at").notNull(),
   },
   (table) => [
+    uniqueIndex("board_views_default_scope_idx")
+      .on(table.project_id, sql`coalesce(${table.extension_instance_id}, '')`, table.board_id)
+      .where(sql`${table.is_default} = true`),
     index("board_views_scope_order_idx").on(
       table.project_id,
       table.extension_instance_id,
       table.board_id,
       table.sort_order,
     ),
-  ],
-);
-
-export const board_default_views = pgTable(
-  "board_default_views",
-  {
-    ...boardScope(),
-    default_view_id: text("default_view_id").notNull(),
-    updated_at: text("updated_at").notNull(),
-  },
-  (table) => [
-    unique("board_default_views_scope_unique")
-      .on(table.project_id, table.extension_instance_id, table.board_id)
-      .nullsNotDistinct(),
   ],
 );

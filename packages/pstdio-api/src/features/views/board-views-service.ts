@@ -13,8 +13,10 @@ import { BoardViewError, validateBoardView } from "./view-rules";
 
 export const createBoardViewsService = (deps: BoardViewsDeps) => {
   const db = deps.boardViewsService;
-  const emitView = (row: NonNullable<Awaited<ReturnType<typeof db.get>>>, op: "set" | "delete" = "set") =>
-    deps.eventBus.emit("board_views", op, row);
+  const emitView = (row: NonNullable<Awaited<ReturnType<typeof db.get>>>, op: "set" | "delete" = "set") => {
+    const { is_default, ...view } = row;
+    deps.eventBus.emit("board_views", op, view);
+  };
   const { savedView, summary, listResolved, queryResolved } = createBoardViewReader(deps, emitView);
   const getSaved = async (projectId: string, id: string, allowOrphan = false) => {
     const boards = await getBoards(deps, projectId);

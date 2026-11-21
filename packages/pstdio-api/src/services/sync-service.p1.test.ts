@@ -84,7 +84,15 @@ test("snapshots shared board views and lists their project cascade deletions", a
   expect(state.board_default_views).toContainEqual(
     expect.objectContaining({ id: defaultId, default_view_id: view.id }),
   );
+  expect(state.board_views.every((row) => !("is_default" in (row as object)))).toBe(true);
+  const native = { project_id: project.id, extension_instance_id: null, board_id: "native" };
+  await views.setDefault(native, "builtin");
+  const withBuiltin = await sync.getFullState();
+  expect(withBuiltin.board_default_views).toContainEqual(
+    expect.objectContaining({ id: JSON.stringify([project.id, null, "native"]), default_view_id: "builtin" }),
+  );
   const deletes = await sync.cascadeDeletes("projects", project.id);
+  expect(deletes).toContainEqual({ table: "board_default_views", id: JSON.stringify([project.id, null, "native"]) });
   expect(deletes).toContainEqual({ table: "board_views", id: view.id });
   expect(deletes).toContainEqual({ table: "board_default_views", id: defaultId });
 });
