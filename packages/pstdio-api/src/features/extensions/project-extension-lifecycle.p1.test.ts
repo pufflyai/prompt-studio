@@ -90,6 +90,35 @@ const createDeps = (input: { skills?: unknown[] } = {}) => {
   };
 };
 
+test.each([
+  "pstdio.worktree",
+  "pstdio.git-workspaces.workspace-type.git",
+])("removes an inactive successor while the legacy provider owns %s", async (providerId) => {
+  const { deps } = createDeps();
+  deps.extensionService.getProjectExtensionInstance.mockResolvedValue({
+    instance: extensionInstance(false),
+    installedSource: { ...installedSource, extension_id: "pstdio.workspaces" },
+  });
+  deps.workspaceService.listForProviderReconciliation.mockResolvedValue([
+    { id: "workspace-1", provider_id: providerId },
+  ]);
+  deps.extensionRuntimeCatalog.get.mockResolvedValue({
+    runtime: {
+      schedules: [],
+      workspaceTypes: [
+        { id: "pstdio.git-workspaces.workspace-type.git", extensionId: "pstdio.git-workspaces" },
+      ] as ExtensionRuntime["workspaceTypes"],
+    },
+  });
+  await expect(
+    createProjectExtensionLifecycle(deps as never).uninstall({
+      projectId: "project-1",
+      instanceId: "instance-1",
+      deleteUserData: false,
+    }),
+  ).resolves.toBe("removed");
+});
+
 describe("project extension lifecycle", () => {
   test("removes a tool with no workspace contributions while an unrelated runtime load is stalled", async () => {
     const { deps } = createDeps();

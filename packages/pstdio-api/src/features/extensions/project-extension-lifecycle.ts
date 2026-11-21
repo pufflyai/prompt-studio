@@ -41,7 +41,7 @@ const extensionProviderWorkspaces = async (deps: LifecycleDeps, projectId: strin
   const prefix = `${extensionId}.workspace-type.`;
   const workspaces = await deps.workspaceService.listForProviderReconciliation(projectId);
   const legacyProvider =
-    extensionId === "pstdio.git-workspaces" &&
+    ["pstdio.git-workspaces", "pstdio.workspaces"].includes(extensionId) &&
     workspaces.some((workspace) => [worktreeProviderId, legacyGitProviderId].includes(workspace.provider_id));
   // The legacy provider and its successor share public IDs. Resolve that handoff
   // only when those workspaces exist; ordinary removal needs no project runtime.

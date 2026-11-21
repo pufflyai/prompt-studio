@@ -27,6 +27,7 @@ const createHarness = (input: {
   requestShutdown?: (force: boolean) => Promise<ShutdownResult>;
   cancelActiveWork?: boolean;
   showQuitConfirmation?: () => Promise<void>;
+  askToCancelActiveWork?: () => Promise<boolean>;
 }) => {
   let state: DesktopState = { kind: "workbench", runtime: runtime.descriptor };
   const calls: string[] = [];
@@ -53,7 +54,7 @@ const createHarness = (input: {
     },
     askToCancelActiveWork: async () => {
       calls.push("askToCancelActiveWork");
-      return input.cancelActiveWork ?? false;
+      return input.askToCancelActiveWork?.() ?? input.cancelActiveWork ?? false;
     },
     flushBeforeQuit: async () => {},
     quitApp: () => {
@@ -69,6 +70,50 @@ const createHarness = (input: {
 };
 
 describe("desktop quit flow", () => {
+  test.each([
+    "keep open",
+    "quit",
+    "failure",
+  ])("keeps the window's confirmed quit when the native dialog later returns %s", async (answer) => {
+    const opened = Promise.withResolvers<void>();
+    const native = Promise.withResolvers<boolean>();
+    const cancelling = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const requests: boolean[] = [];
+    const { flow, calls, state } = createHarness({
+      refreshRuntime: async () => runtime,
+      askToCancelActiveWork: async () => {
+        opened.resolve();
+        return native.promise;
+      },
+      requestShutdown: async (force) => {
+        requests.push(force);
+        if (!force) return { state: "active", activity: { ...noActivity, sessions: [{ id: "s1", label: "Session" }] } };
+        cancelling.resolve();
+        await release.promise;
+        return { state: "accepted" };
+      },
+    });
+    await flow.requestQuit();
+    const repeated = flow.requestQuit();
+    await opened.promise;
+    const confirmed = flow.confirmQuit();
+    try {
+      expect(await Promise.race([cancelling.promise.then(() => true), confirmed.then(() => false)])).toBe(true);
+      if (answer === "failure") native.reject(new Error("Native dialog closed"));
+      else native.resolve(answer === "quit");
+      await repeated;
+      expect(state()).toMatchObject({ kind: "closing" });
+      expect(flow.isQuitting()).toBe(true);
+      expect(requests).toEqual([false, true]);
+    } finally {
+      native.resolve(false);
+      release.resolve();
+      await Promise.all([confirmed, repeated]);
+    }
+    expect(calls.filter((call) => call === "quitApp")).toHaveLength(1);
+  });
+
   test.each([
     "opens",
     "fails",

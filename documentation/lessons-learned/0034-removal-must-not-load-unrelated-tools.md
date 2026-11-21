@@ -14,10 +14,12 @@
 
 ## Prevention
 
-- Check canonical workspace provider identities before requesting runtime contributions. Resolve the legacy Git provider handoff only when those shared provider IDs require it.
+- Check canonical workspace provider identities before requesting runtime contributions. Resolve the legacy Git provider handoff for either predecessor or successor when shared provider IDs require it; aliases alone cannot establish which extension currently owns them.
 - Empty contribution arrays from manifest-only discovery do not prove a tool has no skills or hooks. Keep actual contribution inspection for provisioning decisions.
 - Discard queued source inspection when its source root no longer exists; the root watcher owns registration removal.
+- An existence check cannot prevent deletion starting during a recursive hash. Uninstall must delete source bytes on the exclusive preparation worker that owns source watches, so its synchronous hashing and deletion cannot overlap. Keep external source folders intact.
 - Give each quit operation an owner. Release the initial owner before showing confirmation, and let only the current owner release the guard.
+- A confirmed window choice supersedes an unanswered native dialog. Its later answer or failure cannot cancel the confirmed shutdown or start a second one.
 - Reconcile a lost shutdown response with the durable shutdown record for that exact process and instance. Detaching is not evidence of shutdown; an older response must not affect a replacement runtime.
 
 ## Evidence

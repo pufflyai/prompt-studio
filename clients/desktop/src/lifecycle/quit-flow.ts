@@ -26,7 +26,7 @@ type QuitFlowDeps = {
 
 export const createQuitFlow = (deps: QuitFlowDeps) => {
   let quitAllowed = false;
-  let quitting: { active: boolean } | undefined;
+  let quitting: { active: boolean; waitingForConfirmation: boolean } | undefined;
 
   const finishQuit = async () => {
     // Losing the last saved layout is better than an app that cannot quit.
@@ -41,9 +41,9 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
     await deps.showLifecycle();
   };
 
-  const runQuit = async (run: () => Promise<void>) => {
+  const runQuit = async (run: () => Promise<void>, waitingForConfirmation = false) => {
     if (quitting?.active || quitAllowed) return;
-    const owner = { active: true };
+    const owner = { active: true, waitingForConfirmation };
     quitting = owner;
     try {
       await run();
@@ -104,16 +104,24 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
     await finishQuit();
   };
 
-  const confirmQuit = () => runQuit(stopConfirmedRuntime);
+  const confirmQuit = () => {
+    // A renderer choice supersedes an unanswered native confirmation, but never
+    // interrupts a shutdown already cancelling active work.
+    if (deps.getState().kind === "confirming_active_work" && quitting?.waitingForConfirmation) quitting.active = false;
+    return runQuit(stopConfirmedRuntime);
+  };
 
   const requestQuit = async () => {
     if (quitAllowed || quitting?.active) return;
     const state = deps.getState();
     if (state.kind === "confirming_active_work") {
       return runQuit(async () => {
-        if (await deps.askToCancelActiveWork(state.activity)) await stopConfirmedRuntime();
+        const confirmed = await deps.askToCancelActiveWork(state.activity);
+        if (deps.getState() !== state) return;
+        if (quitting) quitting.waitingForConfirmation = false;
+        if (confirmed) await stopConfirmedRuntime();
         else await cancelQuit();
-      });
+      }, true);
     }
     return runQuit(stopRuntimeAndQuit);
   };
