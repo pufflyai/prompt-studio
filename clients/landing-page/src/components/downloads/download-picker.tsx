@@ -16,7 +16,7 @@ export const DownloadPicker = () => {
   if (selected && release) {
     description = `v${release.version} · ${selected.architecture} · ${Math.round(selected.size / 1024 / 1024)} MB`;
   }
-  if (failed) description = "Desktop downloads could not be loaded.";
+  if (failed) description = "Desktop downloads could not be loaded. Use the CLI instructions or browse releases.";
   const buttonLabel = selected ? `Download for ${selected.platform}` : "Use via CLI";
 
   return (
