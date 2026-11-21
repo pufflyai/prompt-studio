@@ -1,0 +1,146 @@
+import { randomUUID } from "node:crypto";
+import { commandRef, defineCommand, params } from "@pstdio/sdk/extensions";
+import { instancesFor } from "./instances";
+import { machineConnection } from "./machine-connection";
+import { readyMachineCheckpoint } from "./machine-row";
+import {
+  checkRelayDevice,
+  latestMachineConversation,
+  machineSessionTarget,
+  previousMachineSession,
+} from "./machine-session";
+import { unavailableMachineMessage } from "./machine-status";
+import { type ControllerMachine, isTerminal, launchInputOf, machinePath, providerParams } from "./machines";
+import { changed } from "./resources";
+
+const ref = (id: string) => commandRef({ extensionId: "pocketcoder.pocketcoder", id });
+const machineParams = {
+  instance: params.text({ label: "Instance ID", required: true }),
+  machineId: params.text({ label: "Machine ID", required: true }),
+};
+
+export function createMachineCommands(getInstances = instancesFor) {
+  const launchMachine = defineCommand({
+    id: "machines.launch",
+    title: "Launch agent machine",
+    cli: true,
+    mutating: true,
+    params: {
+      instance: params.select({
+        label: "PocketCoder instance",
+        required: true,
+        options: { command: ref("instances.choices"), valueField: "value", labelField: "label" },
+      }),
+      template: params.select({
+        label: "Agent template",
+        required: true,
+        options: {
+          command: ref("templates.choices"),
+          valueField: "value",
+          labelField: "label",
+          params: { instance: params.valueOf("instance") },
+        },
+      }),
+      externalId: providerParams.externalId,
+      launchInput: providerParams.launchInput,
+      metadata: providerParams.metadata,
+    },
+    async run(ctx, input) {
+      const separator = input.template.lastIndexOf("@");
+      if (separator < 1) throw new Error("Choose a versioned agent template.");
+      const metadata = launchInputOf(input.metadata) ?? {};
+      const machine = await getInstances(ctx.projectId).request<ControllerMachine>(input.instance, "/v1/workspaces", {
+        method: "POST",
+        headers: { "Idempotency-Key": randomUUID() },
+        body: JSON.stringify({
+          external_id: input.externalId || randomUUID(),
+          template: { name: input.template.slice(0, separator), version: input.template.slice(separator + 1) },
+          launch_input: launchInputOf(input.launchInput),
+          metadata,
+        }),
+      });
+      await ctx.events.emit(changed, {});
+      return { instanceId: input.instance, machineId: machine.id };
+    },
+  });
+  const connectMachine = defineCommand({
+    id: "machines.connect",
+    title: "Connect to agent",
+    cli: true,
+    mutating: true,
+    params: machineParams,
+    async run(ctx, input) {
+      const instances = getInstances(ctx.projectId);
+      const machine = await instances.request<ControllerMachine>(input.instance, machinePath(input.machineId));
+      await ctx.events.emit(changed, {});
+      const checkpoint =
+        machine.state === "ready" ? null : await readyMachineCheckpoint(instances, input.instance, machine);
+      const unavailable = unavailableMachineMessage(machine, checkpoint);
+      if (unavailable) throw new Error(unavailable);
+      const connection = await machineConnection(
+        () => instances.request(input.instance, `${machinePath(machine.id)}/requests/capabilities`),
+        machine.metadata,
+      );
+      const key = `machine-session:${input.instance}:${machine.id}`;
+      let sessionId = await ctx.storage.get<string>(key);
+      if (!sessionId && connection.kind === "session")
+        sessionId = await previousMachineSession(ctx, input.instance, machine.id);
+      if (connection.kind === "relay") await checkRelayDevice(ctx, connection.deviceId);
+      const existing = sessionId ? await ctx.sessions.get(sessionId) : null;
+      const session =
+        existing ??
+        (await ctx.sessions.create({
+          title: `PocketCoder: ${machine.external_id}`,
+          ...(connection.kind === "relay"
+            ? {
+                deviceId: connection.deviceId,
+                workspaceId: connection.workspaceId,
+                harness: { harnessId: "pstdio.harness-codex.harness.codex" },
+              }
+            : {
+                harness: {
+                  harnessId: `${ctx.extensionId}.harness.agent`,
+                },
+              }),
+        }));
+      if (connection.kind === "session")
+        await instances.bindSession(
+          session.id,
+          input.instance,
+          machine.id,
+          existing ? undefined : await latestMachineConversation(instances, input.instance, machine),
+        );
+      await ctx.storage.set(key, session.id);
+      ctx.navigation.open(machineSessionTarget(ctx.projectId, session));
+      return { machineId: machine.id, sessionId: session.id };
+    },
+  });
+  const deleteMachine = defineCommand({
+    id: "machines.delete",
+    title: "Delete machine",
+    cli: true,
+    mutating: true,
+    params: machineParams,
+    async run(ctx, input) {
+      const instances = getInstances(ctx.projectId);
+      let machine = await instances.request<ControllerMachine>(input.instance, machinePath(input.machineId));
+      if (!isTerminal(machine))
+        machine = await instances.request(input.instance, `${machinePath(machine.id)}/cancel`, { method: "POST" });
+      while (!isTerminal(machine)) {
+        const change = await instances.request<{ workspace: ControllerMachine }>(
+          input.instance,
+          `${machinePath(machine.id)}/changes?after=${machine.change_cursor}&wait=30`,
+        );
+        machine = change.workspace;
+      }
+      const dismissedKey = `dismissed-machines:${input.instance}`;
+      const dismissed = (await ctx.storage.get<string[]>(dismissedKey)) ?? [];
+      await ctx.storage.set(dismissedKey, [...new Set([...dismissed, machine.id])]);
+      await ctx.events.emit(changed, {});
+      return { machineId: machine.id, state: machine.state };
+    },
+  });
+  return { launchMachine, connectMachine, deleteMachine };
+}
+
+export const { launchMachine, connectMachine, deleteMachine } = createMachineCommands();
