@@ -91,6 +91,32 @@ const createDeps = (input: { skills?: unknown[] } = {}) => {
 };
 
 describe("project extension lifecycle", () => {
+  test("removes a tool with no workspace contributions while an unrelated runtime load is stalled", async () => {
+    const { deps } = createDeps();
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const read = deps.extensionRuntimeCatalog.get.getMockImplementation()!;
+    deps.extensionRuntimeCatalog.get.mockImplementation(async () => {
+      entered.resolve();
+      await release.promise;
+      return read();
+    });
+    const removal = createProjectExtensionLifecycle(deps as never).uninstall({
+      projectId: "project-1",
+      instanceId: "instance-1",
+      deleteUserData: false,
+    });
+    try {
+      expect(await Promise.race([removal.then(() => "removed"), entered.promise.then(() => "blocked")])).toBe(
+        "removed",
+      );
+    } finally {
+      release.resolve();
+      await removal;
+    }
+    expect(deps.extensionService.uninstallProjectExtension).toHaveBeenCalledTimes(1);
+  });
+
   test("installs without provisioning when the extension has no workspace contributions", async () => {
     const { deps, provisionProjectWorkspaces } = createDeps();
     const lifecycle = createProjectExtensionLifecycle(deps as never);
@@ -223,6 +249,32 @@ describe("project extension lifecycle", () => {
       lifecycle.uninstall({ projectId: "project-1", instanceId: "instance-1", deleteUserData: true }),
     ).rejects.toThrow("provider-backed workspace");
     expect(deps.extensionService.uninstallProjectExtension).not.toHaveBeenCalled();
+  });
+
+  test("removes a legacy Git provider after the current Workspaces tool takes over its worktrees", async () => {
+    const { deps } = createDeps();
+    deps.extensionService.getProjectExtensionInstance.mockResolvedValue({
+      instance: extensionInstance(false),
+      installedSource: { ...installedSource, extension_id: "pstdio.git-workspaces" },
+    });
+    deps.workspaceService.listForProviderReconciliation.mockResolvedValue([
+      { id: "workspace-1", provider_id: "pstdio.worktree" },
+    ]);
+    deps.extensionRuntimeCatalog.get.mockResolvedValue({
+      runtime: {
+        schedules: [],
+        workspaceTypes: [
+          { id: "pstdio.workspaces.workspace-type.git", extensionId: "pstdio.workspaces" },
+        ] as ExtensionRuntime["workspaceTypes"],
+      },
+    });
+    await expect(
+      createProjectExtensionLifecycle(deps as never).uninstall({
+        projectId: "project-1",
+        instanceId: "instance-1",
+        deleteUserData: false,
+      }),
+    ).resolves.toBe("removed");
   });
 
   test("keeps connection credentials when extension uninstall fails", async () => {
