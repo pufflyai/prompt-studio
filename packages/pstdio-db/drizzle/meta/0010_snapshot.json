@@ -1,5 +1,5 @@
 {
-  "id": "3e16c5f6-77ec-4824-ac7e-a96c236ade50",
+  "id": "780bbe0a-7790-436a-881b-ce62c5fd7f6d",
   "prevId": "e22b1e43-5e44-4e7c-b676-5be106a4f0ab",
   "version": "7",
   "dialect": "postgresql",
@@ -636,8 +636,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "extension_instance_id": {
-          "name": "extension_instance_id",
+        "extension_id": {
+          "name": "extension_id",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -703,7 +703,7 @@
               "nulls": "last"
             },
             {
-              "expression": "coalesce(\"extension_instance_id\", '')",
+              "expression": "coalesce(\"extension_id\", '')",
               "asc": true,
               "isExpression": true,
               "nulls": "last"
@@ -731,7 +731,7 @@
               "nulls": "last"
             },
             {
-              "expression": "extension_instance_id",
+              "expression": "extension_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -763,15 +763,6 @@
           "columnsFrom": ["project_id"],
           "columnsTo": ["id"],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "board_views_extension_instance_id_extension_instances_id_fk": {
-          "name": "board_views_extension_instance_id_extension_instances_id_fk",
-          "tableFrom": "board_views",
-          "tableTo": "extension_instances",
-          "columnsFrom": ["extension_instance_id"],
-          "columnsTo": ["id"],
-          "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },

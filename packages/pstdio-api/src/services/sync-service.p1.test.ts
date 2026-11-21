@@ -62,12 +62,12 @@ test("snapshots shared board views and lists their project cascade deletions", a
     source_kind: "local_path",
     source_path: "/snapshot-boards",
   });
-  const instance = await createExtensionInstancesDBService(db).create({
+  await createExtensionInstancesDBService(db).create({
     installed_extension_id: source.id,
     scope_type: "project",
     scope_id: project.id,
   });
-  const scope = { project_id: project.id, extension_instance_id: instance.id, board_id: "tasks" };
+  const scope = { project_id: project.id, extension_id: source.extension_id, board_id: "tasks" };
   const views = createBoardViewsDBService(db);
   const view = await views.create({
     ...scope,
@@ -84,13 +84,13 @@ test("snapshots shared board views and lists their project cascade deletions", a
   await views.setDefault(scope, view.id);
   const sync = createSyncService({ db });
   const state = await sync.getFullState();
-  const defaultId = JSON.stringify([project.id, instance.id, "tasks"]);
+  const defaultId = JSON.stringify([project.id, source.extension_id, "tasks"]);
   expect(state.board_views).toContainEqual(expect.objectContaining({ id: view.id }));
   expect(state.board_default_views).toContainEqual(
     expect.objectContaining({ id: defaultId, default_view_id: view.id }),
   );
   expect(state.board_views.every((row) => !("is_default" in (row as object)))).toBe(true);
-  const native = { project_id: project.id, extension_instance_id: null, board_id: "native" };
+  const native = { project_id: project.id, extension_id: null, board_id: "native" };
   await views.setDefault(native, "builtin");
   const withBuiltin = await sync.getFullState();
   expect(withBuiltin.board_default_views).toContainEqual(

@@ -20,6 +20,7 @@ import { upgradeIndexNodesToFiles } from "../services/extension-storage/index-no
 import { prepareAppPreferencesUpgrade } from "./app-preferences-upgrade";
 import { prepareAutomationOwnersUpgrade } from "./automation-owners-upgrade";
 import { prepareBoardDefaultsUpgrade } from "./board-defaults-upgrade";
+import { prepareBoardOwnersUpgrade } from "./board-owners-upgrade";
 import { prepareConnectionCredentialsUpgrade } from "./connection-credentials-upgrade";
 import { prepareExtensionPreferencesUpgrade } from "./extension-preferences-upgrade";
 import { openPglite } from "./open-pglite";
@@ -227,6 +228,7 @@ export const createDb = async (options?: {
       const finishPreferencesUpgrade = await prepareAppPreferencesUpgrade(db, dbPath);
       const finishExtensionPreferencesUpgrade = await prepareExtensionPreferencesUpgrade(db, dbPath);
       const finishConnectionCredentialsUpgrade = await prepareConnectionCredentialsUpgrade(db, dbPath);
+      const finishBoardOwnersUpgrade = await prepareBoardOwnersUpgrade(db, dbPath);
       const finishBoardDefaultsUpgrade = await prepareBoardDefaultsUpgrade(db, dbPath);
       const finishAutomationOwnersUpgrade = await prepareAutomationOwnersUpgrade(db, dbPath);
       const finishSessionWorkspaceUpgrade = await prepareSessionWorkspaceUpgrade(db, dbPath);
@@ -234,6 +236,7 @@ export const createDb = async (options?: {
       await finishPreferencesUpgrade?.();
       await finishExtensionPreferencesUpgrade?.();
       await finishConnectionCredentialsUpgrade?.();
+      await finishBoardOwnersUpgrade?.();
       await finishBoardDefaultsUpgrade?.();
       await finishAutomationOwnersUpgrade?.();
       await finishSessionWorkspaceUpgrade?.();

@@ -386,3 +386,26 @@ test("conflicting device settings keep both values and report a recoverable iden
     await close();
   }
 });
+
+test("global migration discovers a stable board owner without an installation row", async () => {
+  const { db, close, now } = await setup();
+  try {
+    await db.insert(s.board_views).values({
+      id: "retained-view",
+      project_id: "project",
+      extension_id: old,
+      board_id: "tasks",
+      title: "Saved view",
+      settings: { viewMode: "board", columnGrouping: "none", rowGrouping: "none", displayProperties: [] },
+      filter: { conjunction: "and", rules: [] },
+      sorts: [],
+      sort_order: 0,
+      created_at: now,
+      updated_at: now,
+    });
+    await migrateExtensionIdentities(db);
+    expect((await db.select().from(s.board_views))[0]).toMatchObject({ id: "retained-view", extension_id: next });
+  } finally {
+    await close();
+  }
+});

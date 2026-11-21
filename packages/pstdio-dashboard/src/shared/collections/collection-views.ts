@@ -12,7 +12,7 @@ import { createRuntimeState } from "@/lib/sync/runtime-state";
 
 interface CollectionViewsInput {
   projectId: string;
-  extensionInstanceId: string | null | undefined;
+  extensionId: string | null | undefined;
   localId: string;
   record: {
     id: string;
@@ -26,7 +26,7 @@ const createCollectionViewsOwner = <TSettings extends NonNullable<import("@pstdi
   input: CollectionViewsInput,
   owner: RuntimeCollections,
 ) => {
-  const { projectId, extensionInstanceId: instanceId, localId, record } = input;
+  const { projectId, extensionId, localId, record } = input;
   const views = getRuntimeApiClient(owner).views;
   let cached: CollectionViewsSource<TSettings> | undefined;
   let sourceRows: readonly SyncedRow[] | undefined;
@@ -41,7 +41,7 @@ const createCollectionViewsOwner = <TSettings extends NonNullable<import("@pstdi
     for (const listener of listeners) listener();
   };
   const matches = (row: Record<string, unknown>) =>
-    row.project_id === projectId && row.extension_instance_id === instanceId && row.board_id === localId;
+    row.project_id === projectId && row.extension_instance_id === extensionId && row.board_id === localId;
   const getSyncedRows = () => owner.getIndexedRows("board_views", "project_id", projectId).filter(matches);
   const reconcilePendingOrder = (change: CollectionChange) => {
     if (change.table !== "board_views" || !pendingOrder) return;
@@ -235,7 +235,7 @@ export const createSharedCollectionViews = <TSettings extends NonNullable<BoardV
 ): CollectionViewsProvider<TSettings> => {
   const owner = getRuntimeCollections();
   const cache = owners(owner);
-  const key = JSON.stringify([input.projectId, input.extensionInstanceId ?? null, input.localId, input.record.id]);
+  const key = JSON.stringify([input.projectId, input.extensionId ?? null, input.localId, input.record.id]);
   let entry = cache.get(key);
   if (!entry) entry = createCollectionViewsOwner(input, owner);
   cache.delete(key);

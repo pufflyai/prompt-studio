@@ -2,6 +2,7 @@ import {
   type BoardViewCreate,
   type BoardViewUpdate,
   boardDefaultSyncRow,
+  boardViewSyncRow,
   EMPTY_VIEW_FILTER,
   type PageQuery,
 } from "pstdio-api-contracts";
@@ -14,8 +15,7 @@ import { BoardViewError, validateBoardView } from "./view-rules";
 export const createBoardViewsService = (deps: BoardViewsDeps) => {
   const db = deps.boardViewsService;
   const emitView = (row: NonNullable<Awaited<ReturnType<typeof db.get>>>, op: "set" | "delete" = "set") => {
-    const { is_default, ...view } = row;
-    deps.eventBus.emit("board_views", op, view);
+    deps.eventBus.emit("board_views", op, boardViewSyncRow(row));
   };
   const { savedView, summary, listResolved, queryResolved } = createBoardViewReader(deps, emitView);
   const getSaved = async (projectId: string, id: string, allowOrphan = false) => {
@@ -24,13 +24,12 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
     if (!row) throw new BoardViewError("View not found", 404);
     const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
     if (
-      row.extension_instance_id !== null &&
-      !snapshot.enabledSources.some((source) => source.instance.id === row.extension_instance_id)
+      row.extension_id !== null &&
+      !snapshot.enabledSources.some((source) => source.installedSource.extension_id === row.extension_id)
     )
       throw new BoardViewError("board is not enabled", 404);
     const board = boards.find(
-      (board) =>
-        board.scope.extension_instance_id === row.extension_instance_id && board.scope.board_id === row.board_id,
+      (board) => board.scope.extension_id === row.extension_id && board.scope.board_id === row.board_id,
     );
     if (!board && !allowOrphan) throw new BoardViewError("board is not enabled", 404);
     return { row, board };
@@ -53,13 +52,13 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
       const page = await db.queryOrphaned(
         projectId,
         input,
-        snapshot.enabledSources.map((source) => source.instance.id),
+        snapshot.enabledSources.map((source) => source.installedSource.extension_id),
         boards.map((board) => board.scope),
       );
       return {
         items: page.rows.map((row) => ({
           id: row.id,
-          boardId: `${snapshot.enabledSources.find((source) => source.instance.id === row.extension_instance_id)!.installedSource.extension_id}.view.${row.board_id}`,
+          boardId: `${snapshot.enabledSources.find((source) => source.installedSource.extension_id === row.extension_id)!.installedSource.extension_id}.view.${row.board_id}`,
           title: row.title,
           settings: row.settings,
           filter: row.filter,
@@ -77,13 +76,12 @@ export const createBoardViewsService = (deps: BoardViewsDeps) => {
       const boards = await getBoards(deps, projectId);
       const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
       return (await db.listProject(projectId)).flatMap((row) => {
-        const source = snapshot.enabledSources.find((source) => source.instance.id === row.extension_instance_id);
+        const source = snapshot.enabledSources.find(
+          (source) => source.installedSource.extension_id === row.extension_id,
+        );
         if (
           !source ||
-          boards.some(
-            (board) =>
-              board.scope.extension_instance_id === row.extension_instance_id && board.scope.board_id === row.board_id,
-          )
+          boards.some((board) => board.scope.extension_id === row.extension_id && board.scope.board_id === row.board_id)
         )
           return [];
         return [

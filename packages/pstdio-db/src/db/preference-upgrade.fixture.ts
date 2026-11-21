@@ -6,6 +6,13 @@ import type { createDb } from "./connection.pglite";
 // the candidate schema. Exercise the actual released data shapes before upgrading.
 export const restoreReleasedPreferenceTables = async (connection: Awaited<ReturnType<typeof createDb>>) => {
   await connection.pglite.exec(`
+    ALTER TABLE board_views ADD COLUMN extension_instance_id text;
+    UPDATE board_views b SET extension_instance_id = (
+      SELECT i.id FROM extension_instances i JOIN extensions e ON e.id = i.installed_extension_id
+      WHERE i.scope_type = 'project' AND i.scope_id = b.project_id AND e.extension_id = b.extension_id
+      ORDER BY i.enabled DESC, i.updated_at DESC, i.id LIMIT 1
+    );
+    ALTER TABLE board_views DROP COLUMN extension_id;
     ALTER TABLE extensions RENAME TO installed_extension_sources;
     ALTER TABLE extension_instances RENAME CONSTRAINT extension_instances_installed_extension_id_extensions_id_fk
       TO extension_instances_installed_extension_id_installed_extension_sources_id_fk;
@@ -41,6 +48,11 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
             sql.startsWith(`ALTER TABLE "${table}" ADD CONSTRAINT`) ||
             (sql.startsWith("CREATE ") && sql.includes(` ON "${table}" `)),
         )
+      )
+        constraints.push(sql);
+      if (
+        sql.startsWith('ALTER TABLE "board_views" ADD CONSTRAINT "board_views_extension_instance_id_') ||
+        (sql.startsWith("CREATE INDEX ") && sql.includes(' ON "board_views" '))
       )
         constraints.push(sql);
       if (sql.startsWith("CREATE INDEX ") && sql.includes(' ON "installed_extension_sources" ')) constraints.push(sql);

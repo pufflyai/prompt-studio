@@ -1,5 +1,5 @@
 import { isNull } from "drizzle-orm";
-import { boardDefaultSyncRow } from "pstdio-api-contracts";
+import { boardDefaultSyncRow, boardViewSyncRow } from "pstdio-api-contracts";
 import type { DbClient } from "pstdio-db";
 import {
   board_views,
@@ -62,8 +62,7 @@ export const getFullState = async (db: DbClient) => {
         name,
         name === "board_views"
           ? rows.map((row) => {
-              const { is_default, ...view } = row as typeof board_views.$inferSelect;
-              return view;
+              return boardViewSyncRow(row as typeof board_views.$inferSelect);
             })
           : rows,
       ] as const;

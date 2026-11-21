@@ -1,4 +1,4 @@
-import { boardDefaultSyncRow } from "pstdio-api-contracts";
+import { boardDefaultSyncRow, boardViewSyncRow } from "pstdio-api-contracts";
 import type {
   createExtensionInstancesDBService,
   createExtensionStorageDBService,
@@ -30,8 +30,7 @@ const deleteInstanceData = async (deps: UninstallProjectExtensionDeps, instance:
     deps.extensionUserDataService.deleteForInstance(instance.id),
   );
   for (const row of deleted.boardViews) {
-    const { is_default, ...view } = row;
-    deps.eventBus?.emit("board_views", "delete", view);
+    deps.eventBus?.emit("board_views", "delete", boardViewSyncRow(row));
   }
   for (const row of deleted.boardDefaults)
     deps.eventBus?.emit("board_default_views", "delete", boardDefaultSyncRow(row));

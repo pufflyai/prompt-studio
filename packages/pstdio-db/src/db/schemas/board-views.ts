@@ -2,16 +2,13 @@ import { sql } from "drizzle-orm";
 import { boolean, index, integer, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
 import type { BoardViewSettings } from "pstdio-api-contracts";
 import type { ViewFilterGroup, ViewSort } from "pstdio-api-contracts/extension-kernel";
-import { extension_instances } from "./extensions";
 import { projects } from "./projects";
 
 const boardScope = () => ({
   project_id: text("project_id")
     .notNull()
     .references(() => projects.id, { onDelete: "cascade" }),
-  extension_instance_id: text("extension_instance_id").references(() => extension_instances.id, {
-    onDelete: "restrict",
-  }),
+  extension_id: text("extension_id"),
   board_id: text("board_id").notNull(),
 });
 
@@ -31,13 +28,8 @@ export const board_views = pgTable(
   },
   (table) => [
     uniqueIndex("board_views_default_scope_idx")
-      .on(table.project_id, sql`coalesce(${table.extension_instance_id}, '')`, table.board_id)
+      .on(table.project_id, sql`coalesce(${table.extension_id}, '')`, table.board_id)
       .where(sql`${table.is_default} = true`),
-    index("board_views_scope_order_idx").on(
-      table.project_id,
-      table.extension_instance_id,
-      table.board_id,
-      table.sort_order,
-    ),
+    index("board_views_scope_order_idx").on(table.project_id, table.extension_id, table.board_id, table.sort_order),
   ],
 );

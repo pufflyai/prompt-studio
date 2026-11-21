@@ -36,6 +36,7 @@ const projectTables = [
   s.recovery_point_owners,
 ];
 const otherTables = [
+  s.board_views,
   s.preferences,
   s.credentials,
   s.assetTransfers,
@@ -86,6 +87,7 @@ const assertNoConflicts = async (tx: Transaction, from: string, to: string) => {
         THEN ${to} ELSE scope_id END)`,
     ],
     [s.credentials, sql`jsonb_build_array(project_id, contribution_id)`],
+    [s.board_views, sql`jsonb_build_array(project_id, board_id)`],
     [s.assetTransfers, sql`to_jsonb(project_id)`],
     [s.extension_resource_sequences, sql`to_jsonb(project_id)`],
     [s.storage_resource_identities, sql`to_jsonb(workbench_id)`],
@@ -118,11 +120,12 @@ const cloneParent = async (tx: Transaction, table: PgTable, from: string, to: st
     FROM ${table} WHERE ${ownerColumn} = ${from}`);
 };
 
-/** Startup runs under the database lock, before any extension, writer, relay or projection cache can open. */
+/** Startup and runtime source recovery move each owner in one transaction. */
 export const migrateExtensionIdentities = async (
   db: DbClient,
   options: {
     extensionId?: string;
+    onRenamed?: (change: { from: string; to: string }) => Promise<void>;
     onConflict?: (error: ExtensionIdentityConflictError) => Promise<void>;
     /** Runs once before the first rename commits, so space reclamation is recorded as owed first. */
     beforeChange?: () => Promise<void>;
@@ -223,6 +226,7 @@ export const migrateExtensionIdentities = async (
         WHERE extension_id = ${to} AND last_error_json->>'code' = 'extension_identity_conflict'`);
       });
       renamed = true;
+      await options.onRenamed?.({ from, to });
     } catch (error) {
       if (!(error instanceof ExtensionIdentityConflictError) || !options.onConflict) throw error;
       conflicted = true;

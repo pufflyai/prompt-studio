@@ -50,6 +50,29 @@ rows move to `<database>-migration-exports/workspace-sessions.jsonl`. This expor
 stays until explicitly removed. An interrupted conversion resumes from the durable
 input. The original session fields and timestamps remain unchanged.
 
+### Stable board ownership
+
+Saved board views belong to `(project_id, extension_id, board_id)`, independent
+of an installed provider. Native boards use a null extension ID. Saved defaults
+use the view flag; built-in choices and the independent selection timestamp are
+project preferences under that stable extension owner. Removing one provider
+preserves this data while another provider remains, including a disabled one.
+
+Before the schema change, startup resolves each old instance against its project
+and writes durable conversion input. It retains original view rows and default
+selections in `<database>-migration-exports/board-owners.jsonl` and
+`board-defaults.jsonl`. If several old providers had different defaults for the
+same stable board, the latest selection timestamp wins, then the greatest old
+instance ID breaks a tie. Every view and its original timestamps remain. An
+interrupted migration resumes before clients can read the rows.
+
+The public core sync collections retain their `extension_instance_id` field name
+as a serialization alias of the stable extension ID. They never store another
+instance reference. Their default-row IDs derive from project, stable extension
+and board. SDK view response fields are unchanged. Runtime identity recovery publishes updated
+view rows and replaces old default sync IDs after the rename commits, including
+built-in defaults with no saved view. Ordinary provider changes keep the same scope.
+
 ### Cleanup and disk maintenance
 
 Startup applies schema migrations, copies reachable receipt nodes into files, and

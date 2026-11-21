@@ -33,7 +33,7 @@ for (const interrupted of [false, true])
         scope_type: "project",
         scope_id: project.id,
       });
-      const scope = { project_id: project.id, extension_instance_id: null, board_id: "native" };
+      const scope = { project_id: project.id, extension_id: null, board_id: "native" };
       const views = createBoardViewsDBService(store.db);
       const view = await views.create({
         ...scope,
@@ -62,9 +62,9 @@ for (const interrupted of [false, true])
       store = await createDb({ path });
       const migrated = createBoardViewsDBService(store.db);
       expect(await migrated.getDefault(scope)).toEqual({ ...scope, default_view_id: view.id, updated_at: stamp });
-      expect(await migrated.getDefault({ ...scope, extension_instance_id: instance.id })).toEqual({
+      expect(await migrated.getDefault({ ...scope, extension_id: source.extension_id })).toEqual({
         ...scope,
-        extension_instance_id: instance.id,
+        extension_id: source.extension_id,
         default_view_id: "builtin",
         updated_at: stamp,
       });

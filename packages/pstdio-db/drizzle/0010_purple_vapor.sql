@@ -55,16 +55,20 @@ DROP TABLE "workspace_sessions" CASCADE;--> statement-breakpoint
 ALTER TABLE "installed_extension_sources" RENAME TO "extensions";--> statement-breakpoint
 ALTER TABLE "activity_events" DROP CONSTRAINT "activity_events_source_extension_id_installed_extension_sources_id_fk";
 --> statement-breakpoint
+ALTER TABLE "board_views" DROP CONSTRAINT "board_views_extension_instance_id_extension_instances_id_fk";
+--> statement-breakpoint
 ALTER TABLE "extension_instances" DROP CONSTRAINT "extension_instances_installed_extension_id_installed_extension_sources_id_fk";
 --> statement-breakpoint
 DROP INDEX "installed_ext_install_name_idx";--> statement-breakpoint
 DROP INDEX "installed_ext_extension_id_idx";--> statement-breakpoint
 DROP INDEX "installed_ext_status_idx";--> statement-breakpoint
 DROP INDEX "automation_runs_idempotency_idx";--> statement-breakpoint
+DROP INDEX "board_views_scope_order_idx";--> statement-breakpoint
 ALTER TABLE "automation_runs" ADD COLUMN "principal" text NOT NULL;--> statement-breakpoint
 ALTER TABLE "automation_tokens" ADD COLUMN "name" text NOT NULL;--> statement-breakpoint
 ALTER TABLE "automation_tokens" ADD COLUMN "created_by" text NOT NULL;--> statement-breakpoint
 ALTER TABLE "board_views" ADD COLUMN "is_default" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "board_views" ADD COLUMN "extension_id" text;--> statement-breakpoint
 ALTER TABLE "sessions" ADD COLUMN "workspace_id" text;--> statement-breakpoint
 ALTER TABLE "credentials" ADD CONSTRAINT "credentials_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "preferences" ADD CONSTRAINT "preferences_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -75,8 +79,10 @@ ALTER TABLE "activity_events" ADD CONSTRAINT "activity_events_source_extension_i
 ALTER TABLE "extension_instances" ADD CONSTRAINT "extension_instances_installed_extension_id_extensions_id_fk" FOREIGN KEY ("installed_extension_id") REFERENCES "public"."extensions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "automation_tokens_project_idx" ON "automation_tokens" USING btree ("project_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "board_views_default_scope_idx" ON "board_views" USING btree ("project_id",coalesce("extension_instance_id", ''),"board_id") WHERE "board_views"."is_default" = true;--> statement-breakpoint
+CREATE UNIQUE INDEX "board_views_default_scope_idx" ON "board_views" USING btree ("project_id",coalesce("extension_id", ''),"board_id") WHERE "board_views"."is_default" = true;--> statement-breakpoint
 CREATE INDEX "sessions_workspace_idx" ON "sessions" USING btree ("workspace_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "automation_runs_idempotency_idx" ON "automation_runs" USING btree ("principal","project_id","command_id","idempotency_key");--> statement-breakpoint
+CREATE INDEX "board_views_scope_order_idx" ON "board_views" USING btree ("project_id","extension_id","board_id","sort_order");--> statement-breakpoint
 ALTER TABLE "automation_runs" DROP COLUMN "principal_id";--> statement-breakpoint
-ALTER TABLE "automation_tokens" DROP COLUMN "principal_id";
+ALTER TABLE "automation_tokens" DROP COLUMN "principal_id";--> statement-breakpoint
+ALTER TABLE "board_views" DROP COLUMN "extension_instance_id";

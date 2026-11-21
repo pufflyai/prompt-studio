@@ -155,8 +155,9 @@ const buildApp = async (
   const storageRoot = input.config.storage.root;
   ensureStorageRoot(storageRoot);
 
+  const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
   const work = createProjectWork();
-  const dbs = createAppDatabaseServices(db, database.path === ":memory:" ? storageRoot : database.path, work);
+  const dbs = createAppDatabaseServices(db, database.path === ":memory:" ? storageRoot : database.path, work, eventBus);
   const { environmentId } = await dbs.environmentDBService.get();
   const storagePositions = createStoragePositions(environmentId);
   const {
@@ -176,7 +177,6 @@ const buildApp = async (
   } = dbs;
   await upgradeAppStorage(extensionStorageDBService);
 
-  const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
   const artifactMountWrites = createArtifactMountWriteLedger();
 
   const queueChanged = sessionQueueChanged(sessionsDBService, eventBus);

@@ -45,7 +45,7 @@ export const createBoardViewsDBService = (db: DbClient) => {
       .where(
         and(
           eq(board_views.project_id, projectId),
-          enabledInstances.length ? inArray(board_views.extension_instance_id, enabledInstances) : sql`false`,
+          enabledInstances.length ? inArray(board_views.extension_id, enabledInstances) : sql`false`,
           boards.length ? not(or(...boards.map((board) => scopeWhere(board_views, board)))!) : undefined,
           boundary ? gt(board_views.id, boundary) : undefined,
         ),
@@ -161,7 +161,7 @@ export const createBoardViewsDBService = (db: DbClient) => {
     queryOrphaned,
     get,
     getDefault,
-    listDefaults: (projectId?: string) => listBoardDefaults(db, projectId),
+    listDefaults: (projectId?: string, extensionId?: string) => listBoardDefaults(db, projectId, extensionId),
     initialize,
     create,
     update,

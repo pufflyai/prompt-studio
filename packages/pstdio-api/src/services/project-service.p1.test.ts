@@ -100,10 +100,10 @@ describe("ProjectService", () => {
       scope_type: "project",
       scope_id: project.id,
     });
-    // Rows that point at the instance with a restricting foreign key must not block the delete.
+    // Stable extension-owned views and instance settings must leave with their project.
     const view = await createBoardViewsDBService(db).create({
       project_id: project.id,
-      extension_instance_id: instance.id,
+      extension_id: source.extension_id,
       board_id: "tasks",
       title: "Tasks",
       settings: { viewMode: "board", columnGrouping: "none", rowGrouping: "none", displayProperties: [] },

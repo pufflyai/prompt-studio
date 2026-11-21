@@ -57,9 +57,18 @@ export type BoardViewSettings = z.infer<typeof boardViewSettingsSchema>;
 export type BoardViewCreate = z.infer<typeof boardViewCreateSchema>;
 export type BoardViewUpdate = z.infer<typeof boardViewUpdateSchema>;
 
-// The sync key is derived from the database's unique collection scope, never stored twice.
-export const boardDefaultSyncRow = <
-  T extends { project_id: string; extension_instance_id: string | null; board_id: string },
->(
+// The released sync field name remains an alias of the stable extension owner.
+export const boardDefaultSyncRow = <T extends { project_id: string; extension_id: string | null; board_id: string }>(
   row: T,
-) => ({ ...row, id: JSON.stringify([row.project_id, row.extension_instance_id, row.board_id]) });
+) => {
+  const { extension_id, ...value } = row;
+  return {
+    ...value,
+    extension_instance_id: extension_id,
+    id: JSON.stringify([row.project_id, extension_id, row.board_id]),
+  };
+};
+export const boardViewSyncRow = <T extends { extension_id: string | null; is_default: boolean }>(row: T) => {
+  const { extension_id, is_default, ...value } = row;
+  return { ...value, extension_instance_id: extension_id };
+};
