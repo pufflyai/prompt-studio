@@ -1,4 +1,4 @@
-import { defineExtension, defineSkill, l10n, packageAsset } from "@pstdio/sdk/extensions";
+import { defineExtension, defineKeybinding, defineSkill, l10n, packageAsset } from "@pstdio/sdk/extensions";
 import { createMachineHarness } from "./src/agent";
 import { catalogView } from "./src/catalog-view";
 import { commands } from "./src/commands";
@@ -22,6 +22,8 @@ import {
   openDeployed,
   readDeployed,
 } from "./src/deployed-workbench";
+import { launchInstance } from "./src/instance-commands";
+import { launchMachine } from "./src/machine-commands";
 import { relaunchMachine, resumeMachine } from "./src/machine-lifecycle";
 import { machineLifecycleActions } from "./src/machine-lifecycle-actions";
 import { watchMachine } from "./src/machine-watch";
@@ -30,7 +32,7 @@ import { instancesView, machinesView, templatesView } from "./src/native-tables"
 import { deployedMachineKind, instanceKind, machineKind, templateKind } from "./src/resources";
 import { selectionCommands } from "./src/selection-commands";
 import { tableCommands } from "./src/table-commands";
-import { deleteTemplateRow, openCatalog, viewTemplateRow } from "./src/template-commands";
+import { deleteTemplateRow, openCatalog, saveTemplate, viewTemplateRow } from "./src/template-commands";
 import { templateFileView, templatePage } from "./src/template-view";
 import { catalogPage, deployedPage, instancePage, instancesPage, navigation } from "./src/workbench";
 import { workspaceHistoryCommands, workspaceHistoryView } from "./src/workspace-history-view";
@@ -100,4 +102,31 @@ export default defineExtension({
   ],
   pages: [instancesPage, instancePage, deployedPage, deployedMachinePage, catalogPage, templatePage],
   navigationItems: [navigation],
+  keybindings: [
+    defineKeybinding({ id: "go-cloud-workspaces", layer: "go", key: "C", sticky: true, action: navigation.action }),
+    defineKeybinding({
+      id: "create-instance",
+      layer: "create",
+      key: instanceKind.ref.id[0]!.toUpperCase(),
+      action: { kind: "command", target: { command: launchInstance.ref } },
+    }),
+    defineKeybinding({
+      id: "create-machine",
+      layer: "create",
+      key: machineKind.ref.id[0]!.toUpperCase(),
+      action: { kind: "command", target: { command: launchMachine.ref } },
+    }),
+    defineKeybinding({
+      id: "create-template",
+      layer: "create",
+      key: templateKind.ref.id[0]!.toUpperCase(),
+      action: { kind: "command", target: { command: saveTemplate.ref } },
+    }),
+    defineKeybinding({
+      id: "create-deployed-machine",
+      layer: "create",
+      key: deployedMachineKind.ref.id[0]!.toUpperCase(),
+      action: { kind: "command", target: { command: launchDeployedWorkspace.ref } },
+    }),
+  ],
 });
