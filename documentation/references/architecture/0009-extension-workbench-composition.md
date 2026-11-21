@@ -17,6 +17,11 @@ place them beneath the tab strip. Empty subheaders are hidden, while the tab str
 retains its bottom separator. Header and body guests have separate host-event
 channels and stable DOM hosts, so moving or switching a view preserves their state.
 
+The web and desktop dashboard shells put project selection and global panel controls
+in the host header above every workbench region. Page history and breadcrumbs stay
+in Main navigation. View controls use the shared short Header when tabbed, and
+contributed controls are vertically centered by the host.
+
 Default host navigation is composed for every active mode that keeps its chrome. A declared replacement view or `false` overrides that default. A mode is selected by navigating to one of its pages.
 
 ## Data flow

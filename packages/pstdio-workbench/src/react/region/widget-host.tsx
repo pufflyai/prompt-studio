@@ -42,7 +42,7 @@ const WorkbenchWidgetFallback = (props: { label: string }) => {
   );
 };
 
-const WorkbenchRenderedWidgetFrame = (props: { children: ReactNode; status: boolean; contentHeight: boolean }) => {
+const WorkbenchRenderedWidgetFrame = (props: { children: ReactNode; centered: boolean; contentHeight: boolean }) => {
   const { children } = props;
 
   return (
@@ -53,8 +53,8 @@ const WorkbenchRenderedWidgetFrame = (props: { children: ReactNode; status: bool
       w="full"
       h={props.contentHeight ? "auto" : "full"}
       overflow="hidden"
-      display={props.status ? "flex" : undefined}
-      alignItems={props.status ? "center" : undefined}
+      display={props.centered ? "flex" : undefined}
+      alignItems={props.centered ? "center" : undefined}
     >
       {children}
     </Box>
@@ -142,7 +142,7 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
       <WorkbenchActionErrors workbench={workbench} target={placement.widgetId} />
       {renderer ? (
         <WorkbenchRenderedWidgetFrame
-          status={props.region === "status"}
+          centered={props.region === "status" || Boolean(props.viewId)}
           contentHeight={sizesToContentHeight(props.sizing)}
         >
           <WorkbenchWidgetContents

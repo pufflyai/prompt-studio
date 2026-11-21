@@ -36,7 +36,7 @@ export const WorkbenchContentHeader = (props: {
       data-workbench-content-header={panel}
       display={visible ? "flex" : "none"}
       flex={inline ? "1" : undefined}
-      h={inline ? "full" : undefined}
+      {...(inline ? { h: "full" } : {})}
       minW="0"
       flexShrink={0}
       gap="xs"

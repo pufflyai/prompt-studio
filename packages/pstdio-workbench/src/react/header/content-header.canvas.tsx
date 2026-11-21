@@ -1,8 +1,9 @@
-import { Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import type { CanvasMeta } from "@pstdio/canvas";
+import { Header } from "@pstdio/ui";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
-import { WorkbenchStory } from "../../examples/workbench-story";
+import { Workbench, WorkbenchPanelToggles, WorkbenchThemeProvider } from "..";
 
 const tool = { kind: "page", extensionId: "preview", id: "tool" } as const;
 const collection = { kind: "page", extensionId: "preview", id: "collection" } as const;
@@ -83,7 +84,12 @@ const createHeaderWorkbench = () => {
   workbench.pageLocations.navigate({ kind: "page", page: tool });
   return workbench;
 };
-export default { title: "Product/Workbench/Header/Page and tab controls", fullscreen: true } satisfies CanvasMeta;
+export default {
+  title: "Product/Workbench/Header/Page and tab controls",
+  description:
+    "App-level project and panel controls sit above the workbench. View actions are centered in page chrome or the shared short tab subheader.",
+  fullscreen: true,
+} satisfies CanvasMeta;
 
 export const PageAndTabSubheaders = () => {
   const [workbench] = useState(createHeaderWorkbench);
@@ -107,7 +113,20 @@ export const PageAndTabSubheaders = () => {
           Show tabbed Main
         </Button>
       </HStack>
-      <WorkbenchStory workbench={workbench} />
+      <Box flex="1" minH="0" overflow="hidden">
+        <WorkbenchThemeProvider>
+          <Workbench
+            workbench={workbench}
+            panelControlsPlacement="host"
+            titleBar={
+              <Header>
+                <Text flex="1">Header preview</Text>
+                <WorkbenchPanelToggles workbench={workbench} />
+              </Header>
+            }
+          />
+        </WorkbenchThemeProvider>
+      </Box>
     </Stack>
   );
 };
