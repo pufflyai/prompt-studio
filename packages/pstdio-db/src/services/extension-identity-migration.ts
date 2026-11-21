@@ -37,7 +37,7 @@ const projectTables = [
 ];
 const otherTables = [
   s.preferences,
-  s.extension_connections,
+  s.credentials,
   s.assetTransfers,
   s.extension_resource_sequences,
   s.storage_resource_identities,
@@ -85,7 +85,7 @@ const assertNoConflicts = async (tx: Transaction, from: string, to: string) => {
       CASE WHEN scope = 'user' AND scope_id = ${from} AND starts_with(key, 'setting:')
         THEN ${to} ELSE scope_id END)`,
     ],
-    [s.extension_connections, sql`to_jsonb(project_id)`],
+    [s.credentials, sql`jsonb_build_array(project_id, contribution_id)`],
     [s.assetTransfers, sql`to_jsonb(project_id)`],
     [s.extension_resource_sequences, sql`to_jsonb(project_id)`],
     [s.storage_resource_identities, sql`to_jsonb(workbench_id)`],

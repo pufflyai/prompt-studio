@@ -12,6 +12,7 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
     "extension_skill_preferences",
     "extension_automation_preferences",
     "webview_preferences",
+    "extension_connections",
   ];
   const folder = join(import.meta.dirname, "../../drizzle");
   const files = (await readdir(folder)).filter((name) => /^000[0-9]_.*\.sql$/.test(name)).sort();
@@ -22,7 +23,7 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
       if (tables.some((table) => sql.startsWith(`CREATE TABLE "${table}" (`))) await connection.pglite.exec(sql);
     }
   }
-  await connection.pglite.exec("DROP TABLE preferences");
+  await connection.pglite.exec("DROP TABLE preferences; DROP TABLE credentials");
   const migrations = await connection.pglite.query<{ id: number }>(
     "SELECT id FROM drizzle.__drizzle_migrations ORDER BY created_at DESC LIMIT 1",
   );

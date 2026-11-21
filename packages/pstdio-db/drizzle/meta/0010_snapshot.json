@@ -1,5 +1,5 @@
 {
-  "id": "f9ea5484-9b05-43e6-a1eb-a66feaa61ab5",
+  "id": "22e9f470-1b01-4a94-9c61-50308f56b027",
   "prevId": "e22b1e43-5e44-4e7c-b676-5be106a4f0ab",
   "version": "7",
   "dialect": "postgresql",
@@ -937,20 +937,14 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.extension_connections": {
-      "name": "extension_connections",
+    "public.credentials": {
+      "name": "credentials",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
           "type": "text",
           "primaryKey": true,
-          "notNull": true
-        },
-        "project_id": {
-          "name": "project_id",
-          "type": "text",
-          "primaryKey": false,
           "notNull": true
         },
         "extension_id": {
@@ -965,11 +959,23 @@
           "primaryKey": false,
           "notNull": true
         },
-        "base_url": {
-          "name": "base_url",
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider": {
+          "name": "provider",
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "account_label": {
+          "name": "account_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "auth_type": {
           "name": "auth_type",
@@ -983,21 +989,27 @@
           "primaryKey": false,
           "notNull": false
         },
+        "scopes": {
+          "name": "scopes",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
         "secret_ref": {
           "name": "secret_ref",
           "type": "text",
           "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "text",
+          "primaryKey": false,
           "notNull": false
         },
-        "config_json": {
-          "name": "config_json",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "last_check_json": {
-          "name": "last_check_json",
+        "last_check": {
+          "name": "last_check",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
@@ -1016,38 +1028,26 @@
         }
       },
       "indexes": {
-        "extension_connections_project_contribution_idx": {
-          "name": "extension_connections_project_contribution_idx",
+        "credentials_project_idx": {
+          "name": "credentials_project_idx",
           "columns": [
             {
               "expression": "project_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            },
-            {
-              "expression": "extension_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "contribution_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
             }
           ],
-          "isUnique": true,
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
         }
       },
       "foreignKeys": {
-        "extension_connections_project_id_projects_id_fk": {
-          "name": "extension_connections_project_id_projects_id_fk",
-          "tableFrom": "extension_connections",
+        "credentials_project_id_projects_id_fk": {
+          "name": "credentials_project_id_projects_id_fk",
+          "tableFrom": "credentials",
           "tableTo": "projects",
           "columnsFrom": [
             "project_id"
@@ -1060,7 +1060,17 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "credentials_owner_uq": {
+          "name": "credentials_owner_uq",
+          "nullsNotDistinct": true,
+          "columns": [
+            "extension_id",
+            "contribution_id",
+            "project_id"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

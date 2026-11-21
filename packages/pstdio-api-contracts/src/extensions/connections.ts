@@ -31,6 +31,7 @@ export const extensionConnectionRecordSchema = z.object({
 export const configureExtensionConnectionSchema = z.object({
   baseUrl: z.url(),
   secret: z.string().optional(),
+  credentialScope: z.enum(["all-projects", "project"]).optional(),
 });
 
 export const listExtensionConnectionsResponseSchema = z.object({

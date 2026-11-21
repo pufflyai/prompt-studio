@@ -18,6 +18,7 @@ import {
 } from "../services/extension-storage/index-node-files";
 import { upgradeIndexNodesToFiles } from "../services/extension-storage/index-node-upgrade";
 import { prepareAppPreferencesUpgrade } from "./app-preferences-upgrade";
+import { prepareConnectionCredentialsUpgrade } from "./connection-credentials-upgrade";
 import { prepareExtensionPreferencesUpgrade } from "./extension-preferences-upgrade";
 import { openPglite } from "./open-pglite";
 import { canonicalDbPath, resolveDbPath } from "./paths";
@@ -222,9 +223,11 @@ export const createDb = async (options?: {
       if (!fs.existsSync(migrationsFolder)) return;
       const finishPreferencesUpgrade = await prepareAppPreferencesUpgrade(db, dbPath);
       const finishExtensionPreferencesUpgrade = await prepareExtensionPreferencesUpgrade(db, dbPath);
+      const finishConnectionCredentialsUpgrade = await prepareConnectionCredentialsUpgrade(db, dbPath);
       await migrate(db, { migrationsFolder });
       await finishPreferencesUpgrade?.();
       await finishExtensionPreferencesUpgrade?.();
+      await finishConnectionCredentialsUpgrade?.();
       migrated = true;
     });
     // Copy durable receipts before opening. Remove old rows for both sides of an identity
