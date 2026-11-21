@@ -68,6 +68,26 @@ const TAIL_LINES = 60;
 const sources = (runId: string) => `sources/${runId}.tar.gz`;
 const logs = (runId: string) => `logs/${runId}.log`;
 
+const notifyRunChange = (deps: Pick<RunDeps, "changed">) =>
+  Promise.resolve()
+    .then(() => deps.changed?.())
+    .catch(() => {});
+
+async function saveSubmissionFailure(deps: RunDeps, record: RunRecord | undefined, error: unknown) {
+  if (!record) return;
+  const summary: RunSummary = {
+    runId: record.runId,
+    environmentId: record.environmentId,
+    status: "error",
+    exitCode: null,
+    durationMs: Math.max(0, Date.now() - Date.parse(record.startedAt)),
+    logPath: null,
+    tail: "",
+    error: error instanceof Error ? error.message : String(error),
+  };
+  await deps.store.set(`run:${record.runId}`, { ...record, summary });
+}
+
 export async function startRun(
   deps: RunDeps,
   input: {
@@ -121,6 +141,7 @@ export async function startRun(
       )
     : await pickEnvironment(deps, runId, timeoutSeconds, input.environmentId, signal);
   let ownsEnvironment = !template;
+  let record: RunRecord | undefined;
   try {
     if (template) {
       ownsEnvironment = await claimEnvironment(deps.store, environment.id, runId, timeoutSeconds + 1800);
@@ -136,7 +157,7 @@ export async function startRun(
       timeoutSeconds,
       log: { url: await deps.storage.signedUrl("PUT", logs(runId), timeoutSeconds + 1800) },
     });
-    const record: RunRecord = {
+    record = {
       runId,
       environmentId: ready.id,
       requestId: crypto.randomUUID(),
@@ -156,11 +177,17 @@ export async function startRun(
       body: { requestId: record.requestId, conversationId: record.conversationId, message, files: [] },
       signal,
     });
-    await deps.changed?.();
+    await notifyRunChange(deps);
     return { record, files, bytes };
   } catch (error) {
-    if (!input.environmentId && ownsEnvironment) await stopEnvironment(deps.api, environment.id).catch(() => {});
-    await releaseEnvironment(deps.store, environment.id, runId);
+    await Promise.allSettled([
+      saveSubmissionFailure(deps, record, error),
+      (async () => {
+        if (!input.environmentId && ownsEnvironment) await stopEnvironment(deps.api, environment.id).catch(() => {});
+        await releaseEnvironment(deps.store, environment.id, runId);
+      })(),
+    ]);
+    await notifyRunChange(deps);
     throw error;
   }
 }
@@ -214,7 +241,7 @@ export async function checkRun(deps: RunCollectionDeps, record: RunRecord, signa
   const summary = await summarize(deps, record, receipt);
   await deps.store.set(`run:${record.runId}`, { ...record, summary });
   await releaseEnvironment(deps.store, record.environmentId, record.runId);
-  await deps.changed?.();
+  await notifyRunChange(deps);
   return summary;
 }
 

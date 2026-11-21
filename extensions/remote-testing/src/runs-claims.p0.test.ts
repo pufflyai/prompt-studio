@@ -6,7 +6,7 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import type { Api } from "./connection";
 import { activeRun, claimEnvironment } from "./environments";
 import { localProcess } from "./process-fixture";
-import { checkRun, type RunDeps, startRun } from "./runs";
+import { checkRun, listRuns, type RunDeps, startRun } from "./runs";
 
 let root: string;
 beforeAll(async () => {
@@ -134,12 +134,57 @@ test.each([
     return response.json() as never;
   };
   try {
-    await expect(startRun(runDeps(api, store), { root, branchTemplate })).rejects.toThrow(
+    const deps = {
+      ...runDeps(api, store),
+      changed: async () => {
+        throw new Error("Notification failed");
+      },
+    };
+    await expect(startRun(deps, { root, branchTemplate })).rejects.toThrow(
       otherOwner ? "another test run" : "Submission failed",
     );
     expect(requests.includes("/v1/workspaces/branch-env/cancel")).toBe(!otherOwner);
     expect(await activeRun(store, "branch-env")).toBe(otherOwner ? "other-running-run" : null);
+    const records = await listRuns(store);
+    expect(records).toHaveLength(otherOwner ? 0 : 1);
+    if (!otherOwner) {
+      const record = records[0]!;
+      expect(record.summary).toMatchObject({
+        status: "error",
+        error: "Submission failed",
+        exitCode: null,
+        logPath: null,
+        tail: "",
+      });
+      expect(record.summary?.durationMs).toBeGreaterThanOrEqual(0);
+      const requestCount = requests.length;
+      expect(await checkRun(deps, record)).toEqual(record.summary ?? null);
+      expect(requests).toHaveLength(requestCount);
+    }
   } finally {
     server.stop(true);
   }
+});
+
+test.each(["synchronous", "asynchronous"])("an accepted run survives notification failure (%s)", async (mode) => {
+  const store = createMemoryStorage();
+  const requests: string[] = [];
+  const api: Api = async ({ method, path }) => {
+    requests.push(`${method} ${path}`);
+    return { id: "accepted-env", state: "ready", metadata: { pstdio_project_id: "project" } } as never;
+  };
+  const deps = {
+    ...runDeps(api, store),
+    changed() {
+      const error = new Error("Notification failed");
+      if (mode === "synchronous") throw error;
+      return Promise.reject(error);
+    },
+  };
+  const { record } = await startRun(deps, { root });
+  expect(await activeRun(store, record.environmentId)).toBe(record.runId);
+  expect((await listRuns(store))[0]).toMatchObject({ runId: record.runId, requestId: record.requestId });
+  expect(record.summary).toBeUndefined();
+  expect(requests.filter((request) => request.endsWith("/requests"))).toHaveLength(1);
+  expect(requests).not.toContain("POST /v1/workspaces/accepted-env/cancel");
 });
