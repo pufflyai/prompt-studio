@@ -81,3 +81,12 @@ Skill text is documentation, so it does not need application tests. Run only the
 - Claims: run the commands the skill tells agents to run, against a disposable project, when you changed command guidance.
 
 Add a `patch` changeset for each extension whose skills changed. Do not add a changeset for test-only changes.
+
+## Missing local skill assets
+
+Stashing or removing a local extension skill folder can leave its accepted declaration pointing to a missing asset.
+The host omits that skill from catalog lists and logs `skills.asset_unavailable` with the owning extension and skill.
+Other skills still provision, and project setup remains usable. A direct request for the missing skill reports the error.
+Restoring the source makes it available on the next read or provisioning pass; no enablement preference is changed.
+Normal owned-file synchronization still applies (RB 6.A.6): a skipped skill leaves the desired copy set, while user-edited
+copies remain protected. Permission errors and paths outside the extension are not treated as missing assets.

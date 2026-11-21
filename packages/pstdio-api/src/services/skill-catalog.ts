@@ -4,9 +4,11 @@ import {
   type ProjectExtensionRuntimeSnapshot,
   resolveEnabledSourceForRecord,
 } from "../features/extensions/project-extension-runtime-snapshot";
+import { apiLogger } from "../lib/logger";
 import {
   catalogId,
   catalogNameFromKey,
+  isMissingExtensionAsset,
   isPackageAssetDescriptor,
   isRecord,
   readSkillPackageAssetFiles,
@@ -119,3 +121,23 @@ export const hydrateExtensionSkill = (skill: ExtensionSkillMetadata): InternalSk
   ...skill,
   files: readSkillPackageAssetFiles(sourceRootForAsset(skill.source_path!), skill.source!),
 });
+
+/** A disappearing editable asset must not reject the healthy catalog used by workspace provisioning. */
+export const hydrateAvailableExtensionSkill = (skill: ExtensionSkillMetadata) => {
+  try {
+    return hydrateExtensionSkill(skill);
+  } catch (error) {
+    if (!isMissingExtensionAsset(error)) throw error;
+    apiLogger.warn(
+      {
+        event: "skills.asset_unavailable",
+        project_id: skill.project_id,
+        extension_id: skill.extension_id,
+        skill: skill.name,
+        err: error,
+      },
+      "Extension skill source is unavailable; skipping this skill until its files return",
+    );
+    return null;
+  }
+};
