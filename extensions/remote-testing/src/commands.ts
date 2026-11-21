@@ -1,6 +1,7 @@
 import { type CommandContext, defineCommand, l10n, params, workbenchPages } from "@pstdio/sdk/extensions";
 import { connectionApi } from "./connection";
 import { changed, googleToken, projectRoot, runDeps } from "./context";
+import { cleanupEnvironmentCommand } from "./environment-cleanup";
 import { createEnvironment, isBusy, listEnvironments, stopEnvironment } from "./environments";
 import { awaitRun, cancelRun, listRuns, readRun, startRun } from "./runs";
 import { sessionResource } from "./session-link";
@@ -325,6 +326,7 @@ export const refresh = defineCommand({
 });
 
 export const commands = [
+  cleanupEnvironmentCommand,
   status,
   run,
   showRun,

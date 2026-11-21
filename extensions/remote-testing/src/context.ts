@@ -1,13 +1,12 @@
 import { join } from "node:path";
-import { type ExtensionContextBase, eventRef } from "@pstdio/sdk/extensions";
+import type { ExtensionContextBase } from "@pstdio/sdk/extensions";
 import { publishBranchTemplate } from "./branch-templates";
 import { connectionApi } from "./connection";
+import { enqueueEnvironmentCleanup } from "./environment-cleanup";
+import { changed } from "./events";
 import type { RunDeps } from "./runs";
 import { readSettings } from "./settings";
 import { gcsStorage } from "./storage";
-
-// Views refresh when runs or environments change.
-export const changed = eventRef({ extensionId: "pocketcoder.remote-testing", id: "changed" });
 
 let cachedToken: { value: string; until: number } | undefined;
 
@@ -37,6 +36,7 @@ export async function runDeps(ctx: ExtensionContextBase): Promise<RunDeps> {
   return {
     projectId: ctx.projectId,
     api: connectionApi(ctx.connections),
+    cleanupEnvironment: (input) => enqueueEnvironmentCleanup(ctx, input),
     publishTemplate: (kind, source, signal) => publishBranchTemplate(ctx, kind, source, signal),
     storage: gcsStorage({
       bucket: settings.storageBucket,
@@ -58,4 +58,4 @@ export async function runDeps(ctx: ExtensionContextBase): Promise<RunDeps> {
   };
 }
 
-export { googleToken };
+export { changed, googleToken };

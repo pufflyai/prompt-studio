@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import type { Api } from "./connection";
+import { cleanupRunEnvironment } from "./environment-cleanup";
 import { activeRun, claimEnvironment } from "./environments";
 import { localProcess } from "./process-fixture";
 import { checkRun, listRuns, type RunDeps, startRun } from "./runs";
@@ -25,6 +26,9 @@ function runDeps(api: Api, store: ReturnType<typeof createMemoryStorage>) {
   return {
     projectId: "project",
     api,
+    async cleanupEnvironment(input) {
+      await cleanupRunEnvironment({ api, store }, input);
+    },
     store,
     process: localProcess,
     settings: {

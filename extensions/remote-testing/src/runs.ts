@@ -1,6 +1,7 @@
 import type { ExtensionProcessApi, ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import type { BranchKind, BranchSource, TemplateRef } from "./branch-templates";
 import type { Api } from "./connection";
+import type { EnvironmentCleanupInput } from "./environment-cleanup";
 import {
   claimEnvironment,
   createEnvironment,
@@ -16,6 +17,7 @@ import type { RunStorage } from "./storage";
 export interface RunDeps {
   projectId: string;
   api: Api;
+  cleanupEnvironment(input: EnvironmentCleanupInput): Promise<void>;
   publishTemplate?(kind: BranchKind, source: BranchSource, signal?: AbortSignal): Promise<TemplateRef>;
   storage: RunStorage;
   store: ExtensionStorageApi;
@@ -182,10 +184,13 @@ export async function startRun(
   } catch (error) {
     await Promise.allSettled([
       saveSubmissionFailure(deps, record, error),
-      (async () => {
-        if (!input.environmentId && ownsEnvironment) await stopEnvironment(deps.api, environment.id).catch(() => {});
-        await releaseEnvironment(deps.store, environment.id, runId);
-      })(),
+      Promise.resolve().then(() =>
+        deps.cleanupEnvironment({
+          environmentId: environment.id,
+          runId,
+          stop: !input.environmentId && ownsEnvironment,
+        }),
+      ),
     ]);
     await notifyRunChange(deps);
     throw error;
