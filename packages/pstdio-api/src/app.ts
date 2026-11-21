@@ -73,12 +73,17 @@ const apiSecurity = (host: CreateAppInput["host"], runtime: RuntimeRouteDeps | u
   return host.kind === "standalone" && host.token ? { token: host.token } : undefined;
 };
 
-const sessionQueueChanged =
-  (sessions: ReturnType<typeof createAppDatabaseServices>["sessionsDBService"], eventBus: EventBus) =>
-  async (id: string) => {
-    const session = await sessions.update(id, {});
+const createAppSessionQueue = (
+  dbs: ReturnType<typeof createAppDatabaseServices>,
+  eventBus: EventBus,
+  deliver: (id: string) => Promise<void>,
+) =>
+  createSessionQueueService(dbs.sessionQueueEntriesDBService, async (id) => {
+    const session = await dbs.sessionsDBService.update(id, {});
     if (session) eventBus.emit("sessions", "set", session);
-  };
+    // Not awaited: queue changes can hold the scheduling lock that delivery also takes.
+    void deliver(id);
+  });
 
 const registerAppRuntime = (
   app: OpenAPIHono<AppBindings>,
@@ -170,7 +175,6 @@ const buildApp = async (
     extensionStorageDBService,
     installedExtensionSourcesDBService,
     boardViewsDBService,
-    sessionQueueEntriesDBService,
     sessionsDBService,
     settingsDBService,
     skillsDBService,
@@ -179,12 +183,7 @@ const buildApp = async (
 
   const artifactMountWrites = createArtifactMountWriteLedger();
 
-  const queueChanged = sessionQueueChanged(sessionsDBService, eventBus);
-  const sessionQueueEntriesService = createSessionQueueService(sessionQueueEntriesDBService, async (sessionId) => {
-    await queueChanged(sessionId);
-    // Not awaited: queue changes can run under the scheduling lock that delivery also takes.
-    void sessions.deliverIdleTurn(sessionId);
-  });
+  const sessionQueueEntriesService = createAppSessionQueue(dbs, eventBus, (id) => sessions.deliverIdleTurn(id));
   const core = createCoreDomainServices({
     projectWork: work,
     getCommandDeps: () => deps,
@@ -194,6 +193,7 @@ const buildApp = async (
     storageRoot,
   });
   const { fileService, notificationService, projectService, workspaceSessionService, workspaceService } = core;
+  await fileService.recoverRemovals();
   let deps!: RouteDeps;
   const {
     extensionConnectionService,
@@ -217,6 +217,7 @@ const buildApp = async (
     projectService,
     provisionWorkspacesUsingSource: (sourcePath) => provisionWorkspacesUsingSource(deps, sourcePath),
     getProjectExtensionDeps: () => deps,
+    fileService,
     workspaceService,
     storageRoot,
   });

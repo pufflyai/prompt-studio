@@ -81,7 +81,10 @@ export class ProjectNotFoundError extends Error {
   }
 }
 
+import type { createFileService } from "./file-service";
+
 type ExtensionServiceDeps = {
+  fileService?: Pick<ReturnType<typeof createFileService>, "remove" | "recoverRemovals">;
   extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   extensionUserDataService: ReturnType<typeof createExtensionUserDataDBService>;

@@ -171,6 +171,7 @@ export const migrateExtensionIdentities = async (
         )})`,
         sql`SELECT source_owner AS extension_id FROM ${s.resource_anchors} WHERE source_owner IN (${oldOwners})
           UNION SELECT target_owner FROM ${s.resource_anchors} WHERE target_owner IN (${oldOwners})`,
+        sql`SELECT owner AS extension_id FROM ${s.files} WHERE owner IN (${oldOwners})`,
         sql`SELECT name AS extension_id FROM ${s.automation_tokens} WHERE created_by = 'extension' AND name IN (${oldOwners})`,
         sql`SELECT substring(principal from 11) AS extension_id FROM ${s.automation_runs}
           WHERE principal IN (${sql.join(
@@ -201,6 +202,7 @@ export const migrateExtensionIdentities = async (
           ...otherTables,
         ])
           await tx.execute(sql`UPDATE ${table} SET ${ownerColumn} = ${to} WHERE ${ownerColumn} = ${from}`);
+        await tx.execute(sql`UPDATE ${s.files} SET owner = ${to} WHERE owner = ${from}`);
         // Device settings use the stable extension identity as their local owner key too.
         await tx.execute(sql`UPDATE ${s.preferences} SET scope_id = ${to}
           WHERE extension_id = ${to} AND scope = 'user' AND scope_id = ${from} AND starts_with(key, 'setting:')`);

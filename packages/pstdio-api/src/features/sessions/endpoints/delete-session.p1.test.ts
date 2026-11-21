@@ -1,7 +1,11 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { existsSync, mkdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { createTestApp } from "../../../test-utils/create-test-app";
-import { createTestHarnessRegistry, testHarnessId } from "../../harnesses/test-harness-registry";
+import {
+  createTestHarnessRecord,
+  createTestHarnessRegistry,
+  testHarnessId,
+} from "../../harnesses/test-harness-registry";
 import { checkpointConversation } from "../session-checkpoint";
 import { createSessionScheduler } from "../session-scheduler";
 
@@ -144,19 +148,30 @@ test("retained run ownership blocks deletion while a terminal run finishes check
 
 test("deletion and a competing follow-up share the lifecycle lock", async () => {
   const session = await create();
-  const scheduler = createSessionScheduler(app.deps);
-  const [deletion, followUp] = await Promise.allSettled([
-    remove(session.id),
-    scheduler.startOrQueueExisting({ session, prompt: "Competing turn" }),
+  const run = Promise.withResolvers<{ status: "cancelled" }>();
+  const registry = createTestHarnessRegistry([
+    createTestHarnessRecord("fake", {
+      provider: { start: () => ({ done: run.promise, stop: () => run.resolve({ status: "cancelled" }) }) },
+    }),
   ]);
-  if (deletion.status !== "fulfilled") throw deletion.reason;
-  if (deletion.value.status === 204) {
-    expect(followUp.status).toBe("rejected");
-    expect(await app.deps.sessionService.get(session.id)).toBeNull();
-  } else {
-    expect(deletion.value.status).toBe(409);
-    expect(followUp.status).toBe("fulfilled");
-    expect(await app.deps.sessionService.get(session.id)).not.toBeNull();
+  const scheduler = createSessionScheduler({ ...app.deps, harnessRegistry: registry });
+  try {
+    const [deletion, followUp] = await Promise.allSettled([
+      remove(session.id),
+      scheduler.startOrQueueExisting({ session, prompt: "Competing turn" }),
+    ]);
+    if (deletion.status !== "fulfilled") throw deletion.reason;
+    if (deletion.value.status === 204) {
+      expect(followUp.status).toBe("rejected");
+      expect(await app.deps.sessionService.get(session.id)).toBeNull();
+    } else {
+      expect(deletion.value.status).toBe(409);
+      expect(followUp.status).toBe("fulfilled");
+      expect(await app.deps.sessionService.get(session.id)).not.toBeNull();
+    }
+  } finally {
+    run.resolve({ status: "cancelled" });
+    await registry.dispose();
   }
 });
 

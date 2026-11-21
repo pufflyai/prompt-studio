@@ -21,6 +21,8 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
   `);
   const tables = [
     "workspace_sessions",
+    "skill_files",
+    "extension_files",
     "automation_principals",
     "automation_tokens",
     "automation_runs",
@@ -43,7 +45,14 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
       const sql = statement.trim();
       if (tables.some((table) => sql.startsWith(`CREATE TABLE "${table}" (`))) await connection.pglite.exec(sql);
       if (
-        ["workspace_sessions", "automation_principals", "automation_tokens", "automation_runs"].some(
+        [
+          "workspace_sessions",
+          "skill_files",
+          "extension_files",
+          "automation_principals",
+          "automation_tokens",
+          "automation_runs",
+        ].some(
           (table) =>
             sql.startsWith(`ALTER TABLE "${table}" ADD CONSTRAINT`) ||
             (sql.startsWith("CREATE ") && sql.includes(` ON "${table}" `)),
@@ -59,6 +68,20 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
     }
   }
   for (const statement of constraints) await connection.pglite.exec(statement);
+  await connection.pglite.exec(`
+    INSERT INTO skill_files (project_id, skill_id, path, file_id, created_at, updated_at)
+      SELECT f.project_id, s.id, f.path, f.id, f.created_at, f.updated_at FROM files f
+      JOIN skills s ON f.owner = 'skill:' || s.id AND f.project_id = s.project_id WHERE f.path IS NOT NULL;
+    INSERT INTO extension_files (id, project_id, extension_instance_id, file_id, scope_type, scope_id, created_at)
+      SELECT f.id, f.project_id, (SELECT i.id FROM extension_instances i
+        JOIN installed_extension_sources e ON e.id = i.installed_extension_id
+        WHERE i.scope_type = 'project' AND i.scope_id = f.project_id AND e.extension_id = f.owner
+        ORDER BY i.enabled DESC, i.updated_at DESC, i.id LIMIT 1),
+        f.id, f.scope::jsonb->>0, f.scope::jsonb->>1, f.created_at
+      FROM files f WHERE f.owner IS NOT NULL AND f.owner <> 'pstdio'
+        AND NOT starts_with(f.owner, 'skill:') AND f.scope IS NOT NULL;
+    ALTER TABLE files DROP COLUMN owner; ALTER TABLE files DROP COLUMN scope; ALTER TABLE files DROP COLUMN path;
+  `);
   await connection.pglite.exec(
     "DROP TABLE preferences; DROP TABLE credentials; ALTER TABLE board_views DROP COLUMN is_default; ALTER TABLE sessions DROP COLUMN workspace_id",
   );

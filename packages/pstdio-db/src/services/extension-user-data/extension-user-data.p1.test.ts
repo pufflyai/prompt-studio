@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
-import { extension_files, files, projects } from "../../db/schemas.pg";
+import { files, projects } from "../../db/schemas.pg";
+import { createExtensionFilesDBService } from "../extension-files/extension-files";
 import { createExtensionInstancesDBService } from "../extension-instances/extension-instances";
 import { createExtensionSkillPreferencesDBService } from "../extension-preferences/extension-preferences";
 import { createDocumentStorageDBService } from "../extension-storage/document-storage";
@@ -29,14 +30,12 @@ const seedAllTables = async () => {
     created_at: timestamp,
     updated_at: timestamp,
   });
-  await db.insert(extension_files).values({
-    id: crypto.randomUUID(),
+  await createExtensionFilesDBService(db).attach({
     project_id: projectId,
     extension_instance_id: instanceId,
     file_id: fileId,
     scope_type: "project",
     scope_id: projectId,
-    created_at: timestamp,
   });
   await createExtensionSkillPreferencesDBService(db).set({
     project_id: projectId,
@@ -149,9 +148,13 @@ describe("extensionUserDataService", () => {
     expect(await svc.hasUserData(instanceId)).toBe(true);
   });
 
-  test("deleteForInstance clears every owned table", async () => {
+  test("data purge retains owned files until cleanup finishes", async () => {
     await seedAllTables();
-    await svc.deleteForInstance(instanceId);
+    const removed = await svc.deleteForInstance(instanceId);
+    expect(removed.files).toHaveLength(1);
+    expect(await svc.hasUserData(instanceId)).toBe(true);
+    const { createFilesDBService } = await import("../files/files");
+    for (const file of removed.files) await createFilesDBService(db).remove(file.id);
     expect(await svc.hasUserData(instanceId)).toBe(false);
   });
 });

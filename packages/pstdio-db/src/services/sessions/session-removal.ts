@@ -48,12 +48,10 @@ const removeCheckpoint = async (
       ),
     )
     .for("update");
-  if (!file) return;
+  if (!file || (file.owner !== null && file.owner !== "pstdio")) return;
   const references = await tx.execute<{ used: boolean }>(sql`select
     exists(select 1 from sessions where session_file_id = ${file.id} or original_session_id = ${session.id})
     or exists(select 1 from workspaces where startup_log_file_id = ${file.id})
-    or exists(select 1 from skill_files where file_id = ${file.id})
-    or exists(select 1 from extension_files where file_id = ${file.id})
     or exists(select 1 from session_queue_entries where attachments_json @> ${JSON.stringify([{ file_id: file.id }])}::jsonb)
     or exists(select 1 from resource_anchors where
       (source_kind = 'file' and source_id = ${file.id}) or (target_kind = 'file' and target_id = ${file.id})) as used`);

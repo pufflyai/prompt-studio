@@ -100,3 +100,24 @@ test("remove deletes the file record", async () => {
   const fetched = await service.get(file.id);
   expect(fetched).toBeNull();
 });
+
+test("a referenced file is refused before removing its bytes", async () => {
+  const file = await insertFile();
+  const { createSessionsDBService } = await import("../sessions/sessions");
+  const session = await createSessionsDBService(db).create({
+    project_id: projectId,
+    title: "Referenced file",
+    agent: "codex",
+  });
+  const { sessions } = await import("../../db/schemas.pg");
+  const { eq } = await import("drizzle-orm");
+  await db.update(sessions).set({ session_file_id: file.id }).where(eq(sessions.id, session.id));
+  let deletedBytes = false;
+  await expect(
+    service.remove(file.id, () => {
+      deletedBytes = true;
+    }),
+  ).rejects.toThrow("in use");
+  expect(deletedBytes).toBe(false);
+  expect(await service.get(file.id)).toEqual(file);
+});

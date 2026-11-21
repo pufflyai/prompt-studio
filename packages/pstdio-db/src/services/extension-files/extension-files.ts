@@ -1,6 +1,8 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { extension_files, files } from "../../db/schemas.pg";
+import { files } from "../../db/schemas.pg";
+import { getExtensionStorageOwner } from "../extension-storage/storage-owner";
+import { fileColumns } from "../files/files";
 
 interface ExtensionFileScope {
   project_id: string;
@@ -8,77 +10,81 @@ interface ExtensionFileScope {
   scope_type: string;
   scope_id: string | null;
 }
-
-const nowTimestamp = () => new Date().toISOString();
-
-const scopeConditions = (scope: ExtensionFileScope) => [
-  eq(extension_files.project_id, scope.project_id),
-  eq(extension_files.extension_instance_id, scope.extension_instance_id),
-  eq(extension_files.scope_type, scope.scope_type),
-  scope.scope_id === null ? isNull(extension_files.scope_id) : eq(extension_files.scope_id, scope.scope_id),
-];
-
+export const encodeFileScope = (scope: Pick<ExtensionFileScope, "scope_type" | "scope_id">) =>
+  JSON.stringify([scope.scope_type, scope.scope_id]);
+const ownerFor = async (
+  db: Pick<DbClient, "select">,
+  input: Pick<ExtensionFileScope, "project_id" | "extension_instance_id">,
+) => {
+  const owner = await getExtensionStorageOwner(db, input.extension_instance_id);
+  return owner?.workbenchId === input.project_id ? owner.extensionId : null;
+};
 export const createExtensionFilesDBService = (db: DbClient) => {
-  const attach = async (input: ExtensionFileScope & { file_id: string }) => {
-    const row = {
-      id: crypto.randomUUID(),
-      project_id: input.project_id,
-      extension_instance_id: input.extension_instance_id,
-      file_id: input.file_id,
-      scope_type: input.scope_type,
-      scope_id: input.scope_id,
-      created_at: nowTimestamp(),
-    };
-    await db.insert(extension_files).values(row);
-    return row;
+  const attach = (input: ExtensionFileScope & { file_id: string }) =>
+    db.transaction(async (tx) => {
+      const owner = await ownerFor(tx, input);
+      if (!owner) throw new Error("Extension file owner is not in this project.");
+      const [file] = await tx
+        .update(files)
+        .set({ owner, scope: encodeFileScope(input), path: null })
+        .where(
+          and(
+            eq(files.id, input.file_id),
+            eq(files.project_id, input.project_id),
+            or(isNull(files.owner), eq(files.owner, "pstdio")),
+          ),
+        )
+        .returning(fileColumns);
+      if (!file) throw new Error("File already belongs to another owner or project.");
+      return {
+        id: file.id,
+        project_id: input.project_id,
+        extension_instance_id: input.extension_instance_id,
+        file_id: file.id,
+        scope_type: input.scope_type,
+        scope_id: input.scope_id,
+        created_at: file.created_at,
+      };
+    });
+  const list = async (input: ExtensionFileScope) => {
+    const owner = await ownerFor(db, input);
+    if (!owner) return [];
+    return db
+      .select(fileColumns)
+      .from(files)
+      .where(
+        and(eq(files.project_id, input.project_id), eq(files.owner, owner), eq(files.scope, encodeFileScope(input))),
+      )
+      .orderBy(files.created_at, files.id);
   };
-
-  const list = async (scope: ExtensionFileScope) => {
-    const rows = await db
-      .select({ file: files })
-      .from(extension_files)
-      .innerJoin(files, eq(extension_files.file_id, files.id))
-      .where(and(...scopeConditions(scope)))
-      .orderBy(extension_files.created_at);
-
-    return rows.map((row) => row.file);
-  };
-
   const getOwnedFile = async (
     input: Pick<ExtensionFileScope, "project_id" | "extension_instance_id"> & { file_id: string },
   ) => {
-    const rows = await db
-      .select({ file: files, scope_type: extension_files.scope_type, scope_id: extension_files.scope_id })
-      .from(extension_files)
-      .innerJoin(files, eq(extension_files.file_id, files.id))
-      .where(
-        and(
-          eq(extension_files.project_id, input.project_id),
-          eq(extension_files.extension_instance_id, input.extension_instance_id),
-          eq(extension_files.file_id, input.file_id),
-        ),
-      );
-
-    const row = rows.at(0);
-    return row ? { ...row.file, scope_type: row.scope_type, scope_id: row.scope_id } : null;
+    const owner = await ownerFor(db, input);
+    if (!owner) return null;
+    const [file] = await db
+      .select({ ...fileColumns, scope: files.scope })
+      .from(files)
+      .where(and(eq(files.id, input.file_id), eq(files.project_id, input.project_id), eq(files.owner, owner)));
+    if (!file?.scope) return null;
+    const { scope, ...value } = file;
+    const [scope_type, scope_id] = JSON.parse(scope) as [string, string | null];
+    return { ...value, scope_type, scope_id };
   };
-
   const detach = async (
     input: Pick<ExtensionFileScope, "project_id" | "extension_instance_id"> & { file_id: string },
   ) => {
-    const deleted = await db
-      .delete(extension_files)
-      .where(
-        and(
-          eq(extension_files.project_id, input.project_id),
-          eq(extension_files.extension_instance_id, input.extension_instance_id),
-          eq(extension_files.file_id, input.file_id),
-        ),
-      )
-      .returning({ id: extension_files.id });
-
-    return deleted.length > 0;
+    const owner = await ownerFor(db, input);
+    if (!owner) return false;
+    return (
+      (
+        await db
+          .update(files)
+          .set({ owner: null, scope: null, path: null })
+          .where(and(eq(files.id, input.file_id), eq(files.project_id, input.project_id), eq(files.owner, owner)))
+          .returning({ id: files.id })
+      ).length > 0
+    );
   };
-
   return { attach, list, getOwnedFile, detach };
 };

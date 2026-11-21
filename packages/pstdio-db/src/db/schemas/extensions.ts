@@ -1,7 +1,5 @@
 import { boolean, index, jsonb, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { extensionLoadStatusEnum, extensionSourceKindEnum } from "./enums";
-import { files } from "./files";
-import { projects } from "./projects";
 import type { JsonObject } from "./types";
 
 export const installed_extension_sources = pgTable(
@@ -51,30 +49,5 @@ export const extension_instances = pgTable(
     ),
     index("extension_instances_scope_idx").on(table.scope_type, table.scope_id),
     index("extension_instances_installed_idx").on(table.installed_extension_id),
-  ],
-);
-
-export const extension_files = pgTable(
-  "extension_files",
-  {
-    id: text("id").primaryKey(),
-    project_id: text("project_id")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    extension_instance_id: text("extension_instance_id")
-      .notNull()
-      .references(() => extension_instances.id, { onDelete: "restrict" }),
-    file_id: text("file_id")
-      .notNull()
-      .references(() => files.id, { onDelete: "cascade" }),
-    scope_type: text("scope_type").notNull(),
-    scope_id: text("scope_id"),
-    created_at: text("created_at").notNull(),
-  },
-  (table) => [
-    uniqueIndex("extension_files_instance_file_uq").on(table.extension_instance_id, table.file_id),
-    index("extension_files_instance_scope_idx").on(table.extension_instance_id, table.scope_type, table.scope_id),
-    index("extension_files_project_idx").on(table.project_id),
-    index("extension_files_file_idx").on(table.file_id),
   ],
 );

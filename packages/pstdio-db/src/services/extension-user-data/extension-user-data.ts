@@ -1,15 +1,12 @@
 import { and, eq, not, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { board_views, extension_files, preferences } from "../../db/schemas.pg";
+import { board_views, files, preferences } from "../../db/schemas.pg";
 import { listBoardDefaults } from "../board-views/board-defaults";
 import { clearOwnerDocuments } from "../extension-storage/clear-documents";
 import { createDocumentStorageDBService } from "../extension-storage/document-storage";
 import { indexNodeFilesFor } from "../extension-storage/index-node-files";
 import { getExtensionStorageOwner, hasOtherStorageProvider } from "../extension-storage/storage-owner";
 
-// Remaining instance-owned data needs explicit deletion. Stable owner data is shared
-// by all providers and leaves only when the last provider removes its data.
-const userDataTables = [extension_files] as const;
 const instancePreferences = (instanceId: string) =>
   and(
     eq(preferences.scope, "project"),
@@ -47,14 +44,12 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
         .where(and(eq(board_views.project_id, owner.workbenchId), eq(board_views.extension_id, owner.extensionId)))
         .limit(1);
       if (view) return true;
-    }
-    for (const table of userDataTables) {
-      const [row] = await db
-        .select({ instance: table.extension_instance_id })
-        .from(table)
-        .where(eq(table.extension_instance_id, extensionInstanceId))
+      const [file] = await db
+        .select({ id: files.id })
+        .from(files)
+        .where(and(eq(files.project_id, owner.workbenchId), eq(files.owner, owner.extensionId)))
         .limit(1);
-      if (row) return true;
+      if (file) return true;
     }
     return false;
   };
@@ -65,6 +60,7 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
       const owner = await getExtensionStorageOwner(tx, extensionInstanceId);
       let boardDefaults: Awaited<ReturnType<typeof listBoardDefaults>> = [];
       let boardViews: Array<typeof board_views.$inferSelect> = [];
+      let ownedFiles: Array<typeof files.$inferSelect> = [];
       if (owner && !(await hasOtherStorageProvider(tx, owner, extensionInstanceId))) {
         boardDefaults = (await listBoardDefaults(tx, owner.workbenchId)).filter(
           (row) => row.extension_id === owner.extensionId,
@@ -73,6 +69,12 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
           .delete(board_views)
           .where(and(eq(board_views.project_id, owner.workbenchId), eq(board_views.extension_id, owner.extensionId)))
           .returning();
+        // Keep ownership until the API removes bytes and rows. A failed cleanup
+        // can then retry from these canonical rows without a second journal.
+        ownedFiles = await tx
+          .select()
+          .from(files)
+          .where(and(eq(files.project_id, owner.workbenchId), eq(files.owner, owner.extensionId)));
         await clearOwnerDocuments(tx, owner);
         await tx
           .delete(preferences)
@@ -87,10 +89,7 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
         cleared = owner;
       }
       await tx.delete(preferences).where(instancePreferences(extensionInstanceId));
-      for (const table of userDataTables) {
-        await tx.delete(table).where(eq(table.extension_instance_id, extensionInstanceId));
-      }
-      return { boardViews, boardDefaults };
+      return { boardViews, boardDefaults, files: ownedFiles };
     });
     // Index node files leave only after the rows naming them are gone.
     if (cleared) await indexNodeFilesFor(db).removeOwner(cleared);

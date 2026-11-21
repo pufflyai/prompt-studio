@@ -33,9 +33,11 @@ ALTER TABLE "board_default_views" DISABLE ROW LEVEL SECURITY;--> statement-break
 ALTER TABLE "local_environment" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "extension_connections" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "extension_automation_preferences" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "extension_files" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "extension_settings" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "extension_skill_preferences" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "settings" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "skill_files" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "webview_preferences" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "workspace_sessions" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "automation_runs" DROP CONSTRAINT "automation_runs_principal_id_automation_principals_id_fk";
@@ -47,9 +49,11 @@ DROP TABLE "board_default_views" CASCADE;--> statement-breakpoint
 DROP TABLE "local_environment" CASCADE;--> statement-breakpoint
 DROP TABLE "extension_connections" CASCADE;--> statement-breakpoint
 DROP TABLE "extension_automation_preferences" CASCADE;--> statement-breakpoint
+DROP TABLE "extension_files" CASCADE;--> statement-breakpoint
 DROP TABLE "extension_settings" CASCADE;--> statement-breakpoint
 DROP TABLE "extension_skill_preferences" CASCADE;--> statement-breakpoint
 DROP TABLE "settings" CASCADE;--> statement-breakpoint
+DROP TABLE "skill_files" CASCADE;--> statement-breakpoint
 DROP TABLE "webview_preferences" CASCADE;--> statement-breakpoint
 DROP TABLE "workspace_sessions" CASCADE;--> statement-breakpoint
 ALTER TABLE "installed_extension_sources" RENAME TO "extensions";--> statement-breakpoint
@@ -69,6 +73,9 @@ ALTER TABLE "automation_tokens" ADD COLUMN "name" text NOT NULL;--> statement-br
 ALTER TABLE "automation_tokens" ADD COLUMN "created_by" text NOT NULL;--> statement-breakpoint
 ALTER TABLE "board_views" ADD COLUMN "is_default" boolean DEFAULT false NOT NULL;--> statement-breakpoint
 ALTER TABLE "board_views" ADD COLUMN "extension_id" text;--> statement-breakpoint
+ALTER TABLE "files" ADD COLUMN "owner" text;--> statement-breakpoint
+ALTER TABLE "files" ADD COLUMN "scope" text;--> statement-breakpoint
+ALTER TABLE "files" ADD COLUMN "path" text;--> statement-breakpoint
 ALTER TABLE "sessions" ADD COLUMN "workspace_id" text;--> statement-breakpoint
 ALTER TABLE "credentials" ADD CONSTRAINT "credentials_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "preferences" ADD CONSTRAINT "preferences_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -80,6 +87,8 @@ ALTER TABLE "extension_instances" ADD CONSTRAINT "extension_instances_installed_
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "automation_tokens_project_idx" ON "automation_tokens" USING btree ("project_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "board_views_default_scope_idx" ON "board_views" USING btree ("project_id",coalesce("extension_id", ''),"board_id") WHERE "board_views"."is_default" = true;--> statement-breakpoint
+CREATE INDEX "files_owner_scope_idx" ON "files" USING btree ("project_id","owner","scope");--> statement-breakpoint
+CREATE UNIQUE INDEX "files_owner_path_idx" ON "files" USING btree ("owner","path") WHERE "files"."path" is not null;--> statement-breakpoint
 CREATE INDEX "sessions_workspace_idx" ON "sessions" USING btree ("workspace_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "automation_runs_idempotency_idx" ON "automation_runs" USING btree ("principal","project_id","command_id","idempotency_key");--> statement-breakpoint
 CREATE INDEX "board_views_scope_order_idx" ON "board_views" USING btree ("project_id","extension_id","board_id","sort_order");--> statement-breakpoint

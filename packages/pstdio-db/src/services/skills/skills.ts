@@ -1,10 +1,10 @@
 import { and, asc, eq, gt, inArray, isNull, notInArray } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { skill_files, skills } from "../../db/schemas.pg";
+import { files as fileRows, skills } from "../../db/schemas.pg";
 import { type PageQuery, pageBoundary, pageLimit } from "../query-page";
 
 type SkillRow = typeof skills.$inferSelect;
-type SkillFileRow = typeof skill_files.$inferSelect;
+type SkillFileRow = SkillFileMembership;
 
 export type SkillFileMembership = { path: string; file_id: string };
 
@@ -38,13 +38,26 @@ const sortFiles = (rows: SkillFileRow[]) =>
 const loadFilesBySkillIds = async (db: DbClient, skillIds: string[]) => {
   if (skillIds.length === 0) return new Map<string, SkillFileMembership[]>();
 
-  const rows = await db.select().from(skill_files).where(inArray(skill_files.skill_id, skillIds));
+  const rows = await db
+    .select({ owner: fileRows.owner, path: fileRows.path, file_id: fileRows.id })
+    .from(fileRows)
+    .where(
+      and(
+        inArray(
+          fileRows.owner,
+          skillIds.map((id) => `skill:${id}`),
+        ),
+        isNull(fileRows.scope),
+      ),
+    );
   const grouped = new Map<string, SkillFileRow[]>();
 
   for (const row of rows) {
-    const list = grouped.get(row.skill_id) ?? [];
-    list.push(row);
-    grouped.set(row.skill_id, list);
+    if (row.path === null) continue;
+    const id = row.owner!.slice("skill:".length);
+    const list = grouped.get(id) ?? [];
+    list.push({ path: row.path, file_id: row.file_id });
+    grouped.set(id, list);
   }
 
   const result = new Map<string, SkillFileMembership[]>();
@@ -55,25 +68,43 @@ const loadFilesBySkillIds = async (db: DbClient, skillIds: string[]) => {
 const decorate = (row: SkillRow, files: SkillFileMembership[]): SkillRecord => ({ ...row, files });
 
 const replaceSkillFiles = async (
-  db: DbClient,
+  db: Pick<DbClient, "select" | "update">,
   projectId: string,
   skillId: string,
   files: SkillFileMembership[],
-  timestamp: string,
 ) => {
-  await db.delete(skill_files).where(eq(skill_files.skill_id, skillId));
-  if (files.length === 0) return;
-
-  await db.insert(skill_files).values(
-    files.map((file) => ({
-      project_id: projectId,
-      skill_id: skillId,
-      path: file.path,
-      file_id: file.file_id,
-      created_at: timestamp,
-      updated_at: timestamp,
-    })),
-  );
+  if (
+    new Set(files.map((file) => file.path)).size !== files.length ||
+    new Set(files.map((file) => file.file_id)).size !== files.length
+  )
+    throw new Error("Skill paths and files must be unique.");
+  const owner = `skill:${skillId}`;
+  const rows = files.length
+    ? await db
+        .select()
+        .from(fileRows)
+        .where(
+          inArray(
+            fileRows.id,
+            files.map((file) => file.file_id),
+          ),
+        )
+        .orderBy(fileRows.id)
+        .for("update")
+    : [];
+  if (
+    rows.length !== files.length ||
+    rows.some(
+      (row) => row.project_id !== projectId || (row.owner !== null && row.owner !== "pstdio" && row.owner !== owner),
+    )
+  )
+    throw new Error("Skill files must belong to this project and owner.");
+  await db
+    .update(fileRows)
+    .set({ owner: null, scope: null, path: null })
+    .where(and(eq(fileRows.owner, owner), eq(fileRows.project_id, projectId)));
+  for (const file of files)
+    await db.update(fileRows).set({ owner, scope: null, path: file.path }).where(eq(fileRows.id, file.file_id));
 };
 
 const sortMembership = (files: SkillFileMembership[]) =>
@@ -143,10 +174,11 @@ export const createSkillsDBService = (db: DbClient) => {
       deleted_at: null,
     };
 
-    await db.insert(skills).values(row);
-    await replaceSkillFiles(db, input.project_id, row.id, files, timestamp);
-
-    return decorate(row, sortMembership(files));
+    return db.transaction(async (tx) => {
+      await tx.insert(skills).values(row);
+      await replaceSkillFiles(tx, input.project_id, row.id, files);
+      return decorate(row, sortMembership(files));
+    });
   };
 
   const update = async (projectId: string, name: string, input: UpdateInput) => {
@@ -161,17 +193,15 @@ export const createSkillsDBService = (db: DbClient) => {
       updated_at: timestamp,
     };
 
-    await db
-      .update(skills)
-      .set({ description: nextRow.description, updated_at: nextRow.updated_at })
-      .where(eq(skills.id, existing.id));
-
-    const nextFiles = input.files ?? existing.files;
-    if (input.files) {
-      await replaceSkillFiles(db, projectId, existing.id, input.files, timestamp);
-    }
-
-    return decorate(nextRow, sortMembership(nextFiles));
+    return db.transaction(async (tx) => {
+      await tx
+        .update(skills)
+        .set({ description: nextRow.description, updated_at: nextRow.updated_at })
+        .where(eq(skills.id, existing.id));
+      const nextFiles = input.files ?? existing.files;
+      if (input.files) await replaceSkillFiles(tx, projectId, existing.id, input.files);
+      return decorate(nextRow, sortMembership(nextFiles));
+    });
   };
 
   const remove = async (projectId: string, name: string) => {

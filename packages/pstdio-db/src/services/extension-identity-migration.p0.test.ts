@@ -409,3 +409,31 @@ test("global migration discovers a stable board owner without an installation ro
     await close();
   }
 });
+
+test("global migration discovers retained extension files and leaves host and skill ownership intact", async () => {
+  const { db, close, now } = await setup();
+  try {
+    const originals = [old, "pstdio", `skill:${old}`].map((owner, index) => ({
+      id: `retained-file-${index}`,
+      project_id: "project",
+      owner,
+      scope: owner === old ? JSON.stringify(["resource", "saved"]) : null,
+      path: owner.startsWith("skill:") ? "SKILL.md" : null,
+      file_name: "Saved.md",
+      file_kind: "extension",
+      storage_path: `/retained/bytes-${index}`,
+      mime_type: "text/markdown",
+      size_bytes: 12,
+      hash: "retained-hash",
+      created_at: now,
+      updated_at: now,
+    }));
+    await db.insert(s.files).values(originals);
+    await migrateExtensionIdentities(db);
+    expect(await db.select().from(s.files).orderBy(s.files.id)).toEqual(
+      originals.map((file) => ({ ...file, owner: file.owner === old ? next : file.owner })),
+    );
+  } finally {
+    await close();
+  }
+});

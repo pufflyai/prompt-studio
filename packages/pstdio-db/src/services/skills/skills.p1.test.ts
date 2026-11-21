@@ -110,3 +110,40 @@ describe("skillsService", () => {
     expect(listed).toHaveLength(0);
   });
 });
+
+test("invalid replacement and removal preserve the current skill and its owned file", async () => {
+  const created = await svc.create({
+    project_id: projectId,
+    name: "private",
+    description: "Original",
+    files: [{ path: "SKILL.md", file_id: entrypointFileId }],
+  });
+  const foreignId = crypto.randomUUID();
+  const stamp = nowTimestamp();
+  await db
+    .insert(projects)
+    .values({ id: foreignId, name: "Foreign", shorthand: "F", created_at: stamp, updated_at: stamp });
+  const foreignFile = await insertFile(foreignId, "SKILL.md");
+  await expect(
+    svc.update(projectId, "private", { description: "Wrong", files: [{ path: "SKILL.md", file_id: foreignFile }] }),
+  ).rejects.toThrow("project and owner");
+  expect(await svc.getByName(projectId, "private")).toEqual(created);
+  await expect(
+    svc.update(projectId, "private", {
+      files: [
+        { path: "a", file_id: entrypointFileId },
+        { path: "b", file_id: entrypointFileId },
+      ],
+    }),
+  ).rejects.toThrow("unique");
+  expect(await svc.getByName(projectId, "private")).toEqual(created);
+  const { createFilesDBService } = await import("../files/files");
+  let removedBytes = false;
+  await expect(
+    createFilesDBService(db).remove(entrypointFileId, () => {
+      removedBytes = true;
+    }),
+  ).rejects.toThrow("belongs to a skill");
+  expect(removedBytes).toBe(false);
+  expect(await createFilesDBService(db).get(entrypointFileId)).not.toBeNull();
+});

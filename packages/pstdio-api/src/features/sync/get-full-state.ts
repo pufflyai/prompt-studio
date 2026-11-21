@@ -7,6 +7,7 @@ import {
   createSettingsDBService,
   createWorkspaceSessionsDBService,
   extension_instances,
+  fileColumns,
   files,
   installed_extension_sources,
   notifications,
@@ -50,6 +51,7 @@ export const getFullState = async (db: DbClient) => {
         return [name, (await createBoardViewsDBService(db).listDefaults()).map(boardDefaultSyncRow)] as const;
       if (name === "workspace_sessions")
         return [name, await createWorkspaceSessionsDBService(db).listAllLinks()] as const;
+      if (name === "files") return [name, await db.select(fileColumns).from(files)] as const;
       const table = tableMap[name];
       if (name === "workspaces")
         return [name, await db.select(workspaceColumns).from(workspaces).where(isNull(workspaces.deleted_at))] as const;

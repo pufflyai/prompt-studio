@@ -73,6 +73,49 @@ and board. SDK view response fields are unchanged. Runtime identity recovery pub
 view rows and replaces old default sync IDs after the rename commits, including
 built-in defaults with no saved view. Ordinary provider changes keep the same scope.
 
+### File ownership conversion
+
+Files carry their owner, optional scope and logical path directly. Skills use
+`skill:<skill ID>` with a logical path. Extensions use their stable extension ID
+with a scope encoded as `[scope type, scope ID]`. Removing a provider preserves
+files while another provider for that owner remains, including a disabled one.
+
+Before removing the released `skill_files` and `extension_files` relations,
+startup captures their complete rows and file metadata. A matching file may keep
+its ID. A file shared by independent owners or scopes gets independent byte
+copies and deterministic new IDs. Host attachments keep their original file.
+The alpha conversion changes secondary binding IDs; it retains every original
+binding and its converted file ID/path in `<database>-migration-exports/`.
+The `skill-files.jsonl`, `extension-files.jsonl`, `file-mappings/` and
+`file-allocations/` exports stay until explicitly removed.
+
+Copies stream through bounded buffers, verify the original size/hash, and fsync
+bytes before publishing metadata. Missing original bytes remain missing at
+independent paths. Conflicting metadata, occupied copy paths and invalid project
+owners stop conversion without replacing data. Durable conversion input remains
+until both ownership groups finish, allowing interrupted restoration to resume.
+Public file response fields stay unchanged.
+
+### File deletion recovery
+
+File deletion locks the row and refuses files still referenced by a skill,
+session or workspace. Before deleting metadata, the file service fsyncs a small
+receipt and moves the bytes to a sibling staging name using a hard link. A failed
+database transaction restores the original path. After commit, it removes the
+staged bytes, readable aliases and receipt. Session checkpoint deletion uses the
+same protocol within the session transaction.
+
+Receipts live under the storage directory's `file-removals/` directory, separated
+by the canonical database path. Startup replays only that database's receipts:
+a surviving row restores bytes, and a removed row finishes deletion. Project,
+path and inode conflicts retain the receipt and report a retryable failure.
+Receipts survive until cleanup succeeds; they add no database table. Explicit
+extension removal retries its receipts before removing the provider. A failed
+startup cleanup is reported and does not prevent other tools from opening.
+POSIX directory flushes qualify the publication order. Windows process replay is
+supported; Windows power-loss durability remains unqualified under
+[ADR 0104](../../adrs/0104-temporary-windows-database-publication-retries.md).
+
 ### Cleanup and disk maintenance
 
 Startup applies schema migrations, copies reachable receipt nodes into files, and
