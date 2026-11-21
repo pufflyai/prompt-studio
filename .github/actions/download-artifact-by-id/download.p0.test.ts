@@ -58,17 +58,27 @@ interface FakeArtifact {
 }
 
 // Serves the two REST endpoints the action uses and records which requests carried the token.
-const github = (artifacts: Record<string, FakeArtifact>) => {
+// `respond` can replace any response, for example with a refusal or a broken archive stream.
+const github = (
+  artifacts: Record<string, FakeArtifact>,
+  respond: (url: string, count: number) => Response | undefined = () => undefined,
+) => {
   const authorized: string[] = [];
+  const requests: string[] = [];
+  let signatures = 0;
   const fetcher = async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
+    requests.push(url);
     if (new Headers(init?.headers).get("authorization") === "Bearer token") authorized.push(url);
-    const blob = url.match(/^https:\/\/storage\.example\.test\/(\d+)$/);
+    const replaced = respond(url, requests.filter((request) => request === url).length);
+    if (replaced) return replaced;
+    const blob = url.match(/^https:\/\/storage\.example\.test\/(\d+)\?sig=\d+$/);
     if (blob) return new Response(zip(artifacts[blob[1]].files));
     const [, id, download] = url.match(/\/repos\/owner\/repo\/actions\/artifacts\/(\d+)(\/zip)?$/) ?? [];
     const artifact = artifacts[id];
     if (!artifact) return new Response('{"message":"Not Found"}', { status: 404 });
-    if (download) return new Response(null, { status: 302, headers: { location: `${storage}/${id}` } });
+    if (download)
+      return new Response(null, { status: 302, headers: { location: `${storage}/${id}?sig=${++signatures}` } });
     const digest = `sha256:${createHash("sha256").update(zip(artifact.files)).digest("hex")}`;
     return Response.json({
       name: artifact.name,
@@ -78,7 +88,7 @@ const github = (artifacts: Record<string, FakeArtifact>) => {
       workflow_run: { id: artifact.run },
     });
   };
-  return { fetcher: fetcher as typeof fetch, authorized };
+  return { fetcher: fetcher as typeof fetch, authorized, requests };
 };
 
 const options = (fetcher: typeof fetch, overrides: Partial<DownloadOptions>): DownloadOptions => ({
@@ -91,6 +101,7 @@ const options = (fetcher: typeof fetch, overrides: Partial<DownloadOptions>): Do
   apiUrl: api,
   fetch: fetcher,
   log: () => {},
+  sleep: async () => {},
   ...overrides,
 });
 
@@ -154,4 +165,84 @@ test("an archive entry cannot escape the destination", async () => {
   await expect(downloadArtifacts(options(fetcher, { artifactIds: "500", mergeMultiple: true }))).rejects.toThrow(
     "Refusing to extract '../escape.txt'",
   );
+});
+
+const metadataUrl = `${api}/repos/owner/repo/actions/artifacts/300`;
+
+test("rate-limit refusals are waited out until the limit resets", async () => {
+  const waits: number[] = [];
+  const now = 1_800_000_000_000;
+  const { fetcher } = github(artifacts, (url, count) => {
+    if (url !== metadataUrl) return;
+    if (count === 1)
+      return Response.json(
+        { message: "API rate limit exceeded" },
+        { status: 403, headers: { "x-ratelimit-remaining": "0", "x-ratelimit-reset": String(now / 1000 + 30) } },
+      );
+    if (count === 2)
+      return Response.json(
+        { message: "You have exceeded a secondary rate limit" },
+        { status: 403, headers: { "retry-after": "7" } },
+      );
+  });
+  await downloadArtifacts(
+    options(fetcher, {
+      artifactIds: "300",
+      mergeMultiple: true,
+      now: () => now,
+      sleep: async (ms) => void waits.push(ms),
+    }),
+  );
+
+  expect(waits).toEqual([30_000, 7_000]);
+  expect(await tree(directory)).toEqual({ "production-candidate.json": "{}" });
+});
+
+test("a permission refusal fails at once with GitHub's reason", async () => {
+  const { fetcher, requests } = github(artifacts, (url) =>
+    url === metadataUrl
+      ? Response.json({ message: "Resource not accessible by integration" }, { status: 403 })
+      : undefined,
+  );
+
+  await expect(downloadArtifacts(options(fetcher, { artifactIds: "300" }))).rejects.toThrow(
+    "Cannot read artifact 300: HTTP 403: Resource not accessible by integration",
+  );
+  expect(requests).toEqual([metadataUrl]);
+});
+
+test("an archive dropped mid-transfer restarts with a fresh signed URL", async () => {
+  const { fetcher, requests } = github(artifacts, (url) => {
+    if (!url.endsWith("?sig=1")) return;
+    return new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(new Uint8Array([0x50, 0x4b]));
+          controller.error(new TypeError("terminated"));
+        },
+      }),
+    );
+  });
+  await downloadArtifacts(options(fetcher, { artifactIds: "300", mergeMultiple: true }));
+
+  expect(requests.filter((url) => url.startsWith(storage))).toEqual([`${storage}/300?sig=1`, `${storage}/300?sig=2`]);
+  expect(await tree(directory)).toEqual({ "production-candidate.json": "{}" });
+});
+
+test("a stalled archive transfer times out instead of hanging", async () => {
+  const { fetcher, requests } = github(artifacts, (url) => {
+    if (!url.startsWith(storage)) return;
+    return new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(new Uint8Array([0x50, 0x4b]));
+        },
+      }),
+    );
+  });
+
+  await expect(downloadArtifacts(options(fetcher, { artifactIds: "300", idleTimeoutMs: 20 }))).rejects.toThrow(
+    "The download stalled for 20 ms",
+  );
+  expect(requests.filter((url) => url.startsWith(storage))).toHaveLength(5);
 });

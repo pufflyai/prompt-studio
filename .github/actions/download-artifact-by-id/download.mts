@@ -2,8 +2,9 @@ import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve, sep } from "node:path";
 import { inflateRawSync } from "node:zlib";
+import { attempts, pause, readBody, request, type TransferOptions, TransientTransferError } from "./transfer.mts";
 
-export interface DownloadOptions {
+export interface DownloadOptions extends TransferOptions {
   artifactIds: string;
   runId: string;
   path: string;
@@ -11,9 +12,7 @@ export interface DownloadOptions {
   token: string;
   repository: string;
   apiUrl: string;
-  fetch?: typeof fetch;
   log?: (line: string) => void;
-  retryDelayMs?: number;
 }
 
 interface ArtifactMetadata {
@@ -80,28 +79,45 @@ export const extractZip = (zip: Buffer, destination: string) => {
   return files;
 };
 
-// download-artifact retried transient API and blob failures; keep that tolerance.
-const request = async (options: DownloadOptions, url: string, init: RequestInit) => {
-  const fetcher = options.fetch ?? fetch;
-  for (let attempt = 1; ; attempt++) {
-    try {
-      const response = await fetcher(url, init);
-      if ((response.status < 500 && response.status !== 429) || attempt === 5) return response;
-    } catch (error) {
-      if (attempt === 5) throw error;
-    }
-    await new Promise((done) => setTimeout(done, (options.retryDelayMs ?? 2000) * attempt));
+const apiError = async (response: Response) => {
+  const body = await response.text();
+  try {
+    return `HTTP ${response.status}: ${(JSON.parse(body) as { message?: string }).message ?? body}`;
+  } catch {
+    return `HTTP ${response.status}: ${body.slice(0, 500)}`;
   }
 };
 
-const downloadZip = async (options: DownloadOptions, id: string, headers: Record<string, string>) => {
-  const url = `${options.apiUrl}/repos/${options.repository}/actions/artifacts/${id}/zip`;
-  let response = await request(options, url, { headers, redirect: "manual" });
+const fetchArtifact = async (options: DownloadOptions, id: string, headers: Record<string, string>) => {
+  const api = `${options.apiUrl}/repos/${options.repository}/actions/artifacts/${id}`;
+  const metadata = await request(options, api, { headers });
+  if (metadata.status === 404) throw new Error(`Artifact ${id} was not found in ${options.repository}`);
+  if (!metadata.ok) throw new Error(`Cannot read artifact ${id}: ${await apiError(metadata)}`);
+  const artifact = (await metadata.json()) as ArtifactMetadata;
+  if (artifact.expired) throw new Error(`Artifact ${id} (${artifact.name}) expired at ${artifact.expires_at}`);
+  if (options.runId && String(artifact.workflow_run.id) !== options.runId)
+    throw new Error(
+      `Artifact ${id} (${artifact.name}) belongs to run ${artifact.workflow_run.id}, not ${options.runId}`,
+    );
+  let response = await request(options, `${api}/zip`, { headers, redirect: "manual" });
   const location = response.headers.get("location");
   // The signed storage URL must not receive the repository token.
   if (response.status >= 300 && response.status < 400 && location) response = await request(options, location, {});
-  if (!response.ok) throw new Error(`Cannot download artifact ${id}: HTTP ${response.status}`);
-  return Buffer.from(await response.arrayBuffer());
+  if (!response.ok) throw new Error(`Cannot download artifact ${id}: ${await apiError(response)}`);
+  return { artifact, zip: await readBody(options, response) };
+};
+
+// Like download-artifact, restart a dropped or stalled transfer with a fresh signed URL.
+const downloadArtifact = async (options: DownloadOptions, id: string, headers: Record<string, string>) => {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fetchArtifact(options, id, headers);
+    } catch (error) {
+      if (!(error instanceof TransientTransferError) || attempt === attempts) throw error;
+      (options.log ?? console.log)(`Retrying artifact ${id} after attempt ${attempt}: ${error.message}`);
+      await pause(options, 2000 * attempt);
+    }
+  }
 };
 
 export const downloadArtifacts = async (options: DownloadOptions) => {
@@ -115,18 +131,7 @@ export const downloadArtifacts = async (options: DownloadOptions) => {
   const destination = resolve(options.path);
   const downloaded: Array<{ id: string; name: string; path: string; files: number }> = [];
   for (const id of parseArtifactIds(options.artifactIds)) {
-    const response = await request(options, `${options.apiUrl}/repos/${options.repository}/actions/artifacts/${id}`, {
-      headers,
-    });
-    if (response.status === 404) throw new Error(`Artifact ${id} was not found in ${options.repository}`);
-    if (!response.ok) throw new Error(`Cannot read artifact ${id}: HTTP ${response.status}`);
-    const artifact = (await response.json()) as ArtifactMetadata;
-    if (artifact.expired) throw new Error(`Artifact ${id} (${artifact.name}) expired at ${artifact.expires_at}`);
-    if (options.runId && String(artifact.workflow_run.id) !== options.runId)
-      throw new Error(
-        `Artifact ${id} (${artifact.name}) belongs to run ${artifact.workflow_run.id}, not ${options.runId}`,
-      );
-    const zip = await downloadZip(options, id, headers);
+    const { artifact, zip } = await downloadArtifact(options, id, headers);
     if (artifact.digest && artifact.digest !== `sha256:${createHash("sha256").update(zip).digest("hex")}`)
       log(
         `::warning::Artifact '${artifact.name}' digest validation failed. Please verify the integrity of the artifact.`,
