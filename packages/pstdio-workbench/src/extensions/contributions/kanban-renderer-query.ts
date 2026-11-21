@@ -78,8 +78,9 @@ export const createKanbanRendererQuery = (input: {
       return {
         rows,
         page: isQueryResult(value) ? value.page : undefined,
-        attributes: isQueryResult(value) ? value.attributes : undefined,
-        boardColumnConfigs: isQueryResult(value) ? value.boardColumnConfigs : undefined,
+        metadata: isQueryResult(value)
+          ? { attributes: value.attributes, boardColumnConfigs: value.boardColumnConfigs }
+          : undefined,
       };
     },
   };

@@ -28,6 +28,7 @@ for (const queryMode of ["legacy", "paged"] as const) {
       let label = "Todo";
       let includeAttributes = true;
       let clearPresentation = false;
+      let returnRowArray = false;
       registerWorkbenchExtensionKanbanRenderers(
         {
           projectId: "project",
@@ -41,6 +42,7 @@ for (const queryMode of ["legacy", "paged"] as const) {
               { id: "first", title: `First ${calls}`, attributes: { status: "todo" } },
               { id: "second", title: "Second", attributes: { status: "done" } },
             ];
+            if (returnRowArray) return rows;
             return {
               rows: queryMode === "paged" ? rows.slice(offset, offset + 1) : rows,
               ...(includeAttributes
@@ -179,6 +181,13 @@ for (const queryMode of ["legacy", "paged"] as const) {
       await act(async () => tree!.update(content(true, true, true)));
       expectColumns("Ready", ["third"]);
       await act(async () => tree!.update(content(false, false, true)));
+      if (queryMode === "legacy") {
+        // The legacy array shorthand supplies no metadata, including no rule removal.
+        returnRowArray = true;
+        await act(async () => getWorkbenchRenderers(workbench).refreshKanbanRenderer("tasks"));
+        expectColumns("Ready", ["third"]);
+        returnRowArray = false;
+      }
       if (queryMode === "paged") {
         const prior = calls;
         await act(async () => output.get("third")!.page!.onLoadMore!());

@@ -42,7 +42,10 @@ export interface KanbanRendererPlacementBinding {
   resource?: ResourceRef;
 }
 
-/** Query-owned presentation travels with rows when a read is shared or restored from cache. */
+/**
+ * Query-owned presentation travels with shared or cached rows. Omitted presentation retains the
+ * accepted value; empty attributes or column configurations explicitly remove it.
+ */
 export interface KanbanRendererQueryResult<
   TRow extends KanbanRendererRow = KanbanRendererRow,
   TNode = unknown,

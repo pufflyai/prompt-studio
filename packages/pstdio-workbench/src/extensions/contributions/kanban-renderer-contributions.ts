@@ -224,8 +224,8 @@ export const registerWorkbenchExtensionKanbanRenderers = (
       });
       const presentation = createKanbanQueryPresentation(attributes, localize);
       const readResult = async (state: import("../../core").KanbanRendererQueryState, signal: AbortSignal) => {
-        const result = await query.read(state, signal);
-        return { ...result, ...presentation(result) };
+        const { metadata, ...result } = await query.read(state, signal);
+        return { ...result, ...(metadata ? presentation(metadata) : {}) };
       };
       const mutate = (
         target: WorkbenchExtensionKanbanRendererRecord,

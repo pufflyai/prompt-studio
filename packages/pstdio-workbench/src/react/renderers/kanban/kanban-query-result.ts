@@ -21,8 +21,12 @@ export const loadKanbanRows = async (
   const result = executePage
     ? await pages.load((page) => executePage({ ...state, page }, signal), signal)
     : await read();
-  // Missing fields retain the accepted schema; an explicit empty array removes it.
-  return { ...result, attributes: result.attributes ?? accepted?.attributes };
+  // Missing presentation retains the accepted value; explicit empty containers remove it.
+  return {
+    ...result,
+    attributes: result.attributes ?? accepted?.attributes,
+    boardColumnConfigs: result.boardColumnConfigs ?? accepted?.boardColumnConfigs,
+  };
 };
 
 export const resolveKanbanQueryPresentation = (
