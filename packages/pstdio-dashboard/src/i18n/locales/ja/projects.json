@@ -95,6 +95,7 @@
       "connections": {
         "title": "接続",
         "description": "この拡張機能をリモートサービスに接続します。認証情報は Prompt Studio ホスト内に保持されます。",
+        "globalScope": "このデバイス上のすべてのローカルプロジェクトで共有されます。",
         "endpoint": "エンドポイント",
         "credential": "認証情報",
         "credentialUnchanged": "現在の認証情報を保持するには空欄にします",

@@ -63,6 +63,7 @@ const registerConnections = (ext: NormalizedExtension, source: LoadedExtensionSo
   for (const connection of connections) {
     if (!isRecord(connection) || typeof connection.id !== "string" || !isLocalizableString(connection.label)) continue;
     if (connection.transport !== "http") continue;
+    if (connection.scope !== undefined && connection.scope !== "project" && connection.scope !== "global") continue;
     if (!Array.isArray(connection.allowedMethods) || !Array.isArray(connection.allowedPathPrefixes)) continue;
     const record: RuntimeConnectionRecord = {
       ...contributionRecordBase(ext, source, "connection", connection.id),
