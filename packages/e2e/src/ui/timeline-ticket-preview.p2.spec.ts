@@ -48,7 +48,11 @@ test("timeline ticket selection keeps the planner visible and replaces the unpin
     await expect(firstCard).not.toHaveAttribute("data-selected", "true");
     await expect(next.getByTestId("renderer-card")).toHaveAttribute("data-selected", "true");
     await expect(page).toHaveURL(timelinePath);
-    await expect(timeline.getByRole("button", { name: "Auto Build", exact: true })).toBeVisible();
+    await expect(
+      page
+        .frameLocator('iframe[title="Timeline actions"]:visible')
+        .getByRole("button", { name: "Auto Build", exact: true }),
+    ).toBeVisible();
     await side.getByRole("tab", { name: /Second timeline ticket/ }).click({ button: "right" });
     await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
     await timeline.locator(`[data-ticket="${first.id}"]`).click();
@@ -99,7 +103,11 @@ test("timeline tickets keep their preview while the attention bubble opens and r
       "true",
     );
     await expect(page).toHaveURL(timelinePath);
-    await expect(timeline.getByRole("button", { name: "Auto Build", exact: true })).toBeVisible();
+    await expect(
+      page
+        .frameLocator('iframe[title="Timeline actions"]:visible')
+        .getByRole("button", { name: "Auto Build", exact: true }),
+    ).toBeVisible();
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${id}`);
   }

@@ -21,13 +21,13 @@ headers("keeps a public header view and menus with their live tab across destina
   await page.setViewportSize({ width: 1600, height: 1000 });
   try {
     await page.goto(`/projects/${id}/extensions/test.panel-views/mailbox`);
-    await expect(toolbar(page, "main").getByText("Header for landing", { exact: true })).toBeVisible();
+    await expect(toolbar(page, "main").getByLabel("Header for landing", { exact: true })).toBeVisible();
     await toolbar(page, "main").getByRole("textbox", { name: "Letter search" }).fill("keep this query");
     await panel(page, "main")
       .frameLocator('iframe[title="Letter viewer"]:visible')
       .getByRole("button", { name: "Switch to A", exact: true })
       .click();
-    await expect(toolbar(page, "main").getByText("Header for A", { exact: true })).toBeVisible();
+    await expect(toolbar(page, "main").getByLabel("Header for A", { exact: true })).toBeVisible();
     await toolbar(page, "main").getByRole("textbox", { name: "Letter search" }).fill("A query");
     const mainMenu = panel(page, "main").frameLocator('iframe[title="Letter browser"]:visible');
     await mainMenu.getByRole("textbox", { name: "Letter menu draft" }).fill("menu state follows A");
@@ -43,7 +43,9 @@ headers("keeps a public header view and menus with their live tab across destina
     await toolbar(page, "side").getByRole("textbox", { name: "Letter search" }).focus();
     await page.keyboard.press("Tab");
     await page.keyboard.press("Enter");
-    await expect(toolbar(page, "side").getByText("Command for A", { exact: true })).toBeVisible();
+    await expect(toolbar(page, "side").getByRole("status", { name: "Header context", exact: true })).toHaveText(
+      "Command for A",
+    );
     await expect(
       side
         .locator('[data-workbench-panel-header="side"]')
@@ -68,7 +70,7 @@ headers("keeps a public header view and menus with their live tab across destina
       .frameLocator('iframe[title="Letter viewer"]:visible')
       .getByRole("button", { name: "Switch to B", exact: true })
       .click();
-    await expect(toolbar(page, "side").getByText("Header for B", { exact: true })).toBeVisible();
+    await expect(toolbar(page, "side").getByLabel("Header for B", { exact: true })).toBeVisible();
     await toolbar(page, "side").getByRole("textbox", { name: "Letter search" }).fill("B query");
     await tab.click();
     await expect(toolbar(page, "side").getByRole("textbox", { name: "Letter search" })).toHaveValue("A query");
@@ -89,7 +91,9 @@ headers("keeps a public header view and menus with their live tab across destina
     ).toHaveValue("menu state follows A");
     await page.keyboard.press("Escape");
     await toolbar(page, "secondary").getByRole("button", { name: "Read header context" }).click();
-    await expect(toolbar(page, "secondary").getByText("Command for A", { exact: true })).toBeVisible();
+    await expect(toolbar(page, "secondary").getByRole("status", { name: "Header context", exact: true })).toHaveText(
+      "Command for A",
+    );
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${id}`);
   }

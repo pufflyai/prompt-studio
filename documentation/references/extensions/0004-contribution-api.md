@@ -462,6 +462,18 @@ moving that instance preserves its header guest and local state. Header commands
 use that instance even when another panel has focus. Use existing page params or
 extension-owned state when the header and body share search or filters.
 
+A custom header webview owns its styling inside the iframe. Import
+`@pstdio/ui/style.css`, mount the shared theme provider, and use compact shared
+controls in a bounded row that centers its children vertically. Allow search
+fields to shrink when the owning view moves to a narrower panel.
+
+Webview popovers and dialogs cannot escape their iframe. Header controls that
+need a larger surface should open a declared single-view page with
+`navigation.open({ kind: "dialog", page })`; the host owns the modal, and the
+content can close it with `placement.close`. The Timeline Auto Build header uses
+this path. A native `actionBar` body is also available for host-rendered buttons
+and menus.
+
 ## Native view toolbar actions
 
 Both `dataTable` and `kanban` bodies accept `toolbarActions`. These actions stay
