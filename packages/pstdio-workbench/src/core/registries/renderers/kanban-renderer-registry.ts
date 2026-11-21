@@ -42,6 +42,17 @@ export interface KanbanRendererPlacementBinding {
   resource?: ResourceRef;
 }
 
+/** Query-owned presentation travels with rows when a read is shared or restored from cache. */
+export interface KanbanRendererQueryResult<
+  TRow extends KanbanRendererRow = KanbanRendererRow,
+  TNode = unknown,
+  TIcon = unknown,
+> {
+  rows: TRow[];
+  attributes?: AttributeDescriptor<TNode>[];
+  boardColumnConfigs?: Record<string, BoardColumnConfig<TIcon>>;
+}
+
 export interface KanbanRendererContribution<
   TRow extends KanbanRendererRow = KanbanRendererRow,
   TNode = unknown,
@@ -93,11 +104,16 @@ export interface KanbanRendererContribution<
    * so this can return unfiltered rows in simple cases.
    */
   executeQuery(state: KanbanRendererQueryState, signal: AbortSignal): Promise<TRow[]> | TRow[];
+  /** Complete alternative for providers whose query supplies fields or column rules. */
+  executeQueryResult?(
+    state: KanbanRendererQueryState,
+    signal: AbortSignal,
+  ): Promise<KanbanRendererQueryResult<TRow, TNode, TIcon>> | KanbanRendererQueryResult<TRow, TNode, TIcon>;
   /** Bounded alternative. Legacy executeQuery continues to return an array. */
   executePage?(
     state: KanbanRendererQueryState & { page: CollectionPageRequest },
     signal: AbortSignal,
-  ): Promise<{ rows: TRow[]; page: CollectionPage }>;
+  ): Promise<KanbanRendererQueryResult<TRow, TNode, TIcon> & { page: CollectionPage }>;
   /** Requested page size for a paged board. Defaults to 100 and is capped at 500. */
   initialPageSize?: number;
   subscribe?: (listener: () => void) => Disposable | (() => void);
