@@ -29,6 +29,7 @@ import { pgliteIdentity } from "./pglite-identity";
 import { acquirePgliteLock } from "./pglite-lock";
 import { createRetiredStorageCleanup } from "./retired-storage-cleanup";
 import * as schema from "./schemas.pg";
+import { prepareSessionWorkspaceUpgrade } from "./session-workspace-upgrade";
 import { type DatabaseMaintenancePhase, invalidateMaintenance, maintainDatabase } from "./startup-maintenance";
 
 type EmbeddedFile = Blob & { name: string };
@@ -228,12 +229,14 @@ export const createDb = async (options?: {
       const finishConnectionCredentialsUpgrade = await prepareConnectionCredentialsUpgrade(db, dbPath);
       const finishBoardDefaultsUpgrade = await prepareBoardDefaultsUpgrade(db, dbPath);
       const finishAutomationOwnersUpgrade = await prepareAutomationOwnersUpgrade(db, dbPath);
+      const finishSessionWorkspaceUpgrade = await prepareSessionWorkspaceUpgrade(db, dbPath);
       await migrate(db, { migrationsFolder });
       await finishPreferencesUpgrade?.();
       await finishExtensionPreferencesUpgrade?.();
       await finishConnectionCredentialsUpgrade?.();
       await finishBoardDefaultsUpgrade?.();
       await finishAutomationOwnersUpgrade?.();
+      await finishSessionWorkspaceUpgrade?.();
       migrated = true;
     });
     // Copy durable receipts before opening. Remove old rows for both sides of an identity

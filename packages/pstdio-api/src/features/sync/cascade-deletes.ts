@@ -1,7 +1,7 @@
 import { eq, getTableColumns, inArray } from "drizzle-orm";
 import { getTableConfig, type PgColumn, type PgTable } from "drizzle-orm/pg-core";
 import { boardDefaultSyncRow } from "pstdio-api-contracts";
-import { createBoardViewsDBService, type DbClient } from "pstdio-db";
+import { createBoardViewsDBService, type DbClient, sessions } from "pstdio-db";
 import { PHYSICAL_SYNCED_TABLES, tableMap } from "./get-full-state";
 
 type SyncedTable = keyof typeof tableMap;
@@ -40,6 +40,21 @@ for (const table of PHYSICAL_SYNCED_TABLES) visit(table);
 
 const syncId = (_table: SyncedTable, row: Row) => row.id as string;
 
+const collectWorkspaceLinkDeletes = async (db: DbClient, removedSessions: Row[], removedWorkspaces: Row[]) => {
+  const ids = new Set(
+    removedSessions.filter((row) => typeof row.workspace_id === "string").map((row) => row.id as string),
+  );
+  const workspaces = removedWorkspaces.map((row) => row.id as string);
+  for (let offset = 0; offset < workspaces.length; offset += 200) {
+    const linked = await db
+      .select({ id: sessions.id })
+      .from(sessions)
+      .where(inArray(sessions.workspace_id, workspaces.slice(offset, offset + 200)));
+    for (const row of linked) ids.add(row.id);
+  }
+  return [...ids].map((id) => ({ table: "workspace_sessions" as const, id }));
+};
+
 /** Lists the synced rows a delete removes, children before their parents and the root last. */
 export const collectCascadeDeletes = async (db: DbClient, root: RootTable, id: string) => {
   const rootTable = tableMap[root];
@@ -70,7 +85,13 @@ export const collectCascadeDeletes = async (db: DbClient, root: RootTable, id: s
           id: boardDefaultSyncRow(row).id,
         }))
       : [];
+  const links = await collectWorkspaceLinkDeletes(
+    db,
+    [...(rows.get("sessions")?.values() ?? [])],
+    [...(rows.get("workspaces")?.values() ?? [])],
+  );
   return [
+    ...links,
     ...defaults,
     ...childrenFirst.flatMap((table) => [...(rows.get(table)?.keys() ?? [])].map((rowId) => ({ table, id: rowId }))),
   ];

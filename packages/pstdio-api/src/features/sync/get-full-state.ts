@@ -5,6 +5,7 @@ import {
   board_views,
   createBoardViewsDBService,
   createSettingsDBService,
+  createWorkspaceSessionsDBService,
   extension_instances,
   files,
   installed_extension_sources,
@@ -12,7 +13,6 @@ import {
   projects,
   sessionColumns,
   sessions,
-  workspace_sessions,
   workspaceColumns,
   workspaces,
 } from "pstdio-db";
@@ -26,11 +26,15 @@ export const tableMap = {
   sessions,
   workspaces,
   files,
-  workspace_sessions,
 } as const;
 
 export const PHYSICAL_SYNCED_TABLES = Object.keys(tableMap) as (keyof typeof tableMap)[];
-export const SYNCED_TABLES = [...PHYSICAL_SYNCED_TABLES, "settings", "board_default_views"] as const;
+export const SYNCED_TABLES = [
+  ...PHYSICAL_SYNCED_TABLES,
+  "settings",
+  "board_default_views",
+  "workspace_sessions",
+] as const;
 
 const hasDeletedAt = (table: unknown): table is Record<string, unknown> & { deleted_at: unknown } =>
   typeof table === "object" && table !== null && "deleted_at" in table;
@@ -44,6 +48,8 @@ export const getFullState = async (db: DbClient) => {
       }
       if (name === "board_default_views")
         return [name, (await createBoardViewsDBService(db).listDefaults()).map(boardDefaultSyncRow)] as const;
+      if (name === "workspace_sessions")
+        return [name, await createWorkspaceSessionsDBService(db).listAllLinks()] as const;
       const table = tableMap[name];
       if (name === "workspaces")
         return [name, await db.select(workspaceColumns).from(workspaces).where(isNull(workspaces.deleted_at))] as const;

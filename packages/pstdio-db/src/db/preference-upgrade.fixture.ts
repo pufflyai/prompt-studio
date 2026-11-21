@@ -6,6 +6,7 @@ import type { createDb } from "./connection.pglite";
 // the candidate schema. Exercise the actual released data shapes before upgrading.
 export const restoreReleasedPreferenceTables = async (connection: Awaited<ReturnType<typeof createDb>>) => {
   const tables = [
+    "workspace_sessions",
     "automation_principals",
     "automation_tokens",
     "automation_runs",
@@ -28,7 +29,7 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
       const sql = statement.trim();
       if (tables.some((table) => sql.startsWith(`CREATE TABLE "${table}" (`))) await connection.pglite.exec(sql);
       if (
-        ["automation_principals", "automation_tokens", "automation_runs"].some(
+        ["workspace_sessions", "automation_principals", "automation_tokens", "automation_runs"].some(
           (table) =>
             sql.startsWith(`ALTER TABLE "${table}" ADD CONSTRAINT`) ||
             (sql.startsWith("CREATE ") && sql.includes(` ON "${table}" `)),
@@ -39,7 +40,7 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
   }
   for (const statement of constraints) await connection.pglite.exec(statement);
   await connection.pglite.exec(
-    "DROP TABLE preferences; DROP TABLE credentials; ALTER TABLE board_views DROP COLUMN is_default",
+    "DROP TABLE preferences; DROP TABLE credentials; ALTER TABLE board_views DROP COLUMN is_default; ALTER TABLE sessions DROP COLUMN workspace_id",
   );
   const migrations = await connection.pglite.query<{ id: number }>(
     "SELECT id FROM drizzle.__drizzle_migrations ORDER BY created_at DESC LIMIT 1",

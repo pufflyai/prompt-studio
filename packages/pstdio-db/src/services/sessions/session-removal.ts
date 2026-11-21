@@ -1,14 +1,16 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { ResourceAnchor, ResourceRef } from "pstdio-api-contracts/extension-kernel";
 import type { DbClient } from "../../db/connection.pglite";
-import { files, session_queue_entries, sessions, workspace_sessions, workspaces } from "../../db/schemas.pg";
+import { files, session_queue_entries, sessions, workspaces } from "../../db/schemas.pg";
 import { sessionColumns, workspaceColumns } from "../legacy-resource-links";
 import { createResourceLinksDBService } from "../resource-links";
+import { workspaceSessionLink } from "../workspace-sessions/workspace-sessions";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
 const readAnchorSources = async (tx: Transaction, changes: Array<{ source: ResourceRef }>, id: string) => {
-  const sessionSources: Array<typeof sessions.$inferSelect & { anchors_json: ResourceAnchor[] }> = [];
+  const sessionSources: Array<Omit<typeof sessions.$inferSelect, "workspace_id"> & { anchors_json: ResourceAnchor[] }> =
+    [];
   const workspaceSources: Array<typeof workspaces.$inferSelect & { anchors_json: ResourceAnchor[] }> = [];
   const sources = new Map(
     changes
@@ -74,7 +76,8 @@ export const removeSession = async (
     if (["in_progress", "awaiting_input", "queued"].includes(session.status) || pendingWork) {
       return { status: "busy" as const };
     }
-    const links = await tx.select().from(workspace_sessions).where(eq(workspace_sessions.session_id, id));
+    const link = workspaceSessionLink(session);
+    const links = link ? [link] : [];
     const changes = session.project_id
       ? await createResourceLinksDBService(tx).removeResource({
           type: "session",

@@ -1,6 +1,6 @@
 import { createReadStream } from "node:fs";
-import { open, rename, rm } from "node:fs/promises";
-import { dirname } from "node:path";
+import { mkdir, open, rename, rm, stat } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { createInterface } from "node:readline";
 import { sql } from "drizzle-orm";
 import type { DbClient } from "./connection.pglite";
@@ -58,10 +58,20 @@ const captureRows = async (
 };
 // Hold private conversion input until restoration commits. Grouped migrations
 // retain every input until all related tables restore, then finalize the group.
+const finishSnapshot = async (snapshot: string, archive?: string) => {
+  if (archive && (await stat(snapshot)).size) {
+    const folder = dirname(archive);
+    await mkdir(folder, { recursive: true, mode: 0o700 });
+    await flushDirectory(dirname(folder));
+    await rename(snapshot, archive);
+    await flushDirectory(folder);
+  } else await rm(snapshot);
+  await flushDirectory(dirname(snapshot));
+};
 export const prepareUpgradeSnapshot = async (
   db: DbClient,
   path: string,
-  source: UpgradeSource & { name: string; capture?: boolean },
+  source: UpgradeSource & { name: string; capture?: boolean; archive?: string },
   restore: (row: Row) => Promise<void>,
   normalize: (row: Row) => Promise<Row> = async (row) => row,
 ) => {
@@ -80,8 +90,10 @@ export const prepareUpgradeSnapshot = async (
   }
   const complete = async () => {
     if (snapshot) {
-      await rm(snapshot);
-      await flushDirectory(dirname(snapshot));
+      await finishSnapshot(
+        snapshot,
+        source.archive ? join(`${path}-migration-exports`, `${source.archive}.jsonl`) : undefined,
+      );
     }
   };
   const resume = async (retain = false) => {

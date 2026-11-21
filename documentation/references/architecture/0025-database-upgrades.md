@@ -39,6 +39,17 @@ Core has no import code. To restore old data, ask an agent to read the export an
 - A change that would need a data repair for existing homes: prefer a schema that does not need one. If it is unavoidable, the repair ships as a generated migration, tested on a copy of a large real database first. See [the lesson from 0.46](../../lessons-learned/0018-in-place-upgrades-meet-real-data-last.md).
 - A new baseline repeats the 0.46 process: squash, change the marker's `baseline`, and update the backup folder name. Decide it as a breaking release, in an ADR.
 
+### Session workspace conversion
+
+The app-storage migration replaces `workspace_sessions` with `sessions.workspace_id`.
+Before changing the schema, startup writes and fsyncs the old link rows beside the
+database. It selects the earliest link by creation time and ID as the current
+workspace. Other workspace associations become normal session resource context
+links, preserving existing link details. After restoration commits, the original
+rows move to `<database>-migration-exports/workspace-sessions.jsonl`. This export
+stays until explicitly removed. An interrupted conversion resumes from the durable
+input. The original session fields and timestamps remain unchanged.
+
 ### Cleanup and disk maintenance
 
 Startup applies schema migrations, copies reachable receipt nodes into files, and
