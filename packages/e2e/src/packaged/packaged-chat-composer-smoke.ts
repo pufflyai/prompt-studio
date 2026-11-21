@@ -19,6 +19,9 @@ const preserveComposerFailure = async (page: Page) => {
   console.error(`Packaged composer failure evidence: ${evidence}`);
 };
 
+const agentReply = (page: Page, prompt: string) =>
+  page.locator(".ai-message__root").filter({ hasText: "Fake Agent: follow-up" }).filter({ hasText: prompt });
+
 export const expectPackagedChatComposer = async (
   baseUrl: string,
   headers: Record<string, string>,
@@ -142,9 +145,13 @@ export const expectPackagedChatComposer = async (
     const equations =
       "Packaged equations: $x^2$\n\n$$\n\\frac{1}{2}\n$$\n\nRead src/app.ts and src/app/(dashboard)/page.ts, not src/missing.ts. Open {{link('https://example.com')}}. End equations.";
     await editor.fill(equations);
+    // Enter keeps the draft while Send is unavailable, so wait for Send and the handoff.
+    await expect(send).toBeEnabled();
     await editor.press("Enter");
-    const reply = page.locator(".ai-message__root").filter({ hasText: "Fake Agent: follow-up" }).last();
-    await expect(reply).toContainText("Packaged equations:");
+    await expect(editor).toBeEmpty();
+    // Earlier replies also start with "Fake Agent: follow-up"; select the reply to this message.
+    const reply = agentReply(page, "Packaged equations:");
+    await expect(reply).toHaveCount(1);
     await expect(reply.locator(".katex")).toHaveCount(2);
     await expect(reply.locator(".katex-display")).toBeVisible();
     await expect(reply.locator(".katex-error")).toHaveCount(0);
@@ -167,11 +174,11 @@ export const expectPackagedChatComposer = async (
     await editor.fill(
       "| Task | Details |\n| --- | --- |\n| Review | Read the changes and confirm that shared tools work together for people who never read code. |",
     );
+    await expect(send).toBeEnabled();
     await editor.press("Enter");
+    await expect(editor).toBeEmpty();
     // The saved turn replaces the optimistic message and its table controls.
-    await expect(page.locator(".ai-message__root").filter({ hasText: "Fake Agent: follow-up" }).last()).toContainText(
-      "Read the changes",
-    );
+    await expect(agentReply(page, "Read the changes")).toHaveCount(1);
     const table = page.getByRole("log").locator('table[data-edit-mode="true"]').last();
     const detail = table.getByRole("cell", { name: /Read the changes/ });
     await expect(detail).toBeVisible();
