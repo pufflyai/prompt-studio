@@ -118,3 +118,29 @@ test("cancels pending runtime readiness after preparation fails and waits for cl
     expect(await startup).toBe(failure);
   }
 });
+
+test("preserves the runtime startup failure when early browser login fails", async () => {
+  const ready = Promise.withResolvers<ManagedRuntime>();
+  const runtimeFailure = new Error("pglite_recovery_failure: Fixture database failed to open");
+  const startup = startWorkbench(
+    {
+      showLifecycle: async () => {},
+      prepareWorkbench: async () => {
+        throw new Error("Runtime browser login failed with status 503");
+      },
+      showWorkbench: async () => {
+        throw new Error("Failed runtime must not reveal a workbench");
+      },
+    },
+    {
+      start: (onStarting?: (descriptor: ManagedRuntime["descriptor"]) => void) => {
+        onStarting?.(runtime.descriptor);
+        return ready.promise;
+      },
+      cancelStart: async () => {},
+    },
+  ).catch((error: unknown) => error);
+  await Bun.sleep(0);
+  ready.reject(runtimeFailure);
+  expect(await startup).toBe(runtimeFailure);
+});

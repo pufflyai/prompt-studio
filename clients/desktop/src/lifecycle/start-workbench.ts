@@ -11,7 +11,12 @@ export const startWorkbench = async (
       window.showLifecycle(),
       Promise.race([
         runtimeManager.start((descriptor) => {
-          void window.prepareWorkbench(descriptor).catch(preparationFailure.reject);
+          void window.prepareWorkbench(descriptor).catch((error: unknown) => {
+            // Login/navigation can fail because the runtime itself is failing. Preserve its diagnosis.
+            if (error instanceof Error && error.message.startsWith("workbench_unavailable:")) {
+              preparationFailure.reject(error);
+            }
+          });
         }),
         preparationFailure.promise,
       ]).then(async (runtime) => {
