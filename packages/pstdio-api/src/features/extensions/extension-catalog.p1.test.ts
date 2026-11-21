@@ -183,6 +183,70 @@ describe("extension-backed skill catalog", () => {
     expect(existsSync(join(repoPath, ".claude", "skills", "catalog-skill", "notes", "example.md"))).toBe(true);
   });
 
+  test("keeps workspaces and healthy skills usable when a skill asset disappears and returns", async () => {
+    const project = await createProject(handle, "Missing Skill Project");
+    const sourcePath = writeCatalogExtension(tempRoot);
+    await enableSource(handle.deps.extensionService, project.id, sourcePath, "catalog");
+    await enableProvisionHarness(handle.deps.extensionService, project.id, tempRoot);
+    await handle.deps.skillService.create({
+      project_id: project.id,
+      name: "healthy",
+      description: "Available project skill",
+      files: [{ path: "SKILL.md", content: "# Healthy\n", encoding: "utf8" }],
+    });
+    await handle.deps.skillService.create({
+      project_id: project.id,
+      name: "catalog-skill",
+      description: "Shadowed project skill",
+      files: [{ path: "SKILL.md", content: "# Shadowed\n", encoding: "utf8" }],
+    });
+    const workspace = (await handle.deps.workspaceService.getDefault(project.id))!;
+    const skillDirectory = join(sourcePath, "skills", "lab-skill");
+    await provisionProjectWorkspaces(handle.deps, project.id);
+    const installedSkill = join(workspace.root_path!, ".claude/skills/catalog-skill");
+    writeFileSync(join(installedSkill, "notes/example.md"), "My edited copy\n");
+    rmSync(skillDirectory, { recursive: true });
+
+    const list = await handle.app.request(`/v1/projects/${project.id}/skills`);
+    expect(list.status).toBe(200);
+    expect((await list.json()).map((skill: { name: string }) => skill.name)).toEqual(["healthy"]);
+    expect((await handle.deps.skillService.query(project.id)).items.map((skill) => skill.name)).toEqual(["healthy"]);
+    const pagedNames: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await handle.deps.skillService.query(project.id, { limit: 1, cursor });
+      pagedNames.push(...page.items.map((skill) => skill.name));
+      cursor = page.nextCursor ?? undefined;
+    } while (cursor);
+    expect(pagedNames).toEqual(["healthy"]);
+    expect(await handle.deps.skillService.getByName(project.id, "healthy")).toMatchObject({ name: "healthy" });
+    await expect(handle.deps.skillService.getByName(project.id, "catalog-skill")).rejects.toThrow(
+      "Package asset is missing",
+    );
+
+    await provisionProjectWorkspaces(handle.deps, project.id);
+    expect(await handle.deps.workspaceService.get(workspace.id)).toMatchObject({
+      initializing: false,
+      setup_error: null,
+    });
+    expect(readFileSync(join(workspace.root_path!, ".claude/skills/healthy/SKILL.md"), "utf8")).toBe("# Healthy\n");
+    expect(existsSync(join(installedSkill, "SKILL.md"))).toBe(false);
+    expect(readFileSync(join(installedSkill, "notes/example.md"), "utf8")).toBe("My edited copy\n");
+    const opened = await handle.app.request(`/v1/projects/${project.id}/open`, { method: "POST" });
+    expect(opened.status).toBe(200);
+
+    mkdirSync(skillDirectory, { recursive: true });
+    writeFileSync(join(skillDirectory, "SKILL.md"), "# Restored\n");
+    await provisionProjectWorkspaces(handle.deps, project.id);
+    expect(readFileSync(join(workspace.root_path!, ".claude/skills/catalog-skill/SKILL.md"), "utf8")).toBe(
+      "# Restored\n",
+    );
+    expect((await handle.deps.skillService.query(project.id)).items.map((skill) => skill.name).sort()).toEqual([
+      "catalog-skill",
+      "healthy",
+    ]);
+  });
+
   test("installs extension catalog skills to repos for available harnesses", async () => {
     await handle.close();
     handle = await createTestApp({
