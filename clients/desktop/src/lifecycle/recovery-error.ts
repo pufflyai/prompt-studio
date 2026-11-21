@@ -3,6 +3,7 @@ import { DesktopSidecarError } from "../runtime/sidecar-artifact";
 import type { DesktopRecoveryError } from "./lifecycle-machine";
 
 const recoveryCode = (detail: string): DesktopRecoveryError["code"] => {
+  if (detail.startsWith("workbench_unavailable:")) return "workbench_unavailable";
   if (detail.startsWith("port_bind_failure:")) return "port_bind_failure";
   if (detail.startsWith("pglite_ownership_conflict:")) return "pglite_ownership_conflict";
   if (detail.startsWith("pglite_recovery_failure:")) return "pglite_recovery_failure";
@@ -34,9 +35,10 @@ export const recoveryError = (error: unknown): DesktopRecoveryError => {
   }
   // Unexpected exits supply the bounded runtime log tail, not a display message.
   // Classify it without sending startup output through the recovery renderer.
-  const classified = /^(?:port_bind_failure|pglite_ownership_conflict|pglite_recovery_failure|unexpected_exit): /.test(
-    detail,
-  );
+  const classified =
+    /^(?:port_bind_failure|pglite_ownership_conflict|pglite_recovery_failure|workbench_unavailable|unexpected_exit): /.test(
+      detail,
+    );
   return {
     ...(classified
       ? { code: recoveryCode(detail), message: detail.slice(detail.indexOf(": ") + 2) }
