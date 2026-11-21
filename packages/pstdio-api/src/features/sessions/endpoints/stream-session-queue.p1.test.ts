@@ -23,6 +23,10 @@ const openQueueStream = async (live: boolean) => {
   return {
     queue: handle.deps.sessionQueueEntriesService,
     sessionId: session.id,
+    stop: async () => {
+      await handle.deps.sessionService.cancel(session.id);
+      handle.deps.sessionService.store.remove(session.id, entry);
+    },
     next,
     nextQueue: async () => {
       while (true) {
@@ -55,6 +59,27 @@ test.each([
     expect((await stream.nextQueue()).messages.map((message) => message.id)).toEqual([queuedId]);
     await stream.queue.removePending(saved.queue_position, saved.revision);
     expect((await stream.nextQueue()).messages).toEqual([]);
+  } finally {
+    await stream.close();
+  }
+});
+
+test("a stopped live stream ends while its saved follow-ups remain available", async () => {
+  const stream = await openQueueStream(true);
+  try {
+    expect((await stream.next()).event).toBe("ready");
+    await stream.nextQueue();
+    const saved = await stream.queue.create({
+      session_id: stream.sessionId,
+      request_kind: "follow_up",
+      prompt: "Keep for later",
+    });
+    expect((await stream.nextQueue()).messages).toHaveLength(1);
+    await stream.stop();
+    expect(await stream.queue.get(saved.queue_position)).toEqual(saved);
+    let event = await stream.next();
+    while (event.event !== "end") event = await stream.next();
+    expect(event.data).toEqual({ status: "cancelled" });
   } finally {
     await stream.close();
   }
