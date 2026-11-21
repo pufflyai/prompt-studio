@@ -1,5 +1,3 @@
-import { rmSync } from "node:fs";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { boardDefaultSyncRow } from "pstdio-api-contracts";
 import type {
   createExtensionInstancesDBService,
@@ -9,7 +7,6 @@ import type {
 } from "pstdio-db";
 import { runExtensionPreparation } from "../features/extensions/extension-preparation";
 
-import { resolvePstdioHome } from "../features/extensions/install-extension-source";
 import type { EventBus } from "../features/sync/event-bus";
 
 type UninstallProjectExtensionDeps = {
@@ -25,28 +22,6 @@ type UninstallProjectExtensionInput = {
   instanceId: string;
   projectId: string;
   deleteUserData?: boolean;
-};
-
-const isManagedInstalledSourcePath = (sourcePath: string) => {
-  const extensionsRoot = resolve(join(resolvePstdioHome({ env: process.env }), "extensions"));
-  const resolvedSourcePath = resolve(sourcePath);
-  const relativePath = relative(extensionsRoot, resolvedSourcePath);
-
-  return relativePath.length > 0 && !relativePath.startsWith("..") && !isAbsolute(relativePath);
-};
-
-// Repo-local extensions live in `<repo>/.pstdio/extensions/<name>`; deleting the folder is the
-// only removal that sticks, since repo sync re-registers any folder it finds there.
-const isRepoLocalSourcePath = (sourcePath: string) => {
-  const resolvedSourcePath = resolve(sourcePath);
-  const marker = `${sep}.pstdio${sep}extensions${sep}`;
-  const markerIndex = resolvedSourcePath.indexOf(marker);
-  return markerIndex > 0 && resolvedSourcePath.length > markerIndex + marker.length;
-};
-
-const removeInstalledSourceFiles = (sourcePath: string) => {
-  if (!isManagedInstalledSourcePath(sourcePath) && !isRepoLocalSourcePath(sourcePath)) return;
-  rmSync(sourcePath, { recursive: true, force: true });
 };
 
 const deleteInstanceData = async (deps: UninstallProjectExtensionDeps, instance: { id: string; scope_id: string }) => {
@@ -70,8 +45,7 @@ export const uninstallProjectExtension = async (
   const installedSource = await deps.installedExtensionSourcesService.get(instance.installed_extension_id);
   if (!installedSource) return null;
 
-  await runExtensionPreparation("runtime.forget", { sourcePath: installedSource.source_path });
-  removeInstalledSourceFiles(installedSource.source_path);
+  await runExtensionPreparation("source.remove", { sourcePath: installedSource.source_path });
 
   const instances = await deps.extensionInstancesService.list({ installed_extension_id: installedSource.id });
   let retainedData = false;

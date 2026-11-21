@@ -12,6 +12,7 @@ import { expressionComparable } from "./query-expression-values";
 import { recordTextMatch, stringBytesSql } from "./query-string-codec";
 import { typedComputedFieldSql } from "./record-computed-field";
 import { formatCacheFields } from "./record-format-key";
+import { recordIdentityPrefixSql } from "./record-identity-order";
 import { identityPredicateSql } from "./record-identity-predicate";
 import { identityQueryText } from "./record-identity-query";
 import { recordNumberTextSql } from "./record-number-text";
@@ -201,7 +202,7 @@ export const recordIndexKeys = (index: StorageRecordIndex) => {
     keys.push(
       sql`(${queryField(index, sort.field).type === "string" ? orderingPrefix(index, sort.field) : sortFieldSql(index, sort.field)}) ${sql.raw(sort.direction)} NULLS LAST`,
     );
-  keys.push(sql`record_id COLLATE "C"`);
+  keys.push(sql`(${recordIdentityPrefixSql()})`);
   return keys;
 };
 

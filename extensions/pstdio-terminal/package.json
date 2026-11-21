@@ -1,6 +1,6 @@
 {
   "name": "pstdio-terminal",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "Terminal",
   "description": "Open native terminals in a project or its selected workspace.",
   "publisher": "pstdio",

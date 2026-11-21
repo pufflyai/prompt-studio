@@ -5,7 +5,12 @@ import { pageBoundary, pageLimit, queryPage } from "pstdio-db";
 import type { ProjectExtensionRuntimeCatalog } from "../features/extensions/project-extension-runtime-catalog";
 import type { EventBus } from "../features/sync/event-bus";
 import type { createFileService } from "./file-service";
-import { hydrateExtensionSkill, type InternalSkill, listExtensionSkills } from "./skill-catalog";
+import {
+  hydrateAvailableExtensionSkill,
+  hydrateExtensionSkill,
+  type InternalSkill,
+  listExtensionSkills,
+} from "./skill-catalog";
 
 type DbSkill = Awaited<ReturnType<ReturnType<typeof createSkillsDBService>["getByName"]>>;
 type ProjectSkill = NonNullable<DbSkill>;
@@ -74,21 +79,21 @@ const listInternal = async (deps: SkillServiceDeps, projectId: string, includeDi
     (await deps.skillsDBService.list(projectId)).map((skill) => hydrateProjectSkill(deps.fileService, skill)),
   );
   const extensionSkills = await listExtensionSkills(deps, projectId, { includeDisabled });
+  const availableExtensionSkills = extensionSkills
+    .map(hydrateAvailableExtensionSkill)
+    .filter((skill) => skill !== null);
   const extensionNames = new Set(extensionSkills.filter((skill) => skill.enabled !== false).map((skill) => skill.name));
   const visibleProjectSkills = projectSkills.filter((skill) => !extensionNames.has(skill.name));
 
-  return [...visibleProjectSkills, ...extensionSkills.map(hydrateExtensionSkill)].sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
+  return [...visibleProjectSkills, ...availableExtensionSkills].sort((a, b) => a.name.localeCompare(b.name));
 };
 
 const findByNameInternal = async (deps: SkillServiceDeps, projectId: string, name: string, includeDisabled = false) => {
-  const skills = await listInternal(deps, projectId, includeDisabled);
-  return (
-    skills.find((skill) => skill.source_kind === "extension" && skill.name === name) ??
-    skills.find((skill) => skill.name === name) ??
-    null
-  );
+  const extensions = await listExtensionSkills(deps, projectId, { includeDisabled });
+  const extension = extensions.find((skill) => skill.name === name);
+  if (extension) return hydrateExtensionSkill(extension);
+  const project = await deps.skillsDBService.getByName(projectId, name);
+  return project ? hydrateProjectSkill(deps.fileService, project) : null;
 };
 
 export const createSkillService = (deps: SkillServiceDeps) => {
@@ -117,11 +122,13 @@ export const createSkillService = (deps: SkillServiceDeps) => {
     const items = await Promise.all(
       page.rows.map(async (skill) => {
         const hydrated =
-          "source_kind" in skill ? hydrateExtensionSkill(skill) : await hydrateProjectSkill(deps.fileService, skill);
-        return toPublicSkill(hydrated);
+          "source_kind" in skill
+            ? hydrateAvailableExtensionSkill(skill)
+            : await hydrateProjectSkill(deps.fileService, skill);
+        return hydrated ? toPublicSkill(hydrated) : null;
       }),
     );
-    return { items, nextCursor: page.nextCursor };
+    return { items: items.filter((skill) => skill !== null), nextCursor: page.nextCursor };
   };
 
   const getByName = async (projectId: string, name: string) => {

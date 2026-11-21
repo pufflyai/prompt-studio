@@ -149,8 +149,6 @@ jobs:
       CANDIDATE_REF: ${{ needs.pair.outputs.to }}
       TARGET: ${{ matrix.target }}
       SOURCE_SHA: ${{ inputs.source_sha }}
-      # PS-1270 (#2241), observed in run 44721919615. Later baselines are checked normally.
-      PSTDIO_QUARANTINE_UPGRADE_TICKET_EDITOR: ${{ inputs.build_artifact_id != '' && matrix.from == 'pstdio@0.48.0-nightly.20261120030226' && (matrix.target == 'darwin-arm64' || matrix.target == 'linux-x64') }}
     steps:
       # A candidate can predate this test. Keep the fixture and product checkouts separate.
       - uses: actions/checkout@v5
@@ -168,7 +166,7 @@ jobs:
           path: __test-tmp__/upgrade-candidate
       - name: Download the shared manual candidate
         if: inputs.ref == ''
-        uses: actions/download-artifact@v4
+        uses: ./.github/actions/download-artifact-by-id
         with:
           artifact-ids: ${{ needs.version_manual.outputs.artifact_id }}
           merge-multiple: true
@@ -204,7 +202,7 @@ jobs:
           echo "CANDIDATE_BINARY=$PWD/dist/pstdio" >> "$GITHUB_ENV"
       - name: Download the frozen candidate manifest
         if: inputs.candidate_artifact_id != ''
-        uses: actions/download-artifact@v4
+        uses: ./.github/actions/download-artifact-by-id
         with:
           artifact-ids: ${{ inputs.candidate_artifact_id }}
           path: __test-tmp__/upgrade-candidate
@@ -221,7 +219,7 @@ jobs:
           echo "id=$id" >> "$GITHUB_OUTPUT"
       - name: Download the exact build
         if: inputs.ref != ''
-        uses: actions/download-artifact@v4
+        uses: ./.github/actions/download-artifact-by-id
         with:
           artifact-ids: ${{ inputs.build_artifact_id || steps.build.outputs.id }}
           run-id: ${{ inputs.artifact_run_id }}
@@ -245,11 +243,11 @@ jobs:
         run: |
           bun --no-env-file packages/e2e/src/packaged/project-upgrade.ts \
             --from "$FROM_TAG" --candidate "$CANDIDATE_BINARY" --candidate-ref "$CANDIDATE_REF" --candidate-root __test-tmp__/upgrade-candidate
-      - name: Verify the ticket editor quarantine lane
-        if: env.PSTDIO_QUARANTINE_UPGRADE_TICKET_EDITOR == 'true'
-        run: bun scripts/ci/verify-project-upgrade-quarantine.ts
+      # Diagnostics only (maintainer decision 2026-11-20, #2241): a GitHub artifact outage must not fail a
+      # passed upgrade. The attested certification evidence below still fails the job if it can't upload.
       - name: Preserve the pair, manifests and startup logs
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: project-upgrade-${{ matrix.from }}-${{ matrix.target }}-attempt-${{ github.run_attempt }}

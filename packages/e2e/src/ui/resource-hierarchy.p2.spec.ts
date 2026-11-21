@@ -109,18 +109,16 @@ test("navigates ticket ancestry to a linked workspace and back", async ({ page, 
       sidenav.getByRole("option", { name: `${child.shorthand} ${child.title}`, exact: true }),
     ).toHaveAttribute("aria-selected", "true");
 
-    // Opening a file from the preview moves the workspace into Main without the Workspaces list.
+    // A row in the preview's Files menu opens the file in Side too, so Main keeps the ticket and its ancestry.
     await side.getByRole("button", { name: "Open Side left menu", exact: true }).click();
     await page.getByRole("option", { name: /^README\.md/ }).click();
-    await expect(page).toHaveURL(/document=README\.md/);
-    await expect(page.getByRole("region", { name: "Main", exact: true })).toContainText(/resource\s+hierarchy\s+e2e/);
+    await expect(side).toContainText(/resource\s+hierarchy\s+e2e/);
+    await expect(page).not.toHaveURL(/document=/);
+    await expect(breadcrumb).toContainText(root.shorthand);
+    await expect(breadcrumb).toContainText(child.shorthand);
     await expect(
       page.locator('[data-workbench-panel-header="main"]').getByRole("tab", { name: "Workspaces", exact: true }),
     ).toHaveCount(0);
-    // History returns to the ticket and its ancestry.
-    await page.getByRole("button", { name: "Navigate back" }).click();
-    await expect(page).not.toHaveURL(/document=/);
-    await expect(breadcrumb).toContainText(child.shorthand);
     await sidenav
       .getByRole("option", { name: `${child.shorthand} ${child.title}`, exact: true })
       .click({ button: "right" });

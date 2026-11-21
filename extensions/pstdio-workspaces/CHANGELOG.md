@@ -1,5 +1,30 @@
 # pstdio-workspaces
 
+## 0.3.0
+
+_2026-11-21_
+
+### Minor Changes
+
+- 52fbda2: Use canonical first-party package names and concise Notes commands on migration-capable API 0.5 hosts. Remove declared global CLI shortcuts and use publisher-qualified Planner and Reports commands.
+- 3539553: Combine Git workspace creation and file browsing in Workspaces while preserving existing checkout identities and shared enablement.
+- 7a29611: Configure an ordinary project default page and public resource openers; let tools own workspace presentation and remove the alpha presentation aliases.
+- 324e652: Preserve shared project and document state while views switch or reopen, adopt retained read owners and scoped invalidation, and keep required saves and bounded recovery work with their domain owners.
+
+### Patch Changes
+
+- de66f90: Hide session workspace information when Workspaces is unavailable and refresh open conversations when tools change.
+- b510245: Prepare bundled extensions for API 0.5 without dropping their existing host ranges, and return Planner, Reports and Artifacts paths and links using the host-provided owner.
+
+  Use publisher-qualified Planner and Reports commands in shipped skills, prompts, help examples and documentation so agent instructions also work after the API 0.5 shortcut removal.
+
+  Keep ticket page ancestry and fresh draft ignore rules on the host-provided owner, including timeline rows, pulls and workspace provisioning.
+
+- 468076b: Move resource pages between panels, keep resource creation in the receiving tabs, open resource links as Side previews, and unify Main page and tab headers.
+- f28e72e: Keep file trees current, show Git-ignored entries subdued, create entries from the background menu, and use the host's native file deletion confirmation.
+- a0fb3f5: Keep action errors local and dismissible, show system notices in the status bar, and represent workspace readiness in the conversation controls.
+- 92fa724: Deliver the default Terminal through an installed tool, preserving workspace selection, native PTY lifetime and legacy commands and placements.
+
 ## 0.2.0
 
 _2026-11-12_

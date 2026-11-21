@@ -10,7 +10,9 @@ interface Artifact {
   digest: string;
   expired: boolean;
 }
-export const selectProductionArtifacts = (artifacts: Artifact[], attempt: number, channel: string) => {
+export const selectProductionArtifacts = (listed: Artifact[], attempt: number, channel: string) => {
+  // The listing is paged newest first while other jobs still upload, so an artifact can repeat across pages.
+  const artifacts = [...new Map(listed.map((artifact) => [artifact.id, artifact])).values()];
   const targets = publishedDesktopTargets(channel);
   const required = [
     `release-build-attempt-${attempt}`,

@@ -28,3 +28,11 @@ test("a classified startup failure retains its specific explanation", () => {
     message: "Could not load the executable search path.",
   });
 });
+
+test("a dashboard startup failure uses workbench recovery with Retry", () => {
+  expect(recoveryError(new Error("workbench_unavailable: The workbench could not open."))).toMatchObject({
+    code: "workbench_unavailable",
+    message: "The workbench could not open.",
+    actions: ["retry", "open_logs", "quit"],
+  });
+});

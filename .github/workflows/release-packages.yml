@@ -472,7 +472,7 @@ jobs:
         with:
           ref: ${{ needs.plan.outputs.commit }}
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
+      - uses: ./.github/actions/download-artifact-by-id
         with:
           artifact-ids: ${{ needs.release_build.outputs.build_artifact_id }}
           merge-multiple: true

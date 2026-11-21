@@ -10,6 +10,8 @@ export const SITE_LINKS = {
   harnessClaudeCode: "/docs/extensions/claude-code/",
   harnessCodex: "/docs/extensions/codex/",
   harnessOpenCode: "/docs/extensions/opencode/",
+  harnessPi: "/docs/extensions/pi/",
+  harnessCopilot: "/docs/extensions/github-copilot/",
 };
 
 /** What the workbench main area renders for a page. */

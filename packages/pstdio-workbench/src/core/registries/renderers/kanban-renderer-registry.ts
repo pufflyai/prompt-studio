@@ -10,6 +10,7 @@ import type { ContributionMetadata, RegisteredContributionMetadata } from "../..
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import type { ResourceRef } from "../resources/resource-registry";
 import type {
   AttributeDescriptor,
   AttributesSource,
@@ -28,9 +29,31 @@ import type { ViewToolbarAction } from "./view-toolbar-action";
 export interface KanbanRendererQueryState {
   page?: CollectionPageRequest;
   pageParams?: import("@pstdio/sdk/extensions").PageParams;
+  /** The resource bound to the rendering placement. A board outside Main does not query Main's resource. */
+  resource?: ResourceRef;
   settings: KanbanRendererSettings;
   filter: ViewFilterGroup;
   sorts: ViewSort[];
+}
+
+/** The placement a renderer serves. Its reads and writes target this resource rather than Main's. */
+export interface KanbanRendererPlacementBinding {
+  instanceId: string;
+  resource?: ResourceRef;
+}
+
+/**
+ * Query-owned presentation travels with shared or cached rows. Omitted presentation retains the
+ * accepted value; empty attributes or column configurations explicitly remove it.
+ */
+export interface KanbanRendererQueryResult<
+  TRow extends KanbanRendererRow = KanbanRendererRow,
+  TNode = unknown,
+  TIcon = unknown,
+> {
+  rows: TRow[];
+  attributes?: AttributeDescriptor<TNode>[];
+  boardColumnConfigs?: Record<string, BoardColumnConfig<TIcon>>;
 }
 
 export interface KanbanRendererContribution<
@@ -38,6 +61,8 @@ export interface KanbanRendererContribution<
   TNode = unknown,
   TIcon = unknown,
 > {
+  /** Binds this renderer to one placement, so its queries, writes and metadata stay with that placement. */
+  forPlacement?(binding: KanbanRendererPlacementBinding): Partial<KanbanRendererContribution<TRow, TNode, TIcon>>;
   /** Captured host identity; never infer a hidden view's project from current selection. */
   queryEvents?: readonly string[];
   queryScope?: Partial<import("@pstdio/sdk/extensions").QueryScope>;
@@ -82,11 +107,16 @@ export interface KanbanRendererContribution<
    * so this can return unfiltered rows in simple cases.
    */
   executeQuery(state: KanbanRendererQueryState, signal: AbortSignal): Promise<TRow[]> | TRow[];
+  /** Complete alternative for providers whose query supplies fields or column rules. */
+  executeQueryResult?(
+    state: KanbanRendererQueryState,
+    signal: AbortSignal,
+  ): Promise<KanbanRendererQueryResult<TRow, TNode, TIcon>> | KanbanRendererQueryResult<TRow, TNode, TIcon>;
   /** Bounded alternative. Legacy executeQuery continues to return an array. */
   executePage?(
     state: KanbanRendererQueryState & { page: CollectionPageRequest },
     signal: AbortSignal,
-  ): Promise<{ rows: TRow[]; page: CollectionPage }>;
+  ): Promise<KanbanRendererQueryResult<TRow, TNode, TIcon> & { page: CollectionPage }>;
   /** Requested page size for a paged board. Defaults to 100 and is capped at 500. */
   initialPageSize?: number;
   subscribe?: (listener: () => void) => Disposable | (() => void);

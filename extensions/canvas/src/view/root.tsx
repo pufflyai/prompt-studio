@@ -7,6 +7,7 @@ import {
   type PropsStore,
   type ResourceRef,
 } from "@pstdio/sdk/extensions";
+import { useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { buildMount } from "../build-mount";
 import type { CanvasDefinition } from "../canvas-model";
@@ -160,14 +161,24 @@ const CanvasPane = ({ host, id, visible, selected }: CanvasPaneProps) => {
   return <ConnectedCanvas key={frames} canvas={canvas} host={host} visible={visible} />;
 };
 
-const RecentCanvases = ({ host, id, selected }: { host: GuestHost; id: string; selected: boolean }) => {
+const RecentCanvases = ({
+  host,
+  id,
+  selected,
+  visible,
+}: {
+  host: GuestHost;
+  id: string;
+  selected: boolean;
+  visible: boolean;
+}) => {
   const [recent, setRecent] = useState([id]);
   if (recent.at(-1) !== id) setRecent([recent[recent.length - 1], id]);
 
   // Keep DOM order stable on a return visit. Moving an iframe can restart its document.
   return [...recent].sort().map((source) => (
     <Box key={source} display={source === id ? "block" : "none"} h="full" minH="0">
-      <CanvasPane host={host} id={source} visible={source === id} selected={source === id && selected} />
+      <CanvasPane host={host} id={source} visible={visible && source === id} selected={source === id && selected} />
     </Box>
   ));
 };
@@ -183,7 +194,11 @@ export const CanvasRoot = (props: RootProps) => {
   const location = current.pageLocation;
   const onDesign = location?.page.extensionId === "pstdio.canvas" && location.page.id === canvasPage.id;
   const id = current.resource?.id ?? (onDesign ? location.resource?.id : undefined);
+  // A retained view keeps its own page location after the person leaves, so only a visible view
+  // may replace a removed canvas; a hidden one would pull the person back from another page.
+  const visible = useWebviewVisibility();
   const active =
+    visible &&
     location?.page.extensionId === "pstdio.canvas" &&
     ((location.page.id === homePage.id && !id) || (location.page.id === canvasPage.id && location.resource?.id === id));
   return (
@@ -195,9 +210,10 @@ export const CanvasRoot = (props: RootProps) => {
             host={host}
             id={id}
             selected={active}
+            visible={visible}
           />
         ) : (
-          <CanvasPane host={host} visible selected={active} />
+          <CanvasPane host={host} visible={visible} selected={active} />
         )}
       </CanvasThemeProvider>
     </CanvasThemeContext>
