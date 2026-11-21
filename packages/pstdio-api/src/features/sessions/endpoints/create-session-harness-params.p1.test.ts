@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessResumeInput, HarnessStartInput } from "pstdio-api-contracts";
+import { harnessParamsPreferenceKey } from "pstdio-db";
 import { createTestApp } from "../../../test-utils/create-test-app";
 import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import {
@@ -152,12 +153,11 @@ describe("POST /v1/sessions harness params", () => {
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
 
-    await handle.deps.extensionSettingsDBService.setValue({
-      owner_type: "extension_instance",
-      owner_id: `${project.id}:${PARAM_AGENT_ID}`,
-      extension_id: "pstdio.harness-params",
-      key: "defaults",
-      value_json: { old_param: "legacy", effort: "high" },
+    await handle.deps.preferencesDBService.set({
+      ...harnessParamsPreferenceKey(project.id, PARAM_AGENT_ID),
+      project_id: project.id,
+      sync: "team",
+      value: { value: { old_param: "legacy", effort: "high" }, created_at: new Date().toISOString() },
     });
 
     const createRes = await handle.app.request("/v1/sessions", {

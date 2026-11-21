@@ -6,6 +6,7 @@ import { sql } from "drizzle-orm";
 import { projectExtensionId } from "../services/extension-instances/project-extension-row";
 import {
   extensionSettingPreferenceOwner,
+  harnessParamsPreferenceKey,
   preferenceProjectId,
   webviewPreferenceKey,
 } from "../services/preferences/preference-owners";
@@ -49,6 +50,50 @@ const legacyInstance = async (db: DbClient, id: string) => {
   if (!row) return null;
   return { ...row, id: row.project_id ? projectExtensionId(row.project_id, row.installed_extension_id) : id };
 };
+const convertHarnessDefaults = async (db: DbClient, row: LegacySetting): Promise<Preference | null> => {
+  if (row.owner_type !== "extension_instance" || row.extension_id !== "pstdio.harness-params" || row.key !== "defaults")
+    return null;
+  const {
+    rows: [project],
+  } = await db.execute<{ id: string }>(sql`
+    SELECT id FROM projects WHERE starts_with(${row.owner_id}, id || ':') ORDER BY length(id) DESC LIMIT 1
+  `);
+  if (!project) return null;
+  return {
+    ...harnessParamsPreferenceKey(project.id, row.owner_id.slice(project.id.length + 1)),
+    project_id: project.id,
+    sync: "team",
+    value: { value: row.value_json, created_at: row.created_at },
+    updated_at: row.updated_at,
+  };
+};
+
+const convertSetting = async (db: DbClient, row: LegacySetting) => {
+  const harnessDefaults = await convertHarnessDefaults(db, row);
+  if (harnessDefaults) return harnessDefaults;
+  const instance = row.owner_type === "extension_instance" ? await legacyInstance(db, row.owner_id) : null;
+  const known = ["installed_extension", "extension_instance", "device_extension"].includes(row.owner_type);
+  const owner = known
+    ? extensionSettingPreferenceOwner({ ...row, owner_id: instance?.id ?? row.owner_id })
+    : {
+        scope: "resource" as const,
+        scope_id: JSON.stringify(["setting-owner", row.owner_type, row.owner_id]),
+        extension_id: row.extension_id,
+      };
+  const projectId = instance?.project_id ?? null;
+  let sync: Preference["sync"] = "device";
+  if (row.owner_type === "installed_extension") sync = "personal";
+  if (row.owner_type === "extension_instance") sync = "team";
+  return {
+    ...owner,
+    key: `setting:${row.key}`,
+    project_id: projectId,
+    sync,
+    value: { value: row.value_json, created_at: row.created_at },
+    updated_at: row.updated_at,
+  };
+};
+
 const convert = async (db: DbClient, table: string, input: Legacy) => {
   if (table === "webview_preferences") {
     const row = input as LegacyWebview;
@@ -63,30 +108,7 @@ const convert = async (db: DbClient, table: string, input: Legacy) => {
       project_id: await preferenceProjectId(db, row.scope_type, row.scope_id),
     };
   }
-  if (table === "extension_settings") {
-    const row = input as LegacySetting;
-    const instance = row.owner_type === "extension_instance" ? await legacyInstance(db, row.owner_id) : null;
-    const known = ["installed_extension", "extension_instance", "device_extension"].includes(row.owner_type);
-    const owner = known
-      ? extensionSettingPreferenceOwner({ ...row, owner_id: instance?.id ?? row.owner_id })
-      : {
-          scope: "resource" as const,
-          scope_id: JSON.stringify(["setting-owner", row.owner_type, row.owner_id]),
-          extension_id: row.extension_id,
-        };
-    const projectId = instance?.project_id ?? null;
-    let sync: Preference["sync"] = "device";
-    if (row.owner_type === "installed_extension") sync = "personal";
-    if (row.owner_type === "extension_instance") sync = "team";
-    return {
-      ...owner,
-      key: `setting:${row.key}`,
-      project_id: projectId,
-      sync,
-      value: { value: row.value_json, created_at: row.created_at },
-      updated_at: row.updated_at,
-    };
-  }
+  if (table === "extension_settings") return convertSetting(db, input as LegacySetting);
   const row = input as LegacyInstancePreference;
   const instance = await legacyInstance(db, row.extension_instance_id);
   if (!instance || instance.project_id !== row.project_id)

@@ -306,6 +306,7 @@ const buildApp = async (
     extensionRuntimeCatalog,
     webviewPreferencesDBService: dbs.webviewPreferencesDBService,
     extensionSettingsDBService,
+    preferencesDBService: dbs.preferencesDBService,
     extensionService,
     extensionUpgradeService,
     extensionInstallations,

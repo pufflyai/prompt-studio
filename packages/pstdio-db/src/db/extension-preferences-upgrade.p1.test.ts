@@ -8,6 +8,7 @@ import { createExtensionAutomationPreferencesDBService } from "../services/exten
 import { createExtensionSkillPreferencesDBService } from "../services/extension-preferences/extension-preferences";
 import { createExtensionSettingsDBService } from "../services/extension-settings/extension-settings";
 import { createInstalledExtensionSourcesDBService } from "../services/installed-extension-sources/installed-extension-sources";
+import { createPreferencesDBService } from "../services/preferences/preferences";
 import { createProjectsDBService } from "../services/projects/projects";
 import { createWebviewPreferencesDBService } from "../services/webview-preferences/webview-preferences";
 import { createDb } from "./connection.pglite";
@@ -52,6 +53,26 @@ for (const interrupted of [false, true])
         "INSERT INTO extension_skill_preferences VALUES ($1, $2, 'shared', false, 'Custom name', 'Custom description', $3::jsonb, $4, $4)",
         [project.id, legacyId, JSON.stringify({ nested: [true, "日本語"] }), stamp],
       );
+      const agentId = "example.preference-migration.harness.agent";
+      await connection.pglite.query(
+        "INSERT INTO extension_settings VALUES ('extension_instance', $1, 'pstdio.harness-params', 'defaults', $2::jsonb, $3, $3)",
+        [`${project.id}:${agentId}`, JSON.stringify({ effort: "high", dryRun: true }), stamp],
+      );
+      const assertHarnessDefaults = async () => {
+        expect(
+          await createPreferencesDBService(connection!.db).get({
+            scope: "project",
+            scope_id: project.id,
+            extension_id: "",
+            key: `harness:${agentId}:params`,
+          }),
+        ).toMatchObject({
+          project_id: project.id,
+          sync: "team",
+          updated_at: stamp,
+          value: { value: { effort: "high", dryRun: true }, created_at: stamp },
+        });
+      };
       const oversized = "x".repeat(5 * 1024 * 1024);
       for (const [key, value] of [
         ["a-before", "first"],
@@ -89,6 +110,7 @@ for (const interrupted of [false, true])
       }
       await connection.close();
       connection = await createDb({ path });
+      await assertHarnessDefaults();
       const settings = createExtensionSettingsDBService(connection.db);
       const largeKey = {
         owner_type: "installed_extension" as const,
@@ -130,6 +152,7 @@ for (const interrupted of [false, true])
       for (const key of webviews) expect(await webview.get(key)).toEqual(key.value_json);
       await connection.close();
       connection = await createDb({ path });
+      await assertHarnessDefaults();
       expect(
         (
           await createExtensionSettingsDBService(connection.db).getValue({

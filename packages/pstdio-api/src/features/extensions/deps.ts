@@ -21,6 +21,7 @@ export type ExtensionsRouteDeps = Pick<
   | "projectInfoService"
   | "extensionConnectionService"
   | "extensionSettingsDBService"
+  | "preferencesDBService"
   | "extensionSettingsService"
   | "notificationService"
   | "sessionQueueEntriesService"

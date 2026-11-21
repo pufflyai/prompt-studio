@@ -50,3 +50,10 @@ export const instancePreferenceOwner = async (db: Pick<DbClient, "select">, proj
   if (!owner || owner.workbenchId !== projectId) throw new Error("Extension instance not found in project");
   return { scope: "project" as const, scope_id: instanceId, extension_id: owner.extensionId };
 };
+
+export const harnessParamsPreferenceKey = (projectId: string, agentId: string) => ({
+  scope: "project" as const,
+  scope_id: projectId,
+  extension_id: "",
+  key: `harness:${agentId}:params`,
+});
