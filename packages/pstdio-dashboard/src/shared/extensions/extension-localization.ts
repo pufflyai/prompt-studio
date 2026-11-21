@@ -54,6 +54,7 @@ export const resolveLocalizableString = (
   args?: Record<string, unknown>,
   owner = getRuntimeCollections(),
   projectId?: string,
+  translate?: typeof i18n.t,
 ) => {
   if (value === undefined) return "";
   if (!isLocalizedString(value)) return value;
@@ -61,14 +62,15 @@ export const resolveLocalizableString = (
   const defaultValue = value.default ?? value.$l10n;
   if (!extensionId) return interpolate(defaultValue, args);
 
-  return i18n.t(value.$l10n, {
+  const options = {
     defaultValue,
     // The global language hierarchy already includes locale and fallback variants.
     // Rebuilding it for every label repeatedly canonicalizes the same locale codes.
     lngs: i18n.languages,
     ns: namespaceFor(extensionId, owner, projectId),
     replace: args,
-  });
+  };
+  return translate ? translate(value.$l10n, options) : i18n.t(value.$l10n, options);
 };
 
 const resolveValue = (
@@ -77,19 +79,20 @@ const resolveValue = (
   owner = getRuntimeCollections(),
   projectId?: string,
   labels = new Map<string, string>(),
+  translate?: typeof i18n.t,
 ): unknown => {
   if (isLocalizedString(value)) {
     const key = JSON.stringify([extensionId, value.$l10n, value.default]);
     const cached = labels.get(key);
     if (cached !== undefined) return cached;
-    const resolved = resolveLocalizableString(value, extensionId, undefined, owner, projectId);
+    const resolved = resolveLocalizableString(value, extensionId, undefined, owner, projectId, translate);
     labels.set(key, resolved);
     return resolved;
   }
   if (Array.isArray(value)) {
     let next: unknown[] | undefined;
     for (let index = 0; index < value.length; index++) {
-      const item = resolveValue(value[index], extensionId, owner, projectId, labels);
+      const item = resolveValue(value[index], extensionId, owner, projectId, labels, translate);
       if (item !== value[index]) {
         next ??= value.slice();
         next[index] = item;
@@ -108,7 +111,7 @@ const resolveValue = (
   const record = withParamOptionDefaults(value as Record<string, unknown>);
   let next: Record<string, unknown> | undefined;
   for (const key of Object.keys(record)) {
-    const item = resolveValue(record[key], nextExtensionId, owner, projectId, labels);
+    const item = resolveValue(record[key], nextExtensionId, owner, projectId, labels, translate);
     if (item !== record[key]) {
       next ??= { ...record };
       next[key] = item;
@@ -130,7 +133,8 @@ export const localizeExtensionValue = (
   extensionId?: string,
   owner = getRuntimeCollections(),
   projectId?: string,
-) => resolveValue(value, extensionId, owner, projectId);
+  translate?: typeof i18n.t,
+) => resolveValue(value, extensionId, owner, projectId, undefined, translate);
 
 const localizeAppearanceRecord = <
   T extends { extensionId: string; title: LocalizableString; description?: LocalizableString },

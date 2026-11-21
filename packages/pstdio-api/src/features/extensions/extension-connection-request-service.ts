@@ -1,4 +1,5 @@
 import type {
+  ExtensionConnectionContribution,
   ExtensionConnectionRequest,
   ExtensionConnectionResponse,
   ExtensionConnectionStreamEvent,
@@ -25,6 +26,7 @@ import {
 } from "./extension-connection-transport";
 
 type RequestInput = ConnectionKey & { input: ExtensionConnectionRequest };
+type PreparedKey = ReturnType<typeof connectionKey>;
 
 export const createExtensionConnectionRequestService = (deps: ExtensionConnectionServiceDeps) => {
   const fetchFn = deps.fetch ?? globalThis.fetch;
@@ -32,6 +34,7 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
   const recordRequest = async (
     input: RequestInput,
     result: Omit<ConnectionRequestAudit, keyof ConnectionKey | "method" | "path">,
+    key?: PreparedKey,
   ) => {
     const audit = {
       projectId: input.projectId,
@@ -41,21 +44,28 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
       path: input.input.path,
       ...result,
     };
-    const contribution = await deps.getContribution(input);
     await Promise.allSettled([
-      deps.connectionsDBService.recordCheck(connectionKey(input, contribution?.scope), {
-        ok: result.ok,
-        status: result.status,
-        error: result.error,
-        checkedAt: new Date().toISOString(),
-      }),
-      Promise.resolve(deps.onRequestComplete?.(audit)),
+      Promise.resolve().then(
+        () =>
+          key &&
+          deps.connectionsDBService.recordCheck(key, {
+            ok: result.ok,
+            status: result.status,
+            error: result.error,
+            checkedAt: new Date().toISOString(),
+          }),
+      ),
+      Promise.resolve().then(() => deps.onRequestComplete?.(audit)),
     ]);
   };
 
-  const prepare = async (input: RequestInput) => {
+  const contributionFor = async (input: RequestInput) => {
     const contribution = await deps.getContribution(input);
     if (!contribution) throw new Error(`Connection is not declared: ${input.connectionId}`);
+    return contribution;
+  };
+
+  const prepare = async (input: RequestInput, contribution: ExtensionConnectionContribution) => {
     const configured = await deps.connectionsDBService.get(connectionKey(input, contribution.scope));
     if (!configured) throw new Error(`Connection is not configured: ${input.connectionId}`);
     const url = resolveRequestUrl(contribution, configured.base_url, input.input);
@@ -81,8 +91,11 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
   const request = async <TBody = JsonValue>(input: RequestInput): Promise<ExtensionConnectionResponse<TBody>> => {
     const startedAt = performance.now();
     let status: number | null = null;
+    let key: PreparedKey | undefined;
     try {
-      const { response, secret, secretHeader } = await prepare(input);
+      const contribution = await contributionFor(input);
+      key = connectionKey(input, contribution.scope);
+      const { response, secret, secretHeader } = await prepare(input, contribution);
       status = response.status;
       const declaredLength = Number(response.headers.get("content-length"));
       if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES) {
@@ -107,22 +120,30 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
       }
       const result = { status: response.status, headers, body: body as TBody };
       const ok = response.status >= 200 && response.status < 300;
-      await recordRequest(input, {
-        ok,
-        status,
-        error: ok ? null : `Connection responded with HTTP ${response.status}.`,
-        durationMs: performance.now() - startedAt,
-        responseBytes: bytes.byteLength,
-      });
+      await recordRequest(
+        input,
+        {
+          ok,
+          status,
+          error: ok ? null : `Connection responded with HTTP ${response.status}.`,
+          durationMs: performance.now() - startedAt,
+          responseBytes: bytes.byteLength,
+        },
+        key,
+      );
       return result;
     } catch (error) {
-      await recordRequest(input, {
-        ok: false,
-        status,
-        error: error instanceof Error ? error.message : String(error),
-        durationMs: performance.now() - startedAt,
-        responseBytes: 0,
-      });
+      await recordRequest(
+        input,
+        {
+          ok: false,
+          status,
+          error: error instanceof Error ? error.message : String(error),
+          durationMs: performance.now() - startedAt,
+          responseBytes: 0,
+        },
+        key,
+      );
       throw error;
     }
   };
@@ -133,12 +154,14 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
     let total = 0;
     let completed = false;
     let responseBody: ReadableStream<Uint8Array> | null = null;
+    let key: PreparedKey | undefined;
     try {
-      const contribution = await deps.getContribution(input);
+      const contribution = await contributionFor(input);
+      key = connectionKey(input, contribution.scope);
       if (!contribution?.supportsStreaming) {
         throw new Error(`Connection does not allow streaming: ${input.connectionId}`);
       }
-      const { response, secret, secretHeader } = await prepare(input);
+      const { response, secret, secretHeader } = await prepare(input, contribution);
       responseBody = response.body;
       status = response.status;
       let headers: Record<string, string>;
@@ -155,24 +178,32 @@ export const createExtensionConnectionRequestService = (deps: ExtensionConnectio
       total = state.total;
       completed = true;
       const ok = response.status >= 200 && response.status < 300;
-      await recordRequest(input, {
-        ok,
-        status,
-        error: ok ? null : `Connection responded with HTTP ${response.status}.`,
-        durationMs: performance.now() - startedAt,
-        responseBytes: total,
-      });
+      await recordRequest(
+        input,
+        {
+          ok,
+          status,
+          error: ok ? null : `Connection responded with HTTP ${response.status}.`,
+          durationMs: performance.now() - startedAt,
+          responseBytes: total,
+        },
+        key,
+      );
       yield { type: "end" };
     } finally {
       if (!completed) {
         await responseBody?.cancel().catch(() => undefined);
-        await recordRequest(input, {
-          ok: false,
-          status,
-          error: "Connection stream ended before completion.",
-          durationMs: performance.now() - startedAt,
-          responseBytes: total,
-        });
+        await recordRequest(
+          input,
+          {
+            ok: false,
+            status,
+            error: "Connection stream ended before completion.",
+            durationMs: performance.now() - startedAt,
+            responseBytes: total,
+          },
+          key,
+        );
       }
     }
   };
