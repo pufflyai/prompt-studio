@@ -104,12 +104,43 @@ const planItem = (params: Record<string, unknown>) => {
   };
 };
 
-export const createAppServerItems = (publish: (item: CodexThreadItem) => void, initialUserMessageId?: string) => {
+const commandPreviewIntervalMs = 100;
+
+export const createAppServerItems = (
+  publish: (item: CodexThreadItem) => void,
+  {
+    initialUserMessageId,
+    onOutputError,
+  }: { initialUserMessageId?: string; onOutputError?: (error: unknown) => void } = {},
+) => {
   const items = new Map<string, CodexThreadItem>();
   const outputs = new Map<string, ReturnType<typeof createToolOutputBuffer>>();
+  const pendingOutput = new Set<string>();
+  let outputTimer: ReturnType<typeof setTimeout> | undefined;
   let usage: CodexUsage | undefined;
+  const clearOutputTimer = () => {
+    clearTimeout(outputTimer);
+    outputTimer = undefined;
+  };
+  const flushCommandOutput = () => {
+    clearOutputTimer();
+    for (const id of pendingOutput) {
+      pendingOutput.delete(id);
+      const item = items.get(id)!;
+      const result = outputs.get(id)!.result();
+      const updated = { ...item, aggregated_output: result.output, resultSummary: result.resultSummary };
+      items.set(id, updated);
+      publish(updated);
+    }
+  };
+  const discardCommandOutput = () => {
+    clearOutputTimer();
+    pendingOutput.clear();
+    outputs.clear();
+  };
   const retainCommandOutput = (native: NativeItem, item: CodexThreadItem, completed: boolean) => {
     if (native.type !== "commandExecution") return;
+    pendingOutput.delete(item.id);
     if (!completed) {
       const buffer = createToolOutputBuffer();
       buffer.append(native.aggregatedOutput ?? "");
@@ -144,10 +175,16 @@ export const createAppServerItems = (publish: (item: CodexThreadItem) => void, i
     const buffer = outputs.get(item.id);
     if (!buffer) return;
     buffer.append(delta);
-    const result = buffer.result();
-    const updated = { ...item, aggregated_output: result.output, resultSummary: result.resultSummary };
-    items.set(item.id, updated);
-    publish(updated);
+    pendingOutput.add(item.id);
+    // Building a whole preview for every chunk can monopolize the runtime event loop.
+    outputTimer ??= setTimeout(() => {
+      try {
+        flushCommandOutput();
+      } catch (error) {
+        if (!onOutputError) throw error;
+        onOutputError(error);
+      }
+    }, commandPreviewIntervalMs);
   };
   const receive = (message: RpcMessage) => {
     const params = message.params ?? {};
@@ -179,5 +216,5 @@ export const createAppServerItems = (publish: (item: CodexThreadItem) => void, i
       publishDelta(item, field, params.delta);
     }
   };
-  return { receive, getUsage: () => usage };
+  return { receive, flushCommandOutput, discardCommandOutput, getUsage: () => usage };
 };
