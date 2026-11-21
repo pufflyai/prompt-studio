@@ -33,8 +33,10 @@ import { useRendererViews } from "../use-renderer-views";
 import { ViewToolbarActions } from "../view-toolbar-actions";
 import { prepareKanbanMove } from "./kanban-move";
 import type { ReactRegisteredKanbanRendererContribution } from "./kanban-presentation";
+import { loadKanbanRows, resolveKanbanQueryPresentation } from "./kanban-query-result";
 import { resolveKanbanRendererStorageKey } from "./kanban-view-storage";
 import { useKanbanAttributes } from "./use-kanban-attributes";
+import { useKanbanPageAttributes } from "./use-kanban-page-attributes";
 
 interface WorkbenchKanbanViewProps {
   workbench: WorkbenchCore;
@@ -100,17 +102,6 @@ const resolveViewSettings = (
 const hasKanbanRowTarget = (row: KanbanRendererRow): boolean =>
   Boolean(row.target || row.children?.some(hasKanbanRowTarget));
 
-const loadKanbanRows = async (
-  contribution: ReactRegisteredKanbanRendererContribution,
-  state: Parameters<RegisteredKanbanRendererContribution["executeQuery"]>[0],
-  pages: ReturnType<typeof useRendererPages<KanbanRendererRow>>,
-  signal: AbortSignal,
-) => {
-  const executePage = contribution.executePage;
-  if (executePage) return pages.load((page) => executePage({ ...state, page }, signal), signal);
-  return { rows: await contribution.executeQuery(state, signal), page: undefined, position: undefined };
-};
-
 const createRowWithRefreshHold = (
   createRow: KanbanRendererProps["onCreateRow"],
   holdRefresh: () => (() => void) | undefined,
@@ -135,7 +126,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     resource: placement.resource,
   });
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
-  const attributes = useKanbanAttributes(contribution.attributes);
+  const declaredAttributes = useKanbanAttributes(contribution.attributes);
   const storageKey = resolveKanbanRendererStorageKey(contribution.id, placement, contribution.storageScope);
   const provider = contribution.viewsProvider;
   const viewsSource = useSyncExternalStore(
@@ -163,12 +154,16 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     },
     provider,
   );
+  const pageAttributes = useKanbanPageAttributes(
+    rendererQueryKey([contribution.id, contribution.queryScope, resourceKey(placement.resource)]),
+    declaredAttributes,
+  );
   const pages = useRendererPages<KanbanRendererRow>({
     identity: rendererQueryKey([contribution.id, resourceKey(placement.resource), settings, filter, sorts, pageParams]),
     scope: storageKey,
-    fields: kanbanPageFields(attributes, settings),
+    fields: kanbanPageFields(pageAttributes.attributes, settings),
     searchFields: kanbanSearchFields(settings),
-    presentation: rendererPagePresentation(attributes),
+    presentation: rendererPagePresentation(pageAttributes.attributes),
     initialPageSize: contribution.initialPageSize,
     rowId: (row) => row.id,
   });
@@ -177,7 +172,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   // so overlapping reads see it before React renders it.
   const lastLoaded = useRef<unknown>(undefined);
 
-  const read = useRendererRead({
+  const read = useRendererRead<Awaited<ReturnType<typeof loadKanbanRows>>>({
     enabled: views.ready,
     workbench,
     ownerKey: rendererReadKey(placement),
@@ -191,9 +186,9 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     // Paged providers apply search before selecting rows; legacy providers keep local search.
     refreshKey: rendererQueryKey([settings, filter, sorts, pageParams, ...(paged ? [pages.refreshKey] : [])]),
 
-    load: async (signal) => {
+    load: async (signal, _publish, accepted) => {
       const state = { settings, filter, sorts, pageParams, resource: placement.resource };
-      const loaded = await loadKanbanRows(contribution, state, pages, signal);
+      const loaded = await loadKanbanRows(contribution, state, pages, signal, accepted);
       // Rows equal to the last loaded board keep their objects, so a reload that changed nothing,
       // such as returning to the page, renders no cards again.
       const shared = shareEqualValue(lastLoaded.current, loaded);
@@ -203,6 +198,8 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     subscribe: contribution.subscribe,
   });
   const rows = read.value?.rows ?? [];
+  const presentation = resolveKanbanQueryPresentation(contribution, read.value, declaredAttributes);
+  pageAttributes.accept(read.value?.attributes, paged);
   // Use the read's and pages' own functions, not the `read` and `pages` objects, which change on
   // every load step. Row callbacks that change rebuild every card on the board.
   const { mutate, holdRefresh } = read;
@@ -255,7 +252,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         rows={rows}
         contentPlaceholder={read.value ? undefined : readNotice}
         storageKey={storageKey}
-        attributes={attributes}
+        attributes={presentation.attributes}
         defaultSettings={contribution.defaultSettings}
         defaultFilter={contribution.defaultFilter}
         defaultSorts={contribution.defaultSorts}
@@ -263,7 +260,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
         defaultActiveViewId={contribution.defaultActiveViewId}
         emptyTitle={contribution.emptyTitle}
         emptyDescription={contribution.emptyDescription}
-        getBoardColumnConfig={contribution.getBoardColumnConfig}
+        getBoardColumnConfig={presentation.getBoardColumnConfig}
         hideToolbar={contribution.hideToolbar}
         onRowClick={contribution.onRowActivate || rows.some(hasKanbanRowTarget) ? handleOpenRow : undefined}
         onActionError={(error, action) => reportUserActionError(workbench, action, error)}
