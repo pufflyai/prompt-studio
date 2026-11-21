@@ -10,6 +10,7 @@ import { createWorkspaceSessionsDBService } from "../services/workspace-sessions
 import { createWorkspacesDBService } from "../services/workspaces/workspaces";
 import { createDb } from "./connection.pglite";
 import { restoreReleasedPreferenceTables } from "./preference-upgrade.fixture";
+import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 import { resource_anchors, sessions } from "./schemas.pg";
 import { prepareSessionWorkspaceUpgrade } from "./session-workspace-upgrade";
 
@@ -76,6 +77,7 @@ for (const interruption of ["normal", "schema", "partial"])
       ).rows;
       if (interruption !== "normal") {
         await prepareSessionWorkspaceUpgrade(store.db, path);
+        await prepareProjectExtensionsUpgrade(store.db, store.path);
         await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
         if (interruption === "partial")
           await store.db.update(sessions).set({ workspace_id: first.id }).where(eq(sessions.id, "session-000"));

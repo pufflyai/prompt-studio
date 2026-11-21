@@ -1,7 +1,5 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
-import { eq } from "drizzle-orm";
 import { createDb } from "../../db/connection.pglite";
-import { extension_instances } from "../../db/schemas.pg";
 import { createExtensionInstancesDBService } from "../extension-instances/extension-instances";
 import { createInstalledExtensionSourcesDBService } from "../installed-extension-sources/installed-extension-sources";
 import { createProjectsDBService } from "./projects";
@@ -105,7 +103,7 @@ test("projects hardDelete removes the project's extension instances and returns 
 
   expect(removed?.extensionInstances.map((instance) => instance.id)).toEqual([owned.id]);
   expect(await projects.get(project.id)).toBeNull();
-  expect(await db.select().from(extension_instances).where(eq(extension_instances.id, kept.id))).toHaveLength(1);
+  expect(await instances.get(kept.id)).not.toBeNull();
 });
 
 test("projects hardDelete returns null for a missing project", async () => {

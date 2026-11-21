@@ -11,6 +11,7 @@ import { createProjectsDBService } from "../services/projects/projects";
 import { prepareBoardDefaultsUpgrade } from "./board-defaults-upgrade";
 import { createDb } from "./connection.pglite";
 import { restoreReleasedPreferenceTables } from "./preference-upgrade.fixture";
+import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 import { board_views } from "./schemas/board-views";
 
 for (const interrupted of [false, true])
@@ -56,6 +57,7 @@ for (const interrupted of [false, true])
       );
       if (interrupted) {
         await prepareBoardDefaultsUpgrade(store.db, path);
+        await prepareProjectExtensionsUpgrade(store.db, store.path);
         await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
       }
       await store.close();

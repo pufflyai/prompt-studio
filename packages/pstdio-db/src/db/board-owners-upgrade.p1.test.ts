@@ -11,6 +11,7 @@ import { prepareBoardDefaultsUpgrade } from "./board-defaults-upgrade";
 import { prepareBoardOwnersUpgrade } from "./board-owners-upgrade";
 import { createDb } from "./connection.pglite";
 import { restoreReleasedPreferenceTables } from "./preference-upgrade.fixture";
+import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 import { board_views } from "./schemas.pg";
 
 type ReleasedBoard = Omit<typeof board_views.$inferSelect, "extension_id" | "is_default"> & {
@@ -91,6 +92,7 @@ for (const interrupted of [false, true])
       if (interrupted) {
         await prepareBoardOwnersUpgrade(store.db, path);
         await prepareBoardDefaultsUpgrade(store.db, path);
+        await prepareProjectExtensionsUpgrade(store.db, store.path);
         await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
       }
       await store.close();

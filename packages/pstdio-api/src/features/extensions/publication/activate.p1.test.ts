@@ -53,7 +53,7 @@ const activatePublication = async (
 const installed = async (projectId: string) =>
   (await app.deps.extensionService.listProjectExtensionInstances(projectId))[0];
 
-test("verified revisions retain instance data and share enable choices; failed activation keeps the usable package", async () => {
+test("verified revisions retain extension data and share enable choices; failed activation keeps the usable package", async () => {
   const project = await app.deps.projectService.create({ name: "Receiver" });
   const source = createTestExtensionSource({
     root,
@@ -66,7 +66,7 @@ test("verified revisions retain instance data and share enable choices; failed a
   expect(await activatePublication(app.deps, project.id, first.publication, first.asset)).toBe("active");
   const previous = await installed(project.id);
   expect(await readFile(join(previous.installedSource.source_path, "payload.bin"))).toEqual(Buffer.from([0, 255, 17]));
-  const scope = { extension_instance_id: previous.instance.id, scope_type: "project", scope_id: project.id };
+  let scope = { extension_instance_id: previous.instance.id, scope_type: "project", scope_id: project.id };
   await app.deps.extensionStorageService.setKv({ ...scope, key: "saved", value_json: { keep: true } });
   await app.deps.extensionService.setProjectExtensionEnabled(previous.instance.id, false);
   await writeFile(join(source, "extension.ts"), "throw new Error('invalid publication'); export default {};");
@@ -88,14 +88,17 @@ test("verified revisions retain instance data and share enable choices; failed a
   const next = await stage(project.id, source);
   await activatePublication(app.deps, project.id, next.publication, next.asset);
   const updated = await installed(project.id);
-  expect(updated.instance.id).toBe(previous.instance.id);
+  expect(updated.instance.id).not.toBe(previous.instance.id);
+  scope = { ...scope, extension_instance_id: updated.instance.id };
   // The replaced revision's folder is removed with its source row.
   expect(existsSync(previous.installedSource.source_path)).toBe(false);
   expect(updated.instance.enabled).toBe(true);
   expect(updated.installedSource.loaded_revision).toBe(next.asset.sha256);
   expect((await app.deps.extensionStorageService.getKv(scope, "saved"))?.value_json).toEqual({ keep: true });
   await activatePublication(app.deps, project.id, first.publication, first.asset);
-  expect((await installed(project.id)).installedSource.loaded_revision).toBe(first.asset.sha256);
+  const restored = await installed(project.id);
+  expect(restored.installedSource.loaded_revision).toBe(first.asset.sha256);
+  scope = { ...scope, extension_instance_id: restored.instance.id };
   expect((await app.deps.extensionStorageService.getKv(scope, "saved"))?.value_json).toEqual({ keep: true });
 });
 
@@ -197,7 +200,7 @@ test("a shared disable reaches a private override without executing an incompati
   expect((await installed(project.id)).installedSource.source_path).toBe(previous.installedSource.source_path);
 });
 
-test("catch-up restores an evicted published cache without replacing the instance or its data", async () => {
+test("catch-up restores an evicted published cache and retains extension data", async () => {
   const project = await app.deps.projectService.create({ name: "Evicted cache" });
   const source = createTestExtensionSource({
     root,
@@ -208,10 +211,25 @@ test("catch-up restores an evicted published cache without replacing the instanc
   const first = await stage(project.id, source);
   await activatePublication(app.deps, project.id, first.publication, first.asset);
   const previous = await installed(project.id);
+  await app.deps.extensionStorageService.setKv({
+    extension_instance_id: previous.instance.id,
+    scope_type: "project",
+    scope_id: project.id,
+    key: "saved",
+    value_json: { keep: true },
+  });
   await rm(previous.installedSource.source_path, { recursive: true, force: true });
   await activatePublication(app.deps, project.id, first.publication, first.asset);
   const repaired = await installed(project.id);
-  expect(repaired.instance.id).toBe(previous.instance.id);
+  expect(repaired.instance.id).not.toBe(previous.instance.id);
+  expect(
+    (
+      await app.deps.extensionStorageService.getKv(
+        { extension_instance_id: repaired.instance.id, scope_type: "project", scope_id: project.id },
+        "saved",
+      )
+    )?.value_json,
+  ).toEqual({ keep: true });
   expect(await readFile(join(repaired.installedSource.source_path, "extension.ts"), "utf8")).toBe(
     "export default {};\n",
   );

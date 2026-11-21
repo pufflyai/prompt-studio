@@ -1,10 +1,51 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { projectExtensionRow } from "../services/extension-instances/project-extension-row";
 import type { createDb } from "./connection.pglite";
+import type { project_extensions } from "./schemas.pg";
+
+const restoreReleasedInstances = async (
+  connection: Awaited<ReturnType<typeof createDb>>,
+  folder: string,
+  files: string[],
+) => {
+  for (const file of files) {
+    const source = await readFile(join(folder, file), "utf8");
+    for (const statement of source.split("--> statement-breakpoint"))
+      if (statement.trim().startsWith('CREATE TABLE "extension_instances" (')) await connection.pglite.exec(statement);
+  }
+  const instances = await connection.pglite.query<typeof project_extensions.$inferSelect>(
+    "SELECT * FROM project_extensions",
+  );
+  for (const row of instances.rows) {
+    const value = projectExtensionRow(row);
+    await connection.pglite.query(
+      `INSERT INTO extension_instances
+      (id, installed_extension_id, scope_type, scope_id, display_name_override, enabled, config_json, diagnostics_json, created_at, updated_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+      [
+        value.id,
+        value.installed_extension_id,
+        value.scope_type,
+        value.scope_id,
+        value.display_name_override,
+        value.enabled,
+        JSON.stringify(value.config_json),
+        value.diagnostics_json === null ? null : JSON.stringify(value.diagnostics_json),
+        value.created_at,
+        value.updated_at,
+      ],
+    );
+  }
+  await connection.pglite.exec("DROP TABLE project_extensions");
+};
 
 // These definitions come from the immutable migrations shipped in 0.48, not from
 // the candidate schema. Exercise the actual released data shapes before upgrading.
 export const restoreReleasedPreferenceTables = async (connection: Awaited<ReturnType<typeof createDb>>) => {
+  const folder = join(import.meta.dirname, "../../drizzle");
+  const files = (await readdir(folder)).filter((name) => /^000[0-9]_.*\.sql$/.test(name)).sort();
+  await restoreReleasedInstances(connection, folder, files);
   await connection.pglite.exec(`
     ALTER TABLE board_views ADD COLUMN extension_instance_id text;
     UPDATE board_views b SET extension_instance_id = (
@@ -14,8 +55,6 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
     );
     ALTER TABLE board_views DROP COLUMN extension_id;
     ALTER TABLE extensions RENAME TO installed_extension_sources;
-    ALTER TABLE extension_instances RENAME CONSTRAINT extension_instances_installed_extension_id_extensions_id_fk
-      TO extension_instances_installed_extension_id_installed_extension_sources_id_fk;
     ALTER TABLE activity_events RENAME CONSTRAINT activity_events_source_extension_id_extensions_id_fk
       TO activity_events_source_extension_id_installed_extension_sources_id_fk;
   `);
@@ -35,8 +74,6 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
     "extension_connections",
     "board_default_views",
   ];
-  const folder = join(import.meta.dirname, "../../drizzle");
-  const files = (await readdir(folder)).filter((name) => /^000[0-9]_.*\.sql$/.test(name)).sort();
   await connection.pglite.exec("DROP TABLE automation_runs; DROP TABLE automation_tokens");
   const constraints: string[] = [];
   for (const file of files) {
@@ -47,6 +84,7 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
       if (
         [
           "workspace_sessions",
+          "extension_instances",
           "skill_files",
           "extension_files",
           "automation_principals",

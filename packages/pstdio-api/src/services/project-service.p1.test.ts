@@ -11,7 +11,6 @@ import {
   createWorkspacesDBService,
   type DbClient,
   eq,
-  extension_instances,
   projects,
 } from "pstdio-db";
 import { EventBus } from "../features/sync/event-bus";
@@ -145,7 +144,7 @@ describe("ProjectService", () => {
     expect(events.at(-1)).toEqual({ table: "projects", op: "delete", data: { id: project.id } });
     expect(indexOf("workspace_sessions")).toBeLessThan(indexOf("workspaces"));
     for (const rows of await Promise.all(projectRowsAtEmit)) expect(rows).toEqual([]);
-    expect(await db.select().from(extension_instances).where(eq(extension_instances.id, instance.id))).toEqual([]);
+    expect(await createExtensionInstancesDBService(db).get(instance.id)).toBeNull();
   });
 
   test("delete of a missing project publishes nothing", async () => {

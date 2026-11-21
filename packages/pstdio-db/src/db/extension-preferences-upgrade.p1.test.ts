@@ -13,6 +13,7 @@ import { createWebviewPreferencesDBService } from "../services/webview-preferenc
 import { createDb } from "./connection.pglite";
 import { prepareExtensionPreferencesUpgrade } from "./extension-preferences-upgrade";
 import { restoreReleasedPreferenceTables } from "./preference-upgrade.fixture";
+import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 
 for (const interrupted of [false, true])
   test(`released scoped preferences survive ${interrupted ? "interruption after schema commit" : "upgrade and reopen"}`, async () => {
@@ -35,10 +36,12 @@ for (const interrupted of [false, true])
         scope_id: project.id,
       });
       await restoreReleasedPreferenceTables(connection);
+      const legacyId = crypto.randomUUID();
+      await connection.pglite.query("UPDATE extension_instances SET id=$1 WHERE id=$2", [legacyId, instance.id]);
       const stamp = "2026-11-20T12:00:00.000Z";
       for (const [ownerType, ownerId, value] of [
         ["installed_extension", source.id, "global"],
-        ["extension_instance", instance.id, "project"],
+        ["extension_instance", legacyId, "project"],
         ["device_extension", source.extension_id, "device"],
       ])
         await connection.pglite.query(
@@ -47,7 +50,7 @@ for (const interrupted of [false, true])
         );
       await connection.pglite.query(
         "INSERT INTO extension_skill_preferences VALUES ($1, $2, 'shared', false, 'Custom name', 'Custom description', $3::jsonb, $4, $4)",
-        [project.id, instance.id, JSON.stringify({ nested: [true, "日本語"] }), stamp],
+        [project.id, legacyId, JSON.stringify({ nested: [true, "日本語"] }), stamp],
       );
       const oversized = "x".repeat(5 * 1024 * 1024);
       for (const [key, value] of [
@@ -62,7 +65,7 @@ for (const interrupted of [false, true])
       }
       await connection.pglite.query(
         "INSERT INTO extension_automation_preferences VALUES ($1, $2, 'shared', false, $3, $3)",
-        [project.id, instance.id, stamp],
+        [project.id, legacyId, stamp],
       );
       // More than one migration page, sharing an owner/key spelling with a different preference family.
       const webviews = Array.from({ length: 205 }, (_, index) => ({
@@ -80,6 +83,7 @@ for (const interrupted of [false, true])
       );
       if (interrupted) {
         await prepareExtensionPreferencesUpgrade(connection.db, path);
+        await prepareProjectExtensionsUpgrade(connection.db, connection.path);
         await migrate(connection.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
         // Exit after schema commit, without running the returned value-restoration callback.
       }

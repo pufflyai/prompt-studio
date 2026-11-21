@@ -30,6 +30,7 @@ import { canonicalDbPath, resolveDbPath } from "./paths";
 import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-current-home";
 import { pgliteIdentity } from "./pglite-identity";
 import { acquirePgliteLock } from "./pglite-lock";
+import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 import { createRetiredStorageCleanup } from "./retired-storage-cleanup";
 import * as schema from "./schemas.pg";
 import { prepareSessionWorkspaceUpgrade } from "./session-workspace-upgrade";
@@ -228,6 +229,7 @@ export const createDb = async (options?: {
     let migrated = false;
     await withMigrationsFolder(async (migrationsFolder) => {
       if (!fs.existsSync(migrationsFolder)) return;
+      const finishProjectExtensionsUpgrade = await prepareProjectExtensionsUpgrade(db, dbPath);
       const finishFileOwnersUpgrade = await prepareFileOwnersUpgrade(db, dbPath);
       const finishPreferencesUpgrade = await prepareAppPreferencesUpgrade(db, dbPath);
       const finishExtensionPreferencesUpgrade = await prepareExtensionPreferencesUpgrade(db, dbPath);
@@ -237,6 +239,7 @@ export const createDb = async (options?: {
       const finishAutomationOwnersUpgrade = await prepareAutomationOwnersUpgrade(db, dbPath);
       const finishSessionWorkspaceUpgrade = await prepareSessionWorkspaceUpgrade(db, dbPath);
       await migrate(db, { migrationsFolder });
+      await finishProjectExtensionsUpgrade?.();
       await finishPreferencesUpgrade?.();
       await finishExtensionPreferencesUpgrade?.();
       await finishConnectionCredentialsUpgrade?.();

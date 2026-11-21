@@ -73,6 +73,35 @@ and board. SDK view response fields are unchanged. Runtime identity recovery pub
 view rows and replaces old default sync IDs after the rename commits, including
 built-in defaults with no saved view. Ordinary provider changes keep the same scope.
 
+### Project extension configuration
+
+`project_extensions` uses `(project_id, extension_ref)` as its primary key.
+The project reference cascades on deletion; the extension reference points to a
+local registration in `extensions` and prevents removing a source still in use.
+Enabled state, configuration, diagnostics, display name and timestamps remain
+on that project configuration. There is no separate stored instance ID or
+polymorphic scope.
+
+The instance collection and API responses keep their published fields. Their
+ID is `project-extension:` followed by the JSON array `[project ID, source ID]`.
+Changing a provider changes that ID. Activation deletes the old sync identity
+before publishing the new one, and moves project settings and skill/automation
+preferences in the same database transaction. A conflicting retained preference
+aborts activation without replacing either choice. Stable extension-owned files,
+documents and board views keep their owner.
+Preference writes validate the live installation and save within one transaction,
+so a concurrent switch or project deletion cannot leave an obsolete scope behind.
+
+Before DDL, startup captures every released instance row. It maps project rows
+and their dependent preferences to the new key, preserving values and timestamps.
+All original rows remain in
+`<database>-migration-exports/extension-instances.jsonl`, including non-project
+or missing-project scopes that have no target in the project-only schema. The
+original ID, scope and source reference in that export also identify the new
+composite key. Exports remain until explicitly removed. Interrupted restoration
+resumes from durable input; a different existing configuration causes a conflict
+instead of overwriting either value.
+
 ### File ownership conversion
 
 Files carry their owner, optional scope and logical path directly. Skills use

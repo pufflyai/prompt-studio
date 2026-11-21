@@ -36,24 +36,29 @@ export const createExtensionAutomationPreferencesDBService = (db: DbClient) => (
     return row ? result(row) : null;
   },
   async set(input: SetAutomationPreferenceInput) {
-    const owner = await instancePreferenceOwner(db, input.project_id, input.extension_instance_id);
-    const stamp = new Date().toISOString();
-    const [row] = await db
-      .insert(preferences)
-      .values({
-        ...owner,
-        project_id: input.project_id,
-        key: `automation:${input.automation_id}`,
-        sync: "team",
-        value: { enabled: input.enabled, created_at: stamp },
-        updated_at: stamp,
-      })
-      .onConflictDoUpdate({
-        target: [preferences.scope, preferences.scope_id, preferences.extension_id, preferences.key],
-        set: { value: sql`jsonb_set(${preferences.value}, '{enabled}', excluded.value->'enabled')`, updated_at: stamp },
-      })
-      .returning();
-    return result(row!);
+    return db.transaction(async (tx) => {
+      const owner = await instancePreferenceOwner(tx, input.project_id, input.extension_instance_id);
+      const stamp = new Date().toISOString();
+      const [row] = await tx
+        .insert(preferences)
+        .values({
+          ...owner,
+          project_id: input.project_id,
+          key: `automation:${input.automation_id}`,
+          sync: "team",
+          value: { enabled: input.enabled, created_at: stamp },
+          updated_at: stamp,
+        })
+        .onConflictDoUpdate({
+          target: [preferences.scope, preferences.scope_id, preferences.extension_id, preferences.key],
+          set: {
+            value: sql`jsonb_set(${preferences.value}, '{enabled}', excluded.value->'enabled')`,
+            updated_at: stamp,
+          },
+        })
+        .returning();
+      return result(row!);
+    });
   },
   async remove(projectId: string, instanceId: string, automationId: string) {
     return (

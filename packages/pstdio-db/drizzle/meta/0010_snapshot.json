@@ -1,5 +1,5 @@
 {
-  "id": "8b3a3b36-91d4-46d4-8918-24767f80d0f8",
+  "id": "7831c13a-76db-4e65-a402-222b04fffc09",
   "prevId": "e22b1e43-5e44-4e7c-b676-5be106a4f0ab",
   "version": "7",
   "dialect": "postgresql",
@@ -994,155 +994,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.extension_instances": {
-      "name": "extension_instances",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "installed_extension_id": {
-          "name": "installed_extension_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "scope_type": {
-          "name": "scope_type",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "scope_id": {
-          "name": "scope_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "display_name_override": {
-          "name": "display_name_override",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "enabled": {
-          "name": "enabled",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "config_json": {
-          "name": "config_json",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "diagnostics_json": {
-          "name": "diagnostics_json",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "extension_instances_scope_installed_uq": {
-          "name": "extension_instances_scope_installed_uq",
-          "columns": [
-            {
-              "expression": "scope_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "scope_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "installed_extension_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "extension_instances_scope_idx": {
-          "name": "extension_instances_scope_idx",
-          "columns": [
-            {
-              "expression": "scope_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "scope_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "extension_instances_installed_idx": {
-          "name": "extension_instances_installed_idx",
-          "columns": [
-            {
-              "expression": "installed_extension_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "extension_instances_installed_extension_id_extensions_id_fk": {
-          "name": "extension_instances_installed_extension_id_extensions_id_fk",
-          "tableFrom": "extension_instances",
-          "tableTo": "extensions",
-          "columnsFrom": ["installed_extension_id"],
-          "columnsTo": ["id"],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.extensions": {
       "name": "extensions",
       "schema": "",
@@ -1267,6 +1118,109 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.project_extensions": {
+      "name": "project_extensions",
+      "schema": "",
+      "columns": {
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extension_ref": {
+          "name": "extension_ref",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "enabled": {
+          "name": "enabled",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "config_json": {
+          "name": "config_json",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "diagnostics_json": {
+          "name": "diagnostics_json",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "project_extensions_ref_idx": {
+          "name": "project_extensions_ref_idx",
+          "columns": [
+            {
+              "expression": "extension_ref",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "project_extensions_project_id_projects_id_fk": {
+          "name": "project_extensions_project_id_projects_id_fk",
+          "tableFrom": "project_extensions",
+          "tableTo": "projects",
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "project_extensions_extension_ref_extensions_id_fk": {
+          "name": "project_extensions_extension_ref_extensions_id_fk",
+          "tableFrom": "project_extensions",
+          "tableTo": "extensions",
+          "columnsFrom": ["extension_ref"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "project_extensions_project_id_extension_ref_pk": {
+          "name": "project_extensions_project_id_extension_ref_pk",
+          "columns": ["project_id", "extension_ref"]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

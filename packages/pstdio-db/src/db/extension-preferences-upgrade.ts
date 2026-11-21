@@ -3,6 +3,7 @@ import { open, rename, rm } from "node:fs/promises";
 import { dirname } from "node:path";
 import { createInterface } from "node:readline";
 import { sql } from "drizzle-orm";
+import { projectExtensionId } from "../services/extension-instances/project-extension-row";
 import {
   extensionSettingPreferenceOwner,
   preferenceProjectId,
@@ -37,6 +38,17 @@ const sources = [
   { table: "webview_preferences", keys: ["extension_id", "name", "scope_type", "scope_id"] },
 ] as const;
 
+const legacyInstance = async (db: DbClient, id: string) => {
+  const {
+    rows: [row],
+  } = await db.execute<{ extension_id: string; installed_extension_id: string; project_id: string | null }>(sql`
+    SELECT s.extension_id, i.installed_extension_id, p.id AS project_id FROM extension_instances i
+    JOIN installed_extension_sources s ON s.id = i.installed_extension_id
+    LEFT JOIN projects p ON p.id = i.scope_id AND i.scope_type = 'project' WHERE i.id = ${id}
+  `);
+  if (!row) return null;
+  return { ...row, id: row.project_id ? projectExtensionId(row.project_id, row.installed_extension_id) : id };
+};
 const convert = async (db: DbClient, table: string, input: Legacy) => {
   if (table === "webview_preferences") {
     const row = input as LegacyWebview;
@@ -53,22 +65,16 @@ const convert = async (db: DbClient, table: string, input: Legacy) => {
   }
   if (table === "extension_settings") {
     const row = input as LegacySetting;
+    const instance = row.owner_type === "extension_instance" ? await legacyInstance(db, row.owner_id) : null;
     const known = ["installed_extension", "extension_instance", "device_extension"].includes(row.owner_type);
     const owner = known
-      ? extensionSettingPreferenceOwner(row)
+      ? extensionSettingPreferenceOwner({ ...row, owner_id: instance?.id ?? row.owner_id })
       : {
           scope: "resource" as const,
           scope_id: JSON.stringify(["setting-owner", row.owner_type, row.owner_id]),
           extension_id: row.extension_id,
         };
-    let projectId: string | null = null;
-    if (row.owner_type === "extension_instance") {
-      const { rows } = await db.execute<{ id: string }>(sql`
-        SELECT p.id FROM extension_instances i JOIN projects p ON p.id = i.scope_id
-        WHERE i.id = ${row.owner_id} AND i.scope_type = 'project'
-      `);
-      projectId = rows[0]?.id ?? null;
-    }
+    const projectId = instance?.project_id ?? null;
     let sync: Preference["sync"] = "device";
     if (row.owner_type === "installed_extension") sync = "personal";
     if (row.owner_type === "extension_instance") sync = "team";
@@ -82,17 +88,13 @@ const convert = async (db: DbClient, table: string, input: Legacy) => {
     };
   }
   const row = input as LegacyInstancePreference;
-  const {
-    rows: [instance],
-  } = await db.execute<{ extension_id: string }>(sql`
-    SELECT s.extension_id FROM extension_instances i JOIN installed_extension_sources s ON s.id = i.installed_extension_id
-    WHERE i.id = ${row.extension_instance_id}
-  `);
-  if (!instance) throw new Error(`Cannot resolve extension preference owner ${row.extension_instance_id}`);
-  const { project_id, extension_instance_id, skill_key, automation_id, updated_at, ...value } = row;
+  const instance = await legacyInstance(db, row.extension_instance_id);
+  if (!instance || instance.project_id !== row.project_id)
+    throw new Error(`Cannot resolve extension preference owner ${row.extension_instance_id}`);
+  const { project_id, extension_instance_id: _instanceId, skill_key, automation_id, updated_at, ...value } = row;
   return {
     scope: "project" as const,
-    scope_id: extension_instance_id,
+    scope_id: instance.id,
     extension_id: instance.extension_id,
     project_id,
     key: table === "extension_skill_preferences" ? `skill:${skill_key}` : `automation:${automation_id}`,

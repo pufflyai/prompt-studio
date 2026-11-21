@@ -8,6 +8,7 @@ import { createProjectsDBService } from "../services/projects/projects";
 import { createDb } from "./connection.pglite";
 import { prepareConnectionCredentialsUpgrade } from "./connection-credentials-upgrade";
 import { restoreReleasedPreferenceTables } from "./preference-upgrade.fixture";
+import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 import { preferences } from "./schemas/preferences";
 
 for (const interrupted of [false, true])
@@ -29,6 +30,7 @@ for (const interrupted of [false, true])
         );
       if (interrupted) {
         await prepareConnectionCredentialsUpgrade(store.db, path);
+        await prepareProjectExtensionsUpgrade(store.db, store.path);
         await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
       }
       await store.close();

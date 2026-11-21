@@ -59,11 +59,9 @@ test("migration retains complete owner history, immutable bytes, sequence positi
       created_at: now,
       updated_at: now,
     });
-    await db.insert(s.extension_instances).values({
-      id: "instance",
-      installed_extension_id: "source",
-      scope_type: "project",
-      scope_id: "project",
+    await db.insert(s.project_extensions).values({
+      extension_ref: "source",
+      project_id: "project",
       enabled: false,
       created_at: now,
       updated_at: now,
@@ -135,9 +133,8 @@ test("migration retains complete owner history, immutable bytes, sequence positi
       pending_bytes: 10,
       receipt_root: bytes,
     });
-    expect((await db.select().from(s.extension_instances))[0]).toMatchObject({
-      id: "instance",
-      installed_extension_id: "source",
+    expect((await db.select().from(s.project_extensions))[0]).toMatchObject({
+      extension_ref: "source",
       enabled: false,
     });
     expect((await db.select().from(s.installed_extension_sources)).find((row) => row.id === "source")).toMatchObject({

@@ -43,33 +43,35 @@ export const createExtensionSkillPreferencesDBService = (db: DbClient) => ({
     return row ? result(row) : null;
   },
   async set(input: SetSkillPreferenceInput) {
-    const owner = await instancePreferenceOwner(db, input.project_id, input.extension_instance_id);
-    const stamp = new Date().toISOString();
-    const { project_id: _project, extension_instance_id: _instance, skill_key: _key, ...values } = input;
-    const patch = Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined));
-    const [row] = await db
-      .insert(preferences)
-      .values({
-        ...owner,
-        project_id: input.project_id,
-        key: `skill:${input.skill_key}`,
-        sync: "team",
-        value: {
-          enabled: true,
-          display_name_override: null,
-          description_override: null,
-          metadata_json: {},
-          ...patch,
-          created_at: stamp,
-        },
-        updated_at: stamp,
-      })
-      .onConflictDoUpdate({
-        target: [preferences.scope, preferences.scope_id, preferences.extension_id, preferences.key],
-        set: { value: sql`${preferences.value} || ${JSON.stringify(patch)}::jsonb`, updated_at: stamp },
-      })
-      .returning();
-    return result(row!);
+    return db.transaction(async (tx) => {
+      const owner = await instancePreferenceOwner(tx, input.project_id, input.extension_instance_id);
+      const stamp = new Date().toISOString();
+      const { project_id: _project, extension_instance_id: _instance, skill_key: _key, ...values } = input;
+      const patch = Object.fromEntries(Object.entries(values).filter(([, value]) => value !== undefined));
+      const [row] = await tx
+        .insert(preferences)
+        .values({
+          ...owner,
+          project_id: input.project_id,
+          key: `skill:${input.skill_key}`,
+          sync: "team",
+          value: {
+            enabled: true,
+            display_name_override: null,
+            description_override: null,
+            metadata_json: {},
+            ...patch,
+            created_at: stamp,
+          },
+          updated_at: stamp,
+        })
+        .onConflictDoUpdate({
+          target: [preferences.scope, preferences.scope_id, preferences.extension_id, preferences.key],
+          set: { value: sql`${preferences.value} || ${JSON.stringify(patch)}::jsonb`, updated_at: stamp },
+        })
+        .returning();
+      return result(row!);
+    });
   },
   async remove(projectId: string, instanceId: string, skillKey: string) {
     return (

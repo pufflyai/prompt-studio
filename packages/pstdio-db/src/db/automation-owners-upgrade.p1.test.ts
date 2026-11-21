@@ -9,6 +9,7 @@ import { prepareAutomationOwnersUpgrade, restoreAutomationPolicy } from "./autom
 import { restoreAutomationRun } from "./automation-run-upgrade";
 import { createDb } from "./connection.pglite";
 import { restoreReleasedPreferenceTables } from "./preference-upgrade.fixture";
+import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 import { automation_runs, automation_tokens } from "./schemas/automation";
 
 const stamp = "2026-11-20T12:00:00.000Z";
@@ -87,8 +88,8 @@ for (const interruption of ["normal", "capture", "schema", "partial-restore", "p
         );
       if (interruption !== "normal") {
         await prepareAutomationOwnersUpgrade(store.db, path);
-        if (interruption !== "capture")
-          await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        if (interruption !== "capture") await prepareProjectExtensionsUpgrade(store.db, store.path);
+        await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
         if (interruption.startsWith("partial-")) await restorePart(store, path, interruption === "partial-restore");
         if (interruption === "partial-cleanup") await rm(`${path}-automation-owners-upgrade.jsonl`);
       }

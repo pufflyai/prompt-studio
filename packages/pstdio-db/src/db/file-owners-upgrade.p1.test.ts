@@ -13,6 +13,7 @@ import { createSkillsDBService } from "../services/skills/skills";
 import { createDb } from "./connection.pglite";
 import { prepareFileOwnersUpgrade } from "./file-owners-upgrade";
 import { restoreReleasedPreferenceTables } from "./preference-upgrade.fixture";
+import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 import { files, skills } from "./schemas.pg";
 
 const hash = (data: Uint8Array) => createHash("sha256").update(data).digest("hex");
@@ -127,6 +128,7 @@ for (const interruption of ["normal", "schema", "restore"])
       const legacyExtensions = (await store.pglite.query("SELECT * FROM extension_files ORDER BY id")).rows;
       if (interruption !== "normal") {
         const finish = await prepareFileOwnersUpgrade(store.db, store.path);
+        await prepareProjectExtensionsUpgrade(store.db, store.path);
         await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
         if (interruption === "restore") {
           await store.pglite.exec(

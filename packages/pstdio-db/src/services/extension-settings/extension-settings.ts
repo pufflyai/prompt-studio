@@ -37,32 +37,38 @@ export const createExtensionSettingsDBService = (db: DbClient) => {
       return rows.map((row) => result(row, owner));
     },
     async setValue(input: SetExtensionSettingInput) {
-      const stamp = new Date().toISOString();
-      let projectId: string | null = null;
-      if (input.owner_type === "extension_instance")
-        projectId = (await getExtensionStorageOwner(db, input.owner_id))?.workbenchId ?? null;
-      let sync: "team" | "personal" | "device" = "personal";
-      if (input.owner_type === "extension_instance") sync = "team";
-      if (input.owner_type === "device_extension") sync = "device";
-      const [row] = await db
-        .insert(preferences)
-        .values({
-          ...extensionSettingPreferenceOwner(input),
-          key: `setting:${input.key}`,
-          project_id: projectId,
-          sync,
-          value: { value: input.value_json, created_at: stamp },
-          updated_at: stamp,
-        })
-        .onConflictDoUpdate({
-          target: [preferences.scope, preferences.scope_id, preferences.extension_id, preferences.key],
-          set: {
-            value: sql`jsonb_build_object('value', excluded.value->'value', 'created_at', ${preferences.value}->'created_at')`,
+      return db.transaction(async (tx) => {
+        const stamp = new Date().toISOString();
+        let projectId: string | null = null;
+        if (input.owner_type === "extension_instance") {
+          const owner = await getExtensionStorageOwner(tx, input.owner_id);
+          if (!owner || owner.extensionId !== input.extension_id)
+            throw new Error("Extension instance not found in project");
+          projectId = owner.workbenchId;
+        }
+        let sync: "team" | "personal" | "device" = "personal";
+        if (input.owner_type === "extension_instance") sync = "team";
+        if (input.owner_type === "device_extension") sync = "device";
+        const [row] = await tx
+          .insert(preferences)
+          .values({
+            ...extensionSettingPreferenceOwner(input),
+            key: `setting:${input.key}`,
+            project_id: projectId,
+            sync,
+            value: { value: input.value_json, created_at: stamp },
             updated_at: stamp,
-          },
-        })
-        .returning();
-      return result(row!, input);
+          })
+          .onConflictDoUpdate({
+            target: [preferences.scope, preferences.scope_id, preferences.extension_id, preferences.key],
+            set: {
+              value: sql`jsonb_build_object('value', excluded.value->'value', 'created_at', ${preferences.value}->'created_at')`,
+              updated_at: stamp,
+            },
+          })
+          .returning();
+        return result(row!, input);
+      });
     },
     async deleteValue(input: ExtensionSettingKey) {
       return (await db.delete(preferences).where(whereKey(input)).returning({ key: preferences.key })).length > 0;

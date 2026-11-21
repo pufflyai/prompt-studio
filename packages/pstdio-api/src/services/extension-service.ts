@@ -333,6 +333,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
             instances: deps.extensionInstancesService,
             emitRemoved: (row) => deps.eventBus?.emit("installed_extension_sources", "delete", row),
             emitInstance: emitExtensionInstance,
+            emitInstanceRemoved: (row) => deps.eventBus?.emit("extension_instances", "delete", row),
             refresh: notifyInstalledSourcesChanged,
             emit: emitInstalledSource,
           },
