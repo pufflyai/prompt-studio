@@ -43,12 +43,14 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
 
   const runQuit = async (run: () => Promise<void>, waitingForConfirmation = false) => {
     if (quitting?.active || quitAllowed) return;
+    const initialState = deps.getState();
     const owner = { active: true, waitingForConfirmation };
     quitting = owner;
     try {
       await run();
     } catch (error) {
-      if (quitAllowed || quitting !== owner) deps.logError(error);
+      if (quitAllowed || quitting !== owner || (owner.waitingForConfirmation && deps.getState() !== initialState))
+        deps.logError(error);
       else await showQuitFailure(error);
     } finally {
       owner.active = false;
@@ -131,7 +133,7 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
     confirmQuit,
     finishQuit,
     isQuitAllowed: () => quitAllowed,
-    isQuitting: () => Boolean(quitting?.active) || quitAllowed,
+    isQuitting: () => Boolean(quitting?.active && !quitting.waitingForConfirmation) || quitAllowed,
     requestQuit,
   };
 };

@@ -74,6 +74,47 @@ describe("desktop quit flow", () => {
     "keep open",
     "quit",
     "failure",
+  ])("preserves crash recovery when the pending native dialog returns %s", async (answer) => {
+    const opened = Promise.withResolvers<void>();
+    const native = Promise.withResolvers<boolean>();
+    const requests: boolean[] = [];
+    const { flow, state, setState } = createHarness({
+      refreshRuntime: async () => runtime,
+      askToCancelActiveWork: async () => {
+        opened.resolve();
+        return native.promise;
+      },
+      requestShutdown: async (force) => {
+        requests.push(force);
+        return { state: "active", activity: { ...noActivity, sessions: [{ id: "s1", label: "Session" }] } };
+      },
+    });
+    await flow.requestQuit();
+    const repeated = flow.requestQuit();
+    await opened.promise;
+    const recovery: DesktopState = {
+      kind: "recovery",
+      error: { code: "unexpected_exit", message: "Backend crashed", actions: ["quit"] },
+    };
+    try {
+      // Main uses this guard to admit unexpected-exit recovery.
+      expect(flow.isQuitting()).toBe(false);
+      setState(recovery);
+      if (answer === "failure") native.reject(new Error("Native dialog closed"));
+      else native.resolve(answer === "quit");
+      await repeated;
+      expect(state()).toBe(recovery);
+      expect(requests).toEqual([false]);
+    } finally {
+      native.resolve(false);
+      await repeated;
+    }
+  });
+
+  test.each([
+    "keep open",
+    "quit",
+    "failure",
   ])("keeps the window's confirmed quit when the native dialog later returns %s", async (answer) => {
     const opened = Promise.withResolvers<void>();
     const native = Promise.withResolvers<boolean>();
