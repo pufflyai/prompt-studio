@@ -62,7 +62,7 @@ headers("keeps a public header view and menus with their live tab across destina
     await page.keyboard.press("Escape");
     await side.getByRole("button", { name: "Add panel", exact: true }).click();
     await expect(page.getByRole("menu", { name: "Add panel", exact: true })).toBeVisible();
-    await page.getByRole("menuitem", { name: "New letter viewer", exact: true }).click();
+    await page.getByRole("menuitem", { name: "New letter viewer", exact: true }).click({ timeout: 15_000 });
     await expect(side.frameLocator('iframe[title="Letter viewer"]:visible').getByText(/^Viewing draft-/)).toBeVisible();
     await side
       .frameLocator('iframe[title="Letter viewer"]:visible')

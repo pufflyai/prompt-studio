@@ -92,7 +92,6 @@ interface WorkbenchPanelMenuOpenerProps {
 const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
   const { canAttach, view } = props;
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (canAttach) setOpen(false);
@@ -129,23 +128,13 @@ const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
         fitViewport: true,
         getAnchorElement: () => triggerRef.current,
       }}
-      onExitComplete={() => {
-        const focused = document.activeElement;
-        // A newer control keeps the focus it received while this menu was closing.
-        if (focused === document.body || (focused && contentRef.current?.contains(focused)))
-          triggerRef.current?.focus();
-      }}
     >
       <Tooltip content={view.title}>
         <Menu.Trigger asChild>{trigger}</Menu.Trigger>
       </Tooltip>
       <Portal>
         <Menu.Positioner>
-          <Menu.Content
-            ref={contentRef}
-            aria-label={`${view.label} controls`}
-            data-workbench-panel-menu-controls={view.region}
-          >
+          <Menu.Content aria-label={`${view.label} controls`} data-workbench-panel-menu-controls={view.region}>
             <Header variant="narrow" borderBottomWidth="1px" borderColor="border.subtle" flexShrink={0} gap="xs">
               <WorkbenchIcon name={view.icon} size={14} />
               <Text flex="1" minW="0" textStyle="label/S/medium" truncate>
