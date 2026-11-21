@@ -1,5 +1,48 @@
 # pstdio-planner
 
+## 0.48.0-nightly.20261121095833
+
+_2026-11-21_
+
+### Minor Changes
+
+- 52fbda2: Use canonical first-party package names and concise Notes commands on migration-capable API 0.5 hosts. Remove declared global CLI shortcuts and use publisher-qualified Planner and Reports commands.
+- 1743980: Import up to 1,000 tickets in one command with `import-tickets`, including their parents, dependencies and links. Planner now keeps tickets as records instead of in a deprecated storage collection; existing tickets move once, with their text history and order.
+- 7a29611: Configure an ordinary project default page and public resource openers; let tools own workspace presentation and remove the alpha presentation aliases.
+- e4c5f68: Use resource Activity for ticket history, note discussion, implementation and review handoffs, while preserving historical report references and evidence.
+- 72d3dc2: Link reusable GitHub pull request resources to tickets while preserving delivery and repair automation.
+- 33a1d31: Add Cleanup board to review stale ticket statuses and blocked reasons with an editable prompt that preserves ongoing sessions.
+
+### Patch Changes
+
+- 6df8aac: Clarify committed-candidate validation, reuse of unchanged passing checks, and refreshing skills with a compatible installed host.
+- 50919bf: Run Planner attempts in existing project folders without requiring Git, with extension-owned attempt identity and extension-first implementation guidance.
+- b7c28cd: Show the original local date and time on Needs Attention request cards.
+- 2598580: Group linked ticket resources by type and keep ticket attention controls off attached files.
+- 86bbbef: Keep sessions and navigation within reach: refresh session pins without waiting for unrelated resources, open resource and collection pages by dragging, reopen closed tabs, and preview complete shortcuts in open menus. Add project-tab settings actions, compact Cloud status, fix retained Home reads and editor toolbars, and show nonempty linked-resource groups with relationships discoverable from either end. Expose session links through a right panel menu that follows attached and floating sessions and hides when empty; keep session navigation focused on conversations and keep the Side launcher floating above Main. Deliver streaming refresh events immediately and hide empty chat attachment trays.
+- 1170295: Run all eight fixed performance workloads on Linux x64, Apple Silicon Mac and Windows x64, and reject incomplete evidence. Leave benchmark PRs for human review and merge.
+- ddd4641: Import tickets several times faster by reading the tag list once per import instead of once per ticket.
+- cd05536: Let the session asked to resume a ticket continue in its existing workspace, consulting another implementer only when that ticket is already active elsewhere.
+- 2598580: Keep labeled unavailable resources visible in ticket navigation and match resource type headings to Workspaces with localized labels for known kinds.
+- 5d0ac4d: Open ticket boards without retrying legacy pull request imports for every ticket when the GitHub extension is disabled.
+- b510245: Prepare bundled extensions for API 0.5 without dropping their existing host ranges, and return Planner, Reports and Artifacts paths and links using the host-provided owner.
+
+  Use publisher-qualified Planner and Reports commands in shipped skills, prompts, help examples and documentation so agent instructions also work after the API 0.5 shortcut removal.
+
+  Keep ticket page ancestry and fresh draft ignore rules on the host-provided owner, including timeline rows, pulls and workspace provisioning.
+
+- 468076b: Move resource pages between panels, keep resource creation in the receiving tabs, open resource links as Side previews, and unify Main page and tab headers.
+- 0579164: Open large ticket boards with fewer indexed storage queries while preserving ticket order and card details.
+- 9617f2c: Read current status, tag and milestone fields for saved ticket views without loading every ticket.
+- c396e07: Use publisher-qualified commands when cleaning up the Planner board.
+- cca9b29: Wait for supervisor quota resets and optionally restart limit-stopped conversations after a 15-second buffer, using durable delayed automation.
+- a0fb3f5: Keep action errors local and dismissible, show system notices in the status bar, and represent workspace readiness in the conversation controls.
+- 4c477e5: Allow the ticket's Needs attention view to read its retained review-request query.
+- 324e652: Preserve shared project and document state while views switch or reopen, adopt retained read owners and scoped invalidation, and keep required saves and bounded recovery work with their domain owners.
+- addc361: Show only explicitly linked workspaces on tickets and hide empty workspace sections.
+- f64fda8: Open ticket content directly without waiting for review requests.
+- ff28280: Keep ticket opening, bulk archival, ordering, dependency checks, linked history, and recovery bounded with scoped indexes and saves, without loading complete ticket collections.
+
 ## 0.47.0
 
 _2026-11-12_

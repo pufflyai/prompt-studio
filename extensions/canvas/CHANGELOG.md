@@ -1,5 +1,23 @@
 # canvas
 
+## 0.1.1-nightly.20261121095833
+
+_2026-11-21_
+
+### Patch Changes
+
+- cd78f5b: Keep a hidden UI Canvas design from pulling the person back to UI Canvas when its canvas is removed.
+- ac7ed05: Keep UI Canvas upgrades working by including the dependency its webview needs to open.
+- 1a939bf: Keep frame controls visible when focusing the selection overlay of a tall Canvas preview.
+- b510245: Prepare bundled extensions for API 0.5 without dropping their existing host ranges, and return Planner, Reports and Artifacts paths and links using the host-provided owner.
+
+  Use publisher-qualified Planner and Reports commands in shipped skills, prompts, help examples and documentation so agent instructions also work after the API 0.5 shortcut removal.
+
+  Keep ticket page ancestry and fresh draft ignore rules on the host-provided owner, including timeline rows, pulls and workspace provisioning.
+
+- 468076b: Move resource pages between panels, keep resource creation in the receiving tabs, open resource links as Side previews, and unify Main page and tab headers.
+- 324e652: Preserve shared project and document state while views switch or reopen, adopt retained read owners and scoped invalidation, and keep required saves and bounded recovery work with their domain owners.
+
 ## 0.1.0
 
 _2026-11-12_

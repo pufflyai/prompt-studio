@@ -1,5 +1,26 @@
 # harness-codex
 
+## 0.48.0-nightly.20261121095833
+
+_2026-11-21_
+
+### Minor Changes
+
+- cca9b29: Wait for supervisor quota resets and optionally restart limit-stopped conversations after a 15-second buffer, using durable delayed automation.
+
+### Patch Changes
+
+- 14c03fc: Keep Prompt Studio responsive during large Codex command output by batching live previews and publishing the final result immediately.
+- 8915c48: Restore Codex conversations and responses containing Unicode line separators.
+- b510245: Prepare bundled extensions for API 0.5 without dropping their existing host ranges, and return Planner, Reports and Artifacts paths and links using the host-provided owner.
+
+  Use publisher-qualified Planner and Reports commands in shipped skills, prompts, help examples and documentation so agent instructions also work after the API 0.5 shortcut removal.
+
+  Keep ticket page ancestry and fresh draft ignore rules on the host-provided owner, including timeline rows, pulls and workspace provisioning.
+
+- 324e652: Preserve shared project and document state while views switch or reopen, adopt retained read owners and scoped invalidation, and keep required saves and bounded recovery work with their domain owners.
+- 8750af3: Update the bundled Codex CLI to 0.169.0 so eligible accounts can select GPT-6.2 Sol and GPT-6.2 Astra.
+
 ## 0.47.0
 
 _2026-11-12_

@@ -1,5 +1,75 @@
 # @pstdio/workbench
 
+## 0.48.0-nightly.20261121095833
+
+_2026-11-21_
+
+### Minor Changes
+
+- a1eb6ac: Add opt-in resource Activity with synced discussions, confirmed agent handoffs, evidence attachments, and revision-bound work outcomes.
+- 2456a14: Keep collection views bounded by default with indexed queries, global summaries and resource-safe paging. Hold column-action refreshes until their writes finish, retain loaded views during reconciliation, and yield repeated background queries without delaying required reads. Batch native text metadata during bulk property saves, and reconcile unchanged extension notifications without repeatedly restarting installation.
+
+  Support complete-record root projections and derived root conditions for record key indexes, retaining the same typed values in native and in-memory queries.
+
+- bedb8ee: Let extensions download generated files through the host and register view-scoped actions in native resource menus, while preserving sandbox permissions and captured resource ownership.
+
+  Allow live resource actions to supply a bounded choice group and update its selected value without cancelling an accepted callback.
+
+  Preserve entry stylesheets in batched webview preparation so installed extensions load their icon fonts, and rebuild incompatible prepared revisions after host upgrades.
+
+- 3b41d41: Use shorter first-party extension identities while preserving historical commands, project data, saved views and encrypted sync streams.
+
+  Remove extension-defined global CLI shortcuts and the `globalAliases` SDK option. Use publisher-qualified commands; historical namespace migration paths remain available.
+
+- 15029c2: Allow performance tools to highlight React renders in the current workbench window.
+- 2ec885f: Support movable resource pages, destination-aware navigation and Side resource previews with one Main header.
+- 7a29611: Configure an ordinary project default page and public resource openers; let tools own workspace presentation and remove the alpha presentation aliases.
+- 95f860c: Let resource owners supply live icons, semantic colors, and accessible labels across Workbench.
+- 324e652: Preserve project views and accepted actions across navigation, scope native observations to their active owners, and share presentation and resource metadata without restarting unrelated work. Read workspace totals in one Git comparison, retain renamed, staged and untracked changes, and stop cancelled summary reads without interrupting independent readers.
+- 3b50550: Show image thumbnails in data table columns, sub-group resource lists with children nested to any depth, and add tags to tree rows.
+- c795b8f: Retain readonly account, performance and preference queries across webview recreation, cancel optional read memberships independently, persist accepted preference choices in order, and support controlled diff selection and tree-row observation lifetimes.
+- 1dea002: Show a dot beside sessions with new replies or requests for input since the last visit. Resource extensions can define which changes count and use the same workbench indicator.
+- 92fa724: Deliver the default Terminal through an installed tool, preserving workspace selection, native PTY lifetime and legacy commands and placements.
+- fa0e4af: Add native action bars with saved item order and dock-aware layout, plus compact draggable status widgets with saved alignment.
+
+### Patch Changes
+
+- eb9017f: Keep the desktop Main fullscreen exit button clear of native window controls.
+- b8c6cc0: A board or resource list shown outside Main, such as a workspace's Session history previewed in the Side Panel, now queries its own resource instead of the page open in Main.
+- 8e54d0f: Keep status popovers within the window and retain their webviews' natural size when hidden.
+- 225fe6c: Show public and locally maintained extension sources, scope resource Activity to owning documents, and preserve grouped tree pagination.
+- cca9b29: Keep background task lifecycle notices out of conversations, preserve OpenCode question choices and replies, and wait for harness readiness before sending an answer.
+- 86bbbef: Keep sessions and navigation within reach: refresh session pins without waiting for unrelated resources, open resource and collection pages by dragging, reopen closed tabs, and preview complete shortcuts in open menus. Add project-tab settings actions, compact Cloud status, fix retained Home reads and editor toolbars, and show nonempty linked-resource groups with relationships discoverable from either end. Expose session links through a right panel menu that follows attached and floating sessions and hides when empty; keep session navigation focused on conversations and keep the Side launcher floating above Main. Deliver streaming refresh events immediately and hide empty chat attachment trays.
+- e4c6d26: Type `_` and `?` in the file editor without opening Keyboard shortcuts. Keyboard shortcuts now opens with Mod+/, and direct shortcuts can no longer use keys that type text.
+- 69efa88: Recover stalled Cloud sources safely and show source phases and named file transfer activity.
+- cd01ece: Keep system activity available in the status bar and simplify extension install, upgrade, and switch feedback.
+- 52c0bc9: Keep canceled queued messages out of chat, keep tool calls visible after steering, and show desktop startup and recovery actions in empty states.
+- de66f90: Hide session workspace information when Workspaces is unavailable and refresh open conversations when tools change.
+- 4c477e5: Keep open files stable when unrelated tools are prepared or sync supplies an unchanged extension configuration. Refresh only the changed tool's project and extension scope.
+
+  Open a selected panel after its menu closes, so a new terminal receives keyboard focus without taking focus from an open menu.
+
+- 34f00bd: Fix Home appearing in two panels when returning from Canvas after its retained view expires.
+- 4a8a70a: Keep the API responsive during repeated extension reads, reduce database work for batched resource links, and defer refreshing a board while opening a newly created row.
+- 378559a: Keep Files selected when a workspace document opens and restore the file-path header's bottom border.
+- dc3d342: Keep completed chat rows and resolved attachments stable while replies stream.
+- 78b8852: Show session and other tabless page titles in the breadcrumb only and display skill file paths in the file viewer.
+- 01bceb8: Open selected collaborative documents in one admission request and support indexed alternate orders and maintained group counts for paged views.
+- ccae1c5: Observe workspace files, expose Git-ignore decorations, and retain expanded tree rows while selection refreshes, and let extension commands use the host delete confirmation.
+- f54b954: Allow the Side Panel to open before its extension content loads.
+- a0fb3f5: Keep action errors local and dismissible, show system notices in the status bar, and represent workspace readiness in the conversation controls.
+- 488b865: A page whose extension tab stops returning a label, such as a removed note kept open with its draft, keeps the title it last showed instead of an empty breadcrumb. Empty tab, indicator and menu labels fall back the same way.
+- 2e36eb7: Keep typing responsive while a long chat reply streams by reusing link handlers for completed messages.
+- 9f724be: Show live session status in the conversation breadcrumb.
+- 09149e7: Keep custom navigation groups in the Nav Panel or subnav where they were created.
+- f377f79: Links followed from a conversation in the Side Panel preview in Main, so the conversation stays visible.
+- 26798fc: A tree in a page previewed in the Side Panel or Secondary panel, such as its Files menu, now reveals and selects that page's document instead of following the page open in Main. Its rows open in the same panel.
+- 3539553: Hide empty system notices and use normal widget controls, simplify extension navigation, keep GitHub internal, install Terminal for Coding, and remove Activity from Notes.
+- aae2818: Offer a separate Skill Browser through Coding onboarding with automatic selection, extension groups, parameter-based Info, and native workbench header controls above Settings in the footer, and narrow the settings modal with properly spaced navigation groups.
+- 21494ed: Keep note editors closed while their initial presentation is replaced
+- 3979b1a: Ask for tool approvals, such as running a shell command, in the same composer form as agent questions. Skip denies the request.
+- a2e8cbb: Recover dropped page requests silently while retaining loaded content.
+
 ## 0.47.0
 
 _2026-11-12_

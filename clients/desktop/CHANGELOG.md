@@ -1,5 +1,13 @@
 # @pstdio/desktop
 
+## 0.48.0-nightly.20261121095833
+
+_2026-11-21_
+
+### Patch Changes
+
+- 52c0bc9: Keep canceled queued messages out of chat, keep tool calls visible after steering, and show desktop startup and recovery actions in empty states.
+
 ## 0.47.0
 
 _2026-11-12_
