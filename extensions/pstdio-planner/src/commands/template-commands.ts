@@ -1,8 +1,15 @@
-import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { deleteOwnedTemplate, listOwnedTemplates, readOwnedTemplate, saveOwnedTemplate } from "../data/template-store";
+import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
+import {
+  deleteOwnedTemplate,
+  listOwnedTemplates,
+  readOwnedTemplate,
+  resetOwnedTemplate,
+  saveOwnedTemplate,
+} from "../data/template-store";
 
 export const listTemplatesCommand = defineCommand({
   id: "templates.list",
+  cli: true,
   title: "List templates",
   params: { type: params.text() },
   async run(ctx, commandParams) {
@@ -12,6 +19,7 @@ export const listTemplatesCommand = defineCommand({
 
 export const readTemplateCommand = defineCommand({
   id: "templates.read",
+  cli: true,
   title: "Read template",
   params: { name: params.text({ required: true }) },
   async run(ctx, commandParams) {
@@ -21,6 +29,7 @@ export const readTemplateCommand = defineCommand({
 
 export const saveTemplateCommand = defineCommand({
   id: "templates.save",
+  cli: true,
   title: "Save template",
   mutating: true,
   params: {
@@ -36,6 +45,7 @@ export const saveTemplateCommand = defineCommand({
 
 export const deleteTemplateCommand = defineCommand({
   id: "templates.delete",
+  cli: true,
   title: "Delete template",
   mutating: true,
   params: { name: params.text({ required: true }) },
@@ -45,9 +55,21 @@ export const deleteTemplateCommand = defineCommand({
   },
 });
 
+export const resetTemplateCommand = defineCommand({
+  id: "templates.reset",
+  title: l10n("commands.templates.reset.title", "Restore package template"),
+  cli: true,
+  mutating: true,
+  params: { name: params.text({ required: true }) },
+  async run(ctx, { name }) {
+    return resetOwnedTemplate(ctx, name);
+  },
+});
+
 export const templateCommands = {
   list: listTemplatesCommand,
   read: readTemplateCommand,
   save: saveTemplateCommand,
   delete: deleteTemplateCommand,
+  reset: resetTemplateCommand,
 };
