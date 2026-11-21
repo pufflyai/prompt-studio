@@ -238,12 +238,13 @@ test("resource discussion sends file-only comments and retains the original atta
 // and must not drain all remaining cursor pages while the boundary stays visible.
 test("earlier discussion retries at the top without moving the reader or focus", async ({ page, request }) => {
   const resource = { projectId: fixture.projectId, extensionId: "test.stream-fixture", type: "item", id: "history" };
-  for (let index = 0; index < 120; index++) {
+  const publish = async (index: number) => {
     const response = await request.post(`/v1/projects/${fixture.projectId}/activity/publish`, {
       data: { resource, entry: { key: String(index), kind: "comment", body: `History ${index}` } },
     });
     expect(response.ok()).toBe(true);
-  }
+  };
+  for (let index = 0; index < 120; index++) await publish(index);
   const earlier = Promise.withResolvers<void>();
   const release = Promise.withResolvers<void>();
   const retryStarted = Promise.withResolvers<void>();
@@ -279,8 +280,14 @@ test("earlier discussion retries at the top without moving the reader or focus",
     await expect(entries).toHaveCount(50);
     const firstId = await entries.first().getAttribute("data-activity-entry");
     const anchor = activity.locator(`[data-activity-entry="${firstId}"]`);
+    const retry = activity.getByRole("button", { name: "Retry", exact: true });
     release.resolve();
-    await activity.getByRole("button", { name: "Retry", exact: true }).click();
+    await expect(retry).toBeVisible();
+    // A live update clears the read error but keeps the earlier-page notice, so Retry removes the
+    // notice above the feed before the page arrives.
+    await publish(120);
+    await expect(entries).toHaveCount(51);
+    await retry.click();
     await retryStarted.promise;
     const top = (await anchor.boundingBox())!.y;
     const input = activity.getByRole("textbox", { name: "Leave a comment…" });
@@ -294,9 +301,9 @@ test("earlier discussion retries at the top without moving the reader or focus",
     await activity.evaluate((element) => {
       element.closest('[data-scope="scroll-area"][data-part="viewport"]')!.scrollTop = 0;
     });
-    await expect(entries).toHaveCount(120);
+    await expect(entries).toHaveCount(121);
     await expect(entries.first()).toContainText("History 0");
-    await expect(entries.last()).toContainText("History 119");
+    await expect(entries.last()).toContainText("History 120");
     await expect(input).toBeFocused();
   } finally {
     release.resolve();
