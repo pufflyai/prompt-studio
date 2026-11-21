@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
+import { canRetryControllerRequest, waitForControllerPoll } from "./connection";
 
 // Where run sources and logs live. Remote environments only ever receive signed URLs
 // for one object that expire with the run.
 export interface RunStorage {
   upload(object: string, archive: Blob): Promise<void>;
-  download(object: string): Promise<Uint8Array | null>;
+  download(object: string, options?: { signal?: AbortSignal; retryTransient?: boolean }): Promise<Uint8Array | null>;
   signedUrl(method: "GET" | "PUT", object: string, expiresSeconds: number): Promise<string>;
 }
 
@@ -56,11 +57,29 @@ export function gcsStorage(options: { bucket: string; signer: string; token: () 
       );
       if (!response.ok) throw new Error(`Upload to ${options.bucket} failed: ${await failure(response)}`);
     },
-    async download(object) {
-      const response = await fetch(`${objectUrl(object)}?alt=media`, { headers: await headers() });
-      if (response.status === 404) return null;
-      if (!response.ok) throw new Error(`Download from ${options.bucket} failed: ${await failure(response)}`);
-      return new Uint8Array(await response.arrayBuffer());
+    async download(object, downloadOptions) {
+      const signal = downloadOptions?.signal;
+      signal?.throwIfAborted();
+      while (true) {
+        signal?.throwIfAborted();
+        // Refresh credentials between attempts without retrying login failures.
+        const request = { headers: await headers(), signal };
+        try {
+          const response = await fetch(`${objectUrl(object)}?alt=media`, request);
+          if (response.status === 404) return null;
+          if (!response.ok) {
+            const message = await failure(response).catch(() => `HTTP ${response.status}`);
+            throw Object.assign(new Error(`Download from ${options.bucket} failed: ${message}`), {
+              status: response.status,
+            });
+          }
+          return new Uint8Array(await response.arrayBuffer());
+        } catch (error) {
+          signal?.throwIfAborted();
+          if (!downloadOptions?.retryTransient || !canRetryControllerRequest(error)) throw error;
+        }
+        await waitForControllerPoll(signal);
+      }
     },
     async signedUrl(method, object, expiresSeconds) {
       const input = v4SigningInput({

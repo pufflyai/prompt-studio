@@ -262,23 +262,29 @@ export async function checkRun(
   deps: RunCollectionDeps,
   record: RunRecord,
   signal?: AbortSignal,
-  retryController = false,
+  retryTransient = false,
 ) {
   if (record.summary) return record.summary;
-  const receipt = retryController
+  const receipt = retryTransient
     ? await readControllerWithRetry<Receipt>(deps.api, requestPath(record), signal)
     : await deps.api<Receipt>({ method: "GET", path: requestPath(record), signal });
   if (!receipt.finalizedAt) return null;
   // The runner uploads its log before the controller finalizes the request.
-  if (record.stopAfterRun) await stopCollectedEnvironment(deps, record, signal, retryController);
-  const summary = await summarize(deps, record, receipt);
+  if (record.stopAfterRun) await stopCollectedEnvironment(deps, record, signal, retryTransient);
+  const summary = await summarize(deps, record, receipt, signal, retryTransient);
   await deps.store.set(`run:${record.runId}`, { ...record, summary });
   await releaseEnvironment(deps.store, record.environmentId, record.runId);
   await notifyRunChange(deps);
   return summary;
 }
 
-async function summarize(deps: RunCollectionDeps, record: RunRecord, receipt: Receipt): Promise<RunSummary> {
+async function summarize(
+  deps: RunCollectionDeps,
+  record: RunRecord,
+  receipt: Receipt,
+  signal?: AbortSignal,
+  retryTransient = false,
+): Promise<RunSummary> {
   const response = receipt.outcome?.finalResponse ?? "";
   const line = response.split("\n").find((text) => text.startsWith(MARKER));
   const result = line
@@ -289,7 +295,7 @@ async function summarize(deps: RunCollectionDeps, record: RunRecord, receipt: Re
         error?: string;
       })
     : null;
-  const log = await deps.storage.download(logs(record.runId));
+  const log = await deps.storage.download(logs(record.runId), { signal, retryTransient });
   const text = log ? new TextDecoder().decode(log) : "";
   const logPath = log ? await deps.saveLog(record.runId, text) : null;
   const base = {
