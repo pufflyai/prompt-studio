@@ -42,6 +42,10 @@ test("switching suspends a color picker and restores its open state", async ({ p
   await expect(picker.locator('[data-part="content"]')).toBeHidden();
   await select(preview, "A");
   await expect(picker.locator('[data-part="content"]')).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(picker.locator('[data-part="content"]')).toBeHidden();
+  await picker.locator('[data-part="trigger"]').click();
+  await expect(picker.locator('[data-part="content"]')).toBeVisible();
 });
 
 // Critical: the enclosing theme provider remains the owner across activation and inner remounts.

@@ -1,6 +1,7 @@
 import { Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ScopedPopover as Popover, Portal, Tooltip, UiScopeActivity } from "@pstdio/ui";
+import { KanbanRenderer } from "@pstdio/ui/kanban-renderer";
 import { Activity, useState } from "react";
 import { createWorkbench, type WorkbenchCore } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
@@ -102,6 +103,7 @@ const createOverlayWorkbench = () => {
         <Activity mode={input.visible ? "visible" : "hidden"}>
           <UiScopeActivity active>
             <OverlayControls workbench={workbench} label="Suspended" destination="two" />
+            <KanbanRenderer rows={[]} attributes={[]} storageKey="overlay-navigation-collection" />
           </UiScopeActivity>
         </Activity>
       ),

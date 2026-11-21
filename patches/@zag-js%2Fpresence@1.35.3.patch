@@ -1,0 +1,40 @@
+diff --git a/dist/presence.machine.js b/dist/presence.machine.js
+index a2c276acfaaef4b6e4e8dc888f1d57f77d12bcc3..d473b0457e81311c10e2251fd0e0ab1e9ff98c25 100644
+--- a/dist/presence.machine.js
++++ b/dist/presence.machine.js
+@@ -49,6 +49,7 @@ var machine = (0, import_core.createMachine)({
+       }))
+     };
+   },
++  entry: ["syncPresence"],
+   exit: ["cleanupNode"],
+   watch({ track, prop, send }) {
+     track([() => prop("present")], () => {
+@@ -132,6 +133,7 @@ var machine = (0, import_core.createMachine)({
+           return send({ type: "UNMOUNT", src: "visibilitychange" });
+         }
+         (0, import_dom_query.raf)(() => {
++          if (prop("present")) return;
+           const animationName = getAnimationName(refs.get("styles"));
+           context.set("unmountAnimationName", animationName);
+           if (animationName === "none" || animationName === context.get("prevAnimationName") || refs.get("styles")?.display === "none" || refs.get("styles")?.animationDuration === "0s") {
+diff --git a/dist/presence.machine.mjs b/dist/presence.machine.mjs
+index 5849f73df2cb3434d38f23676f4c0cb44acdc9a0..a2534daf8c4e5e839e09a5d61712ed3b295e8921 100644
+--- a/dist/presence.machine.mjs
++++ b/dist/presence.machine.mjs
+@@ -25,6 +25,7 @@ var machine = createMachine({
+       }))
+     };
+   },
++  entry: ["syncPresence"],
+   exit: ["cleanupNode"],
+   watch({ track, prop, send }) {
+     track([() => prop("present")], () => {
+@@ -108,6 +109,7 @@ var machine = createMachine({
+           return send({ type: "UNMOUNT", src: "visibilitychange" });
+         }
+         raf(() => {
++          if (prop("present")) return;
+           const animationName = getAnimationName(refs.get("styles"));
+           context.set("unmountAnimationName", animationName);
+           if (animationName === "none" || animationName === context.get("prevAnimationName") || refs.get("styles")?.display === "none" || refs.get("styles")?.animationDuration === "0s") {
