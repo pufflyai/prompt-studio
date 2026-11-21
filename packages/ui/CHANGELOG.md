@@ -1,5 +1,54 @@
 # @pstdio/ui
 
+## 0.48.0
+
+_2026-11-21_
+
+### Minor Changes
+
+- a1eb6ac: Add opt-in resource Activity with synced discussions, confirmed agent handoffs, evidence attachments, and revision-bound work outcomes.
+- 2456a14: Keep collection views bounded by default with indexed queries, global summaries and resource-safe paging. Hold column-action refreshes until their writes finish, retain loaded views during reconciliation, and yield repeated background queries without delaying required reads. Batch native text metadata during bulk property saves, and reconcile unchanged extension notifications without repeatedly restarting installation.
+
+  Support complete-record root projections and derived root conditions for record key indexes, retaining the same typed values in native and in-memory queries.
+
+- 225fe6c: Show public and locally maintained extension sources, scope resource Activity to owning documents, and preserve grouped tree pagination.
+- 3b41d41: Use shorter first-party extension identities while preserving historical commands, project data, saved views and encrypted sync streams.
+
+  Remove extension-defined global CLI shortcuts and the `globalAliases` SDK option. Use publisher-qualified commands; historical namespace migration paths remain available.
+
+- df5f690: Expose collection view filtering and title-field helpers without loading React components in extension commands.
+- 3b50550: Show image thumbnails in data table columns, sub-group resource lists with children nested to any depth, and add tags to tree rows.
+- c795b8f: Retain readonly account, performance and preference queries across webview recreation, cancel optional read memberships independently, persist accepted preference choices in order, and support controlled diff selection and tree-row observation lifetimes.
+- 1dea002: Show a dot beside sessions with new replies or requests for input since the last visit. Resource extensions can define which changes count and use the same workbench indicator.
+- bedb8ee: Reveal clipped dropdown captions in the shared tooltip and expose native scrollbar styles using the ScrollArea theme tokens.
+
+  Render native resource choice groups with checked radio semantics.
+
+  Keep keyboard-highlighted menu rows visible inside shared ScrollArea viewports.
+
+### Patch Changes
+
+- 71dcd5d: Keep dropdown choices inside their owning dialog so people can select command parameters.
+- cca9b29: Keep background task lifecycle notices out of conversations, preserve OpenCode question choices and replies, and wait for harness readiness before sending an answer.
+- 86bbbef: Keep sessions and navigation within reach: refresh session pins without waiting for unrelated resources, open resource and collection pages by dragging, reopen closed tabs, and preview complete shortcuts in open menus. Add project-tab settings actions, compact Cloud status, fix retained Home reads and editor toolbars, and show nonempty linked-resource groups with relationships discoverable from either end. Expose session links through a right panel menu that follows attached and floating sessions and hides when empty; keep session navigation focused on conversations and keep the Side launcher floating above Main. Deliver streaming refresh events immediately and hide empty chat attachment trays.
+- 2d1a60a: Show batch upgrade progress and inline extension results, and combine overlapping workspace refreshes.
+- 52c0bc9: Keep canceled queued messages out of chat, keep tool calls visible after steering, and show desktop startup and recovery actions in empty states.
+- 013099f: Show each harness's own icon in every model selector again, including project defaults and parameter forms, and install extensions such as GitHub Copilot whose dependencies locate their own files through `__filename`.
+- c2e7a01: Keep keyboard menu selection when layout moves a previously hovered item away from a stationary pointer.
+- eb4d205: Keep stopped chat reading in place when visible content shrinks during a panel resize, and preserve automatic following across overlapping resize observations.
+- 0145c2a: Export a controlled DashboardRenderer from @pstdio/ui/dashboard-renderer with caller-owned metric, chart, and table data, responsive drag and resize editing, layout modes, and popover settings.
+- 41e5e87: Show Cloud only projects and outstanding deletion operations in the project picker. Offer separate confirmations for device cleanup and permanent Cloud deletion. The shared deletion dialog supports disabling confirmation until the user acknowledges a required option.
+- cf78831: Keep project tabs usable after a view fails, and offer recovery when the desktop workbench stops.
+- ccae1c5: Observe workspace files, expose Git-ignore decorations, and retain expanded tree rows while selection refreshes, and let extension commands use the host delete confirmation.
+- a0fb3f5: Keep action errors local and dismissible, show system notices in the status bar, and represent workspace readiness in the conversation controls.
+- e85a85b: Keep built-in collection views read-only in the view bar: saving edits to one creates a new view, and built-in tabs offer Duplicate instead of Rename and Delete.
+- e89584c: Reduce repeated row-layout styling while streamed replies update. Shared theme rules emit static row geometry and token spacing once rather than serializing them on every streaming measurement.
+- aae2818: Offer a separate Skill Browser through Coding onboarding with automatic selection, extension groups, parameter-based Info, and native workbench header controls above Settings in the footer, and narrow the settings modal with properly spaced navigation groups.
+- 7308feb: Keep an open menu focused when a terminal finishes loading, so tab actions can complete.
+- 2e61d22: Keep the selected model at the top of model selector lists and show the harness icon in the selector button.
+- 225fe6c: Match fixed resource group headings to tree sections and configure the default Notes opener.
+- fa0e4af: Add native action bars with saved item order and dock-aware layout, plus compact draggable status widgets with saved alignment.
+
 ## 0.47.0
 
 _2026-11-12_
