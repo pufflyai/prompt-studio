@@ -9,7 +9,7 @@
   "type": "module",
   "private": true,
   "engines": {
-    "pstdio": "^0.5.0"
+    "pstdio": "^0.5.0 || ^0.6.0"
   },
   "pstdio": {
     "scope": "user"

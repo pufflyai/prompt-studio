@@ -1,5 +1,6 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { StorageRecordIndex } from "pstdio-sync-contracts";
+import { recordIdentityPrefixBytes } from "./record-identity-order";
 import { pageOrderSql, type QuerySqlOwner, recordIndexKeys, recordScopeSql, sortFieldSql } from "./record-query-sql";
 import { hasTextOrder } from "./record-text-order";
 
@@ -13,11 +14,14 @@ export const recordPrefixCandidatesSql = (
   offset: number,
   owner: QuerySqlOwner | undefined,
 ) => {
-  const orderBy = index.orderBy;
-  if (!owner || !orderBy?.length || (limit + offset) * 2 > 100_000) return;
-  if (!index.alternateOrders?.some((order) => JSON.stringify(order) === JSON.stringify(orderBy))) return;
+  const orderBy = index.orderBy ?? [];
+  const identityOnly = orderBy.length === 0;
+  const probeLimit = (limit + offset) * (identityOnly ? 1 : 2);
+  if (!owner || probeLimit > 100_000) return;
+  if (!identityOnly && !index.alternateOrders?.some((order) => JSON.stringify(order) === JSON.stringify(orderBy)))
+    return;
   const strings = orderBy.filter(({ field }) => index.fields[field].type === "string");
-  if (!strings.length) return;
+  if (!identityOnly && !strings.length) return;
   if (
     orderBy.some(({ field: name }) => {
       const field = index.fields[name];
@@ -35,17 +39,20 @@ export const recordPrefixCandidatesSql = (
   )
     return;
   const safe = sql.join(
-    strings.map(
-      ({ field }) =>
-        sql`coalesce(octet_length(${sortFieldSql(index, field)}) < ${Math.max(1, Math.floor(1024 / orderBy.length))}, true)`,
-    ),
+    [
+      sql`octet_length(record_id) <= ${recordIdentityPrefixBytes}`,
+      ...strings.map(
+        ({ field }) =>
+          sql`coalesce(octet_length(${sortFieldSql(index, field)}) < ${Math.max(1, Math.floor(1024 / orderBy.length))}, true)`,
+      ),
+    ],
     sql` AND `,
   );
   const scope = recordScopeSql(owner, { ...index, identity: undefined });
   const order = sql.join(recordIndexKeys({ ...index, equality: [] }), sql`, `);
   return sql`(
     WITH ordered_probe AS MATERIALIZED (
-      SELECT * FROM storage_current_records WHERE ${scope} ORDER BY ${order} LIMIT ${(limit + offset) * 2}
+      SELECT * FROM storage_current_records WHERE ${scope} ORDER BY ${order} LIMIT ${probeLimit}
     ), selected AS MATERIALIZED (
       SELECT record_id FROM ordered_probe AS storage_current_records WHERE ${where}
     ), unsafe AS MATERIALIZED (
