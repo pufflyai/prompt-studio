@@ -48,7 +48,7 @@ test("shows each quit confirmation over the workbench and recovers from refused 
 
   const lifecycle = await waitForLifecyclePage(electronApp.context());
   await expectStartupWindowVisible(electronApp, lifecycle);
-  const window = await waitForWorkbenchPage(lifecycle, descriptor.origin);
+  let window = await waitForWorkbenchPage(lifecycle, descriptor.origin);
   await expect(window.getByText("Owned Prompt Studio dashboard")).toBeVisible();
 
   // Occluded lifecycle renderers may stop receiving animation frames.
@@ -109,6 +109,7 @@ test("shows each quit confirmation over the workbench and recovers from refused 
   await expect(lifecycle.getByRole("alert")).toBeVisible();
   expect(await workbenchVisible()).toBe(false);
   await lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter");
+  window = await waitForWorkbenchPage(lifecycle, descriptor.origin);
   await expect.poll(desktopState).toMatchObject({ kind: "workbench" });
   expect(await workbenchVisible()).toBe(true);
 
@@ -187,22 +188,31 @@ test("keeps startup render failures in the existing recovery screen after the da
     }),
   );
   await expect(lifecycle.getByRole("alert")).toBeVisible();
-  runtime.releaseDashboard();
-  await expect(window.getByText("Owned Prompt Studio dashboard")).toBeAttached();
-  await window.waitForLoadState("load");
-  // Wait for native startup to finish, including its late showWorkbench call.
-  await expect
-    .poll(() => startupState(lifecycle))
-    .toMatchObject({
-      kind: "recovery",
-      error: { code: "workbench_unavailable" },
-    });
-  expect(
-    await electronApp.evaluate(({ BrowserWindow }) =>
-      BrowserWindow.getAllWindows()[0].contentView.children[0].getVisible(),
-    ),
-  ).toBe(false);
   await lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter");
+  await expect
+    .poll(async () => ({ requests: runtime.dashboardRequests(), state: await startupState(lifecycle) }))
+    .toMatchObject({ requests: 2 });
+  runtime.releaseDashboard();
+  const reopened = await waitForWorkbenchPage(lifecycle, runtime.descriptor.origin);
+  await expect(reopened.getByText("Owned Prompt Studio dashboard")).toBeVisible();
+  await expect.poll(() => startupState(reopened)).toMatchObject({ kind: "workbench" });
+});
+
+// Critical risk: the entry script can fail before the dashboard installs React error handling.
+test("uses existing recovery when the dashboard bundle fails and retries the dashboard", async () => {
+  const runtime = await startActiveRuntime(cleanup, {
+    refuseFirstForcedShutdown: false,
+    holdDashboard: false,
+    failDashboardBundle: true,
+  });
+  const { electronApp } = await launchDesktop(runtime.home, "dashboard-bundle-recovery");
+  const lifecycle = await waitForLifecyclePage(electronApp.context());
+  await expect.poll(() => startupState(lifecycle)).toMatchObject({ kind: "recovery" });
+  await expect(lifecycle.getByRole("alert")).toBeVisible();
+  runtime.restoreDashboardBundle();
+  await lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter");
+  const window = await waitForWorkbenchPage(lifecycle, runtime.descriptor.origin);
+  await expect(window.getByText("Owned Prompt Studio dashboard")).toBeVisible();
   await expect.poll(() => startupState(window)).toMatchObject({ kind: "workbench" });
 });
 

@@ -311,11 +311,11 @@ const bootstrap = async () => {
       if (!details) return;
       logger.error(details, "Workbench render failed");
       if (!details.projectId) {
+        windowController?.markWorkbenchFailed();
         if (state.kind === "starting") {
-          // Pending startup may still reveal its dashboard; recovery keeps ownership after it settles.
-          void runtimeRecovery.recover(
-            new Error("workbench_unavailable: The workbench could not open. Retry to reopen it."),
-          );
+          const error = new Error("workbench_unavailable: The workbench could not open. Retry to reopen it.");
+          // Settle the failed load before recovery exposes Retry.
+          if (!windowController?.abortWorkbenchStartup(error)) void runtimeRecovery.recover(error);
         } else showWorkbenchRecovery({ reason: "render_failed" });
       }
     },

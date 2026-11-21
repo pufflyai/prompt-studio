@@ -11,6 +11,7 @@ interface ActiveRuntimeOptions {
   refuseFirstForcedShutdown: boolean;
   /** Hold the dashboard response until `releaseDashboard` is called. */
   holdDashboard: boolean;
+  failDashboardBundle?: boolean;
 }
 
 const stopProcess = async (child: ChildProcess) => {
@@ -30,9 +31,28 @@ export const startActiveRuntime = async (cleanup: Array<() => void | Promise<voi
   const dashboardRequested = Promise.withResolvers<void>();
   const dashboardReleased = Promise.withResolvers<void>();
   if (!options.holdDashboard) dashboardReleased.resolve();
+  let dashboardRequests = 0;
+  let failDashboardBundle = options.failDashboardBundle ?? false;
   let refuseForcedShutdown = options.refuseFirstForcedShutdown;
   cleanup.push(() => removeTestDirectory(home));
   cleanup.push(() => stopProcess(runtimeProcess));
+
+  const serveDashboard = async (url: string | undefined, response: ServerResponse) => {
+    if (url === "/dashboard.js") {
+      response.writeHead(404).end();
+      return;
+    }
+    dashboardRequests += 1;
+    response.setHeader("content-type", "text/html");
+    response.write("<!doctype html><html><body>");
+    dashboardRequested.resolve();
+    await dashboardReleased.promise;
+    response.end(
+      failDashboardBundle
+        ? '<main id="root"></main><script type="module" src="/dashboard.js"></script></body></html>'
+        : '<main id="root">Owned Prompt Studio dashboard<textarea aria-label="Draft"></textarea></main></body></html>',
+    );
+  };
 
   const server = createServer(async (request, response) => {
     if (request.headers.authorization !== `Bearer ${token}` && request.url?.startsWith("/runtime/")) {
@@ -87,13 +107,7 @@ export const startActiveRuntime = async (cleanup: Array<() => void | Promise<voi
       await stopProcess(runtimeProcess);
       return;
     }
-    response.setHeader("content-type", "text/html");
-    response.write("<!doctype html><html><body>");
-    dashboardRequested.resolve();
-    await dashboardReleased.promise;
-    response.end(
-      '<main id="root">Owned Prompt Studio dashboard<textarea aria-label="Draft"></textarea></main></body></html>',
-    );
+    await serveDashboard(request.url, response);
   });
   await new Promise<void>((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
   cleanup.push(async () => {
@@ -121,6 +135,10 @@ export const startActiveRuntime = async (cleanup: Array<() => void | Promise<voi
     descriptor,
     shutdownForces,
     dashboardRequested: dashboardRequested.promise,
+    dashboardRequests: () => dashboardRequests,
+    restoreDashboardBundle: () => {
+      failDashboardBundle = false;
+    },
     releaseDashboard: () => dashboardReleased.resolve(),
   };
 };
