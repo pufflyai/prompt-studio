@@ -1,0 +1,47 @@
+import { expect, test } from "bun:test";
+import { act, create } from "react-test-renderer";
+import { createWorkbench } from "../../core";
+import { systemActivityItemId, useSystemActivityStatusItem } from "./system-errors";
+
+test("system notices appear only while needed and keep the person's widget alignment", async () => {
+  const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previous = environment.IS_REACT_ACT_ENVIRONMENT;
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  const workbench = createWorkbench();
+  const Status = () => {
+    useSystemActivityStatusItem(workbench, true);
+    return null;
+  };
+  let tree: ReturnType<typeof create>;
+  await act(async () => {
+    tree = create(<Status />);
+  });
+  try {
+    expect(workbench.statusBar.listVisibleItems()).toHaveLength(0);
+    await act(async () => {
+      workbench.notifications.show({ id: "inline", level: "error", title: "Save failed", inlineTarget: "editor" });
+    });
+    expect(workbench.statusBar.listVisibleItems()).toHaveLength(0);
+    await act(async () => {
+      workbench.notifications.show({ id: "update", level: "info", title: "Update ready" });
+    });
+    expect(workbench.statusBar.getItem(systemActivityItemId)?.popoverViewId).toBeDefined();
+    await act(async () => {
+      workbench.statusBar.moveItem(systemActivityItemId, "trailing");
+    });
+    await act(async () => {
+      workbench.notifications.dismiss("update");
+    });
+    expect(workbench.statusBar.listVisibleItems()).toHaveLength(0);
+    await act(async () => {
+      workbench.notifications.show({ id: "connection", level: "error", title: "Connection failed" });
+    });
+    expect(workbench.statusBar.getItem(systemActivityItemId)?.slot).toBe("trailing");
+  } finally {
+    await act(async () => {
+      tree!.unmount();
+    });
+    workbench.dispose();
+    environment.IS_REACT_ACT_ENVIRONMENT = previous;
+  }
+});

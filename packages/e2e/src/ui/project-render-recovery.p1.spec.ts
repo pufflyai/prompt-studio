@@ -15,24 +15,21 @@ const createProject = async (request: APIRequestContext, name: string): Promise<
   return response.json();
 };
 
-const useDesktopTabs = async (page: Page, ids: string[], failStartup = false) => {
+const useDesktopTabs = async (page: Page, ids: string[]) => {
   await page.addInitScript(
-    ({ ids, failStartup }) => {
+    ({ ids }) => {
       if (window.top !== window) return;
       Object.assign(window, {
         promptStudioDesktop: {
           getAppInfo: async () => ({ platform: "darwin" }),
           getProjectTabs: async () => ({ projectIds: ids }),
           setProjectTabs: async () => undefined,
-          getWorkbenchState: async () => {
-            if (failStartup) throw new Error("Fixture rejected the saved layout read");
-            return { values: {} };
-          },
+          getWorkbenchState: async () => ({ values: {} }),
           setWorkbenchItem: async () => undefined,
         },
       });
     },
-    { ids, failStartup },
+    { ids },
   );
 };
 
@@ -109,11 +106,4 @@ test.describe("project tab recovery", () => {
     await expect(retry).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Open / create project" })).toBeVisible();
   });
-});
-
-test("offers a window reload when dashboard startup rejects before mounting React", async ({ page }) => {
-  await useDesktopTabs(page, [], true);
-  await page.goto("/");
-  await expect(page.getByRole("alert")).toContainText("Prompt Studio couldn’t open");
-  await expect(page.getByRole("link", { name: "Reload Prompt Studio" })).toBeVisible();
 });

@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { ticketFilesDir, ticketMarkdownPath } from "../data/draft-storage";
+import { resourceLinkTarget } from "../data/resource-link-target";
 import { putTicket, ticketsCollection } from "../data/ticket-context.fixture";
 import type { Ticket } from "../data/types";
 import { makeCommandArgs } from "./command-context.fixture";
@@ -50,6 +51,23 @@ const countTicketLists = (storage: ExtensionStorageApi) => {
 
 const resolver = (storage: ExtensionStorageApi, projectId: string) => (path: string) =>
   resolveTicketPathCommand.run(...makeCommandArgs({ storage, projectId, params: { path, workspaceId: "workspace" } }));
+
+test("a multi-match ticket path keeps all explicit pins when opened as a resource link", async () => {
+  const storage = createMemoryStorage();
+  await putTicket(storage, storedTicket("first", "T-1"));
+  await putTicket(storage, storedTicket("second", "T-1"));
+  const result = await resolver(storage, "multiple-project")(ticketMarkdownPath("T-1"));
+  expect(result?.target.kind).toBe("compound");
+  const target = resourceLinkTarget(result!.target);
+  expect(target).toMatchObject({
+    kind: "compound",
+    targets: [
+      { resource: { id: "first" }, open: "pin", region: "side" },
+      { resource: { id: "second" }, open: "pin", region: "side" },
+    ],
+  });
+  expect(result?.resource.id).toBe("first");
+});
 
 test("ticket paths and their parents resolve without reading every ticket", async () => {
   const storage = createMemoryStorage();

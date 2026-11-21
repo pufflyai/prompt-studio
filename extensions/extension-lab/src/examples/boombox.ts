@@ -1,11 +1,12 @@
 import { defineExtension, definePlacement } from "@pstdio/sdk/extensions";
+import { boomboxActionBar } from "../apps/boombox-action-bar";
 import { definePageExample, webview } from "../definition";
 
 const views = [
   webview("boombox-playlist", "Lazy Sunday"),
   webview("boombox-player", "Player"),
   webview("boombox-nav", "Boombox"),
-  webview("boombox-rail", "Library"),
+  boomboxActionBar,
   webview("boombox-queue", "Queue"),
 ];
 const example = definePageExample({

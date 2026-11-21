@@ -17,8 +17,9 @@ test("an invalid drop onto Home preserves the terminal's live view and shell sta
   await expect(homeFrame(page).getByText("Project home", { exact: true })).toBeVisible();
   const originalUrl = page.url();
   const main = page.getByRole("region", { name: "Main", exact: true });
-  const mainHeader = page.locator('[data-workbench-panel-header="main"]');
-  await expect(mainHeader).not.toBeVisible();
+  // Home is tabless; the shared navigation header must not gain Main tabs.
+  const mainTabs = page.locator('[data-workbench-panel-header="main"]').getByRole("tab");
+  await expect(mainTabs).toHaveCount(0);
   await page.getByRole("button", { name: "Show Bottom Panel", exact: true }).click();
   const secondary = page.locator('[data-workbench-panel-header="secondary"]');
   await secondary.getByRole("button", { name: "Add panel", exact: true }).click();
@@ -43,9 +44,9 @@ test("an invalid drop onto Home preserves the terminal's live view and shell sta
   await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 12 });
   await expect(page.locator('[data-workbench-tab-drop="main"][data-drop-active]')).toHaveCount(0);
   await page.mouse.up();
-  await expect(mainHeader).not.toBeVisible();
   const retained = secondary.locator(`[data-workbench-tab="${instanceId}"]`).getByRole("tab");
   await expect(retained).toHaveAttribute("aria-selected", "true");
+  await expect(mainTabs).toHaveCount(0);
   expect(
     await terminal.evaluate(
       (element) => element === (window as Window & { retainedTerminal?: Element }).retainedTerminal,
@@ -59,6 +60,6 @@ test("an invalid drop onto Home preserves the terminal's live view and shell sta
   await expect(secondary.getByRole("tab")).toHaveCount(1);
   await retained.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Reset layout", exact: true }).click();
-  await expect(mainHeader).not.toBeVisible();
+  await expect(mainTabs).toHaveCount(0);
   await expect(homeFrame(page).getByText("Project home", { exact: true })).toBeVisible();
 });

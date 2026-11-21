@@ -34,8 +34,6 @@ describe("ticket files tree sub-ticket section", () => {
         {
           id: `ticket-${child.id}`,
           label: `${child.shorthand} ${child.title}`,
-          icon: "Component",
-          iconColor: "gray.fg",
           iconTooltip: "Backlog",
           target: {
             kind: "page",

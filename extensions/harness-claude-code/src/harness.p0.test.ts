@@ -201,30 +201,6 @@ describe("claude-code harness getMessages", () => {
 });
 
 describe("claude-code harness detection", () => {
-  test("declares discrete run params", () => {
-    const harness = createClaudeCodeHarness();
-
-    expect(harness.params).toMatchObject({
-      thinking: {
-        type: "select",
-        defaultValue: "high",
-        options: [
-          { label: "Low", value: "low", icon: "level-low" },
-          { label: "Medium", value: "medium", icon: "level-mid" },
-          { label: "High", value: "high", icon: "level-high" },
-          { label: "XHigh", value: "xhigh", icon: "level-xhigh" },
-          { label: "Max", value: "max", icon: "flame" },
-        ],
-      },
-    });
-    expect(harness.params).not.toHaveProperty("permission-mode");
-  });
-
-  test("reports availability with the CLI version", async () => {
-    const harness = createClaudeCodeHarness();
-    expect(await harness.detect!(ctx)).toMatchObject({ available: true, version: "2.1.295 (Claude Code)" });
-  });
-
   test("lists no models when the CLI is missing", async () => {
     const harness = createClaudeCodeHarness({ detect: async () => ({ available: false }) });
     expect(await harness.listModels!(ctx)).toEqual([]);

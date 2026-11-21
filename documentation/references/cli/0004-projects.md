@@ -4,9 +4,13 @@ A project is a folder that Prompt Studio opens with its own tools, settings, dat
 
 ```sh
 pst projects create [name] [--path <folder>]
-pst projects list
+pst projects list [--cloud]
 pst projects view [--project-id <project-id>]
 pst projects delete <project-id>
+pst projects delete-local <project-id> [--discard-unsynced]   # unreleased
+pst projects download <project-id>                             # unreleased
+pst projects delete-cloud <project-id> --confirm               # unreleased
+pst projects deletion-status <project-id>                     # unreleased
 pst projects environment          # from the release after 0.43.x
 pst projects bind <project-id> --environment <environment-id> --name <name> --path <folder>   # from the release after 0.43.x
 pst projects recovery-points <project-id>   # on main
@@ -33,6 +37,14 @@ Commands find the project from the nearest `.pstdio/config.json` in the current 
 
 `delete` removes the project from Prompt Studio. The folder and its contents stay on disk. Resources that a workspace provider created follow that provider's deletion rules.
 
+Use `list --cloud` to see this device's project presence and outstanding deletion receipts as JSON. A Cloud only entry takes an explicit `download` to restore. Catalog and status commands only read existing state.
+
+`delete-local` removes this device's downloaded data and keeps the project available from Cloud. The source folder and other devices' copies stay in place. If uploads are pending or the device cannot verify completion, including when offline, pass `--discard-unsynced` to accept possible loss. The host rechecks before removal. Repeat the command to finish interrupted cleanup.
+
+`download` requires a connection to Cloud and prints whether the download is in progress or ready. The host prepares the project folder after the copy becomes ready.
+
+`delete-cloud --confirm` retires the Cloud project permanently. Downloaded copies remain available as local projects, including edits made offline. `projects local` (Make local) stops sync and keeps the shared identity available for a later merge. The deletion command prints the affected scope to stderr and an operation receipt to stdout. A receipt in state `deleting` or `needs-attention` represents unfinished cleanup. If the start reply is lost, run `deletion-status` when connected. Repeating confirmed deletion resumes the operation with the same ID. The Cloud catalog can show cached receipts offline.
+
 Run `pst projects <command> --help` for current options.
 
 `environment` and `bind` are on `main` and ship in the release after 0.43.x. The 0.43.x CLI does not have them.
@@ -52,4 +64,7 @@ Run `pst projects <command> --help` for current options.
 
 The device must have connected to Cloud once since Prompt Studio started, so it can unlock its private copies.
 
-*Updated at: 2026-11-07*
+
+Cloud JSON listing retains `account` and `membershipKnown`. When `membershipKnown` is false, `presence: "unknown"` on a locally listed copy means its Cloud membership has not been established; empty Cloud/deletion arrays are incomplete. `delete-cloud --confirm` requires a signed-in catalog account and pins the deletion to it.
+
+*Updated at: 2026-11-19*

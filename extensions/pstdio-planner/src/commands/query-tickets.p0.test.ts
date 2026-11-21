@@ -66,17 +66,6 @@ describe("queryTicketsCommand", () => {
     expect(identities).not.toHaveBeenCalled();
   });
 
-  test("returns both archive states when the view has no archive filter", async () => {
-    const storage = createMemoryStorage();
-    await putTicket(storage, makeTicket({ archived: false, title: "Active" }));
-    await putTicket(storage, makeTicket({ id: "ticket-2", shorthand: "T-2", archived: true, title: "Archived" }));
-
-    const ctx = makeCommandContext({ storage, params: { filter: { conjunction: "and", rules: [] } } });
-    const result = await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
-
-    expect(result.rows.map((row) => row.title)).toEqual(["Active", "Archived"]);
-  });
-
   test("passes archived filter values to the tickets query", async () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);

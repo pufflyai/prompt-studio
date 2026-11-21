@@ -61,6 +61,7 @@ export type {
   CreateKanbanRendererRegistryInput,
   KanbanRendererContribution,
   KanbanRendererImplementation,
+  KanbanRendererQueryResult,
   KanbanRendererQueryState,
   KanbanRendererRegistry,
   KanbanRendererStoreState,

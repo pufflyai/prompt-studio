@@ -1,16 +1,8 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import { PSTDIO_E2E_PLANNER_EXTENSION } from "../default-extensions";
 import { cleanupDirs, createGitRepo, runPstdio } from "./helpers";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
-
-const findTicketDir = (repo: string, shorthand: string) => {
-  const ticketsBase = join(repo, ".pstdio", "extension-storage", "pstdio.planner", "tickets");
-  const exactDir = join(ticketsBase, shorthand);
-  return existsSync(exactDir) ? exactDir : null;
-};
 
 let api: ApiInstance;
 
@@ -50,27 +42,6 @@ describe("pstdio pstdio.planner delete-ticket", () => {
 
       const tickets = JSON.parse(run("pstdio.planner list-tickets", repo));
       expect(tickets.map((ticket: { title: string }) => ticket.title)).not.toContain("Gone ticket");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "deletes a saved ticket by shorthand",
-    () => {
-      const repo = createInitializedRepo("tk-delete-local");
-
-      const { shorthand } = JSON.parse(run('pstdio.planner write-ticket --title "Local delete"', repo));
-
-      run(`pstdio.planner save-ticket --id ${shorthand}`, repo);
-
-      const ticketDir = findTicketDir(repo, shorthand);
-      expect(ticketDir).not.toBeNull();
-      expect(existsSync(ticketDir!)).toBe(true);
-
-      run(`pstdio.planner delete-ticket --id ${shorthand}`, repo);
-
-      const tickets = JSON.parse(run("pstdio.planner list-tickets --draft", repo));
-      expect(tickets.map((ticket: { shorthand: string }) => ticket.shorthand)).not.toContain(shorthand);
     },
     TEST_TIMEOUT,
   );

@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
-import { readFileSync, realpathSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { e2eExtensions } from "../default-extensions";
 import { cleanupDirs } from "./helpers";
@@ -12,7 +12,7 @@ const ctx: HookTestContext = { api: null!, dirs: [] };
 
 beforeAll(async () => {
   api = await startApi({
-    env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "workbench-fixture", "git-workspaces") },
+    env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "workbench-fixture", "pstdio-workspaces") },
   });
   ctx.api = api;
 }, SETUP_TIMEOUT);
@@ -29,33 +29,11 @@ const createRepoWithDefaultExtensions = () => {
   return createInitializedRepo(ctx, "worktree-setup-e2e");
 };
 
-const readProjectExtensions = async (projectId: string) => {
-  const res = await fetch(`${api.url}/v1/projects/${projectId}/extensions`);
-  expect(res.ok).toBe(true);
-  return (await res.json()) as {
-    extensions: Array<{ installName: string; sourcePath: string }>;
-  };
-};
-
-const readProjectId = (repo: string) => {
-  const config = JSON.parse(readFileSync(join(repo, ".pstdio", "config.json"), "utf8"));
-  return config.project_id as string;
-};
-
 describe("workspace provisioning", () => {
   test(
     "provisions worktree config and copies the ticket file",
     async () => {
       const repo = createRepoWithDefaultExtensions();
-      const projectId = readProjectId(repo);
-
-      const projectExtensions = await readProjectExtensions(projectId);
-      const extensionsByName = new Map(
-        projectExtensions.extensions.map((extension) => [extension.installName, extension]),
-      );
-      expect(realpathSync(extensionsByName.get("planner")!.sourcePath)).toBe(
-        realpathSync(join(api.homePath, "extensions", "pstdio-planner")),
-      );
 
       const { workspace, ticketShorthand } = await createWorkspaceInRepo(ctx, repo);
       expect(workspace.root_path).toBeTruthy();

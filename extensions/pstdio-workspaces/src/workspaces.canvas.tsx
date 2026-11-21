@@ -252,14 +252,17 @@ const CreateWorkspaceForm = (props: { onCreate: (name: string) => void }) => {
 };
 export const CreateWorkspaceModal = () => <WorkspacesPreview initial="create" />;
 
-// The multi-resource list keeps the host tab surface so it can share Main with a session.
-export const WorkspacesWithTabs = () => (
-  <Tabs.Root defaultValue="workspaces" h="full" display="flex" flexDirection="column" minH="0" size="sm">
+export const WorkspaceFilesAndChanges = () => (
+  <Tabs.Root defaultValue="files" h="full" display="flex" flexDirection="column" minH="0" size="sm">
     <Tabs.List>
-      <Tabs.Trigger value="workspaces">Workspaces</Tabs.Trigger>
+      <Tabs.Trigger value="files">Files</Tabs.Trigger>
+      <Tabs.Trigger value="changes">Changes</Tabs.Trigger>
     </Tabs.List>
-    <Tabs.Content value="workspaces" flex="1" minH="0" p="0">
-      <WorkspacesPreview />
+    <Tabs.Content value="files" flex="1" minH="0" p="0">
+      <ProjectFiles />
+    </Tabs.Content>
+    <Tabs.Content value="changes" flex="1" minH="0" p="0">
+      <WorktreeChanges />
     </Tabs.Content>
   </Tabs.Root>
 );

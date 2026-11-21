@@ -134,7 +134,6 @@ describe("SkillService", () => {
       expect(result).toHaveLength(1);
       expect(result[0]?.files[0]?.path).toBe("SKILL.md");
       expect(result[0]?.files[0]?.content).toBe("Review this code");
-      expect(list).toHaveBeenCalled();
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

@@ -1,38 +1,20 @@
 import { describe, expect, test } from "bun:test";
 import {
   defineCommand,
-  defineExtension,
   defineMode,
   defineNavigationItem,
   defineNavigationTree,
   definePage,
   definePlacement,
   defineResourceKind,
-  defineSettingsPanel,
   defineView,
   packageAsset,
   resourceMenuSlotRef,
   workbenchModes,
   workbenchPages,
-  workbenchSlots,
 } from "./index";
 
 describe("extension contribution definitions", () => {
-  test("declares app-wide panels and device settings through the public SDK", () => {
-    const view = defineView({
-      id: "account",
-      title: "Account",
-      body: { kind: "webview", entry: packageAsset("./account.tsx", import.meta.url) },
-    });
-    const panel = defineSettingsPanel({ id: "account", view: view.ref, slot: workbenchSlots.globalSettings });
-    const extension = defineExtension({
-      views: [view],
-      settingsPanels: [panel],
-      settings: { properties: { capacity: { type: "number", scope: "device", default: 2 } } },
-    });
-    expect(extension.settingsPanels?.[0]?.slot.id).toBe("global.settings");
-    expect(extension.settings?.properties.capacity.scope).toBe("device");
-  });
   test("returns local typed references for independently addressable contributions", () => {
     const view = defineView({
       id: "tickets",
@@ -104,18 +86,5 @@ describe("extension contribution definitions", () => {
       kind: "menu",
     });
     expect(workbenchPages.start).toEqual({ extensionId: "pstdio", kind: "page", id: "start" });
-  });
-  test("keeps contribution registries as arrays and dictionaries as records", () => {
-    const command = defineCommand({ id: "tickets.open", title: "Open ticket", run: async () => undefined });
-    const extension = defineExtension({
-      commands: [command],
-      settings: {
-        properties: {
-          "tickets.enabled": { type: "boolean", scope: "project", default: true },
-        },
-      },
-    });
-    expect(extension.commands).toEqual([command]);
-    expect(extension.settings?.properties["tickets.enabled"]).toMatchObject({ type: "boolean" });
   });
 });

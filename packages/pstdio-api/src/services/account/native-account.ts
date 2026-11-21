@@ -1,9 +1,7 @@
-import { hostname } from "node:os";
 import { dirname, join } from "node:path";
 import type { DeviceCommand, ProjectReturnAction, ProjectSyncStatus } from "pstdio-api-contracts";
 import type { Json } from "pstdio-sync-contracts";
 import { identitySchema } from "pstdio-sync-contracts";
-import { z } from "zod";
 import type { RouteDeps } from "../../features/deps";
 import { apiLogger } from "../../lib/logger";
 import type { startFolderRecovery } from "../relay/folder-recovery";
@@ -11,28 +9,27 @@ import type { RelayWorkbench } from "../relay/runtime";
 import { createAccountRefresh } from "./account-refresh";
 import { readAccountStatus } from "./account-status";
 import { createDeviceIdentity } from "./device-identity";
-import { readManagerAccount } from "./manager-account";
-import { ManagerRequestDenied, managerOriginSchema, managerRequest } from "./manager-client";
-import { createMissingProjectRecovery } from "./missing-project-recovery";
+import { matchesManagerLogin, type readManagerAccount } from "./manager-account";
+import { ManagerRequestDenied, managerOriginSchema } from "./manager-client";
+import { createMissingProjectRecovery, partitionCloudProjects } from "./missing-project-recovery";
 import { type CloudReturn, createNativeCloudReturn } from "./native-cloud-return";
-import { createNativeDeviceReader, readDeviceLogin } from "./native-device-read";
+import { createNativeDeviceReader, finalizeDeviceLogin, readDeviceLogin } from "./native-device-read";
 import { createNativeLoginRequests } from "./native-login-requests";
+import { createNativeLogout } from "./native-logout";
 import { createNativeManagerCall } from "./native-manager-call";
 import { createNativePresence } from "./native-presence";
-import { connectionSyncStatus, createNativeProjectSyncReader } from "./native-project-sync-read";
+import {
+  connectionSyncStatus,
+  createFolderRecoveryReader,
+  createNativeProjectSyncReader,
+} from "./native-project-sync-read";
 import { createNativeStore, type DeviceLogin } from "./native-store";
-import { initialProjectSyncStatus } from "./project-sync-readiness";
+import { createProjectCloudCatalog } from "./project-cloud-catalog";
+import { initialProjectSyncStatus, recoveringProjectSyncStatus } from "./project-sync-readiness";
 
 type FolderRecoveryOwners = (projectId: string) => ReturnType<typeof startFolderRecovery> | undefined;
 
 const RETRY_MS = 60_000;
-const loginSchema = z.object({
-  accountId: identitySchema,
-  deviceId: identitySchema,
-  token: z.string().min(1),
-  relayOrigin: z.string(),
-});
-
 const connectionFor = (login: DeviceLogin, workbenchId: string) => ({
   accountId: login.accountId,
   workbenchId,
@@ -86,6 +83,13 @@ const denied = (error: unknown) => error instanceof ManagerRequestDenied && erro
 const devicePath = (id: string) => `/v1/devices/${encodeURIComponent(identitySchema.parse(id))}`;
 const projectPath = (id: string) => `/v1/workbenches/${encodeURIComponent(identitySchema.parse(id))}`;
 
+const changeCloudMembership =
+  (call: ReturnType<typeof createNativeManagerCall>, refresh: () => Promise<void>) => async (path: string) => {
+    await call(path, {});
+    await refresh();
+    return { ok: true };
+  };
+
 const retryProjectSync = async (
   projectId: string,
   projects: Pick<RouteDeps["projectService"], "get">,
@@ -117,16 +121,20 @@ export const createNativeAccount = (input: {
 }) => {
   const store = createNativeStore(input.file);
   const presence = createNativePresence({
-    denied: async (credential) => {
-      await store.reject(credential);
+    denied: async (login) => {
+      await store.reject(login.token, login);
       await refresh();
     },
   });
   const changes = createAccountWatch();
-  const logins = createNativeLoginRequests((...args) => finishLogin(...args), changes.notify);
-  let cloudProjects: { credential: string; ids: string[]; features: { relay: boolean } } | undefined;
+  const logins = createNativeLoginRequests(
+    (...args) => finalizeDeviceLogin({ store, environment: input.environment, refresh }, ...args),
+    changes.notify,
+  );
+  let cloudProjects: Awaited<ReturnType<typeof readManagerAccount>> | undefined;
+  let online = false;
   const projectsFor = (login: DeviceLogin | null) =>
-    login?.token === cloudProjects?.credential ? cloudProjects?.ids : undefined;
+    matchesManagerLogin(cloudProjects, login) ? cloudProjects?.ids : undefined;
   let update: (connections: RelayWorkbench[]) => Promise<void> = async () => {};
   let retryProject: (projectId: string, sourceId?: string) => Promise<void> = async () => {};
   let folders: FolderRecoveryOwners = () => undefined;
@@ -160,19 +168,37 @@ export const createNativeAccount = (input: {
     removed: () => new AccountRequestError("This device was removed from your account. Log in again with pst login"),
   });
 
+  const readProjectStatus = (id: string, login: DeviceLogin | null) =>
+    connectionSyncStatus(id, login, projectsFor, projectStatus, missing);
+  const catalog = createProjectCloudCatalog({
+    accountFile: input.file,
+    login: readLogin,
+    cloud: (login) => (matchesManagerLogin(cloudProjects, login) ? cloudProjects : undefined),
+    projects: input.projects,
+    online: () => online,
+    syncStatus: async (id) => {
+      const status = await projectStatus(id);
+      return missing.recovering(id) ? recoveringProjectSyncStatus(status) : status;
+    },
+    returnedUploadState: away.removalState,
+    call,
+    refresh: () => refresh(),
+    retry: (id) => retryProject(id),
+    withdraw: (id) => missing.withdraw(id).then(() => refreshes.changed()),
+    changed: changes.notify,
+  });
+
   // Syncs every cloud project of the account that exists here, then recovers the missing ones.
   // One that cannot be recovered yet is tried again on the next refresh.
   const publish = async (login: DeviceLogin | null, recoverMissing = true) => {
     void presence.update(login);
-    const local: string[] = [];
-    const absent: string[] = [];
-    for (const id of login ? (projectsFor(login) ?? []) : []) {
-      const exists = await input.projects.get(id);
-      // Download durable data while extensions prepare; readiness remains fenced below.
-      if (exists) local.push(id);
-      // Keep the in-flight recovery in its account batch so refresh cannot cancel setup.
-      if (!exists || missing.recovering(id)) absent.push(id);
-    }
+    const withdrawn = login ? await catalog.withdrawnProjectIds(login) : new Set<string>();
+    const { local, absent } = await partitionCloudProjects(
+      login ? (projectsFor(login) ?? []) : [],
+      withdrawn,
+      input.projects.get,
+      missing.recovering,
+    );
     await update(login ? local.map((id) => connectionFor(login, id)) : []);
     if (recoverMissing) missing.recover(login ? absent.map((id) => connectionFor(login, id)) : []);
     await away.settle(login, projectsFor);
@@ -182,11 +208,13 @@ export const createNativeAccount = (input: {
     if (closed) return;
     let login = await readLogin();
     try {
-      cloudProjects = login ? await readManagerAccount(login, shutdown.signal) : undefined;
+      cloudProjects = login ? await catalog.readCloud(login, shutdown.signal) : undefined;
+      online = Boolean(cloudProjects);
     } catch (error) {
+      online = false;
       if (login && denied(error)) {
         // Another device removed this one. A newer login saved meanwhile stays.
-        await store.reject(login.token);
+        await store.reject(login.token, login);
         login = await readLogin();
         cloudProjects = undefined;
       } else if (!closed) {
@@ -200,7 +228,7 @@ export const createNativeAccount = (input: {
       retry = setTimeout(() => void refresh(), RETRY_MS);
       retry.unref?.();
     }
-    await publish(login);
+    await publish(await readLogin());
     if (!closed) changes.notify();
   };
   const refreshes = createAccountRefresh({
@@ -216,40 +244,11 @@ export const createNativeAccount = (input: {
     },
   });
   const refresh = refreshes.refresh;
-  // Logging out works offline and after removal. Removing the device at the manager is best effort.
-  const logout = () =>
-    logins.logout(async () => {
-      const login = await readLogin();
-      if (!login) {
-        await store.forget(null);
-        await refresh();
-        return { ok: true, removed: false };
-      }
-      const removed = await managerRequest(login.managerOrigin, `${devicePath(login.deviceId)}/remove`, login.token, {})
-        .then(() => true)
-        .catch(() => false);
-      await store.forget(login.token);
-      await refresh();
-      return { ok: true, removed };
-    });
-  const finishLogin = async (origin: string, session: string, signal: AbortSignal, user: { email: string }) => {
-    const { environmentId } = await input.environment.get();
-    const device = { deviceId: environmentId, name: hostname(), platform: process.platform };
-    const login = loginSchema.parse(await managerRequest(origin, "/v1/device-login", session, device, signal));
-    // The Google session is only needed to log in; the device credential replaces it.
-    await managerRequest(origin, "/api/auth/sign-out", session, {}, signal).catch(() => {});
-    signal.throwIfAborted();
-    await store.save({ managerOrigin: origin, ...login, email: user.email });
-    if (signal.aborted) {
-      await store.forget(login.token);
-      signal.throwIfAborted();
-    }
-    // Cloud discovery can wait for the network. Credential persistence completes
-    // sign-in, so a later cancellation must not turn a successful login into failure.
-    void refresh();
-  };
+  const changeMembership = changeCloudMembership(call, refresh);
+  const logout = createNativeLogout({ logins, readLogin, store, refresh });
 
   return {
+    ...catalog,
     ...createDeviceIdentity({ current, store, call }),
     sendDeviceCommand: commands.send,
     start(
@@ -272,21 +271,27 @@ export const createNativeAccount = (input: {
     },
     refresh,
     watch: changes.watch,
-    async login(managerOrigin?: string) {
-      return logins.start(readManagerOrigin(managerOrigin));
-    },
+    login: async (managerOrigin?: string) => logins.start(readManagerOrigin(managerOrigin)),
     loginStatus: (id: string) => ({ status: logins.status(id) }),
     cancelLogin: logins.cancel,
     async status() {
       const { environmentId } = await input.environment.get();
-      const account = await readAccountStatus(store, await readLogin(environmentId), cloudProjects, environmentId);
+      const login = await readLogin(environmentId);
+      const status = await readAccountStatus(
+        store,
+        login,
+        cloudProjects,
+        environmentId,
+        catalog.knownProjectIds,
+        online,
+      );
       const loginAttempt = logins.attempt();
-      return { ...account, ...(loginAttempt ? { loginAttempt } : {}) };
+      return { ...status, ...(loginAttempt && { loginAttempt }) };
     },
     projectSyncStatus: createNativeProjectSyncReader({
       login: readLogin,
       exists: (id) => input.projects.get(id),
-      read: (id, login) => connectionSyncStatus(id, login, projectsFor, projectStatus, missing),
+      read: async (id, login) => catalog.fenceLocalStatus(id, login, await readProjectStatus(id, login)),
       away: (id) => away.status(id),
       changed: () => new AccountRequestError("The account changed before the project sync read completed"),
       unknown: () => new AccountRequestError("Unknown project"),
@@ -296,16 +301,12 @@ export const createNativeAccount = (input: {
     retryProjectSync: (projectId: string, sourceId?: string) =>
       retryProjectSync(projectId, input.projects, refresh, retryProject, sourceId),
     /** The project's folder capture, download and restore owner on this device. */
-    async folderRecovery(projectId: string) {
-      if (!(await input.projects.get(projectId))) throw new AccountRequestError("Unknown project");
-      const login = await readLogin();
-      if (!login) throw new AccountRequestError("Log in first with pst login");
-      if (!projectsFor(login)?.includes(projectId))
-        throw new AccountRequestError("This project does not sync with Cloud on this device");
-      const owner = folders(projectId);
-      if (!owner) throw new AccountRequestError("Cloud sync for this project is starting. Try again shortly.");
-      return owner;
-    },
+    folderRecovery: createFolderRecoveryReader({
+      exists: input.projects.get,
+      login: readLogin,
+      projectsFor,
+      folder: (id) => folders(id),
+    }),
     logout,
     devices: createNativeDeviceReader({
       current,
@@ -321,15 +322,9 @@ export const createNativeAccount = (input: {
     },
     async syncProject(projectId: string) {
       if (!(await input.projects.get(projectId))) throw new AccountRequestError("Unknown project");
-      await call(projectPath(projectId), {});
-      await refresh();
-      return { ok: true };
+      return changeMembership(projectPath(projectId));
     },
-    async stopProjectSync(projectId: string) {
-      await call(`${projectPath(projectId)}/remove`, {});
-      await refresh();
-      return { ok: true };
-    },
+    stopProjectSync: (projectId: string) => changeMembership(`${projectPath(projectId)}/remove`),
     async close() {
       closed = true;
       shutdown.abort();
@@ -338,7 +333,7 @@ export const createNativeAccount = (input: {
       update = async () => {};
       changes.close();
       // Startup account reads can still use the database; its owner closes only after they drain.
-      await Promise.all([logins.close(), refreshes.done(), missing.close()]);
+      await Promise.all([logins.close(), refreshes.done(), missing.close(), catalog.closeLocalRemovals()]);
     },
   };
 };

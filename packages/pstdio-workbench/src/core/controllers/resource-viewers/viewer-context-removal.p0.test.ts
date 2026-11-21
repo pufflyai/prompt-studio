@@ -14,7 +14,8 @@ for (const collection of [false, true]) {
       main: { kind: "view", view: { kind: "view", id: "browser" }, presentation: "page", cardinality: "one" },
       slots: [],
     });
-    await w.navigation.openPage({
+    w.pageLocations.navigate({
+      kind: "page",
       page: viewerPage("reader"),
       resource: viewerResource("x"),
       open: "pin",
@@ -72,7 +73,8 @@ for (const collection of [false, true]) {
       slots: [],
     };
     w.pages.registerPage(container);
-    await w.navigation.openPage({
+    w.pageLocations.navigate({
+      kind: "page",
       page: viewerPage("reader"),
       resource: viewerResource("x"),
       open: "pin",
@@ -87,7 +89,12 @@ for (const collection of [false, true]) {
       locations: first.locations,
     });
     next.w.pages.registerPage(container);
-    await next.w.navigation.openPage({ page: viewerPage("reader"), resource: viewerResource("y"), open: "pin" });
+    next.w.pageLocations.navigate({
+      kind: "page",
+      page: viewerPage("reader"),
+      resource: viewerResource("y"),
+      open: "pin",
+    });
     const cached = next.w.layout.getLayout().regions.main.widgets.find((widget) => widget.resource?.id === "x")!;
     next.w.layout.activatePanel(cached.widgetId);
     expect(next.w.pages.store.getState().location?.resource?.id).toBe("x");

@@ -103,6 +103,9 @@ export const createExtensionSourceWatcher = async (
 
     const kind = registration.queued || "source";
     registration.queued = false;
+    // Uninstall removes the folder before its root watcher updates registrations.
+    // A queued edit no longer owns source bytes to hash, build or provision.
+    if (isMissingEntry(registration.sourcePath)) return;
     registration.running = true;
     input
       .onSourceChanged(registration.sourcePath, { kind })

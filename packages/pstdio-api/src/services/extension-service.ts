@@ -18,6 +18,7 @@ import type {
 } from "../features/extensions/extension-runtime";
 import type { EventBus } from "../features/sync/event-bus";
 import { activatePublishedExtensions } from "./activate-published-extension";
+import { serializeExtensionChoices } from "./extension-choice-service";
 import { createExtensionEnablement } from "./extension-enablement";
 import {
   type PruneProjectExtensionInstancesInput,
@@ -101,6 +102,11 @@ type ExtensionServiceDeps = {
       preparedRevision?: PreparedExtensionRevision;
     },
   ) => Promise<void>;
+};
+
+const projectOfInstance = async (instances: ExtensionServiceDeps["extensionInstancesService"], id: string) => {
+  const instance = await instances.get(id);
+  return instance?.scope_type === "project" ? instance.scope_id : null;
 };
 
 export const createExtensionService = (deps: ExtensionServiceDeps) => {
@@ -313,46 +319,49 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     return pruneProjectExtensionInstancesImpl({ ...deps, notifyInstalledSourcesChanged }, input);
   };
 
-  return {
-    adoptDefaultSourceForProject,
-    hasDefaultSourceChoice: deps.extensionInstancesService.hasProjectDefaultChoice,
-    activatePublishedExtensions: (inputs: Parameters<typeof activatePublishedExtensions>[1]) =>
-      activatePublishedExtensions(
-        {
-          sources: deps.installedExtensionSourcesService,
-          instances: deps.extensionInstancesService,
-          emitRemoved: (row) => deps.eventBus?.emit("installed_extension_sources", "delete", row),
-          emitInstance: emitExtensionInstance,
-          refresh: notifyInstalledSourcesChanged,
-          emit: emitInstalledSource,
-        },
-        inputs,
-      ),
-    enableInstalledSourceForProject,
-    attachRegisteredSourceForProject,
-    getInstalledSource,
-    getInstalledSourceById: deps.installedExtensionSourcesService.get,
-    getProjectExtensionInstance,
-    hasEnabledProjectSource,
-    listEnabledSourcesForProject,
-    listProjectExtensionInstances: listProjectInstances,
-    reloadInstalledSourceBySourcePath: (sourcePath: string) =>
-      reloadInstalledSourceBySourcePathImpl(reloadDeps, sourcePath),
-    removeProjectExtensionInstance,
-    pruneProjectExtensionInstances,
-    removeUnusedFolderSources: (folder: string) =>
-      removeUnusedFolderSources({ ...deps, notifyInstalledSourcesChanged }, folder),
-    ...createWebviewBuildReports(reloadDeps, mutateSource),
-    registerInstalledSource,
-    setProjectExtensionEnabled,
-    syncInstalledSourceForProject,
-    uninstallProjectExtension: async (input: { instanceId: string; projectId: string; deleteUserData?: boolean }) => {
-      const record = await getProjectExtensionInstance(input.projectId, input.instanceId);
-      if (!record) return null;
-      await assertOptional(record.installedSource);
-      return mutateSourceAndRefresh(record.installedSource.source_path, (notify) =>
-        uninstallProjectExtensionImpl({ ...deps, notifyInstalledSourcesChanged: notify }, input),
-      );
+  return serializeExtensionChoices(
+    {
+      adoptDefaultSourceForProject,
+      hasDefaultSourceChoice: deps.extensionInstancesService.hasProjectDefaultChoice,
+      activatePublishedExtensions: (inputs: Parameters<typeof activatePublishedExtensions>[1]) =>
+        activatePublishedExtensions(
+          {
+            sources: deps.installedExtensionSourcesService,
+            instances: deps.extensionInstancesService,
+            emitRemoved: (row) => deps.eventBus?.emit("installed_extension_sources", "delete", row),
+            emitInstance: emitExtensionInstance,
+            refresh: notifyInstalledSourcesChanged,
+            emit: emitInstalledSource,
+          },
+          inputs,
+        ),
+      enableInstalledSourceForProject,
+      attachRegisteredSourceForProject,
+      getInstalledSource,
+      getInstalledSourceById: deps.installedExtensionSourcesService.get,
+      getProjectExtensionInstance,
+      hasEnabledProjectSource,
+      listEnabledSourcesForProject,
+      listProjectExtensionInstances: listProjectInstances,
+      reloadInstalledSourceBySourcePath: (sourcePath: string) =>
+        reloadInstalledSourceBySourcePathImpl(reloadDeps, sourcePath),
+      removeProjectExtensionInstance,
+      pruneProjectExtensionInstances,
+      removeUnusedFolderSources: (folder: string) =>
+        removeUnusedFolderSources({ ...deps, notifyInstalledSourcesChanged }, folder),
+      ...createWebviewBuildReports(reloadDeps, mutateSource),
+      registerInstalledSource,
+      setProjectExtensionEnabled,
+      syncInstalledSourceForProject,
+      uninstallProjectExtension: async (input: { instanceId: string; projectId: string; deleteUserData?: boolean }) => {
+        const record = await getProjectExtensionInstance(input.projectId, input.instanceId);
+        if (!record) return null;
+        await assertOptional(record.installedSource);
+        return mutateSourceAndRefresh(record.installedSource.source_path, (notify) =>
+          uninstallProjectExtensionImpl({ ...deps, notifyInstalledSourcesChanged: notify }, input),
+        );
+      },
     },
-  };
+    (instanceId) => projectOfInstance(deps.extensionInstancesService, instanceId),
+  );
 };

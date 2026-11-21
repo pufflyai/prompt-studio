@@ -1,6 +1,8 @@
 import { type SQL, sql } from "drizzle-orm";
 import { queryField } from "pstdio-sync/records";
 import type { Json, StoragePredicate, StorageRecordIndex } from "pstdio-sync-contracts";
+import { recordIdentityPrefixSql } from "./record-identity-order";
+import { recordPrefixCandidatesSql } from "./record-prefix-candidates";
 import { projectionKey } from "./record-projection-codec";
 import { recordCandidateSourceSql, recordRelatedOrderCandidatesSql } from "./record-query-candidates";
 import { orderingPrefix, type QuerySqlOwner, recordFieldSql, sqlLiteral } from "./record-query-sql";
@@ -21,6 +23,7 @@ export const pageOrderSql = (
           ? [sql`${orderingPrefix(index, sort.field, resolve, owner)} ${sql.raw(sort.direction)} NULLS LAST`, ...full]
           : full;
       }),
+      sql`${recordIdentityPrefixSql()} ASC`,
       sql`record_id COLLATE "C" ASC`,
     ],
     sql`, `,
@@ -44,6 +47,7 @@ export const recordPageSql = (
     (sort) => sql`coalesce(${recordFieldSql(index, sort.field, undefined, resolve, owner)}, 'null'::jsonb)`,
   );
   const candidates =
+    recordPrefixCandidatesSql(index, where, limit, offset, owner) ??
     recordCandidateSourceSql(index, predicate, where, limit, offset, resolve, owner) ??
     recordRelatedOrderCandidatesSql(index, where, limit, offset, resolve, owner);
   return sql`
@@ -78,6 +82,15 @@ export const pageAfterSql = (
       equal.push(sql`${field} IS NOT DISTINCT FROM ${value ?? sql`NULL`}`);
     }
   }
-  alternatives.push(sql`(${sql.join([...equal, sql`record_id COLLATE "C" > ${after.recordId}`], sql` AND `)})`);
+  alternatives.push(
+    sql`(${sql.join(
+      [
+        ...equal,
+        sql`${recordIdentityPrefixSql()} >= ${recordIdentityPrefixSql(sql`${after.recordId}::text`)}`,
+        sql`record_id COLLATE "C" > ${after.recordId}`,
+      ],
+      sql` AND `,
+    )})`,
+  );
   return sql`(${sql.join(alternatives, sql` OR `)})`;
 };

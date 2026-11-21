@@ -1,19 +1,15 @@
 import { expect, test } from "bun:test";
 import { createResourceViewerFixture, viewerPage, viewerResource } from "./resource-viewer-test-fixture";
 
-test("opening a resource from a browser focuses its existing auxiliary viewer and preserves Main", async () => {
-  const { w, openMain, openSide, other, side } = createResourceViewerFixture();
+test("opening a resource from a browser transfers its hidden auxiliary view into Main", async () => {
+  const { w, openMain, openSide, other } = createResourceViewerFixture();
   other();
   await openSide("x");
-  const viewer = side();
   w.sidePanel.setMode("closed");
-  const location = w.pages.store.getState().location;
   await openMain("x");
-  expect(w.pages.store.getState().location).toBe(location);
-  expect(side().instanceId).toBe(viewer.instanceId);
-  expect(w.sidePanel.getMode()).toBe("attached");
-  expect(w.focus.getActiveRegion()).toBe("side");
-  expect(w.pages.getContent()?.resource).toBeUndefined();
+  expect(w.pages.getContent()?.resource?.id).toBe("x");
+  expect(w.layout.listPanelInstances("side")).toHaveLength(0);
+  expect(w.focus.getActiveRegion()).toBe("main");
 });
 
 test("opening a new resource targets Main and leaves an auxiliary viewer unchanged", async () => {
@@ -40,7 +36,7 @@ test("a viewer switches itself without changing Main URL context", async () => {
   expect(w.pages.store.getState().location).toBe(location);
 });
 
-test("a duplicate viewer switch focuses Main and keeps the requesting viewer on its old resource", async () => {
+test("a duplicate viewer switch transfers the resource into the requesting panel", async () => {
   const { w, openMain, openSide, side } = createResourceViewerFixture();
   await openMain("x");
   await openSide("y");
@@ -49,27 +45,26 @@ test("a duplicate viewer switch focuses Main and keeps the requesting viewer on 
     from: viewerResource("y"),
     resource: viewerResource("x"),
   });
-  expect(side().resource?.id).toBe("y");
-  expect(w.pages.getContent()?.resource?.id).toBe("x");
-  expect(w.focus.getActiveRegion()).toBe("main");
+  expect(side().resource?.id).toBe("x");
+  expect(w.pages.getContent()?.resource).toBeUndefined();
+  expect(w.layout.listPanelInstances("side")).toHaveLength(1);
 });
 
-test("opening a panel for a resource already shown in Main focuses Main instead of duplicating it", async () => {
+test("opening a panel for a resource already shown in Main transfers it without duplication", async () => {
   const { w, openMain, openSide } = createResourceViewerFixture();
   await openMain("x");
   await openSide("x");
-  expect(w.layout.listPanelInstances("side")).toEqual([]);
-  expect(w.focus.getActiveRegion()).toBe("main");
+  expect(w.layout.listPanelInstances("side")).toHaveLength(1);
+  expect(w.pages.getContent()?.resource).toBeUndefined();
 });
 
-test("opening an inactive auxiliary resource selects that tab without moving it", async () => {
+test("opening an inactive auxiliary resource brings it to Main and preserves its peers", async () => {
   const { w, openMain, openSide, side } = createResourceViewerFixture();
   await openSide("x");
-  const first = side();
   await openSide("y");
   const second = side();
   await openMain("x");
-  expect(side().instanceId).toBe(first.instanceId);
+  expect(w.pages.getContent()?.resource?.id).toBe("x");
   expect(w.layout.listPanelInstances("side").map((panel) => panel.instanceId)).toContain(second.instanceId);
 });
 

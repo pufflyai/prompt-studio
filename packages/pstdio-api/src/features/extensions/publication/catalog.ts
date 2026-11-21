@@ -39,7 +39,17 @@ export const publishedEntries = (
 
 export const publishExtension = async (
   deps: ExtensionsRouteDeps,
-  input: { projectId: string; instanceId: string; expectedRevision: string },
+  input: {
+    projectId: string;
+    instanceId: string;
+    expectedRevision: string;
+    replacement?: {
+      extensionId: string;
+      expectedRevision: string;
+      enabled: boolean;
+      beforeCommit: () => Promise<void>;
+    };
+  },
 ) => {
   const source = await deps.extensionService.getProjectExtensionInstance(input.projectId, input.instanceId);
   if (!source) throw new Error("Extension instance not found");
@@ -62,7 +72,7 @@ export const publishExtension = async (
     extensionId: installedSource.extension_id,
     revision: asset.sha256,
     version: prepared.loaded.metadata.version,
-    enabled: previous.success ? previous.data.enabled : source.instance.enabled,
+    enabled: input.replacement?.enabled ?? (previous.success ? previous.data.enabled : source.instance.enabled),
   };
-  return catalog.select(value, asset, input.expectedRevision);
+  return catalog.select(value, asset, input.expectedRevision, input.replacement);
 };

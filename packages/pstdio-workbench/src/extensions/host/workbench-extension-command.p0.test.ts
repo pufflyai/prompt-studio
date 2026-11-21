@@ -1,9 +1,73 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbench } from "../../core";
 import {
+  createResourceViewerFixture,
+  viewerPage,
+  viewerResource,
+} from "../../core/controllers/resource-viewers/resource-viewer-test-fixture";
+import {
   executeWorkbenchExtensionCommand,
   executeWorkbenchExtensionCommandResponse,
 } from "./workbench-extension-command";
+
+for (const type of ["record", "draft"])
+  test(`creating a ${type} in a tabbed Main after its page moved keeps the resource in a tab`, async () => {
+    const { w } = createResourceViewerFixture({ homePage: true });
+    w.movePanel(w.pages.getContent()!.widgetId, "side");
+    expect(w.pages.store.getState().activePageId).toBeUndefined();
+    await executeWorkbenchExtensionCommandResponse(
+      {
+        projectId: "project",
+        workbench: w,
+        executeCommand: () => ({
+          outcome: {
+            ok: true,
+            status: "success",
+            navigationRequests: [
+              {
+                kind: "page",
+                page: viewerPage("reader"),
+                resource: viewerResource("created", type),
+              },
+            ],
+          },
+        }),
+      },
+      "create",
+    );
+    expect(w.pages.store.getState().activePageId).toBeUndefined();
+    expect(w.layout.getActivePanel("main")?.resource).toMatchObject({ id: "created", type });
+    expect(w.pages.getContent()).toBeUndefined();
+  });
+
+for (const region of ["main", "side", "secondary"] as const)
+  test(`a resource creation result honors its Add destination: ${region}`, async () => {
+    const { w } = createResourceViewerFixture();
+    const location = w.pages.store.getState().location;
+    await executeWorkbenchExtensionCommandResponse(
+      {
+        projectId: "project",
+        workbench: w,
+        executeCommand: () => ({
+          outcome: {
+            ok: true,
+            status: "success",
+            navigationRequests: [
+              {
+                kind: "page",
+                page: viewerPage("reader"),
+                resource: viewerResource("created"),
+              },
+            ],
+          },
+        }),
+      },
+      "create",
+      { region },
+    );
+    expect(w.pages.store.getState().location).toEqual(location);
+    expect(w.layout.getActivePanel(region)?.resource?.id).toBe("created");
+  });
 
 const setupPage = () => {
   const workbench = createWorkbench();

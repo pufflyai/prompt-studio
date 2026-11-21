@@ -1,20 +1,16 @@
 import { Box, Grid } from "@chakra-ui/react";
-import { Header, PANEL_HEADER_CONTROL_SIZE, ResizableSplitLayout } from "@pstdio/ui";
-import { headerTrailingMenuPath, type WorkbenchCore, type WorkbenchRegionSize } from "../../core";
+import { ResizableSplitLayout } from "@pstdio/ui";
+import type { WorkbenchCore, WorkbenchRegionSize } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
-import { WorkbenchHeaderActions } from "../header/header-actions";
 import { WorkbenchNavChrome } from "../header/workbench-nav-chrome";
-import { WorkbenchPageMenuHeader } from "../panel-menu/page-menu-header";
-import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
+import { WorkbenchPanelMenuLayout } from "../panel-menu/panel-menu";
 import { WorkbenchPanelDropFrame } from "../region/panel-drop-frame";
 import { WorkbenchRegion } from "../region/region";
-import { useWorkbenchRegionTabsVisible, WorkbenchRegionTabs } from "../region/region-tabs";
 import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
-import { WorkbenchHeaderBorder } from "./header-bottom-border";
 import { useWorkbenchMainPanels } from "./use-workbench-main-panels";
 import { WorkbenchSecondaryPanel } from "./workbench-secondary-panel";
 
@@ -27,7 +23,6 @@ interface WorkbenchBodyProps {
 
 const SECONDARY_PANEL_SIZE = { defaultPx: 240, minPx: 128, maxPx: 420 };
 const SECONDARY_PANEL_CONTENT_MIN_SIZE_PX = 240;
-const mainHeaderTrailingMenuPath = headerTrailingMenuPath("main");
 
 const resolveRegionSize = (
   regionSize: WorkbenchRegionSize | undefined,
@@ -38,45 +33,6 @@ const resolveRegionSize = (
   minPx: regionSize?.minPx ?? fallback.minPx,
   maxPx: regionSize ? regionSize.maxPx : fallback.maxPx,
 });
-
-interface MainHeaderBarProps {
-  workbench: WorkbenchCore;
-  hasMainHeader: boolean;
-}
-
-const MainHeaderBar = (props: MainHeaderBarProps) => {
-  const { workbench, hasMainHeader } = props;
-  const hasMainContentTabs = useWorkbenchRegionTabsVisible(workbench, "main");
-  const policy = usePanelPolicy(workbench, "main");
-  if (!policy.showHeader) return null;
-
-  return (
-    <Header
-      data-workbench-panel-header="main"
-      variant="main"
-      bg={workbenchBackgrounds.main}
-      position="relative"
-      flexShrink={0}
-      gap="xs"
-      overflow="hidden"
-      overflowY="hidden"
-    >
-      <WorkbenchRegionTabs workbench={workbench} region="main" />
-      {/* The tab strip grows into the empty header, so only claim space when a
-          main-header view is actually mounted or when there are no tabs to claim it. */}
-      <Box flex={hasMainHeader || !hasMainContentTabs ? "1" : "0"} h="full" minW="0" overflow="hidden">
-        <WorkbenchRegion workbench={workbench} region="main-header" title="Main header" />
-      </Box>
-      <WorkbenchHeaderActions
-        workbench={workbench}
-        menuPath={mainHeaderTrailingMenuPath}
-        controlSize={PANEL_HEADER_CONTROL_SIZE}
-      />
-      <WorkbenchPanelMenuOpeners workbench={workbench} panel="main" />
-      <WorkbenchHeaderBorder workbench={workbench} region="main-header" />
-    </Header>
-  );
-};
 
 export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const { workbench, hasNav, panelControls, fullscreenControlsInTitleBar } = props;
@@ -123,7 +79,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
     <Grid
       data-workbench-panel="main"
       data-workbench-page={pageId}
-      gridTemplateRows="auto auto minmax(0, 1fr)"
+      gridTemplateRows="auto minmax(0, 1fr)"
       h="full"
       minH="0"
       minW="0"
@@ -135,15 +91,12 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       <WorkbenchNavChrome
         workbench={workbench}
         hasNav={hasNav}
+        hasMainHeader={hasMainHeader}
         panelControls={panelControls}
         fullscreenControlsInTitleBar={fullscreenControlsInTitleBar}
       />
-      <Box display={fullscreen ? "none" : "flex"} flexDirection="column" minW="0">
-        <MainHeaderBar workbench={workbench} hasMainHeader={hasMainHeader} />
-        <WorkbenchPageMenuHeader workbench={workbench} />
-      </Box>
       <WorkbenchTabDropTarget region="main" />
-      <Box gridRow="3" h="full" minH="0" minW="0" overflow="hidden">
+      <Box gridRow="2" h="full" minH="0" minW="0" overflow="hidden">
         {mainPanelWithMenus}
       </Box>
     </Grid>

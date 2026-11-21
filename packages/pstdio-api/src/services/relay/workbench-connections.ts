@@ -12,9 +12,12 @@ export const createWorkbenchConnections = <T extends { done: Promise<unknown>; c
     },
     async remove(id: string) {
       const connection = connections.get(id);
-      connection?.close();
-      await connection?.done;
-      connections.delete(id);
+      try {
+        connection?.close();
+        await connection?.done;
+      } finally {
+        connections.delete(id);
+      }
     },
     close() {
       for (const connection of connections.values()) connection.close();

@@ -9,7 +9,7 @@ import type { ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionContributions } from "./extension-contributions";
 import { ExtensionIcon } from "./extension-icon";
 import { ExtensionIdentity } from "./extension-identity";
-import { ExtensionProvenance } from "./extension-provenance";
+import { ExtensionAuthorBadge } from "./extension-labels";
 
 interface AvailableExtensionDetailProps {
   extension: MarketplaceExtension;
@@ -62,7 +62,7 @@ export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) =
                 </Flex>
                 <Stack gap="0" flex="1" minW="0">
                   <Text textStyle="heading/M">{extension.displayName}</Text>
-                  <ExtensionProvenance extension={extension} />
+                  <ExtensionAuthorBadge author={extension.author} />
                   <ExtensionIdentity value={extensionId} />
                   <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle" truncate>
                     {extension.publisher ? `${extension.publisher} · ` : ""}

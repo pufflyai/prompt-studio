@@ -74,7 +74,7 @@ export const CompactInstalledWork: Story = {
 export const CompactExtensionsToInstall: Story = {
   id: "onboarding-setup--compact-extensions-to-install",
   description:
-    "Continue to see Home, Onboarding, Themes and Skills already installed, with Workspaces selected for Coding.",
+    "Continue to see Home, Onboarding, Themes and Skills already installed, with Workspaces and Terminal selected for Coding.",
 };
 
 export const Planning: Story = {

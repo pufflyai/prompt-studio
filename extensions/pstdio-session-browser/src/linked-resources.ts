@@ -7,6 +7,7 @@ import {
   resourceKey,
   type TreeViewSection,
 } from "@pstdio/sdk/extensions";
+import { resourceLinkTarget } from "./resource-link-target";
 
 const sectionFor = (resource: ResourceRef) => {
   if (resource.type === "ticket") return { id: "tickets", label: l10n("links.tickets", "Tickets") };
@@ -50,7 +51,7 @@ export const listSessionLinks = async (
       label: peer.label ?? peer.shorthand ?? l10n("links.unavailable", "Unavailable resource"),
       icon: peer.icon ?? "link",
       resource: peer,
-      target,
+      target: target && resourceLinkTarget(target),
       disabled: !target,
     });
     sections.set(group.id, section);

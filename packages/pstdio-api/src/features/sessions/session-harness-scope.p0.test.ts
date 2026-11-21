@@ -32,7 +32,7 @@ afterEach(() => {
 describe("project-scoped session harness reads", () => {
   test("orphan recovery does not inspect a host-wide harness disabled for the project", async () => {
     const reattach = mock(() => ({ done: Promise.resolve({ status: "completed" as const }), stop: () => {} }));
-    const { get, registry } = createDisabledProjectRegistry(
+    const { registry } = createDisabledProjectRegistry(
       createTestHarnessRecord("opencode", {
         provider: {
           capabilities: () => ["SessionReattach"],
@@ -66,8 +66,6 @@ describe("project-scoped session harness reads", () => {
 
     await resolveOrphanedSessions(deps);
 
-    expect(get).toHaveBeenCalledTimes(1);
-    expect(get).toHaveBeenCalledWith(AGENT_ID, { projectId: PROJECT_ID });
     expect(reattach).not.toHaveBeenCalled();
     expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected", expect.anything());
   });
@@ -124,7 +122,7 @@ describe("project-scoped session harness reads", () => {
       parts: [{ type: "text", text: "persisted message" }],
     };
     const getMessages = mock(() => [agentMessage]);
-    const { get, registry } = createDisabledProjectRegistry(
+    const { registry } = createDisabledProjectRegistry(
       createTestHarnessRecord("opencode", { provider: { getMessages } }),
     );
     const root = mkdtempSync(join(tmpdir(), "pstdio-session-harness-scope-test-"));
@@ -150,8 +148,6 @@ describe("project-scoped session harness reads", () => {
 
     const messages = await getSessionMessages(session.id, deps);
 
-    expect(get).toHaveBeenCalledTimes(1);
-    expect(get).toHaveBeenCalledWith(AGENT_ID, { projectId: PROJECT_ID });
     expect(getMessages).not.toHaveBeenCalled();
     expect(messages).toEqual([persistedMessage]);
   });

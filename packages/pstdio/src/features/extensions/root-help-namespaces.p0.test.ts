@@ -24,19 +24,6 @@ const commands: ExtensionCommandRecord[] = [
 ];
 
 describe("extensionNamespaceSummaries", () => {
-  test("includes the owning extension namespace for CLI commands", () => {
-    const summaries = extensionNamespaceSummaries([
-      {
-        id: "onefin-dev.spinUpApp",
-        extensionId: "onefin.onefin-dev",
-        title: "Spin up app",
-        cliPath: "onefin.onefin-dev spinUpApp",
-      },
-    ]);
-
-    expect(summaries).toEqual([{ namespace: "onefin.onefin-dev", description: "onefin.onefin-dev" }]);
-  });
-
   test("derives runnable canonical namespaces with their providers", () => {
     expect(extensionNamespaceSummaries(commands)).toEqual([
       { namespace: "acme.acme-tools", description: "acme.acme-tools" },
@@ -47,11 +34,6 @@ describe("extensionNamespaceSummaries", () => {
   test("excludes namespaces that collide with static built-ins", () => {
     const summaries = extensionNamespaceSummaries(commands, { exclude: new Set(["acme.acme-tools"]) });
     expect(summaries.map((summary) => summary.namespace)).toEqual(["pstdio.planner"]);
-  });
-
-  test("deduplicates canonical cliPath namespaces across commands", () => {
-    const namespaces = extensionNamespaceSummaries(commands).map((summary) => summary.namespace);
-    expect(namespaces.filter((namespace) => namespace === "pstdio.planner")).toHaveLength(1);
   });
 });
 

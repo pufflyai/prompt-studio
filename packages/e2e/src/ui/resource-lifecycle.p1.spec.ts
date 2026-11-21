@@ -5,6 +5,7 @@ import {
   getPlannerTicketStatuses,
   listPlannerTickets,
 } from "../helpers/planner-api";
+import { nativePublicTextEditor } from "../helpers/verify-public-text-editor";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
 
@@ -54,7 +55,7 @@ test("returns to a resource's parent after deleting the open resource", async ({
   const ticketCard = page.getByTestId("renderer-card").filter({ hasText: "Delete open resource" }).first();
   await expect(ticketCard).toBeVisible();
   await ticketCard.getByText("Delete open resource", { exact: true }).click();
-  await expect(page.getByTestId("content-editable").first()).toContainText("Delete open resource");
+  await expect(nativePublicTextEditor(page)).toContainText("Delete open resource");
 
   await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
   const deleteResponse = page.waitForResponse(
@@ -90,7 +91,7 @@ test("remote deletion closes a clean dashboard while keeping another dashboard's
       await prepareDashboard(dashboard, project.id);
       await dashboard.goto(`${apiBase}/projects/${project.id}/extensions/pstdio.planner/tickets`);
       await dashboard.getByTestId("renderer-card").filter({ hasText: ticket.title }).first().click();
-      await expect(dashboard.getByTestId("content-editable").first()).toContainText(ticket.title);
+      await expect(nativePublicTextEditor(dashboard)).toContainText(ticket.title);
     }
     await page.route("**/text-editing/request", async (route) => {
       if (route.request().postDataJSON()?.request?.operation === "submit") {
@@ -99,7 +100,7 @@ test("remote deletion closes a clean dashboard while keeping another dashboard's
       }
       await route.continue();
     });
-    const editor = page.getByTestId("content-editable").first();
+    const editor = nativePublicTextEditor(page);
     await editor.click();
     await page.keyboard.press("ControlOrMeta+End");
     await page.keyboard.insertText(" Keep this unsaved draft.");
@@ -119,14 +120,14 @@ test("remote deletion closes a clean dashboard while keeping another dashboard's
     await expect(editor).toContainText("Keep this unsaved draft.");
     await page.getByRole("navigation", { name: "breadcrumb" }).getByText("Tickets", { exact: true }).click();
     await expect(page.getByRole("button", { name: "Create row", exact: true })).toBeVisible();
-    await expect(editor).not.toBeVisible();
+    await expect(editor).toHaveCount(0);
   } finally {
     await Promise.all(held.map((route) => route.abort().catch(() => undefined)));
     await otherContext.close();
   }
 });
 
-test("a removed note's pending draft stays recoverable until its tab is explicitly closed", async ({
+test("a removed note's pending draft stays recoverable until its page is explicitly left", async ({
   page,
   request,
 }) => {
@@ -145,15 +146,14 @@ test("a removed note's pending draft stays recoverable until its tab is explicit
   const note = await noteCommand("create", { title: "Recover before closing" });
   await prepareDashboard(page, project.id);
   await page.goto(`${apiBase}/projects/${project.id}/extensions/pstdio.planner/tickets`);
-  await page.getByRole("option", { name: "Notes", exact: true }).click();
-  await page.getByRole("option", { name: note.title, exact: true }).click();
-  const tabId = await page
-    .getByRole("tab", { name: note.title, exact: true })
-    .locator("..")
-    .getAttribute("data-workbench-tab");
-  expect(tabId).toBeTruthy();
-  const tab = page.locator(`[data-workbench-tab="${tabId}"]`);
-  const editor = page.getByTestId("content-editable").filter({ visible: true }).first();
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  await sidenav.getByRole("option", { name: "Notes", exact: true }).click();
+  await sidenav.getByRole("option", { name: note.title, exact: true }).click();
+  // Notes open as single-resource pages; the breadcrumb names the open note.
+  const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
+  await expect(breadcrumb.getByText(note.title, { exact: true })).toBeVisible();
+  // The note body loads after the page's Activity composer, so select the body editor itself.
+  const editor = nativePublicTextEditor(page);
   await expect(editor).toBeVisible();
   const held: import("@playwright/test").Route[] = [];
   await page.route("**/text-editing/request", async (route) => {
@@ -166,18 +166,28 @@ test("a removed note's pending draft stays recoverable until its tab is explicit
   try {
     await editor.fill("Recover this removed note.");
     await expect.poll(() => held.length).toBe(1);
+    // After removal the note's tab query answers without a title; the page must keep the title it showed.
+    const tabRefresh = page.waitForResponse(async (response) => {
+      if (!response.url().includes("/pstdio.notes.page.note.%24main.tab.query/") || !response.ok()) return false;
+      const body = await response.json().catch(() => undefined);
+      return body?.outcome?.status === "success" && JSON.stringify(body.outcome.value) === "{}";
+    });
     await noteCommand("delete", { noteId: note.id });
     await expect(page.getByText("This resource was removed.", { exact: false })).toBeVisible();
     const saveResponse = page.waitForResponse((response) => response.request() === held[0].request());
     await held[0].continue();
-    const refused = await (await saveResponse).json();
-    expect(refused.ok).toBe(false);
+    // The text source refuses the save because the note is gone; Notes reports a missing note as read-only.
+    expect(await (await saveResponse).json()).toMatchObject({
+      ok: false,
+      error: { code: expect.stringMatching(/^source_(retired|unavailable|read_only)$/) },
+    });
     held.length = 0;
     await expect(editor).toContainText("Recover this removed note.");
-    await expect(tab).toBeVisible();
-    await tab.getByRole("button", { name: /^Close/ }).click();
-    await expect(tab).toHaveCount(0);
-    await expect(page.getByTestId("content-editable")).toHaveCount(0);
+    await tabRefresh;
+    await expect(breadcrumb.getByText(note.title, { exact: true })).toBeVisible();
+    await breadcrumb.getByText("Notes", { exact: true }).click();
+    await expect(breadcrumb.getByText(note.title, { exact: true })).toHaveCount(0);
+    await expect(editor).toHaveCount(0);
   } finally {
     await Promise.all(held.map((route) => route.abort().catch(() => undefined)));
   }

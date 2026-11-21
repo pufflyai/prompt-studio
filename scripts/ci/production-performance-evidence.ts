@@ -14,7 +14,7 @@ export const productionPerformanceEvidence = (
   const metadata = read("metadata.json");
   const native = read("results.json");
   const platform = `${run.target.platform}-${run.target.arch}`;
-  const checks = performanceChecks(run.productionFamily!, platform);
+  const checks = performanceChecks(run.productionFamily!, plan.source.sha, platform);
   if (
     !checks.length ||
     [metadata, native].some(

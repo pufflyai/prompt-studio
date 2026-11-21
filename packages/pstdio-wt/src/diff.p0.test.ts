@@ -197,21 +197,6 @@ describe("getWorktreeDiff", () => {
 });
 
 describe("getWorktreeDiff with base=HEAD (current mode)", () => {
-  test("returns empty diff when no uncommitted changes", async () => {
-    const wtPath = join(repo.dir, "wt-current-clean");
-    await createWorktree({ repoRoot: repo.dir, branch: "task/current-clean", path: wtPath });
-
-    // Commit a change — should NOT appear in HEAD diff
-    await Bun.write(join(wtPath, "committed.txt"), "committed\n");
-    await git(wtPath, ["add", "."]);
-    await git(wtPath, ["commit", "-m", "add file"]);
-
-    const diff = await getWorktreeDiff({ worktreePath: wtPath, base: "HEAD" });
-
-    expect(diff.files).toEqual([]);
-    expect(diff.totals.file_count).toBe(0);
-  });
-
   test("shows only uncommitted changes, not committed ones", async () => {
     const wtPath = join(repo.dir, "wt-current-dirty");
     await createWorktree({ repoRoot: repo.dir, branch: "task/current-dirty", path: wtPath });

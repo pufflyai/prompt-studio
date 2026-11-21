@@ -97,25 +97,28 @@ test("navigates ticket ancestry to a linked workspace and back", async ({ page, 
     await expect(workspaceRow).toBeVisible();
     await workspaceRow.click();
 
+    // A ticket's linked workspace previews in Side, so Main keeps the ticket and its ancestry.
+    const side = page.locator('[data-workbench-region="side"]');
+    await expect(
+      page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { selected: true }),
+    ).toBeVisible();
     await expect(breadcrumb).toContainText(root.shorthand);
     await expect(breadcrumb).toContainText(parent.shorthand);
     await expect(breadcrumb).toContainText(child.shorthand);
-    await expect(breadcrumb).toContainText(attempt.workspace.workspace_shorthand);
+    await expect(
+      sidenav.getByRole("option", { name: `${child.shorthand} ${child.title}`, exact: true }),
+    ).toHaveAttribute("aria-selected", "true");
 
-    // Opening a file keeps the workspace under its ticket instead of the Workspaces list.
-    await page.getByRole("tab", { name: "Files" }).click();
+    // A row in the preview's Files menu opens the file in Side too, so Main keeps the ticket and its ancestry.
+    await side.getByRole("button", { name: "Open Side left menu", exact: true }).click();
     await page.getByRole("option", { name: /^README\.md/ }).click();
-    await expect(page.getByText("resource hierarchy e2e")).toBeVisible();
-    await expect(breadcrumb).toContainText(child.shorthand);
-    await expect(breadcrumb).toContainText(attempt.workspace.workspace_shorthand);
-    await expect(breadcrumb).not.toContainText("Workspaces");
-
-    await page.getByRole("button", { name: "Navigate back" }).click();
+    await expect(side).toContainText(/resource\s+hierarchy\s+e2e/);
     await expect(page).not.toHaveURL(/document=/);
-    await expect(breadcrumb).toContainText(attempt.workspace.workspace_shorthand);
-    await page.getByRole("button", { name: "Navigate back" }).click();
+    await expect(breadcrumb).toContainText(root.shorthand);
     await expect(breadcrumb).toContainText(child.shorthand);
-    await expect(breadcrumb).not.toContainText(attempt.workspace.workspace_shorthand);
+    await expect(
+      page.locator('[data-workbench-panel-header="main"]').getByRole("tab", { name: "Workspaces", exact: true }),
+    ).toHaveCount(0);
     await sidenav
       .getByRole("option", { name: `${child.shorthand} ${child.title}`, exact: true })
       .click({ button: "right" });

@@ -2,12 +2,7 @@ import { describe, expect, it } from "bun:test";
 import { isValidElement } from "react";
 
 import { CollectionBadge } from "./collection-badge";
-import {
-  collectDisplayBadges,
-  collectDisplayCustomSlots,
-  getAttributeBadgeColorPalette,
-  renderBadgeListDisplay,
-} from "./kanban-renderer-helpers";
+import { collectDisplayBadges, collectDisplayCustomSlots, renderBadgeListDisplay } from "./kanban-renderer-helpers";
 import type { AttributeDescriptor, KanbanRendererRow } from "./types";
 
 const attributes: AttributeDescriptor[] = [
@@ -100,16 +95,6 @@ describe("collectDisplayBadges", () => {
     };
 
     expect(collectDisplayBadges(row, badgeListAttributes, ["workspace"])).toEqual([]);
-  });
-});
-
-describe("getAttributeBadgeColorPalette", () => {
-  it("keeps tag badge containers neutral when enum colors are declared", () => {
-    expect(getAttributeBadgeColorPalette({ attributeId: "status", label: "Done", color: "green" })).toBe("gray");
-  });
-
-  it("falls back to neutral badges when no color is declared", () => {
-    expect(getAttributeBadgeColorPalette({ attributeId: "status", label: "Done" })).toBe("gray");
   });
 });
 

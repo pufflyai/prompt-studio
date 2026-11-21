@@ -1,5 +1,6 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
+import { Switch } from "@pstdio/ui";
 import { useState } from "react";
 import { PerformancePopoverContent, type PerformancePopoverContentProps } from "./performance-popover-content";
 import {
@@ -34,6 +35,44 @@ const meta = {
 } satisfies CanvasMeta<typeof PerformancePopoverContent>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;
+const RenderHighlightingDesign = () => {
+  const [enabled, setEnabled] = useState(false);
+  const [open, setOpen] = useState(true);
+  const [supported, setSupported] = useState(true);
+  return (
+    <Stack gap="sm">
+      <Switch checked={supported} onCheckedChange={({ checked }) => setSupported(checked)}>
+        Supported build
+      </Switch>
+      <Button size="sm" variant="ghost" onClick={() => setOpen(!open)}>
+        {open ? "Close popover" : "Open popover"}
+      </Button>
+      {open ? (
+        <Stack gap="sm">
+          <PerformancePopoverContent
+            snapshot={smoothSnapshot}
+            onCopy={() => {}}
+            onDismissActionError={() => {}}
+            onPause={() => {}}
+            onResume={() => {}}
+            renderOverlay={{
+              state: { supported, enabled: enabled && supported, scope: "workbench" },
+              onEnabledChange: setEnabled,
+            }}
+          />
+        </Stack>
+      ) : (
+        <Text textStyle="label/S/regular">
+          {enabled && supported ? "Workbench highlighting stays active" : "Highlighting off"}
+        </Text>
+      )}
+    </Stack>
+  );
+};
+export const ReactRenderHighlighting: Story = {
+  id: "extensions-performance-popover--react-render-highlighting",
+  render: () => <RenderHighlightingDesign />,
+};
 export const Smooth: Story = {
   id: "settings-developer-tools-performance-popover--smooth",
   args: { snapshot: smoothSnapshot },
@@ -63,6 +102,23 @@ export const ExtensionResuming: Story = {
 export const ManyExtensions: Story = {
   id: "settings-developer-tools-performance-popover--many-extensions",
   args: { snapshot: manyExtensionsSnapshot },
+};
+export const ShortViewport: Story = {
+  id: "extensions-performance-popover--short-viewport",
+  args: {
+    snapshot: manyExtensionsSnapshot,
+    renderOverlay: {
+      state: { supported: true, enabled: false, scope: "workbench" },
+      onEnabledChange: () => undefined,
+    },
+  },
+  decorators: [
+    (Story) => (
+      <Box height="xs" display="flex" flexDirection="column" minH="0">
+        <Story />
+      </Box>
+    ),
+  ],
 };
 export const AllExtensions: Story = {
   id: "settings-developer-tools-performance-popover--all-extensions",
@@ -116,5 +172,9 @@ export const SharedProcess: Story = {
 };
 export const ActionFailed: Story = {
   id: "extensions-performance-popover--action-failed",
-  args: { snapshot: smoothSnapshot, actionError: "Performance controls require a local user interaction" },
+  args: {
+    ...ShortViewport.args,
+    actionError: { message: "Performance controls require a local user interaction", source: "render-overlay" },
+  },
+  decorators: ShortViewport.decorators,
 };

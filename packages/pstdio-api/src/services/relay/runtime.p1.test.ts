@@ -1,6 +1,11 @@
 import { expect, test } from "bun:test";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { documentPeer } from "../../features/extensions/publication/document-peer.fixture";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { nativeAccountFile } from "../account/native-account";
+import { createProjectCopyStore } from "../account/project-copy-store";
 import { startRelayRuntime } from "./runtime";
 
 const unreachable = "http://127.0.0.1:9";
@@ -180,5 +185,65 @@ test.each(["version", "quota"])("a refused live channel reaches the account erro
     await relay.close();
     await server.stop(true);
     await app.close();
+  }
+});
+
+test("a queued relay refresh cannot recreate a copy removed while identity refresh was pending", async () => {
+  const root = await mkdtemp(join(tmpdir(), "relay-copy-withdrawal-"));
+  const app = await createTestApp({ storageRoot: root });
+  const relay = await startRelayRuntime({ deps: app.deps });
+  const project = await app.deps.projectService.create({ name: "Withdrawn copy" });
+  const { environmentId } = await app.deps.environmentService.get();
+  const config = {
+    accountId: "account",
+    workbenchId: project.id,
+    environmentId,
+    relayOrigin: unreachable,
+    managerOrigin: unreachable,
+    renewalGrant: "grant",
+  };
+  const copy = {
+    accountId: config.accountId,
+    managerOrigin: config.managerOrigin,
+    deviceId: environmentId,
+    projectId: project.id,
+    name: project.name,
+  };
+  const copies = createProjectCopyStore(nativeAccountFile(":memory:", root));
+  const history = app.deps.personalHistoryService;
+  const original = history.refreshIdentity;
+  const entered = Promise.withResolvers<void>();
+  const resume = Promise.withResolvers<void>();
+  let stale: Promise<void> | undefined;
+  try {
+    await relay.update([config]);
+    expect(relay.folders(project.id)).toBeDefined();
+    await relay.withdraw(project.id);
+    app.deps.projectService.work.hide(project.id);
+    await copies.write({ ...copy, phase: "removing" });
+    history.refreshIdentity = async () => {
+      entered.resolve();
+      await resume.promise;
+      return original();
+    };
+    stale = relay.update([config]);
+    await entered.promise;
+    await copies.write({ ...copy, phase: "cloud-only" });
+    app.deps.projectService.work.release(project.id);
+    resume.resolve();
+    await stale;
+    expect(relay.folders(project.id)).toBeUndefined();
+    history.refreshIdentity = original;
+    await copies.write({ ...copy, phase: "downloading" });
+    await relay.update([config]);
+    expect(relay.folders(project.id)).toBeDefined();
+  } finally {
+    resume.resolve();
+    await stale?.catch(() => {});
+    history.refreshIdentity = original;
+    app.deps.projectService.work.release(project.id);
+    await relay.close();
+    await app.close();
+    await rm(root, { recursive: true, force: true });
   }
 });

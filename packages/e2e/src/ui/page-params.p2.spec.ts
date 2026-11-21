@@ -40,7 +40,8 @@ test("shareable page params update history, native queries and server preference
     await view.getByRole("button", { name: "Open details" }).click();
     await expect(page).toHaveURL(/details\?range=now-7d/);
     await expect(view.locator("#range")).toHaveText("now-7d");
-    await page.getByRole("button", { name: "Page params", exact: true }).click();
+    // The details page is tabbed, so history (not a breadcrumb) returns to its parent board.
+    await page.getByRole("button", { name: "Navigate back", exact: true }).click();
     await expect(page).toHaveURL(/board\?range=now-24h/);
     await expect(view.locator("#range")).toHaveText("now-24h");
     await view.getByRole("button", { name: "Save preference" }).click();

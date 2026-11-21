@@ -13,6 +13,22 @@ const page: WorkbenchPageContribution = {
 };
 const context = { projectId: "one", modeId: "project", pageId: page.id };
 
+test("locationless modes do not share page header overrides", () => {
+  const saved = new Map<string | undefined, WorkbenchLayout>();
+  const cache = createWorkbenchLayoutCache({
+    layoutPersistence: {
+      getLayout: (scope) => saved.get(scope),
+      setLayout: (layout, scope) => saved.set(scope, structuredClone(layout)),
+    },
+  });
+  const layout = createDefaultWorkbenchLayout();
+  layout.regions.main.headerVisible = false;
+  cache.savePageMain({ projectId: "one", modeId: "first" }, layout, undefined);
+  expect(cache.loadPageLayout({ projectId: "one", modeId: "second" }, undefined)?.regions.main.headerVisible).not.toBe(
+    false,
+  );
+});
+
 for (const canRemove of [true, false]) {
   test(`page header preferences reset independently with deletion ${canRemove}`, () => {
     const saved = new Map<string | undefined, WorkbenchLayout>();

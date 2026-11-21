@@ -8,6 +8,11 @@ import {
 import { workspacePages } from "./refs";
 
 type DeviceOrder = Pick<AccountDevice, "id" | "name" | "online" | "current" | "lastSeenAt">;
+const gitProviderIds = new Set([
+  "pstdio.worktree",
+  "pstdio.git-workspaces.workspace-type.git",
+  "pstdio.workspaces.workspace-type.git",
+]);
 export const groupDevices = <D extends DeviceOrder>(devices: D[]) =>
   [...devices].sort((a, b) => {
     if (a.current !== b.current) return a.current ? -1 : 1;
@@ -18,7 +23,7 @@ export const groupDevices = <D extends DeviceOrder>(devices: D[]) =>
   });
 export const workspaceKind = (workspace: ExtensionWorkspace) => {
   if (workspace.executionKind === "remote") return "Remote";
-  return workspace.providerId === "pstdio.worktree" ? "Git worktree" : "Folder";
+  return gitProviderIds.has(workspace.providerId ?? "") ? "Git worktree" : "Folder";
 };
 export const workspaceResource = (
   workspace: ExtensionWorkspace,
@@ -61,7 +66,7 @@ export const workspaceTarget = (
   if (workspace.device) page = workspacePages.history;
   const params =
     page === workspacePages.workspace
-      ? { comparison: workspace.providerId === "pstdio.worktree" ? "fork_point" : "current" }
+      ? { comparison: gitProviderIds.has(workspace.providerId ?? "") ? "fork_point" : "current" }
       : undefined;
   return {
     kind: "page",

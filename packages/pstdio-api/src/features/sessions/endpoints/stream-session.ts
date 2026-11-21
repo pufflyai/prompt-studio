@@ -64,7 +64,7 @@ const waitForEntry = async (id: string, deps: SessionsRouteDeps, sink: SessionEv
     const entry = deps.sessionService.store.get(id);
     if (entry && entry !== previous) return entry;
     const current = await deps.sessionService.get(id);
-    if (!current) return null;
+    if (!current || current.status === "cancelled") return null;
     if (isTerminal(current.status)) {
       if (!previous || !(await deps.sessionQueueEntriesService.listPendingBySession(id)).length) return null;
     }

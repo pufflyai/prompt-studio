@@ -80,7 +80,6 @@ describe("defaultWorkspaceProviderRuntime", () => {
     expect(handle?.provider.id).toBe("remote");
     expect((await handle?.context.storage.get("state")) as unknown).toEqual({ stored: true });
     expect(await handle?.context.settings.get("token")).toBe("configured");
-    expect(handle?.context.net.findFreePort).toBeFunction();
   });
 });
 

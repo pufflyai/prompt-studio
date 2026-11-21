@@ -27,7 +27,10 @@ test("accounts without early access can manage devices but receive no Cloud proj
           ...(body ? { body: JSON.stringify(body) } : {}),
         }),
       );
-    expect(await (await request("/v1/account")).json()).toEqual({ features: { relay: false } });
+    expect(await (await request("/v1/account")).json()).toEqual({
+      features: { relay: false },
+      projectDeletion: false,
+    });
     expect(await (await request("/v1/workbenches")).json()).toEqual([]);
     expect((await request(`/v1/workbenches/${device.workbenchId}/keys`)).status).toBe(404);
     expect((await request("/v1/workbenches/new-project", {})).status).toBe(403);

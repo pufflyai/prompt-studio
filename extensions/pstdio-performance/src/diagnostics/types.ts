@@ -31,6 +31,5 @@ export interface DiagnosticView extends DiagnosticRecord {
   hasResult: boolean;
 }
 
-export const diagnosticLabels: Record<DiagnosticKind, string> = { cpu: "CPU profile", coverage: "Function calls" };
 export const diagnosticRunning = (capture: Pick<DiagnosticView, "status">) =>
   capture.status === "queued" || capture.status === "running";

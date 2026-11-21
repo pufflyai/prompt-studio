@@ -87,7 +87,13 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
       await route.continue();
     });
     try {
-      await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
+      // A workspace page keeps its Files and Changes tabs, so its open tab carries the workspace actions.
+      await page
+        .locator('[data-workbench-panel-header="main"]')
+        .getByRole("tab", { name: "Files", exact: true })
+        .click({
+          button: "right",
+        });
       await page.getByRole("menuitem", { name: "Rename workspace", exact: true }).click();
       await formRequested.promise;
       const action = page.frameLocator('iframe[title="Workspace action"]');

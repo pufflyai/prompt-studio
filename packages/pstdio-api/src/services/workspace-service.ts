@@ -1,6 +1,7 @@
 import type { ResourceAnchor, ResourceRef } from "pstdio-api-contracts/extension-kernel";
 import type { createWorkspacesDBService } from "pstdio-db";
 import type { EventBus } from "../features/sync/event-bus";
+import { catalogProviderId } from "../features/workspaces/workspace-provider-identity";
 import { apiLogger } from "../lib/logger";
 import {
   publishCreatedResourceAnchors,
@@ -8,6 +9,12 @@ import {
   refreshResourceAnchorEndpoints,
 } from "./resource-anchor-events";
 import { createWorkspaceMaintenance } from "./workspace-maintenance";
+
+const canonicalWorkspace = <T extends object | null | undefined>(row: T) => {
+  if (!row || !("provider_id" in row) || typeof row.provider_id !== "string") return row;
+  const providerId = catalogProviderId(row.provider_id);
+  return providerId === row.provider_id ? row : { ...row, provider_id: providerId };
+};
 
 type WorkspaceRecord = NonNullable<Awaited<ReturnType<ReturnType<typeof createWorkspacesDBService>["get"]>>>;
 
@@ -37,27 +44,36 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
       );
       return null;
     }
-    deps.eventBus.emit("workspaces", op, row);
-    return row;
+    const workspace = canonicalWorkspace(row);
+    deps.eventBus.emit("workspaces", op, workspace);
+    return workspace;
   };
 
   // --- reads (pass-through) ---
-  const get = raw.get;
-  const getByShorthand = raw.getByShorthand;
-  const getDefault = raw.getDefault;
-  const list = raw.list;
-  const query = raw.query;
-  const listForProviderReconciliation = raw.listForProviderReconciliation;
+  const get = async (...args: Parameters<typeof raw.get>) => canonicalWorkspace(await raw.get(...args));
+  const getByShorthand = async (...args: Parameters<typeof raw.getByShorthand>) =>
+    canonicalWorkspace(await raw.getByShorthand(...args));
+  const getDefault = async (...args: Parameters<typeof raw.getDefault>) =>
+    canonicalWorkspace(await raw.getDefault(...args));
+  const list = async (...args: Parameters<typeof raw.list>) => (await raw.list(...args)).map(canonicalWorkspace);
+  const query = async (...args: Parameters<typeof raw.query>) => {
+    const page = await raw.query(...args);
+    return { ...page, rows: page.rows.map(canonicalWorkspace) };
+  };
+  const listForProviderReconciliation = async (...args: Parameters<typeof raw.listForProviderReconciliation>) =>
+    (await raw.listForProviderReconciliation(...args)).map(canonicalWorkspace);
 
   // --- mutations (orchestrated) ---
   const create = async (input: Parameters<typeof raw.create>[0]) => {
-    const workspace = await raw.create(
-      input,
-      (row) =>
-        deps.validateCreatedAnchors?.(
-          { type: "workspace", id: row.id, projectId: row.project_id!, extensionId: "pstdio" },
-          input.anchors ?? [],
-        ) ?? Promise.resolve(),
+    const workspace = canonicalWorkspace(
+      await raw.create(
+        input,
+        (row) =>
+          deps.validateCreatedAnchors?.(
+            { type: "workspace", id: row.id, projectId: row.project_id!, extensionId: "pstdio" },
+            input.anchors ?? [],
+          ) ?? Promise.resolve(),
+      ),
     );
     deps.eventBus.emit("workspaces", "set", workspace);
     publishCreatedResourceAnchors(deps.eventBus, "workspace", workspace);
@@ -66,13 +82,15 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   };
 
   const createStandalone = async (input: Parameters<typeof raw.createStandalone>[0]) => {
-    const workspace = await raw.createStandalone(
-      input,
-      (row) =>
-        deps.validateCreatedAnchors?.(
-          { type: "workspace", id: row.id, projectId: row.project_id!, extensionId: "pstdio" },
-          input.anchors ?? [],
-        ) ?? Promise.resolve(),
+    const workspace = canonicalWorkspace(
+      await raw.createStandalone(
+        input,
+        (row) =>
+          deps.validateCreatedAnchors?.(
+            { type: "workspace", id: row.id, projectId: row.project_id!, extensionId: "pstdio" },
+            input.anchors ?? [],
+          ) ?? Promise.resolve(),
+      ),
     );
     deps.eventBus.emit("workspaces", "set", workspace);
     publishCreatedResourceAnchors(deps.eventBus, "workspace", workspace);
@@ -84,9 +102,9 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   // branch). Returns the existing one or creates and announces a new one.
   const ensureDefault = async (input: Parameters<typeof raw.createDefault>[0]) => {
     const existing = await raw.getDefault(input.project_id);
-    if (existing) return existing;
+    if (existing) return canonicalWorkspace(existing);
 
-    const workspace = await raw.createDefault(input);
+    const workspace = canonicalWorkspace(await raw.createDefault(input));
     deps.eventBus.emit("workspaces", "set", workspace);
     publishCreatedResourceAnchors(deps.eventBus, "workspace", workspace);
     deps.onCreated?.(workspace);
@@ -94,7 +112,7 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   };
 
   const archive = async (id: string) => {
-    const updated = await raw.archive(id);
+    const updated = canonicalWorkspace(await raw.archive(id));
     if (!updated) return null;
 
     deps.eventBus.emit("workspaces", "set", updated);
@@ -113,7 +131,7 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   };
 
   const rename = async (id: string, name: string) => {
-    const updated = await raw.rename(id, name);
+    const updated = canonicalWorkspace(await raw.rename(id, name));
     if (!updated) return null;
 
     deps.eventBus.emit("workspaces", "set", updated);
@@ -149,7 +167,7 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     getDefault,
     attachInitialProvider: async (id: string, input: Parameters<typeof raw.attachInitialProvider>[1]) =>
       emitOrLog("set", id, await raw.attachInitialProvider(id, input)),
-    findByPath: raw.findByPath,
+    findByPath: async (...args: Parameters<typeof raw.findByPath>) => canonicalWorkspace(await raw.findByPath(...args)),
     list,
     query,
     listForProviderReconciliation,

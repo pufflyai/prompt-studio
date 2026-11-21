@@ -98,6 +98,10 @@ export const useTreeRead = (
       pageParams,
     });
   const structure = readStructure(childrenKey);
+  // Group ownership follows the same level and registrations as the tree's structure.
+  const readGroupScope = (_readKey: string, _registrations: number) =>
+    getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId)?.getGroupScope?.();
+  const groupScope = enabled ? readGroupScope(childrenKey, navigationRegistrations) : undefined;
 
   const read = useRendererRead<LoadedTreeData & { children: Record<string, TreeNode[]> }>({
     enabled,
@@ -135,6 +139,7 @@ export const useTreeRead = (
   return {
     read,
     structure,
+    groupScope,
     queryKey,
     queryScope,
     refreshKey,

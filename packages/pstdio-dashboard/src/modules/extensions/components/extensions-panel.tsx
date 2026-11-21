@@ -1,5 +1,6 @@
 import { Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useAgents } from "@/shared/agents/use-agents";
 import { dashboardExtensionDetailPage, dashboardExtensionsPage } from "@/shared/app/resources";
@@ -13,6 +14,7 @@ import {
 import { AvailableExtensionDetail } from "./available-extension-detail";
 import { marketplaceActionKey } from "./extension-actions";
 import { ExtensionDetailContainer } from "./extension-detail-container";
+import { defaultExtensionFilters } from "./extension-filters";
 import { ExtensionReplacementConfirmation } from "./extension-replacement-confirmation";
 import { ExtensionsPanelView } from "./extensions-panel-view";
 import { useExtensionPanelActions } from "./use-extension-panel-actions";
@@ -34,18 +36,62 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
   const agentsQuery = useAgents(projectId);
   const agents = projectId && agentsQuery.isSuccess ? agentsQuery.data : undefined;
   const setAutomationEnabled = useSetExtensionAutomationEnabled(projectId);
+  const [filters, setFilters] = useState(defaultExtensionFilters);
+  const returnFocus = useRef<{ id: string; left: boolean } | undefined>(undefined);
+  const focusTargets = useRef(new Map<string, HTMLElement>());
+  // React Activity disconnects effects while a cached page is hidden. Its cleanup
+  // records the departure even though an effect cannot observe visible=false.
+  useEffect(
+    () => () => {
+      if (returnFocus.current) returnFocus.current.left = true;
+    },
+    [],
+  );
   const selection = settingsInput.instance.resource?.id;
   const selectedInstanceId = selectedExtension(selection, "installed");
   const selectedMarketplaceName = selectedExtension(selection, "marketplace");
-  const openList = () =>
+  const openList = () => {
     settingsInput.workbench.pageLocations.navigate({ kind: "page", page: dashboardExtensionsPage });
-  const openDetail = (id: string, displayName: string) =>
+  };
+  const openDetail = (id: string, displayName: string) => {
+    returnFocus.current = { id, left: false };
     settingsInput.workbench.pageLocations.navigate({
       kind: "page",
       page: dashboardExtensionDetailPage,
       resource: { type: "extension", extensionId: "pstdio", id, label: displayName },
     });
+  };
   const actions = useExtensionPanelActions(projectId, extensionsQuery.data?.upgradeConcurrency);
+  useEffect(() => {
+    // Workbench can retain separate list/detail panels. The list owns its return target
+    // until it has actually left the screen; a render on the way out must not consume it.
+    if (selection) {
+      returnFocus.current ??= { id: selection, left: true };
+      returnFocus.current.left = true;
+      return;
+    }
+    const requested = returnFocus.current;
+    if (settingsInput.visible === false) {
+      if (requested) requested.left = true;
+      return;
+    }
+    if (!requested?.left || !extensionsQuery.data) return;
+    const catalogName = selectedExtension(requested.id, "marketplace");
+    const installedId =
+      catalogName &&
+      (actions.installedIds[marketplaceActionKey(catalogName)] ??
+        extensionsQuery.data.extensions.find((extension) => extension.installName === catalogName)?.id);
+    const target =
+      focusTargets.current.get(installedId ? `installed:${installedId}` : requested.id) ??
+      focusTargets.current.get("search");
+    if (!target?.getClientRects().length) return;
+    target.focus();
+    if (target.ownerDocument.activeElement === target) returnFocus.current = undefined;
+  }, [selection, settingsInput.visible, actions.installedIds, extensionsQuery.data]);
+  const registerFocusTarget = (id: string, node: HTMLElement | null) => {
+    if (node) focusTargets.current.set(id, node);
+    else focusTargets.current.delete(id);
+  };
   const replacementDialog = settingsInput.visible !== false && (
     <ExtensionReplacementConfirmation replacement={actions.replacement} onClose={() => actions.setReplacement(null)} />
   );
@@ -90,11 +136,11 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         {replacementDialog}
         <ExtensionDetailContainer
           projectId={projectId}
+          onBack={openList}
           extension={selected}
           metadata={metadataQuery.data}
           agents={agents}
           settingsInput={settingsInput}
-          onBack={() => openList()}
           action={action}
           sourceChanging={sourceChangingIds.has(selected.id)}
           onUpgrade={() => void actions.handleUpgrade(selected)}
@@ -133,6 +179,10 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       {replacementDialog}
       <ExtensionsPanelView
         projectId={projectId}
+        filters={filters}
+        onFiltersChange={setFilters}
+        rowRef={registerFocusTarget}
+        searchRef={(node) => registerFocusTarget("search", node)}
         extensions={extensions}
         marketplace={marketplace}
         diagnostics={metadataQuery.data?.diagnostics ?? []}

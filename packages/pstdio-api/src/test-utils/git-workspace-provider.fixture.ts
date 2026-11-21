@@ -6,15 +6,15 @@ export const enableGitWorkspaceProvider = async (
   handle: Pick<Awaited<ReturnType<typeof createTestApp>>, "app">,
   projectId: string,
 ) => {
-  const sourcePath = resolve(import.meta.dir, "../../../../extensions/git-workspaces");
+  const sourcePath = resolve(import.meta.dir, "../../../../extensions/pstdio-workspaces");
   const manifest = JSON.parse(await readFile(resolve(sourcePath, "package.json"), "utf8"));
-  const response = await handle.app.request(`/v1/projects/${projectId}/extensions/installed/git-workspaces/enable`, {
+  const response = await handle.app.request(`/v1/projects/${projectId}/extensions/installed/workspaces/enable`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      name: "git-workspaces",
+      name: "workspaces",
       displayName: "Git workspaces",
-      extensionId: "pstdio.git-workspaces",
+      extensionId: "pstdio.workspaces",
       manifest,
       sourcePath,
       sourceHash: null,

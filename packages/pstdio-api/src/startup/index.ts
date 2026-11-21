@@ -1,5 +1,7 @@
 import { basename } from "node:path";
 import type { RouteDeps } from "../features/deps";
+import { adoptWorkspacesTool, combinedWorkspacesSource } from "../features/extensions/adopt-workspaces-tool";
+import { needsBuiltInGitRecovery } from "../features/extensions/built-in-git-workspaces";
 import {
   installDefaultExtensions,
   registerInstalledExtensionSources,
@@ -14,7 +16,8 @@ import { provisionProjectWorkspaces } from "../features/workspaces/provision-coo
 import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-provider-reconciliation";
 import { apiLogger } from "../lib/logger";
 import { traceSetupPhase } from "../lib/setup-phase";
-import { adoptExtractedDefaultTools, extractedDefaultTools } from "./extracted-default-tools";
+import { adoptExtractedDefaultTools } from "./extracted-default-tools";
+import { canRefreshWorkspacesTool, refreshingWorkspacesEntry } from "./workspaces-tool-upgrade";
 
 interface StartupTaskOptions {
   onBackgroundTask?: (task: Promise<void>) => void;
@@ -67,29 +70,61 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
   const sourceMode = process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1";
   const projects = await deps.projectService.list();
   const existingProjects = !sourceMode && projects.length > 0;
+  const workspaceSource = await deps.extensionService.getInstalledSource("pstdio.workspaces");
+  const hasCombinedWorkspaces = workspaceSource
+    ? await combinedWorkspacesSource(workspaceSource.source_path).catch(() => false)
+    : false;
+  const terminalChosen = (
+    await Promise.all(
+      projects.map(({ id }) => deps.extensionService.hasDefaultSourceChoice(id, "pstdio.pstdio-terminal")),
+    )
+  ).every(Boolean);
+  const needsWorkspaceUpgrade =
+    existingProjects &&
+    !hasCombinedWorkspaces &&
+    (
+      await Promise.all(
+        projects.map(async ({ id }) => {
+          const records = await deps.extensionService.listProjectExtensionInstances(id);
+          return (
+            records.some(
+              ({ instance, installedSource }) =>
+                instance.enabled && installedSource.extension_id === "pstdio.git-workspaces",
+            ) || (await needsBuiltInGitRecovery(deps, id, records))
+          );
+        }),
+      )
+    ).some(Boolean);
+
+  const refreshWorkspaces = needsWorkspaceUpgrade && (await canRefreshWorkspacesTool(workspaceSource));
 
   try {
-    const missing = new Set<string>();
-    if (existingProjects) {
-      for (const name of extractedDefaultTools) {
-        const choices = await Promise.all(
-          projects.map(({ id }) => deps.extensionService.hasDefaultSourceChoice(id, `pstdio.${name}`)),
-        );
-        if (choices.includes(false)) missing.add(name);
-      }
-      if (!missing.size) return;
-    }
-    await installDefaultExtensions({
+    if (existingProjects && !needsWorkspaceUpgrade && terminalChosen) return;
+    return await installDefaultExtensions({
       ...(existingProjects
         ? {
             env: {
               ...process.env,
               PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify(
-                (await resolveDefaultExtensionsConfig()).defaultExtensions.filter((entry) =>
-                  missing.has(
-                    typeof entry === "string" ? basename(entry) : (entry.installName ?? basename(entry.source)),
+                (await resolveDefaultExtensionsConfig()).defaultExtensions
+                  .filter(
+                    (entry) =>
+                      (!terminalChosen &&
+                        (typeof entry === "string"
+                          ? basename(entry)
+                          : (entry.installName ?? basename(entry.source))) === "pstdio-terminal") ||
+                      (needsWorkspaceUpgrade &&
+                        (typeof entry === "string"
+                          ? basename(entry)
+                          : (entry.installName ?? basename(entry.source))) === "workspaces"),
+                  )
+                  .map((entry) =>
+                    refreshWorkspaces &&
+                    (typeof entry === "string" ? basename(entry) : (entry.installName ?? basename(entry.source))) ===
+                      "workspaces"
+                      ? refreshingWorkspacesEntry(entry)
+                      : entry,
                   ),
-                ),
               ),
             },
           }
@@ -137,10 +172,16 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
   );
   const defaultExtensionPreparation = (async () => {
     signal?.throwIfAborted();
-    if (options?.prepareDefaultExtensions) await options.prepareDefaultExtensions(signal);
-    else await ensureDefaultExtensionsInstalled(deps, signal);
+    if (options?.prepareDefaultExtensions) {
+      await options.prepareDefaultExtensions(signal);
+      return [];
+    }
+    return (await ensureDefaultExtensionsInstalled(deps, signal)) ?? [];
   })();
-  registerBackgroundTask(defaultExtensionPreparation, options);
+  registerBackgroundTask(
+    defaultExtensionPreparation.then(() => undefined),
+    options,
+  );
   const projectIds = (await deps.projectService.list()).map((project) => project.id);
   signal?.throwIfAborted();
   await reconcileProjectWorkspaces(deps, projectIds, signal);
@@ -167,8 +208,14 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
     });
   }
   registerBackgroundTask(
-    defaultExtensionPreparation.then(async () => {
-      await adoptExtractedDefaultTools(deps, projectIds, signal);
+    defaultExtensionPreparation.then(async (installed) => {
+      await adoptExtractedDefaultTools(deps, projectIds, signal, ["pstdio-terminal"]);
+      for (const projectId of projectIds)
+        await adoptWorkspacesTool(
+          deps,
+          projectId,
+          installed.map(({ targetPath, sourceHash }) => ({ path: targetPath, hash: sourceHash })),
+        );
       await provisionRecoveredWorkspaces(deps, projectIds, signal);
       for (const projectId of projectIds) {
         signal?.throwIfAborted();

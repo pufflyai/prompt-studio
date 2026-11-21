@@ -10,7 +10,7 @@ import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 let api: ApiInstance;
 
 beforeAll(async () => {
-  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("git-workspaces") } });
+  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-workspaces") } });
 }, SETUP_TIMEOUT);
 
 afterAll(async () => {

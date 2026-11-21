@@ -1,4 +1,5 @@
 import { l10n, type ResourceAnchor, sessionBrowser, type TreeNode, type TreeViewSection } from "@pstdio/sdk/extensions";
+import { resourceLinkTarget } from "../data/resource-link-target";
 
 // Session query fields used by the sidenav.
 export interface TicketSession {
@@ -52,12 +53,12 @@ const sessionNode = (session: TicketSession): TreeNode => {
     resource,
     icon: sessionStatusIcon(session.status),
     iconColor: sessionStatusColor(session.status),
-    target: {
+    target: resourceLinkTarget({
       kind: "panel",
       panel: sessionBrowser.panels.conversation,
       resource,
       open: "preview",
-    },
+    }),
   };
 };
 

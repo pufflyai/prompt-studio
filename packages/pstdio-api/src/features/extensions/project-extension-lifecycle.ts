@@ -9,13 +9,16 @@ import { apiLogger } from "../../lib/logger";
 import { ExtensionUpgradeUnavailableError } from "../../services/extension-upgrade-unavailable-error";
 import type { RouteDeps } from "../deps";
 import { provisionProjectWorkspaces } from "../workspaces/provision-coordinator";
-import { runtimeProviderId } from "../workspaces/workspace-provider-identity";
+import { legacyGitProviderId, runtimeProviderId, worktreeProviderId } from "../workspaces/workspace-provider-identity";
 import { reconcileProviderWorkspaces } from "../workspaces/workspace-provider-reconciliation";
+import { findWorkspaceProviderRecord } from "../workspaces/workspace-provider-runtime";
+import { adoptWorkspacesTool } from "./adopt-workspaces-tool";
 import type { ExtensionsRouteDeps } from "./deps";
 import { setDeviceAutomationEnabled } from "./device-automations";
 import { findExtensionCatalogEntry } from "./extension-catalog";
 import { extensionChangesWorkspaceProvisioning } from "./extension-skill-cleanup";
 import { toExtensionEnableInput } from "./install-extension-source";
+import { withProjectExtensionChoices } from "./project-extension-choices";
 import { toProjectExtensionInstance } from "./project-extension-instance";
 import { openPublishedCatalog } from "./publication/catalog";
 import { removeSharedSelection, shareEnabledChoice } from "./publication/change-catalog";
@@ -36,9 +39,26 @@ export class ExtensionProviderInUseError extends Error {}
 
 const extensionProviderWorkspaces = async (deps: LifecycleDeps, projectId: string, extensionId: string) => {
   const prefix = `${extensionId}.workspace-type.`;
-  return (await deps.workspaceService.listForProviderReconciliation(projectId)).filter((workspace) =>
-    runtimeProviderId(workspace.provider_id).startsWith(prefix),
-  );
+  const workspaces = await deps.workspaceService.listForProviderReconciliation(projectId);
+  const legacyProvider =
+    ["pstdio.git-workspaces", "pstdio.workspaces"].includes(extensionId) &&
+    workspaces.some((workspace) => [worktreeProviderId, legacyGitProviderId].includes(workspace.provider_id));
+  // The legacy provider and its successor share public IDs. Resolve that handoff
+  // only when those workspaces exist; ordinary removal needs no project runtime.
+  const runtime = legacyProvider ? (await deps.extensionRuntimeCatalog.get(projectId)).runtime : undefined;
+  return workspaces.filter((workspace) => {
+    const provider = runtime && findWorkspaceProviderRecord(runtime, workspace.provider_id);
+    if (provider) return provider.extensionId === extensionId;
+    // Provider IDs identify their owner without loading every tool in the project.
+    // A suspended runtime read must not prevent removing an unrelated tool.
+    // A disabled predecessor still owns its checkouts until an active successor takes over.
+    if (
+      extensionId === "pstdio.git-workspaces" &&
+      [worktreeProviderId, legacyGitProviderId].includes(workspace.provider_id)
+    )
+      return true;
+    return runtimeProviderId(workspace.provider_id).startsWith(prefix);
+  });
 };
 
 const refreshProviderWorkspaces = async (deps: LifecycleDeps, projectId: string, extensionId: string) => {
@@ -63,6 +83,7 @@ export const completeProjectExtensionInstallation = async (
   if (selected && (await extensionChangesWorkspaceProvisioning(deps, selected.installedSource)))
     await (deps.provisionProjectWorkspaces ?? provisionProjectWorkspaces)(deps, projectId);
   if (selected) await refreshProviderWorkspaces(deps, projectId, selected.installedSource.extension_id);
+  if (selected?.installedSource.extension_id === "pstdio.workspaces") await adoptWorkspacesTool(deps, projectId);
 };
 
 export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
@@ -205,5 +226,12 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     return result.retainedData ? ("retained-disabled" as const) : ("removed" as const);
   };
 
-  return { install, setAutomationEnabled, setEnabled, uninstall };
+  return {
+    install,
+    setAutomationEnabled,
+    setEnabled: (projectId: string, instanceId: string, enabled: boolean) =>
+      withProjectExtensionChoices(deps.extensionService, projectId, () => setEnabled(projectId, instanceId, enabled)),
+    uninstall: (input: Parameters<typeof uninstall>[0]) =>
+      withProjectExtensionChoices(deps.extensionService, input.projectId, () => uninstall(input)),
+  };
 };

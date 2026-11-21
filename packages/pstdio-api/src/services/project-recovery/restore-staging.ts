@@ -68,6 +68,7 @@ export const createRecoveryStagingJournal = (root: string) => {
       };
     },
     async clean() {
+      let remaining = 0;
       for (const name of await readdir(directory).catch(() => [])) {
         const file = join(directory, name);
         const entry = entrySchema.safeParse(
@@ -75,17 +76,24 @@ export const createRecoveryStagingJournal = (root: string) => {
             .then(JSON.parse)
             .catch(() => null),
         ).data;
-        if (running.has(file) || (entry && entry.pid !== process.pid && alive(entry.pid))) continue;
+        if (running.has(file) || (entry && entry.pid !== process.pid && alive(entry.pid))) {
+          remaining++;
+          continue;
+        }
         const stat = entry && (await lstat(entry.path, { bigint: true }).catch(() => null));
         if (stat?.isDirectory() && String(stat.dev) === entry?.dev && String(stat.ino) === entry.ino) {
           const removed = await removeRecoveryStaging(entry.path).then(
             () => true,
             () => false,
           );
-          if (!removed) continue;
+          if (!removed) {
+            remaining++;
+            continue;
+          }
         }
         await unlink(file).catch(() => {});
       }
+      return remaining;
     },
   };
 };

@@ -7,8 +7,8 @@ export const watchWorkbenchPage = (lifecyclePage: Page, origin: string) => {
   const watch = (page: Page) => {
     if (page === lifecyclePage) return;
     const check = () => {
-      const url = new URL(page.url());
-      if (url.origin === origin) ready.resolve(page);
+      const url = URL.parse(page.url());
+      if (url?.origin === origin) ready.resolve(page);
     };
     pages.set(page, check);
     page.on("framenavigated", check);
@@ -38,16 +38,13 @@ export const watchLifecycleRecovery = (page: Page) => {
             resolve(message);
           };
           const check = () => {
-            const headings = document.querySelectorAll("h1,h2,h3,h4,h5,h6,[role=heading]");
-            const heading = Array.from(headings).find(
-              (node) => node.textContent === "Prompt Studio encountered an error",
-            );
+            const recovery = document.querySelector('[role="alert"]');
             if (
-              heading instanceof HTMLElement &&
-              heading.getClientRects().length > 0 &&
-              getComputedStyle(heading).visibility !== "hidden"
+              recovery instanceof HTMLElement &&
+              recovery.getClientRects().length > 0 &&
+              getComputedStyle(recovery).visibility !== "hidden"
             )
-              finish(heading.parentElement?.innerText ?? heading.innerText);
+              finish(recovery.innerText);
           };
           const observer = new MutationObserver(check);
           storage[key] = { stop: () => finish(null) };

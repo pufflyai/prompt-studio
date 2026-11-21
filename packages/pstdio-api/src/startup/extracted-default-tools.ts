@@ -6,9 +6,14 @@ import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-pr
 // Existing projects had these capabilities before they became installable extensions.
 export const extractedDefaultTools = ["pstdio-terminal", "git-workspaces"] as const;
 
-export const adoptExtractedDefaultTools = async (deps: RouteDeps, projectIds: string[], signal?: AbortSignal) => {
+export const adoptExtractedDefaultTools = async (
+  deps: RouteDeps,
+  projectIds: string[],
+  signal?: AbortSignal,
+  tools: readonly (typeof extractedDefaultTools)[number][] = extractedDefaultTools,
+) => {
   if (!projectIds.length) return;
-  for (const name of extractedDefaultTools) {
+  for (const name of tools) {
     const source = await deps.extensionService.getInstalledSource(name);
     if (
       !source ||

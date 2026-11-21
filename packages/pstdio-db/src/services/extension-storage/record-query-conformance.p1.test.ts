@@ -599,7 +599,7 @@ test("unfiltered record-ID pages stay bounded within an equality-indexed prefix"
   const page = await f.records.query({ index: index.name, limit: 3 });
   expect(page.records.map(({ recordId }) => recordId)).toEqual(["z/0000", "z/0001", "z/0002"]);
   const result = await f.db.execute(
-    sql`EXPLAIN (ANALYZE, FORMAT JSON) ${recordPageSql(index, ["status"], recordScopeSql(f.owner, index), 4)}`,
+    sql`EXPLAIN (ANALYZE, FORMAT JSON) ${recordPageSql(index, ["status"], recordScopeSql(f.owner, index), 4, 0, undefined, f.owner)}`,
   );
   const plan = JSON.stringify(result.rows);
   const scans: number[] = [];

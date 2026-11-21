@@ -26,6 +26,7 @@ import {
 } from "./project-selection-sync";
 import { registerProjectSetupCommand } from "./project-setup-command";
 import { createProjectSetupRequests } from "./project-setup-requests";
+import { registerCloudProjectChoice } from "./register-cloud-project-choice";
 
 interface CreateProjectsModuleInput {
   onProjectOpening?: (project: Promise<{ id: string; created?: boolean }>) => Promise<void>;
@@ -159,6 +160,7 @@ const registerProjectCommands = (
   selectedProjectContext: DashboardProjectSelectionContext,
   persistence: DashboardProjectSelectionPersistence | undefined,
   projectTabs: DesktopProjectTabs | undefined,
+  openCloudChoice: ReturnType<typeof registerCloudProjectChoice>,
 ) => {
   ctx.commands.registerCommand<SelectProjectInput, void>(
     {
@@ -168,10 +170,15 @@ const registerProjectCommands = (
       icon: standardResourceIcons.project,
     },
     {
-      execute: (selection) =>
-        projectTabs
-          ? selectProjectTab(ctx, projectTabs, selection)
-          : selectProject(ctx, selectedProjectContext, persistence, selection),
+      async execute(selection) {
+        if (
+          selection.project?.id &&
+          (await openCloudChoice(selection.project.id, selection.cloudCopyChoice, selection.project.name))
+        )
+          return;
+        if (projectTabs) selectProjectTab(ctx, projectTabs, selection);
+        else selectProject(ctx, selectedProjectContext, persistence, selection);
+      },
     },
   );
   ctx.commands.registerCommand(
@@ -239,13 +246,23 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
       registerProjectFolder(ctx);
       registerProjectSelectionMode(ctx);
       registerProjects(ctx);
-      registerProjectCommands(ctx, selectedProjectContext, input.projectSelectionPersistence, input.projectTabs);
+      const openCloudChoice = registerCloudProjectChoice(ctx);
+      registerProjectCommands(
+        ctx,
+        selectedProjectContext,
+        input.projectSelectionPersistence,
+        input.projectTabs,
+        openCloudChoice,
+      );
       const projectOpening = registerProjectOpening(ctx, setupRequests);
       const initialProjectSelection = registerInitialProjectSelection(
         ctx,
         selectedProjectContext,
         input.projectSelectionPersistence,
         input.initialProjectId,
+        (id) => {
+          void openCloudChoice(id);
+        },
       );
       const singleProjectSelection =
         startedWithProject || input.projectTabs
