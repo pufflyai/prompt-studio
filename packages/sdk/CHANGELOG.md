@@ -1,5 +1,56 @@
 # @pstdio/sdk
 
+## 0.48.0
+
+_2026-11-21_
+
+### Minor Changes
+
+- a1eb6ac: Add opt-in resource Activity with synced discussions, confirmed agent handoffs, evidence attachments, and revision-bound work outcomes.
+- 1b443d1: Let extensions number up to 100 resources of one kind in one call with `ctx.resources.allocateMany`, and keep numbering fast in projects with hundreds of numbered resources.
+- 2456a14: Keep collection views bounded by default with indexed queries, global summaries and resource-safe paging. Hold column-action refreshes until their writes finish, retain loaded views during reconciliation, and yield repeated background queries without delaying required reads. Batch native text metadata during bulk property saves, and reconcile unchanged extension notifications without repeatedly restarting installation.
+
+  Support complete-record root projections and derived root conditions for record key indexes, retaining the same typed values in native and in-memory queries.
+
+- 3d9dfbc: Expose Cloud project download, device removal, and permanent deletion through the public SDK and CLI. Confirm destructive actions explicitly and use deletion receipts to follow cleanup.
+- 225fe6c: Show public and locally maintained extension sources, scope resource Activity to owning documents, and preserve grouped tree pagination.
+- bedb8ee: Let extensions download generated files through the host and register view-scoped actions in native resource menus, while preserving sandbox permissions and captured resource ownership.
+
+  Allow live resource actions to supply a bounded choice group and update its selected value without cancelling an accepted callback.
+
+  Preserve entry stylesheets in batched webview preparation so installed extensions load their icon fonts, and rebuild incompatible prepared revisions after host upgrades.
+
+- 3b41d41: Use shorter first-party extension identities while preserving historical commands, project data, saved views and encrypted sync streams.
+
+  Remove extension-defined global CLI shortcuts and the `globalAliases` SDK option. Use publisher-qualified commands; historical namespace migration paths remain available.
+
+- aff0cbb: Let extensions move a deprecated storage collection to records in one migration step with `migration.moveCollection`. Text history and editor bindings move with each item, old-format writes reach the moved records, and record indexes can select records by `keyPrefix`.
+- 15029c2: Allow performance tools to highlight React renders in the current workbench window.
+- 2ec885f: Support movable resource pages, destination-aware navigation and Side resource previews with one Main header.
+- 3a1c8b6: Expose synced project composition and configured resource opening through public SDK and CLI APIs; allow navigation trees to share an optional foreign view.
+- cca9b29: Wait for supervisor quota resets and optionally restart limit-stopped conversations after a 15-second buffer, using durable delayed automation.
+- c355ec2: Allow Kanban and resource-list providers to return current filter fields and options for saved-view validation without loading rows.
+- 95f860c: Let resource owners supply live icons, semantic colors, and accessible labels across Workbench.
+- 3b50550: Show image thumbnails in data table columns, sub-group resource lists with children nested to any depth, and add tags to tree rows.
+- c795b8f: Retain readonly account, performance and preference queries across webview recreation, cancel optional read memberships independently, persist accepted preference choices in order, and support controlled diff selection and tree-row observation lifetimes.
+- 1dea002: Show a dot beside sessions with new replies or requests for input since the last visit. Resource extensions can define which changes count and use the same workbench indicator.
+- fa0e4af: Add native action bars with saved item order and dock-aware layout, plus compact draggable status widgets with saved alignment.
+
+### Patch Changes
+
+- e4c6d26: Type `_` and `?` in the file editor without opening Keyboard shortcuts. Keyboard shortcuts now opens with Mod+/, and direct shortcuts can no longer use keys that type text.
+- 69efa88: Recover stalled Cloud sources safely and show source phases and named file transfer activity.
+- 428996f: Show workspace providers in the extension contribution inventory.
+- 84b0ca6: Pass the session's approval channel to harnesses on a session's first turn, not only when it resumes. `HarnessStartInput.approvals` is now part of the start input; older hosts pass it only on resume, so treat it as optional.
+- 1e22f30: Keep edits a device makes to items it moved itself when another device's move of the same collection wins. The edit is saved again on the item, so the winning move carries it. The in-memory test storage now forwards partly skipped saves as well.
+- 01bceb8: Open selected collaborative documents in one admission request and support indexed alternate orders and maintained group counts for paged views.
+- ccae1c5: Observe workspace files, expose Git-ignore decorations, and retain expanded tree rows while selection refreshes, and let extension commands use the host delete confirmation.
+- 4aeb490: Show extension authors and project scope, with Enabled extensions grouped separately from Installed.
+- 4b24eef: Add bounded collection pages, relationship selection, requested sort order, numeric summaries and canonical Markdown title query fields.
+- e56ea7b: Reuse unchanged memory storage projections while preserving independent values for every reader.
+- a0adbef: Keep extension work bounded with collection-scoped indexes, indexed batch reads and conditional field saves, object-key selection, distinct related-resource pages, scoped workspace queries, and paged local and remote session history.
+- a2e8cbb: Recover dropped page requests silently while retaining loaded content.
+
 ## 0.47.0
 
 _2026-11-12_

@@ -103,7 +103,7 @@
     },
     "clients/desktop": {
       "name": "@pstdio/desktop",
-      "version": "0.47.0",
+      "version": "0.48.0",
       "dependencies": {
         "@chakra-ui/react": "3.32.0",
         "@emotion/react": "11.14.0",
@@ -190,13 +190,14 @@
     },
     "extensions/canvas": {
       "name": "canvas",
-      "version": "0.1.0",
+      "version": "0.1.1",
       "dependencies": {
         "@chakra-ui/react": "3.32.0",
         "@emotion/react": "^11.0.0",
         "@pstdio/canvas": "0.46.0-nightly.20261031030226",
         "@pstdio/sdk": "0.47.0-nightly.20261112030231",
         "@pstdio/ui": "0.47.0-nightly.20261112030231",
+        "@tanstack/react-query": "^5.90.21",
         "react": "19.2.4",
         "react-dom": "19.2.4",
         "zod": "^4.1.12",
@@ -211,7 +212,7 @@
     },
     "extensions/extension-lab": {
       "name": "extension-lab",
-      "version": "0.46.0",
+      "version": "0.47.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -244,7 +245,7 @@
     },
     "extensions/harness-claude-code": {
       "name": "harness-claude-code",
-      "version": "0.47.0",
+      "version": "0.48.0",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "0.3.316",
         "@anthropic-ai/claude-code": "2.1.203",
@@ -257,7 +258,7 @@
     },
     "extensions/harness-codex": {
       "name": "harness-codex",
-      "version": "0.47.0",
+      "version": "0.48.0",
       "dependencies": {
         "@openai/codex": "0.169.0",
         "@pstdio/sdk": "0.47.0-nightly.20261112030231",
@@ -269,7 +270,7 @@
     },
     "extensions/harness-copilot": {
       "name": "harness-copilot",
-      "version": "0.47.0",
+      "version": "0.48.0",
       "dependencies": {
         "@github/copilot-sdk": "1.0.34",
         "@pstdio/sdk": "0.47.0-preview.sha-39796d3892fb176a0254332998ce50fb36ad155f",
@@ -281,7 +282,7 @@
     },
     "extensions/harness-open-code": {
       "name": "harness-open-code",
-      "version": "0.47.0",
+      "version": "0.48.0",
       "dependencies": {
         "@opencode/cli": "2.2.5",
         "@pstdio/sdk": "0.47.0-preview.sha-39796d3892fb176a0254332998ce50fb36ad155f",
@@ -294,7 +295,7 @@
     },
     "extensions/harness-pi": {
       "name": "harness-pi",
-      "version": "0.46.0",
+      "version": "0.46.1",
       "dependencies": {
         "@earendil-works/pi-coding-agent": "0.79.0",
         "@pstdio/sdk": "0.47.0-preview.sha-39796d3892fb176a0254332998ce50fb36ad155f",
@@ -308,7 +309,7 @@
     },
     "extensions/pstdio-artifacts": {
       "name": "artifacts",
-      "version": "0.46.1",
+      "version": "0.47.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -328,7 +329,7 @@
     },
     "extensions/pstdio-base-themes": {
       "name": "base-themes",
-      "version": "0.45.2",
+      "version": "0.46.0",
       "dependencies": {
         "@pstdio/sdk": "0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77",
       },
@@ -346,7 +347,7 @@
     },
     "extensions/pstdio-cloud": {
       "name": "cloud",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -365,7 +366,7 @@
     },
     "extensions/pstdio-home": {
       "name": "home",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -385,7 +386,7 @@
     },
     "extensions/pstdio-notes": {
       "name": "notes",
-      "version": "0.46.1",
+      "version": "0.47.0",
       "dependencies": {
         "@pstdio/sdk": "0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77",
       },
@@ -396,7 +397,7 @@
     },
     "extensions/pstdio-onboarding": {
       "name": "onboarding",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "@chakra-ui/react": "3.32.0",
         "@emotion/react": "^11.0.0",
@@ -419,7 +420,7 @@
     },
     "extensions/pstdio-performance": {
       "name": "performance",
-      "version": "0.1.1",
+      "version": "0.2.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -439,7 +440,7 @@
     },
     "extensions/pstdio-planner": {
       "name": "planner",
-      "version": "0.47.0",
+      "version": "0.48.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -460,7 +461,7 @@
     },
     "extensions/pstdio-reports": {
       "name": "reports",
-      "version": "0.46.1",
+      "version": "0.47.0",
       "dependencies": {
         "@pstdio/sdk": "0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77",
       },
@@ -471,7 +472,7 @@
     },
     "extensions/pstdio-session-browser": {
       "name": "session-browser",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "@pstdio/sdk": "0.48.0-preview.sha-1dea002d5091620d9cee41520eca2cb634450299",
       },
@@ -482,7 +483,7 @@
     },
     "extensions/pstdio-skill-browser": {
       "name": "pstdio-skill-browser",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "@chakra-ui/react": "3.32.0",
         "@emotion/react": "^11.0.0",
@@ -502,7 +503,7 @@
     },
     "extensions/pstdio-skills": {
       "name": "skills",
-      "version": "0.45.2",
+      "version": "0.46.0",
       "dependencies": {
         "@pstdio/sdk": "0.48.0-preview.sha-3b41d415bd0c5c2d607249ba8bdd47a499d62a77",
       },
@@ -520,7 +521,7 @@
     },
     "extensions/pstdio-terminal": {
       "name": "pstdio-terminal",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "dependencies": {
         "@pstdio/sdk": "0.47.0-nightly.20261111030243",
       },
@@ -531,7 +532,7 @@
     },
     "extensions/pstdio-workspaces": {
       "name": "workspaces",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
@@ -550,7 +551,7 @@
     },
     "extensions/remote-workspaces": {
       "name": "remote-workspaces",
-      "version": "0.46.1",
+      "version": "0.46.2",
       "dependencies": {
         "@pstdio/sdk": "0.46.0-preview.sha-2c2b2e4c6b144c418cc048219c56553afe938bf4",
       },
@@ -615,7 +616,7 @@
     },
     "packages/canvas": {
       "name": "@pstdio/canvas",
-      "version": "0.47.0",
+      "version": "0.48.0",
       "bin": {
         "pstdio-canvas": "./bin/pstdio-canvas.ts",
       },
@@ -708,7 +709,7 @@
     },
     "packages/pstdio": {
       "name": "pstdio",
-      "version": "0.47.0",
+      "version": "0.48.0",
       "bin": {
         "pstdio": "./bin/pstdio.cjs",
         "pst": "./bin/pstdio.cjs",
@@ -735,12 +736,12 @@
         "typescript": "6.0.2",
       },
       "optionalDependencies": {
-        "@pstdio/cli-darwin-arm64": "0.47.0",
-        "@pstdio/cli-darwin-x64": "0.47.0",
-        "@pstdio/cli-linux-arm64": "0.47.0",
-        "@pstdio/cli-linux-x64": "0.47.0",
-        "@pstdio/cli-win-arm64": "0.47.0",
-        "@pstdio/cli-win-x64": "0.47.0",
+        "@pstdio/cli-darwin-arm64": "0.48.0",
+        "@pstdio/cli-darwin-x64": "0.48.0",
+        "@pstdio/cli-linux-arm64": "0.48.0",
+        "@pstdio/cli-linux-x64": "0.48.0",
+        "@pstdio/cli-win-arm64": "0.48.0",
+        "@pstdio/cli-win-x64": "0.48.0",
       },
     },
     "packages/pstdio-api": {
@@ -1009,7 +1010,7 @@
     },
     "packages/pstdio-workbench": {
       "name": "@pstdio/workbench",
-      "version": "0.47.0",
+      "version": "0.48.0",
       "dependencies": {
         "@dnd-kit/core": "^6.3.1",
         "@pstdio/sdk": "workspace:^",
@@ -1066,7 +1067,7 @@
     },
     "packages/sdk": {
       "name": "@pstdio/sdk",
-      "version": "0.47.0",
+      "version": "0.48.0",
       "dependencies": {
         "@noble/hashes": "^2.4.0",
         "@tanstack/query-core": "5.90.20",
@@ -1107,7 +1108,7 @@
     },
     "packages/ui": {
       "name": "@pstdio/ui",
-      "version": "0.47.0",
+      "version": "0.48.0",
       "dependencies": {
         "@dnd-kit/core": "^6.3.1",
         "@dnd-kit/sortable": "^10.0.0",
@@ -2301,18 +2302,6 @@
     "@protobufjs/utf8": ["@protobufjs/utf8@1.1.2", "", {}, "sha512-b1UQwcEZ4yCnMCD8DAL1VlbvBJE9/IX4FTIp7BG1xYpf29SLazLSrqUkj4w7Y5y7cCVP6E5tcqqcI0xemPkHug=="],
 
     "@pstdio/canvas": ["@pstdio/canvas@workspace:packages/canvas"],
-
-    "@pstdio/cli-darwin-arm64": ["@pstdio/cli-darwin-arm64@0.47.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-bxleer1aIRZnGP+f5LUZ8XUcQXNFVemCUYk2/qQWNYDb1QlTPcp0W1dA+4EO42ZzYWo32yx8Vm0FWfIinu0xqg=="],
-
-    "@pstdio/cli-darwin-x64": ["@pstdio/cli-darwin-x64@0.47.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-e1iCacJ0ZwyNoeVh8QYztOc5Xah56whE1Ukpz8PfHttReF1UHWepYKCfcqwFN0Y6u24OLE6Fc7pq+EOpScEA1A=="],
-
-    "@pstdio/cli-linux-arm64": ["@pstdio/cli-linux-arm64@0.47.0", "", { "os": "linux", "cpu": "arm64", "libc": "glibc" }, "sha512-JFdsotfUGCSWNlnmTlO8R/EUQIDjMfy5y5ZyhvCH+DARJhEjTyCjLaR141HTG9/XJhH6fgS6t5ICVkgcgPABDw=="],
-
-    "@pstdio/cli-linux-x64": ["@pstdio/cli-linux-x64@0.47.0", "", { "os": "linux", "cpu": "x64", "libc": "glibc" }, "sha512-gpMbQ/T38yS4zWJ16Ho3JtWxEbCRmv/Ff08t5+1Re6az93/z6mT6wfYkoVmJKT7qeHGiu34Wm+DtDvm6qDZi5w=="],
-
-    "@pstdio/cli-win-arm64": ["@pstdio/cli-win-arm64@0.47.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-r75t34WM0r8/v/E0MhseGRKoMK7Ep+qAd+h/i+pw+lCYRE7n25uIE23wa9U7OkARDNAmLaCdoRlFDuI2uMX/Zw=="],
-
-    "@pstdio/cli-win-x64": ["@pstdio/cli-win-x64@0.47.0", "", { "os": "win32", "cpu": "x64" }, "sha512-Exln6EunoWoK8seZz0n5IWu6wyza94QsQ6i4scqKojuL4BMQczqdMrStYiGHI3oD+Y/tjytkBc272jwTi1zKvA=="],
 
     "@pstdio/desktop": ["@pstdio/desktop@workspace:clients/desktop"],
 
@@ -5528,6 +5517,8 @@
 
     "canvas/@pstdio/ui": ["@pstdio/ui@0.47.0-nightly.20261112030231", "", { "dependencies": { "@dnd-kit/core": "^6.3.1", "@dnd-kit/sortable": "^10.0.0", "@dnd-kit/utilities": "^3.2.2", "@fontsource/inter": "^5.2.8", "@fontsource/onest": "^5.2.11", "@fontsource/playfair-display": "^5.2.8", "@git-diff-view/file": "^0.1.3", "@git-diff-view/react": "^0.1.3", "@lexical/code": "^0.40.0", "@lexical/link": "^0.40.0", "@lexical/list": "^0.40.0", "@lexical/mark": "^0.40.0", "@lexical/markdown": "^0.40.0", "@lexical/react": "^0.40.0", "@lexical/rich-text": "^0.40.0", "@lexical/selection": "^0.40.0", "@lexical/utils": "^0.40.0", "@monaco-editor/react": "^4.7.0", "@pstdio/sdk": "0.47.0-nightly.20261112030231", "@tanstack/charts": "1.2.1", "@tanstack/react-table": "^8.21.3", "@tanstack/react-virtual": "^3.13.19", "@types/mdast": "^4.0.4", "@xterm/addon-fit": "^0.10.0", "@xterm/addon-web-links": "^0.11.0", "@xterm/xterm": "^5.5.0", "diff": "^8.0.3", "dompurify": "^3.4.13", "katex": "^0.19.0", "lexical": "^0.40.0", "lucide-react": "^0.564.0", "mdast-util-from-markdown": "^2.0.3", "mdast-util-gfm": "^3.1.0", "mdast-util-math": "^3.0.0", "mdast-util-to-markdown": "^2.1.2", "mermaid": "11.16.1", "micromark-extension-gfm": "^3.0.0", "micromark-extension-math": "^3.1.0", "monaco-editor": "^0.55.1", "prismjs": "^1.30.0", "use-stick-to-bottom": "^1.1.3", "yjs": "^13.6.29", "zustand": "^5.0.8" }, "peerDependencies": { "@chakra-ui/react": "^3.21.0", "@emotion/react": "^11.0.0", "react": "19.2.4", "react-dom": "19.2.4" } }, "sha512-k860Kby3nurNZNqszjWrSpBESArAvQB82WgsM8cf+vOS3XoSn+f+2BRoWdvCP3yv46y22rtDivCZrjcFesIXpA=="],
 
+    "canvas/@tanstack/react-query": ["@tanstack/react-query@5.106.1", "", { "dependencies": { "@tanstack/query-core": "5.106.1" }, "peerDependencies": { "@types/react": "^18 || ^19", "react": "^18 || ^19" }, "optionalPeers": ["@types/react"] }, "sha512-ORDvJG/DSfmlFL9lQ8GDkE0VjtQbLeRDY7BL8xjKkQFGLfjFGfNWNuteWgPqA2gPJgLLuWfQ7IX0FlsHCJriyg=="],
+
     "canvas/@types/bun": ["@types/bun@1.4.2", "", { "dependencies": { "bun-types": "1.4.2" } }, "sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ=="],
 
     "cli-truncate/string-width": ["string-width@5.1.2", "", { "dependencies": { "eastasianwidth": "^0.2.0", "emoji-regex": "^9.2.2", "strip-ansi": "^7.0.1" } }, "sha512-HnLOCR3vjcY8beoNLtcjZ5/nxn2afmME6lhrDrebokqMap+XbeW8n9TXpPDOqdGK5qcI3oT0GKTW6wC7EMiVqA=="],
@@ -6509,6 +6500,8 @@
     "canvas/@pstdio/ui/diff": ["diff@8.0.4", "", {}, "sha512-DPi0FmjiSU5EvQV0++GFDOJ9ASQUVFh5kD+OzOnYdi7n3Wpm9hWWGfB/O2blfHcMVTL5WkQXSnRiK9makhrcnw=="],
 
     "canvas/@pstdio/ui/lucide-react": ["lucide-react@0.564.0", "", { "peerDependencies": { "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-JJ8GVTQqFwuliifD48U6+h7DXEHdkhJ/E87kksGByII3qHxtPciVb8T8woQONHBQgHVOl7rSMrrip3SeVNy7Fg=="],
+
+    "canvas/@tanstack/react-query/@tanstack/query-core": ["@tanstack/query-core@5.106.1", "", {}, "sha512-erYv/UACddcdgjOL2ixmFdK6tO/AVBeUcTCOtX2N51yZpDQ2U7KJ+xgB/bCNfsF3uoCDTqGHEEbDiFsIO9YUmQ=="],
 
     "canvas/@types/bun/bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
 

@@ -166,7 +166,7 @@ jobs:
           path: __test-tmp__/upgrade-candidate
       - name: Download the shared manual candidate
         if: inputs.ref == ''
-        uses: actions/download-artifact@v4
+        uses: ./.github/actions/download-artifact-by-id
         with:
           artifact-ids: ${{ needs.version_manual.outputs.artifact_id }}
           merge-multiple: true
@@ -202,7 +202,7 @@ jobs:
           echo "CANDIDATE_BINARY=$PWD/dist/pstdio" >> "$GITHUB_ENV"
       - name: Download the frozen candidate manifest
         if: inputs.candidate_artifact_id != ''
-        uses: actions/download-artifact@v4
+        uses: ./.github/actions/download-artifact-by-id
         with:
           artifact-ids: ${{ inputs.candidate_artifact_id }}
           path: __test-tmp__/upgrade-candidate
@@ -219,7 +219,7 @@ jobs:
           echo "id=$id" >> "$GITHUB_OUTPUT"
       - name: Download the exact build
         if: inputs.ref != ''
-        uses: actions/download-artifact@v4
+        uses: ./.github/actions/download-artifact-by-id
         with:
           artifact-ids: ${{ inputs.build_artifact_id || steps.build.outputs.id }}
           run-id: ${{ inputs.artifact_run_id }}

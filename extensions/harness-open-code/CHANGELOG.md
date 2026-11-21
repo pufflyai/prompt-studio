@@ -1,5 +1,22 @@
 # harness-open-code
 
+## 0.48.0
+
+_2026-11-21_
+
+### Minor Changes
+
+- cca9b29: Wait for supervisor quota resets and optionally restart limit-stopped conversations after a 15-second buffer, using durable delayed automation.
+
+### Patch Changes
+
+- cca9b29: Keep background task lifecycle notices out of conversations, preserve OpenCode question choices and replies, and wait for harness readiness before sending an answer.
+- b510245: Prepare bundled extensions for API 0.5 without dropping their existing host ranges, and return Planner, Reports and Artifacts paths and links using the host-provided owner.
+
+  Use publisher-qualified Planner and Reports commands in shipped skills, prompts, help examples and documentation so agent instructions also work after the API 0.5 shortcut removal.
+
+  Keep ticket page ancestry and fresh draft ignore rules on the host-provided owner, including timeline rows, pulls and workspace provisioning.
+
 ## 0.47.0
 
 _2026-11-12_

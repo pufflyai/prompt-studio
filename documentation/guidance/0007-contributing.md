@@ -28,6 +28,8 @@
 5. Commit `extensions/harness-codex/src/protocol/**` only when the supported Codex app-server protocol changes. Copy these types from Codex's ts-rs output; do not edit them by hand.
 6. For the Prompt Studio 0.46 and UI Canvas posts, commit final PNG banners and JSON recipes under `clients/landing-page/src/content/blog/images/blog-prompt-studio-0-46*` and `blog-ui-canvas*`, plus GIF workflows and SVG screenshots under `documentation/images/prompt-studio-0-46-*` and `ui-canvas-*`. Raw captures, preview catalogs, and site build output remain excluded.
 
+7. For the Prompt Studio 0.48 post, commit final PNG banners and JSON recipes under `clients/landing-page/src/content/blog/images/blog-prompt-studio-0-48*`, plus GIF workflows and SVG screenshots under `documentation/images/prompt-studio-0-48-*`. Keep raw captures and site build output excluded.
+
 ## 4. Large changes
 
 1. Changes adding 5,000 or more lines to a PR need human approval before writing code. This includes designs that commit the project to that much code later.
