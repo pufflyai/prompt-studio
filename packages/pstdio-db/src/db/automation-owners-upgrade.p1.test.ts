@@ -130,6 +130,9 @@ for (const interruption of ["normal", "capture", "schema", "partial-restore", "p
         await service.getExtensionRun({ projectId: "project", extensionId: "example.retained" }, "extension"),
       ).toMatchObject({ id: "extension" });
       expect(
+        await service.getExtensionRun({ projectId: "project", extensionId: "example.retained" }, "extension-alias"),
+      ).toMatchObject({ id: "extension-alias", principal_id: "second-extension-owner" });
+      expect(
         (await service.getOrCreateExtensionPrincipal({ projectId: "project", extensionId: "example.disabled" }))
           .disabled_at,
       ).toBe(stamp);
