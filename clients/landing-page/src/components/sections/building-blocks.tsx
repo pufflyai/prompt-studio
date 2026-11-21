@@ -1,5 +1,6 @@
-import { Box, Button, HStack, Text } from "@chakra-ui/react";
-import { BUILDING_BLOCKS, blockFor } from "../../content/building-block-content";
+import { Box, chakra, Text } from "@chakra-ui/react";
+import { ArrowRight } from "lucide-react";
+import { BUILDING_BLOCKS } from "../../content/building-block-content";
 import type { ToolShapeKind } from "../../content/tool-shapes";
 import { useStoryStyles } from "../../hooks/use-landing-styles";
 import { ToolShape } from "../shapes/tool-shapes";
@@ -18,27 +19,15 @@ export const BlockSymbol = (props: { kind: ToolShapeKind; large?: boolean }) => 
   );
 };
 
-interface BlockChipProps {
-  kind: ToolShapeKind;
-  selected?: boolean;
-  onClick?: () => void;
-}
-
-export const BlockChip = (props: BlockChipProps) => {
-  const { kind, selected, onClick } = props;
-  const content = (
-    <>
-      <BlockSymbol kind={kind} />
-      <Text textStyle="label/S/medium">{blockFor(kind).name}</Text>
-    </>
+/** The small "Docs" cue at the bottom of a feature card that links to its documentation. */
+export const DocsHint = () => {
+  const styles = useStoryStyles();
+  return (
+    <Text as="span" css={styles.docsHint}>
+      Docs
+      <ArrowRight size={14} />
+    </Text>
   );
-  if (onClick)
-    return (
-      <Button variant="ghost" size="sm" aria-pressed={selected} onClick={onClick}>
-        {content}
-      </Button>
-    );
-  return <HStack gap="xs">{content}</HStack>;
 };
 
 export const BuildingBlocks = () => {
@@ -46,18 +35,19 @@ export const BuildingBlocks = () => {
   return (
     <Box css={styles.blockGrid}>
       {BUILDING_BLOCKS.map((block) => (
-        <Box key={block.kind} css={styles.block}>
+        <chakra.a key={block.kind} href={block.docs} css={styles.block}>
           <Box css={styles.blockSymbol}>
             <BlockSymbol kind={block.kind} large />
           </Box>
-          <Text as="h2" textStyle="heading/S">
+          <Text as="h3" textStyle="heading/S">
             {block.name}
           </Text>
           <Text textStyle="paragraph/M/regular">{block.detail}</Text>
           <Text textStyle="paragraph/S/regular" color="fg.muted">
             {block.example}
           </Text>
-        </Box>
+          <DocsHint />
+        </chakra.a>
       ))}
     </Box>
   );

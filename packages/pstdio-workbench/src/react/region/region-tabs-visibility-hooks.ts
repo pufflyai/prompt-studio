@@ -147,8 +147,3 @@ export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region:
     hasPanelMenus,
   });
 };
-
-export const useWorkbenchRegionTabsVisible = (workbench: WorkbenchCore, region: WorkbenchPanelRegion) => {
-  const { showTabs, hasActions } = useWorkbenchPanelRegionTabsState(workbench, region);
-  return showTabs || hasActions;
-};

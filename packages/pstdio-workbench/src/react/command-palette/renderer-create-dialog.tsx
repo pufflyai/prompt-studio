@@ -2,19 +2,25 @@ import { CloseButton, Spinner } from "@chakra-ui/react";
 import { ScopedDialog as Dialog } from "@pstdio/ui";
 import { KanbanRendererCreateDialog } from "@pstdio/ui/kanban-renderer";
 import { useEffect, useState } from "react";
-import type { RegisteredKanbanRendererContribution } from "../../core";
+import type { RegisteredKanbanRendererContribution, ResourceRef } from "../../core";
+import { bindKanbanRendererContribution } from "../../core/registries/renderers/kanban-renderer-binding";
 import type { ReactRegisteredKanbanRendererContribution } from "../renderers/kanban/kanban-presentation";
 import { useKanbanAttributes } from "../renderers/kanban/use-kanban-attributes";
 import { RendererReadNotice } from "../renderers/renderer-read-notice";
 
 interface RendererCreateDialogProps {
   contribution: RegisteredKanbanRendererContribution;
+  /** The resource the create command was invoked for; its board reads and writes that resource. */
+  resource?: ResourceRef;
   onClose(): void;
 }
 
 export const RendererCreateDialog = (props: RendererCreateDialogProps) => {
   const { onClose } = props;
-  const contribution = props.contribution as ReactRegisteredKanbanRendererContribution;
+  const contribution = bindKanbanRendererContribution(props.contribution as ReactRegisteredKanbanRendererContribution, {
+    instanceId: "create-dialog",
+    resource: props.resource,
+  });
   const attributes = useKanbanAttributes(contribution.attributes);
   const [read, setRead] = useState<{ ready: boolean; error?: string }>({ ready: false });
   const [revision, setRevision] = useState(0);

@@ -35,7 +35,7 @@ const fixture = (saved = new Map<string | undefined, WorkbenchLayout>(), old = f
       : [],
   });
   w.pageLocations.setProject("project");
-  w.pageLocations.navigate({ kind: "page", page });
+  w.pageLocations.navigate({ kind: "page", page, ...(saved.size ? { intent: "restore" as const } : {}) });
   return { w, saved };
 };
 

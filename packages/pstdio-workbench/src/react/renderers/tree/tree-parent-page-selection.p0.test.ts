@@ -2,6 +2,42 @@ import { expect, test } from "bun:test";
 import { createWorkbench, type ResourceRef } from "../../../core";
 import { resolveTreeListSelection, resolveTreeSelectionIntent } from "./tree-list-selection";
 
+test.each([
+  false,
+  true,
+])("a moved Home page loses navigation selection and is selected again on return; declared=%s", async (selected) => {
+  const home = { kind: "page", extensionId: "example.pages", id: "home" } as const;
+  const w = createWorkbench({ defaultPage: home });
+  w.modes.registerMode({ id: "project", activate() {} });
+  w.views.registerView({ id: "home", title: "Home", body: { kind: "react", render: () => null } });
+  w.pages.registerPage({
+    id: "home",
+    ref: home,
+    path: "home",
+    modeId: "project",
+    slots: [],
+    main: { kind: "view", view: { kind: "view", id: "home" }, cardinality: "one", presentation: "page" },
+  });
+  w.pageLocations.setProject("project");
+  const selection = () =>
+    resolveTreeListSelection({
+      sections: [
+        { id: "pages", nodes: [{ id: "home", label: "Home", selected, target: { kind: "page", page: home } }] },
+      ],
+      childrenByNodeId: {},
+      selectedNodeId: "home",
+      activeLocation: w.pages.store.getState().location,
+    });
+  await w.navigation.openPage({ page: home });
+  expect(selection()).toBe("home");
+  w.movePanel(w.pages.getContent()!.widgetId, "side");
+  expect(w.pages.store.getState().activePageId).toBeUndefined();
+  expect(selection()).toBeUndefined();
+  await w.navigation.openPage({ page: home });
+  expect(selection()).toBe("home");
+  expect(w.layout.listPanelInstances("side")).toHaveLength(0);
+});
+
 test("the nearest matching page wins over an ancestor", () => {
   const home = { kind: "page", extensionId: "example.lab", id: "home" } as const;
   const instance = { ...home, id: "instance" };

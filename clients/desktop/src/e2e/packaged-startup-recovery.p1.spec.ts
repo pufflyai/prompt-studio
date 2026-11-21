@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { expect } from "@playwright/test";
 import { test } from "../testing/packaged-fixture";
 import { resumeProcess, suspendProcess } from "../testing/suspend-process";
@@ -37,20 +38,23 @@ test("keeps waiting for a slow runtime and opens automatically without replacing
 
     app = await launchPackagedWindow(home, recoveryEnvironment);
     await expect(app.lifecyclePage.getByRole("status")).toContainText("Opening Prompt Studio");
-    // Advance the renderer's notice timer without delaying process startup or changing the test allowance.
-    const now = Date.now();
-    await app.lifecyclePage.clock.install({ time: now });
-    await app.lifecyclePage.clock.pauseAt(now + 1_000);
+    // Exercise the prerendered notice before its client module has hydrated.
+    await app.lifecyclePage.route(/\/assets\/hydrate-.*\.js$/, async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      await route.continue();
+    });
     await app.lifecyclePage.reload();
     await expect(app.lifecyclePage.getByRole("status")).toContainText("Opening Prompt Studio");
     const copyLogs = app.lifecyclePage
       .getByRole("status")
       .getByRole("button", { name: "Copy diagnostics", exact: true });
     const slowMessage = app.lifecyclePage.getByText("This is taking longer than usual", { exact: true });
-    await app.lifecyclePage.clock.runFor(9_000);
+    // The notice is prerendered. Advancing a paused clock before hydration can
+    // finish before React installs its timer, so observe the real notice interval.
+    await delay(9_000);
     await expect(copyLogs).not.toBeVisible();
     await expect(slowMessage).not.toBeVisible();
-    await app.lifecyclePage.clock.runFor(2_000);
+    await delay(2_000);
     await expect(copyLogs).toBeVisible();
     await expect(slowMessage).toBeVisible();
     await expect(app.lifecyclePage.getByRole("status")).toHaveCount(1);
@@ -70,7 +74,6 @@ test("keeps waiting for a slow runtime and opens automatically without replacing
 
     resumeProcess(runtime.pid);
     suspendedPid = null;
-    await app.lifecyclePage.clock.resume();
     const workbench = await waitForWorkbenchPage(app.lifecyclePage, runtime.origin);
     await expect(workbench.locator("#root")).not.toBeEmpty();
     expect(readDescriptor(home)).toEqual(runtime);

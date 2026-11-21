@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { chromium } from "@playwright/test";
 import { createClient } from "@pstdio/sdk/client";
 import type { ProjectSyncState, StorageRecord } from "@pstdio/sdk/extensions";
@@ -9,6 +9,7 @@ import { createSyncSpace } from "pstdio-sync/encryption";
 import { coreOwnerId, projectInfoDocumentId } from "pstdio-sync/records";
 import { e2eExtension } from "../default-extensions";
 import { folderProjectInput } from "../helpers/folder-project";
+import { waitForDefaultExtensions } from "../scripts/default-extensions-readiness";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { openCloudProjectInPicker, reopenPreparedProjectOffline } from "./packaged-cloud-project-picker";
@@ -166,6 +167,10 @@ const retireDeviceHome = async (child: Parameters<typeof stopProcess>[0], home: 
 // Two real hosts, synchronization and browser preparation share this whole-case allowance.
 const TWO_DEVICE_TEST_TIMEOUT = 180_000;
 
+// The picker's second device keeps its own log with the run's evidence: another test reuses the "second" home name.
+const pickerSecondLog = (root: string) =>
+  join(import.meta.dirname, "../../test-results/packaged-runtime", `picker-second-${basename(root)}.jsonl`);
+
 setupPackagedSmokeTests();
 test(
   "a new device opens its cloud project from the picker, prepares its folder, and restores shared files",
@@ -181,6 +186,8 @@ test(
     try {
       const source = await writeSharedNotesExtension(root);
       const env = deviceEnvironments(source, cert);
+      const secondLog = pickerSecondLog(root);
+      Object.assign(env.second, { PSTDIO_LOG_PATH: secondLog });
       const started = await startPickerDevices(root, env, prepareRepository(root), async (first, repository) => {
         phase("first device and checkout ready");
         const project = await first.client.projects.create(
@@ -235,6 +242,9 @@ test(
       await mkdir(local);
       await second.client.projects.create(folderProjectInput({ name: "Local scratchpad" }, local));
       phase("local picker choice created");
+      // The Cloud status item belongs to a default tool; open the browser once the device has installed it.
+      await waitForDefaultExtensions(second.host.child, secondLog);
+      phase("new device default tools installed");
       picker = await openCloudProjectInPicker({
         browser,
         baseUrl: second.host.baseUrl,

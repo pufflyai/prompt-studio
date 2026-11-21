@@ -1,7 +1,3 @@
-import { createMenuItemGroups, createMenuItems } from "../../menus/command-menu-items";
-import { withLeadingSeparator } from "../../menus/menu-entries";
-export const createTreeMenuItems = createMenuItems;
-
 import { HStack, Text } from "@chakra-ui/react";
 import { PaletteShortcut, type TreeListAction, type TreeListActionMenuItem } from "@pstdio/ui";
 import type {
@@ -17,6 +13,8 @@ import { reportUserActionError } from "../../../core/shared/run-user-action";
 import { hasCommandParameters } from "../../command-palette/command-palette-params";
 import type { CommandParamsRequest } from "../../command-palette/command-params-dialog";
 import { WorkbenchShortcutHint } from "../../keybindings/shortcut-hint";
+import { createMenuItemGroups } from "../../menus/command-menu-items";
+import { withLeadingSeparator } from "../../menus/menu-entries";
 import { WorkbenchIcon } from "../../shared/icon";
 
 export interface TreeActionParamsRequest {

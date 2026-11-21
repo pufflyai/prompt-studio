@@ -1,5 +1,7 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
-import { ASSEMBLY_WIDE_WIDTH, BOARD_SCALE } from "../../services/shapes/assembly-layout";
+
+// The hero places copy and scene side by side once the panel is this wide.
+const HERO_WIDE = "56rem";
 
 export const landingSlotRecipe = defineSlotRecipe({
   slots: [
@@ -22,10 +24,9 @@ export const landingSlotRecipe = defineSlotRecipe({
     "main",
     "hero",
     "heroLayout",
-    "cardSpace",
+    "heroScene",
     "heroCopy",
     "download",
-    "downloadDescription",
     "downloadPlatforms",
     "siteTabs",
     "siteTab",
@@ -165,29 +166,13 @@ export const landingSlotRecipe = defineSlotRecipe({
       minHeight: "full",
       width: "full",
       mx: "auto",
-      [`@container hero (min-width: ${ASSEMBLY_WIDE_WIDTH / 16}rem)`]: {
+      [`@container hero (min-width: ${HERO_WIDE})`]: {
         gridTemplateColumns: "30rem minmax(0, 1fr)",
         alignItems: "center",
         pb: "0",
       },
     },
-    cardSpace: {
-      position: "relative",
-      alignSelf: "stretch",
-      containerType: "size",
-      containerName: "board-area",
-      minHeight: "var(--assembly-min-height)",
-      "--assembly-min-height": "32rem",
-      "--assembly-horizontal-space": "32px",
-      "--assembly-bottom-space": "96px",
-      "--assembly-board-scale": BOARD_SCALE.narrow,
-      [`@container hero (min-width: ${ASSEMBLY_WIDE_WIDTH / 16}rem)`]: {
-        "--assembly-min-height": "36rem",
-        "--assembly-horizontal-space": "48px",
-        "--assembly-bottom-space": "0px",
-        "--assembly-board-scale": BOARD_SCALE.wide,
-      },
-    },
+    heroScene: { position: "relative", alignSelf: "center", width: "full", px: { base: "md", xl: "lg" } },
     heroCopy: {
       position: "relative",
       zIndex: 1,
@@ -201,11 +186,10 @@ export const landingSlotRecipe = defineSlotRecipe({
       gap: "xl",
       px: { base: "lg", xl: "3xl" },
       py: { base: "xl", xl: "4xl" },
-      [`@container hero (min-width: ${ASSEMBLY_WIDE_WIDTH / 16}rem)`]: { gap: "md", py: "lg" },
+      [`@container hero (min-width: ${HERO_WIDE})`]: { gap: "md", py: "lg" },
     },
     download: { display: "flex", flexDirection: "column", gap: "sm", alignItems: "start", width: "full" },
-    downloadDescription: { minHeight: "12" },
-    downloadPlatforms: { minHeight: "8", gap: "xs" },
+    downloadPlatforms: { minHeight: "8", gap: "xs", flexWrap: "wrap" },
     siteTabs: { gap: "2xs", flexShrink: 1, minWidth: 0, overflowX: "auto" },
     siteTab: {
       display: "flex",

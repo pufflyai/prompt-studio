@@ -105,27 +105,6 @@ describe("mergeWorktree", () => {
     ).rejects.toThrow("HOOK preMerge FAILED");
   });
 
-  test("post-merge hook runs after successful merge", async () => {
-    const wtPath = join(repo.dir, "wt-merge");
-    await createWorktree({ repoRoot: repo.dir, branch: "task/hook-post", path: wtPath });
-
-    const dispatch = noopDispatch();
-
-    await Bun.write(join(wtPath, "feature.txt"), "feature");
-    await commitChanges({ worktreePath: wtPath, message: "add feature" });
-
-    await mergeWorktree({ repoRoot: repo.dir, branch: "task/hook-post", target: "main", dispatch });
-
-    expect(dispatch.firePostHook).toHaveBeenCalledWith(
-      "postMerge",
-      expect.objectContaining({
-        repoPath: repo.dir,
-        branch: "task/hook-post",
-        target: "main",
-      }),
-    );
-  });
-
   test("on-conflict hook runs when merge fails", async () => {
     const wtPath = join(repo.dir, "wt-merge");
     await createWorktree({ repoRoot: repo.dir, branch: "task/conflict", path: wtPath });

@@ -40,6 +40,7 @@ import { departingPagePreviews } from "./page-preview-lifetime";
 import { ownWorkbenchPageRuntime } from "./page-runtime-lifetime";
 import { normalizePageRuntimeState } from "./page-runtime-normalization";
 import { toWidgetPlacement } from "./page-view-instance";
+import { registerPortablePagePanel } from "./portable-page-panel";
 import { selectedMainLayout } from "./selected-main-layout";
 import { connectTrayPreviewRemoval } from "./tray-preview-removal";
 export interface ConnectWorkbenchPageRuntimeInput {
@@ -73,6 +74,7 @@ const syncOwnedPanelMenus = (layout: LayoutModel, pageContent: WorkbenchWidgetPl
         role: "panel-menu",
         viewId: menu.rendererId,
         resource: placement.resource,
+        pageContext: placement.pageContext ?? placement.pageOwnerLocation,
         title: menu.region.endsWith("-left-menu") ? placement.resource?.label : menu.title,
       });
     }
@@ -211,7 +213,7 @@ export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeIn
   const removedPreviews = connectTrayPreviewRemoval(input, () => applyingTransition);
   const scope = input.layout.onDidChangePersistenceScope(() => {
     const state = input.registry.store.getState();
-    if (!applyingTransition && state.activePageId) applyPageState(input, state, "scope-restore");
+    if (!applyingTransition && state.activeModeId) applyPageState(input, state, "scope-restore");
   });
   return createDisposable(() => {
     scope.dispose();
@@ -262,33 +264,39 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
     registerPagePlacements: (page) => {
       validatePagePanelView(page, input.modePlacements);
       validatePageLandingDeclaration(page, input.modePlacements, registry.listPages());
-      const registrations = pageSlots(page).map((slot) => {
-        const viewId = contributionRefId(slot.item.kind === "view" ? slot.item.view : slot.item.binding.view);
-        if (!viewId) throw new Error(`Workbench page slot view is not registered: ${page.id}.${slot.id}`);
-        return registerWorkbenchViewPlacement(
-          input.layout,
-          input.views,
-          {
-            ...slot,
-            id: pagePlacementContributionId(page.id, slot.id),
-            viewId,
-            role: slot.role === "primary" ? "location" : "sub-panel",
-            singleton: slot.item.kind === "view" || slot.item.binding.cardinality !== "many",
-            closable: !(slot.role === "primary" && page.main.kind === "view" && page.main.presentation === "page"),
-          },
-          input.viewMenus,
-        );
-      });
+      const portable = registerPortablePagePanel(page, input.modePlacements);
+      const registrations: ReturnType<typeof registerWorkbenchViewPlacement>[] = [];
       let dialog: ReturnType<typeof registerPageDialog>;
       try {
+        for (const slot of pageSlots(page)) {
+          const viewId = contributionRefId(slot.item.kind === "view" ? slot.item.view : slot.item.binding.view);
+          if (!viewId) throw new Error(`Workbench page slot view is not registered: ${page.id}.${slot.id}`);
+          registrations.push(
+            registerWorkbenchViewPlacement(
+              input.layout,
+              input.views,
+              {
+                ...slot,
+                id: pagePlacementContributionId(page.id, slot.id),
+                viewId,
+                role: slot.role === "primary" ? "location" : "sub-panel",
+                singleton: slot.item.kind === "view" || slot.item.binding.cardinality !== "many",
+                closable: !(slot.role === "primary" && page.main.kind === "view" && page.main.presentation === "page"),
+              },
+              input.viewMenus,
+            ),
+          );
+        }
         dialog = input.overlays && registerPageDialog(page, input.overlays);
       } catch (error) {
         for (const registration of registrations.reverse()) registration.dispose();
+        portable?.dispose();
         throw error;
       }
       return createDisposable(() => {
         dialog?.dispose();
         for (const registration of registrations.reverse()) registration.dispose();
+        portable?.dispose();
       });
     },
   });

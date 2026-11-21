@@ -6,6 +6,30 @@ const createTrees = () => {
   const rendererRegistry = createWorkbenchRendererRegistry();
   return createTreeRendererRegistry({ rendererRegistry });
 };
+test("expanded folders inside fixed groups reload through their visible ancestors", async () => {
+  const trees = createTrees();
+  trees.registerTreeRenderer({
+    id: "fixed",
+    title: "Fixed groups",
+    getBody: () => [
+      {
+        id: "resources",
+        nodes: [
+          {
+            id: "group",
+            label: "Group",
+            collapsible: false,
+            children: [{ id: "folder", label: "Folder", collapsible: true }],
+          },
+        ],
+      },
+    ],
+    getChildren: () => [{ id: "child", label: "Child" }],
+  });
+  const loaded = await loadTreeData(trees, "fixed");
+  const children = await loadExpandedTreeChildren(trees, "fixed", loaded!, ["folder"]);
+  expect(children.folder?.map((node) => node.id)).toEqual(["child"]);
+});
 test("expanded folder reads have at most four outstanding transports", async () => {
   const trees = createTrees();
   let active = 0;

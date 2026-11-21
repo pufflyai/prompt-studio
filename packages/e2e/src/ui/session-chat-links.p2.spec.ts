@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { folderProjectInput } from "../helpers/folder-project";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
-import { openSessionSidePanel } from "./helpers/resource-actions";
+import { isSessionUrl, openSessionSidePanel } from "./helpers/resource-actions";
 import { prepareDashboard } from "./helpers/workspace-files";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
@@ -74,29 +74,55 @@ test("opens chat workspace files and restores selected documents through history
       return html;
     });
     expect(copiedHtml).toContain("<code>src/nested/app.ts</code>");
+    // Workspace file links preview beside the conversation and keep it in Main.
+    const side = page.locator('[data-workbench-panel="side"]');
+    const main = page.locator('[data-workbench-panel="main"]');
+    const sideTree = page.getByRole("region", { name: "Side left menu", exact: true });
+    // The preview's Files menu reveals and selects the previewed document.
+    const expectSideTreeSelection = async (name: string) => {
+      const toggle = side.getByRole("button", { name: "Open Side left menu", exact: true });
+      if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
+      await expect(sideTree.getByRole("option", { name, exact: true })).toHaveAttribute("aria-selected", "true");
+    };
     await source.focus();
     await expect(source).toBeFocused();
     await page.keyboard.press("Enter");
-    await expect(page.locator(".monaco-editor .view-lines")).toContainText("chatLinkedFile");
+    await expect(side.locator(".monaco-editor .view-lines")).toContainText("chatLinkedFile");
+    await expect(page).toHaveURL(isSessionUrl(project.id, session.id));
+    await expectSideTreeSelection("app.ts");
+    await page.reload();
+    await expect(side.locator(".monaco-editor .view-lines")).toContainText("chatLinkedFile");
+    await expectSideTreeSelection("app.ts");
+    // A row in the preview's Files menu opens beside the conversation as well.
+    await sideTree.getByRole("option", { name: "README.md", exact: true }).click();
+    await expect(side.locator(".monaco-editor .view-lines:visible")).toContainText(/Workspace\s+README/);
+    await expect(page).toHaveURL(isSessionUrl(project.id, session.id));
+    await expectSideTreeSelection("README.md");
+    await expect(page.getByRole("link", { name: "README", exact: true }).last()).toBeVisible();
+    await page.getByRole("link", { name: "README", exact: true }).last().click();
+    await expect(side.locator(".monaco-editor .view-lines:visible")).toContainText(/Workspace\s+README/);
+    await expectSideTreeSelection("README.md");
+    // The link's own page URL opens the document in Main, survives reload, and history returns to the conversation.
+    await page.goto(sourceHref!);
+    await expect(main.locator(".monaco-editor .view-lines")).toContainText("secondLine");
     await expect(page.getByRole("option").filter({ hasText: "app.ts" }).first()).toHaveAttribute(
       "aria-selected",
       "true",
     );
-    const fileUrl = page.url();
     await page.reload();
-    await expect(page.locator(".monaco-editor .view-lines")).toContainText("chatLinkedFile");
+    await expect(main.locator(".monaco-editor .view-lines")).toContainText("secondLine");
     await page.goBack();
-    await expect(page.getByRole("link", { name: "README", exact: true }).last()).toBeVisible();
-    await page.getByRole("link", { name: "README", exact: true }).last().click();
-    await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Workspace\s+README/);
-    await page.goto(fileUrl);
-    await expect(page.locator(".monaco-editor .view-lines")).toContainText("secondLine");
-    await page.goto(`/projects/${project.id}/session?resource=${encodeURIComponent(resource)}`);
-    await page.getByRole("link", { name: "Draft", exact: true }).last().click();
-    await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Exact\s+workspace\s+draft\s+bytes/);
+    const draft = page.getByRole("link", { name: "Draft", exact: true }).last();
+    await expect(draft).toBeVisible();
+    // The draft's page URL opens it in Main; the link itself previews it beside the conversation.
+    await page.goto((await draft.getAttribute("href"))!);
+    await expect(main.locator(".monaco-editor .view-lines:visible")).toContainText(/Exact\s+workspace\s+draft\s+bytes/);
     await expect(page).toHaveURL(
       /document=.pstdio%2Fextension-storage%2Fpstdio.planner%2Ftickets%2FPS-105%2Fticket.md/,
     );
+    await page.goBack();
+    await draft.click();
+    await expect(side.locator(".monaco-editor .view-lines:visible")).toContainText(/Exact\s+workspace\s+draft\s+bytes/);
   } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
     rmSync(root, { recursive: true, force: true });
@@ -261,8 +287,21 @@ test("opens a same-origin canonical document in another project and returns to i
     await page.goBack();
     await expect(page.getByRole("link", { name: "Source file", exact: true }).last()).toBeVisible();
     await page.getByRole("link", { name: "Source file", exact: true }).last().click();
-    await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Source\s+project/);
-    await expect(page).toHaveURL(new RegExp(`/projects/${source!.id}/extensions/pstdio.workspaces/files`));
+    // Intended since #2252: a source file in the same project previews in Side, and its conversation stays in Main.
+    const sidePreview = page.locator('[data-workbench-panel="side"] .monaco-editor .view-lines:visible');
+    const conversation = page
+      .locator('[data-workbench-panel="main"]')
+      .getByRole("link", { name: "Other project", exact: true })
+      .last();
+    const expectSourcePreview = async () => {
+      await expect(sidePreview).toContainText(/Source\s+project/);
+      await expect(page).toHaveURL(isSessionUrl(source!.id, session.id));
+      await expect(conversation).toBeVisible();
+    };
+    await expectSourcePreview();
+    // The preview survives a reload beside the same conversation.
+    await page.reload();
+    await expectSourcePreview();
   } catch (error) {
     failures.push(error);
   } finally {

@@ -36,10 +36,7 @@ interface TreeNodeRenderContext {
   onCommandError?: (error: unknown) => void;
   onRequestParams?: (request: TreeActionParamsRequest) => void;
 }
-export const resolveTreeListActiveNodeId = (activeNodeId: string | null | undefined, selectedNodeId?: string) => {
-  if (!activeNodeId) return selectedNodeId;
-  return activeNodeId;
-};
+
 export { resolveTreeListSelection } from "./tree-list-selection";
 
 const findNode = (nodes: TreeNode[], nodeId: string, childrenByNodeId: Record<string, TreeNode[]>): TreeNode | null => {
@@ -245,6 +242,7 @@ const toTreeListNode = (
     },
     ...(node.menuPlacement ? { menuPlacement: node.menuPlacement } : {}),
     isContainer: node.collapsible,
+    collapsible: node.collapsible,
     isNavigable: Boolean(navigationIntent),
     navigationIntent,
     children: [...(node.children ?? []), ...(childrenByNodeId[node.id] ?? [])].map((child) =>

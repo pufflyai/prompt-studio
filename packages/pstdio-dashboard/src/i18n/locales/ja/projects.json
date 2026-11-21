@@ -38,12 +38,13 @@
       "loadError": "拡張機能の読み込みに失敗しました。",
       "title": "拡張機能",
       "searchPlaceholder": "拡張機能を検索…",
-      "installedGroup": "インストール済み · {{count}}",
+      "installedGroup": "インストール済み",
       "noSearchResults": "\"{{query}}\"に一致する拡張機能はありません。",
       "noDescription": "説明がありません。",
       "scope": {
-        "repo": "repo",
-        "global": "共有"
+        "label": "範囲",
+        "repo": "このプロジェクト",
+        "global": "すべてのプロジェクト"
       },
       "status": {
         "error": "読み込みに失敗しました"
@@ -133,7 +134,8 @@
           "templates": "テンプレート",
           "themes": "テーマ",
           "navigationItems": "ナビゲーション項目",
-          "commandPaletteResources": "コマンドパレットリソース"
+          "commandPaletteResources": "コマンドパレットリソース",
+          "workspaceTypes": "ワークスペースの種類"
         },
         "deleteHintShared": "この拡張機能のファイルを削除します。使用しているすべてのプロジェクトから取り除かれます。"
       },
@@ -167,7 +169,19 @@
         "upgradingButton": "更新中",
         "batchFailed": "{{total}} 件中 {{count}} 件の更新に失敗しました",
         "installingButton": "インストール中"
-      }
+      },
+      "enabledGroup": "有効",
+      "author": {
+        "label": "作成者",
+        "me": "自分",
+        "promptStudio": "Prompt Studio"
+      },
+      "columns": {
+        "extension": "拡張機能",
+        "enabled": "有効"
+      },
+      "noMatches": "検索に一致する拡張機能はありません。",
+      "clearSearch": "検索をクリア"
     }
   },
   "list": {

@@ -83,3 +83,19 @@ export const NeedsAttention: Story = {
 export const SignedOut: Story = {
   id: "projects-project-picker-rows--signed-out",
 };
+
+const copyPresence: Record<string, "cloud-only" | "removing"> = { "prompt-studio": "cloud-only", granite: "removing" };
+
+export const CloudProjectCopies: Story = {
+  id: "projects-project-picker-rows--cloud-project-copies",
+  args: {
+    cloudState: (id) => {
+      return {
+        signedIn: true,
+        cloud: id !== "scratchpad",
+        presence: copyPresence[id],
+        deleting: id === "docufin",
+      };
+    },
+  },
+};

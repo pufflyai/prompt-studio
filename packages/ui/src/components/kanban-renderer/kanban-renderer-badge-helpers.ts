@@ -18,8 +18,6 @@ export interface AttributeBadge {
   isEditable?: boolean;
 }
 
-export const getAttributeBadgeColorPalette = (_badge: AttributeBadge) => "gray";
-
 export const renderEnumBadge = (descriptor: AttributeDescriptor, type: AttributeType, value: unknown) => {
   if (type.kind !== "enum") return null;
   const stringValue = typeof value === "string" ? value : null;

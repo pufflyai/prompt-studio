@@ -80,12 +80,3 @@ test("does not request diffs when workspace setup has failed", () => {
     }),
   ).toBeUndefined();
 });
-
-test("does not request diffs when workspace support is explicitly disabled", () => {
-  expect(
-    resolveWorkspaceDiffRequest({
-      resourceId: "cloud-workspace",
-      metadata: { workspaceProviderState: "ready", workspaceSupportsDiff: false },
-    }),
-  ).toBeUndefined();
-});

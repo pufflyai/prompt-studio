@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { type Browser, chromium } from "@playwright/test";
+import type { QueuedFollowUpRequest } from "pstdio-api-contracts";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
 import { expectPackagedQueuedEditRecovery } from "./packaged-queued-edit-recovery-smoke";
 import { expectPackagedQueuedEditorCancellation } from "./packaged-queued-editor-smoke";
@@ -105,6 +106,14 @@ describe("packaged queued requests", () => {
         },
       },
     });
+    const savedBeforeStop: QueuedFollowUpRequest[] = (await request(path)).requests;
+    expect(savedBeforeStop).toHaveLength(1);
+    expect(savedBeforeStop[0]).toMatchObject({
+      prompt: other.prompt,
+      model: other.model,
+      params: other.params,
+      attachments: other.attachments,
+    });
     const stopped = await request(
       `/projects/${fixture!.projectId}/extensions/commands/test.queue-smoke.command.stop/execute`,
       "POST",
@@ -113,7 +122,13 @@ describe("packaged queued requests", () => {
     expect(stopped).toMatchObject({
       outcome: {
         ok: true,
-        value: { session: { status: "cancelled", lastExit: { cause: "user_stop" } }, queue: { requests: [] } },
+        value: {
+          session: { status: "cancelled", lastExit: { cause: "user_stop" } },
+          queue: {
+            requests: savedBeforeStop.map(({ steeringUnavailableReason: _reason, ...saved }) => saved),
+            steeringAvailable: false,
+          },
+        },
       },
     });
   });

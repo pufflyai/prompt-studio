@@ -1,9 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  getResizableSplitAxis,
-  resolveDraggedPanelSize,
-  resolveResizableBounds,
-} from "./resizable-split-layout.geometry";
+import { resolveDraggedPanelSize, resolveResizableBounds } from "./resizable-split-layout.geometry";
 
 describe("ResizableSplitLayout geometry", () => {
   test("reserves the separator and minimum content width when sizing a panel", () => {
@@ -26,18 +22,6 @@ describe("ResizableSplitLayout geometry", () => {
       }),
     ).toEqual({ minSize: 144, maxSize: 376 });
   });
-  test("maps bottom panels to a vertical split with a horizontal separator", () => {
-    expect(getResizableSplitAxis("bottom")).toEqual({
-      rootDirection: "column",
-      dimension: "height",
-      separatorOrientation: "horizontal",
-      cursor: "row-resize",
-      pointerCoordinate: "clientY",
-      deltaDirection: -1,
-      panelFirst: false,
-    });
-  });
-
   test("closes a vertical panel at 72 px and keeps 73 px open at its configured minimum", () => {
     const input = {
       side: "bottom" as const,

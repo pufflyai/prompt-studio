@@ -17,7 +17,7 @@ const fixture = async () => {
 };
 
 for (const status of ["queued", "in_progress", "awaiting_input"] as const) {
-  test(`extensions stop ${status} work and cancel its queued follow-ups`, async () => {
+  test(`extensions stop ${status} work and retain accepted active follow-ups`, async () => {
     const { project, service, api } = await fixture();
     const row = await service.createQueuedWithEntry({
       project_id: project.id,
@@ -31,10 +31,13 @@ for (const status of ["queued", "in_progress", "awaiting_input"] as const) {
       await service.insertEntryForActive({ id: row.id, prompt: "Follow up", request_kind: "follow_up" });
       if (status === "awaiting_input") await service.transitionStatus(row.id, status);
     }
-    expect(await handle.deps.sessionQueueEntriesService.listPendingBySession(row.id)).not.toBeEmpty();
+    const pending = await handle.deps.sessionQueueEntriesService.listPendingBySession(row.id);
+    expect(pending).not.toBeEmpty();
     await api.stop(row.id);
     expect(await api.get(row.id)).toMatchObject({ status: "cancelled", lastExit: { cause: "user_stop" } });
-    expect(await handle.deps.sessionQueueEntriesService.listPendingBySession(row.id)).toBeEmpty();
+    expect(await handle.deps.sessionQueueEntriesService.listPendingBySession(row.id)).toEqual(
+      status === "queued" ? [] : pending,
+    );
   });
 }
 

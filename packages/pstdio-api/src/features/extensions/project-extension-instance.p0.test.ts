@@ -32,6 +32,53 @@ const installedSource = {
 };
 
 describe("toProjectExtensionInstance", () => {
+  test("reports first-party, personal and other publishers independently of installation scope", () => {
+    const previousHome = process.env.PSTDIO_HOME;
+    process.env.PSTDIO_HOME = "/home/user/.pstdio";
+    try {
+      for (const scope of ["repo", "global"] as const) {
+        const sourcePath = scope === "repo" ? "/repo/.pstdio/extensions/tool" : "/home/user/.pstdio/extensions/tool";
+        for (const [extensionId, sourceKind, author] of [
+          ["pstdio.planner", "local_path", { kind: "publisher", publisher: "pstdio" }],
+          ["pstdio.my-tool", "local_path", { kind: "self" }],
+          ["acme.imported", "git", { kind: "publisher", publisher: "acme" }],
+        ] as const) {
+          expect(
+            toProjectExtensionInstance(instance, {
+              ...installedSource,
+              source_path: sourcePath,
+              extension_id: extensionId,
+              source_kind: sourceKind,
+            }),
+          ).toMatchObject({ scope, author });
+        }
+      }
+    } finally {
+      if (previousHome === undefined) delete process.env.PSTDIO_HOME;
+      else process.env.PSTDIO_HOME = previousHome;
+    }
+  });
+  test("public package availability is independent of local maintenance and installation scope", () => {
+    const publicLocal = toProjectExtensionInstance(instance, {
+      ...installedSource,
+      extension_id: "pstdio.planner",
+      source_kind: "local_path",
+    });
+    expect(publicLocal).toMatchObject({ ownership: "mine", visibility: "public" });
+    const imported = toProjectExtensionInstance(instance, {
+      ...installedSource,
+      extension_id: "example.imported",
+      source_kind: "git",
+      source_path: "/repo/.pstdio/extensions/imported",
+    });
+    expect(imported).toMatchObject({ ownership: "unknown", visibility: "unknown" });
+    const personal = toProjectExtensionInstance(instance, {
+      ...installedSource,
+      extension_id: "example.personal",
+      source_kind: "local_path",
+    });
+    expect(personal).toMatchObject({ ownership: "mine", visibility: "unknown" });
+  });
   test("publishes installed SVG icon bytes and falls back when an asset disappears", () => {
     const root = mkdtempSync(join(tmpdir(), "instance-icon-"));
     try {

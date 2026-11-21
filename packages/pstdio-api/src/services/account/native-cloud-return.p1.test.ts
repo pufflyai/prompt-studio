@@ -25,6 +25,7 @@ const fakeCloud = () => {
       calls.push(["release", ids]);
     },
     status: async () => status,
+    removalState: async () => "pending",
     apply: async (id: string) => {
       calls.push(["apply", id]);
       return true;

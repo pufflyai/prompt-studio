@@ -175,6 +175,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
         installName: "harness-pi",
         extensionId: "pstdio.harness-pi",
         icon: "Terminal",
+        visibility: "public",
       }),
     );
   });
@@ -213,6 +214,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     expect(enabledRow?.enabled).toBe(true);
     expect(enabledRow?.name).toBe("list-enabled");
     expect(enabledRow?.displayName).toBe("List Enabled");
+    expect(enabledRow).toMatchObject({ ownership: "mine", visibility: "unknown" });
     expect(enabledRow?.installName).toBe("list-enabled-source");
     expect(enabledRow?.installedExtensionId).toBe(enabled.installedExtensionId);
     expect(enabledRow?.extensionId).toBe("test.list-enabled");
@@ -224,7 +226,6 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     expect(disabledRow).toBeDefined();
     expect(disabledRow?.enabled).toBe(false);
     expect(disabledRow?.name).toBe("list-disabled");
-    expect(disabledRow).not.toHaveProperty("namespace");
   });
 
   test("lists discovered installed sources as disabled project extensions", async () => {

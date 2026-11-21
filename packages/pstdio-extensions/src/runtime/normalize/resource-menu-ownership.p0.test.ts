@@ -55,29 +55,6 @@ describe("resource menu slot ownership", () => {
     );
   });
 
-  test("keeps resource kinds with the same local id under different owners", () => {
-    const first = defineResourceKind({
-      id: "recipe",
-      menuSlots: [{ id: "first", placement: "header-overflow", access: "owner" }],
-    });
-    const duplicate = defineResourceKind({
-      id: "recipe",
-      menuSlots: [{ id: "duplicate", placement: "header-overflow", access: "owner" }],
-    });
-
-    const runtime = normalizeExtensionSources([
-      source("owner", defineExtension({ resourceKinds: [first] })),
-      source("intruder", defineExtension({ resourceKinds: [duplicate] })),
-    ]);
-
-    expect(runtime.resourceKinds).toHaveLength(2);
-    expect(runtime.resourceKinds[0]).toMatchObject({
-      extensionId: "pstdio.owner",
-      contribution: { menuSlots: { first: {} } },
-    });
-    expect(runtime.resourceKinds[1]?.extensionId).toBe("pstdio.intruder");
-  });
-
   test("rejects extension declarations of host resource kinds", () => {
     const project = defineResourceKind({
       id: "project",

@@ -5,9 +5,12 @@ import { useTranslation } from "react-i18next";
 import { ExtensionActionButton } from "./extension-action-button";
 import type { ExtensionActionState } from "./extension-action-feedback";
 import { ExtensionIcon } from "./extension-icon";
+import { ExtensionAuthorBadge } from "./extension-labels";
+import { wideExtensionPanel } from "./extension-layout";
 
 interface MarketplaceExtensionRowProps {
   extension: MarketplaceExtension;
+  rowRef?: (node: HTMLDivElement | null) => void;
   action?: ExtensionActionState;
   onDismissAction?: (action: ExtensionActionState) => void;
   onRetryAction?: () => void;
@@ -21,7 +24,10 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
 
   return (
     <HStack
+      ref={props.rowRef}
       data-testid="marketplace-extension-entry"
+      flexWrap="wrap"
+      css={{ [wideExtensionPanel]: { flexWrap: "nowrap" } }}
       gap="md"
       paddingX="lg"
       paddingY="sm"
@@ -34,7 +40,10 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
       onClick={onOpen}
       onKeyDown={(event) => {
         if (event.currentTarget !== event.target) return;
-        if (event.key === "Enter" || event.key === " ") onOpen();
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen();
+        }
       }}
     >
       <Flex
@@ -50,7 +59,7 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
       >
         <ExtensionIcon name={extension.icon} />
       </Flex>
-      <Stack gap="0" flex="1" minW="0">
+      <Stack gap="0" flex="1" minW="0" flexBasis="60%" css={{ [wideExtensionPanel]: { flexBasis: "0" } }}>
         <Text textStyle="label/S/medium" truncate>
           {extension.displayName}
         </Text>
@@ -62,6 +71,10 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
           {extension.origin.url}@{extension.origin.ref}#{extension.origin.path}
         </Text>
       </Stack>
+      <Box css={{ [wideExtensionPanel]: { width: "28" } }} maxW="full" minW="0">
+        <ExtensionAuthorBadge author={extension.author} />
+      </Box>
+      <Box display="none" css={{ [wideExtensionPanel]: { display: "block", width: "28" } }} />
       <Box onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
         <ExtensionActionButton
           variant="outline"

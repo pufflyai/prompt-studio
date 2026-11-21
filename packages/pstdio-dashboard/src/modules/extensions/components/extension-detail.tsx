@@ -24,6 +24,7 @@ import { ExtensionDeleteSection } from "./extension-delete-section";
 import { ExtensionDetailHealth } from "./extension-detail-health";
 import { ExtensionHealthPopover } from "./extension-health-popover";
 import { ExtensionIcon } from "./extension-icon";
+import { ExtensionAuthorBadge, ExtensionScopeBadge } from "./extension-labels";
 import { ExtensionSettingsForm } from "./extension-settings-form";
 import { settingsToParams } from "./extension-settings-params";
 import { ExtensionToggle } from "./extension-toggle";
@@ -119,7 +120,7 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
         header={
           <Stack gap="md">
             <Stack gap="md" paddingX="lg" paddingTop="lg">
-              <HStack gap="md" alignItems="center">
+              <HStack gap="md" alignItems="center" flexWrap="wrap">
                 <Flex
                   alignItems="center"
                   justifyContent="center"
@@ -134,10 +135,13 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                 </Flex>
                 <Stack gap="0" flex="1" minW="0">
                   <Text textStyle="heading/M">{extension.displayName}</Text>
+                  <HStack gap="sm" flexWrap="wrap">
+                    <ExtensionAuthorBadge author={extension.author} />
+                    <ExtensionScopeBadge scope={extension.scope} />
+                  </HStack>
                   <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle">
                     {extension.extensionId}
-                    {extension.version ? ` · v${extension.version}` : ""} ·{" "}
-                    {t(`projectSettings.extensionsPanel.scope.${extension.scope}`)}
+                    {extension.version ? ` · v${extension.version}` : ""}
                   </Text>
                 </Stack>
                 {unavailableHarnesses.length > 0 && (

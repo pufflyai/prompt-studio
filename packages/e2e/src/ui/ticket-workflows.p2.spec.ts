@@ -124,11 +124,20 @@ for (const action of ["Delete workspace"]) {
     const workspaceRow = page
       .getByRole("option")
       .filter({ has: page.getByText(workspace.workspace_shorthand, { exact: true }) });
+    // A ticket's linked workspace previews its Files landing in Side, so the ticket stays open in Main.
+    // Its file tree reads exactly this workspace, and deleting from that tab removes it from the ticket.
+    const workspaceTree = page.waitForRequest(
+      (sent) => sent.url().includes("file-tree.tree.body/execute") && (sent.postData() ?? "").includes(workspace.id),
+    );
     await workspaceRow.click();
-    await expect(page).toHaveURL(/\/workspace\?resource=/);
-    await expect(page.getByRole("tab", { name: "Changes", exact: true })).toBeVisible();
+    const workspaceTab = page
+      .locator('[data-workbench-panel-header="side"]')
+      .getByRole("tab", { name: "Files", exact: true });
+    await expect(workspaceTab).toHaveAttribute("aria-selected", "true");
+    await workspaceTree;
+    await expect(page).toHaveURL(/\/ticket\?resource=/);
     await expect(page.getByRole("tab", { name: "Workspaces", exact: true })).toHaveCount(0);
-    await page.locator("[data-workbench-breadcrumb-resource-actions]").click();
+    await workspaceTab.click({ button: "right" });
     await expect(page.getByRole("menuitem", { name: "Delete workspace", exact: true })).toBeVisible();
     const response = page.waitForResponse(
       (response) => response.url().includes(".command.show-delete/execute") && response.request().method() === "POST",

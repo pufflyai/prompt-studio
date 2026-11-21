@@ -59,8 +59,12 @@ export const createOrderedMemoryRecords = (
   const identities = new Map<string, string>();
   const pending = new Map<string, OrderedOperation>();
   const textFields = structuredClone(declarations);
+  // Reducers replace changed records; unchanged objects keep their projection across queries.
+  const projections = new WeakMap<OrderedRecord, ReturnType<typeof orderedProjection>>();
+  let revisionToken = {};
   const rebuild = async () => {
     views = new Map(canonical);
+    revisionToken = {};
     const suppressed = new Set<string>();
     for (const operation of pending.values()) {
       if ([...operationDependencies(operation).keys()].some((id) => suppressed.has(id))) {
@@ -86,7 +90,15 @@ export const createOrderedMemoryRecords = (
   };
   const read = async (recordId: string) => {
     const record = views.get(recordId);
-    if (record) return orderedProjection(record);
+    if (record) {
+      let projection = projections.get(record);
+      if (!projection) {
+        projection = orderedProjection(record);
+        projections.set(record, projection);
+      }
+      // Every caller owns its values, including the first reader of a cached projection.
+      return structuredClone(await projection);
+    }
     return {
       recordId,
       exists: false,
@@ -142,6 +154,7 @@ export const createOrderedMemoryRecords = (
   };
   return {
     read,
+    revisionToken: () => revisionToken,
     list: async (prefix = "") =>
       Promise.all(
         [...views]
@@ -176,6 +189,7 @@ export const createOrderedMemoryRecords = (
     seed: (records: OrderedRecord[]) => {
       canonical = new Map(records.map((record) => [record.recordId, structuredClone(record)]));
       views = new Map(canonical);
+      revisionToken = {};
     },
     snapshot: (): DocumentSnapshot =>
       new Map(

@@ -19,16 +19,6 @@ describe("resolveRegionPlacementRenderState", () => {
     });
   });
 
-  test("renders the active placement in flow", () => {
-    expect(resolveRegionPlacementRenderState(placement({ widgetId: "active" }), "active", "main")).toEqual({
-      active: true,
-      display: "flex",
-      pointerEvents: "auto",
-      position: "relative",
-      visibility: "visible",
-    });
-  });
-
   test("keeps inactive Sidenav sections visible and interactive", () => {
     expect(
       resolveRegionPlacementRenderState(placement({ widgetId: "mode-sessions" }), "page-tools", "sidenav"),

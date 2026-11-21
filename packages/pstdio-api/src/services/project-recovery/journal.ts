@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite";
 import { createHash } from "node:crypto";
 import { link, mkdir, open, readFile, rename, stat, unlink, utimes } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { z } from "zod";
 import { recoveryChunkSchema } from "./chunks";
 
@@ -34,23 +34,61 @@ const alive = (pid: number) => {
   }
 };
 
+export const recoveryJournalKey = (source: string[]) =>
+  createHash("sha256").update(JSON.stringify(source)).digest("hex").slice(0, 32);
+
+/** Keep the inode until release: the OS relinquishes this lease on process death. */
+export const acquireRecoveryJournalLease = (
+  path: string,
+  create = true,
+  mode: "read" | "write" | "exclusive" = "write",
+) => {
+  let lease: Database | undefined;
+  try {
+    lease = new Database(path, { create });
+    if (mode === "read") lease.exec("BEGIN; SELECT name FROM sqlite_schema LIMIT 1");
+    else lease.exec(mode === "exclusive" ? "BEGIN EXCLUSIVE" : "BEGIN IMMEDIATE");
+  } catch (error) {
+    lease?.close();
+    if ((error as { code?: string }).code === "SQLITE_BUSY") return null;
+    throw error;
+  }
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    lease!.close();
+  };
+};
+
+export const acquireRecoveryProjectLease = async (root: string, exclusive = false) => {
+  const path = `${resolve(root)}.ownership.sqlite`;
+  await mkdir(dirname(path), { recursive: true, mode: 0o700 });
+  return acquireRecoveryJournalLease(path, true, exclusive ? "exclusive" : "read");
+};
+
 /** Durable per-source lifecycle state, kept in recovery working storage outside
  * every captured folder. It holds only opaque ciphertext references. */
-export const openRecoveryJournal = async (input: { root: string; source: string[] }) => {
+export const openRecoveryJournal = (input: { root: string; source: string[]; previousRoot?: string }) => {
   const directory = join(input.root, "sources");
-  await mkdir(directory, { recursive: true, mode: 0o700 });
-  const key = createHash("sha256").update(JSON.stringify(input.source)).digest("hex").slice(0, 32);
+  const key = recoveryJournalKey(input.source);
   const path = join(directory, `${key}.json`);
   const lockPath = join(directory, `${key}.lock`);
-  const read = async () => {
+  const previous =
+    input.previousRoot && input.previousRoot !== input.root
+      ? join(input.previousRoot, "sources", `${key}.json`)
+      : undefined;
+  const readAt = async (location: string) => {
     try {
-      return journalSchema.parse(JSON.parse(await readFile(path, "utf8")));
+      return journalSchema.parse(JSON.parse(await readFile(location, "utf8")));
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === "ENOENT") return empty;
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
       throw error;
     }
   };
+  const read = async () => (await readAt(path)) ?? (previous ? await readAt(previous) : null) ?? empty;
   const write = async (next: RecoveryJournal) => {
+    await mkdir(directory, { recursive: true, mode: 0o700 });
     const temporary = `${path}.${crypto.randomUUID()}.pending`;
     const file = await open(temporary, "wx", 0o600);
     try {
@@ -129,25 +167,28 @@ export const openRecoveryJournal = async (input: { root: string; source: string[
     }
     return null;
   };
-  const acquire = async () => {
-    // Keep this inode: the OS releases the lease on process death.
-    const lease = new Database(`${lockPath}.sqlite`, { create: true });
-    try {
-      lease.exec("BEGIN IMMEDIATE");
-    } catch (error) {
-      lease.close();
-      if ((error as { code?: string }).code === "SQLITE_BUSY") return null;
-      throw error;
-    }
-    let release: (() => Promise<void>) | null;
+  const acquireSource = async () => {
+    await mkdir(directory, { recursive: true, mode: 0o700 });
+    const closeLease = acquireRecoveryJournalLease(`${lockPath}.sqlite`);
+    if (!closeLease) return null;
+    let release: (() => Promise<void>) | null = null;
     try {
       release = await acquireMarker();
+      if (previous && release) {
+        try {
+          await link(previous, path);
+          await unlink(previous);
+        } catch (error) {
+          if (!["ENOENT", "EEXIST"].includes((error as NodeJS.ErrnoException).code ?? "")) throw error;
+        }
+      }
     } catch (error) {
-      lease.close();
+      await release?.();
+      closeLease();
       throw error;
     }
     if (!release) {
-      lease.close();
+      closeLease();
       return null;
     }
     let released = false;
@@ -157,9 +198,30 @@ export const openRecoveryJournal = async (input: { root: string; source: string[
       try {
         await release();
       } finally {
-        lease.close();
+        closeLease();
       }
     };
+  };
+  const acquire = async () => {
+    const releaseProject = await acquireRecoveryProjectLease(input.root);
+    if (!releaseProject) return null;
+    try {
+      const releaseSource = await acquireSource();
+      if (!releaseSource) {
+        releaseProject();
+        return null;
+      }
+      return async () => {
+        try {
+          await releaseSource();
+        } finally {
+          releaseProject();
+        }
+      };
+    } catch (error) {
+      releaseProject();
+      throw error;
+    }
   };
   return {
     read,

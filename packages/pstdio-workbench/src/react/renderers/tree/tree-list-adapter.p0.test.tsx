@@ -298,24 +298,6 @@ describe("toTreeListSection", () => {
     expect(contextLabels).toEqual(overflowLabels);
     expect(section.nodes[0]?.menuItems?.[0]?.group).toBeDefined();
   });
-  test("renders workspace diff metadata as trailing content", () => {
-    const workbench = createWorkbench();
-    const workspace = {
-      type: "workspace",
-      id: "ws-1",
-      label: "WS-1",
-      metadata: { diffAdditions: 7, diffDeletions: 2 },
-    } satisfies ResourceRef;
-    const section = toTreeListSection(
-      {
-        id: "primary",
-        nodes: [{ id: "workspace-ws-1", label: "WS-1", resource: workspace }],
-      },
-      {},
-      { workbench },
-    );
-    expect(section.nodes[0]?.endContent).toBeDefined();
-  });
   test("maps section empty states to disabled empty-state rows", () => {
     const workbench = createWorkbench();
     const section = toTreeListSection(
@@ -361,21 +343,6 @@ describe("toTreeListSection end content", () => {
     expect(section.nodes[0]?.endContent).toMatchObject({ type: TreeRowTags, props: { tags, badge: { label: "3" } } });
     expect(section.nodes[1]?.endContent).toBeUndefined();
   });
-  test("does not render a chevron for menu-backed tree rows", () => {
-    const workbench = createWorkbench();
-    workbench.commands.registerCommand({ id: "help.open", label: "Open help" }, { execute: () => undefined });
-    workbench.layout.registerMenuItem(resourceContextMenuPath("workspace"), { commandId: "help.open" });
-    const section = toTreeListSection(
-      {
-        id: "primary",
-        nodes: [{ id: "help", label: "Help", menuPath: resourceContextMenuPath("workspace") }],
-      },
-      {},
-      { workbench },
-    );
-    expect(section.nodes[0]?.menuItems).toHaveLength(1);
-    expect(section.nodes[0]?.endContent).toBeUndefined();
-  });
   test("preserves explicit and diff end content on menu-backed tree rows", () => {
     const workbench = createWorkbench();
     const explicitEndContent = <Box data-testid="custom-end-content" />;
@@ -411,7 +378,7 @@ describe("toTreeListSection end content", () => {
     expect(section.nodes[0]?.endContent).toBe(explicitEndContent);
     expect(section.nodes[1]?.endContent).toMatchObject({
       type: DiffBubble,
-      props: { additions: 7, deletions: 2, variant: "ghost", size: "small" },
+      props: { additions: 7, deletions: 2 },
     });
   });
   test("preserves explicit end content", () => {

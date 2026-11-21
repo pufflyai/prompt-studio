@@ -15,6 +15,7 @@ import { createDesktopProjectTabs } from "@/lib/desktop-project-tabs-bridge";
 import { connectDesktopUpdateNotices } from "@/lib/desktop-update-notices";
 import { createDesktopWorkbenchStorage } from "@/lib/desktop-workbench-storage";
 import { SyncProvider } from "@/lib/sync/sync-provider";
+import { reportWorkbenchError } from "@/lib/workbench-error-report";
 import { DesktopQuitConfirmation } from "@/modules/desktop/desktop-quit-confirmation";
 import { DesktopStartupAppearance } from "@/modules/desktop/desktop-startup-appearance";
 import { createPerformanceMonitoring } from "@/modules/performance/module";
@@ -53,8 +54,14 @@ const isBrowserSignedOut = async () => {
   }
 };
 
+const showDashboardFailure = (error: unknown, componentStack?: string | null) => {
+  reportWorkbenchError(error, undefined, componentStack);
+};
+
 const renderDashboard = async () => {
-  const root = createRoot(document.getElementById("root")!);
+  const root = createRoot(document.getElementById("root")!, {
+    onUncaughtError: (error, info) => showDashboardFailure(error, info.componentStack),
+  });
   const initialLink = takeBrowserLoginCode(window.location.hash);
   const url = new URL(window.location.href);
   const preparingDesktop = Boolean(window.promptStudioDesktop) && url.searchParams.has("desktop-startup");
@@ -157,11 +164,12 @@ const startDesktopProjectWorkbenches = (
   controller.start({
     persistence,
     projectId: readPageUrlProjectId(pageLocationBrowser.current().url) ?? persistence.getSelectedProjectId(),
-    createWorkbench: (projectId, active) =>
+    onWorkbenchError: (projectId, error) => reportWorkbenchError(error, projectId),
+    createWorkbench: (projectId, active, projectTabs) =>
       createDashboardWorkbench({
         active,
         projectId,
-        projectTabs: controller.forWorkbench(projectId),
+        projectTabs,
         setupHandoff,
         pageLocationBrowser,
         performance,
@@ -181,4 +189,4 @@ const startDesktopProjectWorkbenches = (
   };
 };
 
-void renderDashboard();
+void renderDashboard().catch(showDashboardFailure);

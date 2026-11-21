@@ -1,4 +1,11 @@
-import { defineExtension, definePage, defineView, defineViewMenu, workbenchModes } from "@pstdio/sdk/extensions";
+import {
+  defineExtension,
+  defineNavigationItem,
+  definePage,
+  defineView,
+  defineViewMenu,
+  workbenchModes,
+} from "@pstdio/sdk/extensions";
 
 const content = defineView({
   id: "content",
@@ -25,5 +32,14 @@ const page = definePage({
 export default defineExtension({
   views: [content, menu],
   pages: [page],
+  navigationItems: [
+    defineNavigationItem({
+      id: "menu",
+      owner: workbenchModes.project,
+      label: "Menu page",
+      icon: "PanelsTopLeft",
+      action: { kind: "page", page: page.ref },
+    }),
+  ],
   viewMenus: [defineViewMenu({ id: "attached", owner: content.ref, view: menu.ref, side: "left" })],
 });

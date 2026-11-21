@@ -1,10 +1,9 @@
-import { Box, Flex, HStack, Icon, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, HStack, Stack, Text } from "@chakra-ui/react";
 import type {
   ExtensionDiagnostic,
   ProjectExtensionInstance,
   WorkbenchExtensionAutomationRecord,
 } from "@pstdio/sdk/api";
-import { Folder, Globe } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useTranslation } from "react-i18next";
 import { ExtensionActionButton } from "./extension-action-button";
@@ -13,10 +12,13 @@ import { ExtensionAutomationsPopover } from "./extension-automations-popover";
 import { ExtensionHealthPopover } from "./extension-health-popover";
 import { ExtensionIcon } from "./extension-icon";
 import { ExtensionIdentity } from "./extension-identity";
+import { ExtensionAuthorBadge, ExtensionScopeBadge } from "./extension-labels";
+import { wideExtensionPanel } from "./extension-layout";
 import { ExtensionToggle } from "./extension-toggle";
 
 export interface ExtensionListRowProps {
   projectId?: string;
+  rowRef?: (node: HTMLDivElement | null) => void;
   extension: ProjectExtensionInstance;
   diagnostics: ExtensionDiagnostic[];
   automations: WorkbenchExtensionAutomationRecord[];
@@ -59,7 +61,11 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
 
   return (
     <HStack
+      ref={props.rowRef}
       data-testid="extension-entry"
+      data-extension-id={extension.id}
+      flexWrap="wrap"
+      css={{ [wideExtensionPanel]: { flexWrap: "nowrap" } }}
       position="relative"
       gap="md"
       paddingX="lg"
@@ -73,7 +79,10 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
       onClick={onOpen}
       onKeyDown={(event) => {
         if (event.currentTarget !== event.target) return;
-        if (event.key === "Enter" || event.key === " ") onOpen();
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen();
+        }
       }}
     >
       <Flex
@@ -90,12 +99,21 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         <ExtensionIcon name={extension.icon} />
       </Flex>
 
-      <Stack gap="0" flex="1" minW="0">
+      <Stack gap="0" flex="1" minW="0" flexBasis="60%" css={{ [wideExtensionPanel]: { flexBasis: "0" } }}>
         <HStack gap="sm" minW="0">
           <Text textStyle="label/S/medium" color={extension.enabled ? "fg" : "fg.muted"} truncate>
             {extension.displayName}
           </Text>
           {extension.version && <ExtensionIdentity value={`v${extension.version}`} />}
+          <Box flexShrink="0" display="flex" justifyContent="flex-end" onClick={stopRowClick} onKeyDown={stopRowClick}>
+            <ExtensionHealthPopover
+              extension={extension}
+              diagnostics={diagnostics}
+              unavailableHarnesses={unavailableHarnesses}
+              upgrading={changing}
+              onUpgrade={onUpgrade}
+            />
+          </Box>
         </HStack>
         <Text textStyle="label/XS" color="fg.muted" truncate>
           {extension.description ?? t("projectSettings.extensionsPanel.noDescription")}
@@ -103,9 +121,8 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
       </Stack>
 
       <Box
-        w="64px"
+        display={automations.length ? "flex" : "none"}
         flexShrink="0"
-        display="flex"
         justifyContent="flex-end"
         onClick={stopRowClick}
         data-testid="extension-automation-status"
@@ -115,23 +132,6 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
           automations={automations}
           togglingAutomation={togglingAutomation || changing}
           onToggleAutomation={onToggleAutomation}
-        />
-      </Box>
-
-      <Box
-        w="52px"
-        flexShrink="0"
-        display="flex"
-        justifyContent="flex-end"
-        onClick={stopRowClick}
-        onKeyDown={stopRowClick}
-      >
-        <ExtensionHealthPopover
-          extension={extension}
-          diagnostics={diagnostics}
-          unavailableHarnesses={unavailableHarnesses}
-          upgrading={changing}
-          onUpgrade={onUpgrade}
         />
       </Box>
 
@@ -152,14 +152,22 @@ export const ExtensionListRow = (props: ExtensionListRowProps) => {
         )}
       </Box>
 
-      <HStack gap="2xs" w="72px" flexShrink="0" justifyContent="flex-end" color="fg.subtle">
-        <Icon boxSize="3.5">{extension.scope === "repo" ? <Folder /> : <Globe />}</Icon>
-        <Text textStyle="label/XS" fontFamily="mono">
-          {t(`projectSettings.extensionsPanel.scope.${extension.scope}`)}
-        </Text>
-      </HStack>
+      <Box css={{ [wideExtensionPanel]: { width: "28" } }} maxW="full" minW="0" flexShrink="1">
+        <ExtensionAuthorBadge author={extension.author} />
+      </Box>
+      <Box css={{ [wideExtensionPanel]: { width: "28" } }} flexShrink="0">
+        <ExtensionScopeBadge scope={extension.scope} />
+      </Box>
 
-      <Box flexShrink="0" onClick={stopRowClick} onKeyDown={stopRowClick}>
+      <Box
+        marginLeft="auto"
+        css={{ [wideExtensionPanel]: { width: "16", marginLeft: "0" } }}
+        display="flex"
+        justifyContent="end"
+        flexShrink="0"
+        onClick={stopRowClick}
+        onKeyDown={stopRowClick}
+      >
         <ExtensionActionFeedback
           action={toggleAction}
           onDismiss={toggleAction && (() => onDismissAction?.(toggleAction))}

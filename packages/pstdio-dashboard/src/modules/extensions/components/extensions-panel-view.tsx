@@ -1,4 +1,4 @@
-import { HStack, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
+import { Badge, Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import type {
   ExtensionDiagnostic,
   MarketplaceExtension,
@@ -6,7 +6,6 @@ import type {
   WorkbenchExtensionAutomationRecord,
   WorkbenchExtensionHarnessRecord,
 } from "@pstdio/sdk/api";
-import { Search } from "lucide-react";
 import type { AgentInfo } from "pstdio-api-contracts";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -14,14 +13,20 @@ import { PageContentLayout } from "@/shared/components/page-content-layout";
 import type { DroppedExtensionFolder } from "@/shared/extensions/api";
 import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
 import { type ExtensionUpgradeBatch, marketplaceActionKey } from "./extension-actions";
+import { defaultExtensionFilters, type ExtensionFilters, matchesExtensionSearch } from "./extension-filters";
 import { ExtensionFolderDropZone } from "./extension-folder-drop-zone";
 import { unavailableExtensionHarnesses } from "./extension-harness-availability";
 import { ExtensionListRow } from "./extension-list-row";
 import { ExtensionUpgradeProgress } from "./extension-upgrade-progress";
+import { ExtensionsPanelHeader } from "./extensions-panel-header";
 import { MarketplaceExtensionRow } from "./marketplace-extension-row";
 
 export interface ExtensionsPanelViewProps {
   projectId?: string;
+  filters?: ExtensionFilters;
+  onFiltersChange?: (filters: ExtensionFilters) => void;
+  rowRef?: (id: string, node: HTMLDivElement | null) => void;
+  searchRef?: (node: HTMLInputElement | null) => void;
   extensions: ProjectExtensionInstance[];
   sourceChangingIds?: ReadonlySet<string>;
   actionStates?: Record<string, ExtensionActionState>;
@@ -67,22 +72,6 @@ const getDiagnosticsByExtensionId = (extensions: ProjectExtensionInstance[], dia
   return diagnosticsByExtensionId;
 };
 
-const matchesSearch = (extension: ProjectExtensionInstance, search: string) => {
-  const query = search.trim().toLowerCase();
-  if (!query) return true;
-  return [extension.displayName, extension.extensionId, extension.description ?? ""].some((value) =>
-    value.toLowerCase().includes(query),
-  );
-};
-
-const matchesMarketplaceSearch = (extension: MarketplaceExtension, search: string) => {
-  const query = search.trim().toLowerCase();
-  if (!query) return true;
-  return [extension.displayName, extension.installName, extension.extensionId ?? "", extension.description].some(
-    (value) => value.toLowerCase().includes(query),
-  );
-};
-
 export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
   const {
     extensions,
@@ -108,132 +97,145 @@ export const ExtensionsPanelView = (props: ExtensionsPanelViewProps) => {
     onDropFolder,
   } = props;
   const { t } = useTranslation("projects");
-  const [search, setSearch] = useState("");
+  const [localFilters, setLocalFilters] = useState(defaultExtensionFilters);
+  const filters = props.filters ?? localFilters;
+  const onFiltersChange = props.onFiltersChange ?? setLocalFilters;
+  const clearSearch = () => onFiltersChange(defaultExtensionFilters);
+  const matches = (extension: ProjectExtensionInstance | MarketplaceExtension) =>
+    matchesExtensionSearch(extension, filters.search);
 
   const diagnosticsByExtensionId = getDiagnosticsByExtensionId(extensions, diagnostics);
   const sortedExtensions = [...extensions].sort(compareDisplayName);
-  const visible = sortedExtensions.filter((extension) => matchesSearch(extension, search));
+  const visible = sortedExtensions.filter(matches);
   const availableMarketplace = marketplace.filter((extension) => !extension.installed).sort(compareDisplayName);
-  const visibleMarketplace = availableMarketplace.filter((extension) => matchesMarketplaceSearch(extension, search));
+  const visibleMarketplace = availableMarketplace.filter(matches);
+  const groups = [
+    { key: "enabled", extensions: visible.filter((extension) => extension.enabled) },
+    { key: "installed", extensions: visible.filter((extension) => !extension.enabled) },
+  ];
   const upgradable = extensions.filter((extension) => extension.canUpgrade && !sourceChangingIds?.has(extension.id));
   const folderAction = actionStates.$folder;
 
   return (
-    <PageContentLayout
-      testId="extensions-panel"
-      header={
-        <Stack
-          paddingX="lg"
-          paddingTop="lg"
-          paddingBottom="md"
-          gap="sm"
-          bg="bg"
-          borderBottomWidth="1px"
-          borderColor="border.subtle"
-        >
-          <HStack gap="md" alignItems="center">
-            <Text textStyle="heading/M" flex="1" minW="0">
-              {t("projectSettings.extensionsPanel.title")}
+    <Box w="full" h="full" flex="1" minH="0" minW="0" containerType="inline-size">
+      <PageContentLayout
+        testId="extensions-panel"
+        header={
+          <ExtensionsPanelHeader
+            searchRef={props.searchRef}
+            filters={filters}
+            onFiltersChange={onFiltersChange}
+            upgrade={
+              (upgradable.length > 0 || batch) && (
+                <ExtensionUpgradeProgress
+                  batch={batch}
+                  onUpgrade={() => onUpgradeAll?.(upgradable)}
+                  onDismiss={onDismissBatch}
+                  canUpgrade={upgradable.length > 0}
+                />
+              )
+            }
+          />
+        }
+      >
+        {visible.length === 0 && (
+          <Stack padding="lg" gap="md" align="start" data-testid="extensions-empty">
+            <Text textStyle="paragraph/S/regular" color="fg.muted">
+              {extensions.length === 0
+                ? t("projectSettings.extensionsPanel.empty")
+                : t("projectSettings.extensionsPanel.noMatches")}
             </Text>
-            {(upgradable.length > 0 || batch) && (
-              <ExtensionUpgradeProgress
-                batch={batch}
-                onUpgrade={() => onUpgradeAll?.(upgradable)}
-                onDismiss={onDismissBatch}
-                canUpgrade={upgradable.length > 0}
-              />
+            {filters.search && (
+              <Button variant="outline" size="xs" onClick={clearSearch}>
+                {t("projectSettings.extensionsPanel.clearSearch")}
+              </Button>
             )}
-            <InputGroup startElement={<Search size={14} />} width="260px">
-              <Input
-                size="sm"
-                value={search}
-                placeholder={t("projectSettings.extensionsPanel.searchPlaceholder")}
-                aria-label={t("projectSettings.extensionsPanel.searchPlaceholder")}
-                onChange={(event) => setSearch(event.target.value)}
-                data-testid="extensions-search"
-              />
-            </InputGroup>
-          </HStack>
+          </Stack>
+        )}
+        <Stack gap="0">
+          {groups
+            .filter((group) => group.extensions.length > 0)
+            .flatMap((group) => [
+              <HStack
+                key={group.key}
+                paddingX="lg"
+                paddingY="sm"
+                gap="sm"
+                bg="bg.subtle"
+                borderBottomWidth="1px"
+                borderColor="border.subtle"
+                data-testid={`extensions-group-${group.key}`}
+              >
+                <Text as="h2" textStyle="label/XS/medium">
+                  {t(`projectSettings.extensionsPanel.${group.key}Group`)}
+                </Text>
+                <Badge variant="number" size="xs">
+                  {group.extensions.length}
+                </Badge>
+              </HStack>,
+              ...group.extensions.map((extension) => (
+                <ExtensionListRow
+                  projectId={props.projectId}
+                  key={extension.id}
+                  rowRef={(node) => props.rowRef?.(`installed:${extension.id}`, node)}
+                  extension={extension}
+                  diagnostics={diagnosticsByExtensionId.get(extension.extensionId) ?? []}
+                  automations={automations.filter((automation) => automation.extensionInstanceId === extension.id)}
+                  unavailableHarnesses={unavailableExtensionHarnesses(extension, harnesses, agents)}
+                  togglingAutomation={togglingAutomation}
+                  action={actionStates[extension.id]}
+                  sourceChanging={sourceChangingIds?.has(extension.id)}
+                  onDismissAction={(expected) => onDismissAction?.(extension.id, expected)}
+                  onRetryAction={() => onRetryAction?.(extension.id)}
+                  onToggle={(enabled) => onToggle?.(extension, enabled)}
+                  onToggleAutomation={async (automation, enabled) =>
+                    onToggleAutomation?.(extension, automation, enabled)
+                  }
+                  onUpgrade={() => onUpgrade?.(extension)}
+                  onOpen={() => onOpen?.(extension)}
+                />
+              )),
+            ])}
         </Stack>
-      }
-    >
-      <Text paddingX="lg" paddingTop="md" paddingBottom="2xs" textStyle="label/XS/medium" color="fg.subtle">
-        {t("projectSettings.extensionsPanel.installedGroup", { count: extensions.length })}
-      </Text>
 
-      {extensions.length === 0 && (
-        <Text
-          paddingX="lg"
-          paddingY="md"
-          textStyle="paragraph/S/regular"
-          color="fg.muted"
-          data-testid="extensions-empty"
-        >
-          {t("projectSettings.extensionsPanel.empty")}
+        <Text paddingX="lg" paddingTop="md" paddingBottom="2xs" textStyle="label/XS/medium" color="fg.subtle">
+          {t("projectSettings.extensionsPanel.marketplace.group", { count: availableMarketplace.length })}
         </Text>
-      )}
-      {extensions.length > 0 && visible.length === 0 && (
-        <Text paddingX="lg" paddingY="md" textStyle="paragraph/S/regular" color="fg.muted">
-          {t("projectSettings.extensionsPanel.noSearchResults", { query: search })}
-        </Text>
-      )}
+        {availableMarketplace.length === 0 && (
+          <Text paddingX="lg" paddingY="md" textStyle="paragraph/S/regular" color="fg.muted">
+            {t("projectSettings.extensionsPanel.marketplace.allInstalled")}
+          </Text>
+        )}
+        {availableMarketplace.length > 0 && visibleMarketplace.length === 0 && (
+          <Text paddingX="lg" paddingY="md" textStyle="paragraph/S/regular" color="fg.muted">
+            {t("projectSettings.extensionsPanel.noMatches")}
+          </Text>
+        )}
+        {visibleMarketplace.map((extension) => (
+          <MarketplaceExtensionRow
+            key={extension.installName}
+            rowRef={(node) => props.rowRef?.(`marketplace:${extension.installName}`, node)}
+            extension={extension}
+            action={actionStates[marketplaceActionKey(extension.installName)]}
+            onDismissAction={(expected) => onDismissAction?.(marketplaceActionKey(extension.installName), expected)}
+            onRetryAction={() => onRetryAction?.(marketplaceActionKey(extension.installName))}
+            onInstall={() => onInstallMarketplace?.(extension)}
+            onOpen={() => onOpenMarketplace?.(extension)}
+          />
+        ))}
 
-      {visible.map((extension) => (
-        <ExtensionListRow
-          projectId={props.projectId}
-          key={extension.id}
-          extension={extension}
-          diagnostics={diagnosticsByExtensionId.get(extension.extensionId) ?? []}
-          automations={automations.filter((automation) => automation.extensionInstanceId === extension.id)}
-          unavailableHarnesses={unavailableExtensionHarnesses(extension, harnesses, agents)}
-          togglingAutomation={togglingAutomation}
-          action={actionStates[extension.id]}
-          sourceChanging={sourceChangingIds?.has(extension.id)}
-          onDismissAction={(expected) => onDismissAction?.(extension.id, expected)}
-          onRetryAction={() => onRetryAction?.(extension.id)}
-          onToggle={(enabled) => onToggle?.(extension, enabled)}
-          onToggleAutomation={async (automation, enabled) => onToggleAutomation?.(extension, automation, enabled)}
-          onUpgrade={() => onUpgrade?.(extension)}
-          onOpen={() => onOpen?.(extension)}
-        />
-      ))}
-
-      <Text paddingX="lg" paddingTop="md" paddingBottom="2xs" textStyle="label/XS/medium" color="fg.subtle">
-        {t("projectSettings.extensionsPanel.marketplace.group", { count: availableMarketplace.length })}
-      </Text>
-      {availableMarketplace.length === 0 && (
-        <Text paddingX="lg" paddingY="md" textStyle="paragraph/S/regular" color="fg.muted">
-          {t("projectSettings.extensionsPanel.marketplace.allInstalled")}
-        </Text>
-      )}
-      {availableMarketplace.length > 0 && visibleMarketplace.length === 0 && (
-        <Text paddingX="lg" paddingY="md" textStyle="paragraph/S/regular" color="fg.muted">
-          {t("projectSettings.extensionsPanel.noSearchResults", { query: search })}
-        </Text>
-      )}
-      {visibleMarketplace.map((extension) => (
-        <MarketplaceExtensionRow
-          key={extension.installName}
-          extension={extension}
-          action={actionStates[marketplaceActionKey(extension.installName)]}
-          onDismissAction={(expected) => onDismissAction?.(marketplaceActionKey(extension.installName), expected)}
-          onRetryAction={() => onRetryAction?.(marketplaceActionKey(extension.installName))}
-          onInstall={() => onInstallMarketplace?.(extension)}
-          onOpen={() => onOpenMarketplace?.(extension)}
-        />
-      ))}
-
-      <Stack padding="lg" position="relative">
-        <ExtensionActionFeedback
-          action={folderAction}
-          onDismiss={() => onDismissAction?.("$folder", folderAction)}
-          onRetry={() => onRetryAction?.("$folder")}
-        />
-        <ExtensionFolderDropZone
-          addingLabel={folderAction?.status === "running" ? folderAction.label : undefined}
-          onDropFolder={(folder) => onDropFolder?.(folder)}
-        />
-      </Stack>
-    </PageContentLayout>
+        <Stack padding="lg" position="relative">
+          <ExtensionActionFeedback
+            action={folderAction}
+            onDismiss={() => onDismissAction?.("$folder", folderAction)}
+            onRetry={() => onRetryAction?.("$folder")}
+          />
+          <ExtensionFolderDropZone
+            addingLabel={folderAction?.status === "running" ? folderAction.label : undefined}
+            onDropFolder={(folder) => onDropFolder?.(folder)}
+          />
+        </Stack>
+      </PageContentLayout>
+    </Box>
   );
 };

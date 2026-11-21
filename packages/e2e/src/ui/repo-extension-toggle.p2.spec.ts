@@ -138,7 +138,7 @@ const expectExtensionSettingsViewsToLoad = async (page: import("@playwright/test
 test.describe
   .serial("repo-local extension toggle", () => {
     test("disables the extension", async ({ page }) => {
-      const { toggle } = await openLocalExtensionToggle(page);
+      const { localRow, toggle } = await openLocalExtensionToggle(page);
       await expect(toggle).toBeChecked();
 
       const heldReads = await holdProjectExtensionReads(page);
@@ -146,7 +146,7 @@ test.describe
         (response) =>
           response.url().includes(`/v1/projects/${projectId}/extensions/`) && response.request().method() === "PATCH",
       );
-      await toggle.click({ force: true });
+      await localRow.locator("label").click();
       expect((await disableResponse).status()).toBe(200);
       await expect(toggle).not.toBeChecked();
       expect(existsSync(join(repoPath, ".pstdio", "extensions", localExtensionName))).toBe(true);
@@ -162,7 +162,7 @@ test.describe
     });
 
     test("enables the extension again", async ({ page }) => {
-      const { toggle } = await openLocalExtensionToggle(page);
+      const { localRow, toggle } = await openLocalExtensionToggle(page);
       await expect(toggle).not.toBeChecked();
 
       const heldReads = await holdProjectExtensionReads(page);
@@ -170,7 +170,7 @@ test.describe
         (response) =>
           response.url().includes(`/v1/projects/${projectId}/extensions/`) && response.request().method() === "PATCH",
       );
-      await toggle.click({ force: true });
+      await localRow.locator("label").click();
       expect((await enableResponse).status()).toBe(200);
       await expect(toggle).toBeChecked();
       await heldReads.wait();

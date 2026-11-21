@@ -8,6 +8,7 @@ import { sessionBrowser } from "../refs";
 import { nativeAction } from "./native-actions";
 import { queueAction } from "./queue";
 import { sessionId, sessionResource } from "./resource";
+import { resourceLinkTarget } from "./resource-link-target";
 import { readSnapshot } from "./snapshot";
 import { submitMessage } from "./submit-message";
 import { submitNativeDraft } from "./submit-native";
@@ -59,7 +60,7 @@ export const act = async (
         },
       ]);
       if (!opening?.target) throw new Error("The configured workspace opener is unavailable.");
-      ctx.navigation.open(opening.target);
+      ctx.navigation.open(resourceLinkTarget(opening.target));
       return {};
     }
     case "openLink":

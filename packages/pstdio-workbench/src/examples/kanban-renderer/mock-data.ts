@@ -1,6 +1,5 @@
 import type { AttributeDescriptor, AttributesSource, KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 
-export const kanbanRendererStoryRendererId = "kanban-renderer.story.rows";
 export const kanbanRendererStoryWidgetId = "kanban-renderer.story.rows";
 export const kanbanRendererStoryViewKind = "kanban-renderer.story.row";
 export const kanbanRendererStoryEditorWidgetId = "kanban-renderer.story.editor";

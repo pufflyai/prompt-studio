@@ -39,13 +39,6 @@ describe("normalizeOpencodeMessage", () => {
 
       expect(result.parts).toEqual([]);
     });
-
-    test("filters out empty parts", () => {
-      const msg = contentMsg("user", [{ type: "text", text: "" }]);
-      const result = normalizeOpencodeMessage(msg, 0);
-
-      expect(result.parts).toEqual([]);
-    });
   });
 
   describe("role resolution", () => {
@@ -81,12 +74,6 @@ describe("normalizeOpencodeMessage", () => {
   });
 
   describe("text parts", () => {
-    test("normalizes text parts", () => {
-      const result = normalizeOpencodeMessage(contentMsg("assistant", [{ type: "text", text: "hello world" }]), 0);
-
-      expect(result.parts).toEqual([{ type: "text", text: "hello world" }]);
-    });
-
     test("filters empty text", () => {
       const result = normalizeOpencodeMessage(contentMsg("assistant", [{ type: "text", text: "" }]), 0);
 

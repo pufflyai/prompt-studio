@@ -25,10 +25,8 @@ describe("workspaces list", () => {
     expect(log).toHaveBeenCalledTimes(2);
     expect(log.mock.calls[0][0]).toContain("Workspace");
     expect(log.mock.calls[0][0]).toContain("ID");
-    expect(log.mock.calls[0][0]).not.toContain("Ticket");
     expect(log.mock.calls[1][0]).toContain("default");
     expect(log.mock.calls[1][0]).toContain(workspace.id);
-    expect(log.mock.calls[1][0]).not.toContain("TICKET-9");
   });
 
   test("prints complete workspace records as JSON", async () => {

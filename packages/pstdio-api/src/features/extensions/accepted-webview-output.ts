@@ -89,18 +89,31 @@ export const notifyAcceptedWebviewPublication = async (
   }
 };
 
-export const reconcileAcceptedWebviews = async (
-  rows: InstalledSourceWithManifest[],
-  cacheRoot: string,
-  check: (id: string) => Promise<unknown>,
-) => {
-  removeUnownedWebviewBuilds(
-    cacheRoot,
-    rows.map((row) => row.id),
-  );
-  await Promise.all(
-    rows.map(async (row) => {
-      if (!(await hasAcceptedWebviews(row, cacheRoot))) await check(row.id);
-    }),
-  );
+// The first real asset request makes an extension eligible for subsequent
+// watcher checks. Keep serving the last accepted publication during that check.
+export const createWebviewUsage = (cacheRoot: string) => {
+  const opened = new Set<string>();
+  return {
+    opened,
+    serveAccepted: async (row: InstalledSourceWithManifest, viewId: string | undefined, check: () => void) => {
+      const firstUse = !opened.has(row.source_path);
+      opened.add(row.source_path);
+      if (!(await hasAcceptedWebviews(row, cacheRoot, viewId))) return false;
+      if (firstUse && viewId) check();
+      return true;
+    },
+    reconcile: async (rows: InstalledSourceWithManifest[], check: (id: string) => Promise<unknown>) => {
+      const paths = new Set(rows.map((row) => row.source_path));
+      for (const path of opened) if (!paths.has(path)) opened.delete(path);
+      removeUnownedWebviewBuilds(
+        cacheRoot,
+        rows.map((row) => row.id),
+      );
+      await Promise.all(
+        rows.map(async (row) => {
+          if (!(await hasAcceptedWebviews(row, cacheRoot)) && opened.has(row.source_path)) await check(row.id);
+        }),
+      );
+    },
+  };
 };

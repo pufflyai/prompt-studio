@@ -5,6 +5,7 @@ import {
   type ResourceResolution,
   resourceKey,
 } from "@pstdio/sdk/extensions";
+import { resourceLinkTarget } from "./resource-link-target";
 
 // Keep the saved display preference identity while broadening it to every resource kind.
 export const TICKET_LINKED_RESOURCES_ATTRIBUTE = "workspace";
@@ -26,7 +27,7 @@ const badgeItem = (saved: ResourceRef, resolved: ResourceResolution | undefined)
     label,
     icon: available ? resource.icon : "circle-alert",
     tooltip: `${resource.extensionId ?? "pstdio"} · ${label}${available ? "" : " · Unavailable"}`,
-    ...(resolved?.target ? { action: resolved.target, resource } : {}),
+    ...(resolved?.target ? { action: resourceLinkTarget(resolved.target), resource } : {}),
   } satisfies CollectionBadgeItem;
 };
 
@@ -97,7 +98,15 @@ export const readTicketLinkedResourcePage = async (
     (await resources.resolveOpenings(page.items)).map((item) => [resourceKey(item.resource), item]),
   );
   return {
-    items: page.items.map((ref) => badgeItem(ref, resolved.get(resourceKey(ref)))).filter((item) => item !== undefined),
+    items: page.items
+      .map((ref) => {
+        const resolution = resolved.get(resourceKey(ref));
+        const item = badgeItem(ref, resolution);
+        // Trees retain labeled unavailable resources as disabled rows; card badges
+        // deliberately omit the identity to prevent an activation fallback.
+        return item ? { ...item, resource: resolution?.resource ?? ref } : undefined;
+      })
+      .filter((item) => item !== undefined),
     nextCursor: page.nextCursor ?? undefined,
   };
 };

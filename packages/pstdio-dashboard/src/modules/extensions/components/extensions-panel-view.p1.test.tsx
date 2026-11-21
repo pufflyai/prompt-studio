@@ -8,6 +8,45 @@ import { ChakraProvider, psTheme } from "@pstdio/ui";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ExtensionsPanelView } from "./extensions-panel-view";
 
+test("installed extensions expose author and scope independently", () => {
+  const extension: ProjectExtensionInstance = {
+    id: "local-copy",
+    projectId: "project",
+    extensionId: "example.tool",
+    installedExtensionId: "source",
+    installName: "tool",
+    name: "tool",
+    displayName: "Local public tool",
+    sourcePath: "/source",
+    scope: "repo",
+    status: "loaded",
+    enabled: true,
+    config: {},
+    canUpgrade: false,
+    updateAvailable: false,
+    ownership: "mine",
+    visibility: "public",
+    author: { kind: "self" },
+  };
+  const markup = renderToStaticMarkup(
+    <ChakraProvider value={psTheme}>
+      <ExtensionsPanelView
+        extensions={[extension]}
+        marketplace={[]}
+        diagnostics={[]}
+        automations={[]}
+        filters={{ search: "" }}
+        onFiltersChange={() => {}}
+      />
+    </ChakraProvider>,
+  );
+  expect(markup.includes('data-extension-author="me"')).toBe(true);
+  expect(markup.includes('data-extension-scope="repo"')).toBe(true);
+  expect(markup.indexOf('data-testid="extensions-group-enabled"')).toBeLessThan(
+    markup.indexOf('data-testid="extension-entry"'),
+  );
+});
+
 test("automation controls belong to their installed extension instance", () => {
   const active: ProjectExtensionInstance = {
     id: "active-instance",
@@ -101,4 +140,58 @@ test("installed and available extensions are listed alphabetically by display na
 
   expect(orderedNames.every((index) => index >= 0)).toBe(true);
   expect([...orderedNames].sort((a, b) => a - b)).toEqual(orderedNames);
+});
+
+const groupedExtension = (
+  id: string,
+  enabled: boolean,
+  scope: "repo" | "global",
+  firstParty: boolean,
+): ProjectExtensionInstance => ({
+  id,
+  enabled,
+  scope,
+  author: firstParty ? { kind: "publisher", publisher: "pstdio" } : { kind: "self" },
+  projectId: "project",
+  extensionId: `example.${id}`,
+  installedExtensionId: id,
+  installName: id,
+  name: id,
+  displayName: id,
+  sourcePath: "/source",
+  status: enabled ? "loaded" : "disabled",
+  config: {},
+  canUpgrade: false,
+  updateAvailable: false,
+});
+
+test("groups enabled before other installed extensions and searches across authors and scopes", () => {
+  const extensions = [
+    groupedExtension("z-personal-project", true, "repo", false),
+    groupedExtension("a-publisher-project", false, "repo", true),
+    groupedExtension("personal-global", false, "global", false),
+    groupedExtension("publisher-global", true, "global", true),
+  ];
+  const render = (search = "") =>
+    renderToStaticMarkup(
+      <ChakraProvider value={psTheme}>
+        <ExtensionsPanelView
+          extensions={extensions}
+          marketplace={[]}
+          diagnostics={[]}
+          automations={[]}
+          filters={{ search }}
+          onFiltersChange={() => {}}
+        />
+      </ChakraProvider>,
+    );
+  const ids = (html: string) => [...html.matchAll(/data-extension-id="([^"]+)"/g)].map((match) => match[1]);
+  const all = render();
+  expect(ids(all)).toEqual(["publisher-global", "z-personal-project", "a-publisher-project", "personal-global"]);
+  expect(all.indexOf('data-testid="extensions-group-enabled"')).toBeLessThan(
+    all.indexOf('data-testid="extensions-group-installed"'),
+  );
+  expect(ids(render("personal"))).toEqual(["z-personal-project", "personal-global"]);
+  expect(ids(render("PUBLISHER"))).toEqual(["publisher-global", "a-publisher-project"]);
+  expect(ids(render("absent"))).toEqual([]);
 });

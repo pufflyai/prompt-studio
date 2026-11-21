@@ -64,7 +64,7 @@ export const installedProjectTools = async (api: StackApi, project: string) => {
 // Read candidate releases independently of the runtime's canUpgrade response.
 export const candidateToolVersions = async (root: string) => {
   const versions = new Map<string, string>();
-  for (const dir of ["pstdio-home", "pstdio-planner", "pstdio-session-browser", "git-workspaces", "harness-codex"]) {
+  for (const dir of ["pstdio-home", "pstdio-planner", "pstdio-session-browser", "pstdio-workspaces", "harness-codex"]) {
     const manifest = await Bun.file(join(root, "extensions", dir, "package.json")).json();
     assert.equal(typeof manifest.version, "string");
     versions.set(canonicalExtensionId(`pstdio.${dir}`), manifest.version);
@@ -80,7 +80,15 @@ export const assertProjectToolsRetained = async (
 ) => {
   const current = new Map((await installedProjectTools(api, project)).map((tool) => [tool.id, tool]));
   for (const previous of before) {
-    const tool = current.get(previous.id);
+    let tool = current.get(previous.id);
+    if (!tool && canonicalExtensionId(previous.extensionId) === "pstdio.git-workspaces") {
+      tool = [...current.values()].find(
+        (candidate) => canonicalExtensionId(candidate.extensionId) === "pstdio.workspaces",
+      );
+      assert(tool, "Git Workspaces must migrate to Workspaces");
+      if (previous.enabled) assert(tool.enabled, "Migration disabled the Git workspace provider");
+      continue;
+    }
     assert(tool, `Upgrade lost extension instance ${previous.id}`);
     assert.equal(tool.enabled, previous.enabled, `Enablement changed for ${tool.id}`);
     if (previous.version && tool.version !== previous.version)
@@ -105,7 +113,9 @@ export const upgradeCoreProjectTools = async (api: StackApi, project: string) =>
   const changes: { extension: string; version: string | null; next: string | null }[] = [];
   for (const tool of extensions) {
     if (
-      !/^pstdio\.((pstdio-)?(home|planner|session-browser)|harness-codex|git-workspaces)$/.test(tool.extensionId) ||
+      !/^pstdio\.((pstdio-)?(home|planner|session-browser|workspaces)|harness-codex|git-workspaces)$/.test(
+        tool.extensionId,
+      ) ||
       !tool.enabled
     )
       continue;
@@ -346,7 +356,7 @@ export const seedUpgradeProject = async (api: StackApi, input: ProjectUpgradeInp
     await Bun.write(join(folder, "handoff.txt"), "Historical handoff · 修正\n".repeat(6000));
   const project = await api.post<{ id: string; name: string }>("/projects", folderProjectInput({ name }, folder));
   const prefix = `/projects/${project.id}`;
-  console.log("[upgrade fixture] Preparing Home, Planner, Git Workspaces, and the conversation harness");
+  console.log("[upgrade fixture] Preparing Home, Planner, Workspaces, and the conversation harness");
   const { marketplace, extensions } = await api.get<{
     marketplace: { installName: string }[];
     extensions: ProjectExtension[];
@@ -360,8 +370,8 @@ export const seedUpgradeProject = async (api: StackApi, input: ProjectUpgradeInp
   if (!enabled.has("pstdio.harness-codex"))
     await api.post(`${prefix}/extensions/install`, { source: { kind: "catalog", name: "harness-codex" } });
   // Older releases supply the Git provider directly.
-  if (!enabled.has("pstdio.git-workspaces") && marketplace.some(({ installName }) => installName === "git-workspaces"))
-    await api.post(`${prefix}/extensions/install`, { source: { kind: "catalog", name: "git-workspaces" } });
+  if (!enabled.has("pstdio.workspaces") && marketplace.some(({ installName }) => installName === "workspaces"))
+    await api.post(`${prefix}/extensions/install`, { source: { kind: "catalog", name: "workspaces" } });
   const commands = await planner(api, project.id);
   console.log("[upgrade fixture] Creating worktrees and conversations");
   const worktreeIds: string[] = [];

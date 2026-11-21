@@ -38,12 +38,13 @@
       "loadError": "加载扩展失败。",
       "title": "扩展",
       "searchPlaceholder": "搜索扩展…",
-      "installedGroup": "已安装 · {{count}}",
+      "installedGroup": "已安装",
       "noSearchResults": "没有与\"{{query}}\"匹配的扩展。",
       "noDescription": "未提供描述。",
       "scope": {
-        "repo": "repo",
-        "global": "共享"
+        "label": "范围",
+        "repo": "此项目",
+        "global": "所有项目"
       },
       "status": {
         "error": "加载失败"
@@ -133,7 +134,8 @@
           "templates": "模板",
           "themes": "主题",
           "navigationItems": "导航项",
-          "commandPaletteResources": "命令面板资源"
+          "commandPaletteResources": "命令面板资源",
+          "workspaceTypes": "工作区类型"
         },
         "deleteHintShared": "删除此扩展的文件。它将从所有使用它的项目中移除。"
       },
@@ -167,7 +169,19 @@
         "upgradingButton": "正在升级",
         "batchFailed": "{{total}} 个升级中有 {{count}} 个失败",
         "installingButton": "正在安装"
-      }
+      },
+      "enabledGroup": "已启用",
+      "author": {
+        "label": "作者",
+        "me": "我",
+        "promptStudio": "Prompt Studio"
+      },
+      "columns": {
+        "extension": "扩展",
+        "enabled": "启用"
+      },
+      "noMatches": "没有与搜索匹配的扩展。",
+      "clearSearch": "清除搜索"
     }
   },
   "list": {

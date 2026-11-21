@@ -258,8 +258,15 @@ export class DesktopRuntimeManager {
   }
 
   requestShutdown(force: boolean) {
-    if (!this.#runtime) return Promise.resolve({ state: "failed" as const });
-    return this.#deps.requestRuntimeShutdown(this.#runtime.descriptor, force).then((result) => {
+    const runtime = this.#runtime?.descriptor;
+    if (!runtime) return Promise.resolve({ state: "failed" as const });
+    return this.#deps.requestRuntimeShutdown(runtime, force).then((result) => {
+      const current = this.#runtime?.descriptor;
+      if (current?.instanceId !== runtime.instanceId || current.pid !== runtime.pid)
+        return { state: "failed" as const };
+      // The runtime persists shutdown intent before its HTTP response can be lost.
+      const receipt = result.state === "failed" ? readRuntimeShutdown(this.#options.descriptorPath) : null;
+      if (receipt?.instanceId === runtime.instanceId && receipt.pid === runtime.pid) result = { state: "accepted" };
       if (result.state === "accepted") this.#intentional = true;
       return result;
     });

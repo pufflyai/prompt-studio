@@ -40,6 +40,7 @@ type DesktopIpcOptions = {
   revealInFinder: (path: string) => void;
   quitApp: () => Promise<void>;
   retryRuntime: () => Promise<void>;
+  reportWorkbenchError: (report: unknown) => void;
   runtimeOrigin: () => string | null;
   setWorkbenchItem: (key: string, value: string | null) => void;
   webContents: () => WebContents[];
@@ -115,6 +116,7 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
     }
     options.setWorkbenchItem(key, value);
   });
+  handle(DESKTOP_CHANNELS.reportWorkbenchError, options.reportWorkbenchError);
   handle(DESKTOP_CHANNELS.getPerformanceMonitoring, () => options.performance.enabled);
   handle(DESKTOP_CHANNELS.setPerformanceMonitoring, (enabled) => {
     if (typeof enabled !== "boolean") throw new Error("Invalid performance monitoring update");

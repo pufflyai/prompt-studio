@@ -10,7 +10,7 @@ type State = WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
 
 export const departingPagePreviews = (next: State, previous: State, layout: WorkbenchLayout) => {
   if (
-    !previous.activePageId ||
+    !previous.activeModeId ||
     previous.projectId !== next.projectId ||
     previous.activeModeId !== next.activeModeId ||
     !pageContextChanged(next, previous)

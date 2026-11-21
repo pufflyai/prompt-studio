@@ -1,6 +1,7 @@
 import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
+import { resourceLinkTarget } from "pstdio-api-contracts/extension-kernel";
 import { getApiClient } from "@/lib/api";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { canonicalDashboardResource } from "@/shared/extensions/resource-identity";
@@ -31,7 +32,7 @@ export const resolveLinkedResources = async (
       open: target
         ? async () => {
             if (signal?.aborted || getDashboardSelectedProjectId(ctx) !== projectId) return;
-            await ctx.navigation.openTarget(toWorkbenchNavigationTarget(target));
+            await ctx.navigation.openTarget(toWorkbenchNavigationTarget(resourceLinkTarget(target)));
           }
         : undefined,
     }));

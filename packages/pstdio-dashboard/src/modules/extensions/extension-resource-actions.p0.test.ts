@@ -6,15 +6,18 @@ const workspaceId = "tree-resource-workspace";
 const projectId = "tree-resource-project";
 afterEach(() => getWriter("workspaces")?.remove(workspaceId));
 
-test("preserves resource ownership when resolving row actions", () => {
-  const resource = {
-    type: "ticket",
-    id: "ticket-1",
+test("extension resource rows inherit their owner's icon and retain document overrides", () => {
+  const kinds = [
+    { id: "other.ticket", localId: "ticket", extensionId: "other", icon: "bookmark" },
+    { id: "pstdio.planner.ticket", localId: "ticket", extensionId: "pstdio.planner", icon: "component" },
+  ];
+  const ticket = { type: "ticket", id: "ticket-1", extensionId: "pstdio.planner" };
+  expect(toDashboardExtensionResource(ticket, projectId, kinds)?.icon).toBe("component");
+  expect(toDashboardExtensionResource({ ...ticket, icon: "file-text" }, projectId, kinds)?.icon).toBe("file-text");
+  expect(toDashboardExtensionResource({ type: "ticket", id: "ticket-2" }, projectId, kinds.slice(1))).toMatchObject({
     extensionId: "pstdio.planner",
-    projectId,
-    metadata: { documentId: "notes" },
-  };
-  expect(toDashboardExtensionResource(resource, projectId)).toMatchObject(resource);
+    icon: "component",
+  });
 });
 
 test("resolving an extension resource preserves its document metadata", () => {

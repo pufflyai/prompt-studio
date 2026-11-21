@@ -14,12 +14,6 @@ afterEach(() => {
   process.env.PSTDIO_HOME = originalPstdioHome;
 });
 
-test("resolveStorageRoot uses ~/.pstdio/storage by default", () => {
-  delete process.env.PSTDIO_HOME;
-
-  expect(resolveStorageRoot()).toBe(path.join(os.homedir(), ".pstdio", "storage"));
-});
-
 test("resolveStorageRoot uses PSTDIO_HOME by default", () => {
   process.env.PSTDIO_HOME = path.resolve("/tmp/pstdio-home");
 

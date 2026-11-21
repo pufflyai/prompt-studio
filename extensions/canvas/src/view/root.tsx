@@ -7,6 +7,7 @@ import {
   type PropsStore,
   type ResourceRef,
 } from "@pstdio/sdk/extensions";
+import { useWebviewVisibility } from "@pstdio/sdk/extensions/react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { buildMount } from "../build-mount";
 import type { CanvasDefinition } from "../canvas-model";
@@ -138,7 +139,11 @@ export const CanvasRoot = (props: RootProps) => {
   }, [current.themePreference]);
   const id = current.resource?.id;
   const location = current.pageLocation;
+  // A retained view keeps its own page location after the person leaves, so only a visible view
+  // may replace a removed canvas; a hidden one would pull the person back from another page.
+  const visible = useWebviewVisibility();
   const active =
+    visible &&
     location?.page.extensionId === "pstdio.canvas" &&
     ((location.page.id === homePage.id && !id) || (location.page.id === canvasPage.id && location.resource?.id === id));
   const read = useCanvasBuild(host, id, active);

@@ -19,19 +19,17 @@ import {
   startAppLifecycle,
   startNotificationWakeTimer,
 } from "./app-runtime";
+import { createAppSessions } from "./app-sessions";
 import { registerBenchmarkCounters } from "./benchmark-counters";
 import { createAutomationService } from "./features/automation/automation-service";
 import type { RouteDeps } from "./features/deps";
 import { createArtifactMountWriteLedger } from "./features/extensions/artifact-mount-watch/write-ledger";
-import { validateLegacyAnchors } from "./features/extensions/command-environment/resource-link-policy";
 import { provisionWorkspacesUsingSource } from "./features/extensions/extension-skill-cleanup";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
 import { runtimeOperationOrigin } from "./features/performance/operation-origin";
 import type { RuntimeRouteDeps } from "./features/runtime/routes";
 import { deliverIdleFollowUp } from "./features/sessions/idle-turn";
 import { createSessionImportService } from "./features/sessions/imports/service";
-import { createSessionQueueLifecycle } from "./features/sessions/session-queue-lifecycle";
-import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
 import { logStartupPhase } from "./lib/startup-phase";
@@ -41,9 +39,8 @@ import { loadNativeMarkdownFile, saveNativeMarkdownFile } from "./services/nativ
 import { resolveNativeTextAccess } from "./services/native-documents/source-access";
 import { initializeNativeSource } from "./services/native-documents/source-binding";
 import { createSessionLogFiles } from "./services/personal-history/log-files";
-import { createSessionLifecycleCallbacks } from "./services/session-lifecycle-callbacks";
+import { createProjectWork } from "./services/project-work";
 import { createSessionQueueService } from "./services/session-queue-service";
-import { createSessionService } from "./services/session-service";
 import { createSkillService } from "./services/skill-service";
 import { createTextEditingService } from "./services/text-editing/service";
 import { createWorkspaceCapacityService } from "./services/workspace-capacity-service";
@@ -62,6 +59,7 @@ const createAppAutomationService = async (input: {
   automationDBService: ReturnType<typeof createAppDatabaseServices>["automationDBService"];
   getCommandDeps: () => RouteDeps;
   maxRunsPerMinute: number;
+  projectWork: ReturnType<typeof createProjectWork>;
 }) => {
   const service = createAutomationService(input);
   await input.automationDBService.pruneTerminalRuns(new Date(Date.now() - AUTOMATION_RUN_RETENTION_MS).toISOString());
@@ -107,9 +105,11 @@ const createAppNativeDocuments = (
   getDeps: () => RouteDeps,
   storage: RouteDeps["extensionStorageService"],
   catalog: RouteDeps["extensionRuntimeCatalog"],
+  projectWork: ReturnType<typeof createProjectWork>,
 ) => {
   const nativeDocuments = createNativeDocumentService({
-    deviceId: deviceId,
+    deviceId,
+    projectWork,
     presenceIdentity: () => nativePresenceIdentity(account),
     catalog,
     storage,
@@ -128,6 +128,20 @@ const createAppNativeDocuments = (
   };
 };
 
+const createAccountWithRemovalBarrier = async (
+  config: CreateAppInput["config"],
+  environment: RouteDeps["environmentService"],
+  projects: RouteDeps["projectService"],
+  environmentId: string,
+) => {
+  const account = createAppAccount(config, environment, projects);
+  await account.accountService.restoreLocalRemovalBarrier(environmentId, (id) => {
+    projects.work.suspend(id);
+    projects.work.hide(id);
+  });
+  return account;
+};
+
 const buildApp = async (
   input: CreateAppInput,
   dependencies: AppDependencies,
@@ -141,7 +155,8 @@ const buildApp = async (
   const storageRoot = input.config.storage.root;
   ensureStorageRoot(storageRoot);
 
-  const dbs = createAppDatabaseServices(db, database.path === ":memory:" ? storageRoot : database.path);
+  const work = createProjectWork();
+  const dbs = createAppDatabaseServices(db, database.path === ":memory:" ? storageRoot : database.path, work);
   const { environmentId } = await dbs.environmentDBService.get();
   const storagePositions = createStoragePositions(environmentId);
   const {
@@ -163,14 +178,15 @@ const buildApp = async (
 
   const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
   const artifactMountWrites = createArtifactMountWriteLedger();
-  let deliverIdleTurn: (sessionId: string) => Promise<void> = async () => {};
+
   const queueChanged = sessionQueueChanged(sessionsDBService, eventBus);
   const sessionQueueEntriesService = createSessionQueueService(sessionQueueEntriesDBService, async (sessionId) => {
     await queueChanged(sessionId);
     // Not awaited: queue changes can run under the scheduling lock that delivery also takes.
-    void deliverIdleTurn(sessionId);
+    void sessions.deliverIdleTurn(sessionId);
   });
   const core = createCoreDomainServices({
+    projectWork: work,
     getCommandDeps: () => deps,
     db,
     dbs,
@@ -216,35 +232,30 @@ const buildApp = async (
     automationDBService,
     getCommandDeps: () => deps,
     maxRunsPerMinute: input.config.automation.runsPerMinute,
+    projectWork: work,
   });
 
-  const sessionQueueLifecycle = createSessionQueueLifecycle();
-  const sessionHooks = createSessionLifecycleCallbacks(() => deps);
-
-  let drainSessionQueue: (input?: { releasedSessionId?: string }) => Promise<void> = async () => {};
-
-  const sessionService = createSessionService({
-    sessionsDb: sessionsDBService,
-    validateCreatedAnchors: (source, anchors) => validateLegacyAnchors(deps, source, anchors),
-    eventBus,
-    ...sessionHooks,
-    onCapacityAvailable: (input) => drainSessionQueue(input),
-    onIdleTurn: (sessionId) => deliverIdleTurn(sessionId),
-  });
+  const sessions = createAppSessions({ sessionsDBService, eventBus, deps: () => deps });
+  const { sessionQueueLifecycle, sessionService } = sessions;
   const settingsService = await createAppSettingsService({
     eventBus,
     settingsDb: settingsDBService,
-    onCapacityAvailable: () => drainSessionQueue(),
+    onCapacityAvailable: () => sessions.drainSessionQueue(),
   });
 
   const workspaceCapacityService = createWorkspaceCapacityService({
     path: join(storageRoot, "device-workspace-capacity.json"),
     deviceId: environmentId,
     activeWorkspaceIds: workspaceSessionService.activeWorkspaceIds,
-    onCapacityAvailable: () => drainSessionQueue(),
+    onCapacityAvailable: () => sessions.drainSessionQueue(),
   });
   const terminalSupervisor = createAppTerminalSupervisor();
-  const account = createAppAccount(input.config, dbs.environmentDBService, projectService);
+  const account = await createAccountWithRemovalBarrier(
+    input.config,
+    dbs.environmentDBService,
+    projectService,
+    environmentId,
+  );
 
   const { nativeDocuments, textEditing } = createAppNativeDocuments(
     environmentId,
@@ -252,6 +263,7 @@ const buildApp = async (
     () => deps,
     extensionStorageDBService,
     extensionRuntimeCatalog,
+    work,
   );
 
   deps = {
@@ -319,12 +331,12 @@ const buildApp = async (
       terminalSupervisor,
     });
 
-    drainSessionQueue = (input) => createSessionScheduler(deps).drainQueue(input);
-    deliverIdleTurn = (sessionId) => deliverIdleFollowUp(deps, sessionId);
+    sessions.connectQueueDrain();
+    sessions.connectIdleTurn((sessionId) => deliverIdleFollowUp(deps, sessionId));
 
     const close = await startAppLifecycle({
       deps,
-      closeSessionHooks: sessionHooks.close,
+      closeSessionHooks: sessions.closeHooks,
       notificationWakeTimer,
       stopDeadRowCleanup: () => stopDeadRowCleanup(),
       unsubscribeExtensionEvents,

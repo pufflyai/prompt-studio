@@ -69,6 +69,14 @@ export const performanceTrigger = (page: Page) =>
 export const performanceDetails = (page: Page) =>
   page.frameLocator('iframe[title="Performance details"]').getByTestId("performance-popover");
 
+// The details view runs in its own renderer process, and the browser routes input to it from the
+// window's last painted frame. Until the opened popover is painted, a click lands on the host
+// iframe element instead. A trial click waits for the iframe to stay put across painted frames.
+export const openPerformanceDetails = async (page: Page) => {
+  await performanceTrigger(page).click();
+  await page.locator('iframe[title="Performance details"]').click({ trial: true });
+};
+
 // Turns the device switch off directly, as a test fixture rather than a person.
 export const stopMonitoring = async (page: Page) => {
   await page.evaluate(() =>

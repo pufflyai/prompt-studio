@@ -91,7 +91,7 @@ runs:
 
     - name: Download certified stable desktop artifacts by immutable ID
       if: inputs.channel == 'stable'
-      uses: actions/download-artifact@v4
+      uses: ./.github/actions/download-artifact-by-id
       with:
         artifact-ids: ${{ steps.certified.outputs.desktop_ids }}
         path: desktop-release
@@ -118,7 +118,7 @@ runs:
 
     - name: Download certified stable service images by immutable ID
       if: inputs.channel == 'stable'
-      uses: actions/download-artifact@v4
+      uses: ./.github/actions/download-artifact-by-id
       with:
         artifact-ids: ${{ steps.certified.outputs.service_ids }}
         path: service-images

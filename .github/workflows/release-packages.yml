@@ -426,7 +426,11 @@ jobs:
 
   nightly_upgrade:
     needs: [plan, release_build]
-    if: ${{ needs.plan.outputs.release == 'true' && needs.plan.outputs.channel == 'nightly' }}
+    # Normal nightlies skip prepare_patch. Check the required jobs explicitly so that
+    # the skipped ancestor doesn't suppress verification of a successful nightly build.
+    if: >-
+      ${{ !cancelled() && needs.plan.result == 'success' && needs.release_build.result == 'success' &&
+      needs.plan.outputs.release == 'true' && needs.plan.outputs.channel == 'nightly' }}
     permissions:
       actions: read
       contents: read
@@ -468,7 +472,7 @@ jobs:
         with:
           ref: ${{ needs.plan.outputs.commit }}
           fetch-depth: 0
-      - uses: actions/download-artifact@v4
+      - uses: ./.github/actions/download-artifact-by-id
         with:
           artifact-ids: ${{ needs.release_build.outputs.build_artifact_id }}
           merge-multiple: true
@@ -482,11 +486,12 @@ jobs:
           previous-tag: ${{ needs.plan.outputs.previous_tag }}
           patch: ${{ inputs.channel == 'patch' }}
 
-  # Stable and patch releases measure every benchmark suite for the Performance pages. The run is
-  # separate and starts after publishing, so benchmarks never hold or fail a release.
+  # Performance measurements start independently when a candidate exists or after publication.
+  # A dispatch failure remains advisory and cannot fail an otherwise delivered release.
   benchmarks:
-    needs: [plan, publish]
-    if: ${{ !cancelled() && needs.publish.result == 'success' && needs.plan.outputs.channel != 'nightly' }}
+    needs: [plan, release_build, production, production_unchanged, publish, publish_nightly]
+    if: ${{ !cancelled() && (needs.publish.result == 'success' || needs.publish_nightly.result == 'success' || (needs.plan.outputs.channel == 'nightly' && needs.plan.outputs.release != 'true') || needs.production.outputs.candidate_artifact_id != '') }}
+    continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -497,12 +502,33 @@ jobs:
       TAG: ${{ needs.plan.outputs.tag }}
       COMMIT: ${{ needs.plan.outputs.commit }}
       TARGETS: ${{ needs.plan.outputs.targets }}
+      SOURCE_SHA: ${{ needs.plan.outputs.source_sha }}
+      ARTIFACT_RUN_ID: ${{ needs.plan.outputs.release == 'true' && github.run_id || needs.plan.outputs.candidate_run_id }}
+      ARTIFACT_ATTEMPT: ${{ needs.release_build.outputs.artifact_attempt || needs.plan.outputs.candidate_attempt }}
+      CANDIDATE_ARTIFACT_ID: ${{ needs.production.outputs.candidate_artifact_id || needs.production_unchanged.outputs.candidate_artifact_id }}
+      CANDIDATE_ARTIFACT_RUN_ID: ${{ github.run_id }}
+      CHANNEL: ${{ needs.plan.outputs.channel }}
+      WORKFLOW_REF: ${{ github.event.repository.default_branch }}
     steps:
       - name: Start the release benchmarks
+        if: ${{ !cancelled() && needs.plan.outputs.channel != 'nightly' && inputs.channel != 'verify' && needs.publish.result == 'success' }}
         run: |
           set -euo pipefail
           gh workflow run benchmarks.yml --ref "$TAG" \
             -f commits="$COMMIT" -f platforms="$(jq -r 'join(",")' <<< "$TARGETS")" -f release_tag="$TAG"
+
+      - name: Start artifact performance observations
+        if: ${{ !cancelled() && env.CANDIDATE_ARTIFACT_ID != '' }}
+        run: |
+          set -euo pipefail
+          gh workflow run production-performance.yml --ref "$WORKFLOW_REF" \
+            -f ref="$COMMIT" -f source_sha="$SOURCE_SHA" \
+            -f artifact_run_id="$ARTIFACT_RUN_ID" -f artifact_attempt="$ARTIFACT_ATTEMPT" \
+            -f candidate_artifact_id="$CANDIDATE_ARTIFACT_ID" \
+            -f candidate_artifact_run_id="$CANDIDATE_ARTIFACT_RUN_ID" -f channel="$CHANNEL"
+      - name: Report unavailable performance inputs
+        if: ${{ !cancelled() && env.CANDIDATE_ARTIFACT_ID == '' }}
+        run: echo "Performance observations were not dispatched because the candidate identity is unavailable." >> "$GITHUB_STEP_SUMMARY"
 
   # Runs only after a nightly published with every asset.
   nightly_prune:

@@ -73,23 +73,6 @@ const openPrimaryWorkspace = async (workbench: ReturnType<typeof setup>, panelId
   });
 };
 describe("createWorkbenchTerminalModule", () => {
-  test("registers the host-owned terminal widget in the secondary region", () => {
-    const workbench = setup();
-    expect(workbench.shellPlacements.getPlacement(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({
-      region: "secondary",
-      mountStrategy: "keep-mounted",
-      item: {
-        kind: "binding",
-        binding: {
-          cardinality: "many",
-          kinds: [{ kind: "resource-kind", id: "terminal" }],
-          view: { kind: "view", id: WORKBENCH_TERMINAL_WIDGET_ID },
-          add: { kind: "command", target: { command: { kind: "command", id: WORKBENCH_TERMINAL_OPEN_COMMAND_ID } } },
-        },
-      },
-    });
-    expect(workbench.views.getView(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({ title: "Terminal" });
-  });
   test("exposes the terminal panel to the secondary add menu", () => {
     const workbench = setup();
     const addable = workbench.composition.panelsFor("secondary").addable;

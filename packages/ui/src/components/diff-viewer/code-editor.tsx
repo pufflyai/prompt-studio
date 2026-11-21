@@ -1,6 +1,6 @@
-import { DiffEditor, Editor } from "@monaco-editor/react";
+import { DiffEditor, Editor, loader } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
-import { lazy, Suspense, useEffect, useId, useRef } from "react";
+import { lazy, Suspense, useEffect, useId, useRef, useState } from "react";
 import type { MonacoThemeData } from "../../theme";
 import psTheme from "../../theme/theme";
 import { useThemePreference } from "../../utils/theme-preference";
@@ -117,6 +117,28 @@ const reveal = (editor: Monaco.editor.IStandaloneCodeEditor, target?: CodeSource
   editor.revealRangeInCenter(selection);
 };
 
+// Activity hides a view by running its effect cleanups while keeping component state (ADR 0161).
+// Each editor keeps its models across hide and reveal so drafts, undo history and view state
+// survive; the models are disposed once the editor's owner is collected after a real unmount.
+const retainedModels =
+  typeof FinalizationRegistry === "undefined"
+    ? undefined
+    : new FinalizationRegistry<Set<string>>((paths) => {
+        const monaco = loader.__getMonacoInstance();
+        for (const path of paths) monaco?.editor.getModel(monaco.Uri.parse(path))?.dispose();
+      });
+
+// A revealed editor is recreated; only move the cursor for a position it has not shown yet.
+const revealOnce = (
+  revealed: { current: CodeSourcePosition | undefined },
+  editor: Monaco.editor.IStandaloneCodeEditor,
+  target?: CodeSourcePosition,
+) => {
+  if (target === revealed.current) return;
+  revealed.current = target;
+  reveal(editor, target);
+};
+
 interface CodeEditorProps {
   language: string;
   /** File name, including its extension, used to parse the editor model. */
@@ -145,14 +167,29 @@ export const CodeEditor = (props: CodeEditorProps) => {
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const positionRef = useRef(position);
   positionRef.current = position;
+  const revealedRef = useRef<CodeSourcePosition | undefined>(undefined);
   useEffect(() => {
-    if (editorRef.current) reveal(editorRef.current, position);
+    if (editorRef.current) revealOnce(revealedRef, editorRef.current, position);
   }, [position]);
+  // The library disposes the editor when the view is hidden; forget it until the next mount.
+  useEffect(
+    () => () => {
+      editorRef.current = null;
+    },
+    [],
+  );
   const editorId = useId();
   // Preserve the extension for JSX parsing while keeping each editor's model independent.
-  const modelPath = fileName
-    ? `inmemory://editor/${encodeURIComponent(editorId)}/${encodeURIComponent(fileName)}`
-    : undefined;
+  // Every editor needs a stable path so a revealed editor finds its retained model.
+  const modelPath = `inmemory://editor/${encodeURIComponent(editorId)}/${encodeURIComponent(fileName ?? "code")}`;
+  const [modelOwner] = useState(() => {
+    const owner = { paths: new Set<string>() };
+    retainedModels?.register(owner, owner.paths);
+    return owner;
+  });
+  useEffect(() => {
+    modelOwner.paths.add(modelPath);
+  }, [modelOwner, modelPath]);
   const editorTheme = useEditorTheme();
   const applyEditorTheme = useApplyEditorTheme(editorTheme);
 
@@ -187,6 +224,8 @@ export const CodeEditor = (props: CodeEditorProps) => {
         height="100%"
         language={language}
         path={modelPath}
+        keepCurrentModel
+        loading={null}
         defaultValue={defaultCode}
         value={code}
         theme={EDITOR_THEME_NAME}
@@ -201,7 +240,7 @@ export const CodeEditor = (props: CodeEditorProps) => {
           applyEditorTheme(monaco);
           configureCodeEditor(editor, monaco);
           editorRef.current = editor;
-          reveal(editor, positionRef.current);
+          revealOnce(revealedRef, editor, positionRef.current);
         }}
       />
     </Suspense>
@@ -255,6 +294,7 @@ export const CodeDiffEditor = (props: CodeDiffEditorProps) => {
         language={language}
         original={original}
         modified={modified}
+        loading={null}
         theme={EDITOR_THEME_NAME}
         options={options}
         beforeMount={(monaco) => {

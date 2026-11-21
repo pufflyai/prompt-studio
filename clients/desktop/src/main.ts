@@ -5,6 +5,7 @@ import { resolvePstdioRuntimeDescriptorPath, resolvePstdioUpdateChannelPath } fr
 import { createMacOSCliSetup } from "./cli/macos-cli-setup";
 import { runWindowsInstallerEvent, windowsInstallerEvent } from "./cli/windows-installer";
 import { formatDesktopDiagnostics } from "./diagnostics/diagnostics";
+import { workbenchErrorDetails } from "./diagnostics/workbench-error";
 import { registerDesktopIpc } from "./ipc/register-desktop-ipc";
 import {
   type DesktopState,
@@ -27,7 +28,7 @@ import { validateSidecarArtifact } from "./runtime/sidecar-artifact";
 import { focusPrimaryWindow } from "./security/apply-window-security";
 import { DesktopProjectTabsStore } from "./windows/desktop-project-tabs-store";
 import { LIFECYCLE_SCHEME } from "./windows/lifecycle-protocol";
-import { DesktopWindowController } from "./windows/window-controller";
+import { DesktopWindowController, type WorkbenchLoadFailure } from "./windows/window-controller";
 import { DesktopWorkbenchStateStore } from "./windows/workbench-state-store";
 
 const logger = createLogger({ component: "desktop", level: "info", service: "pstdio-desktop", sync: true });
@@ -196,6 +197,22 @@ const runtimeRecovery = createRuntimeRecovery({
   },
 });
 
+const showWorkbenchRecovery = (failure: WorkbenchLoadFailure) => {
+  if (state.kind !== "workbench" && state.kind !== "confirming_active_work") return;
+  logger.error({ event: "desktop.workbench.unavailable", ...failure }, "Workbench renderer unavailable");
+  setState({
+    kind: "recovery",
+    error: {
+      code: "workbench_unavailable",
+      message: "The workbench stopped. Retry to reopen it.",
+      actions: ["retry", "open_logs", "quit"],
+    },
+  });
+  void windowController?.showLifecycle().catch(() => {
+    logger.error({ event: "desktop.workbench.recovery.failed" }, "Could not show workbench recovery");
+  });
+};
+
 const bootstrap = async () => {
   const cliSetup = createMacOSCliSetup((error) => {
     logger.error({ event: "desktop.cli.install.failed", message: error.message }, "CLI setup failed");
@@ -215,7 +232,11 @@ const bootstrap = async () => {
     ),
   );
   const preloadPath = join(import.meta.dirname, "preload.cjs");
-  windowController = await DesktopWindowController.create(preloadPath, () => workbenchState.getStartupAppearance());
+  windowController = await DesktopWindowController.create(
+    preloadPath,
+    () => workbenchState.getStartupAppearance(),
+    showWorkbenchRecovery,
+  );
   const { window } = windowController;
   windowController.window.on("close", (event) => {
     if (quitFlow.isQuitAllowed()) return;
@@ -284,6 +305,21 @@ const bootstrap = async () => {
       if (projectIds.length > 0) void cliSetup?.offerOnce();
     },
     setWorkbenchItem: (key, value) => workbenchState.setItem(key, value),
+    reportWorkbenchError: (report) => {
+      const token = runtimeManager.lastDescriptor?.token;
+      const details = workbenchErrorDetails(report, token ? [token] : []);
+      if (!details) return;
+      logger.error(details, "Workbench render failed");
+      if (!details.projectId) {
+        windowController?.markWorkbenchFailed();
+        const error = new Error("workbench_unavailable: The workbench could not open. Retry to reopen it.");
+        // Startup or quit confirmation owns a pending load and exposes recovery after it settles.
+        if (!windowController?.abortWorkbenchStartup(error)) {
+          if (state.kind === "starting") void runtimeRecovery.recover(error);
+          else showWorkbenchRecovery({ reason: "render_failed" });
+        }
+      }
+    },
     performance: performanceMonitor,
   });
   void performanceMonitor.start();

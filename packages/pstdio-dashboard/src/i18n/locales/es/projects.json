@@ -38,12 +38,13 @@
       "loadError": "Error al cargar las extensiones.",
       "title": "Extensiones",
       "searchPlaceholder": "Buscar extensiones…",
-      "installedGroup": "Instaladas · {{count}}",
+      "installedGroup": "Instaladas",
       "noSearchResults": "Ninguna extensión coincide con \"{{query}}\".",
       "noDescription": "Sin descripción.",
       "scope": {
-        "repo": "repo",
-        "global": "compartida"
+        "label": "Alcance",
+        "repo": "Este proyecto",
+        "global": "Todos los proyectos"
       },
       "status": {
         "error": "Error al cargar"
@@ -135,7 +136,8 @@
           "templates": "Plantillas",
           "themes": "Temas",
           "navigationItems": "Elementos de navegación",
-          "commandPaletteResources": "Recursos de la paleta de comandos"
+          "commandPaletteResources": "Recursos de la paleta de comandos",
+          "workspaceTypes": "Tipos de espacio de trabajo"
         },
         "deleteHintShared": "Eliminar los archivos de esta extensión. Esto la quita de todos los proyectos que la usan."
       },
@@ -169,7 +171,19 @@
         "upgradingButton": "Actualizando",
         "batchFailed": "{{count}} de {{total}} actualizaciones fallaron",
         "installingButton": "Instalando"
-      }
+      },
+      "enabledGroup": "Habilitadas",
+      "author": {
+        "label": "Autor",
+        "me": "Yo",
+        "promptStudio": "Prompt Studio"
+      },
+      "columns": {
+        "extension": "Extensión",
+        "enabled": "Habilitada"
+      },
+      "noMatches": "Ninguna extensión coincide con tu búsqueda.",
+      "clearSearch": "Borrar búsqueda"
     }
   },
   "list": {

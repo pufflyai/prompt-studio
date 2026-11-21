@@ -23,7 +23,6 @@ export const artifactTarget = (projectId: string, id: string, label?: string, ow
   kind: "page" as const,
   page: { ...artifactPage.ref, extensionId: owner },
   resource: artifactResource(projectId, id, label, owner),
-  open: "pin" as const,
 });
 
 export const artifactUrl = (projectId: string, id: string, owner = extensionId) =>

@@ -12,6 +12,7 @@ import type { StorageGroup } from "pstdio-sync-contracts";
 import { createRecordAssets } from "../../features/extensions/command-environment/record-assets";
 import type { ExtensionsRouteDeps } from "../../features/extensions/deps";
 import { PublicationUpdateRequiredError } from "../../features/extensions/publication/types";
+import { assertArtifactBoundary, canLookupArtifactPath } from "./artifact-path";
 import { artifactTreeReader } from "./artifact-tree-reader";
 import { createFileProjectionIO, sameFile } from "./file-io";
 import { createFileReconciler } from "./file-reconciliation";
@@ -20,7 +21,27 @@ import { createFileTree, type FileNode, fileRecordId, within } from "./file-tree
 import { withoutStorageObservation } from "./storage-observation";
 
 type FileDeps = Pick<ExtensionsRouteDeps, "extensionStorageService" | "assetTransferService">;
+type ArtifactStorage = Awaited<ReturnType<FileDeps["extensionStorageService"]["open"]>>;
 const missing = (path: string) => Object.assign(new Error(`Artifact not found: ${path}`), { code: "ENOENT" });
+
+const openArtifactStorage = async (
+  input: {
+    assertWritable?: () => Promise<void>;
+    open: () => Promise<ArtifactStorage>;
+    unchanged: (path: string) => Promise<ArtifactStorage | undefined>;
+    reconcile: (path?: string) => Promise<ArtifactStorage>;
+  },
+  target?: string,
+) => {
+  try {
+    await input.assertWritable?.();
+  } catch (error) {
+    if (!(error instanceof PublicationUpdateRequiredError)) throw error;
+    return input.open();
+  }
+  const storage = target === undefined ? undefined : await input.unchanged(target);
+  return storage ?? withoutStorageObservation(() => input.reconcile(target));
+};
 
 export const createSharedArtifactMount = (
   deps: FileDeps,
@@ -43,13 +64,7 @@ export const createSharedArtifactMount = (
   const tree = createFileTree(roots);
   const root = resolveArtifactMountRoot(input);
   const boundary = createSafeFileRoot(root);
-  const assertBoundary = async (path: string) => {
-    let current = normalizeMountRelativePath(path);
-    while (!(await boundary.tryResolveExisting(current)) && current) {
-      const parent = posix.dirname(current);
-      current = parent === "." ? "" : parent;
-    }
-  };
+  const assertBoundary = (path: string) => assertArtifactBoundary(boundary, path);
   const packageRoot = root.slice(0, -prefix.length - 1);
   const key = artifactProjectionKey(owner, input.repoRoot);
   const projection = fileProjection(key, deps.extensionStorageService.fileProjections);
@@ -83,19 +98,24 @@ export const createSharedArtifactMount = (
     signal: input.signal,
     assertWritable: input.assertWritable,
   });
-  const pointTree = async (storage: Awaited<ReturnType<typeof open>>, target: string) =>
+  const pointTree = async (storage: ArtifactStorage, target: string) =>
     tree.active(
       await Promise.all([...tree.ancestors(target), target].map((path) => storage.records.read(fileRecordId(path)))),
     );
+  const pointFile = async (storage: ArtifactStorage, target: string) => {
+    await assertBoundary(posix.relative(prefix, target));
+    const entry = (await pointTree(storage, target)).live.get(target);
+    return entry?.node.kind === "file" ? { record: entry.record, node: entry.node } : undefined;
+  };
   // A point read can reuse its projection when both the journal and local bytes still match.
   // Recheck ancestors and the real-path boundary each time; remote edits and deletes fall back
   // to reconciliation, as do external filesystem edits and cold reads.
   const unchanged = async (path: string) => {
     await assertBoundary(posix.relative(prefix, path));
-    const target = path;
+    const paths = [...tree.ancestors(path), path];
     const storage = await open();
-    const state = await projection.read();
-    for (const current of [...tree.ancestors(target), target]) {
+    const state = await projection.read(paths);
+    for (const current of paths) {
       const previous = state[current];
       if (!previous?.node) return;
       const record = await storage.records.read(fileRecordId(current));
@@ -105,17 +125,9 @@ export const createSharedArtifactMount = (
     }
     return storage;
   };
-  const run = <T>(action: (storage: Awaited<ReturnType<typeof open>>) => Promise<T>, target?: string) =>
-    serializeFiles(key, async () => {
-      try {
-        await input.assertWritable?.();
-      } catch (error) {
-        if (!(error instanceof PublicationUpdateRequiredError)) throw error;
-        return action(await open());
-      }
-      const storage = target === undefined ? undefined : await unchanged(target);
-      return action(storage ?? (await withoutStorageObservation(() => reconcile(target))));
-    });
+  const mountStorage = { assertWritable: input.assertWritable, open, unchanged, reconcile };
+  const run = <T>(action: (storage: ArtifactStorage) => Promise<T>, target?: string) =>
+    serializeFiles(key, () => openArtifactStorage(mountStorage, target).then(action));
   const write = (path: string, value: Blob, update: boolean) =>
     run(async (storage) => {
       const target = fullPath(path);
@@ -175,9 +187,8 @@ export const createSharedArtifactMount = (
     }, fullPath(path));
   const read = (path: string) =>
     run(async (storage) => {
-      await assertBoundary(path);
-      const entry = (await pointTree(storage, fullPath(path))).live.get(fullPath(path));
-      if (entry?.node.kind !== "file" || !entry.record.asset) throw missing(path);
+      const entry = await pointFile(storage, fullPath(path));
+      if (!entry?.record.asset) throw missing(path);
       const key = nativeTextAssetKey(entry.record);
       if (key)
         return new Blob([await deps.extensionStorageService.openNativeTextDocument({ owner, fileId: key }).read()]);
@@ -226,6 +237,23 @@ export const createSharedArtifactMount = (
   return {
     ...api,
     root,
+    statFile(path: string) {
+      const target = fullPath(path);
+      const name = posix.relative(prefix, target);
+      return serializeFiles(key, async () => {
+        if (
+          !(await canLookupArtifactPath(
+            packageRoot,
+            root,
+            name,
+            async () => (await pointTree(await open(), target)).live.get(target)?.node.kind === "file",
+          ))
+        )
+          return;
+        const entry = await pointFile(await openArtifactStorage(mountStorage, target), target);
+        return entry && { path: name, size: entry.record.asset?.byteLength, updatedAt: entry.node.updatedAt };
+      });
+    },
     refresh: () => run(async () => {}),
     async refreshText(documentKey: string) {
       const copies = await deps.extensionStorageService.nativeFileProjections.copies({ owner, documentKey });

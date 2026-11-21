@@ -26,10 +26,14 @@ test("reports a failed tab write and recovers when the next tab change can be sa
 
     await openPackagedProject(app.page, first);
     const systemErrors = app.page.getByRole("button", {
-      name: "System errors: Could not save project tabs",
+      name: "System activity",
       exact: true,
     });
     await expect(systemErrors).toBeVisible();
+    await expect(systemErrors).toContainText("Could not save project tabs");
+    await expect(
+      app.page.getByRole("status").filter({ hasText: "System errors: Could not save project tabs" }),
+    ).toHaveText("System errors: Could not save project tabs");
     await systemErrors.click();
     const error = app.page.getByLabel("System error list").getByText("Could not save project tabs", { exact: true });
     await expect(error).toBeVisible();

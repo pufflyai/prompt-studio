@@ -16,6 +16,24 @@ if (window.location.protocol === "pstdio:" && window.location.hostname === "life
   window.addEventListener("unload", stopPaint, { once: true });
 }
 
+// Bundle failures happen before the dashboard can install its own error reporting.
+if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+  let reportedStartupFailure = false;
+  window.addEventListener(
+    "error",
+    (event) => {
+      if (reportedStartupFailure || document.getElementById("root")?.hasChildNodes()) return;
+      const scriptFailed = event.target instanceof HTMLScriptElement;
+      if (!scriptFailed && !(event instanceof ErrorEvent)) return;
+      reportedStartupFailure = true;
+      void ipcRenderer.invoke(DESKTOP_CHANNELS.reportWorkbenchError, {
+        message: scriptFailed ? "The workbench app files could not load." : event.message,
+      });
+    },
+    true,
+  );
+}
+
 if (process.platform === "darwin") {
   const applyFullScreen = (fullScreen: boolean) => {
     document.documentElement.toggleAttribute("data-window-full-screen", fullScreen);
@@ -104,6 +122,7 @@ const desktopApi: PromptStudioDesktopApi = Object.freeze({
   setProjectTabs: (state: DesktopProjectTabsState) => ipcRenderer.invoke(DESKTOP_CHANNELS.setProjectTabs, state),
   setWorkbenchItem: (key: string, value: string | null) =>
     ipcRenderer.invoke(DESKTOP_CHANNELS.setWorkbenchItem, key, value),
+  reportWorkbenchError: (report: unknown) => ipcRenderer.invoke(DESKTOP_CHANNELS.reportWorkbenchError, report),
   getPerformanceMonitoring: () => ipcRenderer.invoke(DESKTOP_CHANNELS.getPerformanceMonitoring),
   setPerformanceMonitoring: (enabled: boolean) =>
     ipcRenderer.invoke(DESKTOP_CHANNELS.setPerformanceMonitoring, enabled),

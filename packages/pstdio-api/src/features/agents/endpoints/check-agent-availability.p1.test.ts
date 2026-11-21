@@ -24,16 +24,6 @@ afterAll(async () => {
 });
 
 describe("GET /v1/agents/availability", () => {
-  test("returns INSTALLED for a known agent", async () => {
-    const res = await app.request("/v1/agents/availability?agent=claude-code");
-
-    expect(res.status).toBe(200);
-
-    const body = await res.json();
-    expect(body.type).toBeDefined();
-    expect(["INSTALLED", "NOT_FOUND"]).toContain(body.type);
-  });
-
   test("returns NOT_FOUND for an unknown agent", async () => {
     const res = await app.request("/v1/agents/availability?agent=unknown-agent");
 

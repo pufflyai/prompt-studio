@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { jsonObjectSchema } from "./common";
 
+export const extensionAuthorSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("self") }),
+  z.object({ kind: z.literal("publisher"), publisher: z.string().min(1) }),
+]);
+export type ExtensionAuthor = z.infer<typeof extensionAuthorSchema>;
+
 export const enableInstalledExtensionRequestSchema = z.object({
   displayName: z.string(),
   extensionId: z.string(),
@@ -35,6 +41,11 @@ export const projectExtensionInstanceSchema = z.object({
   icon: z.string().optional(),
   sourcePath: z.string(),
   scope: z.enum(["repo", "global"]),
+  author: extensionAuthorSchema.optional(),
+  /** Mine identifies a locally maintained source, independently of installation scope or authorship. */
+  ownership: z.enum(["mine", "unknown"]).optional(),
+  /** Public confirms that a package exists in the bundled public catalog, not that local edits were published. */
+  visibility: z.enum(["public", "unknown"]).optional(),
   status: z.enum(["pending", "loaded", "error", "missing", "disabled"]),
   lastLoadedAt: z.string().nullable().optional(),
   lastError: jsonObjectSchema.nullable().optional(),
@@ -60,6 +71,8 @@ export const marketplaceExtensionSchema = z.object({
     ref: z.string(),
   }),
   publisher: z.string().optional(),
+  author: extensionAuthorSchema.optional(),
+  visibility: z.enum(["public", "unknown"]).optional(),
   /** Stable package source. origin describes the repository source used by development builds. */
   registry: z.object({ url: z.string(), extensionId: z.string() }).optional(),
 });

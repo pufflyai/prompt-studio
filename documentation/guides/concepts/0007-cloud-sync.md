@@ -72,4 +72,13 @@ In Cloud settings, choose **Make local** and confirm. Syncing stops on this devi
 
 Choose **Sync with Cloud** to enable syncing again. The copies merge. Where both copies changed the same thing, one change is kept.
 
-*Updated at: 2026-11-10*
+
+## Remove a device copy or delete a Cloud project
+
+In a Cloud project's Danger zone, **Delete local version** removes this device's downloaded Prompt Studio data. Other devices keep their copies, and your selected source folder remains on disk. Prompt Studio asks for explicit acknowledgement if uploads are pending or their completion is unknown. The project stays in the picker as **Cloud only**. Open that entry and use **Download** when you want a copy on this device again.
+
+**Delete cloud project** permanently removes the stored Cloud data, files, history, recovery data, and project encryption keys. Downloaded copies become local projects, including work done offline. A device that is offline makes that transition when it reconnects. You can follow cleanup from the picker and retry if it needs attention. A Cloud only entry disappears when cleanup finishes.
+
+**Make local** stops syncing and preserves the option to merge with Cloud later. A permanently retired project identity cannot reconnect to Cloud.
+
+*Updated at: 2026-11-18*

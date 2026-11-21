@@ -22,7 +22,9 @@ import {
 import { planTrayDrop } from "../../core/registries/layout/tray-tabs";
 import { reportUserActionError } from "../../core/shared/run-user-action";
 import { batchWorkbenchChanges } from "../../core/shared/store/workbench-batch";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { panelDropCollision } from "./panel-drop-collision";
+import { tabDragDestinations } from "./tab-drag-destinations";
 import { tabEdgeDropCollisions, tabHeaderDropCollisions } from "./tab-edge-drop-collision";
 
 interface TabDrop {
@@ -32,6 +34,10 @@ interface TabDrop {
   edge?: "before" | "after";
   panelPosition?: WorkbenchPanelPosition;
 }
+const draggedPlacement = (workbench: WorkbenchCore, id: string) => {
+  const content = workbench.pages.getContent();
+  return content?.widgetId === id ? content : findPlacementByWidgetId(workbench.layout.getLayout(), id)?.placement;
+};
 const TabDragContext = createContext<{
   activeId?: string;
   drop?: TabDrop;
@@ -43,6 +49,8 @@ export const useTabDrag = () => useContext(TabDragContext);
 
 export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; children: ReactNode }) => {
   const { workbench, children } = props;
+  useWorkbenchStore(workbench.layout.store, (state) => state.layout);
+  useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
   const [activeId, setActiveId] = useState<string>();
   const [activePanel, setActivePanel] = useState<WorkbenchPositionedRegion>();
   const [panelDrop, setPanelDrop] = useState<WorkbenchPanelPosition>();
@@ -52,10 +60,7 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { distance: 5 } }),
   );
-  const destinationsFor = (id: string) => {
-    const regions = workbench.getPanelDestinations(id);
-    return panelPageDropTarget(workbench, id) && !regions.includes("main") ? [...regions, "main" as const] : regions;
-  };
+  const destinationsFor = (id: string) => tabDragDestinations(workbench, id);
   const finish = () => {
     origin.current = undefined;
     setActiveId(undefined);
@@ -72,7 +77,7 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
     )
       return undefined;
     const layout = workbench.layout.getLayout();
-    const placement = findPlacementByWidgetId(layout, String(event.active.id))?.placement;
+    const placement = draggedPlacement(workbench, String(event.active.id));
     if (!placement) return undefined;
     const region = data.region as WorkbenchPanelRegion;
     const widgets = layout.regions[region].widgets;
@@ -93,7 +98,7 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
       panelPosition: data.panelPosition as WorkbenchPanelPosition | undefined,
     } satisfies TabDrop;
   };
-  const placement = activeId ? findPlacementByWidgetId(workbench.layout.getLayout(), activeId)?.placement : undefined;
+  const placement = activeId ? draggedPlacement(workbench, activeId) : undefined;
   return (
     <TabDragContext
       value={{
@@ -113,7 +118,9 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
             destinations.includes(collision.data?.droppableContainer.data.current?.region),
           );
           if (tabs.length) return tabs;
-          const edges = tabEdgeDropCollisions(args);
+          const edges = tabEdgeDropCollisions(args).filter((collision) =>
+            destinations.includes(collision.data?.droppableContainer.data.current?.region),
+          );
           if (edges.length) return edges;
           const pointer = args.pointerCoordinates;
           const panel = pointer
@@ -124,6 +131,7 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
             : undefined;
           return pointerWithin(args)
             .filter((collision) => collision.data?.droppableContainer.data.current?.region === panel)
+            .filter((collision) => destinations.includes(collision.data?.droppableContainer.data.current?.region))
             .sort((a, b) => {
               const area = (id: typeof a.id) => {
                 const rect = args.droppableRects.get(id);
@@ -159,7 +167,11 @@ export const WorkbenchTabDragProvider = (props: { workbench: WorkbenchCore; chil
           }
           const target = resolveDrop(event);
           finish();
-          if (target?.region === "main" && panelPageDropTarget(workbench, String(event.active.id))) {
+          if (
+            target?.region === "main" &&
+            !workbench.shell.getPanelPolicy("main").acceptsTabs &&
+            panelPageDropTarget(workbench, String(event.active.id))
+          ) {
             void openPanelAsPage(workbench, String(event.active.id)).catch((error) =>
               reportUserActionError(workbench, "Open page", error),
             );

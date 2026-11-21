@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createProjectWork } from "../project-work";
 import { createNativeProjectionQueue } from "./projection-queue";
 
 test("a failed projection still processes a newer queued change", async () => {
@@ -81,5 +82,92 @@ test("a captured projection fence completes while a later trailing projection re
     trailing.resolve();
     await later;
     await queue.drain();
+  }
+});
+
+test("a trailing projection uses the admitted editor lease while removal drains", async () => {
+  const work = createProjectWork();
+  const entered = Promise.withResolvers<void>();
+  const resume = Promise.withResolvers<void>();
+  const address = { owner: { workbenchId: "project", extensionId: "example.source" }, documentKey: "source" };
+  let calls = 0;
+  const queue = createNativeProjectionQueue({
+    reconcile: () =>
+      work.run("project", async () => {
+        if (++calls === 1) {
+          entered.resolve();
+          await resume.promise;
+          return 1;
+        }
+        return 2;
+      }),
+    failed: () => {},
+  });
+  const watcher = queue.request(address);
+  await entered.promise;
+  const editorEntered = Promise.withResolvers<void>();
+  const editorResume = Promise.withResolvers<void>();
+  const editor = work.run("project", async () => {
+    editorEntered.resolve();
+    await editorResume.promise;
+    await queue.through(address, 2);
+  });
+  const result = editor.catch((error) => error);
+  try {
+    await editorEntered.promise;
+    work.freeze("project");
+    editorResume.resolve();
+    await Promise.resolve();
+    resume.resolve();
+    expect(await result).toBeUndefined();
+    await watcher;
+    await work.drain("project");
+    await expect(queue.request(address)).rejects.toThrow("removing its copy");
+  } finally {
+    editorResume.resolve();
+    resume.resolve();
+    await result;
+    await queue.drain();
+    work.release("project");
+  }
+});
+
+test("background work joining an editor's queue cannot borrow its live removal lease", async () => {
+  const work = createProjectWork();
+  const entered = Promise.withResolvers<void>();
+  const resume = Promise.withResolvers<void>();
+  const admitted = Promise.withResolvers<void>();
+  const finishEditor = Promise.withResolvers<void>();
+  const address = { owner: { workbenchId: "project", extensionId: "example.source" }, documentKey: "source" };
+  let calls = 0;
+  const queue = createNativeProjectionQueue({
+    reconcile: () =>
+      work.run("project", async () => {
+        calls++;
+        entered.resolve();
+        await resume.promise;
+        return calls;
+      }),
+    failed: () => {},
+  });
+  const editor = work.run("project", async () => {
+    await queue.through(address, 1);
+    admitted.resolve();
+    await finishEditor.promise;
+  });
+  await entered.promise;
+  work.freeze("project");
+  const background = queue.request(address).catch((error) => error);
+  try {
+    resume.resolve();
+    await admitted.promise;
+    expect(await background).toBeInstanceOf(Error);
+    expect(calls).toBe(1);
+  } finally {
+    resume.resolve();
+    finishEditor.resolve();
+    await editor;
+    await queue.drain();
+    work.release("project");
   }
 });
