@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { createLiveConnection, type LiveConnection } from "pstdio-sync/relay";
 import { documentPeer } from "../../features/extensions/publication/document-peer.fixture";
 import { streamPersonalSession } from "../../features/sessions/endpoints/stream-personal-session";
 import { inertSessionChannelHooks } from "../../features/sessions/session-store.test-utils";
@@ -19,6 +20,7 @@ test("opening an advancing session catches up completed messages before displayi
   const peer = documentPeer();
   const controller = new AbortController();
   const syncs: ReturnType<typeof startRelayPersonalHistory>[] = [];
+  const lives: LiveConnection[] = [];
   let aborted = false;
   let wake = () => {};
   let reading: Promise<boolean> | undefined;
@@ -46,19 +48,29 @@ test("opening an advancing session catches up completed messages before displayi
       });
       app.deps.accountService.devices = async () => [];
       await app.deps.personalHistoryService.refreshIdentity();
+      const config = {
+        accountId: "owner",
+        environmentId: deviceId,
+        workbenchId: project.id,
+        managerOrigin: peer.origin,
+        relayOrigin: peer.origin,
+        renewalGrant: "grant",
+      };
+      const access = async () => ({ token: deviceId, expiresAt: new Date(Date.now() + 60_000).toISOString() });
+      const live = createLiveConnection({
+        origin: peer.origin,
+        projectId: project.id,
+        access,
+        signal: controller.signal,
+      });
+      lives.push(live);
       syncs.push(
         startRelayPersonalHistory({
           deps: app.deps,
-          config: {
-            accountId: "owner",
-            environmentId: deviceId,
-            workbenchId: project.id,
-            managerOrigin: peer.origin,
-            relayOrigin: peer.origin,
-            renewalGrant: "grant",
-          },
+          config,
           signal: controller.signal,
-          access: async () => ({ token: deviceId, expiresAt: new Date(Date.now() + 60_000).toISOString() }),
+          access,
+          live,
         }),
       );
     }
@@ -72,7 +84,17 @@ test("opening an advancing session catches up completed messages before displayi
       });
       throw error;
     });
-    await until(async () => !(await syncs[0]!.status()).busy);
+    // Initial routing is independent of sync busy. The first reader's routes must stay inside the timed operation.
+    await until(async () => {
+      const owners = await Promise.all(syncs.map((sync) => sync.status()));
+      return (
+        owners.every((owner) => !owner.busy) &&
+        lives.every((live) => {
+          const status = live.status();
+          return status.connected && !status.routingPending;
+        })
+      );
+    });
     conversation.push({ op: "add", path: "/messages/2", value: message("current-3") });
     const frames: unknown[] = [];
     const shown = Promise.withResolvers<void>();
@@ -104,7 +126,9 @@ test("opening an advancing session catches up completed messages before displayi
     await reading;
     for (const sync of syncs) sync.close();
     controller.abort();
+    for (const live of lives) live.close();
     await Promise.all(syncs.map((sync) => sync.done));
+    await Promise.all(lives.map((live) => live.done));
     await peer.close();
     await destination.close();
     await source.close();
