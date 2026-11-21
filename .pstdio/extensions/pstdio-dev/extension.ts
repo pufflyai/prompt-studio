@@ -200,6 +200,11 @@ export default defineExtension({
       source: packageAsset("./skills/patch-release", import.meta.url),
     }),
     defineSkill({
+      id: "fix-release-pipeline",
+      title: "Fix release pipeline",
+      source: packageAsset("./skills/fix-release-pipeline", import.meta.url),
+    }),
+    defineSkill({
       id: "discord-release-announcement",
       title: "Discord release announcement",
       source: packageAsset("./skills/discord-release-announcement", import.meta.url),
