@@ -6,7 +6,7 @@
   "publisher": "pocketcoder",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "^0.5.0"
+    "pstdio": "^0.5.1"
   },
   "pstdio": {
     "scope": "user",

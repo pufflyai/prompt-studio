@@ -1,4 +1,4 @@
-import { defineExtension, defineSkill, packageAsset } from "@pstdio/sdk/extensions";
+import { defineExtension, defineSkill, l10n, packageAsset } from "@pstdio/sdk/extensions";
 import { createBranchTemplate, openPromptStudio, runPromptStudio } from "./src/branch-commands";
 import { commands } from "./src/commands";
 import { connection, templatePublisher } from "./src/connection";
@@ -16,8 +16,11 @@ export default defineExtension({
   skills: [
     defineSkill({
       id: "run-tests-remotely",
-      title: "Run tests remotely",
-      description: "Run the repository's test suite on a remote PocketCoder environment and manage those environments.",
+      title: l10n("remote-testing.run-tests-remotely", "Run tests remotely"),
+      description: l10n(
+        "remote-testing.run-the-repository-s-test-suite-on-a-remote-pocketcoder-environment-and-manage-those-environments",
+        "Run the repository's test suite on a remote PocketCoder environment and manage those environments.",
+      ),
       source: packageAsset("./skills/run-tests-remotely", import.meta.url),
     }),
   ],

@@ -120,7 +120,12 @@ export async function startRun(
         },
       )
     : await pickEnvironment(deps, runId, timeoutSeconds, input.environmentId, signal);
+  let ownsEnvironment = !template;
   try {
+    if (template) {
+      ownsEnvironment = await claimEnvironment(deps.store, environment.id, runId, timeoutSeconds + 1800);
+      if (!ownsEnvironment) throw new Error(`Environment ${environment.id} is running another test run.`);
+    }
     const ready = await waitUntilReady(deps.api, environment, signal);
     // The source URL must outlive a cold start; the log URL must outlive the run.
     const message = JSON.stringify({
@@ -154,7 +159,7 @@ export async function startRun(
     await deps.changed?.();
     return { record, files, bytes };
   } catch (error) {
-    if (!input.environmentId) await stopEnvironment(deps.api, environment.id).catch(() => {});
+    if (!input.environmentId && ownsEnvironment) await stopEnvironment(deps.api, environment.id).catch(() => {});
     await releaseEnvironment(deps.store, environment.id, runId);
     throw error;
   }

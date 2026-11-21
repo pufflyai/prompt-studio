@@ -21,44 +21,59 @@ export const settingsSchema = {
   },
   templateName: {
     type: "string",
-    title: "Template",
+    title: l10n("remote-testing.template", "Template"),
     scope: "project",
     default: "remote-tests",
-    description: "PocketCoder template that runs test commands.",
+    description: l10n(
+      "remote-testing.pocketcoder-template-that-runs-test-commands",
+      "PocketCoder template that runs test commands.",
+    ),
   },
   templateVersion: {
     type: "string",
-    title: "Template version",
+    title: l10n("remote-testing.template-version", "Template version"),
     scope: "project",
     default: "",
-    description: "Exact published version of the template.",
+    description: l10n(
+      "remote-testing.exact-published-version-of-the-template",
+      "Exact published version of the template.",
+    ),
   },
   testCommand: {
     type: "string",
-    title: "Test command",
+    title: l10n("remote-testing.test-command", "Test command"),
     scope: "project",
     default: "bun install --frozen-lockfile && bun run test",
-    description: "Shell command that runs the test suite in the repository root.",
+    description: l10n(
+      "remote-testing.shell-command-that-runs-the-test-suite-in-the-repository-root",
+      "Shell command that runs the test suite in the repository root.",
+    ),
   },
   timeoutMinutes: {
     type: "number",
-    title: "Timeout (minutes)",
+    title: l10n("remote-testing.timeout-minutes", "Timeout (minutes)"),
     scope: "project",
     default: 60,
   },
   storageBucket: {
     type: "string",
-    title: "Storage bucket",
+    title: l10n("remote-testing.storage-bucket", "Storage bucket"),
     scope: "project",
     default: "",
-    description: "Cloud Storage bucket for run sources and logs.",
+    description: l10n(
+      "remote-testing.cloud-storage-bucket-for-run-sources-and-logs",
+      "Cloud Storage bucket for run sources and logs.",
+    ),
   },
   signerAccount: {
     type: "string",
-    title: "URL signer",
+    title: l10n("remote-testing.url-signer", "URL signer"),
     scope: "project",
     default: "",
-    description: "Service account that signs the short-lived source and log URLs.",
+    description: l10n(
+      "remote-testing.service-account-that-signs-the-short-lived-source-and-log-urls",
+      "Service account that signs the short-lived source and log URLs.",
+    ),
   },
 } as const;
 
@@ -77,7 +92,7 @@ export function readSettings(values: Partial<Record<keyof Settings, unknown>>) {
   };
   const problems = (["templateName", "templateVersion", "testCommand", "storageBucket", "signerAccount"] as const)
     .filter((key) => !settings[key])
-    .map((key) => `Set the ${settingsSchema[key].title} setting.`);
+    .map((key) => `Set the ${settingsSchema[key].title.default} setting.`);
   if (!(settings.timeoutMinutes > 0)) problems.push("Set a positive Timeout (minutes) setting.");
   return { settings, problems };
 }

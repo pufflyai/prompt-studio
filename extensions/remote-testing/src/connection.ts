@@ -1,11 +1,11 @@
-import { defineConnection, type ExtensionConnectionsApi, type JsonValue } from "@pstdio/sdk/extensions";
+import { defineConnection, type ExtensionConnectionsApi, type JsonValue, l10n } from "@pstdio/sdk/extensions";
 
 // The host keeps the controller URL and its finite machine key. The key never reaches
 // extension settings, the repository or a remote environment.
 export const connection = defineConnection({
   id: "pocketcoder",
   scope: "global",
-  label: "PocketCoder remote tests",
+  label: l10n("remote-testing.pocketcoder-remote-tests", "PocketCoder remote tests"),
   transport: "http",
   auth: { type: "bearer" },
   allowedMethods: ["GET", "POST"],
@@ -16,7 +16,7 @@ export const connection = defineConnection({
 export const templatePublisher = defineConnection({
   id: "branch-template-publisher",
   scope: "global",
-  label: "PocketCoder branch templates",
+  label: l10n("remote-testing.pocketcoder-branch-templates", "PocketCoder branch templates"),
   transport: "http",
   auth: { type: "bearer" },
   allowedMethods: ["POST"],

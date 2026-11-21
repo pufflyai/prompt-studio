@@ -1,4 +1,4 @@
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { publishBranchTemplate } from "./branch-templates";
 import { startCollection } from "./commands";
 import { projectRoot, runDeps } from "./context";
@@ -8,23 +8,32 @@ import { startRun } from "./runs";
 import { withSourceArchive } from "./source";
 
 const sourceParams = {
-  path: params.text({ label: "Repository folder (default: this workspace)" }),
-  ref: params.text({ label: "Git ref (default: working tree)" }),
+  path: params.text({
+    label: l10n(
+      "remote-testing.repository-folder-default-this-workspace",
+      "Repository folder (default: this workspace)",
+    ),
+  }),
+  ref: params.text({ label: l10n("remote-testing.git-ref-default-working-tree", "Git ref (default: working tree)") }),
 };
 
 export const createBranchTemplate = defineCommand({
   id: "templates.branch",
-  title: "Publish a branch template",
+  title: l10n("remote-testing.publish-a-branch-template", "Publish a branch template"),
   cli: true,
   mutating: true,
   params: {
     ...sourceParams,
     kind: params.select({
-      label: "Template type",
+      label: l10n("remote-testing.template-type", "Template type"),
       required: true,
       options: [
-        { value: "tests", label: "Run tests" },
-        { value: "preview", label: "Run Prompt Studio" },
+        { value: "tests", label: "Run tests", localizedLabel: l10n("remote-testing.run-tests", "Run tests") },
+        {
+          value: "preview",
+          label: "Run Prompt Studio",
+          localizedLabel: l10n("remote-testing.run-prompt-studio", "Run Prompt Studio"),
+        },
       ],
     }),
   },
@@ -41,12 +50,15 @@ export const createBranchTemplate = defineCommand({
 
 export const runPromptStudio = defineCommand({
   id: "preview.run",
-  title: "Run Prompt Studio",
+  title: l10n("remote-testing.run-prompt-studio", "Run Prompt Studio"),
   cli: true,
   mutating: true,
   params: {
     ...sourceParams,
-    timeoutMinutes: params.number({ label: "Preview duration in minutes", default: 60 }),
+    timeoutMinutes: params.number({
+      label: l10n("remote-testing.preview-duration-in-minutes", "Preview duration in minutes"),
+      default: 60,
+    }),
   },
   async run(ctx, input) {
     const timeoutMinutes = input.timeoutMinutes ?? 60;
@@ -74,9 +86,14 @@ export const runPromptStudio = defineCommand({
 
 export const openPromptStudio = defineCommand({
   id: "preview.open",
-  title: "Open the Prompt Studio preview",
+  title: l10n("remote-testing.open-the-prompt-studio-preview", "Open the Prompt Studio preview"),
   cli: true,
-  params: { workspaceId: params.text({ label: "Preview workspace ID", required: true }) },
+  params: {
+    workspaceId: params.text({
+      label: l10n("remote-testing.preview-workspace-id", "Preview workspace ID"),
+      required: true,
+    }),
+  },
   async run(ctx, { workspaceId }) {
     const bridge = await requirePreviewBridge(ctx);
     const result = await ctx.process.run({
