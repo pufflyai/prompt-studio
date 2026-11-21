@@ -19,12 +19,14 @@ export type ConnectionRequestAudit = ConnectionKey & {
   responseBytes: number;
 };
 
+export type ConnectionCleanupContext = { operation: string; secretRef?: string } & Partial<ConnectionKey>;
+
 export type ExtensionConnectionServiceDeps = {
   connectionsDBService: ReturnType<typeof createExtensionConnectionsDBService>;
   secretStore: ConnectionSecretStore;
   getContribution: (input: ConnectionKey) => Promise<ExtensionConnectionContribution | null | undefined>;
   isExtensionInstalled?: (projectId: string | null, extensionId: string) => Promise<boolean>;
-  onCleanupError?: (error: unknown, context: { operation: string; secretRef?: string }) => void;
+  onCleanupError?: (error: unknown, context: ConnectionCleanupContext) => void;
   fetch?: typeof fetch;
   onRequestComplete?: (audit: ConnectionRequestAudit) => void | Promise<void>;
 };

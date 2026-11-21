@@ -3,6 +3,7 @@ import type { ExtensionConnectionsApi } from "pstdio-api-contracts/extension-ker
 import type { ConnectionSecretStore } from "./connection-secret-store";
 import { createExtensionConnectionRequestService } from "./extension-connection-request-service";
 import {
+  type ConnectionCleanupContext,
   type ConnectionKey,
   connectionKey,
   type ExtensionConnectionServiceDeps,
@@ -19,19 +20,16 @@ const prepareProjectConnectionRemoval = async (deps: ExtensionConnectionServiceD
   };
 };
 
-const reportCleanupError = (
-  deps: ExtensionConnectionServiceDeps,
-  error: unknown,
-  context: { operation: string; secretRef?: string },
-) => {
-  deps.onCleanupError?.(error, context);
-};
+const reportCleanupError = (deps: ExtensionConnectionServiceDeps, error: unknown, context: ConnectionCleanupContext) =>
+  Promise.resolve()
+    .then(() => deps.onCleanupError?.(error, context))
+    .catch(() => {});
 
 const deleteSecret = async (deps: ExtensionConnectionServiceDeps, secretRef: string, operation: string) => {
   try {
     await deps.secretStore.delete(secretRef);
   } catch (error) {
-    reportCleanupError(deps, error, { operation, secretRef });
+    await reportCleanupError(deps, error, { operation, secretRef });
   }
 };
 
@@ -45,7 +43,7 @@ const removeExtensionConnections = async (
     try {
       await removeStoredConnection(deps, { projectId, extensionId, contributionId: connection.contribution_id });
     } catch (error) {
-      reportCleanupError(deps, error, { operation: "remove_extension_connection" });
+      await reportCleanupError(deps, error, { operation: "remove_extension_connection" });
     }
   }
 };
@@ -67,7 +65,7 @@ const reconcileConnections = async (deps: ExtensionConnectionServiceDeps) => {
           contributionId: connection.contribution_id,
         });
       } catch (error) {
-        reportCleanupError(deps, error, { operation: "reconcile_extension_connection" });
+        await reportCleanupError(deps, error, { operation: "reconcile_extension_connection" });
       }
     }
   }
@@ -118,6 +116,33 @@ const retirePreviousSecret = async (
   }
 };
 
+const retireProjectCopies = async (deps: ExtensionConnectionServiceDeps, input: ConnectionKey) => {
+  const identity = { extensionId: canonicalExtensionId(input.extensionId), connectionId: input.connectionId };
+  let copies: StoredConnection[];
+  try {
+    copies = await deps.connectionsDBService.listAll();
+  } catch (error) {
+    await reportCleanupError(deps, error, { ...identity, operation: "list_global_connection_copies" });
+    return;
+  }
+  for (const copy of copies) {
+    if (
+      copy.project_id === null ||
+      copy.extension_id !== identity.extensionId ||
+      copy.contribution_id !== identity.connectionId
+    )
+      continue;
+    const ownerKey = { ...identity, projectId: copy.project_id };
+    try {
+      const owner = await deps.getContribution(ownerKey);
+      if (owner?.scope !== "global") continue;
+      await removeStoredConnection(deps, connectionKey(ownerKey));
+    } catch (error) {
+      await reportCleanupError(deps, error, { ...ownerKey, operation: "remove_global_connection_copy" });
+    }
+  }
+};
+
 const configureConnection = async (
   deps: ExtensionConnectionServiceDeps,
   input: ConnectionKey & { baseUrl: string; secret?: string },
@@ -141,28 +166,7 @@ const configureConnection = async (
     throw error;
   }
   await retirePreviousSecret(deps, key, existing, newSecretRef);
-  if (contribution.scope === "global") {
-    const copies = (await deps.connectionsDBService.listAll()).filter(
-      (row) =>
-        row.project_id !== null &&
-        row.extension_id === canonicalExtensionId(input.extensionId) &&
-        row.contribution_id === input.connectionId,
-    );
-    for (const copy of copies) {
-      if (copy.project_id === null) continue;
-      const owner = await deps.getContribution({
-        projectId: copy.project_id,
-        extensionId: copy.extension_id,
-        connectionId: copy.contribution_id,
-      });
-      if (owner?.scope !== "global") continue;
-      await removeStoredConnection(deps, {
-        projectId: copy.project_id,
-        extensionId: copy.extension_id,
-        contributionId: copy.contribution_id,
-      });
-    }
-  }
+  if (contribution.scope === "global") await retireProjectCopies(deps, input);
   return toConnectionRecord(stored);
 };
 
