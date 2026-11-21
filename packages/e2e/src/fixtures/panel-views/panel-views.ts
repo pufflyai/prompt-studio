@@ -5,6 +5,7 @@ import {
   definePlacement,
   defineResourceKind,
   defineView,
+  defineViewMenu,
   packageAsset,
   params,
   workbenchModes,
@@ -50,10 +51,22 @@ export const deleteLetter = defineCommand({
     await ctx.resources.removed(ctx.resource);
   },
 });
+export const headerContext = defineCommand({
+  id: "header-context",
+  title: "Read header context",
+  run: (ctx) => ctx.resource?.id ?? "landing",
+});
+
 export const createPanelViewFixture = (baseUrl: string) => {
+  const toolbar = defineView({
+    id: "letter-toolbar",
+    title: "Letter toolbar",
+    body: { kind: "webview", entry: packageAsset("./letter-toolbar.tsx", baseUrl), capabilities: ["commands.execute"] },
+  });
   const reader = defineView({
     id: "letter-reader",
     title: "Letter viewer",
+    header: { view: toolbar.ref },
     icon: "Mail",
     body: {
       kind: "webview",
@@ -144,9 +157,10 @@ export const createPanelViewFixture = (baseUrl: string) => {
     slots: [],
   });
   return {
-    commands: [addLetterViewer, completeLetter, deleteLetter],
+    commands: [addLetterViewer, completeLetter, deleteLetter, headerContext],
     resourceKinds: [kind],
-    views: [reader, browser],
+    views: [reader, browser, toolbar],
+    viewMenus: [defineViewMenu({ id: "letter-tools", owner: reader.ref, view: browser.ref, side: "right" })],
     placements: [viewer, browserPanel],
     pages: [mailbox, letter, collection],
     navigationItems: [

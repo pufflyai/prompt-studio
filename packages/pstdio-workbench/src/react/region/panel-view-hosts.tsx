@@ -11,8 +11,13 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../core";
-import { workbenchPanelRegions } from "../../core";
+import type {
+  WorkbenchCore,
+  WorkbenchPanelMenuRegion,
+  WorkbenchPanelRegion,
+  WorkbenchWidgetPlacement,
+} from "../../core";
+import { getWorkbenchPanelForMenuRegion, workbenchPanelMenuRegions, workbenchPanelRegions } from "../../core";
 import {
   isRetiredViewerHost,
   releaseViewerHosts,
@@ -21,26 +26,40 @@ import {
 } from "../../core/controllers/resource-viewers/viewer-host-continuity";
 import { resolvePageContent } from "../../core/registries/pages/page-content";
 import { resolveResourcePreview } from "../../core/registries/resources/resource-preview";
+import { resolvePanelMenuRegionState } from "../panel-menu/panel-menu-placements";
 import { useOpenPlacementIds } from "../shared/use-open-placement-ids";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { ViewActivityContext } from "../shared/view-activity-context";
 import { movePanelHost } from "./move-panel-host";
 import { RegionScrollArea } from "./region-scroll-area";
 import { isPlacementEligibleForRegion } from "./region-tabs-visibility-hooks";
 import { useRetainedViewPlacements } from "./use-retained-view-placements";
 import { WorkbenchWidgetHost } from "./widget-host";
 
+type ViewRegion = WorkbenchPanelRegion | WorkbenchPanelMenuRegion;
+const viewRegions: ViewRegion[] = [
+  ...workbenchPanelRegions,
+  ...Object.values(workbenchPanelMenuRegions).flatMap((sides) => Object.values(sides)),
+];
+const isPanel = (region: ViewRegion): region is WorkbenchPanelRegion =>
+  workbenchPanelRegions.includes(region as WorkbenchPanelRegion);
+
+type HeaderSurface = "content" | "header" | "page-header";
+type ViewSlot = { node: HTMLDivElement; active: boolean };
+type ViewSlots = Record<HeaderSurface, Partial<Record<ViewRegion, ViewSlot>>>;
 interface PanelViewSlots {
-  register(region: WorkbenchPanelRegion, node: HTMLDivElement | null): void;
+  register(region: ViewRegion, node: HTMLDivElement | null, surface: HeaderSurface, active: boolean): void;
 }
 const PanelViewContext = createContext<PanelViewSlots | null>(null);
-export const usePanelViewSlot = (region: WorkbenchPanelRegion | undefined) => {
+export const usePanelViewSlot = (region: ViewRegion | undefined, surface: HeaderSurface = "content") => {
   const registry = useContext(PanelViewContext);
+  const active = useContext(ViewActivityContext);
   const [node, setNode] = useState<HTMLDivElement | null>(null);
   useLayoutEffect(() => {
     if (!region) return;
-    registry?.register(region, node);
-    return () => registry?.register(region, null);
-  }, [registry, region, node]);
+    registry?.register(region, node, surface, active);
+    return () => registry?.register(region, null, surface, false);
+  }, [registry, region, node, surface, active]);
   return { enabled: Boolean(registry && region), ref: setNode };
 };
 
@@ -73,11 +92,15 @@ const PanelViewPortal = (props: {
   workbench: WorkbenchCore;
   placement: WorkbenchWidgetPlacement;
   slot?: HTMLElement;
-  region?: WorkbenchPanelRegion;
+  headerSlot?: HTMLElement;
+  region?: ViewRegion;
   active: boolean;
 }) => {
-  const { workbench, placement, slot, region, active } = props;
-  const view = placement.viewId ? workbench.views.getView(placement.viewId) : undefined;
+  const { workbench, placement, slot, headerSlot, region, active } = props;
+  const view = useWorkbenchStore(workbench.views.store, () =>
+    placement.viewId ? workbench.views.getView(placement.viewId) : undefined,
+  );
+  const headerViewId = view?.header?.viewId;
   const collection =
     view?.body.kind === "dataTable" || view?.body.kind === "kanban" || view?.body.kind === "resourceList";
   // The portal target is stable for the life of a view. Only its DOM parent moves.
@@ -86,6 +109,20 @@ const PanelViewPortal = (props: {
     node.style.display = "contents";
     return node;
   });
+  const [headerHost] = useState(() => {
+    const node = document.createElement("div");
+    node.style.display = "contents";
+    return node;
+  });
+  useLayoutEffect(() => {
+    movePanelHost(headerHost, headerSlot);
+  }, [headerHost, headerSlot]);
+  useEffect(
+    () => () => {
+      if (!headerHost.hasChildNodes()) headerHost.remove();
+    },
+    [headerHost],
+  );
   useLayoutEffect(() => {
     // Hidden retained views stay connected to keep their iframe browsing context.
     movePanelHost(host, slot);
@@ -106,7 +143,7 @@ const PanelViewPortal = (props: {
     if (workbench.layout.getLayout().activeWidgetId !== placement.widgetId)
       workbench.layout.activatePanel(placement.widgetId);
   };
-  return createPortal(
+  const content = createPortal(
     <Box
       data-workbench-instance={placement.widgetId}
       display={active ? "flex" : "none"}
@@ -120,47 +157,91 @@ const PanelViewPortal = (props: {
       onFocusCapture={(event) => {
         if (!event.currentTarget.contains(event.target)) return;
         activate();
-        if (region) workbench.focus.setActiveRegion(region);
+        if (region) workbench.focus.setActiveRegion(isPanel(region) ? region : getWorkbenchPanelForMenuRegion(region));
       }}
     >
       {/* The retained view owns its viewport, so another tab cannot reset its scroll position. */}
-      <UiScopeActivity active={active}>
-        <RegionScrollArea>
-          {/* Preserve collection state while deferring updates and reads for hidden pages. */}
-          <Activity mode={active || !collection ? "visible" : "hidden"}>
-            <WorkbenchWidgetHost workbench={workbench} placement={placement} region={region} visible={active} />
-          </Activity>
-        </RegionScrollArea>
-      </UiScopeActivity>
+      <ViewActivityContext value={active}>
+        <UiScopeActivity active={active}>
+          <RegionScrollArea>
+            {/* Preserve collection state while deferring updates and reads for hidden pages. */}
+            <Activity mode={active || !collection ? "visible" : "hidden"}>
+              <WorkbenchWidgetHost workbench={workbench} placement={placement} region={region} visible={active} />
+            </Activity>
+          </RegionScrollArea>
+        </UiScopeActivity>
+      </ViewActivityContext>
     </Box>,
     host,
+  );
+  return (
+    <>
+      {content}
+      {headerViewId
+        ? createPortal(
+            <Box
+              data-workbench-header-for={placement.widgetId}
+              display={active ? "flex" : "none"}
+              inert={!active}
+              flex="1"
+              minW="0"
+              h="full"
+              onPointerDown={activate}
+              onFocusCapture={(event) => {
+                if (!event.currentTarget.contains(event.target)) return;
+                activate();
+                if (region)
+                  workbench.focus.setActiveRegion(isPanel(region) ? region : getWorkbenchPanelForMenuRegion(region));
+              }}
+            >
+              <ViewActivityContext value={active}>
+                <UiScopeActivity active={active}>
+                  <WorkbenchWidgetHost
+                    workbench={workbench}
+                    placement={placement}
+                    viewId={headerViewId}
+                    region={region}
+                    visible={active}
+                  />
+                </UiScopeActivity>
+              </ViewActivityContext>
+            </Box>,
+            headerHost,
+          )
+        : null}
+    </>
   );
 };
 
 // Retained views belong to the project that opened them. Keying this host by project
 // releases them on a switch, while the shell and its view slots stay mounted.
-const ProjectViewHosts = (props: {
-  workbench: WorkbenchCore;
-  slots: Partial<Record<WorkbenchPanelRegion, HTMLDivElement>>;
-}) => {
+const ProjectViewHosts = (props: { workbench: WorkbenchCore; slots: ViewSlots }) => {
+  "use no memo";
   const { workbench, slots } = props;
   const changes = useWorkbenchStore(workbench.resources.preview.store, (state) => state.changes);
   const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const pageState = useWorkbenchStore(workbench.pages.store, (state) => state);
   const content = resolvePageContent(pageState);
+  const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
   const open = useOpenPlacementIds(workbench);
   useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
+  const eligibleIn = (region: ViewRegion) => {
+    if (!isPanel(region)) return resolvePanelMenuRegionState(workbench, region).widgets;
+    return layout.regions[region].widgets.filter(
+      (placement) =>
+        (!placement.resource || Boolean(resolveResourcePreview(placement.resource, changes))) &&
+        isPlacementEligibleForRegion(workbench, region, placement),
+    );
+  };
   const current = [
     ...(content ? [content] : []),
-    ...workbenchPanelRegions.flatMap((region) => {
-      const state = layout.regions[region];
-      const eligible = state.widgets.filter(
-        (p) =>
-          (!p.resource || Boolean(resolveResourcePreview(p.resource, changes))) &&
-          isPlacementEligibleForRegion(workbench, region, p),
+    ...viewRegions.flatMap((region) => {
+      const eligible = eligibleIn(region);
+      const selected =
+        eligible.find((placement) => placement.widgetId === layout.regions[region].activeWidgetId) ?? eligible[0];
+      return eligible.filter(
+        (placement) => placement.widgetId === selected?.widgetId || placement.mountStrategy === "keep-mounted",
       );
-      const selected = eligible.find((p) => p.widgetId === state.activeWidgetId) ?? eligible[0];
-      return eligible.filter((p) => p.widgetId === selected?.widgetId || p.mountStrategy === "keep-mounted");
     }),
   ];
   for (const placement of current) reopenViewerHost(workbench, placement.widgetId);
@@ -180,27 +261,24 @@ const ProjectViewHosts = (props: {
         const region =
           content?.widgetId === placement.widgetId
             ? "main"
-            : workbenchPanelRegions.find((id) =>
-                layout.regions[id].widgets.some((p) => p.widgetId === placement.widgetId),
-              );
-        const peers = region
-          ? layout.regions[region].widgets.filter(
-              (p) =>
-                (!p.resource || Boolean(resolveResourcePreview(p.resource, changes))) &&
-                isPlacementEligibleForRegion(workbench, region, p),
-            )
-          : [];
+            : viewRegions.find((id) => layout.regions[id].widgets.some((p) => p.widgetId === placement.widgetId));
+        const peers = region ? eligibleIn(region) : [];
         const selected = region
           ? (peers.find((p) => p.widgetId === layout.regions[region].activeWidgetId) ?? peers[0])
           : undefined;
+        const headerSurface = content?.widgetId === placement.widgetId && !fullscreen ? "page-header" : "header";
         return (
           <PanelViewPortal
             key={key}
             workbench={workbench}
             placement={placement}
             region={region}
-            slot={region ? slots[region] : undefined}
-            active={content?.widgetId === placement.widgetId || selected?.widgetId === placement.widgetId}
+            slot={region ? slots.content[region]?.node : undefined}
+            headerSlot={region && isPanel(region) ? slots[headerSurface][region]?.node : undefined}
+            active={
+              (content?.widgetId === placement.widgetId || selected?.widgetId === placement.widgetId) &&
+              (!region || slots.content[region]?.active !== false)
+            }
           />
         );
       })}
@@ -211,12 +289,13 @@ const ProjectViewHosts = (props: {
 export const WorkbenchPanelViewHosts = (props: { workbench: WorkbenchCore; children: ReactNode }) => {
   const { workbench, children } = props;
   const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
-  const [slots, setSlots] = useState<Partial<Record<WorkbenchPanelRegion, HTMLDivElement>>>({});
+  const [slots, setSlots] = useState<ViewSlots>({ content: {}, header: {}, "page-header": {} });
   const [registry] = useState<PanelViewSlots>(() => ({
-    register: (region, node) =>
+    register: (region, node, surface, active) =>
       setSlots((previous) => {
-        if (previous[region] === (node ?? undefined)) return previous;
-        return { ...previous, [region]: node ?? undefined };
+        const current = previous[surface][region];
+        if (current?.node === (node ?? undefined) && (!node || current?.active === active)) return previous;
+        return { ...previous, [surface]: { ...previous[surface], [region]: node ? { node, active } : undefined } };
       }),
   }));
   return (

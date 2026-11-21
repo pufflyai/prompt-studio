@@ -58,6 +58,7 @@ const registerViews = (
       contribution: {
         ...contribution,
         ref: normalizeRef(ext, contribution.ref),
+        header: contribution.header ? { view: normalizeRef(ext, contribution.header.view) } : undefined,
         body: normalizeViewBody({ ...base, ext, source, runtime, index, viewId: base.id, body: contribution.body }),
       } as RuntimeViewRecord["contribution"],
     };

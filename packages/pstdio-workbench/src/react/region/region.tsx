@@ -8,16 +8,15 @@ import type {
   WorkbenchWidgetPlacement,
 } from "../../core";
 import {
-  getActiveWorkbenchSubPanel,
   getWorkbenchPanelForMenuRegion,
   isWorkbenchPanelPlacementVisible,
   matchesWorkbenchModeEligibility,
-  matchesWorkbenchPanelMenuOwner,
   type WorkbenchPanelRegion,
   workbenchPanelMenuRegions,
   workbenchPanelRegions,
 } from "../../core";
 import { resolvePageContent } from "../../core/registries/pages/page-content";
+import { resolvePanelMenuRegionState } from "../panel-menu/panel-menu-placements";
 import { useOpenPlacementIds } from "../shared/use-open-placement-ids";
 import { useWorkbenchLocationPanel } from "../shared/use-workbench-location-panel";
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
@@ -163,50 +162,47 @@ const activateRegionPlacement = (
   else if (target && target.widgetId !== activeWidgetId) workbench.layout.activatePanel(target.widgetId);
 };
 
+const eligibleRegionPlacement = (
+  workbench: WorkbenchCore,
+  region: WorkbenchRegionId,
+  placement: WorkbenchWidgetPlacement,
+  resource: ReturnType<WorkbenchCore["getPrimaryResource"]>,
+  modeId: string | undefined,
+  location: WorkbenchWidgetPlacement | undefined,
+) => {
+  const contribution = workbench.layout.getWidget(placement.contributionId);
+  if (!contribution) return false;
+  if (sidePanelRegionIds.has(region)) return matchesWorkbenchModeEligibility(contribution, modeId);
+  return isWorkbenchPanelPlacementVisible(contribution, resource, modeId, placement, { location });
+};
+
 export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
+  "use no memo";
   const { workbench, region, title, pointerEvents = "auto", transparent = false } = props;
-  const panelRegion = workbenchPanelRegions.includes(region as WorkbenchPanelRegion)
-    ? (region as WorkbenchPanelRegion)
-    : undefined;
-  const panelSlot = usePanelViewSlot(panelRegion);
+  const panelRegion = workbenchPanelRegions.find((candidate) => candidate === region);
+  const menuRegion = [...panelMenuRegionIds].find((candidate) => candidate === region) as
+    | WorkbenchPanelMenuRegion
+    | undefined;
+  const panelSlot = usePanelViewSlot(panelRegion ?? menuRegion);
   const sharedViews = panelSlot.enabled;
   const chrome = useModeChrome(workbench, region);
   const locationResource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
   const pageContent = useRegionPageContent(workbench, region);
   const currentRegionState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions[region]);
-  const registeredWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
-  const activeSubPanel = useWorkbenchStore(workbench.layout.store, (state) =>
-    panelMenuRegionIds.has(region)
-      ? getActiveWorkbenchSubPanel(
-          state.layout,
-          getWorkbenchPanelForMenuRegion(region as WorkbenchPanelMenuRegion),
-          locationResource,
-          { ignoreOwnerResourceKey: sidePanelRegionIds.has(region) },
-        )
-      : undefined,
-  );
+  useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
   const activeLocationPanel = useWorkbenchLocationPanel(
     workbench,
     panelMenuRegionIds.has(region) ? getWorkbenchPanelForMenuRegion(region as WorkbenchPanelMenuRegion) : panelRegion,
   );
-  const regionState = {
-    ...currentRegionState,
-    widgets: currentRegionState.widgets.filter((placement) => {
-      const contribution = registeredWidgets[placement.contributionId];
-      return contribution
-        ? (sidePanelRegionIds.has(region)
-            ? matchesWorkbenchModeEligibility(contribution, modeId)
-            : isWorkbenchPanelPlacementVisible(contribution, locationResource, modeId, placement, {
-                location: activeLocationPanel,
-              })) &&
-            matchesWorkbenchPanelMenuOwner(contribution, {
-              locationPanel: activeLocationPanel,
-              subPanel: activeSubPanel,
-            })
-        : false;
-    }),
-  };
+  const regionState = menuRegion
+    ? resolvePanelMenuRegionState(workbench, menuRegion)
+    : {
+        ...currentRegionState,
+        widgets: currentRegionState.widgets.filter((placement) =>
+          eligibleRegionPlacement(workbench, region, placement, locationResource, modeId, activeLocationPanel),
+        ),
+      };
   const globalActiveWidgetId = useWorkbenchStore(workbench.layout.store, (state) => state.layout.activeWidgetId);
   const activePlacement = getActivePlacement(regionState.widgets, regionState.activeWidgetId, pageContent);
   const regionRef = useRef<HTMLDivElement>(null);

@@ -104,6 +104,7 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
   return input.workbench.views.registerView(
     {
       id: record.id,
+      header: record.headerViewId ? { viewId: record.headerViewId } : undefined,
       title: text(record.title, record.id),
       icon: record.icon,
       body: {

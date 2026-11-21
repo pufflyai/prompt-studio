@@ -24,6 +24,8 @@ import { WorkbenchWidgetContents } from "./widget-contents";
 interface WorkbenchWidgetHostProps {
   workbench: WorkbenchCore;
   placement: WorkbenchWidgetPlacement;
+  /** Render an instance-owned companion view without replacing the owning viewer identity. */
+  viewId?: string;
   widget?: RegisteredWidgetContribution | RegisteredPlaceholderContribution;
   region?: WorkbenchRegion;
   sizing?: WorkbenchPanelRenderInput["sizing"];
@@ -86,7 +88,8 @@ const toHostedPanel = (input: {
 export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
   const { workbench, placement } = props;
   const widget = props.widget ?? workbench.layout.getWidget(placement.contributionId);
-  const view = placement.viewId ? workbench.views.getView(placement.viewId) : undefined;
+  const viewId = props.viewId ?? placement.viewId;
+  const view = viewId ? workbench.views.getView(viewId) : undefined;
   const rendererId = view?.id ?? widget?.rendererId ?? "";
   const refresh = noopRefresh;
   const rendererFromStore = useWorkbenchStore(
@@ -145,7 +148,15 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
           <WorkbenchWidgetContents
             renderer={renderer}
             webview={view?.body.kind === "webview" || renderer.id === "webview:bridge"}
-            input={{ workbench, panel, instance, refresh, sizing: props.sizing, visible: props.visible }}
+            input={{
+              workbench,
+              panel,
+              instance,
+              viewId: view?.id,
+              refresh,
+              sizing: props.sizing,
+              visible: props.visible,
+            }}
             // File views start an async read; their heavy editors load separately.
             defer={view?.body.kind !== "file" && ["main", "side", "bottom"].includes(panel.region)}
           />
@@ -153,7 +164,7 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
       ) : (
         <WorkbenchWidgetFallback label={`No renderer registered for ${rendererId}.`} />
       )}
-      {resource && activity && showsActivity && props.region === "main" && (
+      {!props.viewId && resource && activity && showsActivity && props.region === "main" && (
         <WorkbenchResourceActivity
           key={resourceKey(resource)}
           workbench={workbench}

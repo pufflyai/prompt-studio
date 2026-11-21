@@ -443,6 +443,25 @@ This additive surface requires host capability `view.actionBar.v1` and a
 supporting published SDK. Publish platform support before releasing independent
 extensions that adopt it. Older view kinds and activity items stay supported.
 
+## View-owned page and tab headers
+
+On unreleased extension API 0.5.0, declare `header: { view: toolbar.ref }` on a view
+alongside its `body`. The toolbar is another declared view, using a native body or
+a bounded webview. Header references must name an available view and cannot form
+cycles.
+
+The host places those controls in the page header for standalone content, or a
+subheader below the tab strip for tabbed content. Existing `viewMenus` openers
+share that row. Main, Side, Secondary, and floating Side use the same contract;
+every tab header keeps a bottom separator. Tab and whole-panel actions remain in
+the tab header.
+
+The companion header inherits its owning live instance’s resource, project,
+workspace and page context. Switching tabs shows the selected instance’s header;
+moving that instance preserves its header guest and local state. Header commands
+use that instance even when another panel has focus. Use existing page params or
+extension-owned state when the header and body share search or filters.
+
 ## Native view toolbar actions
 
 Both `dataTable` and `kanban` bodies accept `toolbarActions`. These actions stay
