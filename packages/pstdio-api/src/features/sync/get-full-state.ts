@@ -4,6 +4,7 @@ import type { DbClient } from "pstdio-db";
 import {
   board_default_views,
   board_views,
+  createSettingsDBService,
   extension_instances,
   files,
   installed_extension_sources,
@@ -11,7 +12,6 @@ import {
   projects,
   sessionColumns,
   sessions,
-  settings,
   workspace_sessions,
   workspaceColumns,
   workspaces,
@@ -20,7 +20,6 @@ import {
 export const tableMap = {
   board_views,
   board_default_views,
-  settings,
   projects,
   installed_extension_sources,
   notifications,
@@ -31,7 +30,8 @@ export const tableMap = {
   workspace_sessions,
 } as const;
 
-export const SYNCED_TABLES = Object.keys(tableMap) as (keyof typeof tableMap)[];
+export const PHYSICAL_SYNCED_TABLES = Object.keys(tableMap) as (keyof typeof tableMap)[];
+export const SYNCED_TABLES = [...PHYSICAL_SYNCED_TABLES, "settings"] as const;
 
 const hasDeletedAt = (table: unknown): table is Record<string, unknown> & { deleted_at: unknown } =>
   typeof table === "object" && table !== null && "deleted_at" in table;
@@ -39,6 +39,10 @@ const hasDeletedAt = (table: unknown): table is Record<string, unknown> & { dele
 export const getFullState = async (db: DbClient) => {
   const entries = await Promise.all(
     SYNCED_TABLES.map(async (name) => {
+      if (name === "settings") {
+        const settings = await createSettingsDBService(db).getStored();
+        return [name, settings ? [settings] : []] as const;
+      }
       const table = tableMap[name];
       if (name === "workspaces")
         return [name, await db.select(workspaceColumns).from(workspaces).where(isNull(workspaces.deleted_at))] as const;

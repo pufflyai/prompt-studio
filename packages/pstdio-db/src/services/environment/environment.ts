@@ -1,16 +1,23 @@
-import { eq } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { local_environment } from "../../db/schemas/environment";
+import { preferences } from "../../db/schemas/preferences";
+import { createPreferencesDBService } from "../preferences/preferences";
+
+const key = { scope: "global", scope_id: "global", extension_id: "", key: "environment_id" } as const;
 
 export const createEnvironmentDBService = (db: DbClient) => {
   let environment: Promise<{ environmentId: string }> | undefined;
   const load = async () => {
     await db
-      .insert(local_environment)
-      .values({ id: "local", environment_id: crypto.randomUUID() })
+      .insert(preferences)
+      .values({
+        ...key,
+        sync: "device",
+        value: crypto.randomUUID(),
+        updated_at: new Date().toISOString(),
+      })
       .onConflictDoNothing();
-    const [owner] = await db.select().from(local_environment).where(eq(local_environment.id, "local"));
-    return { environmentId: owner!.environment_id };
+    const owner = await createPreferencesDBService(db).get(key);
+    return { environmentId: owner!.value as string };
   };
   return {
     get: () =>

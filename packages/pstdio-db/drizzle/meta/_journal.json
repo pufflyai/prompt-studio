@@ -71,6 +71,13 @@
       "when": 1795109146045,
       "tag": "0009_fat_vision",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795282839061,
+      "tag": "0010_complex_dreadnoughts",
+      "breakpoints": true
     }
   ]
 }

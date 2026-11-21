@@ -17,6 +17,7 @@ import {
   createMemoryIndexNodeFiles,
 } from "../services/extension-storage/index-node-files";
 import { upgradeIndexNodesToFiles } from "../services/extension-storage/index-node-upgrade";
+import { prepareAppPreferencesUpgrade } from "./app-preferences-upgrade";
 import { openPglite } from "./open-pglite";
 import { canonicalDbPath, resolveDbPath } from "./paths";
 import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-current-home";
@@ -218,7 +219,9 @@ export const createDb = async (options?: {
     let migrated = false;
     await withMigrationsFolder(async (migrationsFolder) => {
       if (!fs.existsSync(migrationsFolder)) return;
+      const finishPreferencesUpgrade = await prepareAppPreferencesUpgrade(db, dbPath);
       await migrate(db, { migrationsFolder });
+      await finishPreferencesUpgrade?.();
       migrated = true;
     });
     // Copy durable receipts before opening. Remove old rows for both sides of an identity
