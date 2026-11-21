@@ -1,12 +1,13 @@
 import type { ExtensionProcessApi, ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import type { BranchKind, BranchSource, TemplateRef } from "./branch-templates";
-import type { Api } from "./connection";
+import { type Api, readControllerWithRetry, waitForControllerPoll } from "./connection";
 import type { EnvironmentCleanupInput } from "./environment-cleanup";
 import {
   claimEnvironment,
   createEnvironment,
   readEnvironment,
   releaseEnvironment,
+  renewEnvironmentClaim,
   stopEnvironment,
   waitUntilReady,
 } from "./environments";
@@ -226,23 +227,26 @@ const requestPath = (record: RunRecord) =>
   `/v1/workspaces/${record.environmentId}/requests/${record.requestId}?conversationId=${record.conversationId}`;
 
 export async function awaitRun(deps: RunDeps, record: RunRecord, signal?: AbortSignal): Promise<RunSummary> {
-  let summary = await checkRun(deps, record, signal);
+  let summary = await checkRun(deps, record, signal, true);
   while (!summary) {
-    await Bun.sleep(3000);
+    await waitForControllerPoll(signal);
     signal?.throwIfAborted();
-    summary = await checkRun(deps, record, signal);
+    summary = await checkRun(deps, record, signal, true);
   }
   return summary;
 }
 
 // One look at a run: collects its result once the controller has finished it, so a run
 // whose caller went away still gets its summary and log.
-export async function checkRun(deps: RunCollectionDeps, record: RunRecord, signal?: AbortSignal) {
+export async function checkRun(deps: RunCollectionDeps, record: RunRecord, signal?: AbortSignal, retryReceipt = false) {
   if (record.summary) return record.summary;
-  const receipt = await deps.api<Receipt>({ method: "GET", path: requestPath(record), signal });
+  const receipt = retryReceipt
+    ? await readControllerWithRetry<Receipt>(deps.api, requestPath(record), signal)
+    : await deps.api<Receipt>({ method: "GET", path: requestPath(record), signal });
   if (!receipt.finalizedAt) return null;
   // The runner uploads its log before the controller finalizes the request.
-  if (record.stopAfterRun) await stopEnvironment(deps.api, record.environmentId, signal);
+  if (record.stopAfterRun && (await renewEnvironmentClaim(deps.store, record.environmentId, record.runId, 1800)))
+    await stopEnvironment(deps.api, record.environmentId, signal);
   const summary = await summarize(deps, record, receipt);
   await deps.store.set(`run:${record.runId}`, { ...record, summary });
   await releaseEnvironment(deps.store, record.environmentId, record.runId);

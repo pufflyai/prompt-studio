@@ -1,3 +1,4 @@
+import { setTimeout as delay } from "node:timers/promises";
 import { defineConnection, type ExtensionConnectionsApi, type JsonValue, l10n } from "@pstdio/sdk/extensions";
 
 // The host keeps the controller URL and its finite machine key. The key never reaches
@@ -51,4 +52,38 @@ export function connectionApi(connections: ExtensionConnectionsApi, id = connect
     }
     return response.body as never;
   };
+}
+
+export async function waitForControllerPoll(signal?: AbortSignal) {
+  try {
+    await delay(3000, undefined, { signal });
+  } catch (error) {
+    signal?.throwIfAborted();
+    throw error;
+  }
+}
+
+// Receipt reads are safe to repeat. Keep accepted runs alive across transport outages;
+// known permanent controller responses, malformed data and cancellation still surface.
+export async function readControllerWithRetry<T>(api: Api, path: string, signal?: AbortSignal): Promise<T> {
+  while (true) {
+    signal?.throwIfAborted();
+    try {
+      return await api<T>({ method: "GET", path, signal });
+    } catch (error) {
+      signal?.throwIfAborted();
+      const status = error && typeof error === "object" && "status" in error ? error.status : undefined;
+      if (
+        (typeof status === "number" &&
+          Number.isInteger(status) &&
+          status >= 100 &&
+          status < 500 &&
+          ![408, 429].includes(status)) ||
+        error instanceof SyntaxError ||
+        (error && typeof error === "object" && "name" in error && error.name === "AbortError")
+      )
+        throw error;
+    }
+    await waitForControllerPoll(signal);
+  }
 }

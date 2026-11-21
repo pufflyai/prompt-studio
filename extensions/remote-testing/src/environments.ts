@@ -17,6 +17,7 @@ export interface Environment {
 }
 
 const PURPOSE = "remote-testing";
+const MANAGED_PURPOSES = [PURPOSE, "pstdio-preview"];
 const ACTIVE = ["queued", "provisioning", "connected", "ready"];
 const ENDED = ["succeeded", "failed", "canceled", "expired", "preserved"];
 const path = (id: string) => `/v1/workspaces/${encodeURIComponent(id)}`;
@@ -35,7 +36,7 @@ export async function listEnvironments(api: Api, projectId: string) {
       ...page.items.filter(
         (item) =>
           ACTIVE.includes(item.state) &&
-          item.metadata?.purpose === PURPOSE &&
+          MANAGED_PURPOSES.includes(item.metadata?.purpose ?? "") &&
           item.metadata.pstdio_project_id === projectId,
       ),
     );

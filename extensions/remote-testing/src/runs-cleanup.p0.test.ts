@@ -3,7 +3,7 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { activeRun, claimEnvironment } from "./environments";
 import { checkRun, type RunRecord } from "./runs";
 
-function finishedRun(stopAfterRun: boolean) {
+async function finishedRun(stopAfterRun: boolean) {
   const apiCalls: string[] = [];
   const record = {
     runId: "test",
@@ -36,11 +36,12 @@ function finishedRun(stopAfterRun: boolean) {
       return "test.log";
     },
   } satisfies Parameters<typeof checkRun>[0];
+  await claimEnvironment(deps.store, record.environmentId, record.runId, 60);
   return { deps, record, apiCalls };
 }
 
 test("completed runs stop the environment by default even when the suite fails", async () => {
-  const { deps, record, apiCalls } = finishedRun(true);
+  const { deps, record, apiCalls } = await finishedRun(true);
   const result = await checkRun(deps, record);
   expect(result?.status).toBe("failed");
   expect(apiCalls).toContain("POST /v1/workspaces/env/cancel");
@@ -48,13 +49,13 @@ test("completed runs stop the environment by default even when the suite fails",
 });
 
 test("an explicit request to keep the environment preserves it", async () => {
-  const { deps, record, apiCalls } = finishedRun(false);
+  const { deps, record, apiCalls } = await finishedRun(false);
   expect((await checkRun(deps, record))?.status).toBe("failed");
   expect(apiCalls.length).toBe(1);
 });
 
 test.each(["synchronous", "asynchronous"])("collection survives notification failure (%s)", async (mode) => {
-  const { deps, record, apiCalls } = finishedRun(true);
+  const { deps, record, apiCalls } = await finishedRun(true);
   await claimEnvironment(deps.store, record.environmentId, record.runId, 60);
   const result = await checkRun(
     {
