@@ -1,6 +1,6 @@
 import type { ExtensionProcessApi, ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import type { BranchKind, BranchSource, TemplateRef } from "./branch-templates";
-import { type Api, readControllerWithRetry, waitForControllerPoll } from "./connection";
+import { type Api, canRetryControllerRequest, readControllerWithRetry, waitForControllerPoll } from "./connection";
 import type { EnvironmentCleanupInput } from "./environment-cleanup";
 import {
   claimEnvironment,
@@ -236,17 +236,41 @@ export async function awaitRun(deps: RunDeps, record: RunRecord, signal?: AbortS
   return summary;
 }
 
+async function stopCollectedEnvironment(
+  deps: RunCollectionDeps,
+  record: RunRecord,
+  signal: AbortSignal | undefined,
+  retryController: boolean,
+) {
+  while (true) {
+    signal?.throwIfAborted();
+    if (!(await renewEnvironmentClaim(deps.store, record.environmentId, record.runId, 1800))) return;
+    try {
+      await stopEnvironment(deps.api, record.environmentId, signal);
+      return;
+    } catch (error) {
+      signal?.throwIfAborted();
+      if (!retryController || !canRetryControllerRequest(error)) throw error;
+    }
+    await waitForControllerPoll(signal);
+  }
+}
+
 // One look at a run: collects its result once the controller has finished it, so a run
 // whose caller went away still gets its summary and log.
-export async function checkRun(deps: RunCollectionDeps, record: RunRecord, signal?: AbortSignal, retryReceipt = false) {
+export async function checkRun(
+  deps: RunCollectionDeps,
+  record: RunRecord,
+  signal?: AbortSignal,
+  retryController = false,
+) {
   if (record.summary) return record.summary;
-  const receipt = retryReceipt
+  const receipt = retryController
     ? await readControllerWithRetry<Receipt>(deps.api, requestPath(record), signal)
     : await deps.api<Receipt>({ method: "GET", path: requestPath(record), signal });
   if (!receipt.finalizedAt) return null;
   // The runner uploads its log before the controller finalizes the request.
-  if (record.stopAfterRun && (await renewEnvironmentClaim(deps.store, record.environmentId, record.runId, 1800)))
-    await stopEnvironment(deps.api, record.environmentId, signal);
+  if (record.stopAfterRun) await stopCollectedEnvironment(deps, record, signal, retryController);
   const summary = await summarize(deps, record, receipt);
   await deps.store.set(`run:${record.runId}`, { ...record, summary });
   await releaseEnvironment(deps.store, record.environmentId, record.runId);

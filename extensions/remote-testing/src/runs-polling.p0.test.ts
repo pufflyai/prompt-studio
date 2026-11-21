@@ -182,3 +182,49 @@ test.each(["expired", "missing"])("terminal cleanup requires a matching claim (%
   expect(stops).toBe(claim === "expired" ? 1 : 0);
   expect<string | null>(ownerAtStop).toBe(claim === "expired" ? "run" : null);
 });
+
+test.each(["network", "server"])("terminal collection recovers a transient stop failure (%s)", async (failure) => {
+  let reads = 0;
+  let stops = 0;
+  const { deps, record } = fixture(
+    async <TBody>(_id: string, input: Parameters<ExtensionConnectionsApi["request"]>[1]) => {
+      if (input.method === "GET") reads++;
+      else if (++stops === 1) {
+        if (failure === "network") throw new Error("Connection reset during stop");
+        return { status: 503, headers: {}, body: { error: { message: "Stop temporarily unavailable" } } as TBody };
+      }
+      return { status: 200, headers: {}, body: receipt as TBody };
+    },
+  );
+  await claimEnvironment(deps.store, "env", "run", 60);
+  const summary = await awaitRun(deps, record);
+  expect(summary).toMatchObject({ status: "passed", logPath: "run.log" });
+  expect(reads).toBe(1);
+  expect(stops).toBe(2);
+  expect(await deps.store.get("run:run")).toMatchObject({ summary });
+  expect(await activeRun(deps.store, "env")).toBeNull();
+});
+
+test("a shutdown retry rechecks ownership before touching a newly claimed environment", async () => {
+  let stops = 0;
+  const { deps, record } = fixture(
+    async <TBody>(_id: string, input: Parameters<ExtensionConnectionsApi["request"]>[1]) => {
+      if (input.method === "POST") {
+        stops++;
+        const claims = deps.store.collection<{ runId: string; until: number }>("environment-claims");
+        const current = await claims.read("env");
+        if (!current) throw new Error("Missing fixture claim");
+        await claims.updateIfUnchanged("env", current.revision, { runId: "run", until: Date.now() - 1 });
+        expect(await claimEnvironment(deps.store, "env", "new-owner", 60)).toBe(true);
+        return { status: 503, headers: {}, body: { error: { message: "Controller unavailable" } } as TBody };
+      }
+      return { status: 200, headers: {}, body: receipt as TBody };
+    },
+  );
+  await claimEnvironment(deps.store, "env", "run", 60);
+  const summary = await awaitRun(deps, record);
+  expect(summary.status).toBe("passed");
+  expect(stops).toBe(1);
+  expect(await activeRun(deps.store, "env")).toBe("new-owner");
+  expect(await deps.store.get("run:run")).toMatchObject({ summary });
+});

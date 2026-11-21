@@ -63,8 +63,20 @@ export async function waitForControllerPoll(signal?: AbortSignal) {
   }
 }
 
-// Receipt reads are safe to repeat. Keep accepted runs alive across transport outages;
-// known permanent controller responses, malformed data and cancellation still surface.
+export function canRetryControllerRequest(error: unknown) {
+  const status = error && typeof error === "object" && "status" in error ? error.status : undefined;
+  return !(
+    (typeof status === "number" &&
+      Number.isInteger(status) &&
+      status >= 100 &&
+      status < 500 &&
+      ![408, 429].includes(status)) ||
+    error instanceof SyntaxError ||
+    (error && typeof error === "object" && "name" in error && error.name === "AbortError")
+  );
+}
+
+// Receipt reads are safe to repeat. Keep accepted runs alive across transport outages.
 export async function readControllerWithRetry<T>(api: Api, path: string, signal?: AbortSignal): Promise<T> {
   while (true) {
     signal?.throwIfAborted();
@@ -72,17 +84,7 @@ export async function readControllerWithRetry<T>(api: Api, path: string, signal?
       return await api<T>({ method: "GET", path, signal });
     } catch (error) {
       signal?.throwIfAborted();
-      const status = error && typeof error === "object" && "status" in error ? error.status : undefined;
-      if (
-        (typeof status === "number" &&
-          Number.isInteger(status) &&
-          status >= 100 &&
-          status < 500 &&
-          ![408, 429].includes(status)) ||
-        error instanceof SyntaxError ||
-        (error && typeof error === "object" && "name" in error && error.name === "AbortError")
-      )
-        throw error;
+      if (!canRetryControllerRequest(error)) throw error;
     }
     await waitForControllerPoll(signal);
   }

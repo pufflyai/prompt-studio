@@ -1,4 +1,4 @@
-import { defineExtension, defineSkill, l10n, packageAsset } from "@pstdio/sdk/extensions";
+import { defineExtension, defineKeybinding, defineSkill, l10n, packageAsset } from "@pstdio/sdk/extensions";
 import { createBranchTemplate, openPromptStudio, runPromptStudio } from "./src/branch-commands";
 import { commands } from "./src/commands";
 import { connection, templatePublisher } from "./src/connection";
@@ -13,6 +13,9 @@ export default defineExtension({
   views: [runsView, environmentsView],
   pages: [remoteTestsPage],
   navigationItems: [navigation],
+  keybindings: [
+    defineKeybinding({ id: "go-remote-tests", layer: "go", key: "R", sticky: true, action: navigation.action }),
+  ],
   skills: [
     defineSkill({
       id: "run-tests-remotely",
