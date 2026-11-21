@@ -100,6 +100,18 @@ test("shows each quit confirmation over the workbench and recovers from refused 
   await window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.cancelQuit());
   await expect.poll(desktopState).toMatchObject({ kind: "workbench" });
 
+  // A dashboard-wide render failure uses the same recovery screen as a crashed renderer.
+  await window.evaluate(() =>
+    (globalThis as unknown as Window).promptStudioDesktop.reportWorkbenchError({
+      message: "Fixture dashboard render failed",
+    }),
+  );
+  await expect(lifecycle.getByRole("alert")).toBeVisible();
+  expect(await workbenchVisible()).toBe(false);
+  await lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter");
+  await expect.poll(desktopState).toMatchObject({ kind: "workbench" });
+  expect(await workbenchVisible()).toBe(true);
+
   // A crashed workbench exposes recovery in the lifecycle renderer. Retry and Quit can both reopen it.
   // Playwright cannot drive a page after its renderer crashes, so read the new page from main.
   const workbenchContents = (script: string) =>
@@ -155,6 +167,44 @@ test("shows each quit confirmation over the workbench and recovers from refused 
 
 const startupState = (page: Page) =>
   page.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState());
+
+// Critical risk: a late dashboard load must not cover recovery after a startup error.
+test("keeps startup render failures in the existing recovery screen after the dashboard finishes loading", async () => {
+  const runtime = await startActiveRuntime(cleanup, { refuseFirstForcedShutdown: false, holdDashboard: true });
+  const { electronApp } = await launchDesktop(runtime.home, "dashboard-startup-recovery");
+  const lifecycle = await waitForLifecyclePage(electronApp.context());
+  await runtime.dashboardRequested;
+  const findWorkbench = () =>
+    electronApp
+      .context()
+      .pages()
+      .find((page) => page.url().startsWith(runtime.descriptor.origin));
+  await expect.poll(findWorkbench).toBeDefined();
+  const window = findWorkbench()!;
+  await window.evaluate(() =>
+    (globalThis as unknown as Window).promptStudioDesktop.reportWorkbenchError({
+      message: "Fixture startup render failed",
+    }),
+  );
+  await expect(lifecycle.getByRole("alert")).toBeVisible();
+  runtime.releaseDashboard();
+  await expect(window.getByText("Owned Prompt Studio dashboard")).toBeAttached();
+  await window.waitForLoadState("load");
+  // Wait for native startup to finish, including its late showWorkbench call.
+  await expect
+    .poll(() => startupState(lifecycle))
+    .toMatchObject({
+      kind: "recovery",
+      error: { code: "workbench_unavailable" },
+    });
+  expect(
+    await electronApp.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0].contentView.children[0].getVisible(),
+    ),
+  ).toBe(false);
+  await lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter");
+  await expect.poll(() => startupState(window)).toMatchObject({ kind: "workbench" });
+});
 
 test("keeps the first workbench load when a quit arrives while it loads", async () => {
   const runtime = await startActiveRuntime(cleanup, { refuseFirstForcedShutdown: false, holdDashboard: true });

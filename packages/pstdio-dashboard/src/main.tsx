@@ -55,11 +55,6 @@ const isBrowserSignedOut = async () => {
 };
 
 const showDashboardFailure = (error: unknown, componentStack?: string | null) => {
-  const status = document.getElementById("dashboard-status-message");
-  if (status) {
-    status.setAttribute("role", "alert");
-    status.textContent = "Prompt Studio couldn’t open";
-  }
   reportWorkbenchError(error, undefined, componentStack);
 };
 
