@@ -27,6 +27,7 @@ import {
   toCreateFields,
 } from "./kanban-renderer-contribution-helpers";
 import { createKanbanRendererQuery } from "./kanban-renderer-query";
+import { createKanbanQueryPresentation } from "./kanban-renderer-query-result";
 import { mapViewToolbarActions } from "./view-toolbar-actions";
 
 type ColumnConfigRecord = Record<string, WireBoardColumnConfig>;
@@ -221,6 +222,11 @@ export const registerWorkbenchExtensionKanbanRenderers = (
           columnConfigs = value.boardColumnConfigs;
         },
       });
+      const presentation = createKanbanQueryPresentation(attributes, localize);
+      const readResult = async (state: import("../../core").KanbanRendererQueryState, signal: AbortSignal) => {
+        const result = await query.read(state, signal);
+        return { ...result, ...presentation(result) };
+      };
       const mutate = (
         target: WorkbenchExtensionKanbanRendererRecord,
         commandId: string,
@@ -233,6 +239,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
         onRowActivate,
         executeQuery: async (state: import("../../core").KanbanRendererQueryState, signal: AbortSignal) =>
           (await query.read(state, signal)).rows,
+        executeQueryResult: readResult,
         executePage:
           record.queryMode === "paged"
             ? async (
@@ -240,7 +247,10 @@ export const registerWorkbenchExtensionKanbanRenderers = (
                   page: import("@pstdio/sdk/extensions").CollectionPageRequest;
                 },
                 signal: AbortSignal,
-              ) => acceptRendererPage(await query.read(state, signal), state.page)
+              ) => {
+                const result = await readResult(state, signal);
+                return { ...result, ...acceptRendererPage(result, state.page) };
+              }
             : undefined,
         onAttributeChange: record.attributeChangeHandlerId
           ? (rowId: string, attributeId: string, value: unknown) =>
