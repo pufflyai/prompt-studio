@@ -150,6 +150,7 @@ export const workbenchExtensionViewBodySchema = z.discriminatedUnion("kind", [
 ]);
 
 export const workbenchExtensionViewRecordSchema = z.object({
+  header: z.object({ view: viewRefSchema }).optional(),
   id: z.string(),
   localId: z.string(),
   extensionId: z.string(),

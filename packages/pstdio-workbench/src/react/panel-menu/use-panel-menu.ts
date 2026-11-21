@@ -1,11 +1,7 @@
 import { useUiScope } from "@pstdio/ui";
 import { useLayoutEffect, useState } from "react";
 import {
-  getActiveWorkbenchSubPanel,
   isWorkbenchModePanelAvailable,
-  isWorkbenchPanelPlacementVisible,
-  matchesWorkbenchModeEligibility,
-  matchesWorkbenchPanelMenuOwner,
   type WorkbenchCore,
   type WorkbenchPanelMenuRegion,
   type WorkbenchPanelMenuSide,
@@ -13,10 +9,10 @@ import {
   type WorkbenchRegionSize,
   workbenchPanelMenuRegions,
 } from "../../core";
-import { useWorkbenchLocationPanel } from "../shared/use-workbench-location-panel";
-import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
+import { useWorkbenchActiveModeId } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { resolvePanelCollapsible } from "../workbench/workbench-panel-state";
+import { resolvePanelMenuRegionState } from "./panel-menu-placements";
 import { getWorkbenchPanelMenuAttachment } from "./panel-menu-sizing";
 import { usePanelMenuContent } from "./use-panel-menu-content";
 
@@ -56,37 +52,17 @@ const useWorkbenchPanelMenu = (
   panel: WorkbenchPanelRegion,
   side: WorkbenchPanelMenuSide,
 ): WorkbenchPanelMenuView => {
+  "use no memo";
   const region = workbenchPanelMenuRegions[panel][side];
-  const locationResource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
   const panelAvailable = isWorkbenchModePanelAvailable(modeId ? workbench.modes.getMode(modeId) : undefined, panel);
-  const registeredWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
-  const currentRegionState = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions[region]);
-  const activeSubPanel = useWorkbenchStore(workbench.layout.store, (state) =>
-    getActiveWorkbenchSubPanel(state.layout, panel, locationResource, { ignoreOwnerResourceKey: panel === "side" }),
-  );
-  const activeLocationPanel = useWorkbenchLocationPanel(workbench, panel);
-  const regionState = {
-    ...currentRegionState,
-    widgets: currentRegionState.widgets.filter((placement) => {
-      const contribution = registeredWidgets[placement.contributionId];
-      return contribution
-        ? (panel === "side"
-            ? matchesWorkbenchModeEligibility(contribution, modeId)
-            : isWorkbenchPanelPlacementVisible(contribution, locationResource, modeId, placement, {
-                location: activeLocationPanel,
-              })) &&
-            matchesWorkbenchPanelMenuOwner(contribution, {
-              locationPanel: activeLocationPanel,
-              subPanel: activeSubPanel,
-            })
-        : false;
-    }),
-  };
+  useWorkbenchStore(workbench.layout.store, (state) => state);
+  useWorkbenchStore(workbench.pages.store, (state) => state);
+  const regionState = resolvePanelMenuRegionState(workbench, region);
   const activePlacement =
     regionState.widgets.find((placement) => placement.widgetId === regionState.activeWidgetId) ??
     regionState.widgets[0];
-  const widget = activePlacement ? registeredWidgets[activePlacement.contributionId] : undefined;
+  const widget = activePlacement ? workbench.layout.getWidget(activePlacement.contributionId) : undefined;
   const hasContent = usePanelMenuContent(workbench, activePlacement);
   const collapsible = useWorkbenchStore(workbench.layout.store, () => resolvePanelCollapsible(workbench, region));
   const panelStateKey = activePlacement ? `panel-menu:${activePlacement.widgetId}` : region;

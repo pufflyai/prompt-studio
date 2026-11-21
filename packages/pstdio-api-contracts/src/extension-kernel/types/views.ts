@@ -61,6 +61,8 @@ export type ViewBody =
 export interface ViewContribution extends ContributionDefinition<"view"> {
   readonly title: Localizable<string>;
   readonly icon?: string;
+  /** Controls that follow this live view into a page header or tab subheader. */
+  readonly header?: { readonly view: ViewRef };
   readonly body: ViewBody;
 }
 

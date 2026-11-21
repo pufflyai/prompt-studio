@@ -1,14 +1,14 @@
 import { Box } from "@chakra-ui/react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
-import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
+import { WorkbenchContentHeader } from "../header/content-header";
+import { WorkbenchPanelMenuLayout } from "../panel-menu/panel-menu";
 import { PanelHeader } from "../region/panel-header";
 import { WorkbenchRegion } from "../region/region";
 import { WorkbenchRegionTabs } from "../region/region-tabs";
 import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { usePanelPolicy } from "../shared/use-panel-policy";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
-import { WorkbenchHeaderBorder } from "./header-bottom-border";
 
 interface WorkbenchSecondaryPanelProps {
   workbench: WorkbenchCore;
@@ -48,15 +48,16 @@ export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => 
         flexShrink={0}
         gap="xs"
         overflow="hidden"
+        borderBottomWidth="1px"
+        borderColor="border.subtle"
         overflowY="hidden"
       >
         <WorkbenchRegionTabs workbench={workbench} region="secondary" />
         <Box display={hasSecondaryHeader ? "block" : "none"} flex="1" h="full" minW="0" overflow="hidden">
           <WorkbenchRegion workbench={workbench} region="secondary-header" title="Secondary Panel header" />
         </Box>
-        <WorkbenchPanelMenuOpeners workbench={workbench} panel="secondary" />
-        <WorkbenchHeaderBorder workbench={workbench} region="secondary-header" />
       </PanelHeader>
+      <WorkbenchContentHeader workbench={workbench} panel="secondary" />
       <WorkbenchTabDropTarget region="secondary" visible={policy.open} />
       <Box flex="1" minH="0" minW="0" overflow="hidden">
         <WorkbenchPanelMenuLayout workbench={workbench} panel="secondary">

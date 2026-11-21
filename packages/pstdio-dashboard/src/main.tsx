@@ -19,6 +19,7 @@ import { reportWorkbenchError } from "@/lib/workbench-error-report";
 import { DesktopQuitConfirmation } from "@/modules/desktop/desktop-quit-confirmation";
 import { DesktopStartupAppearance } from "@/modules/desktop/desktop-startup-appearance";
 import { createPerformanceMonitoring } from "@/modules/performance/module";
+import { BrowserAppHeader } from "@/modules/projects/components/browser-app-header";
 import type { DesktopProjectTabsController } from "@/modules/projects/desktop-project-tabs-controller";
 import { createProjectSetupHandoff } from "@/modules/projects/setup/project-setup-handoff";
 import { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
@@ -128,16 +129,19 @@ const renderDashboard = async () => {
             />
           ) : (
             <DashboardWorkbenchView
-              panelControlsPlacement="nav"
+              panelControlsPlacement="host"
               workbench={workbenches.getActive()!}
               storage={storage}
               titleBar={
-                desktopLifecycle && (
-                  <>
-                    <DesktopStartupAppearance bridge={desktopLifecycle} />
-                    <DesktopQuitConfirmation bridge={desktopLifecycle} />
-                  </>
-                )
+                <>
+                  <BrowserAppHeader workbench={workbenches.getActive()!} />
+                  {desktopLifecycle && (
+                    <>
+                      <DesktopStartupAppearance bridge={desktopLifecycle} />
+                      <DesktopQuitConfirmation bridge={desktopLifecycle} />
+                    </>
+                  )}
+                </>
               }
             />
           )}

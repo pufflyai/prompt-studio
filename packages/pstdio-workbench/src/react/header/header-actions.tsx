@@ -7,6 +7,7 @@ import {
   type ResourceRef,
   type WorkbenchCommandExecutionContext,
   type WorkbenchCore,
+  type WorkbenchWidgetPlacement,
 } from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { hasCommandParameters } from "../command-palette/command-palette-params";
@@ -20,6 +21,7 @@ interface WorkbenchHeaderActionsProps {
   workbench: WorkbenchCore;
   menuPath: MenuPath;
   controlSize?: "2xs" | "xs";
+  placement?: WorkbenchWidgetPlacement;
 }
 
 const commandExecutionContext = (resource: ResourceRef | undefined): WorkbenchCommandExecutionContext | undefined =>
@@ -57,15 +59,24 @@ const WorkbenchInlineHeaderAction = (props: {
   );
 };
 
-export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
-  const { controlSize = "xs", menuPath, workbench } = props;
+export const useWorkbenchHeaderItems = (
+  workbench: WorkbenchCore,
+  menuPath: MenuPath,
+  placement?: WorkbenchWidgetPlacement,
+) => {
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
   // Command handlers can read the focused panel while the page's primary resource stays unchanged.
   const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
-  const resource = getAnchorResource(layout, "primary");
+  const resource = placement ? placement.resource : getAnchorResource(layout, "primary");
   const items = listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, menuPath, { resource });
+  return { commands, resource, items };
+};
+
+export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
+  const { controlSize = "xs", menuPath, workbench, placement } = props;
+  const { commands, resource, items } = useWorkbenchHeaderItems(workbench, menuPath, placement);
   const { inlineItems, overflowItems } = resolveWorkbenchHeaderActionGroups(items);
 
   // Actions whose command declares parameters collect that input through the shared

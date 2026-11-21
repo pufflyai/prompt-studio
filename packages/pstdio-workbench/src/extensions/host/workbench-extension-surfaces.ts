@@ -41,6 +41,7 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
     return [
       input.workbench.views.registerView({
         id: panel.id,
+        header: panel.headerViewId ? { viewId: panel.headerViewId } : undefined,
         title: text(panel.title, panel.id),
         icon: panel.icon,
         body: {
@@ -68,7 +69,12 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
                   webviewId: panel.id,
                   placement: renderInput.instance,
                   textTarget: renderInput.textTarget,
-                  hostEvents: getBridgeWebviewHostEventPublisher(renderInput.workbench, renderInput.instance),
+                  hostEvents: getBridgeWebviewHostEventPublisher(
+                    renderInput.workbench,
+                    renderInput.instance,
+                    input.projectId,
+                    panel.id,
+                  ),
                 },
                 createHostAdapters: createExtensionHostAdapters(input, slotKind),
                 createProps:

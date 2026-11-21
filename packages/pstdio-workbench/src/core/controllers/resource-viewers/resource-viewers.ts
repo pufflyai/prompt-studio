@@ -28,6 +28,7 @@ import { replaceMainViewerTab } from "./replace-main-viewer-tab";
 import { retainedViewerSource } from "./retained-viewer-source";
 import { createViewerCaptures } from "./viewer-captures";
 import { replaceViewerHost } from "./viewer-host-continuity";
+import { captureViewerMenuHosts } from "./viewer-menu-host-continuity";
 import { navigatePanelViewer } from "./viewer-panel-navigation";
 import { currentViewerSource } from "./viewer-source";
 
@@ -150,6 +151,7 @@ const validateMainPage = (core: WorkbenchCore, request: ViewerChange) => {
 };
 const replaceMainResource = (core: WorkbenchCore, request: ViewerChange) => {
   const source = core.pages.getContent();
+  const transferMenus = captureViewerMenuHosts(core, source);
   const page = validateMainPage(core, request);
   const current = core.pages.store.getState().location!;
   const samePage = current.page.id === page.id && current.page.extensionId === page.extensionId;
@@ -163,7 +165,10 @@ const replaceMainResource = (core: WorkbenchCore, request: ViewerChange) => {
     position: request.position,
   });
   if (!result.ok) throw new Error(result.diagnostic.message);
-  if (request.operation === "replace") replaceViewerHost(core, source, core.pages.getContent());
+  if (request.operation === "replace") {
+    replaceViewerHost(core, source, core.pages.getContent());
+    transferMenus(core.pages.getContent());
+  }
   if (request.operation === "replace" && region && region !== "main") {
     if (selected) core.layout.activatePanel(selected);
     core.focus.setActiveRegion(region);

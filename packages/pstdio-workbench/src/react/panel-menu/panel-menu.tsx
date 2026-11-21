@@ -128,7 +128,6 @@ const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
         fitViewport: true,
         getAnchorElement: () => triggerRef.current,
       }}
-      onExitComplete={() => triggerRef.current?.focus()}
     >
       <Tooltip content={view.title}>
         <Menu.Trigger asChild>{trigger}</Menu.Trigger>

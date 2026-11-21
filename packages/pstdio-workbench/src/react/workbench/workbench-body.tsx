@@ -2,6 +2,7 @@ import { Box, Grid } from "@chakra-ui/react";
 import { ResizableSplitLayout } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchRegionSize } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
+import { WorkbenchContentHeader } from "../header/content-header";
 import { WorkbenchNavChrome } from "../header/workbench-nav-chrome";
 import { WorkbenchPanelMenuLayout } from "../panel-menu/panel-menu";
 import { WorkbenchPanelDropFrame } from "../region/panel-drop-frame";
@@ -79,7 +80,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
     <Grid
       data-workbench-panel="main"
       data-workbench-page={pageId}
-      gridTemplateRows="auto minmax(0, 1fr)"
+      gridTemplateRows="auto auto minmax(0, 1fr)"
       h="full"
       minH="0"
       minW="0"
@@ -95,8 +96,9 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
         panelControls={panelControls}
         fullscreenControlsInTitleBar={fullscreenControlsInTitleBar}
       />
+      <WorkbenchContentHeader workbench={workbench} panel="main" />
       <WorkbenchTabDropTarget region="main" />
-      <Box gridRow="2" h="full" minH="0" minW="0" overflow="hidden">
+      <Box gridRow="3" h="full" minH="0" minW="0" overflow="hidden">
         {mainPanelWithMenus}
       </Box>
     </Grid>

@@ -1,14 +1,9 @@
 import { Box, HStack, IconButton } from "@chakra-ui/react";
-import { PANEL_HEADER_CONTROL_SIZE, ResourceContextMenu, Tooltip } from "@pstdio/ui";
+import { ResourceContextMenu, Tooltip } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
-import {
-  headerTrailingMenuPath,
-  workbenchTopHeaderLeadingMenuPath,
-  workbenchTopHeaderTrailingMenuPath,
-} from "../../core";
+import { workbenchTopHeaderLeadingMenuPath, workbenchTopHeaderTrailingMenuPath } from "../../core";
 import { isSingleViewPage } from "../../core/registries/pages/page-main";
 import { WorkbenchBreadcrumbView } from "../breadcrumb/breadcrumb-view";
-import { WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
 import { useModeChrome } from "../region/mode-chrome";
 import { PanelDragHeader, usePanelPositionActions } from "../region/panel-position-controls";
 import { WorkbenchRegion } from "../region/region";
@@ -17,8 +12,8 @@ import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { FullscreenControls } from "../workbench/fullscreen-controls";
-import { WorkbenchHeaderBorder } from "../workbench/header-bottom-border";
 import { WorkbenchPanelToggles } from "../workbench/workbench-panel-toggles";
+import { WorkbenchContentHeader } from "./content-header";
 import { WorkbenchHeaderActions } from "./header-actions";
 import { WorkbenchBreadcrumbActions } from "./resource-actions";
 import { WorkbenchPresence } from "./workbench-presence";
@@ -93,12 +88,7 @@ const MainHeaderIdentity = (props: {
       <Box flex={hasMainHeader || !tabbed ? "1" : "0"} h="full" minW="0" overflow="hidden">
         <WorkbenchRegion workbench={workbench} region="main-header" title="Main header" />
       </Box>
-      <WorkbenchHeaderActions
-        workbench={workbench}
-        menuPath={headerTrailingMenuPath("main")}
-        controlSize={PANEL_HEADER_CONTROL_SIZE}
-      />
-      <WorkbenchPanelMenuOpeners workbench={workbench} panel="main" toggle />
+      <WorkbenchContentHeader workbench={workbench} panel="main" inline />
       <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
     </>
   );
@@ -115,6 +105,10 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
   const tabbed = useWorkbenchStore(
     workbench.pages.store,
     (state) => !isSingleViewPage(state.pages[state.activePageId ?? ""]),
+  );
+  const border = useWorkbenchStore(
+    workbench.layout.store,
+    () => tabbed || workbench.layout.getRegionHeaderBorderBottom("nav"),
   );
   const chrome = useModeChrome(workbench, "nav");
   const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state.active);
@@ -137,6 +131,8 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
         flexShrink={0}
         gap="xs"
         overflow="hidden"
+        borderBottomWidth={border ? "1px" : "0"}
+        borderColor="border.subtle"
         overflowY="hidden"
       >
         <Box display={chrome !== undefined || fullscreen ? "none" : "contents"}>
@@ -162,7 +158,6 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
         {!fullscreenControlsInTitleBar && (panelControls || fullscreen) ? (
           <FullscreenControls workbench={workbench} />
         ) : null}
-        <WorkbenchHeaderBorder workbench={workbench} region="nav" />
       </PanelDragHeader>
     </ResourceContextMenu>
   );
