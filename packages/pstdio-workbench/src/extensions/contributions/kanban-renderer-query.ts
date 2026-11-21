@@ -75,7 +75,13 @@ export const createKanbanRendererQuery = (input: {
         rowCache = nextCache;
         if (isQueryResult(value)) onMetadata(value);
       }
-      return { rows, page: isQueryResult(value) ? value.page : undefined };
+      return {
+        rows,
+        page: isQueryResult(value) ? value.page : undefined,
+        metadata: isQueryResult(value)
+          ? { attributes: value.attributes, boardColumnConfigs: value.boardColumnConfigs }
+          : undefined,
+      };
     },
   };
 };

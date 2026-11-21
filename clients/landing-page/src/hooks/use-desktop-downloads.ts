@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
-import { fetchDesktopRelease } from "../services/desktop-releases";
+import { loadDesktopRelease } from "../services/desktop-releases";
 import { type DesktopRelease, preferredDownload } from "../services/release-assets";
+
+// `astro build` replaces this with the latest desktop release it found, or null. Dev servers leave it undefined.
+declare const __DESKTOP_RELEASE__: DesktopRelease | null | undefined;
+const SNAPSHOT = (typeof __DESKTOP_RELEASE__ === "undefined" ? undefined : __DESKTOP_RELEASE__) ?? undefined;
 
 export const useDesktopDownloads = () => {
   const [release, setRelease] = useState<DesktopRelease>();
@@ -8,12 +12,17 @@ export const useDesktopDownloads = () => {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
+    const show = (result: DesktopRelease) => {
+      setRelease(result);
+      setSelectedId(
+        (current) => current ?? preferredDownload(result.downloads, navigator.userAgent, navigator.maxTouchPoints)?.id,
+      );
+    };
+    // The platform is only known in the browser, so the build snapshot is shown after hydration.
+    if (SNAPSHOT) show(SNAPSHOT);
     const controller = new AbortController();
-    fetchDesktopRelease(controller.signal)
-      .then((result) => {
-        setRelease(result);
-        setSelectedId(preferredDownload(result.downloads, navigator.userAgent, navigator.maxTouchPoints)?.id);
-      })
+    loadDesktopRelease({ snapshot: SNAPSHOT, signal: controller.signal })
+      .then(show)
       .catch(() => {
         if (!controller.signal.aborted) setFailed(true);
       });
