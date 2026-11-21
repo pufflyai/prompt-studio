@@ -108,7 +108,22 @@ test("shows each quit confirmation over the workbench and recovers from refused 
   );
   await expect(lifecycle.getByRole("alert")).toBeVisible();
   expect(await workbenchVisible()).toBe(false);
+  const quitReplacement = window.waitForEvent("close");
+  await electronApp.evaluate(({ app }) => app.quit());
+  await quitReplacement;
+  window = await waitForWorkbenchPage(lifecycle, descriptor.origin);
+  await expect.poll(desktopState).toMatchObject({ kind: "confirming_active_work" });
+  await window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.cancelQuit());
+  await expect.poll(desktopState).toMatchObject({ kind: "workbench" });
+  await window.evaluate(() =>
+    (globalThis as unknown as Window).promptStudioDesktop.reportWorkbenchError({
+      message: "Fixture root failed again",
+    }),
+  );
+  await expect(lifecycle.getByRole("alert")).toBeVisible();
+  const retryReplacement = window.waitForEvent("close");
   await lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter");
+  await retryReplacement;
   window = await waitForWorkbenchPage(lifecycle, descriptor.origin);
   await expect.poll(desktopState).toMatchObject({ kind: "workbench" });
   expect(await workbenchVisible()).toBe(true);
@@ -163,7 +178,7 @@ test("shows each quit confirmation over the workbench and recovers from refused 
   void workbenchContents("promptStudioDesktop.confirmQuit()").catch(() => {});
   await closed;
 
-  expect(shutdownForces).toEqual([false, false, true, false, false, true]);
+  expect(shutdownForces).toEqual([false, false, true, false, false, false, true]);
 });
 
 const startupState = (page: Page) =>

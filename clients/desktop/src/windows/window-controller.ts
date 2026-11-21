@@ -217,6 +217,7 @@ export class DesktopWindowController {
     if (
       this.#workbenchLoad ||
       !this.#workbench ||
+      this.#workbenchFailed ||
       !contents ||
       contents.isCrashed() ||
       new URL(contents.getURL() || "about:blank").origin !== descriptor.origin
