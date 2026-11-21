@@ -185,7 +185,7 @@ describe("POST /v1/sessions multi-pending follow-ups", () => {
 });
 
 describe("POST /v1/sessions active follow-up cancellation", () => {
-  test("cancelling an active session removes pending follow-ups without dispatching", async () => {
+  test("stopping an active session preserves ordered follow-ups without dispatching", async () => {
     const isolatedTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-active-cancel-followup-test-"));
     const isolated = await createTestApp({
       databasePath: ":memory:",
@@ -213,16 +213,28 @@ describe("POST /v1/sessions active follow-up cancellation", () => {
       const followUpRes = await isolated.app.request(`/v1/sessions/${active.id}/follow-up`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ prompt: "drop me" }),
+        body: JSON.stringify({ prompt: "Keep first" }),
       });
       expect(followUpRes.status).toBe(200);
       expect(await isolated.deps.sessionQueueEntriesService.listPendingBySession(active.id)).toHaveLength(1);
 
+      const second = await isolated.app.request(`/v1/sessions/${active.id}/follow-up`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: "Keep second" }),
+      });
+      expect(second.status).toBe(200);
+      const pending = await isolated.deps.sessionQueueEntriesService.listPendingBySession(active.id);
+      expect(pending.map((entry) => entry.prompt)).toEqual(["Keep first", "Keep second"]);
       const callsBefore = resumeSession.mock.calls.length;
-      await isolated.deps.sessionService.transitionStatus(active.id, "cancelled");
+      await isolated.deps.sessionService.cancel(active.id);
       await Bun.sleep(50);
 
-      expect(await isolated.deps.sessionQueueEntriesService.listPendingBySession(active.id)).toEqual([]);
+      expect(await isolated.deps.sessionQueueEntriesService.listPendingBySession(active.id)).toEqual(pending);
+      expect(await isolated.deps.sessionService.get(active.id)).toMatchObject({ status: "cancelled" });
+      const saved = await isolated.app.request(`/v1/sessions/${active.id}/queued-follow-ups`);
+      expect(saved.status).toBe(200);
+      expect((await saved.json()).requests).toMatchObject([{ prompt: "Keep first" }, { prompt: "Keep second" }]);
       expect(resumeSession.mock.calls.length).toBe(callsBefore);
     } finally {
       await isolated.close();

@@ -17,6 +17,7 @@ accepting user work from starting agent processes.
 4. Queued sessions are visible in the dashboard and cannot be stopped as running processes.
 5. When capacity opens, queued sessions start automatically in FIFO order.
 6. If concurrency is unlimited, session starts continue immediately.
+7. Stopping an active run preserves pending follow-ups, their order, settings, and attachment references. The session stays cancelled and the scheduler does not replay that saved work automatically. The stopped live stream ends normally. Cancelling a session that has not left the queued state still removes its undelivered queued request.
 
 ## Architecture
 

@@ -10,6 +10,24 @@ import type { DesktopState } from "./lifecycle/lifecycle-machine";
 import { installTitleBarGeometry } from "./windows/install-title-bar-geometry";
 import { observeTitleBarAppearance } from "./windows/observe-title-bar-appearance";
 
+// Bundle failures happen before the dashboard can install its own error reporting.
+if (window.location.protocol === "http:" || window.location.protocol === "https:") {
+  let reportedStartupFailure = false;
+  window.addEventListener(
+    "error",
+    (event) => {
+      if (reportedStartupFailure || document.getElementById("root")?.hasChildNodes()) return;
+      const scriptFailed = event.target instanceof HTMLScriptElement;
+      if (!scriptFailed && !(event instanceof ErrorEvent)) return;
+      reportedStartupFailure = true;
+      void ipcRenderer.invoke(DESKTOP_CHANNELS.reportWorkbenchError, {
+        message: scriptFailed ? "The workbench app files could not load." : event.message,
+      });
+    },
+    true,
+  );
+}
+
 if (process.platform === "darwin") {
   const applyFullScreen = (fullScreen: boolean) => {
     document.documentElement.toggleAttribute("data-window-full-screen", fullScreen);

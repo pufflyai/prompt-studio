@@ -21,7 +21,9 @@ export type WorkbenchLoadFailure = { reason: string; exitCode?: number; errorCod
 export class DesktopWindowController {
   #runtimeOrigin: string | null = null;
   #workbench: WebContentsView | null = null;
+  #workbenchFailed = false;
   #workbenchLoad: Promise<void> | undefined;
+  #workbenchStartup: AbortController | undefined;
   #workbenchRuntimeId: string | undefined;
   readonly #shown: Promise<void>;
   #lifecycle: ReturnType<typeof createStartupDocument>;
@@ -171,7 +173,16 @@ export class DesktopWindowController {
     );
   }
 
+  markWorkbenchFailed() {
+    this.#workbenchFailed = true;
+  }
+
   private createWorkbench() {
+    if (this.#workbench) {
+      this.window.contentView.removeChildView(this.#workbench);
+      this.#workbench.webContents.close();
+    }
+    this.#workbenchFailed = false;
     const view = new WebContentsView({
       webPreferences: createSecureWindowOptions(this.preloadPath, WORKBENCH_PARTITION).webPreferences,
     });
@@ -206,6 +217,7 @@ export class DesktopWindowController {
     if (
       this.#workbenchLoad ||
       !this.#workbench ||
+      this.#workbenchFailed ||
       !contents ||
       contents.isCrashed() ||
       new URL(contents.getURL() || "about:blank").origin !== descriptor.origin
@@ -234,14 +246,14 @@ export class DesktopWindowController {
   }
 
   prepareWorkbench(descriptor: RuntimeDescriptor) {
-    const loading = this.#loadRuntime(descriptor, () => this.#prepareWorkbenchAssets(descriptor));
+    const loading = this.#loadRuntime(descriptor, (signal) => this.#prepareWorkbenchAssets(descriptor, signal));
     // Keep an early failure owned until showWorkbench joins this preparation.
     void loading.catch(() => {});
     return loading;
   }
 
   async showWorkbench(descriptor: RuntimeDescriptor) {
-    const loading = this.#loadRuntime(descriptor, () => this.#loadWorkbench(descriptor));
+    const loading = this.#loadRuntime(descriptor, (signal) => this.#loadWorkbench(descriptor, signal));
     try {
       await loading;
       this.#workbench!.setVisible(true);
@@ -252,35 +264,59 @@ export class DesktopWindowController {
     }
   }
 
-  #loadRuntime(descriptor: RuntimeDescriptor, load: () => Promise<void>) {
+  abortWorkbenchStartup(error: Error) {
+    if (!this.#workbenchStartup) return false;
+    this.#workbenchStartup.abort(error);
+    this.#workbench?.webContents.stop();
+    return true;
+  }
+
+  #startWorkbenchLoad(load: (signal: AbortSignal) => Promise<void>) {
+    const controller = new AbortController();
+    this.#workbenchStartup = controller;
+    return load(controller.signal)
+      .then(() => controller.signal.throwIfAborted())
+      .catch((error) => {
+        throw controller.signal.aborted ? controller.signal.reason : error;
+      })
+      .finally(() => {
+        if (this.#workbenchStartup === controller) this.#workbenchStartup = undefined;
+      });
+  }
+
+  #loadRuntime(descriptor: RuntimeDescriptor, load: (signal: AbortSignal) => Promise<void>) {
     if (this.#workbenchRuntimeId !== descriptor.instanceId) {
       const previous = this.#workbenchLoad;
       this.#workbenchRuntimeId = descriptor.instanceId;
       // A failed runtime can expose Retry before its early asset preparation has settled.
-      this.#workbenchLoad = previous ? previous.catch(() => {}).then(load) : load();
+      this.#workbenchLoad = previous
+        ? previous.catch(() => {}).then(() => this.#startWorkbenchLoad(load))
+        : this.#startWorkbenchLoad(load);
     }
-    this.#workbenchLoad ??= load();
+    this.#workbenchLoad ??= this.#startWorkbenchLoad(load);
     return this.#workbenchLoad;
   }
 
-  async #loadWorkbench(descriptor: RuntimeDescriptor) {
+  async #loadWorkbench(descriptor: RuntimeDescriptor, signal: AbortSignal) {
     this.#runtimeOrigin = descriptor.origin;
     const [loginUrl] = await Promise.all([
-      createRuntimeLoginUrl(fetch, descriptor),
+      createRuntimeLoginUrl((input, init) => fetch(input, { ...init, signal }), descriptor),
       this.#shown,
       this.#lifecycle.ready,
     ]);
-    const view = this.#workbench ?? this.createWorkbench();
+    signal.throwIfAborted();
+    const view = this.#workbench && !this.#workbenchFailed ? this.#workbench : this.createWorkbench();
     await view.webContents.loadURL(loginUrl);
   }
 
-  async #prepareWorkbenchAssets(descriptor: RuntimeDescriptor) {
+  async #prepareWorkbenchAssets(descriptor: RuntimeDescriptor, signal: AbortSignal) {
     this.#runtimeOrigin = descriptor.origin;
     // A visible startup document can lack Chromium paint timing on Linux.
     await Promise.all([this.#shown, this.#lifecycle.ready]);
-    const view = this.#workbench ?? this.createWorkbench();
+    signal.throwIfAborted();
+    const view = this.#workbench && !this.#workbenchFailed ? this.#workbench : this.createWorkbench();
     // The dashboard waits for this fragment during native bootstrap; it redeems it without reloading.
-    await prepareWorkbenchDocument(view.webContents, descriptor);
+    await prepareWorkbenchDocument(view.webContents, descriptor, fetch, signal);
   }
 
   private loadLifecycle() {
