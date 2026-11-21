@@ -6,6 +6,9 @@ import type { createDb } from "./connection.pglite";
 // the candidate schema. Exercise the actual released data shapes before upgrading.
 export const restoreReleasedPreferenceTables = async (connection: Awaited<ReturnType<typeof createDb>>) => {
   const tables = [
+    "automation_principals",
+    "automation_tokens",
+    "automation_runs",
     "settings",
     "local_environment",
     "extension_settings",
@@ -17,13 +20,24 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
   ];
   const folder = join(import.meta.dirname, "../../drizzle");
   const files = (await readdir(folder)).filter((name) => /^000[0-9]_.*\.sql$/.test(name)).sort();
+  await connection.pglite.exec("DROP TABLE automation_runs; DROP TABLE automation_tokens");
+  const constraints: string[] = [];
   for (const file of files) {
     const source = await readFile(join(folder, file), "utf8");
     for (const statement of source.split("--> statement-breakpoint")) {
       const sql = statement.trim();
       if (tables.some((table) => sql.startsWith(`CREATE TABLE "${table}" (`))) await connection.pglite.exec(sql);
+      if (
+        ["automation_principals", "automation_tokens", "automation_runs"].some(
+          (table) =>
+            sql.startsWith(`ALTER TABLE "${table}" ADD CONSTRAINT`) ||
+            (sql.startsWith("CREATE ") && sql.includes(` ON "${table}" `)),
+        )
+      )
+        constraints.push(sql);
     }
   }
+  for (const statement of constraints) await connection.pglite.exec(statement);
   await connection.pglite.exec(
     "DROP TABLE preferences; DROP TABLE credentials; ALTER TABLE board_views DROP COLUMN is_default",
   );

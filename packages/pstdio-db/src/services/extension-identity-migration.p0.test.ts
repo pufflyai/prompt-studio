@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { createDb } from "../db/connection.pglite";
 import * as s from "../db/schemas.pg";
+import { getAutomationOwner, storeExtensionAutomationOwner } from "./automation/automation-owners";
 import { migrateExtensionIdentities } from "./extension-identity-migration";
 import { createExtensionSettingsDBService } from "./extension-settings/extension-settings";
 
@@ -279,16 +280,27 @@ test.each(
       target_id: "target",
       details,
     });
-    await db.insert(s.automation_principals).values([
-      {
-        id: `${planner}.opaque-principal`,
-        project_id: "project",
-        name: planner,
-        created_by: "extension",
-        created_at: now,
-      },
-      { id: "user-principal", project_id: "project", name: planner, created_by: "user", created_at: now },
-    ]);
+    await storeExtensionAutomationOwner(db, {
+      id: `${planner}.opaque-principal`,
+      project_id: "project",
+      name: planner,
+      created_by: "extension",
+      created_at: now,
+      disabled_at: null,
+    });
+    await db.insert(s.automation_tokens).values({
+      id: "user-token",
+      principal_id: "user-principal",
+      project_id: "project",
+      name: planner,
+      created_by: "user",
+      principal_created_at: now,
+      created_at: now,
+      token_prefix: "test",
+      token_digest: "digest",
+      command_scopes_json: [],
+      expires_at: "2099-01-01",
+    });
     await migrateExtensionIdentities(db, { extensionId: "pstdio.planner" });
     expect((await db.select().from(s.resource_anchors))[0]).toMatchObject({
       source_owner: endpoint === "source" ? "pstdio.planner" : "pstdio",
@@ -297,12 +309,14 @@ test.each(
       target_id: "target",
       details,
     });
-    expect(await db.select().from(s.automation_principals)).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: `${planner}.opaque-principal`, name: "pstdio.planner" }),
-        expect.objectContaining({ id: "user-principal", name: planner }),
-      ]),
-    );
+    expect(await getAutomationOwner(db, "project", `${planner}.opaque-principal`)).toMatchObject({
+      id: `${planner}.opaque-principal`,
+      name: "pstdio.planner",
+    });
+    expect(await getAutomationOwner(db, "project", "user-principal")).toMatchObject({
+      id: "user-principal",
+      name: planner,
+    });
     if (!marked)
       expect(
         await db.select().from(s.storage_documents).where(eq(s.storage_documents.extension_id, old)),
@@ -326,18 +340,19 @@ test.each([
   "skills",
   "workspaces",
   "dev",
-])("global migration still discovers the %s owner through an extension principal alone", async (name) => {
+])("global migration still discovers the %s owner through extension automation ownership alone", async (name) => {
   const { db, close, now } = await setup();
   try {
-    await db.insert(s.automation_principals).values({
+    await storeExtensionAutomationOwner(db, {
       id: "retained-principal",
       project_id: "project",
       name: `pstdio.pstdio-${name}`,
       created_by: "extension",
       created_at: now,
+      disabled_at: null,
     });
     await migrateExtensionIdentities(db);
-    expect((await db.select().from(s.automation_principals))[0]).toMatchObject({
+    expect(await getAutomationOwner(db, "project", "retained-principal")).toMatchObject({
       id: "retained-principal",
       name: `pstdio.${name}`,
     });

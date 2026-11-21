@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
-import { automation_principals, automation_runs } from "../../db/schemas.pg";
+import { automation_runs, automation_tokens } from "../../db/schemas.pg";
 import { createProjectsDBService } from "../projects/projects";
 import { createAutomationDBService } from "./automation";
 
@@ -161,10 +161,11 @@ describe("automation run persistence", () => {
     expect(await db.select().from(automation_runs)).toEqual([]);
   });
 
-  test("deletes project-scoped principals with their project", async () => {
+  test("deletes project-scoped automation credentials with their project", async () => {
     await createProjectsDBService(db).hardDelete(projectId);
 
-    expect(await db.select().from(automation_principals)).toEqual([]);
+    expect(await service.getPrincipal(projectId, principalId)).toBeNull();
+    expect(await db.select().from(automation_tokens)).toEqual([]);
   });
 
   test("lets only one worker claim a queued run", async () => {
@@ -246,5 +247,63 @@ describe("automation run persistence", () => {
     expect(await service.listRunEvents(old.id)).toEqual([]);
     expect(await service.getRunById(current.id)).not.toBeNull();
     expect(await service.getRunById(queued.id)).not.toBeNull();
+  });
+});
+
+test("machine tokens retain inherited owner metadata and retried run identity", async () => {
+  const { automation_tokens } = await import("../../db/schemas.pg");
+  const [stored] = await db.select().from(automation_tokens).where(eq(automation_tokens.id, tokenId));
+  expect(stored).toMatchObject({ name: "retention-test", created_by: "test" });
+  const first = await createRun("inherited-owner");
+  const second = await createRun("inherited-owner");
+  expect(second.created).toBe(false);
+  expect(second.run.id).toBe(first.run.id);
+  expect((await service.getToken(tokenId))?.principal.id).toBe(principalId);
+});
+
+test("clearing extension user data retains automation ownership and historical run access", async () => {
+  const {
+    createExtensionInstancesDBService,
+    createInstalledExtensionSourcesDBService,
+    createExtensionUserDataDBService,
+  } = await import("../../index");
+  const { storeExtensionAutomationOwner } = await import("./automation-owners");
+  const extensionId = "example.automation-owner";
+  const source = await createInstalledExtensionSourcesDBService(db).register({
+    install_name: "automation-owner",
+    extension_id: extensionId,
+    display_name: "Automation owner",
+    source_kind: "local_path",
+    source_path: "/automation-owner",
+  });
+  const instance = await createExtensionInstancesDBService(db).create({
+    installed_extension_id: source.id,
+    scope_type: "project",
+    scope_id: projectId,
+  });
+  const originalId = "opaque-owner:with-colons";
+  await storeExtensionAutomationOwner(db, {
+    id: originalId,
+    project_id: projectId,
+    name: extensionId,
+    created_by: "extension",
+    created_at: new Date().toISOString(),
+    disabled_at: null,
+  });
+  const queued = await service.createRun({
+    projectId,
+    principalId: originalId,
+    tokenId: null,
+    commandId: "example.automation-owner.command.run",
+    idempotencyKey: "retained-history",
+    inputHash: "history",
+    inputJson: {},
+  });
+  await createExtensionUserDataDBService(db).deleteForInstance(instance.id);
+  expect(await createExtensionUserDataDBService(db).hasUserData(instance.id)).toBe(false);
+  expect((await service.getOrCreateExtensionPrincipal({ projectId, extensionId })).id).toBe(originalId);
+  expect(await service.getExtensionRun({ projectId, extensionId }, queued.run.id)).toMatchObject({
+    id: queued.run.id,
+    principal_id: originalId,
   });
 });

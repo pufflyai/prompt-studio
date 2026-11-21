@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, not, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { board_views, extension_files, preferences } from "../../db/schemas.pg";
 import { listBoardDefaults } from "../board-views/board-defaults";
@@ -33,7 +33,13 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
       const [sharedPreference] = await db
         .select({ key: preferences.key })
         .from(preferences)
-        .where(and(eq(preferences.project_id, owner.workbenchId), eq(preferences.extension_id, owner.extensionId)))
+        .where(
+          and(
+            eq(preferences.project_id, owner.workbenchId),
+            eq(preferences.extension_id, owner.extensionId),
+            not(sql`starts_with(${preferences.key}, 'automation-owner:')`),
+          ),
+        )
         .limit(1);
       if (sharedPreference) return true;
     }
@@ -59,7 +65,14 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
         await clearOwnerDocuments(tx, owner);
         await tx
           .delete(preferences)
-          .where(and(eq(preferences.project_id, owner.workbenchId), eq(preferences.extension_id, owner.extensionId)));
+          // Automation identity outlives tool data, like retained run history.
+          .where(
+            and(
+              eq(preferences.project_id, owner.workbenchId),
+              eq(preferences.extension_id, owner.extensionId),
+              not(sql`starts_with(${preferences.key}, 'automation-owner:')`),
+            ),
+          );
         cleared = owner;
       }
       await tx.delete(preferences).where(instancePreferences(extensionInstanceId));

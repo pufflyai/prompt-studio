@@ -164,7 +164,7 @@ export const migrateExtensionIdentities = async (
         )})`,
         sql`SELECT source_owner AS extension_id FROM ${s.resource_anchors} WHERE source_owner IN (${oldOwners})
           UNION SELECT target_owner FROM ${s.resource_anchors} WHERE target_owner IN (${oldOwners})`,
-        sql`SELECT name AS extension_id FROM ${s.automation_principals} WHERE created_by = 'extension' AND name IN (${oldOwners})`,
+        sql`SELECT name AS extension_id FROM ${s.automation_tokens} WHERE created_by = 'extension' AND name IN (${oldOwners})`,
       ],
       sql` UNION ALL `,
     )}) candidates`,
@@ -206,7 +206,7 @@ export const migrateExtensionIdentities = async (
           );
         // Extension-created principals use their owner as their name; user-created names are prose.
         await tx.execute(
-          sql`UPDATE ${s.automation_principals} SET name = ${to} WHERE created_by = 'extension' AND name = ${from}`,
+          sql`UPDATE ${s.automation_tokens} SET name = ${to} WHERE created_by = 'extension' AND name = ${from}`,
         );
         await tx.execute(sql`UPDATE ${s.installed_extension_sources} SET status = 'pending', last_error_json = NULL
         WHERE extension_id = ${to} AND last_error_json->>'code' = 'extension_identity_conflict'`);

@@ -3,10 +3,15 @@ import type { DbClient } from "../../db/connection.pglite";
 import {
   type AutomationRunError,
   type AutomationRunStatus,
-  automation_principals,
   automation_runs,
   automation_tokens,
 } from "../../db/schemas.pg";
+import {
+  type AutomationRunRecord,
+  automationPrincipalRef,
+  automationRunRecord,
+  getAutomationOwner,
+} from "./automation-owners";
 import { createAutomationTokenDBService } from "./automation-tokens";
 import { createExtensionAutomationDBService } from "./extension-automation";
 
@@ -37,7 +42,7 @@ const eventPayload = (error: AutomationRunError | null) => {
 // Events are read from those times. A cursor is the step's time in milliseconds times four plus its step,
 // which stays above the cursors the former event table issued. Each cursor is also kept above the one
 // before it, so a clock that steps back between steps cannot hide a later step from a polling reader.
-export const automationRunEvents = (run: typeof automation_runs.$inferSelect, after = 0) => {
+export const automationRunEvents = (run: AutomationRunRecord, after = 0) => {
   const steps = [
     { step: 1, type: "queued", at: run.created_at, payload: {} },
     { step: 2, type: "running", at: run.started_at, payload: {} },
@@ -64,6 +69,8 @@ export const automationRunEvents = (run: typeof automation_runs.$inferSelect, af
 };
 
 const createAutomationRunDBService = (db: DbClient) => {
+  const principalRef = async (projectId: string, id: string) =>
+    automationPrincipalRef((await getAutomationOwner(db, projectId, id)) ?? { id, created_by: "token" });
   const getRunByIdempotency = async (input: {
     principalId: string;
     projectId: string;
@@ -75,13 +82,13 @@ const createAutomationRunDBService = (db: DbClient) => {
       .from(automation_runs)
       .where(
         and(
-          eq(automation_runs.principal_id, input.principalId),
+          eq(automation_runs.principal, await principalRef(input.projectId, input.principalId)),
           eq(automation_runs.project_id, input.projectId),
           eq(automation_runs.command_id, input.commandId),
           eq(automation_runs.idempotency_key, input.idempotencyKey),
         ),
       );
-    return row ?? null;
+    return row ? automationRunRecord(row) : null;
   };
 
   const countRecentRuns = async (input: { principalId: string; projectId: string; since: string }) => {
@@ -90,7 +97,7 @@ const createAutomationRunDBService = (db: DbClient) => {
       .from(automation_runs)
       .where(
         and(
-          eq(automation_runs.principal_id, input.principalId),
+          eq(automation_runs.principal, await principalRef(input.projectId, input.principalId)),
           eq(automation_runs.project_id, input.projectId),
           gte(automation_runs.created_at, input.since),
         ),
@@ -109,12 +116,7 @@ const createAutomationRunDBService = (db: DbClient) => {
   }) => {
     return db.transaction(async (tx) => {
       const createdAt = nowTimestamp();
-      const [owner] = await tx
-        .select()
-        .from(automation_principals)
-        .where(
-          and(eq(automation_principals.id, input.principalId), eq(automation_principals.project_id, input.projectId)),
-        );
+      const owner = await getAutomationOwner(tx, input.projectId, input.principalId);
       if (!owner) throw new Error("Automation run ownership does not match.");
       if (input.tokenId !== null) {
         const [token] = await tx
@@ -134,7 +136,7 @@ const createAutomationRunDBService = (db: DbClient) => {
         .values({
           id: crypto.randomUUID(),
           project_id: input.projectId,
-          principal_id: input.principalId,
+          principal: automationPrincipalRef(owner),
           token_id: input.tokenId,
           command_id: input.commandId,
           idempotency_key: input.idempotencyKey,
@@ -149,20 +151,20 @@ const createAutomationRunDBService = (db: DbClient) => {
         })
         .onConflictDoNothing()
         .returning();
-      if (created) return { run: created, created: true };
+      if (created) return { run: automationRunRecord(created), created: true };
       const [existing] = await tx
         .select()
         .from(automation_runs)
         .where(
           and(
-            eq(automation_runs.principal_id, input.principalId),
+            eq(automation_runs.principal, automationPrincipalRef(owner)),
             eq(automation_runs.project_id, input.projectId),
             eq(automation_runs.command_id, input.commandId),
             eq(automation_runs.idempotency_key, input.idempotencyKey),
           ),
         );
       if (!existing) throw new Error("Automation idempotency lookup failed.");
-      return { run: existing, created: false };
+      return { run: automationRunRecord(existing), created: false };
     });
   };
 
@@ -171,12 +173,12 @@ const createAutomationRunDBService = (db: DbClient) => {
       .select()
       .from(automation_runs)
       .where(and(eq(automation_runs.project_id, projectId), eq(automation_runs.id, runId)));
-    return row ?? null;
+    return row ? automationRunRecord(row) : null;
   };
 
   const getRunById = async (runId: string) => {
     const [row] = await db.select().from(automation_runs).where(eq(automation_runs.id, runId));
-    return row ?? null;
+    return row ? automationRunRecord(row) : null;
   };
 
   const claimQueuedRun = async (runId: string) => {
@@ -185,7 +187,7 @@ const createAutomationRunDBService = (db: DbClient) => {
       .set({ status: "running", started_at: nowTimestamp() })
       .where(and(eq(automation_runs.id, runId), eq(automation_runs.status, "queued")))
       .returning();
-    return claimed ?? null;
+    return claimed ? automationRunRecord(claimed) : null;
   };
 
   const transitionRun = async (
@@ -201,7 +203,7 @@ const createAutomationRunDBService = (db: DbClient) => {
         .set(transitionPatch(input, changedAt))
         .where(and(eq(automation_runs.id, runId), eq(automation_runs.status, current.status)))
         .returning();
-      return updated ?? null;
+      return updated ? automationRunRecord(updated) : null;
     });
   };
 
@@ -210,7 +212,7 @@ const createAutomationRunDBService = (db: DbClient) => {
     return run ? automationRunEvents(run, after) : [];
   };
 
-  const recoverInterruptedRuns = async (onRecovered?: (run: typeof automation_runs.$inferSelect) => Promise<void>) => {
+  const recoverInterruptedRuns = async (onRecovered?: (run: AutomationRunRecord) => Promise<void>) => {
     const running = await db.select().from(automation_runs).where(eq(automation_runs.status, "running"));
     for (const run of running) {
       const recovered = await transitionRun(run.id, {
@@ -222,7 +224,8 @@ const createAutomationRunDBService = (db: DbClient) => {
     return running.length;
   };
 
-  const listQueuedRuns = () => db.select().from(automation_runs).where(eq(automation_runs.status, "queued"));
+  const listQueuedRuns = async () =>
+    (await db.select().from(automation_runs).where(eq(automation_runs.status, "queued"))).map(automationRunRecord);
 
   const listActiveProjectRuns = (id: string) =>
     db

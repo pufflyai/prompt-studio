@@ -18,6 +18,7 @@ import {
 } from "../services/extension-storage/index-node-files";
 import { upgradeIndexNodesToFiles } from "../services/extension-storage/index-node-upgrade";
 import { prepareAppPreferencesUpgrade } from "./app-preferences-upgrade";
+import { prepareAutomationOwnersUpgrade } from "./automation-owners-upgrade";
 import { prepareBoardDefaultsUpgrade } from "./board-defaults-upgrade";
 import { prepareConnectionCredentialsUpgrade } from "./connection-credentials-upgrade";
 import { prepareExtensionPreferencesUpgrade } from "./extension-preferences-upgrade";
@@ -226,11 +227,13 @@ export const createDb = async (options?: {
       const finishExtensionPreferencesUpgrade = await prepareExtensionPreferencesUpgrade(db, dbPath);
       const finishConnectionCredentialsUpgrade = await prepareConnectionCredentialsUpgrade(db, dbPath);
       const finishBoardDefaultsUpgrade = await prepareBoardDefaultsUpgrade(db, dbPath);
+      const finishAutomationOwnersUpgrade = await prepareAutomationOwnersUpgrade(db, dbPath);
       await migrate(db, { migrationsFolder });
       await finishPreferencesUpgrade?.();
       await finishExtensionPreferencesUpgrade?.();
       await finishConnectionCredentialsUpgrade?.();
       await finishBoardDefaultsUpgrade?.();
+      await finishAutomationOwnersUpgrade?.();
       migrated = true;
     });
     // Copy durable receipts before opening. Remove old rows for both sides of an identity
