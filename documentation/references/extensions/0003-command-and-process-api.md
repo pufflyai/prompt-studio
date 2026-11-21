@@ -475,6 +475,7 @@ Workspace providers must validate instance and template ownership in `create`.
 Choice lists help discovery; they do not authorize a resource. The host still
 checks required fields, value types, fixed choices, and provider availability.
 Harness params and Kanban create-row forms require fixed options.
+Fixed choices keep their string `label` fallback and can add `localizedLabel: l10n("stable.key", "Default copy")`. The dashboard translates the display label while option values stay unchanged across locales.
 
 ## Local workspace providers on main
 

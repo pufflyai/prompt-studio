@@ -18,6 +18,7 @@ const isValidSelectDescriptor = (descriptor: Record<string, unknown>) => {
   const values = new Set<string>();
   for (const option of descriptor.options) {
     if (!isRecord(option) || typeof option.label !== "string" || typeof option.value !== "string") return false;
+    if (option.localizedLabel !== undefined && !isLocalizableString(option.localizedLabel)) return false;
     values.add(option.value);
   }
 

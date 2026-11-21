@@ -3,6 +3,7 @@ import type { JsonValue } from "@pstdio/sdk/extensions";
 import i18n from "@/i18n";
 import { getRuntimeCollections } from "@/lib/sync/collections";
 import { createRuntimeState } from "@/lib/sync/runtime-state";
+import { withParamOptionDefaults, withTranslatedParamOptions } from "./param-option-labels";
 
 type LocalizedStringToken = Extract<LocalizableString, { $l10n: string }>;
 
@@ -104,7 +105,7 @@ const resolveValue = (
       : extensionId;
   // Large theme and schema payloads usually contain no labels. Retain those branches
   // instead of cloning the whole catalog on every project switch and locale refresh.
-  const record = value as Record<string, unknown>;
+  const record = withParamOptionDefaults(value as Record<string, unknown>);
   let next: Record<string, unknown> | undefined;
   for (const key of Object.keys(record)) {
     const item = resolveValue(record[key], nextExtensionId, owner, projectId, labels);
@@ -113,7 +114,7 @@ const resolveValue = (
       next[key] = item;
     }
   }
-  return next ?? value;
+  return withTranslatedParamOptions(next ?? record);
 };
 
 export const localizeExtensionMetadata = (
