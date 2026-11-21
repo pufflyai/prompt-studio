@@ -1,5 +1,5 @@
 {
-  "id": "e36a0428-cd67-40f0-a97c-252163135079",
+  "id": "3e16c5f6-77ec-4824-ac7e-a96c236ade50",
   "prevId": "e22b1e43-5e44-4e7c-b676-5be106a4f0ab",
   "version": "7",
   "dialect": "postgresql",
@@ -177,10 +177,10 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "activity_events_source_extension_id_installed_extension_sources_id_fk": {
-          "name": "activity_events_source_extension_id_installed_extension_sources_id_fk",
+        "activity_events_source_extension_id_extensions_id_fk": {
+          "name": "activity_events_source_extension_id_extensions_id_fk",
           "tableFrom": "activity_events",
-          "tableTo": "installed_extension_sources",
+          "tableTo": "extensions",
           "columnsFrom": ["source_extension_id"],
           "columnsTo": ["id"],
           "onDelete": "set null",
@@ -1298,10 +1298,10 @@
         }
       },
       "foreignKeys": {
-        "extension_instances_installed_extension_id_installed_extension_sources_id_fk": {
-          "name": "extension_instances_installed_extension_id_installed_extension_sources_id_fk",
+        "extension_instances_installed_extension_id_extensions_id_fk": {
+          "name": "extension_instances_installed_extension_id_extensions_id_fk",
           "tableFrom": "extension_instances",
-          "tableTo": "installed_extension_sources",
+          "tableTo": "extensions",
           "columnsFrom": ["installed_extension_id"],
           "columnsTo": ["id"],
           "onDelete": "restrict",
@@ -1314,8 +1314,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.installed_extension_sources": {
-      "name": "installed_extension_sources",
+    "public.extensions": {
+      "name": "extensions",
       "schema": "",
       "columns": {
         "id": {
@@ -1420,21 +1420,6 @@
         }
       },
       "indexes": {
-        "installed_ext_install_name_idx": {
-          "name": "installed_ext_install_name_idx",
-          "columns": [
-            {
-              "expression": "install_name",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "installed_ext_source_path_uq": {
           "name": "installed_ext_source_path_uq",
           "columns": [
@@ -1446,36 +1431,6 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "installed_ext_extension_id_idx": {
-          "name": "installed_ext_extension_id_idx",
-          "columns": [
-            {
-              "expression": "extension_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "installed_ext_status_idx": {
-          "name": "installed_ext_status_idx",
-          "columns": [
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}

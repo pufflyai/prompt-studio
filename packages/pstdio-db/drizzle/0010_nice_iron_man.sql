@@ -52,6 +52,14 @@ DROP TABLE "extension_skill_preferences" CASCADE;--> statement-breakpoint
 DROP TABLE "settings" CASCADE;--> statement-breakpoint
 DROP TABLE "webview_preferences" CASCADE;--> statement-breakpoint
 DROP TABLE "workspace_sessions" CASCADE;--> statement-breakpoint
+ALTER TABLE "installed_extension_sources" RENAME TO "extensions";--> statement-breakpoint
+ALTER TABLE "activity_events" DROP CONSTRAINT "activity_events_source_extension_id_installed_extension_sources_id_fk";
+--> statement-breakpoint
+ALTER TABLE "extension_instances" DROP CONSTRAINT "extension_instances_installed_extension_id_installed_extension_sources_id_fk";
+--> statement-breakpoint
+DROP INDEX "installed_ext_install_name_idx";--> statement-breakpoint
+DROP INDEX "installed_ext_extension_id_idx";--> statement-breakpoint
+DROP INDEX "installed_ext_status_idx";--> statement-breakpoint
 DROP INDEX "automation_runs_idempotency_idx";--> statement-breakpoint
 ALTER TABLE "automation_runs" ADD COLUMN "principal" text NOT NULL;--> statement-breakpoint
 ALTER TABLE "automation_tokens" ADD COLUMN "name" text NOT NULL;--> statement-breakpoint
@@ -63,6 +71,8 @@ ALTER TABLE "preferences" ADD CONSTRAINT "preferences_project_id_projects_id_fk"
 CREATE INDEX "credentials_project_idx" ON "credentials" USING btree ("project_id");--> statement-breakpoint
 CREATE INDEX "preferences_extension_idx" ON "preferences" USING btree ("extension_id");--> statement-breakpoint
 CREATE INDEX "preferences_project_idx" ON "preferences" USING btree ("project_id");--> statement-breakpoint
+ALTER TABLE "activity_events" ADD CONSTRAINT "activity_events_source_extension_id_extensions_id_fk" FOREIGN KEY ("source_extension_id") REFERENCES "public"."extensions"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "extension_instances" ADD CONSTRAINT "extension_instances_installed_extension_id_extensions_id_fk" FOREIGN KEY ("installed_extension_id") REFERENCES "public"."extensions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "automation_tokens_project_idx" ON "automation_tokens" USING btree ("project_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "board_views_default_scope_idx" ON "board_views" USING btree ("project_id",coalesce("extension_instance_id", ''),"board_id") WHERE "board_views"."is_default" = true;--> statement-breakpoint

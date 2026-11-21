@@ -5,7 +5,7 @@ import { projects } from "./projects";
 import type { JsonObject } from "./types";
 
 export const installed_extension_sources = pgTable(
-  "installed_extension_sources",
+  "extensions",
   {
     id: text("id").primaryKey(),
     install_name: text("install_name").notNull(),
@@ -24,12 +24,7 @@ export const installed_extension_sources = pgTable(
     created_at: text("created_at").notNull(),
     updated_at: text("updated_at").notNull(),
   },
-  (table) => [
-    index("installed_ext_install_name_idx").on(table.install_name),
-    uniqueIndex("installed_ext_source_path_uq").on(table.source_path),
-    index("installed_ext_extension_id_idx").on(table.extension_id),
-    index("installed_ext_status_idx").on(table.status),
-  ],
+  (table) => [uniqueIndex("installed_ext_source_path_uq").on(table.source_path)],
 );
 
 export const extension_instances = pgTable(

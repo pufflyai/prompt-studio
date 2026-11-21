@@ -103,8 +103,12 @@ export const checkHomeHistory = async (input: ProjectUpgradeInput, project: stri
   const icu = join(dirname(require.resolve("@electric-sql/pglite-icu-full")), "icu.76.tgz");
   const db = new PGlite(path, { database: "template1", username: "postgres", icuDataDir: Bun.file(icu) });
   try {
+    const {
+      rows: [schema],
+    } = await db.query<{ current: boolean }>("SELECT to_regclass('public.extensions') IS NOT NULL AS current");
+    const sourceTable = schema!.current ? "extensions" : "installed_extension_sources";
     const source = await db.query<{ extension_id: string }>(
-      "SELECT DISTINCT s.extension_id FROM installed_extension_sources s JOIN extension_instances i ON i.installed_extension_id = s.id WHERE i.scope_id = $1 AND i.enabled AND s.extension_id IN ($2, $3)",
+      `SELECT DISTINCT s.extension_id FROM ${sourceTable} s JOIN extension_instances i ON i.installed_extension_id = s.id WHERE i.scope_id = $1 AND i.enabled AND s.extension_id IN ($2, $3)`,
       [project, historical, canonical],
     );
     assert.equal(source.rows.length, 1, "Expected one enabled Home identity in the upgrade fixture");

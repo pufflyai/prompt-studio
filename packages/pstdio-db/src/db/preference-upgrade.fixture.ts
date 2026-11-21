@@ -5,6 +5,13 @@ import type { createDb } from "./connection.pglite";
 // These definitions come from the immutable migrations shipped in 0.48, not from
 // the candidate schema. Exercise the actual released data shapes before upgrading.
 export const restoreReleasedPreferenceTables = async (connection: Awaited<ReturnType<typeof createDb>>) => {
+  await connection.pglite.exec(`
+    ALTER TABLE extensions RENAME TO installed_extension_sources;
+    ALTER TABLE extension_instances RENAME CONSTRAINT extension_instances_installed_extension_id_extensions_id_fk
+      TO extension_instances_installed_extension_id_installed_extension_sources_id_fk;
+    ALTER TABLE activity_events RENAME CONSTRAINT activity_events_source_extension_id_extensions_id_fk
+      TO activity_events_source_extension_id_installed_extension_sources_id_fk;
+  `);
   const tables = [
     "workspace_sessions",
     "automation_principals",
@@ -36,6 +43,7 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
         )
       )
         constraints.push(sql);
+      if (sql.startsWith("CREATE INDEX ") && sql.includes(' ON "installed_extension_sources" ')) constraints.push(sql);
     }
   }
   for (const statement of constraints) await connection.pglite.exec(statement);
