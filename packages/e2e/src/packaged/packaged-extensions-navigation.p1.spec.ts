@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { stopPendingTestProcesses } from "../scripts/pending-test-processes";
 import { type Browser, chromium, expect, test } from "../scripts/playwright-test";
@@ -26,7 +27,7 @@ const createRepository = (root: string) => {
       displayName: "Example tool 0",
       version: "1.0.0",
       main: "extension.ts",
-      engines: { pstdio: "^0.4.0 || ^0.5.0" },
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
     }),
   );
   const commands = Array.from({ length: 50 }, (_, index) => ({
