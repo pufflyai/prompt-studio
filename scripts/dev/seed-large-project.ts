@@ -51,12 +51,12 @@ const ensureProject = async (api: StackApi, name: string, folder: string, files:
 // Worktree workspaces come from the Git workspaces extension, which new projects do not enable by default.
 // Enabling re-provisions every workspace, so it runs only while workspaces are still missing.
 const enableWorktrees = async (api: StackApi, repoRoot: string, project: Project) => {
-  const sourcePath = join(repoRoot, "extensions", "git-workspaces");
+  const sourcePath = join(repoRoot, "extensions", "pstdio-workspaces");
   const manifest = JSON.parse(readFileSync(join(sourcePath, "package.json"), "utf8"));
-  await api.post(`/projects/${project.id}/extensions/installed/git-workspaces/enable`, {
-    name: "git-workspaces",
+  await api.post(`/projects/${project.id}/extensions/installed/workspaces/enable`, {
+    name: "workspaces",
     displayName: "Git workspaces",
-    extensionId: "pstdio.git-workspaces",
+    extensionId: "pstdio.workspaces",
     manifest,
     sourcePath,
     sourceHash: null,

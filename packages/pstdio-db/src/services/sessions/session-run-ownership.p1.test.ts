@@ -69,15 +69,23 @@ test("dispatch and recovery never reuse a prior run identity", async () => {
   expect(await queue.get(entry!.queue_position)).not.toBeNull();
 });
 
-test("terminal updates remove queued work only when their run guard succeeds", async () => {
+test("cancelling an active run preserves follow-ups and refuses stale run guards", async () => {
   const session = await sessions.create({ project_id: projectId, title: "Cancel", agent: "test" });
-  await sessions.insertEntryForActive({ id: session.id, prompt: "Next", request_kind: "follow_up" });
+  const pending = await sessions.insertEntryForActive({
+    id: session.id,
+    prompt: "Next",
+    request_kind: "follow_up",
+    model: "saved-model",
+    params_json: { thinking: "high" },
+    attachments_json: [{ file_id: "saved-attachment" }],
+  });
+  if (!pending) throw new Error("The active follow-up was not accepted");
   expect(await sessions.updateStatus(session.id, "cancelled", { expectedLastRequestStarted: null })).toBeNull();
   expect(await queue.listPendingBySession(session.id)).toHaveLength(1);
   expect(
     await sessions.updateStatus(session.id, "cancelled", { expectedLastRequestStarted: session.last_request_started }),
   ).toMatchObject({ status: "cancelled" });
-  expect(await queue.listPendingBySession(session.id)).toHaveLength(0);
+  expect(await queue.listPendingBySession(session.id)).toEqual([pending]);
 });
 
 test("cancellation prevents a delayed follow-up from entering the queue", async () => {
@@ -107,7 +115,7 @@ test.each([
   expect(await queue.listPendingBySession(active.id)).toHaveLength(1);
 });
 
-test("cancelling ordinary queued work retains an uncertain native delivery for recovery", async () => {
+test("cancelling an active run preserves ordinary follow-ups and uncertain native delivery", async () => {
   const session = await sessions.create({ project_id: projectId, title: "Held delivery", agent: "test" });
   const ordinary = await queue.create({ session_id: session.id, prompt: "Ordinary", request_kind: "follow_up" });
   const held = await queue.create({ session_id: session.id, prompt: "Possibly delivered", request_kind: "follow_up" });
@@ -116,7 +124,7 @@ test("cancelling ordinary queued work retains an uncertain native delivery for r
     runStartedAt: session.last_request_started!,
   });
   await sessions.updateStatus(session.id, "cancelled");
-  expect(await queue.get(ordinary.queue_position)).toBeNull();
+  expect(await queue.get(ordinary.queue_position)).toEqual(ordinary);
   expect(await queue.get(held.queue_position)).toMatchObject({
     prompt: "Possibly delivered",
     steering_delivery_json: { id: "delivery" },
@@ -149,4 +157,18 @@ test("an automatic follow-up cannot resume or queue after the observed run is st
   ).toEqual({ session: null, entry: null });
   expect(await queue.listPendingBySession(session.id)).toHaveLength(0);
   expect((await sessions.get(session.id))?.status).toBe("cancelled");
+});
+
+test.each([
+  "completed",
+  "failed",
+  "disconnected",
+] as const)("a late %s exit cannot overwrite a stopped run or discard its saved follow-ups", async (status) => {
+  const session = await sessions.create({ project_id: projectId, title: "Stopped", agent: "test" });
+  const saved = await sessions.insertEntryForActive({ id: session.id, prompt: "Keep", request_kind: "follow_up" });
+  if (!saved) throw new Error("The active follow-up was not accepted");
+  await sessions.updateStatus(session.id, "cancelled", { exitCause: "user_stop" });
+  expect(await sessions.updateStatus(session.id, status)).toBeNull();
+  expect(await sessions.get(session.id)).toMatchObject({ status: "cancelled" });
+  expect(await queue.listPendingBySession(session.id)).toEqual([saved]);
 });

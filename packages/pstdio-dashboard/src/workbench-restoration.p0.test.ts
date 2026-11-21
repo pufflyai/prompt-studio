@@ -262,7 +262,7 @@ describe("createDashboardWorkbench restoration", () => {
     });
     expect(sidePanelSessionUris(second)).toEqual([resourceKey(sessionResource)]);
   });
-  test("does not duplicate a primary session into the Side Panel after refresh", async () => {
+  test("restores an explicitly relocated session in Side without duplicating it in Main", async () => {
     const storage = createStorage();
     seedSyncedRows();
     const first = createDashboardWorkbench({ storage });
@@ -270,11 +270,15 @@ describe("createDashboardWorkbench restoration", () => {
     await flushMicrotasks();
     openSessionsPage(first, sessionResource);
     await first.commands.executeCommand("dashboard.openSessionPanel", { resource: sessionResource });
-    expect(first.layout.listPanelInstances("side")).toEqual([]);
+    expect(sidePanelSessionUris(first)).toEqual([resourceKey(sessionResource)]);
+    expect(first.pages.store.getState().location?.resource).toBeUndefined();
     await first.dispose();
     const second = createDashboardWorkbench({ storage });
     await flushMicrotasks();
-    expect(resourceKey(second.getPrimaryResource())).toBe(resourceKey(sessionResource));
-    expect(sidePanelSessionUris(second)).toEqual([]);
+    expect(second.pages.store.getState().location?.resource).toBeUndefined();
+    expect(second.layout.listPanelInstances("main").some((panel) => panel.resource?.id === sessionResource.id)).toBe(
+      false,
+    );
+    expect(sidePanelSessionUris(second)).toEqual([resourceKey(sessionResource)]);
   });
 });

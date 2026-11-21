@@ -15,6 +15,17 @@ interface Evidence {
   files?: unknown[];
   coverage?: { file: string | null; sourceRoot: string } | null;
 }
+interface PlannedRun {
+  id: string;
+  priority: string;
+  lane: string;
+  files: string[];
+}
+interface PlannedExecution {
+  planDigest?: string;
+  source?: { sha?: string };
+  results?: Array<{ runId: string; outcome: string; complete: boolean; source?: { sha?: string } }>;
+}
 interface ApiFileResult {
   file: string;
   outcome: string;
@@ -22,9 +33,36 @@ interface ApiFileResult {
   cases?: Evidence;
 }
 
+// The shared test-plan runner records each planned run's files in plan.json and its outcome in execution.json.
+const plannedSelections = (documents: Map<string, Evidence>, path: string, execution: PlannedExecution) => {
+  if (!execution.planDigest) throw new Error(`Invalid nightly source selection: ${path} has no plan digest`);
+  const plan = [...documents.values()].find(
+    (document) => (document as { digest?: string }).digest === execution.planDigest,
+  ) as { runs?: PlannedRun[] } | undefined;
+  if (!plan?.runs || !Array.isArray(execution.results))
+    throw new Error(`Invalid nightly source selection: ${path} has no matching plan`);
+  const selections: Evidence[] = [];
+  for (const result of execution.results) {
+    const run = plan.runs.find((candidate) => candidate.id === result.runId);
+    if (!run) throw new Error(`Invalid nightly source selection: ${path} ran unplanned ${result.runId}`);
+    if (run.lane === "quarantine" || run.priority === "P3") continue;
+    selections.push({
+      sourceSha: result.source?.sha ?? execution.source?.sha,
+      outcome: result.outcome,
+      complete: result.complete,
+      selectedFiles: run.files,
+    });
+  }
+  return selections;
+};
+
 const sourceSelections = (documents: Map<string, Evidence>) => {
   const selections: Evidence[] = [];
   for (const [path, evidence] of documents) {
+    if (basename(path) === "execution.json") {
+      selections.push(...plannedSelections(documents, path, evidence as PlannedExecution));
+      continue;
+    }
     if (evidence.selectedFiles) {
       selections.push(evidence);
       continue;

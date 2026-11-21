@@ -2,7 +2,6 @@ import { Badge, Icon, Text } from "@chakra-ui/react";
 import type { ExtensionAuthor } from "@pstdio/sdk/api";
 import { Blocks, Building2, Folder, Folders, UserRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { extensionAuthorKey } from "./extension-filters";
 
 export const ExtensionAuthorBadge = ({ author }: { author?: ExtensionAuthor }) => {
   const { t } = useTranslation("projects");
@@ -16,7 +15,13 @@ export const ExtensionAuthorBadge = ({ author }: { author?: ExtensionAuthor }) =
   }
   const middle = Math.max(0, label.length - 12);
   return (
-    <Badge variant="chip" size="sm" maxW="full" minW="0" data-extension-author={extensionAuthorKey(author)}>
+    <Badge
+      variant="chip"
+      size="sm"
+      maxW="full"
+      minW="0"
+      data-extension-author={author.kind === "self" ? "me" : `publisher:${author.publisher}`}
+    >
       <Icon as={icon} boxSize="3" flexShrink="0" />
       <Text as="span" display="flex" minW="0" title={label}>
         <Text as="span" truncate>

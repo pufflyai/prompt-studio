@@ -20,7 +20,8 @@ interface RendererReadOptions<T> {
    * current value on screen until the new one arrives.
    */
   refreshKey?: string;
-  load(signal: AbortSignal, publish: (value: T) => void): Promise<T> | T;
+  /** The accepted value belongs to this read scope, including results loaded by a peer. */
+  load(signal: AbortSignal, publish: (value: T) => void, accepted: T | undefined): Promise<T> | T;
   /** Hydrate presentation controllers for both shared and newly loaded values. */
   onAccept?(value: T): void;
   onInvalidate?(): boolean;
@@ -177,7 +178,7 @@ export const useRendererRead = <T>(options: RendererReadOptions<T>) => {
               latest.queryKey === queryKey &&
               latest.refreshKey === current.refreshKey &&
               latestScope === scopeKey;
-            return (sameQuery ? latest : current).load(signal, publish);
+            return (sameQuery ? latest : current).load(signal, publish, owner.value());
           },
           onProgress: (value: T) => {
             // A replacement keeps even a partial snapshot. Progress within its original read still grows.

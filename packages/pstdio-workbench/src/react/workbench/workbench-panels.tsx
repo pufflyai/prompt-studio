@@ -1,4 +1,4 @@
-import { Box, useSlotRecipe } from "@chakra-ui/react";
+import { Box, useSlotRecipe, VisuallyHidden } from "@chakra-ui/react";
 import { type ResourceContextAction, ResourceContextMenu } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
@@ -97,7 +97,7 @@ interface WorkbenchStatusBarProps extends WorkbenchRegionPanelProps {
 export const WorkbenchStatusBar = (props: WorkbenchStatusBarProps) => {
   const { workbench, leftInset = "panel-gap", floating = false, visible = true } = props;
   const chrome = useModeChrome(workbench, "status");
-  useSystemActivityStatusItem(workbench, visible);
+  const systemNoticeAnnouncement = useSystemActivityStatusItem(workbench, visible);
   const styles = useSlotRecipe({ key: "statusBar" })();
 
   return (
@@ -119,6 +119,7 @@ export const WorkbenchStatusBar = (props: WorkbenchStatusBarProps) => {
       minW="0"
       overflow="hidden"
     >
+      <VisuallyHidden role="status">{systemNoticeAnnouncement}</VisuallyHidden>
       <Box css={styles.root} ml={leftInset}>
         <WorkbenchStatusBarItems workbench={workbench} chrome={chrome} visible={visible} />
       </Box>

@@ -11,7 +11,7 @@ test(
   "links two tickets to a standalone workspace and removes only the selected link",
   async () => {
     const api = await startApi({
-      env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "git-workspaces") },
+      env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "pstdio-workspaces") },
     });
     try {
       const run = (args: string, cwd: string) => runPstdio(args, cwd, { PSTDIO_API_URL: api.url });

@@ -54,46 +54,52 @@ test("system information can be opened and dismissed in the status bar", async (
   const preview = await openCanvasPreview(page, `${canvas}#HiddenStatusBar`);
   const action = preview.getByRole("button", { name: "Report system information" });
   await expect(action).toBeVisible();
-  const before = await action.boundingBox();
+  // Measure within the preview: fitting the Canvas camera can change its outer browser scale.
+  const rect = () =>
+    action.evaluate((element) => {
+      const { x, y, width, height } = element.getBoundingClientRect();
+      return { x, y, width, height };
+    });
+  const before = await rect();
   await action.click();
   const status = preview.locator('[data-workbench-region="status"]');
   const widget = status.locator('[data-status-bar-item="workbench.system-activity"]');
-  await widget.getByRole("button", { name: "System notices: Update ready" }).press("Enter");
+  await widget.press("Enter");
   const details = preview.getByRole("region", { name: "System notice list" });
   await expect(details.getByText("Update ready", { exact: true })).toBeVisible();
   await details.getByRole("button", { name: "Dismiss Update ready" }).press("Enter");
   await expect(status).toBeHidden();
-  expect(await action.boundingBox()).toEqual(before);
+  expect(await rect()).toEqual(before);
 });
 
-test("System activity stays pinned when other status widgets reorder", async ({ page }) => {
+// Critical: notices must remain keyboard accessible while sharing ordinary widget layout controls.
+test("system notices hide when empty and retain normal widget alignment", async ({ page }) => {
   const preview = await openCanvasPreview(page, `${canvas}#SystemAndActionErrors`);
   const status = preview.locator('[data-workbench-region="status"]');
-  const activity = status.getByRole("group", { name: "System activity" });
-  const idleActivity = activity.getByRole("button", { name: "System activity", exact: true });
-  await expect(idleActivity).toBeVisible();
-  await idleActivity.press("Enter");
-  const panel = preview.getByRole("dialog", { name: "System notices", exact: true });
-  await expect(panel).toBeVisible();
-  const details = panel.getByRole("region", { name: "System notice list" });
-  await expect(details).toBeVisible();
-  await expect(details.getByRole("alert")).toHaveCount(0);
-  await idleActivity.press("Enter");
-  await expect(details).toBeHidden();
-
+  const activity = status.getByRole("button", { name: "System activity", exact: true });
+  await expect(activity).toBeHidden();
   await preview.getByRole("button", { name: "Report system information" }).click();
-  await activity.getByRole("button", { name: "System notices: Update ready" }).press("Enter");
-  await details.getByRole("button", { name: "Dismiss Update ready" }).press("Enter");
-  await expect(idleActivity).toBeVisible();
-  await expect(details).toBeVisible();
-  await idleActivity.press("Enter");
-
-  const first = status.getByRole("group", { name: "First tool" });
-  const second = status.getByRole("group", { name: "Second tool" });
   await expect(activity).toBeVisible();
-  await expect(activity).not.toHaveAttribute("data-sortable", "true");
-  await second.press("Alt+ArrowLeft");
-  await expect.poll(async () => (await second.boundingBox())!.x).toBeLessThan((await first.boundingBox())!.x);
-  await second.press("Alt+ArrowLeft");
-  expect((await activity.boundingBox())!.x).toBeLessThan((await second.boundingBox())!.x);
+  await expect(status.getByRole("status").filter({ hasText: "System notices: Update ready" })).toHaveText(
+    "System notices: Update ready",
+  );
+  await expect(activity).toHaveAttribute("data-sortable", "true");
+  const second = status.getByRole("group", { name: "Second tool", exact: true });
+  await activity.press("Alt+ArrowLeft");
+  await expect.poll(async () => (await activity.boundingBox())!.x).toBeLessThan((await second.boundingBox())!.x);
+  await activity.press("Alt+Shift+ArrowRight");
+  await expect(activity).toHaveAttribute("data-status-bar-slot", "center");
+  await activity.press("Enter");
+  const details = preview.getByRole("region", { name: "System notice list" });
+  await expect(details.getByText("Update ready", { exact: true })).toBeVisible();
+  await details.getByRole("button", { name: "Dismiss Update ready" }).press("Enter");
+  await expect(activity).toBeHidden();
+  await expect(details).toBeHidden();
+  await preview.getByRole("button", { name: "Report system information" }).click();
+  await expect(activity).toHaveAttribute("data-status-bar-slot", "center");
+  await activity.press("Alt+Shift+ArrowRight");
+  await expect(activity).toHaveAttribute("data-status-bar-slot", "trailing");
+  await activity.press("Enter");
+  await preview.getByRole("button", { name: "Clear all", exact: true }).click();
+  await expect(activity).toBeHidden();
 });

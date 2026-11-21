@@ -49,7 +49,7 @@ const home = definePage({
   title: "Instances",
   path: "resource-choices-home",
   mode: workbenchModes.project,
-  main: { kind: "view", view: view.ref, cardinality: "one" },
+  main: { kind: "view", view: view.ref, cardinality: "one", presentation: "page" },
   slots: [],
 });
 const page = definePage({
@@ -59,7 +59,7 @@ const page = definePage({
   mode: workbenchModes.project,
   parent: home.ref,
   resource: { kinds: [kind.ref] },
-  main: { kind: "view", view: view.ref, cardinality: "one" },
+  main: { kind: "view", view: view.ref, cardinality: "one", presentation: "page" },
   slots: [],
 });
 export default defineExtension({

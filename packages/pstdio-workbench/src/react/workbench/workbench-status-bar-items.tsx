@@ -74,12 +74,12 @@ export const WorkbenchStatusBarItems = (props: {
   const context = JSON.stringify([projectId, activeModeId, visible]);
   const origin = useRef<string | undefined>(undefined);
   const visibleItems = workbench.statusBar.listVisibleItems();
-  const systemActivity = visibleItems.find((item) => item.id === systemActivityItemId);
-  const widgets =
+  const items =
     activeModeId === workbench.modes.getActiveModeId()
-      ? visibleItems.filter((item) => item !== systemActivity && (chrome === undefined || item.id === chromeItem))
+      ? visibleItems.filter(
+          (item) => item.id === systemActivityItemId || chrome === undefined || item.id === chromeItem,
+        )
       : [];
-  const items = systemActivity ? [systemActivity, ...widgets] : widgets;
   const placements = useRetainedViewPlacements(
     workbench,
     items.map((item) => ({

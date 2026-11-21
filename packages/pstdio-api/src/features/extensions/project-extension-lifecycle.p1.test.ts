@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { normalizeExtensionSources } from "pstdio-extensions";
+import { type ExtensionRuntime, normalizeExtensionSources } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestDocumentStorage } from "../../test-utils/create-test-document-storage";
 import { loadExtensionSource } from "./extension-runtime";
@@ -46,7 +46,12 @@ const createDeps = (input: { skills?: unknown[] } = {}) => {
       extensionConnectionService: { removeExtension: mock(async () => {}) },
       extensionStorageService: createTestDocumentStorage(),
       extensionRuntimeCatalog: {
-        get: mock(async () => ({ runtime: { schedules: [] as Array<Record<string, unknown>> } })),
+        get: mock(async () => ({
+          runtime: {
+            schedules: [] as Array<Record<string, unknown>>,
+            workspaceTypes: [] as ExtensionRuntime["workspaceTypes"],
+          },
+        })),
         getSourcesRuntime: mock(async () => ({
           extensions: [installedSource],
           diagnostics: [],
@@ -85,7 +90,62 @@ const createDeps = (input: { skills?: unknown[] } = {}) => {
   };
 };
 
+test.each([
+  "pstdio.worktree",
+  "pstdio.git-workspaces.workspace-type.git",
+])("removes an inactive successor while the legacy provider owns %s", async (providerId) => {
+  const { deps } = createDeps();
+  deps.extensionService.getProjectExtensionInstance.mockResolvedValue({
+    instance: extensionInstance(false),
+    installedSource: { ...installedSource, extension_id: "pstdio.workspaces" },
+  });
+  deps.workspaceService.listForProviderReconciliation.mockResolvedValue([
+    { id: "workspace-1", provider_id: providerId },
+  ]);
+  deps.extensionRuntimeCatalog.get.mockResolvedValue({
+    runtime: {
+      schedules: [],
+      workspaceTypes: [
+        { id: "pstdio.git-workspaces.workspace-type.git", extensionId: "pstdio.git-workspaces" },
+      ] as ExtensionRuntime["workspaceTypes"],
+    },
+  });
+  await expect(
+    createProjectExtensionLifecycle(deps as never).uninstall({
+      projectId: "project-1",
+      instanceId: "instance-1",
+      deleteUserData: false,
+    }),
+  ).resolves.toBe("removed");
+});
+
 describe("project extension lifecycle", () => {
+  test("removes a tool with no workspace contributions while an unrelated runtime load is stalled", async () => {
+    const { deps } = createDeps();
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const read = deps.extensionRuntimeCatalog.get.getMockImplementation()!;
+    deps.extensionRuntimeCatalog.get.mockImplementation(async () => {
+      entered.resolve();
+      await release.promise;
+      return read();
+    });
+    const removal = createProjectExtensionLifecycle(deps as never).uninstall({
+      projectId: "project-1",
+      instanceId: "instance-1",
+      deleteUserData: false,
+    });
+    try {
+      expect(await Promise.race([removal.then(() => "removed"), entered.promise.then(() => "blocked")])).toBe(
+        "removed",
+      );
+    } finally {
+      release.resolve();
+      await removal;
+    }
+    expect(deps.extensionService.uninstallProjectExtension).toHaveBeenCalledTimes(1);
+  });
+
   test("installs without provisioning when the extension has no workspace contributions", async () => {
     const { deps, provisionProjectWorkspaces } = createDeps();
     const lifecycle = createProjectExtensionLifecycle(deps as never);
@@ -199,6 +259,51 @@ describe("project extension lifecycle", () => {
     ).rejects.toThrow("provider-backed workspace");
     expect(deps.extensionConnectionService.removeExtension).not.toHaveBeenCalled();
     expect(deps.extensionService.uninstallProjectExtension).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    "pstdio.worktree",
+    "pstdio.git-workspaces.workspace-type.git",
+  ])("keeps a disabled legacy Git provider installed while %s workspaces depend on it", async (providerId) => {
+    const { deps } = createDeps();
+    deps.extensionService.getProjectExtensionInstance.mockResolvedValue({
+      instance: extensionInstance(false),
+      installedSource: { ...installedSource, extension_id: "pstdio.git-workspaces" },
+    });
+    deps.workspaceService.listForProviderReconciliation.mockResolvedValue([
+      { id: "workspace-1", provider_id: providerId },
+    ]);
+    const lifecycle = createProjectExtensionLifecycle(deps as never);
+    await expect(
+      lifecycle.uninstall({ projectId: "project-1", instanceId: "instance-1", deleteUserData: true }),
+    ).rejects.toThrow("provider-backed workspace");
+    expect(deps.extensionService.uninstallProjectExtension).not.toHaveBeenCalled();
+  });
+
+  test("removes a legacy Git provider after the current Workspaces tool takes over its worktrees", async () => {
+    const { deps } = createDeps();
+    deps.extensionService.getProjectExtensionInstance.mockResolvedValue({
+      instance: extensionInstance(false),
+      installedSource: { ...installedSource, extension_id: "pstdio.git-workspaces" },
+    });
+    deps.workspaceService.listForProviderReconciliation.mockResolvedValue([
+      { id: "workspace-1", provider_id: "pstdio.worktree" },
+    ]);
+    deps.extensionRuntimeCatalog.get.mockResolvedValue({
+      runtime: {
+        schedules: [],
+        workspaceTypes: [
+          { id: "pstdio.workspaces.workspace-type.git", extensionId: "pstdio.workspaces" },
+        ] as ExtensionRuntime["workspaceTypes"],
+      },
+    });
+    await expect(
+      createProjectExtensionLifecycle(deps as never).uninstall({
+        projectId: "project-1",
+        instanceId: "instance-1",
+        deleteUserData: false,
+      }),
+    ).resolves.toBe("removed");
   });
 
   test("keeps connection credentials when extension uninstall fails", async () => {

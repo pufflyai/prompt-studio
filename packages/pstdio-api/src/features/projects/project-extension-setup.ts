@@ -3,6 +3,7 @@ import type { ExtensionSetupWarning } from "pstdio-api-contracts";
 import { matchesExtensionInstallName } from "pstdio-api-contracts/extension-host";
 import { apiLogger } from "../../lib/logger";
 import { traceSetupPhase } from "../../lib/setup-phase";
+import { adoptWorkspacesTool } from "../extensions/adopt-workspaces-tool";
 import { AlwaysEnabledExtensionError } from "../extensions/always-on-extensions";
 import {
   installMissingDefaultExtensions,
@@ -110,6 +111,7 @@ export const setupProjectExtensions = async (
   await traceSetupPhase("project.extension_enable", { project_id: projectId }, () =>
     enableDefaultProjectExtensions(deps, projectId, preservedExtensionIds),
   );
+  await adoptWorkspacesTool(deps, projectId);
 
   return warnings;
 };

@@ -43,7 +43,6 @@
       "noDescription": "No description provided.",
       "scope": {
         "label": "Scope",
-        "all": "All scopes",
         "repo": "This Project",
         "global": "All Projects"
       },
@@ -176,7 +175,6 @@
       "enabledGroup": "Enabled",
       "author": {
         "label": "Author",
-        "all": "All authors",
         "me": "Me",
         "promptStudio": "Prompt Studio"
       },
@@ -184,8 +182,8 @@
         "extension": "Extension",
         "enabled": "Enabled"
       },
-      "clearFilters": "Clear filters",
-      "noMatches": "No extensions match these filters."
+      "noMatches": "No extensions match your search.",
+      "clearSearch": "Clear search"
     },
     "machineTokens": {
       "title": "Machine tokens",
@@ -218,6 +216,9 @@
     "cloudWaiting": "Cloud · waiting to download",
     "cloudReady": "Cloud · ready offline · no folder yet",
     "cloud": "Cloud",
+    "cloudOnly": "Cloud only",
+    "cloudDeleting": "Deleting cloud project",
+    "cloudRemovalPending": "Local removal needs attention",
     "cloudNeedsAttention": "Cloud · needs attention",
     "localPath": "{{path}} · local"
   },

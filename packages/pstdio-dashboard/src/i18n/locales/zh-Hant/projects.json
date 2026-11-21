@@ -43,7 +43,6 @@
       "noDescription": "未提供描述。",
       "scope": {
         "label": "範圍",
-        "all": "所有範圍",
         "repo": "此專案",
         "global": "所有專案"
       },
@@ -174,7 +173,6 @@
       "enabledGroup": "已啟用",
       "author": {
         "label": "作者",
-        "all": "所有作者",
         "me": "我",
         "promptStudio": "Prompt Studio"
       },
@@ -182,8 +180,8 @@
         "extension": "擴充功能",
         "enabled": "啟用"
       },
-      "clearFilters": "清除篩選",
-      "noMatches": "沒有符合的擴充功能。"
+      "noMatches": "沒有符合搜尋的擴充功能。",
+      "clearSearch": "清除搜尋"
     }
   },
   "list": {

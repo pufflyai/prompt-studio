@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 export const verifyPanelInsertionTargets = async (page: Page) => {
   const main = page.locator('[data-workbench-panel="main"]');
@@ -99,57 +99,61 @@ const verifyNearbyTabTargets = async (page: Page) => {
   const tab = main.getByRole("tab", { selected: true });
   await tab.hover();
   await main.hover();
-  const bounds = (await main.boundingBox())!;
-  const source = (await tab.boundingBox())!;
-  await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(source.x + source.width / 2 + 12, source.y + source.height / 2, { steps: 3 });
-  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2, { steps: 6 });
+  const closedBounds = (await main.boundingBox())!;
+  await beginTabDrag(page, tab);
+  await page.mouse.move(closedBounds.x + 3, closedBounds.y + closedBounds.height / 2, { steps: 6 });
+  await expect(page.locator("[data-workbench-edge-hit]")).toHaveCount(0);
   await expect(page.locator("[data-workbench-edge-drop]")).toHaveCount(0);
-  await expect.poll(() => main.boundingBox()).toEqual(bounds);
-  for (const [region, position] of [
-    ["side", "left"],
-    ["side", "right"],
-    ["secondary", "top"],
-    ["secondary", "bottom"],
-  ]) {
-    await page.locator(`[data-workbench-edge-hit="${region}"][data-workbench-edge-position="${position}"]`).hover();
-    await expect(page.locator(`[data-workbench-edge-drop="${region}"]`)).toBeVisible();
-    await expect(page.locator(`[data-workbench-edge-drop="${region}"]`)).toHaveAttribute(
-      "data-workbench-edge-position",
-      position,
-    );
-    await expect(page.locator("[data-workbench-edge-drop], [data-workbench-tab-drop][data-drop-active]")).toHaveCount(
-      1,
-    );
-    const slot = (await page.locator(`[data-workbench-edge-drop="${region}"]`).boundingBox())!;
-    await expect
-      .poll(() => main.boundingBox())
-      .toEqual({
-        x: bounds.x + (position === "left" ? slot.width : 0),
-        y: bounds.y + (position === "top" ? slot.height : 0),
-        width: bounds.width - (region === "side" ? slot.width : 0),
-        height: bounds.height - (region === "secondary" ? slot.height : 0),
-      });
-  }
+  await expect.poll(() => main.boundingBox()).toEqual(closedBounds);
   await page.keyboard.press("Escape");
   await page.mouse.up();
-  await expect(page.locator("[data-workbench-edge-drop]")).toHaveCount(0);
-  await expect.poll(() => main.boundingBox()).toEqual(bounds);
-  for (const [sourceRegion, region, position] of [
-    ["main", "side", "right"],
-    ["side", "secondary", "bottom"],
-  ]) {
-    const sourceTab = page.locator(`[data-workbench-panel="${sourceRegion}"]:visible`).getByRole("tab", {
-      selected: true,
-    });
-    await sourceTab.hover();
-    const sourceBounds = (await sourceTab.boundingBox())!;
-    await page.mouse.move(sourceBounds.x + sourceBounds.width / 2, sourceBounds.y + sourceBounds.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(sourceBounds.x + sourceBounds.width / 2 + 12, sourceBounds.y + sourceBounds.height / 2, {
-      steps: 3,
-    });
+  // Explicit moves can reveal a closed panel. Auxiliary tabs still exercise closed-edge insertion.
+  await tab.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Move to Secondary", exact: true }).click();
+  const bottomHeader = page.locator('[data-workbench-panel-header="secondary"]');
+  const terminalId = await bottomHeader
+    .getByRole("tab", { selected: true })
+    .locator("xpath=ancestor::*[@data-workbench-tab]")
+    .getAttribute("data-workbench-tab");
+  expect(terminalId).toBeTruthy();
+  const terminal = page.locator(`[data-workbench-tab=${JSON.stringify(terminalId)}]`).getByRole("tab");
+  const others = bottomHeader
+    .locator(`[data-workbench-tab]:not([data-workbench-tab=${JSON.stringify(terminalId)}])`)
+    .getByRole("tab");
+  for (let remaining = await others.count(); remaining > 0; remaining--) {
+    await others.first().click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Close tab", exact: true }).click();
+    await expect(others).toHaveCount(remaining - 1);
+  }
+  for (const [region, positions, position] of [
+    ["side", ["left", "right"], "right"],
+    ["secondary", ["top", "bottom"], "bottom"],
+  ] as const) {
+    const bounds = (await main.boundingBox())!;
+    await beginTabDrag(page, terminal);
+    for (const edge of positions) {
+      await page.locator(`[data-workbench-edge-hit="${region}"][data-workbench-edge-position="${edge}"]`).hover();
+      const target = page.locator(`[data-workbench-edge-drop="${region}"]`);
+      await expect(target).toBeVisible();
+      await expect(target).toHaveAttribute("data-workbench-edge-position", edge);
+      await expect(page.locator("[data-workbench-edge-drop], [data-workbench-tab-drop][data-drop-active]")).toHaveCount(
+        1,
+      );
+      const slot = (await target.boundingBox())!;
+      await expect
+        .poll(() => main.boundingBox())
+        .toEqual({
+          x: bounds.x + (edge === "left" ? slot.width : 0),
+          y: bounds.y + (edge === "top" ? slot.height : 0),
+          width: bounds.width - (region === "side" ? slot.width : 0),
+          height: bounds.height - (region === "secondary" ? slot.height : 0),
+        });
+    }
+    await page.keyboard.press("Escape");
+    await page.mouse.up();
+    await expect(page.locator("[data-workbench-edge-drop]")).toHaveCount(0);
+    await expect.poll(() => main.boundingBox()).toEqual(bounds);
+    await beginTabDrag(page, terminal);
     await page.locator(`[data-workbench-edge-hit="${region}"][data-workbench-edge-position="${position}"]`).hover();
     await page.mouse.up();
     const moved = page.locator(`[data-workbench-panel="${region}"]:visible`);
@@ -172,6 +176,15 @@ const verifyNearbyTabTargets = async (page: Page) => {
     main.getByRole("group", { name: "Available tabs" }).getByRole("button", { name: "Menu content", exact: true }),
   ).toBeVisible();
   await expect.poll(async () => (await bottom.boundingBox())!.y < (await main.boundingBox())!.y).toBe(true);
+};
+
+const beginTabDrag = async (page: Page, tab: Locator) => {
+  await tab.hover();
+  const source = (await tab.boundingBox())!;
+  await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(source.x + source.width / 2 + 12, source.y + source.height / 2, { steps: 3 });
+  await expect(tab).toHaveCSS("opacity", "0.5");
 };
 
 const verifyLastTabPanelMove = async (page: Page, region: string, position: string) => {

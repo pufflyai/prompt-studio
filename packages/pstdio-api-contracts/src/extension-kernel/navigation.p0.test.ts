@@ -1,6 +1,104 @@
 import { describe, expect, test } from "bun:test";
 import { navigationTargetSchema } from "../extensions/navigation-target-metadata";
 import { isNavigationTarget, qualifyNavigationTarget } from "./navigation";
+import { resourceLinkTarget } from "./resource-link-target";
+
+test("resource links retain semantic context while requesting an unpinned Side preview", () => {
+  const target = {
+    kind: "page" as const,
+    page: { kind: "page" as const, extensionId: "example.records", id: "record" },
+    resource: { type: "record", id: "a", metadata: { document: "body" } },
+    params: { filter: "mine" },
+    section: { anchors: [{ id: "intro", heading: "Introduction" }] },
+    parent: { kind: "page" as const, page: { kind: "page" as const, id: "records", extensionId: "example.records" } },
+    open: "pin" as const,
+  };
+  const preview = resourceLinkTarget(target);
+  expect(preview).toEqual({ ...target, region: "side", open: "preview" });
+  expect(isNavigationTarget(preview)).toBe(true);
+  expect(preview).toEqual(navigationTargetSchema.parse(preview));
+  const panel = {
+    kind: "panel" as const,
+    panel: { kind: "placement" as const, extensionId: "example.records", id: "records" },
+    resource: target.resource,
+  };
+  const compound = resourceLinkTarget({ kind: "compound", targets: [target.parent, panel] });
+  expect(compound).toEqual({ kind: "compound", targets: [{ ...panel, region: "side" }] });
+  expect(compound).toEqual(navigationTargetSchema.parse(compound));
+});
+
+test("a resource link followed from Side previews in Main so its source stays visible", () => {
+  const target = {
+    kind: "page" as const,
+    page: { kind: "page" as const, extensionId: "example.records", id: "record" },
+    resource: { type: "record", id: "a" },
+    params: { filter: "mine" },
+  };
+  const preview = resourceLinkTarget(target, { region: "side" });
+  expect(preview).toEqual({ ...target, region: "main" });
+  expect(preview).toEqual(navigationTargetSchema.parse(preview));
+  expect(resourceLinkTarget(target, { region: "main" })).toEqual({ ...target, region: "side", open: "preview" });
+});
+
+test("panel and compound links from Side keep panels in Side and open pages in Main", () => {
+  const resource = { type: "record", id: "a" };
+  const panel = {
+    kind: "panel" as const,
+    panel: { kind: "placement" as const, extensionId: "example.records", id: "records" },
+    resource,
+    open: "pin" as const,
+  };
+  // Main does not accept panels in every mode, so a panel link stays in Side whatever its source.
+  const { open: _open, ...unpinned } = panel;
+  expect(resourceLinkTarget(panel, { region: "side" })).toEqual({ ...unpinned, region: "side" });
+  const page = {
+    kind: "page" as const,
+    page: { kind: "page" as const, extensionId: "example.records", id: "record" },
+    resource,
+  };
+  const single = resourceLinkTarget({ kind: "compound", targets: [panel] }, { region: "side" });
+  expect(single).toEqual({ kind: "compound", targets: [{ ...unpinned, region: "side" }] });
+  expect(single).toEqual(navigationTargetSchema.parse(single));
+  const many = resourceLinkTarget({ kind: "compound", targets: [page, panel] }, { region: "side" });
+  expect(many).toEqual({
+    kind: "compound",
+    targets: [
+      { ...page, region: "main" },
+      { ...panel, region: "side" },
+    ],
+  });
+  expect(many).toEqual(navigationTargetSchema.parse(many));
+  expect(resourceLinkTarget({ kind: "compound", targets: [page, panel] })).toEqual({
+    kind: "compound",
+    targets: [
+      { ...page, region: "side" },
+      { ...panel, region: "side" },
+    ],
+  });
+});
+
+test.each([
+  "overlay",
+  "sidenav",
+  "invalid",
+])("resource navigation rejects an invalid panel destination: %s", (region) => {
+  for (const kind of ["page", "panel"]) {
+    const target = {
+      kind,
+      [kind]: { kind: kind === "page" ? "page" : "placement", id: "record" },
+      resource: { type: "record", id: "a" },
+      region,
+    };
+    expect(isNavigationTarget(target)).toBe(false);
+    expect(navigationTargetSchema.safeParse(target).success).toBe(false);
+  }
+});
+
+test("an auxiliary page target requires a resource", () => {
+  const target = { kind: "page", page: { kind: "page", id: "collection" }, region: "side" };
+  expect(isNavigationTarget(target)).toBe(false);
+  expect(navigationTargetSchema.safeParse(target).success).toBe(false);
+});
 
 test("viewer navigation is caller-relative and qualifies both resource identities", () => {
   const target = {

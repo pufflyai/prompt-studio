@@ -19,10 +19,8 @@
     "@emotion/react": "11.14.0",
     "@phosphor-icons/react": "^2.1.10",
     "@pstdio/ui": "workspace:*",
-    "@tanstack/charts": "1.2.1",
     "astro": "^7.3.5",
     "lucide-react": "^0.557.0",
-    "matter-js": "^0.20.0",
     "posthog-js": "^1.430.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -31,7 +29,6 @@
   },
   "devDependencies": {
     "@types/bun": "1.4.4",
-    "@types/matter-js": "^0.20.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@pstdio/canvas": "workspace:*"

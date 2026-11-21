@@ -4,6 +4,7 @@ import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
+import { isSessionUrl } from "./helpers/resource-actions";
 import { prepareDashboard } from "./helpers/workspace-files";
 import { createGitRepo } from "./helpers/workspace-session-attempt";
 
@@ -51,7 +52,7 @@ test("saved ticket document links survive copy, reload, history and rename", asy
     await context.grantPermissions(["clipboard-read", "clipboard-write"]);
     await page.getByRole("button", { name: /^Actions for / }).click();
     await page.getByRole("menuitem", { name: "Copy link", exact: true }).click();
-    await expect(page.getByText("Link copied")).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Link copied" })).toBeVisible();
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(fileUrl);
     await page.reload();
     await expect(page.getByText("Saved research bytes", { exact: false }).first()).toBeVisible();
@@ -107,7 +108,8 @@ test("saved ticket document links survive copy, reload, history and rename", asy
     );
     await page.getByRole("link", { name: "Draft", exact: true }).last().click();
     await expect(page.locator(".monaco-editor .view-lines:visible")).toContainText(/Exact\s+unsaved\s+draft\s+bytes/);
-    await page.goBack();
+    // Chat links preview beside the conversation, so it stays open for the next link.
+    await expect(page).toHaveURL(isSessionUrl(project.id, session.id));
     await page.getByRole("link", { name: "Saved", exact: true }).last().click();
     await expect(page.getByText("Saved body bytes", { exact: false }).first()).toBeVisible();
   } finally {

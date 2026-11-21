@@ -1,6 +1,7 @@
 import type { ChatAttachment, ControlValueMap } from "@pstdio/sdk/extensions";
 import type { ChatLinkHandler, ChatPanel, SessionMessage } from "@pstdio/ui/chat-ui";
 import type { ComponentProps, ReactNode } from "react";
+import type { WorkbenchPanelRegion } from "../../../core";
 import type { ChatSession } from "../../../extensions/contributions/chat-session";
 
 /** Trusted host UI; account replies never cross an extension command boundary. */
@@ -30,5 +31,7 @@ export interface NativeChatHostProps {
   /** Files in the visible draft, including an active queued-request edit. */
   attachments?: ChatAttachment[];
   linkHandler?: ChatLinkHandler;
+  /** The panel showing this conversation when a link opens, so references can preview beside it. */
+  sourceRegion?: () => WorkbenchPanelRegion | undefined;
   children(services: NativeChatHostServices): ReactNode;
 }

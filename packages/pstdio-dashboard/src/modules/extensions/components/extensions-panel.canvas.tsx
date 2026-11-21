@@ -196,6 +196,8 @@ const failedExtension = installedExtensions[1]!;
 const meta: CanvasMeta<typeof ExtensionsPanelView> = {
   title: "Product/Settings/Extensions/Manage extensions",
   component: ExtensionsPanelView,
+  description:
+    "Search all tools by name. Author and scope remain row details. Open a tool and use its breadcrumb to return to Extensions.",
   fullscreen: true,
   args: { onUpgrade: noop, onDropFolder: noop },
 };

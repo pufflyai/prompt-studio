@@ -10,6 +10,7 @@ interface DeleteConfirmationModalProps {
   headline?: string;
   notificationText?: string;
   buttonText?: string;
+  confirmDisabled?: boolean;
   /** Extra controls rendered below the message, e.g. an opt-in checkbox. */
   children?: ReactNode;
 }
@@ -18,9 +19,10 @@ export type { DeleteConfirmationModalProps };
 
 export const DeleteConfirmationModal = (props: DeleteConfirmationModalProps) => {
   const [isDeleting, setIsDeleting] = useState(false);
-  const { headline, buttonText, notificationText, onDelete, open, onClose, children } = props;
+  const { headline, buttonText, notificationText, onDelete, open, onClose, children, confirmDisabled } = props;
 
   const handleDelete = async () => {
+    if (isDeleting || confirmDisabled) return;
     setIsDeleting(true);
 
     try {
@@ -50,7 +52,9 @@ export const DeleteConfirmationModal = (props: DeleteConfirmationModalProps) => 
         <Dialog.Positioner>
           <Dialog.Content>
             <Dialog.Header>
-              <Text textStyle="heading/M">{headline}</Text>
+              <Dialog.Title asChild>
+                <Text textStyle="heading/M">{headline}</Text>
+              </Dialog.Title>
               <Dialog.CloseTrigger asChild>
                 <CloseButton size="sm" disabled={isDeleting} />
               </Dialog.CloseTrigger>
@@ -66,7 +70,7 @@ export const DeleteConfirmationModal = (props: DeleteConfirmationModalProps) => 
                 <Button onClick={onClose} disabled={isDeleting}>
                   Close
                 </Button>
-                <Button loading={isDeleting} variant="destructive" onClick={handleDelete}>
+                <Button loading={isDeleting} disabled={confirmDisabled} variant="destructive" onClick={handleDelete}>
                   {buttonText}
                 </Button>
               </Stack>

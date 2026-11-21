@@ -13,17 +13,22 @@ test("a resource collection uses its declared independent viewer as its only own
   expect(w.pages.store.getState().location?.resource?.id).toBe("x");
 });
 
-test("an independent collection viewer can move and reopen without changing ownership", async () => {
-  const { w, openMain, side } = createResourceViewerFixture({ collection: true });
+test("an independent collection viewer returns to Main when explicitly reopened", async () => {
+  const { w, openMain } = createResourceViewerFixture({ collection: true });
   await openMain("x");
   const first = w.layout.getActivePanel("main")!;
   w.movePanel(first.instanceId, "side");
   await openMain("y");
-  const location = w.pages.store.getState().location;
   await openMain("x");
-  expect(side().instanceId).toBe(first.instanceId);
-  expect(w.layout.listPanelInstances("main").map((panel) => panel.resource?.id)).toEqual(["y"]);
-  expect(w.pages.store.getState().location).toBe(location);
+  expect(w.layout.getActivePanel("main")?.instanceId).toBe(first.instanceId);
+  expect(
+    w.layout
+      .listPanelInstances("main")
+      .map((panel) => panel.resource?.id)
+      .sort(),
+  ).toEqual(["x", "y"]);
+  expect(w.layout.listPanelInstances("side")).toHaveLength(0);
+  expect(w.pages.store.getState().location?.resource?.id).toBe("x");
 });
 
 test("restoring a tabbed tray retires resources now owned by auxiliary viewers", async () => {

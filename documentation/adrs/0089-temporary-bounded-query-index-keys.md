@@ -24,6 +24,13 @@ Use bounded string prefixes for ordering keys and compare complete values in SQL
 within equal-prefix groups. This temporary workaround belongs only in the SQL
 query compiler; public values and cursor comparisons retain their full values.
 
+Record identities share the query index's entry-size budget with those fields.
+Index a prefix of at most 512 bytes for the identity, and retain its complete
+value for SQL ordering and cursor comparisons. Bounded probes use prefix-only
+ordering only when the selected identities and string fields fit in their
+prefixes. A changed physical index fingerprint rebuilds existing indexes during
+normal admission without changing their public definitions.
+
 Named Yjs types can also contain complete nested JSON values. Their ownership
 table keeps the original type name as text and uses a non-unique B-tree expression
 index on the owner and `md5(type_name)` to find candidates. Insertion checks the

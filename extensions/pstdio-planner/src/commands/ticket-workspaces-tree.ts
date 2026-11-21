@@ -9,6 +9,7 @@ import {
   type TreeNode,
   type TreeViewSection,
 } from "@pstdio/sdk/extensions";
+import { resourceLinkTarget } from "../data/resource-link-target";
 import { ticketPageTarget } from "../data/ticket-page-target";
 import type { TicketResourceReference } from "../data/ticket-resource-hierarchy";
 import { workspacePresentation } from "../data/workspace-presentation";
@@ -103,7 +104,7 @@ export const buildWorkspacesSection = async (
     nodes: nodes.length
       ? nodes.map((node) => {
           const opening = openings.find((entry) => entry.resource.id === node.resource.id);
-          const target = opening?.target;
+          const target = opening?.target && resourceLinkTarget(opening.target);
           return {
             ...node,
             target:

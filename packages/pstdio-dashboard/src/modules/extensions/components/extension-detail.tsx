@@ -18,7 +18,6 @@ import { createExtensionStringResolver } from "@/shared/extensions/extension-loc
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
 import { ExtensionActionButton } from "./extension-action-button";
 import { ExtensionActionFeedback, type ExtensionActionState } from "./extension-action-feedback";
-import { ExtensionBackButton } from "./extension-back-button";
 import { ExtensionConnectionsCard } from "./extension-connections-card";
 import { ExtensionContributions } from "./extension-contributions";
 import { ExtensionDeleteSection } from "./extension-delete-section";
@@ -34,8 +33,6 @@ export interface ExtensionDetailProps {
   projectId?: string;
   workbench?: WorkbenchCore;
   extension: ProjectExtensionInstance;
-  onBack?: () => void;
-  visible?: boolean;
   metadata: DashboardExtensionMetadata | undefined;
   automations: WorkbenchExtensionAutomationRecord[];
   diagnostics: ExtensionDiagnostic[];
@@ -123,7 +120,6 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
         header={
           <Stack gap="md">
             <Stack gap="md" paddingX="lg" paddingTop="lg">
-              <ExtensionBackButton onBack={props.onBack} visible={props.visible} />
               <HStack gap="md" alignItems="center" flexWrap="wrap">
                 <Flex
                   alignItems="center"

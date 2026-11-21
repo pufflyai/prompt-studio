@@ -1,9 +1,5 @@
 import { appendFileSync, readFileSync } from "node:fs";
-import {
-  productionBenchmarkPlatforms,
-  productionDesktopPlatforms,
-  productionPerformanceWorkloads,
-} from "./production-platforms";
+import { productionDesktopPlatforms } from "./production-platforms";
 
 export interface ProductionCandidate {
   sourceSha: string;
@@ -86,8 +82,6 @@ export const requiredProductionChecks = (channel: string) => {
     "services",
     ...(channel === "stable" ? projectUpgradePlatforms().map(({ target }) => `project-upgrade-${target}`) : []),
     ...targets.map((target) => `desktop-${target === "linux-x64" ? "shared" : "native"}-${target}`),
-    ...productionBenchmarkPlatforms().map(({ target }) => `performance-desktop-${target}`),
-    ...productionPerformanceWorkloads(channel).map((row) => `performance-${row.family}-${row.os}`),
   ];
 };
 
@@ -139,13 +133,14 @@ if (import.meta.main) {
       errors.push(`${path}: invalid evidence`);
     }
   }
-  let evidence = observations;
+  // Performance observations retain their own outcome and never certify publication.
+  let evidence = observations.filter((entry) => !entry.check.startsWith("performance-"));
   if (candidate) {
     try {
       if (process.env.GITHUB_RUN_ID && process.env.GITHUB_RUN_ATTEMPT) {
         const selection = selectProductionEvidence(
           candidate,
-          observations,
+          evidence,
           process.env.GITHUB_RUN_ID,
           Number(process.env.GITHUB_RUN_ATTEMPT),
         );
@@ -159,7 +154,7 @@ if (import.meta.main) {
     }
   }
   if (!candidate) errors.push(...required.map((check) => `${check}: missing`));
-  const jobs = ["candidate", "functional", "signed_functional", "performance", "services"];
+  const jobs = ["candidate", "functional", "signed_functional", "services"];
   if (channel === "stable") jobs.push("project_upgrade");
   for (const check of jobs)
     if (results[check]?.result !== "success") errors.push(`${check}: ${results[check]?.result ?? "missing"}`);

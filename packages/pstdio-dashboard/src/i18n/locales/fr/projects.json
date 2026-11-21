@@ -43,7 +43,6 @@
       "noDescription": "Aucune description fournie.",
       "scope": {
         "label": "Portée",
-        "all": "Toutes les portées",
         "repo": "Ce projet",
         "global": "Tous les projets"
       },
@@ -176,7 +175,6 @@
       "enabledGroup": "Activées",
       "author": {
         "label": "Auteur",
-        "all": "Tous les auteurs",
         "me": "Moi",
         "promptStudio": "Prompt Studio"
       },
@@ -184,8 +182,8 @@
         "extension": "Extension",
         "enabled": "Activée"
       },
-      "clearFilters": "Effacer les filtres",
-      "noMatches": "Aucune extension ne correspond à ces filtres."
+      "noMatches": "Aucune extension ne correspond à votre recherche.",
+      "clearSearch": "Effacer la recherche"
     }
   },
   "list": {

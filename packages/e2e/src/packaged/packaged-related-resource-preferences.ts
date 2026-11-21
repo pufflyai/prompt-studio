@@ -8,13 +8,7 @@ const tabAction = async (page: Page, tab: Locator, name: string) => {
   await page.getByRole("menuitem", { name, exact: true }).click();
 };
 
-export const verifyClosedSidePreference = async (
-  page: Page,
-  preview: Locator,
-  leave: Navigate,
-  reopen: Navigate,
-  workspaceName: string,
-) => {
+export const verifyClosedSidePreference = async (page: Page, preview: Locator, leave: Navigate, reopen: Navigate) => {
   const side = page.locator('[data-workbench-panel="side"]:visible');
   const revealPlacedPreview = async () => {
     await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
@@ -34,8 +28,12 @@ export const verifyClosedSidePreference = async (
     await expect(preview).toBeVisible();
   };
   await expect(side).toHaveCount(0);
+  const workspaceUrl = page.url();
   await page.reload();
-  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(workspaceName);
+  await expect(page).toHaveURL(workspaceUrl);
+  const main = page.locator('[data-workbench-panel-header="main"]');
+  await expect(main.getByRole("tab", { name: "Files", exact: true })).toBeVisible();
+  await expect(main.getByRole("tab", { name: "Changes", exact: true })).toBeVisible();
   await expect(side).toHaveCount(0);
   await revealPlacedPreview();
   await reset();

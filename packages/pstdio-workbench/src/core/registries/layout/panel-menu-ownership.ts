@@ -24,15 +24,29 @@ const menuSide = (region: WorkbenchPanelMenuRegion): WorkbenchPanelMenuSide =>
 const ownerContributionId = (getWidget: GetWidget, contributionId: string) =>
   getWidget(contributionId)?.panelMenuOwner?.contributionId;
 
-const ownerPlacement = (layout: WorkbenchLayout, contributionId: string, detached: GetDetachedOwners) => {
+const ownerPlacement = (
+  layout: WorkbenchLayout,
+  contributionId: string,
+  menu: WorkbenchWidgetPlacement,
+  menuRegion: WorkbenchPanelMenuRegion,
+  detached: GetDetachedOwners,
+) => {
+  const owners: { region: WorkbenchPanelRegion; placement: WorkbenchWidgetPlacement }[] = [];
   for (const region of workbenchPanelRegions) {
     const current = layout.regions[region];
     const candidates = current.widgets.filter((candidate) => candidate.contributionId === contributionId);
     const placement = candidates.find((candidate) => candidate.widgetId === current.activeWidgetId) ?? candidates[0];
-    if (placement) return { region, placement };
+    if (placement) owners.push({ region, placement });
   }
   const placement = detached().find((candidate) => candidate.contributionId === contributionId);
-  return placement ? { region: "main" as const, placement } : undefined;
+  if (placement) owners.push({ region: "main", placement });
+  // Resource identity follows a moved owner; a changed owner in the same panel rebinds its menu.
+  const resourceKey = menu.resourceKey ?? menu.ownerResourceKey;
+  return (
+    owners.find((owner) => resourceKey && owner.placement.resourceKey === resourceKey) ??
+    owners.find((owner) => Object.values(workbenchPanelMenuRegions[owner.region]).includes(menuRegion)) ??
+    owners[0]
+  );
 };
 
 interface MenuResolution {
@@ -40,7 +54,7 @@ interface MenuResolution {
   changed: boolean;
 }
 
-// One placement per owned menu contribution. A panel opened without a resource and
+// One placement per owned menu contribution in each destination panel. A panel opened without a resource and
 // then reopened with one would otherwise leave its first menu behind, because menu
 // reuse keys on the owner's resource. Keeping the first placement and rebinding it
 // preserves the menu's identity and active state.
@@ -52,7 +66,6 @@ const resolveMenuPlacements = (
 ): MenuResolution & { moves: { placement: WorkbenchWidgetPlacement; target: WorkbenchPanelMenuRegion }[] } => {
   const placements: WorkbenchWidgetPlacement[] = [];
   const moves: { placement: WorkbenchWidgetPlacement; target: WorkbenchPanelMenuRegion }[] = [];
-  const seen = new Set<string>();
   let changed = false;
 
   for (const placement of layout.regions[region].widgets) {
@@ -61,27 +74,28 @@ const resolveMenuPlacements = (
       placements.push(placement);
       continue;
     }
-    if (seen.has(placement.contributionId)) {
-      changed = true;
-      continue;
-    }
-    seen.add(placement.contributionId);
 
-    const found = ownerPlacement(layout, owner, detached);
+    const found = ownerPlacement(layout, owner, placement, region, detached);
     if (!found) {
       // Orphaned menu: its owner panel has no placement anywhere.
       changed = true;
       continue;
     }
 
+    const pageContext = found.placement.pageContext ?? found.placement.pageOwnerLocation;
     const bound =
-      placement.ownerResourceKey === found.placement.resourceKey && placement.resource === found.placement.resource
+      placement.ownerResourceKey === found.placement.resourceKey &&
+      placement.resource === found.placement.resource &&
+      placement.pageContext === pageContext
         ? placement
         : {
             ...placement,
             ownerResourceKey: found.placement.resourceKey,
             resource: found.placement.resource,
             resourceKey: found.placement.resourceKey,
+            pageContext,
+            section: found.placement.section,
+            position: found.placement.position,
           };
     if (bound !== placement) changed = true;
 
@@ -132,6 +146,25 @@ export const reconcilePanelMenuOwnership = (
     regions[move.target] = { ...target, widgets: [...target.widgets, move.placement] };
   }
 
+  for (const menuRegion of menuRegions) {
+    const region = regions[menuRegion];
+    const seen = new Set<string>();
+    const widgets = region.widgets.filter((placement) => {
+      if (!ownerContributionId(getWidget, placement.contributionId)) return true;
+      if (seen.has(placement.contributionId)) return false;
+      seen.add(placement.contributionId);
+      return true;
+    });
+    if (widgets.length === region.widgets.length) continue;
+    changed = true;
+    regions[menuRegion] = {
+      ...region,
+      widgets,
+      activeWidgetId: widgets.some((entry) => entry.widgetId === region.activeWidgetId)
+        ? region.activeWidgetId
+        : undefined,
+    };
+  }
   return changed ? { ...layout, regions } : layout;
 };
 

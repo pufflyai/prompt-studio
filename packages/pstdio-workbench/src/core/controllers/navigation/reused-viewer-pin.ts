@@ -62,7 +62,8 @@ export const retainOutgoingViewerPins = (
 ) => {
   const open = new Set(state.placements.map((placement) => placementIdentityKey(placement.identity)));
   for (const identity of pins) {
-    if (open.has(placementIdentityKey(identity))) core.pinPlacement(identity);
+    if (open.has(placementIdentityKey(identity)) && !isPageContent(state.pages[state.activePageId ?? ""], identity))
+      core.pinPlacement(identity);
   }
 };
 export const isReusedViewerPin = (
@@ -70,3 +71,13 @@ export const isReusedViewerPin = (
   state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
   identity: PlacementIdentity,
 ) => open === "pin" && !isPageContent(state.pages[state.activePageId ?? ""], identity);
+
+export const recordOutgoingViewerPins = (
+  open: string | undefined,
+  state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+  active: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>["reconciliation"]["activate"],
+  pins: Map<string, PlacementIdentity>,
+) => {
+  for (const entry of active)
+    if (isReusedViewerPin(open, state, entry.identity)) pins.set(placementIdentityKey(entry.identity), entry.identity);
+};

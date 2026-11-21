@@ -16,7 +16,7 @@ export const workspaces = definePage({
     kind: "view",
     view: workspacesView.ref,
     cardinality: "one",
-    presentation: "tabs",
+    presentation: "page",
     tab: {
       query: () => ({
         label: workspaceListTitle,

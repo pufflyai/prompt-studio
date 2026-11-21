@@ -6,6 +6,38 @@ import { createDocumentSync, type DocumentRelay } from "pstdio-sync/relay";
 import type { Asset, StoredUpdate } from "pstdio-sync-contracts";
 import { createPublicationCatalog } from "./catalog-store";
 
+test("a provider replacement preserves newer choices and switches both selectors atomically", async () => {
+  const storage = createDocumentStorage({
+    owner: { workbenchId: "replacement", extensionId: "pstdio.published-extensions" },
+    store: createMemoryDocumentStore(),
+    assets: { verifyComplete: async () => {} } as never,
+  });
+  const catalog = createPublicationCatalog({ records: storage.records, verifyComplete: async () => {} });
+  const asset = (letter: string) => ({
+    sha256: letter.repeat(64),
+    byteLength: 1,
+    mediaType: "application/octet-stream",
+  });
+  const oldAsset = asset("b"),
+    nextAsset = asset("c");
+  const old = { extensionId: "pstdio.git-workspaces", version: "1.0.0", revision: oldAsset.sha256, enabled: true };
+  const next = { extensionId: "pstdio.workspaces", version: "1.0.0", revision: nextAsset.sha256, enabled: true };
+  await catalog.select(old, oldAsset);
+  const oldRevision = (await catalog.read(old.extensionId)).revision;
+  const nextRevision = (await catalog.read(next.extensionId)).revision;
+  await catalog.select({ ...old, enabled: false }, oldAsset, oldRevision);
+  await expect(
+    catalog.select(next, nextAsset, nextRevision, { extensionId: old.extensionId, expectedRevision: oldRevision }),
+  ).rejects.toThrow("changed");
+  expect((await catalog.read(next.extensionId)).value).toBeNull();
+  expect((await catalog.read(old.extensionId)).value).toMatchObject({ enabled: false });
+  await catalog.select(next, nextAsset, nextRevision, {
+    extensionId: old.extensionId,
+    expectedRevision: (await catalog.read(old.extensionId)).revision,
+  });
+  expect((await catalog.list()).map(({ recordId }) => recordId)).toEqual([next.extensionId]);
+});
+
 test("historical publication selectors retain their record keys and canonical-only selectors are reused", async () => {
   for (const extensionId of ["pstdio.pstdio-notes", "pstdio.notes"]) {
     const storage = createDocumentStorage({

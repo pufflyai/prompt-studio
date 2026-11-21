@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { chromium, expect as expectUI } from "@playwright/test";
+import { chromium, expect as expectUI, type Page } from "@playwright/test";
 import { createClient } from "@pstdio/sdk/client";
 import type { KanbanRendererQueryResult, ResourceListRendererRow } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -149,6 +149,22 @@ const connectDevice = async (
     return result.value as ResourceListRendererQueryResult;
   };
   return { client, id: identity.environmentId, command, query };
+};
+
+const openForeignWorkspaceHistory = async (page: Page, workspaceId: string, progress: (phase: string) => void) => {
+  progress("open foreign workspace history");
+  await page.locator(`[role="option"][id='${JSON.stringify(["resource", workspaceId])}']`).click();
+  await expectUI(page).toHaveURL(/\/history\?/);
+  progress("open the private session from history");
+  await page
+    .getByRole("region", { name: "Main", exact: true })
+    .getByRole("option")
+    .filter({ hasText: "Device A history" })
+    .click();
+  await expectUI(
+    page.getByRole("region", { name: "Main", exact: true }).getByText("Private workspace history", { exact: true }),
+  ).toBeVisible();
+  await expectUI(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Device A history");
 };
 
 test(
@@ -303,22 +319,12 @@ test(
         return { first, second, session, foreignWorkspace };
       });
       const [history, opened] = await Promise.allSettled([preparingHistory, openingPage]);
+      progress("history data and collection prepared");
       if (history.status === "rejected") throw history.reason;
       if (opened.status === "rejected") throw opened.reason;
       const { first, second, session, foreignWorkspace } = history.value;
       const page = opened.value;
-      await page.locator(`[role="option"][id='${JSON.stringify(["resource", foreignWorkspace.id])}']`).click();
-      await expectUI(page).toHaveURL(/\/history\?/);
-      await page
-        .getByRole("region", { name: "Main", exact: true })
-        .getByRole("option")
-        .filter({ hasText: "Device A history" })
-        .click();
-      await expectUI(
-        page
-          .getByRole("region", { name: "Side Panel", exact: true })
-          .getByText("Private workspace history", { exact: true }),
-      ).toBeVisible();
+      await openForeignWorkspaceHistory(page, foreignWorkspace.id, progress);
       progress("private history visible");
       progress("stop first runtime");
       if (a) await stopProcess(a.child);
