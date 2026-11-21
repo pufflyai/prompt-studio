@@ -82,6 +82,18 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           fetch-depth: 0
+      # The checkout above can be an older candidate, so use this workflow's own download action.
+      - name: Check out the workflow's artifact download action
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: __test-tmp__/workflow-actions
+          persist-credentials: false
+          # Leave the action's test out of the workspace so test discovery never finds it.
+          sparse-checkout: |
+            /.github/actions/download-artifact-by-id/
+            !/.github/actions/download-artifact-by-id/*.test.ts
+          sparse-checkout-cone-mode: false
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -116,7 +128,7 @@ jobs:
         run: bunx playwright@1.60.0 install chromium --with-deps
       - name: Download assigned test plan
         if: inputs.test_plan
-        uses: actions/download-artifact@v4
+        uses: ./__test-tmp__/workflow-actions/.github/actions/download-artifact-by-id
         with:
           artifact-ids: ${{ inputs.test_plan_artifact_id }}
           merge-multiple: true

@@ -1,0 +1,29 @@
+name: Download artifacts by ID
+description: >-
+  Download workflow artifacts directly by their immutable IDs, keeping actions/download-artifact@v4's
+  path and merge-multiple layout. download-artifact lists the run's artifacts first and can stop after
+  100 of them (https://github.com/actions/download-artifact/issues/441), so it misses IDs in larger runs.
+inputs:
+  artifact-ids:
+    description: Comma- or newline-separated artifact IDs
+    required: true
+  run-id:
+    description: Run that must own every artifact, as download-artifact required
+    default: ${{ github.run_id }}
+  path:
+    description: Destination directory; defaults to the workspace
+    default: ""
+  merge-multiple:
+    description: Extract every artifact into path instead of path/<artifact name>
+    default: "false"
+  github-token:
+    description: Token with actions:read on the repository
+    default: ${{ github.token }}
+  repository:
+    description: Repository that owns the artifacts
+    default: ${{ github.repository }}
+# The runner's own Node runs this on every host and inside job containers, before Bun is set up.
+# Node 24 strips the TypeScript types itself, so the action needs no build or dependencies.
+runs:
+  using: node24
+  main: main.mts
