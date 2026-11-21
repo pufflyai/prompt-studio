@@ -1,0 +1,4 @@
+{
+  "remote-testing.preview-helper.title": "Assistant d’URL d’aperçu",
+  "remote-testing.preview-helper.description": "Script TypeScript géré par l’opérateur sur cet appareil qui renvoie une URL HTTPS temporaire."
+}
