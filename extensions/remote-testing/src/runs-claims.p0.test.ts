@@ -108,9 +108,11 @@ test.each([
 });
 
 test.each([
-  false,
-  true,
-])("failed branch setup only stops an environment it owns (other owner: %s)", async (otherOwner) => {
+  { branchTemplate: false, otherOwner: false },
+  { branchTemplate: false, otherOwner: true },
+  { branchTemplate: true, otherOwner: false },
+  { branchTemplate: true, otherOwner: true },
+])("failed setup only stops an environment it owns (%j)", async ({ branchTemplate, otherOwner }) => {
   const store = createMemoryStorage();
   const requests: string[] = [];
   const server = Bun.serve({
@@ -132,7 +134,7 @@ test.each([
     return response.json() as never;
   };
   try {
-    await expect(startRun(runDeps(api, store), { root, branchTemplate: true })).rejects.toThrow(
+    await expect(startRun(runDeps(api, store), { root, branchTemplate })).rejects.toThrow(
       otherOwner ? "another test run" : "Submission failed",
     );
     expect(requests.includes("/v1/workspaces/branch-env/cancel")).toBe(!otherOwner);

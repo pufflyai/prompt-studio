@@ -185,7 +185,8 @@ async function pickEnvironment(
   // Claims live in one project's storage, while the controller lists all projects.
   // Start isolated unless the caller explicitly selects a workspace to reuse.
   const created = await createEnvironment(deps.api, deps.settings, signal, { pstdio_project_id: deps.projectId });
-  await claimEnvironment(deps.store, created.id, runId, hold);
+  if (!(await claimEnvironment(deps.store, created.id, runId, hold)))
+    throw new Error(`Environment ${created.id} is running another test run.`);
   return created;
 }
 
