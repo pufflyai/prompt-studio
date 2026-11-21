@@ -161,16 +161,14 @@ const PanelViewPortal = (props: {
       }}
     >
       {/* The retained view owns its viewport, so another tab cannot reset its scroll position. */}
-      <ViewActivityContext value={active}>
-        <UiScopeActivity active={active}>
-          <RegionScrollArea>
-            {/* Preserve collection state while deferring updates and reads for hidden pages. */}
-            <Activity mode={active || !collection ? "visible" : "hidden"}>
-              <WorkbenchWidgetHost workbench={workbench} placement={placement} region={region} visible={active} />
-            </Activity>
-          </RegionScrollArea>
-        </UiScopeActivity>
-      </ViewActivityContext>
+      <UiScopeActivity active={active}>
+        <RegionScrollArea>
+          {/* Preserve collection state while deferring updates and reads for hidden pages. */}
+          <Activity mode={active || !collection ? "visible" : "hidden"}>
+            <WorkbenchWidgetHost workbench={workbench} placement={placement} region={region} visible={active} />
+          </Activity>
+        </RegionScrollArea>
+      </UiScopeActivity>
     </Box>,
     host,
   );
@@ -194,17 +192,15 @@ const PanelViewPortal = (props: {
                   workbench.focus.setActiveRegion(isPanel(region) ? region : getWorkbenchPanelForMenuRegion(region));
               }}
             >
-              <ViewActivityContext value={active}>
-                <UiScopeActivity active={active}>
-                  <WorkbenchWidgetHost
-                    workbench={workbench}
-                    placement={placement}
-                    viewId={headerViewId}
-                    region={region}
-                    visible={active}
-                  />
-                </UiScopeActivity>
-              </ViewActivityContext>
+              <UiScopeActivity active={active}>
+                <WorkbenchWidgetHost
+                  workbench={workbench}
+                  placement={placement}
+                  viewId={headerViewId}
+                  region={region}
+                  visible={active}
+                />
+              </UiScopeActivity>
             </Box>,
             headerHost,
           )
