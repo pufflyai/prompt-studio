@@ -88,7 +88,7 @@ test("shows each quit confirmation over the workbench and recovers from refused 
   await electronApp.evaluate(({ app }) => app.quit());
   await expectConfirmationInWorkbench();
   void window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.confirmQuit());
-  await expect(lifecycle.getByRole("heading", { name: "Prompt Studio encountered an error" })).toBeVisible();
+  await expect(lifecycle.getByRole("alert")).toBeVisible();
   expect(await workbenchVisible()).toBe(false);
   expect(
     await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].contentView.children.length),
@@ -100,7 +100,7 @@ test("shows each quit confirmation over the workbench and recovers from refused 
   await window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.cancelQuit());
   await expect.poll(desktopState).toMatchObject({ kind: "workbench" });
 
-  // A crashed workbench loads again so its dialog can appear instead of stalling the quit.
+  // A crashed workbench exposes recovery in the lifecycle renderer. Retry and Quit can both reopen it.
   // Playwright cannot drive a page after its renderer crashes, so read the new page from main.
   const workbenchContents = (script: string) =>
     electronApp.evaluate(
@@ -111,16 +111,29 @@ test("shows each quit confirmation over the workbench and recovers from refused 
       },
       [descriptor.origin, script] as const,
     );
-  await electronApp.evaluate(async ({ webContents }, origin) => {
-    for (const contents of webContents.getAllWebContents()) {
-      if (!contents.getURL().startsWith(origin)) continue;
-      // Crashing the process is asynchronous; quit must see the completed crash.
+  const crashWorkbench = () =>
+    electronApp.evaluate(async ({ webContents }, origin) => {
+      const contents = webContents.getAllWebContents().find((candidate) => candidate.getURL().startsWith(origin));
+      if (!contents) throw new Error("No workbench renderer to crash");
       await new Promise<void>((resolve) => {
         contents.once("render-process-gone", () => resolve());
         contents.forcefullyCrashRenderer();
       });
-    }
-  }, descriptor.origin);
+    }, descriptor.origin);
+  await crashWorkbench();
+  await expect(lifecycle.getByRole("alert")).toBeVisible();
+  const retryWorkbench = lifecycle.getByRole("button", { name: "Retry", exact: true });
+  await expect(retryWorkbench).toBeVisible();
+  expect(await workbenchVisible()).toBe(false);
+  await retryWorkbench.press("Enter");
+  await expect
+    .poll(() => workbenchContents("promptStudioDesktop.getStartupState().then((state) => state.kind)"))
+    .toBe("workbench");
+  expect(await workbenchContents("document.body.innerText")).toContain("Owned Prompt Studio dashboard");
+  expect(await workbenchVisible()).toBe(true);
+
+  await crashWorkbench();
+  await expect(retryWorkbench).toBeVisible();
   await electronApp.evaluate(({ app }) => app.quit());
   await expect
     .poll(() => workbenchContents("promptStudioDesktop.getStartupState().then((state) => state.kind)"))

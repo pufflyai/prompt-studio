@@ -18,7 +18,7 @@ test.beforeAll(() => {
   if (!process.env.E2E_PACKAGED_BINARY_PATH) buildBinary();
 });
 
-test("Notes offers note creation and restores its Main tabs separately from Artifacts", async () => {
+test("Notes creates dedicated pages and reclaims Side views into the current tabbed page", async () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-notes-page-")));
   let child: ChildProcess | null = null;
   let browser: Browser | null = null;
@@ -28,7 +28,7 @@ test("Notes offers note creation and restores its Main tabs separately from Arti
   try {
     const started = await startPackagedServe(root, {
       PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(
-        "pstdio-artifacts",
+        "pstdio-workspaces",
         "pstdio-notes",
         "pstdio-planner",
         "pstdio-session-browser",
@@ -44,6 +44,15 @@ test("Notes offers note creation and restores its Main tabs separately from Arti
     });
     expect(response.status).toBe(201);
     const project = (await response.json()) as { id: string };
+    const workspaceResponse = await fetch(`${started.baseUrl}/v1/workspaces?project_id=${project.id}`, {
+      headers: runtimeAuthorization(started.descriptor),
+    });
+    expect(workspaceResponse.status).toBe(200);
+    const workspaces = (await workspaceResponse.json()) as { id: string; is_default: boolean }[];
+    const workspace = workspaces.find((workspace) => workspace.is_default)!;
+    expect(workspace).toBeDefined();
+    const resource = `pstdio://extension-resource/workspace/${workspace.id}?extensionId=pstdio&projectId=${project.id}`;
+    const tabbedUrl = `${started.baseUrl}/projects/${project.id}/extensions/pstdio.workspaces/workspace?resource=${encodeURIComponent(resource)}`;
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
     finishEvidence = await observePackagedNotes(page);
@@ -51,19 +60,19 @@ test("Notes offers note creation and restores its Main tabs separately from Arti
       if (window.top === window) localStorage.setItem("onboarding-complete", "true");
     });
     await signInBrowser(page, started.descriptor);
-    await page.goto(`${started.baseUrl}/projects/${project.id}/`);
+    await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.notes/notes`);
     // Critical creation path: palette creation must reach the editor without a parameter dialog.
     await expect(page.getByRole("button", { name: "Help", exact: true })).toBeVisible();
+    // This fixture has no default Home; the Notes route supplies its dedicated receiving page.
+    await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Notes");
     await page.mouse.move(0, 0);
     await page.keyboard.press("Alt+Shift+K");
     const palette = page.getByRole("dialog", { name: "Command palette" });
     await palette.getByRole("textbox").fill(">New note");
-    await palette.getByRole("option", { name: /New note/ }).click();
-    const main = page.locator('[data-workbench-panel="main"]');
-    await expect(main.getByRole("tab", { name: "New note", exact: true })).toBeVisible();
+    await palette.getByRole("option", { name: /New note/, selected: true }).click();
+    await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("New note");
     await expect(page.getByRole("dialog")).toHaveCount(0);
-    await main.getByRole("button", { name: "Close New note", exact: true }).click();
-    await verifyNotesPageIsolation(page);
+    await verifyNotesPageIsolation(page, tabbedUrl);
     failed = false;
   } finally {
     await finishEvidence?.(folder, failed);

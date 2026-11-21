@@ -5,8 +5,8 @@ import { ChevronsUpDown } from "lucide-react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { ProjectCrumb, projectButtonInteraction } from "./project-crumb";
 
-export const ProjectHeader = (props: { input: WorkbenchPanelRenderInput }) => {
-  const { input } = props;
+export const ProjectHeader = (props: { input: WorkbenchPanelRenderInput; showBreadcrumbs: boolean }) => {
+  const { input, showBreadcrumbs } = props;
   const breadcrumbItems = useWorkbenchStore(input.workbench.breadcrumbs.store, (state) => state.items) ?? [];
 
   return (
@@ -28,12 +28,12 @@ export const ProjectHeader = (props: { input: WorkbenchPanelRenderInput }) => {
           </IconButton>
         </Tooltip>
       </HStack>
-      {breadcrumbItems.length > 0 ? (
+      {showBreadcrumbs && breadcrumbItems.length > 0 ? (
         <Text aria-hidden="true" color="fg.subtle" flexShrink={0}>
           /
         </Text>
       ) : null}
-      <WorkbenchBreadcrumbView workbench={input.workbench} />
+      {showBreadcrumbs ? <WorkbenchBreadcrumbView workbench={input.workbench} /> : null}
     </HStack>
   );
 };

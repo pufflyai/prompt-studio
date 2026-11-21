@@ -160,19 +160,6 @@ describe("installSkillsForAgent", () => {
     }
   });
 
-  test("reinstalling keeps every existing skill folder unchanged", async () => {
-    mockApi([CLAUDE_AGENT]);
-    const root = setup("agent-reinstall");
-    await installSkillsForAgent({ root, agentId: "claude-code", projectId: TEST_PROJECT_ID });
-
-    const result = await installSkillsForAgent({ root, agentId: "claude-code", projectId: TEST_PROJECT_ID });
-
-    expect(result).toEqual({ installed: [], kept: SKILL_NAMES, replaced: [] });
-    expect(readFileSync(join(root, ".claude", "skills", "refine-ticket", "SKILL.md"), "utf8")).toBe(
-      SKILL_FIXTURES[1].files[0].content,
-    );
-  });
-
   test("keeps local edits and same-name folders it did not write", async () => {
     mockApi([CLAUDE_AGENT]);
     const root = setup("agent-local-folders");

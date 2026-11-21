@@ -89,6 +89,7 @@ test("reuses a dashboard session tab selected again from a planner ticket", asyn
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   await page.getByRole("menuitem", { name: "New session", exact: true }).click();
+  await expect(sideHeader.getByRole("tab", { name: /New session/ })).toHaveAttribute("aria-selected", "true");
   await sessionRow.click();
   const sessionTabs = sideHeader.getByRole("tab");
   const sessionTab = sideHeader.getByRole("tab", { name: new RegExp(`Refine ticket: ${ticket.shorthand}`) });

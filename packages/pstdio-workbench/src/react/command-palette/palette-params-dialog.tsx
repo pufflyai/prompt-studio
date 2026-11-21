@@ -35,7 +35,14 @@ export const PaletteParamsDialog = (props: PaletteParamsDialogProps) => {
   return (
     <>
       {confirmation ? <CommandConfirmationDialog key={confirmation.label} confirmation={confirmation} /> : null}
-      {creation ? <RendererCreateDialog key={creation.id} contribution={creation} onClose={closeParams} /> : null}
+      {creation ? (
+        <RendererCreateDialog
+          key={creation.id}
+          contribution={creation}
+          resource={request?.context?.resource}
+          onClose={closeParams}
+        />
+      ) : null}
       {!creation && request && resourceParam ? (
         <ResourceCommandDialog
           key={request.record.command.id}

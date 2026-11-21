@@ -138,7 +138,7 @@ See [project composition](../extensions/0004-contribution-api.md#configure-proje
    A host package that loads another workspace package from source in its tests
    declares it as a development dependency, without importing it. Pull request
    CI then runs those tests when the loaded package changes. `pstdio-api`
-   declares `extension-lab`, `git-workspaces`, `pstdio-base-themes`, `pstdio-planner`,
+   declares `extension-lab`, `workspaces`, `pstdio-base-themes`, `pstdio-planner`,
    `pstdio-skills` and `workbench-fixture`. `pstdio-extension-testbench` declares `pstdio-base-themes`
    and `pstdio-planner`.
 
@@ -214,11 +214,11 @@ See [project composition](../extensions/0004-contribution-api.md#configure-proje
    Cross-package relative imports are only allowed for the
    generated embed manifest allowlist enforced by the boundary checker.
 
-Git workspace policy belongs to `extensions/git-workspaces`, which consumes only
+Git workspace policy belongs to `extensions/pstdio-workspaces`, which consumes only
 public SDK workspace, process and managed-directory facilities. The host retains
 identity, permissions, readiness, session cancellation and generic provider
 lifecycle coordination. Its legacy `pstdio.worktree` ID maps to the installed
-`pstdio.git-workspaces.workspace-type.git` contribution; it has no built-in Git
+`pstdio.workspaces.workspace-type.git` contribution; it has no built-in Git
 creation or cleanup path. Shared Git diff and merge services remain in core.
 
 The API declares Notes and Planner as development dependencies for the isolated

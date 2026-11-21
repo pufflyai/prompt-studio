@@ -23,7 +23,13 @@ test("a device heartbeats without a Cloud project, repeats, and stops on logout"
   });
   const presence = createNativePresence({ denied: async () => {} });
   try {
-    const login = { managerOrigin: manager.url.origin, token: "fixture-device" };
+    const login = {
+      managerOrigin: manager.url.origin,
+      relayOrigin: manager.url.origin,
+      accountId: "account",
+      deviceId: "device",
+      token: "fixture-device",
+    };
     await presence.update(login);
     expect(calls).toBe(1);
     await presence.update(login);
@@ -46,14 +52,51 @@ test("a removed device stops heartbeating and tells the native credential owner"
   const manager = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: () => Response.json({}, { status: 401 }) });
   const presence = createNativePresence({
     denied: async (credential) => {
-      removed = credential;
+      removed = credential.token;
     },
   });
   try {
-    await presence.update({ managerOrigin: manager.url.origin, token: "removed-device" });
+    await presence.update({
+      managerOrigin: manager.url.origin,
+      relayOrigin: manager.url.origin,
+      accountId: "account",
+      deviceId: "device",
+      token: "removed-device",
+    });
     expect(removed).toBe("removed-device");
   } finally {
     presence.close();
     await manager.stop(true);
+  }
+});
+
+test("equal-token logins at different managers replace the heartbeat owner", async () => {
+  let firstCalls = 0;
+  let secondCalls = 0;
+  const first = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: () => {
+      firstCalls++;
+      return Response.json({ ok: true });
+    },
+  });
+  const second = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: () => {
+      secondCalls++;
+      return Response.json({ ok: true });
+    },
+  });
+  const presence = createNativePresence({ denied: async () => {} });
+  try {
+    const login = { token: "same-token", deviceId: "device", accountId: "account", relayOrigin: first.url.origin };
+    await presence.update({ ...login, managerOrigin: first.url.origin });
+    await presence.update({ ...login, managerOrigin: second.url.origin });
+    expect([firstCalls, secondCalls]).toEqual([1, 1]);
+  } finally {
+    presence.close();
+    await Promise.all([first.stop(true), second.stop(true)]);
   }
 });

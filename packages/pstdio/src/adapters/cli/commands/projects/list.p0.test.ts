@@ -53,3 +53,33 @@ describe("projects list", () => {
     expect(log).toHaveBeenCalledWith("No projects found. Run `pstdio projects create [name]` to create one.");
   });
 });
+
+test.each([false, true, undefined])("Cloud listing preserves membership certainty %s", async (membershipKnown) => {
+  const log = mock();
+  const account = { accountId: "account-x", managerOrigin: "https://manager.example" };
+  const handler = createHandler({
+    log,
+    listProjects: async () => [
+      {
+        id: "local-copy",
+        name: "Downloaded notes",
+        shorthand: "N",
+        selected_agents: [],
+        default_agent_id: null,
+        default_agent_model: null,
+        startup_script: null,
+        created_at: "2026-01-15T00:00:00.000Z",
+        updated_at: "2026-01-15T00:00:00.000Z",
+        deleted_at: null,
+      },
+    ],
+    listCloudProjects: async () => ({ projects: [], deletions: [], account, membershipKnown }),
+  });
+  await handler({ cloud: true, _: [], $0: "pstdio" });
+  const result = JSON.parse(log.mock.calls[0][0]);
+  expect(result.membershipKnown).toBe(membershipKnown);
+  expect(result.account).toEqual(account);
+  expect(result.projects).toEqual([
+    { id: "local-copy", name: "Downloaded notes", presence: membershipKnown === false ? "unknown" : "local" },
+  ]);
+});

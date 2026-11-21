@@ -14,7 +14,7 @@ import { apiLogger } from "../../lib/logger";
 import { createCommandEnvironment } from "../extensions/command-environment";
 import type { WorkspacesRouteDeps } from "./deps";
 import { createWorkspaceProviderDirectory } from "./workspace-provider-directory";
-import { runtimeProviderId } from "./workspace-provider-identity";
+import { legacyGitProviderId, runtimeProviderId, worktreeProviderId } from "./workspace-provider-identity";
 import { createWorkspaceProviderProcess } from "./workspace-provider-process";
 
 export interface WorkspaceProviderHandle {
@@ -40,12 +40,16 @@ const providerLogger = {
     apiLogger.error({ event: "workspace.provider.log", metadata: metadata ?? {} }, message),
 };
 
+export const findWorkspaceProviderRecord = (runtime: Pick<ExtensionRuntime, "workspaceTypes">, providerId: string) =>
+  runtime.workspaceTypes.find((candidate) => candidate.id === runtimeProviderId(providerId)) ??
+  ([worktreeProviderId, legacyGitProviderId].includes(providerId)
+    ? runtime.workspaceTypes.find((candidate) => candidate.id === legacyGitProviderId)
+    : undefined);
+
 export const defaultWorkspaceProviderRuntime: WorkspaceProviderRuntime = {
   async find(deps, input) {
     const snapshot = await deps.extensionRuntimeCatalog.get(input.projectId);
-    const record = snapshot.runtime.workspaceTypes.find(
-      (candidate) => candidate.id === runtimeProviderId(input.providerId),
-    );
+    const record = findWorkspaceProviderRecord(snapshot.runtime, input.providerId);
     if (!record) return undefined;
 
     const runner = createCommandRunner(snapshot.runtime, {

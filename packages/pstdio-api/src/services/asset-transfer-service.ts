@@ -5,12 +5,14 @@ import { AssetIntegrityError, type createAssetBytesStorage } from "pstdio-storag
 import { AssetTransferError } from "./asset-transfer-errors";
 import { createAssetTransferOperations } from "./asset-transfer-operations";
 import { openAssetTransferSource } from "./asset-transfer-source";
+import type { createProjectWork } from "./project-work";
 
 export { AssetTransferError } from "./asset-transfer-errors";
 
 interface AssetTransferServiceDeps {
   transfers: ReturnType<typeof createAssetTransfersDBService>;
   bytes: ReturnType<typeof createAssetBytesStorage>;
+  projectWork?: ReturnType<typeof createProjectWork>;
 }
 
 const sameReference = (first: AssetReference, second: AssetReference) =>
@@ -168,5 +170,27 @@ export const createAssetTransferService = (deps: AssetTransferServiceDeps) => {
     };
     return receive(owner, operationId, expected, async (offset) => source.slice(offset).stream(), signal);
   };
-  return { begin, get, append, complete, cancel, read, verifyComplete, receive, stage };
+  const scoped = <Result>(
+    owner: AssetOwner,
+    signal: AbortSignal | undefined,
+    action: (signal?: AbortSignal) => Promise<Result>,
+  ) => (deps.projectWork ? deps.projectWork.run(owner.workbenchId, action, signal) : action(signal));
+
+  return {
+    removeProjectBytes: deps.bytes.removeProject,
+    begin: (owner: AssetOwner, id: string, asset: AssetReference, signal?: AbortSignal) =>
+      scoped(owner, signal, (active) => begin(owner, id, asset, active)),
+    append: (owner: AssetOwner, id: string, offset: number, source: ReadableStream<Uint8Array>, signal?: AbortSignal) =>
+      scoped(owner, signal, (active) => append(owner, id, offset, source, active)),
+    complete: (owner: AssetOwner, id: string, signal?: AbortSignal) =>
+      scoped(owner, signal, (active) => complete(owner, id, active)),
+    receive: (...[owner, id, asset, source, signal]: Parameters<typeof receive>) =>
+      scoped(owner, signal, (active) => receive(owner, id, asset, source, active)),
+    stage: (...[owner, id, source, signal]: Parameters<typeof stage>) =>
+      scoped(owner, signal, (active) => stage(owner, id, source, active)),
+    cancel,
+    get,
+    read,
+    verifyComplete,
+  };
 };

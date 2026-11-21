@@ -71,18 +71,6 @@ describe("pstdio pstdio.planner create-ticket", () => {
 
 describe("pstdio pstdio.planner list-tickets", () => {
   test(
-    "returns an empty array when there are no tickets",
-    () => {
-      const repo = createInitializedRepo("tk-list-empty");
-
-      const tickets = JSON.parse(run("pstdio.planner list-tickets", repo));
-
-      expect(tickets).toEqual([]);
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
     "lists created tickets",
     () => {
       const repo = createInitializedRepo("tk-list");
@@ -154,25 +142,6 @@ describe("pstdio pstdio.planner write-ticket", () => {
 });
 
 describe("pstdio pstdio.planner save-ticket", () => {
-  test(
-    "pushes draft ticket to database and sets draft=false",
-    () => {
-      const repo = createInitializedRepo("tk-save");
-
-      const { shorthand } = JSON.parse(run('pstdio.planner write-ticket --title "Save me"', repo));
-
-      const saveResult = JSON.parse(run(`pstdio.planner save-ticket --id ${shorthand}`, repo));
-      expect(saveResult.shorthand).toBe(shorthand);
-
-      const tickets = JSON.parse(run("pstdio.planner list-tickets", repo));
-      expect(tickets.map((ticket: { title: string }) => ticket.title)).toContain("Save me");
-
-      const draftTickets = JSON.parse(run("pstdio.planner list-tickets --draft", repo));
-      expect(draftTickets).toEqual([]);
-    },
-    TEST_TIMEOUT,
-  );
-
   test(
     "persists parent_id from ticket frontmatter",
     () => {

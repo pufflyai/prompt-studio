@@ -46,9 +46,9 @@ export const LANDING_PAGES: LandingPage[] = [
     path: "/what-is-prompt-studio/",
     view: "what-is-prompt-studio",
     label: VIEW_META["what-is-prompt-studio"].label,
-    title: "What is Prompt Studio? | A workbench for your agents",
+    title: "What is Prompt Studio? | An agentic workbench",
     description:
-      "Give the tools you build a place to live. Combine pages, editors, commands, skills, hooks, and workflows in your own workbench.",
+      "Your agents can build the tools you need. Prompt Studio gives them one place to live, change shape, and work together on your computer.",
   },
   ...TOOL_EXAMPLES.map((example) => ({
     path: `/examples/${example.slug}/`,
@@ -62,9 +62,9 @@ export const LANDING_PAGES: LandingPage[] = [
     path: "/features/",
     view: "features",
     label: VIEW_META.features.label,
-    title: "Shared features for your tools | Prompt Studio",
+    title: "What your tools get for free | Prompt Studio",
     description:
-      "Try shared search, notifications, navigation, extension management, and themes. Build tools on the features already included in Prompt Studio.",
+      "Every tool your agent builds gets agents, a command line, workspaces, search, notifications, links between tools, safety limits, shortcuts, settings, and themes.",
   },
   // Legal pages read as documents. Their text lives in `src/content/legal/<slug>.md`.
   {

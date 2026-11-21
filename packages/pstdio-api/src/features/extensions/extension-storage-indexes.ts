@@ -1,6 +1,7 @@
 import { resolveCollectionIndexes } from "pstdio-api-contracts";
 import type { createExtensionStorageDBService } from "pstdio-db";
 import type { ExtensionRuntime } from "pstdio-extensions";
+import { activityStorageOwner, resourceActivityIndexes } from "../activity/resource-activity-store";
 
 export type ExtensionStorageIndexService = Pick<ReturnType<typeof createExtensionStorageDBService>, "installIndexes">;
 
@@ -18,10 +19,15 @@ export const installExtensionStorageIndexes = async (
     return;
   }
   await service.installIndexes(
-    runtime.extensions.map((extension) => ({
-      owner: { workbenchId: projectId, extensionId: extension.id },
-      definitions: resolveCollectionIndexes(extension.definition.storageIndexes ?? [], "project", projectId),
-    })),
+    [
+      ...runtime.extensions.map((extension) => ({
+        owner: { workbenchId: projectId, extensionId: extension.id },
+        definitions: resolveCollectionIndexes(extension.definition.storageIndexes ?? [], "project", projectId),
+      })),
+      ...(runtime.resourceKinds.some(({ contribution }) => Object.values(contribution.activity ?? {}).some(Boolean))
+        ? [{ owner: activityStorageOwner(projectId), definitions: resourceActivityIndexes }]
+        : []),
+    ],
     validate,
   );
 };

@@ -45,7 +45,10 @@ export const verifyPackagedDocumentState = async (page: Page, origin: string, pr
   await navigate("a");
   await expect(optional).toHaveCount(0);
   await page.reload();
-  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Document layout");
+  await expect(page).toHaveURL(url("a"));
+  await expect(main.getByRole("tab", { name: "Section", exact: true })).toBeVisible();
+  await main.getByRole("tab", { name: "Section", exact: true }).click();
+  await expect(section).toBeVisible();
   await expect(optional).toHaveCount(0);
   await navigate("b");
   await expect(optional).toBeVisible();

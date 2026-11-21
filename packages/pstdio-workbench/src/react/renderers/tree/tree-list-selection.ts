@@ -21,6 +21,10 @@ const activeNodeIds = (ids: string[]) => {
   if (uniqueIds.length === 0) return undefined;
   return uniqueIds.length === 1 ? uniqueIds[0] : uniqueIds;
 };
+const targetsContent = (target: NavigationTarget | undefined) => {
+  const targets = target?.kind === "compound" ? target.targets : [target];
+  return targets.some((item) => item?.kind === "page" || item?.kind === "panel");
+};
 const targetPanelResource = (target: NavigationTarget | undefined) => {
   if (!target) return undefined;
   const targets = target.kind === "compound" ? target.targets : [target];
@@ -122,7 +126,7 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
         if (nodeResourceKey && activeResourceKeys.includes(nodeResourceKey)) return true;
         return activeLocation
           ? targetMatchesPage(node.target, activeLocation.page, activeResource, referenceKey)
-          : !activeResource;
+          : !activeResource && !targetsContent(node.target);
       })
       .map((node) => node.id),
   );
@@ -139,7 +143,7 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
   const activePageNodeId = resolveActivePageNodeIds(sections, childrenByNodeId, activeLocation, referenceKey);
   if (activePageNodeId) return activePageNodeId;
   if (!selectedNodeId) return undefined;
-  if (selectedResourceKey) return undefined;
+  if (selectedResourceKey || targetsContent(selectedNode?.target)) return undefined;
   return selectedNodeId;
 };
 

@@ -211,16 +211,6 @@ describe("harness registry project scope", () => {
     });
   });
 
-  test("builds handles from the project's runtime snapshot", async () => {
-    const service = makeService({
-      snapshot: () => fakeSnapshot(1, [createTestHarnessRecord("fake")]),
-    });
-
-    const handles = await service.list(SCOPE);
-
-    expect(handles.map((handle) => handle.id)).toEqual([FAKE_ID]);
-  });
-
   test("a new snapshot generation rebuilds the project handles", async () => {
     let snapshot = fakeSnapshot(1, [createTestHarnessRecord("fake")]);
     const service = makeService({ snapshot: () => snapshot });

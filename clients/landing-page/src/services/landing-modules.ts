@@ -1,14 +1,5 @@
 import { deferredComponent } from "./deferred-module";
 
-export const ShaderDemo = deferredComponent(async () => ({
-  default: (await import("../components/examples/shader-editor-demo")).ShaderEditorDemo,
-}));
-export const AgentDemo = deferredComponent(async () => ({
-  default: (await import("../components/examples/agent-dashboard-demo")).AgentDashboardDemo,
-}));
-export const FormulaDemo = deferredComponent(async () => ({
-  default: (await import("../components/examples/formula-glossary-demo")).FormulaGlossaryDemo,
-}));
 export const WhatIsPage = deferredComponent(async () => ({
   default: (await import("../components/sections/what-is-prompt-studio-view")).WhatIsPromptStudioView,
 }));
@@ -32,9 +23,6 @@ export const CommandMenu = deferredComponent(async () => ({
 }));
 
 export const BACKGROUND_MODULES = [
-  ShaderDemo,
-  AgentDemo,
-  FormulaDemo,
   WhatIsPage,
   ExamplesPage,
   FeaturesPage,

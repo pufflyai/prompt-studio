@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createMemoryStorage as createIdStorage } from "@pstdio/sdk/testing";
 import { parseNoteDocument } from "./note-frontmatter";
 import { createNote, deleteNote, listNotes, renameNote } from "./notes";
-import { editor, notesPage } from "./pages";
+import { editor, notePage } from "./pages";
 import { createNotesMount } from "./test-mount";
 import { noteText } from "./text-source";
 
@@ -81,10 +81,10 @@ describe("note editor", () => {
     const { ctx, mount } = createContext();
     const note = await createNote(mount, coreIds.create(), "Original");
     await renameNote(mount, note.id, "Renamed");
-    const query = notesPage.slots[0].tab!.query;
+    const query = notePage.main.tab.query;
     expect(
       await query(ctx as never, {
-        renderer: { rendererId: "notes", resource: { type: "note", id: note.id, label: "Original" } },
+        renderer: { resource: { type: "note", id: note.id, label: "Original" } },
       }),
     ).toMatchObject({
       label: "Renamed",

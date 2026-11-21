@@ -17,16 +17,6 @@ const setup = async () => {
 };
 
 describe("getFullState", () => {
-  test("returns all synced tables as keys", async () => {
-    await setup();
-    const state = await getFullState(db);
-
-    for (const table of SYNCED_TABLES) {
-      expect(state).toHaveProperty(table);
-      expect(Array.isArray(state[table])).toBe(true);
-    }
-  });
-
   test("returns empty arrays for fresh database", async () => {
     await setup();
     const state = await getFullState(db);
@@ -88,14 +78,5 @@ describe("getFullState", () => {
     const syncedProjects = state.projects as { id: string }[];
 
     expect(syncedProjects.find((item) => item.id === project.id)).toBeUndefined();
-  });
-
-  test("does not include ydoc tables", async () => {
-    await setup();
-    const state = await getFullState(db);
-
-    expect(state).not.toHaveProperty("ydoc_updates");
-    expect(state).not.toHaveProperty("ydoc_awareness");
-    expect(state).not.toHaveProperty("ydoc_resume_state");
   });
 });

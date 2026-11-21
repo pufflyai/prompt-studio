@@ -239,10 +239,11 @@ test("chat paths use the session workspace while another workspace is selected",
       metadata: { workspaceFilePath: "src/app.ts" },
     });
     await handler.open(candidate);
-    expect(workbench.pages.store.getState().location).toMatchObject({
+    expect(workbench.layout.getActivePanel("side")).toMatchObject({
       resource: { id: "workspace-a", metadata: { workspaceFilePath: "src/app.ts" } },
       position: { line: 12 },
     });
+    expect(workbench.pages.store.getState().location?.resource?.id).toBe("workspace-b");
     const before = workbench.pages.store.getState().location;
     await handler.open({ source: "/repo/workspace-b/src/app.ts", origin: "tool" });
     expect(workbench.pages.store.getState().location).toBe(before);

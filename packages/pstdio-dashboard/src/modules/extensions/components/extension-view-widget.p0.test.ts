@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
-import { createExtensionWebviewHostCapabilities } from "@pstdio/workbench/extensions";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
-import { createDashboardExtensionWebviewAdapters } from "@/shared/extensions/extension-webview-capabilities";
 import {
   clearCachedDashboardExtensionMetadata,
   type DashboardExtensionMetadata,
@@ -117,16 +115,10 @@ test("settings placements retain their settings slot context", () => {
     panel: { id: settingsId, title: "Status", region: "main", rendererId: view.id },
     instance: { instanceId: settingsId, panelId: settingsId, viewId: view.id, closable: false },
   });
-  expect(resolved).toMatchObject({ projectId, slotKind: "settings", view: { id: view.id } });
-  const capabilities = createExtensionWebviewHostCapabilities(
-    createDashboardExtensionWebviewAdapters({
-      ...resolved!,
-      base: {},
-      extensionId: view.extensionId,
-      webviewId: view.id,
-    }),
-  );
-  expect(capabilities["files.upload"]).toBeFunction();
-  expect(capabilities["files.list"]).toBeFunction();
-  expect(capabilities["files.delete"]).toBeFunction();
+  expect(resolved).toMatchObject({
+    projectId,
+    slotKind: "settings",
+    extensionInstanceId: "planner-instance",
+    view: { id: view.id },
+  });
 });

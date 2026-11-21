@@ -8,7 +8,11 @@ export const performanceSuites = (family: string, platform = `${process.platform
   if (!ids[family]) throw new Error(`Unknown performance family: ${family}`);
   return suites.filter((suite) => ids[family]!.includes(suite.id) && suite.platforms?.includes(platform));
 };
-export const performanceChecks = (family: string, platform = `${process.platform}-${process.arch}`) =>
+export const performanceChecks = (
+  family: string,
+  sourceSha: string,
+  platform = `${process.platform}-${process.arch}`,
+) =>
   performanceSuites(family, platform).map((suite) => ({
     id: suite.id,
     command: [
@@ -18,7 +22,7 @@ export const performanceChecks = (family: string, platform = `${process.platform
       "--suite",
       suite.id,
       "--sha",
-      process.env.CI_PLAN_SOURCE_SHA ?? "",
+      sourceSha,
       "--out",
       `test-results/production-performance/${family}/${suite.id}-metrics.jsonl`,
     ],

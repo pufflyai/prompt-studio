@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Page } from "@playwright/test";
 
@@ -9,8 +9,11 @@ const readFixtureFiles = async (folder: string | undefined) => {
   for (const owner of ["pstdio.notes", "pstdio.pstdio-notes"]) {
     const cwd = join(folder, ".pstdio/extension-storage", owner, "documents");
     if (!existsSync(cwd)) continue;
-    for await (const file of new Bun.Glob("*/content.md").scan({ cwd }))
-      files[`${owner}/${file}`] = await Bun.file(join(cwd, file)).text();
+    for (const directory of await readdir(cwd, { withFileTypes: true })) {
+      if (!directory.isDirectory()) continue;
+      const file = join(directory.name, "content.md");
+      if (existsSync(join(cwd, file))) files[`${owner}/${file}`] = await readFile(join(cwd, file), "utf8");
+    }
   }
   return files;
 };
@@ -48,16 +51,6 @@ export const observePackagedNotes = async (page: Page) => {
     void work.finally(() => pending.delete(work));
   };
   page.on("response", response);
-  const tracing = await page
-    .context()
-    .tracing.start({ screenshots: true, snapshots: true, sources: true })
-    .then(
-      () => true,
-      (error) => {
-        console.warn("Cloud Notes trace could not start", error);
-        return false;
-      },
-    );
   return async (folder: string | undefined, failed: boolean) => {
     page.off("response", response);
     const evidence = join(import.meta.dirname, "../../test-results/cloud-notes-failure");
@@ -69,12 +62,6 @@ export const observePackagedNotes = async (page: Page) => {
       await writeFile(join(evidence, "observed.json"), JSON.stringify({ exchanges, files }, null, 2));
     } catch (error) {
       console.warn("Cloud Notes failure evidence could not be saved", error);
-    } finally {
-      if (tracing)
-        await page
-          .context()
-          .tracing.stop(failed ? { path: join(evidence, "trace.zip") } : {})
-          .catch((error) => console.warn("Cloud Notes trace could not stop", error));
     }
   };
 };

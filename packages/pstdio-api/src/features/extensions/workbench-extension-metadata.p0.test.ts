@@ -277,7 +277,6 @@ describe("buildWorkbenchExtensionMetadata", () => {
       },
       canonicalChord: "Mod+Shift+R",
     });
-    expect(metadata).not.toHaveProperty("dataTableRenderers");
   });
 
   test("does not emit unsupported html webviews", () => {

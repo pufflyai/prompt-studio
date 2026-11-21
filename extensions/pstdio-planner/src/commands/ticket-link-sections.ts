@@ -7,6 +7,7 @@ import {
   type TreeViewSection,
 } from "@pstdio/sdk/extensions";
 import { createTicketParentLookup, ticketDisplayTitle } from "../data/mappers";
+import { resourceLinkTarget } from "../data/resource-link-target";
 import { normalizeTicketDependencies } from "../data/ticket-dependencies";
 import { ticketPageTarget } from "../data/ticket-page-target";
 import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
@@ -54,7 +55,7 @@ export const ticketRelationshipSections = (
           label: ticketDisplayTitle(related),
           icon: "component",
           resource,
-          target: ticketPageTarget(resource, extensionId),
+          target: resourceLinkTarget(ticketPageTarget(resource, extensionId)),
         },
       ];
     });
@@ -103,7 +104,7 @@ export const mergeTicketLinkSections = (
       label: item.label,
       icon: item.icon,
       resource,
-      target: item.action,
+      target: item.action && resourceLinkTarget(item.action),
       disabled: !item.action,
       tooltip: item.tooltip,
     });

@@ -44,6 +44,22 @@ const recordEvents = () => {
 };
 
 describe("ProjectService", () => {
+  test("failed initialization withdraws project rows already published by defaults", async () => {
+    const id = crypto.randomUUID();
+    const events = recordEvents();
+    await expect(
+      service.create({ id, name: "Failed setup" }, async () => {
+        await service.setDefaults(id, { default_agent_id: "test.harness.agent" });
+        throw new Error("Initialization failed");
+      }),
+    ).rejects.toThrow("Initialization failed");
+    expect(await service.get(id)).toBeNull();
+    expect(events).toEqual([
+      { table: "projects", op: "set", data: expect.objectContaining({ id }) },
+      { table: "projects", op: "delete", data: { id } },
+    ]);
+  });
+
   test("setDefaults publishes the changed project", async () => {
     const project = await service.create({ name: "Defaults" });
     const events = recordEvents();

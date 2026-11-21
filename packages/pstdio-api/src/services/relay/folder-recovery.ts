@@ -14,6 +14,7 @@ import { createRecoveryChunkStore } from "../project-recovery/chunks";
 import { createLocalRecoverySource } from "../project-recovery/local-source";
 import type { RecoveryChunkStore } from "../project-recovery/manifest";
 import { createRecoveryOperations, folderRecoveryError, type RecoveryAttach } from "../project-recovery/operations";
+import { projectRecoveryRoot } from "../project-recovery/project-paths";
 import { createRecoveryStagingJournal } from "../project-recovery/restore-staging";
 import type { RelayDeps } from "./deps";
 import { createSyncQuarantine } from "./quarantine";
@@ -36,6 +37,7 @@ export const startFolderRecovery = (input: {
   schedule?: { quietMs?: number; gapMs?: number };
 }) => {
   const { config, deps } = input;
+  const root = projectRecoveryRoot(deps.projectRecovery.root, config.workbenchId);
   const controller = new AbortController();
   const signal = AbortSignal.any([controller.signal, input.signal]);
   const catalog = createRecoveryCatalog({
@@ -59,14 +61,15 @@ export const startFolderRecovery = (input: {
     | { transport: Awaited<ReturnType<ReturnType<typeof createDocumentRelay>["manifestBlobs"]>>; signal: AbortSignal }
     | undefined;
   // A staging folder left by a crashed restore is removed once this process starts.
-  void createRecoveryStagingJournal(deps.projectRecovery.root)
-    .clean()
-    .catch(() => {});
+  const cleanupStaging = Promise.all(
+    [root, deps.projectRecovery.root].map((directory) => createRecoveryStagingJournal(directory).clean()),
+  ).catch(() => {});
   const local = createLocalRecoverySource({
     workbenchId: config.workbenchId,
     accountId: config.accountId,
     deviceId: config.environmentId,
-    root: deps.projectRecovery.root,
+    root,
+    previousRoot: deps.projectRecovery.root,
     workspaces: deps.workspaceService,
     catalog,
     chunks: () => chunks,
@@ -86,7 +89,7 @@ export const startFolderRecovery = (input: {
   });
 
   const operations = createRecoveryOperations({
-    workRoot: deps.projectRecovery.root,
+    workRoot: root,
     deviceId: config.environmentId,
     catalog,
     chunks: () => chunks,
@@ -121,7 +124,11 @@ export const startFolderRecovery = (input: {
       const { personal } = await fetchSyncSpaces({ ...config, credential: config.renewalGrant, signal: attempt });
       if (!chunks || space?.generation !== personal.generation) {
         space = personal;
-        chunks = await createRecoveryChunkStore({ root: join(deps.projectRecovery.root, "chunks"), space: personal });
+        chunks = await createRecoveryChunkStore({
+          root: join(root, "chunks"),
+          previousRoot: join(deps.projectRecovery.root, "chunks"),
+          space: personal,
+        });
         sync?.documentSync.close();
         sync = undefined;
         local.request("startup");
@@ -219,7 +226,7 @@ export const startFolderRecovery = (input: {
       stopCatalog();
       stopWorkspaces();
       clearTimeout(publishRetry);
-      await local.close();
+      await Promise.all([local.close(), operations.cancel(), cleanupStaging]);
       sync?.documentSync.close();
     }),
     close: () => controller.abort(),

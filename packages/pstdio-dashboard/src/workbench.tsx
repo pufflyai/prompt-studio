@@ -2,6 +2,7 @@ import { createWorkbench, type SettingsRegistry, type WorkbenchPageLocationBrows
 import { WORKBENCH_TERMINAL_PANEL_SIZE } from "@pstdio/workbench/react";
 import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { getDashboardScopedQueries } from "@/lib/scoped-queries";
+import { reportWorkbenchError } from "@/lib/workbench-error-report";
 import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
 import { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
 import { createDashboardPageLocationBrowser, readPageUrlProjectId } from "@/shared/app/page-location-browser";
@@ -138,21 +139,26 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     ...(pageLocationBrowser ? { pageLocationBrowser } : {}),
   });
 
-  workbench.preferences.registerSchema({
-    properties: {
-      "dashboard.themePreference": { type: "string", scope: "user" },
-      "dashboard.locale": { type: "string", scope: "user" },
-    },
-  });
-  const modules = createDashboardModules({
-    settings: workbench.settings,
-    initialProjectId: input.projectTabs ? input.projectId : urlProjectId,
-    performance: input.performance,
-    projectTabs: input.projectTabs,
-    setupHandoff: input.setupHandoff,
-    projectSelectionPersistence,
-  });
-  for (const module of modules) workbench.registerModule(module);
+  try {
+    workbench.preferences.registerSchema({
+      properties: {
+        "dashboard.themePreference": { type: "string", scope: "user" },
+        "dashboard.locale": { type: "string", scope: "user" },
+      },
+    });
+    const modules = createDashboardModules({
+      settings: workbench.settings,
+      initialProjectId: input.projectTabs ? input.projectId : urlProjectId,
+      performance: input.performance,
+      projectTabs: input.projectTabs,
+      setupHandoff: input.setupHandoff,
+      projectSelectionPersistence,
+    });
+    for (const module of modules) workbench.registerModule(module);
+  } catch (error) {
+    void workbench.dispose().catch((cause) => reportWorkbenchError(cause, input.projectId ?? urlProjectId));
+    throw error;
+  }
 
   return workbench;
 };

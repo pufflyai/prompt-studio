@@ -1,3 +1,5 @@
+import { nativeScrollbarCss, nativeScrollbarThemeTokens } from "@pstdio/ui/scrollbars";
+
 const themeTokens = {
   bg: "colors-bg",
   surface: "colors-bg-muted",
@@ -8,20 +10,24 @@ const themeTokens = {
   font: "fonts-body",
 };
 
+export const readPreviewTheme = () => {
+  const computed = getComputedStyle(document.documentElement);
+  const mode = computed.colorScheme === "dark" ? ("dark" as const) : ("light" as const);
+  const variables = Object.fromEntries(
+    Object.entries({
+      ...Object.fromEntries(Object.entries(themeTokens).map(([name, token]) => [`--artifact-${name}`, token])),
+      ...nativeScrollbarThemeTokens,
+    }).map(([name, token]) => [name, computed.getPropertyValue(`--chakra-${token}`).trim()]),
+  );
+  return { mode, variables };
+};
+
 export const postPreviewTheme = (frame: HTMLIFrameElement | null, title: string) => {
   if (!frame) return;
-  const computed = getComputedStyle(document.documentElement);
-  const mode = computed.colorScheme === "dark" ? "dark" : "light";
-  // The embedding element controls prefers-color-scheme inside the document.
-  frame.style.colorScheme = mode;
-  const variables = Object.fromEntries(
-    Object.entries(themeTokens).map(([name, token]) => [
-      `--artifact-${name}`,
-      computed.getPropertyValue(`--chakra-${token}`).trim(),
-    ]),
-  );
+  const theme = readPreviewTheme();
+  frame.style.colorScheme = theme.mode;
   // Sandboxed documents have an opaque origin. Only the title and theme values cross this boundary.
-  frame.contentWindow?.postMessage({ type: "pstdio.preview-theme", mode, variables, title }, "*");
+  frame.contentWindow?.postMessage({ type: "pstdio.preview-theme", ...theme, title }, "*");
 };
 
 // This function runs inside the isolated document and must have no module dependencies.
@@ -52,6 +58,7 @@ body {
   color: var(--artifact-fg, CanvasText);
   font-family: var(--artifact-font, system-ui, sans-serif);
 }
+${nativeScrollbarCss}
 </style><script>(${receivePreviewTheme.toString()})()</script>`;
 
 export const previewThemeRelayDocument = `<script>(${receivePreviewTheme.toString()})(true)</script>`;

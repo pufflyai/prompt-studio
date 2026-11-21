@@ -2,7 +2,13 @@ import type { ScopedQueryClient } from "@pstdio/sdk/extensions";
 import { type ChatRendererAction, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import { type ComponentType, createElement } from "react";
-import type { WorkbenchCore, WorkbenchPanelRenderInput } from "../../core";
+import type { WorkbenchCore, WorkbenchPanelRegion, WorkbenchPanelRenderInput } from "../../core";
+import {
+  getWorkbenchPanelForMenuRegion,
+  type WorkbenchPanelMenuRegion,
+  workbenchPanelMenuRegions,
+  workbenchPanelRegions,
+} from "../../core/registries/layout/layout-regions";
 import { getWorkbenchQueries } from "../../core/workbench-queries";
 import type { NativeChatHostProps } from "../../react/renderers/chat/native-chat-host";
 import { NativeChatView } from "../../react/renderers/chat/native-chat-view";
@@ -50,6 +56,54 @@ const createQueryRootKeys = () => {
     if (!roots.has(queries)) roots.set(queries, ++nextRoot);
     return roots.get(queries);
   };
+};
+
+/** A retained conversation presentation; it stays live while any view observes its session. */
+const createChatSlot = <Current,>(input: {
+  render: WorkbenchPanelRenderInput;
+  scope: string;
+  resource: string;
+  key: string;
+  trim(): void;
+  current(render: WorkbenchPanelRenderInput): Current | undefined;
+}) => {
+  const created = {
+    render: input.render,
+    scope: input.scope,
+    resource: input.resource,
+    key: input.key,
+    active: 0,
+    observe: (session: ChatSession) => {
+      const release = session.retain();
+      created.active++;
+      let closed = false;
+      return () => {
+        if (closed) return;
+        closed = true;
+        created.active--;
+        release();
+        input.trim();
+      };
+    },
+    resolve: () => input.current(created.render),
+  };
+  return created;
+};
+
+const isPanelMenuRegion = (region: string): region is WorkbenchPanelMenuRegion =>
+  Object.values(workbenchPanelMenuRegions).some((menus) => menus.left === region || menus.right === region);
+// Read when a link opens, because a conversation can move between panels while it is shown.
+const conversationRegion = (render: WorkbenchPanelRenderInput): WorkbenchPanelRegion | undefined => {
+  const { workbench, instance } = render;
+  if (workbench.pages.getContent()?.widgetId === instance.instanceId) return "main";
+  for (const [region, state] of Object.entries(workbench.layout.getLayout().regions)) {
+    if (!state.widgets.some((widget) => widget.widgetId === instance.instanceId)) continue;
+    if ((workbenchPanelRegions as readonly string[]).includes(region)) return region as WorkbenchPanelRegion;
+    // A conversation in a panel menu sits beside that panel's content.
+    if (isPanelMenuRegion(region)) return getWorkbenchPanelForMenuRegion(region);
+    return undefined;
+  }
+  return undefined;
 };
 
 export const createChatRendererOwner = (
@@ -194,33 +248,18 @@ export const createChatRendererOwner = (
               const scope = JSON.stringify(session.query.key.slice(0, 6));
               let slot = slots.get(render.instance.instanceId);
               if (!slot || slot.resource !== identity || slot.scope !== scope) {
-                const created = {
+                slot = createChatSlot({
                   render,
                   scope,
                   resource: identity,
                   key,
-                  active: 0,
-                  observe: (session: ChatSession) => {
-                    const release = session.retain();
-                    created.active++;
-                    let closed = false;
-                    return () => {
-                      if (closed) return;
-                      closed = true;
-                      created.active--;
-                      release();
-                      trimSlots();
-                    };
-                  },
-                  resolve: () => {
+                  trim: trimSlots,
+                  current: (latest) => {
                     if (!registered) return;
-                    const current = sessionFor(created.render, nextInput, token);
-                    return JSON.stringify(current.session.query.key.slice(0, 6)) === created.scope
-                      ? current
-                      : undefined;
+                    const current = sessionFor(latest, nextInput, token);
+                    return JSON.stringify(current.session.query.key.slice(0, 6)) === scope ? current : undefined;
                   },
-                };
-                slot = created;
+                });
                 slots.set(render.instance.instanceId, slot);
                 trimSlots();
               }
@@ -231,6 +270,7 @@ export const createChatRendererOwner = (
                 session,
                 action,
                 linkHandler,
+                sourceRegion: () => conversationRegion(render),
                 conversationKey: key,
                 observe: slot.observe,
                 resolve: slot.resolve,

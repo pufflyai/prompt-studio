@@ -295,7 +295,8 @@ export const SettingsPreview = (props: {
   contentLoading?: boolean;
   extensionViews?: boolean;
 }) => {
-  const [workbench] = useState(() => createWorkbench());
+  // Like the dashboard, the Side Panel starts closed; this example places nothing in it.
+  const [workbench] = useState(() => createWorkbench({ initialSidePanelMode: "closed" }));
   useEffect(() => {
     const contributions = workbench.registerModule({
       id: "preview.consistent-settings",

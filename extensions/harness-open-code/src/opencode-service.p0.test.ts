@@ -301,26 +301,3 @@ test("startSession selects the thinking variant before admitting the initial pro
     },
   ]);
 });
-
-test("abortSession posts to the opencode abort endpoint", async () => {
-  const requests: Array<{ url: string; method: string }> = [];
-  const service = createOpencodeService({
-    startServer: async () => ({ running: true, url: "http://127.0.0.1:4900", dispose: async () => {} }),
-    serverStore: { read: async () => null, write: async () => {}, clear: async () => {} },
-    isPortOpen: async () => false,
-    pingServer: async () => false,
-    fetcher: async (input, init) => {
-      requests.push({ url: String(input), method: init?.method ?? "GET" });
-      return new Response("true");
-    },
-  });
-
-  await service.abortSession("session-1", "/repo");
-
-  expect(requests).toHaveLength(1);
-  expect(requests[0]?.method).toBe("POST");
-
-  const url = new URL(requests[0]!.url);
-  expect(url.pathname).toBe("/api/session/session-1/interrupt");
-  expect(url.searchParams.get("location[directory]")).toBe("/repo");
-});

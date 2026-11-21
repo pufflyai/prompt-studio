@@ -10,7 +10,6 @@ import type { ExtensionsRouteDeps, ExtensionWebviewRouteDeps } from "./deps";
 import {
   ARTIFACT_IMAGE_LIMIT_BYTES,
   artifactImageMediaType,
-  findArtifactFile,
   resolveExtensionArtifactMount,
   safeArtifactPath,
 } from "./extension-artifact-assets";
@@ -63,7 +62,7 @@ const serveArtifact = async (
   }
   if (!resolved) return notFound(c);
 
-  const file = await findArtifactFile(resolved.mount, artifactPath);
+  const file = await resolved.mount.statFile(artifactPath);
   if (!file) return notFound(c);
   if (file.size !== undefined && file.size > ARTIFACT_IMAGE_LIMIT_BYTES) {
     return c.json({ error: `Artifact image exceeds the ${ARTIFACT_IMAGE_LIMIT_BYTES.toString()} byte limit` }, 413);

@@ -12,11 +12,11 @@ const plannerTestTimeout = 120_000;
 
 test(
   "packaged Planner keeps independent views, timeline status, milestones, and review requests",
-  () => withPackagedPlanner(expectPackagedPlannerTimeline, ["workbench-fixture", "git-workspaces"]),
+  () => withPackagedPlanner(expectPackagedPlannerTimeline, ["workbench-fixture", "pstdio-workspaces"]),
   plannerTestTimeout,
 );
 test(
   "packaged Planner keeps supervisor model choices, scoped Auto Build dispatch, and dependency blockers",
-  () => withPackagedPlanner(expectPackagedPlannerAutoBuild, ["git-workspaces"]),
+  () => withPackagedPlanner(expectPackagedPlannerAutoBuild, ["pstdio-workspaces"]),
   plannerTestTimeout,
 );

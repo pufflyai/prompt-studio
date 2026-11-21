@@ -44,7 +44,6 @@
     "@electric-sql/pglite": "0.4.6",
     "@electric-sql/pglite-icu-full": "0.1.0",
     "drizzle-orm": "^0.45.2",
-    "drizzle-zod": "^0.8.3",
     "pg": "^8.20.0",
     "pglite-previous": "npm:@electric-sql/pglite@0.3.16",
     "pstdio-api-contracts": "workspace:*",
@@ -52,7 +51,6 @@
     "pstdio-sync": "workspace:*",
     "pstdio-sync-contracts": "workspace:*",
     "yjs": "^13.6.29",
-    "zod": "^4.3.6",
     "pstdio-diagnostics": "workspace:*"
   }
 }

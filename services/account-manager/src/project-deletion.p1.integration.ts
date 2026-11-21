@@ -79,6 +79,16 @@ test("permanent deletion retires authority at acceptance and completes only afte
     expect(accepted.status).toBe(202);
     const operation = await accepted.json();
     expect(operation).toMatchObject({ workbenchId: retired.workbenchId, state: "deleting" });
+    const disabled = implementation.createManagerAuthentication(authenticationConfig(fixture.databaseUrl));
+    try {
+      expect(await (await request(disabled, "/v1/account", retired.token)).json()).toMatchObject({
+        projectDeletion: false,
+      });
+      expect(await (await request(disabled, "/v1/project-deletions", retired.token)).json()).toEqual([operation]);
+      expect((await request(disabled, projectPath(local.workbenchId), local.token, "POST")).status).toBe(503);
+    } finally {
+      await disabled.close();
+    }
     expect(await (await request(restarted, path, retired.token, "POST")).json()).toEqual(operation);
     expect((await request(restarted, path, revoked.token)).status).toBe(401);
     expect((await request(restarted, path, outsider.token)).status).toBe(404);

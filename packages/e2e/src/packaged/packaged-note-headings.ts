@@ -75,6 +75,7 @@ export const verifyPackagedNoteHeadings = async (page: Page, origin: string, pro
   for (const paragraph of paragraphs) {
     await expect(editor.getByRole("heading", { level: 2, name: paragraph, exact: true })).toBeVisible();
   }
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Heading formatting");
   const row = page.locator('[data-workbench-region="sidenav"]').getByRole("option", {
     name: "Heading formatting",
     exact: true,
@@ -84,6 +85,8 @@ export const verifyPackagedNoteHeadings = async (page: Page, origin: string, pro
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("dialog").getByRole("button", { name: "Delete note", exact: true }).click();
   await expect(row).toHaveCount(0);
-  await expect(page.getByRole("tab", { name: "Heading formatting", exact: true })).toHaveCount(0);
+  await expect(page).toHaveURL(/\/extensions\/pstdio.notes\/notes$/);
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Notes");
+  await expect(editor.getByRole("heading", { level: 2, name: paragraphs[0], exact: true })).toHaveCount(0);
   await expect.poll(() => execute("pstdio.notes.command.notes.resolve", { noteId: note.id })).toBeNull();
 };

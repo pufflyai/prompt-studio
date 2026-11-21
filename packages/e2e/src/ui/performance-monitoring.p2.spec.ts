@@ -13,6 +13,7 @@ test("measures while the Performance Monitoring extension is loaded and shows it
     await request.post(`${apiBase}/v1/projects`, { data: folderProjectInput({ name: "Performance monitoring" }) })
   ).json();
   await page.addInitScript((projectId: string) => {
+    if (window !== window.top) return;
     const operations: string[] = [];
     Reflect.set(window, "performanceDetailsOperations", operations);
     window.addEventListener("message", (event) => {
@@ -29,6 +30,7 @@ test("measures while the Performance Monitoring extension is loaded and shows it
         operations.push(request.params.query.operation);
     });
     localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("react-scan-options", JSON.stringify({ enabled: true }));
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
   await page.goto(`/projects/${project.id}/`);
@@ -54,13 +56,20 @@ test("measures while the Performance Monitoring extension is loaded and shows it
   await expect.poll(() => details.evaluate(() => document.visibilityState)).toBe("visible");
   await expect.poll(operations).toContain("observe");
   await expect(details.getByText("CPU is measured in the desktop app", { exact: true })).toBeVisible();
-  await expect(details.getByRole("checkbox")).toHaveCount(0);
+  const highlighting = details.getByRole("checkbox", { name: "Highlight React renders" });
+  await expect(highlighting).toBeEnabled();
+  await expect(highlighting).not.toBeChecked();
+  // Critical: the extension controls the workbench's scanner, not its own iframe.
+  await details.getByText("Highlight React renders", { exact: true }).click();
+  await expect(highlighting).toBeChecked();
+  await expect(page.locator("canvas[data-react-scan]")).toBeVisible();
 
   // Critical: reopening must reuse the webview document instead of repeating its startup.
   const detailFrame = page.locator('iframe[title="Performance details"]');
   const loadedFrame = await detailFrame.elementHandle();
   await page.locator("footer").getByRole("button", { name: "Performance", exact: true }).click();
   await expect(detailFrame).toBeHidden();
+  await expect(page.locator("canvas[data-react-scan]")).toBeVisible();
   await expect.poll(() => details.evaluate(() => document.visibilityState)).toBe("hidden");
   await expect.poll(operations).toContain("close");
   expect(await loadedFrame!.evaluate((frame) => frame.isConnected)).toBe(true);
@@ -73,6 +82,9 @@ test("measures while the Performance Monitoring extension is loaded and shows it
     })
     .toBe(true);
   expect(await detailFrame.evaluate((frame, original) => frame === original, loadedFrame)).toBe(true);
+  await expect(highlighting).toBeChecked();
+  await details.getByText("Highlight React renders", { exact: true }).click();
+  await expect(page.locator("canvas[data-react-scan]")).toBeHidden();
 });
 
 test("short status popovers keep fixed bottom actions reachable", async ({ page, request }) => {

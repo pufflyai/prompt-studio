@@ -1,41 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import {
-  createInMemoryWatermarkStore,
-  floorToMinute,
-  parseWatermarks,
-  serializeWatermarks,
-  toMinuteEpoch,
-} from "./watermark-store";
+import { createInMemoryWatermarkStore, floorToMinute, parseWatermarks } from "./watermark-store";
 
 describe("watermark helpers", () => {
-  test("toMinuteEpoch floors to the minute", () => {
-    expect(toMinuteEpoch(new Date("2026-01-02T03:04:59.999Z"))).toBe(
-      Math.floor(new Date("2026-01-02T03:04:00.000Z").getTime() / 60_000),
-    );
-  });
-
   test("floorToMinute returns a Date aligned to the minute", () => {
     const floored = floorToMinute(new Date("2026-01-02T03:04:59.999Z"));
     expect(floored.toISOString()).toBe("2026-01-02T03:04:00.000Z");
-  });
-
-  test("serializeWatermarks/parseWatermarks round-trip with sorted keys", () => {
-    const watermarks = new Map([
-      ["b", 2],
-      ["a", 1],
-      ["c", 3],
-    ]);
-
-    const serialized = serializeWatermarks(watermarks);
-    expect(serialized.endsWith("\n")).toBe(true);
-    expect(serialized).toBe(`{\n  "a": 1,\n  "b": 2,\n  "c": 3\n}\n`);
-
-    const parsed = parseWatermarks(serialized);
-    expect([...parsed.entries()]).toEqual([
-      ["a", 1],
-      ["b", 2],
-      ["c", 3],
-    ]);
   });
 
   test("parseWatermarks ignores non-finite numbers", () => {

@@ -1,4 +1,5 @@
 import { type APIRequestContext, expect, type Page } from "@playwright/test";
+import { defaultPageResourceCodec } from "@pstdio/sdk/extensions";
 import { folderProjectInput } from "../../helpers/folder-project";
 import { switchSession } from "../../helpers/session-side-panel";
 import { uiOrigin as apiBase } from "../../ui-server";
@@ -74,4 +75,50 @@ export const openSessionSidePanel = async (page: Page, title: string) => {
     await page.keyboard.press("Escape");
   }
   await expect(tab).toHaveCSS("font-style", "normal");
+};
+
+/**
+ * Opens the attached Side Panel once the Sessions provider has loaded, so it starts with exactly its New session tab.
+ * The Side shell can open before then; an empty Side Panel keeps offering the provider instead of placing its tab.
+ */
+export const openSideNewSession = async (page: Page) => {
+  // The Sessions extension contributes its Sidenav entry together with its Side placement.
+  await expect(page.getByRole("complementary").getByRole("option", { name: "Sessions", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
+  await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
+  const header = page.locator('[data-workbench-panel-header="side"]');
+  const tabs = header.getByRole("tab");
+  await expect(tabs).toHaveCount(1);
+  await expect(tabs.first()).toHaveText("New session");
+  return { header, panel: page.getByTestId("workbench-side-panel-attached"), tabs };
+};
+
+/** Adds a pinned New session tab from the Side header and returns it; existing tabs stay in place. */
+export const addSideNewSession = async (page: Page) => {
+  const header = page.locator('[data-workbench-panel-header="side"]');
+  const tabs = header.getByRole("tab");
+  const before = await tabs.evaluateAll((elements) => elements.map((element) => element.id));
+  const add = header.getByRole("button", { name: "Add panel", exact: true });
+  // Before the extension catalog arrives, + opens the sole built-in terminal directly.
+  await expect(add).toHaveAttribute("aria-haspopup", "menu");
+  await add.click();
+  await page
+    .getByRole("menu", { name: "Add panel" })
+    .getByRole("menuitem", { name: "New session", exact: true })
+    .click();
+  await expect(tabs).toHaveCount(before.length + 1);
+  for (const id of before) await expect(header.locator(`[id="${id}"]`)).toHaveCount(1);
+  const added = header.locator(`[role="tab"]${before.map((id) => `:not([id="${id}"])`).join("")}`);
+  await expect(added).toHaveText("New session");
+  await expect(added).toHaveAttribute("aria-selected", "true");
+  // Preview tabs are italic; + opens a pinned tab.
+  await expect(added).toHaveCSS("font-style", "normal");
+  return added;
+};
+
+/** Matches a page URL that still routes this conversation. Owners may canonicalise the reference, so compare what it names. */
+export const isSessionUrl = (projectId: string, sessionId: string) => (url: URL) => {
+  if (url.pathname !== `/projects/${projectId}/session`) return false;
+  const resource = defaultPageResourceCodec.fromUri(url.searchParams.get("resource") ?? "");
+  return resource?.type === "session" && resource.id === sessionId;
 };

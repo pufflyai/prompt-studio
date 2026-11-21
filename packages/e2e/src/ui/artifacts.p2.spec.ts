@@ -11,73 +11,72 @@ const extensionId = "pstdio.artifacts";
 // Let iframe color-scheme follow its embedding element instead of browser media emulation.
 test.use({ colorScheme: null });
 
-for (const title of ["Project brief", "System diagram"]) {
-  test(`starts and opens a creation session from ${title}`, async ({ page, request }) => {
-    const repoRoot = resolve(import.meta.dirname, "../../../..");
-    const tempRoot = resolve(repoRoot, "__test-tmp__");
-    mkdirSync(tempRoot, { recursive: true });
-    const repo = mkdtempSync(join(tempRoot, "artifact-creation-"));
-    execFileSync("git", ["init", "--quiet", repo]);
-    const created = await request.post(`${uiOrigin}/v1/projects`, {
-      data: folderProjectInput({ name: "Artifact creation examples" }, repo),
-    });
-    expect(created.ok()).toBe(true);
-    const project = (await created.json()) as { id: string };
-    try {
-      const enabled = await request.post(
-        `${uiOrigin}/v1/projects/${project.id}/extensions/installed/workbench-fixture/enable`,
-        {
-          data: {
-            displayName: "Workbench fixture",
-            extensionId: "pstdio.workbench-fixture",
-            manifest: { id: "pstdio.workbench-fixture", name: "workbench-fixture" },
-            name: "workbench-fixture",
-            sourceHash: "artifact-creation",
-            sourceKind: "local_path",
-            sourcePath: resolve(repoRoot, "packages/workbench-fixture"),
-            sourceRef: null,
-            version: null,
-          },
-        },
-      );
-      expect(enabled.ok()).toBe(true);
-      const configured = await request.patch(`${uiOrigin}/v1/projects/${project.id}`, {
-        data: { default_agent_id: "pstdio.workbench-fixture.harness.fake", default_agent_model: null },
-      });
-      expect(configured.ok()).toBe(true);
-      await page.addInitScript(() => {
-        localStorage.setItem("onboarding-complete", "true");
-      });
-      const libraryUrl = `/projects/${project.id}/extensions/${extensionId}/artifacts`;
-      await page.goto(libraryUrl);
-      const frame = page.frameLocator('iframe[title="Artifacts"]:visible').last();
-      const response = page.waitForResponse(
-        (response) =>
-          response.url().endsWith(`${extensionId}.command.start-creation/execute`) &&
-          response.request().method() === "POST",
-      );
-      await frame.getByRole("button", { name: title, exact: true }).click();
-      const result = await (await response).json();
-      expect(result.outcome.status, result.outcome.reason).toBe("success");
-      const target = result.outcome.navigationRequests[0];
-      expect(target.resource.id).toBe(result.outcome.value.sessionId);
-      // The command opens a Session panel target, which keeps the library as the page location.
-      expect(target).toMatchObject({ kind: "panel", panel: sessionBrowser.panels.conversation });
-      const sessionTab = page
-        .locator('[data-workbench-panel-header="side"]')
-        .getByRole("tab", { name: target.resource.label, exact: true });
-      await expect(sessionTab).toHaveAttribute("aria-selected", "true");
-      expect(new URL(page.url()).pathname).toBe(libraryUrl);
-      await expect(frame.getByRole("button", { name: title, exact: true })).toBeVisible();
-      const session = await request.get(`${uiOrigin}/v1/sessions/${result.outcome.value.sessionId}`);
-      expect(session.ok()).toBe(true);
-      expect((await session.json()).project_id).toBe(project.id);
-    } finally {
-      await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
-      rmSync(repo, { recursive: true, force: true });
-    }
+test("starts and opens a creation session from an example", async ({ page, request }) => {
+  const title = "Project brief";
+  const repoRoot = resolve(import.meta.dirname, "../../../..");
+  const tempRoot = resolve(repoRoot, "__test-tmp__");
+  mkdirSync(tempRoot, { recursive: true });
+  const repo = mkdtempSync(join(tempRoot, "artifact-creation-"));
+  execFileSync("git", ["init", "--quiet", repo]);
+  const created = await request.post(`${uiOrigin}/v1/projects`, {
+    data: folderProjectInput({ name: "Artifact creation examples" }, repo),
   });
-}
+  expect(created.ok()).toBe(true);
+  const project = (await created.json()) as { id: string };
+  try {
+    const enabled = await request.post(
+      `${uiOrigin}/v1/projects/${project.id}/extensions/installed/workbench-fixture/enable`,
+      {
+        data: {
+          displayName: "Workbench fixture",
+          extensionId: "pstdio.workbench-fixture",
+          manifest: { id: "pstdio.workbench-fixture", name: "workbench-fixture" },
+          name: "workbench-fixture",
+          sourceHash: "artifact-creation",
+          sourceKind: "local_path",
+          sourcePath: resolve(repoRoot, "packages/workbench-fixture"),
+          sourceRef: null,
+          version: null,
+        },
+      },
+    );
+    expect(enabled.ok()).toBe(true);
+    const configured = await request.patch(`${uiOrigin}/v1/projects/${project.id}`, {
+      data: { default_agent_id: "pstdio.workbench-fixture.harness.fake", default_agent_model: null },
+    });
+    expect(configured.ok()).toBe(true);
+    await page.addInitScript(() => {
+      localStorage.setItem("onboarding-complete", "true");
+    });
+    const libraryUrl = `/projects/${project.id}/extensions/${extensionId}/artifacts`;
+    await page.goto(libraryUrl);
+    const frame = page.frameLocator('iframe[title="Artifacts"]:visible').last();
+    const response = page.waitForResponse(
+      (response) =>
+        response.url().endsWith(`${extensionId}.command.start-creation/execute`) &&
+        response.request().method() === "POST",
+    );
+    await frame.getByRole("button", { name: title, exact: true }).click();
+    const result = await (await response).json();
+    expect(result.outcome.status, result.outcome.reason).toBe("success");
+    const target = result.outcome.navigationRequests[0];
+    expect(target.resource.id).toBe(result.outcome.value.sessionId);
+    // The command opens a Session panel target, which keeps the library as the page location.
+    expect(target).toMatchObject({ kind: "panel", panel: sessionBrowser.panels.conversation });
+    const sessionTab = page
+      .locator('[data-workbench-panel-header="side"]')
+      .getByRole("tab", { name: target.resource.label, exact: true });
+    await expect(sessionTab).toHaveAttribute("aria-selected", "true");
+    expect(new URL(page.url()).pathname).toBe(libraryUrl);
+    await expect(frame.getByRole("button", { name: title, exact: true })).toBeVisible();
+    const session = await request.get(`${uiOrigin}/v1/sessions/${result.outcome.value.sessionId}`);
+    expect(session.ok()).toBe(true);
+    expect((await session.json()).project_id).toBe(project.id);
+  } finally {
+    await request.delete(`${uiOrigin}/v1/projects/${project.id}`);
+    rmSync(repo, { recursive: true, force: true });
+  }
+});
 
 test("publishes HTML, isolates its preview, and preserves revisions across live updates", async ({ page, request }) => {
   // A shared path also lets this test target the isolated Docker instance.
@@ -100,6 +99,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     expect(body.outcome.status, body.outcome.reason).toBe("success");
     return body.outcome.value;
   };
+  let releaseRead = () => {};
   try {
     expect(await execute("list", {})).toEqual([]);
     await page.addInitScript((projectId) => {
@@ -127,7 +127,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
 
     await frame.getByRole("button", { name: "First page", exact: true }).click();
     await expect(artifactMenu).toBeVisible();
-    await expect(mainTabs).toHaveCount(2);
+    await expect(mainTabs).toHaveCount(0);
     const preview = frame.frameLocator('iframe[title^="Preview: "]').frameLocator("iframe");
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
     await expect(preview.getByText("Parent isolated")).toBeVisible();
@@ -141,10 +141,9 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await palette.getByRole("textbox").fill("Reference");
     await palette.getByText("Reference", { exact: true }).click();
     await expect(preview.getByRole("heading", { name: "Reference chart" })).toBeVisible();
-    const referenceTab = page.getByRole("tab", { name: "Reference", exact: true });
-    await expect(referenceTab).toHaveAttribute("aria-selected", "true");
+    await expect(mainTabs).toHaveCount(0);
     await expect(breadcrumbs.getByText("Reference", { exact: true })).toBeVisible();
-    await page.getByRole("tab", { name: "First page", exact: true }).click();
+    await page.goBack();
     await expect(preview.getByRole("button", { name: "Complete", exact: true })).toBeVisible();
     await expect(breadcrumbs.getByText("First page", { exact: true })).toBeVisible();
     await page.evaluate(() => {
@@ -180,33 +179,60 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     rmSync(join(repo, "update.html"));
     await expect(frame.locator('iframe[title^="Preview: "]')).toHaveAttribute("title", "Preview: Second page");
     await expect(preview.getByRole("button", { name: "Complete", exact: true })).toBeVisible();
-    await versionMenu.click();
-    await frame.getByRole("menuitemradio", { name: "Second · Latest", exact: true }).click();
+    // A cold version read must keep the header mounted so keyboard focus returns to its trigger.
+    const readGate = new Promise<void>((resolve) => {
+      releaseRead = resolve;
+    });
+    const readRoute = "**/pstdio.artifacts.command.read/execute";
+    await page.route(readRoute, async (route) => {
+      if (route.request().postDataJSON()?.params?.revisionId === second.revisionId) await readGate;
+      await route.continue();
+    });
+    const reading = page.waitForRequest(
+      (request) =>
+        request.url().endsWith("pstdio.artifacts.command.read/execute") &&
+        request.postDataJSON()?.params?.revisionId === second.revisionId,
+    );
+    await versionMenu.press("ArrowDown");
+    await expect(frame.locator(`time[datetime="${second.publishedAt}"]`)).toBeVisible();
+    await frame.getByRole("menu").press("Home");
+    await frame.getByRole("menu").press("Enter");
+    await reading;
+    await expect(versionMenu).toBeFocused();
+    releaseRead();
     await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
-    await versionMenu.click();
-    await frame.getByRole("menuitemradio", { name: "First", exact: true }).click();
-    await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
+    await page.unrouteAll({ behavior: "wait" });
+    // A failed cold read keeps revision navigation available and reports the finished failure.
+    await page.route(readRoute, async (route) => {
+      if (route.request().postDataJSON()?.params?.revisionId === second.revisionId) {
+        await route.fulfill({ status: 500, json: { error: "Selected revision unavailable" } });
+        return;
+      }
+      await route.continue();
+    });
     await page.reload();
-    // The chosen immutable revision is a persisted presentation preference (PS-157).
+    await expect(versionMenu).toBeVisible();
+    await expect(frame.getByRole("alert")).toBeVisible();
+    await page.unrouteAll({ behavior: "wait" });
+    await versionMenu.click();
+    await expect(frame.getByRole("menuitemradio", { name: /^Second · Latest/ })).toBeChecked();
+    await frame.getByRole("menuitemradio", { name: /^First/ }).click();
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
-    // A published URL restores the same artifact and selected revision from a fresh location.
+    // The selected immutable revision is a saved preference, including across reloads.
+    await page.reload();
+    await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
+    // A published URL opens a single-resource page from a fresh location.
     await page.goto(first.url);
     await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
-    await versionMenu.click();
-    await frame.getByRole("menuitemradio", { name: "Second · Latest", exact: true }).click();
-    await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
-    const selectedTitle = await page.getByRole("tab", { name: /^(First|Second) page$/ }).innerText();
-    await expect(breadcrumbs.getByText(selectedTitle, { exact: true })).toBeVisible();
-    await expect(referenceTab).toBeVisible();
+    await expect(breadcrumbs.getByText("Second page", { exact: true })).toBeVisible();
+    await expect(mainTabs).toHaveCount(0);
     expect(await execute("revisions", { url: first.url })).toHaveLength(2);
     await artifactMenu.click();
     await page.getByRole("menuitem", { name: "Rename artifact…", exact: true }).click();
     await page.getByRole("textbox", { name: "Artifact name" }).fill("Launch notes");
     await page.getByRole("button", { name: "Run", exact: true }).click();
-    await expect(page.getByRole("tab", { name: "Launch notes", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Close Launch notes", exact: true }).click();
-    await referenceTab.click();
-    await page.getByRole("button", { name: "Close Reference", exact: true }).click();
+    await expect(breadcrumbs.getByText("Launch notes", { exact: true })).toBeVisible();
+    await breadcrumbs.getByText("Artifacts", { exact: true }).click();
     const card = frame.getByRole("button", { name: "Launch notes", exact: true });
     await expect(card).toBeVisible();
     // Thumbnails load only after their card enters the viewport.
@@ -215,7 +241,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await expect(card.locator("iframe")).toHaveCount(1);
     await card.focus();
     await card.press("Enter");
-    await expect(preview.getByRole("heading", { name: "Second page" })).toBeVisible();
+    await expect(preview.getByRole("heading", { name: "First page" })).toBeVisible();
     await artifactMenu.click();
     await page.getByRole("menuitem", { name: "Delete artifact…", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Delete artifact", exact: true }).click();
@@ -228,6 +254,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     await expect(frame.getByText("Your first artifact starts with an idea", { exact: true })).toBeVisible();
     expect(await execute("list", {})).toEqual([]);
   } finally {
+    releaseRead();
     await request.delete(`${uiOrigin}/v1/projects/${project.id}`).catch(() => {});
     rmSync(repo, { recursive: true, force: true });
   }

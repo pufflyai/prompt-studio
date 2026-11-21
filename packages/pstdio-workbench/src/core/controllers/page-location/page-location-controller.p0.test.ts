@@ -26,7 +26,7 @@ describe("page location controller", () => {
       outgoing.dispose();
     });
     expect(harness.registry.store.getState().location).toBeUndefined();
-    expect(harness.persistence.values.get("p2")?.location.page).toEqual(ticketsRef);
+    expect(harness.persistence.values.get("p2")?.location?.page).toEqual(ticketsRef);
     expect(harness.controller.boot("p2").ok).toBe(true);
     expect(harness.registry.store.getState().location?.page).toEqual(ticketsRef);
   });
@@ -54,7 +54,7 @@ describe("page location controller", () => {
     expect(harness.browser.current().url).toBe(
       "/projects/p1/extensions/acme.planner/ticket?resource=pstdio%3A%2F%2Fticket%2FPS-326",
     );
-    expect(harness.persistence.values.get("p1")?.location.resource?.id).toBe("PS-326");
+    expect(harness.persistence.values.get("p1")?.location?.resource?.id).toBe("PS-326");
   });
   test("does not add history when navigating to the active location again", () => {
     const harness = createHarness();

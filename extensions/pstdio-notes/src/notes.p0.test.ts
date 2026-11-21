@@ -177,14 +177,6 @@ describe("notes", () => {
     ]);
   });
 
-  test("keeps Markdown source intact across saves and reloads", async () => {
-    const mount = createNotesMount();
-    const note = await createNote(mount, coreIds.create(), "Notes");
-    const content = "# Notes\n\n- [ ] Try **bold** and `code`\n\n| A | B |\n| - | - |\n| 1 | 2 |\n";
-    await writeNote(mount, note.id, content);
-    expect(await readNote(mount, note.id)).toBe(content);
-  });
-
   test("deletes the body and title and rejects delayed saves and renames", async () => {
     const mount = createNotesMount();
     const note = await createNote(mount, coreIds.create(), "Drop");

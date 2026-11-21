@@ -19,3 +19,10 @@ export const restoreRememberedLocation = (
   if (location === resolved.location) return resolved;
   return { ...normalize(location), consumeRemembered: remembered };
 };
+
+export const resolveBootLocation = (
+  fromUrl: ResolvedPageLocation | undefined,
+  saved: PageLocation | undefined,
+  normalize: (location: PageLocation) => ResolvedPageLocation,
+  start: () => ResolvedPageLocation,
+) => fromUrl ?? (saved ? normalize(saved) : start());

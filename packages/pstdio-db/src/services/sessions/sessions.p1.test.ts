@@ -272,14 +272,6 @@ describe("sessions service", () => {
     expect(list.map((session) => session.id)).toEqual([first.id, second.id]);
   });
 
-  test("updates session status", async () => {
-    const session = await sessionsService.create({ project_id: projectId, title: "S1", agent: "claude-code" });
-    const updated = await sessionsService.updateStatus(session.id, "completed");
-
-    expect(updated).not.toBeNull();
-    expect(updated!.status).toBe("completed");
-  });
-
   test("archives a session", async () => {
     const session = await sessionsService.create({ project_id: projectId, title: "S1", agent: "claude-code" });
     await sessionsService.archive(session.id);

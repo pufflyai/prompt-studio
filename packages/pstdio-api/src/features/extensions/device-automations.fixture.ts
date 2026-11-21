@@ -21,7 +21,7 @@ export const createDeviceAutomationFixture = async () => {
     join(source, "extension.ts"),
     `export default {
     commands: [{ id: "tick", ref: { kind: "command", id: "tick" }, title: "Tick", async run(ctx) {
-      await globalThis.__deviceAutomationRun(ctx.invocation.metadata);
+      await globalThis.__deviceAutomationRun(ctx.invocation.metadata, ctx.signal);
     }}],
     schedules: [{ id: "tick", ref: { kind: "schedule", id: "tick" }, title: "Tick", schedule: "* * * * *",
       command: { kind: "command", id: "tick" } }],

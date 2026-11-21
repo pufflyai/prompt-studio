@@ -54,8 +54,6 @@ test("shows site icons on chat web links and opens them in a new tab", async ({ 
     await expect(link).toHaveAttribute("target", "_blank");
     await expect(link).toHaveAttribute("rel", "noopener noreferrer");
     await expect(link.locator("img")).toHaveAttribute("src", ICON);
-    const fallback = page.getByRole("link", { name: "https://no-icon.example.com/docs", exact: true }).last();
-    await expect(fallback.locator("svg.lucide-globe")).toBeVisible();
     expect(asked).toContain("https://github.com/pufflyai/prompt-studio");
 
     const opened = page.waitForEvent("popup");

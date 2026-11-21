@@ -2,6 +2,7 @@ import { isAbsolute, relative } from "node:path";
 import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
 import { deleteResource, renameResource, resolvePath, resolveResource, resolveResources } from "./artifact-actions";
 import { serviceFor } from "./artifact-context";
+import { exportArtifact } from "./artifact-export";
 import { removeArtifact, renameArtifact } from "./artifact-mutations";
 import { HTML_LIMIT_BYTES } from "./artifacts";
 import { openCreation, startCreation } from "./create-artifact";
@@ -101,6 +102,7 @@ const remove = defineCommand({
 });
 
 export const commands = {
+  export: exportArtifact,
   publish,
   list,
   read,

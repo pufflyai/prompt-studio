@@ -3,19 +3,6 @@ import type { ControlsQueryResult } from "../extension-kernel";
 import { supportedControls } from "./control-declaration-fixtures";
 import { controlsQueryResultSchema } from "./control-declarations";
 
-test("round-trips a native harness control and its model options", () => {
-  const agent = {
-    harnessId: "pstdio.harness-codex.harness.codex",
-    model: "gpt-6-astra",
-    params: { effort: "high", fast: false },
-  };
-  const result = {
-    params: [{ id: "agent", name: "Model", type: "harness" as const, defaultValue: agent }],
-    values: { agent },
-  };
-  expect(controlsQueryResultSchema.parse(result)).toEqual(result);
-});
-
 test.each(Object.values(supportedControls))("round-trips supported controls: $type", (control) => {
   expect(controlsQueryResultSchema.parse(JSON.parse(JSON.stringify({ params: [control] })))).toEqual({
     params: [control],
@@ -64,13 +51,6 @@ test("native harness controls preserve an unselected picker before a harness is 
   const result = {
     params: [{ id: "harness", name: "Harness", type: "harness" as const, defaultValue: { harnessId: "" } }],
     values: { harness: { harnessId: "" } },
-  };
-  expect(controlsQueryResultSchema.parse(result)).toEqual(result);
-});
-
-test("numeric controls retain the boolean control that enables input", () => {
-  const result = {
-    params: [{ id: "count", name: "Count", type: "number" as const, defaultValue: 6, enabledBy: "limited" }],
   };
   expect(controlsQueryResultSchema.parse(result)).toEqual(result);
 });

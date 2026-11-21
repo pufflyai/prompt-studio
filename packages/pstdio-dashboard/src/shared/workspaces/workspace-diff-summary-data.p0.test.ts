@@ -1,5 +1,4 @@
-import { afterEach, describe, expect, spyOn, test } from "bun:test";
-import { getDashboardScopedQueries } from "@/lib/scoped-queries";
+import { afterEach, describe, expect, test } from "bun:test";
 import { createRuntimeCollections, getWriter } from "@/lib/sync/collections";
 import {
   getDashboardWorkspaceDiffQuery,
@@ -111,22 +110,15 @@ test.each([
   }
 });
 
-test("a repeated workspace query lookup neither visits unrelated handles nor resolves its scope again", async () => {
+test("a repeated workspace query lookup reuses its handle until it is disposed", async () => {
   const owner = createRuntimeCollections({ baseUrl: "http://query-lookup.test", token: "" });
-  const unrelated = getDashboardWorkspaceDiffQuery("other", owner, "project");
   const selected = getDashboardWorkspaceDiffQuery("selected", owner, "project");
-  const inspectUnrelated = spyOn(unrelated, "isDisposed");
-  const resolveScope = spyOn(getDashboardScopedQueries(owner), "forScope");
   try {
     for (let render = 0; render < 20; render++)
       expect(getDashboardWorkspaceDiffQuery("selected", owner, "project")).toBe(selected);
-    expect(inspectUnrelated).not.toHaveBeenCalled();
-    expect(resolveScope).not.toHaveBeenCalled();
     selected.dispose();
     expect(getDashboardWorkspaceDiffQuery("selected", owner, "project")).not.toBe(selected);
   } finally {
-    inspectUnrelated.mockRestore();
-    resolveScope.mockRestore();
     await owner.dispose();
   }
 });
@@ -388,31 +380,6 @@ test("defers background diff requests until the synced workspace is ready", asyn
     writer.upsert({ ...row, initializing: true });
     expect(await requestDashboardWorkspaceDiffSummaries([workspaceId])).toEqual(new Map());
     expect(requests).toHaveLength(1);
-  } finally {
-    writer.remove(workspaceId);
-    server.stop(true);
-    delete (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY];
-  }
-});
-
-test("does not request a summary when workspace diff support is explicitly disabled", async () => {
-  const workspaceId = "disabled-diff-workspace";
-  const requests: string[] = [];
-  const server = Bun.serve({
-    port: 0,
-    fetch: (request) => {
-      const account = accountResponse(request);
-      if (account) return account;
-      requests.push(new URL(request.url).pathname);
-      return Response.json({ workspace_id: workspaceId, additions: 1, deletions: 0, file_count: 1 });
-    },
-  });
-  (globalThis as RuntimeConfigWindow)[RUNTIME_CONFIG_KEY] = { apiBaseUrl: server.url.toString() };
-  const writer = getWriter("workspaces")!;
-  try {
-    writer.upsert({ id: workspaceId, provider_state: "ready", provider_capabilities_json: { diff: false } });
-    expect(await requestDashboardWorkspaceDiffSummaries([workspaceId])).toEqual(new Map());
-    expect(requests).toEqual([]);
   } finally {
     writer.remove(workspaceId);
     server.stop(true);

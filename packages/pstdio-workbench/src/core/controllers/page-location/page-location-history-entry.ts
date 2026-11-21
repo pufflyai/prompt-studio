@@ -16,7 +16,7 @@ export const createPageHistoryEntry =
     removalVersion?(): number;
     removalEpoch?(): string;
   }) =>
-  (projectId: string, location: PageLocation | undefined, index: number) => ({
+  (projectId: string, location: PageLocation | undefined, index: number, modeId?: string) => ({
     url: location
       ? serializeWorkbenchPageUrl({ projectId, location, pages: input.pages(), resources: input.resources })
       : `/projects/${encodeURIComponent(projectId)}`,
@@ -24,6 +24,7 @@ export const createPageHistoryEntry =
       kind: "pstdio.page-location",
       index,
       projectId,
+      ...(!location && modeId ? { modeId } : {}),
       ...(location
         ? { routeKey: workbenchPageLocationRouteKey(location, input.resources, input.pages()), location }
         : {}),

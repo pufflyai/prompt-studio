@@ -21,7 +21,7 @@ test("Home snapshot updates preserve the quota owner while its actual command is
       }
       if (command.commandId.endsWith(".read")) {
         home++;
-        return { project: { name: "Home " + home }, setupError: null };
+        return { project: { name: `Home ${home}` }, setupError: null };
       }
       return [];
     },

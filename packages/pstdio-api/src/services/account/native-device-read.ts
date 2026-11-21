@@ -1,6 +1,8 @@
+import { hostname } from "node:os";
 import { identitySchema } from "pstdio-sync-contracts";
 import { z } from "zod";
 import type { RouteDeps } from "../../features/deps";
+import { managerRequest } from "./manager-client";
 import type { createNativeStore, DeviceLogin } from "./native-store";
 
 export interface DeviceReadIdentity {
@@ -59,3 +61,36 @@ export const createNativeDeviceReader =
     if (current.token !== login.token || !matchesDeviceAccount(current, login)) throw input.changed();
     return listed.devices.map((device) => ({ ...device, current: device.id === listed.deviceId }));
   };
+
+const loginSchema = z.object({
+  accountId: identitySchema,
+  deviceId: identitySchema,
+  token: z.string().min(1),
+  relayOrigin: z.string(),
+});
+
+export const finalizeDeviceLogin = async (
+  input: {
+    store: ReturnType<typeof createNativeStore>;
+    environment: Pick<RouteDeps["environmentService"], "get">;
+    refresh(): Promise<void>;
+  },
+  origin: string,
+  session: string,
+  signal: AbortSignal,
+  user: { email: string },
+) => {
+  const { environmentId } = await input.environment.get();
+  const device = { deviceId: environmentId, name: hostname(), platform: process.platform };
+  const login = loginSchema.parse(await managerRequest(origin, "/v1/device-login", session, device, signal));
+  // The Google session is only needed to log in; the device credential replaces it.
+  await managerRequest(origin, "/api/auth/sign-out", session, {}, signal).catch(() => {});
+  signal.throwIfAborted();
+  await input.store.save({ managerOrigin: origin, ...login, email: user.email });
+  if (signal.aborted) {
+    await input.store.forget(login.token, { managerOrigin: origin, ...login, email: user.email });
+    signal.throwIfAborted();
+  }
+  // Discovery starts after credential persistence so it cannot delay successful sign-in.
+  void input.refresh();
+};

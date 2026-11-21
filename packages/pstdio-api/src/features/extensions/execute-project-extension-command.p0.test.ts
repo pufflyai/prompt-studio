@@ -116,6 +116,46 @@ test("ordinary execution drops chunks from a streaming command", async () => {
   expect((await execute()).outcome).toMatchObject({ ok: true, value: "done" });
 });
 
+test("closing project admission cancels a command stream before draining its work lease", async () => {
+  const snapshot = await fixture.deps.extensionRuntimeCatalog.get("project-1");
+  const command = snapshot.runtime.commands[0]!;
+  command.stream = { kind: "stream" };
+  const ready = Promise.withResolvers<void>();
+  let signal!: AbortSignal;
+  command.run = async (ctx) => {
+    signal = ctx.signal!;
+    ready.resolve();
+    await new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+  };
+  const controller = new AbortController();
+  const executing = executeProjectExtensionCommand(fixture.deps, {
+    projectId: "project-1",
+    commandId: command.id,
+    body: {},
+    signal: controller.signal,
+    onChunk: async () => {},
+  });
+  const work = fixture.deps.projectService.work;
+  try {
+    await ready.promise;
+    work.freeze("another-project");
+    expect(signal.aborted).toBe(false);
+    work.freeze("project-1");
+    expect(signal.aborted).toBe(true);
+    await work.drain("project-1");
+    expect((await executing).outcome).toMatchObject({ ok: false, code: "command_stream_cancelled" });
+    await expect(execute()).rejects.toThrow("removing");
+    work.release("project-1");
+    command.run = async () => "available again";
+    expect((await execute()).outcome.ok).toBe(true);
+  } finally {
+    controller.abort();
+    await executing;
+    work.release("project-1");
+    work.release("another-project");
+  }
+});
+
 test("command warnings reach the host log with the command owner", async () => {
   const snapshot = await fixture.deps.extensionRuntimeCatalog.get("project-1");
   snapshot.runtime.commands[0]!.run = async (ctx) => {

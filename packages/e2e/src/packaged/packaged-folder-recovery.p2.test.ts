@@ -182,8 +182,10 @@ test.skipIf(process.platform === "win32")(
       expect((await listedCopy(desktop, project.id, laptopDevice))?.available ?? false).toBe(false);
       // HTTP response delivery precedes client verification and atomic retention.
       // Retry may cancel that unfinished response; only retained chunks are finished work.
+      const cache = join(desktop.home, "storage/folder-recovery");
       const retained = new Set(
-        [...new Bun.Glob("**/*.blob").scanSync(join(desktop.home, "storage/folder-recovery/chunks"))].map(
+        Array.from(
+          new Bun.Glob("**/chunks/**/*.blob").scanSync(cache),
           (path) => `~${path.split(/[\\/]/).at(-1)!.slice(0, -".blob".length)}`,
         ),
       );

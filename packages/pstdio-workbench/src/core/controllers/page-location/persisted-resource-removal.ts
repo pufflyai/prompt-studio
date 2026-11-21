@@ -20,10 +20,10 @@ export const createPersistedPageResourceRemover =
     const references = (location: PageLocation | undefined): boolean =>
       Boolean(location && ((location.resource && key(location.resource) === removed) || references(location.parent)));
     let location = saved.location;
-    if (references(location)) {
+    if (location && references(location)) {
       const state = input.getState();
       const page = Object.values(state.pages).find(
-        (page) => workbenchPageRefKey(page.ref) === workbenchPageRefKey(location.page),
+        (page) => workbenchPageRefKey(page.ref) === workbenchPageRefKey(location!.page),
       );
       const next = removePageResource(
         {
@@ -43,6 +43,7 @@ export const createPersistedPageResourceRemover =
     }
     input.persistence.save(resource.projectId, {
       location,
+      ...(saved.modeId ? { modeId: saved.modeId } : {}),
       ...(references(saved.rootLevel) ? {} : { rootLevel: saved.rootLevel }),
       remembered: saved.remembered?.filter((entry) => !references(entry) && !references(entry.location)),
     });

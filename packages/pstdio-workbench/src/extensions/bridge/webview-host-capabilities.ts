@@ -3,6 +3,7 @@ import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target
 import type { ExtensionWebviewHostAdapters } from "./extension-webview-host-adapters";
 import { createExtensionWebviewHostCapabilities } from "./extension-webview-host-capabilities";
 import { updateOverlayPageParams } from "./overlay-page-params";
+import { updatePortablePageParams } from "./portable-page-params";
 import { createWorkbenchEditingSessionAdapter } from "./webview-editing-adapter";
 import { createWebviewPreferenceQueries } from "./webview-preference-queries";
 import { createWebviewPreferencesAdapter, type WebviewOwnedPreferences } from "./webview-preferences-capability";
@@ -108,6 +109,8 @@ export const createWorkbenchWebviewHostAdapters = (input: CreateWorkbenchWebview
         requireCurrentViewer();
         if (placement?.pageContext && isOverlay())
           return updateOverlayPageParams(workbench, placement, extensionId, patch);
+        const portable = placement && updatePortablePageParams(workbench, placement, extensionId, patch);
+        if (portable) return portable;
         const state = workbench.pages.store.getState();
         if (!state.location) throw new Error("page_params_no_page");
         if (!extensionId || extensionId !== state.location.page.extensionId) throw new Error("page_params_not_owner");

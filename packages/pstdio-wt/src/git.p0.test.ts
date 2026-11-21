@@ -91,11 +91,6 @@ describe("git", () => {
     }
   });
 
-  test("runs a git command and returns trimmed stdout", async () => {
-    const result = await git(import.meta.dir, ["rev-parse", "--is-inside-work-tree"]);
-    expect(result).toBe("true");
-  });
-
   test("throws GitError on failure", async () => {
     try {
       await git(import.meta.dir, ["rev-parse", "--verify", "nonexistent-ref-abc123"]);

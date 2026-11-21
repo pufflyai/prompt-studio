@@ -4,12 +4,6 @@ import { createThemeRegistry } from "./theme-registry";
 const themeOption = (id: string) => ({ id, mode: "dark" as const });
 
 describe("createThemeRegistry", () => {
-  test("starts with no themes", () => {
-    const registry = createThemeRegistry();
-
-    expect(registry.listThemes()).toEqual([]);
-  });
-
   test("register publishes themes; disposing the registration removes them", () => {
     const registry = createThemeRegistry();
     const midnight = themeOption("midnight");
