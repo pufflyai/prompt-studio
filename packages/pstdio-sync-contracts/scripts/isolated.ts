@@ -17,7 +17,7 @@ const config = {
       image: "postgres:16-alpine",
       environment: { POSTGRES_DB: "conformance", POSTGRES_USER: "test", POSTGRES_PASSWORD: "isolated-test-only" },
       healthcheck: {
-        test: ["CMD-SHELL", "pg_isready -U test -d conformance"],
+        test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U test -d conformance"],
         interval: "1s",
         timeout: "1s",
         retries: 20,
