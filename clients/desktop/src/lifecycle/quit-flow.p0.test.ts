@@ -26,6 +26,8 @@ const createHarness = (input: {
   refreshRuntime: () => Promise<ManagedRuntime | null>;
   requestShutdown?: (force: boolean) => Promise<ShutdownResult>;
   cancelActiveWork?: boolean;
+  showQuitConfirmation?: () => Promise<void>;
+  askToCancelActiveWork?: () => Promise<boolean>;
 }) => {
   let state: DesktopState = { kind: "workbench", runtime: runtime.descriptor };
   const calls: string[] = [];
@@ -48,10 +50,11 @@ const createHarness = (input: {
     showLifecycle: async () => {},
     showQuitConfirmation: async () => {
       calls.push("showQuitConfirmation");
+      await input.showQuitConfirmation?.();
     },
     askToCancelActiveWork: async () => {
       calls.push("askToCancelActiveWork");
-      return input.cancelActiveWork ?? false;
+      return input.askToCancelActiveWork?.() ?? input.cancelActiveWork ?? false;
     },
     flushBeforeQuit: async () => {},
     quitApp: () => {
@@ -67,6 +70,167 @@ const createHarness = (input: {
 };
 
 describe("desktop quit flow", () => {
+  test.each([
+    "keep open",
+    "quit",
+    "failure",
+  ])("preserves crash recovery when the pending native dialog returns %s", async (answer) => {
+    const opened = Promise.withResolvers<void>();
+    const native = Promise.withResolvers<boolean>();
+    const requests: boolean[] = [];
+    const { flow, state, setState } = createHarness({
+      refreshRuntime: async () => runtime,
+      askToCancelActiveWork: async () => {
+        opened.resolve();
+        return native.promise;
+      },
+      requestShutdown: async (force) => {
+        requests.push(force);
+        return { state: "active", activity: { ...noActivity, sessions: [{ id: "s1", label: "Session" }] } };
+      },
+    });
+    await flow.requestQuit();
+    const repeated = flow.requestQuit();
+    await opened.promise;
+    const recovery: DesktopState = {
+      kind: "recovery",
+      error: { code: "unexpected_exit", message: "Backend crashed", actions: ["quit"] },
+    };
+    try {
+      // Main uses this guard to admit unexpected-exit recovery.
+      expect(flow.isQuitting()).toBe(false);
+      setState(recovery);
+      if (answer === "failure") native.reject(new Error("Native dialog closed"));
+      else native.resolve(answer === "quit");
+      await repeated;
+      expect(state()).toBe(recovery);
+      expect(requests).toEqual([false]);
+    } finally {
+      native.resolve(false);
+      await repeated;
+    }
+  });
+
+  test.each([
+    "keep open",
+    "quit",
+    "failure",
+  ])("keeps the window's confirmed quit when the native dialog later returns %s", async (answer) => {
+    const opened = Promise.withResolvers<void>();
+    const native = Promise.withResolvers<boolean>();
+    const cancelling = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const requests: boolean[] = [];
+    const { flow, calls, state } = createHarness({
+      refreshRuntime: async () => runtime,
+      askToCancelActiveWork: async () => {
+        opened.resolve();
+        return native.promise;
+      },
+      requestShutdown: async (force) => {
+        requests.push(force);
+        if (!force) return { state: "active", activity: { ...noActivity, sessions: [{ id: "s1", label: "Session" }] } };
+        cancelling.resolve();
+        await release.promise;
+        return { state: "accepted" };
+      },
+    });
+    await flow.requestQuit();
+    const repeated = flow.requestQuit();
+    await opened.promise;
+    const confirmed = flow.confirmQuit();
+    try {
+      expect(await Promise.race([cancelling.promise.then(() => true), confirmed.then(() => false)])).toBe(true);
+      if (answer === "failure") native.reject(new Error("Native dialog closed"));
+      else native.resolve(answer === "quit");
+      await repeated;
+      expect(state()).toMatchObject({ kind: "closing" });
+      expect(flow.isQuitting()).toBe(true);
+      expect(requests).toEqual([false, true]);
+    } finally {
+      native.resolve(false);
+      release.resolve();
+      await Promise.all([confirmed, repeated]);
+    }
+    expect(calls.filter((call) => call === "quitApp")).toHaveLength(1);
+  });
+
+  test.each([
+    "opens",
+    "fails",
+  ])("keeps confirmed shutdown when the confirmation window %s afterward", async (window) => {
+    const showing = Promise.withResolvers<void>();
+    const releaseWindow = Promise.withResolvers<void>();
+    const cancelling = Promise.withResolvers<void>();
+    const releaseCancellation = Promise.withResolvers<void>();
+    const requests: boolean[] = [];
+    const { flow, calls, state } = createHarness({
+      refreshRuntime: async () => runtime,
+      showQuitConfirmation: async () => {
+        showing.resolve();
+        await releaseWindow.promise;
+      },
+      requestShutdown: async (force) => {
+        requests.push(force);
+        if (!force) return { state: "active", activity: { ...noActivity, sessions: [{ id: "s1", label: "Session" }] } };
+        cancelling.resolve();
+        await releaseCancellation.promise;
+        return { state: "accepted" };
+      },
+    });
+    const initial = flow.requestQuit();
+    await showing.promise;
+    const confirmed = flow.confirmQuit();
+    try {
+      expect(await Promise.race([cancelling.promise.then(() => true), confirmed.then(() => false)])).toBe(true);
+      if (window === "fails") releaseWindow.reject(new Error("Confirmation window retired"));
+      else releaseWindow.resolve();
+      await initial;
+      expect(flow.isQuitting()).toBe(true);
+      expect(state()).toMatchObject({ kind: "closing" });
+      await flow.requestQuit();
+      expect(requests).toEqual([false, true]);
+    } finally {
+      releaseWindow.resolve();
+      releaseCancellation.resolve();
+      await Promise.all([initial, confirmed]);
+    }
+    expect(calls.filter((call) => call === "quitApp")).toHaveLength(1);
+  });
+
+  test("keeps confirmed shutdown single-flight while active work is cancelling", async () => {
+    const cancelling = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const requests: boolean[] = [];
+    const { flow, state, calls } = createHarness({
+      refreshRuntime: async () => runtime,
+      requestShutdown: async (force) => {
+        requests.push(force);
+        if (force) {
+          cancelling.resolve();
+          await release.promise;
+          return { state: "accepted" };
+        }
+        return requests.length === 1
+          ? { state: "active", activity: { ...noActivity, sessions: [{ id: "s1", label: "Session" }] } }
+          : { state: "failed" };
+      },
+    });
+    await flow.requestQuit();
+    const confirmed = flow.confirmQuit();
+    await cancelling.promise;
+    try {
+      await flow.requestQuit();
+      expect(flow.isQuitting()).toBe(true);
+      expect(requests).toEqual([false, true]);
+      expect(state()).toMatchObject({ kind: "closing" });
+    } finally {
+      release.resolve();
+      await confirmed;
+    }
+    expect(calls.filter((call) => call === "quitApp")).toHaveLength(1);
+  });
+
   test("quits when the runtime already stopped", async () => {
     const { calls, flow } = createHarness({ refreshRuntime: async () => null });
 
