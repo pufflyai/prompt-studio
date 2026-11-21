@@ -26,7 +26,7 @@ type QuitFlowDeps = {
 
 export const createQuitFlow = (deps: QuitFlowDeps) => {
   let quitAllowed = false;
-  let quitting: object | undefined;
+  let quitting: { active: boolean } | undefined;
 
   const finishQuit = async () => {
     // Losing the last saved layout is better than an app that cannot quit.
@@ -42,15 +42,16 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
   };
 
   const runQuit = async (run: () => Promise<void>) => {
-    if (quitting || quitAllowed) return;
-    const owner = {};
+    if (quitting?.active || quitAllowed) return;
+    const owner = { active: true };
     quitting = owner;
     try {
       await run();
     } catch (error) {
-      await showQuitFailure(error);
+      if (quitAllowed || quitting !== owner) deps.logError(error);
+      else await showQuitFailure(error);
     } finally {
-      if (quitting === owner) quitting = undefined;
+      owner.active = false;
     }
   };
 
@@ -67,7 +68,7 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
     if (result.state === "active") {
       // The renderer can confirm while its window is still opening. Hand ownership
       // to that confirmation without letting this older request clear its guard.
-      quitting = undefined;
+      if (quitting) quitting.active = false;
       const { instanceId, origin, ownerType } = runtime.descriptor;
       deps.setState(
         transitionDesktopState(
@@ -106,7 +107,7 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
   const confirmQuit = () => runQuit(stopConfirmedRuntime);
 
   const requestQuit = async () => {
-    if (quitAllowed || quitting) return;
+    if (quitAllowed || quitting?.active) return;
     const state = deps.getState();
     if (state.kind === "confirming_active_work") {
       return runQuit(async () => {
@@ -122,7 +123,7 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
     confirmQuit,
     finishQuit,
     isQuitAllowed: () => quitAllowed,
-    isQuitting: () => Boolean(quitting) || quitAllowed,
+    isQuitting: () => Boolean(quitting?.active) || quitAllowed,
     requestQuit,
   };
 };

@@ -69,13 +69,16 @@ const createHarness = (input: {
 };
 
 describe("desktop quit flow", () => {
-  test("accepts confirmation while its window is opening and retains the confirmed shutdown owner", async () => {
+  test.each([
+    "opens",
+    "fails",
+  ])("keeps confirmed shutdown when the confirmation window %s afterward", async (window) => {
     const showing = Promise.withResolvers<void>();
     const releaseWindow = Promise.withResolvers<void>();
     const cancelling = Promise.withResolvers<void>();
     const releaseCancellation = Promise.withResolvers<void>();
     const requests: boolean[] = [];
-    const { flow, calls } = createHarness({
+    const { flow, calls, state } = createHarness({
       refreshRuntime: async () => runtime,
       showQuitConfirmation: async () => {
         showing.resolve();
@@ -94,9 +97,11 @@ describe("desktop quit flow", () => {
     const confirmed = flow.confirmQuit();
     try {
       expect(await Promise.race([cancelling.promise.then(() => true), confirmed.then(() => false)])).toBe(true);
-      releaseWindow.resolve();
+      if (window === "fails") releaseWindow.reject(new Error("Confirmation window retired"));
+      else releaseWindow.resolve();
       await initial;
       expect(flow.isQuitting()).toBe(true);
+      expect(state()).toMatchObject({ kind: "closing" });
       await flow.requestQuit();
       expect(requests).toEqual([false, true]);
     } finally {
