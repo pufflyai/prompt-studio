@@ -6,12 +6,7 @@ import {
   automation_runs,
   automation_tokens,
 } from "../../db/schemas.pg";
-import {
-  type AutomationRunRecord,
-  automationPrincipalRef,
-  automationRunRecord,
-  getAutomationOwner,
-} from "./automation-owners";
+import { type AutomationRunRecord, automationRunRecord } from "./automation-owners";
 import { createAutomationTokenDBService } from "./automation-tokens";
 import { createExtensionAutomationDBService } from "./extension-automation";
 
@@ -69,8 +64,6 @@ export const automationRunEvents = (run: AutomationRunRecord, after = 0) => {
 };
 
 const createAutomationRunDBService = (db: DbClient) => {
-  const principalRef = async (projectId: string, id: string) =>
-    automationPrincipalRef((await getAutomationOwner(db, projectId, id)) ?? { id, created_by: "token" });
   const getRunByIdempotency = async (input: {
     principalId: string;
     projectId: string;
@@ -82,7 +75,7 @@ const createAutomationRunDBService = (db: DbClient) => {
       .from(automation_runs)
       .where(
         and(
-          eq(automation_runs.principal, await principalRef(input.projectId, input.principalId)),
+          eq(automation_runs.principal, input.principalId),
           eq(automation_runs.project_id, input.projectId),
           eq(automation_runs.command_id, input.commandId),
           eq(automation_runs.idempotency_key, input.idempotencyKey),
@@ -97,7 +90,7 @@ const createAutomationRunDBService = (db: DbClient) => {
       .from(automation_runs)
       .where(
         and(
-          eq(automation_runs.principal, await principalRef(input.projectId, input.principalId)),
+          eq(automation_runs.principal, input.principalId),
           eq(automation_runs.project_id, input.projectId),
           gte(automation_runs.created_at, input.since),
         ),
@@ -114,21 +107,16 @@ const createAutomationRunDBService = (db: DbClient) => {
     inputHash: string;
     inputJson: Record<string, unknown>;
   }) => {
+    if (input.tokenId === null && !input.principalId.startsWith("extension:"))
+      throw new Error("Automation run ownership does not match.");
     return db.transaction(async (tx) => {
       const createdAt = nowTimestamp();
-      const owner = await getAutomationOwner(tx, input.projectId, input.principalId);
-      if (!owner) throw new Error("Automation run ownership does not match.");
       if (input.tokenId !== null) {
+        if (input.principalId !== `token:${input.tokenId}`) throw new Error("Automation run ownership does not match.");
         const [token] = await tx
           .select()
           .from(automation_tokens)
-          .where(
-            and(
-              eq(automation_tokens.id, input.tokenId),
-              eq(automation_tokens.principal_id, input.principalId),
-              eq(automation_tokens.project_id, input.projectId),
-            ),
-          );
+          .where(and(eq(automation_tokens.id, input.tokenId), eq(automation_tokens.project_id, input.projectId)));
         if (!token) throw new Error("Automation run ownership does not match.");
       }
       const [created] = await tx
@@ -136,7 +124,7 @@ const createAutomationRunDBService = (db: DbClient) => {
         .values({
           id: crypto.randomUUID(),
           project_id: input.projectId,
-          principal: automationPrincipalRef(owner),
+          principal: input.principalId,
           token_id: input.tokenId,
           command_id: input.commandId,
           idempotency_key: input.idempotencyKey,
@@ -157,7 +145,7 @@ const createAutomationRunDBService = (db: DbClient) => {
         .from(automation_runs)
         .where(
           and(
-            eq(automation_runs.principal, automationPrincipalRef(owner)),
+            eq(automation_runs.principal, input.principalId),
             eq(automation_runs.project_id, input.projectId),
             eq(automation_runs.command_id, input.commandId),
             eq(automation_runs.idempotency_key, input.idempotencyKey),

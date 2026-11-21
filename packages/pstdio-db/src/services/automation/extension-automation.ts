@@ -1,35 +1,11 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { type AutomationRunStatus, automation_runs } from "../../db/schemas.pg";
-import {
-  automationPrincipalRef,
-  automationRunRecord,
-  extensionPrincipalId,
-  getExtensionAutomationOwner,
-  getExtensionAutomationOwners,
-  storeExtensionAutomationOwner,
-} from "./automation-owners";
+import { automationRunRecord, getExtensionAutomationOwner } from "./automation-owners";
 
 export const createExtensionAutomationDBService = (db: DbClient) => {
-  const getOrCreateExtensionPrincipal = async (input: { projectId: string; extensionId: string }) => {
-    const existing = await getExtensionAutomationOwner(db, input);
-    if (existing) return existing;
-    await storeExtensionAutomationOwner(db, {
-      id: extensionPrincipalId(input),
-      project_id: input.projectId,
-      name: input.extensionId,
-      created_by: "extension",
-      created_at: new Date().toISOString(),
-      disabled_at: null,
-    });
-    return (await getExtensionAutomationOwner(db, input))!;
-  };
-  const principalRefs = async (input: { projectId: string; extensionId: string }) => {
-    const owners = await getExtensionAutomationOwners(db, input);
-    return (owners.length ? owners : [{ id: extensionPrincipalId(input), created_by: "extension" }]).map(
-      automationPrincipalRef,
-    );
-  };
+  const getExtensionPrincipal = (input: { projectId: string; extensionId: string }) =>
+    getExtensionAutomationOwner(db, input);
   const getExtensionRun = async (input: { projectId: string; extensionId: string }, runId: string) => {
     const [run] = await db
       .select()
@@ -37,7 +13,7 @@ export const createExtensionAutomationDBService = (db: DbClient) => {
       .where(
         and(
           eq(automation_runs.project_id, input.projectId),
-          inArray(automation_runs.principal, await principalRefs(input)),
+          eq(automation_runs.principal, `extension:${input.extensionId}`),
           eq(automation_runs.id, runId),
         ),
       );
@@ -56,7 +32,7 @@ export const createExtensionAutomationDBService = (db: DbClient) => {
       .where(
         and(
           eq(automation_runs.project_id, input.projectId),
-          inArray(automation_runs.principal, await principalRefs(input)),
+          eq(automation_runs.principal, `extension:${input.extensionId}`),
           filter?.status ? inArray(automation_runs.status, filter.status) : undefined,
           filter?.commandId ? eq(automation_runs.command_id, filter.commandId) : undefined,
         ),
@@ -64,5 +40,5 @@ export const createExtensionAutomationDBService = (db: DbClient) => {
       .orderBy(order(automation_runs.created_at), order(automation_runs.id));
     return (await (filter?.limit === undefined ? query : query.limit(filter.limit))).map(automationRunRecord);
   };
-  return { getOrCreateExtensionPrincipal, getExtensionRun, listExtensionRuns };
+  return { getExtensionPrincipal, getExtensionRun, listExtensionRuns };
 };

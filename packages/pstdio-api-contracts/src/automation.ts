@@ -8,7 +8,6 @@ export const issueAutomationTokenInputSchema = z
   .object({
     name: z.string().trim().min(1).max(120),
     projectId: z.string().min(1),
-    principalId: z.string().uuid().optional(),
     commandScopes: z.array(z.string().min(1)).min(1),
     expiresInSeconds: z
       .number()

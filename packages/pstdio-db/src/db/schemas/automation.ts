@@ -9,10 +9,8 @@ export const automation_tokens = pgTable(
   "automation_tokens",
   {
     id: text("id").primaryKey(),
-    principal_id: text("principal_id").notNull(),
     name: text("name").notNull(),
     created_by: text("created_by").notNull(),
-    principal_created_at: text("principal_created_at").notNull(),
     token_prefix: text("token_prefix").notNull(),
     token_digest: text("token_digest").notNull(),
     project_id: text("project_id")
@@ -26,7 +24,7 @@ export const automation_tokens = pgTable(
   },
   (table) => [
     uniqueIndex("automation_tokens_prefix_idx").on(table.token_prefix),
-    index("automation_tokens_project_principal_idx").on(table.project_id, table.principal_id),
+    index("automation_tokens_project_idx").on(table.project_id),
   ],
 );
 

@@ -37,7 +37,7 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
           and(
             eq(preferences.project_id, owner.workbenchId),
             eq(preferences.extension_id, owner.extensionId),
-            not(sql`starts_with(${preferences.key}, 'automation-owner:')`),
+            not(eq(preferences.key, "automation-disabled")),
           ),
         )
         .limit(1);
@@ -65,12 +65,12 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
         await clearOwnerDocuments(tx, owner);
         await tx
           .delete(preferences)
-          // Automation identity outlives tool data, like retained run history.
+          // Device automation policy outlives tool data and retained run history.
           .where(
             and(
               eq(preferences.project_id, owner.workbenchId),
               eq(preferences.extension_id, owner.extensionId),
-              not(sql`starts_with(${preferences.key}, 'automation-owner:')`),
+              not(eq(preferences.key, "automation-disabled")),
             ),
           );
         cleared = owner;

@@ -1,32 +1,48 @@
 import { sql } from "drizzle-orm";
-import {
-  type AutomationPrincipal,
-  automationPrincipalRef,
-  storeDisabledAutomationOwner,
-  storeExtensionAutomationOwner,
-} from "../services/automation/automation-owners";
+import { restoreAutomationRun } from "./automation-run-upgrade";
 import type { DbClient } from "./connection.pglite";
 import { automation_runs, automation_tokens } from "./schemas/automation";
+import { preferences } from "./schemas/preferences";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
+type ReleasedPrincipal = {
+  id: string;
+  project_id: string;
+  name: string;
+  created_by: string;
+  created_at: string;
+  disabled_at: string | null;
+};
 const releasedPrincipal = async (db: DbClient, id: unknown, projectId: unknown) => {
   const {
     rows: [principal],
-  } = await db.execute<AutomationPrincipal>(sql`SELECT * FROM automation_principals WHERE id = ${id}`);
+  } = await db.execute<ReleasedPrincipal>(sql`SELECT * FROM automation_principals WHERE id = ${id}`);
   if (!principal || principal.project_id !== projectId)
     throw new Error(`Released automation ownership does not match for ${id}`);
   return principal;
+};
+export const restoreAutomationPolicy = async (db: DbClient, principal: ReleasedPrincipal) => {
+  if (principal.created_by !== "extension" || !principal.disabled_at) return;
+  await db
+    .insert(preferences)
+    .values({
+      scope: "project",
+      scope_id: principal.project_id,
+      project_id: principal.project_id,
+      extension_id: principal.name,
+      key: "automation-disabled",
+      sync: "device",
+      value: principal.disabled_at,
+      updated_at: principal.disabled_at,
+    })
+    .onConflictDoNothing();
 };
 export const prepareAutomationOwnersUpgrade = async (db: DbClient, path: string) => {
   const owners = await prepareUpgradeSnapshot(
     db,
     path,
     { table: "automation_principals", keys: ["id"], name: "automation-owners" },
-    async (row) => {
-      const principal = row as AutomationPrincipal;
-      if (principal.created_by === "extension") await storeExtensionAutomationOwner(db, principal);
-      else await storeDisabledAutomationOwner(db, principal);
-    },
+    (row) => restoreAutomationPolicy(db, row as ReleasedPrincipal),
   );
   // The source table is the boundary marker. Once the schema migration dropped
   // it, any surviving snapshots already hold normalized rows ready to restore.
@@ -47,11 +63,11 @@ export const prepareAutomationOwnersUpgrade = async (db: DbClient, path: string)
     },
     async (row) => {
       const owner = await releasedPrincipal(db, row.principal_id, row.project_id);
+      const { principal_id, ...token } = row;
       return {
-        ...row,
+        ...token,
         name: owner.name,
         created_by: owner.created_by,
-        principal_created_at: owner.created_at,
         revoked_at: row.revoked_at ?? owner.disabled_at,
       };
     },
@@ -60,12 +76,7 @@ export const prepareAutomationOwnersUpgrade = async (db: DbClient, path: string)
     db,
     path,
     { table: "automation_runs", keys: ["id"], name: "automation-runs", capture: Boolean(legacy.present) },
-    async (row) => {
-      await db
-        .insert(automation_runs)
-        .values(row as typeof automation_runs.$inferInsert)
-        .onConflictDoNothing();
-    },
+    (row) => restoreAutomationRun(db, path, row),
     async (row) => {
       const owner = await releasedPrincipal(db, row.principal_id, row.project_id);
       if (row.token_id !== null) {
@@ -76,9 +87,15 @@ export const prepareAutomationOwnersUpgrade = async (db: DbClient, path: string)
         );
         if (!token || token.principal_id !== row.principal_id || token.project_id !== row.project_id)
           throw new Error(`Released automation run ownership does not match for ${row.id}`);
+      } else if (owner.created_by !== "extension") {
+        throw new Error(`Released automation run ownership does not match for ${row.id}`);
       }
       const { principal_id, ...run } = row;
-      return { ...run, principal: automationPrincipalRef(owner) };
+      return {
+        ...run,
+        principal: row.token_id !== null ? `token:${row.token_id}` : `extension:${owner.name}`,
+        released_principal_id: owner.id,
+      };
     },
   );
   if (!legacy.present && !owners && !tokens && !runs) return;

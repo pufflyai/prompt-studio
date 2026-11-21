@@ -1,5 +1,5 @@
 {
-  "id": "1b3c60b5-8047-4171-b640-86077208b009",
+  "id": "1642dd43-15a0-4a96-9380-cb9e23a4c4d7",
   "prevId": "e22b1e43-5e44-4e7c-b676-5be106a4f0ab",
   "version": "7",
   "dialect": "postgresql",
@@ -503,12 +503,6 @@
           "primaryKey": true,
           "notNull": true
         },
-        "principal_id": {
-          "name": "principal_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "name": {
           "name": "name",
           "type": "text",
@@ -517,12 +511,6 @@
         },
         "created_by": {
           "name": "created_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "principal_created_at": {
-          "name": "principal_created_at",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -592,17 +580,11 @@
           "method": "btree",
           "with": {}
         },
-        "automation_tokens_project_principal_idx": {
-          "name": "automation_tokens_project_principal_idx",
+        "automation_tokens_project_idx": {
+          "name": "automation_tokens_project_idx",
           "columns": [
             {
               "expression": "project_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "principal_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

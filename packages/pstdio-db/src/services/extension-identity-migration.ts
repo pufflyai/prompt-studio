@@ -99,6 +99,10 @@ const assertNoConflicts = async (tx: Transaction, from: string, to: string) => {
     GROUP BY project_id HAVING bool_or(source_owner = ${from} OR target_owner = ${from})
       AND bool_or(source_owner = ${to} OR target_owner = ${to}) LIMIT 1`);
   if (anchors.rows[0]) throw new ExtensionIdentityConflictError(from, to, String(anchors.rows[0].scope));
+  const runs = await tx.execute(sql`SELECT project_id AS scope FROM ${s.automation_runs}
+    WHERE principal IN (${`extension:${from}`}, ${`extension:${to}`}) GROUP BY project_id
+    HAVING count(DISTINCT principal) > 1 LIMIT 1`);
+  if (runs.rows[0]) throw new ExtensionIdentityConflictError(from, to, String(runs.rows[0].scope));
 };
 
 const cloneParent = async (tx: Transaction, table: PgTable, from: string, to: string) => {
@@ -165,6 +169,11 @@ export const migrateExtensionIdentities = async (
         sql`SELECT source_owner AS extension_id FROM ${s.resource_anchors} WHERE source_owner IN (${oldOwners})
           UNION SELECT target_owner FROM ${s.resource_anchors} WHERE target_owner IN (${oldOwners})`,
         sql`SELECT name AS extension_id FROM ${s.automation_tokens} WHERE created_by = 'extension' AND name IN (${oldOwners})`,
+        sql`SELECT substring(principal from 11) AS extension_id FROM ${s.automation_runs}
+          WHERE principal IN (${sql.join(
+            oldIds.map((id) => sql`${`extension:${id}`}`),
+            sql`, `,
+          )})`,
       ],
       sql` UNION ALL `,
     )}) candidates`,
@@ -204,7 +213,9 @@ export const migrateExtensionIdentities = async (
           await tx.execute(
             sql`UPDATE ${s.resource_anchors} SET ${sql.identifier(column)} = ${to} WHERE ${sql.identifier(column)} = ${from}`,
           );
-        // Extension-created principals use their owner as their name; user-created names are prose.
+        // Extension references follow the owner; user-created token names are prose.
+        await tx.execute(sql`UPDATE ${s.automation_runs} SET principal = ${`extension:${to}`}
+          WHERE principal = ${`extension:${from}`}`);
         await tx.execute(
           sql`UPDATE ${s.automation_tokens} SET name = ${to} WHERE created_by = 'extension' AND name = ${from}`,
         );

@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Preserve device identity and scoped settings during storage consolidation, and keep host credentials private while supporting device and project sign-ins. Preserve saved and built-in board defaults during table consolidation. Retain automation token identity and run history when consolidating ownership.
+Preserve device identity and scoped settings during storage consolidation, and keep host credentials private while supporting device and project sign-ins. Preserve saved and built-in board defaults during table consolidation. Retain automation token identity and run history when consolidating ownership. Give each automation token its own retry history and remove grouped-token issuance.

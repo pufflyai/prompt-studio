@@ -42,7 +42,12 @@ test("a released machine credential authenticates, retries retained work, execut
     const settings = await createSettingsDBService(source.db).get();
     const environment = await createEnvironmentDBService(source.db).get();
     await restoreReleasedPreferenceTables(source);
-    const p = released.principal;
+    const p = {
+      ...released.principal,
+      id: crypto.randomUUID(),
+      project_id: projectId,
+      created_at: new Date().toISOString(),
+    };
     await source.pglite.query("INSERT INTO automation_principals VALUES ($1,$2,$3,$4,$5,$6)", [
       p.id,
       p.project_id,
@@ -54,7 +59,7 @@ test("a released machine credential authenticates, retries retained work, execut
     const t = released.token;
     await source.pglite.query("INSERT INTO automation_tokens VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10)", [
       t.id,
-      t.principal_id,
+      p.id,
       t.token_prefix,
       t.token_digest,
       t.project_id,

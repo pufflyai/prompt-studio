@@ -58,7 +58,7 @@ const createRun = (idempotencyKey: string) =>
 describe("automation run persistence", () => {
   test("extension activity selects the latest matching command inside its database limit", async () => {
     const owner = { projectId, extensionId: "example.worker" };
-    const principal = await service.getOrCreateExtensionPrincipal(owner);
+    const principal = await service.getExtensionPrincipal(owner);
     const ids: string[] = [];
     for (let i = 0; i < 4; i++) {
       const commandId = i === 3 ? "example.worker.command.other" : "example.worker.command.run";
@@ -85,13 +85,12 @@ describe("automation run persistence", () => {
     expect(page.map(({ id }) => id)).toEqual([ids[2]]);
     expect(await service.listExtensionRuns({ ...owner, extensionId: "peer" }, { limit: 1 } as never)).toEqual([]);
   });
-  test("preserves idempotency across token rotation for one principal", async () => {
+  test("keeps retry identity per token when two credentials use the same command and key", async () => {
     const first = await createRun("rotation-safe");
     const rotatedTokenId = crypto.randomUUID();
     const rotated = await service.createToken({
       name: "retention-test rotated",
       createdBy: "test",
-      principalId,
       tokenId: rotatedTokenId,
       tokenPrefix: `pst_at_${rotatedTokenId}`,
       tokenDigest: "rotated-digest",
@@ -110,9 +109,10 @@ describe("automation run persistence", () => {
       inputJson: { commandId: "pstdio.test.command.run", input: {} },
     });
 
-    expect(rotated.principal.id).toBe(principalId);
-    expect(retry.created).toBe(false);
-    expect(retry.run.id).toBe(first.run.id);
+    expect(principalId).toBe(`token:${tokenId}`);
+    expect(rotated.principal.id).toBe(`token:${rotatedTokenId}`);
+    expect(retry.created).toBe(true);
+    expect(retry.run.id).not.toBe(first.run.id);
   });
 
   test("rejects runs whose project, principal, and token do not share ownership", async () => {
@@ -164,7 +164,6 @@ describe("automation run persistence", () => {
   test("deletes project-scoped automation credentials with their project", async () => {
     await createProjectsDBService(db).hardDelete(projectId);
 
-    expect(await service.getPrincipal(projectId, principalId)).toBeNull();
     expect(await db.select().from(automation_tokens)).toEqual([]);
   });
 
@@ -267,7 +266,6 @@ test("clearing extension user data retains automation ownership and historical r
     createInstalledExtensionSourcesDBService,
     createExtensionUserDataDBService,
   } = await import("../../index");
-  const { storeExtensionAutomationOwner } = await import("./automation-owners");
   const extensionId = "example.automation-owner";
   const source = await createInstalledExtensionSourcesDBService(db).register({
     install_name: "automation-owner",
@@ -281,15 +279,7 @@ test("clearing extension user data retains automation ownership and historical r
     scope_type: "project",
     scope_id: projectId,
   });
-  const originalId = "opaque-owner:with-colons";
-  await storeExtensionAutomationOwner(db, {
-    id: originalId,
-    project_id: projectId,
-    name: extensionId,
-    created_by: "extension",
-    created_at: new Date().toISOString(),
-    disabled_at: null,
-  });
+  const originalId = `extension:${extensionId}`;
   const queued = await service.createRun({
     projectId,
     principalId: originalId,
@@ -301,7 +291,7 @@ test("clearing extension user data retains automation ownership and historical r
   });
   await createExtensionUserDataDBService(db).deleteForInstance(instance.id);
   expect(await createExtensionUserDataDBService(db).hasUserData(instance.id)).toBe(false);
-  expect((await service.getOrCreateExtensionPrincipal({ projectId, extensionId })).id).toBe(originalId);
+  expect((await service.getExtensionPrincipal({ projectId, extensionId })).id).toBe(originalId);
   expect(await service.getExtensionRun({ projectId, extensionId }, queued.run.id)).toMatchObject({
     id: queued.run.id,
     principal_id: originalId,
