@@ -1,6 +1,8 @@
 ---
 name: fix-release-pipeline
 description: Get Prompt Studio's release pipeline (nightly, verify or stable Release Packages runs) green in one pass. Find every blocker at once, run the release-only gates locally, triage by root cause, fix in parallel and verify before dispatching the next run. Use when a nightly fails to publish, a verify or stable run is red, or the user asks to make the release pipeline green or stable.
+metadata:
+  version: 0.0.1
 ---
 
 # Fix the release pipeline in one pass
@@ -62,10 +64,10 @@ A failure that appears only after a merge is a regression in that merge. Find th
 
 ## 4. Land and dispatch
 
-1. Queue PRs whose CI is green and whose review is resolved, with the GraphQL `enqueuePullRequest` mutation. Queue the PR that unblocks publication first, so another PR can't delay it.
+1. Read the current PR labels immediately before any merge or queue action. If `benchmark` is present, leave the PR for human review and merge: never enqueue it, merge it, enable auto-merge, or remove the label to bypass this rule, even with green CI and resolved review (004.1.11). For other PRs, queue only when CI is green and review is resolved, using `enqueuePullRequest`. Queue the eligible PR that unblocks publication first.
 2. Two PRs that each need the other's spec fix: merge one branch into the other and land them together.
 3. A branch in the merge queue can't be pushed. Put follow-ups on a new branch.
-4. Automate the hand-off: a background loop that queues a PR when its head commit's checks are green (ignore optional reviewer checks) and dispatches the next run when it merges.
+4. A background hand-off loop must re-read the current labels immediately before each queue attempt. If `benchmark` is present, stop automatic queueing for that PR and leave it to a human; do not reuse an earlier eligibility result. For other PRs, queue only when the current head checks are green and review is resolved, then dispatch the next run after it merges.
 5. Dispatch the next run only after the local release gates pass on the merged code.
 
 ## 5. Prove stability
@@ -90,7 +92,10 @@ gh run view <run> --json jobs --jq '.jobs[]|select(.name=="plan")|.steps[]|selec
 gh api "repos/pufflyai/prompt-studio/commits/<sha>/check-runs?per_page=100" \
   --jq '[.check_runs[]|select(.conclusion!="skipped" and (.name|test("copilot")|not))|(.conclusion // "pending")]'
 
-# Queue a PR
+# Inspect current labels first; never run the queue mutation for a benchmark PR.
+gh pr view <n> --json labels --jq '.labels[].name'
+
+# Queue only an eligible non-benchmark PR after CI and review pass.
 gh api graphql -f query='mutation($id:ID!){enqueuePullRequest(input:{pullRequestId:$id}){mergeQueueEntry{position}}}' \
   -f id="$(gh pr view <n> --json id -q .id)"
 ```
