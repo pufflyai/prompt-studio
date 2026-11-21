@@ -3,19 +3,26 @@ import type { DesktopWindowController } from "../windows/window-controller";
 
 export const startWorkbench = async (
   window: Pick<DesktopWindowController, "showLifecycle" | "prepareWorkbench" | "showWorkbench">,
-  runtimeManager: Pick<DesktopRuntimeManager, "start">,
+  runtimeManager: Pick<DesktopRuntimeManager, "start" | "cancelStart">,
 ) => {
-  const [, runtime] = await Promise.all([
-    window.showLifecycle(),
-    runtimeManager
-      .start((descriptor) => {
-        // Preparation owns its failure; showing the prepared view observes it after API readiness.
-        void window.prepareWorkbench(descriptor).catch(() => {});
-      })
-      .then(async (runtime) => {
+  const preparationFailure = Promise.withResolvers<never>();
+  try {
+    const [, runtime] = await Promise.all([
+      window.showLifecycle(),
+      Promise.race([
+        runtimeManager.start((descriptor) => {
+          void window.prepareWorkbench(descriptor).catch(preparationFailure.reject);
+        }),
+        preparationFailure.promise,
+      ]).then(async (runtime) => {
         await window.showWorkbench(runtime.descriptor);
         return runtime;
       }),
-  ]);
-  return runtime;
+    ]);
+    return runtime;
+  } catch (error) {
+    // Recovery and Retry must wait for the failed readiness attempt and its child to stop.
+    await runtimeManager.cancelStart();
+    throw error;
+  }
 };

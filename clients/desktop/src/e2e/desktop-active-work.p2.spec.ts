@@ -213,6 +213,58 @@ test("keeps startup render failures in the existing recovery screen after the da
   await expect.poll(() => startupState(reopened)).toMatchObject({ kind: "workbench" });
 });
 
+// Critical risk: a failed replacement must not cover Recovery while quitting with active work.
+test("keeps recovery visible when the quit confirmation replacement fails during loading", async () => {
+  const runtime = await startActiveRuntime(cleanup, { refuseFirstForcedShutdown: false, holdDashboard: false });
+  const { electronApp } = await launchDesktop(runtime.home, "quit-confirmation-load-recovery");
+  const lifecycle = await waitForLifecyclePage(electronApp.context());
+  const window = await waitForWorkbenchPage(lifecycle, runtime.descriptor.origin);
+  await window.evaluate(() =>
+    (globalThis as unknown as Window).promptStudioDesktop.reportWorkbenchError({ message: "Fixture root failed" }),
+  );
+  await expect(lifecycle.getByRole("alert")).toBeVisible();
+  runtime.holdDashboard();
+  const replaced = window.waitForEvent("close");
+  await electronApp.evaluate(({ app }) => app.quit());
+  await replaced;
+  const findReplacement = () =>
+    electronApp
+      .context()
+      .pages()
+      .find((page) => page.url().startsWith(runtime.descriptor.origin));
+  await expect.poll(findReplacement).toBeDefined();
+  const replacement = findReplacement()!;
+  await expect.poll(() => startupState(lifecycle)).toMatchObject({ kind: "confirming_active_work" });
+  await replacement.evaluate(() =>
+    (globalThis as unknown as Window).promptStudioDesktop.reportWorkbenchError({
+      message: "Fixture replacement failed",
+    }),
+  );
+  await expect(lifecycle.getByRole("alert")).toBeVisible();
+  runtime.releaseDashboard();
+  await expect
+    .poll(() =>
+      electronApp.evaluate(
+        ({ webContents }, origin) =>
+          webContents
+            .getAllWebContents()
+            .filter((contents) => contents.getURL().startsWith(origin))
+            .every((contents) => !contents.isLoading()),
+        runtime.descriptor.origin,
+      ),
+    )
+    .toBe(true);
+  expect(
+    await electronApp.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0].contentView.children[0].getVisible(),
+    ),
+  ).toBe(false);
+  await expect.poll(() => startupState(lifecycle)).toMatchObject({ kind: "recovery" });
+  await lifecycle.getByRole("button", { name: "Retry", exact: true }).press("Enter");
+  const reopened = await waitForWorkbenchPage(lifecycle, runtime.descriptor.origin);
+  await expect.poll(() => startupState(reopened)).toMatchObject({ kind: "workbench" });
+});
+
 // Critical risk: the entry script can fail before the dashboard installs React error handling.
 test("uses existing recovery when the dashboard bundle fails and retries the dashboard", async () => {
   const runtime = await startActiveRuntime(cleanup, {

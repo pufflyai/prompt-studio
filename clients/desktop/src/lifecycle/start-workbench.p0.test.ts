@@ -29,11 +29,10 @@ test("loads the attached workbench while lifecycle resources are still loading",
         workbenchLoaded = true;
       },
     },
-    { start: async () => runtime },
+    { start: async () => runtime, cancelStart: async () => {} },
   );
   try {
-    await Promise.resolve();
-    await Promise.resolve();
+    await Bun.sleep(0);
     expect(workbenchLoaded).toBe(true);
   } finally {
     lifecycle.resolve();
@@ -57,6 +56,7 @@ test("prepares the workbench while its runtime starts and reveals it only after 
       },
     },
     {
+      cancelStart: async () => {},
       start: (onStarting?: (descriptor: ManagedRuntime["descriptor"]) => void) => {
         onStarting?.(runtime.descriptor);
         return ready.promise;
@@ -72,4 +72,49 @@ test("prepares the workbench while its runtime starts and reveals it only after 
     await startup;
   }
   expect(revealed).toBe(true);
+});
+
+test("cancels pending runtime readiness after preparation fails and waits for cleanup", async () => {
+  const ready = Promise.withResolvers<ManagedRuntime>();
+  const cleanup = Promise.withResolvers<void>();
+  const failure = new Error("workbench_unavailable: Fixture bundle failed");
+  let cancelled = false;
+  let settled = false;
+  let revealed = false;
+  const startup = startWorkbench(
+    {
+      showLifecycle: async () => {},
+      prepareWorkbench: async () => {
+        throw failure;
+      },
+      showWorkbench: async () => {
+        revealed = true;
+        throw failure;
+      },
+    },
+    {
+      start: (onStarting?: (descriptor: ManagedRuntime["descriptor"]) => void) => {
+        onStarting?.(runtime.descriptor);
+        return ready.promise;
+      },
+      cancelStart: async () => {
+        cancelled = true;
+        ready.reject(new Error("Runtime startup cancelled"));
+        await cleanup.promise;
+      },
+    },
+  ).catch((error: unknown) => {
+    settled = true;
+    return error;
+  });
+  try {
+    await Bun.sleep(0);
+    expect(cancelled).toBe(true);
+    expect(settled).toBe(false);
+    expect(revealed).toBe(false);
+  } finally {
+    ready.resolve(runtime);
+    cleanup.resolve();
+    expect(await startup).toBe(failure);
+  }
 });

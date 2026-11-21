@@ -29,7 +29,7 @@ export const startActiveRuntime = async (cleanup: Array<() => void | Promise<voi
   const eventResponses = new Set<ServerResponse>();
   const shutdownForces: boolean[] = [];
   const dashboardRequested = Promise.withResolvers<void>();
-  const dashboardReleased = Promise.withResolvers<void>();
+  let dashboardReleased = Promise.withResolvers<void>();
   if (!options.holdDashboard) dashboardReleased.resolve();
   let dashboardRequests = 0;
   let failDashboardBundle = options.failDashboardBundle ?? false;
@@ -138,6 +138,9 @@ export const startActiveRuntime = async (cleanup: Array<() => void | Promise<voi
     dashboardRequests: () => dashboardRequests,
     restoreDashboardBundle: () => {
       failDashboardBundle = false;
+    },
+    holdDashboard: () => {
+      dashboardReleased = Promise.withResolvers<void>();
     },
     releaseDashboard: () => dashboardReleased.resolve(),
   };
