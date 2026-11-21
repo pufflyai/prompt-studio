@@ -178,6 +178,7 @@
         "@emotion/react": "^11.0.0",
         "@pstdio/canvas": "workspace:*",
         "@pstdio/ui": "workspace:*",
+        "@tanstack/charts": "1.2.1",
         "lucide-react": "^0.556.0",
         "react": "19.2.4",
         "react-dom": "19.2.4",
