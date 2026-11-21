@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { commandRef, defineCommand, params } from "@pstdio/sdk/extensions";
 import { instancesFor } from "./instances";
 import { machineConnection } from "./machine-connection";
+import { dismissMachine } from "./machine-dismissals";
 import { readyMachineCheckpoint } from "./machine-row";
 import {
   checkRelayDevice,
@@ -133,9 +134,7 @@ export function createMachineCommands(getInstances = instancesFor) {
         );
         machine = change.workspace;
       }
-      const dismissedKey = `dismissed-machines:${input.instance}`;
-      const dismissed = (await ctx.storage.get<string[]>(dismissedKey)) ?? [];
-      await ctx.storage.set(dismissedKey, [...new Set([...dismissed, machine.id])]);
+      await dismissMachine(ctx, input.instance, machine.id);
       await ctx.events.emit(changed, {});
       return { machineId: machine.id, state: machine.state };
     },
