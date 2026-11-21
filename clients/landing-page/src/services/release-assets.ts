@@ -93,9 +93,3 @@ export const preferredDownload = (downloads: DesktopDownload[], userAgent: strin
   }
   return undefined;
 };
-
-export const downloadDescription = (download: DesktopDownload) => {
-  if (download.format === "deb") return "Debian / Ubuntu · DEB";
-  if (download.format === "zip") return "ZIP archive";
-  return download.format.toUpperCase();
-};

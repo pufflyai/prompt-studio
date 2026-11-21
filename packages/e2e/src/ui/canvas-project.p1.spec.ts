@@ -136,8 +136,9 @@ test("UI Canvas shows a project's own canvas and follows edits to its component 
   }
 });
 
-// Critical: the Canvas entry must always show a design or setup guidance, including after a
-// remembered pinned design is removed while the person is on another page.
+// Critical: the Canvas entry must always show a design or setup guidance, including after the
+// remembered design is removed while the person is on another page. Canvas designs open as a
+// tabless Main page, so navigation memory, not a pinned tab, remembers the last design.
 test("UI Canvas opens the last design or the first available canvas without a blank page", async ({
   page,
   request,
@@ -175,8 +176,6 @@ export const Default = () => <button>Secondary canvas</button>;
     await expect(frame.getByRole("button", { name: "Startup: Save" })).toBeVisible();
     await page.getByText("Secondary", { exact: true }).first().click();
     await expect(frame.getByRole("button", { name: "Secondary canvas", exact: true })).toBeVisible();
-    await page.getByRole("tab", { name: "Secondary", exact: true }).click({ button: "right" });
-    await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
     await page.getByRole("button", { name: "Back to project", exact: true }).click();
     await page.reload();
     await page.getByText("UI Canvas", { exact: true }).first().click();
@@ -193,6 +192,13 @@ export const Default = () => <button>Secondary canvas</button>;
         return result.outcome?.value?.canvases.map((canvas: { id: string }) => canvas.id);
       })
       .toEqual(["src/button.canvas.tsx"]);
+    // The design's view stays retained while hidden. It must show the removal itself instead of
+    // opening another design; waiting for that keeps the URL check from passing before it reacts.
+    const retained = page.locator('iframe[title="UI Canvas"]');
+    await expect(
+      retained.first().contentFrame().getByText("This canvas no longer exists", { exact: true }),
+    ).toBeAttached();
+    await expect(retained).toHaveCount(1);
     await expect(page).not.toHaveURL(/canvases/);
     await page.getByText("UI Canvas", { exact: true }).first().click();
     await expect(frame.getByRole("button", { name: "Startup: Save" })).toBeVisible();

@@ -86,6 +86,30 @@ const matchesCatalogOrigin = (
   source: ReturnType<typeof parseExtensionSourceRef>,
 ) => !entry || !source || (entry.origin.url === source.url && entry.origin.path === source.path);
 
+/** Retired host extension folders and the catalog extension that adopts their projects. */
+const retiredHostFolders = new Map([["extensions/git-workspaces", "pstdio.workspaces"]]);
+const repositoryKey = (url: string) =>
+  url
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\.git$/, "")
+    .toLowerCase();
+
+// A host folder a newer release merged into another tool has no source at that release.
+// Its successor's adoption replaces it, so it never offers an upgrade.
+const isRetiredHostSource = (catalog: ExtensionCatalog, parsed: ReturnType<typeof parseExtensionSourceRef>) => {
+  const successor = parsed && retiredHostFolders.get(parsed.path);
+  if (!successor) return false;
+  const entry = selectExtensionCatalogEntry(catalog, successor);
+  return Boolean(entry && repositoryKey(entry.origin.url) === repositoryKey(parsed.url));
+};
+
+const upgradableOrigin = (
+  catalog: ExtensionCatalog,
+  entry: ExtensionCatalogEntry | undefined,
+  parsed: ReturnType<typeof parseExtensionSourceRef>,
+) => matchesCatalogOrigin(entry, parsed) && !isRetiredHostSource(catalog, parsed);
+
 const upgradeRef = (entry: ExtensionCatalogEntry | undefined, release: ExtensionRelease | null) =>
   entry && entry.origin.ref !== "{hostRelease}" ? entry.origin.ref : release?.ref;
 
@@ -153,10 +177,9 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     if (deps.release?.source === "registry") return canMoveToRegistry(entry, parsed, source.version);
     const origin = parsed ?? entry?.origin;
     const releaseRef = upgradeRef(entry, deps.release);
-    if (!origin || !releaseRef || !matchesCatalogOrigin(entry, parsed)) return false;
+    if (!origin || !releaseRef || !upgradableOrigin(await catalog, entry, parsed)) return false;
     return canUpgradeGitSource(source, parsed, origin, releaseRef);
   };
-
   const requireCatalogEntry = async (installName: string) => {
     const entry = await catalogEntry(installName);
     if (!entry) throw new ExtensionUpgradeUnavailableError(`No catalog entry for extension: ${installName}`);

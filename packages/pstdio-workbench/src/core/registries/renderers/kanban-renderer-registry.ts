@@ -10,6 +10,7 @@ import type { ContributionMetadata, RegisteredContributionMetadata } from "../..
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import type { ResourceRef } from "../resources/resource-registry";
 import type {
   AttributeDescriptor,
   AttributesSource,
@@ -28,9 +29,17 @@ import type { ViewToolbarAction } from "./view-toolbar-action";
 export interface KanbanRendererQueryState {
   page?: CollectionPageRequest;
   pageParams?: import("@pstdio/sdk/extensions").PageParams;
+  /** The resource bound to the rendering placement. A board outside Main does not query Main's resource. */
+  resource?: ResourceRef;
   settings: KanbanRendererSettings;
   filter: ViewFilterGroup;
   sorts: ViewSort[];
+}
+
+/** The placement a renderer serves. Its reads and writes target this resource rather than Main's. */
+export interface KanbanRendererPlacementBinding {
+  instanceId: string;
+  resource?: ResourceRef;
 }
 
 export interface KanbanRendererContribution<
@@ -38,6 +47,8 @@ export interface KanbanRendererContribution<
   TNode = unknown,
   TIcon = unknown,
 > {
+  /** Binds this renderer to one placement, so its queries, writes and metadata stay with that placement. */
+  forPlacement?(binding: KanbanRendererPlacementBinding): Partial<KanbanRendererContribution<TRow, TNode, TIcon>>;
   /** Captured host identity; never infer a hidden view's project from current selection. */
   queryEvents?: readonly string[];
   queryScope?: Partial<import("@pstdio/sdk/extensions").QueryScope>;

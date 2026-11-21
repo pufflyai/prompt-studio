@@ -68,6 +68,18 @@ jobs:
             /scripts/ci/install-native-dependencies.ts
             /scripts/ci/native-dependency-environment.ts
           sparse-checkout-cone-mode: false
+      # The checkout above can be an older candidate, so use this workflow's own download action.
+      - name: Check out the workflow's artifact download action
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: __test-tmp__/workflow-actions
+          persist-credentials: false
+          # Leave the action's test out of the workspace so test discovery never finds it.
+          sparse-checkout: |
+            /.github/actions/download-artifact-by-id/
+            !/.github/actions/download-artifact-by-id/*.test.ts
+          sparse-checkout-cone-mode: false
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
@@ -113,7 +125,7 @@ jobs:
         if: inputs.kind == 'functional'
         run: bun scripts/test.ts --artifact packaged-desktop --prebuilt --out test-results/ci/desktop-contract-plan.json
       - name: Download the immutable candidate identity
-        uses: actions/download-artifact@v4
+        uses: ./__test-tmp__/workflow-actions/.github/actions/download-artifact-by-id
         if: always()
         with:
           artifact-ids: ${{ inputs.candidate_artifact_id }}
