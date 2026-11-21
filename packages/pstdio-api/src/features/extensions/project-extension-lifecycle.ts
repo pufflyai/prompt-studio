@@ -39,10 +39,18 @@ export class ExtensionProviderInUseError extends Error {}
 
 const extensionProviderWorkspaces = async (deps: LifecycleDeps, projectId: string, extensionId: string) => {
   const prefix = `${extensionId}.workspace-type.`;
-  const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
-  return (await deps.workspaceService.listForProviderReconciliation(projectId)).filter((workspace) => {
-    const provider = findWorkspaceProviderRecord(snapshot.runtime, workspace.provider_id);
+  const workspaces = await deps.workspaceService.listForProviderReconciliation(projectId);
+  const legacyProvider =
+    ["pstdio.git-workspaces", "pstdio.workspaces"].includes(extensionId) &&
+    workspaces.some((workspace) => [worktreeProviderId, legacyGitProviderId].includes(workspace.provider_id));
+  // The legacy provider and its successor share public IDs. Resolve that handoff
+  // only when those workspaces exist; ordinary removal needs no project runtime.
+  const runtime = legacyProvider ? (await deps.extensionRuntimeCatalog.get(projectId)).runtime : undefined;
+  return workspaces.filter((workspace) => {
+    const provider = runtime && findWorkspaceProviderRecord(runtime, workspace.provider_id);
     if (provider) return provider.extensionId === extensionId;
+    // Provider IDs identify their owner without loading every tool in the project.
+    // A suspended runtime read must not prevent removing an unrelated tool.
     // A disabled predecessor still owns its checkouts until an active successor takes over.
     if (
       extensionId === "pstdio.git-workspaces" &&

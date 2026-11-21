@@ -69,5 +69,16 @@
     ],
     "removalCriteria": "Find why PowerShell sometimes never starts the script on hosted Windows runners: in release run 44775675600 the probe reported scriptStarted=false after 30217 ms (the case previously failed at a 3 s deadline, see #1660), while the five preceding release runs passed. Fix the launch or the runner condition, then restore this unchanged case to the stable lane with first-attempt native Windows evidence. Keep every assertion.",
     "failureMessageIncludes": ["Command timed out after"]
+  },
+  {
+    "runner": "playwright-ui",
+    "file": "packages/e2e/src/ui/extension-webviews.p2.spec.ts",
+    "name": "opens host terminal tabs from the Secondary Panel",
+    "platforms": ["linux"],
+    "arch": "x64",
+    "owner": "PS-1270",
+    "evidence": ["https://github.com/pufflyai/prompt-studio/actions/runs/44880763815"],
+    "removalCriteria": "One-off in release run 44880763815: the visible terminal text stayed empty for the 2 s poll at extension-webviews.p2.spec.ts:80, after passing on the first attempt in the seven preceding release runs. Find why the host terminal sometimes paints no output within 2 s (late shell prompt, missed resize or a missed first frame), fix it, then restore this unchanged case to the stable lane with first-attempt evidence. Keep every assertion.",
+    "failureMessageIncludes": ["Expected pattern: /\\S/"]
   }
 ]

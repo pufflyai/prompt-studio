@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { DesktopRuntimeManager } from "./runtime-manager";
 
 const descriptor = {
@@ -28,6 +31,61 @@ class RuntimeChild extends EventEmitter {
     return true;
   }
 }
+
+test.each([
+  "announced",
+  "unconfirmed",
+  "detached",
+  "replaced",
+])("reconciles a lost shutdown response against its runtime owner (%s)", async (outcome) => {
+  const root = mkdtempSync(join(tmpdir(), "desktop-shutdown-response-"));
+  const descriptorPath = join(root, "runtime.json");
+  let attached = descriptor;
+  let onShutdown = () => {};
+  let announcements = 0;
+  const manager = new DesktopRuntimeManager(
+    {
+      descriptorPath,
+      resolveSidecarPath: () => "/app/pstdio",
+      onIntentionalShutdown() {
+        announcements++;
+      },
+      onUnexpectedExit() {},
+      onPhase() {},
+    },
+    {
+      discoverRuntime: async () => ({ state: "healthy", descriptor: attached }),
+      observeRuntimeShutdown: async (_runtime, listener) => {
+        onShutdown = listener;
+      },
+      requestRuntimeShutdown: async () => {
+        if (outcome === "announced") {
+          writeFileSync(`${descriptorPath}.shutdown`, JSON.stringify(descriptor));
+          onShutdown();
+        }
+        if (outcome === "detached") await manager.detach();
+        if (outcome === "replaced") {
+          await manager.detach();
+          attached = { ...descriptor, instanceId: "replacement-runtime" };
+          await manager.start();
+          return { state: "accepted" };
+        }
+        return { state: "failed" };
+      },
+    },
+  );
+  await manager.start();
+  try {
+    expect(await manager.requestShutdown(true)).toEqual({ state: outcome === "announced" ? "accepted" : "failed" });
+    if (outcome === "replaced") {
+      onShutdown();
+      expect(announcements).toBe(1);
+    }
+  } finally {
+    await manager.detach();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 describe("DesktopRuntimeManager", () => {
   test("attaches to a healthy runtime without running shell startup", async () => {
