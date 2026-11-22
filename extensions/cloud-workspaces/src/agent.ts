@@ -74,6 +74,25 @@ export function createMachineHarness(getInstances = instancesFor) {
     label: l10n("cloud-workspaces.pocketcoder-agent", "PocketCoder agent"),
     cwdRequirement: "optional",
     capabilities: () => ["SessionReattach", "Attachments"],
+    prepareOperation(ctx, input, operation) {
+      const match = operation.kind === "command" && /^\/attach ([^:\s]+):([^:\s]+):([^:\s]+)$/.exec(operation.text);
+      if (!match || input.agentSessionId) throw new Error("Attach a machine conversation to a new session.");
+      const agentSessionId = `${match[1]}:${match[2]}:${match[3]}`;
+      return {
+        execution: "exclusive",
+        async invoke({ events, signal }) {
+          const session = await runs.run(
+            ctx,
+            { ...input, agentSessionId, prompt: "", events, signal },
+            async (active) => {
+              const ref = await target(ctx, { agentSessionId, signal: active.signal });
+              return startFileTurn(ctx, active, ref);
+            },
+          );
+          return { kind: "started", session };
+        },
+      };
+    },
     start: (ctx, input) => runs.run(ctx, input, (active) => send(ctx, active)),
     resume: (ctx, input) =>
       runs.run(ctx, input, async (active) => resumeFileTurn(ctx, active, await target(ctx, active))),

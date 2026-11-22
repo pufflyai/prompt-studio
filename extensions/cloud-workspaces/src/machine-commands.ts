@@ -5,8 +5,10 @@ import { machineConnection } from "./machine-connection";
 import { dismissMachine } from "./machine-dismissals";
 import { readyMachineCheckpoint } from "./machine-row";
 import {
+  attachMachineSession,
   checkRelayDevice,
-  latestMachineConversation,
+  createMachineSession,
+  machineConversationToAttach,
   machineSessionTarget,
   previousMachineSession,
 } from "./machine-session";
@@ -89,25 +91,13 @@ export function createMachineCommands(getInstances = instancesFor) {
       if (connection.kind === "relay") await checkRelayDevice(ctx, connection.deviceId);
       const existing = sessionId ? await ctx.sessions.get(sessionId) : null;
       const conversationId =
-        !existing && connection.kind === "session"
-          ? await latestMachineConversation(instances, input.instance, machine)
+        connection.kind === "session"
+          ? await machineConversationToAttach(instances, input.instance, machine, existing)
           : undefined;
       const session =
-        existing ??
-        (await ctx.sessions.create({
-          title: `PocketCoder: ${machine.external_id}`,
-          ...(connection.kind === "relay"
-            ? {
-                deviceId: connection.deviceId,
-                workspaceId: connection.workspaceId,
-                harness: { harnessId: "pstdio.harness-codex.harness.codex" },
-              }
-            : {
-                harness: {
-                  harnessId: `${ctx.extensionId}.harness.agent`,
-                },
-              }),
-        }));
+        existing ?? (await createMachineSession(ctx, input.instance, machine, connection, conversationId));
+      if (existing && conversationId)
+        await attachMachineSession(ctx, existing.id, input.instance, machine.id, conversationId);
       if (connection.kind === "session")
         await instances.bindSession(session.id, input.instance, machine.id, conversationId);
       await ctx.storage.set(key, session.id);
