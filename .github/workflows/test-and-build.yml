@@ -124,6 +124,7 @@ jobs:
           const { readReviewSource, localReviewEnvironment } = await import(root + "/scripts/ci/local-review-source.ts");
           const { executePlan } = await import(root + "/scripts/ci/run-test-plan.ts");
           const { cleanupReviewCompose } = await import(root + "/scripts/ci/local-review-compose.ts");
+          const { cpSync, existsSync, mkdirSync } = await import("node:fs");
           const source = readReviewSource(root, "origin/main", input.tests);
           if (source.dirty || source.head !== input.source) throw new Error("Repair source must be the clean expected commit");
           const available = new Set(source.plan.testPlan.runs.map((run) => run.id));
@@ -135,9 +136,59 @@ jobs:
             process.exit(0);
           }
           await Bun.write(input.audit + "/repair-selection.json", JSON.stringify({ source: source.plan.testPlan.source, planDigest: source.plan.testPlan.digest, runIds: input.runIds, partial: true, note: "Only failed, affected or previously unrun groups; this does not certify the complete local review or static/package checks." }, null, 2));
+          const executions = [];
+          const controller = new AbortController();
+          process.on("SIGINT", () => controller.abort("Owned diagnostic interrupted"));
+          process.on("SIGTERM", () => controller.abort("Owned diagnostic interrupted"));
+          const saveExecutions = async () => {
+            const complete = executions.length === input.runIds.length && executions.every((entry) => entry.complete);
+            await Bun.write(input.audit + "/repair-executions.json", JSON.stringify({ kind: "independent-owned-group-executions", source: source.plan.testPlan.source, planDigest: source.plan.testPlan.digest, runIds: input.runIds, executions, complete, outcome: complete && executions.every((entry) => entry.outcome === "success") ? "success" : "failure", partial: true }, null, 2));
+          };
+          const preserveBrowserOutput = async (run, saved) => {
+            const owner = run.runner === "component" ? "packages/canvas-tests" : run.runner === "desktop" ? "clients/desktop" : ["app", "packaged-browser", "browser-helper"].includes(run.runner) ? "packages/e2e" : undefined;
+            if (!owner) return;
+            const phase = saved.phases.find((entry) => entry.kind === "test" && entry.id === run.id);
+            if (!phase) return;
+            const reports = saved.results.find((entry) => entry.runId === run.id)?.reports ?? [];
+            const manifests = [];
+            for (const report of reports) {
+              const file = Bun.file(root + "/" + report);
+              if (!await file.exists()) continue;
+              const value = await file.json();
+              if (value.runId === run.id && value.executionId === saved.executionId && value.planDigest === saved.planDigest && Array.isArray(value.cases) && value.cases.length) manifests.push(report);
+            }
+            if (!manifests.length) return;
+            const snapshot = "test-results/ci/owned-browser-artifacts/" + run.id;
+            const copied = [];
+            for (const directory of ["test-results", "playwright-report"]) {
+              const from = root + "/" + owner + "/" + directory;
+              if (!existsSync(from)) continue;
+              const to = root + "/" + snapshot + "/" + owner + "/" + directory;
+              mkdirSync(to, { recursive: true });
+              cpSync(from, to, { recursive: true });
+              copied.push(owner + "/" + directory);
+            }
+            if (!copied.length) return;
+            await Bun.write(root + "/" + snapshot + "/provenance.json", JSON.stringify({ kind: "package-output-snapshot", afterRunId: run.id, source: saved.source, planDigest: saved.planDigest, executionId: saved.executionId, complete: saved.complete, outcome: saved.outcome, testPhase: phase, manifests, copied, note: "Snapshot taken after this validated owning invocation. Package directories can accumulate prior artifacts; attribute traces through their browser manifest, not this directory name alone." }, null, 2));
+            return snapshot;
+          };
           try {
-            const result = await executePlan(source.plan.testPlan, { root, runIds: input.runIds, env: { ...localReviewEnvironment(input.temporary), TMPDIR: input.temporary, CI_PROFILE: "production" }, report: input.audit + "/repair-execution.json" });
-            process.exitCode = result.outcome === "success" ? 0 : 1;
+            await saveExecutions();
+            for (const id of input.runIds) {
+              if (controller.signal.aborted) break;
+              const run = source.plan.testPlan.runs.find((entry) => entry.id === id);
+              const report = input.audit + "/repair-execution-" + id + ".json";
+              const result = await executePlan(source.plan.testPlan, { root, runIds: [id], env: { ...localReviewEnvironment(input.temporary), TMPDIR: input.temporary, CI_PROFILE: "production" }, signal: controller.signal, report });
+              const saved = await Bun.file(report).json();
+              const expected = source.plan.testPlan.source;
+              if (saved.planDigest !== source.plan.testPlan.digest || saved.source.sha !== expected.sha || saved.source.tree !== expected.tree || saved.source.policy !== expected.policy || saved.source.dirty || saved.runIds.length !== 1 || saved.runIds[0] !== id || typeof saved.executionId !== "string" || !Number.isFinite(saved.elapsedMs) || saved.complete !== result.complete || saved.outcome !== result.outcome) throw new Error("Invalid saved owning execution report: " + id);
+              // Playwright clears its package outputDir on the next invocation.
+              const browserSnapshot = await preserveBrowserOutput(run, saved);
+              executions.push({ runId: id, report, executionId: saved.executionId, complete: saved.complete, outcome: saved.outcome, elapsedMs: saved.elapsedMs, browserSnapshot });
+              await saveExecutions();
+              if (result.phases.some((phase) => phase.kind !== "test" && phase.outcome !== "success")) break;
+            }
+            process.exitCode = executions.length === input.runIds.length && executions.every((entry) => entry.complete && entry.outcome === "success") ? 0 : 1;
           } finally {
             const cleanup = await cleanupReviewCompose(input.temporary);
             await Bun.write(input.audit + "/repair-compose-cleanup.json", JSON.stringify(cleanup, null, 2));
