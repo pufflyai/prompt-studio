@@ -171,6 +171,35 @@ const TWO_DEVICE_TEST_TIMEOUT = 180_000;
 const pickerSecondLog = (root: string) =>
   join(import.meta.dirname, "../../test-results/packaged-runtime", `picker-second-${basename(root)}.jsonl`);
 
+const diagnoseReady = async (
+  ready: () => Promise<void>,
+  device: Awaited<ReturnType<typeof startDevice>>,
+  projectId: string,
+) => {
+  try {
+    await ready();
+  } catch (error) {
+    try {
+      const page = await device.client.workspaces.query(projectId);
+      console.error(
+        "Project readiness diagnostic",
+        page.items.map((workspace) => ({
+          isDefault: workspace.isDefault,
+          device: Boolean(workspace.device),
+          initializing: workspace.initializing,
+          providerState: workspace.providerState,
+          executionKind: workspace.executionKind,
+          hasRoot: Boolean(workspace.rootPath),
+          setupError: workspace.setupError,
+        })),
+      );
+    } catch (diagnosticError) {
+      console.error("Project readiness diagnostic failed", String(diagnosticError));
+    }
+    throw error;
+  }
+};
+
 setupPackagedSmokeTests();
 test(
   "a new device opens its cloud project from the picker, prepares its folder, and restores shared files",
@@ -271,7 +300,7 @@ test(
       await picker.retry();
       phase("retry requested");
       await Promise.all([first.reach(project.id, "synced"), second.reach(project.id, "synced")]);
-      await picker.ready();
+      await diagnoseReady(picker.ready, second, project.id);
       // Folder preparation can replace a synced owner; navigation does not await its next download.
       await waitFor(async () => (await second.client.account.projectSyncStatus(project.id)).offlineReady);
       phase("project folder prepared");

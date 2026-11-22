@@ -215,6 +215,61 @@ test("names the process that hosts an extension and ends its frames when paused"
   let app: PackagedApp | null = null;
   try {
     ({ app } = await launchProject("Extension processes", { monitoring: true, webview: true }));
+    // Temporary PS-1293 diagnostic: observe real input and bridge messages without changing either path.
+    app.page.on("console", (message) => {
+      if (message.text().startsWith("[pause-diagnostic]")) console.log(message.text());
+    });
+    const observeInput = () => {
+      const log = (value: unknown) => console.info("[pause-diagnostic]", JSON.stringify(value));
+      for (const type of ["pointerdown", "pointerup", "mousedown", "mouseup", "click"]) {
+        document.addEventListener(
+          type,
+          (event) => {
+            const target = event.target instanceof Element ? event.target : undefined;
+            const button = target?.closest("button");
+            log({
+              type,
+              path: location.pathname,
+              trusted: event.isTrusted,
+              target: target?.tagName,
+              button: button?.getAttribute("aria-label"),
+              active: navigator.userActivation?.isActive,
+              focus: document.hasFocus(),
+              visible: document.visibilityState,
+              hover: button?.matches(":hover"),
+            });
+          },
+          true,
+        );
+      }
+      window.addEventListener("message", (event) => {
+        const data = event.data as {
+          action?: string;
+          callName?: string;
+          callID?: string;
+          args?: { method?: string; params?: unknown }[];
+          result?: { ok?: boolean; error?: unknown };
+          error?: unknown;
+        } | null;
+        const request = data?.args?.[0];
+        if (
+          request?.method === "performance.control" ||
+          (location.pathname.includes("details") && data?.callName === "call")
+        )
+          log({
+            path: location.pathname,
+            action: data?.action,
+            callID: data?.callID,
+            method: request?.method,
+            params: request?.method === "performance.control" ? request.params : undefined,
+            ok: data?.result?.ok,
+            error: data?.error ?? data?.result?.error,
+            active: navigator.userActivation?.isActive,
+          });
+      });
+    };
+    await app.page.evaluate(observeInput);
+    await app.page.addInitScript(observeInput);
     const processes = async () => (await readSnapshot(app!.page))?.processes ?? [];
     const extensionProcesses = async () =>
       (await processes()).filter((process) => process.role === "extension-frames" && process.extensionFrames.length);
