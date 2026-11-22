@@ -14,3 +14,25 @@ test("workspace provider label/default projection needs no runtime or browser st
     }).template,
   ).toMatchObject({ label: "Template", defaultValue: "small" });
 });
+
+test("workspace choices retain their string fallback without starting a translation owner", () => {
+  const template = workspaceProviderParamSchema({
+    id: "custom",
+    label: "Custom",
+    params: {
+      template: {
+        type: "select",
+        options: [
+          { label: "Small", localizedLabel: { $l10n: "small" }, value: "small" },
+          { label: "Large", localizedLabel: { $l10n: "large", default: "Large instance" }, value: "large" },
+        ],
+      },
+    },
+  }).template;
+  expect(template).toMatchObject({
+    options: [
+      { label: "Small", value: "small" },
+      { label: "Large instance", value: "large" },
+    ],
+  });
+});

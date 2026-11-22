@@ -108,10 +108,15 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
         (record) => record.extensionId === extensionId && record.localId === connectionId,
       )?.contribution;
     },
-    isExtensionInstalled: async (projectId, extensionId) =>
-      (await extensionService.listProjectExtensionInstances(projectId)).some(
+    isExtensionInstalled: async (projectId, extensionId) => {
+      if (projectId === null)
+        return (await input.installedExtensionSourcesDBService.list()).some(
+          (source) => source.extension_id === extensionId,
+        );
+      return (await extensionService.listProjectExtensionInstances(projectId)).some(
         ({ installedSource }) => installedSource.extension_id === extensionId,
-      ),
+      );
+    },
     onCleanupError: (error, context) =>
       apiLogger.error(
         { err: error, event: "extension.connection_cleanup.deferred", ...context },
