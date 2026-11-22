@@ -73,6 +73,7 @@ export type {
   WorkbenchShellRegionState,
   WorkbenchSidePanelPresentation,
 } from "../controllers/shell/shell-controller";
+export { sidePanelBubblePreferences } from "../controllers/side-panel/side-panel-bubble";
 export type {
   CreateWorkbenchSidePanelControllerInput,
   WorkbenchSidePanelChangeListener,

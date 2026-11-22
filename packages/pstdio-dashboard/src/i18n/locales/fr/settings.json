@@ -41,6 +41,7 @@
     }
   },
   "appearance": {
+    "showSidePanelBubble": "Afficher la bulle du panneau latéral",
     "title": "Apparence",
     "description": "Choisissez l'apparence de Prompt Studio. Vous pouvez aussi changer de thème avec Alt+Shift+T.",
     "theme": "Thème",

@@ -1,8 +1,9 @@
 import { Box, Flex, IconButton, Text } from "@chakra-ui/react";
-import { AttachedPanel, BubbleButton, BubblePanel, PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
-import { MessageCircle, Minimize2, Minus, SquareArrowOutUpRight } from "lucide-react";
+import { AttachedPanel, BubblePanel, PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
+import { Minimize2, Minus, SquareArrowOutUpRight } from "lucide-react";
 import { type ReactNode, useLayoutEffect, useRef } from "react";
 import type { WorkbenchCore } from "../../core";
+import { sidePanelBubblePreferences } from "../../core/controllers/side-panel/side-panel-bubble";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
 import { PanelHeader } from "../region/panel-header";
@@ -10,6 +11,7 @@ import { WorkbenchTabDropTarget } from "../region/tab-drag-context";
 import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
+import { SidePanelBubble } from "./side-panel-bubble";
 
 interface WorkbenchSidePanelProps {
   workbench: WorkbenchCore;
@@ -17,7 +19,8 @@ interface WorkbenchSidePanelProps {
   bottomOffset?: string;
   header?: ReactNode;
   bubbleIcon?: ReactNode;
-  onOpen?: () => void;
+  defaultPanelLabel?: string;
+  onOpen?: () => void | Promise<void>;
 }
 
 const floatingPanelBottom = (bottomOffset: string | undefined) =>
@@ -99,11 +102,26 @@ export const useSidePanelLauncherVisible = (workbench: WorkbenchCore, available:
   const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state);
   const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
   const policy = usePanelPolicy(workbench, "side");
-  return available && canFloat && policy.canOpen && (fullscreen.active ? !fullscreen.sideOpen : mode === "closed");
+  const enabled = useWorkbenchStore(
+    workbench.preferences.store,
+    () => workbench.preferences.getValue(sidePanelBubblePreferences.visible) !== false,
+  );
+  return (
+    enabled && available && canFloat && policy.canOpen && (fullscreen.active ? !fullscreen.sideOpen : mode === "closed")
+  );
 };
 
 export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProps) => {
-  const { workbench, contentSlotRef, bottomOffset, header, bubbleIcon, onOpen, available = true } = props;
+  const {
+    workbench,
+    contentSlotRef,
+    bottomOffset,
+    header,
+    bubbleIcon,
+    defaultPanelLabel,
+    onOpen,
+    available = true,
+  } = props;
   const mode = useWorkbenchStore(workbench.layout.store, () => workbench.sidePanel.getMode());
   const fullscreen = useWorkbenchStore(workbench.fullscreen.store, (state) => state);
   const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
@@ -116,27 +134,25 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
     const previous = previousFullscreen.current;
     previousFullscreen.current = fullscreen;
     if (!previous.active || !fullscreen.active || !previous.sideOpen || fullscreen.sideOpen) return;
-    const frame = requestAnimationFrame(() => bubbleRef.current?.focus({ preventScroll: true }));
+    const frame = requestAnimationFrame(() => {
+      if (bubbleRef.current) bubbleRef.current.focus({ preventScroll: true });
+      else workbench.focus.setActiveRegion("main");
+    });
     return () => cancelAnimationFrame(frame);
-  }, [fullscreen]);
+  }, [fullscreen, workbench]);
 
   return (
     <>
       {launcherVisible || visible ? (
-        <BubbleButton
-          ref={bubbleRef}
+        <SidePanelBubble
+          workbench={workbench}
+          buttonRef={bubbleRef}
           isOpen={visible}
-          aria-label="Open Side Panel"
-          containerProps={{ bottom: launcherBottom(bottomOffset) }}
-          tooltip="Open Side Panel"
-          onClick={
-            fullscreen.active
-              ? () => workbench.commands.executeCommand("workbench.showFullscreenSide")
-              : (onOpen ?? (() => workbench.shell.setSidePanelPresentation("floating")))
-          }
-        >
-          {bubbleIcon ?? <MessageCircle size={20} strokeWidth={2} />}
-        </BubbleButton>
+          bottom={launcherBottom(bottomOffset)}
+          icon={bubbleIcon}
+          defaultPanelLabel={defaultPanelLabel}
+          onOpen={onOpen}
+        />
       ) : null}
       {/* Both presentation slots stay connected so hiding cannot release a live iframe. */}
       <BubblePanel

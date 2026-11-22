@@ -41,6 +41,7 @@
     }
   },
   "appearance": {
+    "showSidePanelBubble": "显示侧边面板气泡",
     "title": "外观",
     "description": "选择 Prompt Studio 的外观。也可以按 Alt+Shift+T 更改主题。",
     "theme": "主题",

@@ -41,6 +41,7 @@
     }
   },
   "appearance": {
+    "showSidePanelBubble": "顯示側邊面板氣泡",
     "title": "外觀",
     "description": "選擇 Prompt Studio 的外觀。也可以按 Alt+Shift+T 變更主題。",
     "theme": "主題",

@@ -1,5 +1,6 @@
 import { rmSync } from "node:fs";
 import { folderProjectInput } from "../helpers/folder-project";
+import { homeFrame } from "../helpers/home-loading";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { expect, test } from "../scripts/session-test";
 import { uiOrigin as apiBase } from "../ui-server";
@@ -7,6 +8,7 @@ import { createGitRepo } from "./helpers/workspace-session-attempt";
 
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((selectedProjectId: string) => {
+    if (window.parent !== window) return;
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
     localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
@@ -102,5 +104,75 @@ test.describe("Session bubble workspace selection", () => {
     await expect(sidePanel.getByRole("button", { name: "Select workspace", exact: true })).toContainText(
       workspace.workspace_shorthand,
     );
+  });
+
+  // Critical risk: launcher customization must keep the Side Panel reachable and
+  // must not open a session merely because the person drags the bubble.
+  test("remembers the bubble position, visibility, and default panel", async ({ page, request }) => {
+    projectId = (await createProjectViaApi(request, "Custom Side Panel bubble")).id;
+    await bypassOnboarding(page, projectId);
+    await page.goto(`/projects/${projectId}`);
+    await expect(homeFrame(page).getByText("Custom Side Panel bubble", { exact: true })).toBeVisible();
+    const bubble = page.getByRole("button", { name: "Open Side Panel", exact: true });
+    await expect(bubble).toBeVisible();
+    await bubble.click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Align center", exact: true }).click();
+    await expect(bubble).toHaveAttribute("data-side-panel-bubble-alignment", "center");
+    const bounds = await bubble.boundingBox();
+    await page.mouse.move(bounds!.x + bounds!.width / 2, bounds!.y + bounds!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(32, bounds!.y + bounds!.height / 2, { steps: 5 });
+    await page.mouse.up();
+    await expect(bubble).toHaveAttribute("data-side-panel-bubble-alignment", "left");
+    await expect(page.getByTestId("workbench-side-panel-floating")).toBeHidden();
+    await bubble.click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Default panel", exact: true }).hover();
+    await page.getByRole("menuitem", { name: "Side Panel", exact: true }).click();
+    await page.reload();
+    await expect(homeFrame(page).getByText("Custom Side Panel bubble", { exact: true })).toBeVisible();
+    await expect(bubble).toHaveAttribute("data-side-panel-bubble-alignment", "left");
+    await bubble.click();
+    const side = page.getByTestId("workbench-side-panel-floating");
+    await expect(side).toBeVisible();
+    await expect(side.getByTestId("content-editable").filter({ visible: true })).toHaveCount(0);
+    await side.getByRole("button", { name: "Close Side Panel", exact: true }).click();
+    await page.getByRole("option", { name: "Settings", exact: true }).click();
+    await page.getByRole("option", { name: "Appearance", exact: true }).click();
+    const toggle = page.getByRole("checkbox", { name: "Show Side Panel bubble", exact: true });
+    await expect(toggle).toBeChecked();
+    await page.locator("label").filter({ has: toggle }).click();
+    await expect(toggle).not.toBeChecked();
+    await expect(page.locator("[data-side-panel-bubble-alignment]")).toHaveCount(0);
+    await page.locator("label").filter({ has: toggle }).click();
+    await expect(toggle).toBeChecked();
+    await page.keyboard.press("Escape");
+    await expect(bubble).toBeVisible();
+    await expect(bubble).toHaveAttribute("data-side-panel-bubble-alignment", "left");
+    await bubble.click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Default panel", exact: true }).hover();
+    await expect(page.getByRole("menuitem", { name: "Default (New session)", exact: true })).toBeVisible();
+    await page.getByRole("menuitem", { name: "New session", exact: true }).click();
+    await bubble.click();
+    await expect(side.getByTestId("content-editable").filter({ visible: true })).toBeVisible();
+    await side.getByRole("button", { name: "Close Side Panel", exact: true }).click();
+    const listed = await (await request.get(`${apiBase}/v1/projects/${projectId}/extensions`)).json();
+    const sessions = listed.extensions.find(
+      (entry: { installName: string }) => entry.installName === "session-browser",
+    );
+    expect(sessions).toBeTruthy();
+    const disabled = await request.patch(`${apiBase}/v1/projects/${projectId}/extensions/${sessions.id}`, {
+      data: { enabled: false },
+    });
+    expect(disabled.ok()).toBe(true);
+    await expect(page.getByRole("option", { name: "Sessions", exact: true })).toHaveCount(0);
+    await bubble.click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Default panel", exact: true }).hover();
+    await expect(page.getByRole("menuitem", { name: "Default (New session)", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("menuitem", { name: "New session", exact: true })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
+    await bubble.click();
+    await expect(side).toBeVisible();
+    await expect(side.getByTestId("content-editable").filter({ visible: true })).toHaveCount(0);
   });
 });

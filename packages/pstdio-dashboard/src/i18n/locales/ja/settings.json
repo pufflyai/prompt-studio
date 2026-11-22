@@ -41,6 +41,7 @@
     }
   },
   "appearance": {
+    "showSidePanelBubble": "サイドパネルのバブルを表示",
     "title": "外観",
     "description": "Prompt Studio の見た目を選びます。Alt+Shift+T でもテーマを変更できます。",
     "theme": "テーマ",

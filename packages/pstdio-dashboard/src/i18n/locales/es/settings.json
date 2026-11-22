@@ -41,6 +41,7 @@
     }
   },
   "appearance": {
+    "showSidePanelBubble": "Mostrar burbuja del panel lateral",
     "title": "Apariencia",
     "description": "Elige cómo se ve Prompt Studio. También puedes cambiar el tema con Alt+Shift+T.",
     "theme": "Tema",

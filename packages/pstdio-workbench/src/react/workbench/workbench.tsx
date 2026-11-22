@@ -54,8 +54,10 @@ interface WorkbenchProps {
   renderParamField?: CommandParamFieldRenderer;
   /** Icon shown in the closed Side Panel's bubble launcher. */
   sidePanelBubbleIcon?: ReactNode;
+  /** Label of the host's optional default launcher action, while available. */
+  sidePanelBubbleDefaultLabel?: string;
   /** Host action for opening the closed Side Panel from its bubble launcher. */
-  onOpenSidePanel?: () => void;
+  onOpenSidePanel?: () => void | Promise<void>;
   /** Host storage for the chosen theme. Defaults to browser storage. */
   themeStorage?: ThemePreferenceStorage;
 }
@@ -87,6 +89,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     workbench,
     renderParamField,
     sidePanelBubbleIcon,
+    sidePanelBubbleDefaultLabel,
     onOpenSidePanel,
     titleBar,
     panelControlsPlacement,
@@ -232,6 +235,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
           workbench={workbench}
           available={hasSidePanel}
           bubbleIcon={sidePanelBubbleIcon}
+          defaultPanelLabel={sidePanelBubbleDefaultLabel}
           onOpen={onOpenSidePanel}
           contentSlotRef={setFloatingSidePanelSlot}
           bottomOffset={showStatus ? WORKBENCH_STATUS_BAR_HEIGHT : undefined}

@@ -270,6 +270,7 @@ export {
   resourceHierarchyCycleCode,
   runUserAction,
   settleReadBatch,
+  sidePanelBubblePreferences,
   standardResourceIcons,
   WORKBENCH_KEYBOARD_OPEN_COMMAND_ID,
   WORKBENCH_KEYBOARD_SELECT_TAB_COMMAND_ID,

@@ -91,6 +91,19 @@ Use `SearchableMenu` or resource actions with `isSelected` for shared selection 
 Native Chakra menu choices use `Menu.ItemText` and `Menu.ItemIndicator` with the shared recipe.
 
 The floating Side Panel hides its launcher while open and restores it when closed.
+Drag the bubble to the left, center, or right, or right-click and choose **Align left**,
+**Align center**, or **Align right**. While the bubble has focus, Alt+Shift+Left/Right
+changes alignment. **Settings → Workbench → Appearance → Show Side Panel bubble**
+controls visibility. These user preferences persist across projects and reloads.
+
+The bubble's **Default panel** context menu offers the Side Panel's available tabs
+and a generic **Side Panel** option. Clicking reuses the chosen tab when present.
+An unavailable saved choice opens the generic shell and stays saved for when its
+extension is enabled again. The dashboard defaults to **New session** only while
+Sessions is enabled. Hosts can label their `onOpenSidePanel` action with
+`sidePanelBubbleDefaultLabel`. Hiding the bubble leaves the regular panel controls
+available. Fullscreen uses its temporary Side overlay without changing the saved layout.
+
 The hidden launcher is inert and outside the accessibility tree. Panel content stays
 mounted while closed, so minimizing and reopening preserves drafts. See the
 [menu selection story](../../../packages/ui/src/components/overlays/menu-selection.canvas.tsx)

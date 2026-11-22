@@ -1,14 +1,18 @@
 import { Stack } from "@chakra-ui/react";
 import { useThemePreference } from "@pstdio/ui";
 import { ParamEditorRow, type SelectionParam } from "@pstdio/ui/param-editor";
-import type { WorkbenchCore } from "@pstdio/workbench";
-import { openRelatedResourcesPreference } from "@pstdio/workbench/react";
+import { sidePanelBubblePreferences, type WorkbenchCore } from "@pstdio/workbench";
+import { openRelatedResourcesPreference, useWorkbenchStore } from "@pstdio/workbench/react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 // Lists every registered theme, light themes first, like the Change Theme picker.
 export const AppearanceSettingsPanel = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
+  const showBubble = useWorkbenchStore(
+    workbench.preferences.store,
+    () => workbench.preferences.getValue(sidePanelBubblePreferences.visible) !== false,
+  );
   const [openRelated, setOpenRelated] = useState(
     () => workbench.preferences.getValue(openRelatedResourcesPreference) !== false,
   );
@@ -41,6 +45,19 @@ export const AppearanceSettingsPanel = (props: { workbench: WorkbenchCore }) => 
         param={themeParam}
         onChange={(_id, value) => {
           if (typeof value === "string") setThemePreference(value);
+        }}
+      />
+      <ParamEditorRow
+        fullWidth
+        param={{
+          id: "show-side-panel-bubble",
+          name: t("appearance.showSidePanelBubble"),
+          type: "boolean",
+          defaultValue: showBubble,
+        }}
+        onChange={(_id, value) => {
+          if (typeof value !== "boolean") return;
+          return workbench.preferences.setValue(sidePanelBubblePreferences.visible, value, { scope: "user" });
         }}
       />
       <ParamEditorRow
