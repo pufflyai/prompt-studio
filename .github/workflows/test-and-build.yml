@@ -17,6 +17,14 @@ on:
         type: string
         default: ""
         description: Additional repository-relative tests, one per line
+      repair_run_ids:
+        type: string
+        default: ""
+        description: Optional JSON array of failed or unrun IDs from the current frozen plan; partial evidence only
+      plan_only:
+        type: boolean
+        default: false
+        description: Export the current native plan without executing or qualifying any checks
       test_os:
         type: choice
         options: [macos-15-intel]
@@ -37,17 +45,23 @@ jobs:
     env:
       EXPECTED_SOURCE: ${{ inputs.source_sha }}
       ADDITIONAL_TESTS: ${{ inputs.test_file }}
+      REPAIR_RUN_IDS: ${{ inputs.repair_run_ids }}
+      PLAN_ONLY: ${{ inputs.plan_only }}
     steps:
       - name: Validate the exact source and additional paths
         run: |
           python3 - <<'PYCODE'
-          import os, re
+          import json, os, re
           from pathlib import PurePosixPath
           assert re.fullmatch(r"[0-9a-f]{40}", os.environ["EXPECTED_SOURCE"]), "Expected a full commit SHA"
           for path in os.environ["ADDITIONAL_TESTS"].splitlines():
               if path:
                   parsed = PurePosixPath(path)
                   assert not parsed.is_absolute() and ".." not in parsed.parts and "\x00" not in path
+          if os.environ["REPAIR_RUN_IDS"]:
+              ids = json.loads(os.environ["REPAIR_RUN_IDS"])
+              assert isinstance(ids, list) and ids and all(isinstance(value, str) and re.fullmatch(r"[0-9a-f]{24}", value) for value in ids)
+              assert len(ids) == len(set(ids)), "Repair IDs must be unique"
           PYCODE
       - uses: actions/checkout@v5
         with:
@@ -79,6 +93,7 @@ jobs:
       - name: Install the repository's native dependencies
         run: bun scripts/ci/install-native-dependencies.ts
       - name: Prepare browser engines
+        if: inputs.plan_only != true
         timeout-minutes: 3
         run: bunx playwright@1.60.0 install
       - name: Run the unchanged canonical review command
@@ -100,7 +115,43 @@ jobs:
           command = ["bun", "run", "test:review", "--base", "origin/main"]
           for test in tests:
               command += ["--test", test]
-          metadata = {"source": actual, "workflowSha": os.environ["GITHUB_SHA"], "command": command, "additionalTests": tests, "scratch": str(temporary), "freeBytesBeforeCanonical": shutil.disk_usage(temporary).free, "memoryBytes": int(subprocess.check_output(["sysctl", "-n", "hw.memsize"], text=True)), "logicalCPUs": int(subprocess.check_output(["sysctl", "-n", "hw.logicalcpu"], text=True)), "machine": os.uname().machine}
+          run_ids = json.loads(os.environ["REPAIR_RUN_IDS"]) if os.environ["REPAIR_RUN_IDS"] else None
+          plan_only = os.environ["PLAN_ONLY"] == "true"
+          if run_ids is not None or plan_only:
+              repair = r'''
+          const input = JSON.parse(process.argv.at(-1));
+          const root = process.cwd();
+          const { readReviewSource, localReviewEnvironment } = await import(root + "/scripts/ci/local-review-source.ts");
+          const { executePlan } = await import(root + "/scripts/ci/run-test-plan.ts");
+          const { cleanupReviewCompose } = await import(root + "/scripts/ci/local-review-compose.ts");
+          const source = readReviewSource(root, "origin/main", input.tests);
+          if (source.dirty || source.head !== input.source) throw new Error("Repair source must be the clean expected commit");
+          const available = new Set(source.plan.testPlan.runs.map((run) => run.id));
+          for (const id of input.runIds) if (!available.has(id)) throw new Error("Unknown current plan run: " + id);
+          await Bun.write(input.audit + "/current-review-plan.json", JSON.stringify({ head: source.head, mergeBase: source.mergeBase, ...source.plan }, null, 2));
+          if (input.planOnly) {
+            await Bun.write(input.audit + "/plan-preview.json", JSON.stringify({ source: source.plan.testPlan.source, planDigest: source.plan.testPlan.digest, validationExecuted: false, qualified: false }, null, 2));
+            console.log("Native plan preview only; no validation executed");
+            process.exit(0);
+          }
+          await Bun.write(input.audit + "/repair-selection.json", JSON.stringify({ source: source.plan.testPlan.source, planDigest: source.plan.testPlan.digest, runIds: input.runIds, partial: true, note: "Only failed, affected or previously unrun groups; this does not certify the complete local review or static/package checks." }, null, 2));
+          try {
+            const result = await executePlan(source.plan.testPlan, { root, runIds: input.runIds, env: { ...localReviewEnvironment(input.temporary), TMPDIR: input.temporary, CI_PROFILE: "production" }, report: input.audit + "/repair-execution.json" });
+            process.exitCode = result.outcome === "success" ? 0 : 1;
+          } finally {
+            const cleanup = await cleanupReviewCompose(input.temporary);
+            await Bun.write(input.audit + "/repair-compose-cleanup.json", JSON.stringify(cleanup, null, 2));
+            if (cleanup.some((entry) => entry.outcome !== "success")) process.exitCode = 1;
+          }
+          '''
+              payload = {"audit": str(audit), "temporary": str(temporary), "source": actual, "tests": tests, "runIds": run_ids or [], "planOnly": plan_only}
+              command = ["bun", "-e", repair, json.dumps(payload)]
+          mode = "complete-canonical"
+          if run_ids is not None:
+              mode = "partial-repair"
+          if plan_only:
+              mode = "plan-preview"
+          metadata = {"source": actual, "workflowSha": os.environ["GITHUB_SHA"], "command": command, "additionalTests": tests, "mode": mode, "selectedRunIds": run_ids, "scratch": str(temporary), "freeBytesBeforeCanonical": shutil.disk_usage(temporary).free, "memoryBytes": int(subprocess.check_output(["sysctl", "-n", "hw.memsize"], text=True)), "logicalCPUs": int(subprocess.check_output(["sysctl", "-n", "hw.logicalcpu"], text=True)), "machine": os.uname().machine}
           def save():
               pending = audit / "invocation.pending.json"
               pending.write_text(json.dumps(metadata, indent=2) + "\n")
@@ -179,9 +230,23 @@ jobs:
               except (ValueError, KeyError, TypeError, OSError) as error:
                   print("Unreadable invocation metadata; preserving this run's deterministic scratch:", error)
           with zipfile.ZipFile(audit / "canonical-evidence.zip", "w", zipfile.ZIP_DEFLATED) as archive:
-              for path in (workspace / "test-results/local-review").rglob("*"):
+              registry = private / "compose-projects.jsonl"
+              if registry.is_file():
+                  archive.write(registry, "owned-compose/compose-projects.jsonl")
+                  for index, line in enumerate(registry.read_text().splitlines()):
+                      try:
+                          config = Path(json.loads(line)["file"]).resolve()
+                          if config.is_file() and (private in config.parents or workspace in config.parents):
+                              archive.write(config, "owned-compose/" + str(index) + "-" + config.name)
+                      except (ValueError, KeyError, TypeError, OSError):
+                          pass
+              for path in (private / "logs").rglob("*"):
                   if path.is_file():
-                      archive.write(path, "workspace/" + str(path.relative_to(workspace)))
+                      archive.write(path, "owned-scratch/" + str(path.relative_to(private)))
+              for folder in [workspace / "test-results", workspace / "packages/e2e/test-results", workspace / "packages/ui/test-results", workspace / "packages/canvas-tests/test-results", workspace / "clients/desktop/test-results"]:
+                  for path in folder.rglob("*"):
+                      if path.is_file():
+                          archive.write(path, "workspace/" + str(path.relative_to(workspace)))
               for scratch in private.glob("pstdio-local-review-*"):
                   checks = scratch / "checks.json"
                   if checks.is_file():
