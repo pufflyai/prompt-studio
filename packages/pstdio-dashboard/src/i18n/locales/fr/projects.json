@@ -116,6 +116,19 @@
         "saved": "Connexion enregistrée",
         "actionFailed": "Échec de l’action sur la connexion"
       },
+      "environmentAccess": {
+        "title": "Accès à l’environnement",
+        "description": "Valeurs nommées de l’environnement qui a lancé Prompt Studio, transmises uniquement aux programmes lancés par cette extension. Les valeurs ne sont jamais affichées ici ni envoyées à l’extension.",
+        "notAllowed": "Non autorisé",
+        "partlyAllowed": "{{count}} sur {{total}} autorisés",
+        "allowed": "Autorisé",
+        "stale": "L’extension a changé depuis l’autorisation. Autorisez de nouveau les noms.",
+        "allow": "Autoriser la sélection",
+        "revoke": "Révoquer",
+        "fileAccess": "Cela ne limite pas l’accès aux fichiers. L’extension peut toujours lire et modifier tous les fichiers accessibles à votre compte.",
+        "actionFailed": "L’accès à l’environnement n’a pas été modifié",
+        "loadError": "Impossible de charger l’accès à l’environnement."
+      },
       "detail": {
         "back": "Extensions",
         "sourcePath": "Dossier source",

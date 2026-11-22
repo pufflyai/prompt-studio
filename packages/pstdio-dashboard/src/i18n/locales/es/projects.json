@@ -116,6 +116,19 @@
         "saved": "Conexión guardada",
         "actionFailed": "Falló la acción de conexión"
       },
+      "environmentAccess": {
+        "title": "Acceso al entorno",
+        "description": "Valores con nombre del entorno que inició Prompt Studio, que solo reciben los programas que inicia esta extensión. Los valores nunca se muestran aquí ni se envían a la extensión.",
+        "notAllowed": "No permitido",
+        "partlyAllowed": "{{count}} de {{total}} permitidos",
+        "allowed": "Permitido",
+        "stale": "La extensión cambió desde que se permitió el acceso. Vuelve a permitir los nombres.",
+        "allow": "Permitir selección",
+        "revoke": "Revocar",
+        "fileAccess": "Esto no limita el acceso a archivos. La extensión puede seguir leyendo y modificando cualquier archivo al que acceda tu cuenta.",
+        "actionFailed": "No se cambió el acceso al entorno",
+        "loadError": "No se pudo cargar el acceso al entorno."
+      },
       "detail": {
         "back": "Extensiones",
         "sourcePath": "Carpeta de origen",

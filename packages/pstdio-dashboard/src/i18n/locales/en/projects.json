@@ -116,6 +116,19 @@
         "saved": "Connection saved",
         "actionFailed": "Connection action failed"
       },
+      "environmentAccess": {
+        "title": "Environment access",
+        "description": "Named values from the environment that started Prompt Studio, passed only to programs this extension starts. Values are never shown here or sent to the extension.",
+        "notAllowed": "Not allowed",
+        "partlyAllowed": "{{count}} of {{total}} allowed",
+        "allowed": "Allowed",
+        "stale": "The extension changed since access was allowed. Allow the names again.",
+        "allow": "Allow selected",
+        "revoke": "Revoke",
+        "fileAccess": "This does not limit file access. The extension can still read and change any file your account can.",
+        "actionFailed": "Environment access was not changed",
+        "loadError": "Environment access could not be loaded."
+      },
       "detail": {
         "back": "Extensions",
         "sourcePath": "Source folder",
