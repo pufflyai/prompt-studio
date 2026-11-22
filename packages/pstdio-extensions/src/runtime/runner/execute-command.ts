@@ -13,6 +13,7 @@ import type { RunnerState } from "./context";
 import { lifecycleEventId } from "./dispatch";
 import { createEnvironmentCache, environmentFailedOutcome, withNotices } from "./environment";
 import { findCommand, findPrivateHandler, middlewaresFor, serializeError } from "./internals";
+import { admitInvocation, overloadedOutcome } from "./invocation-admission";
 import { type MiddlewareChainResult, runMiddlewareChain } from "./middleware";
 import { createInvocationScope, type InvocationScope } from "./scope";
 import type { CommandRunnerEnvironment, InternalExecuteInput } from "./types";
@@ -44,15 +45,19 @@ export const executeExtensionCommand = async (
   state: RunnerState,
   input: InternalExecuteInput,
 ): Promise<CommandOutcome> => {
+  const owner = findCommand(state.runtime, input.commandId) ?? findPrivateHandler(state.runtime, input.commandId);
+  const release = owner && input.depth === 0 ? admitInvocation(owner.extensionId) : undefined;
+  if (owner && input.depth === 0 && !release) return overloadedOutcome(owner.extensionId);
   const scope = createInvocationScope({ logger: state.logger, parent: input.signal });
   scope.collectionQuery = input.collectionQuery;
   try {
     return await withRuntimeOperationOrigin(
-      { kind: "command", name: input.commandId, projectId: input.projectId },
+      { kind: "command", name: input.commandId, projectId: input.projectId, extensionId: owner?.extensionId },
       () => runExtensionCommand(state, input, scope),
     );
   } finally {
     await scope.close();
+    release?.();
   }
 };
 

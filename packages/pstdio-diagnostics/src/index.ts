@@ -4,6 +4,7 @@ export { summarizePerformanceEvidence } from "./performance-evidence";
 export { createPerformanceRecording, readPerformanceRecordings } from "./performance-recording";
 export { restoreRecordedCapture } from "./recorded-capture";
 export {
+  currentRuntimeOperationOrigin,
   finishRuntimeOperation,
   runRuntimeOperation,
   runtimeOperationChannel,
