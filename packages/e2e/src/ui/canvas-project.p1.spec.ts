@@ -230,6 +230,9 @@ export const Default = () => <label>Secondary canvas<input aria-label="Preview n
       await loading.promise;
       await page.getByRole("button", { name: "Back to project", exact: true }).click();
       await expect(page).not.toHaveURL(/canvases/);
+      const settled = page.waitForResponse("**/pstdio.canvas.command.preview.assets/execute");
+      resume.resolve();
+      await (await settled).finished();
       await openCanvas.click();
     } finally {
       resume.resolve();
@@ -243,6 +246,30 @@ export const Default = () => <label>Secondary canvas<input aria-label="Preview n
     await page.getByRole("button", { name: "Back to project", exact: true }).click();
     await openCanvas.click();
     await expect(frame.getByRole("textbox", { name: "Preview note" })).toBeVisible();
+    await frame.getByRole("textbox", { name: "Preview note" }).fill("Draft across project navigation");
+    const designViewer = await page.locator('iframe[title="UI Canvas"]:visible').elementHandle();
+    const retainedDesign = await designViewer!.contentFrame();
+    await designViewer!.dispose();
+    await page.getByRole("button", { name: "Back to project", exact: true }).click();
+    // A build while the design is hidden must not replace its retained draft with a closed-viewer error.
+    writeFileSync(
+      join(root, "src/third.canvas.tsx"),
+      'export default { title: "Components/Updated Third" }; export const Example = () => <button>Third design</button>;',
+    );
+    await expect
+      .poll(async () => {
+        const response = await request.post(
+          `${baseURL}/v1/projects/${project.id}/extensions/commands/pstdio.canvas.command.list/execute`,
+          { data: { source: "api", params: {} } },
+        );
+        const result = await response.json();
+        return result.outcome?.value?.canvases.map((canvas: { name: string }) => canvas.name);
+      })
+      .toContain("Updated Third");
+    await expect(openCanvas).toBeVisible();
+    await expect(retainedDesign!.locator("[data-ui-canvas-build-error]")).toHaveCount(0);
+    await openCanvas.click();
+    await expect(frame.getByRole("textbox", { name: "Preview note" })).toHaveValue("Draft across project navigation");
     await page.getByRole("button", { name: "Back to project", exact: true }).click();
     rmSync(join(root, "src/secondary.canvas.tsx"));
     await expect
@@ -255,13 +282,8 @@ export const Default = () => <label>Secondary canvas<input aria-label="Preview n
         return result.outcome?.value?.canvases.map((canvas: { id: string }) => canvas.id);
       })
       .toEqual(["src/button.canvas.tsx", "src/third.canvas.tsx"]);
-    // The design's view stays retained while hidden. It must show the removal itself instead of
-    // opening another design; waiting for that keeps the URL check from passing before it reacts.
-    const retained = page.locator('iframe[title="UI Canvas"]');
-    await expect(
-      retained.first().contentFrame().getByText("This canvas no longer exists", { exact: true }),
-    ).toBeAttached();
-    await expect(retained).toHaveCount(1);
+    // Hidden views suspend reads. Removal must leave Home intact until Canvas is explicitly reopened.
+    await expect(openCanvas).toBeVisible();
     await expect(page).not.toHaveURL(/canvases/);
     await openCanvas.click();
     await expect(frame.getByRole("button", { name: "Startup: Save" })).toBeVisible();

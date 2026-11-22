@@ -102,9 +102,12 @@ const ConnectedCanvas = (props: ConnectedCanvasProps) => {
 
 type CanvasRead = { status: BuildStatus | "ready"; canvas?: CanvasDefinition; message?: string };
 
-const useCanvasBuild = (host: GuestHost, id: string | undefined) => {
+const useCanvasBuild = (host: GuestHost, id: string | undefined, visible: boolean) => {
   const [read, setRead] = useState<CanvasRead>();
   useEffect(() => {
+    // A retained frame keeps its draft, but its calling viewer cannot read after navigation away.
+    // Refresh on return and fence any result that was still pending when the view became hidden.
+    if (!visible) return;
     const client = createWebviewClient<typeof commands>(host);
     let latest = 0;
     const refresh = () => {
@@ -123,7 +126,7 @@ const useCanvasBuild = (host: GuestHost, id: string | undefined) => {
       latest++;
       unsubscribe();
     };
-  }, [host, id]);
+  }, [host, id, visible]);
   return read;
 };
 
@@ -135,7 +138,7 @@ interface CanvasPaneProps {
 }
 
 const CanvasPane = ({ host, id, visible, selected }: CanvasPaneProps) => {
-  const read = useCanvasBuild(host, id);
+  const read = useCanvasBuild(host, id, visible);
   const canvas = read?.canvas;
   const fallback = canvas && canvas.id !== id ? canvas : undefined;
   const [navigationError, setNavigationError] = useState("");
@@ -191,12 +194,20 @@ export const CanvasRoot = (props: RootProps) => {
     const frame = requestAnimationFrame(() => setTheme(readCanvasTheme(current.themePreference ?? "pstdio-light")));
     return () => cancelAnimationFrame(frame);
   }, [current.themePreference]);
-  const location = current.pageLocation;
+  const ownsContext =
+    current.pageLocation?.page.extensionId === "pstdio.canvas" ||
+    (current.resource?.type === "canvas" &&
+      (!current.resource.extensionId || current.resource.extensionId === "pstdio.canvas"));
+  // The shared placement receives empty resource props after Back to project. Keep its last
+  // Canvas context mounted until another Canvas context replaces it, preserving preview drafts.
+  const retained = useRef(current);
+  if (ownsContext) retained.current = current;
+  const location = retained.current.pageLocation;
   const onDesign = location?.page.extensionId === "pstdio.canvas" && location.page.id === canvasPage.id;
-  const id = current.resource?.id ?? (onDesign ? location.resource?.id : undefined);
+  const id = retained.current.resource?.id ?? (onDesign ? location.resource?.id : undefined);
   // A retained view keeps its own page location after the person leaves, so only a visible view
   // may replace a removed canvas; a hidden one would pull the person back from another page.
-  const visible = useWebviewVisibility();
+  const visible = useWebviewVisibility() && ownsContext;
   const active =
     visible &&
     location?.page.extensionId === "pstdio.canvas" &&
@@ -206,7 +217,7 @@ export const CanvasRoot = (props: RootProps) => {
       <CanvasThemeProvider>
         {id ? (
           <RecentCanvases
-            key={current.resource?.projectId ?? location?.resource?.projectId}
+            key={retained.current.resource?.projectId ?? location?.resource?.projectId}
             host={host}
             id={id}
             selected={active}
