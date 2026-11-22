@@ -4,7 +4,11 @@ import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import type { HarnessExit, HarnessStartInput, SessionMessage, ToolPart } from "pstdio-api-contracts";
 import { jsonSchema } from "pstdio-sync-contracts";
-import { installExtensionSource, toExtensionEnableInput } from "../features/extensions/install-extension-source";
+import {
+  type InstalledExtensionSource,
+  installExtensionSource,
+  toExtensionEnableInput,
+} from "../features/extensions/install-extension-source";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -132,22 +136,25 @@ await source.deps.projectService.create({
 });
 await target.deps.projectService.setDefaults(project.id, { default_agent_id: testHarnessId("browser-remote") });
 await source.deps.projectService.setDefaults(project.id, { default_agent_id: testHarnessId("browser-remote") });
-// Browser qualification installs the production provider from maintained staged public artifacts.
-// Backend mirror/cleanup unit tests omit this optional source because they exercise no presentation.
-if (process.argv[2]) {
-  const installed = await installExtensionSource({
-    source: process.argv[2],
+const installFixtureExtension = (installName: string, extensionSource: string, signal?: AbortSignal) =>
+  installExtensionSource({
+    source: extensionSource,
     scope: "user",
-    installName: "pstdio-session-browser",
+    installName,
     env: process.env,
     bunCacheDir: process.env.E2E_BUN_CACHE_DIR,
+    signal,
   });
+const enableFixtureExtension = async (installed: InstalledExtensionSource) => {
   await source.deps.extensionService.enableInstalledSourceForProject({
     projectId: project.id,
     installName: installed.installName,
     ...toExtensionEnableInput(installed),
   });
-}
+};
+// Backend cleanup tests omit the optional production Sessions source.
+if (process.argv[2])
+  await enableFixtureExtension(await installFixtureExtension("pstdio-session-browser", process.argv[2]));
 
 const workspace = await target.deps.workspaceService.createStandalone({
   project_id: project.id,
@@ -255,22 +262,18 @@ const createSession = async (title: string) => {
 const session = await createSession("Remote conversation");
 const unrelated = await createSession("Other running session");
 await mirror();
-const workspacesSource = JSON.parse(process.env.E2E_EXTENSION_SOURCES ?? "{}")["pstdio-workspaces"];
-// API cleanup tests need only the server fixture; browser callers supply the installed tool source.
-if (workspacesSource) {
-  const installed = await installExtensionSource({
-    source: workspacesSource,
-    scope: "user",
-    installName: "pstdio-workspaces",
-    env: process.env,
-    bunCacheDir: process.env.E2E_BUN_CACHE_DIR,
-  });
-  await source.deps.extensionService.enableInstalledSourceForProject({
-    projectId: project.id,
-    installName: installed.installName,
-    ...toExtensionEnableInput(installed),
-  });
-}
+// Prepare Workspaces while the browser exercises the Sessions controls. The history
+// scenario waits for the bundle before enabling the extension in the project.
+const workspacesSource = (JSON.parse(process.env.E2E_EXTENSION_SOURCES ?? "{}") as Record<string, string>)[
+  "pstdio-workspaces"
+];
+const workspacesPreparation = new AbortController();
+const preparedWorkspaces = workspacesSource
+  ? installFixtureExtension("pstdio-workspaces", workspacesSource, workspacesPreparation.signal).then(
+      (installed) => ({ installed }),
+      (error: unknown) => ({ error }),
+    )
+  : undefined;
 const snapshot = async () => {
   await syncing;
   return {
@@ -287,6 +290,13 @@ const snapshot = async () => {
 };
 const admin = async (request: Request) => {
   const input = (await request.json()) as { action: string };
+  if (input.action === "enable-workspaces") {
+    const prepared = await preparedWorkspaces;
+    if (!prepared) throw new Error("Prepared Workspaces source is unavailable.");
+    if ("error" in prepared) throw prepared.error;
+    await enableFixtureExtension(prepared.installed);
+    return Response.json({ ok: true });
+  }
   if (input.action === "hold-presence") {
     presence = new Promise<void>((done) => {
       releasePresence = done;
@@ -393,6 +403,8 @@ const close = async () => {
   unsubscribe();
   unwatch();
   server.stop(true);
+  workspacesPreparation.abort();
+  await preparedWorkspaces;
   const phase = (name: string) =>
     setupLogger.info({ event: "fixture.remote_session.cleanup", phase: name }, "Remote fixture cleanup");
   phase("delivery-drain");

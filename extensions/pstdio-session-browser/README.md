@@ -8,7 +8,18 @@ Choose **Copy session ID** from a saved session's menu to share its full Prompt 
 
 Other tools use `sessionBrowser` from `@pstdio/sdk/extensions`. This package re-exports the same implementation-free contract from `pstdio-session-browser/refs`. Session and draft resources retain `extensionId: "pstdio"`; navigation refs belong to this provider. New navigation uses provider refs. The host retains deprecated page/panel/command definitions that target the provider renderer, without another chat implementation or persistence owner. Missing or disabled providers use normal unavailable-target feedback.
 
-Draft bodies, files and control values are stored through public project storage, with small record pointers to durable blobs. Projects without a local folder remain supported. The native host transfers legacy `session-drafts` and `session-attachments` snapshots only after a successful durable save. Removing an attachment chip releases that draft reference, not an attachment still used elsewhere.
+Each browser keeps its own draft text, attachment references, and composer settings,
+including for projects without a local folder and for conversations running on another
+device. Main and Side show the same local composer. Sending a message delivers it to
+the session's owner. Removing an attachment chip releases its draft reference.
+
+Upgrading also recovers drafts saved by the old provider and accepted native input
+created before browser identities existed. Older drafts have no browser owner, so
+the first browser that durably saves all their bodies acknowledges recovery. The
+old provider record and file remain intact; a content receipt prevents duplicate
+recovery without hiding later writes from an older client. New accepted input
+recovers only in its sending browser. Unavailable browser storage leaves recovery
+unacknowledged.
 
 Creation uses `sessionBrowser.commands.create`. With `side: true`, an optional
 `panel` placement ref selects an existing compatible destination (for example a
@@ -32,9 +43,13 @@ each project install without changing message identity or stream behavior.
 
 This provider has an independent version/changelog and its own changeset. It stays outside the host fixed group. `private: true` follows bundled/PSX core-extension conventions. Keep published dependency checks enabled; supporting native chat SDK/UI packages must actually publish before the draft consumer PR can leave `waiting-for-release`. Local qualification does not establish published compatibility.
 
+Browser-local drafts use `ChatViewBody.browserDraft` and require extension API
+`^0.5.1`. Pin the supporting published SDK and pass `published_extensions` before
+release; the current SDK pin predates this option.
+
 ## Current implementation checkpoint
 
-Default catalog, provider refs, production native view/list/commands, contextual workspace previews and thin legacy definitions are wired. The implementation is unfinished. Clean installed browser acceptance, complete harness/draft/stream lifetime and performance qualification, and release checks remain. The superseded dashboard chat/list implementation has been removed; retained caller tests load the production provider declarations. Existing unit checks do not establish installed parity. The consumer PR stacks on prerequisite #1762.
+Default catalog, provider refs, production native view/list/commands, contextual workspace previews and thin legacy definitions are wired. The implementation is unfinished. Clean installed browser acceptance, complete harness/draft/stream lifetime and performance qualification, and release checks remain. The superseded dashboard chat/list implementation has been removed; retained caller tests load the production provider declarations. Existing unit checks do not establish installed parity. The browser-draft consumer stacks on prerequisite #2332.
 
 ## Quota recovery
 
