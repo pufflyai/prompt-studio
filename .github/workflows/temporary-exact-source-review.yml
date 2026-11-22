@@ -1,0 +1,118 @@
+name: Temporary exact-source local review
+
+# Keep this file on a disposable validation branch. The job checks out the
+# published candidate below, so this workflow is not part of the tested tree.
+on:
+  push:
+    branches:
+      - validation/local-review/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: temporary-local-review-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  review:
+    # The repository's pinned Playwright 1.60 supports Ubuntu 24.04.
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        include:
+          - pr: 2238
+            sha: 4b504072dedcdef459cb55cd387bf0f267dd9d02
+            tree: 32b322c7fecbfb680b39a838d1075182ae418499
+            base: 6efc0a79e2728e54e10425687f45ef928d5b318f
+          - pr: 2254
+            sha: e50e287693ac5d4f8346c6d2810b062b35cefd2f
+            tree: 0387f3d790c7f51e5680ec59febc41148af5b9f1
+            base: 6efc0a79e2728e54e10425687f45ef928d5b318f
+    name: Review PR ${{ matrix.pr }}
+    env:
+      REVIEW_SHA: ${{ matrix.sha }}
+      REVIEW_TREE: ${{ matrix.tree }}
+      REVIEW_MERGE_BASE: ${{ matrix.base }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.REVIEW_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Record and verify the exact clean source
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from "node:assert/strict";
+          import { execFileSync } from "node:child_process";
+          import { mkdirSync, writeFileSync } from "node:fs";
+          import { join } from "node:path";
+          const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
+          const directory = join(process.env.RUNNER_TEMP, "review-evidence");
+          mkdirSync(directory, { recursive: true });
+          const source = {
+            requestedSha: process.env.REVIEW_SHA,
+            head: git("rev-parse", "HEAD"),
+            tree: git("rev-parse", "HEAD^{tree}"),
+            main: git("rev-parse", "origin/main"),
+            mergeBase: git("merge-base", "origin/main", "HEAD"),
+            dirty: Boolean(git("status", "--porcelain")),
+            workflowSha: process.env.GITHUB_SHA,
+            workflowRef: process.env.GITHUB_WORKFLOW_REF,
+            runId: process.env.GITHUB_RUN_ID,
+            runAttempt: process.env.GITHUB_RUN_ATTEMPT,
+            platform: process.platform,
+            arch: process.arch,
+            node: process.version,
+            bun: execFileSync("bun", ["--version"], { encoding: "utf8" }).trim(),
+          };
+          writeFileSync(join(directory, "source.json"), JSON.stringify(source, null, 2) + "\n");
+          assert.equal(source.head, process.env.REVIEW_SHA);
+          assert.equal(source.tree, process.env.REVIEW_TREE);
+          assert.equal(source.mergeBase, process.env.REVIEW_MERGE_BASE);
+          assert.equal(source.dirty, false);
+          NODE
+      - name: Install the review entry point dependencies
+        run: bun install --frozen-lockfile --concurrent-scripts 1
+      - name: Install the existing browser prerequisite
+        run: bunx playwright@1.60.0 install --with-deps chromium
+      - name: Verify hosted Docker and display prerequisites
+        shell: bash
+        run: |
+          docker info --format '{{.ServerVersion}}'
+          docker compose version
+          command -v xvfb-run
+      - name: Run the unchanged complete local-review command
+        shell: bash
+        env:
+          TMPDIR: ${{ runner.temp }}
+          # The existing owning runner starts one X display per invocation.
+          PLAN_DISPLAY: "true"
+        run: |
+          set -o pipefail
+          bun run test:review --base origin/main 2>&1 | tee "$RUNNER_TEMP/review-evidence/console.log"
+      - name: Retain source identity and canonical review evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exact-source-local-review-${{ env.REVIEW_SHA }}-attempt-${{ github.run_attempt }}
+          if-no-files-found: error
+          path: |
+            ${{ runner.temp }}/review-evidence
+            test-results/local-review
+            ${{ runner.temp }}/pstdio-local-review-*/checks.json
+            ${{ runner.temp }}/pstdio-local-review-*/compose-projects.jsonl
+            ${{ runner.temp }}/pstdio-local-review-*/logs
+            ${{ runner.temp }}/pstdio-local-review-*/source/test-results
+            ${{ runner.temp }}/pstdio-local-review-*/source/packages/e2e/test-results
+            ${{ runner.temp }}/pstdio-local-review-*/source/clients/desktop/test-results
+
