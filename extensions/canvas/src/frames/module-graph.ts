@@ -8,6 +8,7 @@ export interface FrameAssetResponse {
   entry: string;
   modules: string[];
   styles: string[];
+  fonts?: string[];
   files: Record<string, string>;
 }
 
@@ -43,15 +44,30 @@ export const readFrameAssets = async (
   const modules = selectFrameModules(manifest, request.source);
   const requiredStyles = new Set(modules.flatMap((name) => manifest.modules[name].css ?? []));
   const styles = manifest.styles.filter((name) => requiredStyles.has(name));
+  const fonts = [...new Set(styles.flatMap((name) => manifest.modules[name].imports))];
+  // Style names from Bun can coincide across archive formats. Cache packed styles by their actual bytes.
+  const key = (name: string) => {
+    const style = manifest.modules[name];
+    return name.endsWith(".css") && style?.imports.length ? `${style.file}.css` : name;
+  };
   const cached = new Set(request.cached);
+  const packs = new Map<string, Promise<Record<string, string>>>();
   const files = await Promise.all(
-    [...modules, ...styles]
-      .filter((name) => !cached.has(name))
+    [...modules, ...styles, ...fonts]
+      .filter((name) => !cached.has(key(name)))
       .map(async (name) => {
         const module = manifest.modules[name];
         if (!module) throw new Error(`Missing compiled preview asset: ${name}`);
-        return [name, await readText(module.file)] as const;
+        if (!module.file.endsWith(".fonts.json")) return [key(name), await readText(module.file)] as const;
+        let pack = packs.get(module.file);
+        if (!pack) {
+          pack = readText(module.file).then((text) => JSON.parse(text) as Record<string, string>);
+          packs.set(module.file, pack);
+        }
+        const data = (await pack)[name];
+        if (typeof data !== "string") throw new Error(`Missing archived font: ${name}`);
+        return [name, data] as const;
       }),
   );
-  return { entry: manifest.entry, modules, styles, files: Object.fromEntries(files) };
+  return { entry: manifest.entry, modules, styles: styles.map(key), fonts, files: Object.fromEntries(files) };
 };

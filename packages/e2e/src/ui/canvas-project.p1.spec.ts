@@ -1,5 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
@@ -11,7 +11,7 @@ const repoRoot = resolve(import.meta.dirname, "../../../..");
 const writeProject = (root: string, label: string, color = "rgb(0, 128, 0)") => {
   const files: Record<string, string> = {
     "package.json": `{ "name": "canvas-project", "private": true }\n`,
-    "src/button.css": `.button { color: ${color}; }\n`,
+    "src/button.css": `@font-face { font-family: CanvasFixture; src: url(./fixture.woff2); } .button { color: ${color}; font-family: CanvasFixture; }\n`,
     "src/button.tsx": `import "./button.css";\nexport const Button = (props: { label: string }) => <button className="button">${label}: {props.label}</button>;\n`,
     "src/default.json": '{"name":"Default","values":{"label":"Save"}}',
     "src/button.canvas.tsx": `import { Button } from "./button";
@@ -22,6 +22,11 @@ export default { title: "Components/Button", component: Button, args: config.val
 export const Primary = {};
 `,
   };
+  mkdirSync(join(root, "src"), { recursive: true });
+  copyFileSync(
+    join(repoRoot, "packages/ui/node_modules/@fontsource/inter/files/inter-latin-400-normal.woff2"),
+    join(root, "src/fixture.woff2"),
+  );
   for (const [path, content] of Object.entries(files)) {
     mkdirSync(dirname(join(root, path)), { recursive: true });
     writeFileSync(join(root, path), content);
@@ -79,6 +84,11 @@ test("UI Canvas shows a project's own canvas and follows edits to its component 
     const frame = viewer.frameLocator('iframe[data-frame-ready="true"]');
     await expect(frame.getByRole("button", { name: "Version 1: Save" })).toBeVisible({ timeout: 30_000 });
 
+    // A project font must load inside the opaque preview from its own offline build.
+    const faces = await frame
+      .locator("body")
+      .evaluate(async () => (await document.fonts.load("16px CanvasFixture")).map((font) => font.status));
+    expect(faces).toEqual(["loaded"]);
     writeProject(root, "Version 2");
     const button = frame.getByRole("button", { name: "Version 2: Save" });
     await expect(button).toBeVisible({ timeout: 30_000 });
@@ -153,8 +163,12 @@ test("UI Canvas opens the last design or the first available canvas without a bl
     writeFileSync(
       join(root, "src/secondary.canvas.tsx"),
       `export default { title: "Components/Secondary" };
-export const Default = () => <button>Secondary canvas</button>;
+export const Default = () => <label>Secondary canvas<input aria-label="Preview note" /></label>;
 `,
+    );
+    writeFileSync(
+      join(root, "src/third.canvas.tsx"),
+      'export default { title: "Components/Third" }; export const Example = () => <button>Third design</button>;',
     );
     mkdirSync(join(root, "node_modules"));
     for (const name of ["react", "react-dom"])
@@ -167,19 +181,68 @@ export const Default = () => <button>Secondary canvas</button>;
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await page.goto(`/projects/${project.id}/extensions/pstdio.canvas/canvases`);
     const viewer = page.frameLocator('iframe[title="UI Canvas"]:visible');
+    const openCanvas = page.getByRole("option", { name: "UI Canvas", exact: true });
     await expect(viewer.locator("[data-ui-canvas-setup]")).toBeVisible();
     watcher = spawn("bun", [join(repoRoot, "packages/canvas/bin/pstdio-canvas.ts"), "watch", "--root", root], {
       stdio: "inherit",
     });
     await expect(page).toHaveURL(/canvases\/design/);
-    const frame = viewer.frameLocator('iframe[data-frame-ready="true"]');
+    const frame = viewer.frameLocator('iframe[data-frame-ready="true"]:visible');
+    await expect(frame.getByRole("button", { name: "Startup: Save" })).toBeVisible();
+    const viewerDocument = await viewer.locator("html").elementHandle();
+    await page.getByText("Secondary", { exact: true }).first().click();
+    await expect(frame.getByRole("textbox", { name: "Preview note" })).toBeVisible();
+    // The same live viewer owns the shared asset cache, while each example has its own sandbox.
+    expect(await viewer.locator("html").evaluate((element, previous) => element === previous, viewerDocument)).toBe(
+      true,
+    );
+    await expect(viewer.locator("iframe[data-frame-ready]:visible")).toHaveAttribute(
+      "sandbox",
+      "allow-scripts allow-forms",
+    );
+    await viewerDocument.dispose();
+    await viewer.locator("[data-canvas-select]:visible").click();
+    await frame.getByRole("textbox", { name: "Preview note" }).fill("Keep this draft");
+    await page.getByText("Button", { exact: true }).first().click();
     await expect(frame.getByRole("button", { name: "Startup: Save" })).toBeVisible();
     await page.getByText("Secondary", { exact: true }).first().click();
-    await expect(frame.getByRole("button", { name: "Secondary canvas", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Back to project", exact: true }).click();
+    await expect(frame.getByRole("textbox", { name: "Preview note" })).toHaveValue("Keep this draft");
+    await page.getByText("Third", { exact: true }).first().click();
+    await expect(frame.getByRole("button", { name: "Third design" })).toBeVisible();
+    await expect(viewer.locator("iframe[data-frame-ready]")).toHaveCount(2);
+    await expect(viewer.locator('iframe[data-frame-story^="src/button.canvas.tsx#"]')).toHaveCount(0);
+    await page.getByText("Secondary", { exact: true }).first().click();
+    await expect(frame.getByRole("textbox", { name: "Preview note" })).toHaveValue("Keep this draft");
+    // Button was evicted. Leave during its next asset request and reopen the design.
+    const loading = Promise.withResolvers<void>();
+    const resume = Promise.withResolvers<void>();
+    await page.route(
+      "**/pstdio.canvas.command.preview.assets/execute",
+      async (route) => {
+        loading.resolve();
+        await resume.promise;
+        await route.continue();
+      },
+      { times: 1 },
+    );
+    try {
+      await page.getByText("Button", { exact: true }).first().click();
+      await loading.promise;
+      await page.getByRole("button", { name: "Back to project", exact: true }).click();
+      await expect(page).not.toHaveURL(/canvases/);
+      await openCanvas.click();
+    } finally {
+      resume.resolve();
+    }
+    await expect(frame.getByRole("button", { name: "Startup: Save" })).toBeVisible();
+    await page.getByText("Secondary", { exact: true }).first().click();
+    await expect(frame.getByRole("textbox", { name: "Preview note" })).toBeVisible();
+    // Reload the chosen design, then reopen Canvas through project navigation.
     await page.reload();
-    await page.getByText("UI Canvas", { exact: true }).first().click();
-    await expect(frame.getByRole("button", { name: "Secondary canvas", exact: true })).toBeVisible();
+    await expect(frame.getByRole("textbox", { name: "Preview note" })).toBeVisible();
+    await page.getByRole("button", { name: "Back to project", exact: true }).click();
+    await openCanvas.click();
+    await expect(frame.getByRole("textbox", { name: "Preview note" })).toBeVisible();
     await page.getByRole("button", { name: "Back to project", exact: true }).click();
     rmSync(join(root, "src/secondary.canvas.tsx"));
     await expect
@@ -191,7 +254,7 @@ export const Default = () => <button>Secondary canvas</button>;
         const result = await response.json();
         return result.outcome?.value?.canvases.map((canvas: { id: string }) => canvas.id);
       })
-      .toEqual(["src/button.canvas.tsx"]);
+      .toEqual(["src/button.canvas.tsx", "src/third.canvas.tsx"]);
     // The design's view stays retained while hidden. It must show the removal itself instead of
     // opening another design; waiting for that keeps the URL check from passing before it reacts.
     const retained = page.locator('iframe[title="UI Canvas"]');
@@ -200,7 +263,7 @@ export const Default = () => <button>Secondary canvas</button>;
     ).toBeAttached();
     await expect(retained).toHaveCount(1);
     await expect(page).not.toHaveURL(/canvases/);
-    await page.getByText("UI Canvas", { exact: true }).first().click();
+    await openCanvas.click();
     await expect(frame.getByRole("button", { name: "Startup: Save" })).toBeVisible();
   } finally {
     await stopChildProcess(watcher);

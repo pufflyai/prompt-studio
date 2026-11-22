@@ -1,4 +1,4 @@
-import { type CanvasBuildManifest, MANIFEST_FORMAT } from "@pstdio/canvas";
+import type { CanvasBuildManifest } from "@pstdio/canvas";
 import {
   type ArtifactMount,
   artifactChanged,
@@ -42,12 +42,15 @@ export const buildFiles = (
 // The last parsed manifest. A large project's module graph is megabytes, and every frame asks for it.
 let parsed: { stamp: string; manifest: CanvasBuildManifest } | undefined;
 
+// Format 2 stores fonts separately. The remaining manifest fields also describe format 1 builds.
+const supported = (format: unknown) => format === 1 || format === 2;
+
 const readManifest = async (files: BuildFiles, fresh: boolean) => {
   const source = await files.readText("manifest.json");
   const stamp = `${files.projectId}\n${new Bun.CryptoHasher("sha256").update(source).digest("hex")}`;
   if (!fresh && parsed?.stamp === stamp) return parsed.manifest;
   const manifest = JSON.parse(source);
-  if (manifest?.format === MANIFEST_FORMAT) parsed = { stamp, manifest };
+  if (supported(manifest?.format)) parsed = { stamp, manifest };
   return manifest;
 };
 
@@ -59,6 +62,6 @@ export const readBuild = async (files: BuildFiles | undefined, options: { fresh?
   if (!files || exists === undefined) return { status: "unavailable" as const };
   if (!exists) return { status: "missing" as const };
   const manifest = await readManifest(files, options.fresh ?? false);
-  if (manifest?.format !== MANIFEST_FORMAT) return { status: "unsupported" as const, format: manifest?.format };
+  if (!supported(manifest?.format)) return { status: "unsupported" as const, format: manifest?.format };
   return { status: "ready" as const, manifest: manifest as CanvasBuildManifest };
 };

@@ -3,6 +3,7 @@ import { type ReactNode, type RefObject, useRef, useSyncExternalStore } from "re
 import type { CanvasRuntime } from "../controller/runtime";
 
 export const CanvasViewport = (props: {
+  instructions: string;
   runtime: CanvasRuntime;
   name: string;
   viewportRef: RefObject<HTMLDivElement | null>;
@@ -46,7 +47,7 @@ export const CanvasViewport = (props: {
       }}
       data-canvas-viewport
       aria-label={`${name} canvas`}
-      aria-describedby="canvas-instructions"
+      aria-describedby={props.instructions}
       tabIndex={0}
       position="relative"
       overflow="hidden"

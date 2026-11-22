@@ -1,6 +1,6 @@
 import { Box, Flex, Icon, Text } from "@chakra-ui/react";
 import { ResizableSplitLayout, resolveIconComponent, Tooltip } from "@pstdio/ui";
-import { useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { CanvasDefinition } from "../canvas-model";
 import { Button } from "../components/themed-primitives";
 import { installItemMovement } from "../controller/item-movement";
@@ -17,11 +17,13 @@ import { ItemFrame } from "./item-frame";
 const ParametersIcon = resolveIconComponent("sliders-horizontal")!;
 const AnimationIcon = resolveIconComponent("film")!;
 interface StageProps {
+  visible?: boolean;
   canvas: CanvasDefinition;
   runtime: CanvasRuntime;
 }
 export const CanvasStage = (props: StageProps) => {
-  const { canvas, runtime } = props;
+  const { canvas, runtime, visible = true } = props;
+  const instructions = useId();
   const selected = useSyncExternalStore(runtime.selection.subscribe, runtime.selection.get);
   const selectedEditable = useSyncExternalStore(runtime.editable.subscribe, () =>
     selected === undefined ? false : runtime.editable.get(selected),
@@ -51,12 +53,14 @@ export const CanvasStage = (props: StageProps) => {
     const measure = () => {
       if (!active) return;
       cancelAnimationFrame(measureFrame);
-      measureFrame = requestAnimationFrame(() => runtime.measure());
+      measureFrame = requestAnimationFrame(() => {
+        if (container.clientWidth && container.clientHeight) runtime.measure();
+      });
     };
     const observer = new ResizeObserver(measure);
     for (const element of runtime.elements()) observer.observe(element);
     observer.observe(container);
-    runtime.measure();
+    measure();
     void document.fonts.ready.then(measure);
     document.fonts.addEventListener("loadingdone", measure);
     const cleanup = installItemMovement(container, runtime);
@@ -72,11 +76,12 @@ export const CanvasStage = (props: StageProps) => {
   }, [runtime]);
   return (
     <FrameEditorOutlet value={outlet}>
-      <FrameEditorVisible value={showEditor}>
+      <FrameEditorVisible value={showEditor && visible}>
         <FrameAnimationOutlet
           value={{
             element: animationOutlet,
-            open: showAnimation,
+            open: showAnimation && visible,
+            visible,
             setActiveFrame: setAnimatedFrame,
             reportHeight: setIntrinsicHeight,
             heightLimit: resizedHeight,
@@ -112,8 +117,13 @@ export const CanvasStage = (props: StageProps) => {
                 resizablePanel={<FrameEditorMenu outlet={setOutlet} open={showEditor} />}
                 contentPanel={
                   <Box flex="1" minW="0" position="relative">
-                    <CanvasViewport viewportRef={shell} name={canvas.name} runtime={runtime}>
-                      <Text id="canvas-instructions" srOnly>
+                    <CanvasViewport
+                      instructions={instructions}
+                      viewportRef={shell}
+                      name={canvas.name}
+                      runtime={runtime}
+                    >
+                      <Text id={instructions} srOnly>
                         Select a frame before interacting. Click empty space or press Escape on the canvas to clear
                         selection. Drag empty space to pan. Drag panel dividers towards their edge to close them; focus
                         a divider and press Home to close it with the keyboard. Use the move handle to move a preview.
@@ -121,11 +131,17 @@ export const CanvasStage = (props: StageProps) => {
                       </Text>
                       <Box ref={stage} position="absolute" top="0" left="0" transformOrigin="0 0" data-canvas-stage>
                         {canvas.items.map((item) => (
-                          <ItemFrame key={item.id} item={item} runtime={runtime} />
+                          <ItemFrame
+                            visible={visible}
+                            instructions={instructions}
+                            key={item.id}
+                            item={item}
+                            runtime={runtime}
+                          />
                         ))}
                       </Box>
                     </CanvasViewport>
-                    {selected !== undefined && (
+                    {visible && selected !== undefined && (
                       <Flex position="absolute" top="sm" right="sm" gap="2xs" data-canvas-control>
                         {hasAnimation && !animationOpen && (
                           <Tooltip content="Open animation timeline">
