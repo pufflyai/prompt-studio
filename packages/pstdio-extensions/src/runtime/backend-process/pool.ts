@@ -1,6 +1,11 @@
 import { fileURLToPath } from "node:url";
 import { isPackagedRuntime } from "pstdio-paths";
-import { type BackendWorker, type BackendWorkerOptions, startBackendWorker } from "./supervisor";
+import {
+  BackendUnavailableError,
+  type BackendWorker,
+  type BackendWorkerOptions,
+  startBackendWorker,
+} from "./supervisor";
 
 /** The packaged CLI selects its private worker entry before it loads the API or opens the database. */
 export const backendWorkerCommand = () =>
@@ -14,8 +19,10 @@ export const backendWorkerCommand = () =>
  */
 export const createBackendWorkerPool = (start: (key: string) => Omit<BackendWorkerOptions, "command">) => {
   const workers = new Map<string, Promise<BackendWorker>>();
+  let closing = false;
 
   const acquire = (key: string) => {
+    if (closing) return Promise.reject(new BackendUnavailableError("Extension backends are shutting down."));
     const existing = workers.get(key);
     if (existing) return existing;
     const starting = startBackendWorker({ command: backendWorkerCommand(), ...start(key) });
@@ -37,7 +44,15 @@ export const createBackendWorkerPool = (start: (key: string) => Omit<BackendWork
     );
   };
 
-  const close = () => Promise.all([...workers.keys()].map(retire)).then(() => {});
+  /** Refuses new workers while it stops the running ones; the pool can be used again afterwards. */
+  const close = async () => {
+    closing = true;
+    try {
+      while (workers.size > 0) await Promise.all([...workers.keys()].map(retire));
+    } finally {
+      closing = false;
+    }
+  };
 
   return { acquire, retire, close };
 };
