@@ -14,6 +14,8 @@ import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 import { pageLocationTarget } from "../page-location/page-location-target";
 import { portablePagePanel } from "../page-runtime/portable-page-panel";
+import { viewerResourceKey } from "../resource-viewers/displayed-viewers";
+import { viewerTargetBinding } from "../resource-viewers/viewer-target-binding";
 import { preparePageNavigation } from "./page-navigation-preparation";
 
 const panelRegion = (
@@ -46,7 +48,8 @@ const panelRegion = (
       matches(entry.identity) &&
       (!target.resource ||
         (entry.value.resource &&
-          core.pages.resourceReferenceKey(entry.value.resource) === core.pages.resourceReferenceKey(target.resource))),
+          viewerResourceKey(core, entry.value.resource, entry.identity) ===
+            core.pages.resourceReferenceKey(target.resource, viewerTargetBinding(core, target, state)))),
   );
   if (existing)
     return (
@@ -92,7 +95,8 @@ export const planMainDeparture = (
   const sameResource =
     source.resource &&
     target.resource &&
-    core.pages.resourceReferenceKey(source.resource) === core.pages.resourceReferenceKey(target.resource);
+    core.pages.resourceReferenceKey(source.resource, page?.resource) ===
+      core.pages.resourceReferenceKey(target.resource, viewerTargetBinding(core, target, state));
   const staticPage =
     !source.resource &&
     !target.resource &&
