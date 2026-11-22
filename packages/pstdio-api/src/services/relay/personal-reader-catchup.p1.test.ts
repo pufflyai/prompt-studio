@@ -85,15 +85,15 @@ test("opening an advancing session catches up completed messages before displayi
       throw error;
     });
     // Initial routing is independent of sync busy. The first reader's routes must stay inside the timed operation.
+    // Read routing before busy: the final routing acknowledgement wakes the sync, so busy is only settled after it.
     await until(async () => {
+      const routed = lives.every((live) => {
+        const status = live.status();
+        return status.connected && !status.routingPending;
+      });
+      if (!routed) return false;
       const owners = await Promise.all(syncs.map((sync) => sync.status()));
-      return (
-        owners.every((owner) => !owner.busy) &&
-        lives.every((live) => {
-          const status = live.status();
-          return status.connected && !status.routingPending;
-        })
-      );
+      return owners.every((owner) => !owner.busy);
     });
     conversation.push({ op: "add", path: "/messages/2", value: message("current-3") });
     const frames: unknown[] = [];
