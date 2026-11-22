@@ -40,6 +40,9 @@ Optional fields:
 - SVG images retain their own colors. For a monochrome `currentColor` SVG, define its color inside the asset. A `prefers-color-scheme` media rule follows the embedding app's light/dark `color-scheme`; it does not inherit the surrounding text color.
 - Catalogs may provide a Lucide name or a public SVG data URL. Repository catalog entries can use the same `./assets/icon.svg` declaration as the manifest: the host build embeds its bytes for discovery independently of source-archive inclusion. Embedded icons are keyed by the exact catalog package origin, full ID, install name, and declared asset path; an operator catalog cannot borrow a stock icon merely by reusing its install name. External catalogs must supply their own display metadata.
 - `pstdio.scope`: install/load scope, either `user` or `repo`. Defaults to `user`.
+- `pstdio.backendRuntime`: set to `"process"` to run the backend in its own worker process instead
+  of the API process. See [Process runtime](#process-runtime). Leave it out to keep the current
+  in-process behavior.
 
 Derived fields:
 
@@ -194,6 +197,40 @@ value, and it does not check a signature on remote catalogs. PS-528 adds both.
 An installed extension runs inside the API process with the access of the user's account. It can read
 files, the host environment, and stored connection secrets. The process isolation model is in
 [ADR 0058](../../adrs/0058-isolate-extension-backends.md).
+
+### Process runtime
+
+With `"pstdio": { "backendRuntime": "process" }`, the host never imports the extension entry. A
+private worker process imports it instead, and one worker serves every project that enables the same
+content revision. Commands, middleware, private handlers and hooks run in the worker, so a slow or
+CPU-heavy handler no longer blocks the workbench. The worker gets an allowlisted environment, so
+provider keys and the runtime token are not in its `process.env`.
+
+It is not a sandbox. The worker still runs as your OS account and can read the same files as the
+host, including the Prompt Studio home folder.
+
+In this release, handler code in the worker can use these parts of `ctx`:
+
+- `projectId`, `workspaceId`, `project`, `extensionId`, `name`, `signal`, and the command or event
+  identity fields
+- `logger`, `navigation.open`, `stream.write`, `events.emit`, and `commands.execute` with the
+  middleware helpers `continue`, `patchParams`, `replaceParams`, `replaceInvocation` and `reject`
+- `settings`
+- `storage`: key-value calls, `collection` and its `attachments`, `files` (without `urlFor`),
+  `ids.create`, `canMigrate`, `readLegacy`, `scope`, and `records.read`, `list`, `commit`,
+  `commitIfCurrent`, `outcome`, `conflicts`, `inspect` and `resolve` (`records.id` only at the
+  project scope)
+
+Other `ctx` members are missing for now. That includes `storage.migrate`, `storage.observe`,
+`storage.text`, `storage.log`, other `records` calls, callbacks, process and terminal handles,
+sessions and workspaces. A terminal view's session handler cannot return a live session yet. Harnesses, workspace types, text
+sources and resource hierarchy providers are not loaded, and the extension reports an
+`extension_process_runtime_unsupported` diagnostic. Arguments and results must be plain data:
+objects, arrays, strings, numbers, booleans, `Date` and bytes.
+
+A worker that crashes rejects its running calls with `backend_unavailable`. The host does not
+retry them. The next call starts a new worker. When a changed source loads, the old worker stops
+before the new one starts, unless another folder with identical content still uses it.
 
 Repo extensions are discovered and enabled when a project opens, and their entry code runs at that
 point. User extensions stay disabled until someone enables them. The planned trust step, which reads
