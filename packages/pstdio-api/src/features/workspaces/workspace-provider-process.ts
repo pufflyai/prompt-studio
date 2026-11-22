@@ -3,7 +3,7 @@ import { createProcessApi } from "../extensions/extension-process-api";
 import type { WorkspacesRouteDeps } from "./deps";
 import { createWorkspaceProviderDirectory } from "./workspace-provider-directory";
 
-type ProviderProcessInput = { projectId: string; providerId: string; workspaceId?: string };
+type ProviderProcessInput = { projectId: string; providerId: string; extensionId: string; workspaceId?: string };
 
 const ownedWorkspace = async (deps: WorkspacesRouteDeps, input: ProviderProcessInput) => {
   if (!input.workspaceId) return null;
@@ -24,6 +24,7 @@ export const createWorkspaceProviderProcess = (
   scope?: InvocationScope,
 ) =>
   createProcessApi({
+    extensionId: input.extensionId,
     scope,
     resolveCwd: async (process) => {
       scope?.signal.throwIfAborted();
