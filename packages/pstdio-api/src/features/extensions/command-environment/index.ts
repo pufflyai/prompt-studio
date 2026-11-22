@@ -181,7 +181,13 @@ export const createCommandEnvironment = (
           await enqueueCatalogExtensions(deps.extensionInstallations, names, input.projectId);
         },
       },
-      ...createScopedHostApis(deps, input, { connections, terminal }, runtimeDeps, scope),
+      ...createScopedHostApis(
+        deps,
+        { ...input, source: enabledSource.installedSource },
+        { connections, terminal },
+        runtimeDeps,
+        scope,
+      ),
     } satisfies ScopedHostApis;
     return input.resourceLinksReadOnly ? restrictResourceLinkMutations(apis) : apis;
   };

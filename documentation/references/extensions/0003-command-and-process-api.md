@@ -8,7 +8,7 @@ Use `ctx.automation.enqueue({ command, input, key })` for work that lasts longer
 
 ## Detached processes
 
-Use `ctx.process.spawnDetached({ command, cwd, env })` for work that must continue
+Use `ctx.process.spawnDetached({ command, cwd, env, envFromHost })` for work that must continue
 after Prompt Studio shuts down. It returns the child PID, starts an independent
 process group, disconnects standard input/output/error, and releases the host's
 process reference. The child survives both desktop Quit and `pst close`; it does
@@ -38,6 +38,37 @@ native diagnostics describe relationships; they do not identify children owned b
 
 `spawnDetached` is the exception. Its children are meant to outlive the host, so the extension
 owns their lifetime.
+
+## Host environment values
+
+A child started with `ctx.process` gets a small set of runtime variables, such as `PATH` and
+`HOME`, plus the `env` you pass. It never gets the rest of the host environment. To pass a value
+the user keeps in the environment that starts Prompt Studio, such as a provider key, request it by
+name:
+
+1. List the name in `package.json` under `pstdio.processEnvironment`. See
+   [Manifest and installation](0002-manifest-and-installation.md#host-environment-names).
+2. Name it in `envFromHost` when you start the child:
+
+   ```ts
+   await ctx.process.run({ command: ["claude", "-p", prompt], envFromHost: ["ANTHROPIC_API_KEY"] });
+   ```
+
+`run`, `runOrThrow` and `spawnDetached` accept `envFromHost`. Before starting the child, the host
+checks each name against the declaration and against the user's grant for this project and this
+exact extension source. The call then fails, and no child starts, when:
+
+- a name is not in `pstdio.processEnvironment` (`process_environment_not_requested`);
+- the user has not allowed the name for this project, or the extension source changed since they
+  did (`process_environment_not_granted`);
+- the host environment does not have the variable (`process_environment_unavailable`);
+- `env` also sets the name. `env` cannot replace a value requested with `envFromHost`.
+
+The value goes into the child's environment only. Your extension never receives it: no API returns
+it, and the host replaces it with `[Redacted]` in the child's `stdout` and `stderr` before returning
+them. When the user revokes the grant or narrows it, the host first stops the running children that
+received it, including detached ones, and then retires the grant. A detached child that outlived a
+host restart is not stopped by a later revocation.
 
 `ctx.signal` is host cancellation, not command lifetime. It aborts when the host cancels the
 command, and stays open when the command simply returns, so a command can hand it to work the host

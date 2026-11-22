@@ -8,6 +8,7 @@ import { workspaceEvents } from "pstdio-api-contracts/extension-kernel";
 import type { InvocationScope, ScopedHostApis } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createProcessApi } from "../extension-process-api";
+import type { ProcessEnvironmentSource } from "../process-environment/permissions";
 import { createSessionsApi } from "./sessions";
 import type { CommandEnvironmentRuntimeDeps } from "./types";
 import { resolveLocalWorkspaceTarget } from "./workspace-target";
@@ -45,6 +46,8 @@ export const createScopedHostApis = (
     projectId: string;
     workspaceId?: string;
     eventId?: string;
+    /** The installed source generation this invocation runs. Host environment grants are checked against it. */
+    source: ProcessEnvironmentSource;
   },
   hosts: { connections: ExtensionConnectionsApi; terminal?: ExtensionTerminalApi },
   runtimeDeps: CommandEnvironmentRuntimeDeps,
@@ -72,7 +75,12 @@ export const createScopedHostApis = (
     sessions: createSessionsApi(deps, { projectId: input.projectId, project: input.project, signal, scope }),
     workspaces: createWorkspacesApi(deps, { projectId: input.projectId, signal }, runtimeDeps),
     connections: signal ? withConnectionSignal(hosts.connections, signal) : hosts.connections,
-    process: createProcessApi({ scope, resolveCwd, extensionId: input.extensionId }),
+    process: createProcessApi({
+      scope,
+      resolveCwd,
+      extensionId: input.extensionId,
+      hostEnvironment: (names) => deps.extensionProcessEnvironment.authorize(input.projectId, input.source, names),
+    }),
     terminal: scope && terminal ? withSessionOwnership(terminal, scope) : terminal,
   };
 };
