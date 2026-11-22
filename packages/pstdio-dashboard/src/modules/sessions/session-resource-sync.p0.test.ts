@@ -58,7 +58,8 @@ test.each([
     return [];
   });
   try {
-    expect(w.getOpenResources()).toHaveLength(6);
+    // Owner aliases share a viewer; references with and without an explicit project remain distinct.
+    expect(w.getOpenResources()).toHaveLength(4);
     const version = w.resources.getRemovalVersion();
     if (action === "delete") getWriter("sessions")!.remove(session.id);
     else getWriter("sessions")!.upsert({ ...row, archived: true });
