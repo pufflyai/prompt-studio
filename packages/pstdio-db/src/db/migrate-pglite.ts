@@ -1,6 +1,39 @@
 import type { PGlite } from "@electric-sql/pglite";
 import { readMigrationFiles } from "drizzle-orm/migrator";
 
+/** Completed homes need no released-schema probes. History alone is insufficient:
+ * failed legacy conversion can retain its source tables after the DDL commits. */
+export const hasCurrentPgliteSchema = async (db: PGlite, migrationsFolder: string) => {
+  const {
+    rows: [state],
+  } = await db.query<{ history: string | null; legacy: boolean }>(`
+    SELECT to_regclass('drizzle.__drizzle_migrations')::text AS history,
+      to_regclass('public.storage_record_sync') IS NOT NULL
+      OR to_regclass('public.storage_record_outbox') IS NOT NULL
+      OR to_regclass('public.storage_ordered_owners') IS NOT NULL AS legacy`);
+  if (!state?.history || state.legacy) return false;
+  const migrations = readMigrationFiles({ migrationsFolder });
+  const { rows } = await db.query<{ hash: string; created_at: string | number }>(
+    'SELECT hash,created_at FROM "drizzle"."__drizzle_migrations" ORDER BY created_at',
+  );
+  if (
+    rows.length !== migrations.length ||
+    !rows.every(
+      (row, index) =>
+        row.hash === migrations[index]!.hash && Number(row.created_at) === migrations[index]!.folderMillis,
+    )
+  )
+    return false;
+  // Number-only owners can still need admission after stream-table retirement.
+  const {
+    rows: [pending],
+  } = await db.query<{ present: boolean }>(`
+    SELECT EXISTS (SELECT 1 FROM owners o WHERE o.extension_id='pstdio'
+      AND EXISTS (SELECT 1 FROM documents d WHERE d.owner_id=o.id
+        AND d.key='resource-identities')) AS present`);
+  return !pending!.present;
+};
+
 /** Keep Drizzle's generated SQL, hashes, ordering and all-pending transaction.
  * PGlite can execute each migration in one simple-protocol batch instead of
  * crossing the JavaScript/WASM boundary for every generated statement. */
