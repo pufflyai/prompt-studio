@@ -92,8 +92,10 @@ Native Chakra menu choices use `Menu.ItemText` and `Menu.ItemIndicator` with the
 
 The floating Side Panel hides its launcher while open and restores it when closed.
 Drag the bubble or unused floating header space to the left, center, or right.
-Both share their saved alignment and move visibly while dragging. Right-click either
-for **Align left**, **Align center**, or **Align right**. While the bubble or floating
+Both share their saved alignment and move visibly while dragging. During a drag,
+three drop areas appear above the status area; the area under the pointer is
+highlighted. Releasing saves that alignment. Right-click either surface for
+**Align left**, **Align center**, or **Align right**. While the bubble or floating
 header has focus, Alt+Shift+Left/Right changes alignment. These user preferences
 persist across projects and reloads.
 

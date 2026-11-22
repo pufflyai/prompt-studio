@@ -19,6 +19,7 @@ import { usePanelPolicy } from "../shared/use-panel-policy";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { SidePanelBubble } from "./side-panel-bubble";
+import { SidePanelDropTargets } from "./side-panel-drop-targets";
 import { useSidePanelPosition } from "./use-side-panel-position";
 
 interface WorkbenchSidePanelProps {
@@ -148,10 +149,12 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchFloatingSidePanelProp
           buttonRef={bubbleRef}
           isOpen={visible}
           bottom={launcherBottom(bottomOffset)}
+          bottomOffset={bottomOffset}
           icon={bubbleIcon}
           onOpen={onOpen}
         />
       ) : null}
+      <SidePanelDropTargets alignment={position.dropAlignment} bottom={bottomOffset} />
       {/* Both presentation slots stay connected so hiding cannot release a live iframe. */}
       <BubblePanel
         isOpen={visible}

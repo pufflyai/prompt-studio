@@ -4,9 +4,10 @@ import { sidePanelBubblePreferences } from "../../core/controllers/side-panel/si
 import { runUserAction } from "../../core/shared/run-user-action";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
-const alignments = ["left", "center", "right"] as const;
-type Alignment = (typeof alignments)[number];
-const alignmentAt = (x: number, width: number) => alignments[Math.min(2, Math.max(0, Math.floor(x / (width / 3))))]!;
+export const sidePanelAlignments = ["left", "center", "right"] as const;
+type Alignment = (typeof sidePanelAlignments)[number];
+const alignmentAt = (x: number, width: number) =>
+  sidePanelAlignments[Math.min(2, Math.max(0, Math.floor(x / (width / 3))))]!;
 const margins = {
   left: { marginLeft: "0", marginRight: "auto" },
   center: { marginLeft: "auto", marginRight: "auto" },
@@ -18,8 +19,8 @@ export const useSidePanelPosition = (workbench: WorkbenchCore) => {
     workbench.preferences.store,
     () => workbench.preferences.getValue(sidePanelBubblePreferences.alignment) as Alignment,
   );
-  const [preview, setPreview] = useState<{ alignment: Alignment; offset: number; dragging: boolean }>();
-  const drag = useRef<{ x: number; center: number; width: number; moved: boolean; offset: number } | null>(null);
+  const [preview, setPreview] = useState<{ alignment: Alignment; offset: number; drop?: Alignment }>();
+  const drag = useRef<{ x: number; width: number; moved: boolean; offset: number } | null>(null);
   const suppressClick = useRef(false);
   const save = (value: Alignment) =>
     runUserAction(workbench, "Move Side Panel", () =>
@@ -28,28 +29,27 @@ export const useSidePanelPosition = (workbench: WorkbenchCore) => {
   const shownAlignment = preview?.alignment ?? alignment;
   return {
     alignment: shownAlignment,
+    dropAlignment: preview?.drop,
     frameProps: {
       left: "6",
       right: "6",
       ...margins[shownAlignment],
       style: { translate: `${preview?.offset ?? 0}px 0` },
     },
-    actions: alignments.map((value) => ({
+    actions: sidePanelAlignments.map((value) => ({
       key: value,
       label: `Align ${value}`,
       isSelected: alignment === value,
       onClick: () => save(value),
     })),
     dragProps: {
-      cursor: preview?.dragging ? "grabbing" : "grab",
+      cursor: preview?.drop ? "grabbing" : "grab",
       touchAction: "pan-y",
       onPointerDown: (event: PointerEvent<HTMLElement>) => {
         if (event.button !== 0 || event.pointerType === "touch") return;
-        const bounds = event.currentTarget.getBoundingClientRect();
         suppressClick.current = false;
         drag.current = {
           x: event.clientX,
-          center: bounds.left + bounds.width / 2,
           width: event.currentTarget.ownerDocument.documentElement.clientWidth,
           moved: false,
           offset: 0,
@@ -61,15 +61,15 @@ export const useSidePanelPosition = (workbench: WorkbenchCore) => {
         if (!current || (!current.moved && Math.abs(event.clientX - current.x) < 6)) return;
         current.moved = true;
         current.offset = event.clientX - current.x;
-        setPreview({ alignment, offset: current.offset, dragging: true });
+        setPreview({ alignment, offset: current.offset, drop: alignmentAt(event.clientX, current.width) });
       },
       onPointerUp: () => {
         const current = drag.current;
         drag.current = null;
         if (!current?.moved) return;
         suppressClick.current = true;
-        const next = alignmentAt(current.center + current.offset, current.width);
-        const accepted = { alignment: next, offset: 0, dragging: false };
+        const next = alignmentAt(current.x + current.offset, current.width);
+        const accepted = { alignment: next, offset: 0 };
         setPreview(accepted);
         void save(next).finally(() => setPreview((value) => (value === accepted ? undefined : value)));
       },
@@ -82,7 +82,7 @@ export const useSidePanelPosition = (workbench: WorkbenchCore) => {
         if (!event.altKey || !event.shiftKey || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
         event.preventDefault();
         event.stopPropagation();
-        const next = alignments[alignments.indexOf(alignment) + (event.key === "ArrowLeft" ? -1 : 1)];
+        const next = sidePanelAlignments[sidePanelAlignments.indexOf(alignment) + (event.key === "ArrowLeft" ? -1 : 1)];
         if (next) void save(next);
       },
     },

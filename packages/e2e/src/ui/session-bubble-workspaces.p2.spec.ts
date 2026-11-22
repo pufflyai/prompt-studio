@@ -45,11 +45,17 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
-const verifyMovableSidePanel = async (page: import("@playwright/test").Page, projectId: string) => {
+const verifyMovableSidePanel = async (
+  page: import("@playwright/test").Page,
+  projectId: string,
+  info: import("@playwright/test").TestInfo,
+) => {
   await bypassOnboarding(page, projectId);
   await page.goto(`/projects/${projectId}`);
   await expect(homeFrame(page).getByText("Movable Side Panel", { exact: true })).toBeVisible();
   const bubble = page.getByRole("button", { name: "Open Side Panel", exact: true });
+  const targets = page.locator("[data-side-panel-drop-slot]");
+  await expect(targets).toHaveCount(0);
   const viewport = page.viewportSize()!;
   const centerX = async (locator: import("@playwright/test").Locator) => {
     const bounds = (await locator.boundingBox())!;
@@ -63,8 +69,15 @@ const verifyMovableSidePanel = async (page: import("@playwright/test").Page, pro
   await page.mouse.down();
   await page.mouse.move(bounds.x + bounds.width / 2 - 30, bounds.y + bounds.height / 2, { steps: 3 });
   await expect.poll(() => centerX(bubble)).toBeLessThan(viewport.width / 2 - 20);
+  await expect(targets).toHaveCount(3);
+  for (const slot of ["left", "center", "right"])
+    await expect(page.locator(`[data-side-panel-drop-slot="${slot}"]`)).toBeVisible();
+  await expect(page.locator('[data-side-panel-drop-slot="center"]')).toHaveAttribute("data-drop-active", "true");
   await page.mouse.move(40, bounds.y + bounds.height / 2, { steps: 8 });
+  await expect(page.locator('[data-side-panel-drop-slot="left"]')).toHaveAttribute("data-drop-active", "true");
+  await page.screenshot({ path: info.outputPath("bubble-drop-targets.png") });
   await page.mouse.up();
+  await expect(targets).toHaveCount(0);
   await expect.poll(() => centerX(bubble)).toBeLessThan(viewport.width / 3);
   await bubble.click();
   const side = page.getByTestId("workbench-side-panel-floating");
@@ -75,8 +88,14 @@ const verifyMovableSidePanel = async (page: import("@playwright/test").Page, pro
   const header = (await side.locator('[data-workbench-panel-header="side"]').boundingBox())!;
   await page.mouse.move(header.x + header.width * 0.65, header.y + header.height / 2);
   await page.mouse.down();
+  await page.mouse.move((viewport.width * 2) / 3 + 15, header.y + header.height / 2, { steps: 8 });
+  await expect(page.locator('[data-side-panel-drop-slot="right"]')).toHaveAttribute("data-drop-active", "true");
+  await page.screenshot({ path: info.outputPath("panel-drop-targets.png") });
   await page.mouse.move(viewport.width - 40, header.y + header.height / 2, { steps: 8 });
+  await expect(targets).toHaveCount(3);
+  await expect(page.locator('[data-side-panel-drop-slot="right"]')).toHaveAttribute("data-drop-active", "true");
   await page.mouse.up();
+  await expect(targets).toHaveCount(0);
   await expect.poll(() => centerX(side)).toBeGreaterThan((viewport.width * 2) / 3);
   await expect(draft).toContainText("Keep this draft while moving the panel");
   await side.getByRole("button", { name: "Close Side Panel", exact: true }).click();
@@ -158,9 +177,9 @@ test.describe("Session bubble workspace selection", () => {
   });
 
   // Critical risk: both launchers must move visually, including over a live Side iframe.
-  test("moves the bubble and floating panel to the chosen position", async ({ page, request }) => {
+  test("moves the bubble and floating panel to the chosen position", async ({ page, request }, info) => {
     projectId = (await createProjectViaApi(request, "Movable Side Panel")).id;
-    await verifyMovableSidePanel(page, projectId);
+    await verifyMovableSidePanel(page, projectId, info);
   });
 
   // Critical risk: choosing a default must work with existing tabs and preserve their drafts.
