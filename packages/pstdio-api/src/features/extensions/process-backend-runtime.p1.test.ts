@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { closeBackendWorkers } from "pstdio-extensions";
+import { closeBackendWorkers, uncoveredContextFunctions } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
 
 let root: string;
@@ -52,6 +52,12 @@ export default {
     },
     { id: "crash", ref: { kind: "command", id: "crash" }, title: "Crash", run: () => process.exit(1) },
     {
+      id: "port",
+      ref: { kind: "command", id: "port" },
+      title: "Port",
+      run: (ctx) => ctx.net.findFreePort(),
+    },
+    {
       id: "spin",
       ref: { kind: "command", id: "spin" },
       title: "Spin",
@@ -83,6 +89,22 @@ beforeAll(async () => {
     }),
   );
   await writeFile(join(source, "extension.ts"), entry);
+  const inProcess = join(root, "in-process");
+  await mkdir(inProcess);
+  await writeFile(
+    join(inProcess, "package.json"),
+    JSON.stringify({
+      name: "in-process",
+      version: "1.0.0",
+      publisher: "example",
+      main: "./extension.ts",
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+    }),
+  );
+  await writeFile(
+    join(inProcess, "extension.ts"),
+    `export default { commands: [{ id: "capture", ref: { kind: "command", id: "capture" }, title: "Capture", run(ctx) { globalThis.__processRuntimeHostContext = ctx; } }] };`,
+  );
   handle = await createTestApp({ databasePath: ":memory:", storageRoot: join(root, "storage") });
   const project = await handle.deps.projectService.create({ name: "Isolated" });
   projectId = project.id;
@@ -93,6 +115,16 @@ beforeAll(async () => {
     name: "isolated",
     displayName: "Isolated",
     sourcePath: source,
+    sourceKind: "local_path",
+    manifest: {},
+  });
+  await handle.deps.extensionService.enableInstalledSourceForProject({
+    projectId,
+    installName: "in-process",
+    extensionId: "example.in-process",
+    name: "in-process",
+    displayName: "In process",
+    sourcePath: inProcess,
     sourceKind: "local_path",
     manifest: {},
   });
@@ -155,4 +187,21 @@ test("a crashed worker fails only its running call; the next call starts a new w
   const after = (await execute("save", { id: "d", text: "y" })).outcome;
   expect(after.ok).toBe(true);
   expect((after.value as { pid: number }).pid).not.toBe(first.pid);
+});
+
+test("the process-mode surface accounts for every function of the host's real ctx", async () => {
+  await handle.app.request(`/v1/projects/${projectId}/extensions/commands/example.in-process.command.capture/execute`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ params: {} }),
+  });
+  const captured = (globalThis as { __processRuntimeHostContext?: { projectId: string } }).__processRuntimeHostContext;
+  expect(captured?.projectId).toBe(projectId);
+  expect(uncoveredContextFunctions(captured!)).toEqual([]);
+});
+
+test("host services answer a process-mode command", async () => {
+  const { outcome } = await execute("port");
+  expect(outcome.ok).toBe(true);
+  expect(outcome.value).toBeGreaterThan(0);
 });
