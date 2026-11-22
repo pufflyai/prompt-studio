@@ -30,7 +30,8 @@ export function drawWorkspaceHistory(
   const bottom = height - 31;
   const tick = Math.max(1, Math.ceil(peak / 4));
   const highest = tick * Math.max(1, Math.ceil(peak / tick));
-  const duration = last.time - first.time;
+  // A single timestamp has no span; one millisecond keeps every coordinate finite and plots it at the left edge.
+  const duration = Math.max(1, last.time - first.time);
   const x = (time: number) => left + ((time - first.time) / duration) * (right - left);
   const y = (count: number) => bottom - (count / highest) * (bottom - top);
 
