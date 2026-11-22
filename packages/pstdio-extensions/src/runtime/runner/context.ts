@@ -19,6 +19,7 @@ import type { ExtensionRuntime } from "../../types/runtime";
 import { canonicalNavigationOwners } from "../canonical-navigation-owners";
 import { boundedQueryAutomation, boundedQueryStorage, rejectUnboundedCollectionRead } from "./collection-query";
 import { type EventDispatcher, refId } from "./dispatch";
+import { markHostContext } from "./host-context";
 import type { NavigationScope } from "./navigation-scope";
 import type { InvocationScope } from "./scope";
 import type {
@@ -192,7 +193,7 @@ export const createContextFactory = (
       signal: scope?.signal,
     };
 
-    return {
+    return markHostContext({
       projectId: ids.projectId,
       workspaceId: env.workspaceId,
       project: env.project,
@@ -233,7 +234,7 @@ export const createContextFactory = (
       logger: createLogger(ids.extensionId),
       settings: hostApis.settings,
       account: hostApis.account ?? unavailableAccount,
-    };
+    });
   },
 
   buildCommandContext(
