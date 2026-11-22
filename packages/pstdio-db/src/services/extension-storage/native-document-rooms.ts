@@ -4,7 +4,12 @@ import type { StorageOwner } from "pstdio-sync";
 import { applyTextEditorUpdate, readTextDocumentSeed } from "pstdio-sync/text";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
-import { native_document_room_updates, native_document_rooms, native_document_sources } from "../../db/schemas.pg";
+import {
+  native_document_room_updates,
+  native_document_rooms,
+  native_document_sources,
+  owners as storageOwners,
+} from "../../db/schemas.pg";
 import { createDocumentCache } from "./document-cache";
 import { NativeDocumentRoomError } from "./native-document-errors";
 import {
@@ -13,21 +18,17 @@ import {
   roomGeneration,
   saveOrderedMarker,
 } from "./ordered-native-metadata";
+import { ensureStorageOwner, storageOwnerKey } from "./storage-owner-key";
 
 interface RoomAddress {
   owner: StorageOwner;
   roomId: string;
 }
 const roomWhere = ({ owner, roomId }: RoomAddress) =>
-  and(
-    eq(native_document_rooms.id, roomId),
-    eq(native_document_rooms.workbench_id, owner.workbenchId),
-    eq(native_document_rooms.extension_id, owner.extensionId),
-  );
+  and(eq(native_document_rooms.id, roomId), eq(native_document_rooms.owner_id, storageOwnerKey(owner)));
 const sourceWhere = ({ owner, documentKey }: { owner: StorageOwner; documentKey: string }) =>
   and(
-    eq(native_document_sources.workbench_id, owner.workbenchId),
-    eq(native_document_sources.extension_id, owner.extensionId),
+    eq(native_document_sources.owner_id, storageOwnerKey(owner)),
     eq(native_document_sources.document_key, documentKey),
   );
 const validate = async (document: Y.Doc) => {
@@ -66,13 +67,14 @@ const append = async (
 export const createNativeDocumentRoomsDBService = (db: DbClient) => {
   const cache = createDocumentCache();
   const access = async <T>(input: RoomAddress, action: (document: Y.Doc) => Promise<T>) => {
-    const key = JSON.stringify([input.owner, input.roomId]);
+    let key = JSON.stringify([input.owner, input.roomId]);
     let loaded: Y.Doc | undefined;
     try {
       const result = await db.transaction(async (tx) => {
         const [row] = await tx
           .select({
             id: native_document_rooms.id,
+            owner_id: native_document_rooms.owner_id,
             document_key: native_document_rooms.document_key,
             revision: native_document_rooms.revision,
             folded_revision: native_document_rooms.folded_revision,
@@ -81,6 +83,7 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
           .where(roomWhere(input))
           .for("update");
         if (!row) throw new NativeDocumentRoomError("not_found", "Editor room not found");
+        key = JSON.stringify([row.owner_id, input.roomId]);
         const cached = cache.get(key);
         const document = cached?.revision === row.revision ? cached.document : new Y.Doc();
         loaded = document;
@@ -162,34 +165,30 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
           throw new NativeDocumentRoomError("invalid_frame", "Invalid editor source");
         }
         const id = crypto.randomUUID();
-        await db.transaction(async (tx) => {
+        const ownerId = await db.transaction(async (tx) => {
+          const ownerId = await ensureStorageOwner(tx, input.owner);
           const insert = tx.insert(native_document_sources).values({
-            workbench_id: input.owner.workbenchId,
-            extension_id: input.owner.extensionId,
+            owner_id: ownerId,
             document_key: input.documentKey,
             target,
           });
           if (target)
             await insert.onConflictDoUpdate({
-              target: [
-                native_document_sources.workbench_id,
-                native_document_sources.extension_id,
-                native_document_sources.document_key,
-              ],
+              target: [native_document_sources.owner_id, native_document_sources.document_key],
               set: { target },
             });
           else await insert.onConflictDoNothing();
           await tx.insert(native_document_rooms).values({
             id,
-            workbench_id: input.owner.workbenchId,
-            extension_id: input.owner.extensionId,
+            owner_id: ownerId,
             document_key: input.documentKey,
             state: Y.encodeStateAsUpdate(document),
           });
           if (input.generation !== undefined)
             await saveOrderedMarker(tx, input.owner, orderedRoomMarkerId(id), { generation: input.generation });
+          return ownerId;
         });
-        cache.publish(JSON.stringify([input.owner, id]), { document, revision: 0 });
+        cache.publish(JSON.stringify([ownerId, id]), { document, revision: 0 });
         return { id };
       } catch (error) {
         document.destroy();
@@ -212,11 +211,11 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
         const removed = await tx
           .delete(native_document_rooms)
           .where(roomWhere(input))
-          .returning({ id: native_document_rooms.id });
+          .returning({ id: native_document_rooms.id, owner_id: native_document_rooms.owner_id });
         if (removed.length) await removeRoomGeneration(tx, input.owner, input.roomId);
         return removed;
       });
-      cache.discard(JSON.stringify([input.owner, input.roomId]));
+      for (const row of removed) cache.discard(JSON.stringify([row.owner_id, input.roomId]));
       return removed.length > 0;
     },
     async source(input: { owner: StorageOwner; documentKey: string }) {
@@ -232,11 +231,12 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
         const rows = await db
           .select({
             id: native_document_rooms.id,
-            workbenchId: native_document_rooms.workbench_id,
-            extensionId: native_document_rooms.extension_id,
+            workbenchId: storageOwners.project_id,
+            extensionId: storageOwners.extension_id,
             documentKey: native_document_rooms.document_key,
           })
           .from(native_document_rooms)
+          .innerJoin(storageOwners, eq(storageOwners.id, native_document_rooms.owner_id))
           .where(cursor ? gt(native_document_rooms.id, cursor) : undefined)
           .orderBy(native_document_rooms.id)
           .limit(100);

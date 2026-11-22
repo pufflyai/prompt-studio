@@ -57,7 +57,25 @@ for (const entry of after.filter((entry) => !before.some((old) => old.idx === en
     ordered.splice(constraint, 0, statement);
     movedColumns = true;
   }
-  if (!move.size && !movedColumns) continue;
+  // Dropping a key column removes its primary key implicitly. A later explicit
+  // key drop would then fail, so generate it before the first such column drop.
+  let movedKeys = false;
+  for (const statement of statements) {
+    const drop = /^ALTER TABLE "([^"]+)" DROP CONSTRAINT "([^"]+)";$/u.exec(statement.trim());
+    const columns: string[] | undefined =
+      drop && snapshot.tables[`public.${drop[1]}`]?.compositePrimaryKeys[drop[2]]?.columns;
+    if (!drop || !columns) continue;
+    const dependency = ordered.findIndex((candidate) => {
+      const column = /^ALTER TABLE "([^"]+)" DROP COLUMN "([^"]+)";$/u.exec(candidate.trim());
+      return column?.[1] === drop[1] && columns.includes(column[2]!);
+    });
+    const constraint = ordered.indexOf(statement);
+    if (dependency < 0 || constraint < dependency) continue;
+    ordered.splice(constraint, 1);
+    ordered.splice(dependency, 0, statement);
+    movedKeys = true;
+  }
+  if (!move.size && !movedColumns && !movedKeys) continue;
   await Bun.write(file, ordered.join("--> statement-breakpoint"));
-  console.log("Generated columns and foreign-key drops before their dependent constraints and table drops.");
+  console.log("Generated constraint drops and column additions before dependent schema changes.");
 }

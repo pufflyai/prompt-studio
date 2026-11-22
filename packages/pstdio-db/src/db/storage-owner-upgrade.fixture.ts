@@ -29,6 +29,12 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     FROM recovery_point_owners r JOIN owners o ON r.owner_id=o.id`);
   const points = await query(`SELECT (to_jsonb(r)-'project_id') ||
     jsonb_build_object('workbench_id',project_id) AS row FROM recovery_points r`);
+  const native: Record<string, Record<string, unknown>[]> = {};
+  for (const table of ["native_document_sources", "native_document_rooms", "native_document_file_projections"])
+    native[table] = await query(`SELECT (to_jsonb(n)-'owner_id') ||
+      jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id) AS row
+      FROM ${table} n JOIN owners o ON n.owner_id=o.id`);
+  native.native_document_room_updates = await query("SELECT to_jsonb(n) AS row FROM native_document_room_updates n");
   const assets = await query(`SELECT (to_jsonb(a)-'owner_id') ||
     jsonb_build_object('project_id',o.project_id,'extension_id',o.extension_id) AS row
     FROM asset_transfers a JOIN owners o ON a.owner_id=o.id`);
@@ -52,9 +58,13 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     )
   ).rows[0]!;
   await connection.pglite.exec(
-    "DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
+    "DROP TABLE native_document_room_updates; DROP TABLE native_document_rooms; DROP TABLE native_document_file_projections; DROP TABLE native_document_sources; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
   );
   const data = {
+    native_document_sources: native.native_document_sources!,
+    native_document_file_projections: native.native_document_file_projections!,
+    native_document_rooms: native.native_document_rooms!,
+    native_document_room_updates: native.native_document_room_updates!,
     recovery_points: points,
     recovery_point_owners: recovery,
     ...ordered,
@@ -93,6 +103,9 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
         columns.map((column) => {
           const value = row[column];
           const binaryColumns: Record<string, string[]> = {
+            native_document_rooms: ["state"],
+            native_document_room_updates: ["update"],
+            native_document_file_projections: ["baseline", "pending"],
             recovery_point_owners: ["records", "metadata"],
             storage_log_entries: ["entry", "envelope"],
             storage_ordered_owners: ["receipt_root"],

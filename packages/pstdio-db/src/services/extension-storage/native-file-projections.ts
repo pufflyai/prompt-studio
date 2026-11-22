@@ -1,7 +1,13 @@
 import { and, asc, eq, gt, isNotNull, or, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
-import { native_document_file_projections as projections, storage_documents } from "../../db/schemas.pg";
+import {
+  native_document_file_projections as projections,
+  storage_documents,
+  owners as storageOwners,
+} from "../../db/schemas.pg";
+
+import { ensureStorageOwner, storageOwnerKey } from "./storage-owner-key";
 
 interface Address {
   owner: StorageOwner;
@@ -9,16 +15,14 @@ interface Address {
   projectionKey?: string;
 }
 const columns = ({ owner, documentKey, projectionKey = "handler" }: Address) => ({
-  workbench_id: owner.workbenchId,
-  extension_id: owner.extensionId,
+  owner_id: storageOwnerKey(owner),
   document_key: documentKey,
   projection_key: projectionKey,
 });
 const where = (input: Address) => {
   const address = columns(input);
   return and(
-    eq(projections.workbench_id, address.workbench_id),
-    eq(projections.extension_id, address.extension_id),
+    eq(projections.owner_id, address.owner_id),
     eq(projections.document_key, address.document_key),
     eq(projections.projection_key, address.projection_key),
   );
@@ -29,20 +33,17 @@ export const createNativeFileProjectionsDBService = (db: DbClient) => ({
     const rows = await db
       .select({ key: projections.projection_key })
       .from(projections)
-      .where(
-        and(
-          eq(projections.workbench_id, owner.workbenchId),
-          eq(projections.extension_id, owner.extensionId),
-          eq(projections.document_key, documentKey),
-        ),
-      );
+      .where(and(eq(projections.owner_id, storageOwnerKey(owner)), eq(projections.document_key, documentKey)));
     return rows.map(({ key }) => key);
   },
   async initialize(input: Address & { state: Uint8Array | null }) {
-    await db
-      .insert(projections)
-      .values({ ...columns(input), baseline: input.state })
-      .onConflictDoNothing();
+    await db.transaction(async (tx) => {
+      const ownerId = await ensureStorageOwner(tx, input.owner);
+      await tx
+        .insert(projections)
+        .values({ ...columns(input), owner_id: ownerId, baseline: input.state })
+        .onConflictDoNothing();
+    });
   },
   async read(input: Address) {
     const [row] = await db
@@ -84,16 +85,17 @@ export const createNativeFileProjectionsDBService = (db: DbClient) => ({
     while (true) {
       const rows = await db
         .select({
-          workbenchId: projections.workbench_id,
-          extensionId: projections.extension_id,
+          workbenchId: storageOwners.project_id,
+          extensionId: storageOwners.extension_id,
           documentKey: projections.document_key,
         })
         .from(projections)
+        .innerJoin(storageOwners, eq(storageOwners.id, projections.owner_id))
         .leftJoin(
           storage_documents,
           and(
-            eq(storage_documents.workbench_id, projections.workbench_id),
-            eq(storage_documents.extension_id, projections.extension_id),
+            eq(storage_documents.workbench_id, storageOwners.project_id),
+            eq(storage_documents.extension_id, storageOwners.extension_id),
             eq(storage_documents.document_id, sql`'["native-markdown","' || ${projections.document_key} || '"]'`),
           ),
         )
@@ -101,13 +103,13 @@ export const createNativeFileProjectionsDBService = (db: DbClient) => ({
           and(
             or(isNotNull(projections.pending), gt(storage_documents.revision, projections.completed_revision)),
             eq(projections.projection_key, "handler"),
-            workbenchId ? eq(projections.workbench_id, workbenchId) : undefined,
+            workbenchId ? eq(storageOwners.project_id, workbenchId) : undefined,
             cursor
-              ? sql`(${projections.workbench_id}, ${projections.extension_id}, ${projections.document_key}) > (${cursor[0]}, ${cursor[1]}, ${cursor[2]})`
+              ? sql`(${storageOwners.project_id}, ${storageOwners.extension_id}, ${projections.document_key}) > (${cursor[0]}, ${cursor[1]}, ${cursor[2]})`
               : undefined,
           ),
         )
-        .orderBy(asc(projections.workbench_id), asc(projections.extension_id), asc(projections.document_key))
+        .orderBy(asc(storageOwners.project_id), asc(storageOwners.extension_id), asc(projections.document_key))
         .limit(100);
       for (const { workbenchId, extensionId, documentKey } of rows)
         yield { owner: { workbenchId, extensionId }, documentKey };

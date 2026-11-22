@@ -7,7 +7,7 @@ import * as s from "../db/schemas.pg";
 import { indexNodeFilesFor } from "./extension-storage/index-node-files";
 
 // Ordered by foreign-key dependency. Only these composite-key parents need a new key before moving children.
-const parents = [s.storage_documents, s.storage_record_projections, s.storage_record_sync, s.native_document_sources];
+const parents = [s.storage_documents, s.storage_record_projections, s.storage_record_sync];
 const projectTables = [
   ...parents,
   s.storage_document_updates,
@@ -15,8 +15,6 @@ const projectTables = [
   s.storage_current_records,
   s.storage_record_indexes,
   s.storage_record_outbox,
-  s.native_document_file_projections,
-  s.native_document_rooms,
   s.storage_ordered_resource_numbers,
 ];
 const otherTables = [

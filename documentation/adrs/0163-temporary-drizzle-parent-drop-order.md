@@ -14,11 +14,13 @@ The installed Drizzle Kit 0.31 generator emits `DROP TABLE automation_principals
 
 The same generator also emits a replacement `asset_transfers` primary key using `owner_id` before the `ADD COLUMN owner_id` statement. PostgreSQL rejects that primary key because its column does not exist. The asset-owner migration regression reproduces this on a fresh database as well as a released-schema upgrade.
 
+A replacement named `native_document_file_projections_pk` also leaves its explicit constraint drop after removal of the old key columns. PostgreSQL automatically removes the primary key when its column is dropped; the later explicit constraint drop then fails. Native-owner upgrade and fresh service fixtures reproduce this.
+
 Changing the desired schema cannot express the missing statement-order dependency. Keeping the principal table would prevent the approved consolidation. Hand-editing this migration would also leave the next generated migration exposed to the same failure.
 
 ## Temporary workaround
 
-[`generate-database.ts`](../../packages/pstdio-db/scripts/generate-database.ts) runs Drizzle Kit, then processes only newly generated migrations. It uses the preceding schema snapshot to identify explicit foreign-key drops whose referenced table is also dropped. It moves those drops before the first table drop, preserving their relative order. It also recognizes generated column additions and moves an addition before an earlier constraint on the same table that uses that column. Other generated statements retain their order. The migration remains reproducible through `db:generate`.
+[`generate-database.ts`](../../packages/pstdio-db/scripts/generate-database.ts) runs Drizzle Kit, then processes only newly generated migrations. It uses the preceding schema snapshot to identify explicit foreign-key drops whose referenced table is also dropped. It moves those drops before the first table drop, preserving their relative order. It also recognizes generated column additions and moves an addition before an earlier constraint on the same table that uses that column. It also uses the preceding primary-key metadata to move an explicit key drop before removal of any of its columns, which would implicitly remove that same key. Other generated statements retain their order. The migration remains reproducible through `db:generate`.
 
 The released-schema upgrade tests execute the generated result, including populated automation and asset-transfer rows, owner-key replacement, and restart recovery. The workaround adds no runtime migration adapter or SQL exceptions.
 
@@ -28,4 +30,4 @@ The adapter recognizes the current PostgreSQL statement format and snapshot fore
 
 ## Removal
 
-Remove the ordering step when the installed generator emits dependent constraint drops before parent-table drops and required columns before replacement constraints. Regenerate the candidate and run the owning released-schema migration and interruption tests before removing the adapter. Retain the unmodified generated SQL as evidence that the upstream output now works.
+Remove the ordering step when the installed generator emits dependent constraint drops before parent-table drops required columns before replacement constraints, and explicit key drops before removing their columns. Regenerate the candidate and run the owning released-schema migration and interruption tests before removing the adapter. Retain the unmodified generated SQL as evidence that the upstream output now works.

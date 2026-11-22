@@ -24,6 +24,8 @@ import {
 } from "./ordered-native-metadata";
 import { decodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 
+import { ensureStorageOwner, storageOwnerKey } from "./storage-owner-key";
+
 const authoredId = (id: string) => JSON.stringify(["ordered-native-authored", id]);
 type Captured = Record<string, { generation?: string; recordId: string; field: string; state?: string }>;
 interface AuthoredText {
@@ -149,13 +151,7 @@ const mergePrivateRooms = async (
   const admitted = await tx
     .select()
     .from(rooms)
-    .where(
-      and(
-        eq(rooms.workbench_id, owner.workbenchId),
-        eq(rooms.extension_id, owner.extensionId),
-        eq(rooms.document_key, field.key),
-      ),
-    );
+    .where(and(eq(rooms.owner_id, storageOwnerKey(owner)), eq(rooms.document_key, field.key)));
   for (const room of admitted) {
     if ((await roomGeneration(tx, owner, room.id)) !== generation) continue;
     const copy = new Y.Doc();
@@ -264,19 +260,17 @@ export const fenceOrderedNativeText = async (
     const current = marker.value.generation === generation;
     if (!current && !capturedState) continue;
     const state = await privateFieldState(tx, owner, field, generation, before, capturedState);
+    const ownerId = await ensureStorageOwner(tx, owner);
     await tx
       .insert(sources)
       .values({
-        workbench_id: owner.workbenchId,
-        extension_id: owner.extensionId,
+        owner_id: ownerId,
         document_key: field.key,
         target: null,
       })
       .onConflictDoNothing();
     const id = crypto.randomUUID();
-    await tx
-      .insert(rooms)
-      .values({ id, workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_key: field.key, state });
+    await tx.insert(rooms).values({ id, owner_id: ownerId, document_key: field.key, state });
     if (generation !== undefined) await saveOrderedMarker(tx, owner, orderedRoomMarkerId(id), { generation });
     if (!current) continue; // Preserve the old private lineage without fencing a fresh replica.
     const next = await fingerprint({
