@@ -90,9 +90,14 @@ export const createRecoveryPoints = (
       ownerIds.set(extensionId, await ensureStorageOwner(tx, { workbenchId: projectId, extensionId }));
     for (const hours of plan.write) {
       await tx.insert(recovery_points).values({ project_id: projectId, hours, captured_at: capturedAt });
+      const written = new Map<string, { sha256: string; bytes: number }>();
       for (const owner of content) {
         // No referenced path is overwritten: rollback leaves the previous hash readable.
-        const reference = await files.put(projectId, hours, owner.file);
+        let reference = written.get(owner.file.sha256);
+        if (!reference) {
+          reference = await files.put(projectId, hours, owner.file);
+          written.set(owner.file.sha256, reference);
+        }
         await tx.insert(recovery_point_owners).values({
           project_id: projectId,
           hours,

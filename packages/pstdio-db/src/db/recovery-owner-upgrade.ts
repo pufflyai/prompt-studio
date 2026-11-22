@@ -2,7 +2,11 @@ import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import { sql } from "drizzle-orm";
-import { prepareRecoveryBytes, recoveryFilesFor } from "../services/extension-storage/recovery-files";
+import {
+  prepareRecoveryBytes,
+  type RecoveryReference,
+  recoveryFilesFor,
+} from "../services/extension-storage/recovery-files";
 import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
 import { recovery_point_owners } from "./schemas.pg";
@@ -25,6 +29,7 @@ const normalizeOwner = async (
   input: ReleasedOwner,
   files: ReturnType<typeof recoveryFilesFor>,
   ownerIds: Map<string, number>,
+  written: Map<string, RecoveryReference>,
 ) => {
   const projectId = input.project_id ?? input.workbench_id;
   if (typeof projectId !== "string") throw new Error("Invalid exported recovery project");
@@ -43,14 +48,18 @@ const normalizeOwner = async (
   }
   const revision = Number(input.revision);
   if (!Number.isSafeInteger(revision)) throw new Error("Invalid exported recovery revision");
-  const reference = await files.put(
-    projectId,
-    input.hours,
-    await prepareRecoveryBytes({
-      records: decodeBytes(input.records),
-      metadata: decodeBytes(input.metadata),
-    }),
-  );
+  const key = createHash("sha256")
+    .update(JSON.stringify([projectId, input.hours, input.records, input.metadata]))
+    .digest("hex");
+  let reference = written.get(key);
+  if (!reference) {
+    reference = await files.put(
+      projectId,
+      input.hours,
+      await prepareRecoveryBytes({ records: decodeBytes(input.records), metadata: decodeBytes(input.metadata) }),
+    );
+    written.set(key, reference);
+  }
   return { project_id: projectId, hours: input.hours, owner_id: ownerId, revision, ...reference };
 };
 
@@ -72,8 +81,11 @@ export const prepareRecoveryOwnerUpgrade = async (db: DbClient, path: string) =>
     pendingBytes = 0;
     await db.transaction(async (tx) => {
       const ownerIds = new Map<string, number>();
+      // Identical copies share a file. Reuse only within this bounded transaction:
+      // collection cannot interleave, and every reused reference was already flushed.
+      const written = new Map<string, RecoveryReference>();
       const expected = [];
-      for (const input of batch) expected.push(await normalizeOwner(tx, input, files, ownerIds));
+      for (const input of batch) expected.push(await normalizeOwner(tx, input, files, ownerIds, written));
       const key = (row: { project_id: string; hours: number; owner_id: number }) =>
         JSON.stringify([row.project_id, row.hours, row.owner_id]);
       const existing = await tx
