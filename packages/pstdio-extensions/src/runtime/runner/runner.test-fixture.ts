@@ -4,7 +4,8 @@ import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "../normalize";
 import { type CommandRunnerEnvironment, createCommandRunner } from "./runner";
 
-export const makeStorage = () => ({ api: createMemoryStorage() });
+// Declares the log the process-mode surface coverage opens, so its factory resolves like a real one.
+export const makeStorage = () => ({ api: createMemoryStorage({ logs: ["entries"] }) });
 
 const createSessionResource = () => ({
   type: "session" as const,
