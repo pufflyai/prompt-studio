@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { resourceLinkTarget } from "pstdio-api-contracts/extension-kernel";
 import { toWorkbenchNavigationTarget } from "../../../extensions/host/extension-navigation-target";
-import { createResourceViewerFixture, viewerPage, viewerResource } from "./resource-viewer-test-fixture";
+import { createResourceViewerFixture, viewerPage, viewerPanel, viewerResource } from "./resource-viewer-test-fixture";
 
 for (const compound of [false, true])
   test(`a resource link in another mode enters its owning page; compound=${compound}`, async () => {
@@ -251,6 +251,39 @@ test("a legacy resource link panel can preview outside its containing page", asy
   });
   expect(w.pages.store.getState().activePageId).toBe("other");
   expect(w.layout.getActivePanel("side")?.resource?.id).toBe("linked");
+});
+
+test("a page with a shared Main viewer opens its declared resource panel in Side", async () => {
+  const { w, openMain } = createResourceViewerFixture({ collection: true });
+  const landing = { kind: "placement" as const, id: "shared", extensionId: "example.readers" };
+  w.modePlacements.registerPlacement({
+    id: "shared",
+    ref: landing,
+    modeId: "project",
+    region: "main",
+    item: { kind: "view", view: { kind: "view", id: "landing" }, presence: "closed" },
+  });
+  w.pages.registerPage({
+    id: "shared",
+    ref: viewerPage("shared"),
+    path: "shared",
+    modeId: "project",
+    resource: { kinds: [{ kind: "resource-kind", extensionId: "example.readers", id: "record" }] },
+    main: { kind: "panels", landing },
+    panelView: viewerPanel,
+    slots: [],
+  });
+  await openMain("source");
+  const original = w.pages.store.getState().location;
+  await w.navigation.openTarget({
+    kind: "page",
+    page: viewerPage("shared"),
+    resource: viewerResource("linked"),
+    region: "side",
+    open: "pin",
+  });
+  expect(w.layout.getActivePanel("side")).toMatchObject({ resource: { id: "linked" }, tabRetention: "persistent" });
+  expect(w.pages.store.getState().location).toEqual(original);
 });
 
 test("a resource with Files and Changes tabs previews its declared landing in Side", async () => {

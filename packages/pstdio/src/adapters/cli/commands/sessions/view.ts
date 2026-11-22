@@ -5,9 +5,11 @@ export const command = "view";
 export const describe = "View session details";
 
 export const builder = (yargs: Argv) =>
-  yargs.option("id", { type: "string", demandOption: true, describe: "Session ID" });
+  yargs
+    .option("id", { type: "string", demandOption: true, describe: "Session ID" })
+    .option("json", { type: "boolean", default: false, describe: "Print the complete session record as JSON" });
 
-export type ViewArgs = { id: string };
+export type ViewArgs = { id: string; json?: boolean };
 
 type Deps = {
   getSession: typeof defaultGetSession;
@@ -24,6 +26,11 @@ export const createHandler =
   async (argv: Arguments<ViewArgs>) => {
     const session = await deps.getSession(argv.id);
     if (!session) throw new Error(`Session not found: ${argv.id}`);
+
+    if (argv.json) {
+      deps.log(JSON.stringify(session, null, 2));
+      return;
+    }
 
     const lines = [
       `Session:     ${session.id}`,
