@@ -43,6 +43,7 @@ import { acquirePgliteLock } from "./pglite-lock";
 import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 import { prepareRecoveryOwnerUpgrade } from "./recovery-owner-upgrade";
 import { prepareResourceLinkOwnerUpgrade } from "./resource-link-owner-upgrade";
+import { prepareResourcePrefixUpgrade } from "./resource-prefix-upgrade";
 import { createRetiredStorageCleanup } from "./retired-storage-cleanup";
 import * as schema from "./schemas.pg";
 import { prepareSessionWorkspaceUpgrade } from "./session-workspace-upgrade";
@@ -244,6 +245,7 @@ export const createDb = async (options?: {
       if (!fs.existsSync(migrationsFolder)) return;
       const finishProjectExtensionsUpgrade = await prepareProjectExtensionsUpgrade(db, dbPath);
       const finishResourceLinkOwnerUpgrade = await prepareResourceLinkOwnerUpgrade(db, dbPath);
+      const finishResourcePrefixUpgrade = await prepareResourcePrefixUpgrade(db, dbPath);
       const finishOwnerIndexUpgrade = await prepareOwnerIndexUpgrade(db, dbPath);
       const finishOwnerProjectionUpgrade = await prepareOwnerProjectionUpgrade(db, dbPath);
       const finishDocumentOwnerUpgrade = await prepareDocumentOwnerUpgrade(db, dbPath);
@@ -279,6 +281,7 @@ export const createDb = async (options?: {
       await finishBoardDefaultsUpgrade?.();
       await finishAutomationOwnersUpgrade?.();
       await finishResourceLinkOwnerUpgrade?.();
+      await finishResourcePrefixUpgrade?.();
       await finishSessionWorkspaceUpgrade?.();
       await finishFileOwnersUpgrade();
       if (await upgradeLegacyRecords(db, dbPath, { signal: options?.signal, failed: options?.onLegacyConversionError }))

@@ -19,7 +19,7 @@ const otherTables = [
   s.board_views,
   s.preferences,
   s.credentials,
-  s.extension_resource_sequences,
+  s.resource_prefixes,
   s.storage_resource_identities,
 ];
 const ownerColumn = sql.identifier("extension_id");
@@ -79,7 +79,7 @@ const assertNoConflicts = async (tx: Transaction, from: string, to: string, excl
     ],
     [s.credentials, sql`jsonb_build_array(project_id, contribution_id)`],
     [s.board_views, sql`jsonb_build_array(project_id, board_id)`],
-    [s.extension_resource_sequences, sql`to_jsonb(project_id)`],
+    [s.resource_prefixes, sql`to_jsonb(project_id)`],
     [s.storage_resource_identities, sql`to_jsonb(workbench_id)`],
   ] as const) {
     const result = await tx.execute(sql`SELECT ${scope} AS scope FROM ${table} WHERE ${ownerColumn} IN (${from}, ${to})

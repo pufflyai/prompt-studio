@@ -31,6 +31,16 @@ CREATE TABLE "resource_links" (
 	CONSTRAINT "resource_links_source_owner_source_kind_source_id_target_owner_target_kind_target_id_pk" PRIMARY KEY("source_owner","source_kind","source_id","target_owner","target_kind","target_id")
 );
 --> statement-breakpoint
+CREATE TABLE "resource_prefixes" (
+	"project_id" text NOT NULL,
+	"prefix" text NOT NULL,
+	"extension_id" text NOT NULL,
+	"kind" text NOT NULL,
+	"next_value" bigint NOT NULL,
+	CONSTRAINT "resource_prefixes_project_id_prefix_pk" PRIMARY KEY("project_id","prefix"),
+	CONSTRAINT "resource_prefixes_project_extension_kind_unique" UNIQUE("project_id","extension_id","kind")
+);
+--> statement-breakpoint
 CREATE TABLE "log_entries" (
 	"stream_id" bigint NOT NULL,
 	"entry_id" text NOT NULL,
@@ -84,6 +94,7 @@ CREATE TABLE "history_sources" (
 	CONSTRAINT "history_sources_pk" PRIMARY KEY("owner_id","source_id","kind","device_id","record_id")
 );
 --> statement-breakpoint
+ALTER TABLE "extension_resource_sequences" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "resource_anchors" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "storage_log_entries" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "storage_log_streams" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
@@ -101,6 +112,7 @@ ALTER TABLE "storage_ordered_records" DROP CONSTRAINT "storage_ordered_records_w
 --> statement-breakpoint
 ALTER TABLE "storage_current_records" DROP CONSTRAINT "storage_current_records_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk";
 --> statement-breakpoint
+DROP TABLE "extension_resource_sequences" CASCADE;--> statement-breakpoint
 DROP TABLE "resource_anchors" CASCADE;--> statement-breakpoint
 DROP TABLE "storage_log_entries" CASCADE;--> statement-breakpoint
 DROP TABLE "storage_log_streams" CASCADE;--> statement-breakpoint
@@ -180,6 +192,7 @@ ALTER TABLE "storage_resource_projections" ADD COLUMN "owner_id" integer NOT NUL
 ALTER TABLE "owners" ADD CONSTRAINT "owners_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "resource_links" ADD CONSTRAINT "resource_links_source_owner_owners_id_fk" FOREIGN KEY ("source_owner") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "resource_links" ADD CONSTRAINT "resource_links_target_owner_owners_id_fk" FOREIGN KEY ("target_owner") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "resource_prefixes" ADD CONSTRAINT "resource_prefixes_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "log_entries" ADD CONSTRAINT "log_entries_stream_fk" FOREIGN KEY ("stream_id") REFERENCES "public"."log_streams"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "log_streams" ADD CONSTRAINT "log_streams_owner_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "history_rows" ADD CONSTRAINT "history_rows_owner_id_owners_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

@@ -89,6 +89,9 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     FROM ${table} h JOIN owners o ON h.owner_id=o.id`);
   const rows = await history("history_rows");
   const sources = await history("history_sources");
+  const prefixes = await query(`SELECT to_jsonb(p) ||
+    jsonb_build_object('next_value',next_value::text,'created_at','2026-11-22','updated_at','2026-11-22') AS row
+    FROM resource_prefixes p`);
   const positions = await query(`SELECT jsonb_build_object('workbench_id',project_id,'extension_id',extension_id,
     'cursor',history_cursor,'migrated',history_migrated) AS row FROM owners`);
   const sequence = (
@@ -97,10 +100,11 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     )
   ).rows[0]!;
   await connection.pglite.exec(
-    "DROP TABLE resource_links; DROP TABLE storage_resource_aliases; DROP TABLE storage_resource_identities; DROP TABLE storage_resource_projections; DROP TABLE storage_current_records; DROP TABLE storage_document_operations; DROP TABLE storage_document_updates; DROP TABLE storage_documents; DROP TABLE native_document_room_updates; DROP TABLE native_document_rooms; DROP TABLE native_document_file_projections; DROP TABLE native_document_sources; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE IF EXISTS storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
+    "DROP TABLE resource_links; DROP TABLE resource_prefixes; DROP TABLE storage_resource_aliases; DROP TABLE storage_resource_identities; DROP TABLE storage_resource_projections; DROP TABLE storage_current_records; DROP TABLE storage_document_operations; DROP TABLE storage_document_updates; DROP TABLE storage_documents; DROP TABLE native_document_room_updates; DROP TABLE native_document_rooms; DROP TABLE native_document_file_projections; DROP TABLE native_document_sources; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE IF EXISTS storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
   );
   const data = {
     resource_anchors: links,
+    extension_resource_sequences: prefixes,
     ...documents,
     native_document_sources: native.native_document_sources!,
     native_document_file_projections: native.native_document_file_projections!,
@@ -125,9 +129,15 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
   for (const file of files)
     for (const input of (await readFile(join(folder, file), "utf8")).split("--> statement-breakpoint")) {
       const statement = input.trim();
-      if (tables.some((table) => statement.startsWith(`CREATE TABLE "${table}" (`)))
-        await connection.pglite.exec(statement);
-      if (tables.some((table) => statement.startsWith(`ALTER TABLE "${table}" ADD COLUMN `)))
+      if (
+        tables.some((table) =>
+          [
+            `CREATE TABLE "${table}" (`,
+            `ALTER TABLE "${table}" ADD COLUMN `,
+            `ALTER TABLE "${table}" ALTER COLUMN `,
+          ].some((prefix) => statement.startsWith(prefix)),
+        )
+      )
         await connection.pglite.exec(statement);
       if (
         tables.some(

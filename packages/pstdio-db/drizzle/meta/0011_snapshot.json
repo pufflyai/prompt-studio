@@ -1,5 +1,5 @@
 {
-  "id": "c9da168e-93db-4dec-bc35-0415dbfc3c20",
+  "id": "d681b65f-3aa9-455f-bfb3-fc11658cb07f",
   "prevId": "7831c13a-76db-4e65-a402-222b04fffc09",
   "version": "7",
   "dialect": "postgresql",
@@ -892,98 +892,6 @@
           "columns": ["extension_id", "contribution_id", "project_id"]
         }
       },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.extension_resource_sequences": {
-      "name": "extension_resource_sequences",
-      "schema": "",
-      "columns": {
-        "project_id": {
-          "name": "project_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "extension_id": {
-          "name": "extension_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "prefix": {
-          "name": "prefix",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "next_value": {
-          "name": "next_value",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "extension_resource_sequences_project_prefix_uq": {
-          "name": "extension_resource_sequences_project_prefix_uq",
-          "columns": [
-            {
-              "expression": "project_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "prefix",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "extension_resource_sequences_project_id_projects_id_fk": {
-          "name": "extension_resource_sequences_project_id_projects_id_fk",
-          "tableFrom": "extension_resource_sequences",
-          "tableTo": "projects",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "extension_resource_sequences_project_id_extension_id_kind_pk": {
-          "name": "extension_resource_sequences_project_id_extension_id_kind_pk",
-          "columns": ["project_id", "extension_id", "kind"]
-        }
-      },
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -2494,6 +2402,70 @@
         }
       },
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.resource_prefixes": {
+      "name": "resource_prefixes",
+      "schema": "",
+      "columns": {
+        "project_id": {
+          "name": "project_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prefix": {
+          "name": "prefix",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extension_id": {
+          "name": "extension_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "next_value": {
+          "name": "next_value",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "resource_prefixes_project_id_projects_id_fk": {
+          "name": "resource_prefixes_project_id_projects_id_fk",
+          "tableFrom": "resource_prefixes",
+          "tableTo": "projects",
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "resource_prefixes_project_id_prefix_pk": {
+          "name": "resource_prefixes_project_id_prefix_pk",
+          "columns": ["project_id", "prefix"]
+        }
+      },
+      "uniqueConstraints": {
+        "resource_prefixes_project_extension_kind_unique": {
+          "name": "resource_prefixes_project_extension_kind_unique",
+          "nullsNotDistinct": false,
+          "columns": ["project_id", "extension_id", "kind"]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

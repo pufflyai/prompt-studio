@@ -8,7 +8,7 @@ import {
   storage_resource_aliases as aliases,
   storage_resource_identities as identities,
   storage_resource_projections as projections,
-  extension_resource_sequences as sequences,
+  resource_prefixes as sequences,
 } from "../../db/schemas.pg";
 import { jsonBatches } from "./json-batches";
 import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
@@ -193,7 +193,6 @@ export const projectNumberRecords = async (
       aliases: aliasesById.get(record.id) ?? [],
     })),
   );
-  const timestamp = new Date().toISOString();
   for (const batch of jsonBatches(
     [...live, ...retainedNumbers].map((r) => ({
       extension_id: r.extensionId,
@@ -205,13 +204,13 @@ export const projectNumberRecords = async (
       }, r.value),
     })),
   )) {
-    await tx.execute(sql`INSERT INTO extension_resource_sequences
-      (project_id, extension_id, kind, prefix, next_value, created_at, updated_at)
-      SELECT ${owner.workbenchId}, i.extension_id, i.kind, i.prefix, max(i.value) + 1, ${timestamp}, ${timestamp}
+    await tx.execute(sql`INSERT INTO resource_prefixes
+      (project_id, extension_id, kind, prefix, next_value)
+      SELECT ${owner.workbenchId}, i.extension_id, i.kind, i.prefix, max(i.value) + 1
       FROM jsonb_to_recordset(${batch}::jsonb) AS i(extension_id text, kind text, prefix text, value bigint)
       GROUP BY i.extension_id, i.kind, i.prefix
       ON CONFLICT (project_id, extension_id, kind) DO UPDATE
-      SET next_value = greatest(extension_resource_sequences.next_value, excluded.next_value), updated_at = excluded.updated_at`);
+      SET next_value = greatest(resource_prefixes.next_value, excluded.next_value)`);
   }
 };
 

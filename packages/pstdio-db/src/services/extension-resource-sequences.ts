@@ -3,7 +3,7 @@ import { createStorageId } from "pstdio-api-contracts";
 import { coreOwnerId } from "pstdio-sync/records";
 import type * as Y from "yjs";
 import type { DbClient } from "../db/connection.pglite";
-import { extension_resource_sequences as sequences } from "../db/schemas.pg";
+import { resource_prefixes as sequences } from "../db/schemas.pg";
 import { createDocumentStorageDBService } from "./extension-storage/document-storage";
 import { nextIndexedNumber } from "./extension-storage/resource-number-records";
 import { createResourceIdentityIndex } from "./resource-identity-index";
@@ -36,7 +36,6 @@ export const createExtensionResourceSequencesDBService = (
       throw new Error("Allocate 1 to 100 resource numbers at a time.");
     await ready();
     const ids = Array.from({ length: input.count }, () => createStorageId(input.idPrefix));
-    const timestamp = new Date().toISOString();
     try {
       return await documents.open({ owner: owner(input.projectId) }).records.transaction(async (records, tx) => {
         const [row] = await tx
@@ -47,12 +46,10 @@ export const createExtensionResourceSequencesDBService = (
             kind: input.kind,
             prefix: input.prefix,
             next_value: 1,
-            created_at: timestamp,
-            updated_at: timestamp,
           })
           .onConflictDoUpdate({
             target: [sequences.project_id, sequences.extension_id, sequences.kind],
-            set: { updated_at: timestamp },
+            set: { prefix: sequences.prefix },
           })
           .returning();
         const first = await nextIndexedNumber(tx, input.projectId, row!.prefix);
