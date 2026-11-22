@@ -19,8 +19,7 @@ test("concurrent frames reuse immutable runtime assets without sharing frame sta
     };
   });
   const [first, second] = await Promise.all([load("button"), load("button")]);
-  expect(requests).toHaveLength(2);
-  expect(requests[1].cached).toEqual(["runtime.js", "theme.css"]);
+  expect(requests).toEqual([{ source: "button", cached: [] }]);
   expect(first).toBe(second);
   expect(await first.scripts["example.js"].text()).toBe("example.js");
   expect(first.styles[0].type.split(";")[0]).toBe("text/css");
@@ -65,4 +64,76 @@ test("new builds release obsolete cached module bytes and preview revisions", as
   const count = requests.length;
   await load("button", "1");
   expect(requests.length).toBeGreaterThan(count);
+});
+
+test("switching designs reuses common bytes and releases older designs", async () => {
+  const requests: FrameAssetRequest[] = [];
+  const load = createFrameAssetLoader(async (request) => {
+    requests.push(request);
+    const modules = request.source === "$runtime" ? ["runtime.js"] : ["runtime.js", "ui.js", request.source];
+    return {
+      entry: "runtime.js",
+      modules,
+      styles: [],
+      files: Object.fromEntries(
+        modules.filter((name) => !request.cached.includes(name)).map((name) => [name, encoded(name)]),
+      ),
+    };
+  });
+  const a = await load("a.js");
+  await load("b.js");
+  expect(requests.at(-1)?.cached).toContain("ui.js");
+  expect(await load("a.js")).toBe(a);
+  await load("c.js");
+  await load("d.js");
+  expect(requests.at(-1)?.cached).not.toContain("b.js");
+  expect(requests.at(-1)?.cached).toContain("ui.js");
+  expect(await load("a.js")).not.toBe(a);
+});
+
+test("a failed evicted load preserves the replacement for the same revision", async () => {
+  const entered = Promise.withResolvers<void>();
+  const interrupted = Promise.withResolvers<never>();
+  let first = true;
+  const load = createFrameAssetLoader(async ({ source, cached }) => {
+    if (source === "a" && first) {
+      first = false;
+      entered.resolve();
+      await interrupted.promise;
+    }
+    const name = `${source}.js`;
+    return { entry: name, modules: [name], styles: [], files: cached.includes(name) ? {} : { [name]: encoded(name) } };
+  });
+  const pending = load("a", "1");
+  await entered.promise;
+  await load("b");
+  await load("c");
+  const replacement = await load("a", "1");
+  interrupted.reject(new Error("Old load failed"));
+  await expect(pending).rejects.toThrow("Old load failed");
+  expect(await load("a", "1")).toBe(replacement);
+});
+
+test("different designs reuse archived fonts and keep their own self-contained styles", async () => {
+  const font = `${"a".repeat(64)}.woff2`;
+  const data = btoa("project font bytes");
+  const requests: FrameAssetRequest[] = [];
+  const load = createFrameAssetLoader(async (request) => {
+    requests.push(request);
+    const style = `${request.source}.css`;
+    const css = `@font-face { font-family: ${request.source}; src: url("canvas-font:${font}"); }`;
+    return {
+      entry: "entry.js",
+      modules: [],
+      styles: [style],
+      fonts: [font],
+      files: { [style]: encoded(css), ...(request.cached.includes(font) ? {} : { [font]: data }) },
+    };
+  });
+  await load("First");
+  const next = await load("Second");
+  expect(requests[1].cached).toContain(font);
+  expect(await next.styles[0].text()).toBe(
+    `@font-face { font-family: Second; src: url("data:font/woff2;base64,${data}"); }`,
+  );
 });
