@@ -1,3 +1,4 @@
+import { serviceSurfaces } from "./service-surfaces";
 import type { BackendSurface } from "./surface";
 
 type Members = Record<string, BackendSurface>;
@@ -29,7 +30,20 @@ const collection = object({
 
 const records = (namespace?: string[]) =>
   object({
-    ...calls("read", "list", "commit", "commitIfCurrent", "outcome", "conflicts", "inspect", "resolve"),
+    ...calls(
+      "read",
+      "readMany",
+      "list",
+      "query",
+      "aggregate",
+      "defineIndexes",
+      "commit",
+      "commitIfCurrent",
+      "outcome",
+      "conflicts",
+      "inspect",
+      "resolve",
+    ),
     ...(namespace ? { id: { kind: "local", name: "recordId", namespace } } : {}),
   });
 
@@ -67,6 +81,7 @@ export const extensionContextSurface = (projectId: string): BackendSurface =>
       "eventId",
       "deliveryId",
     ),
+    ...serviceSurfaces,
     signal: { kind: "signal" },
     logger: object({ info: notify, warn: notify, error: notify }),
     navigation: object({ open: notify }),
