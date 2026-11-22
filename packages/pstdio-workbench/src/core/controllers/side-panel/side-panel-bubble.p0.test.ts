@@ -66,6 +66,39 @@ test("a removed panel falls back to the Side Panel without running the host defa
   expect(workbench.preferences.getValue(sidePanelBubblePreferences.panel)).toBe("panel:inspector");
 });
 
+test("a different view override is not reused as the chosen panel", async () => {
+  const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+  workbench.layout.registerPanel({
+    id: "conversation",
+    title: "Conversation",
+    region: "side",
+    rendererId: "conversation",
+    singleton: false,
+    eligibleLocations: {},
+    openCommand: { commandId: "new-conversation" },
+  });
+  workbench.commands.registerCommand(
+    { id: "new-conversation", label: "New conversation" },
+    {
+      execute: () =>
+        workbench.layout.openPanel("conversation", {
+          resource: { type: "conversation", id: "new" },
+          viewId: "conversation",
+          strategy: { kind: "persistent" },
+        }),
+    },
+  );
+  const reader = workbench.layout.openPanel("conversation", {
+    resource: { type: "conversation", id: "existing" },
+    viewId: "reader",
+    strategy: { kind: "persistent" },
+  });
+  await workbench.preferences.setValue(sidePanelBubblePreferences.panel, "panel:conversation", { scope: "user" });
+  await openSidePanelBubble(workbench);
+  expect(workbench.layout.getActivePanel("side")?.instanceId).not.toBe(reader.instanceId);
+  expect(workbench.layout.getActivePanel("side")?.viewId).toBe("conversation");
+});
+
 test("the generic Side Panel preference bypasses the optional host default", async () => {
   const workbench = createWorkbench({ initialSidePanelMode: "closed" });
   let openedDefault = 0;

@@ -74,11 +74,12 @@ export const openSidePanelBubble = async (workbench: WorkbenchCore, openDefault?
   if (typeof selected === "string" && selected.startsWith("panel:")) {
     const id = selected.slice("panel:".length);
     const { open, addable, movable } = sidePanelChoices(workbench);
+    const rendererId = workbench.layout.getWidget(id)?.rendererId;
+    const matches = (panel: WorkbenchWidgetPlacement) =>
+      panel.contributionId === id && (panel.viewId ?? rendererId) === rendererId;
     const activeId = workbench.layout.getLayout().regions.side.activeWidgetId;
-    const existing =
-      open.find((panel) => panel.contributionId === id && panel.widgetId === activeId) ??
-      open.find((panel) => panel.contributionId === id);
-    const elsewhere = movable.find((panel) => panel.contributionId === id);
+    const existing = open.find((panel) => matches(panel) && panel.widgetId === activeId) ?? open.find(matches);
+    const elsewhere = movable.find(matches);
     if (existing) workbench.layout.activatePanel(existing.widgetId);
     else if (elsewhere) {
       workbench.movePanel(elsewhere.widgetId, "side");

@@ -154,6 +154,12 @@ test.describe("Session bubble workspace selection", () => {
     await page.getByRole("menuitem", { name: "New session", exact: true }).click();
     await bubble.click();
     await expect(side.getByTestId("content-editable").filter({ visible: true })).toBeVisible();
+    await side.getByTestId("content-editable").filter({ visible: true }).fill("Keep the bubble's chosen session");
+    await side.getByRole("button", { name: "Close Side Panel", exact: true }).click();
+    await bubble.click();
+    await expect(side.getByTestId("content-editable").filter({ visible: true })).toContainText(
+      "Keep the bubble's chosen session",
+    );
     await side.getByRole("button", { name: "Close Side Panel", exact: true }).click();
     const listed = await (await request.get(`${apiBase}/v1/projects/${projectId}/extensions`)).json();
     const sessions = listed.extensions.find(
