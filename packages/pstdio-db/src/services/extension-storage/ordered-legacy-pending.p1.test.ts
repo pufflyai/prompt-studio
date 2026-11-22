@@ -1,12 +1,7 @@
 import { expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
-import {
-  storage_document_updates,
-  storage_documents,
-  storage_ordered_operations,
-  storage_ordered_owners,
-  storage_record_outbox,
-} from "../../db/schemas.pg";
+import { storage_ordered_owners, storage_record_outbox } from "../../db/legacy-records-schema";
+import { storage_document_updates, storage_documents, storage_ordered_operations } from "../../db/schemas.pg";
 import { peers } from "./ordered-legacy-pending.fixture";
 import { resourceDocumentId } from "./resource-document-persistence";
 
@@ -23,8 +18,8 @@ test("an upgrade retains a legacy offline frame after another full writer founds
     edits: [{ recordId: "card", replace: { title: "offline unsynced", status: "todo" } }],
   });
   expect(await second.db.select().from(storage_record_outbox)).toHaveLength(1);
-  const a = first.upgrade();
-  const b = second.upgrade();
+  const a = await first.upgrade();
+  const b = await second.upgrade();
   await a.sync.synchronize();
   await b.sync.synchronize();
   await a.sync.synchronize();
@@ -32,7 +27,7 @@ test("an upgrade retains a legacy offline frame after another full writer founds
     expect((await peer.records.read("card")).value).toEqual({ title: "offline unsynced", status: "todo" });
   const migrated = await second.db.select().from(storage_ordered_operations);
   expect(migrated.filter((row) => row.operation_id.startsWith("legacy-pending:"))).toHaveLength(1);
-  await second.upgrade().sync.synchronize();
+  await (await second.upgrade()).sync.synchronize();
   expect(
     (await second.db.select().from(storage_ordered_operations)).filter((row) =>
       row.operation_id.startsWith("legacy-pending:"),
@@ -50,8 +45,8 @@ test("a pending legacy native field binding carries its actual seeded text histo
     operationId: "native-offline",
     edits: [{ recordId: "card", replace: { body: "offline native" } }],
   });
-  const a = first.upgrade();
-  const b = second.upgrade();
+  const a = await first.upgrade();
+  const b = await second.upgrade();
   await a.sync.synchronize();
   await b.sync.synchronize();
   await a.sync.synchronize();
@@ -89,8 +84,8 @@ test("pending legacy assets and delete/restore frames survive upgrade without lo
       { recordId: "restored", deleted: false, replace: { body: "restored offline" } },
     ],
   });
-  const a = first.upgrade();
-  const b = second.upgrade();
+  const a = await first.upgrade();
+  const b = await second.upgrade();
   await a.sync.synchronize();
   await b.sync.synchronize();
   await a.sync.synchronize();
@@ -119,8 +114,8 @@ test("the first explicit shared-text edits after migrating a pending legacy text
     operationId: "shared-offline",
     edits: [{ recordId: "text", shared: [{ kind: "text.insert", index: 4, text: " offline" }] }],
   });
-  const a = first.upgrade();
-  const b = second.upgrade();
+  const a = await first.upgrade();
+  const b = await second.upgrade();
   await a.sync.synchronize();
   await b.sync.synchronize();
   await a.sync.synchronize();
@@ -172,7 +167,7 @@ test("upgraded pending paths keep whole arrays and multiline text without replac
       { recordId: "audit", replace: { saved: true } },
     ],
   });
-  const a = first.upgrade();
+  const a = await first.upgrade();
   await a.records.commit({
     operationId: "peer-fields",
     edits: [
@@ -180,7 +175,7 @@ test("upgraded pending paths keep whole arrays and multiline text without replac
     ],
   });
   await a.sync.synchronize();
-  const b = second.upgrade();
+  const b = await second.upgrade();
   await b.sync.synchronize();
   await a.sync.synchronize();
   const expected = {
@@ -218,7 +213,7 @@ for (const restoring of [false, true])
         { recordId: "card", deleted: !restoring, ...(restoring ? { replace: { body: "restored offline" } } : {}) },
       ],
     });
-    const b = second.upgrade();
+    const b = await second.upgrade();
     const observed = await b.records.read("card");
     expect(observed.deleted).toBe(!restoring);
     await b.records.commit({
@@ -232,7 +227,7 @@ for (const restoring of [false, true])
         },
       ],
     });
-    const a = first.upgrade();
+    const a = await first.upgrade();
     await a.sync.synchronize();
     await b.sync.synchronize();
     await a.sync.synchronize();
@@ -254,10 +249,10 @@ test("overlapping old frames retain latest authored intent and original frame ev
       edits: [{ recordId: "card", replace: { title, status: "old" } }],
     });
   const evidence = (await second.db.select().from(storage_record_outbox)).map((row) => row.frame);
-  const a = first.upgrade();
+  const a = await first.upgrade();
   await a.records.commit({ operationId: "peer", edits: [{ recordId: "card", set: { "/status": "remote" } }] });
   await a.sync.synchronize();
-  const b = second.upgrade();
+  const b = await second.upgrade();
   await b.sync.synchronize();
   await a.sync.synchronize();
   expect((await a.records.read("card")).value).toEqual({ title: "latest pending", status: "remote" });
@@ -286,13 +281,13 @@ test("missing legacy causal source leaves a resumable conversion while pending f
     .from(storage_document_updates)
     .where(eq(storage_document_updates.document_id, resourceDocumentId("card")));
   await second.db.delete(storage_documents).where(eq(storage_documents.document_id, resourceDocumentId("card")));
-  await expect(second.upgrade().records.read("card")).rejects.toThrow("missing its conversion source");
+  await expect(second.upgrade()).rejects.toThrow("missing its conversion source");
   expect(await second.db.select().from(storage_ordered_owners)).toHaveLength(1);
   expect(await second.db.select().from(storage_ordered_operations)).toHaveLength(0);
   expect(await second.db.select().from(storage_record_outbox)).toEqual(evidence);
   await second.db.insert(storage_documents).values(source!);
   if (updates.length) await second.db.insert(storage_document_updates).values(updates);
-  expect((await second.upgrade().records.read("card")).value).toBe("pending");
+  expect((await (await second.upgrade()).records.read("card")).value).toBe("pending");
 });
 
 test("a conditional child of a newly created legacy pending record resolves the same creation occurrence", async () => {
@@ -304,13 +299,13 @@ test("a conditional child of a newly created legacy pending record resolves the 
     operationId: "new-offline",
     edits: [{ recordId: "new", replace: { title: "pending" } }],
   });
-  const b = second.upgrade();
+  const b = await second.upgrade();
   const observed = await b.records.read("new");
   await b.records.commit({
     operationId: "new-child",
     edits: [{ recordId: "new", expectedRevision: observed.revision, set: { "/title": "child" } }],
   });
-  const a = first.upgrade();
+  const a = await first.upgrade();
   await a.sync.synchronize();
   await b.sync.synchronize();
   await a.sync.synchronize();
@@ -328,14 +323,14 @@ test("old native-only unsynced typing and its new conditional child survive orde
   await (await second.oldNativeSync(bound.documentKey)).synchronize();
   await second.native(bound.documentKey).save("offline native");
   expect(await second.db.select().from(storage_record_outbox)).toHaveLength(0);
-  const b = second.upgrade();
+  const b = await second.upgrade();
   const observed = await b.records.read("card");
   expect(observed.value).toEqual({ body: "offline native" });
   await b.records.commit({
     operationId: "native-child",
     edits: [{ recordId: "card", expectedRevision: observed.revision, set: { "/body": "offline native child" } }],
   });
-  const a = first.upgrade();
+  const a = await first.upgrade();
   await a.sync.synchronize();
   await b.sync.synchronize();
   await a.sync.synchronize();

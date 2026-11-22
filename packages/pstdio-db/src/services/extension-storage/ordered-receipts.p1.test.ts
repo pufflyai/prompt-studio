@@ -10,7 +10,7 @@ import {
   storage_current_records,
   storage_documents,
   storage_ordered_operations,
-  storage_ordered_owners,
+  owners as storage_ordered_owners,
   storage_ordered_receipts,
   storage_ordered_records,
   storage_ordered_touches,
@@ -96,7 +96,6 @@ const save = (operationId: string, model: string) => ({
 const capture = async (db: Awaited<ReturnType<typeof createDb>>["db"]) => ({
   storageOwners: await db.select().from(storageOwners),
   documents: await db.select().from(storage_documents),
-  owners: await db.select().from(storage_ordered_owners),
   records: await db.select().from(storage_ordered_records),
   operations: await db.select().from(storage_ordered_operations),
   touches: await db.select().from(storage_ordered_touches),
@@ -115,7 +114,6 @@ const restore = async (db: Awaited<ReturnType<typeof createDb>>["db"], backup: A
     return { ...row, owner_id: id };
   };
   for (const row of backup.documents) await db.insert(storage_documents).values(row);
-  for (const row of backup.owners) await db.insert(storage_ordered_owners).values(mapped(row));
   for (const row of backup.records) await db.insert(storage_ordered_records).values(mapped(row));
   for (const row of backup.operations) await db.insert(storage_ordered_operations).values(mapped(row));
   for (const row of backup.touches) await db.insert(storage_ordered_touches).values(mapped(row));

@@ -8,6 +8,7 @@ import {
   storage_resource_projections as projections,
   owners as recordOwners,
 } from "../db/schemas.pg";
+import { assertStorageOwnerAdmitted } from "../db/storage-admission";
 import { storageOwnerKey } from "./extension-storage/storage-owner-key";
 
 export const createResourceIdentityIndex = (db: DbClient, ready: () => Promise<void>) => {
@@ -20,6 +21,7 @@ export const createResourceIdentityIndex = (db: DbClient, ready: () => Promise<v
       eq(identities.kind, input.kind),
     );
   const assertCurrent = async (connection: Connection, projectId: string) => {
+    assertStorageOwnerAdmitted(db, { workbenchId: projectId, extensionId: coreOwnerId });
     const [row] = await connection
       .select({ current: recordOwners.revision, projected: projections.revision })
       .from(recordOwners)

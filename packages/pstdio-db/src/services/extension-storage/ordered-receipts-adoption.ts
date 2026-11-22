@@ -111,7 +111,7 @@ export const adoptOrderedCheckpoint = async (input: {
   const owned = await readOrderedOwner(tx, owner);
   // Capture locally settled records before replacing canonical state, including saves made
   // while our own founding upload was in flight. The tail must precede their new saves.
-  const local = !(await orderedOwnerJoinedCloud(tx, owner, owned))
+  const local = !(await orderedOwnerJoinedCloud(owned))
     ? (await tx.select({ state: canonical.state }).from(canonical).where(orderedOwnerWhere(canonical, owner))).map(
         (row) => decodeOrderedJson<OrderedRecord>(row.state),
       )

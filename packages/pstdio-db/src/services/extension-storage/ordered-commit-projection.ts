@@ -25,7 +25,7 @@ export const publishCommittedOrderedGroup = async (input: {
   if (
     owner.extensionId === coreOwnerId ||
     operationDependencies(operation, { base: false }).size > 0 ||
-    !(await orderedOwnerJoinedCloud(tx, owner, row)) ||
+    !(await orderedOwnerJoinedCloud(row)) ||
     (await orderedSavesFold(tx, owner))
   )
     return rebaseOrderedProjection(

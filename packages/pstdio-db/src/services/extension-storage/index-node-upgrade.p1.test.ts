@@ -2,9 +2,9 @@ import { afterEach, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { like } from "drizzle-orm";
+import { eq, like } from "drizzle-orm";
 import { createDb } from "../../db/connection.pglite";
-import { projects, storage_documents, storage_ordered_owners } from "../../db/schemas.pg";
+import { projects, storage_documents, owners as storage_ordered_owners } from "../../db/schemas.pg";
 import { createIndexNodeFiles, createMemoryIndexNodeFiles } from "./index-node-files";
 import { upgradeIndexNodesToFiles } from "./index-node-upgrade";
 import { orderedIndexBlobDocumentId } from "./ordered-receipts-blobs";
@@ -52,15 +52,18 @@ const seed = async (db: Db, workbenchId = crypto.randomUUID()) => {
       row(logs.extensionId, "log-page", []),
       row(logs.extensionId, "log-root", ["log-page"]),
     ]);
-  await db.insert(storage_ordered_owners).values({
-    owner_id: await ensureStorageOwner(db, records),
-    receipt_root: encodeOrderedJson({
-      version: 1,
-      root: { blobId: id("root"), byteLength: 9 },
-      published: { blobId: id("published"), byteLength: 14 },
-      stateId: null,
-    }),
-  });
+  const recordOwnerId = await ensureStorageOwner(db, records);
+  await db
+    .update(storage_ordered_owners)
+    .set({
+      receipt_root: encodeOrderedJson({
+        version: 1,
+        root: { blobId: id("root"), byteLength: 9 },
+        published: { blobId: id("published"), byteLength: 14 },
+        stateId: null,
+      }),
+    })
+    .where(eq(storage_ordered_owners.id, recordOwnerId));
   return { records, logs, workbenchId };
 };
 

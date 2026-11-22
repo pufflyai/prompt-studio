@@ -21,10 +21,10 @@ import {
   retryOrderedLocalOperation,
 } from "./ordered-authorship";
 import { createOrderedCanonical } from "./ordered-canonical";
-import { ensureOrderedOwner } from "./ordered-conversion";
 import { createOrderedDependencyCache } from "./ordered-dependency-cache";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
 import { fenceOrderedNativeText, forgetOrderedTextGeneration } from "./ordered-native-recovery";
+import { ensureOrderedOwner } from "./ordered-owner";
 import { createOrderedReceiptCache } from "./ordered-receipts-cache";
 import {
   decodeOrderedJson as decode,

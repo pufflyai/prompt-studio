@@ -1,15 +1,22 @@
 import { and, desc, gt, inArray, lt, type SQL, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId } from "pstdio-sync/records";
-import type { DbClient } from "../../db/connection.pglite";
+import { createOrderedJournal } from "../services/extension-storage/ordered-journal";
+import { settleLocalOrderedSaves } from "../services/extension-storage/ordered-local-settlement";
+import { indexInitialCanonicalNumbers } from "../services/extension-storage/ordered-number-canonical";
+import { retainNumberHistory } from "../services/extension-storage/ordered-number-values";
+import { publishOrderedProjection } from "../services/extension-storage/ordered-projection";
+import { type OrderedTransaction, orderedOwnerWhere } from "../services/extension-storage/ordered-sql";
+import { orderedOwnerJoinedCloud, readOrderedOwner } from "../services/extension-storage/ordered-stream-state";
+import { readProjectedRecords } from "../services/extension-storage/record-queries";
+import { ensureStorageOwner, storageOwnerKey } from "../services/extension-storage/storage-owner-key";
+import type { DbClient } from "./connection.pglite";
+import { planLegacyBatch } from "./legacy-records/ordered-conversion-plan";
 import {
-  storage_current_records as current,
-  storage_documents as documents,
-  storage_record_outbox as outbox,
-  storage_ordered_owners as owners,
-} from "../../db/schemas.pg";
-import { planLegacyBatch } from "./ordered-conversion-plan";
-import { conversionPendingPage, projectConversionBatch, publishConvertedPage } from "./ordered-conversion-projection";
+  conversionPendingPage,
+  projectConversionBatch,
+  publishConvertedPage,
+} from "./legacy-records/ordered-conversion-projection";
 import {
   type ConversionCursor,
   type ConversionRecord,
@@ -18,22 +25,13 @@ import {
   readConversion,
   readConversionValues,
   saveConversion,
-} from "./ordered-conversion-state";
-import { createOrderedJournal } from "./ordered-journal";
-import { stripLegacyPendingPaths } from "./ordered-legacy-baseline";
-import { migrateLegacyPendingBatch } from "./ordered-legacy-pending";
-import { convertLegacyOrderedRecords } from "./ordered-legacy-record";
-import { settleLocalOrderedSaves } from "./ordered-local-settlement";
-import { indexInitialCanonicalNumbers } from "./ordered-number-canonical";
-import { retainNumberHistory } from "./ordered-number-values";
-import { publishOrderedProjection } from "./ordered-projection";
-import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
-import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
-import { lockRecordOwner } from "./record-changes";
-import { readProjectedRecords } from "./record-queries";
-import { ensureStorageOwner, storageOwnerKey } from "./storage-owner-key";
+} from "./legacy-records/ordered-conversion-state";
+import { stripLegacyPendingPaths } from "./legacy-records/ordered-legacy-baseline";
+import { migrateLegacyPendingBatch } from "./legacy-records/ordered-legacy-pending";
+import { convertLegacyOrderedRecords } from "./legacy-records/ordered-legacy-record";
+import { storage_record_outbox as outbox, storage_ordered_owners as owners } from "./legacy-records-schema";
+import { storage_current_records as current, storage_documents as documents } from "./schemas.pg";
 
-const jobs = new WeakMap<DbClient, Map<string, { promise: Promise<void>; signals: Set<AbortSignal> }>>();
 const yieldTurn = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 const recordPage = async (tx: OrderedTransaction, owner: StorageOwner, after?: string) =>
   (
@@ -80,8 +78,7 @@ const convertBatch = async (tx: OrderedTransaction, owner: StorageOwner, cursor:
   if (cursor.phase === "project") return projectConversionBatch(journal, tx, owner, cursor);
   if (cursor.phase === "plan" || cursor.phase === "pending") return convertFrames(tx, owner, cursor);
   if (cursor.phase === "settle") {
-    if (await orderedOwnerJoinedCloud(tx, owner, await readOrderedOwner(tx, owner)))
-      return advance(tx, owner, "project");
+    if (await orderedOwnerJoinedCloud(await readOrderedOwner(tx, owner))) return advance(tx, owner, "project");
     const page = await conversionPendingPage(journal, cursor.sequence);
     if (!page.length) return advance(tx, owner, "project");
     await settleLocalOrderedSaves(journal, tx, owner, page);
@@ -139,59 +136,41 @@ const convertBatch = async (tx: OrderedTransaction, owner: StorageOwner, cursor:
   await saveConversion(tx, owner, { phase: cursor.phase, after: ids.at(-1)! });
 };
 
-/** Single-flight per database/owner. A failed or interrupted job retries from its durable cursor. */
-export const ensureOrderedOwner = (db: DbClient, owner: StorageOwner, signal?: AbortSignal) => {
-  let active = jobs.get(db);
-  if (!active) {
-    active = new Map();
-    jobs.set(db, active);
+/** Admission is serialized by the database lock; each batch resumes from its durable cursor. */
+export const convertLegacyOwner = async (db: DbClient, owner: StorageOwner, signal?: AbortSignal) => {
+  signal?.throwIfAborted();
+  await db.execute(sql`UPDATE owners o SET joined=true FROM storage_record_sync s
+    WHERE o.project_id=${owner.workbenchId} AND o.extension_id=${owner.extensionId}
+      AND o.project_id=s.workbench_id AND o.extension_id=s.extension_id AND s.joined
+      AND (o.epoch IS NULL OR o.epoch='' OR o.epoch LIKE 'local:%') AND NOT o.joined`);
+  const [existing] = await db.select({ id: owners.extension_id }).from(owners).where(orderedOwnerWhere(owners, owner));
+  if (existing && !(await readConversion(db, owner))) return;
+  if (!existing)
+    await db.transaction(async (tx) => {
+      await ensureStorageOwner(tx, owner);
+      const created = await tx
+        .insert(owners)
+        .values({ workbench_id: owner.workbenchId, extension_id: owner.extensionId })
+        .onConflictDoNothing()
+        .returning({ id: owners.extension_id });
+      if (created.length) {
+        const [{ present }] = (
+          await tx.execute<{ present: boolean }>(sql`SELECT
+          EXISTS (SELECT 1 FROM storage_current_records WHERE owner_id=${storageOwnerKey(owner)})
+          OR EXISTS (SELECT 1 FROM storage_record_outbox WHERE workbench_id=${owner.workbenchId}
+            AND extension_id=${owner.extensionId}) AS present`)
+        ).rows;
+        if (present) await saveConversion(tx, owner, { phase: "records" });
+      }
+    });
+  while (true) {
+    await yieldTurn();
+    signal?.throwIfAborted();
+    const cursor = await readConversion(db, owner);
+    if (!cursor) return;
+    await db.transaction(async (tx) => {
+      const current = await readConversion(tx, owner);
+      if (current) await convertBatch(tx, owner, current);
+    });
   }
-  const key = JSON.stringify([owner.workbenchId, owner.extensionId]);
-  const previous = active.get(key);
-  if (previous) {
-    if (signal) previous.signals.add(signal);
-    return previous.promise;
-  }
-  const signals = new Set(signal ? [signal] : []);
-  const checkAbort = () => {
-    for (const signal of signals) signal.throwIfAborted();
-  };
-  const run = (async () => {
-    checkAbort();
-    const [existing] = await db.select({ id: owners.owner_id }).from(owners).where(orderedOwnerWhere(owners, owner));
-    if (existing && !(await readConversion(db, owner))) return;
-    if (!existing)
-      await db.transaction(async (tx) => {
-        await lockRecordOwner(tx, owner);
-        const created = await tx
-          .insert(owners)
-          .values({ owner_id: await ensureStorageOwner(tx, owner) })
-          .onConflictDoNothing()
-          .returning({ id: owners.owner_id });
-        if (created.length) {
-          const [legacy] = await tx
-            .select({
-              present: sql<boolean>`EXISTS (SELECT 1 FROM storage_current_records WHERE owner_id=${storageOwnerKey(owner)}) OR EXISTS (SELECT 1 FROM storage_record_outbox WHERE workbench_id=${owner.workbenchId} AND extension_id=${owner.extensionId})`,
-            })
-            .from(owners)
-            .where(orderedOwnerWhere(owners, owner));
-          if (legacy?.present) await saveConversion(tx, owner, { phase: "records" });
-        }
-      });
-    while (true) {
-      await yieldTurn();
-      checkAbort();
-      const cursor = await readConversion(db, owner);
-      if (!cursor) return;
-      await db.transaction(async (tx) => {
-        await lockRecordOwner(tx, owner);
-        const current = await readConversion(tx, owner);
-        if (current) await convertBatch(tx, owner, current);
-      });
-    }
-  })().finally(() => {
-    active.delete(key);
-  });
-  active.set(key, { promise: run, signals });
-  return run;
 };

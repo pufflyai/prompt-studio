@@ -7,6 +7,7 @@ import type { StorageTextDeclaration } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { deleteStorageDocuments } from "../../db/delete-storage-documents";
 import { storage_current_records, storage_documents } from "../../db/schemas.pg";
+import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
 import { createDocumentDirectory } from "./document-directory";
@@ -55,6 +56,7 @@ const hasProjectedRecords = async (db: DbClient, owner: StorageOwner) => {
 export type StorageChange = StorageOwner & { documentId?: string; recordIds?: readonly string[] };
 
 const documentRevision = (db: DbClient, documentId: string) => async (owner: StorageOwner) => {
+  assertStorageOwnerAdmitted(db, owner);
   const [row] = await db
     .select({ revision: storage_documents.revision })
     .from(storage_documents)
@@ -68,6 +70,7 @@ const discardDocument = async (
   owner: StorageOwner,
   documentId: string,
 ) => {
+  assertStorageOwnerAdmitted(db, owner);
   const address = addressFor(owner, documentId);
   await deleteStorageDocuments(
     db,
@@ -180,6 +183,7 @@ export const createDocumentStorageDBService = (
     },
     async hasData(owner: StorageOwner) {
       owner = canonicalOwner(owner);
+      assertStorageOwnerAdmitted(db, owner);
       if (await hasProjectedRecords(db, owner)) return true;
       const documents = await db
         .select({ id: storage_documents.document_id })

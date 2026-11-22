@@ -129,3 +129,5 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
   const appUpgrade = journal.entries.find((entry: { idx: number }) => entry.idx === 10);
   await connection.pglite.query("DELETE FROM drizzle.__drizzle_migrations WHERE created_at >= $1", [appUpgrade.when]);
 };
+
+export { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";

@@ -1,11 +1,12 @@
 import { isDeepStrictEqual } from "node:util";
-import { getTableColumns, getTableName, sql } from "drizzle-orm";
+import { eq, getTableColumns, getTableName, sql } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
+import { storage_ordered_owners } from "./legacy-records-schema";
 import {
+  owners,
   storage_ordered_operations,
-  storage_ordered_owners,
   storage_ordered_receipts,
   storage_ordered_records,
   storage_ordered_touches,
@@ -57,11 +58,37 @@ const normalizedRow = async (
   }
   return { ...row, owner_id: ownerId } as Record<string, unknown>;
 };
+const restoreOwnerBatch = async (tx: UpgradeTransaction, batch: Record<string, unknown>[]) => {
+  const defaults = {
+    epoch: null,
+    joined: false,
+    after: 0,
+    state_id: null,
+    through: 0,
+    pending_bytes: 0,
+    state_bytes: 0,
+    skipped: false,
+    receipt_root: null,
+  };
+  for (const input of batch) {
+    const { owner_id: id, ...expected } = await normalizedRow(tx, sources[0]!, input, new Map());
+    const [current] = await tx
+      .select()
+      .from(owners)
+      .where(eq(owners.id, id as number));
+    if (!current) throw new Error("Missing restored ordered storage owner");
+    const actual = Object.fromEntries(Object.keys(defaults).map((key) => [key, current[key as keyof typeof current]]));
+    if (isDeepStrictEqual(actual, expected)) continue;
+    if (!isDeepStrictEqual(actual, defaults)) throw new Error("Ordered storage restoration conflict: owners");
+    await tx.update(owners).set(expected).where(eq(owners.id, current.id));
+  }
+};
 const restoreBatch = async (
   tx: UpgradeTransaction,
   source: (typeof sources)[number],
   batch: Record<string, unknown>[],
 ) => {
+  if (source.table === storage_ordered_owners) return restoreOwnerBatch(tx, batch);
   const table: PgTable = source.table;
   const columns = getTableColumns(table);
   const keys = ["owner_id", ...source.keys];
@@ -104,7 +131,7 @@ export const prepareOrderedOwnerUpgrade = async (db: DbClient, path: string) => 
     rows: [columns],
   } = await db.execute<{ legacy: boolean }>(sql`
     SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public'
-      AND table_name='storage_ordered_owners' AND column_name='workbench_id') AS legacy`);
+      AND table_name='storage_ordered_records' AND column_name='workbench_id') AS legacy`);
   const restorations: {
     restore: NonNullable<Awaited<ReturnType<typeof prepareUpgradeSnapshot>>>;
     flush: () => Promise<void>;
@@ -145,9 +172,9 @@ export const prepareOrderedOwnerUpgrade = async (db: DbClient, path: string) => 
     );
     if (restore) restorations.push({ restore, flush });
   }
-  // Cascade only after every related input is fsynced. The sequence stays in place,
-  // including positions already pruned from the journal, across generated ALTERs.
-  if (columns!.legacy) await db.delete(storage_ordered_owners);
+  // Retain the text-addressed parent as the conversion completion marker. Only
+  // clear children after every input is fsynced; generated DDL rewires their FKs.
+  if (columns!.legacy) for (const source of sources.slice(1).reverse()) await db.delete(source.table);
   if (!restorations.length) return;
   return async () => {
     for (const { restore, flush } of restorations) {

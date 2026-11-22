@@ -1,6 +1,11 @@
 import type { StorageOwner } from "pstdio-sync";
 import * as Y from "yjs";
-import type { storage_record_outbox as outbox } from "../../db/schemas.pg";
+import type { OrderedTransaction } from "../../services/extension-storage/ordered-sql";
+import {
+  loadResourceDocuments,
+  resourceDocumentId,
+} from "../../services/extension-storage/resource-document-persistence";
+import type { storage_record_outbox as outbox } from "../legacy-records-schema";
 import {
   type ConversionRecord,
   conversionFrameId,
@@ -9,8 +14,6 @@ import {
   saveConversionValues,
 } from "./ordered-conversion-state";
 import { decodeLegacyPendingFrame, LegacyPendingMask, planLegacyFrame } from "./ordered-legacy-plan";
-import type { OrderedTransaction } from "./ordered-sql";
-import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
 
 /** Reverse planning retains only this page and the touched records' path masks in memory. */
 export const planLegacyBatch = async (

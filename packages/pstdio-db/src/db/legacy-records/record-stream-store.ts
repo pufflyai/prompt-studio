@@ -1,15 +1,19 @@
 import { and, eq, inArray, isNotNull, max } from "drizzle-orm";
-import type { DocumentStore, StorageOwner } from "pstdio-sync";
+import type { StorageOwner } from "pstdio-sync";
 import { type RecordFrame, type RecordStreamCursor, type RecordStreamStore, recordFrameLimit } from "pstdio-sync/relay";
-import { type Asset, type AssetReference, assetReferenceSchema } from "pstdio-sync-contracts";
-import type { DbClient } from "../../db/connection.pglite";
-import { storage_current_records, storage_record_outbox, storage_record_sync } from "../../db/schemas.pg";
-import type { createProjectionStatistics } from "./projection-statistics";
-import { lockRecordOwner, saveRecordChanges } from "./record-changes";
+import type { Asset } from "pstdio-sync-contracts";
+import { lockRecordOwner, saveRecordChanges } from "../../services/extension-storage/record-changes";
+import {
+  createRecordStreamReferences,
+  type RecordStreamDependencies,
+} from "../../services/extension-storage/record-stream-references";
+import type { NumberChange } from "../../services/extension-storage/resource-number-repair";
+import { storageOwnerKey } from "../../services/extension-storage/storage-owner-key";
+import type { DbClient } from "../connection.pglite";
+import { storage_record_outbox, storage_record_sync } from "../legacy-records-schema";
+import { storage_current_records } from "../schemas.pg";
 import { dropRecordOutbox, queueRecordBytes, queueRecordUpload, readRecordOutbox } from "./record-outbox";
 import { acceptFrames, adoptRecords, localRecordIds, mergeRecords, recordStates } from "./record-stream-merge";
-import type { NumberChange } from "./resource-number-repair";
-import { storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
@@ -24,18 +28,7 @@ const cursorOf = (row: typeof storage_record_sync.$inferSelect): RecordStreamCur
 });
 
 /** One owner's records as its encrypted relay stream reads and writes them. */
-export const createRecordStreamStore = (
-  db: DbClient,
-  owner: StorageOwner,
-  deps: {
-    statistics: ReturnType<typeof createProjectionStatistics>;
-    /** Notifies owner watchers after downloaded records change. */
-    changed: (recordIds?: readonly string[]) => void;
-    numbersChanged?: (events: NumberChange[]) => void;
-    /** The owner's metadata document, which remembers where each asset's ciphertext lives. */
-    metadata: DocumentStore["transaction"];
-  },
-) => {
+export const createRecordStreamStore = (db: DbClient, owner: StorageOwner, deps: RecordStreamDependencies) => {
   const syncWhere = and(
     eq(storage_record_sync.workbench_id, owner.workbenchId),
     eq(storage_record_sync.extension_id, owner.extensionId),
@@ -89,17 +82,7 @@ export const createRecordStreamStore = (
     }
     return assets;
   };
-  const references = {
-    get: (sha256: string) =>
-      deps.metadata(owner, async ({ document }) => {
-        const parsed = assetReferenceSchema.safeParse(document.getMap("record-blobs").get(sha256));
-        return parsed.success ? parsed.data : undefined;
-      }),
-    set: (reference: AssetReference) =>
-      deps.metadata(owner, async ({ document }) => {
-        document.getMap("record-blobs").set(reference.asset.sha256, reference);
-      }),
-  };
+  const references = createRecordStreamReferences(owner, deps);
   return {
     references,
     async open() {

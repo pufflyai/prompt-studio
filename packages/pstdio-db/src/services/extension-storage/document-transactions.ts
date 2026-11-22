@@ -2,24 +2,15 @@ import { canonicalOwner } from "pstdio-api-contracts/extension-host";
 import type { DocumentState, DocumentStore, StorageOwner } from "pstdio-sync";
 import type * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
+import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import type { createDocumentCache } from "./document-cache";
 import type { createDocumentDirectory } from "./document-directory";
 import { runDocumentTransaction } from "./document-persistence";
 import { lockStorageProject, refreshNativeRecordText } from "./native-record-projection";
-import { ensureOrderedOwner } from "./ordered-conversion";
-import { readConversion } from "./ordered-conversion-state";
 import { runOrderedNativeField } from "./ordered-native-field";
-import type { OrderedTransaction } from "./ordered-sql";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 
 export type DocumentTransactions = ReturnType<typeof createDocumentTransactions>;
-class ConversionPending extends Error {}
-const lockNativeFallback = async (tx: OrderedTransaction, owner: StorageOwner) => {
-  await lockStorageProject(tx, owner.workbenchId);
-  // Startup can claim the owner after the optimistic native probe. Release this
-  // transaction before waiting for the conversion's own transactions.
-  if (await readConversion(tx, owner)) throw new ConversionPending();
-};
 export const createDocumentTransactions = (
   db: DbClient,
   deps: {
@@ -52,6 +43,7 @@ export const createDocumentTransactions = (
   ) => {
     const transaction: DocumentStore["transaction"] = async (owner, action) => {
       owner = canonicalOwner(owner);
+      assertStorageOwnerAdmitted(db, owner);
       const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_id: documentId };
       const key = JSON.stringify(address);
       try {
@@ -61,7 +53,7 @@ export const createDocumentTransactions = (
           const nativeKey = documentId.startsWith('["native-markdown",')
             ? (JSON.parse(documentId) as string[])[1]
             : undefined;
-          if (nativeKey) await lockNativeFallback(tx, owner);
+          if (nativeKey) await lockStorageProject(tx, owner.workbenchId);
           const result = await runDocumentTransaction(
             tx,
             { address, owner, cached: deps.cache.get(key), diagnostics: deps.diagnostics, prepare },
@@ -77,10 +69,6 @@ export const createDocumentTransactions = (
         return result.value;
       } catch (error) {
         deps.cache.discard(key);
-        if (error instanceof ConversionPending) {
-          await ensureOrderedOwner(db, owner);
-          return transaction(owner, action);
-        }
         throw error;
       }
     };

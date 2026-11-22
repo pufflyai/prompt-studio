@@ -11,20 +11,28 @@ import {
   readOrderedPath,
 } from "pstdio-sync/records";
 import { fingerprint } from "pstdio-sync-contracts";
+import type { OrderedJournal } from "../../services/extension-storage/ordered-journal";
+import { rememberOrderedTextGeneration } from "../../services/extension-storage/ordered-native-recovery";
+import {
+  indexInitialCanonicalNumbers,
+  removeInitialCanonicalNumbers,
+} from "../../services/extension-storage/ordered-number-canonical";
+import {
+  encodeOrderedJson,
+  type OrderedTransaction,
+  orderedAddress,
+  orderedOwnerWhere,
+} from "../../services/extension-storage/ordered-sql";
+import { readProjectedRecords } from "../../services/extension-storage/record-queries";
+import type { storage_record_outbox as outbox } from "../legacy-records-schema";
 import {
   storage_ordered_records as canonical,
   storage_documents as documents,
   storage_ordered_operations as operations,
-  type storage_record_outbox as outbox,
   storage_ordered_touches as touches,
-} from "../../db/schemas.pg";
-import type { OrderedJournal } from "./ordered-journal";
+} from "../schemas.pg";
 import { decodeLegacyPendingFrame, type LegacyRecordPlan } from "./ordered-legacy-plan";
 import { convertLegacyOrderedRecords } from "./ordered-legacy-record";
-import { rememberOrderedTextGeneration } from "./ordered-native-recovery";
-import { indexInitialCanonicalNumbers, removeInitialCanonicalNumbers } from "./ordered-number-canonical";
-import { encodeOrderedJson, type OrderedTransaction, orderedAddress, orderedOwnerWhere } from "./ordered-sql";
-import { readProjectedRecords } from "./record-queries";
 
 type JsonChange = OrderedOperation["edits"][number]["changes"][number];
 

@@ -4,6 +4,7 @@ import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { AssetStore, StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
 import { projects, recovery_point_owners, recovery_points, owners as storageOwners } from "../../db/schemas.pg";
+import { assertStorageProjectAdmitted } from "../../db/storage-admission";
 import type { createDocumentStorageDBService } from "./document-storage";
 import {
   dataOwners,
@@ -46,7 +47,12 @@ export const createRecoveryPoints = (
   // half-done restore and a restore never writes back data that was deleted while it ran.
   const running = new Map<string, Promise<unknown>>();
   const exclusive = <T>(projectId: string, run: () => Promise<T>) => {
-    const next = (running.get(projectId) ?? Promise.resolve()).catch(() => {}).then(run);
+    const next = (running.get(projectId) ?? Promise.resolve())
+      .catch(() => {})
+      .then(() => {
+        assertStorageProjectAdmitted(db, projectId);
+        return run();
+      });
     running.set(projectId, next);
     void next
       .finally(() => {
@@ -204,6 +210,7 @@ export const createRecoveryPoints = (
       return rows.map((row) => row.id);
     },
     async list(projectId: string) {
+      assertStorageProjectAdmitted(db, projectId);
       const saved = await db
         .select({ hours: recovery_point_owners.hours, id: storageOwners.extension_id })
         .from(recovery_point_owners)

@@ -3,9 +3,9 @@ import { prepareRecordTextEdit, readNativeRecordSources } from "pstdio-sync/reco
 import { readTextDocumentSeed, saveTextDocument } from "pstdio-sync/text";
 import type { StorageGroup } from "pstdio-sync-contracts";
 import * as Y from "yjs";
-import type { DbClient } from "../../db/connection.pglite";
-import { runDocumentTransaction } from "./document-persistence";
-import { nativeDocumentId } from "./native-record-projection";
+import { runDocumentTransaction } from "../../services/extension-storage/document-persistence";
+import { nativeDocumentId } from "../../services/extension-storage/native-record-projection";
+import type { DbClient } from "../connection.pglite";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 export const prepareNativeRecordWrite = async (

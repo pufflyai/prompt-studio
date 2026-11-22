@@ -1,6 +1,7 @@
 import { and, eq, not, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { board_views, files, preferences } from "../../db/schemas.pg";
+import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import { listBoardDefaults } from "../board-views/board-defaults";
 import { clearOwnerDocuments } from "../extension-storage/clear-documents";
 import { createDocumentStorageDBService } from "../extension-storage/document-storage";
@@ -58,6 +59,7 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
     let cleared: Awaited<ReturnType<typeof getExtensionStorageOwner>> = null;
     const result = await db.transaction(async (tx) => {
       const owner = await getExtensionStorageOwner(tx, extensionInstanceId);
+      if (owner) assertStorageOwnerAdmitted(db, owner);
       let boardDefaults: Awaited<ReturnType<typeof listBoardDefaults>> = [];
       let boardViews: Array<typeof board_views.$inferSelect> = [];
       let ownedFiles: Array<typeof files.$inferSelect> = [];

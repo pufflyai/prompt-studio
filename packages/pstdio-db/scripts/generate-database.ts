@@ -76,8 +76,19 @@ for (const entry of generated) {
     ordered.splice(dependency, 0, statement);
     movedKeys = true;
   }
-  if (!move.size && !movedColumns && !movedKeys) continue;
-  await Bun.write(file, ordered.join("--> statement-breakpoint"));
+  // This baseline needs the new owner graph before converting released frames.
+  // Keep its generated input-table drops for admission's post-data transaction.
+  const retired = new Set(["storage_record_sync", "storage_record_outbox", "storage_ordered_owners"]);
+  const deferred = ordered.filter((statement) => {
+    const drop = /^DROP TABLE "([^"]+)" CASCADE;$/u.exec(statement.trim());
+    return drop && retired.has(drop[1]!);
+  });
+  if (deferred.length && deferred.length !== retired.size)
+    throw new Error("Legacy retirement must generate all three input-table drops together");
+  if (deferred.length)
+    await Bun.write(join(folder, `${entry.tag}.post-data.sql`), deferred.join("--> statement-breakpoint"));
+  if (!move.size && !movedColumns && !movedKeys && !deferred.length) continue;
+  await Bun.write(file, ordered.filter((statement) => !deferred.includes(statement)).join("--> statement-breakpoint"));
   console.log("Generated constraint drops and column additions before dependent schema changes.");
 }
 

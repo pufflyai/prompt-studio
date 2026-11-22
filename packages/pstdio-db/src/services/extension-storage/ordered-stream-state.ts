@@ -1,6 +1,7 @@
+import { sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { RecordStreamCursor } from "pstdio-sync/relay";
-import { storage_record_sync as legacy, storage_ordered_owners as owners } from "../../db/schemas.pg";
+import { owners } from "../../db/schemas.pg";
 import { receiptRoots } from "./ordered-receipts-state";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 
@@ -12,7 +13,7 @@ export const readOrderedOwner = async (tx: Pick<OrderedTransaction, "select">, o
 export const orderedCursor = (row: typeof owners.$inferSelect): RecordStreamCursor => ({
   receiptRoot: receiptRoots(row.receipt_root).published,
   receiptStateId: receiptRoots(row.receipt_root).stateId,
-  joined: row.joined,
+  joined: row.joined && hasOrderedCloudEpoch(row.epoch),
   after: row.after,
   stateId: row.state_id,
   through: row.through,
@@ -29,7 +30,11 @@ export const saveOrderedCursor = (
   tx
     .update(owners)
     .set({
-      joined: cursor.joined,
+      // Before ordered admission, joined remembers released Cloud membership. A
+      // transport cursor is admitted only once it has a remote epoch.
+      joined: sql`CASE WHEN ${epoch ?? owners.epoch}::text IS NULL OR ${epoch ?? owners.epoch}::text = ''
+        OR ${epoch ?? owners.epoch}::text LIKE 'local:%' THEN ${owners.joined} OR ${cursor.joined}
+        ELSE ${cursor.joined} END`,
       after: cursor.after,
       state_id: cursor.stateId,
       through: cursor.through,
@@ -40,15 +45,8 @@ export const saveOrderedCursor = (
     })
     .where(orderedOwnerWhere(owners, owner));
 
-/** Upgrading a joined legacy stream is not a device's first Cloud join. */
-export const joinedLegacyOrderedOwner = async (tx: Pick<OrderedTransaction, "select">, owner: StorageOwner) => {
-  const [row] = await tx.select({ joined: legacy.joined }).from(legacy).where(orderedOwnerWhere(legacy, owner));
-  return row?.joined ?? false;
-};
+const hasOrderedCloudEpoch = (epoch: string | null) => !!epoch && !epoch.startsWith("local:");
 
 /** A lost relay cursor does not undo a device's earlier Cloud admission. */
-export const orderedOwnerJoinedCloud = async (
-  tx: Pick<OrderedTransaction, "select">,
-  owner: StorageOwner,
-  row: Pick<typeof owners.$inferSelect, "joined" | "epoch">,
-) => row.joined || (!!row.epoch && !row.epoch.startsWith("local:")) || (await joinedLegacyOrderedOwner(tx, owner));
+export const orderedOwnerJoinedCloud = (row: Pick<typeof owners.$inferSelect, "joined" | "epoch">) =>
+  row.joined || hasOrderedCloudEpoch(row.epoch);

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { StorageRecordIndex } from "pstdio-sync-contracts";
-import { storage_ordered_owners as owners } from "../../db/schemas.pg";
+import { owners } from "../../db/schemas.pg";
 import { createProjectsDBService } from "../projects/projects";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";

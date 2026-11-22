@@ -5,9 +5,8 @@ import { readTextDocumentSeed } from "pstdio-sync/text";
 import { fingerprint, type Json, type StorageRecord } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
-import { projects, owners as recordOwners, storage_current_records, storage_ordered_owners } from "../../db/schemas.pg";
+import { projects, owners as recordOwners, storage_current_records } from "../../db/schemas.pg";
 import { orderedAssetRevision } from "./ordered-native-assets";
-import { orderedOwnerWhere } from "./ordered-sql";
 import { derivedQueryValues, readDerivedQueryIndexes } from "./record-derived-fields";
 import { decodeProjectionValue, encodeProjectionValue } from "./record-projection-codec";
 import { loadResourceDocuments } from "./resource-document-persistence";
@@ -41,7 +40,7 @@ export const readNativeTextIn = async (tx: Transaction, owner: StorageOwner, key
   }
 };
 
-const materialized = async (record: NativeProjectedRecord, texts: Map<string, string>) => {
+export const materializeNativeRecord = async (record: NativeProjectedRecord, texts: Map<string, string>) => {
   if (!Object.keys(record.nativeSources ?? {}).length || record.deleted) return record;
   const value = structuredClone(record.value) as Record<string, Json>;
   const nativeVersions = { ...record.nativeVersions };
@@ -67,15 +66,11 @@ export const projectNativeRecordText = async (tx: Transaction, owner: StorageOwn
     const text = await readNativeTextIn(tx, owner, key);
     if (text !== undefined) texts.set(key, text);
   }
-  return materialized(record, texts);
+  return materializeNativeRecord(record, texts);
 };
 
 /** Only indexed bindings for this standalone text are refreshed; no record documents are loaded. */
 export const refreshNativeRecordText = async (tx: Transaction, owner: StorageOwner, key: string, content: string) => {
-  const [ordered] = await tx
-    .select({ id: storage_ordered_owners.owner_id })
-    .from(storage_ordered_owners)
-    .where(orderedOwnerWhere(storage_ordered_owners, owner));
   const rows = await tx
     .select()
     .from(storage_current_records)
@@ -89,7 +84,7 @@ export const refreshNativeRecordText = async (tx: Transaction, owner: StorageOwn
   let changed = 0;
   const derived = await readDerivedQueryIndexes(tx, owner);
   for (const row of rows) {
-    const record = await materialized(
+    const record = await materializeNativeRecord(
       {
         recordId: row.record_id,
         exists: true,
@@ -103,10 +98,8 @@ export const refreshNativeRecordText = async (tx: Transaction, owner: StorageOwn
       },
       new Map([[key, content]]),
     );
-    if (ordered) {
-      if (!("asset" in row.native_sources[key]!)) throw new Error("An ordered field must use its record text owner");
-      record.revision = await orderedAssetRevision(row.revision, record.nativeVersions ?? {});
-    }
+    if (!("asset" in row.native_sources[key]!)) throw new Error("An ordered field must use its record text owner");
+    record.revision = await orderedAssetRevision(row.revision, record.nativeVersions ?? {});
     if (record.revision === row.revision) continue;
     await tx
       .update(storage_current_records)

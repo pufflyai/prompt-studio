@@ -8,10 +8,7 @@ import {
   storage_document_operations,
   storage_document_updates,
   storage_documents,
-  storage_ordered_owners,
-  storage_record_sync,
 } from "../../db/schemas.pg";
-import { orderedOwnerWhere } from "./ordered-sql";
 import { formatDatabasePrefix } from "./record-format-key";
 import { dropRecordIndexObjects, installRecordIndex } from "./record-index-lifecycle";
 import { recordIndexRows as storage_record_indexes } from "./record-index-rows";
@@ -62,18 +59,7 @@ export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) 
   await tx.delete(storage_document_updates).where(ownerWhere(storage_document_updates));
   await tx.delete(storage_document_operations).where(ownerWhere(storage_document_operations));
   await tx.delete(storage_current_records).where(ownerWhere(storage_current_records));
-  // The device joins the record stream again, with its saves still waiting for upload dropped.
-  await tx
-    .delete(storage_record_sync)
-    .where(
-      and(
-        eq(storage_record_sync.workbench_id, owner.workbenchId),
-        eq(storage_record_sync.extension_id, owner.extensionId),
-      ),
-    );
-  // Canonical records, pending saves, recovery copies, retained receipts and logs cascade from their owner rows,
-  // so a cleared owner founds or joins again and may reuse its operation IDs.
-  await tx.delete(storage_ordered_owners).where(orderedOwnerWhere(storage_ordered_owners, owner));
+  // Canonical records, stream state, pending saves and receipts share this owner lifetime.
   await tx.delete(owners).where(storageOwnerWhere(owner));
   // Deleting tool data keeps the installed tool's declared queries usable. Recreate
   // their objects for the new owner generation; derived format caches rebuild on demand.

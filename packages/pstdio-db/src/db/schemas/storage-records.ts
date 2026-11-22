@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import { boolean, index, integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import type { NativeRecordSources } from "pstdio-sync/records";
 import type { StorageRecord } from "pstdio-sync-contracts";
@@ -31,8 +30,5 @@ export const storage_current_records = pgTable(
   (table) => [
     primaryKey({ columns: [table.owner_id, table.record_id] }),
     index("storage_current_records_native_sources_idx").using("gin", table.native_sources),
-    index("storage_current_records_lifetime_upgrade_idx")
-      .on(table.owner_id, table.record_id)
-      .where(sql`${table.record_lifetime} = '' AND NOT ${table.deleted}`),
   ],
 );

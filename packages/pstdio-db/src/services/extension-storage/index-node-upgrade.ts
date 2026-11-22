@@ -2,7 +2,7 @@ import { and, eq, inArray, like, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { type OrderedIndexReference, readOrderedIndexReference } from "pstdio-sync/relay";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_documents as documents, storage_ordered_owners as owners } from "../../db/schemas.pg";
+import { storage_documents as documents, owners } from "../../db/schemas.pg";
 import { type IndexNodeFiles, sortIndexChildren } from "./index-node-files";
 import { orderedIndexBlobDocumentId } from "./ordered-receipts-blobs";
 import { receiptRoots } from "./ordered-receipts-state";

@@ -21,11 +21,7 @@ import {
 } from "pstdio-sync/records";
 import { importTextSource } from "pstdio-sync/text";
 import { fingerprint, type Json } from "pstdio-sync-contracts";
-import {
-  storage_current_records as current,
-  storage_documents as documents,
-  storage_ordered_owners as owners,
-} from "../../db/schemas.pg";
+import { storage_current_records as current, storage_documents as documents, owners } from "../../db/schemas.pg";
 import { registerSharedDocument } from "./document-directory";
 import { runDocumentTransaction } from "./document-persistence";
 import { nativeDocumentId, readNativeTextIn } from "./native-record-projection";

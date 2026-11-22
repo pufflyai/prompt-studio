@@ -22,24 +22,24 @@ import { createCommitQueue } from "./commit-queue";
 import { createOrderedCommitJournal } from "./ordered-canonical-batch";
 import { createOrderedCommitCache } from "./ordered-commit-cache";
 import { publishCommittedOrderedGroup } from "./ordered-commit-projection";
-import { ensureOrderedOwner } from "./ordered-conversion";
 import { type OrderedJournal, withOrderedOwner } from "./ordered-journal";
 import { rememberOrderedTextGeneration } from "./ordered-native-recovery";
 import { bindOrderedNativeSource, type OrderedSourceInput } from "./ordered-native-source";
 import { combineNumberEvents } from "./ordered-number-projection";
+import { ensureOrderedOwner } from "./ordered-owner";
 import { knownDependencies, rebaseOrderedProjection } from "./ordered-rebase";
 import { compileOrderedGroup } from "./ordered-record-compiler";
 import { moveOrderedRecordsIn } from "./ordered-record-move";
 import type { OrderedTransaction } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
 import { writeOrderedTextAsset } from "./ordered-text-asset";
+import type { RecordDependencies } from "./record-dependencies";
 import {
   createRecordQueries,
   listProjectedRecords,
   readProjectedRecords,
   readProjectedRevisions,
 } from "./record-queries";
-import type { createResourceRecords as createLegacyResourceRecords } from "./resource-records";
 
 const savedOutcome = async (journal: OrderedJournal, operationId: string) => {
   const decision = await journal.outcome(operationId);
@@ -66,7 +66,7 @@ const prepareCommitViews = async (
   const cached = await cache.read(tx, ids);
   if (cached) return { ...cached, recordIds: [] as string[] };
   const row = await readOrderedOwner(tx, owner);
-  if (!(await orderedOwnerJoinedCloud(tx, owner, row)) && !(await journal.pendingFor(ids, { limit: 1 })).length)
+  if (!(await orderedOwnerJoinedCloud(row)) && !(await journal.pendingFor(ids, { limit: 1 })).length)
     return { views: await journal.canonical(ids), events: [], recordIds: [] as string[] };
   return rebaseOrderedProjection(journal, tx, owner, ids);
 };
@@ -74,7 +74,7 @@ const prepareCommitViews = async (
 const notifyNativeFileSave = (
   saved: Awaited<ReturnType<typeof writeOrderedTextAsset>>,
   owner: StorageOwner,
-  deps: Parameters<typeof createLegacyResourceRecords>[2],
+  deps: RecordDependencies,
   cache: ReturnType<typeof createOrderedCommitCache>,
 ) => {
   if (saved.changed) deps.nativeChanged?.([saved.key]);
@@ -84,12 +84,7 @@ const notifyNativeFileSave = (
   deps.observer?.committed(owner, saved.records, { status: "saved-locally" });
 };
 
-const bindText = async (
-  db: DbClient,
-  owner: StorageOwner,
-  deps: Parameters<typeof createLegacyResourceRecords>[2],
-  input: OrderedSourceInput,
-) => {
+const bindText = async (db: DbClient, owner: StorageOwner, deps: RecordDependencies, input: OrderedSourceInput) => {
   const result = await withOrderedOwner(db, owner, (journal, tx) =>
     bindOrderedNativeSource(journal, tx, owner, input, deps.observer),
   );
@@ -119,12 +114,11 @@ const readOrderedRecords = async (
 export const createOrderedResourceRecords = (
   db: DbClient,
   owner: StorageOwner,
-  deps: Parameters<typeof createLegacyResourceRecords>[2] & {
+  deps: RecordDependencies & {
     textFields?: StorageTextDeclaration[];
     withProjectWork?: <T>(id: string, task: () => Promise<T>) => Promise<T>;
   },
 ) => {
-  type LegacyRecords = ReturnType<typeof createLegacyResourceRecords>;
   const { queryIn, ...queries } = createRecordQueries(db, owner, deps.diagnostics);
   const write = <T>(task: () => Promise<T>) => deps.withProjectWork?.(owner.workbenchId, task) ?? task();
   const commitCache = createOrderedCommitCache(db, owner);
@@ -227,8 +221,8 @@ export const createOrderedResourceRecords = (
   const transaction = <T>(
     run: (
       records: {
-        read: (id: string) => ReturnType<LegacyRecords["read"]>;
-        readMany: (ids: string[]) => ReturnType<LegacyRecords["readMany"]>;
+        read: (id: string) => Promise<Awaited<ReturnType<typeof queries.readMany>>[number]>;
+        readMany: (ids: string[]) => ReturnType<typeof queries.readMany>;
         readCurrentMany: (ids: string[]) => ReturnType<typeof readProjectedRevisions>;
         query: typeof queries.query;
         commit: (group: StorageGroup) => Promise<StorageSaveOutcome>;

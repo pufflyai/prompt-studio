@@ -2,12 +2,15 @@ import { and, eq, like } from "drizzle-orm";
 import { NativeSourceRecoveryError, type StorageOwner } from "pstdio-sync";
 import { adoptResourceDocument, mergeResourceDocument, resourceDocumentState } from "pstdio-sync/records";
 import type { RecordBytes, RecordFrame } from "pstdio-sync/relay";
-import type { DbClient } from "../../db/connection.pglite";
-import { storage_documents } from "../../db/schemas.pg";
-import type { RecordChange } from "./record-changes";
-import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
+import type { RecordChange } from "../../services/extension-storage/record-changes";
+import {
+  loadResourceDocuments,
+  resourceDocumentId,
+} from "../../services/extension-storage/resource-document-persistence";
+import { storageOwnerKey } from "../../services/extension-storage/storage-owner-key";
+import type { DbClient } from "../connection.pglite";
+import { storage_documents } from "../schemas.pg";
 import { resourceFoldEvery } from "./resource-records";
-import { storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 const batchSize = 500;

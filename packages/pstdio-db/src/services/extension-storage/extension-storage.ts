@@ -10,7 +10,6 @@ import type { CollectionScope, KvScope, SetCollectionItemInput, SetKvInput } fro
 import { createNativeDocumentRoomsDBService } from "./native-document-rooms";
 import { createNativeFileProjectionsDBService } from "./native-file-projections";
 import { resolveNativeRecordAddress } from "./native-source-address";
-import { upgradeNativeSourceLifetimes } from "./native-source-upgrade";
 import { createPersonalHistoryIndex } from "./personal-history-index";
 import { installRecordIndexes } from "./record-index-installation";
 import { createRecoveryPoints } from "./recovery-points";
@@ -54,8 +53,6 @@ export const createExtensionStorageDBService = (
       owner: StorageOwner,
       input: { recordId: string; documentKey: string; field?: string },
     ) => resolveNativeRecordAddress(db, owner, input),
-    upgradeNativeSources: (options: Parameters<typeof upgradeNativeSourceLifetimes>[1]) =>
-      upgradeNativeSourceLifetimes(db, options),
     installIndexes: (owners: Parameters<typeof installRecordIndexes>[1], validate: () => void = () => {}) =>
       installRecordIndexes(db, owners, validate),
     recovery: createRecoveryPoints(db, documents, options),

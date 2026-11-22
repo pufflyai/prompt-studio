@@ -1,12 +1,13 @@
-import { and, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
-import { storage_ordered_owners as owners } from "../../db/schemas.pg";
-import { conversionId } from "./ordered-conversion-state";
+import { owners } from "../../db/schemas.pg";
+import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { storageOwnerKey } from "./storage-owner-key";
 
 /** Progress polls must not contend with synchronization for the project write lock. */
 export const readOrderedPending = async (db: Pick<OrderedTransaction, "select">, owner: StorageOwner) => {
+  assertStorageOwnerAdmitted(db, owner);
   const [row] = await db
     .select({
       pending: sql<boolean>`
@@ -15,23 +16,12 @@ export const readOrderedPending = async (db: Pick<OrderedTransaction, "select">,
       AND p.envelope IS NOT NULL AND p.settled_epoch IS NULL)
     OR (
       NOT (${owners.joined} OR (${owners.epoch} IS NOT NULL AND ${owners.epoch} <> '' AND ${owners.epoch} NOT LIKE 'local:%'))
-      AND NOT EXISTS (SELECT 1 FROM storage_record_sync l
-        WHERE l.workbench_id = ${owner.workbenchId} AND l.extension_id = ${owner.extensionId} AND l.joined)
       AND EXISTS (SELECT 1 FROM storage_ordered_records c
         WHERE c.owner_id = ${storageOwnerKey(owner)})
     )
   `,
     })
     .from(owners)
-    .where(
-      and(
-        orderedOwnerWhere(owners, owner),
-        sql`NOT EXISTS (
-      SELECT 1 FROM storage_documents conversion
-      WHERE conversion.owner_id = ${storageOwnerKey(owner)}
-        AND conversion.document_id = ${conversionId}
-    )`,
-      ),
-    );
+    .where(orderedOwnerWhere(owners, owner));
   return row?.pending;
 };

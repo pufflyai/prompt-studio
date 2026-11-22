@@ -50,7 +50,9 @@ for (const interruption of ["normal", "schema", "restore"])
         ).rows.map((row) => row.row);
       if (interruption !== "normal") {
         const finish = await prepareOrderedOwnerUpgrade(old.db, old.path);
-        for (const table of tables) expect((await old.pglite.query(`SELECT * FROM ${table}`)).rows).toEqual([]);
+        for (const table of tables.slice(1))
+          expect((await old.pglite.query(`SELECT * FROM ${table}`)).rows).toEqual([]);
+        expect((await old.pglite.query("SELECT * FROM storage_ordered_owners")).rows).toHaveLength(3);
         await migrate(old.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
         if (interruption === "restore") {
           await old.pglite.exec(`CREATE FUNCTION stop_ordered_restore() RETURNS trigger LANGUAGE plpgsql AS $$
@@ -74,13 +76,19 @@ for (const interruption of ["normal", "schema", "restore"])
       current = await createDb({ path: old.path });
       const verify = async () => {
         for (const table of tables) {
-          const rows = (
-            await current!.pglite.query<{ row: unknown }>(`SELECT (to_jsonb(t)-'owner_id') ||
-            jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id) AS row
-            FROM ${table} t JOIN owners o ON t.owner_id=o.id
-            ORDER BY o.project_id,o.extension_id,((to_jsonb(t)-'owner_id') ||
-              jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id))::text`)
-          ).rows;
+          const query =
+            table === "storage_ordered_owners"
+              ? `SELECT jsonb_build_object('workbench_id',project_id,'extension_id',extension_id,
+                'epoch',epoch,'joined',joined,'after',"after",'state_id',state_id,'through',through,
+                'pending_bytes',pending_bytes,'state_bytes',state_bytes,'skipped',skipped,'receipt_root',receipt_root) AS row
+              FROM owners WHERE extension_id IN ('example.records','example.other')
+              ORDER BY project_id,extension_id`
+              : `SELECT (to_jsonb(t)-'owner_id') ||
+                jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id) AS row
+              FROM ${table} t JOIN owners o ON t.owner_id=o.id
+              ORDER BY o.project_id,o.extension_id,((to_jsonb(t)-'owner_id') ||
+                jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id))::text`;
+          const rows = (await current!.pglite.query<{ row: unknown }>(query)).rows;
           expect(rows.map((row) => row.row)).toEqual(original[table]);
         }
       };

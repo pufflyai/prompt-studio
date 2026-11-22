@@ -1,9 +1,14 @@
 import { and, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
-import { storage_documents as documents } from "../../db/schemas.pg";
-import { readOrderedMarker, saveOrderedMarker } from "./ordered-native-metadata";
-import { decodeOrderedJson, encodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
-import { ensureStorageOwner } from "./storage-owner-key";
+import { readOrderedMarker, saveOrderedMarker } from "../../services/extension-storage/ordered-native-metadata";
+import {
+  decodeOrderedJson,
+  encodeOrderedJson,
+  type OrderedTransaction,
+  orderedOwnerWhere,
+} from "../../services/extension-storage/ordered-sql";
+import { ensureStorageOwner } from "../../services/extension-storage/storage-owner-key";
+import { storage_documents as documents } from "../schemas.pg";
 
 export const conversionId = '["ordered-conversion"]';
 export const conversionFrameId = (sequence: number) => JSON.stringify(["ordered-conversion-frame", sequence]);

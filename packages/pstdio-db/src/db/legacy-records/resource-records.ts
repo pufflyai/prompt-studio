@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { type AssetStore, type StorageObserver, type StorageOwner, StorageRevisionChangedError } from "pstdio-sync";
+import { type StorageOwner, StorageRevisionChangedError } from "pstdio-sync";
 import { editResourceDocument } from "pstdio-sync/records";
 import {
   assertStorageLimits,
@@ -9,20 +9,26 @@ import {
   type StorageGroup,
   type StorageSaveOutcome,
 } from "pstdio-sync-contracts";
-import type { DbClient } from "../../db/connection.pglite";
-import { storage_document_operations } from "../../db/schemas.pg";
+import { createCommitQueue } from "../../services/extension-storage/commit-queue";
+import { dataMigrationContext } from "../../services/extension-storage/data-migration-context";
+import { lockRecordOwner, saveRecordChanges } from "../../services/extension-storage/record-changes";
+import type { RecordDependencies } from "../../services/extension-storage/record-dependencies";
+import {
+  createRecordQueries,
+  listProjectedRecords,
+  readProjectedRecords,
+} from "../../services/extension-storage/record-queries";
+import {
+  loadResourceDocuments,
+  resourceDocumentId,
+} from "../../services/extension-storage/resource-document-persistence";
+import type { NumberChange } from "../../services/extension-storage/resource-number-repair";
+import { storageOwnerKey } from "../../services/extension-storage/storage-owner-key";
+import type { DbClient } from "../connection.pglite";
+import { storage_document_operations } from "../schemas.pg";
 import { bindNativeRecordSource } from "./bind-native-source";
-import { createCommitQueue } from "./commit-queue";
-import { dataMigrationContext } from "./data-migration-context";
 import { prepareNativeRecordWrite } from "./native-record-write";
-import type { createProjectionStatistics } from "./projection-statistics";
-import { lockRecordOwner, saveRecordChanges } from "./record-changes";
 import { queueRecordUpload } from "./record-outbox";
-import { createRecordQueries, listProjectedRecords, readProjectedRecords } from "./record-queries";
-import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
-import type { NumberChange } from "./resource-number-repair";
-import type { StorageDiagnostics } from "./storage-diagnostics";
-import { storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 // A record's update tail folds into its checkpoint after this many updates.
@@ -37,21 +43,7 @@ const outcome = (operationId: string) => ({
 const retryAddress = (owner: StorageOwner) => ({ owner_id: storageOwnerKey(owner), document_id: "records" });
 
 /** Records of one owner. Each record is its own Yjs document; reads use the SQL projection. */
-export const createResourceRecords = (
-  db: DbClient,
-  owner: StorageOwner,
-  deps: {
-    /** Resolves once the owner's records no longer live in its owner document. */
-    statistics: ReturnType<typeof createProjectionStatistics>;
-    /** Notifies owner watchers after a commit. */
-    changed: (recordIds?: readonly string[]) => void;
-    nativeChanged?: (keys: string[]) => void;
-    numbersChanged?: (events: NumberChange[]) => void;
-    observer?: StorageObserver;
-    assets?: AssetStore;
-    diagnostics?: StorageDiagnostics;
-  },
-) => {
+export const createResourceRecords = (db: DbClient, owner: StorageOwner, deps: RecordDependencies) => {
   // Owner-locked transactions load the latest state, so this handle can continue its
   // causal clock instead of adding a new Yjs writer to every record on every save.
   const writer = crypto.getRandomValues(new Uint32Array(1))[0]!;

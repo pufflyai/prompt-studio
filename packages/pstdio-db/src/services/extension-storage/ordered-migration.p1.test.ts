@@ -1,16 +1,19 @@
 import { afterEach, expect, test } from "bun:test";
+import { convertLegacyOwner } from "../../db/legacy-record-conversion";
+import { openReleasedNativeText } from "../../db/legacy-records/native-text.fixture";
+import { createResourceRecords as createLegacyRecords } from "../../db/legacy-records/resource-records";
+import { createUnadmittedLegacyFixture } from "../../db/legacy-records/unadmitted.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
-import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { populateExtensionStorageFixture } from "./extension-storage.fixture";
 import { createOrderedLogStore } from "./ordered-log-store";
 import { createProjectionStatistics } from "./projection-statistics";
-import { createResourceRecords as createLegacyRecords } from "./resource-records";
 
 const cleanup: (() => Promise<unknown>)[] = [];
 afterEach(async () => {
   for (const close of cleanup.splice(0).reverse()) await close();
 });
 const fixture = async () => {
-  const f = await createExtensionStorageFixture();
+  const f = await populateExtensionStorageFixture(await createUnadmittedLegacyFixture());
   cleanup.push(f.close);
   const owner = { workbenchId: f.projectAId, extensionId: "example.migration" };
   const statistics = createProjectionStatistics(f.db);
@@ -30,8 +33,8 @@ test("legacy migration retains deleted values and explicit native field history 
   await f.legacy.commit({ operationId: "delete", edits: [{ recordId: "removed", deleted: true }] });
   const key = "d".repeat(64);
   await f.legacy.bindText({ recordId: "ticket", field: "/content", documentKey: key });
-  const oldDocuments = createDocumentStorageDBService(f.db);
-  await oldDocuments.openNativeTextDocument({ owner: f.owner, fileId: key }).save("EDIT first\nlast");
+  await openReleasedNativeText(f.db, f.owner, key).save("EDIT first\nlast");
+  await convertLegacyOwner(f.db, f.owner);
   const service = createDocumentStorageDBService(f.db);
   const records = service.open({ owner: f.owner }).records;
   expect((await records.read("ticket")).value).toEqual({ title: "plain\ntitle", content: "EDIT first\nlast" });
@@ -55,6 +58,7 @@ test("the first indexed query after upgrade returns an ordered revision usable b
     },
   ]);
   await f.legacy.commit({ operationId: "old-query", edits: [{ recordId: "card", replace: { title: "old" } }] });
+  await convertLegacyOwner(f.db, f.owner);
   const records = createDocumentStorageDBService(f.db).open({ owner: f.owner }).records;
   const page = await records.query({ index: "titles", fields: ["title"] });
   expect(() => JSON.parse(page.records[0]!.revision)).not.toThrow();
@@ -69,6 +73,7 @@ test("the first indexed query after upgrade returns an ordered revision usable b
 test("reading an outcome before any record access cannot bypass the owner's upgrade", async () => {
   const f = await fixture();
   await f.legacy.commit({ operationId: "old-outcome", edits: [{ recordId: "card", replace: { title: "retained" } }] });
+  await convertLegacyOwner(f.db, f.owner);
   const records = createDocumentStorageDBService(f.db).open({ owner: f.owner }).records;
   expect(await records.outcome("unknown")).toBeUndefined();
   const record = await records.read("card");
@@ -93,6 +98,7 @@ test("a log owner created before record access still converts its legacy records
     stream: "laptop",
     writerId: "laptop",
   }).append({ text: "Created the shared integer owner" });
+  await convertLegacyOwner(f.db, f.owner);
   const records = createDocumentStorageDBService(f.db).open({ owner: f.owner }).records;
   expect((await records.read("retained")).value).toEqual({ title: "Original" });
   await records.commit({

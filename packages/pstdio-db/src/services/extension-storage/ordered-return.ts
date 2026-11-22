@@ -355,7 +355,7 @@ export const foldOrderedSaves = async (
   if (owner.extensionId === coreOwnerId) return [];
   if (!(await readOrderedReturnState(tx, owner))) {
     const row = await readOrderedOwner(tx, owner);
-    if (!(await orderedOwnerJoinedCloud(tx, owner, row)) || !(await overFoldLimit(tx, owner))) return [];
+    if (!(await orderedOwnerJoinedCloud(row)) || !(await overFoldLimit(tx, owner))) return [];
     await setOrderedReturnState(tx, owner, "folded");
     return foldAllOrderedSaves(journal, tx, owner);
   }

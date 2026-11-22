@@ -1,7 +1,7 @@
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId, type OrderedRecord } from "pstdio-sync/records";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_ordered_owners as owners, owners as projections } from "../../db/schemas.pg";
+import { owners } from "../../db/schemas.pg";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 
 type Entry = { owner: string; version: string; ids: Set<string>; views: Map<string, OrderedRecord> };
@@ -14,10 +14,9 @@ export const createOrderedCommitCache = (db: DbClient, owner: StorageOwner) => {
   const address = JSON.stringify([owner.workbenchId, owner.extensionId]);
   const version = async (tx: OrderedTransaction) => {
     const [row] = await tx
-      .select({ ownerId: owners.owner_id, revision: projections.revision, epoch: owners.epoch, after: owners.after })
-      .from(projections)
-      .innerJoin(owners, orderedOwnerWhere(owners, owner))
-      .where(orderedOwnerWhere(projections, owner));
+      .select({ ownerId: owners.id, revision: owners.revision, epoch: owners.epoch, after: owners.after })
+      .from(owners)
+      .where(orderedOwnerWhere(owners, owner));
     return row ? JSON.stringify(row) : undefined;
   };
   return {

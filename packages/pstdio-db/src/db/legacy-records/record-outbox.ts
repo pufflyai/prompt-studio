@@ -3,8 +3,8 @@ import type { StorageOwner } from "pstdio-sync";
 import { decodeRecordFrame, encodeRecordFrame, type RecordBytes } from "pstdio-sync/relay";
 import type { Asset, StorageRecord } from "pstdio-sync-contracts";
 import * as Y from "yjs";
-import type { DbClient } from "../../db/connection.pglite";
-import { storage_record_outbox, storage_record_sync } from "../../db/schemas.pg";
+import type { DbClient } from "../connection.pglite";
+import { storage_record_outbox, storage_record_sync } from "../legacy-records-schema";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 

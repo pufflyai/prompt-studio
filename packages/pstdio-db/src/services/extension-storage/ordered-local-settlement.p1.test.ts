@@ -11,7 +11,7 @@ import {
   projects,
   storage_ordered_operations,
   storage_ordered_touches,
-  storage_record_sync,
+  owners as streamOwners,
 } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createAssets, createRelay } from "./record-stream-relay.fixture";
@@ -110,8 +110,8 @@ test("pending progress isolates every project and extension including unrelated 
   expect(await localStream.pending()).toBe(true);
   // A historical cursor belongs only to its own project/extension, like canonical and pending rows.
   await first.db
-    .insert(storage_record_sync)
-    .values({ workbench_id: otherProjectId, extension_id: "example.legacy", joined: true });
+    .insert(streamOwners)
+    .values({ project_id: otherProjectId, extension_id: "example.legacy", joined: true });
   expect(await localStream.pending()).toBe(true);
   expect(await empty.pending()).toBe(false);
   expect(await crossProject.pending()).toBe(false);

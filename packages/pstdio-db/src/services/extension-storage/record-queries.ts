@@ -23,6 +23,7 @@ import {
   owners as projections,
   storage_resource_projections,
 } from "../../db/schemas.pg";
+import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import { traceStorageQuery } from "./query-trace";
 import { aggregateCacheEpochs, aggregateCacheFor } from "./record-aggregate-cache";
 import { aggregateRecordQuery, canCountOwnerProjection } from "./record-aggregate-query";
@@ -118,6 +119,7 @@ const emptyQueryResult = (owner: StorageOwner, revision: string, diagnostics?: S
 };
 
 const prepareQueryMetadata = async (
+  db: DbClient,
   tx: Pick<DbClient, "select" | "execute" | "insert" | "delete">,
   owner: StorageOwner,
   query: StorageRecordQuery,
@@ -143,6 +145,7 @@ const prepareQueryMetadata = async (
     index,
   );
   traceStorageQuery("query-metadata", query.index);
+  if (related.hasIdentity) assertStorageOwnerAdmitted(db, { ...owner, extensionId: "pstdio" });
   if (!revisionOnly) {
     await pruneDateFormatIndexes(tx, owner, related.definitions);
     if (related.hasIdentity) await prepareResourceQueryValues(tx, owner);
@@ -178,6 +181,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
   const getRevision = async (connection: Reader, identities = false) => {
     let identityRevision = "";
     if (identities) {
+      assertStorageOwnerAdmitted(db, { ...owner, extensionId: "pstdio" });
       const [core] = await connection
         .select({
           ownerId: projections.id,
@@ -206,7 +210,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
   const queryIn = async (tx: Parameters<Parameters<DbClient["transaction"]>[0]>[0], query: StorageRecordQuery) => {
     const queryOwner = await readQueryOwner(tx, owner);
     traceStorageQuery("query-start", query.index);
-    const { declared, index, related } = await prepareQueryMetadata(tx, owner, query, getIndex, diagnostics);
+    const { declared, index, related } = await prepareQueryMetadata(db, tx, owner, query, getIndex, diagnostics);
     const revision = await getRevision(tx, related.hasIdentity);
     traceStorageQuery("query-execute", query.index);
     const page = await prepareRecordQuery(owner, index, query, revision, related);
@@ -287,7 +291,10 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
         );
         traceStorageQuery("aggregate-metadata", query.index);
         await pruneDateFormatIndexes(tx, owner, related.definitions);
-        if (related.hasIdentity) await prepareResourceQueryValues(tx, owner);
+        if (related.hasIdentity) {
+          assertStorageOwnerAdmitted(db, { ...owner, extensionId: "pstdio" });
+          await prepareResourceQueryValues(tx, owner);
+        }
         const revision = await getRevision(tx, related.hasIdentity);
         traceStorageQuery("aggregate-execute", query.index);
         validatePredicate(index, query.where, 0, related);

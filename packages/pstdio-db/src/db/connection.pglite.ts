@@ -28,6 +28,7 @@ import { prepareDocumentOwnerUpgrade } from "./document-owner-upgrade";
 import { prepareExtensionPreferencesUpgrade } from "./extension-preferences-upgrade";
 import { prepareFileOwnersUpgrade } from "./file-owners-upgrade";
 import { prepareHistoryOwnerUpgrade } from "./history-owner-upgrade";
+import { retireLegacyRecordTables } from "./legacy-record-retirement";
 import { type LegacyConversionFailure, upgradeLegacyRecords } from "./legacy-record-upgrade";
 import { prepareLogOwnerUpgrade } from "./log-owner-upgrade";
 import { prepareNativeOwnerUpgrade } from "./native-owner-upgrade";
@@ -280,7 +281,8 @@ export const createDb = async (options?: {
       await finishResourceLinkOwnerUpgrade?.();
       await finishSessionWorkspaceUpgrade?.();
       await finishFileOwnersUpgrade();
-      await upgradeLegacyRecords(db, dbPath, { signal: options?.signal, failed: options?.onLegacyConversionError });
+      if (await upgradeLegacyRecords(db, dbPath, { signal: options?.signal, failed: options?.onLegacyConversionError }))
+        await retireLegacyRecordTables(db, migrationsFolder);
       migrated = true;
     });
     // Copy durable receipts before opening. Remove old rows for both sides of an identity

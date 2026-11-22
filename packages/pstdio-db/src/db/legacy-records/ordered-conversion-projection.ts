@@ -1,19 +1,26 @@
 import { and, inArray } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId, type OrderedRecord, projectOrderedOperation } from "pstdio-sync/records";
-import { storage_documents as documents } from "../../db/schemas.pg";
+import type { OrderedJournal } from "../../services/extension-storage/ordered-journal";
+import {
+  markOrderedNumberProjectionCurrent,
+  publishOrderedNumberIndex,
+} from "../../services/extension-storage/ordered-number-projection";
+import { retainNumberHistory } from "../../services/extension-storage/ordered-number-values";
+import { publishOrderedProjection, removeOrderedProjection } from "../../services/extension-storage/ordered-projection";
+import {
+  encodeOrderedJson,
+  type OrderedTransaction,
+  orderedOwnerWhere,
+} from "../../services/extension-storage/ordered-sql";
+import { storage_documents as documents } from "../schemas.pg";
 import {
   type ConversionCursor,
   readConversionValues,
   saveConversion,
   saveConversionValues,
 } from "./ordered-conversion-state";
-import type { OrderedJournal } from "./ordered-journal";
 import { migrateLegacyNativeFields } from "./ordered-legacy-native";
-import { markOrderedNumberProjectionCurrent, publishOrderedNumberIndex } from "./ordered-number-projection";
-import { retainNumberHistory } from "./ordered-number-values";
-import { publishOrderedProjection, removeOrderedProjection } from "./ordered-projection";
-import { encodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 
 const viewId = (id: string) => JSON.stringify(["ordered-conversion-view", id]);
 

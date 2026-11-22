@@ -6,10 +6,10 @@ import {
   parseJsonPointer,
   readOrderedPath,
 } from "pstdio-sync/records";
-import type { OrderedJournal } from "./ordered-journal";
+import type { OrderedJournal } from "../../services/extension-storage/ordered-journal";
+import { indexInitialCanonicalNumbers } from "../../services/extension-storage/ordered-number-canonical";
+import type { OrderedTransaction } from "../../services/extension-storage/ordered-sql";
 import { minimalLegacyPaths } from "./ordered-legacy-paths";
-import { indexInitialCanonicalNumbers } from "./ordered-number-canonical";
-import type { OrderedTransaction } from "./ordered-sql";
 
 const ordinaryRemovals = (record: OrderedRecord, paths: string[][]) => {
   const texts = Object.keys(record.texts ?? {}).map(parseJsonPointer);

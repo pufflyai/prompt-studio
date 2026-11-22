@@ -1,23 +1,21 @@
 import { sql } from "drizzle-orm";
 import { encodeRecordFrame } from "pstdio-sync/relay";
 import * as Y from "yjs";
-import { createDb } from "../../db/connection.pglite";
-import {
-  projects,
-  storage_current_records,
-  storage_documents,
-  storage_record_outbox,
-  storage_record_sync,
-} from "../../db/schemas.pg";
+import { convertLegacyOwner as ensureOrderedOwner } from "../../db/legacy-record-conversion";
+import { readConversion } from "../../db/legacy-records/ordered-conversion-state";
+import { createUnadmittedLegacyFixture } from "../../db/legacy-records/unadmitted.fixture";
+import { storage_record_outbox, storage_record_sync } from "../../db/legacy-records-schema";
+import { projects, storage_current_records, storage_documents } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
-import { ensureOrderedOwner } from "./ordered-conversion";
-import { readConversion } from "./ordered-conversion-state";
 import { lockRecordOwner } from "./record-changes";
 import { resourceDocumentId } from "./resource-document-persistence";
 import { ensureStorageOwner, storageOwnerKey } from "./storage-owner-key";
 
 export const backlogOwner = { workbenchId: "backlog-project", extensionId: "example.backlog" };
-export const seedLegacyBacklog = async (db: Awaited<ReturnType<typeof createDb>>["db"], count = 60_000) => {
+export const seedLegacyBacklog = async (
+  db: Awaited<ReturnType<typeof createUnadmittedLegacyFixture>>["db"],
+  count = 60_000,
+) => {
   const now = new Date().toISOString();
   await db
     .insert(projects)
@@ -74,7 +72,7 @@ export const seedLegacyBacklog = async (db: Awaited<ReturnType<typeof createDb>>
 if (import.meta.main) {
   const [mode, path] = process.argv.slice(2);
   if (!path) throw new Error("A test database path is required");
-  const connection = await createDb({ path });
+  const connection = await createUnadmittedLegacyFixture(path);
   if (mode === "seed") {
     await seedLegacyBacklog(connection.db);
     console.log(JSON.stringify({ seeded: true }));

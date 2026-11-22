@@ -6,6 +6,7 @@ import {
   storage_documents,
   owners as storageOwners,
 } from "../../db/schemas.pg";
+import { assertStorageOwnerAdmitted, storageOwnerAdmissionPending } from "../../db/storage-admission";
 
 import { ensureStorageOwner, storageOwnerKey } from "./storage-owner-key";
 
@@ -30,6 +31,7 @@ const where = (input: Address) => {
 
 export const createNativeFileProjectionsDBService = (db: DbClient) => ({
   async copies({ owner, documentKey }: Address) {
+    assertStorageOwnerAdmitted(db, owner);
     const rows = await db
       .select({ key: projections.projection_key })
       .from(projections)
@@ -37,6 +39,7 @@ export const createNativeFileProjectionsDBService = (db: DbClient) => ({
     return rows.map(({ key }) => key);
   },
   async initialize(input: Address & { state: Uint8Array | null }) {
+    assertStorageOwnerAdmitted(db, input.owner);
     await db.transaction(async (tx) => {
       const ownerId = await ensureStorageOwner(tx, input.owner);
       await tx
@@ -46,6 +49,7 @@ export const createNativeFileProjectionsDBService = (db: DbClient) => ({
     });
   },
   async read(input: Address) {
+    assertStorageOwnerAdmitted(db, input.owner);
     const [row] = await db
       .select({
         baseline: projections.baseline,
@@ -57,12 +61,15 @@ export const createNativeFileProjectionsDBService = (db: DbClient) => ({
     return row;
   },
   async baseline(input: Address & { state: Uint8Array }) {
+    assertStorageOwnerAdmitted(db, input.owner);
     await db.update(projections).set({ baseline: input.state }).where(where(input));
   },
   async begin(input: Address & { state: Uint8Array }) {
+    assertStorageOwnerAdmitted(db, input.owner);
     await db.update(projections).set({ pending: input.state }).where(where(input));
   },
   async complete(input: Address & { state: Uint8Array; revision?: number }) {
+    assertStorageOwnerAdmitted(db, input.owner);
     const rows = await db
       .update(projections)
       .set({
@@ -75,6 +82,7 @@ export const createNativeFileProjectionsDBService = (db: DbClient) => ({
     return rows.length > 0;
   },
   async cancel(input: Address & { state: Uint8Array }) {
+    assertStorageOwnerAdmitted(db, input.owner);
     await db
       .update(projections)
       .set({ pending: null })
@@ -111,7 +119,8 @@ export const createNativeFileProjectionsDBService = (db: DbClient) => ({
         .orderBy(asc(storageOwners.project_id), asc(storageOwners.extension_id), asc(projections.document_key))
         .limit(100);
       for (const { workbenchId, extensionId, documentKey } of rows)
-        yield { owner: { workbenchId, extensionId }, documentKey };
+        if (!storageOwnerAdmissionPending(db, { workbenchId, extensionId }))
+          yield { owner: { workbenchId, extensionId }, documentKey };
       if (rows.length < 100) return;
       const last = rows.at(-1)!;
       cursor = [last.workbenchId, last.extensionId, last.documentKey];

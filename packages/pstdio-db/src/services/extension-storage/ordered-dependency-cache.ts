@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { OrderedDecision } from "pstdio-sync/records";
-import { storage_ordered_operations as operations, storage_ordered_owners as owners } from "../../db/schemas.pg";
+import { storage_ordered_operations as operations, owners } from "../../db/schemas.pg";
 import { readOrderedMarker, saveOrderedMarker } from "./ordered-native-metadata";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 

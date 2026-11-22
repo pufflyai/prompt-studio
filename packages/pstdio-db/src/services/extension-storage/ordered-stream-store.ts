@@ -6,6 +6,7 @@ import { createOrderedReceiptIndex, type OrderedIndexReference } from "pstdio-sy
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_ordered_records as canonical } from "../../db/schemas.pg";
+import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import { indexNodeFilesFor } from "./index-node-files";
 import { createOrderedCanonicalBatch } from "./ordered-canonical-batch";
 import { indexOrderedCheckpoint, stageOrderedCheckpoint } from "./ordered-checkpoint";
@@ -26,7 +27,7 @@ import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { admissibleOrderedFrame, applyOrderedStreamFrame } from "./ordered-stream-frames";
 import { readOrderedPending } from "./ordered-stream-pending";
 import { orderedCursor, readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
-import { createRecordStreamStore } from "./record-stream-store";
+import { createRecordStreamReferences, type RecordStreamDependencies } from "./record-stream-references";
 import type { NumberChange } from "./resource-number-repair";
 
 const hasCanonicalRecords = async (tx: OrderedTransaction, owner: StorageOwner) =>
@@ -53,21 +54,13 @@ const collectSavedReceiptNodes = async (db: DbClient, owner: StorageOwner) => {
   });
 };
 
-const notifyChanges = (
-  deps: Parameters<typeof createRecordStreamStore>[2],
-  events: NumberChange[] = [],
-  recordIds?: readonly string[],
-) => {
+const notifyChanges = (deps: RecordStreamDependencies, events: NumberChange[] = [], recordIds?: readonly string[]) => {
   if (!recordIds || recordIds.length) deps.changed(recordIds);
   deps.numbersChanged?.(combineNumberEvents(events));
 };
 
-export const createOrderedStreamStore = (
-  db: DbClient,
-  owner: StorageOwner,
-  deps: Parameters<typeof createRecordStreamStore>[2],
-) => {
-  const references = createRecordStreamStore(db, owner, deps).references;
+export const createOrderedStreamStore = (db: DbClient, owner: StorageOwner, deps: RecordStreamDependencies) => {
+  const references = createRecordStreamReferences(owner, deps);
   let index: ReturnType<typeof createOrderedReceiptIndex> | undefined;
   let cache: ReturnType<typeof createOrderedManifestCache> | undefined;
   let connected: DocumentRelay | undefined;
@@ -126,6 +119,7 @@ export const createOrderedStreamStore = (
     recordFormat: "ordered" as const,
     references,
     async connect(space: SyncSpace, relay: DocumentRelay) {
+      assertStorageOwnerAdmitted(db, owner);
       if (connected === relay) return;
       if (!relay.manifestBlobs) throw new Error("Ordered receipts require relay manifest graph support");
       // Before the receipt index exists nothing writes receipt nodes, so the saved roots are the only roots.
@@ -217,7 +211,7 @@ export const createOrderedStreamStore = (
     async snapshot(options?: { found: boolean; relayEmpty?: boolean }) {
       const draft = await run(async (journal, tx) => {
         const row = await readOrderedOwner(tx, owner);
-        const found = options?.found ?? !row.joined;
+        const found = options?.found ?? !orderedCursor(row).joined;
         const root = receiptRoots(row.receipt_root).root;
         const resolver = createOrderedReceiptResolver(journal, root, receiptIndex());
         const epoch = found ? crypto.randomUUID() : row.epoch!;
@@ -272,7 +266,7 @@ export const createOrderedStreamStore = (
     async pending() {
       const pending = await readOrderedPending(db, owner);
       if (pending !== undefined) return pending;
-      // Only a genuinely new owner needs the normal atomic legacy conversion.
+      // Initialize an owner that has not stored any records yet.
       return run(async (_journal, tx) => (await readOrderedPending(tx, owner)) ?? false);
     },
   } satisfies RecordStreamStore;

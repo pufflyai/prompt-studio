@@ -36,7 +36,6 @@ import { publishBoardOwnerRename } from "./features/views/board-owner-renames";
 import { apiLogger } from "./lib/logger";
 import { isPgliteCheckpointFailure, pgliteRecoverySteps } from "./lib/pglite-recovery-hint";
 import { logStartupPhase } from "./lib/startup-phase";
-import { upgradeNativeSources } from "./services/native-documents/source-upgrade";
 import type { createProjectWork } from "./services/project-work";
 import { upgradeArtifactFileProjections } from "./services/shared-files/artifact-projection-upgrade";
 import { storageObserver } from "./services/shared-files/storage-observation";
@@ -122,7 +121,6 @@ export const createAppDatabaseServices = (
 export const upgradeAppStorage = async (
   storage: ReturnType<typeof createAppDatabaseServices>["extensionStorageDBService"],
 ) => {
-  await upgradeNativeSources(storage);
   await upgradeArtifactFileProjections({
     projections: storage.fileProjections,
     contexts: await storage.fileProjections.legacyContexts(),

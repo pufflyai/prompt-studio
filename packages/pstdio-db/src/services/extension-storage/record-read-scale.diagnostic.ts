@@ -3,12 +3,12 @@ import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import { assertBenchmarkWorker, contract, createRow, measure, type Workload } from "storage-scale-fixture";
 import { createDb } from "../../db/connection.pglite";
+import { resourceFoldEvery } from "../../db/legacy-records/resource-records";
 import { runDatabaseScaleEntrypoint } from "./database-scale-entrypoint";
 import { databaseFixtureOwner, databaseFixtureOwners } from "./database-scale-fixture";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createViewReader, type ReadOperation, readOperations } from "./record-read-views";
 import { resourceDocumentId } from "./resource-document-persistence";
-import { resourceFoldEvery } from "./resource-records";
 import { storageOwnerKey } from "./storage-owner-key";
 
 const coldOperations = [...readOperations, "all-owner-burst"] as const;

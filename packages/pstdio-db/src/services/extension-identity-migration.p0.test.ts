@@ -80,8 +80,9 @@ test("migration retains complete owner history, immutable bytes, sequence positi
       .insert(s.storage_document_updates)
       .values({ ...orderedOwner, document_id: "records", revision: 31, update: bytes });
     await db
-      .insert(s.storage_ordered_owners)
-      .values({ ...orderedOwner, epoch: "epoch", after: 42, joined: true, pending_bytes: 10, receipt_root: bytes });
+      .update(s.owners)
+      .set({ epoch: "epoch", after: 42, joined: true, pending_bytes: 10, receipt_root: bytes })
+      .where(eq(s.owners.id, orderedOwner.owner_id));
     await db
       .insert(s.storage_ordered_operations)
       .values({ ...orderedOwner, operation_id: "save", fingerprint: "immutable", local_sequence: 19, envelope: bytes });
@@ -130,8 +131,8 @@ test("migration retains complete owner history, immutable bytes, sequence positi
       owner_id: orderedOwner.owner_id,
       indexed: true,
     });
-    expect((await db.select().from(s.storage_ordered_owners))[0]).toMatchObject({
-      owner_id: orderedOwner.owner_id,
+    expect((await db.select().from(s.owners))[0]).toMatchObject({
+      id: orderedOwner.owner_id,
       epoch: "epoch",
       after: 42,
       pending_bytes: 10,

@@ -1,16 +1,19 @@
-import { getTableColumns, sql } from "drizzle-orm";
+import { type SQLWrapper, sql } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
-import { type ExtensionIdentityRename, extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
+import {
+  canonicalExtensionId,
+  type ExtensionIdentityRename,
+  extensionIdentityRenames,
+} from "pstdio-api-contracts/extension-host";
 import * as Y from "yjs";
 import type { DbClient } from "../db/connection.pglite";
 import * as s from "../db/schemas.pg";
-import { mergeTextOwnerHistories, textOnlyOwnerSql } from "./extension-identity-storage";
+import { unadmittedExtensionProjects, unadmittedStorageOwners } from "../db/storage-admission";
+import { availableIdentityProject, mergeTextOwnerHistories, textOnlyOwnerSql } from "./extension-identity-storage";
 import { indexNodeFilesFor } from "./extension-storage/index-node-files";
 import { ensureStorageOwner } from "./extension-storage/storage-owner-key";
 
-// Ordered by foreign-key dependency. Only these composite-key parents need a new key before moving children.
-const parents = [s.storage_record_sync];
-const projectTables = [...parents, s.storage_record_outbox, s.storage_ordered_resource_numbers];
+const projectTables = [s.storage_ordered_resource_numbers];
 const otherTables = [
   s.owners,
   s.board_views,
@@ -36,7 +39,9 @@ export class ExtensionIdentityConflictError extends Error {
   }
 }
 
-const assertNoConflicts = async (tx: Transaction, from: string, to: string) => {
+const projectColumn = (table: (typeof projectTables)[number] | (typeof otherTables)[number]) =>
+  "workbench_id" in table ? table.workbench_id : table.project_id;
+const assertNoConflicts = async (tx: Transaction, from: string, to: string, excluded: readonly string[]) => {
   // Each text file has its own document, updates and retry journal. Separate file IDs can
   // retain both histories byte for byte. Ordered streams and shared document IDs cannot.
   const documents = new Set<PgTable>([s.storage_documents, s.storage_document_updates, s.storage_document_operations]);
@@ -53,7 +58,8 @@ const assertNoConflicts = async (tx: Transaction, from: string, to: string) => {
     ],
     sql` UNION ALL `,
   );
-  const scopes = await tx.execute(sql`SELECT scope FROM (${owners}) owners GROUP BY scope
+  const scopes =
+    await tx.execute(sql`SELECT scope FROM (${owners}) owners WHERE ${availableIdentityProject(sql`scope`, excluded)} GROUP BY scope
     HAVING count(DISTINCT extension_id) > 1 AND (
       (bool_or(NOT text_file AND extension_id = ${from}) AND bool_or(NOT text_file AND extension_id = ${to}))
       OR EXISTS (SELECT 1 FROM storage_documents a JOIN owners ao ON a.owner_id=ao.id
@@ -77,26 +83,14 @@ const assertNoConflicts = async (tx: Transaction, from: string, to: string) => {
     [s.storage_resource_identities, sql`to_jsonb(workbench_id)`],
   ] as const) {
     const result = await tx.execute(sql`SELECT ${scope} AS scope FROM ${table} WHERE ${ownerColumn} IN (${from}, ${to})
-      GROUP BY 1 HAVING count(DISTINCT extension_id) > 1 LIMIT 1`);
+      AND ${availableIdentityProject(projectColumn(table), excluded)} GROUP BY 1 HAVING count(DISTINCT extension_id) > 1 LIMIT 1`);
     if (result.rows[0]) throw new ExtensionIdentityConflictError(from, to, JSON.stringify(result.rows[0].scope));
   }
   const runs = await tx.execute(sql`SELECT project_id AS scope FROM ${s.automation_runs}
-    WHERE principal IN (${`extension:${from}`}, ${`extension:${to}`}) GROUP BY project_id
+    WHERE principal IN (${`extension:${from}`}, ${`extension:${to}`})
+    AND ${availableIdentityProject(s.automation_runs.project_id, excluded)} GROUP BY project_id
     HAVING count(DISTINCT principal) > 1 LIMIT 1`);
   if (runs.rows[0]) throw new ExtensionIdentityConflictError(from, to, String(runs.rows[0].scope));
-};
-
-const cloneParent = async (tx: Transaction, table: PgTable, from: string, to: string) => {
-  const columns = Object.values(getTableColumns(table));
-  await tx.execute(sql`INSERT INTO ${table} (${sql.join(
-    columns.map((c) => sql.identifier(c.name)),
-    sql`, `,
-  )})
-    SELECT ${sql.join(
-      columns.map((c) => (c.name === "extension_id" ? sql`${to}` : sql`${sql.identifier(c.name)}`)),
-      sql`, `,
-    )}
-    FROM ${table} WHERE ${ownerColumn} = ${from}`);
 };
 
 /** Startup and runtime source recovery move each owner in one transaction. */
@@ -120,6 +114,19 @@ export const migrateExtensionIdentities = async (
     (SELECT 1 FROM ${s.storage_documents} d JOIN owners o ON d.owner_id=o.id WHERE o.project_id = p.id AND o.extension_id = 'pstdio' AND d.document_id = ${markerId})`);
   const pending = projects.rows.map((row) => String(row.id));
   const oldIds = renames.map(({ from }) => `${from.publisher}.${from.name}`);
+  const blocked = unadmittedStorageOwners(db).flatMap((owner) =>
+    oldIds
+      .filter((id) => canonicalExtensionId(id) === canonicalExtensionId(owner.extensionId))
+      .map((extensionId) => ({ ...owner, extensionId })),
+  );
+  const availableSource = (project: SQLWrapper, extension: SQLWrapper) =>
+    blocked.length
+      ? sql`(${project} IS NULL OR NOT (${sql.join(
+          blocked.map((owner) => sql`(${project}=${owner.workbenchId} AND ${extension}=${owner.extensionId})`),
+          sql` OR `,
+        )}))`
+      : sql`true`;
+
   const oldOwners = sql.join(
     oldIds.map((id) => sql`${id}`),
     sql`, `,
@@ -132,26 +139,24 @@ export const migrateExtensionIdentities = async (
             sql`SELECT extension_id FROM ${table} WHERE workbench_id IN (${sql.join(
               pending.map((id) => sql`${id}`),
               sql`, `,
-            )}) AND ${ownerColumn} IN (${sql.join(
+            )}) AND ${availableSource(table.workbench_id, ownerColumn)} AND ${ownerColumn} IN (${sql.join(
               oldIds.map((id) => sql`${id}`),
               sql`, `,
             )})`,
         ),
-        ...[...otherTables, s.installed_extension_sources].map(
-          (table) =>
-            sql`SELECT extension_id FROM ${table} WHERE ${ownerColumn} IN (${sql.join(
-              oldIds.map((id) => sql`${id}`),
-              sql`, `,
-            )})`,
+        ...otherTables.map(
+          (table) => sql`SELECT extension_id FROM ${table}
+            WHERE ${availableSource(projectColumn(table), ownerColumn)} AND ${ownerColumn} IN (${oldOwners})`,
         ),
-        sql`SELECT source_extension_id AS extension_id FROM ${s.notifications} WHERE source_extension_id IN (${sql.join(
+        sql`SELECT extension_id FROM ${s.installed_extension_sources} WHERE ${ownerColumn} IN (${oldOwners})`,
+        sql`SELECT source_extension_id AS extension_id FROM ${s.notifications} WHERE ${availableSource(s.notifications.project_id, s.notifications.source_extension_id)} AND source_extension_id IN (${sql.join(
           oldIds.map((id) => sql`${id}`),
           sql`, `,
         )})`,
-        sql`SELECT owner AS extension_id FROM ${s.files} WHERE owner IN (${oldOwners})`,
-        sql`SELECT name AS extension_id FROM ${s.automation_tokens} WHERE created_by = 'extension' AND name IN (${oldOwners})`,
+        sql`SELECT owner AS extension_id FROM ${s.files} WHERE ${availableSource(s.files.project_id, s.files.owner)} AND owner IN (${oldOwners})`,
+        sql`SELECT name AS extension_id FROM ${s.automation_tokens} WHERE created_by = 'extension' AND ${availableSource(s.automation_tokens.project_id, s.automation_tokens.name)} AND name IN (${oldOwners})`,
         sql`SELECT substring(principal from 11) AS extension_id FROM ${s.automation_runs}
-          WHERE principal IN (${sql.join(
+          WHERE ${availableSource(s.automation_runs.project_id, sql`substring(principal from 11)`)} AND principal IN (${sql.join(
             oldIds.map((id) => sql`${`extension:${id}`}`),
             sql`, `,
           )})`,
@@ -168,35 +173,35 @@ export const migrateExtensionIdentities = async (
   for (const { from: previous, to: canonical } of renames) {
     const from = `${previous.publisher}.${previous.name}`;
     const to = `${canonical.publisher}.${canonical.name}`;
+    const excluded = unadmittedExtensionProjects(db, from);
+    if (excluded.length) conflicted = true;
     if (!presentOwners.has(from) && !gatedOwners.has(from) && !gatedOwners.has(to)) continue;
     try {
       if (!renamed) await options.beforeChange?.();
       await db.transaction(async (tx) => {
-        await assertNoConflicts(tx, from, to);
-        await mergeTextOwnerHistories(tx, from, to);
-        for (const table of parents) await cloneParent(tx, table, from, to);
-        for (const table of [
-          ...projectTables.filter((t) => !parents.includes(t as (typeof parents)[number])),
-          ...otherTables,
-        ])
-          await tx.execute(sql`UPDATE ${table} SET ${ownerColumn} = ${to} WHERE ${ownerColumn} = ${from}`);
-        await tx.execute(sql`UPDATE ${s.files} SET owner = ${to} WHERE owner = ${from}`);
+        await assertNoConflicts(tx, from, to, excluded);
+        await mergeTextOwnerHistories(tx, from, to, excluded);
+        for (const table of [...projectTables, ...otherTables])
+          await tx.execute(sql`UPDATE ${table} SET ${ownerColumn} = ${to} WHERE ${ownerColumn} = ${from}
+            AND ${availableIdentityProject(projectColumn(table), excluded)}`);
+        await tx.execute(sql`UPDATE ${s.files} SET owner = ${to} WHERE owner = ${from}
+          AND ${availableIdentityProject(s.files.project_id, excluded)}`);
         // Device settings use the stable extension identity as their local owner key too.
         await tx.execute(sql`UPDATE ${s.preferences} SET scope_id = ${to}
           WHERE extension_id = ${to} AND scope = 'user' AND scope_id = ${from} AND starts_with(key, 'setting:')`);
-        for (const table of [...parents].reverse())
-          await tx.execute(sql`DELETE FROM ${table} WHERE ${ownerColumn} = ${from}`);
         await tx.execute(sql`UPDATE ${s.installed_extension_sources} SET extension_id = ${to},
         install_name = CASE WHEN install_name IN (${previous.name}, ${from}, ${canonical.name}, ${to}) THEN ${canonical.name} ELSE install_name END,
         manifest_json = CASE WHEN manifest_json->>'name' = ${previous.name} THEN jsonb_set(manifest_json, '{name}', to_jsonb(${canonical.name}::text)) ELSE manifest_json END WHERE extension_id = ${from}`);
         await tx.execute(
-          sql`UPDATE ${s.notifications} SET source_extension_id = ${to} WHERE source_extension_id = ${from}`,
+          sql`UPDATE ${s.notifications} SET source_extension_id = ${to} WHERE source_extension_id = ${from}
+            AND ${availableIdentityProject(s.notifications.project_id, excluded)}`,
         );
         // Extension references follow the owner; user-created token names are prose.
         await tx.execute(sql`UPDATE ${s.automation_runs} SET principal = ${`extension:${to}`}
-          WHERE principal = ${`extension:${from}`}`);
+          WHERE principal = ${`extension:${from}`} AND ${availableIdentityProject(s.automation_runs.project_id, excluded)}`);
         await tx.execute(
-          sql`UPDATE ${s.automation_tokens} SET name = ${to} WHERE created_by = 'extension' AND name = ${from}`,
+          sql`UPDATE ${s.automation_tokens} SET name = ${to} WHERE created_by = 'extension' AND name = ${from}
+            AND ${availableIdentityProject(s.automation_tokens.project_id, excluded)}`,
         );
         await tx.execute(sql`UPDATE ${s.installed_extension_sources} SET status = 'pending', last_error_json = NULL
         WHERE extension_id = ${to} AND last_error_json->>'code' = 'extension_identity_conflict'`);
@@ -242,10 +247,11 @@ const moveRenamedIndexNodes = async (db: DbClient, renames: readonly ExtensionId
   for (const { from: previous, to: canonical } of renames) {
     const from = `${previous.publisher}.${previous.name}`;
     if (!(await files.hasExtension(from))) continue;
-    const remaining = await db.execute(
-      sql`SELECT 1 FROM ${s.storage_ordered_owners} ordered_owner JOIN ${s.owners} o
-        ON ordered_owner.owner_id=o.id WHERE o.extension_id = ${from} LIMIT 1`,
+    const remaining = await db.execute(sql`SELECT project_id FROM ${s.owners} o WHERE o.extension_id = ${from}`);
+    await files.moveExtension(
+      from,
+      `${canonical.publisher}.${canonical.name}`,
+      new Set(remaining.rows.map((row) => String(row.project_id))),
     );
-    if (!remaining.rows.length) await files.moveExtension(from, `${canonical.publisher}.${canonical.name}`);
   }
 };

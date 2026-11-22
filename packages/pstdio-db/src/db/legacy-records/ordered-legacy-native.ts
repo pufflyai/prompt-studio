@@ -1,9 +1,9 @@
 import type { StorageOwner } from "pstdio-sync";
 import { type OrderedRecord, parseJsonPointer, prepareOrderedOperation } from "pstdio-sync/records";
 import { fingerprint } from "pstdio-sync-contracts";
-import type { OrderedJournal } from "./ordered-journal";
-import { queueOrderedNativeOperation } from "./ordered-native-queue";
-import type { OrderedTransaction } from "./ordered-sql";
+import type { OrderedJournal } from "../../services/extension-storage/ordered-journal";
+import { queueOrderedNativeOperation } from "../../services/extension-storage/ordered-native-queue";
+import type { OrderedTransaction } from "../../services/extension-storage/ordered-sql";
 
 /** Old native sync has no durable ACK boundary. Seeded full state replays clean structs idempotently. */
 export const migrateLegacyNativeFields = async (

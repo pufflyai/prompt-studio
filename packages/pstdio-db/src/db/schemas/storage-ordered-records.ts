@@ -7,27 +7,6 @@ const owner = () => ({
   owner_id: integer("owner_id").notNull(),
 });
 
-/** New-format owner state. Its existence does not mean transport has opened. */
-export const storage_ordered_owners = pgTable(
-  "storage_ordered_owners",
-  {
-    ...owner(),
-    epoch: text("epoch"),
-    joined: boolean("joined").notNull().default(false),
-    after: bigint("after", { mode: "number" }).notNull().default(0),
-    state_id: text("state_id"),
-    through: bigint("through", { mode: "number" }).notNull().default(0),
-    pending_bytes: bigint("pending_bytes", { mode: "number" }).notNull().default(0),
-    state_bytes: bigint("state_bytes", { mode: "number" }).notNull().default(0),
-    skipped: boolean("skipped").notNull().default(false),
-    receipt_root: bytea("receipt_root"),
-  },
-  (table) => [
-    primaryKey({ columns: [table.owner_id] }),
-    foreignKey({ columns: [table.owner_id], foreignColumns: [owners.id] }).onDelete("cascade"),
-  ],
-);
-
 /** Only ordered data lives here; public queries use the existing optimistic SQL projection. */
 export const storage_ordered_records = pgTable(
   "storage_ordered_records",
@@ -41,7 +20,7 @@ export const storage_ordered_records = pgTable(
     primaryKey({ columns: [table.owner_id, table.record_id] }),
     foreignKey({
       columns: [table.owner_id],
-      foreignColumns: [storage_ordered_owners.owner_id],
+      foreignColumns: [owners.id],
     }).onDelete("cascade"),
   ],
 );
@@ -70,7 +49,7 @@ export const storage_ordered_operations = pgTable(
       .where(sql`${table.envelope} IS NOT NULL AND ${table.settled_epoch} IS NULL`),
     foreignKey({
       columns: [table.owner_id],
-      foreignColumns: [storage_ordered_owners.owner_id],
+      foreignColumns: [owners.id],
     }).onDelete("cascade"),
   ],
 );

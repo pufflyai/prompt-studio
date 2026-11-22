@@ -8,7 +8,6 @@ import {
   storage_current_records,
   storage_documents,
   storage_ordered_operations,
-  storage_ordered_owners,
   storage_ordered_records,
   storage_ordered_touches,
   owners as storageOwners,
@@ -233,7 +232,6 @@ test("two devices that move under different key prefixes end with every item und
 // Copies a device's ordered storage, without receipts, as a backup taken before its pending save uploaded.
 const tables = [
   storage_documents,
-  storage_ordered_owners,
   storage_ordered_records,
   storage_ordered_operations,
   storage_ordered_touches,

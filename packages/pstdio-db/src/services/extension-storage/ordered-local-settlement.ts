@@ -1,7 +1,7 @@
 import type { StorageOwner } from "pstdio-sync";
 import { applyOrderedNativeOperation, operationDependencies } from "pstdio-sync/records";
 import { fingerprint, type Json } from "pstdio-sync-contracts";
-import { storage_ordered_owners as owners } from "../../db/schemas.pg";
+import { owners } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
 import { applyOrderedNumberPolicy } from "./ordered-number-admission";
@@ -18,7 +18,7 @@ export const settleLocalOrderedSaves = async (
   selected?: Awaited<ReturnType<OrderedJournal["pending"]>>,
 ) => {
   const row = await readOrderedOwner(tx, owner);
-  if (await orderedOwnerJoinedCloud(tx, owner, row)) return [];
+  if (await orderedOwnerJoinedCloud(row)) return [];
   const epoch = row.epoch ?? `local:${crypto.randomUUID()}`;
   if (!row.epoch) await tx.update(owners).set({ epoch }).where(orderedOwnerWhere(owners, owner));
   const changed = new Set<string>();

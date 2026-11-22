@@ -12,11 +12,14 @@ import {
 import { readTextDocumentSeed } from "pstdio-sync/text";
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import * as Y from "yjs";
-import type { NativeProjectedRecord } from "./native-record-projection";
-import { nativeDocumentId } from "./native-record-projection";
-import { orderedFieldMarkerId, saveOrderedMarker } from "./ordered-native-metadata";
-import type { OrderedTransaction } from "./ordered-sql";
-import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
+import type { NativeProjectedRecord } from "../../services/extension-storage/native-record-projection";
+import { nativeDocumentId } from "../../services/extension-storage/native-record-projection";
+import { orderedFieldMarkerId, saveOrderedMarker } from "../../services/extension-storage/ordered-native-metadata";
+import type { OrderedTransaction } from "../../services/extension-storage/ordered-sql";
+import {
+  loadResourceDocuments,
+  resourceDocumentId,
+} from "../../services/extension-storage/resource-document-persistence";
 
 type Sources = Awaited<ReturnType<typeof loadResourceDocuments>>["sources"];
 const legacyBody = async (

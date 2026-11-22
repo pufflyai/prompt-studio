@@ -5,14 +5,22 @@ import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import { editResourceDocument } from "pstdio-sync/records";
 import { encodeRecordFrame } from "pstdio-sync/relay";
+import { createExtensionInstancesDBService } from "../services/extension-instances/extension-instances";
 import { createDocumentStorageDBService } from "../services/extension-storage/document-storage";
+import { createNativeDocumentRoomsDBService } from "../services/extension-storage/native-document-rooms";
+import { createNativeFileProjectionsDBService } from "../services/extension-storage/native-file-projections";
 import { createProjectionStatistics } from "../services/extension-storage/projection-statistics";
-import { createResourceRecords } from "../services/extension-storage/resource-records";
+import { createRecoveryPoints } from "../services/extension-storage/recovery-points";
+import { createExtensionUserDataDBService } from "../services/extension-user-data/extension-user-data";
+import { createInstalledExtensionSourcesDBService } from "../services/installed-extension-sources/installed-extension-sources";
 import { createDb } from "./connection.pglite";
+import { createResourceRecords } from "./legacy-records/resource-records";
+import { createUnadmittedLegacyFixture } from "./legacy-records/unadmitted.fixture";
+import { storage_record_outbox, storage_record_sync } from "./legacy-records-schema";
 import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
-import { projects, storage_record_outbox, storage_record_sync } from "./schemas.pg";
+import { projects } from "./schemas.pg";
 
-const seed = async (connection: Awaited<ReturnType<typeof createDb>>) => {
+const seed = async (connection: Awaited<ReturnType<typeof createDb>>, corruptId = "example.corrupt") => {
   const now = new Date().toISOString();
   await connection.db.insert(projects).values({
     id: "project",
@@ -23,7 +31,7 @@ const seed = async (connection: Awaited<ReturnType<typeof createDb>>) => {
   });
   const statistics = createProjectionStatistics(connection.db);
   try {
-    for (const extensionId of ["example.healthy", "example.corrupt"]) {
+    for (const extensionId of ["example.healthy", corruptId]) {
       const owner = { workbenchId: "project", extensionId };
       await connection.db.insert(storage_record_sync).values({
         workbench_id: owner.workbenchId,
@@ -38,7 +46,7 @@ const seed = async (connection: Awaited<ReturnType<typeof createDb>>) => {
     await connection.db
       .update(storage_record_outbox)
       .set({ frame: new Uint8Array([255]) })
-      .where(sql`extension_id='example.corrupt'`);
+      .where(sql`extension_id=${corruptId}`);
   } finally {
     await statistics.flush();
   }
@@ -66,7 +74,7 @@ test("opening an upgraded database converts unsent records and durably isolates 
   const path = join(root, "pstdio.db");
   let connection: Awaited<ReturnType<typeof createDb>> | undefined;
   try {
-    connection = await createDb({ path });
+    connection = await createUnadmittedLegacyFixture(path);
     await seed(connection);
     const original = await rows(connection, "storage_record_outbox");
     await connection.close();
@@ -121,7 +129,7 @@ for (const failure of ["export", "deletion"])
     const path = join(root, "pstdio.db");
     let connection: Awaited<ReturnType<typeof createDb>> | undefined;
     try {
-      connection = await createDb({ path });
+      connection = await createUnadmittedLegacyFixture(path);
       await seed(connection);
       const originals = (await rows(connection, "storage_record_outbox")).filter(
         (row) => row.extension_id === "example.corrupt",
@@ -168,11 +176,149 @@ for (const failure of ["export", "deletion"])
         const backup = JSON.parse(await readFile(diagnostics[0]!.backupPath!, "utf8"));
         expect(backup.tables.storage_record_outbox).toEqual(originals);
       } else expect(diagnostics[0]!.backupPath).toBeUndefined();
+      const service = createDocumentStorageDBService(connection.db);
+      const badOwner = { workbenchId: "project", extensionId: "example.corrupt" };
+      const records = service.open({ owner: badOwner }).records;
+      await expect(records.read("card")).rejects.toThrow("unavailable");
+      await expect(
+        records.commit({
+          operationId: "new-user-save",
+          edits: [{ recordId: "new", replace: { title: "Must not disappear on restart" } }],
+        }),
+      ).rejects.toThrow("unavailable");
+      await expect(service.documents.recordStream(badOwner).pending()).rejects.toThrow("unavailable");
+      await expect(service.cloudReturn.status("project")).rejects.toThrow("unavailable");
+      expect(await service.cloudReturn.removalState("project")).toBe("unknown");
+      await expect(service.openTextDocument({ owner: badOwner, fileId: "note.md" }).save("New text")).rejects.toThrow(
+        "unavailable",
+      );
+      await expect(service.documents.open("records").revision(badOwner)).rejects.toThrow("unavailable");
+      await expect(service.openNativeTextDocument({ owner: badOwner, fileId: "note.md" }).snapshot()).rejects.toThrow(
+        "unavailable",
+      );
+      await expect(
+        createNativeFileProjectionsDBService(connection.db).initialize({
+          owner: badOwner,
+          documentKey: "note.md",
+          state: new Uint8Array([0, 0]),
+        }),
+      ).rejects.toThrow("unavailable");
+      await expect(
+        createNativeDocumentRoomsDBService(connection.db).create({
+          owner: badOwner,
+          documentKey: "0".repeat(64),
+          target: { fileRendererId: "example.corrupt.document", resource: undefined },
+          state: new Uint8Array([0, 0]),
+        }),
+      ).rejects.toThrow("unavailable");
+      await expect(createRecoveryPoints(connection.db, service).capture("project")).rejects.toThrow("unavailable");
+      const source = await createInstalledExtensionSourcesDBService(connection.db).register({
+        install_name: "corrupt",
+        extension_id: badOwner.extensionId,
+        display_name: "Unavailable",
+        source_kind: "local_path",
+        source_path: join(root, "extension"),
+      });
+      const instance = await createExtensionInstancesDBService(connection.db).create({
+        installed_extension_id: source.id,
+        scope_type: "project",
+        scope_id: "project",
+      });
+      await expect(createExtensionUserDataDBService(connection.db).deleteForInstance(instance.id)).rejects.toThrow(
+        "unavailable",
+      );
+      expect(
+        (await service.open({ owner: { ...badOwner, extensionId: "example.healthy" } }).records.read("card")).value,
+      ).toEqual({ title: "example.healthy" });
+      await service
+        .openTextDocument({ owner: { ...badOwner, extensionId: "example.healthy" }, fileId: "note.md" })
+        .save("Healthy data stays usable");
+      if (failure === "deletion")
+        await connection.pglite.exec("DROP TRIGGER stop_failed_owner_delete ON storage_documents");
+      else await rm(join(root, "backups"));
+      await connection.close();
+      connection = undefined;
+      connection = await createDb({ path, onLegacyConversionError: (event) => diagnostics.push(event) });
+      expect(diagnostics).toHaveLength(2);
+      expect((await connection.pglite.query("SELECT to_regclass('storage_record_outbox') AS old")).rows).toEqual([
+        { old: null },
+      ]);
+      expect(
+        (
+          await createDocumentStorageDBService(connection.db)
+            .open({
+              owner: { workbenchId: "project", extensionId: "example.healthy" },
+            })
+            .records.read("card")
+        ).value,
+      ).toEqual({ title: "example.healthy" });
+      expect(
+        await createDocumentStorageDBService(connection.db)
+          .openTextDocument({
+            owner: { workbenchId: "project", extensionId: "example.healthy" },
+            fileId: "note.md",
+          })
+          .read(),
+      ).toBe("Healthy data stays usable");
     } finally {
       await connection?.close();
       await rm(root, { recursive: true, force: true });
     }
   });
+
+test("an unpreserved historical owner retains its original scope and pending bytes across rename retries", async () => {
+  const root = await mkdtemp(join(tmpdir(), "legacy-record-rename-preservation-"));
+  const path = join(root, "pstdio.db");
+  const extensionId = "pstdio.pstdio-notes";
+  let connection: Awaited<ReturnType<typeof createDb>> | undefined;
+  try {
+    connection = await createUnadmittedLegacyFixture(path);
+    await seed(connection, extensionId);
+    const originals = (await rows(connection, "storage_record_outbox")).filter(
+      (row) => row.extension_id === extensionId,
+    );
+    await Bun.write(join(root, "backups"), "Cannot create a backup directory here");
+    await connection.close();
+    connection = undefined;
+    const diagnostics: { backupPath?: string }[] = [];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      connection = await createDb({ path, onLegacyConversionError: (event) => diagnostics.push(event) });
+      expect(diagnostics).toHaveLength(attempt + 1);
+      expect(
+        (await rows(connection, "storage_record_outbox")).filter((row) => row.extension_id === extensionId),
+      ).toEqual(originals);
+      expect(
+        (await connection.pglite.query("SELECT extension_id FROM owners WHERE extension_id=$1", [extensionId])).rows,
+      ).toEqual([{ extension_id: extensionId }]);
+      const service = createDocumentStorageDBService(connection.db);
+      for (const name of [extensionId, "pstdio.notes"])
+        await expect(
+          service.open({ owner: { workbenchId: "project", extensionId: name } }).records.commit({
+            operationId: "new-user-save",
+            edits: [{ recordId: "new", replace: { title: "Must be refused" } }],
+          }),
+        ).rejects.toThrow("unavailable");
+      await connection.close();
+      connection = undefined;
+    }
+    await rm(join(root, "backups"));
+    connection = await createDb({ path, onLegacyConversionError: (event) => diagnostics.push(event) });
+    expect(diagnostics).toHaveLength(3);
+    expect(diagnostics[2]!.backupPath).toBeDefined();
+    expect((await connection.pglite.query("SELECT to_regclass('storage_record_outbox') AS old")).rows).toEqual([
+      { old: null },
+    ]);
+    const preserved = JSON.parse(await readFile(diagnostics[2]!.backupPath!, "utf8"));
+    expect(preserved.owner).toEqual({ workbenchId: "project", extensionId });
+    expect(preserved.tables.storage_record_outbox).toEqual(originals);
+    expect(
+      (await connection.pglite.query("SELECT extension_id FROM owners WHERE extension_id=$1", [extensionId])).rows,
+    ).toEqual([]);
+  } finally {
+    await connection?.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test("released text-owner records convert before the upgraded database opens", async () => {
   const root = await mkdtemp(join(tmpdir(), "released-legacy-record-upgrade-"));
@@ -250,7 +396,7 @@ test("a released stream without a records root is preserved and diagnosed during
   const path = join(root, "pstdio.db");
   let connection: Awaited<ReturnType<typeof createDb>> | undefined;
   try {
-    connection = await createDb({ path });
+    connection = await createUnadmittedLegacyFixture(path);
     const now = new Date().toISOString();
     await connection.db
       .insert(projects)
@@ -269,7 +415,9 @@ test("a released stream without a records root is preserved and diagnosed during
     const backup = JSON.parse(await readFile(failures[0]!.backupPath!, "utf8"));
     expect(backup.tables.storage_record_outbox).toHaveLength(1);
     expect(backup.tables.storage_record_outbox[0].frame).toBe("\\xff");
-    expect(await connection.db.select().from(storage_record_outbox)).toEqual([]);
+    expect((await connection.pglite.query("SELECT to_regclass('storage_record_outbox') AS old")).rows).toEqual([
+      { old: null },
+    ]);
   } finally {
     await connection?.close();
     await rm(root, { recursive: true, force: true });
@@ -281,7 +429,7 @@ test("a failed core owner admits healthy identity queries against its empty numb
   const path = join(root, "pstdio.db");
   let connection: Awaited<ReturnType<typeof createDb>> | undefined;
   try {
-    connection = await createDb({ path });
+    connection = await createUnadmittedLegacyFixture(path);
     const now = new Date().toISOString();
     await connection.db
       .insert(projects)

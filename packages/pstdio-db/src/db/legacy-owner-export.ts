@@ -20,7 +20,7 @@ const ownerSources = (owner: StorageOwner, id: number): UpgradeSource[] => {
     { table: "storage_current_records", keys: ["owner_id", "record_id"], where },
     { table: "storage_record_sync", keys: ["workbench_id", "extension_id"], where: pair },
     { table: "storage_record_outbox", keys: ["sequence"], where: pair },
-    { table: "storage_ordered_owners", keys: ["owner_id"], where },
+    { table: "storage_ordered_owners", keys: ["workbench_id", "extension_id"], where: pair },
     { table: "storage_ordered_records", keys: ["owner_id", "record_id"], where },
     { table: "storage_ordered_operations", keys: ["owner_id", "operation_id"], where },
     { table: "storage_ordered_touches", keys: ["owner_id", "record_id", "operation_id"], where },

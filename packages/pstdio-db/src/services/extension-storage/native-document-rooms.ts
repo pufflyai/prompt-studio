@@ -10,6 +10,7 @@ import {
   native_document_sources,
   owners as storageOwners,
 } from "../../db/schemas.pg";
+import { assertStorageOwnerAdmitted, storageOwnerAdmissionPending } from "../../db/storage-admission";
 import { createDocumentCache } from "./document-cache";
 import { NativeDocumentRoomError } from "./native-document-errors";
 import {
@@ -67,6 +68,7 @@ const append = async (
 export const createNativeDocumentRoomsDBService = (db: DbClient) => {
   const cache = createDocumentCache();
   const access = async <T>(input: RoomAddress, action: (document: Y.Doc) => Promise<T>) => {
+    assertStorageOwnerAdmitted(db, input.owner);
     let key = JSON.stringify([input.owner, input.roomId]);
     let loaded: Y.Doc | undefined;
     try {
@@ -151,6 +153,7 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
       writable?: boolean;
       generation?: string;
     }) {
+      assertStorageOwnerAdmitted(db, input.owner);
       const parsed = nativeTextTargetSchema.parse(input.target);
       const normalized = "fileRendererId" in parsed ? { ...parsed, resource: parsed.resource } : parsed;
       const target = input.writable === false ? null : normalized;
@@ -208,6 +211,7 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
     apply: (input: RoomAddress & { update: Uint8Array }) => apply(input, true),
     receive: (input: RoomAddress & { update: Uint8Array }) => apply(input, false),
     async remove(input: RoomAddress) {
+      assertStorageOwnerAdmitted(db, input.owner);
       const removed = await db.transaction(async (tx) => {
         const removed = await tx
           .delete(native_document_rooms)
@@ -220,6 +224,7 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
       return removed.length > 0;
     },
     async source(input: { owner: StorageOwner; documentKey: string }) {
+      assertStorageOwnerAdmitted(db, input.owner);
       const [row] = await db
         .select({ target: native_document_sources.target })
         .from(native_document_sources)
@@ -242,6 +247,7 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
           .orderBy(native_document_rooms.id)
           .limit(100);
         for (const { id, workbenchId, extensionId, documentKey } of rows) {
+          if (storageOwnerAdmissionPending(db, { workbenchId, extensionId })) continue;
           const generation = await roomGeneration(db, { workbenchId, extensionId }, id);
           yield {
             id,

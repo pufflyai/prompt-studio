@@ -13,16 +13,16 @@ import {
   recordTextBindingUpdate,
 } from "pstdio-sync/records";
 import { importTextSource } from "pstdio-sync/text";
-import type { DbClient } from "../../db/connection.pglite";
-import { storage_document_updates, storage_documents } from "../../db/schemas.pg";
-import { runDocumentTransaction } from "./document-persistence";
-import { nativeDocumentId, readNativeTextIn } from "./native-record-projection";
+import { runDocumentTransaction } from "../../services/extension-storage/document-persistence";
+import { nativeDocumentId, readNativeTextIn } from "../../services/extension-storage/native-record-projection";
+import { lockRecordOwner, saveRecordChanges } from "../../services/extension-storage/record-changes";
+import { readProjectedRecords } from "../../services/extension-storage/record-queries";
+import { resourceDocumentId } from "../../services/extension-storage/resource-document-persistence";
+import { storageOwnerKey } from "../../services/extension-storage/storage-owner-key";
+import type { DbClient } from "../connection.pglite";
+import { storage_document_updates, storage_documents } from "../schemas.pg";
 import { nativeSourceAddressIn } from "./native-source-address";
-import { lockRecordOwner, saveRecordChanges } from "./record-changes";
 import { queueRecordUpload } from "./record-outbox";
-import { readProjectedRecords } from "./record-queries";
-import { resourceDocumentId } from "./resource-document-persistence";
-import { storageOwnerKey } from "./storage-owner-key";
 
 type SourceInput = { recordId: string; documentKey: string; sourceKey?: string; field?: string; content?: string };
 type SourceRecord = Awaited<ReturnType<typeof readProjectedRecords>>[number];
