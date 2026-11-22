@@ -1,15 +1,23 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import type { CommandOutcome } from "@pstdio/sdk/extensions";
 import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
 
 /**
  * Commands of one extension share this allowance across every project, so opening more projects
- * or callers cannot multiply it. Work already running for the extension (nested commands, hooks)
- * runs inside that admission. A slot is released when the invocation settles or is cancelled.
+ * or callers cannot multiply it. A command's nested commands of the same extension share its slot;
+ * any other caller, including a hook, needs its own. A slot is released when the command settles or is cancelled.
  */
 export const MAX_CONCURRENT_INVOCATIONS_PER_EXTENSION = 256;
 const RETRY_AFTER_MS = 1000;
 
 const running = new Map<string, number>();
+// The extensions whose slot the current command holds. Being extension code is not proof of a slot.
+const held = new AsyncLocalStorage<ReadonlySet<string>>();
+
+export const holdsAdmission = (extensionId: string) => held.getStore()?.has(extensionId) === true;
+
+export const withAdmission = <T>(extensionId: string, run: () => T) =>
+  held.run(new Set([...(held.getStore() ?? []), extensionId]), run);
 
 export const admitInvocation = (extensionId: string) => {
   const count = running.get(extensionId) ?? 0;

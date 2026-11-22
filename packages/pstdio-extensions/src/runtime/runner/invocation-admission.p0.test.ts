@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { workspaceEvents } from "pstdio-api-contracts/extension-kernel";
 import { MAX_CONCURRENT_INVOCATIONS_PER_EXTENSION } from "./invocation-admission";
 import { makeRunner } from "./runner.test-fixture";
 
@@ -71,4 +72,39 @@ test("cancelling a command that ignores cancellation frees its slot", async () =
   expect(await execute()).toMatchObject({ code: "extension_overloaded" });
   for (const controller of controllers) controller.abort();
   expect(await Promise.race([execute(), Bun.sleep(20).then(() => "running")])).toBe("running");
+});
+
+test("a hook needs its own slot to start a command of its extension", async () => {
+  const release = Promise.withResolvers<void>();
+  const outcomes: unknown[] = [];
+  const runner = makeRunner({
+    commands: [
+      {
+        id: "wait",
+        ref: { kind: "command", id: "wait" },
+        title: "Wait",
+        run: () => release.promise.then(() => "done"),
+      },
+    ],
+    hooks: [
+      {
+        id: "on-ping",
+        ref: { kind: "hook", id: "on-ping" },
+        event: workspaceEvents.provision,
+        run: async (ctx) => {
+          outcomes.push(await ctx.commands.execute({ kind: "command", id: "wait" }, { params: {} }));
+        },
+      },
+    ],
+  });
+  const running = Array.from({ length: MAX_CONCURRENT_INVOCATIONS_PER_EXTENSION }, () =>
+    runner.execute({ commandId: "pstdio.lab.command.wait", projectId: "p1", source: "cli" }),
+  );
+  try {
+    await runner.dispatchEvent({ eventId: "workspace.provision", projectId: "p1" });
+    expect(outcomes).toMatchObject([{ code: "extension_overloaded" }]);
+  } finally {
+    release.resolve();
+    await Promise.all(running);
+  }
 });
