@@ -38,7 +38,7 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
   const showQuitFailure = async (error: unknown) => {
     deps.logError(error);
     deps.setState({ kind: "recovery", error: deps.recoveryError(error) });
-    await deps.showLifecycle();
+    await deps.showLifecycle().catch(deps.logError);
   };
 
   const runQuit = async (run: () => Promise<void>, waitingForConfirmation = false) => {
@@ -72,19 +72,23 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
       // to that confirmation without letting this older request clear its guard.
       if (quitting) quitting.active = false;
       const { instanceId, origin, ownerType } = runtime.descriptor;
-      deps.setState(
-        transitionDesktopState(
-          { kind: "workbench", runtime: { instanceId, origin, ownerType } },
-          { type: "quit_requested", activity: result.activity },
-        ),
+      const confirmation = transitionDesktopState(
+        { kind: "workbench", runtime: { instanceId, origin, ownerType } },
+        { type: "quit_requested", activity: result.activity },
       );
-      await deps.showQuitConfirmation(runtime.descriptor);
+      deps.setState(confirmation);
+      try {
+        await deps.showQuitConfirmation(runtime.descriptor);
+      } catch (error) {
+        deps.logError(error);
+        if (confirmation.kind === "confirming_active_work" && deps.getState() === confirmation) await requestQuit();
+      }
       return;
     }
     if (result.state !== "accepted") throw new Error("Runtime refused graceful shutdown");
 
     deps.setState({ kind: "closing" });
-    await deps.showLifecycle();
+    await deps.showLifecycle().catch(deps.logError);
     await deps.runtimeManager.waitForExit();
     await finishQuit();
   };
@@ -99,7 +103,7 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
     const state = deps.getState();
     if (state.kind !== "confirming_active_work") return;
     deps.setState(transitionDesktopState(state, { type: "quit_confirmed" }));
-    await deps.showLifecycle();
+    await deps.showLifecycle().catch(deps.logError);
     const result = await deps.runtimeManager.requestShutdown(true);
     if (result.state !== "accepted") throw new Error("Runtime refused graceful shutdown");
     await deps.runtimeManager.waitForExit();

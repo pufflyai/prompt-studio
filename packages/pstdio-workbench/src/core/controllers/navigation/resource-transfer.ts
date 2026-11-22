@@ -14,7 +14,8 @@ import {
 import { getOwnedPlacementPreparation } from "../../registries/placements/owned-placement-preparation";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { portablePagePanel } from "../page-runtime/portable-page-panel";
-import { resourceViewerBinding } from "../resource-viewers/displayed-viewers";
+import { resourceViewerBinding, viewerResourceKey } from "../resource-viewers/displayed-viewers";
+import { viewerTargetBinding } from "../resource-viewers/viewer-target-binding";
 
 export const retireTransferredSource = (
   core: WorkbenchCore,
@@ -78,7 +79,7 @@ export const retainTransferredPin = (
   target: NavigationTargetPage | NavigationTargetPanel,
   state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
 ) => {
-  if (!target.resource || matchingResourcePlacement(core, state, target.resource)?.value.tabRetention !== "persistent")
+  if (!target.resource || matchingResourcePlacement(core, state, target)?.value.tabRetention !== "persistent")
     return target;
   if (target.kind === "page") {
     const page = Object.values(state.pages).find(
@@ -97,17 +98,18 @@ export const retainTransferredPin = (
 export const matchingResourcePlacement = (
   core: WorkbenchCore,
   state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
-  resource: NonNullable<WorkbenchWidgetPlacement["resource"]>,
+  target: NavigationTargetPage | NavigationTargetPanel,
   identities?: readonly PlacementIdentity[],
 ) => {
+  if (!target.resource) return undefined;
   const allowed = identities && new Set(identities.map(placementIdentityKey));
-  const key = core.pages.resourceReferenceKey(resource);
+  const key = core.pages.resourceReferenceKey(target.resource, viewerTargetBinding(core, target, state));
   return state.placements.find(
     (placement) =>
       (!allowed || allowed.has(placementIdentityKey(placement.identity))) &&
       placement.value.resource &&
       resourceViewerBinding(core, placement.identity)?.kind === "binding" &&
-      core.pages.resourceReferenceKey(placement.value.resource) === key,
+      viewerResourceKey(core, placement.value.resource, placement.identity) === key,
   );
 };
 
@@ -122,10 +124,7 @@ export const panelTransferLocation = (
   const source =
     departing ??
     (target.resource &&
-      (
-        matchingResourcePlacement(core, current, target.resource) ??
-        matchingResourcePlacement(core, original, target.resource)
-      )?.value);
+      (matchingResourcePlacement(core, current, target) ?? matchingResourcePlacement(core, original, target))?.value);
   if (!source) return requested;
   const ref = target.panel;
   let item: WorkbenchOwnedPlacementItem | undefined;
@@ -169,17 +168,17 @@ export const prepareResourceTransfer = (
       (entry) => placementIdentityKey(entry.identity) === placementIdentityKey(input.replacement!.placementIdentity!),
     ) ?? { identity: input.replacement.placementIdentity, value: input.replacement });
   const found = target.resource
-    ? (matchingResourcePlacement(core, input.before, target.resource) ??
-      matchingResourcePlacement(core, input.original, target.resource))
+    ? (matchingResourcePlacement(core, input.before, target) ?? matchingResourcePlacement(core, input.original, target))
     : (matchingStaticPagePlacement(core, input.before, target) ??
       matchingStaticPagePlacement(core, input.original, target));
   const sameResource =
     target.resource &&
     replacement?.value.resource &&
-    core.pages.resourceReferenceKey(target.resource) === core.pages.resourceReferenceKey(replacement.value.resource);
+    core.pages.resourceReferenceKey(target.resource, viewerTargetBinding(core, target, page)) ===
+      viewerResourceKey(core, replacement.value.resource, replacement.identity);
   const source = sameResource ? replacement : (found ?? replacement);
   const destination = target.resource
-    ? matchingResourcePlacement(core, page, target.resource, activations)
+    ? matchingResourcePlacement(core, page, target, activations)
     : page.placements.find(
         (entry) => keys.has(placementIdentityKey(entry.identity)) && entry.value.viewId === source?.value.viewId,
       );

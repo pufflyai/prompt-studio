@@ -162,7 +162,7 @@ export interface WorkbenchPageRegistry<Value> {
   registerPage(page: WorkbenchPageContribution): { dispose(): void };
   getPage(pageId: string): WorkbenchPageContribution | undefined;
   listPages(): WorkbenchPageContribution[];
-  resourceReferenceKey(resource: ResourceRef): string;
+  resourceReferenceKey(resource: ResourceRef, context?: ResourceConstraint): string;
   refreshResource(resource: ResourceRef): void;
   refreshPlacement(identity: PlacementIdentity, reference: { resource: ResourceRef } & ViewLocation): void;
   pinPlacement(identity: PlacementIdentity, open?: PageOpenIntent): void;
