@@ -174,18 +174,15 @@ test("interrupted number admission preserves its source and resumes after a comm
     expect((await connection.pglite.query("SELECT count(*)::int AS count FROM storage_current_records")).rows).toEqual([
       { count: 100 },
     ]);
-    const operations = (
-      await connection.pglite.query("SELECT operation_id FROM storage_ordered_operations ORDER BY operation_id")
-    ).rows;
+    const operations = (await connection.pglite.query("SELECT operation_id FROM operations ORDER BY operation_id"))
+      .rows;
     await documents.flushStatistics();
     await connection.close();
     connection = await createDb({ path });
     expect((await connection.pglite.query("SELECT count(*)::int AS count FROM storage_current_records")).rows).toEqual([
       { count: 201 },
     ]);
-    const saved = (
-      await connection.pglite.query("SELECT operation_id FROM storage_ordered_operations ORDER BY operation_id")
-    ).rows;
+    const saved = (await connection.pglite.query("SELECT operation_id FROM operations ORDER BY operation_id")).rows;
     expect(saved).toHaveLength(3);
     expect(saved).toEqual(expect.arrayContaining(operations));
     expect((await connection.pglite.query("SELECT key FROM documents WHERE key='resource-identities'")).rows).toEqual(

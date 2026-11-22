@@ -86,19 +86,14 @@ test("migration retains complete owner history, immutable bytes, sequence positi
       .update(s.owners)
       .set({ epoch: "epoch", after: 42, joined: true, pending_bytes: 10, receipt_root: bytes })
       .where(eq(s.owners.id, orderedOwner.owner_id));
-    await db
-      .insert(s.storage_ordered_operations)
-      .values({ ...orderedOwner, operation_id: "save", fingerprint: "immutable", local_sequence: 19, envelope: bytes });
-    await db
-      .insert(s.storage_ordered_touches)
-      .values({ ...orderedOwner, operation_id: "save", record_id: "note", local_sequence: 19 });
-    await db.insert(s.storage_ordered_receipts).values({
+    await db.insert(s.storage_ordered_operations).values({
       ...orderedOwner,
       operation_id: "save",
-      epoch: "epoch",
-      admission_fingerprint: "receipt",
-      state: "accepted",
-      indexed: true,
+      fingerprint: "immutable",
+      local_sequence: 19,
+      envelope: bytes,
+      touches: ["note"],
+      receipt: { epoch: { admissionFingerprint: "receipt", state: "accepted", indexed: true } },
     });
     const settings = createExtensionSettingsDBService(db);
     await settings.setValue({
@@ -130,9 +125,10 @@ test("migration retains complete owner history, immutable bytes, sequence positi
       local_sequence: 19,
       envelope: bytes,
     });
-    expect((await db.select().from(s.storage_ordered_receipts))[0]).toMatchObject({
+    expect((await db.select().from(s.storage_ordered_operations))[0]).toMatchObject({
       owner_id: orderedOwner.owner_id,
-      indexed: true,
+      touches: ["note"],
+      receipt: { epoch: { admissionFingerprint: "receipt", state: "accepted", indexed: true } },
     });
     expect((await db.select().from(s.owners))[0]).toMatchObject({
       id: orderedOwner.owner_id,

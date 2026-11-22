@@ -10,11 +10,7 @@ import {
 } from "pstdio-sync/records";
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import {
-  storage_ordered_operations as operations,
-  storage_ordered_receipts as receipts,
-  storage_ordered_touches as touches,
-} from "../../db/schemas.pg";
+import { storage_ordered_operations as operations } from "../../db/schemas.pg";
 import {
   createOrderedAuthorship,
   orderedLocalOperation as local,
@@ -25,6 +21,7 @@ import { createOrderedDependencyCache } from "./ordered-dependency-cache";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
 import { fenceOrderedNativeText, forgetOrderedTextGeneration } from "./ordered-native-recovery";
 import { ensureOrderedOwner } from "./ordered-owner";
+import { operationReceipt, operationReceiptsIndexed } from "./ordered-receipt-values";
 import { createOrderedReceiptCache } from "./ordered-receipts-cache";
 import {
   decodeOrderedJson as decode,
@@ -64,7 +61,6 @@ const queueOrderedOperation = async (
   requestFingerprint: string,
   operation: (id: string) => Promise<typeof operations.$inferSelect | undefined>,
 ) => {
-  const address = orderedAddress(owner);
   input = await verifyOrderedOperation(input);
   if (isOrderedNativeRequest(requestFingerprint)) {
     validateOrderedNativeOperation(input);
@@ -74,11 +70,12 @@ const queueOrderedOperation = async (
   const [saved] = await tx
     .insert(operations)
     .values({
-      ...address,
+      ...orderedAddress(owner),
       operation_id: input.operationId,
       fingerprint: input.fingerprint,
       envelope: encode(input),
       request_fingerprint: requestFingerprint,
+      touches: [...new Set(input.edits.map((edit) => edit.recordId))],
     })
     .onConflictDoUpdate({
       target: [operations.owner_id, operations.operation_id],
@@ -88,6 +85,7 @@ const queueOrderedOperation = async (
         envelope: sql`excluded.envelope`,
         request_fingerprint: sql`excluded.request_fingerprint`,
         local_sequence: sql`excluded.local_sequence`,
+        touches: sql`excluded.touches`,
       },
       setWhere: and(
         eq(operations.fingerprint, input.fingerprint),
@@ -101,24 +99,11 @@ const queueOrderedOperation = async (
     if (row.fingerprint !== input.fingerprint) throw identityError();
     return retryOrderedLocalOperation(row, input, requestFingerprint);
   }
-  for (let offset = 0; offset < input.edits.length; offset += 1_000)
-    await tx
-      .insert(touches)
-      .values(
-        input.edits.slice(offset, offset + 1_000).map((edit) => ({
-          ...address,
-          operation_id: input.operationId,
-          record_id: edit.recordId,
-          local_sequence: saved!.local_sequence,
-        })),
-      )
-      .onConflictDoNothing();
   return local(saved!)!;
 };
 
 /** All calls run inside the same project/owner lock as their projection and relay cursor. */
 export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
-  const address = orderedAddress(owner);
   const operationWhere = (id: string) => and(ownerWhere(operations, owner), eq(operations.operation_id, id));
   const operation = async (id: string) => {
     const [row] = await tx.select().from(operations).where(operationWhere(id));
@@ -134,22 +119,8 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
     if (row) held.set(key, row);
     return row;
   };
-  const readDecision = async (id: string, epoch: string) => {
-    const [row] = await tx
-      .select({
-        operationId: receipts.operation_id,
-        epoch: receipts.epoch,
-        state: receipts.state,
-        fingerprint: operations.fingerprint,
-      })
-      .from(receipts)
-      .innerJoin(
-        operations,
-        and(eq(operations.owner_id, receipts.owner_id), eq(operations.operation_id, receipts.operation_id)),
-      )
-      .where(and(ownerWhere(receipts, owner), eq(receipts.operation_id, id), eq(receipts.epoch, epoch)));
-    return row;
-  };
+  const readDecision = async (id: string, epoch: string) =>
+    (await createOrderedReceiptCache(tx, owner).cachedReceipt(id, epoch))?.decision;
   const pendingWhere = () =>
     and(ownerWhere(operations, owner), isNotNull(operations.envelope), isNull(operations.settled_epoch));
   const dependencies = createOrderedDependencyCache(tx, owner, cachedDecision);
@@ -182,18 +153,13 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
       const limit = options.limit ?? 100;
       let selected = new Map<string, number>();
       for (let offset = 0; offset < recordIds.length; offset += 1_000) {
-        // Seek each record's membership index before deduplicating groups. Read payloads only
-        // after the global page is known, so a group touching many records is never copied per join row.
+        // The partial GIN index probes memberships without copying pending envelopes.
         const result = await tx.execute(sql`
-          SELECT DISTINCT picked.operation_id, picked.local_sequence
-          FROM jsonb_array_elements_text(${JSON.stringify(recordIds.slice(offset, offset + 1_000))}::jsonb) requested(record_id)
-          CROSS JOIN LATERAL (
-            SELECT membership.operation_id, membership.local_sequence FROM storage_ordered_touches membership
-            WHERE membership.owner_id = ${storageOwnerKey(owner)}
-              AND membership.record_id = requested.record_id AND membership.local_sequence > ${options.after ?? 0}
-            ORDER BY membership.local_sequence LIMIT ${limit}
-          ) picked ORDER BY picked.local_sequence LIMIT ${limit}
-        `);
+          SELECT operation_id,local_sequence FROM operations
+          WHERE owner_id=${storageOwnerKey(owner)} AND envelope IS NOT NULL AND settled_epoch IS NULL
+            AND touches && ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(recordIds.slice(offset, offset + 1_000))}::jsonb))
+            AND local_sequence>${options.after ?? 0}
+          ORDER BY local_sequence LIMIT ${limit}`);
         for (const row of result.rows as { operation_id: string; local_sequence: number | string }[])
           selected.set(row.operation_id, Number(row.local_sequence));
         selected = new Map([...selected].sort((a, b) => a[1] - b[1]).slice(0, limit));
@@ -243,31 +209,29 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
       if (isOrderedNativeRequest(row.request_fingerprint)) throw identityError();
       if (row.admission_epoch === decision.epoch && row.admission_fingerprint !== admissionFingerprint)
         throw new Error("The decision does not match the admitted identity");
-      const [retained] = await tx
-        .insert(receipts)
-        .values({
-          ...address,
-          epoch: decision.epoch,
-          operation_id: decision.operationId,
-          state: decision.state,
-          admission_fingerprint: admissionFingerprint,
-          indexed: options.indexed ?? false,
-        })
-        .onConflictDoUpdate({
-          target: [receipts.owner_id, receipts.epoch, receipts.operation_id],
-          // Return the retained decision without replacing its immutable contents.
-          set: { indexed: options.indexed ? true : receipts.indexed },
-        })
-        .returning({ state: receipts.state, admissionFingerprint: receipts.admission_fingerprint });
-      if (retained!.state !== decision.state || retained!.admissionFingerprint !== admissionFingerprint)
+      const retained = operationReceipt(row.receipt, decision.epoch);
+      if (retained && (retained.state !== decision.state || retained.admissionFingerprint !== admissionFingerprint))
         throw new Error("An ordered decision is immutable");
+      const receipt = Object.fromEntries([
+        ...Object.entries(row.receipt),
+        [
+          decision.epoch,
+          { state: decision.state, admissionFingerprint, indexed: !!retained?.indexed || !!options.indexed },
+        ],
+      ]);
+      await tx
+        .update(operations)
+        .set({ receipt, receipt_epoch: decision.epoch, receipt_indexed: operationReceiptsIndexed(receipt) })
+        .where(operationWhere(decision.operationId));
       await dependencies.remember(decision);
       // Historical decisions remain queryable but never settle a wrapper admitted in another epoch.
       if (row.envelope && row.admission_epoch === decision.epoch && !row.settled_epoch) {
         if (decision.state === "refused")
           await fenceOrderedNativeText(tx, owner, decode<OrderedOperation>(row.envelope));
-        await tx.update(operations).set({ settled_epoch: decision.epoch }).where(operationWhere(decision.operationId));
-        await tx.delete(touches).where(and(ownerWhere(touches, owner), eq(touches.operation_id, decision.operationId)));
+        await tx
+          .update(operations)
+          .set({ settled_epoch: decision.epoch, touches: [] })
+          .where(operationWhere(decision.operationId));
         await forgetOrderedTextGeneration(tx, owner, decision.operationId);
       }
     },
@@ -293,8 +257,10 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
       if (!known || known.fingerprint !== decision.fingerprint || known.state !== decision.state)
         throw new Error("Settlement requires the exact saved receipt");
       if (decision.state === "refused") await fenceOrderedNativeText(tx, owner, decode<OrderedOperation>(row.envelope));
-      await tx.update(operations).set({ settled_epoch: decision.epoch }).where(operationWhere(decision.operationId));
-      await tx.delete(touches).where(and(ownerWhere(touches, owner), eq(touches.operation_id, decision.operationId)));
+      await tx
+        .update(operations)
+        .set({ settled_epoch: decision.epoch, touches: [] })
+        .where(operationWhere(decision.operationId));
       await forgetOrderedTextGeneration(tx, owner, decision.operationId);
     },
     ...createOrderedCanonical(tx, owner),

@@ -1,7 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { OrderedAdmission, OrderedOperation } from "pstdio-sync/records";
-import { storage_ordered_operations as operations, storage_ordered_receipts as receipts } from "../../db/schemas.pg";
+import { storage_ordered_operations as operations } from "../../db/schemas.pg";
+import { operationReceipt } from "./ordered-receipt-values";
 import { decodeOrderedJson as decode, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 
 export const orderedLocalOperation = (row: typeof operations.$inferSelect) =>
@@ -31,11 +32,8 @@ export const createOrderedAuthorship = (
   },
 
   async isIndexed(id: string, epoch: string) {
-    const [row] = await tx
-      .select({ indexed: receipts.indexed })
-      .from(receipts)
-      .where(and(orderedOwnerWhere(receipts, owner), eq(receipts.operation_id, id), eq(receipts.epoch, epoch)));
-    return row?.indexed ?? false;
+    const row = await operation(id);
+    return row ? (operationReceipt(row.receipt, epoch)?.indexed ?? false) : false;
   },
   async requestIdentity(id: string) {
     return (await operation(id))?.request_fingerprint ?? undefined;

@@ -154,7 +154,7 @@ test(
           expect(saved).toEqual([{ value: { title: "kept" }, joined: true, epoch: null }]);
           const pending = (
             await inspect.query(`SELECT encode(envelope,'hex') AS bytes,operation_id,local_sequence
-            FROM storage_ordered_operations WHERE envelope IS NOT NULL ORDER BY local_sequence`)
+            FROM operations WHERE envelope IS NOT NULL ORDER BY local_sequence`)
           ).rows;
           expect(pending).toHaveLength(1);
           if (open === 0) expected = pending;

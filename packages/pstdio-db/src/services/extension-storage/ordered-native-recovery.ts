@@ -9,7 +9,6 @@ import {
   storage_ordered_records as canonical,
   storage_current_records as current,
   storage_ordered_operations as operations,
-  storage_ordered_touches as touches,
 } from "../../db/schemas.pg";
 import { loadFileDocument } from "./document-file-persistence";
 import { documentFilesFor } from "./document-files";
@@ -119,14 +118,10 @@ async function* pendingText(tx: OrderedTransaction, owner: StorageOwner, recordI
     const rows = await tx
       .select({ envelope: operations.envelope, sequence: operations.local_sequence })
       .from(operations)
-      .innerJoin(
-        touches,
-        and(eq(touches.owner_id, operations.owner_id), eq(touches.operation_id, operations.operation_id)),
-      )
       .where(
         and(
           orderedOwnerWhere(operations, owner),
-          eq(touches.record_id, recordId),
+          sql`${operations.touches} @> ARRAY[${recordId}]::text[]`,
           isNotNull(operations.envelope),
           isNull(operations.settled_epoch),
           gt(operations.local_sequence, after),

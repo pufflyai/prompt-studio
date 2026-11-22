@@ -35,8 +35,7 @@ test("a restored old pending frontier cannot reuse a known raw-frame identity wi
   await a.sync.synchronize();
   await second.db.transaction(async (tx) => {
     await tx.execute(sql`DELETE FROM storage_ordered_records`);
-    await tx.execute(sql`DELETE FROM storage_ordered_operations`);
-    await tx.execute(sql`DELETE FROM storage_ordered_receipts`);
+    await tx.execute(sql`DELETE FROM operations`);
     await tx.delete(owners);
     await tx.delete(current);
     await tx.delete(documents);

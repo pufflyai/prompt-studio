@@ -11,7 +11,7 @@ export const readOrderedPending = async (db: Pick<OrderedTransaction, "select">,
   const [row] = await db
     .select({
       pending: sql<boolean>`
-    EXISTS (SELECT 1 FROM storage_ordered_operations p
+    EXISTS (SELECT 1 FROM operations p
       WHERE p.owner_id = ${storageOwnerKey(owner)}
       AND p.envelope IS NOT NULL AND p.settled_epoch IS NULL)
     OR (

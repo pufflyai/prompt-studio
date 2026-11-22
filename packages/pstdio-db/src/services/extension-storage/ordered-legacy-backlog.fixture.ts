@@ -160,7 +160,7 @@ if (import.meta.main) {
           firstVersion: row.rows[0]!.version,
           counts: (
             await connection.db.execute(
-              sql`SELECT (SELECT count(*) FROM storage_ordered_records) AS records, (SELECT count(*) FROM storage_ordered_operations) AS operations, (SELECT count(*) FROM storage_record_outbox) AS legacy, (SELECT count(*) FROM projects) AS projects, (SELECT count(*) FROM storage_current_records) AS projected, (SELECT count(*) FROM storage_current_records WHERE deleted) AS tombstones`,
+              sql`SELECT (SELECT count(*) FROM storage_ordered_records) AS records, (SELECT count(*) FROM operations) AS operations, (SELECT count(*) FROM storage_record_outbox) AS legacy, (SELECT count(*) FROM projects) AS projects, (SELECT count(*) FROM storage_current_records) AS projected, (SELECT count(*) FROM storage_current_records WHERE deleted) AS tombstones`,
             )
           ).rows[0],
         }),

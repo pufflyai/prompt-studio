@@ -6,6 +6,7 @@ import { migrate } from "drizzle-orm/pglite/migrator";
 import { createDb } from "./connection.pglite";
 import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
 import { prepareOrderedOwnerUpgrade } from "./ordered-owner-upgrade";
+import { releasedOperationQuery } from "./released-operation-rows.fixture";
 
 const tables = [
   "storage_ordered_owners",
@@ -41,6 +42,9 @@ for (const interruption of ["normal", "schema", "restore"])
         INSERT INTO storage_ordered_receipts SELECT workbench_id,extension_id,'earlier',operation_id,
           admission_fingerprint,CASE WHEN delivered THEN 'accepted' ELSE 'refused' END,delivered
           FROM storage_ordered_operations;
+        INSERT INTO storage_ordered_receipts SELECT workbench_id,extension_id,'other-epoch',operation_id,
+          'other-admission',CASE WHEN delivered THEN 'refused' ELSE 'accepted' END,NOT delivered
+          FROM storage_ordered_operations;
         SELECT setval('storage_ordered_operations_local_sequence_seq',9001,true)`);
       const original: Record<string, unknown[]> = {};
       for (const table of tables)
@@ -57,18 +61,17 @@ for (const interruption of ["normal", "schema", "restore"])
         if (interruption === "restore") {
           await old.pglite.exec(`CREATE FUNCTION stop_ordered_restore() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN IF NEW.operation_id='operation-99' THEN RAISE EXCEPTION 'stop restoration'; END IF; RETURN NEW; END $$;
-            CREATE TRIGGER stop_ordered_restore BEFORE INSERT ON storage_ordered_operations FOR EACH ROW
+            CREATE TRIGGER stop_ordered_restore BEFORE INSERT ON operations FOR EACH ROW
               EXECUTE FUNCTION stop_ordered_restore()`);
           await expect(finish!()).rejects.toThrow("Failed query");
           expect(
-            (await old.pglite.query<{ count: number }>("SELECT count(*)::int AS count FROM storage_ordered_operations"))
-              .rows[0]!.count,
+            (await old.pglite.query<{ count: number }>("SELECT count(*)::int AS count FROM operations")).rows[0]!.count,
           ).toBe(200);
           for (const table of tables) {
             const lines = (await readFile(`${old.path}-${table}-owners-upgrade.jsonl`, "utf8")).trim().split("\n");
             expect(lines).toHaveLength(original[table]!.length);
           }
-          await old.pglite.exec("DROP TRIGGER stop_ordered_restore ON storage_ordered_operations");
+          await old.pglite.exec("DROP TRIGGER stop_ordered_restore ON operations");
         }
       }
       await old.close();
@@ -83,22 +86,16 @@ for (const interruption of ["normal", "schema", "restore"])
                 'pending_bytes',pending_bytes,'state_bytes',state_bytes,'skipped',skipped,'receipt_root',receipt_root) AS row
               FROM owners WHERE extension_id IN ('example.records','example.other')
               ORDER BY project_id,extension_id`
-              : `SELECT (to_jsonb(t)-'owner_id') ||
-                jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id) AS row
-              FROM ${table} t JOIN owners o ON t.owner_id=o.id
-              ORDER BY o.project_id,o.extension_id,((to_jsonb(t)-'owner_id') ||
-                jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id))::text`;
+              : `SELECT row FROM (${releasedOperationQuery(table)}) released
+                ORDER BY row->>'workbench_id',row->>'extension_id',row::text`;
           const rows = (await current!.pglite.query<{ row: unknown }>(query)).rows;
           expect(rows.map((row) => row.row)).toEqual(original[table]);
         }
       };
       await verify();
       expect(
-        (
-          await current.pglite.query<{ last_value: number }>(
-            "SELECT last_value FROM storage_ordered_operations_local_sequence_seq",
-          )
-        ).rows[0]!.last_value,
+        (await current.pglite.query<{ last_value: number }>("SELECT last_value FROM operations_local_sequence_seq"))
+          .rows[0]!.last_value,
       ).toBe(9001);
       for (const table of tables) {
         expect(await Bun.file(`${old.path}-${table}-owners-upgrade.jsonl`).exists()).toBe(false);

@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { bigint, bigserial, boolean, foreignKey, index, integer, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { bigserial, boolean, foreignKey, index, integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import { owners } from "./owners";
 import { bytea } from "./types";
 
@@ -25,9 +25,17 @@ export const storage_ordered_records = pgTable(
   ],
 );
 
-/** Global identity binding and this device's immutable local envelope, when it authored one. */
-export const storage_ordered_operations = pgTable(
-  "storage_ordered_operations",
+export interface OperationReceipt {
+  state: "accepted" | "refused";
+  admissionFingerprint: string;
+  indexed: boolean;
+}
+export type OperationReceipts = Record<string, OperationReceipt>;
+
+/** Immutable authored identity, pending membership and exact per-epoch decision cache.
+ * Receipt collection must preserve rooted retry facts; pending envelopes never expire. */
+export const operations = pgTable(
+  "operations",
   {
     ...owner(),
     operation_id: text("operation_id").notNull(),
@@ -35,67 +43,31 @@ export const storage_ordered_operations = pgTable(
     local_sequence: bigserial("local_sequence", { mode: "number" }).notNull(),
     request_fingerprint: text("request_fingerprint"),
     envelope: bytea("envelope"),
-    // A new epoch changes delivery coordinates, never the authored envelope or its conditions.
     admission_epoch: text("admission_epoch"),
     admission: bytea("admission"),
     admission_fingerprint: text("admission_fingerprint"),
     delivered: boolean("delivered").notNull().default(false),
     settled_epoch: text("settled_epoch"),
+    touches: text("touches").array().notNull().default([]),
+    /** Last selected foreign dependency epoch; historical receipts remain independently immutable. */
+    receipt_epoch: text("receipt_epoch"),
+    receipt: jsonb("receipt").$type<OperationReceipts>().notNull().default({}),
+    /** All cached receipt facts are covered by the owner's encrypted receipt index. */
+    receipt_indexed: boolean("receipt_indexed").notNull().default(true),
   },
   (table) => [
     primaryKey({ columns: [table.owner_id, table.operation_id] }),
-    index("storage_ordered_operations_pending_idx")
+    index("operations_pending_idx")
       .on(table.owner_id, table.local_sequence)
       .where(sql`${table.envelope} IS NOT NULL AND ${table.settled_epoch} IS NULL`),
-    foreignKey({
-      columns: [table.owner_id],
-      foreignColumns: [owners.id],
-    }).onDelete("cascade"),
+    index("operations_touches_pending_idx")
+      .using("gin", table.touches)
+      .where(sql`${table.envelope} IS NOT NULL AND ${table.settled_epoch} IS NULL`),
+    index("operations_unindexed_idx")
+      .on(table.owner_id, table.operation_id)
+      .where(sql`${table.receipt_indexed} = false`),
+    foreignKey({ columns: [table.owner_id], foreignColumns: [owners.id] }).onDelete("cascade"),
   ],
 );
-
-/** Indexed membership of unresolved local groups; rebasing one record never scans every pending save. */
-export const storage_ordered_touches = pgTable(
-  "storage_ordered_touches",
-  {
-    ...owner(),
-    record_id: text("record_id").notNull(),
-    operation_id: text("operation_id").notNull(),
-    local_sequence: bigint("local_sequence", { mode: "number" }).notNull(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.owner_id, table.record_id, table.operation_id] }),
-    index("storage_ordered_touches_operation_idx").on(table.owner_id, table.operation_id),
-    index("storage_ordered_touches_record_sequence_idx").on(table.owner_id, table.record_id, table.local_sequence),
-    foreignKey({
-      columns: [table.owner_id, table.operation_id],
-      foreignColumns: [storage_ordered_operations.owner_id, storage_ordered_operations.operation_id],
-    }).onDelete("cascade"),
-  ],
-);
-
-/** Exact cached decisions; a cache miss still needs the rooted encrypted receipt index. */
-export const storage_ordered_receipts = pgTable(
-  "storage_ordered_receipts",
-  {
-    ...owner(),
-    epoch: text("epoch").notNull(),
-    operation_id: text("operation_id").notNull(),
-    admission_fingerprint: text("admission_fingerprint").notNull(),
-    state: text("state").$type<"accepted" | "refused">().notNull(),
-    /** This exact receipt is included in the owner's retained encrypted root. */
-    indexed: boolean("indexed").notNull().default(false),
-  },
-  (table) => [
-    primaryKey({ columns: [table.owner_id, table.epoch, table.operation_id] }),
-    // Deleting an operation cascades here; without this index each delete scans the owner's receipts.
-    index("storage_ordered_receipts_operation_idx").on(table.owner_id, table.operation_id),
-    index("storage_ordered_receipts_unindexed_idx")
-      .on(table.owner_id, table.epoch, table.operation_id)
-      .where(sql`${table.indexed} = false`),
-    foreignKey({
-      columns: [table.owner_id, table.operation_id],
-      foreignColumns: [storage_ordered_operations.owner_id, storage_ordered_operations.operation_id],
-    }).onDelete("cascade"),
-  ],
-);
+// Keep the internal adapter name while the physical schema has one operations table.
+export { operations as storage_ordered_operations };

@@ -5,8 +5,7 @@ type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 // Text files have independent histories. Any other owner state needs explicit conflict resolution.
 const otherStorage = [
   "storage_ordered_records",
-  "storage_ordered_operations",
-  "storage_ordered_receipts",
+  "operations",
   "file_projections",
   "log_streams",
   "history_rows",

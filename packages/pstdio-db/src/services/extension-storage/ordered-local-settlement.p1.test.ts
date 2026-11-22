@@ -7,12 +7,7 @@ import { createSyncSpace } from "pstdio-sync/encryption";
 import { createRecordStreamSync } from "pstdio-sync/relay";
 import * as Y from "yjs";
 import { createDb } from "../../db/connection.pglite";
-import {
-  projects,
-  storage_ordered_operations,
-  storage_ordered_touches,
-  owners as streamOwners,
-} from "../../db/schemas.pg";
+import { projects, storage_ordered_operations, owners as streamOwners } from "../../db/schemas.pg";
 import { readNativeRoomHistory } from "./document-history.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createAssets, createRelay } from "./record-stream-relay.fixture";
@@ -157,7 +152,7 @@ test("never-joined saves settle immediately without retaining envelopes; exact r
   expect(
     await first.db.select().from(storage_ordered_operations).where(isNotNull(storage_ordered_operations.envelope)),
   ).toEqual([]);
-  expect(await first.db.select().from(storage_ordered_touches)).toEqual([]);
+  expect((await first.db.select().from(storage_ordered_operations)).flatMap((row) => row.touches)).toEqual([]);
   expect(await first.records.commit(initial)).toMatchObject({ state: "saved-locally" });
   await expect(
     first.records.commit({ ...initial, edits: [{ recordId: "card", replace: { count: -1 } }] }),

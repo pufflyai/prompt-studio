@@ -13,7 +13,7 @@ import {
 } from "pstdio-sync/records";
 import { canonicalJson, type Json } from "pstdio-sync-contracts";
 import { documents } from "../../db/schemas/documents";
-import { storage_ordered_operations as operations, storage_ordered_touches as touches } from "../../db/schemas.pg";
+import { storage_ordered_operations as operations } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
 import { readOrderedMarker, saveOrderedMarker } from "./ordered-native-metadata";
@@ -246,9 +246,8 @@ export const dropPending = async (tx: OrderedTransaction, owner: StorageOwner, i
     const page = ids.slice(offset, offset + 1_000);
     await tx
       .update(operations)
-      .set({ envelope: null, admission: null, admission_epoch: null, admission_fingerprint: null })
+      .set({ envelope: null, admission: null, admission_epoch: null, admission_fingerprint: null, touches: [] })
       .where(and(orderedOwnerWhere(operations, owner), inArray(operations.operation_id, page)));
-    await tx.delete(touches).where(and(orderedOwnerWhere(touches, owner), inArray(touches.operation_id, page)));
   }
 };
 
@@ -296,12 +295,8 @@ const foldScope = async (journal: OrderedJournal, tx: OrderedTransaction, owner:
 
 const unfoldedRecords = async (tx: Pick<OrderedTransaction, "selectDistinct">, owner: StorageOwner) => {
   const rows = await tx
-    .selectDistinct({ recordId: touches.record_id })
-    .from(touches)
-    .innerJoin(
-      operations,
-      and(eq(operations.owner_id, touches.owner_id), eq(operations.operation_id, touches.operation_id)),
-    )
+    .selectDistinct({ recordId: sql<string>`unnest(${operations.touches})` })
+    .from(operations)
     .where(and(pendingWhere(owner), eq(operations.delivered, false), unfolded));
   return rows.map((row) => row.recordId);
 };

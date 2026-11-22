@@ -1,5 +1,5 @@
 {
-  "id": "9f1b41b2-edc6-4705-8a12-f7c2d5b15fbd",
+  "id": "fe9fb79d-48d5-42ec-b12f-a0b259cfd25f",
   "prevId": "7831c13a-76db-4e65-a402-222b04fffc09",
   "version": "7",
   "dialect": "postgresql",
@@ -1248,6 +1248,148 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.file_projections": {
+      "name": "file_projections",
+      "schema": "",
+      "columns": {
+        "owner_id": {
+          "name": "owner_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "root": {
+          "name": "root",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "path": {
+          "name": "path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "baseline_sha256": {
+          "name": "baseline_sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "baseline_bytes": {
+          "name": "baseline_bytes",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pending_sha256": {
+          "name": "pending_sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pending_bytes": {
+          "name": "pending_bytes",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completed_revision": {
+          "name": "completed_revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "file_projections_document": {
+          "name": "file_projections_document",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "document_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "file_projections_native_pending": {
+          "name": "file_projections_native_pending",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "path",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"file_projections\".\"root\"='[\"native\",\"handler\"]'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "file_projections_owner_id_owners_id_fk": {
+          "name": "file_projections_owner_id_owners_id_fk",
+          "tableFrom": "file_projections",
+          "tableTo": "owners",
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "file_projections_owner_id_document_id_documents_owner_id_id_fk": {
+          "name": "file_projections_owner_id_document_id_documents_owner_id_id_fk",
+          "tableFrom": "file_projections",
+          "tableTo": "documents",
+          "columnsFrom": ["owner_id", "document_id"],
+          "columnsTo": ["owner_id", "id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "file_projections_owner_id_root_path_pk": {
+          "name": "file_projections_owner_id_root_path_pk",
+          "columns": ["owner_id", "root", "path"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.files": {
       "name": "files",
       "schema": "",
@@ -1394,148 +1536,6 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.file_projections": {
-      "name": "file_projections",
-      "schema": "",
-      "columns": {
-        "owner_id": {
-          "name": "owner_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "root": {
-          "name": "root",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "path": {
-          "name": "path",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "document_id": {
-          "name": "document_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "state": {
-          "name": "state",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "baseline_sha256": {
-          "name": "baseline_sha256",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "baseline_bytes": {
-          "name": "baseline_bytes",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "pending_sha256": {
-          "name": "pending_sha256",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "pending_bytes": {
-          "name": "pending_bytes",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "completed_revision": {
-          "name": "completed_revision",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        }
-      },
-      "indexes": {
-        "file_projections_document": {
-          "name": "file_projections_document",
-          "columns": [
-            {
-              "expression": "owner_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "document_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "file_projections_native_pending": {
-          "name": "file_projections_native_pending",
-          "columns": [
-            {
-              "expression": "owner_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "path",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"file_projections\".\"root\"='[\"native\",\"handler\"]'",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "file_projections_owner_id_owners_id_fk": {
-          "name": "file_projections_owner_id_owners_id_fk",
-          "tableFrom": "file_projections",
-          "tableTo": "owners",
-          "columnsFrom": ["owner_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "file_projections_owner_id_document_id_documents_owner_id_id_fk": {
-          "name": "file_projections_owner_id_document_id_documents_owner_id_id_fk",
-          "tableFrom": "file_projections",
-          "tableTo": "documents",
-          "columnsFrom": ["owner_id", "document_id"],
-          "columnsTo": ["owner_id", "id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "file_projections_owner_id_root_path_pk": {
-          "name": "file_projections_owner_id_root_path_pk",
-          "columns": ["owner_id", "root", "path"]
-        }
-      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -3344,8 +3344,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.storage_ordered_operations": {
-      "name": "storage_ordered_operations",
+    "public.operations": {
+      "name": "operations",
       "schema": "",
       "columns": {
         "owner_id": {
@@ -3414,11 +3414,38 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "touches": {
+          "name": "touches",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'"
+        },
+        "receipt_epoch": {
+          "name": "receipt_epoch",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "receipt": {
+          "name": "receipt",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "receipt_indexed": {
+          "name": "receipt_indexed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
         }
       },
       "indexes": {
-        "storage_ordered_operations_pending_idx": {
-          "name": "storage_ordered_operations_pending_idx",
+        "operations_pending_idx": {
+          "name": "operations_pending_idx",
           "columns": [
             {
               "expression": "owner_id",
@@ -3434,16 +3461,54 @@
             }
           ],
           "isUnique": false,
-          "where": "\"storage_ordered_operations\".\"envelope\" IS NOT NULL AND \"storage_ordered_operations\".\"settled_epoch\" IS NULL",
+          "where": "\"operations\".\"envelope\" IS NOT NULL AND \"operations\".\"settled_epoch\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "operations_touches_pending_idx": {
+          "name": "operations_touches_pending_idx",
+          "columns": [
+            {
+              "expression": "touches",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"operations\".\"envelope\" IS NOT NULL AND \"operations\".\"settled_epoch\" IS NULL",
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        },
+        "operations_unindexed_idx": {
+          "name": "operations_unindexed_idx",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "operation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"operations\".\"receipt_indexed\" = false",
           "concurrently": false,
           "method": "btree",
           "with": {}
         }
       },
       "foreignKeys": {
-        "storage_ordered_operations_owner_id_owners_id_fk": {
-          "name": "storage_ordered_operations_owner_id_owners_id_fk",
-          "tableFrom": "storage_ordered_operations",
+        "operations_owner_id_owners_id_fk": {
+          "name": "operations_owner_id_owners_id_fk",
+          "tableFrom": "operations",
           "tableTo": "owners",
           "columnsFrom": ["owner_id"],
           "columnsTo": ["id"],
@@ -3452,124 +3517,9 @@
         }
       },
       "compositePrimaryKeys": {
-        "storage_ordered_operations_owner_id_operation_id_pk": {
-          "name": "storage_ordered_operations_owner_id_operation_id_pk",
+        "operations_owner_id_operation_id_pk": {
+          "name": "operations_owner_id_operation_id_pk",
           "columns": ["owner_id", "operation_id"]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.storage_ordered_receipts": {
-      "name": "storage_ordered_receipts",
-      "schema": "",
-      "columns": {
-        "owner_id": {
-          "name": "owner_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "epoch": {
-          "name": "epoch",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "operation_id": {
-          "name": "operation_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "admission_fingerprint": {
-          "name": "admission_fingerprint",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "state": {
-          "name": "state",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "indexed": {
-          "name": "indexed",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        }
-      },
-      "indexes": {
-        "storage_ordered_receipts_operation_idx": {
-          "name": "storage_ordered_receipts_operation_idx",
-          "columns": [
-            {
-              "expression": "owner_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "operation_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "storage_ordered_receipts_unindexed_idx": {
-          "name": "storage_ordered_receipts_unindexed_idx",
-          "columns": [
-            {
-              "expression": "owner_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "epoch",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "operation_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"storage_ordered_receipts\".\"indexed\" = false",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "storage_ordered_receipts_owner_id_operation_id_storage_ordered_operations_owner_id_operation_id_fk": {
-          "name": "storage_ordered_receipts_owner_id_operation_id_storage_ordered_operations_owner_id_operation_id_fk",
-          "tableFrom": "storage_ordered_receipts",
-          "tableTo": "storage_ordered_operations",
-          "columnsFrom": ["owner_id", "operation_id"],
-          "columnsTo": ["owner_id", "operation_id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "storage_ordered_receipts_owner_id_epoch_operation_id_pk": {
-          "name": "storage_ordered_receipts_owner_id_epoch_operation_id_pk",
-          "columns": ["owner_id", "epoch", "operation_id"]
         }
       },
       "uniqueConstraints": {},
@@ -3616,107 +3566,6 @@
         "storage_ordered_records_owner_id_record_id_pk": {
           "name": "storage_ordered_records_owner_id_record_id_pk",
           "columns": ["owner_id", "record_id"]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.storage_ordered_touches": {
-      "name": "storage_ordered_touches",
-      "schema": "",
-      "columns": {
-        "owner_id": {
-          "name": "owner_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "record_id": {
-          "name": "record_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "operation_id": {
-          "name": "operation_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "local_sequence": {
-          "name": "local_sequence",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "storage_ordered_touches_operation_idx": {
-          "name": "storage_ordered_touches_operation_idx",
-          "columns": [
-            {
-              "expression": "owner_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "operation_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "storage_ordered_touches_record_sequence_idx": {
-          "name": "storage_ordered_touches_record_sequence_idx",
-          "columns": [
-            {
-              "expression": "owner_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "record_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "local_sequence",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "storage_ordered_touches_owner_id_operation_id_storage_ordered_operations_owner_id_operation_id_fk": {
-          "name": "storage_ordered_touches_owner_id_operation_id_storage_ordered_operations_owner_id_operation_id_fk",
-          "tableFrom": "storage_ordered_touches",
-          "tableTo": "storage_ordered_operations",
-          "columnsFrom": ["owner_id", "operation_id"],
-          "columnsTo": ["owner_id", "operation_id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "storage_ordered_touches_owner_id_record_id_operation_id_pk": {
-          "name": "storage_ordered_touches_owner_id_record_id_operation_id_pk",
-          "columns": ["owner_id", "record_id", "operation_id"]
         }
       },
       "uniqueConstraints": {},

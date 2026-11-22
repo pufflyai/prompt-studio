@@ -87,7 +87,7 @@ test("opening an upgraded database converts unsent records and durably isolates 
     expect(
       (
         await connection.pglite.query(`SELECT DISTINCT o.extension_id
-      FROM storage_ordered_operations r JOIN owners o ON o.id=r.owner_id ORDER BY 1`)
+      FROM operations r JOIN owners o ON o.id=r.owner_id ORDER BY 1`)
       ).rows,
     ).toEqual([{ extension_id: "example.healthy" }]);
     expect(
@@ -105,13 +105,13 @@ test("opening an upgraded database converts unsent records and durably isolates 
       original.filter((row) => row.extension_id === "example.corrupt"),
     );
     expect(backup.tables.documents.length).toBeGreaterThan(0);
-    const snapshot = await rows(connection, "storage_ordered_operations");
+    const snapshot = await rows(connection, "operations");
     expect(snapshot).toHaveLength(1);
     const savedBackup = await readFile(diagnostics[0]!.backupPath!, "utf8");
     await connection.close();
     connection = undefined;
     connection = await createDb({ path, onLegacyConversionError: (failure) => diagnostics.push(failure) });
-    expect(await rows(connection, "storage_ordered_operations")).toEqual(snapshot);
+    expect(await rows(connection, "operations")).toEqual(snapshot);
     expect(diagnostics).toHaveLength(1);
     expect(await readFile(diagnostics[0]!.backupPath!, "utf8")).toBe(savedBackup);
     expect(
@@ -167,7 +167,7 @@ for (const failure of ["export", "deletion"])
       ).toEqual(originalDocuments);
       expect(
         (
-          await connection.pglite.query(`SELECT DISTINCT o.extension_id FROM storage_ordered_operations p
+          await connection.pglite.query(`SELECT DISTINCT o.extension_id FROM operations p
         JOIN owners o ON o.id=p.owner_id`)
         ).rows,
       ).toEqual([{ extension_id: "example.healthy" }]);
@@ -368,7 +368,7 @@ test("released text-owner records convert before the upgraded database opens", a
     connection = await createDb({ path: previous.path, onLegacyConversionError: (event) => diagnostics.push(event) });
     expect(
       (
-        await connection.pglite.query(`SELECT o.extension_id FROM storage_ordered_operations p
+        await connection.pglite.query(`SELECT o.extension_id FROM operations p
       JOIN owners o ON o.id=p.owner_id`)
       ).rows,
     ).toEqual([{ extension_id: "example.healthy" }]);

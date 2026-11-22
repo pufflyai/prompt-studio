@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import { dropRecordIndexes } from "../services/extension-storage/record-index-lifecycle";
 import type { createDb } from "./connection.pglite";
 import { releasedDocumentRows } from "./released-document-rows.fixture";
+import { releasedOperationQuery } from "./released-operation-rows.fixture";
 import { decodeUpgradeBytes } from "./upgrade-bytes";
 
 /** Preserve seeded data when an app-upgrade fixture reconstructs the released storage schema. */
@@ -58,9 +59,7 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     "storage_ordered_touches",
     "storage_ordered_receipts",
   ])
-    ordered[table] = await query(`SELECT (to_jsonb(s)-'owner_id') ||
-      jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id) AS row
-      FROM ${table} s JOIN owners o ON s.owner_id=o.id`);
+    ordered[table] = await query(releasedOperationQuery(table));
   ordered.storage_ordered_resource_numbers = await query(`SELECT jsonb_build_object('workbench_id',project_id,
     'resource_id',resource_id,'prefix',prefix,'high_water',max(value)::text,
     'extension_id',coalesce(max(extension_id)FILTER(WHERE canonical_current),''),
@@ -69,7 +68,7 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     FROM resource_numbers WHERE canonical GROUP BY project_id,resource_id,prefix`);
   const orderedSequence = (
     await connection.pglite.query<{ last_value: string; is_called: boolean }>(
-      "SELECT last_value,is_called FROM storage_ordered_operations_local_sequence_seq",
+      "SELECT last_value,is_called FROM operations_local_sequence_seq",
     )
   ).rows[0]!;
   const recovery = releasedFiles.recovery_point_owners!;
@@ -102,7 +101,7 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     )
   ).rows[0]!;
   await connection.pglite.exec(
-    "DROP TABLE resource_links; DROP TABLE resource_prefixes; DROP TABLE resource_numbers; DROP TABLE storage_current_records; DROP TABLE file_projections; DROP TABLE documents; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE IF EXISTS storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
+    "DROP TABLE resource_links; DROP TABLE resource_prefixes; DROP TABLE resource_numbers; DROP TABLE storage_current_records; DROP TABLE file_projections; DROP TABLE documents; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_records; DROP TABLE operations; DROP TABLE IF EXISTS storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
   );
   const data = {
     artifact_file_projection_roots: releasedFiles.artifact_file_projection_roots!,

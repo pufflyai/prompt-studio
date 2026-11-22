@@ -16,15 +16,28 @@ export interface OrderedFieldMarker {
 }
 const where = (owner: StorageOwner, id: string) => and(orderedOwnerWhere(documents, owner), eq(documents.key, id));
 export const readOrderedMarker = async <T>(tx: Pick<OrderedTransaction, "select">, owner: StorageOwner, id: string) => {
-  return withDocumentFileTransaction(tx, async (tx) => {
-    const [row] = await tx.select().from(documents).where(where(owner, id));
-    return row
+  const select = async (client: Pick<OrderedTransaction, "select">) => {
+    const [row] = await client.select().from(documents).where(where(owner, id));
+    return row;
+  };
+  const load = async (client: object, row: Awaited<ReturnType<typeof select>>) =>
+    row
       ? {
-          value: decodeOrderedJson<T>(await readFileDocumentState(documentFilesFor(tx), owner.workbenchId, row)),
+          value: decodeOrderedJson<T>(await readFileDocumentState(documentFilesFor(client), owner.workbenchId, row)),
           revision: row.revision,
         }
       : undefined;
-  });
+  const row = await select(tx);
+  try {
+    return await load(tx, row);
+  } catch (error) {
+    const current = await select(tx);
+    if (current?.id === row?.id && current?.state_sha256 === row?.state_sha256) throw error;
+    // A writer can replace the SQL reference and collect the old immutable files
+    // between a root read's SELECT and file read. Fence only that race; steady
+    // progress polls remain one read and never contend for a write transaction.
+    return withDocumentFileTransaction(tx, async (scoped) => load(scoped, await select(scoped)));
+  }
 };
 /** Metadata for one bounded projection batch; standalone text documents stay unopened. */
 export const readOrderedMarkers = async <T>(

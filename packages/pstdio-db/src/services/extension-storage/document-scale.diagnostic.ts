@@ -97,7 +97,7 @@ export const benchmarkDatabase = async (kind: Workload, count: number, root: str
     const history = async () =>
       (
         await db.execute<{ count: string }>(sql`
-        SELECT count(*) FROM storage_ordered_operations
+        SELECT count(*) FROM operations
         WHERE owner_id = ${storageOwnerKey(address)}
       `)
       ).rows[0]!.count;

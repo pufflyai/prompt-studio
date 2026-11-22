@@ -55,9 +55,9 @@ export const pendingOrderedNumberPeers = async (
     ) candidate
     WHERE NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(${JSON.stringify(ids)}::jsonb) included(id)
       WHERE included.id = candidate.resource_id)
-      AND EXISTS (SELECT 1 FROM storage_ordered_touches t
-        WHERE t.owner_id = ${storageOwnerKey(owner)}
-          AND t.record_id = candidate.resource_id)
+      AND EXISTS (SELECT 1 FROM operations o
+        WHERE o.owner_id = ${storageOwnerKey(owner)} AND o.envelope IS NOT NULL AND o.settled_epoch IS NULL
+          AND o.touches @> ARRAY[candidate.resource_id])
     LIMIT 100`);
     for (const row of result.rows as { resource_id: string }[])
       if (!included.has(row.resource_id)) peers.add(row.resource_id);

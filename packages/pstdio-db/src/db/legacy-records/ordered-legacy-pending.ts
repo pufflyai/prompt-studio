@@ -26,11 +26,7 @@ import {
 import { readProjectedRecords } from "../../services/extension-storage/record-queries";
 import type { storage_record_outbox as outbox } from "../legacy-records-schema";
 import { documents } from "../schemas/documents";
-import {
-  storage_ordered_records as canonical,
-  storage_ordered_operations as operations,
-  storage_ordered_touches as touches,
-} from "../schemas.pg";
+import { storage_ordered_records as canonical, storage_ordered_operations as operations } from "../schemas.pg";
 import { decodeLegacyPendingFrame, type LegacyRecordPlan } from "./ordered-legacy-plan";
 import { convertLegacyOrderedRecords } from "./ordered-legacy-record";
 
@@ -171,29 +167,16 @@ export const migrateLegacyPendingBatch = async (
   }
   if (prepared.length) {
     const address = orderedAddress(owner);
-    const saved = await tx
-      .insert(operations)
-      .values(
-        prepared.map(({ operation, requestFingerprint }) => ({
-          ...address,
-          operation_id: operation.operationId,
-          fingerprint: operation.fingerprint,
-          envelope: encodeOrderedJson(operation),
-          request_fingerprint: requestFingerprint,
-        })),
-      )
-      .returning({ id: operations.operation_id, sequence: operations.local_sequence });
-    const sequences = new Map(saved.map((row) => [row.id, row.sequence]));
-    const memberships = prepared.flatMap(({ operation }) =>
-      operation.edits.map((edit) => ({
+    await tx.insert(operations).values(
+      prepared.map(({ operation, requestFingerprint }) => ({
         ...address,
         operation_id: operation.operationId,
-        record_id: edit.recordId,
-        local_sequence: sequences.get(operation.operationId)!,
+        fingerprint: operation.fingerprint,
+        envelope: encodeOrderedJson(operation),
+        request_fingerprint: requestFingerprint,
+        touches: [...new Set(operation.edits.map((edit) => edit.recordId))],
       })),
     );
-    for (let offset = 0; offset < memberships.length; offset += 1_000)
-      await tx.insert(touches).values(memberships.slice(offset, offset + 1_000));
   }
   await saveConversionValues(tx, owner, state);
   await tx.delete(documents).where(

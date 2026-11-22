@@ -8,7 +8,6 @@ import {
   storage_current_records,
   storage_ordered_operations,
   storage_ordered_records,
-  storage_ordered_touches,
   owners as storageOwners,
 } from "../../db/schemas.pg";
 import { captureDocumentFiles, restoreDocumentBackup } from "./document-history.fixture";
@@ -230,12 +229,7 @@ test("two devices that move under different key prefixes end with every item und
 });
 
 // Copies a device's ordered storage, without receipts, as a backup taken before its pending save uploaded.
-const tables = [
-  storage_ordered_records,
-  storage_ordered_operations,
-  storage_ordered_touches,
-  storage_current_records,
-] as const;
+const tables = [storage_ordered_records, storage_ordered_operations, storage_current_records] as const;
 const copyStorage = async (from: Device["db"], to: Device["db"]) => {
   const files = await captureDocumentFiles(from);
   await to.transaction(async (tx) => {
@@ -247,6 +241,9 @@ const copyStorage = async (from: Device["db"], to: Device["db"]) => {
     for (const table of tables)
       for (const row of await from.select().from(table)) {
         const copy = "owner_id" in row ? { ...row, owner_id: ownerIds.get(row.owner_id) } : row;
+        // This backup predates receipt capture, even though the facts now share one row.
+        if (table === storage_ordered_operations)
+          Object.assign(copy, { receipt: {}, receipt_epoch: null, receipt_indexed: true });
         await tx.insert(table).values(copy as never);
       }
     await restoreDocumentBackup(tx, files, ownerIds);

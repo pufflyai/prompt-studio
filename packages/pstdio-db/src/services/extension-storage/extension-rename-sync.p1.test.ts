@@ -25,8 +25,6 @@ const tables: PgTable[] = [
 
   s.storage_current_records,
   s.storage_ordered_records,
-  s.storage_ordered_touches,
-  s.storage_ordered_receipts,
 ];
 
 const phaseLogger = () => {

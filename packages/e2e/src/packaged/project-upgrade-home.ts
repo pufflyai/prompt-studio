@@ -71,7 +71,18 @@ const loadSavedQuota = async (db: PGlite, project: string, owners: string[]) => 
   });
 };
 
-const quotaJournalSql = (table: string, numeric: boolean) => {
+const quotaJournalSql = (table: string, numeric: boolean, consolidated: boolean) => {
+  if (consolidated)
+    return {
+      from: `operations t JOIN owners o ON t.owner_id=o.id${table === "storage_ordered_receipts" ? " CROSS JOIN LATERAL jsonb_each(t.receipt) fact(key,value)" : ""}`,
+      address: "o.project_id=$1 AND o.extension_id=$2",
+      retained:
+        table === "storage_ordered_receipts"
+          ? `jsonb_build_object('extension_id',o.extension_id,'operation_id',t.operation_id,'epoch',fact.key,
+        'admission_fingerprint',fact.value->>'admissionFingerprint','state',fact.value->>'state',
+        'indexed',(fact.value->>'indexed')::boolean)`
+          : "(to_jsonb(t)-'owner_id'-'touches'-'receipt_epoch'-'receipt'-'receipt_indexed') || jsonb_build_object('extension_id',o.extension_id)",
+    };
   if (numeric)
     return {
       from: `${table} t JOIN owners o ON t.owner_id=o.id`,
@@ -84,9 +95,9 @@ const quotaJournalSql = (table: string, numeric: boolean) => {
 const assertSavedQuota = async (db: PGlite, project: string, owners: string[], migrated: boolean) => {
   const {
     rows: [layout],
-  } = await db.query<{ numeric: boolean; documents: boolean }>(`SELECT EXISTS (
+  } = await db.query<{ numeric: boolean; documents: boolean; consolidated: boolean }>(`SELECT EXISTS (
     SELECT 1 FROM information_schema.columns WHERE table_schema='public'
-      AND table_name='storage_ordered_operations' AND column_name='owner_id') AS numeric, EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='storage_current_records' AND column_name='owner_id') AS documents`);
+      AND table_name='storage_ordered_operations' AND column_name='owner_id') AS numeric, to_regclass('public.operations') IS NOT NULL AS consolidated, EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='storage_current_records' AND column_name='owner_id') AS documents`);
   for (const sample of savedQuota.storage_current_records.filter((row) => owners.includes(row.extension_id))) {
     const owner = migrated ? canonical : sample.extension_id;
     const { rows } = await db.query<{ value: unknown }>(
@@ -104,7 +115,7 @@ const assertSavedQuota = async (db: PGlite, project: string, owners: string[], m
       for (const entry of savedQuota[table].filter((row) => row.extension_id === sample.extension_id)) {
         // local_sequence is assigned by the receiving database on insert.
         const data = { ...entry, extension_id: owner };
-        const { from, address, retained } = quotaJournalSql(table, layout!.numeric);
+        const { from, address, retained } = quotaJournalSql(table, layout!.numeric, layout!.consolidated);
         const matches = await db.query(
           `SELECT 1 FROM ${from} WHERE ${address} AND t.operation_id = $3 AND (${retained}) @> ($4::jsonb - 'local_sequence')`,
           [project, owner, entry.operation_id, JSON.stringify(data)],
