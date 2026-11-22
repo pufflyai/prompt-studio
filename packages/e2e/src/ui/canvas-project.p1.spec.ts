@@ -192,13 +192,9 @@ export const Default = () => <button>Secondary canvas</button>;
         return result.outcome?.value?.canvases.map((canvas: { id: string }) => canvas.id);
       })
       .toEqual(["src/button.canvas.tsx"]);
-    // The design's view stays retained while hidden. It must show the removal itself instead of
-    // opening another design; waiting for that keeps the URL check from passing before it reacts.
-    const retained = page.locator('iframe[title="UI Canvas"]');
-    await expect(
-      retained.first().contentFrame().getByText("This canvas no longer exists", { exact: true }),
-    ).toBeAttached();
-    await expect(retained).toHaveCount(1);
+    // Leaving closes the preview and retires its request owner. It must not survive to navigate
+    // away from Home after its design is removed; returning opens a fresh, valid design.
+    await expect(page.locator('iframe[title="UI Canvas"]')).toHaveCount(0);
     await expect(page).not.toHaveURL(/canvases/);
     await page.getByText("UI Canvas", { exact: true }).first().click();
     await expect(frame.getByRole("button", { name: "Startup: Save" })).toBeVisible();
