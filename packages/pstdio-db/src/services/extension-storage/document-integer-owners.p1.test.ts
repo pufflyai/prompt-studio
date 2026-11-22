@@ -115,7 +115,7 @@ test("purging an owner removes its generated query objects before deleting their
     const {
       rows: [saved],
     } = await f.db.execute<{ name: string }>(
-      sql`SELECT database_name AS name FROM storage_record_indexes WHERE owner_id=(SELECT id FROM owners WHERE project_id=${owner.workbenchId} AND extension_id=${owner.extensionId}) AND name='states'`,
+      sql`SELECT record_indexes->'states'->>'database_name' AS name FROM owners WHERE project_id=${owner.workbenchId} AND extension_id=${owner.extensionId}`,
     );
     await f.db.transaction((tx) => clearOwnerDocuments(tx, owner));
     const objects = await f.db.execute(

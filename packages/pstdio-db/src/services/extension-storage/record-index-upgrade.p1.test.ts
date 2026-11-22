@@ -5,10 +5,10 @@ import { join } from "node:path";
 import { and, eq, sql } from "drizzle-orm";
 import { fingerprint, type Json, type StorageRecordIndex } from "pstdio-sync-contracts";
 import { createDb } from "../../db/connection.pglite";
-import { storage_record_indexes } from "../../db/schemas.pg";
 import { createProjectsDBService } from "../projects/projects";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { saveRecordIndexRow, recordIndexRows as storage_record_indexes } from "./record-index-rows";
 import { storageOwnerKey } from "./storage-owner-key";
 
 // A saved home keeps its public definitions across physical query-layout upgrades.
@@ -48,7 +48,7 @@ test("upgrades persisted v2 indexes, rejects old cursors and preserves records a
     await handle.db.execute(
       sql`ALTER STATISTICS ${sql.identifier(`${current.database_name}_s0`)} RENAME TO ${sql.identifier(`${legacyName}_s0`)}`,
     );
-    await handle.db.update(storage_record_indexes).set({ database_name: legacyName }).where(address);
+    await saveRecordIndexRow(handle.db, { ...current, database_name: legacyName });
     const legacyPage = await open().query({ index: index.name, limit: 3 });
     expect(legacyPage.cursor).not.toBeNull();
     await handle.close();

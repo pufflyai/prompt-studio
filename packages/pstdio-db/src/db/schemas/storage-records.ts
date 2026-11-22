@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { boolean, index, integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import type { NativeRecordSources } from "pstdio-sync/records";
-import type { StorageRecord, StorageRecordIndex } from "pstdio-sync-contracts";
+import type { StorageRecord } from "pstdio-sync-contracts";
 import { owners } from "./owners";
 
 const ownerColumns = () => ({
@@ -35,15 +35,4 @@ export const storage_current_records = pgTable(
       .on(table.owner_id, table.record_id)
       .where(sql`${table.record_lifetime} = '' AND NOT ${table.deleted}`),
   ],
-);
-
-export const storage_record_indexes = pgTable(
-  "storage_record_indexes",
-  {
-    ...ownerColumns(),
-    name: text("name").notNull(),
-    definition: jsonb("definition").$type<StorageRecordIndex>().notNull(),
-    database_name: text("database_name").notNull(),
-  },
-  (table) => [primaryKey({ columns: [table.owner_id, table.name] })],
 );

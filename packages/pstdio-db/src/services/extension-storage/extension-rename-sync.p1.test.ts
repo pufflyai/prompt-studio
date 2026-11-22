@@ -28,7 +28,6 @@ const tables: PgTable[] = [
   s.storage_document_updates,
   s.storage_document_operations,
   s.storage_current_records,
-  s.storage_record_indexes,
   s.storage_ordered_records,
   s.storage_ordered_touches,
   s.storage_ordered_receipts,

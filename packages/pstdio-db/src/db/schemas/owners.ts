@@ -1,4 +1,5 @@
-import { bigint, boolean, integer, pgTable, text, unique } from "drizzle-orm/pg-core";
+import { bigint, boolean, integer, jsonb, pgTable, text, unique } from "drizzle-orm/pg-core";
+import type { StorageRecordIndex } from "pstdio-sync-contracts";
 import { projects } from "./projects";
 
 /** Stable local keys; project deletion owns the lifetime of every storage owner. */
@@ -12,6 +13,10 @@ export const owners = pgTable(
     extension_id: text("extension_id").notNull(),
     revision: bigint("revision", { mode: "number" }).notNull().default(0),
     live_count: bigint("live_count", { mode: "number" }).notNull().default(0),
+    record_indexes: jsonb("record_indexes")
+      .$type<Record<string, { definition: StorageRecordIndex; database_name: string }>>()
+      .notNull()
+      .default({}),
     history_cursor: text("history_cursor"),
     history_migrated: boolean("history_migrated").notNull().default(false),
   },

@@ -1,16 +1,12 @@
 import { expect, test } from "bun:test";
 import { eq, sql } from "drizzle-orm";
 import type { StorageRecordIndex } from "pstdio-sync-contracts";
-import {
-  owners as recordOwners,
-  storage_current_records,
-  storage_documents,
-  storage_record_indexes,
-} from "../../db/schemas.pg";
+import { owners as recordOwners, storage_current_records, storage_documents } from "../../db/schemas.pg";
 import { migrateExtensionIdentities } from "../extension-identity-migration";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 import { installRecordIndex } from "./record-index-lifecycle";
+import { recordIndexRows as storage_record_indexes } from "./record-index-rows";
 import { ensureStorageOwner } from "./storage-owner-key";
 
 test("reinstalling unchanged indexes after an owner rename restores the current owner's partial indexes", async () => {

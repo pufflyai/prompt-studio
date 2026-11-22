@@ -1,5 +1,5 @@
 {
-  "id": "1e76384a-e284-4e44-b62e-6bff8b8cfd3d",
+  "id": "3d02ff45-3a54-4f6d-820c-a9b1558a3654",
   "prevId": "7831c13a-76db-4e65-a402-222b04fffc09",
   "version": "7",
   "dialect": "postgresql",
@@ -2040,6 +2040,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": 0
+        },
+        "record_indexes": {
+          "name": "record_indexes",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
         },
         "history_cursor": {
           "name": "history_cursor",
@@ -4638,65 +4645,6 @@
           "columns": [
             "owner_id",
             "record_id"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.storage_record_indexes": {
-      "name": "storage_record_indexes",
-      "schema": "",
-      "columns": {
-        "owner_id": {
-          "name": "owner_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "definition": {
-          "name": "definition",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "database_name": {
-          "name": "database_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "storage_record_indexes_owner_id_owners_id_fk": {
-          "name": "storage_record_indexes_owner_id_owners_id_fk",
-          "tableFrom": "storage_record_indexes",
-          "tableTo": "owners",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "storage_record_indexes_owner_id_name_pk": {
-          "name": "storage_record_indexes_owner_id_name_pk",
-          "columns": [
-            "owner_id",
-            "name"
           ]
         }
       },

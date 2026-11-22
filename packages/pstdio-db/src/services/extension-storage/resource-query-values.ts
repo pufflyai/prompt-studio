@@ -1,8 +1,9 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_record_indexes as indexes, owners } from "../../db/schemas.pg";
+import { owners } from "../../db/schemas.pg";
 import { jsonBatches } from "./json-batches";
+import { recordIndexRows as indexes, saveRecordIndexRow } from "./record-index-rows";
 import { encodeProjectionValue } from "./record-projection-codec";
 import { storageOwnerKey } from "./storage-owner-key";
 
@@ -70,7 +71,7 @@ export const prepareResourceQueryValues = async (tx: Transaction, owner: Storage
     if (!result.rows.length) break;
     await writeResourceQueryValues(tx, owner.workbenchId, result.rows);
   }
-  await tx.insert(indexes).values({
+  await saveRecordIndexRow(tx, {
     owner_id: storageOwnerKey({ ...owner, extensionId: "pstdio" }),
     name: marker,
     database_name: "storage_format_identity_v1",

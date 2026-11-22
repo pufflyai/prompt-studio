@@ -8,11 +8,11 @@ import {
   storage_document_updates,
   storage_documents,
   storage_ordered_owners,
-  storage_record_indexes,
   storage_record_sync,
 } from "../../db/schemas.pg";
 import { orderedOwnerWhere } from "./ordered-sql";
 import { dropRecordIndexes } from "./record-index-lifecycle";
+import { recordIndexRows as storage_record_indexes } from "./record-index-rows";
 import { resourceDocumentId } from "./resource-document-persistence";
 import { storageOwnerKey, storageOwnerWhere } from "./storage-owner-key";
 

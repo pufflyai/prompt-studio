@@ -2,8 +2,9 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { fingerprint, formatViewDate, type Json, type StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_current_records as current, storage_record_indexes as indexes } from "../../db/schemas.pg";
+import { storage_current_records as current } from "../../db/schemas.pg";
 import { formatCacheFields, formatCachePrefix, formatCacheSource, formatDatabasePrefix } from "./record-format-key";
+import { deleteRecordIndexRows, recordIndexRows as indexes, saveRecordIndexRow } from "./record-index-rows";
 import { decodeProjectionValue, encodeProjectionValue, projectionKey } from "./record-projection-codec";
 import { recordFieldSql, recordScopeSql } from "./record-query-sql";
 import type { StorageDiagnostics } from "./storage-diagnostics";
@@ -20,12 +21,12 @@ export const retainDateFormatIndexes = async (installed: StorageRecordIndex[], d
 };
 
 export const installDateFormatIndex = async (
-  tx: Pick<DbClient, "insert" | "select">,
+  tx: Pick<DbClient, "insert" | "select" | "execute">,
   owner: StorageOwner,
   index: StorageRecordIndex,
 ) => {
   const digest = await fingerprint(index.name);
-  await tx.insert(indexes).values({
+  await saveRecordIndexRow(tx, {
     owner_id: await ensureStorageOwner(tx, owner),
     name: index.name,
     database_name: `${formatDatabasePrefix}${digest.slice(0, 32)}`,
@@ -142,7 +143,7 @@ export const pruneDateFormatIndexes = async (
     .slice(0, Math.max(0, cached.length - 128))
     .map(({ name }) => name);
   if (evicted.length) {
-    await tx.delete(indexes).where(and(ownerWhere, inArray(indexes.name, evicted)));
+    await deleteRecordIndexRows(tx, and(ownerWhere, inArray(indexes.name, evicted))!);
     await tx.execute(
       sql`UPDATE storage_current_records SET query_values = query_values - ARRAY[${sql.join(
         evicted.map((key) => sql`${projectionKey(key)}`),

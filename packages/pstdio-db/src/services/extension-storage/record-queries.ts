@@ -20,7 +20,6 @@ import {
 import type { DbClient } from "../../db/connection.pglite";
 import {
   storage_current_records as current,
-  storage_record_indexes as indexes,
   owners as projections,
   storage_resource_projections,
 } from "../../db/schemas.pg";
@@ -32,6 +31,7 @@ import { prepareDateFormatIndexes, pruneDateFormatIndexes } from "./record-date-
 import { dependencyOrderedPageSql } from "./record-dependency-order";
 import { formatDatabasePrefix } from "./record-format-key";
 import { defineRecordIndexes } from "./record-index-definition";
+import { recordIndexRows as indexes } from "./record-index-rows";
 import { decodeProjectionValue } from "./record-projection-codec";
 import { readQueryOwner } from "./record-query-owner";
 import { pageAfterSql, recordPageSql } from "./record-query-sql";
@@ -151,8 +151,11 @@ const prepareQueryMetadata = async (
 };
 
 export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnostics?: StorageDiagnostics) => {
-  const ownerWhere = (table: typeof current | typeof indexes | typeof projections) =>
-    and(eq("owner_id" in table ? table.owner_id : table.id, storageOwnerKey(owner)));
+  const ownerWhere = (table: typeof current | typeof indexes | typeof projections) => {
+    if (table === indexes) return eq(indexes.owner_id, storageOwnerKey(owner));
+    if (table === projections) return eq(projections.id, storageOwnerKey(owner));
+    return eq(current.owner_id, storageOwnerKey(owner));
+  };
   const physicalNames = new WeakMap<StorageRecordIndex, string>();
   const aggregateCache = aggregateCacheFor(db);
   const getIndex = async (connection: Pick<DbClient, "select">, name: string) => {

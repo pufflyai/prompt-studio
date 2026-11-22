@@ -32,6 +32,7 @@ import { prepareLogOwnerUpgrade } from "./log-owner-upgrade";
 import { prepareNativeOwnerUpgrade } from "./native-owner-upgrade";
 import { openPglite } from "./open-pglite";
 import { prepareOrderedOwnerUpgrade } from "./ordered-owner-upgrade";
+import { prepareOwnerIndexUpgrade } from "./owner-index-upgrade";
 import { prepareOwnerProjectionUpgrade } from "./owner-projection-upgrade";
 import { canonicalDbPath, resolveDbPath } from "./paths";
 import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-current-home";
@@ -240,6 +241,7 @@ export const createDb = async (options?: {
       if (!fs.existsSync(migrationsFolder)) return;
       const finishProjectExtensionsUpgrade = await prepareProjectExtensionsUpgrade(db, dbPath);
       const finishResourceLinkOwnerUpgrade = await prepareResourceLinkOwnerUpgrade(db, dbPath);
+      const finishOwnerIndexUpgrade = await prepareOwnerIndexUpgrade(db, dbPath);
       const finishOwnerProjectionUpgrade = await prepareOwnerProjectionUpgrade(db, dbPath);
       const finishDocumentOwnerUpgrade = await prepareDocumentOwnerUpgrade(db, dbPath);
       const finishNativeOwnerUpgrade = await prepareNativeOwnerUpgrade(db, dbPath);
@@ -266,6 +268,7 @@ export const createDb = async (options?: {
       await finishNativeOwnerUpgrade?.();
       await finishDocumentOwnerUpgrade?.();
       await finishOwnerProjectionUpgrade?.();
+      await finishOwnerIndexUpgrade?.();
       await finishPreferencesUpgrade?.();
       await finishExtensionPreferencesUpgrade?.();
       await finishConnectionCredentialsUpgrade?.();

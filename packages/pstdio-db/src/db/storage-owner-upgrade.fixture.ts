@@ -22,14 +22,19 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     "storage_record_indexes",
   ];
   const documents: Record<string, Record<string, unknown>[]> = {};
-  const documentRows = async (table: string) =>
-    table === "storage_record_projections"
-      ? await query(`SELECT jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id,
+  const documentRows = async (table: string) => {
+    if (table === "storage_record_projections")
+      return query(`SELECT jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id,
         'document_id','records','revision',o.revision,'live_count',o.live_count) AS row FROM owners o
-        WHERE EXISTS (SELECT 1 FROM storage_documents d WHERE d.owner_id=o.id AND d.document_id='records')`)
-      : await query(`SELECT (to_jsonb(d)-'owner_id') ||
+        WHERE EXISTS (SELECT 1 FROM storage_documents d WHERE d.owner_id=o.id AND d.document_id='records')`);
+    if (table === "storage_record_indexes")
+      return query(`SELECT jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id,
+        'name',entry.key,'definition',entry.value->'definition','database_name',entry.value->'database_name') AS row
+        FROM owners o CROSS JOIN LATERAL jsonb_each(o.record_indexes) AS entry(key,value)`);
+    return query(`SELECT (to_jsonb(d)-'owner_id') ||
         jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id) AS row
         FROM ${table} d JOIN owners o ON d.owner_id=o.id`);
+  };
   for (const table of documentTables) documents[table] = await documentRows(table);
   documents.storage_resource_projections = await query(`SELECT (to_jsonb(d)-'owner_id') ||
     jsonb_build_object('extension_id',o.extension_id) AS row FROM storage_resource_projections d JOIN owners o ON d.owner_id=o.id`);
@@ -88,7 +93,7 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     )
   ).rows[0]!;
   await connection.pglite.exec(
-    "DROP TABLE resource_links; DROP TABLE storage_resource_aliases; DROP TABLE storage_resource_identities; DROP TABLE storage_resource_projections; DROP TABLE storage_current_records; DROP TABLE storage_document_operations; DROP TABLE storage_document_updates; DROP TABLE storage_record_indexes; DROP TABLE storage_documents; DROP TABLE native_document_room_updates; DROP TABLE native_document_rooms; DROP TABLE native_document_file_projections; DROP TABLE native_document_sources; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
+    "DROP TABLE resource_links; DROP TABLE storage_resource_aliases; DROP TABLE storage_resource_identities; DROP TABLE storage_resource_projections; DROP TABLE storage_current_records; DROP TABLE storage_document_operations; DROP TABLE storage_document_updates; DROP TABLE storage_documents; DROP TABLE native_document_room_updates; DROP TABLE native_document_rooms; DROP TABLE native_document_file_projections; DROP TABLE native_document_sources; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
   );
   const data = {
     resource_anchors: links,

@@ -4,12 +4,13 @@ import { compareQueryValues, validateIndexes } from "pstdio-sync/records";
 import type { Json, StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { analyzeRecordProjection } from "../../db/record-projection-statistics";
-import { storage_current_records as current, storage_record_indexes as indexes } from "../../db/schemas.pg";
+import { storage_current_records as current } from "../../db/schemas.pg";
 import { traceStorageQuery } from "./query-trace";
 import { retainDateFormatIndexes } from "./record-date-format";
 import { derivedQueryChanges, rebuildDerivedQueryValues } from "./record-derived-fields";
 import { formatDatabasePrefix } from "./record-format-key";
 import { dropRecordIndexes, installRecordIndex, recordIndexName } from "./record-index-lifecycle";
+import { deleteRecordIndexRows, recordIndexRows as indexes } from "./record-index-rows";
 import { decodeProjectionValue } from "./record-projection-codec";
 import type { StorageDiagnostics } from "./storage-diagnostics";
 import { ensureStorageOwner, storageOwnerKey } from "./storage-owner-key";
@@ -80,7 +81,7 @@ export const defineRecordIndexes = async (
         ),
       )!;
       await dropRecordIndexes(tx, removed);
-      await tx.delete(indexes).where(removed);
+      await deleteRecordIndexRows(tx, removed);
     }
     await rebuildDerivedQueryValues(tx, owner, derivedQueryChanges(installed, desired), diagnostics);
     const saved = new Map(previous.map((row) => [row.name, row.database_name]));

@@ -1,23 +1,13 @@
 import { isDeepStrictEqual } from "node:util";
-import { eq, getTableColumns, getTableName, sql } from "drizzle-orm";
+import { getTableColumns, getTableName, sql } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
-import type { Json, StorageRecordIndex } from "pstdio-sync-contracts";
-import { formatDatabasePrefix } from "../services/extension-storage/record-format-key";
-import {
-  dropRecordIndexes,
-  installRecordIndex,
-  recordIndexName,
-} from "../services/extension-storage/record-index-lifecycle";
-import { decodeProjectionValue } from "../services/extension-storage/record-projection-codec";
 import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
 import {
-  owners,
   storage_current_records,
   storage_document_operations,
   storage_document_updates,
   storage_documents,
-  storage_record_indexes,
   storage_resource_aliases,
   storage_resource_identities,
   storage_resource_projections,
@@ -75,7 +65,6 @@ const sources = [
     bytes: [],
     numbers: ["value"],
   },
-  { table: storage_record_indexes, owner: true, ownerKey: true, keys: ["name"], bytes: [], numbers: [] },
 ];
 const safeNumber = (value: unknown) => {
   const number = Number(value);
@@ -105,20 +94,6 @@ const normalizedRow = async (
   if (ownerId === undefined) {
     ownerId = await ensureStorageOwner(tx, { workbenchId: workbench_id, extensionId: extension_id });
     ownerIds.set(address, ownerId);
-  }
-  if (
-    source.table === storage_record_indexes &&
-    typeof row.database_name === "string" &&
-    !row.database_name.startsWith(formatDatabasePrefix)
-  ) {
-    const definition = decodeProjectionValue(row.definition as Json) as unknown as StorageRecordIndex;
-    const coreOwnerId = definition.identity
-      ? await ensureStorageOwner(tx, { workbenchId: workbench_id, extensionId: "pstdio" })
-      : null;
-    row.database_name = await recordIndexName(
-      { workbenchId: workbench_id, extensionId: extension_id, ownerId, coreOwnerId },
-      definition,
-    );
   }
   return { ...row, owner_id: ownerId } as Record<string, unknown>;
 };
@@ -160,22 +135,7 @@ const restoreBatch = async (
     else if (!isDeepStrictEqual(previous, row))
       throw new Error(`Document storage restoration conflict: ${getTableName(table)}`);
   }
-  if (source.table === storage_record_indexes) {
-    for (const row of missing) {
-      if (String(row.database_name).startsWith(formatDatabasePrefix)) await tx.insert(table).values(row);
-      else {
-        const [owner] = await tx
-          .select()
-          .from(owners)
-          .where(eq(owners.id, row.owner_id as number));
-        await installRecordIndex(
-          tx,
-          { workbenchId: owner!.project_id, extensionId: owner!.extension_id },
-          decodeProjectionValue(row.definition as Json) as unknown as StorageRecordIndex,
-        );
-      }
-    }
-  } else if (missing.length) await tx.insert(table).values(missing);
+  if (missing.length) await tx.insert(table).values(missing);
 };
 
 /** Capture the entire FK graph before required integer keys replace released owner addresses. */
@@ -228,9 +188,7 @@ export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string) =>
   // All document inputs and the separately captured owner positions must be durable before document deletion cascades to derived identities.
   // Drop generated query triggers while their released columns still exist.
   if (columns!.legacy) {
-    await dropRecordIndexes(db, sql`true`);
     await db.delete(storage_documents);
-    await db.delete(storage_record_indexes);
   }
   if (!restorations.length) return;
   return async () => {

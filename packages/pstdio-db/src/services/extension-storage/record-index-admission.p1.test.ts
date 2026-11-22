@@ -14,7 +14,7 @@ test("unchanged index admission checks catalog identities without reloading ever
       logger: {
         logQuery: (query) => {
           if (/^analyze/i.test(query)) maintenance.push(query);
-          if (query.startsWith("select") && query.includes('from "storage_record_indexes"')) catalog.push(query);
+          if (query.startsWith("select") && query.includes('"record_index_rows"')) catalog.push(query);
         },
       },
     });
@@ -35,7 +35,7 @@ test("unchanged index admission checks catalog identities without reloading ever
     catalog.length = 0;
     await records.defineIndexes([definition]);
     expect(catalog).toHaveLength(1);
-    expect(catalog[0]).not.toContain('"definition"');
+    expect(catalog[0].split(" from ")[0]).not.toContain('"definition"');
     expect((await records.query({ index: "items" })).records.map(({ recordId }) => recordId)).toEqual(["first/item"]);
     await records.defineIndexes([{ ...definition, prefix: "second/" }]);
     expect((await records.query({ index: "items" })).records.map(({ recordId }) => recordId)).toEqual(["second/item"]);

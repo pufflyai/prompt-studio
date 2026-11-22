@@ -6,6 +6,7 @@ import { migrate } from "drizzle-orm/pglite/migrator";
 import { createDb } from "./connection.pglite";
 import { prepareDocumentOwnerUpgrade } from "./document-owner-upgrade";
 import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
+import { prepareOwnerIndexUpgrade } from "./owner-index-upgrade";
 import { prepareOwnerProjectionUpgrade } from "./owner-projection-upgrade";
 
 const tables = [
@@ -55,6 +56,7 @@ for (const interruption of ["normal", "schema", "restore"])
           ).rows.map(({ row }) => row),
         );
       if (interruption !== "normal") {
+        await prepareOwnerIndexUpgrade(previous.db, previous.path);
         await prepareOwnerProjectionUpgrade(previous.db, previous.path);
         const finish = await prepareDocumentOwnerUpgrade(previous.db, previous.path);
         for (const table of tables) expect((await previous.pglite.query(`SELECT * FROM ${table}`)).rows).toEqual([]);
@@ -78,6 +80,18 @@ for (const interruption of ["normal", "schema", "restore"])
       const restored = async () => {
         const rows = [];
         for (const table of tables) {
+          if (table === "storage_record_indexes") {
+            rows.push(
+              (
+                await store!.pglite.query<{
+                  row: Record<string, unknown>;
+                }>(`SELECT jsonb_build_object('workbench_id',o.project_id,
+              'extension_id',o.extension_id,'name',entry.key,'definition',entry.value->'definition') AS row
+              FROM owners o CROSS JOIN LATERAL jsonb_each(o.record_indexes) AS entry(key,value) ORDER BY row`)
+              ).rows.map(({ row }) => row),
+            );
+            continue;
+          }
           if (table === "storage_record_projections") {
             rows.push(
               (
@@ -105,7 +119,7 @@ for (const interruption of ["normal", "schema", "restore"])
       };
       expect(await restored()).toEqual(original);
       const countTables = await store.pglite.query<{ database_name: string }>(
-        "SELECT database_name FROM storage_record_indexes",
+        "SELECT entry.value->>'database_name' AS database_name FROM owners o CROSS JOIN LATERAL jsonb_each(o.record_indexes) AS entry(key,value)",
       );
       for (const { database_name } of countTables.rows) {
         const result = await store.pglite.query<{ n: string }>(`SELECT sum(n)::text AS n FROM ${database_name}_c`);
