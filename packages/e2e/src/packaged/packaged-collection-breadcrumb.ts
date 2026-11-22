@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page } from "@playwright/test";
+import { navigatePackagedPage } from "./packaged-page-navigation";
 
 export const verifyPackagedCollectionBreadcrumb = async (
   page: Page,
@@ -31,6 +32,24 @@ export const verifyPackagedCollectionBreadcrumb = async (
   await expect(breadcrumbs.getByText("Artifacts", { exact: true })).toBeVisible();
   await expect(breadcrumbs.getByText(title, { exact: true })).toBeVisible();
   expect(new URL(page.url()).pathname).toBe(`${new URL(libraryUrl).pathname}/view`);
+  const header = page.locator('[data-workbench-panel-header="main"]');
+  const moved = page
+    .locator('[data-workbench-panel-header="secondary"]')
+    .getByRole("tab", { name: title, exact: true });
+  await expect(header.getByRole("tab")).toHaveCount(0);
+  const detailUrl = page.url();
+  const move = async () => {
+    await header.focus();
+    await page.keyboard.press("Shift+F10");
+    await page.getByRole("menuitem", { name: "Move to Bottom", exact: true }).click();
+    await expect(moved).toBeVisible();
+  };
+  await move();
+  await page.reload();
+  await expect(moved).toBeVisible();
+  await navigatePackagedPage(page, detailUrl);
+  await expect(breadcrumbs.getByText(title, { exact: true })).toBeVisible();
+  await expect(moved).toHaveCount(0);
   const projectReturnUrl = page.url();
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   const home = await sidenav.getByRole("option", { name: "Home", exact: true }).boundingBox();

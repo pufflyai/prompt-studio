@@ -1,6 +1,6 @@
 {
   "name": "@pstdio/ui",
-  "version": "0.47.0",
+  "version": "0.48.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/pufflyai/prompt-studio"
@@ -153,7 +153,7 @@
     "@lexical/rich-text": "^0.40.0",
     "@lexical/selection": "^0.40.0",
     "@lexical/utils": "^0.40.0",
-    "@monaco-editor/react": "^4.7.0",
+    "@monaco-editor/react": "4.7.0",
     "@pstdio/sdk": "workspace:*",
     "@tanstack/charts": "1.2.1",
     "@tanstack/react-table": "^8.21.3",

@@ -27,7 +27,7 @@ const harness = (values = new Map<string, PreferenceValue>()) => {
     ref: page("home"),
     path: "home",
     modeId: "project",
-    main: { kind: "view", view: { kind: "view", id: "view" }, cardinality: "one" },
+    main: { kind: "view", view: { kind: "view", id: "view" }, cardinality: "one", presentation: "page" },
     slots: [],
   });
   for (const type of ["session", "ticket", "artifact", "workspace", "file"]) {
@@ -39,7 +39,7 @@ const harness = (values = new Map<string, PreferenceValue>()) => {
       path: type,
       modeId: "project",
       resource: { kinds: [{ kind: "resource-kind", extensionId: "example", id: type }] },
-      main: { kind: "view", view: { kind: "view", id: "view" }, cardinality: "many" },
+      main: { kind: "view", view: { kind: "view", id: "view" }, cardinality: "many", presentation: "page" },
       slots: [],
     });
   }
@@ -62,6 +62,76 @@ const open = (type: string, id: string, projectId = "one") => ({
   kind: "page" as const,
   page: page(type),
   resource: resource(type, id, projectId),
+});
+
+test("Recent keeps a resource tab's semantic destination when it is selected and reopened elsewhere", async () => {
+  const { w, read } = harness();
+  w.pages.registerPage({
+    id: "collection",
+    ref: page("collection"),
+    path: "collection",
+    modeId: "project",
+    main: { kind: "panels" },
+    slots: [],
+  });
+  w.pageLocations.navigate({ kind: "page", page: page("collection") });
+  await w.navigation.openTarget({ ...open("ticket", "a"), open: "pin" });
+  const first = w.layout.getActivePanel("main")!;
+  await w.navigation.openTarget({ ...open("artifact", "b"), open: "pin" });
+  w.layout.activatePanel(first.instanceId);
+  const recent = (await read())[0]!;
+  expect(recent.target).toMatchObject(open("ticket", "a"));
+  w.pageLocations.navigate(open("session", "other"));
+  await w.navigation.openTarget(recent.target);
+  expect(w.pages.store.getState().location?.page).toEqual(page("ticket"));
+  expect(w.pages.getContent()?.resource?.id).toBe("a");
+});
+
+test("Recent distinguishes a selected semantic tab from its container with the same resource", async () => {
+  const { w, read } = harness();
+  const kinds = [{ kind: "resource-kind" as const, extensionId: "example", id: "workspace" }];
+  w.pages.registerPage({
+    id: "workspace-detail",
+    ref: page("workspace-detail"),
+    path: "workspace-detail",
+    modeId: "project",
+    parentId: "home",
+    resource: { kinds },
+    main: { kind: "panels", landing: "files" },
+    slots: [
+      { id: "files", region: "main", item: { kind: "view", view: { kind: "view", id: "view" }, presence: "open" } },
+    ],
+  });
+  w.views.registerView({ id: "history", title: "History", body: { kind: "react", render: () => null } });
+  w.pages.registerPage({
+    id: "history",
+    ref: page("history"),
+    path: "history",
+    modeId: "project",
+    parentId: "home",
+    resource: { kinds },
+    main: { kind: "view", view: { kind: "view", id: "history" }, cardinality: "one", presentation: "page" },
+    slots: [],
+  });
+  const workspace = resource("workspace", "a");
+  const history = { kind: "page" as const, page: page("history"), resource: workspace };
+  w.pageLocations.navigate({ kind: "page", page: page("workspace-detail"), resource: workspace });
+  await w.navigation.openTarget({ ...history, open: "pin" });
+  expect((await read())[0]!.target).toMatchObject(history);
+  const tab = w.layout.getActivePanel("main")!;
+  const files = w.layout.listPanelInstances("main").find((tab) => tab.placementIdentity?.kind === "page")!;
+  w.layout.activatePanel(files.instanceId);
+  expect((await read())[0]!.target).toMatchObject({
+    kind: "page",
+    page: page("workspace-detail"),
+    resource: workspace,
+  });
+  w.layout.activatePanel(tab.instanceId);
+  expect((await read())[0]!.target).toMatchObject(history);
+  await w.navigation.openTarget({ ...open("ticket", "other"), open: "pin" });
+  w.layout.activatePanel(tab.instanceId);
+  expect((await read())[0]!.target).toMatchObject(history);
+  expect(w.pages.store.getState().activePageId).toBe("workspace-detail");
 });
 
 test("Recent orders opened resources across kinds, deduplicates revisits and restores exact destinations", async () => {

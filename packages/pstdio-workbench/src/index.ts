@@ -62,6 +62,7 @@ export type {
   KanbanRendererCreateFieldType,
   KanbanRendererCreateRowConfig,
   KanbanRendererCreateSubmission,
+  KanbanRendererQueryResult,
   KanbanRendererQueryState,
   KanbanRendererRow,
   KanbanRendererSettings,

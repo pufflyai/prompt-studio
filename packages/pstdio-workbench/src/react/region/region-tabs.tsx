@@ -32,7 +32,6 @@ export {
   shouldShowPanelHeader,
   shouldShowRegionTabs,
   useWorkbenchPanelHeaderVisible,
-  useWorkbenchRegionTabsVisible,
 } from "./region-tabs-visibility-hooks";
 
 interface WorkbenchRegionTabsProps {

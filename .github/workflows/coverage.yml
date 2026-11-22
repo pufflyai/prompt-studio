@@ -44,7 +44,7 @@ jobs:
           SOURCE_RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
         run: bun scripts/badges/select-nightly-source-coverage.ts
 
-  # Only this job can write to the repository, and it runs no project code.
+  # Only this job can write to the repository. It runs no project code except the main branch's download action.
   publish:
     needs: select
     if: needs.select.outputs.artifact_id != ''
@@ -54,7 +54,17 @@ jobs:
       contents: write
       actions: read
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Check out the artifact download action
+        uses: actions/checkout@v5
+        with:
+          path: __test-tmp__/workflow-actions
+          persist-credentials: false
+          # Leave the action's test out of the workspace so test discovery never finds it.
+          sparse-checkout: |
+            /.github/actions/download-artifact-by-id/
+            !/.github/actions/download-artifact-by-id/*.test.ts
+          sparse-checkout-cone-mode: false
+      - uses: ./__test-tmp__/workflow-actions/.github/actions/download-artifact-by-id
         with:
           artifact-ids: ${{ needs.select.outputs.artifact_id }}
           run-id: ${{ needs.select.outputs.run_id }}

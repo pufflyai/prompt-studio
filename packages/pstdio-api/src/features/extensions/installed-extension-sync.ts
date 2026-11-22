@@ -64,6 +64,7 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
   const load = deps.loadExtension ?? ((path: string) => loadExtensionSource(path, { accepted: true }));
   const hash = deps.hashExtension ?? hashExtensionSourceAsync;
   const discovered = new Array<DiscoveredInstalledExtension | undefined>(listing.paths.length);
+  let combinedWorkspaces = false;
   let next = 0;
   let failure: { index: number; error: unknown } | undefined;
 
@@ -83,6 +84,15 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
         return;
       }
     }
+    if (
+      loaded.metadata.id === "pstdio.workspaces" &&
+      "definition" in loaded &&
+      Array.isArray(loaded.definition.workspaceTypes) &&
+      loaded.definition.workspaceTypes.some(
+        (provider) => typeof provider === "object" && provider !== null && "id" in provider && provider.id === "git",
+      )
+    )
+      combinedWorkspaces = true;
     return {
       installName,
       displayName: loaded.metadata.displayName,
@@ -114,7 +124,9 @@ const discoverInstalledExtensions = async (deps: InstalledExtensionDiscoveryDeps
   const healthy = discovered.filter((extension): extension is DiscoveredInstalledExtension => extension !== undefined);
 
   return {
-    discovered: healthy,
+    discovered: combinedWorkspaces
+      ? healthy.filter(({ extensionId }) => extensionId !== "pstdio.git-workspaces")
+      : healthy,
     presentSourcePaths: healthy.map((extension) => extension.sourcePath),
     root,
     rootExists: true,

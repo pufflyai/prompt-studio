@@ -65,24 +65,38 @@ export const createAppServerOperation = (
       });
     }
   };
-  const items = createAppServerItems(publish);
+  const items = createAppServerItems(publish, {
+    onOutputError: (error) => {
+      finish({ status: "failed" });
+      options.onProtocolError(error);
+    },
+  });
   const questions = createQuestionChannel(options.write, publish, (callId, answers, signal) =>
     confirmQuestionReply(options.transcriptPath(), callId, answers, signal),
   );
   const finish = (exit: HarnessExit) => {
     if (finished) return;
     finished = true;
-    void (async () => {
-      try {
-        await questions.close();
-        await pendingImages;
-      } catch {
-        exit = { status: "failed" };
-      } finally {
-        options.onFinish();
-        completion.resolve(exit);
-      }
-    })();
+    try {
+      // A disconnect or cancellation may arrive before the provider completes the item.
+      if (exit.status !== "failed") items.flushCommandOutput();
+    } catch (error) {
+      exit = { status: "failed" };
+      options.onProtocolError(error);
+    } finally {
+      items.discardCommandOutput();
+      void (async () => {
+        try {
+          await questions.close();
+          await pendingImages;
+        } catch {
+          exit = { status: "failed" };
+        } finally {
+          options.onFinish();
+          completion.resolve(exit);
+        }
+      })();
+    }
   };
   const finishIfIdle = () => {
     if (!turnId && !goalActive && !goalUpdates && (ownsGoal || idleExit))
@@ -99,6 +113,8 @@ export const createAppServerOperation = (
   };
   const completeTurn = (turn: Turn) => {
     if (turnId !== turn.id) return;
+    items.flushCommandOutput();
+    items.discardCommandOutput();
     if (turn.status === "failed")
       projection.publish(errorMessage(turn.error?.message, `codex-${turn.id}-error`, Date.now()));
     else projection.publish(usageMessage(items.getUsage(), `codex-${turn.id}-usage`, Date.now()));

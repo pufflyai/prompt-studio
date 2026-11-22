@@ -12,6 +12,8 @@ export interface NavigationTargetPage {
   section?: FileRendererSectionTarget;
   position?: FileSourcePosition;
   open?: PageOpenIntent;
+  /** Present this resource in a panel in its current mode. Cross-mode pages enter their owning mode. Omit for Main. */
+  region?: "main" | "side" | "secondary";
   params?: PageParams;
   parent?: NavigationTargetPage;
   /** Return to this page's remembered Main location, falling back to its landing when that resource is shown elsewhere. */
@@ -42,6 +44,7 @@ export interface NavigationTargetPanel {
   panel: PanelRef;
   resource?: ResourceRef;
   open?: PageOpenIntent;
+  region?: "main" | "side" | "secondary";
 }
 
 export interface NavigationTargetCommand {

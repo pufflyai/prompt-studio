@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { WorkbenchLayout } from "../../registries/layout/layout-types";
+import type { WorkbenchLayout, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import { createWorkbench } from "../../workbench-core";
 
 const ref = (id: string) => ({ kind: "page" as const, extensionId: "example", id });
@@ -169,6 +169,11 @@ test("migrating several old tabs to a one-instance viewer preserves one valid vi
   expect(viewers).toHaveLength(1);
 });
 
+const showLegacyDuplicate = (widget: WorkbenchWidgetPlacement) => {
+  if (widget.placementIdentity?.kind === "page" && widget.resource?.id === "b")
+    widget.resource = { ...widget.resource, id: "a" };
+};
+
 test("migration keeps an already independent viewer when an old page tab shows the same resource", () => {
   const old = fixture({ presentation: "tabs", cardinality: "many", panelVersion: true });
   old.w.modePlacements.openPlacement({
@@ -176,12 +181,13 @@ test("migration keeps an already independent viewer when an old page tab shows t
     resource: { type: "document", id: "a" },
     open: "pin",
   });
-  old.navigate("document", "a");
+  old.navigate("document", "b");
   old.w.movePanel(old.w.layout.getActivePanel("main")!.instanceId, "secondary");
   old.navigate("home");
   for (const layout of old.saved.values()) {
     for (const region of Object.values(layout.regions)) {
       for (const widget of region.widgets) {
+        showLegacyDuplicate(widget);
         if (widget.placementIdentity?.kind !== "mode" || widget.resource?.id !== "a") continue;
         const id = widget.widgetId;
         widget.widgetId = "saved-viewer";
@@ -256,11 +262,11 @@ test("page-owned resource focus publishes changes without a Main tab", () => {
   subscription.dispose();
 });
 
-test("page content has no tab actions or move destinations", () => {
+test("page content has move destinations without tab close or pin actions", () => {
   const { w } = fixture();
   const content = w.pages.getContent()!;
   expect(w.layout.getLayout().regions.main.widgets).toEqual([]);
-  expect(w.getPanelDestinations(content.widgetId)).toEqual([]);
+  expect(w.getPanelDestinations(content.widgetId)).toEqual(["secondary", "side"]);
   expect(() => w.closePlacement(content.placementIdentity!)).toThrow();
   expect(w.pageLocations.closePlacement(content.placementIdentity!).ok).toBe(false);
   expect(() => w.pinPlacement(content.placementIdentity!, false)).toThrow();

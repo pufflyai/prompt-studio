@@ -2,6 +2,7 @@ import {
   isNavigationTarget,
   type NavigationTarget,
   type PageLocation,
+  type PlacementIdentity,
   type ResourceRef,
   resourceKey,
   workbenchCommands,
@@ -19,6 +20,23 @@ const preference = "workbench.recentResources";
 const pageTarget = (location: PageLocation): Extract<NavigationTarget, { kind: "page" }> => {
   const { parent, ...page } = location;
   return { ...page, kind: "page", ...(parent ? { parent: pageTarget(parent) } : {}) };
+};
+const panelForPlacement = (ctx: WorkbenchModuleContext, identity: PlacementIdentity | undefined) => {
+  if (!identity || identity.kind === "shell") return;
+  return identity.kind === "mode"
+    ? ctx.modePlacements.listPlacements().find((placement) => placement.id === identity.placementId)?.ref
+    : { kind: "page-slot" as const, page: ctx.pages.getPage(identity.pageId)!.ref, id: identity.slotId };
+};
+const resourceWidget = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
+  const layout = ctx.layout.getLayout();
+  const widgets = Object.values(layout.regions)
+    .flatMap((region) => region.widgets)
+    .filter(
+      (widget) =>
+        resourceKey(widget.resource && canonicalDashboardResource(widget.resource, resource.projectId!)) ===
+        resourceKey(resource),
+    );
+  return widgets.find((widget) => widget.widgetId === layout.activeWidgetId) ?? widgets[0];
 };
 // Recents cross extension bridges: a bare core resource must retain its original
 // owner instead of being qualified to the extension that displays the shortcut.
@@ -120,24 +138,18 @@ export const createRecentResourcesModule = () =>
         const location = ctx.pages.store.getState().location;
         if (!resource || !location) return;
         resource = canonicalDashboardResource(resource, ctx.pages.store.getState().projectId!);
+        const widget = resourceWidget(ctx, resource);
+        if (widget?.pageContext)
+          return remember(
+            resource,
+            pageTarget({ ...widget.pageContext, resource, section: widget.section, position: widget.position }),
+          );
         if (
           resourceKey(resource) ===
           resourceKey(location.resource && canonicalDashboardResource(location.resource, resource.projectId!))
         )
           return remember(resource, pageTarget(location));
-        const widget = Object.values(ctx.layout.getLayout().regions)
-          .flatMap((region) => region.widgets)
-          .find(
-            (widget) =>
-              resourceKey(widget.resource && canonicalDashboardResource(widget.resource, resource.projectId!)) ===
-              resourceKey(resource),
-          );
-        const identity = widget?.placementIdentity;
-        if (!identity || identity.kind === "shell") return;
-        const panel =
-          identity.kind === "mode"
-            ? ctx.modePlacements.listPlacements().find((placement) => placement.id === identity.placementId)?.ref
-            : { kind: "page-slot" as const, page: ctx.pages.getPage(identity.pageId)!.ref, id: identity.slotId };
+        const panel = panelForPlacement(ctx, widget?.placementIdentity);
         if (panel)
           remember(resource, { kind: "compound", targets: [pageTarget(location), { kind: "panel", panel, resource }] });
       };
@@ -198,14 +210,26 @@ export const createRecentResourcesModule = () =>
         refreshReferences();
         if (state.pages !== previous.pages) changed();
       });
-      const layouts = ctx.layout.store.subscribe(refreshReferences);
+      const layouts = ctx.layout.store.subscribe((state, previous) => {
+        refreshReferences();
+        if (state.layout.activeWidgetId !== previous.layout.activeWidgetId) rememberActive();
+      });
       const kinds = ctx.resources.store.subscribe(() => changed());
       const placements = ctx.modePlacements.onDidChange(() => changed());
       const navigation = ctx.pageLocations.onDidNavigate((location) => {
         if (location.resource) remember(location.resource, pageTarget(location));
       });
+      const rememberOpenedPage = (target: Extract<NavigationTarget, { kind: "page" }>) => {
+        const location = ctx.pages.store.getState().location;
+        if (
+          target.resource &&
+          (target.page.id !== location?.page.id || target.page.extensionId !== location?.page.extensionId)
+        )
+          rememberActive(target.resource);
+      };
       const opened = ctx.navigation.onDidOpenTarget((target) => {
         if (target.kind === "viewer") return rememberActive(target.resource);
+        if (target.kind === "page") return rememberOpenedPage(target);
         if (target.kind === "compound") {
           if (isNavigationTarget(target))
             target.targets.forEach((step) => {

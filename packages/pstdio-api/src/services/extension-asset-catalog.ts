@@ -8,6 +8,12 @@ export class ExtensionCatalogAssetError extends Error {
   status = 400 as const;
 }
 
+export class MissingExtensionCatalogAssetError extends ExtensionCatalogAssetError {}
+
+export const isMissingExtensionAsset = (error: unknown) =>
+  error instanceof MissingExtensionCatalogAssetError ||
+  (error instanceof Error && "code" in error && (error.code === "ENOENT" || error.code === "ENOTDIR"));
+
 export type ExtensionContributionContext = {
   extensionId: string;
   extensionInstanceId: string;
@@ -42,8 +48,10 @@ const assertInsideRoot = (sourceRoot: string, targetPath: string) => {
   try {
     root = realpathSync(sourceRoot);
     target = realpathSync(targetPath);
-  } catch {
-    throw new ExtensionCatalogAssetError(`Package asset is missing: ${targetPath}`);
+  } catch (error) {
+    if (isMissingExtensionAsset(error))
+      throw new MissingExtensionCatalogAssetError(`Package asset is missing: ${targetPath}`, { cause: error });
+    throw error;
   }
   const rel = relative(root, target);
 

@@ -136,11 +136,11 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
         {replacementDialog}
         <ExtensionDetailContainer
           projectId={projectId}
+          onBack={openList}
           extension={selected}
           metadata={metadataQuery.data}
           agents={agents}
           settingsInput={settingsInput}
-          onBack={() => openList()}
           action={action}
           sourceChanging={sourceChangingIds.has(selected.id)}
           onUpgrade={() => void actions.handleUpgrade(selected)}
@@ -157,7 +157,6 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
       <>
         {replacementDialog}
         <AvailableExtensionDetail
-          visible={settingsInput.visible}
           extension={selectedMarketplace}
           metadata={marketplaceContributions.data}
           contributionsError={
@@ -169,7 +168,6 @@ export const ExtensionsPanel = (props: ExtensionsPanelProps) => {
             actions.dismiss(marketplaceActionKey(selectedMarketplace.installName), expected)
           }
           onRetryAction={() => actions.retry(marketplaceActionKey(selectedMarketplace.installName))}
-          onBack={openList}
           onInstall={() => void actions.handleInstall(selectedMarketplace)}
         />
       </>

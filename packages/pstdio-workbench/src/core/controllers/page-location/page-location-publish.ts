@@ -143,3 +143,31 @@ export const createMainViewSelector =
       undefined,
       "select",
     );
+
+export const createPreparedPageLocationPublisher =
+  <Value>(
+    input: CreateWorkbenchPageLocationControllerInput<Value>,
+    publish: ReturnType<typeof createPageLocationPublisher<Value>>,
+    consume: (location: PageLocation | undefined) => void,
+  ) =>
+  (
+    state: WorkbenchPageRegistryStoreState<Value>,
+    beforePublish?: () => void,
+    consumeRemembered: readonly PageLocation[] = [],
+    historyOverride?: "push" | "replace" | "none",
+  ) => {
+    if (!state.projectId || !state.location) throw new Error("Cannot navigate before a project is active");
+    const { resources } = getWorkbenchPageRegistryInternals(input.registry);
+    const history = workbenchPageLocationsEqual(
+      input.registry.store.getState().location,
+      state.location,
+      resources,
+      input.registry.listPages(),
+    )
+      ? "none"
+      : "push";
+    return publish(state.projectId, state, historyOverride ?? history, "navigateCompoundTarget", () => {
+      beforePublish?.();
+      for (const location of consumeRemembered) consume(location);
+    });
+  };

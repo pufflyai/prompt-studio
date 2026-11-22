@@ -127,3 +127,12 @@ export const aggregateRecordQuery = async (
       .sort((a, b) => compareAggregateGroups(query, a.value, b.value)),
   };
 };
+
+export const canCountOwnerProjection = (index: StorageRecordIndex, query: StorageAggregateQuery) =>
+  query.where === undefined &&
+  query.groupBy === undefined &&
+  query.metrics === undefined &&
+  query.statistics === undefined &&
+  query.fingerprint === undefined &&
+  index.prefix === undefined &&
+  !index.identity;

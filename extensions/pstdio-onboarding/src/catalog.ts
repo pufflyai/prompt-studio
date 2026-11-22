@@ -33,6 +33,7 @@ export const extensions: Record<string, { name: string; icon?: string }> = {
   skills: { name: "Prompt Studio Skills" },
   "pstdio-skill-browser": { name: "Skill Browser" },
   workspaces: { name: "Workspaces" },
+  "pstdio-terminal": { name: "Terminal" },
   planner: { name: "Project Planner" },
   reports: { name: "Agent Reports" },
   artifacts: { name: "Artifacts" },

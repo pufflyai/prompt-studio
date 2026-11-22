@@ -34,7 +34,7 @@ test("page params push for navigation and replace for updates without forking pa
   expect(h.browser.current().url).toContain("range=now-24h&refresh=60");
   h.controller.updateParams({ refresh: null });
   expect(h.registry.store.getState().location?.params).toEqual({ range: "now-24h" });
-  expect(h.persistence.values.get("p1")?.location.params).toEqual({ range: "now-24h" });
+  expect(h.persistence.values.get("p1")?.location?.params).toEqual({ range: "now-24h" });
 });
 
 test("invalid param navigation and patches leave the location and history untouched", () => {
@@ -96,7 +96,7 @@ test("closing auxiliary and inactive Main panels preserves current page params",
   expect(h.controller.closePlacement(side.identity).ok).toBe(true);
   expect(h.registry.store.getState().location?.params).toEqual({ range: "now-6h" });
   expect(resolvePageParams(board.params, h.registry.store.getState().location?.params).range).toBe("now-6h");
-  expect(h.persistence.values.get("p1")?.location.params).toEqual({ range: "now-6h" });
+  expect(h.persistence.values.get("p1")?.location?.params).toEqual({ range: "now-6h" });
   expect(h.browser.current().url).toBe(url);
 
   const resourceRef = pageRef("acme", "resource-board");
@@ -140,7 +140,7 @@ test("closing auxiliary and inactive Main panels preserves current page params",
   ).toBe(true);
   expect(h.registry.store.getState().location?.resource?.id).toBe("PS-2");
   expect(h.registry.store.getState().location?.params).toEqual({ range: "now-24h" });
-  expect(h.persistence.values.get("p1")?.location.params).toEqual({ range: "now-24h" });
+  expect(h.persistence.values.get("p1")?.location?.params).toEqual({ range: "now-24h" });
   expect(h.browser.current().url).toBe(resourceUrl);
 });
 
@@ -198,7 +198,7 @@ test("removing a contextual parent preserves the active page params", () => {
   });
   parent.dispose();
   expect(h.registry.store.getState().location?.params).toEqual({ range: "now-6h" });
-  expect(h.persistence.values.get("p1")?.location.params).toEqual({ range: "now-6h" });
+  expect(h.persistence.values.get("p1")?.location?.params).toEqual({ range: "now-6h" });
   expect(h.browser.current().url).toContain("range=now-6h");
 });
 

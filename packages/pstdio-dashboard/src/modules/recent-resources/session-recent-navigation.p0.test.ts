@@ -29,7 +29,7 @@ const setup = () => {
     ref: home,
     path: "home",
     modeId: "project",
-    main: { kind: "view", view: { kind: "view", id: "home-view" }, cardinality: "one" },
+    main: { kind: "view", view: { kind: "view", id: "home-view" }, cardinality: "one", presentation: "page" },
     slots: [],
   });
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });

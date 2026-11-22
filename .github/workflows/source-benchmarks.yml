@@ -106,10 +106,22 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ inputs.source_sha }}
+      # The checkout above can be an older candidate, so use this workflow's own download action.
+      - name: Check out the workflow's artifact download action
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: __test-tmp__/workflow-actions
+          persist-credentials: false
+          # Leave the action's test out of the workspace so test discovery never finds it.
+          sparse-checkout: |
+            /.github/actions/download-artifact-by-id/
+            !/.github/actions/download-artifact-by-id/*.test.ts
+          sparse-checkout-cone-mode: false
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-      - uses: actions/download-artifact@v4
+      - uses: ./__test-tmp__/workflow-actions/.github/actions/download-artifact-by-id
         with:
           artifact-ids: ${{ needs.plan.outputs.plan_artifact_id }}
           merge-multiple: true

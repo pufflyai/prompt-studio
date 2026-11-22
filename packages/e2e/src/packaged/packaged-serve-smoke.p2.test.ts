@@ -85,7 +85,7 @@ test("includes extension development, smoke test, browser setup and update comma
 });
 
 test(
-  "loads default extensions for concurrent projects, native actions and command-backed workspace choices",
+  "loads default extensions for concurrent projects, native actions and selected Coding tools",
   async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
     let child: ChildProcess | null = null;

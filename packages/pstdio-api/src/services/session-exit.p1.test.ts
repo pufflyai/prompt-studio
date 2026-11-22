@@ -22,10 +22,16 @@ test("execution exits retain actual stop causes and cannot describe a newer run"
         last_request_started: "2026-10-13T10:00:00.000Z",
       }),
     ).toBeNull();
+    expect(await sessions.updateStatus(session.id, "disconnected")).toBeNull();
+    expect(await readSessionExit(activity, { ...stopped, project_id: project.id })).toMatchObject({
+      cause: "user_stop",
+    });
+    await sessions.updateStatus(session.id, "in_progress");
     const lost = (await sessions.updateStatus(session.id, "disconnected"))!;
     expect(await readSessionExit(activity, { ...lost, project_id: project.id })).toMatchObject({
       cause: "worker_lost",
     });
+    await sessions.updateStatus(session.id, "in_progress");
     const unknown = (await sessions.updateStatus(session.id, "cancelled"))!;
     expect(await readSessionExit(activity, { ...unknown, project_id: project.id })).toMatchObject({ cause: "unknown" });
   } finally {

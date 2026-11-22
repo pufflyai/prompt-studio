@@ -1,16 +1,19 @@
+import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
+import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import type { WorkbenchCore } from "../../workbench-core-types";
 
 interface ViewerHosts {
   keys: Map<string, string>;
   retired: Set<string>;
   next: number;
+  successors: Map<string, { identity: PlacementIdentity; widgetId: string }>;
 }
 const hosts = new WeakMap<WorkbenchCore, ViewerHosts>();
 const viewerHosts = (core: WorkbenchCore) => {
   let state = hosts.get(core);
   if (!state) {
-    state = { keys: new Map(), retired: new Set(), next: 0 };
+    state = { keys: new Map(), retired: new Set(), next: 0, successors: new Map() };
     hosts.set(core, state);
   }
   return state;
@@ -33,7 +36,12 @@ export const releaseViewerHosts = (core: WorkbenchCore, retained: ReadonlySet<st
   const open = core.host.getOpenPlacementIds();
   for (const id of state.keys.keys()) if (!retained.has(id) && !open.has(id)) state.keys.delete(id);
   for (const id of state.retired) if (!retained.has(id) && !open.has(id)) state.retired.delete(id);
+  for (const [key, next] of state.successors)
+    if (!retained.has(next.widgetId) && !open.has(next.widgetId)) state.successors.delete(key);
 };
+
+export const transferredViewerIdentity = (core: WorkbenchCore, identity: PlacementIdentity) =>
+  viewerHosts(core).successors.get(placementIdentityKey(identity))?.identity ?? identity;
 
 export const replaceViewerHost = (
   core: WorkbenchCore,
@@ -47,4 +55,13 @@ export const replaceViewerHost = (
   state.retired.add(source.widgetId);
   state.keys.set(destination.widgetId, key);
   state.retired.delete(destination.widgetId);
+  if (source.placementIdentity && destination.placementIdentity) {
+    const sourceKey = placementIdentityKey(source.placementIdentity);
+    const destinationKey = placementIdentityKey(destination.placementIdentity);
+    for (const [key, next] of state.successors)
+      if (placementIdentityKey(next.identity) === sourceKey)
+        state.successors.set(key, { identity: destination.placementIdentity, widgetId: destination.widgetId });
+    state.successors.set(sourceKey, { identity: destination.placementIdentity, widgetId: destination.widgetId });
+    state.successors.delete(destinationKey);
+  }
 };

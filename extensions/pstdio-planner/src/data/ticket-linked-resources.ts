@@ -5,6 +5,7 @@ import {
   type ResourceResolution,
   resourceKey,
 } from "@pstdio/sdk/extensions";
+import { resourceLinkTarget } from "./resource-link-target";
 import { ticketPageTarget } from "./ticket-page-target";
 import type { StoredTicketReviewLink } from "./types";
 
@@ -28,7 +29,7 @@ const badgeItem = (saved: ResourceRef, resolved: ResourceResolution | undefined)
     label,
     icon: available ? resource.icon : "circle-alert",
     tooltip: `${resource.extensionId ?? "pstdio"} · ${label}${available ? "" : " · Unavailable"}`,
-    ...(resolved?.target ? { action: resolved.target, resource } : {}),
+    ...(resolved?.target ? { action: resourceLinkTarget(resolved.target), resource } : {}),
   } satisfies CollectionBadgeItem;
 };
 

@@ -35,6 +35,7 @@ interface NativeChatViewProps extends NativeChatHostServices {
   session: ChatSession;
   action: Parameters<ChatSession["run"]>[1];
   linkHandler?: ChatLinkHandler;
+  sourceRegion?: NativeChatHostProps["sourceRegion"];
   conversationKey: string;
   observe?: (session: ChatSession) => () => void;
   resolve?: () => NativeChatPresentation | undefined;
@@ -166,6 +167,7 @@ const NativeChatConversation = (props: NativeChatViewProps) => {
       attachments={attachments}
       extensionId={props.extensionId}
       linkHandler={props.linkHandler}
+      sourceRegion={props.sourceRegion}
     >
       {(host) => {
         const availability = nativeChatComposerAvailability({

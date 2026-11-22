@@ -17,6 +17,7 @@ import {
 } from "./extension-install-transaction";
 import { checkExtensionSource, checkExtensionsRoot } from "./extension-runtime";
 import { createSharedNamedSourceCheckout } from "./extension-source-checkout";
+import { removeInstalledSourceFiles } from "./extension-source-removal";
 import {
   inspectManagedWebviewBuildInputsAsync,
   prepareManagedWebviewBuildSource,
@@ -60,6 +61,10 @@ const handle = createPreparationHandler({
     recoverPreparationStages(true);
   },
   "source.list": listExtensionSourcesInWorker,
+  "source.remove": (input: { sourcePath: string }) => {
+    runtimePreparationTasks["runtime.forget"](input);
+    removeInstalledSourceFiles(input.sourcePath);
+  },
   "install.resources": inspectExtensionInstallResources,
   "published.prepare": async (
     input: Omit<PreparePublishedInput, "bytes" | "signal"> & { bytes: ArrayBuffer },

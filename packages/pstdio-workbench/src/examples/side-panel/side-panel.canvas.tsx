@@ -7,10 +7,11 @@ import { WorkbenchStory } from "../workbench-story";
 
 interface SidePanelStoryProps {
   detachable?: boolean;
+  empty?: boolean;
   bubbleIcon?: ReactNode;
 }
 const SidePanelStory = (props: SidePanelStoryProps) => {
-  const { detachable, bubbleIcon } = props;
+  const { detachable, bubbleIcon, empty } = props;
   const [workbench] = useState(() => {
     const instance = createWorkbench({
       floatingPanels: detachable === false ? "hidden" : "visible",
@@ -49,18 +50,19 @@ const SidePanelStory = (props: SidePanelStoryProps) => {
       },
       region: "main",
     });
-    instance.shellPlacements.registerPlacement({
-      id: "side-panel.inspector",
-      item: {
-        kind: "view",
-        presence: "fixed",
-        view: {
+    if (!empty)
+      instance.shellPlacements.registerPlacement({
+        id: "side-panel.inspector",
+        item: {
           kind: "view",
-          id: "side-panel.inspector",
+          presence: "fixed",
+          view: {
+            kind: "view",
+            id: "side-panel.inspector",
+          },
         },
-      },
-      region: "side",
-    });
+        region: "side",
+      });
     return instance;
   });
   return <WorkbenchStory workbench={workbench} sidePanelBubbleIcon={bubbleIcon} />;
@@ -84,4 +86,10 @@ export const CustomBubbleIcon: Story = {
   id: "pstdio-workbench-reference-core-api-side-panel--custom-bubble-icon",
   description: "Pass sidePanelBubbleIcon to Workbench to replace the default chat icon.",
   render: () => <SidePanelStory bubbleIcon={<SlidersHorizontal size={20} />} />,
+};
+
+export const EmptyShell: Story = {
+  id: "pstdio-workbench-reference-core-api-side-panel--empty-shell",
+  description: "The generic Side Panel can open and attach before any provider places content in it.",
+  render: () => <SidePanelStory empty />,
 };
