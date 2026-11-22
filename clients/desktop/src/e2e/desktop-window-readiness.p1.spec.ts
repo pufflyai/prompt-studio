@@ -10,7 +10,7 @@ import { removeTestDirectory } from "../testing/remove-test-directory";
 
 const require = createRequire(import.meta.url);
 
-test("loads the workbench after the startup window shows while lifecycle resources are still loading", async () => {
+test("loads the workbench when the startup window shows without a paint receipt and lifecycle resources are still loading", async () => {
   const root = mkdtempSync(join(tmpdir(), "desktop-window-readiness-"));
   let workbenchRequests = 0;
   let loginRequests = 0;
@@ -36,16 +36,8 @@ test("loads the workbench after the startup window shows while lifecycle resourc
       join(root, "renderer/index.html"),
       '<!doctype html><main>Startup progress</main><img src="pending.png">',
     );
-    const preload = spawnSync("bun", [
-      "build",
-      join(import.meta.dirname, "startup-paint-preload-fixture.ts"),
-      "--outfile",
-      join(root, "preload.cjs"),
-      "--target=node",
-      "--format=cjs",
-      "--external=electron",
-    ]);
-    expect(preload.status, preload.stderr.toString()).toBe(0);
+    // This renderer never reports paint timing, as on some Linux displays.
+    writeFileSync(join(root, "preload.cjs"), "");
     const entry = join(root, "main.mjs");
     const build = spawnSync("bun", [
       "build",
@@ -74,10 +66,6 @@ test("loads the workbench after the startup window shows while lifecycle resourc
       const [documentReady] = await test.step("receive document-ready state", async () =>
         (await messages.next()).value!);
       expect(documentReady).toEqual({ documentReadyVisible: true });
-      const [paintReady] = (await messages.next()).value!;
-      expect(paintReady).toEqual({ paintReady: true });
-      expect(workbenchRequests).toBe(0);
-      application.send("release-paint");
       await expect.poll(() => workbenchRequests).toBe(1);
       const [lifecycleShown] = await test.step("receive lifecycle-visible state", async () =>
         (await messages.next()).value!);
@@ -114,10 +102,6 @@ test("loads the workbench after the startup window shows while lifecycle resourc
       }
       const beforeReload = workbenchRequests;
       application.send("reload-lifecycle");
-      const [reloadPaintReady] = (await messages.next()).value!;
-      expect(reloadPaintReady).toEqual({ paintReady: true });
-      expect(workbenchRequests).toBe(beforeReload);
-      application.send("release-paint");
       const [reloaded] = (await messages.next()).value!;
       expect(reloaded).toEqual({ lifecycleReloaded: true });
       expect(workbenchRequests).toBe(beforeReload + 1);

@@ -1,14 +1,13 @@
 import type { WebContents } from "electron";
-import { DESKTOP_CHANNELS } from "../desktop-api";
 import { LIFECYCLE_URL } from "./lifecycle-protocol";
 
-export const waitForStartupPaint = (contents: WebContents, signal: AbortSignal) =>
+export const waitForStartupDom = (contents: WebContents, signal: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     let settled = false;
     const finish = (error?: Error) => {
       if (settled) return;
       settled = true;
-      contents.removeListener("ipc-message", painted);
+      contents.removeListener("dom-ready", ready);
       contents.removeListener("did-fail-load", failed);
       contents.removeListener("render-process-gone", crashed);
       contents.removeListener("destroyed", destroyed);
@@ -16,19 +15,16 @@ export const waitForStartupPaint = (contents: WebContents, signal: AbortSignal) 
       if (error) reject(error);
       else resolve();
     };
-    const painted = (event: Electron.IpcMainEvent, channel: string) => {
-      if (settled || channel !== DESKTOP_CHANNELS.startupPainted) return;
-      const frame = event.senderFrame;
-      if (frame !== contents.mainFrame || frame?.url !== LIFECYCLE_URL) return;
-      finish();
+    const ready = () => {
+      if (contents.getURL() === LIFECYCLE_URL) finish();
     };
     const failed = (_event: unknown, code: number, description: string, _url: string, mainFrame: boolean) => {
-      if (mainFrame) finish(new Error(`Startup document could not paint: ${description} (${code})`));
+      if (mainFrame) finish(new Error(`Startup document could not load: ${description} (${code})`));
     };
-    const crashed = () => finish(new Error("Startup renderer exited before its first contentful paint"));
-    const destroyed = () => finish(new Error("Startup window closed before its first contentful paint"));
+    const crashed = () => finish(new Error("Startup renderer exited before its document was ready"));
+    const destroyed = () => finish(new Error("Startup window closed before its document was ready"));
     const aborted = () => finish(signal.reason);
-    contents.on("ipc-message", painted);
+    contents.on("dom-ready", ready);
     contents.on("did-fail-load", failed);
     contents.on("render-process-gone", crashed);
     contents.on("destroyed", destroyed);
@@ -39,13 +35,13 @@ export const waitForStartupPaint = (contents: WebContents, signal: AbortSignal) 
 export const createStartupDocument = (contents: WebContents) => {
   const controller = new AbortController();
   const document = {
-    painted: waitForStartupPaint(contents, controller.signal),
+    ready: waitForStartupDom(contents, controller.signal),
     load: undefined as Promise<void> | undefined,
     failed: false,
-    close: () => controller.abort(new Error("Startup document was replaced before its first contentful paint")),
+    close: () => controller.abort(new Error("Startup document was replaced before its document was ready")),
   };
   // Failure belongs to this navigation until an actual reload replaces it.
-  void document.painted.catch(() => {
+  void document.ready.catch(() => {
     document.failed = true;
   });
   return document;
