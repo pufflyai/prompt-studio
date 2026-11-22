@@ -87,6 +87,7 @@ test("a collection display popup stays closed after its suspended view returns",
   }
   await display.click();
   await expect(popup).toBeVisible();
+  await expect.poll(() => popup.evaluate((node) => node.contains(node.ownerDocument.activeElement))).toBe(true);
   await popup.press("Escape");
   await expect(popup).toBeHidden();
   await expect(display).toBeFocused();
