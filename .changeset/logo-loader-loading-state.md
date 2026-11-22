@@ -5,4 +5,4 @@
 "@pstdio/desktop": patch
 ---
 
-Show the animated Prompt Studio logo as the loading indicator on pages, panels and dialogs, with new `LoadingState` and `LogoLoader` components.
+Show the animated Prompt Studio logo while pages, panels and dialogs load, with new `LoadingState` and `LogoLoader` components; the action bar, navigation and status bar show skeletons instead.

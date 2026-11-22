@@ -39,10 +39,12 @@ import { createDashboardWebviewServiceQueries } from "../webview-service-queries
 import { executeWebviewCommand, webviewCommandSlot } from "./extension-webview-command";
 import { BridgedWebviewSurface, StaticWebviewSurface, type WebviewDescriptor } from "./extension-webview-surfaces";
 import { PausedExtensionView } from "./paused-extension-view";
+import type { WebviewLoadingKind } from "./webview-loading";
 
 interface ExtensionWebviewFrameProps {
   visible?: boolean;
   sizing?: WebviewSizing;
+  loading: WebviewLoadingKind;
   extensionId: string;
   extensionInstanceId?: string;
   installName?: string;
@@ -250,6 +252,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
         visible={props.visible}
         workbench={props.workbench}
         sizing={props.sizing}
+        loading={props.loading}
         key={view.id}
         view={view}
         extensionProps={{
