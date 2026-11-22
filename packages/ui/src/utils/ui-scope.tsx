@@ -1,5 +1,5 @@
 import { Box, Portal as ChakraPortal, type createToaster, type PortalProps } from "@chakra-ui/react";
-import { createContext, type ReactNode, type RefObject, useCallback, useContext, useRef, useState } from "react";
+import { createContext, type ReactNode, type RefObject, useContext, useRef, useState } from "react";
 import { createUiToaster } from "./create-ui-toaster";
 import { PortalContainerContext } from "./portal-container";
 
@@ -33,9 +33,9 @@ export const UiScopeActivity = (props: { active: boolean; children: ReactNode })
   const parentPortal = useContext(UiScopePortalContext);
   const [portal, setPortal] = useState<HTMLDivElement | null>(null);
   // Activity detaches refs while hidden; the retained portal still owns its unfinished content.
-  const attachPortal = useCallback((node: HTMLDivElement | null) => {
+  const attachPortal = (node: HTMLDivElement | null) => {
     if (node) setPortal(node);
-  }, []);
+  };
   // A suspended child can miss the inactive render; retain that dismissal until it resumes.
   const [activity, setActivity] = useState({ active, revision: 0 });
   if (activity.active !== active) {
