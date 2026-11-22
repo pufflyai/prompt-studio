@@ -242,7 +242,8 @@ export async function resumeFileTurn(
   if (!pending) return startFileTurn(ctx, input, ref);
   let current = await reconnectFileTurn(ctx, input, ref);
   if (!current) throw new Error("Pending request disappeared");
-  if (!input.prompt.trim() || input.prompt === pending.request.message) return current;
+  // Reattachment recovers work; a resume with content is a distinct submission.
+  if (!input.prompt.trim() && !input.attachments?.length) return current;
   const recovered = current;
   let stopped = false;
   return {
