@@ -225,7 +225,11 @@ headers(
       await page.setViewportSize({ width: 700, height: 600 });
       await expect(header).toHaveAttribute("aria-label", "Floating menu header bubbles");
       await expect(main.locator('[data-workbench-panel-menu="main-left-menu"]')).not.toBeVisible();
-      await header.getByRole("button", { name: "Open Main right menu", exact: true }).click();
+      await move(
+        page,
+        header.getByRole("button", { name: "Open Main right menu", exact: true }),
+        "Open Letter browser on the right",
+      );
       await expect(page.getByRole("dialog", { name: "Letter browser", exact: true })).toBeVisible();
       await page.keyboard.press("Escape");
       await page.setViewportSize({ width: 1600, height: 1000 });

@@ -62,14 +62,16 @@ export const WorkbenchPanelMenuButton = (props: {
     key: side,
     label: `Open ${entry.title} on the ${side}`,
     isSelected: entry.side === side,
-    onSelect: async () => {
+    onClick: async () => {
       const projectId = workbench.pages.store.getState().projectId;
       await configure({ menuSides: { [entry.id]: side } });
       if (projectId !== workbench.pages.store.getState().projectId || !owner) return;
       const current = resolvePanelMenuEntries(workbench, panel).find(
         (candidate) => candidate.placement.widgetId === entry.placement.widgetId,
       );
-      if (current?.side === side) openOwnedViewMenu(workbench, owner.widgetId, entry.id);
+      if (current?.side !== side) return;
+      openOwnedViewMenu(workbench, owner.widgetId, entry.id);
+      if (!view.canAttach) floatingMenu.select(entry.placement.widgetId);
     },
   }));
   const button = floating ? (

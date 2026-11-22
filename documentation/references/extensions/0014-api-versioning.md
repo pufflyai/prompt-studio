@@ -552,6 +552,6 @@ their published dependency ranges before release. See
 
 The optional `ViewContribution.header.view` adds a companion view for menu header controls in API 0.5.1. Existing declarations remain supported. Extensions using this field require `engines.pstdio: "^0.5.1"`; publish supporting host and SDK versions before releasing consumers. See [view-owned page and tab headers](0004-contribution-api.md#view-owned-menu-headers).
 
-*Updated at: 2026-11-21*
-
 API 0.5.1 also permits `viewMenus.side: "bottom"` and the optional owner view `menuHeader.multipleMenus` default. Existing declarations keep the single-open-menu default; user layout preferences can override the default.
+
+*Updated at: 2026-11-22*
