@@ -2,6 +2,7 @@ import { Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import type { ProjectExtensionInstance, WorkbenchExtensionAutomationRecord } from "@pstdio/sdk/api";
 import { SelectionInput } from "@pstdio/ui/param-editor";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ExtensionDetail } from "./extension-detail";
 
 const extension: ProjectExtensionInstance = {
@@ -320,5 +321,38 @@ export const RestartAfterQuotaReset: Story = {
         source: "default",
       },
     ],
+  },
+};
+
+const environmentQueries = new QueryClient({ defaultOptions: { queries: { staleTime: Number.POSITIVE_INFINITY } } });
+environmentQueries.setQueryData(["extension-process-environment", "project-1", "acme.agent"], {
+  extensionId: "acme.agent",
+  projectId: "project-1",
+  sourceIdentity: "source-1",
+  requested: ["ANTHROPIC_API_KEY"],
+  granted: [],
+  stale: false,
+});
+// Without pstdio.processEnvironment, as in Loaded, the details show no environment access section.
+export const EnvironmentAccessRequested: Story = {
+  id: "projectsettings-extensiondetail--environment-access-requested",
+  decorators: [
+    (Story) => (
+      <QueryClientProvider client={environmentQueries}>
+        <Story />
+      </QueryClientProvider>
+    ),
+  ],
+  args: {
+    projectId: "project-1",
+    settings: [],
+    automations: [],
+    extension: {
+      ...extension,
+      extensionId: "acme.agent",
+      displayName: "Agent",
+      description: "Starts a coding agent with the provider key you allow.",
+      processEnvironment: ["ANTHROPIC_API_KEY"],
+    },
   },
 };
