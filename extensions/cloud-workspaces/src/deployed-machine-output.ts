@@ -27,12 +27,6 @@ function createTestOutput() {
   };
 }
 
-export function formatTestOutput(messages: OutputMessage[]) {
-  const output = createTestOutput();
-  for (const message of messages) output.append(message);
-  return output.read();
-}
-
 export async function readTestOutput(connections: Connections, machineId: string) {
   const path = `${machinePath(machineId)}/conversation`;
   const { turns } = await getDeployed<{ turns: { messages: Message[] }[] }>(connections, `${path}/open`);
