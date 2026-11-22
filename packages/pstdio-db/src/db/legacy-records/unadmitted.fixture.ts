@@ -1,7 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { drizzle } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
 import { pruneDocumentFiles } from "../../services/extension-storage/document-file-retention";
 import { attachDocumentCollector, documentFilesFor } from "../../services/extension-storage/document-files";
 import {
@@ -12,6 +11,7 @@ import {
 import { recoveryFilesFor } from "../../services/extension-storage/recovery-files";
 import { resolvePgliteOptions } from "../connection.pglite";
 import { attachDatabaseAuthority } from "../database-authority";
+import { migratePglite } from "../migrate-pglite";
 import { openPglite } from "../open-pglite";
 import { engineFile, engineIdentity } from "../pglite-home-recovery";
 import * as schema from "../schemas.pg";
@@ -23,7 +23,7 @@ export const createUnadmittedLegacyFixture = async (path = ":memory:") => {
   await pglite.waitReady;
   const db = drizzle(pglite, { schema });
   try {
-    await migrate(db, { migrationsFolder: join(import.meta.dirname, "../../../drizzle") });
+    await migratePglite(pglite, join(import.meta.dirname, "../../../drizzle"));
     attachDatabaseAuthority(db, path);
     documentFilesFor(db, path);
     recoveryFilesFor(db, path);

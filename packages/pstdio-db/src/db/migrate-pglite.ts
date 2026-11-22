@@ -1,0 +1,27 @@
+import type { PGlite } from "@electric-sql/pglite";
+import { readMigrationFiles } from "drizzle-orm/migrator";
+
+/** Keep Drizzle's generated SQL, hashes, ordering and all-pending transaction.
+ * PGlite can execute each migration in one simple-protocol batch instead of
+ * crossing the JavaScript/WASM boundary for every generated statement. */
+export const migratePglite = async (db: PGlite, migrationsFolder: string) => {
+  const migrations = readMigrationFiles({ migrationsFolder });
+  await db.exec('CREATE SCHEMA IF NOT EXISTS "drizzle"');
+  await db.exec(`CREATE TABLE IF NOT EXISTS "drizzle"."__drizzle_migrations" (
+    id SERIAL PRIMARY KEY, hash text NOT NULL, created_at bigint
+  )`);
+  const { rows } = await db.query<{ created_at: number | string }>(
+    'SELECT created_at FROM "drizzle"."__drizzle_migrations" ORDER BY created_at DESC LIMIT 1',
+  );
+  const previous = rows[0];
+  await db.transaction(async (tx) => {
+    for (const migration of migrations) {
+      if (previous && Number(previous.created_at) >= migration.folderMillis) continue;
+      await tx.exec(migration.sql.join("\n"));
+      await tx.query('INSERT INTO "drizzle"."__drizzle_migrations" (hash,created_at) VALUES ($1,$2)', [
+        migration.hash,
+        migration.folderMillis,
+      ]);
+    }
+  });
+};

@@ -2,8 +2,8 @@ import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
-import { migrate } from "drizzle-orm/pglite/migrator";
 import { resolvePgliteOptions } from "./connection.pglite";
+import { migratePglite } from "./migrate-pglite";
 import { engineFile, engineIdentity } from "./pglite-home-recovery";
 import * as schema from "./schemas.pg";
 
@@ -22,7 +22,7 @@ export const createTextLogOwnerFixture = async (root: string) => {
   await pglite.waitReady;
   const db = drizzle(pglite, { schema });
   try {
-    await migrate(db, { migrationsFolder });
+    await migratePglite(pglite, migrationsFolder);
     await writeFile(join(path, engineFile), JSON.stringify(engineIdentity));
   } catch (error) {
     await pglite.close();
