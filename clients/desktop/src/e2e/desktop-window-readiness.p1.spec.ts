@@ -144,7 +144,7 @@ for (const operation of ["prepare", "show"] as const)
       const entry = join(root, "main.mjs");
       const build = spawnSync("bun", [
         "build",
-        join(import.meta.dirname, "window-startup-abort.fixture.ts"),
+        join(import.meta.dirname, "window-startup-abort-fixture.ts"),
         "--outfile",
         entry,
         "--target=node",
