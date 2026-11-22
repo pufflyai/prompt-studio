@@ -282,7 +282,7 @@ pst extensions permissions revoke acme.agent
 The same owner-authenticated API backs both:
 `GET`, `PUT` and `DELETE /v1/projects/{projectId}/extension-process-environment/{extensionId}`.
 `PUT` takes the names and the `sourceIdentity` the caller read, and is refused with `409` when the
-source has changed since then. Extension code and scoped machine tokens cannot call these routes.
+source has changed since then. Scoped machine tokens cannot call these routes.
 
 A grant covers one project and one exact extension source. Installing or reloading changed source
 content retires it, and the details show that access must be allowed again. Grants live in the

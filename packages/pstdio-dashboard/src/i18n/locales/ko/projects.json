@@ -113,7 +113,7 @@
       },
       "environmentAccess": {
         "title": "환경 접근",
-        "description": "Prompt Studio를 시작한 환경의 이름이 지정된 값으로, 이 확장이 시작하는 프로그램에만 전달됩니다. 값은 여기에 표시되거나 확장으로 전송되지 않습니다.",
+        "description": "Prompt Studio를 시작한 환경의 이름이 지정된 값으로, 이 확장이 시작하는 프로그램에 전달됩니다. 이름을 허용하면 이 확장이 해당 값을 사용할 수 있습니다.",
         "notAllowed": "허용되지 않음",
         "partlyAllowed": "{{total}}개 중 {{count}}개 허용",
         "allowed": "허용됨",
