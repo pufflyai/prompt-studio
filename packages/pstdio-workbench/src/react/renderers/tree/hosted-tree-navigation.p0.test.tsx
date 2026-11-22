@@ -7,7 +7,7 @@ import {
   type WorkbenchPanelInstance,
 } from "../../../core";
 import { toPanelInstance } from "../../../core/registries/layout/panel-api";
-import { useTreeViewState } from "./tree-presentation-state";
+import { useTreePresentationState, useTreeViewState } from "./tree-presentation-state";
 import { createTreeNavigator } from "./tree-view";
 import { useTreeData } from "./use-tree-data";
 import { resolveTreeHostRegion, useTreeNavigationState } from "./use-tree-navigation-state";
@@ -301,6 +301,69 @@ test("resource navigation presentation survives transfer from project navigation
     expect(current.treeState).toMatchObject({ expandedNodeIds: ["src"], selectedNodeId: "src/app.ts" });
     expect(current.presentation).toMatchObject({ filter: "app", scrollTop: 120 });
     expect(w.pages.store.getState().location?.page).toEqual(page("home"));
+  } finally {
+    await act(async () => renderer?.unmount());
+    await w.dispose();
+    environment.IS_REACT_ACT_ENVIRONMENT = previous;
+  }
+});
+
+test("tree presentation keeps live drafts while expiring old closed-resource filters", async () => {
+  const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previous = environment.IS_REACT_ACT_ENVIRONMENT;
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  const w = filesWorkbench();
+  let live!: ReturnType<typeof useTreePresentationState>, history!: ReturnType<typeof useTreePresentationState>;
+  const Probe = ({ id, active = false }: { id: string; active?: boolean }) => {
+    const value = useTreePresentationState(w, id);
+    if (active) live = value;
+    else history = value;
+    return null;
+  };
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      renderer = create(
+        <>
+          <Probe id="live" active />
+          <Probe id="old" />
+        </>,
+      );
+    });
+    await act(async () => {
+      live.update({ filter: "keep live", scrollTop: 120 });
+      history.update({ filter: "old closed" });
+    });
+    for (let i = 0; i < 300; i++) {
+      await act(async () =>
+        renderer!.update(
+          <>
+            <Probe id="live" active />
+            <Probe id={`closed-${i}`} />
+          </>,
+        ),
+      );
+      await act(async () => history.update({ filter: `filter-${i}` }));
+    }
+    expect(live).toMatchObject({ filter: "keep live", scrollTop: 120 });
+    await act(async () =>
+      renderer!.update(
+        <>
+          <Probe id="live" active />
+          <Probe id="closed-298" />
+        </>,
+      ),
+    );
+    expect(history.filter).toBe("filter-298");
+    await act(async () =>
+      renderer!.update(
+        <>
+          <Probe id="live" active />
+          <Probe id="old" />
+        </>,
+      ),
+    );
+    expect(history.filter).toBe("");
   } finally {
     await act(async () => renderer?.unmount());
     await w.dispose();

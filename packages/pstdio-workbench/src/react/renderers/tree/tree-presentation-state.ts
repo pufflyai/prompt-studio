@@ -1,5 +1,5 @@
 import { type PageLocation, resourceKey } from "@pstdio/sdk/extensions";
-import { type RefObject, useLayoutEffect, useMemo, useSyncExternalStore } from "react";
+import { type RefObject, useLayoutEffect, useSyncExternalStore } from "react";
 import {
   getWorkbenchRenderers,
   type ResourceRef,
@@ -21,6 +21,13 @@ export const resourceTreeStateScope = (workbench: WorkbenchCore, location: PageL
 const empty = { filter: "", scrollTop: 0 };
 const states = new WeakMap<WorkbenchCore, Map<string, typeof empty>>();
 const listeners = new WeakMap<WorkbenchCore, Map<string, Set<() => void>>>();
+// Keep live inputs and at most 128 recently visited inactive presentations.
+const prunePresentations = (workbench: WorkbenchCore) => {
+  const map = states.get(workbench);
+  if (!map) return;
+  const inactive = [...map.keys()].filter((key) => !listeners.get(workbench)?.get(key)?.size);
+  for (const key of inactive.slice(0, Math.max(0, inactive.length - 128))) map.delete(key);
+};
 export const useTreePresentationState = (workbench: WorkbenchCore, key: string) => {
   const snapshot = useSyncExternalStore(
     (listener) => {
@@ -35,8 +42,17 @@ export const useTreePresentationState = (workbench: WorkbenchCore, key: string) 
         subscriptions.set(key, set);
       }
       set.add(listener);
+      const map = states.get(workbench),
+        previous = map?.get(key);
+      if (map && previous) {
+        map.delete(key);
+        map.set(key, previous);
+      }
       return () => {
         set.delete(listener);
+        if (!set.size && subscriptions.get(key) === set) subscriptions.delete(key);
+        // React may reattach this same live scope during the current commit.
+        queueMicrotask(() => prunePresentations(workbench));
       };
     },
     () => states.get(workbench)?.get(key) ?? empty,
@@ -50,7 +66,9 @@ export const useTreePresentationState = (workbench: WorkbenchCore, key: string) 
     const previous = map.get(key) ?? empty;
     const next = { ...previous, ...patch };
     if (previous.filter === next.filter && previous.scrollTop === next.scrollTop) return;
+    map.delete(key);
     map.set(key, next);
+    prunePresentations(workbench);
     for (const listener of listeners.get(workbench)?.get(key) ?? []) listener();
   };
   return { ...snapshot, update };
@@ -75,13 +93,10 @@ export const useTreeViewState = (
   const presentation = useTreePresentationState(workbench, presentationKey);
   const stateKey = treeStateKey(treeViewId, stateScope);
   const declared = useWorkbenchStore(getWorkbenchRenderers(workbench).treeStore, (state) => state.trees[treeViewId]);
-  const fallback = useMemo(
-    () => ({
-      expandedNodeIds: declared?.defaultExpandedNodeIds ?? [],
-      expandedSectionIds: declared?.defaultExpandedSectionIds ?? [],
-    }),
-    [declared],
-  );
+  const fallback = {
+    expandedNodeIds: declared?.defaultExpandedNodeIds ?? [],
+    expandedSectionIds: declared?.defaultExpandedSectionIds ?? [],
+  };
   const treeState =
     useWorkbenchStore(getWorkbenchRenderers(workbench).treeStore, (state) => state.statesByTreeId[stateKey]) ??
     fallback;
