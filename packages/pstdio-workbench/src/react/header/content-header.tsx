@@ -9,6 +9,7 @@ import { type ActionBarDropEdge, applyActionBarOrder } from "../action-bar/actio
 import { useFloatingMenu } from "../panel-menu/floating-menu-context";
 import { resolvePanelMenuEntries } from "../panel-menu/panel-menu-entries";
 import { useWorkbenchPanelMenus } from "../panel-menu/use-panel-menu";
+import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchActivePanel } from "../shared/use-workbench-active-panel";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { resolveWorkbenchHeaderActionGroups } from "./header-action-items";
@@ -64,7 +65,13 @@ export const WorkbenchContentHeader = (props: {
     : [
         ...menuHeaderPositions.map((edge) => ({
           key: edge,
-          label: `Move menu header to ${edge}`,
+          label: `Move to ${edge.charAt(0).toUpperCase()}${edge.slice(1)}`,
+          icon: (
+            <WorkbenchIcon
+              name={{ top: "PanelTop", left: "PanelLeft", right: "PanelRight", bottom: "PanelBottom" }[edge]}
+              size={14}
+            />
+          ),
           isSelected: position === edge,
           onSelect: () => configure({ position: edge }),
         })),
