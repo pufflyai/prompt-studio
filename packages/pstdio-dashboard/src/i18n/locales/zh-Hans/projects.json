@@ -113,7 +113,7 @@
       },
       "environmentAccess": {
         "title": "环境访问",
-        "description": "来自启动 Prompt Studio 的环境中的命名值，仅传递给此扩展启动的程序。这些值不会在此处显示，也不会发送给扩展。",
+        "description": "来自启动 Prompt Studio 的环境中的命名值，会传递给此扩展启动的程序。允许某个名称后，此扩展即可使用其值。",
         "notAllowed": "未允许",
         "partlyAllowed": "已允许 {{count}}/{{total}}",
         "allowed": "已允许",

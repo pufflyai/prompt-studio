@@ -115,7 +115,7 @@
       },
       "environmentAccess": {
         "title": "Acceso al entorno",
-        "description": "Valores con nombre del entorno que inició Prompt Studio, que solo reciben los programas que inicia esta extensión. Los valores nunca se muestran aquí ni se envían a la extensión.",
+        "description": "Valores con nombre del entorno que inició Prompt Studio, que se pasan a los programas que inicia esta extensión. Permitir un nombre deja que esta extensión use su valor.",
         "notAllowed": "No permitido",
         "partlyAllowed": "{{count}} de {{total}} permitidos",
         "allowed": "Permitido",

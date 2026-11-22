@@ -154,6 +154,44 @@ describe("process environment permissions", () => {
     expect(stopped).toBe(true);
   });
 
+  test("a revocation that finishes while a child is being authorized refuses that child", async () => {
+    const { path, sources } = setup();
+    let lookups = 0;
+    const lookup = Promise.withResolvers<void>();
+    const permissions = createProcessEnvironmentPermissions({
+      path,
+      findSource: async (projectId) => {
+        // The third lookup is authorize's; hold it until the revocation is done.
+        if (++lookups === 3) await lookup.promise;
+        return sources.get(projectId);
+      },
+    });
+    const { sourceIdentity } = await permissions.read("project-1", "acme.agent");
+    await permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
+    const authorizing = permissions.authorize("project-1", sources.get("project-1")!, ["GH_TOKEN"]);
+    await permissions.revoke("project-1", "acme.agent");
+    lookup.resolve();
+    await expect(authorizing).rejects.toMatchObject({ code: "process_environment_not_granted" });
+  });
+
+  test("a grant made while a revocation is stopping children waits, so no child starts in between", async () => {
+    const { permissions, sources } = setup();
+    const { sourceIdentity } = await permissions.read("project-1", "acme.agent");
+    await permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
+    const lease = await permissions.authorize("project-1", sources.get("project-1")!, ["GH_TOKEN"]);
+    const stopping = Promise.withResolvers<void>();
+    lease.attach(() => stopping.promise);
+    const revoking = permissions.revoke("project-1", "acme.agent");
+    const granting = permissions.grant("project-1", "acme.agent", { names: ["GH_TOKEN"], sourceIdentity });
+    await Bun.sleep(10);
+    await expect(permissions.authorize("project-1", sources.get("project-1")!, ["GH_TOKEN"])).rejects.toMatchObject({
+      code: "process_environment_not_granted",
+    });
+    stopping.resolve();
+    await Promise.all([revoking, granting]);
+    expect(await permissions.read("project-1", "acme.agent")).toMatchObject({ granted: ["GH_TOKEN"] });
+  });
+
   test("narrowing a grant stops the children that started under the wider grant", async () => {
     const { permissions, source } = setup();
     const { sourceIdentity } = await permissions.read("project-1", "acme.agent");
