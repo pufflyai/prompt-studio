@@ -28,7 +28,7 @@ import type { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
 import { logStartupPhase } from "./lib/startup-phase";
 import { createExtensionInstallations } from "./services/extension-installations";
-import { createExtensionService } from "./services/extension-service";
+import { createExtensionService, ProjectNotFoundError } from "./services/extension-service";
 import { createExtensionUpgradeService } from "./services/extension-upgrade-service";
 import type { createProjectService } from "./services/project-service";
 import type { createWorkspaceService } from "./services/workspace-service";
@@ -143,11 +143,23 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
   });
   const extensionProcessEnvironment = createProcessEnvironmentPermissions({
     path: join(input.storageRoot, "extension-process-environment.json"),
-    findSource: async (projectId, extensionId) =>
-      (await extensionService.listProjectExtensionInstances(projectId)).find(
-        ({ installedSource }) => installedSource.extension_id === extensionId,
-      )?.installedSource,
+    findSource: async (projectId, extensionId) => {
+      try {
+        return (await extensionService.listProjectExtensionInstances(projectId)).find(
+          ({ installedSource }) => installedSource.extension_id === extensionId,
+        )?.installedSource;
+      } catch (error) {
+        // An unknown project has no extension to grant for.
+        if (error instanceof ProjectNotFoundError) return undefined;
+        throw error;
+      }
+    },
   });
+  if (process.env.PSTDIO_EXTENSION_PROCESS_ENV)
+    apiLogger.warn(
+      { event: "extensions.process_environment.legacy_variable" },
+      "PSTDIO_EXTENSION_PROCESS_ENV is no longer read. Extensions request host variables in pstdio.processEnvironment, and you allow them per project in the extension's details.",
+    );
   const harnessRegistry = input.dependencies.createHarnessRegistry({
     installedExtensionSourcesService: input.installedExtensionSourcesDBService,
     extensionRuntimeCatalog,
