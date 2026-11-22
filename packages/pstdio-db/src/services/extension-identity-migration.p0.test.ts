@@ -5,6 +5,7 @@ import * as s from "../db/schemas.pg";
 import { migrateExtensionIdentities } from "./extension-identity-migration";
 import { createExtensionSettingsDBService } from "./extension-settings/extension-settings";
 import { ensureStorageOwner, storageOwnerKey } from "./extension-storage/storage-owner-key";
+import { resourceLinkQuery } from "./resource-link-rows";
 
 const old = "pstdio.pstdio-notes";
 const next = "pstdio.notes";
@@ -304,12 +305,17 @@ test.each(
         document_id: "other-owner",
         state: new Uint8Array([17]),
       });
-    await db.insert(s.resource_anchors).values({
-      project_id: "project",
-      source_owner: endpoint === "source" ? planner : "pstdio",
+    await db.insert(s.resource_links).values({
+      source_owner: await ensureStorageOwner(db, {
+        workbenchId: "project",
+        extensionId: endpoint === "source" ? planner : "pstdio",
+      }),
       source_kind: "ticket",
       source_id: `${planner}.opaque-record`,
-      target_owner: endpoint === "target" ? planner : "pstdio",
+      target_owner: await ensureStorageOwner(db, {
+        workbenchId: "project",
+        extensionId: endpoint === "target" ? planner : "pstdio",
+      }),
       target_kind: "session",
       target_id: "target",
       details,
@@ -327,7 +333,7 @@ test.each(
       expires_at: "2099-01-01",
     });
     await migrateExtensionIdentities(db, { extensionId: "pstdio.planner" });
-    expect((await db.select().from(s.resource_anchors))[0]).toMatchObject({
+    expect((await resourceLinkQuery(db))[0]).toMatchObject({
       source_owner: endpoint === "source" ? "pstdio.planner" : "pstdio",
       target_owner: endpoint === "target" ? "pstdio.planner" : "pstdio",
       source_id: `${planner}.opaque-record`,

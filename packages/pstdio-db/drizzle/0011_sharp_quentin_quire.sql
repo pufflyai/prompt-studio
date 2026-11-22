@@ -7,6 +7,18 @@ CREATE TABLE "owners" (
 	CONSTRAINT "owners_project_extension_unique" UNIQUE("project_id","extension_id")
 );
 --> statement-breakpoint
+CREATE TABLE "resource_links" (
+	"source_owner" integer NOT NULL,
+	"source_kind" text NOT NULL,
+	"source_id" text NOT NULL,
+	"target_owner" integer NOT NULL,
+	"target_kind" text NOT NULL,
+	"target_id" text NOT NULL,
+	"role" text DEFAULT 'context' NOT NULL,
+	"details" jsonb NOT NULL,
+	CONSTRAINT "resource_links_source_owner_source_kind_source_id_target_owner_target_kind_target_id_pk" PRIMARY KEY("source_owner","source_kind","source_id","target_owner","target_kind","target_id")
+);
+--> statement-breakpoint
 CREATE TABLE "log_entries" (
 	"stream_id" bigint NOT NULL,
 	"entry_id" text NOT NULL,
@@ -60,11 +72,13 @@ CREATE TABLE "history_sources" (
 	CONSTRAINT "history_sources_pk" PRIMARY KEY("owner_id","source_id","kind","device_id","record_id")
 );
 --> statement-breakpoint
+ALTER TABLE "resource_anchors" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "storage_log_entries" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "storage_log_streams" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "storage_personal_history" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "storage_personal_history_positions" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "storage_personal_history_sources" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+DROP TABLE "resource_anchors" CASCADE;--> statement-breakpoint
 DROP TABLE "storage_log_entries" CASCADE;--> statement-breakpoint
 DROP TABLE "storage_log_streams" CASCADE;--> statement-breakpoint
 DROP TABLE "storage_personal_history" CASCADE;--> statement-breakpoint
@@ -162,10 +176,13 @@ ALTER TABLE "storage_document_operations" ADD COLUMN "owner_id" integer NOT NULL
 ALTER TABLE "storage_document_updates" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
 ALTER TABLE "storage_resource_projections" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
 ALTER TABLE "owners" ADD CONSTRAINT "owners_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "resource_links" ADD CONSTRAINT "resource_links_source_owner_owners_id_fk" FOREIGN KEY ("source_owner") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "resource_links" ADD CONSTRAINT "resource_links_target_owner_owners_id_fk" FOREIGN KEY ("target_owner") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "log_entries" ADD CONSTRAINT "log_entries_stream_fk" FOREIGN KEY ("stream_id") REFERENCES "public"."log_streams"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "log_streams" ADD CONSTRAINT "log_streams_owner_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "history_rows" ADD CONSTRAINT "history_rows_owner_id_owners_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "history_sources" ADD CONSTRAINT "history_sources_owner_id_owners_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "resource_links_target_idx" ON "resource_links" USING btree ("target_owner","target_kind","target_id","source_owner","source_kind","source_id");--> statement-breakpoint
 CREATE INDEX "log_entries_relay_idx" ON "log_entries" USING btree ("stream_id","relay_sequence","relay_index");--> statement-breakpoint
 CREATE INDEX "log_entries_pending_idx" ON "log_entries" USING btree ("stream_id","local_sequence") WHERE "log_entries"."local" = true AND "log_entries"."relay_sequence" IS NULL;--> statement-breakpoint
 CREATE INDEX "log_entries_retention_idx" ON "log_entries" USING btree ("stream_id","created_at");--> statement-breakpoint

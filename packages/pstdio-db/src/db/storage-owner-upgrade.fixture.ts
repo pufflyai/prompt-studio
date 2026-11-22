@@ -9,6 +9,10 @@ import { decodeUpgradeBytes } from "./upgrade-bytes";
 export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<typeof createDb>>) => {
   const query = async (source: string) =>
     (await connection.pglite.query<{ row: Record<string, unknown> }>(source)).rows.map(({ row }) => row);
+  const links =
+    await query(`SELECT to_jsonb(link) AS row FROM (SELECT s.project_id,s.extension_id AS source_owner,l.source_kind,l.source_id,
+    t.extension_id AS target_owner,l.target_kind,l.target_id,l.role,l.details
+    FROM resource_links l JOIN owners s ON l.source_owner=s.id JOIN owners t ON l.target_owner=t.id) link`);
   const documentTables = [
     "storage_documents",
     "storage_document_updates",
@@ -79,9 +83,10 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     )
   ).rows[0]!;
   await connection.pglite.exec(
-    "DROP TABLE storage_resource_aliases; DROP TABLE storage_resource_identities; DROP TABLE storage_resource_projections; DROP TABLE storage_current_records; DROP TABLE storage_record_projections; DROP TABLE storage_document_operations; DROP TABLE storage_document_updates; DROP TABLE storage_record_indexes; DROP TABLE storage_documents; DROP TABLE native_document_room_updates; DROP TABLE native_document_rooms; DROP TABLE native_document_file_projections; DROP TABLE native_document_sources; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
+    "DROP TABLE resource_links; DROP TABLE storage_resource_aliases; DROP TABLE storage_resource_identities; DROP TABLE storage_resource_projections; DROP TABLE storage_current_records; DROP TABLE storage_record_projections; DROP TABLE storage_document_operations; DROP TABLE storage_document_updates; DROP TABLE storage_record_indexes; DROP TABLE storage_documents; DROP TABLE native_document_room_updates; DROP TABLE native_document_rooms; DROP TABLE native_document_file_projections; DROP TABLE native_document_sources; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
   );
   const data = {
+    resource_anchors: links,
     ...documents,
     native_document_sources: native.native_document_sources!,
     native_document_file_projections: native.native_document_file_projections!,

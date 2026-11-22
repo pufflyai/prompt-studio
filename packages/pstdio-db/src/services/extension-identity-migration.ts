@@ -80,11 +80,6 @@ const assertNoConflicts = async (tx: Transaction, from: string, to: string) => {
       GROUP BY 1 HAVING count(DISTINCT extension_id) > 1 LIMIT 1`);
     if (result.rows[0]) throw new ExtensionIdentityConflictError(from, to, JSON.stringify(result.rows[0].scope));
   }
-  const anchors = await tx.execute(sql`SELECT project_id AS scope FROM ${s.resource_anchors}
-    WHERE source_owner IN (${from}, ${to}) OR target_owner IN (${from}, ${to})
-    GROUP BY project_id HAVING bool_or(source_owner = ${from} OR target_owner = ${from})
-      AND bool_or(source_owner = ${to} OR target_owner = ${to}) LIMIT 1`);
-  if (anchors.rows[0]) throw new ExtensionIdentityConflictError(from, to, String(anchors.rows[0].scope));
   const runs = await tx.execute(sql`SELECT project_id AS scope FROM ${s.automation_runs}
     WHERE principal IN (${`extension:${from}`}, ${`extension:${to}`}) GROUP BY project_id
     HAVING count(DISTINCT principal) > 1 LIMIT 1`);
@@ -153,8 +148,6 @@ export const migrateExtensionIdentities = async (
           oldIds.map((id) => sql`${id}`),
           sql`, `,
         )})`,
-        sql`SELECT source_owner AS extension_id FROM ${s.resource_anchors} WHERE source_owner IN (${oldOwners})
-          UNION SELECT target_owner FROM ${s.resource_anchors} WHERE target_owner IN (${oldOwners})`,
         sql`SELECT owner AS extension_id FROM ${s.files} WHERE owner IN (${oldOwners})`,
         sql`SELECT name AS extension_id FROM ${s.automation_tokens} WHERE created_by = 'extension' AND name IN (${oldOwners})`,
         sql`SELECT substring(principal from 11) AS extension_id FROM ${s.automation_runs}
@@ -199,10 +192,6 @@ export const migrateExtensionIdentities = async (
         await tx.execute(
           sql`UPDATE ${s.notifications} SET source_extension_id = ${to} WHERE source_extension_id = ${from}`,
         );
-        for (const column of ["source_owner", "target_owner"])
-          await tx.execute(
-            sql`UPDATE ${s.resource_anchors} SET ${sql.identifier(column)} = ${to} WHERE ${sql.identifier(column)} = ${from}`,
-          );
         // Extension references follow the owner; user-created token names are prose.
         await tx.execute(sql`UPDATE ${s.automation_runs} SET principal = ${`extension:${to}`}
           WHERE principal = ${`extension:${from}`}`);

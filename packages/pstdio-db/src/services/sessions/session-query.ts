@@ -2,8 +2,10 @@ import { and, desc, eq, exists, gte, inArray, lt, lte, or, sql } from "drizzle-o
 import { sessionStatusSchema } from "pstdio-api-contracts";
 import type { ExtensionSessionQuery } from "pstdio-api-contracts/extension-kernel";
 import type { DbClient } from "../../db/connection.pglite";
-import { resource_anchors, sessions, workspaces } from "../../db/schemas.pg";
+import { resource_links, sessions, workspaces } from "../../db/schemas.pg";
+import { storageOwnerKey } from "../extension-storage/storage-owner-key";
 import { historyAnchorProjection, sessionColumns } from "../legacy-resource-links";
+import { resourceLinkRows } from "../resource-link-rows";
 import { sessionAnchorCondition, workspaceAnchorCondition } from "./workspace-anchor-query";
 
 const activityTime = sql<string>`greatest(${sessions.last_request_ended}, ${sessions.last_request_started}, ${sessions.updated_at}, ${sessions.created_at})`;
@@ -73,18 +75,22 @@ const queryConditions = (db: DbClient, projectId: string, input: ExtensionSessio
       or(
         exists(
           db
-            .select({ id: resource_anchors.source_id })
-            .from(resource_anchors)
+            .select({ id: resource_links.source_id })
+            .from(resource_links)
             .where(
               and(
-                eq(resource_anchors.project_id, projectId),
-                eq(resource_anchors.source_owner, "pstdio"),
-                eq(resource_anchors.source_kind, "session"),
-                eq(resource_anchors.source_id, sessions.id),
-                eq(resource_anchors.target_kind, input.anchor.type),
-                eq(resource_anchors.target_id, input.anchor.id),
-                input.anchor.extensionId ? eq(resource_anchors.target_owner, input.anchor.extensionId) : undefined,
-                input.anchor.projectId ? eq(resource_anchors.project_id, input.anchor.projectId) : undefined,
+                eq(resource_links.source_owner, storageOwnerKey({ workbenchId: projectId, extensionId: "pstdio" })),
+                eq(resource_links.source_kind, "session"),
+                eq(resource_links.source_id, sessions.id),
+                eq(resource_links.target_kind, input.anchor.type),
+                eq(resource_links.target_id, input.anchor.id),
+                input.anchor.extensionId
+                  ? eq(
+                      resource_links.target_owner,
+                      storageOwnerKey({ workbenchId: projectId, extensionId: input.anchor.extensionId }),
+                    )
+                  : undefined,
+                input.anchor.projectId ? sql`${projectId} = ${input.anchor.projectId}` : undefined,
               ),
             ),
         ),
@@ -95,7 +101,7 @@ const queryConditions = (db: DbClient, projectId: string, input: ExtensionSessio
                 projectId,
                 input.anchor,
                 sql`select w.id from workspaces w where w.project_id = ${projectId} and w.archived = false and w.deleted_at is null
-                  and (w.id = ${sessions.workspace_id} or exists (select 1 from resource_anchors links
+                  and (w.id = ${sessions.workspace_id} or exists (select 1 from ${resourceLinkRows} links
                     where links.project_id = ${projectId} and links.source_owner = 'pstdio' and links.source_kind = 'session'
                       and links.source_id = ${sessions.id} and links.target_owner = 'pstdio' and links.target_kind = 'workspace' and links.target_id = w.id))`,
               ),

@@ -1,5 +1,5 @@
 {
-  "id": "2ed2fbdb-7554-4ccc-860b-4fa2306e5ffc",
+  "id": "b960ee69-f3d7-42c9-a0bc-1608a9fb461d",
   "prevId": "7831c13a-76db-4e65-a402-222b04fffc09",
   "version": "7",
   "dialect": "postgresql",
@@ -2423,19 +2423,13 @@
       },
       "isRLSEnabled": false
     },
-    "public.resource_anchors": {
-      "name": "resource_anchors",
+    "public.resource_links": {
+      "name": "resource_links",
       "schema": "",
       "columns": {
-        "project_id": {
-          "name": "project_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "source_owner": {
           "name": "source_owner",
-          "type": "text",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -2453,7 +2447,7 @@
         },
         "target_owner": {
           "name": "target_owner",
-          "type": "text",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -2484,15 +2478,9 @@
         }
       },
       "indexes": {
-        "resource_anchors_target_idx": {
-          "name": "resource_anchors_target_idx",
+        "resource_links_target_idx": {
+          "name": "resource_links_target_idx",
           "columns": [
-            {
-              "expression": "project_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
             {
               "expression": "target_owner",
               "isExpression": false,
@@ -2537,12 +2525,25 @@
         }
       },
       "foreignKeys": {
-        "resource_anchors_project_id_projects_id_fk": {
-          "name": "resource_anchors_project_id_projects_id_fk",
-          "tableFrom": "resource_anchors",
-          "tableTo": "projects",
+        "resource_links_source_owner_owners_id_fk": {
+          "name": "resource_links_source_owner_owners_id_fk",
+          "tableFrom": "resource_links",
+          "tableTo": "owners",
           "columnsFrom": [
-            "project_id"
+            "source_owner"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "resource_links_target_owner_owners_id_fk": {
+          "name": "resource_links_target_owner_owners_id_fk",
+          "tableFrom": "resource_links",
+          "tableTo": "owners",
+          "columnsFrom": [
+            "target_owner"
           ],
           "columnsTo": [
             "id"
@@ -2552,10 +2553,9 @@
         }
       },
       "compositePrimaryKeys": {
-        "resource_anchors_project_id_source_owner_source_kind_source_id_target_owner_target_kind_target_id_pk": {
-          "name": "resource_anchors_project_id_source_owner_source_kind_source_id_target_owner_target_kind_target_id_pk",
+        "resource_links_source_owner_source_kind_source_id_target_owner_target_kind_target_id_pk": {
+          "name": "resource_links_source_owner_source_kind_source_id_target_owner_target_kind_target_id_pk",
           "columns": [
-            "project_id",
             "source_owner",
             "source_kind",
             "source_id",

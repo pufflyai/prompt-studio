@@ -14,7 +14,7 @@ export * from "./schemas/owners";
 export * from "./schemas/preferences";
 export * from "./schemas/projects";
 export * from "./schemas/recovery-points";
-export * from "./schemas/resource-anchors";
+export * from "./schemas/resource-links";
 export * from "./schemas/session-queue-entries";
 export * from "./schemas/sessions";
 export * from "./schemas/skills";

@@ -21,6 +21,7 @@ export const textOnlyOwnerSql = (alias: string) => {
   return sql`${owner}.history_cursor IS NULL AND NOT ${owner}.history_migrated
     AND NOT EXISTS (SELECT 1 FROM storage_documents d WHERE d.owner_id=${owner}.id
       AND NOT starts_with(d.document_id, '["text-file",'))
+    AND NOT EXISTS (SELECT 1 FROM resource_links l WHERE l.source_owner=${owner}.id OR l.target_owner=${owner}.id)
     AND ${sql.join(
       otherStorage.map(
         (table) => sql`NOT EXISTS (SELECT 1 FROM ${sql.identifier(table)} child WHERE child.owner_id=${owner}.id)`,
