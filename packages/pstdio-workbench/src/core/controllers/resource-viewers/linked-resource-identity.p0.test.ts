@@ -209,3 +209,48 @@ test("hydration uses each page slot's declared owner for a bare reference", () =
   expect(w.layout.getActivePanel("side")?.instanceId).toBe(sideId);
   w.dispose();
 });
+
+test("replaying a resolved link retains its many-resource follower and host", () => {
+  const { w } = createResourceViewerFixture();
+  try {
+    w.views.registerView({ id: "follower", title: "Follower", body: { kind: "react", render: () => null } });
+    w.pages.registerPage({
+      ...w.pages.getPage("reader")!,
+      id: "paired",
+      ref: viewerPage("paired"),
+      path: "paired",
+      panelView: undefined,
+      slots: [
+        {
+          id: "follower",
+          region: "side",
+          openOn: "page-resource",
+          item: {
+            kind: "binding",
+            binding: {
+              kinds: [{ kind: "resource-kind", extensionId: "example.readers", id: "record" }],
+              view: { kind: "view", id: "follower" },
+              cardinality: "many",
+            },
+          },
+        },
+      ],
+    });
+    expect(
+      w.pageLocations.navigate({ kind: "page", page: viewerPage("paired"), resource: { type: "record", id: "x" } }).ok,
+    ).toBe(true);
+    const main = w.pages.getContent()!;
+    const follower = w.layout.getActivePanel("side")!;
+    expect(follower.placementIdentity).toMatchObject({ kind: "page", pageId: "paired", slotId: "follower" });
+    const host = viewerHostKey(w, follower.instanceId);
+    const location = w.pages.store.getState().location!;
+    expect(w.pageLocations.replay({ ...location, resource: viewerResource("x") })).toMatchObject({ ok: true });
+    expect(w.pages.getContent()?.widgetId).toBe(main.widgetId);
+    expect(w.layout.listPanelInstances("side")).toHaveLength(1);
+    expect(w.layout.getActivePanel("side")?.instanceId).toBe(follower.instanceId);
+    expect(w.layout.getActivePanel("side")?.resource).toEqual(viewerResource("x"));
+    expect(viewerHostKey(w, follower.instanceId)).toBe(host);
+  } finally {
+    w.dispose();
+  }
+});

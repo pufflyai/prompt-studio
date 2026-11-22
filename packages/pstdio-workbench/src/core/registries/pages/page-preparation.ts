@@ -38,6 +38,7 @@ const locationActivations = (
   state: WorkbenchPageRuntimeState,
   target: WorkbenchPageLocationCommitInput,
   resources: WorkbenchPageResourceCodec,
+  resourceKey: (resource: ResourceRef) => string,
   openFollowers: boolean,
 ) => {
   const primary = primarySlot(page);
@@ -47,9 +48,7 @@ const locationActivations = (
     main.kind === "panels" && !target.pageStates
       ? page.slots.find((slot) => slot.id === main.landing && (!slot.isAvailable || slot.isAvailable(target.resource)))
       : undefined;
-  const followers = openFollowers
-    ? pageFollowerIdentities(page, target.resource, (resource) => pageResourceInstanceKey(page, resource, resources))
-    : [];
+  const followers = openFollowers ? pageFollowerIdentities(page, target.resource, resourceKey) : [];
   return [
     ...(primary && instanceKey ? [pagePlacementIdentity(page.id, primary.id, instanceKey)] : []),
     ...(landing
@@ -179,7 +178,7 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
         activate: [
           ...(independentLanding ? [independentLanding.identity] : []),
           ...(owned?.landing ? [owned.landing] : []),
-          ...locationActivations(page, pageState, normalizedTarget, input.resources, openFollowers),
+          ...locationActivations(page, pageState, normalizedTarget, input.resources, resourceKey, openFollowers),
         ],
         action: target.action,
       },
