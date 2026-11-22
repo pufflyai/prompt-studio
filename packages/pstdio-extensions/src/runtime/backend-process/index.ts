@@ -3,3 +3,4 @@ export { BACKEND_PROTOCOL_VERSION, type BackendHandlerRef, HANDLER_MARKER, isBac
 export { type BackendInvocation, BackendUnavailableError, type BackendWorker, startBackendWorker } from "./supervisor";
 export type { BackendSurface, SurfaceStep } from "./surface";
 export { SurfaceCallRejectedError } from "./surface";
+export { runBackendWorker } from "./worker";
