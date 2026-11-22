@@ -14,7 +14,7 @@ import { ensureOrderedOwner } from "./ordered-conversion";
 import { readConversion } from "./ordered-conversion-state";
 import { lockRecordOwner } from "./record-changes";
 import { resourceDocumentId } from "./resource-document-persistence";
-import { storageOwnerKey } from "./storage-owner-key";
+import { ensureStorageOwner, storageOwnerKey } from "./storage-owner-key";
 
 export const backlogOwner = { workbenchId: "backlog-project", extensionId: "example.backlog" };
 export const seedLegacyBacklog = async (db: Awaited<ReturnType<typeof createDb>>["db"], count = 60_000) => {
@@ -26,6 +26,7 @@ export const seedLegacyBacklog = async (db: Awaited<ReturnType<typeof createDb>>
     .insert(storage_record_sync)
     .values({ workbench_id: backlogOwner.workbenchId, extension_id: backlogOwner.extensionId, joined: true });
   await db.transaction((tx) => lockRecordOwner(tx, backlogOwner));
+  const ownerId = await ensureStorageOwner(db, backlogOwner);
   const clean = count / 3;
   for (let offset = 0; offset < count; offset += 100) {
     const documents: (typeof storage_documents.$inferInsert)[] = [];
@@ -45,9 +46,13 @@ export const seedLegacyBacklog = async (db: Awaited<ReturnType<typeof createDb>>
         document.getMap("deleted").set(id, true);
       }
       const address = { workbench_id: backlogOwner.workbenchId, extension_id: backlogOwner.extensionId };
-      documents.push({ ...address, document_id: resourceDocumentId(id), state: Y.encodeStateAsUpdate(document) });
+      documents.push({
+        owner_id: ownerId,
+        document_id: resourceDocumentId(id),
+        state: Y.encodeStateAsUpdate(document),
+      });
       records.push({
-        ...address,
+        owner_id: ownerId,
         record_id: id,
         deleted,
         value: deleted ? null : "x".repeat(1_000),

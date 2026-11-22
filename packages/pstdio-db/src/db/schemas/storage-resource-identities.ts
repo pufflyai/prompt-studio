@@ -1,4 +1,5 @@
-import { bigint, foreignKey, index, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { bigint, foreignKey, index, integer, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { owners } from "./owners";
 import { projects } from "./projects";
 import { storage_documents } from "./storage-documents";
 
@@ -11,15 +12,18 @@ export const storage_resource_projections = pgTable(
   "storage_resource_projections",
   {
     workbench_id: project(),
-    extension_id: text("extension_id").notNull().default("pstdio"),
+    owner_id: integer("owner_id")
+      .notNull()
+      .references(() => owners.id, { onDelete: "cascade" }),
     document_id: text("document_id").notNull().default("resource-identities"),
     revision: bigint("revision", { mode: "number" }).notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.workbench_id] }),
+    index("storage_resource_projection_document").on(table.owner_id, table.document_id),
     foreignKey({
-      columns: [table.workbench_id, table.extension_id, table.document_id],
-      foreignColumns: [storage_documents.workbench_id, storage_documents.extension_id, storage_documents.document_id],
+      columns: [table.owner_id, table.document_id],
+      foreignColumns: [storage_documents.owner_id, storage_documents.document_id],
     }).onDelete("cascade"),
   ],
 );

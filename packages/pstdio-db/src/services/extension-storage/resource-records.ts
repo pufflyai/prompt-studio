@@ -22,6 +22,7 @@ import { createRecordQueries, listProjectedRecords, readProjectedRecords } from 
 import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
 import type { NumberChange } from "./resource-number-repair";
 import type { StorageDiagnostics } from "./storage-diagnostics";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 // A record's update tail folds into its checkpoint after this many updates.
@@ -32,6 +33,8 @@ const outcome = (operationId: string) => ({
   state: "saved-locally" as const,
   status: "saved-locally" as const,
 });
+
+const retryAddress = (owner: StorageOwner) => ({ owner_id: storageOwnerKey(owner), document_id: "records" });
 
 /** Records of one owner. Each record is its own Yjs document; reads use the SQL projection. */
 export const createResourceRecords = (
@@ -52,7 +55,6 @@ export const createResourceRecords = (
   // Owner-locked transactions load the latest state, so this handle can continue its
   // causal clock instead of adding a new Yjs writer to every record on every save.
   const writer = crypto.getRandomValues(new Uint32Array(1))[0]!;
-  const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_id: "records" };
   const { queryIn: _queryIn, ...queries } = createRecordQueries(db, owner, deps.diagnostics);
   const receipt = (tx: Pick<DbClient, "select">, operationId: string) =>
     tx
@@ -60,8 +62,7 @@ export const createResourceRecords = (
       .from(storage_document_operations)
       .where(
         and(
-          eq(storage_document_operations.workbench_id, owner.workbenchId),
-          eq(storage_document_operations.extension_id, owner.extensionId),
+          eq(storage_document_operations.owner_id, storageOwnerKey(owner)),
           eq(storage_document_operations.document_id, "records"),
           eq(storage_document_operations.operation_id, operationId),
         ),
@@ -116,7 +117,7 @@ export const createResourceRecords = (
     await queueRecordUpload(tx, owner, [...prepared, ...saved.repairs]);
     await tx
       .insert(storage_document_operations)
-      .values({ ...address, operation_id: group.operationId, fingerprint: identity });
+      .values({ ...retryAddress(owner), operation_id: group.operationId, fingerprint: identity });
     const bound = saved.records.filter((record) => "nativeSources" in record);
     const materialized = new Map(
       (

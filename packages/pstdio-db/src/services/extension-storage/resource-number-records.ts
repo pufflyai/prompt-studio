@@ -13,6 +13,7 @@ import {
 import { jsonBatches } from "./json-batches";
 import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
 import { writeResourceQueryValues } from "./resource-query-values";
+import { storageOwnerKey } from "./storage-owner-key";
 
 export type NumberRecord = NumberedResource & { aliases: string[] };
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
@@ -123,8 +124,11 @@ export const projectNumberRecords = async (
   if (owner.extensionId !== coreOwnerId || !records.length) return;
   await tx
     .insert(projections)
-    .values({ workbench_id: owner.workbenchId, document_id: "records", revision })
-    .onConflictDoUpdate({ target: projections.workbench_id, set: { document_id: "records", revision } });
+    .values({ workbench_id: owner.workbenchId, owner_id: storageOwnerKey(owner), document_id: "records", revision })
+    .onConflictDoUpdate({
+      target: projections.workbench_id,
+      set: { owner_id: storageOwnerKey(owner), document_id: "records", revision },
+    });
   const ids = records.map((record) => record.recordId);
   for (let offset = 0; offset < ids.length; offset += 1_000) {
     const selected = ids.slice(offset, offset + 1_000);

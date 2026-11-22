@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, isNull, notInArray } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, notInArray, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { project_extensions, projects, storage_record_indexes } from "../../db/schemas.pg";
 import { projectExtensionRow } from "../extension-instances/project-extension-row";
@@ -106,7 +106,10 @@ export const createProjectsDBService = (db: DbClient) => {
   // Capture rows for committed sync deletions before the project FK cascades them.
   const hardDelete = async (id: string) =>
     db.transaction(async (tx) => {
-      await dropRecordIndexes(tx, eq(storage_record_indexes.workbench_id, id));
+      await dropRecordIndexes(
+        tx,
+        sql`${storage_record_indexes.owner_id} IN (SELECT id FROM owners WHERE project_id=${id})`,
+      );
       const extensionInstances = await tx
         .select()
         .from(project_extensions)

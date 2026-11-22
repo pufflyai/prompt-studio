@@ -2,10 +2,12 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { recordLifetime } from "pstdio-sync/records";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
+import { owners as storageOwners } from "../../db/schemas/owners";
 import { storage_current_records as records } from "../../db/schemas.pg";
 import { jsonBatches } from "./json-batches";
 import { nativeSourceUpgradeBatches } from "./native-source-upgrade-batches";
 import { resourceDocumentId } from "./resource-document-persistence";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 type Row = { workbenchId: string; extensionId: string; recordId: string };
@@ -55,11 +57,11 @@ const writeLifetimes = async (tx: Transaction, facts: Awaited<ReturnType<typeof 
     UPDATE storage_current_records AS saved SET record_lifetime = source.lifetime
     FROM jsonb_to_recordset(${batch}::jsonb)
       AS source("workbenchId" text, "extensionId" text, "recordId" text, lifetime text)
-    WHERE (saved.workbench_id, saved.extension_id, saved.record_id) IN (${sql.join(
-      rows.map((fact) => sql`(${fact.workbenchId}, ${fact.extensionId}, ${fact.recordId})`),
+    WHERE (saved.owner_id, saved.record_id) IN (${sql.join(
+      rows.map((fact) => sql`(${storageOwnerKey(fact)}, ${fact.recordId})`),
       sql`, `,
     )})
-      AND saved.workbench_id = source."workbenchId" AND saved.extension_id = source."extensionId" AND saved.record_id = source."recordId"
+      AND saved.owner_id = (SELECT id FROM owners WHERE project_id = source."workbenchId" AND extension_id = source."extensionId") AND saved.record_id = source."recordId"
   `);
   }
 };
@@ -70,18 +72,23 @@ export const upgradeNativeSourceLifetimes = async (db: DbClient, options: Upgrad
     while (true) {
       const rows = await db.transaction(async (tx) => {
         const rows = await tx
-          .select({ workbenchId: records.workbench_id, extensionId: records.extension_id, recordId: records.record_id })
+          .select({
+            workbenchId: storageOwners.project_id,
+            extensionId: storageOwners.extension_id,
+            recordId: records.record_id,
+          })
           .from(records)
+          .innerJoin(storageOwners, eq(storageOwners.id, records.owner_id))
           .where(
             and(
               eq(records.deleted, false),
               eq(records.record_lifetime, ""),
               cursor
-                ? sql`(${records.workbench_id}, ${records.extension_id}, ${records.record_id}) > (${cursor[0]}, ${cursor[1]}, ${cursor[2]})`
+                ? sql`(${storageOwners.project_id}, ${storageOwners.extension_id}, ${records.record_id}) > (${cursor[0]}, ${cursor[1]}, ${cursor[2]})`
                 : undefined,
             ),
           )
-          .orderBy(asc(records.workbench_id), asc(records.extension_id), asc(records.record_id))
+          .orderBy(asc(storageOwners.project_id), asc(storageOwners.extension_id), asc(records.record_id))
           .limit(500);
         await writeLifetimes(tx, await readLifetimes(tx, rows, options));
         return rows;

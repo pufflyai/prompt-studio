@@ -28,7 +28,7 @@ export const readOrderedPending = async (db: Pick<OrderedTransaction, "select">,
         orderedOwnerWhere(owners, owner),
         sql`NOT EXISTS (
       SELECT 1 FROM storage_documents conversion
-      WHERE conversion.workbench_id = ${owner.workbenchId} AND conversion.extension_id = ${owner.extensionId}
+      WHERE conversion.owner_id = ${storageOwnerKey(owner)}
         AND conversion.document_id = ${conversionId}
     )`,
       ),

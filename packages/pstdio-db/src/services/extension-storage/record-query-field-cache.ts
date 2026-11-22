@@ -22,7 +22,7 @@ export const queryFieldCacheSourceSql = (
   const fields = [...cache.fields].map(([name, column]) => sql`${read(name)} AS ${sql.identifier(column)}`);
   // Keep SQL NULL distinct from JSON null, and leave complete bodies out of the temporary relation.
   return sql`(WITH cached_fields AS MATERIALIZED (
-    SELECT record_id, revision, workbench_id, extension_id, ${sql.join(fields, sql`, `)}
+    SELECT record_id, revision, owner_id, ${sql.join(fields, sql`, `)}
     FROM storage_current_records WHERE ${where}
   ) SELECT * FROM cached_fields) AS storage_current_records`;
 };

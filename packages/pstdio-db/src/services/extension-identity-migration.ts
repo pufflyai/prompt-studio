@@ -4,19 +4,13 @@ import { type ExtensionIdentityRename, extensionIdentityRenames } from "pstdio-a
 import * as Y from "yjs";
 import type { DbClient } from "../db/connection.pglite";
 import * as s from "../db/schemas.pg";
+import { mergeTextOwnerHistories, textOnlyOwnerSql } from "./extension-identity-storage";
 import { indexNodeFilesFor } from "./extension-storage/index-node-files";
+import { ensureStorageOwner } from "./extension-storage/storage-owner-key";
 
 // Ordered by foreign-key dependency. Only these composite-key parents need a new key before moving children.
-const parents = [s.storage_documents, s.storage_record_projections, s.storage_record_sync];
-const projectTables = [
-  ...parents,
-  s.storage_document_updates,
-  s.storage_document_operations,
-  s.storage_current_records,
-  s.storage_record_indexes,
-  s.storage_record_outbox,
-  s.storage_ordered_resource_numbers,
-];
+const parents = [s.storage_record_sync];
+const projectTables = [...parents, s.storage_record_outbox, s.storage_ordered_resource_numbers];
 const otherTables = [
   s.owners,
   s.board_views,
@@ -53,19 +47,24 @@ const assertNoConflicts = async (tx: Transaction, from: string, to: string) => {
         return sql`SELECT workbench_id AS scope, extension_id, ${textFile} AS text_file FROM ${table}
         WHERE ${ownerColumn} IN (${from}, ${to})`;
       }),
-      sql`SELECT project_id AS scope, extension_id, false AS text_file FROM ${s.owners} WHERE extension_id IN (${from}, ${to})`,
+      sql`SELECT o.project_id AS scope, o.extension_id, ${textOnlyOwnerSql("o")} AS text_file FROM ${s.owners} o WHERE o.extension_id IN (${from}, ${to})`,
+      sql`SELECT o.project_id AS scope,o.extension_id,starts_with(d.document_id, '["text-file",') AS text_file
+        FROM storage_documents d JOIN owners o ON d.owner_id=o.id WHERE o.extension_id IN (${from},${to})`,
     ],
     sql` UNION ALL `,
   );
   const scopes = await tx.execute(sql`SELECT scope FROM (${owners}) owners GROUP BY scope
     HAVING count(DISTINCT extension_id) > 1 AND (
       (bool_or(NOT text_file AND extension_id = ${from}) AND bool_or(NOT text_file AND extension_id = ${to}))
-      OR EXISTS (SELECT 1 FROM ${s.storage_documents} a JOIN ${s.storage_documents} b USING (workbench_id, document_id)
-        WHERE a.workbench_id = owners.scope AND a.extension_id = ${from} AND b.extension_id = ${to})
+      OR EXISTS (SELECT 1 FROM storage_documents a JOIN owners ao ON a.owner_id=ao.id
+        JOIN owners bo ON bo.project_id=ao.project_id JOIN storage_documents b ON b.owner_id=bo.id AND b.document_id=a.document_id
+        WHERE ao.project_id=owners.scope AND ao.extension_id=${from} AND bo.extension_id=${to})
+      OR EXISTS (SELECT 1 FROM owners a JOIN owners b USING(project_id)
+        WHERE a.project_id=owners.scope AND a.extension_id=${from} AND b.extension_id=${to}
+          AND NOT (${textOnlyOwnerSql("a")} AND ${textOnlyOwnerSql("b")}))
     ) LIMIT 1`);
   if (scopes.rows[0]) throw new ExtensionIdentityConflictError(from, to, String(scopes.rows[0].scope));
   for (const [table, scope] of [
-    [s.owners, sql`to_jsonb(project_id)`],
     [
       s.preferences,
       sql`jsonb_build_array(scope,
@@ -123,7 +122,7 @@ export const migrateExtensionIdentities = async (
   );
   if (!renames.length) return false;
   const projects = await db.execute(sql`SELECT id FROM ${s.projects} p WHERE NOT EXISTS
-    (SELECT 1 FROM ${s.storage_documents} d WHERE d.workbench_id = p.id AND d.extension_id = 'pstdio' AND d.document_id = ${markerId})`);
+    (SELECT 1 FROM ${s.storage_documents} d JOIN owners o ON d.owner_id=o.id WHERE o.project_id = p.id AND o.extension_id = 'pstdio' AND d.document_id = ${markerId})`);
   const pending = projects.rows.map((row) => String(row.id));
   const oldIds = renames.map(({ from }) => `${from.publisher}.${from.name}`);
   const oldOwners = sql.join(
@@ -181,6 +180,7 @@ export const migrateExtensionIdentities = async (
       if (!renamed) await options.beforeChange?.();
       await db.transaction(async (tx) => {
         await assertNoConflicts(tx, from, to);
+        await mergeTextOwnerHistories(tx, from, to);
         for (const table of parents) await cloneParent(tx, table, from, to);
         for (const table of [
           ...projectTables.filter((t) => !parents.includes(t as (typeof parents)[number])),
@@ -228,7 +228,15 @@ export const migrateExtensionIdentities = async (
     document.destroy();
     await db
       .insert(s.storage_documents)
-      .values(pending.map((workbench_id) => ({ workbench_id, extension_id: "pstdio", document_id: markerId, state })))
+      .values(
+        await Promise.all(
+          pending.map(async (workbenchId) => ({
+            owner_id: await ensureStorageOwner(db, { workbenchId, extensionId: "pstdio" }),
+            document_id: markerId,
+            state,
+          })),
+        ),
+      )
       .onConflictDoNothing();
   }
   await moveRenamedIndexNodes(db, renames);

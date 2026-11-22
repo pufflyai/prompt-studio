@@ -7,14 +7,21 @@ import { identityQueryText } from "./record-identity-query";
 import { projectionKey } from "./record-projection-codec";
 import { recordFieldSql, recordScopeSql, sqlLiteral } from "./record-query-sql";
 import { identityQueryKey } from "./resource-query-values";
+import { ensureStorageOwner } from "./storage-owner-key";
 
 type Writer = Pick<DbClient, "execute">;
+type IndexWriter = Pick<DbClient, "execute" | "select" | "insert">;
 const ddl = (query: SQL) => new PgDialect().sqlToQuery(query.inlineParams()).sql;
 const literal = (value: string) => ddl(sqlLiteral(value));
 
 // Each physical index owns its counts. For identity-backed views the two halves of
 // membership can arrive in either order, including within the same transaction.
-export const installCountIndex = async (tx: Writer, owner: StorageOwner, index: StorageRecordIndex, name: string) => {
+export const installCountIndex = async (
+  tx: IndexWriter,
+  owner: StorageOwner & { ownerId: number },
+  index: StorageRecordIndex,
+  name: string,
+) => {
   if (!index.countBy?.length) return;
   const counts = `${name}_c`,
     records = `${name}_r`,
@@ -35,6 +42,7 @@ export const installCountIndex = async (tx: Writer, owner: StorageOwner, index: 
   const resource = (alias: string) =>
     index.identity ? ddl(identityQueryText(recordFieldSql(index, index.identity.idField, alias))) : "NULL::text";
   const scope = (alias: string) => ddl(recordScopeSql(owner, { ...index, identity: undefined }, alias));
+  const coreOwner = index.identity ? String(await ensureStorageOwner(tx, { ...owner, extensionId: "pstdio" })) : "-1";
   const workbench = literal(owner.workbenchId),
     extension = literal(owner.extensionId);
   const kind = literal(index.identity?.kind ?? "");
@@ -57,7 +65,7 @@ export const installCountIndex = async (tx: Writer, owner: StorageOwner, index: 
     await tx.execute(
       sql.raw(`INSERT INTO ${identities}
       SELECT resource_id,true,${named("c")} FROM storage_resource_identities m
-      LEFT JOIN storage_current_records c ON c.workbench_id=m.workbench_id AND c.extension_id='pstdio' AND c.record_id=m.resource_id
+      LEFT JOIN storage_current_records c ON c.owner_id=${coreOwner} AND c.record_id=m.resource_id
       WHERE m.workbench_id=${workbench} AND ${mapped("m")}`),
     );
   }
@@ -85,7 +93,7 @@ export const installCountIndex = async (tx: Writer, owner: StorageOwner, index: 
       `DECLARE was boolean; now_visible boolean; g record; BEGIN
       SELECT mapped AND named INTO was FROM ${identities} WHERE rid=key;
       IF mapping AND present THEN
-        SELECT EXISTS(SELECT 1 FROM storage_current_records c WHERE c.workbench_id=${workbench} AND c.extension_id='pstdio'
+        SELECT EXISTS(SELECT 1 FROM storage_current_records c WHERE c.owner_id=${coreOwner}
           AND c.record_id=key AND ${named("c")}) INTO now_visible;
         INSERT INTO ${identities} VALUES(key,true,now_visible) ON CONFLICT(rid) DO UPDATE SET named=excluded.named;
       ELSIF mapping THEN
@@ -104,10 +112,11 @@ export const installCountIndex = async (tx: Writer, owner: StorageOwner, index: 
     END`,
     );
   const syncFlag = (mapping: boolean) => {
-    const test = mapping ? mapped : (v: string) => `${v}.extension_id='pstdio' AND ${named(v)}`;
+    const test = mapping ? mapped : (v: string) => `${named(v)}`;
+    const scope = (v: string) => (mapping ? `${v}.workbench_id=${workbench}` : `${v}.owner_id=${coreOwner}`);
     const id = mapping ? "resource_id" : "record_id";
-    return `old_flag := TG_OP<>'INSERT' AND OLD.workbench_id=${workbench} AND ${test("OLD")};
-      new_flag := TG_OP<>'DELETE' AND NEW.workbench_id=${workbench} AND ${test("NEW")};
+    return `old_flag := TG_OP<>'INSERT' AND ${scope("OLD")} AND ${test("OLD")};
+      new_flag := TG_OP<>'DELETE' AND ${scope("NEW")} AND ${test("NEW")};
       IF old_flag AND (NOT new_flag OR OLD.${id}<>NEW.${id}) THEN PERFORM ${flag}(OLD.${id},${mapping},false); END IF;
       IF new_flag AND (NOT old_flag OR OLD.${id}<>NEW.${id}) THEN PERFORM ${flag}(NEW.${id},${mapping},true); END IF;`;
   };
@@ -142,7 +151,7 @@ export const installCountIndex = async (tx: Writer, owner: StorageOwner, index: 
     const belongs = (row: string) =>
       table === "storage_resource_identities"
         ? `(${row}.workbench_id=${workbench} AND ${mapped(row)})`
-        : `(${scope(row)}${index.identity ? ` OR (${row}.workbench_id=${workbench} AND ${row}.extension_id='pstdio' AND ${named(row)})` : ""})`;
+        : `(${scope(row)}${index.identity ? ` OR (${row}.owner_id=${coreOwner} AND ${named(row)})` : ""})`;
     for (const [verb, condition] of [
       ["INSERT", belongs("new")],
       ["DELETE", belongs("old")],

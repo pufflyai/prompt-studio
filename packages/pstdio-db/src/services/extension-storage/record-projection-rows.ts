@@ -7,6 +7,7 @@ import { type NativeProjectedRecord, projectNativeRecordText } from "./native-re
 import { derivedQueryValues, readDerivedQueryIndexes } from "./record-derived-fields";
 import { encodeProjectionValue } from "./record-projection-codec";
 import { identityQueryKey } from "./resource-query-values";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
@@ -41,21 +42,21 @@ export const writeProjectedRecords = async (tx: Transaction, owner: StorageOwner
       const row = rows[0]!;
       // An ordinary edit already has scalar fields. Avoid parsing a surrounding
       // JSON recordset only to unpack that one row again in Postgres.
-      yield sql`VALUES (${owner.workbenchId}, ${owner.extensionId}, ${row.record_id}, ${row.deleted},
+      yield sql`VALUES (${storageOwnerKey(owner)}, ${row.record_id}, ${row.deleted},
         ${jsonInput(row.value)}, ${jsonInput(row.query_values)}, ${jsonInput(row.asset)}, ${jsonInput(row.shared)},
         ${row.revision}, ${jsonInput(row.native_sources)}, ${jsonInput(row.native_versions)}, ${row.record_lifetime})`;
       return;
     }
     for (const batch of jsonBatches(rows))
-      yield sql`SELECT ${owner.workbenchId}, ${owner.extensionId}, input.record_id, input.deleted, input.value, input.query_values, input.asset, input.shared, input.revision, input.native_sources, input.native_versions, input.record_lifetime
+      yield sql`SELECT ${storageOwnerKey(owner)}, input.record_id, input.deleted, input.value, input.query_values, input.asset, input.shared, input.revision, input.native_sources, input.native_versions, input.record_lifetime
         FROM jsonb_to_recordset(${batch}::jsonb)
           AS input(record_id text, deleted boolean, value jsonb, query_values jsonb, asset jsonb, shared jsonb, revision text, native_sources jsonb, native_versions jsonb, record_lifetime text)`;
   };
   for (const input of inputs()) {
     const changed = await tx.execute(sql`
-      INSERT INTO storage_current_records (workbench_id, extension_id, record_id, deleted, value, query_values, asset, shared, revision, native_sources, native_versions, record_lifetime)
+      INSERT INTO storage_current_records (owner_id, record_id, deleted, value, query_values, asset, shared, revision, native_sources, native_versions, record_lifetime)
       ${input}
-      ON CONFLICT (workbench_id, extension_id, record_id) DO UPDATE SET
+      ON CONFLICT (owner_id, record_id) DO UPDATE SET
         deleted = excluded.deleted, value = excluded.value,
         query_values = excluded.query_values || ${owner.extensionId === "pstdio" ? sql`CASE WHEN storage_current_records.query_values ? ${identityQueryKey} THEN jsonb_build_object(${identityQueryKey}::text, storage_current_records.query_values -> ${identityQueryKey}) ELSE '{}'::jsonb END` : sql`'{}'::jsonb`},
         asset = excluded.asset, shared = excluded.shared,

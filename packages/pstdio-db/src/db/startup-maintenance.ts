@@ -26,7 +26,7 @@ export const maintainDatabase = async (
   const { rows } = await db.query<{ migration: string; legacy: boolean }>(
     `SELECT
       (SELECT hash || ':' || created_at::text FROM drizzle.__drizzle_migrations ORDER BY created_at DESC LIMIT 1) AS migration,
-      EXISTS (SELECT 1 FROM storage_documents WHERE starts_with(extension_id, $1)) AS legacy`,
+      EXISTS (SELECT 1 FROM storage_documents WHERE owner_id IN (SELECT id FROM owners WHERE starts_with(extension_id, $1))) AS legacy`,
     [legacyOwnerPrefix],
   );
   const expected = JSON.stringify({ version: 1, migration: rows[0].migration });
@@ -41,7 +41,10 @@ export const maintainDatabase = async (
   await rm(marker, { force: true });
   if (rows[0].legacy) {
     onPhase("database_cleaning");
-    await db.query("DELETE FROM storage_documents WHERE starts_with(extension_id, $1)", [legacyOwnerPrefix]);
+    await db.query(
+      "DELETE FROM storage_documents WHERE owner_id IN (SELECT id FROM owners WHERE starts_with(extension_id, $1))",
+      [legacyOwnerPrefix],
+    );
   }
 
   // The migrator has committed and the runtime still owns the exclusive database lock.

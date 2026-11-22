@@ -33,12 +33,14 @@ import { dependencyOrderedPageSql } from "./record-dependency-order";
 import { formatDatabasePrefix } from "./record-format-key";
 import { defineRecordIndexes } from "./record-index-definition";
 import { decodeProjectionValue } from "./record-projection-codec";
+import { readQueryOwner } from "./record-query-owner";
 import { pageAfterSql, recordPageSql } from "./record-query-sql";
 import { recordVisibilitySql } from "./record-query-visibility";
 import { loadRelatedQueryIndexes, relatedRecordPredicateSql } from "./record-related-query";
 import { prepareTextOrder } from "./record-text-order";
 import { identityQueryVersion, prepareResourceQueryValues } from "./resource-query-values";
 import type { StorageDiagnostics } from "./storage-diagnostics";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type QueryRow = { record_id: string; revision: string; fields: Record<string, Json>; sort_values: Json[] };
 type Current = typeof current.$inferSelect;
@@ -67,8 +69,7 @@ const asRecord = (row: Current) =>
   }) satisfies StorageRecord;
 
 type Reader = Pick<DbClient, "select">;
-const currentWhere = (owner: StorageOwner) =>
-  and(eq(current.workbench_id, owner.workbenchId), eq(current.extension_id, owner.extensionId));
+const currentWhere = (owner: StorageOwner) => and(eq(current.owner_id, storageOwnerKey(owner)));
 
 /** Point reads come from the projection; a missing row is a record that was never saved. */
 export const readProjectedRecords = async (connection: Reader, owner: StorageOwner, ids: string[]) => {
@@ -151,7 +152,7 @@ const prepareQueryMetadata = async (
 
 export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnostics?: StorageDiagnostics) => {
   const ownerWhere = (table: typeof current | typeof indexes | typeof projections) =>
-    and(eq(table.workbench_id, owner.workbenchId), eq(table.extension_id, owner.extensionId));
+    and(eq(table.owner_id, storageOwnerKey(owner)));
   const physicalNames = new WeakMap<StorageRecordIndex, string>();
   const aggregateCache = aggregateCacheFor(db);
   const getIndex = async (connection: Pick<DbClient, "select">, name: string) => {
@@ -175,13 +176,17 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     let identityRevision = "";
     if (identities) {
       const [core] = await connection
-        .select({ current: projections.revision, projected: storage_resource_projections.revision })
+        .select({
+          ownerId: projections.owner_id,
+          current: projections.revision,
+          projected: storage_resource_projections.revision,
+        })
         .from(projections)
-        .leftJoin(storage_resource_projections, eq(storage_resource_projections.workbench_id, projections.workbench_id))
-        .where(and(eq(projections.workbench_id, owner.workbenchId), eq(projections.extension_id, "pstdio")));
+        .leftJoin(storage_resource_projections, eq(storage_resource_projections.owner_id, projections.owner_id))
+        .where(eq(projections.owner_id, storageOwnerKey({ ...owner, extensionId: "pstdio" })));
       if (core && core.current !== (core.projected ?? 0))
         throw new Error("Resource identity projection is stale; upgrade before reading");
-      identityRevision = `:${core?.projected ?? 0}:${identityQueryVersion}`;
+      identityRevision = `:${core?.ownerId ?? 0}:${core?.projected ?? 0}:${identityQueryVersion}`;
     }
     const projection = connection
       .select({ revision: projections.revision })
@@ -196,33 +201,34 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     return row.revision + identityRevision;
   };
   const queryIn = async (tx: Parameters<Parameters<DbClient["transaction"]>[0]>[0], query: StorageRecordQuery) => {
+    const queryOwner = await readQueryOwner(tx, owner);
     traceStorageQuery("query-start", query.index);
     const { declared, index, related } = await prepareQueryMetadata(tx, owner, query, getIndex, diagnostics);
     const revision = await getRevision(tx, related.hasIdentity);
     traceStorageQuery("query-execute", query.index);
     const page = await prepareRecordQuery(owner, index, query, revision, related);
     if (page.limit === 0) return emptyQueryResult(owner, revision, diagnostics);
-    const visible = await recordVisibilitySql(owner, index, declared, physicalNames.get(declared));
+    const visible = await recordVisibilitySql(queryOwner, index, declared, physicalNames.get(declared));
     const result = await tx.execute<QueryRow>(
       query.dependencyOrder
         ? dependencyOrderedPageSql(
-            owner,
+            queryOwner,
             index,
             query.dependencyOrder,
             page.fields,
-            sql`${visible} AND ${relatedRecordPredicateSql(owner, index, query.where, related)}`,
+            sql`${visible} AND ${relatedRecordPredicateSql(queryOwner, index, query.where, related)}`,
             page.limit,
             related,
           )
         : recordPageSql(
             index,
             page.fields,
-            sql`${visible} AND ${relatedRecordPredicateSql(owner, index, query.where, related)} AND ${pageAfterSql(index, page.after, related, owner)}`,
+            sql`${visible} AND ${relatedRecordPredicateSql(queryOwner, index, query.where, related)} AND ${pageAfterSql(index, page.after, related, queryOwner)}`,
             // One extra row shows whether a next page exists without a second scan.
             page.limit + 1,
             page.offset,
             related,
-            owner,
+            queryOwner,
             query.orderBy === undefined || JSON.stringify(query.orderBy) === JSON.stringify(declared.orderBy)
               ? query.where
               : undefined,
@@ -259,6 +265,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
       let cacheKey: string | undefined;
       let reused = false;
       const result = await db.transaction(async (tx) => {
+        const queryOwner = await readQueryOwner(tx, owner);
         traceStorageQuery("aggregate-start", query.index);
         validateRelatedQueryFields(query);
         const declared = await getIndex(tx, query.index);
@@ -293,11 +300,11 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
           const [projection] = await tx.select().from(projections).where(ownerWhere(projections));
           return { revision, count: projection?.live_count ?? 0, groups: [] };
         }
-        const predicate = relatedRecordPredicateSql(owner, index, query.where, related);
+        const predicate = relatedRecordPredicateSql(queryOwner, index, query.where, related);
         const name = physicalNames.get(declared);
         // An owner rename moves declarations before the new owner installs its count tables.
-        const counted = await countIndexSource(tx, index, query, { name, declared, owner }, predicate);
-        const visible = counted ? sql`true` : await recordVisibilitySql(owner, index, declared, name);
+        const counted = await countIndexSource(tx, index, query, { name, declared, owner: queryOwner }, predicate);
+        const visible = counted ? sql`true` : await recordVisibilitySql(queryOwner, index, declared, name);
         return aggregateRecordQuery(
           tx,
           index,
@@ -305,7 +312,7 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
           revision,
           sql`${visible} AND ${predicate}`,
           related,
-          owner,
+          queryOwner,
           counted,
         );
       });

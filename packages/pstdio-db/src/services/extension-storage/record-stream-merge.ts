@@ -7,6 +7,7 @@ import { storage_documents } from "../../db/schemas.pg";
 import type { RecordChange } from "./record-changes";
 import { loadResourceDocuments, resourceDocumentId } from "./resource-document-persistence";
 import { resourceFoldEvery } from "./resource-records";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 const batchSize = 500;
@@ -25,8 +26,7 @@ export const localRecordIds = async (tx: Pick<DbClient, "select">, owner: Storag
     .from(storage_documents)
     .where(
       and(
-        eq(storage_documents.workbench_id, owner.workbenchId),
-        eq(storage_documents.extension_id, owner.extensionId),
+        eq(storage_documents.owner_id, storageOwnerKey(owner)),
         like(storage_documents.document_id, `${resourceDocumentId("").slice(0, -2)}%`),
       ),
     )

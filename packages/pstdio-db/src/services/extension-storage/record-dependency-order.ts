@@ -3,7 +3,7 @@ import type { StorageRecordIndex, StorageRecordQuery } from "pstdio-sync-contrac
 import { expressionArray } from "./query-expression-values";
 import { projectionKey } from "./record-projection-codec";
 import { pageOrderSql } from "./record-query-page";
-import { type QuerySqlOwner, recordFieldSql, sqlLiteral } from "./record-query-sql";
+import { type QuerySqlOwner, queryOwnerKey, recordFieldSql, sqlLiteral } from "./record-query-sql";
 
 /** The graph is a database working set. Only the selected batch's fields cross the storage boundary. */
 export const dependencyOrderedPageSql = (
@@ -82,7 +82,6 @@ export const dependencyOrderedPageSql = (
     CROSS JOIN LATERAL unnest(batch.selected) WITH ORDINALITY chosen(priority, position)
     INNER JOIN nodes ON nodes.priority = chosen.priority
     INNER JOIN storage_current_records ON storage_current_records.record_id = nodes.record_id
-      AND storage_current_records.workbench_id = ${owner.workbenchId}
-      AND storage_current_records.extension_id = ${owner.extensionId}
+      AND storage_current_records.owner_id = ${queryOwnerKey(owner)}
     ORDER BY chosen.position`;
 };

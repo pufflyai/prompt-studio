@@ -9,6 +9,7 @@ import { storage_record_indexes } from "../../db/schemas.pg";
 import { createProjectsDBService } from "../projects/projects";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { storageOwnerKey } from "./storage-owner-key";
 
 // A saved home keeps its public definitions across physical query-layout upgrades.
 test("upgrades persisted v2 indexes, rejects old cursors and preserves records across reopening", async () => {
@@ -36,10 +37,7 @@ test("upgrades persisted v2 indexes, rejects old cursors and preserves records a
       })),
     });
     const saved = await open().read("ticket/3");
-    const address = and(
-      eq(storage_record_indexes.workbench_id, owner.workbenchId),
-      eq(storage_record_indexes.extension_id, owner.extensionId),
-    );
+    const address = and(eq(storage_record_indexes.owner_id, storageOwnerKey(owner)));
     const [current] = await handle.db.select().from(storage_record_indexes).where(address);
     const legacyName = `storage_query_${(await fingerprint({ owner, definition: index as unknown as Json, layout: 2 })).slice(0, 32)}`;
     // Reproduce v2's persisted physical names without changing public declarations or record data.

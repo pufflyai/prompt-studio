@@ -113,6 +113,7 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
         return {
           value,
           document,
+          ownerId: row.owner_id,
           revision,
           documentKey: row.document_key,
           generation: await roomGeneration(tx, input.owner, input.roomId),
@@ -188,7 +189,7 @@ export const createNativeDocumentRoomsDBService = (db: DbClient) => {
             await saveOrderedMarker(tx, input.owner, orderedRoomMarkerId(id), { generation: input.generation });
           return ownerId;
         });
-        cache.publish(JSON.stringify([ownerId, id]), { document, revision: 0 });
+        cache.publish(JSON.stringify([ownerId, id]), { document, ownerId, revision: 0 });
         return { id };
       } catch (error) {
         document.destroy();

@@ -5,6 +5,7 @@ import { storage_record_projections as projections } from "../../db/schemas.pg";
 import { jsonBatches } from "./json-batches";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { encodeProjectionValue } from "./record-projection-codec";
+import { storageOwnerKey } from "./storage-owner-key";
 
 /** Shared edits leave an existing plain record's value, lifecycle and native
  * bindings intact. Under the owner lock, update only the changed query columns
@@ -45,7 +46,7 @@ export const publishOrderedSharedProjection = async (input: {
     const changed = await tx.execute(sql`
       UPDATE storage_current_records current SET shared = input.shared, revision = input.revision
       FROM jsonb_to_recordset(${batch}::jsonb) AS input(record_id text, shared jsonb, revision text, lifetime text)
-      WHERE current.workbench_id = ${owner.workbenchId} AND current.extension_id = ${owner.extensionId}
+      WHERE current.owner_id = ${storageOwnerKey(owner)}
         AND current.record_id = input.record_id AND current.record_lifetime = input.lifetime AND NOT current.deleted
       RETURNING current.record_id
     `);

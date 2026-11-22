@@ -1,7 +1,14 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { StorageRecordIndex } from "pstdio-sync-contracts";
 import { recordIdentityPrefixBytes } from "./record-identity-order";
-import { pageOrderSql, type QuerySqlOwner, recordIndexKeys, recordScopeSql, sortFieldSql } from "./record-query-sql";
+import {
+  pageOrderSql,
+  type QuerySqlOwner,
+  queryOwnerKey,
+  recordIndexKeys,
+  recordScopeSql,
+  sortFieldSql,
+} from "./record-query-sql";
 import { hasTextOrder } from "./record-text-order";
 
 /** Probe an installed alternate ordering before expensive computed filters influence
@@ -67,7 +74,6 @@ export const recordPrefixCandidatesSql = (
     ) AS fallback
   ) AS candidates CROSS JOIN LATERAL (
     SELECT * FROM storage_current_records WHERE storage_current_records.record_id = candidates.selected_record_id
-    AND storage_current_records.workbench_id = ${owner.workbenchId}
-    AND storage_current_records.extension_id = ${owner.extensionId} OFFSET 0
+    AND storage_current_records.owner_id = ${queryOwnerKey(owner)} OFFSET 0
   ) AS storage_current_records`;
 };

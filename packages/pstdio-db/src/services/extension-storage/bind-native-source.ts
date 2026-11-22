@@ -22,6 +22,7 @@ import { lockRecordOwner, saveRecordChanges } from "./record-changes";
 import { queueRecordUpload } from "./record-outbox";
 import { readProjectedRecords } from "./record-queries";
 import { resourceDocumentId } from "./resource-document-persistence";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type SourceInput = { recordId: string; documentKey: string; sourceKey?: string; field?: string; content?: string };
 type SourceRecord = Awaited<ReturnType<typeof readProjectedRecords>>[number];
@@ -119,11 +120,7 @@ export const bindNativeRecordSource = async (
     native.document.destroy();
     const id = resourceDocumentId(input.recordId);
     const scope = (table: typeof storage_documents | typeof storage_document_updates) =>
-      and(
-        eq(table.workbench_id, owner.workbenchId),
-        eq(table.extension_id, owner.extensionId),
-        eq(table.document_id, id),
-      );
+      and(eq(table.owner_id, storageOwnerKey(owner)), eq(table.document_id, id));
     const [head] = await tx
       .select({ revision: storage_documents.revision, folded: storage_documents.folded_revision })
       .from(storage_documents)

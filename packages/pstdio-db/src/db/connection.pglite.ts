@@ -24,6 +24,7 @@ import { prepareBoardDefaultsUpgrade } from "./board-defaults-upgrade";
 import { prepareBoardOwnersUpgrade } from "./board-owners-upgrade";
 import { prepareConnectionCredentialsUpgrade } from "./connection-credentials-upgrade";
 import { attachDatabaseAuthority } from "./database-authority";
+import { prepareDocumentOwnerUpgrade } from "./document-owner-upgrade";
 import { prepareExtensionPreferencesUpgrade } from "./extension-preferences-upgrade";
 import { prepareFileOwnersUpgrade } from "./file-owners-upgrade";
 import { prepareHistoryOwnerUpgrade } from "./history-owner-upgrade";
@@ -236,6 +237,7 @@ export const createDb = async (options?: {
     await withMigrationsFolder(async (migrationsFolder) => {
       if (!fs.existsSync(migrationsFolder)) return;
       const finishProjectExtensionsUpgrade = await prepareProjectExtensionsUpgrade(db, dbPath);
+      const finishDocumentOwnerUpgrade = await prepareDocumentOwnerUpgrade(db, dbPath);
       const finishNativeOwnerUpgrade = await prepareNativeOwnerUpgrade(db, dbPath);
       const finishRecoveryOwnerUpgrade = await prepareRecoveryOwnerUpgrade(db, dbPath);
       const finishOrderedOwnerUpgrade = await prepareOrderedOwnerUpgrade(db, dbPath);
@@ -258,6 +260,7 @@ export const createDb = async (options?: {
       await finishOrderedOwnerUpgrade?.();
       await finishRecoveryOwnerUpgrade?.();
       await finishNativeOwnerUpgrade?.();
+      await finishDocumentOwnerUpgrade?.();
       await finishPreferencesUpgrade?.();
       await finishExtensionPreferencesUpgrade?.();
       await finishConnectionCredentialsUpgrade?.();

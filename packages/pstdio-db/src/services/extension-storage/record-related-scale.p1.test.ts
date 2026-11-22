@@ -3,6 +3,7 @@ import { type SQL, sql } from "drizzle-orm";
 import type { RecordEdit, StorageRecordIndex } from "pstdio-sync-contracts";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { readQueryOwner } from "./record-query-owner";
 import { recordFieldSql, recordPageSql, recordScopeSql } from "./record-query-sql";
 import { relatedRecordPredicateSql } from "./record-related-query";
 
@@ -80,7 +81,7 @@ afterAll(async () => {
 
 const explain = async (projection: SQL) => {
   const result = await f.db.execute(
-    sql`EXPLAIN (ANALYZE, FORMAT JSON) SELECT ${projection} FROM storage_current_records WHERE ${recordScopeSql(owner, indexes[0])}`,
+    sql`EXPLAIN (ANALYZE, FORMAT JSON) SELECT ${projection} FROM storage_current_records WHERE ${recordScopeSql(await readQueryOwner(f.db, owner), indexes[0])}`,
   );
   const nodes: Record<string, unknown>[] = [];
   const walk = (value: unknown) => {
@@ -104,9 +105,9 @@ const visits = (nodes: Record<string, unknown>[]) =>
   );
 
 test("lookup probes the target equality key instead of scanning all placements per resource", async () => {
-  const targets = (await explain(recordFieldSql(indexes[0], "group", undefined, resolve, owner))).filter(
-    (node) => node.Alias === "storage_current_records_lookup",
-  );
+  const targets = (
+    await explain(recordFieldSql(indexes[0], "group", undefined, resolve, await readQueryOwner(f.db, owner)))
+  ).filter((node) => node.Alias === "storage_current_records_lookup");
   expect(visits(targets)).toBeLessThanOrEqual(600);
   expect(targets.some((node) => node["Index Cond"])).toBe(true);
   expect((await records.aggregate({ index: "resources", groupBy: "group", groupLimit: 10 })).groups).toContainEqual({
@@ -117,7 +118,7 @@ test("lookup probes the target equality key instead of scanning all placements p
 
 test("dependency membership probes only referenced targets including empty source arrays", async () => {
   const predicate = relatedRecordPredicateSql(
-    owner,
+    await readQueryOwner(f.db, owner),
     indexes[0],
     { exists: { index: "resources", on: [{ sourceField: "dependencies", relatedField: "id", op: "contains" }] } },
     resolve,
@@ -138,9 +139,9 @@ test("dependency membership probes only referenced targets including empty sourc
 });
 
 test("breadcrumbs skip absent parents and probe the parent key for the one child", async () => {
-  const targets = (await explain(recordFieldSql(indexes[0], "breadcrumb", undefined, resolve, owner))).filter((node) =>
-    String(node.Alias).startsWith("hierarchy_ancestor"),
-  );
+  const targets = (
+    await explain(recordFieldSql(indexes[0], "breadcrumb", undefined, resolve, await readQueryOwner(f.db, owner)))
+  ).filter((node) => String(node.Alias).startsWith("hierarchy_ancestor"));
   expect(visits(targets)).toBeLessThanOrEqual(1);
   expect(
     (
@@ -166,9 +167,9 @@ test("breadcrumb search walks each candidate lineage once", async () => {
 });
 
 test("forward array lookups probe only referenced resources instead of every target", async () => {
-  const targets = (await explain(recordFieldSql(indexes[0], "dependencyTitle", undefined, resolve, owner))).filter(
-    (node) => node.Alias === "storage_current_records_lookup",
-  );
+  const targets = (
+    await explain(recordFieldSql(indexes[0], "dependencyTitle", undefined, resolve, await readQueryOwner(f.db, owner)))
+  ).filter((node) => node.Alias === "storage_current_records_lookup");
   expect(visits(targets)).toBeLessThanOrEqual(600);
   expect(
     (
@@ -209,9 +210,9 @@ test("core identity lookups probe the resource ID instead of every same-kind ide
   // Install identity query values through the public query path before explaining the projection.
   await records.defineIndexes([...indexes, { ...identified, name: "identified" }]);
   await records.query({ index: "identified", fields: [], limit: 1 });
-  const targets = (await explain(recordFieldSql(identified, "shorthand", undefined, resolve, owner))).filter(
-    (node) => node.Alias === "identity",
-  );
+  const targets = (
+    await explain(recordFieldSql(identified, "shorthand", undefined, resolve, await readQueryOwner(f.db, owner)))
+  ).filter((node) => node.Alias === "identity");
   expect(visits(targets)).toBeLessThanOrEqual(600);
   const ordered: StorageRecordIndex = {
     ...identified,
@@ -220,7 +221,7 @@ test("core identity lookups probe the resource ID instead of every same-kind ide
   };
   await records.defineIndexes([...indexes, ordered]);
   const plan = await f.db.execute(
-    sql`EXPLAIN (ANALYZE, FORMAT JSON) ${recordPageSql(ordered, [], recordScopeSql(owner, ordered), 1, 0, resolve, owner)}`,
+    sql`EXPLAIN (ANALYZE, FORMAT JSON) ${recordPageSql(ordered, [], recordScopeSql(await readQueryOwner(f.db, owner), ordered), 1, 0, resolve, await readQueryOwner(f.db, owner))}`,
   );
   const identityVisits = (value: unknown): number => {
     if (!value || typeof value !== "object") return 0;

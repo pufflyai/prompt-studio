@@ -3,11 +3,13 @@ import { coreOwnerId, resourceNumbers, resourceNumbersDocumentId, resourceShorth
 import { fingerprint } from "pstdio-sync-contracts";
 import type * as Y from "yjs";
 import type { DbClient } from "../db/connection.pglite";
+import { owners as storageOwners } from "../db/schemas/owners";
 import { storage_documents, storage_resource_aliases, storage_resource_identities } from "../db/schemas.pg";
 import { dataMigrationContext } from "./extension-storage/data-migration-context";
 import { runDocumentTransaction } from "./extension-storage/document-persistence";
 import type { createDocumentStorageDBService } from "./extension-storage/document-storage";
 import { numberValue } from "./extension-storage/resource-number-records";
+import { storageOwnerKey } from "./extension-storage/storage-owner-key";
 
 type NumberRecords = Parameters<
   Parameters<ReturnType<ReturnType<typeof createDocumentStorageDBService>["open"]>["records"]["transaction"]>[0]
@@ -45,21 +47,18 @@ export const upgradeResourceNumbers = async (
   documents: ReturnType<typeof createDocumentStorageDBService>,
 ) => {
   const owners = await db
-    .select({ workbenchId: storage_documents.workbench_id })
+    .select({ workbenchId: storageOwners.project_id })
     .from(storage_documents)
+    .innerJoin(storageOwners, eq(storageOwners.id, storage_documents.owner_id))
     .where(
-      and(
-        eq(storage_documents.extension_id, coreOwnerId),
-        eq(storage_documents.document_id, resourceNumbersDocumentId),
-      ),
+      and(eq(storageOwners.extension_id, coreOwnerId), eq(storage_documents.document_id, resourceNumbersDocumentId)),
     );
   for (const { workbenchId } of owners) {
     const owner = { workbenchId, extensionId: coreOwnerId };
     const address = { workbench_id: workbenchId, extension_id: coreOwnerId, document_id: resourceNumbersDocumentId };
     await documents.open({ owner }).records.transaction(async (records, tx) => {
       const where = and(
-        eq(storage_documents.workbench_id, workbenchId),
-        eq(storage_documents.extension_id, coreOwnerId),
+        eq(storage_documents.owner_id, storageOwnerKey(owner)),
         eq(storage_documents.document_id, resourceNumbersDocumentId),
       );
       if (!(await tx.select().from(storage_documents).where(where)).length) return;

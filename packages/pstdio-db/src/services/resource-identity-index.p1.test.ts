@@ -11,6 +11,7 @@ import {
 } from "../db/schemas.pg";
 import { createExtensionResourceSequencesDBService } from "./extension-resource-sequences";
 import { createDocumentStorageDBService } from "./extension-storage/document-storage";
+import { ensureStorageOwner, storageOwnerKey } from "./extension-storage/storage-owner-key";
 import { createProjectsDBService } from "./projects/projects";
 
 test("closing an unused number service leaves its old source unopened for the next start", async () => {
@@ -18,8 +19,7 @@ test("closing an unused number service leaves its old source unopened for the ne
   try {
     const project = await createProjectsDBService(connection.db).create({ name: "Unused old numbers" });
     await connection.db.insert(storage_documents).values({
-      workbench_id: project.id,
-      extension_id: coreOwnerId,
+      owner_id: await ensureStorageOwner(connection.db, { workbenchId: project.id, extensionId: coreOwnerId }),
       document_id: resourceNumbersDocumentId,
       state: new Uint8Array([1]),
     });
@@ -43,7 +43,9 @@ test("existing numbers and aliases move once into records and retain their alloc
       resourceNumbers(document).set(resource.id, resource);
       rememberResourceNumber(document, resource);
     });
-    await connection.db.insert(storage_resource_projections).values({ workbench_id: project.id, revision: 0 });
+    await connection.db
+      .insert(storage_resource_projections)
+      .values({ workbench_id: project.id, owner_id: storageOwnerKey(owner), revision: 0 });
     await connection.db.insert(storage_resource_identities).values({
       workbench_id: project.id,
       resource_id: "z-deleted-by-old-writer",

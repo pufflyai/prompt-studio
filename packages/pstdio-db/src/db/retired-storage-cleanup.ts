@@ -1,14 +1,14 @@
 import { and, eq, like, type SQL, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { legacyNodeRows } from "../services/extension-storage/index-node-upgrade";
+import { storageOwnerKey } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
 import { storage_documents as documents } from "./schemas.pg";
 import { invalidateMaintenance, legacyOwnerPrefix } from "./startup-maintenance";
 
 const BATCH_SIZE = 32;
-const key = sql`(${documents.workbench_id}, ${documents.extension_id}, ${documents.document_id})`;
-const address = (row: { workbenchId: string; extensionId: string; documentId: string }) =>
-  sql`(${row.workbenchId}, ${row.extensionId}, ${row.documentId})`;
+const key = sql`(${documents.owner_id}, ${documents.document_id})`;
+const address = (row: { ownerId: number; documentId: string }) => sql`(${row.ownerId}, ${row.documentId})`;
 
 const removeRows = async (db: DbClient, filter: SQL, stopped: () => boolean, beforeDelete: () => Promise<void>) => {
   let after: SQL | undefined;
@@ -18,13 +18,12 @@ const removeRows = async (db: DbClient, filter: SQL, stopped: () => boolean, bef
     if (stopped()) return false;
     const batch = await db
       .select({
-        workbenchId: documents.workbench_id,
-        extensionId: documents.extension_id,
+        ownerId: documents.owner_id,
         documentId: documents.document_id,
       })
       .from(documents)
       .where(and(filter, after ? sql`${key} > ${after}` : undefined))
-      .orderBy(documents.workbench_id, documents.extension_id, documents.document_id)
+      .orderBy(documents.owner_id, documents.document_id)
       .limit(BATCH_SIZE);
     if (!batch.length) return true;
     if (stopped()) return false;
@@ -47,17 +46,13 @@ export const createRetiredStorageCleanup = (db: DbClient, path: string, owners: 
   return async (stopped: () => boolean) => {
     for (; nextOwner < owners.length; nextOwner++) {
       const owner = owners[nextOwner]!;
-      const filter = and(
-        eq(documents.workbench_id, owner.workbenchId),
-        eq(documents.extension_id, owner.extensionId),
-        like(documents.document_id, legacyNodeRows),
-      )!;
+      const filter = and(eq(documents.owner_id, storageOwnerKey(owner)), like(documents.document_id, legacyNodeRows))!;
       if (!(await removeRows(db, filter, stopped, beforeDelete))) return;
     }
     if (!historyDone)
       historyDone = await removeRows(
         db,
-        sql`starts_with(${documents.extension_id}, ${legacyOwnerPrefix})`,
+        sql`${documents.owner_id} IN (SELECT id FROM owners WHERE starts_with(extension_id, ${legacyOwnerPrefix}))`,
         stopped,
         beforeDelete,
       );

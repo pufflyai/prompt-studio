@@ -229,7 +229,12 @@ test("two upgraded devices, an offline return and a clean join share encrypted s
       expect(await device.text.read()).toBe("Draft before upgrade");
       expect((await device.log.read({ after: 0, limit: 10 })).entries.map((e) => e.id)).toEqual(["log-stable"]);
       expect(
-        await device.db.select().from(s.storage_documents).where(eq(s.storage_documents.extension_id, historical)),
+        await device.db
+          .select()
+          .from(s.storage_documents)
+          .where(
+            eq(s.storage_documents.owner_id, storageOwnerKey({ workbenchId: projectId, extensionId: historical })),
+          ),
       ).toEqual([]);
     }),
   );

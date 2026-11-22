@@ -1,15 +1,14 @@
 import { sql } from "drizzle-orm";
-import { bigint, boolean, foreignKey, index, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { bigint, boolean, foreignKey, index, integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import type { NativeRecordSources } from "pstdio-sync/records";
 import type { StorageRecord, StorageRecordIndex } from "pstdio-sync-contracts";
-import { projects } from "./projects";
+import { owners } from "./owners";
 import { storage_documents } from "./storage-documents";
 
 const ownerColumns = () => ({
-  workbench_id: text("workbench_id")
+  owner_id: integer("owner_id")
     .notNull()
-    .references(() => projects.id, { onDelete: "cascade" }),
-  extension_id: text("extension_id").notNull(),
+    .references(() => owners.id, { onDelete: "cascade" }),
 });
 
 export const storage_record_projections = pgTable(
@@ -22,10 +21,10 @@ export const storage_record_projections = pgTable(
     live_count: bigint("live_count", { mode: "number" }).notNull().default(0),
   },
   (table) => [
-    primaryKey({ columns: [table.workbench_id, table.extension_id] }),
+    primaryKey({ columns: [table.owner_id] }),
     foreignKey({
-      columns: [table.workbench_id, table.extension_id, table.document_id],
-      foreignColumns: [storage_documents.workbench_id, storage_documents.extension_id, storage_documents.document_id],
+      columns: [table.owner_id, table.document_id],
+      foreignColumns: [storage_documents.owner_id, storage_documents.document_id],
     }).onDelete("cascade"),
   ],
 );
@@ -49,14 +48,14 @@ export const storage_current_records = pgTable(
     revision: text("revision").notNull(),
   },
   (table) => [
-    primaryKey({ columns: [table.workbench_id, table.extension_id, table.record_id] }),
+    primaryKey({ columns: [table.owner_id, table.record_id] }),
     index("storage_current_records_native_sources_idx").using("gin", table.native_sources),
     index("storage_current_records_lifetime_upgrade_idx")
-      .on(table.workbench_id, table.extension_id, table.record_id)
+      .on(table.owner_id, table.record_id)
       .where(sql`${table.record_lifetime} = '' AND NOT ${table.deleted}`),
     foreignKey({
-      columns: [table.workbench_id, table.extension_id],
-      foreignColumns: [storage_record_projections.workbench_id, storage_record_projections.extension_id],
+      columns: [table.owner_id],
+      foreignColumns: [storage_record_projections.owner_id],
     }).onDelete("cascade"),
   ],
 );
@@ -69,5 +68,5 @@ export const storage_record_indexes = pgTable(
     definition: jsonb("definition").$type<StorageRecordIndex>().notNull(),
     database_name: text("database_name").notNull(),
   },
-  (table) => [primaryKey({ columns: [table.workbench_id, table.extension_id, table.name] })],
+  (table) => [primaryKey({ columns: [table.owner_id, table.name] })],
 );

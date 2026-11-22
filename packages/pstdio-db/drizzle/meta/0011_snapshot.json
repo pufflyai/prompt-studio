@@ -1,5 +1,5 @@
 {
-  "id": "f584031f-140b-4c4a-8349-5023f0b7a385",
+  "id": "2ed2fbdb-7554-4ccc-860b-4fa2306e5ffc",
   "prevId": "7831c13a-76db-4e65-a402-222b04fffc09",
   "version": "7",
   "dialect": "postgresql",
@@ -2990,15 +2990,9 @@
       "name": "storage_document_operations",
       "schema": "",
       "columns": {
-        "workbench_id": {
-          "name": "workbench_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "extension_id": {
-          "name": "extension_id",
-          "type": "text",
+        "owner_id": {
+          "name": "owner_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -3028,13 +3022,11 @@
           "tableFrom": "storage_document_operations",
           "tableTo": "storage_documents",
           "columnsFrom": [
-            "workbench_id",
-            "extension_id",
+            "owner_id",
             "document_id"
           ],
           "columnsTo": [
-            "workbench_id",
-            "extension_id",
+            "owner_id",
             "document_id"
           ],
           "onDelete": "cascade",
@@ -3045,8 +3037,7 @@
         "storage_document_operations_pk": {
           "name": "storage_document_operations_pk",
           "columns": [
-            "workbench_id",
-            "extension_id",
+            "owner_id",
             "document_id",
             "operation_id"
           ]
@@ -3061,15 +3052,9 @@
       "name": "storage_document_updates",
       "schema": "",
       "columns": {
-        "workbench_id": {
-          "name": "workbench_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "extension_id": {
-          "name": "extension_id",
-          "type": "text",
+        "owner_id": {
+          "name": "owner_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -3099,13 +3084,11 @@
           "tableFrom": "storage_document_updates",
           "tableTo": "storage_documents",
           "columnsFrom": [
-            "workbench_id",
-            "extension_id",
+            "owner_id",
             "document_id"
           ],
           "columnsTo": [
-            "workbench_id",
-            "extension_id",
+            "owner_id",
             "document_id"
           ],
           "onDelete": "cascade",
@@ -3116,8 +3099,7 @@
         "storage_document_updates_pk": {
           "name": "storage_document_updates_pk",
           "columns": [
-            "workbench_id",
-            "extension_id",
+            "owner_id",
             "document_id",
             "revision"
           ]
@@ -3132,15 +3114,9 @@
       "name": "storage_documents",
       "schema": "",
       "columns": {
-        "workbench_id": {
-          "name": "workbench_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "extension_id": {
-          "name": "extension_id",
-          "type": "text",
+        "owner_id": {
+          "name": "owner_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -3173,12 +3149,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "storage_documents_workbench_id_projects_id_fk": {
-          "name": "storage_documents_workbench_id_projects_id_fk",
+        "storage_documents_owner_id_owners_id_fk": {
+          "name": "storage_documents_owner_id_owners_id_fk",
           "tableFrom": "storage_documents",
-          "tableTo": "projects",
+          "tableTo": "owners",
           "columnsFrom": [
-            "workbench_id"
+            "owner_id"
           ],
           "columnsTo": [
             "id"
@@ -3188,11 +3164,10 @@
         }
       },
       "compositePrimaryKeys": {
-        "storage_documents_workbench_id_extension_id_document_id_pk": {
-          "name": "storage_documents_workbench_id_extension_id_document_id_pk",
+        "storage_documents_owner_id_document_id_pk": {
+          "name": "storage_documents_owner_id_document_id_pk",
           "columns": [
-            "workbench_id",
-            "extension_id",
+            "owner_id",
             "document_id"
           ]
         }
@@ -4518,15 +4493,9 @@
       "name": "storage_current_records",
       "schema": "",
       "columns": {
-        "workbench_id": {
-          "name": "workbench_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "extension_id": {
-          "name": "extension_id",
-          "type": "text",
+        "owner_id": {
+          "name": "owner_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -4615,13 +4584,7 @@
           "name": "storage_current_records_lifetime_upgrade_idx",
           "columns": [
             {
-              "expression": "workbench_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "extension_id",
+              "expression": "owner_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4641,12 +4604,12 @@
         }
       },
       "foreignKeys": {
-        "storage_current_records_workbench_id_projects_id_fk": {
-          "name": "storage_current_records_workbench_id_projects_id_fk",
+        "storage_current_records_owner_id_owners_id_fk": {
+          "name": "storage_current_records_owner_id_owners_id_fk",
           "tableFrom": "storage_current_records",
-          "tableTo": "projects",
+          "tableTo": "owners",
           "columnsFrom": [
-            "workbench_id"
+            "owner_id"
           ],
           "columnsTo": [
             "id"
@@ -4654,28 +4617,25 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "storage_current_records_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk": {
-          "name": "storage_current_records_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk",
+        "storage_current_records_owner_id_storage_record_projections_owner_id_fk": {
+          "name": "storage_current_records_owner_id_storage_record_projections_owner_id_fk",
           "tableFrom": "storage_current_records",
           "tableTo": "storage_record_projections",
           "columnsFrom": [
-            "workbench_id",
-            "extension_id"
+            "owner_id"
           ],
           "columnsTo": [
-            "workbench_id",
-            "extension_id"
+            "owner_id"
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
-        "storage_current_records_workbench_id_extension_id_record_id_pk": {
-          "name": "storage_current_records_workbench_id_extension_id_record_id_pk",
+        "storage_current_records_owner_id_record_id_pk": {
+          "name": "storage_current_records_owner_id_record_id_pk",
           "columns": [
-            "workbench_id",
-            "extension_id",
+            "owner_id",
             "record_id"
           ]
         }
@@ -4689,15 +4649,9 @@
       "name": "storage_record_indexes",
       "schema": "",
       "columns": {
-        "workbench_id": {
-          "name": "workbench_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "extension_id": {
-          "name": "extension_id",
-          "type": "text",
+        "owner_id": {
+          "name": "owner_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -4722,12 +4676,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "storage_record_indexes_workbench_id_projects_id_fk": {
-          "name": "storage_record_indexes_workbench_id_projects_id_fk",
+        "storage_record_indexes_owner_id_owners_id_fk": {
+          "name": "storage_record_indexes_owner_id_owners_id_fk",
           "tableFrom": "storage_record_indexes",
-          "tableTo": "projects",
+          "tableTo": "owners",
           "columnsFrom": [
-            "workbench_id"
+            "owner_id"
           ],
           "columnsTo": [
             "id"
@@ -4737,11 +4691,10 @@
         }
       },
       "compositePrimaryKeys": {
-        "storage_record_indexes_workbench_id_extension_id_name_pk": {
-          "name": "storage_record_indexes_workbench_id_extension_id_name_pk",
+        "storage_record_indexes_owner_id_name_pk": {
+          "name": "storage_record_indexes_owner_id_name_pk",
           "columns": [
-            "workbench_id",
-            "extension_id",
+            "owner_id",
             "name"
           ]
         }
@@ -4755,15 +4708,9 @@
       "name": "storage_record_projections",
       "schema": "",
       "columns": {
-        "workbench_id": {
-          "name": "workbench_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "extension_id": {
-          "name": "extension_id",
-          "type": "text",
+        "owner_id": {
+          "name": "owner_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -4790,12 +4737,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "storage_record_projections_workbench_id_projects_id_fk": {
-          "name": "storage_record_projections_workbench_id_projects_id_fk",
+        "storage_record_projections_owner_id_owners_id_fk": {
+          "name": "storage_record_projections_owner_id_owners_id_fk",
           "tableFrom": "storage_record_projections",
-          "tableTo": "projects",
+          "tableTo": "owners",
           "columnsFrom": [
-            "workbench_id"
+            "owner_id"
           ],
           "columnsTo": [
             "id"
@@ -4803,18 +4750,16 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "storage_record_projections_workbench_id_extension_id_document_id_storage_documents_workbench_id_extension_id_document_id_fk": {
-          "name": "storage_record_projections_workbench_id_extension_id_document_id_storage_documents_workbench_id_extension_id_document_id_fk",
+        "storage_record_projections_owner_id_document_id_storage_documents_owner_id_document_id_fk": {
+          "name": "storage_record_projections_owner_id_document_id_storage_documents_owner_id_document_id_fk",
           "tableFrom": "storage_record_projections",
           "tableTo": "storage_documents",
           "columnsFrom": [
-            "workbench_id",
-            "extension_id",
+            "owner_id",
             "document_id"
           ],
           "columnsTo": [
-            "workbench_id",
-            "extension_id",
+            "owner_id",
             "document_id"
           ],
           "onDelete": "cascade",
@@ -4822,11 +4767,10 @@
         }
       },
       "compositePrimaryKeys": {
-        "storage_record_projections_workbench_id_extension_id_pk": {
-          "name": "storage_record_projections_workbench_id_extension_id_pk",
+        "storage_record_projections_owner_id_pk": {
+          "name": "storage_record_projections_owner_id_pk",
           "columns": [
-            "workbench_id",
-            "extension_id"
+            "owner_id"
           ]
         }
       },
@@ -5140,12 +5084,11 @@
           "primaryKey": false,
           "notNull": true
         },
-        "extension_id": {
-          "name": "extension_id",
-          "type": "text",
+        "owner_id": {
+          "name": "owner_id",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'pstdio'"
+          "notNull": true
         },
         "document_id": {
           "name": "document_id",
@@ -5161,7 +5104,29 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "storage_resource_projection_document": {
+          "name": "storage_resource_projection_document",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "document_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "storage_resource_projections_workbench_id_projects_id_fk": {
           "name": "storage_resource_projections_workbench_id_projects_id_fk",
@@ -5176,18 +5141,29 @@
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
-        "storage_resource_projections_workbench_id_extension_id_document_id_storage_documents_workbench_id_extension_id_document_id_fk": {
-          "name": "storage_resource_projections_workbench_id_extension_id_document_id_storage_documents_workbench_id_extension_id_document_id_fk",
+        "storage_resource_projections_owner_id_owners_id_fk": {
+          "name": "storage_resource_projections_owner_id_owners_id_fk",
+          "tableFrom": "storage_resource_projections",
+          "tableTo": "owners",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "storage_resource_projections_owner_id_document_id_storage_documents_owner_id_document_id_fk": {
+          "name": "storage_resource_projections_owner_id_document_id_storage_documents_owner_id_document_id_fk",
           "tableFrom": "storage_resource_projections",
           "tableTo": "storage_documents",
           "columnsFrom": [
-            "workbench_id",
-            "extension_id",
+            "owner_id",
             "document_id"
           ],
           "columnsTo": [
-            "workbench_id",
-            "extension_id",
+            "owner_id",
             "document_id"
           ],
           "onDelete": "cascade",

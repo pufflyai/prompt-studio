@@ -9,6 +9,7 @@ import { lockRecordOwner, saveRecordChanges } from "./record-changes";
 import { dropRecordOutbox, queueRecordBytes, queueRecordUpload, readRecordOutbox } from "./record-outbox";
 import { acceptFrames, adoptRecords, localRecordIds, mergeRecords, recordStates } from "./record-stream-merge";
 import type { NumberChange } from "./resource-number-repair";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
@@ -78,8 +79,7 @@ export const createRecordStreamStore = (
         .from(storage_current_records)
         .where(
           and(
-            eq(storage_current_records.workbench_id, owner.workbenchId),
-            eq(storage_current_records.extension_id, owner.extensionId),
+            eq(storage_current_records.owner_id, storageOwnerKey(owner)),
             inArray(storage_current_records.record_id, recordIds.slice(offset, offset + 1_000)),
             eq(storage_current_records.deleted, false),
             isNotNull(storage_current_records.asset),

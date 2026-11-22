@@ -3,6 +3,7 @@ import type { StorageOwner } from "pstdio-sync";
 import { storage_documents as documents } from "../../db/schemas.pg";
 import { readOrderedMarker, saveOrderedMarker } from "./ordered-native-metadata";
 import { decodeOrderedJson, encodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { ensureStorageOwner } from "./storage-owner-key";
 
 export const conversionId = '["ordered-conversion"]';
 export const conversionFrameId = (sequence: number) => JSON.stringify(["ordered-conversion-frame", sequence]);
@@ -41,9 +42,9 @@ export const saveConversionValues = async (
   owner: StorageOwner,
   values: Map<string, unknown>,
 ) => {
+  const ownerId = await ensureStorageOwner(tx, owner);
   const rows = [...values].map(([id, value]) => ({
-    workbench_id: owner.workbenchId,
-    extension_id: owner.extensionId,
+    owner_id: ownerId,
     document_id: id,
     state: encodeOrderedJson(value),
   }));
@@ -52,7 +53,7 @@ export const saveConversionValues = async (
       .insert(documents)
       .values(rows.slice(offset, offset + 100))
       .onConflictDoUpdate({
-        target: [documents.workbench_id, documents.extension_id, documents.document_id],
+        target: [documents.owner_id, documents.document_id],
         set: { state: sql`excluded.state`, revision: sql`${documents.revision} + 1` },
       });
 };

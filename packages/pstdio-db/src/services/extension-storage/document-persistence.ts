@@ -6,6 +6,7 @@ import { storage_document_operations, storage_document_updates, storage_document
 import { dataMigrationContext } from "./data-migration-context";
 import type { LoadedDocument } from "./document-cache";
 import type { StorageDiagnostics } from "./storage-diagnostics";
+import { ensureStorageOwner, storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 export interface DocumentAddress {
@@ -13,16 +14,22 @@ export interface DocumentAddress {
   extension_id: string;
   document_id: string;
 }
+const ownerFor = (address: DocumentAddress) => ({
+  workbenchId: address.workbench_id,
+  extensionId: address.extension_id,
+});
+const documentColumns = (address: DocumentAddress) => ({
+  owner_id: storageOwnerKey(ownerFor(address)),
+  document_id: address.document_id,
+});
 const documentWhere = (address: DocumentAddress) =>
   and(
-    eq(storage_documents.workbench_id, address.workbench_id),
-    eq(storage_documents.extension_id, address.extension_id),
+    eq(storage_documents.owner_id, storageOwnerKey(ownerFor(address))),
     eq(storage_documents.document_id, address.document_id),
   );
 const updatesWhere = (address: DocumentAddress) =>
   and(
-    eq(storage_document_updates.workbench_id, address.workbench_id),
-    eq(storage_document_updates.extension_id, address.extension_id),
+    eq(storage_document_updates.owner_id, storageOwnerKey(ownerFor(address))),
     eq(storage_document_updates.document_id, address.document_id),
   );
 const foldEvery = 128;
@@ -34,17 +41,22 @@ const loadDocument = async (
   cached?: LoadedDocument,
   diagnostics?: StorageDiagnostics,
 ) => {
+  const ownerId = await ensureStorageOwner(tx, owner);
   const inserted = await tx
     .insert(storage_documents)
-    .values({ ...address, state: new Uint8Array([0, 0]) })
+    .values({ ...documentColumns(address), owner_id: ownerId, state: new Uint8Array([0, 0]) })
     .onConflictDoNothing()
     .returning();
   const [row] = await tx
-    .select({ revision: storage_documents.revision, folded_revision: storage_documents.folded_revision })
+    .select({
+      owner_id: storage_documents.owner_id,
+      revision: storage_documents.revision,
+      folded_revision: storage_documents.folded_revision,
+    })
     .from(storage_documents)
     .where(documentWhere(address))
     .for("update");
-  if (cached?.revision === row.revision) return { row, document: cached.document };
+  if (cached?.ownerId === row.owner_id && cached.revision === row.revision) return { row, document: cached.document };
   const [saved] = await tx
     .select({ state: storage_documents.state })
     .from(storage_documents)
@@ -75,8 +87,7 @@ const localOperations = (tx: Transaction, address: DocumentAddress) => {
         .from(storage_document_operations)
         .where(
           and(
-            eq(storage_document_operations.workbench_id, address.workbench_id),
-            eq(storage_document_operations.extension_id, address.extension_id),
+            eq(storage_document_operations.owner_id, storageOwnerKey(ownerFor(address))),
             eq(storage_document_operations.document_id, address.document_id),
             eq(storage_document_operations.operation_id, id),
           ),
@@ -90,7 +101,9 @@ const localOperations = (tx: Transaction, address: DocumentAddress) => {
       if (!pending.size) return;
       await tx
         .insert(storage_document_operations)
-        .values([...pending].map(([id, fingerprint]) => ({ ...address, operation_id: id, fingerprint })))
+        .values(
+          [...pending].map(([id, fingerprint]) => ({ ...documentColumns(address), operation_id: id, fingerprint })),
+        )
         .onConflictDoNothing();
     },
   };
@@ -105,7 +118,9 @@ const appendUpdates = async (
 ) => {
   if (!updates.length) return row.revision;
   const revision = row.revision + 1;
-  await tx.insert(storage_document_updates).values({ ...address, revision, update: Y.mergeUpdates(updates) });
+  await tx
+    .insert(storage_document_updates)
+    .values({ ...documentColumns(address), revision, update: Y.mergeUpdates(updates) });
   const fold = revision - row.folded_revision >= foldEvery;
   await tx
     .update(storage_documents)
@@ -168,7 +183,7 @@ export const runDocumentTransaction = async <T>(
     const revision = replaced
       ? await replaceDocument(tx, address, row.revision, document)
       : await appendUpdates(tx, address, row, document, updates);
-    return { value, revision, document, changed: replaced || updates.length > 0 };
+    return { value, revision, document, ownerId: row.owner_id, changed: replaced || updates.length > 0 };
   } catch (error) {
     if (document !== input.cached?.document) document.destroy();
     throw error;

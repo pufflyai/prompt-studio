@@ -29,13 +29,20 @@ test(
           JSON.stringify(["pstdio.personal-history", "https://manager.example", "alice"]),
           "transcript",
         ];
-        await seed.pglite.query(
-          "INSERT INTO storage_documents (workbench_id,extension_id,document_id,state) VALUES ($1,$2,$3,$4)",
-          [...address, new Uint8Array([0, 0])],
+        const {
+          rows: [owner],
+        } = await seed.pglite.query<{ id: number }>(
+          "INSERT INTO owners(project_id,extension_id) VALUES ($1,$2) RETURNING id",
+          address.slice(0, 2),
         );
+        await seed.pglite.query("INSERT INTO storage_documents (owner_id,document_id,state) VALUES ($1,$2,$3)", [
+          owner!.id,
+          address[2],
+          new Uint8Array([0, 0]),
+        ]);
         await seed.pglite.query(
-          "INSERT INTO storage_document_updates (workbench_id,extension_id,document_id,revision,update) VALUES ($1,$2,$3,1,$4)",
-          [...address, randomBytes(2 * 1024 * 1024)],
+          "INSERT INTO storage_document_updates (owner_id,document_id,revision,update) VALUES ($1,$2,1,$3)",
+          [owner!.id, address[2], randomBytes(2 * 1024 * 1024)],
         );
       } finally {
         await seed.close();

@@ -4,6 +4,7 @@ import type { StorageRecordIndex } from "pstdio-sync-contracts";
 import { analyzeRecordProjection } from "../../db/record-projection-statistics";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { readQueryOwner } from "./record-query-owner";
 import { predicateSql, recordPageSql, recordScopeSql } from "./record-query-sql";
 
 test("an empty page seeks a nonleading equality field instead of walking every ordered resource", async () => {
@@ -38,7 +39,7 @@ test("an empty page seeks a nonleading equality field instead of walking every o
     const statement = recordPageSql(
       index,
       ["id"],
-      sql`${recordScopeSql(owner, index)} AND ${predicateSql(index, where)}`,
+      sql`${recordScopeSql(await readQueryOwner(f.db, owner), index)} AND ${predicateSql(index, where)}`,
       101,
     );
     const result = await f.db.execute<{ "QUERY PLAN": { Plan: Record<string, unknown> }[] }>(

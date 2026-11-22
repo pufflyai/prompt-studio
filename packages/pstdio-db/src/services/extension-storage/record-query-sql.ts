@@ -1,3 +1,7 @@
+import { type QuerySqlOwner, queryOwnerKey, rowQueryOwner } from "./record-query-owner";
+
+export { type QuerySqlOwner, queryOwnerKey } from "./record-query-owner";
+
 import { type SQL, sql } from "drizzle-orm";
 import { queryField } from "pstdio-sync/records";
 import type {
@@ -30,7 +34,6 @@ import { relatedRecordPredicateSql } from "./record-related-query";
 import { identityQueryKey } from "./resource-query-values";
 
 export const sqlLiteral = (value: string) => sql.raw(`'${value.replaceAll("'", "''")}'`);
-export type QuerySqlOwner = { workbenchId: string | SQL; extensionId: string | SQL };
 const json = (value: Json) => sql`${JSON.stringify(encodeProjectionValue(value))}::jsonb`;
 export const projectionStringSortSql = (value: SQL) => stringBytesSql(value);
 export const sortValueSql = (value: Json) =>
@@ -38,15 +41,17 @@ export const sortValueSql = (value: Json) =>
 const column = (name: string, alias?: string) =>
   alias ? sql`${sql.identifier(alias)}.${sql.identifier(name)}` : sql`${sql.identifier(name)}`;
 export const recordScopeSql = (owner: QuerySqlOwner, index: StorageRecordIndex, alias?: string) =>
-  sql`${column("workbench_id", alias)} = ${typeof owner.workbenchId === "string" ? sqlLiteral(owner.workbenchId) : owner.workbenchId} AND ${column("extension_id", alias)} = ${typeof owner.extensionId === "string" ? sqlLiteral(owner.extensionId) : owner.extensionId}
+  sql`${column("owner_id", alias)} = ${queryOwnerKey(owner)}
     AND NOT ${column("deleted", alias)} ${index.prefix === undefined ? sql`` : sql`AND starts_with(${column("record_id", alias)}, ${sqlLiteral(index.prefix)})`}
     ${index.identity ? sql`AND ${recordIdentitySql(index, alias)} IS NOT NULL` : sql``}`;
 const recordIdentitySql = (index: StorageRecordIndex, alias = "storage_current_records", field = "shorthand") => {
   if (!index.identity) throw new Error("Identity index declaration required");
   const id: SQL = recordFieldSql(index, index.identity.idField, alias);
   return sql`(SELECT core.query_values #> ARRAY[${sqlLiteral(identityQueryKey)}, ${sqlLiteral(field)}] FROM storage_resource_identities AS identity
-    INNER JOIN storage_current_records core ON core.workbench_id = identity.workbench_id AND core.extension_id = 'pstdio' AND core.record_id = identity.resource_id
-    WHERE identity.workbench_id = ${column("workbench_id", alias)} AND identity.extension_id = ${column("extension_id", alias)}
+    INNER JOIN owners target_owner ON target_owner.id = ${column("owner_id", alias)}
+    INNER JOIN owners core_owner ON core_owner.project_id = identity.workbench_id AND core_owner.extension_id = 'pstdio'
+    INNER JOIN storage_current_records core ON core.owner_id = core_owner.id AND core.record_id = identity.resource_id
+    WHERE identity.workbench_id = target_owner.project_id AND identity.extension_id = target_owner.extension_id
       AND identity.kind = ${sqlLiteral(index.identity.kind)} AND identity.resource_id = ${identityQueryText(id)})`;
 };
 const recordAncestorsSql = (source: SQL, path: SQL[]) => {
@@ -82,12 +87,7 @@ export const recordFieldSql = (
       outer,
       resolve,
       (index, field, alias) => recordFieldSql(index, field, alias, resolve, owner),
-      (index, alias) =>
-        recordScopeSql(
-          owner ?? { workbenchId: column("workbench_id", outer), extensionId: column("extension_id", outer) },
-          index,
-          alias,
-        ),
+      (index, alias) => recordScopeSql(owner ?? rowQueryOwner(outer), index, alias),
       recordEqualitySql,
     );
     return value;
@@ -98,12 +98,7 @@ export const recordFieldSql = (
       index,
       outer,
       (field, alias) => recordFieldSql(index, field, alias, resolve, owner),
-      (alias) =>
-        recordScopeSql(
-          owner ?? { workbenchId: column("workbench_id", outer), extensionId: column("extension_id", outer) },
-          index,
-          alias,
-        ),
+      (alias) => recordScopeSql(owner ?? rowQueryOwner(outer), index, alias),
       (field, left, right) =>
         recordEqualitySql(index, field, sql`coalesce(${left}, 'null'::jsonb)`, sql`coalesce(${right}, 'null'::jsonb)`),
     );
@@ -337,10 +332,7 @@ const conditionalFieldSql = (
   if (!field.cases) throw new Error("Conditional field declaration required");
 
   const outer = alias ?? "storage_current_records";
-  const conditionOwner = owner ?? {
-    workbenchId: column("workbench_id", outer),
-    extensionId: column("extension_id", outer),
-  };
+  const conditionOwner = owner ?? rowQueryOwner(outer);
   const indexFor =
     resolve ??
     (() => {

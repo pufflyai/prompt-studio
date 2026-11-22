@@ -22,6 +22,7 @@ import { createDocumentStorageDBService } from "./document-storage";
 import { createOrderedJournal } from "./ordered-journal";
 import { decodeOrderedJson, orderedOwnerWhere } from "./ordered-sql";
 import { readProjectedRecords } from "./record-queries";
+import { storageOwnerKey } from "./storage-owner-key";
 
 export const databaseFixtureOwner = { workbenchId: "00000000-0000-4000-8000-000000000903", extensionId: "scale.owner" };
 
@@ -103,12 +104,7 @@ export const verifyDatabaseFixture = async (db: DbClient, kind: Workload, count:
   const [projection] = await db
     .select()
     .from(storage_record_projections)
-    .where(
-      and(
-        eq(storage_record_projections.workbench_id, databaseFixtureOwner.workbenchId),
-        eq(storage_record_projections.extension_id, databaseFixtureOwner.extensionId),
-      ),
-    );
+    .where(and(eq(storage_record_projections.owner_id, storageOwnerKey(databaseFixtureOwner))));
   assert.equal(projection?.revision, seedCommits, "Incomplete owner revision");
   assert.equal(projection.live_count, count, "Stored live count differs");
   for (const deleted of churn ? [false, true] : [false]) {

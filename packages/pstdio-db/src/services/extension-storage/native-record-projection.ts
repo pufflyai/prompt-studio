@@ -16,6 +16,7 @@ import { orderedOwnerWhere } from "./ordered-sql";
 import { derivedQueryValues, readDerivedQueryIndexes } from "./record-derived-fields";
 import { decodeProjectionValue, encodeProjectionValue } from "./record-projection-codec";
 import { loadResourceDocuments } from "./resource-document-persistence";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 export type NativeProjectedRecord = StorageRecord & {
@@ -85,8 +86,7 @@ export const refreshNativeRecordText = async (tx: Transaction, owner: StorageOwn
     .from(storage_current_records)
     .where(
       and(
-        eq(storage_current_records.workbench_id, owner.workbenchId),
-        eq(storage_current_records.extension_id, owner.extensionId),
+        eq(storage_current_records.owner_id, storageOwnerKey(owner)),
         eq(storage_current_records.deleted, false),
         sql`${storage_current_records.native_sources} ? ${key}`,
       ),
@@ -123,8 +123,7 @@ export const refreshNativeRecordText = async (tx: Transaction, owner: StorageOwn
       })
       .where(
         and(
-          eq(storage_current_records.workbench_id, owner.workbenchId),
-          eq(storage_current_records.extension_id, owner.extensionId),
+          eq(storage_current_records.owner_id, storageOwnerKey(owner)),
           eq(storage_current_records.record_id, row.record_id),
         ),
       );
@@ -134,11 +133,6 @@ export const refreshNativeRecordText = async (tx: Transaction, owner: StorageOwn
     await tx
       .update(storage_record_projections)
       .set({ revision: sql`${storage_record_projections.revision} + 1` })
-      .where(
-        and(
-          eq(storage_record_projections.workbench_id, owner.workbenchId),
-          eq(storage_record_projections.extension_id, owner.extensionId),
-        ),
-      );
+      .where(and(eq(storage_record_projections.owner_id, storageOwnerKey(owner))));
   return changed;
 };

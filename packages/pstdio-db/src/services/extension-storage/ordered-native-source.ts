@@ -36,6 +36,7 @@ import { orderedBody } from "./ordered-projection";
 import { rebaseOrderedProjection } from "./ordered-rebase";
 import { encodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { readProjectedRecords } from "./record-queries";
+import { ensureStorageOwner } from "./storage-owner-key";
 
 export interface OrderedSourceInput {
   recordId: string;
@@ -205,8 +206,7 @@ export const bindOrderedNativeSource = async (
     await tx
       .insert(documents)
       .values({
-        workbench_id: owner.workbenchId,
-        extension_id: owner.extensionId,
+        owner_id: await ensureStorageOwner(tx, owner),
         document_id: orderedFieldMarkerId(key),
         state: encodeOrderedJson({ recordId: record.recordId, field: input.field, lifetime: record.lifetime }),
       })

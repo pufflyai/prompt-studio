@@ -11,6 +11,7 @@ import { migrateExtensionIdentities } from "../extension-identity-migration";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 import { installRecordIndex } from "./record-index-lifecycle";
+import { ensureStorageOwner } from "./storage-owner-key";
 
 test("reinstalling unchanged indexes after an owner rename restores the current owner's partial indexes", async () => {
   const fixture = await createExtensionStorageFixture();
@@ -44,8 +45,7 @@ test("reinstalling unchanged indexes after an owner rename restores the current 
     const definition = await fixture.db.execute<{ indexdef: string }>(
       sql`SELECT indexdef FROM pg_indexes WHERE indexname = ${after.database_name}`,
     );
-    expect(definition.rows[0].indexdef).toContain("pstdio.planner");
-    expect(definition.rows[0].indexdef).not.toContain("pstdio.pstdio-planner");
+    expect(definition.rows[0].indexdef).toContain(`owner_id = ${after.owner_id}`);
     await renamed.commit({
       operationId: "seed",
       edits: [{ recordId: "things/a", replace: { id: "a", position: "a" } }],
@@ -69,7 +69,7 @@ test("renamed owners keep their group counts before and after reinstalling index
   const fixture = await createExtensionStorageFixture();
   try {
     const owner = { workbenchId: fixture.projectAId, extensionId: "pstdio.pstdio-planner" };
-    const legacy = { workbench_id: owner.workbenchId, extension_id: owner.extensionId };
+    const legacy = { owner_id: await ensureStorageOwner(fixture.db, owner) };
     const index: StorageRecordIndex = {
       name: "things",
       fields: { state: { type: "string", path: ["state"], derive: { kind: "string" } } },

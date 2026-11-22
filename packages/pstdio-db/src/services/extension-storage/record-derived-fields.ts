@@ -6,6 +6,7 @@ import type { DbClient } from "../../db/connection.pglite";
 import { storage_current_records as current, storage_record_indexes as indexes } from "../../db/schemas.pg";
 import { decodeProjectionValue, encodeProjectionValue, projectionKey } from "./record-projection-codec";
 import type { StorageDiagnostics } from "./storage-diagnostics";
+import { storageOwnerKey } from "./storage-owner-key";
 
 const derivedDefinitions = (definitions: StorageRecordIndex[]) =>
   new Map(
@@ -41,8 +42,7 @@ export const readDerivedQueryIndexes = async (tx: Pick<DbClient, "select">, owne
     .from(indexes)
     .where(
       and(
-        eq(indexes.workbench_id, owner.workbenchId),
-        eq(indexes.extension_id, owner.extensionId),
+        eq(indexes.owner_id, storageOwnerKey(owner)),
         sql`jsonb_path_exists(${indexes.definition}, '$.fields.*.derive')`,
       ),
     );
@@ -90,8 +90,7 @@ export const rebuildDerivedQueryValues = async (
       .from(current)
       .where(
         and(
-          eq(current.workbench_id, owner.workbenchId),
-          eq(current.extension_id, owner.extensionId),
+          eq(current.owner_id, storageOwnerKey(owner)),
           scope,
           after === undefined ? undefined : sql`${current.record_id} COLLATE "C" > ${after}`,
         ),
@@ -112,7 +111,7 @@ export const rebuildDerivedQueryValues = async (
     const merged = sql`(target.query_values - ${removed}) || input.query_values`;
     await tx.execute(sql`UPDATE storage_current_records AS target SET query_values = ${merged}
       FROM jsonb_to_recordset(${JSON.stringify(input)}::jsonb) AS input(record_id text, query_values jsonb)
-      WHERE target.workbench_id = ${owner.workbenchId} AND target.extension_id = ${owner.extensionId}
+      WHERE target.owner_id = ${storageOwnerKey(owner)}
         AND target.record_id = input.record_id AND target.query_values IS DISTINCT FROM (${merged})`);
     after = rows.at(-1)!.recordId;
   }

@@ -94,8 +94,7 @@ export const createNativeFileProjectionsDBService = (db: DbClient) => ({
         .leftJoin(
           storage_documents,
           and(
-            eq(storage_documents.workbench_id, storageOwners.project_id),
-            eq(storage_documents.extension_id, storageOwners.extension_id),
+            eq(storage_documents.owner_id, projections.owner_id),
             eq(storage_documents.document_id, sql`'["native-markdown","' || ${projections.document_key} || '"]'`),
           ),
         )

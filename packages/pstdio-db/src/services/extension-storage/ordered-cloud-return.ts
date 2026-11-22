@@ -201,9 +201,15 @@ export const createOrderedCloudReturn = (
       }
       const notices = (
         await db
-          .select({ extensionId: documents.extension_id, id: documents.document_id, state: documents.state })
+          .select({ extensionId: storageOwners.extension_id, id: documents.document_id, state: documents.state })
           .from(documents)
-          .where(and(eq(documents.workbench_id, projectId), like(documents.document_id, `${orderedReplacedPrefix}%`)))
+          .innerJoin(storageOwners, eq(storageOwners.id, documents.owner_id))
+          .where(
+            and(
+              sql`${documents.owner_id} IN (SELECT id FROM owners WHERE project_id=${projectId})`,
+              like(documents.document_id, `${orderedReplacedPrefix}%`),
+            ),
+          )
       )
         .map((row) => ({
           extensionId: row.extensionId,
@@ -262,7 +268,12 @@ export const createOrderedCloudReturn = (
     async dismissReplaced(projectId: string) {
       await db
         .delete(documents)
-        .where(and(eq(documents.workbench_id, projectId), like(documents.document_id, `${orderedReplacedPrefix}%`)));
+        .where(
+          and(
+            sql`${documents.owner_id} IN (SELECT id FROM owners WHERE project_id=${projectId})`,
+            like(documents.document_id, `${orderedReplacedPrefix}%`),
+          ),
+        );
     },
   };
 };

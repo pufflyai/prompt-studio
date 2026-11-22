@@ -8,6 +8,7 @@ import {
   storage_resource_projections as projections,
   storage_record_projections,
 } from "../db/schemas.pg";
+import { storageOwnerKey } from "./extension-storage/storage-owner-key";
 
 export const createResourceIdentityIndex = (db: DbClient, ready: () => Promise<void>) => {
   type Address = { projectId: string; extensionId: string; kind: string };
@@ -22,11 +23,13 @@ export const createResourceIdentityIndex = (db: DbClient, ready: () => Promise<v
     const [row] = await connection
       .select({ current: storage_record_projections.revision, projected: projections.revision })
       .from(storage_record_projections)
-      .leftJoin(projections, eq(projections.workbench_id, storage_record_projections.workbench_id))
+      .leftJoin(projections, eq(projections.owner_id, storage_record_projections.owner_id))
       .where(
         and(
-          eq(storage_record_projections.workbench_id, projectId),
-          eq(storage_record_projections.extension_id, coreOwnerId),
+          eq(
+            storage_record_projections.owner_id,
+            storageOwnerKey({ workbenchId: projectId, extensionId: coreOwnerId }),
+          ),
         ),
       );
     if (row && row.current !== (row.projected ?? 0))

@@ -20,6 +20,7 @@ import { createProjectionStatistics } from "./projection-statistics";
 import { resourceDocumentId } from "./resource-document-persistence";
 import type { NumberChange } from "./resource-number-repair";
 import type { StorageDiagnostics } from "./storage-diagnostics";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type NativeChange = { recordIds?: readonly string[] };
 type NativeListener = (change?: NativeChange) => void;
@@ -47,12 +48,7 @@ const hasProjectedRecords = async (db: DbClient, owner: StorageOwner) => {
   const [record] = await db
     .select({ id: storage_current_records.record_id })
     .from(storage_current_records)
-    .where(
-      and(
-        eq(storage_current_records.workbench_id, owner.workbenchId),
-        eq(storage_current_records.extension_id, owner.extensionId),
-      ),
-    )
+    .where(and(eq(storage_current_records.owner_id, storageOwnerKey(owner))))
     .limit(1);
   return !!record;
 };
@@ -62,13 +58,7 @@ const documentRevision = (db: DbClient, documentId: string) => async (owner: Sto
   const [row] = await db
     .select({ revision: storage_documents.revision })
     .from(storage_documents)
-    .where(
-      and(
-        eq(storage_documents.workbench_id, owner.workbenchId),
-        eq(storage_documents.extension_id, owner.extensionId),
-        eq(storage_documents.document_id, documentId),
-      ),
-    );
+    .where(and(eq(storage_documents.owner_id, storageOwnerKey(owner)), eq(storage_documents.document_id, documentId)));
   return row?.revision ?? 0;
 };
 
@@ -81,13 +71,7 @@ const discardDocument = async (
   const address = addressFor(owner, documentId);
   await db
     .delete(storage_documents)
-    .where(
-      and(
-        eq(storage_documents.workbench_id, owner.workbenchId),
-        eq(storage_documents.extension_id, owner.extensionId),
-        eq(storage_documents.document_id, documentId),
-      ),
-    );
+    .where(and(eq(storage_documents.owner_id, storageOwnerKey(owner)), eq(storage_documents.document_id, documentId)));
   cache.discard(JSON.stringify(address));
 };
 
@@ -201,12 +185,7 @@ export const createDocumentStorageDBService = (
       const documents = await db
         .select({ id: storage_documents.document_id })
         .from(storage_documents)
-        .where(
-          and(
-            eq(storage_documents.workbench_id, owner.workbenchId),
-            eq(storage_documents.extension_id, owner.extensionId),
-          ),
-        );
+        .where(and(eq(storage_documents.owner_id, storageOwnerKey(owner))));
       for (const { id } of documents) {
         if (isResourceDocument(id)) continue;
         if (await transactionFor(id)(owner, async ({ document }) => hasDocumentUserData(document))) return true;

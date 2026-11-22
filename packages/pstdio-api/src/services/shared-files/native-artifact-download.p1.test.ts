@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { storage_documents } from "pstdio-db";
 import { NativeSourcePendingError } from "pstdio-sync";
 import * as Y from "yjs";
@@ -25,8 +25,10 @@ test.each([
       .delete(storage_documents)
       .where(
         and(
-          eq(storage_documents.workbench_id, f.owner.workbenchId),
-          eq(storage_documents.extension_id, f.owner.extensionId),
+          eq(
+            storage_documents.owner_id,
+            sql`(SELECT id FROM owners WHERE project_id=${f.owner.workbenchId} AND extension_id=${f.owner.extensionId})`,
+          ),
           eq(storage_documents.document_id, JSON.stringify(["native-markdown", documentKey])),
         ),
       );
@@ -71,8 +73,10 @@ test("a pending child defers a concurrent ancestor replacement without blocking 
       .delete(storage_documents)
       .where(
         and(
-          eq(storage_documents.workbench_id, f.owner.workbenchId),
-          eq(storage_documents.extension_id, f.owner.extensionId),
+          eq(
+            storage_documents.owner_id,
+            sql`(SELECT id FROM owners WHERE project_id=${f.owner.workbenchId} AND extension_id=${f.owner.extensionId})`,
+          ),
           eq(storage_documents.document_id, JSON.stringify(["native-markdown", documentKey])),
         ),
       );

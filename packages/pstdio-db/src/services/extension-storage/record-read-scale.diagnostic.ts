@@ -9,6 +9,7 @@ import { createDocumentStorageDBService } from "./document-storage";
 import { createViewReader, type ReadOperation, readOperations } from "./record-read-views";
 import { resourceDocumentId } from "./resource-document-persistence";
 import { resourceFoldEvery } from "./resource-records";
+import { storageOwnerKey } from "./storage-owner-key";
 
 const coldOperations = [...readOperations, "all-owner-burst"] as const;
 type ColdOperation = (typeof coldOperations)[number];
@@ -144,11 +145,10 @@ export const benchmarkReads = async (kind: Workload, count: number, root: string
     const history = async () => {
       const result = await db.execute<{ revision: string; folded: string }>(sql`
         select greatest(saved.revision, (select max(tails.revision) from storage_document_updates tails
-          where tails.workbench_id = saved.workbench_id and tails.extension_id = saved.extension_id
+          where tails.owner_id = saved.owner_id
             and tails.document_id = saved.document_id)) as revision, saved.folded_revision as folded
         from storage_documents saved
-        where saved.workbench_id = ${databaseFixtureOwner.workbenchId}
-          and saved.extension_id = ${databaseFixtureOwner.extensionId}
+        where saved.owner_id = ${storageOwnerKey(databaseFixtureOwner)}
           and saved.document_id = ${resourceDocumentId(row.id)}`);
       return { revision: Number(result.rows[0].revision), folded: Number(result.rows[0].folded) };
     };

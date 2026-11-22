@@ -3,6 +3,7 @@ import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_documents as documents, storage_document_updates as updates } from "../../db/schemas.pg";
 import { loadResourceDocuments } from "./resource-document-persistence";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 const sourceBytes = 4_000_000;
@@ -13,18 +14,11 @@ export async function* nativeSourceUpgradeBatches(tx: Transaction, owner: Storag
       id: documents.document_id,
       bytes: sql<number>`octet_length(${documents.state}) + coalesce((
     SELECT sum(octet_length(${updates.update})) FROM ${updates}
-    WHERE ${updates.workbench_id} = ${documents.workbench_id}
-      AND ${updates.extension_id} = ${documents.extension_id} AND ${updates.document_id} = ${documents.document_id}
+    WHERE ${updates.owner_id} = ${documents.owner_id} AND ${updates.document_id} = ${documents.document_id}
   ), 0)`,
     })
     .from(documents)
-    .where(
-      and(
-        eq(documents.workbench_id, owner.workbenchId),
-        eq(documents.extension_id, owner.extensionId),
-        inArray(documents.document_id, ids),
-      ),
-    );
+    .where(and(eq(documents.owner_id, storageOwnerKey(owner)), inArray(documents.document_id, ids)));
   const sizes = new Map(rows.map((row) => [row.id, Number(row.bytes)]));
   let pending: string[] = [];
   let bytes = 0;

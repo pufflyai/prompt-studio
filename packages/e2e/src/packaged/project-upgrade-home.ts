@@ -70,16 +70,28 @@ const loadSavedQuota = async (db: PGlite, project: string, owners: string[]) => 
   });
 };
 
+const quotaJournalSql = (table: string, numeric: boolean) => {
+  if (numeric)
+    return {
+      from: `${table} t JOIN owners o ON t.owner_id=o.id`,
+      address: "o.project_id=$1 AND o.extension_id=$2",
+      retained: "(to_jsonb(t)-'owner_id') || jsonb_build_object('extension_id',o.extension_id)",
+    };
+  return { from: `${table} t`, address: "t.workbench_id=$1 AND t.extension_id=$2", retained: "to_jsonb(t)" };
+};
+
 const assertSavedQuota = async (db: PGlite, project: string, owners: string[], migrated: boolean) => {
   const {
     rows: [layout],
-  } = await db.query<{ numeric: boolean }>(`SELECT EXISTS (
+  } = await db.query<{ numeric: boolean; documents: boolean }>(`SELECT EXISTS (
     SELECT 1 FROM information_schema.columns WHERE table_schema='public'
-      AND table_name='storage_ordered_operations' AND column_name='owner_id') AS numeric`);
+      AND table_name='storage_ordered_operations' AND column_name='owner_id') AS numeric, EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='storage_current_records' AND column_name='owner_id') AS documents`);
   for (const sample of savedQuota.storage_current_records.filter((row) => owners.includes(row.extension_id))) {
     const owner = migrated ? canonical : sample.extension_id;
     const { rows } = await db.query<{ value: unknown }>(
-      "SELECT value FROM storage_current_records WHERE workbench_id = $1 AND extension_id = $2 AND record_id = $3 AND NOT deleted",
+      layout!.documents
+        ? "SELECT value FROM storage_current_records WHERE owner_id=(SELECT id FROM owners WHERE project_id=$1 AND extension_id=$2) AND record_id=$3 AND NOT deleted"
+        : "SELECT value FROM storage_current_records WHERE workbench_id = $1 AND extension_id = $2 AND record_id = $3 AND NOT deleted",
       [project, owner, sample.record_id],
     );
     assert.deepEqual(
@@ -91,13 +103,7 @@ const assertSavedQuota = async (db: PGlite, project: string, owners: string[], m
       for (const entry of savedQuota[table].filter((row) => row.extension_id === sample.extension_id)) {
         // local_sequence is assigned by the receiving database on insert.
         const data = { ...entry, extension_id: owner };
-        const from = layout!.numeric ? `${table} t JOIN owners o ON t.owner_id=o.id` : `${table} t`;
-        const address = layout!.numeric
-          ? "o.project_id=$1 AND o.extension_id=$2"
-          : "t.workbench_id=$1 AND t.extension_id=$2";
-        const retained = layout!.numeric
-          ? "(to_jsonb(t)-'owner_id') || jsonb_build_object('extension_id',o.extension_id)"
-          : "to_jsonb(t)";
+        const { from, address, retained } = quotaJournalSql(table, layout!.numeric);
         const matches = await db.query(
           `SELECT 1 FROM ${from} WHERE ${address} AND t.operation_id = $3 AND (${retained}) @> ($4::jsonb - 'local_sequence')`,
           [project, owner, entry.operation_id, JSON.stringify(data)],
@@ -155,7 +161,7 @@ export const checkHomeHistory = async (input: ProjectUpgradeInput, project: stri
           );
         } else {
           const { rows } = await db.query<{ state: Uint8Array }>(
-            "SELECT state FROM storage_documents WHERE workbench_id = $1 AND extension_id = $2 AND document_id = $3",
+            "SELECT state FROM storage_documents WHERE owner_id=(SELECT id FROM owners WHERE project_id=$1 AND extension_id=$2) AND document_id=$3",
             [project, conflicted ? original : canonical, key],
           );
           assert.equal(rows.length, 1, `Active Home lost access to ${key} after upgrade`);

@@ -1,6 +1,7 @@
 import type * as Y from "yjs";
 
 export interface LoadedDocument {
+  ownerId: number;
   revision: number;
   document: Y.Doc;
 }

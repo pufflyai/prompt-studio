@@ -7,6 +7,7 @@ import { type IndexNodeFiles, sortIndexChildren } from "./index-node-files";
 import { orderedIndexBlobDocumentId } from "./ordered-receipts-blobs";
 import { receiptRoots } from "./ordered-receipts-state";
 import { decodeOrderedJson, orderedOwnerWhere } from "./ordered-sql";
+import { storageOwnerKey } from "./storage-owner-key";
 
 interface StoredNode {
   version: 1;
@@ -30,8 +31,7 @@ const readRows = async (db: DbClient, owner: StorageOwner, ids: string[]) => {
     .from(documents)
     .where(
       and(
-        eq(documents.workbench_id, owner.workbenchId),
-        eq(documents.extension_id, owner.extensionId),
+        eq(documents.owner_id, storageOwnerKey(owner)),
         inArray(documents.document_id, ids.map(orderedIndexBlobDocumentId)),
       ),
     );
@@ -87,13 +87,7 @@ const copyOwnerReceipts = async (db: DbClient, files: IndexNodeFiles, owner: Sto
 const deleteOwnerNodes = async (db: DbClient, owner: StorageOwner) => {
   const removed = await db
     .delete(documents)
-    .where(
-      and(
-        eq(documents.workbench_id, owner.workbenchId),
-        eq(documents.extension_id, owner.extensionId),
-        like(documents.document_id, legacyNodeRows),
-      ),
-    )
+    .where(and(eq(documents.owner_id, storageOwnerKey(owner)), like(documents.document_id, legacyNodeRows)))
     .returning({ id: documents.document_id });
   return removed.length;
 };
@@ -113,8 +107,8 @@ export const upgradeIndexNodesToFiles = async (
   deferDeletion?: (owner: StorageOwner) => boolean,
 ) => {
   const result = await db.execute(
-    sql`SELECT DISTINCT workbench_id, extension_id FROM ${documents} WHERE document_id LIKE ${legacyNodeRows}
-      ORDER BY workbench_id, extension_id`,
+    sql`SELECT DISTINCT o.project_id AS workbench_id, o.extension_id FROM ${documents} d JOIN owners o ON d.owner_id=o.id WHERE d.document_id LIKE ${legacyNodeRows}
+      ORDER BY o.project_id, o.extension_id`,
   );
   let removed = false;
   if (result.rows.length) await beforeChange();

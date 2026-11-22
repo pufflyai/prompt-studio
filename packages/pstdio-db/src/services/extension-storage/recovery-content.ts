@@ -4,6 +4,7 @@ import { and, asc, eq, like } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
+import { owners as storageOwners } from "../../db/schemas/owners";
 import {
   installed_extension_sources,
   project_extensions,
@@ -49,8 +50,7 @@ export const textFileIds = async (db: Reader, owner: StorageOwner) =>
       .from(storage_documents)
       .where(
         and(
-          eq(storage_documents.workbench_id, owner.workbenchId),
-          eq(storage_documents.extension_id, owner.extensionId),
+          eq(storage_documents.owner_id, storageOwnerKey(owner)),
           like(storage_documents.document_id, `${textPrefix}%`),
         ),
       )
@@ -66,12 +66,13 @@ export const dataOwners = async (db: Reader, projectId: string) =>
       .from(project_extensions)
       .innerJoin(installed_extension_sources, eq(project_extensions.extension_ref, installed_extension_sources.id))
       .innerJoin(
-        storage_documents,
+        storageOwners,
         and(
-          eq(storage_documents.workbench_id, projectId),
-          eq(storage_documents.extension_id, installed_extension_sources.extension_id),
+          eq(storageOwners.project_id, projectId),
+          eq(storageOwners.extension_id, installed_extension_sources.extension_id),
         ),
       )
+      .innerJoin(storage_documents, eq(storage_documents.owner_id, storageOwners.id))
       .where(eq(project_extensions.project_id, projectId))
   )
     .map((row) => row.id)
@@ -81,11 +82,7 @@ export const dataOwners = async (db: Reader, projectId: string) =>
 const readDocument = async (tx: Transaction, owner: StorageOwner, documentId: string) => {
   const document = new Y.Doc();
   const where = <T extends typeof storage_documents | typeof storage_document_updates>(table: T) =>
-    and(
-      eq(table.workbench_id, owner.workbenchId),
-      eq(table.extension_id, owner.extensionId),
-      eq(table.document_id, documentId),
-    );
+    and(eq(table.owner_id, storageOwnerKey(owner)), eq(table.document_id, documentId));
   const [saved] = await tx
     .select({ state: storage_documents.state })
     .from(storage_documents)
@@ -123,12 +120,13 @@ export const readProjectContent = async (tx: Transaction, projectId: string) => 
     (
       await tx
         .select({
-          id: storage_record_projections.extension_id,
+          id: storageOwners.extension_id,
           revision: storage_record_projections.revision,
           live: storage_record_projections.live_count,
         })
         .from(storage_record_projections)
-        .where(eq(storage_record_projections.workbench_id, projectId))
+        .innerJoin(storageOwners, eq(storageOwners.id, storage_record_projections.owner_id))
+        .where(eq(storageOwners.project_id, projectId))
         .for("share")
     ).map((row) => [row.id, row]),
   );

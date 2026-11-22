@@ -26,9 +26,11 @@ const seed = async (db: Db, workbenchId = crypto.randomUUID()) => {
   await db
     .insert(projects)
     .values({ id: workbenchId, name: "Upgrade", shorthand: "U", created_at: now, updated_at: now });
+  const ownerIds = new Map<string, number>();
+  for (const extensionId of ["example.records", "example.history"])
+    ownerIds.set(extensionId, await ensureStorageOwner(db, { workbenchId, extensionId }));
   const row = (extensionId: string, name: string, children: string[] | null) => ({
-    workbench_id: workbenchId,
-    extension_id: extensionId,
+    owner_id: ownerIds.get(extensionId)!,
     document_id: orderedIndexBlobDocumentId(id(name)),
     state: encodeOrderedJson({
       version: 1,
@@ -93,10 +95,9 @@ test("the upgrade keeps reachable receipt nodes as files and drops every node ro
 test("an owner with an unreadable row keeps its rows while other owners move", async () => {
   const { db, close } = await createDb({ path: ":memory:" });
   try {
-    const { records, logs, workbenchId } = await seed(db);
+    const { records, logs } = await seed(db);
     await db.insert(storage_documents).values({
-      workbench_id: workbenchId,
-      extension_id: records.extensionId,
+      owner_id: await ensureStorageOwner(db, records),
       document_id: orderedIndexBlobDocumentId(id("broken")),
       state: encodeOrderedJson(null),
     });
@@ -110,8 +111,8 @@ test("an owner with an unreadable row keeps its rows while other owners move", a
     });
     const files = createMemoryIndexNodeFiles();
     expect(await upgradeIndexNodesToFiles(db, files)).toBe(true);
-    const left = await db.select({ owner: storage_documents.extension_id }).from(storage_documents).where(nodeRows);
-    expect(new Set(left.map((row) => row.owner))).toEqual(new Set([records.extensionId]));
+    const left = await db.select({ owner: storage_documents.owner_id }).from(storage_documents).where(nodeRows);
+    expect(new Set(left.map((row) => row.owner))).toEqual(new Set([await ensureStorageOwner(db, records)]));
     expect(await files.list(logs, "logs")).toEqual([]);
   } finally {
     await close();
@@ -150,15 +151,14 @@ test("runtime startup preserves receipt files and defers stale rows until its ma
   const { records, logs, workbenchId } = await seed(original.db);
   const retired = JSON.stringify(["pstdio.personal-history", "account"]);
   await original.db.insert(storage_documents).values({
-    workbench_id: workbenchId,
-    extension_id: retired,
+    owner_id: await ensureStorageOwner(original.db, { workbenchId, extensionId: retired }),
     document_id: "transcript",
     state: new Uint8Array([0, 0]),
   });
+  const logsOwnerId = await ensureStorageOwner(original.db, logs);
   await original.db.insert(storage_documents).values(
     Array.from({ length: 64 }, (_, index) => ({
-      workbench_id: workbenchId,
-      extension_id: logs.extensionId,
+      owner_id: logsOwnerId,
       document_id: orderedIndexBlobDocumentId(id(`stale-${index}`)),
       state: new Uint8Array([0, 0]),
     })),
@@ -188,7 +188,10 @@ test("runtime startup preserves receipt files and defers stale rows until its ma
     await reopened.cleanupRetiredRows(() => false);
     expect(await reopened.db.select().from(storage_documents).where(nodeRows)).toEqual([]);
     expect(
-      await reopened.pglite.query("SELECT extension_id FROM storage_documents WHERE extension_id = $1", [retired]),
+      await reopened.pglite.query(
+        "SELECT o.extension_id FROM storage_documents d JOIN owners o ON d.owner_id=o.id WHERE o.extension_id = $1",
+        [retired],
+      ),
     ).toMatchObject({ rows: [] });
     expect(await createIndexNodeFiles(`${path}-index-nodes`).read(records, "receipts", id("root"))).toBeDefined();
   } finally {

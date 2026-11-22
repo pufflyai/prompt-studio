@@ -1,5 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { sql } from "drizzle-orm";
+import { dropRecordIndexes } from "../services/extension-storage/record-index-lifecycle";
 import type { createDb } from "./connection.pglite";
 import { decodeUpgradeBytes } from "./upgrade-bytes";
 
@@ -7,6 +9,25 @@ import { decodeUpgradeBytes } from "./upgrade-bytes";
 export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<typeof createDb>>) => {
   const query = async (source: string) =>
     (await connection.pglite.query<{ row: Record<string, unknown> }>(source)).rows.map(({ row }) => row);
+  const documentTables = [
+    "storage_documents",
+    "storage_document_updates",
+    "storage_document_operations",
+    "storage_record_projections",
+    "storage_current_records",
+    "storage_record_indexes",
+  ];
+  const documents: Record<string, Record<string, unknown>[]> = {};
+  for (const table of documentTables)
+    documents[table] = await query(`SELECT (to_jsonb(d)-'owner_id') ||
+      jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id) AS row
+      FROM ${table} d JOIN owners o ON d.owner_id=o.id`);
+  documents.storage_resource_projections = await query(`SELECT (to_jsonb(d)-'owner_id') ||
+    jsonb_build_object('extension_id',o.extension_id) AS row FROM storage_resource_projections d JOIN owners o ON d.owner_id=o.id`);
+  documents.storage_resource_identities = await query("SELECT to_jsonb(d) AS row FROM storage_resource_identities d");
+  documents.storage_resource_aliases = await query("SELECT to_jsonb(d) AS row FROM storage_resource_aliases d");
+  // The released reconstruction owns these generated query objects too.
+  await dropRecordIndexes(connection.db, sql`true`);
   const orderedTables = [
     "storage_ordered_owners",
     "storage_ordered_operations",
@@ -58,9 +79,10 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     )
   ).rows[0]!;
   await connection.pglite.exec(
-    "DROP TABLE native_document_room_updates; DROP TABLE native_document_rooms; DROP TABLE native_document_file_projections; DROP TABLE native_document_sources; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
+    "DROP TABLE storage_resource_aliases; DROP TABLE storage_resource_identities; DROP TABLE storage_resource_projections; DROP TABLE storage_current_records; DROP TABLE storage_record_projections; DROP TABLE storage_document_operations; DROP TABLE storage_document_updates; DROP TABLE storage_record_indexes; DROP TABLE storage_documents; DROP TABLE native_document_room_updates; DROP TABLE native_document_rooms; DROP TABLE native_document_file_projections; DROP TABLE native_document_sources; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
   );
   const data = {
+    ...documents,
     native_document_sources: native.native_document_sources!,
     native_document_file_projections: native.native_document_file_projections!,
     native_document_rooms: native.native_document_rooms!,
@@ -84,6 +106,8 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
       const statement = input.trim();
       if (tables.some((table) => statement.startsWith(`CREATE TABLE "${table}" (`)))
         await connection.pglite.exec(statement);
+      if (tables.some((table) => statement.startsWith(`ALTER TABLE "${table}" ADD COLUMN `)))
+        await connection.pglite.exec(statement);
       if (
         tables.some(
           (table) =>
@@ -103,6 +127,8 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
         columns.map((column) => {
           const value = row[column];
           const binaryColumns: Record<string, string[]> = {
+            storage_documents: ["state"],
+            storage_document_updates: ["update"],
             native_document_rooms: ["state"],
             native_document_room_updates: ["update"],
             native_document_file_projections: ["baseline", "pending"],

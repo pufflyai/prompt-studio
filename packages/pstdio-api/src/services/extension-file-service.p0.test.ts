@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { storage_documents } from "pstdio-db";
 import { NativeSourcePendingError } from "pstdio-sync";
 import { storageRecordId } from "pstdio-sync/records";
@@ -20,8 +20,10 @@ test("pending native text keeps file metadata and deletion available without ser
       .delete(storage_documents)
       .where(
         and(
-          eq(storage_documents.workbench_id, f.owner.workbenchId),
-          eq(storage_documents.extension_id, f.owner.extensionId),
+          eq(
+            storage_documents.owner_id,
+            sql`(SELECT id FROM owners WHERE project_id=${f.owner.workbenchId} AND extension_id=${f.owner.extensionId})`,
+          ),
           eq(storage_documents.document_id, JSON.stringify(["native-markdown", documentKey])),
         ),
       );

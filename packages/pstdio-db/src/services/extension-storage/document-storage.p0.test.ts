@@ -4,6 +4,7 @@ import { storage_current_records, storage_document_updates } from "../../db/sche
 import { createExtensionUserDataDBService } from "../extension-user-data/extension-user-data";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { storageOwnerKey } from "./storage-owner-key";
 
 const cleanup: (() => Promise<unknown>)[] = [];
 afterEach(async () => {
@@ -39,7 +40,7 @@ test("obsolete document journals can be discarded without loading their content 
       .from(storage_document_updates)
       .where(
         and(
-          eq(storage_document_updates.extension_id, f.owner.extensionId),
+          eq(storage_document_updates.owner_id, storageOwnerKey(f.owner)),
           eq(storage_document_updates.document_id, name),
         ),
       ),

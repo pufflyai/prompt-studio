@@ -8,16 +8,20 @@ import {
   storage_document_updates,
   storage_documents,
   storage_ordered_owners,
+  storage_record_indexes,
   storage_record_projections,
   storage_record_sync,
 } from "../../db/schemas.pg";
 import { orderedOwnerWhere } from "./ordered-sql";
+import { dropRecordIndexes } from "./record-index-lifecycle";
 import { resourceDocumentId } from "./resource-document-persistence";
-import { storageOwnerWhere } from "./storage-owner-key";
+import { storageOwnerKey, storageOwnerWhere } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
 export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) => {
+  // Generated SQL objects have no FK lifetime; remove them while their declarations still exist.
+  await dropRecordIndexes(tx, eq(storage_record_indexes.owner_id, storageOwnerKey(owner)));
   const ownerWhere = (
     table:
       | typeof storage_documents
@@ -25,7 +29,7 @@ export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) 
       | typeof storage_document_operations
       | typeof storage_current_records
       | typeof storage_record_projections,
-  ) => and(eq(table.workbench_id, owner.workbenchId), eq(table.extension_id, owner.extensionId));
+  ) => and(eq(table.owner_id, storageOwnerKey(owner)));
   // Record documents and ordered markers/caches are removed outright; update tails cascade with them.
   // An emptied marker would no longer decode, and a cleared owner founds or joins its stream again.
   const recordDocuments = or(

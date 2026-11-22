@@ -1,7 +1,8 @@
-import { and, desc, gt, inArray, lt, type SQL, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lt, type SQL, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId } from "pstdio-sync/records";
 import type { DbClient } from "../../db/connection.pglite";
+import { owners as storageOwners } from "../../db/schemas/owners";
 import {
   storage_current_records as current,
   storage_documents as documents,
@@ -32,7 +33,7 @@ import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
 import { lockRecordOwner } from "./record-changes";
 import { readProjectedRecords } from "./record-queries";
-import { ensureStorageOwner } from "./storage-owner-key";
+import { ensureStorageOwner, storageOwnerKey } from "./storage-owner-key";
 
 const jobs = new WeakMap<DbClient, Map<string, { promise: Promise<void>; signals: Set<AbortSignal> }>>();
 const yieldTurn = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -172,7 +173,7 @@ export const ensureOrderedOwner = (db: DbClient, owner: StorageOwner, signal?: A
         if (created.length) {
           const [legacy] = await tx
             .select({
-              present: sql<boolean>`EXISTS (SELECT 1 FROM storage_current_records WHERE workbench_id=${owner.workbenchId} AND extension_id=${owner.extensionId}) OR EXISTS (SELECT 1 FROM storage_record_outbox WHERE workbench_id=${owner.workbenchId} AND extension_id=${owner.extensionId})`,
+              present: sql<boolean>`EXISTS (SELECT 1 FROM storage_current_records WHERE owner_id=${storageOwnerKey(owner)}) OR EXISTS (SELECT 1 FROM storage_record_outbox WHERE workbench_id=${owner.workbenchId} AND extension_id=${owner.extensionId})`,
             })
             .from(owners)
             .where(orderedOwnerWhere(owners, owner));
@@ -209,14 +210,15 @@ export const convertLegacyOwners = async (
   let after: { workbenchId: string; extensionId: string } | undefined;
   while (!options.signal?.aborted) {
     const [row] = await db
-      .select({ workbenchId: projections.workbench_id, extensionId: projections.extension_id })
+      .select({ workbenchId: storageOwners.project_id, extensionId: storageOwners.extension_id })
       .from(projections)
+      .innerJoin(storageOwners, eq(storageOwners.id, projections.owner_id))
       .where(
         after
-          ? sql`(${projections.workbench_id}, ${projections.extension_id}) > (${after.workbenchId}, ${after.extensionId})`
+          ? sql`(${storageOwners.project_id}, ${storageOwners.extension_id}) > (${after.workbenchId}, ${after.extensionId})`
           : undefined,
       )
-      .orderBy(projections.workbench_id, projections.extension_id)
+      .orderBy(storageOwners.project_id, storageOwners.extension_id)
       .limit(1);
     if (!row) return;
     try {

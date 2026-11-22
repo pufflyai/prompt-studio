@@ -2,6 +2,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { storage_documents as documents } from "../../db/schemas.pg";
 import { decodeOrderedJson, encodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { ensureStorageOwner } from "./storage-owner-key";
 
 export const orderedFieldMarkerId = (key: string) => JSON.stringify(["ordered-native-field", key]);
 export const orderedRoomMarkerId = (roomId: string) => JSON.stringify(["ordered-native-room", roomId]);
@@ -39,13 +40,12 @@ export const saveOrderedMarker = async (tx: OrderedTransaction, owner: StorageOw
   await tx
     .insert(documents)
     .values({
-      workbench_id: owner.workbenchId,
-      extension_id: owner.extensionId,
+      owner_id: await ensureStorageOwner(tx, owner),
       document_id: id,
       state: encodeOrderedJson(value),
     })
     .onConflictDoUpdate({
-      target: [documents.workbench_id, documents.extension_id, documents.document_id],
+      target: [documents.owner_id, documents.document_id],
       set: { state: encodeOrderedJson(value), revision: sql`${documents.revision} + 1` },
     });
 };

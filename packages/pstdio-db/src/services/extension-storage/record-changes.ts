@@ -7,14 +7,11 @@ import { publishProjectedRecords } from "./record-projection-rows";
 import { persistResourceDocuments } from "./resource-document-persistence";
 import { projectNumberRecords } from "./resource-number-records";
 import { previousNumbers, repairNumberRecords } from "./resource-number-repair";
+import { ensureStorageOwner, storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
-const ownerWhere = (owner: StorageOwner) =>
-  and(
-    eq(storage_record_projections.workbench_id, owner.workbenchId),
-    eq(storage_record_projections.extension_id, owner.extensionId),
-  );
+const ownerWhere = (owner: StorageOwner) => and(eq(storage_record_projections.owner_id, storageOwnerKey(owner)));
 
 /** Locks the owner's projection row, which serializes its record writes, and returns its revision. */
 export const lockRecordOwner = async (tx: Transaction, owner: StorageOwner) => {
@@ -22,15 +19,14 @@ export const lockRecordOwner = async (tx: Transaction, owner: StorageOwner) => {
   await tx
     .insert(storage_documents)
     .values({
-      workbench_id: owner.workbenchId,
-      extension_id: owner.extensionId,
+      owner_id: await ensureStorageOwner(tx, owner),
       document_id: "records",
       state: new Uint8Array([0, 0]),
     })
     .onConflictDoNothing();
   await tx
     .insert(storage_record_projections)
-    .values({ workbench_id: owner.workbenchId, extension_id: owner.extensionId, revision: 0 })
+    .values({ owner_id: await ensureStorageOwner(tx, owner), revision: 0 })
     .onConflictDoNothing();
   const [row] = await tx
     .select({ revision: storage_record_projections.revision })
@@ -70,8 +66,7 @@ export const saveRecordChanges = async (
       .from(storage_current_records)
       .where(
         and(
-          eq(storage_current_records.workbench_id, owner.workbenchId),
-          eq(storage_current_records.extension_id, owner.extensionId),
+          eq(storage_current_records.owner_id, storageOwnerKey(owner)),
           inArray(storage_current_records.record_id, ids.slice(offset, offset + 1_000)),
         ),
       );
