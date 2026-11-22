@@ -1,4 +1,5 @@
 import type { CommandOutcome } from "@pstdio/sdk/extensions";
+import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
 
 /**
  * Commands of one extension share this allowance across every project, so opening more projects
@@ -43,3 +44,15 @@ export const overloadedOutcome = (extensionId: string): CommandOutcome => {
     ],
   };
 };
+
+/**
+ * Runs extension handler code as that extension's work. Only the handler call is attributed, so
+ * host work around it, such as environment setup or a shared catalog load, keeps core priority.
+ */
+export const asExtension = <T>(
+  extensionId: string,
+  name: string,
+  projectId: string | undefined,
+  run: () => T,
+  kind: "command" | "event" = "command",
+) => withRuntimeOperationOrigin({ kind, name, projectId, extensionId }, run);

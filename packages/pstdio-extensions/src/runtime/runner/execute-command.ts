@@ -14,7 +14,7 @@ import type { RunnerState } from "./context";
 import { lifecycleEventId } from "./dispatch";
 import { createEnvironmentCache, environmentFailedOutcome, withNotices } from "./environment";
 import { findCommand, findPrivateHandler, middlewaresFor, serializeError } from "./internals";
-import { admitInvocation, overloadedOutcome } from "./invocation-admission";
+import { admitInvocation, asExtension, overloadedOutcome } from "./invocation-admission";
 import { type MiddlewareChainResult, runMiddlewareChain } from "./middleware";
 import { createInvocationScope, type InvocationScope } from "./scope";
 import type { CommandRunnerEnvironment, InternalExecuteInput } from "./types";
@@ -57,7 +57,7 @@ export const executeExtensionCommand = async (
   if (release) scope.signal.addEventListener("abort", release, { once: true });
   try {
     return await withRuntimeOperationOrigin(
-      { kind: "command", name: input.commandId, projectId: input.projectId, extensionId: owner?.extensionId },
+      { kind: "command", name: input.commandId, projectId: input.projectId },
       () => runExtensionCommand(state, input, scope),
     );
   } finally {
@@ -200,7 +200,10 @@ const runExtensionCommand = async (
   const start = Date.now();
   try {
     if (input.signal?.aborted) throw input.signal.reason;
-    const value = await record.run({ ...buildCommandCtx(finalInvocation), stream: writer }, finalInvocation.params);
+    const ctx = { ...buildCommandCtx(finalInvocation), stream: writer };
+    const value = await asExtension(record.extensionId, record.id, input.projectId, () =>
+      record.run(ctx, finalInvocation.params),
+    );
     if (streamCancelled(input, scope)) throw scope.signal.reason;
     const elapsedMs = Date.now() - start;
     await state.dispatcher.dispatch(
@@ -299,7 +302,9 @@ const executePrivateHandler = async (
       input.navigationScope,
     );
     ctx.activity = env.activityForInvocation?.(input.source) ?? ctx.activity;
-    const value = await handler.handler(ctx, params);
+    const value = await asExtension(handler.extensionId, handler.id, input.projectId, () =>
+      handler.handler(ctx, params),
+    );
     validateCollectionQueryResult(handler.collectionQuery, params, value);
     const elapsedMs = Date.now() - start;
     await state.dispatcher.dispatch(

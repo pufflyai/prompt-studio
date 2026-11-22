@@ -13,8 +13,8 @@ const CORE_TURNS_PER_EXTENSION_TURN = 4;
 type Turn = () => void;
 
 /**
- * Orders top-level database work: core first, extensions in turn, and an event-loop turn after
- * each slice of continuous work. Order within one owner stays first-in, first-out.
+ * Orders top-level database work: core first, extensions in turn, and an event-loop turn before
+ * extension work once a slice of continuous work has run. Order within one owner stays first-in, first-out.
  */
 export const createDatabaseAdmission = ({ sliceMs = DEFAULT_SLICE_MS } = {}) => {
   const core: Turn[] = [];
@@ -47,18 +47,20 @@ export const createDatabaseAdmission = ({ sliceMs = DEFAULT_SLICE_MS } = {}) => 
     return turn;
   };
 
+  const coreGoesNext = () => core.length > 0 && (extensions.size === 0 || coreStreak < CORE_TURNS_PER_EXTENSION_TURN);
+
   const nextTurn = () => {
-    if (core.length > 0 && (extensions.size === 0 || coreStreak < CORE_TURNS_PER_EXTENSION_TURN)) {
-      coreStreak += 1;
-      return core.shift()!;
-    }
-    return nextExtensionTurn();
+    if (!coreGoesNext()) return nextExtensionTurn();
+    coreStreak += 1;
+    return core.shift()!;
   };
 
   const dispatch = () => {
     if (active || (core.length === 0 && extensions.size === 0)) return;
     active = true;
-    if (performance.now() - sliceStartedAt >= sliceMs) {
+    // Only extension work waits for the event loop. Core work runs as soon as the engine is free,
+    // exactly as it did before admission, so the host's own bursts keep their timing.
+    if (!coreGoesNext() && performance.now() - sliceStartedAt >= sliceMs) {
       setTimeout(() => {
         sliceStartedAt = performance.now();
         active = false;

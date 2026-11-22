@@ -48,15 +48,16 @@ keeps running afterwards, such as a session started with `ctx.sessions.create()`
 The host shares one database and one API process among the workbench, core and every extension.
 It keeps them responsive when an extension does a lot of work at once.
 
-- Database work started by a command, private handler, hook or workspace provider callback belongs
-  to that extension. Middleware work belongs to the command's extension. Core work, including calls
-  from extension webviews to host routes, goes ahead of queued extension work. When both keep
-  queuing, extensions still get one turn for every four core turns. Extensions take turns with
-  each other, so one extension's queue does not delay another's. Your own calls keep their order,
-  and a transaction runs as one unit.
-- During a long burst of database calls, the host pauses about every 10 ms to answer health
-  checks, cancellation and other requests. A single long statement or transaction is not split, so
-  keep transactions short.
+- Database work started by your handler code belongs to your extension. That covers commands,
+  middleware, private handlers, hooks and workspace provider callbacks. Work the host does around
+  them, and calls from extension webviews to host routes, is core work. Core work goes ahead of
+  queued extension work. When both keep queuing, extensions still get one turn for every four core
+  turns. Extensions take turns with each other, so one extension's queue does not delay another's.
+  Your own calls keep their order, and a transaction runs as one unit.
+- Before extension work runs, the host lets the event loop take a turn once about 10 ms of
+  continuous database work has passed. Health checks, cancellation and other requests are answered
+  during an extension's long burst. A single long statement or transaction is not split, so keep
+  transactions short.
 - One extension can run at most 256 commands at once, across all projects. Nested
   `ctx.commands.execute` calls and hooks of the same extension count as part of the work that
   started them. A new command over the limit returns
