@@ -18,6 +18,7 @@ import {
   type StorageTextDeclaration,
 } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
+import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import { createCommitQueue } from "./commit-queue";
 import { createOrderedCommitJournal } from "./ordered-canonical-batch";
 import { createOrderedCommitCache } from "./ordered-commit-cache";
@@ -30,6 +31,7 @@ import { ensureOrderedOwner } from "./ordered-owner";
 import { knownDependencies, rebaseOrderedProjection } from "./ordered-rebase";
 import { compileOrderedGroup } from "./ordered-record-compiler";
 import { moveOrderedRecordsIn } from "./ordered-record-move";
+import { readOrderedSaveOutcome } from "./ordered-save-outcome";
 import type { OrderedTransaction } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
 import { writeOrderedTextAsset } from "./ordered-text-asset";
@@ -41,18 +43,8 @@ import {
   readProjectedRevisions,
 } from "./record-queries";
 
-const savedOutcome = async (journal: OrderedJournal, operationId: string) => {
-  const decision = await journal.outcome(operationId);
-  let state: StorageSaveOutcome["state"] = "saved-locally";
-  if (decision?.state === "refused") state = "refused";
-  else if (decision && (!decision.epoch.startsWith("local:") || (await journal.isIndexed(operationId, decision.epoch))))
-    state = "synced";
-  return {
-    operationId,
-    state,
-    status: "saved-locally",
-  } as StorageSaveOutcome;
-};
+const savedOutcome = async (journal: OrderedJournal, operationId: string) =>
+  (await journal.authoredOutcome(operationId))!;
 
 // Settled local records already are the visible baseline. Avoid publishing the same
 // unchanged projection and recomputing every observation before each local save.
@@ -243,7 +235,7 @@ export const createOrderedResourceRecords = (
               readMany: (ids) => readOrderedRecords(tx, owner, ids, deps.observer),
               readCurrentMany: (ids) => readProjectedRevisions(tx, owner, ids),
               query: (query) => queryIn(tx, query),
-              outcome: async (id) => ((await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined),
+              outcome: (id) => journal.authoredOutcome(id),
               commit: (group) =>
                 queue.run(async () => {
                   const result = await commitIn(journal, tx, group, ownRevisions);
@@ -331,11 +323,11 @@ export const createOrderedResourceRecords = (
       return records;
     },
     outcome: (id: string) =>
-      write(() =>
-        withOrderedOwner(db, owner, async (journal) => {
-          return (await journal.requestIdentity(id)) ? savedOutcome(journal, id) : undefined;
-        }),
-      ),
+      write(async () => {
+        await ready();
+        assertStorageOwnerAdmitted(db, owner);
+        return readOrderedSaveOutcome(db, owner, id);
+      }),
     transaction,
     commitIfCurrent: (group: StorageCurrentGroup) => commitCurrentBatch({ transaction }, group),
   };

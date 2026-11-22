@@ -24,6 +24,7 @@ import { ensureOrderedOwner } from "./ordered-owner";
 import { operationReceipt, operationReceiptsIndexed } from "./ordered-receipt-values";
 import { createOrderedReceiptCache } from "./ordered-receipts-cache";
 import { finishOrderedRecordWrites } from "./ordered-record-publication";
+import { readOrderedSaveOutcome } from "./ordered-save-outcome";
 import {
   decodeOrderedJson as decode,
   encodeOrderedJson as encode,
@@ -126,6 +127,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
     and(ownerWhere(operations, owner), isNotNull(operations.envelope), isNull(operations.settled_epoch));
   const dependencies = createOrderedDependencyCache(tx, owner, cachedDecision);
   return {
+    authoredOutcome: (id: string) => readOrderedSaveOutcome(tx, owner, id),
     knownDependency: dependencies.known,
     cachedDecision,
     bindIdentity: bind,

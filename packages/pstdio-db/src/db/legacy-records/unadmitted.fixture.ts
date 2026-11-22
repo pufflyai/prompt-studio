@@ -9,6 +9,7 @@ import {
   createIndexNodeFiles,
   createMemoryIndexNodeFiles,
 } from "../../services/extension-storage/index-node-files";
+import { recoveryFilesFor } from "../../services/extension-storage/recovery-files";
 import { resolvePgliteOptions } from "../connection.pglite";
 import { attachDatabaseAuthority } from "../database-authority";
 import { openPglite } from "../open-pglite";
@@ -25,6 +26,7 @@ export const createUnadmittedLegacyFixture = async (path = ":memory:") => {
     await migrate(db, { migrationsFolder: join(import.meta.dirname, "../../../drizzle") });
     attachDatabaseAuthority(db, path);
     documentFilesFor(db, path);
+    recoveryFilesFor(db, path);
     attachDocumentCollector(db, (project, ids) => pruneDocumentFiles(db, project, ids));
     attachIndexNodeFiles(
       db,
