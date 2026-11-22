@@ -234,13 +234,13 @@ export class DesktopWindowController {
     // Recovery must not wait for a new renderer, JavaScript bundle, or theme initialization.
     this.#workbench?.setVisible(false);
     this.syncLifecycleThrottling();
-    if (
+    const loading =
       this.window.webContents.getURL() !== this.lifecycleUrl ||
       this.window.webContents.isCrashed() ||
       this.#lifecycle.failed
-    ) {
-      await this.loadLifecycle();
-    } else await this.#lifecycle.load;
+        ? this.loadLifecycle()
+        : this.#lifecycle.load;
+    await Promise.all([loading, this.#lifecycle.ready]);
     const contents = this.#workbench?.getVisible() ? this.#workbench.webContents : this.window.webContents;
     contents.focus();
   }
