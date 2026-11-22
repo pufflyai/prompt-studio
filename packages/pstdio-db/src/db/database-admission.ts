@@ -6,6 +6,8 @@ import { currentRuntimeOperationOrigin, finishRuntimeOperation, startRuntimeOper
 // of extension writes keeps health probes, cancellation and every other request waiting until it ends.
 const DEFAULT_SLICE_MS = 10;
 // Core persistence and interactive reads go first, but sustained core work still leaves extensions a turn.
+// Turns use timers, not setImmediate: under load in Bun 1.4.4, adding these immediates made the read
+// boundary's own setImmediate callback never run (3 of 24 parallel API test runs hung; 0 of 48 with timers).
 const CORE_TURNS_PER_EXTENSION_TURN = 4;
 
 type Turn = () => void;
@@ -30,10 +32,10 @@ export const createDatabaseAdmission = ({ sliceMs = DEFAULT_SLICE_MS } = {}) => 
   const observeNextTurn = () => {
     if (turnObserved) return;
     turnObserved = true;
-    setImmediate(() => {
+    setTimeout(() => {
       turnObserved = false;
       sliceStartedAt = performance.now();
-    });
+    }, 0);
   };
 
   const nextExtensionTurn = () => {
@@ -57,11 +59,11 @@ export const createDatabaseAdmission = ({ sliceMs = DEFAULT_SLICE_MS } = {}) => 
     if (active || (core.length === 0 && extensions.size === 0)) return;
     active = true;
     if (performance.now() - sliceStartedAt >= sliceMs) {
-      setImmediate(() => {
+      setTimeout(() => {
         sliceStartedAt = performance.now();
         active = false;
         dispatch();
-      });
+      }, 0);
       return;
     }
     observeNextTurn();

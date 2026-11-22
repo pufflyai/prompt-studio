@@ -64,7 +64,9 @@ test("closing during a burst finishes admitted work and refuses later work", asy
   const database = await openPglite(":memory:");
   await database.exec("CREATE TABLE writes (id integer PRIMARY KEY)");
   const burst = withRuntimeOperationOrigin({ kind: "command", name: "bulk", extensionId: "ext.bulk" }, () =>
-    Promise.allSettled(Array.from({ length: 2_000 }, (_, id) => database.query("INSERT INTO writes VALUES ($1)", [id]))),
+    Promise.allSettled(
+      Array.from({ length: 2_000 }, (_, id) => database.query("INSERT INTO writes VALUES ($1)", [id])),
+    ),
   );
   await new Promise((resolve) => setImmediate(resolve));
   await database.close();
