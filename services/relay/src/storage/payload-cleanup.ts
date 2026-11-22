@@ -1,6 +1,6 @@
-import { and, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import type { connectRelay, RelayTransaction } from "./database";
-import { projectRetirements, syncObjectDeletions } from "./document-schema";
+import { projectRetirements, syncObjectDeletions, syncStates, syncUpdates } from "./document-schema";
 import type { PayloadObjects } from "./payloads";
 import { tryLockProject } from "./project-access";
 
@@ -12,6 +12,34 @@ const canReclaim = async (tx: RelayTransaction, projectKey: string | null) => {
   if (!(await tryLockProject(tx, projectKey))) return false;
   const [retired] = await tx.select().from(projectRetirements).where(eq(projectRetirements.projectKey, projectKey));
   return !retired;
+};
+
+const removePayloads = async (
+  tx: RelayTransaction,
+  payloads: PayloadObjects,
+  keys: (typeof syncObjectDeletions.$inferSelect)[],
+  signal: AbortSignal | undefined,
+  legacyOnly: boolean,
+) => {
+  const objectKeys = keys.map(({ objectKey }) => objectKey);
+  const present = await tx.execute<{ objectKey: string }>(sql`
+    SELECT "objectKey" FROM relay_sync_updates WHERE ${inArray(syncUpdates.objectKey, objectKeys)}
+    UNION
+    SELECT "objectKey" FROM relay_sync_states WHERE ${inArray(syncStates.objectKey, objectKeys)}`);
+  const referenced = new Set(present.rows.map(({ objectKey }) => objectKey));
+  const results = await Promise.allSettled(
+    keys.map(async ({ objectKey, multipartId }) => {
+      if (!referenced.has(objectKey)) {
+        await payloads.discard(objectKey, multipartId, signal);
+        await payloads.remove(objectKey, signal);
+        if (legacyOnly) await payloads.verifyRemoved(objectKey, signal);
+      }
+    }),
+  );
+  const failures = results.flatMap((result) => (result.status === "rejected" ? [result.reason] : []));
+  if (failures.length === 1) throw failures[0];
+  if (failures.length) throw new AggregateError(failures, "Payload cleanup failed");
+  await tx.delete(syncObjectDeletions).where(inArray(syncObjectDeletions.objectKey, objectKeys));
 };
 
 export const cleanupPayloads = async (
@@ -37,23 +65,25 @@ export const cleanupPayloads = async (
           .limit(batchSize),
       signal,
     );
-    for (const { objectKey, projectKey, multipartId } of keys) {
-      await connection.run(
-        (db) =>
-          db.transaction(async (tx) => {
-            if (!(await canReclaim(tx, projectKey))) return;
-            const present = await tx.execute<{ referenced: boolean }>(sql`
-          SELECT EXISTS (SELECT 1 FROM relay_sync_updates WHERE "objectKey" = ${objectKey})
-            OR EXISTS (SELECT 1 FROM relay_sync_states WHERE "objectKey" = ${objectKey}) AS referenced`);
-            if (!present.rows[0]!.referenced) {
-              await payloads.discard(objectKey, multipartId, signal);
-              await payloads.remove(objectKey, signal);
-              if (legacyOnly) await payloads.verifyRemoved(objectKey, signal);
-            }
-            await tx.delete(syncObjectDeletions).where(eq(syncObjectDeletions.objectKey, objectKey));
-          }),
-        signal,
-      );
+    const projects = new Map<string | null, typeof keys>();
+    for (const key of keys) {
+      const entries = projects.get(key.projectKey) ?? [];
+      entries.push(key);
+      projects.set(key.projectKey, entries);
+    }
+    for (const [projectKey, entries] of projects) {
+      for (let offset = 0; offset < entries.length; offset += 8) {
+        await connection.run(
+          (db) =>
+            db.transaction(async (tx) => {
+              if (!(await canReclaim(tx, projectKey))) return;
+              // One exclusion protects these independent keys until every admitted
+              // removal drains. Small groups avoid holding it for an entire page.
+              await removePayloads(tx, payloads, entries.slice(offset, offset + 8), signal, legacyOnly);
+            }),
+          signal,
+        );
+      }
     }
     if (keys.length < batchSize) return;
     after = keys.at(-1)!.objectKey;
