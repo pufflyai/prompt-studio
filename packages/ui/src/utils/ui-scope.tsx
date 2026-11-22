@@ -10,7 +10,11 @@ export interface UiScope {
 }
 const UiScopeContext = createContext<UiScope | null>(null);
 const UiScopeViewActivityContext = createContext({ active: true, revision: 0 });
-const UiScopePortalContext = createContext<RefObject<HTMLDivElement | null> | null>(null);
+interface ViewPortal {
+  container: RefObject<HTMLDivElement | null>;
+  modalContainer: PortalProps["container"];
+}
+const UiScopePortalContext = createContext<ViewPortal | null>(null);
 
 /** Keeps window overlays and imperative component feedback inside their owning surface. */
 export const UiScopeProvider = (props: { active: boolean; children: ReactNode }) => {
@@ -30,7 +34,8 @@ export const UiScopeActivity = (props: { active: boolean; children: ReactNode })
   const { active, children } = props;
   const scope = useUiScope();
   const parent = useContext(UiScopeViewActivityContext);
-  const parentPortal = useContext(UiScopePortalContext);
+  const modalContainer = useContext(PortalContainerContext);
+  const parentContainer = useDefaultPortalContainer();
   const [portal, setPortal] = useState<HTMLDivElement | null>(null);
   // Activity detaches refs while hidden; the retained portal still owns its unfinished content.
   const attachPortal = (node: HTMLDivElement | null) => {
@@ -47,9 +52,11 @@ export const UiScopeActivity = (props: { active: boolean; children: ReactNode })
       value={{ active: parent.active && active, revision: parent.revision + activity.revision }}
     >
       <UiScopeContext value={scope ? { ...scope, active: enabled } : null}>
-        <UiScopePortalContext value={{ current: portal }}>{children}</UiScopePortalContext>
+        <UiScopePortalContext value={{ container: { current: portal }, modalContainer }}>
+          {children}
+        </UiScopePortalContext>
       </UiScopeContext>
-      <ChakraPortal container={parentPortal ?? scope?.root}>
+      <ChakraPortal container={parentContainer}>
         <Box
           ref={attachPortal}
           data-ui-view-overlays=""
@@ -87,10 +94,17 @@ export const useUiScope: () => UiScope | null = () => useContext(UiScopeContext)
 // View navigation dismisses overlays; suspending the whole surface preserves its unfinished work.
 export const useUiScopeViewActivity = () => useContext(UiScopeViewActivityContext);
 
-/** Defaults to the owning surface, or the document body for standalone components. */
-export const Portal = (props: PortalProps & { children?: ReactNode }) => {
+const useDefaultPortalContainer = () => {
   const scope = useUiScope();
   const viewPortal = useContext(UiScopePortalContext);
   const modalContainer = useContext(PortalContainerContext);
-  return <ChakraPortal {...props} container={props.container ?? modalContainer ?? viewPortal ?? scope?.root} />;
+  // A deeper modal owns its choices; a view inside the same modal owns their visibility.
+  if (modalContainer && modalContainer !== viewPortal?.modalContainer) return modalContainer;
+  return viewPortal?.container ?? modalContainer ?? scope?.root;
+};
+
+/** Defaults to the closest modal/view owner, then its surface or the standalone document body. */
+export const Portal = (props: PortalProps & { children?: ReactNode }) => {
+  const container = useDefaultPortalContainer();
+  return <ChakraPortal {...props} container={props.container ?? container} />;
 };
