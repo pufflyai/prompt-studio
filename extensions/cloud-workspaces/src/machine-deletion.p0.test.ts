@@ -72,7 +72,6 @@ test("canceling Delete stops its changes read and preserves the machine row", as
   const f = await fileTurnFixture((request) => {
     const path = new URL(request.url).pathname;
     if (path.endsWith("/changes")) {
-      controller.abort();
       return Response.json({ workspace: { id: f.ref.machineId, state: "canceled", change_cursor: 2 } });
     }
     return Response.json({
@@ -84,8 +83,21 @@ test("canceling Delete stops its changes read and preserves the machine row", as
   const storage = createMemoryStorage();
   const ctx = makeCommandContext({ storage, params: {}, overrides: { signal: controller.signal } });
   try {
-    const command = createMachineCommands(() => f.ref.instances).deleteMachine;
+    let reachedTerminalChanges = false;
+    const instances = f.ref.instances;
+    const command = createMachineCommands(() => ({
+      ...instances,
+      async request<T>(...args: Parameters<typeof instances.request>) {
+        const result = await instances.request<T>(...args);
+        if (args[1].includes("/changes?")) {
+          reachedTerminalChanges = true;
+          controller.abort();
+        }
+        return result;
+      },
+    })).deleteMachine;
     await expect(command.run(ctx, { instance: f.ref.instanceId, machineId: f.ref.machineId })).rejects.toThrow();
+    expect(reachedTerminalChanges).toBe(true);
     expect(await storage.get(`dismissed-machines:${f.ref.instanceId}`)).toBeUndefined();
   } finally {
     await f.close();

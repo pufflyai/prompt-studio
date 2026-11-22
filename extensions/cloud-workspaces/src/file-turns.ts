@@ -97,7 +97,9 @@ export async function startFileTurn(
   ctx: HarnessContext,
   input: HarnessStartInput & { agentSessionId?: string },
   ref: Target,
+  preparationSignal = input.signal,
 ) {
+  preparationSignal?.throwIfAborted();
   if (await ctx.state.get(key(input.sessionId)))
     throw new Error("Reconnect to the pending request before sending another message.");
   const conversationKey = `file-conversation:${input.sessionId}`;
@@ -116,7 +118,8 @@ export async function startFileTurn(
       stop() {},
     };
   }
-  const files = await upload(ref, input);
+  const files = await upload(ref, { ...input, signal: preparationSignal });
+  preparationSignal?.throwIfAborted();
   for (const { fileId, fileName, mimeType, sizeBytes, url } of input.attachments ?? [])
     await ctx.state.set(`file-presentation:${conversationId}:${fileId}`, {
       fileId,
@@ -131,7 +134,12 @@ export async function startFileTurn(
     message: input.prompt || "Read the attached files.",
     files,
   };
+  preparationSignal?.throwIfAborted();
   await ctx.state.set(key(input.sessionId), { target: ref.sessionId, request });
+  if (preparationSignal?.aborted) {
+    await ctx.state.delete(key(input.sessionId));
+    preparationSignal.throwIfAborted();
+  }
   return observeFileTurn(ctx, input, ref, { target: ref.sessionId, request }, true);
 }
 
@@ -251,17 +259,25 @@ export async function resumeFileTurn(
   // Reattachment recovers work; a resume with content is a distinct submission.
   if (!input.prompt.trim() && !input.attachments?.length) return current;
   const recovered = current;
+  const preparation = new AbortController();
+  const preparationSignal = input.signal ? AbortSignal.any([input.signal, preparation.signal]) : preparation.signal;
   let stopped = false;
   return {
     ...recovered,
     async stop() {
       stopped = true;
+      preparation.abort();
       await current!.stop();
     },
     done: (async () => {
       const result = await recovered.done;
       if (stopped || result.status === "disconnected") return result;
-      current = await startFileTurn(ctx, input, ref);
+      try {
+        current = await startFileTurn(ctx, input, ref, preparationSignal);
+      } catch (error) {
+        if (stopped && preparation.signal.aborted) return { status: "cancelled" as const };
+        throw error;
+      }
       if (stopped) await current.stop();
       return current.done;
     })(),

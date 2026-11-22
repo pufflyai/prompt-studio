@@ -55,32 +55,55 @@ test("instance initialization uses the supplied port allocator and keeps control
 
 test("a failed launch keeps the instance state when the rollback cannot confirm the controller stopped", async () => {
   const root = await fs.mkdtemp(join(tmpdir(), "cloud-instance-rollback-"));
-  const binary = join(root, "pocketcoder");
-  // A started controller whose status probe fails, as when the probe times out.
+  const binary = join(root, "controller.ts");
+  const instancesRoot = join(root, "instances");
+  let directory = "";
+  let publications = 0;
+  const server = Bun.serve({
+    port: 0,
+    async fetch(request) {
+      if (request.method !== "POST" || new URL(request.url).pathname !== "/v1/templates")
+        throw new Error("Unexpected controller request");
+      publications++;
+      await fs.writeFile(join(directory, "publication-failed"), "yes");
+      return Response.json({ error: { code: "publish_failed", message: "Template rejected" } }, { status: 503 });
+    },
+  });
   await fs.writeFile(
     binary,
-    `#!/bin/sh
-shift 2
-case "$1 $2" in
-  "server start") mkdir -p "$POCKETCODER_STATE_DIR" && echo '{"pid":1}' > "$POCKETCODER_STATE_DIR/server.json" ;;
-  "server status") [ -f "$POCKETCODER_STATE_DIR/server.json" ] || echo '{"state":"not_running"}'; exit 1 ;;
-  "superuser create") echo '{"token":"owner","key":{"expires_at":"2099-01-01T00:00:00Z"}}' ;;
-esac
+    `#!${process.execPath}
+import { mkdir, writeFile } from "node:fs/promises";
+const args = process.argv.slice(2);
+if (args.includes("status")) {
+  if (await Bun.file("publication-failed").exists()) { console.error("Probe unavailable after publication"); process.exit(1); }
+  const running = await Bun.file("state/server.json").exists();
+  console.log(JSON.stringify({ state: running ? "running" : "not_running" })); process.exit(running ? 0 : 1);
+}
+if (args.includes("start")) { await mkdir("state", { recursive: true }); await writeFile("state/server.json", JSON.stringify({ pid: ${process.pid} })); }
+if (args.includes("stop")) await writeFile("stop-attempted", "yes");
+if (args.includes("superuser")) console.log(JSON.stringify({ token: "fixture", key: { expires_at: "2099-01-01T00:00:00Z" } }));
 `,
-    { mode: 0o755 },
+    { mode: 0o700 },
   );
-  // Nothing listens on the controller port, so publishing the template fails after startup.
-  const closed = Bun.serve({ port: 0, fetch: () => new Response() });
-  const port = closed.port!;
-  await closed.stop(true);
-  const ports = [port, port + 1];
+  let ports = 0;
   try {
-    const instances = createInstances(join(root, "instances"));
-    await expect(
-      instances.launch({ name: "Publish fails", binary, manifests: [{}] }, async () => ports.shift()!),
-    ).rejects.toThrow();
-    expect(await fs.readdir(join(root, "instances"))).toHaveLength(1);
+    const instances = createInstances(instancesRoot);
+    const result = await instances
+      .launch({ name: "Publish fails", binary, manifests: [{}] }, async () => {
+        directory = join(instancesRoot, (await fs.readdir(instancesRoot))[0]!);
+        return ports++ === 0 ? server.port! : server.port! + 1;
+      })
+      .catch((error: unknown) => error);
+    expect(publications).toBe(1);
+    expect(result).toBeInstanceOf(AggregateError);
+    expect((result as AggregateError).errors[0]).toHaveProperty("status", 503);
+    expect(await fs.readdir(instancesRoot)).toHaveLength(1);
+    expect(await Bun.file(join(directory, "stop-attempted")).exists()).toBe(true);
   } finally {
-    await fs.rm(root, { recursive: true, force: true });
+    try {
+      await server.stop(true);
+    } finally {
+      await fs.rm(root, { recursive: true, force: true });
+    }
   }
 });

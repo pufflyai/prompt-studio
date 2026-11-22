@@ -5,18 +5,24 @@ import type { InputObjectReference, WorkspaceRequest } from "@pstdio/pocketcoder
 import { reconnectFileTurn, resumeFileTurn } from "./file-turns";
 import { fileTurnFixture } from "./file-turns.test-fixture";
 
-async function pendingTurn() {
+async function pendingTurn(uploadGate?: { entered: () => void; release: Promise<void> }) {
   const bodies: WorkspaceRequest[] = [];
   const uploaded: string[] = [];
   let uploadedReference: InputObjectReference | undefined;
   const f = await fileTurnFixture(async (req) => {
     if (req.method === "PUT") {
       uploaded.push(await req.text());
+      uploadGate?.entered();
+      await uploadGate?.release;
       return Response.json(uploadedReference);
     }
     if (req.method === "POST") {
       bodies.push((await req.json()) as WorkspaceRequest);
-      return Response.json({});
+      return Response.json({
+        phase: "terminal",
+        finalizedAt: new Date().toISOString(),
+        outcome: { status: "completed" },
+      });
     }
     return Response.json({
       phase: "terminal",
@@ -75,6 +81,26 @@ async function pendingTurn() {
     },
   };
 }
+
+test("Stop during follow-up upload prevents a new controller submission", async () => {
+  const entered = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const f = await pendingTurn({ entered: entered.resolve, release: release.promise });
+  let session: Awaited<ReturnType<typeof resumeFileTurn>> | undefined;
+  try {
+    session = await resumeFileTurn(f.ctx, { ...f.input, prompt: "follow-up", attachments: [f.attachment] }, f.ref);
+    await entered.promise;
+    await session.stop();
+    release.resolve();
+    expect(await session.done).toEqual({ status: "cancelled" });
+    expect(new Set(f.bodies.map((body) => body.requestId))).toEqual(new Set([f.request.requestId]));
+    expect(await f.state.get(`file-turn:${f.input.sessionId}`)).toBeUndefined();
+  } finally {
+    release.resolve();
+    await session?.done.catch(() => {});
+    await f.close();
+  }
+});
 
 test.each(["", "   ", "hello"])("pending recovery sends a new file follow-up with prompt %j", async (prompt) => {
   const f = await pendingTurn();

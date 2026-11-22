@@ -112,9 +112,12 @@ test("session readers see a complete binding while a replacement write is in pro
     });
   } finally {
     release.resolve();
-    await binding;
-    writing.mockRestore();
-    await fs.rm(root, { recursive: true, force: true });
+    try {
+      await binding.catch(() => {});
+    } finally {
+      writing.mockRestore();
+      await fs.rm(root, { recursive: true, force: true });
+    }
   }
 });
 
@@ -154,6 +157,7 @@ if (args.includes("start")) {
   await mkdir("state", { recursive: true });
   await writeFile("state/server.json", JSON.stringify({ pid: ${process.pid} }));
 }
+if (args.includes("stop")) await writeFile("stop-attempted", "yes");
 if (args.includes("superuser")) console.log(JSON.stringify({ token: "fixture", key: { expires_at: "2099-01-01T00:00:00Z" } }));
 `,
     { mode: 0o700 },
@@ -175,6 +179,7 @@ if (args.includes("superuser")) console.log(JSON.stringify({ token: "fixture", k
     expect(await fs.readdir(instancesRoot)).toHaveLength(1);
     expect(await Bun.file(join(directory, "instance.json")).exists()).toBe(true);
     expect(await Bun.file(join(directory, "state/server.json")).exists()).toBe(true);
+    expect(await Bun.file(join(directory, "stop-attempted")).exists()).toBe(true);
   } finally {
     server.stop(true);
     await fs.rm(root, { recursive: true, force: true });
@@ -200,16 +205,24 @@ test.each([
   const result = f.ref.instances
     .request(f.ref.instanceId, "/stalled", { signal: caller.signal })
     .catch((error: unknown) => error);
+  let timer: ReturnType<typeof setTimeout>;
+  const watchdog = new Promise<never>((_, reject) => {
+    timer = setTimeout(
+      () => reject(new Error("Cancellation did not settle inside the existing test allowance")),
+      4_000,
+    );
+  });
   try {
-    await entered.promise;
+    await Promise.race([entered.promise, watchdog]);
     expect(delays).toEqual([35_000]);
     const reason = new DOMException("Fixture interruption", cause === "deadline" ? "TimeoutError" : "AbortError");
     (cause === "deadline" ? deadline : caller).abort(reason);
-    expect(await result).toBe(reason);
+    expect(await Promise.race([result, watchdog])).toBe(reason);
   } finally {
     caller.abort();
-    await result;
+    deadline.abort();
     timeout.mockRestore();
+    clearTimeout(timer!);
     await f.close();
   }
 });

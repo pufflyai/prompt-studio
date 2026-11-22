@@ -209,14 +209,29 @@ test("reconnecting a previously blank session loads its saved conversation and p
   }
 });
 
-test("failed history attachment does not save or open a blank conversation", async () => {
+test("failed history attachment retains its failed session for retry without opening it", async () => {
   const f = await connectionFixture({ historyFailure: true });
   try {
     await expect(f.connect()).rejects.toThrow("History unavailable");
-    expect(await f.storage.get(`machine-session:${f.instanceId}:${f.machineId}`)).toBeUndefined();
+    expect(await f.storage.get(`machine-session:${f.instanceId}:${f.machineId}`)).toBe(f.created[0]?.id);
     expect(f.opened).toEqual([]);
     expect(f.created.map((session) => session.status)).toEqual(["failed"]);
     expect(f.requests.every((request) => request.method === "GET")).toBe(true);
+  } finally {
+    await f.close();
+  }
+});
+
+test("retrying a failed history attachment reuses the recorded session", async () => {
+  const options = { historyFailure: true };
+  const f = await connectionFixture(options);
+  try {
+    await expect(f.connect()).rejects.toThrow("History unavailable");
+    options.historyFailure = false;
+    await f.connect();
+    expect(f.created).toHaveLength(1);
+    expect(f.messages).toMatchObject([{ id: "saved-reply" }]);
+    expect(f.opened).toHaveLength(1);
   } finally {
     await f.close();
   }

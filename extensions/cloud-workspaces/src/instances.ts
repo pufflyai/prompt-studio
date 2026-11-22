@@ -1,11 +1,13 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { resolveExecutable } from "./executable";
 import { inputEnvironment, instanceLimits } from "./instance-inputs";
 import { runCli } from "./local-cli";
+import { instanceDirectory, serializeState, writeJson } from "./local-state";
 import { createOwnerKeys, type OwnerKey } from "./owner-keys";
+import { createSessionBindings } from "./session-bindings";
 
 export interface Instance {
   id: string;
@@ -58,17 +60,8 @@ async function controllerRunning(instance: Instance, directory: string, environm
   }
 }
 
-async function writeJson(path: string, value: unknown) {
-  const temporary = `${path}.${randomUUID()}.tmp`;
-  await writeFile(temporary, JSON.stringify(value), { mode: 0o600 });
-  await rename(temporary, path);
-}
-
 export function createInstances(root: string) {
-  const directory = (id: string) => {
-    if (!/^[0-9a-f-]{36}$/.test(id)) throw new Error("Invalid PocketCoder instance ID.");
-    return join(root, id);
-  };
+  const directory = (id: string) => instanceDirectory(root, id);
   const read = async <T>(id: string, file: string) =>
     JSON.parse(await readFile(join(directory(id), file), "utf8")) as T;
   const write = (id: string, file: string, value: unknown) => writeJson(join(directory(id), file), value);
@@ -116,20 +109,21 @@ export function createInstances(root: string) {
       JSON.parse(await cli(instance, ["superuser", "create", "--automation", "--expires", expiresAt, "--json"])),
     get,
   });
-  const start = async (id: string, binary?: string) => {
-    if (binary) {
-      // Check the new path before saving it, so a bad path cannot break an instance that worked before.
-      const resolved = await resolveExecutable({ binary });
-      const saved = await read<Instance>(id, "instance.json");
-      await write(id, "instance.json", { ...saved, binary: resolved });
-    }
-    const instance = await get(id);
-    if (instance.error) throw new Error(instance.error);
-    if (instance.state === "stopped") await cli(instance, ["server", "start"]);
-    await ownerKeys.issue(instance);
-    if (instance.removed) await write(id, "instance.json", { ...instance, removed: false });
-    return get(id);
-  };
+  const start = (id: string, binary?: string) =>
+    serializeState(directory(id), async () => {
+      if (binary) {
+        // Check the new path before saving it, so a bad path cannot break an instance that worked before.
+        const resolved = await resolveExecutable({ binary });
+        const saved = await read<Instance>(id, "instance.json");
+        await write(id, "instance.json", { ...saved, binary: resolved });
+      }
+      const instance = await get(id);
+      if (instance.error) throw new Error(instance.error);
+      if (instance.state === "stopped") await cli(instance, ["server", "start"]);
+      await ownerKeys.issue(instance);
+      if (instance.removed) await write(id, "instance.json", { ...instance, removed: false });
+      return get(id);
+    });
   const request = async <T>(id: string, path: string, options: RequestInit = {}) => {
     const instance = await read<Instance>(id, "instance.json");
     const token = await ownerKeys.token(id);
@@ -150,33 +144,20 @@ export function createInstances(root: string) {
     }
     return response.json() as Promise<T>;
   };
-  return {
-    async bindSession(sessionId: string, instanceId: string, machineId: string, conversationId?: string) {
-      directory(sessionId);
-      directory(instanceId);
-      directory(machineId);
-      if (!conversationId) {
-        try {
-          const saved = JSON.parse(await readFile(join(root, `${sessionId}.json`), "utf8"));
-          if (saved.instanceId === instanceId && saved.machineId === machineId) conversationId = saved.conversationId;
-        } catch (error) {
-          if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
-        }
+  const rollback = (id: string) =>
+    serializeState(directory(id), async () => {
+      const instance = await read<Instance>(id, "instance.json");
+      if (await Bun.file(join(directory(id), "state/server.json")).exists()) {
+        // The identity-checking CLI can stop an unhealthy controller without a successful health probe.
+        await cli(instance, ["server", "stop"]);
+        const stopped = await get(id);
+        if (stopped.error) throw new Error(stopped.error);
+        if (stopped.state !== "stopped") throw new Error("PocketCoder controller is still running.");
       }
-      await writeJson(join(root, `${sessionId}.json`), {
-        instanceId,
-        machineId,
-        ...(conversationId ? { conversationId } : {}),
-      });
-    },
-    async sessionTarget(sessionId: string) {
-      directory(sessionId);
-      return JSON.parse(await readFile(join(root, `${sessionId}.json`), "utf8")) as {
-        instanceId: string;
-        machineId: string;
-        conversationId?: string;
-      };
-    },
+      await rm(directory(id), { recursive: true });
+    });
+  return {
+    ...createSessionBindings(root),
     get,
     start,
     request,
@@ -204,16 +185,29 @@ export function createInstances(root: string) {
       await mkdir(root, { recursive: true, mode: 0o700 });
       const entries = await readdir(root, { withFileTypes: true });
       const saved = await Promise.all(
-        entries.filter((entry) => entry.isDirectory()).map((entry) => read<Instance>(entry.name, "instance.json")),
+        entries
+          .filter((entry) => entry.isDirectory())
+          .map(async (entry) => {
+            try {
+              const instance = await read<Instance>(entry.name, "instance.json");
+              if (instance.removed) return null;
+              return await get(instance.id);
+            } catch (error) {
+              if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+              throw error;
+            }
+          }),
       );
-      return Promise.all(saved.filter((instance) => !instance.removed).map((instance) => get(instance.id)));
+      return saved.filter((instance) => instance !== null);
     },
-    async remove(id: string) {
-      const instance = await read<Instance>(id, "instance.json");
-      if (await controllerRunning(instance, directory(instance.id), environment(instance)))
-        throw new Error("Stop the instance before removing it. Its controller process is still running.");
-      // Keep the controller database and checkpoints so saved conversations and recovery data survive removal.
-      await write(id, "instance.json", { ...instance, removed: true });
+    remove(id: string) {
+      return serializeState(directory(id), async () => {
+        const instance = await read<Instance>(id, "instance.json");
+        if (await controllerRunning(instance, directory(instance.id), environment(instance)))
+          throw new Error("Stop the instance before removing it. Its controller process is still running.");
+        // Keep the controller database and checkpoints so saved conversations and recovery data survive removal.
+        await write(id, "instance.json", { ...instance, removed: true });
+      });
     },
     async launch(input: InstanceLaunchInput, allocatePort: () => Promise<number>) {
       const workloadLimits = instanceLimits(input.manifests ?? []);
@@ -243,14 +237,14 @@ export function createInstances(root: string) {
         return started;
       } catch (error) {
         try {
-          if (initialized) await this.stop(id);
+          if (initialized) await rollback(id);
+          else await rm(directory(id), { recursive: true });
         } catch (cleanupError) {
           throw new AggregateError(
             [error, cleanupError],
-            `PocketCoder launch failed and its controller could not be confirmed stopped. Recovery state remains at ${directory(id)}.`,
+            `PocketCoder launch failed and cleanup could not complete. Recovery state remains at ${directory(id)}.`,
           );
         }
-        await rm(directory(id), { recursive: true });
         throw error;
       }
     },
@@ -278,14 +272,16 @@ export function createInstances(root: string) {
         POCKETCODER_KEY: owner.token,
       });
     },
-    async stop(id: string) {
-      const instance = await get(id);
-      if (instance.error) throw new Error(instance.error);
-      if (instance.state === "running") await cli(instance, ["server", "stop"]);
-      const stopped = await get(id);
-      if (stopped.error) throw new Error(stopped.error);
-      if (stopped.state !== "stopped") throw new Error("PocketCoder controller is still running.");
-      return stopped;
+    stop(id: string) {
+      return serializeState(directory(id), async () => {
+        const instance = await get(id);
+        if (instance.error) throw new Error(instance.error);
+        if (instance.state === "running") await cli(instance, ["server", "stop"]);
+        const stopped = await get(id);
+        if (stopped.error) throw new Error(stopped.error);
+        if (stopped.state !== "stopped") throw new Error("PocketCoder controller is still running.");
+        return stopped;
+      });
     },
   };
 }

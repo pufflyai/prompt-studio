@@ -146,27 +146,88 @@ test("Stop while recovering a pending request does not launch its queued follow-
 });
 
 test("reattaching after a restored machine keeps the old terminal request and its conversation", async () => {
-  const f = await fixture((req) => {
-    if (req.method === "POST") throw new Error("A fenced request must not be submitted to the restored machine");
-    return Response.json({ phase: "lost", finalizedAt: new Date().toISOString(), outcome: { status: "lost" } });
-  });
+  const conversationId = randomUUID(),
+    machineId = randomUUID();
+  const paths: string[] = [];
+  const messages: unknown[] = [];
+  const f = await fixture(
+    (req) => {
+      const path = new URL(req.url).pathname;
+      paths.push(path);
+      if (req.method === "POST") throw new Error("A fenced request must not be submitted to the restored machine");
+      if (path.includes("/conversation/open")) return Response.json({ turns: [] });
+      if (path.includes("/conversations/"))
+        return Response.json({
+          items: [
+            {
+              message_id: "restored-message",
+              role: "assistant",
+              occurred_at: "2026-11-22T00:00:00Z",
+              content: path.includes(machineId) ? "Preserved conversation" : "Wrong workspace history",
+            },
+          ],
+          next_cursor: null,
+        });
+      return Response.json({ phase: "terminal", finalizedAt: new Date().toISOString(), outcome: { status: "failed" } });
+    },
+    { conversation: true },
+  );
   try {
-    const conversationId = randomUUID();
     await f.state.set(`file-turn:${f.input.sessionId}`, {
       target: f.ref.sessionId,
       request: { requestId: randomUUID(), conversationId, message: "accepted before restore", files: [] },
     });
-    const machineId = randomUUID();
     const ref = { ...f.ref, machineId, sessionId: `${f.ref.instanceId}:${machineId}` };
     const session = await reconnectFileTurn(
       f.ctx,
-      { ...f.input, agentSessionId: `${f.ref.sessionId}:${conversationId}` },
+      {
+        ...f.input,
+        agentSessionId: `${f.ref.sessionId}:${conversationId}`,
+        events: {
+          getMessages: () => [],
+          push(patch) {
+            if (patch.op === "replace" && patch.path === "/messages") messages.push(patch.value);
+          },
+        },
+      },
       ref,
     );
     expect(await session?.done).toEqual({ status: "failed" });
     expect(session?.agentSessionId).toBe(`${ref.sessionId}:${conversationId}`);
     expect(await f.state.get(`file-turn:${f.input.sessionId}`)).toBeUndefined();
     expect(await f.state.get(`file-conversation:${f.input.sessionId}`)).toBe(conversationId);
+    expect(messages).toMatchObject([
+      [{ id: "restored-message", parts: [{ type: "text", text: "Preserved conversation" }] }],
+    ]);
+    expect(paths.some((path) => path.startsWith(`/v1/workspaces/${f.ref.machineId}/requests/`))).toBe(true);
+  } finally {
+    await f.close();
+  }
+});
+
+test("an unreadable old receipt preserves its request fence after restore", async () => {
+  let posts = 0;
+  const f = await fixture((req) => {
+    if (req.method === "POST") posts++;
+    return Response.json({ error: { code: "missing", message: "Receipt unavailable" } }, { status: 404 });
+  });
+  try {
+    const pending = {
+      target: f.ref.sessionId,
+      request: { requestId: randomUUID(), conversationId: randomUUID(), message: "accepted", files: [] },
+    };
+    await f.state.set(`file-turn:${f.input.sessionId}`, pending);
+    const machineId = randomUUID();
+    await expect(
+      reconnectFileTurn(
+        f.ctx,
+        { ...f.input, agentSessionId: f.ref.sessionId },
+        { ...f.ref, machineId, sessionId: `${f.ref.instanceId}:${machineId}` },
+      ),
+    ).rejects.toThrow("404");
+    expect(await f.state.get<unknown>(`file-turn:${f.input.sessionId}`)).toEqual(pending);
+    await expect(startFileTurn(f.ctx, f.input, f.ref)).rejects.toThrow("pending request");
+    expect(posts).toBe(0);
   } finally {
     await f.close();
   }
@@ -211,17 +272,30 @@ test("Stop that races finalization does not restore the completed request", asyn
 });
 
 test("a stalled receipt read disconnects a turn that has a run signal", async () => {
-  const timeout = AbortSignal.timeout.bind(AbortSignal);
-  // Shorten the transport deadline so the stalled read gives up quickly.
-  const deadline = spyOn(AbortSignal, "timeout").mockImplementation((ms) => timeout(Math.min(ms, 100)));
-  const f = await fixture((req) => (req.method === "POST" ? Response.json({}) : new Promise<Response>(() => {})));
+  const nativeTimeout = AbortSignal.timeout.bind(AbortSignal);
+  let accepted = false;
+  let receiptReads = 0;
+  let f: Awaited<ReturnType<typeof fixture>> | undefined;
+  const deadline = spyOn(AbortSignal, "timeout").mockImplementation((ms) =>
+    nativeTimeout(accepted ? Math.min(ms, 100) : ms),
+  );
   try {
+    f = await fixture((req) => {
+      if (req.method === "POST") {
+        accepted = true;
+        return Response.json({});
+      }
+      if (new URL(req.url).pathname.includes("/requests/")) receiptReads++;
+      return new Promise<Response>(() => {});
+    });
     const session = await startFileTurn(f.ctx, { ...f.input, signal: new AbortController().signal }, f.ref);
     expect(await session.done).toEqual({ status: "disconnected" });
+    expect(accepted).toBe(true);
+    expect(receiptReads).toBe(1);
     expect(await f.state.get(`file-turn:${f.input.sessionId}`)).toBeDefined();
   } finally {
     deadline.mockRestore();
-    await f.close();
+    await f?.close();
   }
 });
 

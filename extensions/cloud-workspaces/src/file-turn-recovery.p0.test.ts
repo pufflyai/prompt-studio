@@ -53,8 +53,11 @@ test("late Stop completion cannot restore a finalized pending request", async ()
     expect(await next.done).toEqual({ status: "completed" });
   } finally {
     releaseStop.resolve();
-    await stopping;
-    await f.close();
+    try {
+      await stopping?.catch(() => {});
+    } finally {
+      await f.close();
+    }
   }
 });
 

@@ -51,7 +51,7 @@ export async function createMachineSession(
   connection: Awaited<ReturnType<typeof machineConnection>>,
   conversationId?: string,
 ) {
-  const session = await ctx.sessions.create({
+  return ctx.sessions.create({
     title: `PocketCoder: ${machine.external_id}`,
     ...(connection.kind === "relay"
       ? {
@@ -64,9 +64,14 @@ export async function createMachineSession(
           operation: conversationId ? attachOperation(instanceId, machine.id, conversationId) : undefined,
         }),
   });
+}
+
+export function assertCreatedSessionAttached(
+  session: Pick<Awaited<ReturnType<CommandContext["sessions"]["create"]>>, "id" | "operationResult">,
+  conversationId?: string,
+) {
   if (conversationId && session.operationResult?.status !== "started")
     throw new Error(session.operationResult?.message || "Could not load the machine conversation.");
-  return session;
 }
 
 export const machineSessionTarget = (projectId: string, session: { id: string; title: string }) => ({
@@ -76,7 +81,14 @@ export const machineSessionTarget = (projectId: string, session: { id: string; t
   resource: { type: "session", extensionId: "pstdio", projectId, id: session.id, label: session.title },
 });
 
-export async function previousMachineSession(ctx: CommandContext, instanceId: string, machineId: string) {
+export async function previousMachineSession(
+  ctx: CommandContext,
+  instanceId: string,
+  machineId: string,
+  connection: Awaited<ReturnType<typeof machineConnection>>,
+) {
+  const saved = await ctx.storage.get<string>(`machine-session:${instanceId}:${machineId}`);
+  if (saved || connection.kind !== "session") return saved;
   const candidates = (await ctx.workspaces.list()).filter(
     (workspace) =>
       workspace.providerId === `${ctx.extensionId}.workspace-type.machine` &&

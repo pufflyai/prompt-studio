@@ -5,6 +5,7 @@ import { machineConnection } from "./machine-connection";
 import { dismissMachine } from "./machine-dismissals";
 import { readyMachineCheckpoint } from "./machine-row";
 import {
+  assertCreatedSessionAttached,
   attachMachineSession,
   checkRelayDevice,
   createMachineSession,
@@ -85,9 +86,7 @@ export function createMachineCommands(getInstances = instancesFor) {
         machine.metadata,
       );
       const key = `machine-session:${input.instance}:${machine.id}`;
-      let sessionId = await ctx.storage.get<string>(key);
-      if (!sessionId && connection.kind === "session")
-        sessionId = await previousMachineSession(ctx, input.instance, machine.id);
+      const sessionId = await previousMachineSession(ctx, input.instance, machine.id, connection);
       if (connection.kind === "relay") await checkRelayDevice(ctx, connection.deviceId);
       const existing = sessionId ? await ctx.sessions.get(sessionId) : null;
       const conversationId =
@@ -96,11 +95,12 @@ export function createMachineCommands(getInstances = instancesFor) {
           : undefined;
       const session =
         existing ?? (await createMachineSession(ctx, input.instance, machine, connection, conversationId));
-      if (existing && conversationId)
-        await attachMachineSession(ctx, existing.id, input.instance, machine.id, conversationId);
       if (connection.kind === "session")
         await instances.bindSession(session.id, input.instance, machine.id, conversationId);
       await ctx.storage.set(key, session.id);
+      if (!existing) assertCreatedSessionAttached(session, conversationId);
+      if (existing && conversationId)
+        await attachMachineSession(ctx, existing.id, input.instance, machine.id, conversationId);
       ctx.navigation.open(machineSessionTarget(ctx.projectId, session));
       return { machineId: machine.id, sessionId: session.id };
     },
