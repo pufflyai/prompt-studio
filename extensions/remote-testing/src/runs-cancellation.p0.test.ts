@@ -5,7 +5,7 @@ import { join } from "node:path";
 import type { ExtensionAutomationApi, ExtensionConnectionsApi } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { commands } from "./commands";
-import type { Api } from "./connection";
+import { type Api, PocketCoderError } from "./connection";
 import { runDeps } from "./context";
 import { cleanupRunEnvironment, enqueueEnvironmentCleanup } from "./environment-cleanup";
 import { activeRun, claimEnvironment } from "./environments";
@@ -153,7 +153,7 @@ test.each([60, -1])("cleanup preserves another owner's claim with %s seconds rem
 test("failed cleanup retains the owning claim and can resume safely", async () => {
   const store = createMemoryStorage();
   await claimEnvironment(store, "env", "owner", -1);
-  const failure = new Error("Controller unavailable");
+  const failure = new PocketCoderError(401, "Sign in again");
   let failing = true;
   const api: Api = async () => {
     expect(await activeRun(store, "env")).toBe("owner");
@@ -191,6 +191,7 @@ test("an unavailable cleanup queue reports the environment and preserves its err
       },
     },
   });
+  await claimEnvironment(ctx.storage, "env", "run", 60);
   await expect(enqueueEnvironmentCleanup(ctx, { environmentId: "env", runId: "run", stop: true })).rejects.toBe(
     failure,
   );

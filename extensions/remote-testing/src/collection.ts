@@ -8,7 +8,8 @@ export const collectRun = defineCommand({
   automation: true,
   params: { runId: params.text({ label: l10n("remote-testing.run-id", "Run ID"), required: true }) },
   async run(ctx, { runId }) {
-    return awaitRun(await runDeps(ctx), await readRun(ctx.storage, runId), ctx.signal);
+    await awaitRun(await runDeps(ctx), await readRun(ctx.storage, runId), ctx.signal);
+    return { runId };
   },
 });
 

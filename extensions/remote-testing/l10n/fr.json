@@ -81,5 +81,6 @@
   "remote-testing.stop-environment": "Arrêter l’environnement",
   "remote-testing.remote-tests": "Tests à distance",
   "remote-testing.runs": "Exécutions",
-  "remote-testing.environments": "Environnements"
+  "remote-testing.environments": "Environnements",
+  "remote-testing.resume-environment-cleanup": "Reprendre le nettoyage des environnements"
 }

@@ -107,18 +107,26 @@ export async function claimEnvironment(store: ExtensionStorageApi, id: string, r
 
 export async function releaseEnvironment(store: ExtensionStorageApi, id: string, runId: string) {
   const claims = store.collection<Claim>("environment-claims");
-  const current = await claims.get(id);
-  if (current?.runId === runId) await claims.deleteIfValue(id, current);
+  while (true) {
+    const current = await claims.get(id);
+    if (current?.runId !== runId) return;
+    if (await claims.deleteIfValue(id, current)) return;
+  }
 }
 
 export async function renewEnvironmentClaim(store: ExtensionStorageApi, id: string, runId: string, seconds: number) {
   const claims = store.collection<Claim>("environment-claims");
-  const current = await claims.read(id);
-  if (!current || current.value.runId !== runId) return false;
-  return claims.updateIfUnchanged(id, current.revision, {
-    runId,
-    until: Math.max(current.value.until, Date.now() + seconds * 1000),
-  });
+  while (true) {
+    const current = await claims.read(id);
+    if (!current || current.value.runId !== runId) return false;
+    if (
+      await claims.updateIfUnchanged(id, current.revision, {
+        runId,
+        until: Math.max(current.value.until, Date.now() + seconds * 1000),
+      })
+    )
+      return true;
+  }
 }
 
 export async function activeRun(store: ExtensionStorageApi, id: string) {

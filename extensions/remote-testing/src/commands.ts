@@ -2,7 +2,7 @@ import { defineCommand, l10n, params, workbenchPages } from "@pstdio/sdk/extensi
 import { collectRun, startCollection, waitForCollection } from "./collection";
 import { connectionApi } from "./connection";
 import { changed, googleToken, projectRoot, runDeps } from "./context";
-import { cleanupEnvironmentCommand } from "./environment-cleanup";
+import { cleanupEnvironmentCommand, recoverEnvironmentCleanup } from "./environment-cleanup";
 import { createEnvironment, isBusy, listEnvironments, stopEnvironment } from "./environments";
 import { awaitRun, cancelRun, listRuns, readRun, startRun } from "./runs";
 import { sessionResource } from "./session-link";
@@ -288,6 +288,7 @@ export const refresh = defineCommand({
 
 export const commands = [
   cleanupEnvironmentCommand,
+  recoverEnvironmentCleanup,
   status,
   run,
   showRun,

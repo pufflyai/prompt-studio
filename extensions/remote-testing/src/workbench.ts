@@ -20,6 +20,7 @@ import {
   stopEnvironmentCommand,
 } from "./commands";
 import { changed, runDeps } from "./context";
+import { resumeEnvironmentCleanups } from "./environment-cleanup";
 import { activeRun, listEnvironments } from "./environments";
 import { environmentValues, runValues } from "./run-rows";
 import { checkRun, listRuns } from "./runs";
@@ -95,6 +96,7 @@ export const runsView = defineView({
     onRowActivate: openRunSession,
     defaultSorts: [{ attributeId: "started", direction: "desc" }],
     async query(ctx) {
+      await resumeEnvironmentCleanups(ctx);
       const records = await listRuns(ctx.storage);
       // Older runs may have been submitted before background collection was available.
       const deps = await runDeps(ctx).catch(() => null);
