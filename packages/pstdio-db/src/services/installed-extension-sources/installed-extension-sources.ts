@@ -56,7 +56,7 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
     );
     if (new Set(rows.map((row) => row.extension_id)).size > 1)
       throw new Error(`Extension install name is ambiguous: ${installName}. Use its publisher-qualified ID.`);
-    return rows[0] ?? null;
+    return rows.find((row) => row.install_name === canonicalInstallName(installName)) ?? rows[0] ?? null;
   };
 
   const getBySourcePath = async (sourcePath: string) => {

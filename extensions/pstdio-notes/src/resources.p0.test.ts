@@ -6,7 +6,7 @@ import { createNotesMount } from "./test-mount";
 
 const coreIds = createIdStorage().ids;
 
-test("searches existing notes by title and content and opens their resource panel", async () => {
+test("searches existing notes by title and content and opens their resource page", async () => {
   const mount = createNotesMount();
   const note = await createNote(mount, coreIds.create());
   await writeNote(mount, note.id, "# Research plan\nDiscuss sidebar accessibility");
@@ -30,14 +30,9 @@ test("searches existing notes by title and content and opens their resource pane
         id: note.id,
         label: "Research plan",
         target: {
-          kind: "compound",
-          targets: [
-            { kind: "page" },
-            {
-              kind: "panel",
-              resource: { type: "note", id: note.id, extensionId: "pstdio.notes", projectId: "notes-project" },
-            },
-          ],
+          kind: "page",
+          page: { kind: "page", id: "note" },
+          resource: { type: "note", id: note.id, extensionId: "pstdio.notes", projectId: "notes-project" },
         },
       },
     ],

@@ -3,6 +3,7 @@ import { isWorkbenchProjectUrl, normalizePageParams } from "pstdio-api-contracts
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
 import type { createWorkbenchEvent } from "../../shared/workbench-event";
 import { eligibleDefaultPage } from "./default-page";
+import { pageLocationTarget } from "./page-location-target";
 import type {
   CreateWorkbenchPageLocationControllerInput,
   ResolvedPageLocation,
@@ -62,6 +63,14 @@ export const createPageLocationControllerActions = <Value>(
 ): WorkbenchPageLocationController => {
   const { input } = actions;
   const { navigation } = actions;
+  const commitExplicit = (
+    projectId: string,
+    resolved: ResolvedPageLocation,
+    history: "push" | "replace" | "none",
+    action: string,
+  ) =>
+    input.navigateTarget?.(pageLocationTarget(resolved.location), history) ??
+    actions.commit(projectId, resolved, history, action);
   const navigated = (result: WorkbenchPageNavigationResult) => {
     if (result.ok) {
       input.activateLocation?.();
@@ -90,7 +99,7 @@ export const createPageLocationControllerActions = <Value>(
           return actions.resolveUrl(projectId, input.browser.current())?.location;
         }
         const saved = input.persistence.load(projectId);
-        if (saved) return actions.normalizeStored(saved.location).location;
+        if (saved) return saved.location ? actions.normalizeStored(saved.location).location : undefined;
         const page = eligibleDefaultPage(input);
         return page ? actions.normalizeTarget({ kind: "page", page: page.ref }).location : undefined;
       } catch {
@@ -108,6 +117,7 @@ export const createPageLocationControllerActions = <Value>(
       if (!projectId) return actions.fail("navigation", new Error("Cannot navigate before a project is active"));
       try {
         const resolved = actions.normalizeTarget(target);
+        if (target.intent !== "restore" && input.navigateTarget) return navigated(input.navigateTarget(target));
         const current = input.registry.store.getState().location;
         if (current && target.intent !== "restore" && input.focusResource?.(resolved.location, resolved.open)) {
           navigation.notify(current);
@@ -165,7 +175,7 @@ export const createPageLocationControllerActions = <Value>(
       }
       try {
         return navigated(
-          actions.commit(
+          commitExplicit(
             current.projectId,
             actions.normalizeStored(current.location.parent),
             "replace",
@@ -186,7 +196,7 @@ export const createPageLocationControllerActions = <Value>(
       }
       try {
         return navigated(
-          actions.commit(
+          commitExplicit(
             projectId,
             actions.normalizeTarget({ kind: "page", page: page.ref }),
             "push",
@@ -215,7 +225,7 @@ export const createPageLocationControllerActions = <Value>(
       }
       try {
         const history = actions.locationsEqual(current.location, resolved.location) ? "none" : "push";
-        return navigated(actions.commit(current.projectId, resolved, history, "navigateToRootLevelPageLocation"));
+        return navigated(commitExplicit(current.projectId, resolved, history, "navigateToRootLevelPageLocation"));
       } catch (error) {
         return actions.fail("navigation", error);
       }

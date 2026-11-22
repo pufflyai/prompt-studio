@@ -136,10 +136,10 @@ test("queues two follow-ups without stopping the active session and keeps a fail
   await editor.fill("Keep this draft");
   await expect(send).toHaveAttribute("aria-label", "Queue message");
   await send.click();
-  // The failed message stays in the conversation; closing it puts the text back in the composer.
+  // The failed message stays in the conversation until its input is explicitly restored.
   await expect(page.getByText("Message not sent")).toBeVisible();
   await expect(editor).toBeEmpty();
-  await page.getByRole("button", { name: "Dismiss" }).click();
+  await page.getByRole("button", { name: "Restore draft", exact: true }).click();
   await expect(page.getByText("Message not sent")).toHaveCount(0);
   await expect(editor).toHaveText("Keep this draft");
   await page.unroute(actionRoute);

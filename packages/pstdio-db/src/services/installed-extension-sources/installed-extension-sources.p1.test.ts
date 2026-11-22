@@ -40,6 +40,25 @@ test("conditionally records load state only while the source registration is unc
 });
 
 describe("installedExtensionSourcesService", () => {
+  test("an explicitly named installation wins over another copy matching its owner alias", async () => {
+    await svc.register({
+      install_name: "private-workspaces",
+      extension_id: "pstdio.workspaces",
+      display_name: "Private",
+      source_kind: "local_path",
+      source_path: "/private/workspaces",
+    });
+    const named = await svc.register({
+      install_name: "workspaces",
+      extension_id: "pstdio.workspaces",
+      display_name: "Workspaces",
+      source_kind: "local_path",
+      source_path: "/installed/workspaces",
+    });
+    expect((await svc.getByInstallName("workspaces"))?.id).toBe(named.id);
+    expect((await svc.getByInstallName("pstdio.workspaces"))?.id).toBe(named.id);
+  });
+
   test("registers and retrieves a source by install name", async () => {
     const registered = await svc.register({
       install_name: "pstdio.core-templates",

@@ -6,7 +6,7 @@ import {
 } from "./workbench-extension-contributions";
 
 type ResourceKinds = (Pick<DashboardExtensionMetadata["resourceKinds"][number], "id" | "extensionId"> &
-  Partial<Pick<DashboardExtensionMetadata["resourceKinds"][number], "localId">>)[];
+  Partial<Pick<DashboardExtensionMetadata["resourceKinds"][number], "localId" | "icon">>)[];
 export const canonicalDashboardResource = (
   resource: ResourceRef,
   projectId: string,

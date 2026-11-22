@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test";
+import { createHash } from "node:crypto";
+import { resourceKey } from "pstdio-api-contracts/extension-kernel";
 import { createDb, createExtensionStorageDBService, createProjectsDBService } from "pstdio-db";
+import { canonicalJson, type Json } from "pstdio-sync-contracts";
 import { createResourceActivityStore } from "./resource-activity-store";
 
 const resource = { projectId: "", extensionId: "test.owner", type: "note", id: "same-id" };
@@ -124,5 +127,65 @@ test("offline peers cannot rewrite a referenced implementation by reusing its re
     }
   } finally {
     await Promise.all(databases.map((database) => database.close()));
+  }
+});
+
+test("activity retries preserve legacy receipts and concurrent new publications", async () => {
+  const db = await createDb({ path: ":memory:" });
+  try {
+    const project = await createProjectsDBService(db.db).create({ name: "Activity retries" });
+    const storage = createExtensionStorageDBService(db.db);
+    const store = createResourceActivityStore(storage, project.id);
+    const ref = { ...resource, projectId: project.id };
+    const input = { key: "legacy", kind: "comment" as const, body: "Original discussion" };
+    const entry = {
+      id: "legacy-entry",
+      resource: ref,
+      author,
+      kind: input.kind,
+      body: input.body,
+      attachments: [],
+      resolved: false,
+      createdAt: "2026-01-01T00:00:00.000Z",
+    };
+    const hash = (text: string) => createHash("sha256").update(text).digest("hex");
+    const scope = resourceKey(ref);
+    const request = hash(
+      canonicalJson(
+        JSON.parse(
+          JSON.stringify({
+            input,
+            author: { type: author.type, id: author.id, extensionId: undefined },
+            preserved: undefined,
+          }),
+        ) as Json,
+      ),
+    );
+    await (await store.records()).commit({
+      operationId: crypto.randomUUID(),
+      edits: [
+        { recordId: `entry/${entry.id}`, replace: { ...entry, scope, root: true, sourceOwner: "" } as Json },
+        { recordId: `key/${hash(JSON.stringify([scope, input.key]))}`, replace: { id: entry.id, request } },
+      ],
+    });
+    expect(await store.append(ref, input, author)).toEqual(entry);
+    await expect(store.append(ref, { ...input, body: "Changed" }, author)).rejects.toThrow("key");
+    const created = await Promise.all(
+      Array.from({ length: 3 }, () =>
+        store.append(ref, { key: "new", kind: "comment", body: "One publication" }, author),
+      ),
+    );
+    expect(new Set(created.map((item) => item.id)).size).toBe(1);
+    expect((await store.query(ref, {})).items.map((item) => item.body).sort()).toEqual([
+      "One publication",
+      "Original discussion",
+    ]);
+    await store.resolve(ref, created[0]!.id, true);
+    expect((await store.append(ref, { key: "new", kind: "comment", body: "One publication" }, author)).resolved).toBe(
+      true,
+    );
+    await expect(store.append(ref, { key: "new", kind: "comment", body: "Changed" }, author)).rejects.toThrow("key");
+  } finally {
+    await db.close();
   }
 });

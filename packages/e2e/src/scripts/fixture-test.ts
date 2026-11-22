@@ -12,6 +12,7 @@ const installed = new Map<
     sourceHash: string;
   }
 >();
+const installing = new Map<string, Promise<NonNullable<ReturnType<typeof installed.get>>>>();
 // Each import opts its scenarios into one small installable input. Other projects use production defaults only.
 export const fixtureTest = (kind: keyof typeof sources, parent = base) =>
   parent.extend({
@@ -20,8 +21,10 @@ export const fixtureTest = (kind: keyof typeof sources, parent = base) =>
         const source = sources[kind];
         const manifest = JSON.parse(readFileSync(join(source, "package.json"), "utf8"));
         const key = `${origin}:${kind}`;
-        const previous = installed.get(key);
-        if (previous) {
+        const pending = installing.get(key);
+        const saved = installed.get(key);
+        if (saved || pending) {
+          const previous = saved ?? (await pending!);
           const response = await request.post(
             `${origin}/v1/projects/${projectId}/extensions/installed/${manifest.name}/enable`,
             {
@@ -56,11 +59,21 @@ export const fixtureTest = (kind: keyof typeof sources, parent = base) =>
           }
         };
         add(source);
-        const response = await request.post(`${origin}/v1/projects/${projectId}/extensions/install`, {
-          multipart: form,
-        });
-        expect(response.ok(), await response.text()).toBe(true);
-        installed.set(key, (await response.json()).source);
+        const preparation = (async () => {
+          const response = await request.post(`${origin}/v1/projects/${projectId}/extensions/install`, {
+            multipart: form,
+          });
+          expect(response.ok(), await response.text()).toBe(true);
+          const source = (await response.json()).source;
+          installed.set(key, source);
+          return source;
+        })();
+        installing.set(key, preparation);
+        try {
+          await preparation;
+        } finally {
+          installing.delete(key);
+        }
       };
       const proxy = new Proxy(request, {
         get(target, key) {

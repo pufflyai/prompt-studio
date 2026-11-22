@@ -35,7 +35,7 @@ test("installed extensions expose author and scope independently", () => {
         marketplace={[]}
         diagnostics={[]}
         automations={[]}
-        filters={{ search: "", author: "all", scope: "all" }}
+        filters={{ search: "" }}
         onFiltersChange={() => {}}
       />
     </ChakraProvider>,
@@ -165,14 +165,14 @@ const groupedExtension = (
   updateAvailable: false,
 });
 
-test("groups enabled before other installed extensions and intersects author, scope and search", () => {
+test("groups enabled before other installed extensions and searches across authors and scopes", () => {
   const extensions = [
     groupedExtension("z-personal-project", true, "repo", false),
     groupedExtension("a-publisher-project", false, "repo", true),
     groupedExtension("personal-global", false, "global", false),
     groupedExtension("publisher-global", true, "global", true),
   ];
-  const render = (author = "all", scope: "all" | "repo" | "global" = "all", search = "") =>
+  const render = (search = "") =>
     renderToStaticMarkup(
       <ChakraProvider value={psTheme}>
         <ExtensionsPanelView
@@ -180,7 +180,7 @@ test("groups enabled before other installed extensions and intersects author, sc
           marketplace={[]}
           diagnostics={[]}
           automations={[]}
-          filters={{ author, scope, search }}
+          filters={{ search }}
           onFiltersChange={() => {}}
         />
       </ChakraProvider>,
@@ -191,9 +191,7 @@ test("groups enabled before other installed extensions and intersects author, sc
   expect(all.indexOf('data-testid="extensions-group-enabled"')).toBeLessThan(
     all.indexOf('data-testid="extensions-group-installed"'),
   );
-  expect(ids(render("me", "repo"))).toEqual(["z-personal-project"]);
-  expect(ids(render("publisher:pstdio", "repo"))).toEqual(["a-publisher-project"]);
-  expect(ids(render("me", "global"))).toEqual(["personal-global"]);
-  expect(ids(render("publisher:pstdio", "global", "PUBLISHER"))).toEqual(["publisher-global"]);
-  expect(ids(render("me", "repo", "absent"))).toEqual([]);
+  expect(ids(render("personal"))).toEqual(["z-personal-project", "personal-global"]);
+  expect(ids(render("PUBLISHER"))).toEqual(["publisher-global", "a-publisher-project"]);
+  expect(ids(render("absent"))).toEqual([]);
 });

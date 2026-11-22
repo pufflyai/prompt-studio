@@ -21,7 +21,13 @@ export const retireConflictingMainViewers = (input: {
   for (const region of ["side", "secondary"] as const) {
     for (const widget of sharedLayout?.regions[region].widgets ?? []) {
       const identity = widget.placementIdentity;
-      if (identity && widget.resource && !departing.has(widget.widgetId) && input.isResourceViewer(identity))
+      if (
+        identity &&
+        widget.resource &&
+        !departing.has(widget.widgetId) &&
+        input.isResourceViewer(identity) &&
+        state.placements.some((entry) => placementIdentityKey(entry.identity) === placementIdentityKey(identity))
+      )
         auxiliary.set(input.resourceKey(widget.resource), placementIdentityKey(identity));
     }
   }

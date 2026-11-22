@@ -66,17 +66,19 @@ export const verifyPackagedPreviewSelection = async (page: Page, projectId: stri
     await selectMenuAction(isolated, "Pin tab");
     await expect(kept).toHaveCSS("font-style", "normal");
     logTestPhase("Preview selection kept pinned");
-    const old = await open("Selection old");
+    await open("Selection old");
+    const sourceUrl = isolated.url();
     await isolated
       .getByRole("region", { name: "Side Panel", exact: true })
       .getByRole("button", { name: "Open workspace", exact: true })
       .click();
     logTestPhase("Preview selection workspace opened");
-    // Leaving the page closes the old preview before the destination places its related tab.
-    await expect(header.getByRole("tab", { name: /Selection replacement/ })).toHaveAttribute("aria-selected", "false");
-    await expect(kept).toHaveAttribute("aria-selected", "true");
-    await expect(old).toHaveCount(0);
-    await expect(header.getByRole("tab")).toHaveCount(2);
+    await expect(isolated).toHaveURL(sourceUrl);
+    const files = header.getByRole("tab", { name: "Files", exact: true });
+    await expect(files).toHaveAttribute("aria-selected", "true");
+    await expect(files).toHaveCSS("font-style", "italic");
+    await expect(kept).toBeVisible();
+    await expect(kept).toHaveCSS("font-style", "normal");
   } finally {
     await context.close();
   }

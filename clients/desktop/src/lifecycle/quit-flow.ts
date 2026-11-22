@@ -26,7 +26,7 @@ type QuitFlowDeps = {
 
 export const createQuitFlow = (deps: QuitFlowDeps) => {
   let quitAllowed = false;
-  let quitting = false;
+  let quitting: { active: boolean; waitingForConfirmation: boolean } | undefined;
 
   const finishQuit = async () => {
     // Losing the last saved layout is better than an app that cannot quit.
@@ -41,6 +41,22 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
     await deps.showLifecycle();
   };
 
+  const runQuit = async (run: () => Promise<void>, waitingForConfirmation = false) => {
+    if (quitting?.active || quitAllowed) return;
+    const initialState = deps.getState();
+    const owner = { active: true, waitingForConfirmation };
+    quitting = owner;
+    try {
+      await run();
+    } catch (error) {
+      if (quitAllowed || quitting !== owner || (owner.waitingForConfirmation && deps.getState() !== initialState))
+        deps.logError(error);
+      else await showQuitFailure(error);
+    } finally {
+      owner.active = false;
+    }
+  };
+
   const stopRuntimeAndQuit = async () => {
     await deps.runtimeManager.cancelStart();
     const runtime = await deps.runtimeManager.refreshRuntime();
@@ -52,6 +68,9 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
 
     const result = await deps.runtimeManager.requestShutdown(false);
     if (result.state === "active") {
+      // The renderer can confirm while its window is still opening. Hand ownership
+      // to that confirmation without letting this older request clear its guard.
+      if (quitting) quitting.active = false;
       const { instanceId, origin, ownerType } = runtime.descriptor;
       deps.setState(
         transitionDesktopState(
@@ -76,41 +95,37 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
     deps.setState(transitionDesktopState(state, { type: "quit_cancelled" }));
   };
 
-  const confirmQuit = async () => {
+  const stopConfirmedRuntime = async () => {
     const state = deps.getState();
     if (state.kind !== "confirming_active_work") return;
     deps.setState(transitionDesktopState(state, { type: "quit_confirmed" }));
+    await deps.showLifecycle();
+    const result = await deps.runtimeManager.requestShutdown(true);
+    if (result.state !== "accepted") throw new Error("Runtime refused graceful shutdown");
+    await deps.runtimeManager.waitForExit();
+    await finishQuit();
+  };
 
-    try {
-      await deps.showLifecycle();
-      const result = await deps.runtimeManager.requestShutdown(true);
-      if (result.state !== "accepted") throw new Error("Runtime refused graceful shutdown");
-      await deps.runtimeManager.waitForExit();
-      await finishQuit();
-    } catch (error) {
-      await showQuitFailure(error);
-    }
+  const confirmQuit = () => {
+    // A renderer choice supersedes an unanswered native confirmation, but never
+    // interrupts a shutdown already cancelling active work.
+    if (deps.getState().kind === "confirming_active_work" && quitting?.waitingForConfirmation) quitting.active = false;
+    return runQuit(stopConfirmedRuntime);
   };
 
   const requestQuit = async () => {
-    if (quitAllowed) return;
+    if (quitAllowed || quitting?.active) return;
     const state = deps.getState();
     if (state.kind === "confirming_active_work") {
-      if (await deps.askToCancelActiveWork(state.activity)) await confirmQuit();
-      else await cancelQuit();
-      return;
+      return runQuit(async () => {
+        const confirmed = await deps.askToCancelActiveWork(state.activity);
+        if (deps.getState() !== state) return;
+        if (quitting) quitting.waitingForConfirmation = false;
+        if (confirmed) await stopConfirmedRuntime();
+        else await cancelQuit();
+      }, true);
     }
-    if (quitting) return;
-    quitting = true;
-    try {
-      await stopRuntimeAndQuit();
-    } catch (error) {
-      await showQuitFailure(error);
-    } finally {
-      // A pending confirmation lives in the lifecycle state, so this flag only blocks a second
-      // request while one is still running. Every outcome must free the next quit request.
-      quitting = false;
-    }
+    return runQuit(stopRuntimeAndQuit);
   };
 
   return {
@@ -118,7 +133,7 @@ export const createQuitFlow = (deps: QuitFlowDeps) => {
     confirmQuit,
     finishQuit,
     isQuitAllowed: () => quitAllowed,
-    isQuitting: () => quitting || quitAllowed,
+    isQuitting: () => Boolean(quitting?.active && !quitting.waitingForConfirmation) || quitAllowed,
     requestQuit,
   };
 };

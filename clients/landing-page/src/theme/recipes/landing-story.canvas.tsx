@@ -5,8 +5,8 @@ import { ExamplesView } from "../../components/sections/examples-view";
 import { WhatIsPromptStudioView } from "../../components/sections/what-is-prompt-studio-view";
 import type { ToolExampleId } from "../../content/tool-examples-content";
 
-const ExampleChapters = () => {
-  const [example, setExample] = useState<ToolExampleId>("agents");
+const Examples = () => {
+  const [example, setExample] = useState<ToolExampleId>("board");
   return <ExamplesView exampleId={example} onNavigate={setExample} />;
 };
 const meta = {
@@ -26,14 +26,17 @@ type Story = CanvasFrame<typeof meta>;
 export const WhatIsPromptStudio: Story = {
   id: "theme-landing-chapters--what-is-prompt-studio",
   description:
-    "Chapters advance every eight seconds without transition animations. A compact tab row sits above the bounded chapter scroll area. Hover or focus holds the current chapter. Tabs have no numbered stepper or playback controls.",
+    "One scroll of four chapters that alternate scene and text: why, any shape, tools that work together, and yours. Each isometric scene loops on its own while it is on screen.",
 };
-export const Examples: Story = {
-  id: "theme-landing-chapters--examples",
-  render: () => <ExampleChapters />,
+export const ExampleRecordings: Story = {
+  id: "theme-landing-chapters--example-recordings",
+  description:
+    "A scripted recording switches between four tools like a mode change: the frame stays, panels resize, and content crossfades. Tabs show progress and jump to a tool.",
+  render: () => <Examples />,
 };
 export const NarrowChapters: Story = {
   id: "theme-landing-chapters--narrow-chapters",
+  description: "Chapters stack text above the scene and the scenes scale down.",
   decorators: [
     (Story) => (
       <Box width="80" height="full">
@@ -43,17 +46,8 @@ export const NarrowChapters: Story = {
   ],
 };
 export const NarrowExamples: Story = {
-  id: "theme-landing-chapters--narrow-examples",
   ...NarrowChapters,
-  render: () => <ExampleChapters />,
-};
-export const ShortViewport: Story = {
-  id: "theme-landing-chapters--short-viewport",
-  decorators: [
-    (Story) => (
-      <Box height="28rem">
-        <Story />
-      </Box>
-    ),
-  ],
+  id: "theme-landing-chapters--narrow-examples",
+  description: "The recording window scales like a video to fit a phone-width panel.",
+  render: () => <Examples />,
 };

@@ -8,10 +8,17 @@ import type {
 
 interface PageLocationPreparation<Value> {
   resolve(target: NavigationTargetPage): ResolvedPageLocation;
+  defaultTarget(): ResolvedPageLocation;
+  commitUnavailable(
+    state: WorkbenchPageRegistryStoreState<Value>,
+    beforePublish: () => void,
+    history: "push" | "replace" | "none",
+  ): undefined;
   commit(
     state: WorkbenchPageRegistryStoreState<Value>,
     beforePublish?: () => void,
     consumeRemembered?: readonly PageLocation[],
+    history?: "push" | "replace" | "none",
   ): WorkbenchPageNavigationResult;
 }
 const preparations = new WeakMap<WorkbenchPageLocationController, PageLocationPreparation<unknown>>();

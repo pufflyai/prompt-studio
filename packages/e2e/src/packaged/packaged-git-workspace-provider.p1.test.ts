@@ -31,7 +31,7 @@ test(
     try {
       const source = await preparePackagedExtensionSource(
         join(root, "source"),
-        join(import.meta.dir, "../../../../extensions/git-workspaces"),
+        join(import.meta.dir, "../../../../extensions/pstdio-workspaces"),
       );
       const projectFolder = join(root, "project");
       mkdirSync(projectFolder);
@@ -57,7 +57,7 @@ test(
       };
       const project = await request("/projects", folderProjectInput({ name: "Installed Git" }, projectFolder));
       const env = { PSTDIO_HOME: root, PSTDIO_API_URL: runtime.baseUrl, PSTDIO_API_TOKEN: runtime.descriptor.token };
-      const dev = spawn(PACKAGED_BINARY_PATH, ["extensions", "dev", source, "--name", "git-workspaces"], {
+      const dev = spawn(PACKAGED_BINARY_PATH, ["extensions", "dev", source, "--name", "pstdio-workspaces"], {
         cwd: projectFolder,
         env: { ...process.env, ...env },
         stdio: ["ignore", "pipe", "pipe"],
@@ -74,7 +74,7 @@ test(
         await waitForProcessReady(dev, "Git provider dev", async () =>
           output.includes(`watching ${source}`) ? true : undefined,
         );
-        expect(output).toContain("validated pstdio.git-workspaces");
+        expect(output).toContain("validated pstdio.workspaces");
       } finally {
         try {
           await stopProcess(dev);
@@ -84,14 +84,14 @@ test(
       }
       console.log(
         await runPackagedAsync(
-          ["extensions", "add", source, "--force", "--name", "git-workspaces"],
+          ["extensions", "add", source, "--force", "--name", "pstdio-workspaces"],
           projectFolder,
           env,
         ),
       );
       const listing = await request(`/projects/${project.id}/extensions`);
       const provider = listing.extensions.find(
-        (extension: { extensionId: string }) => extension.extensionId === "pstdio.git-workspaces",
+        (extension: { extensionId: string }) => extension.extensionId === "pstdio.workspaces",
       );
       expect(provider).toMatchObject({ enabled: true, status: "loaded" });
       // Workspace providers are user-scoped; use the host's installed source

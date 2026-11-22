@@ -116,11 +116,10 @@ describe("extension catalog", () => {
       "home",
       "session-browser",
       "onboarding",
+      "workspaces",
       "base-themes",
       "skills",
-      "github",
       "pstdio-terminal",
-      "git-workspaces",
     ]);
   });
 });

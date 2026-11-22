@@ -43,7 +43,6 @@
       "noDescription": "説明がありません。",
       "scope": {
         "label": "範囲",
-        "all": "すべての範囲",
         "repo": "このプロジェクト",
         "global": "すべてのプロジェクト"
       },
@@ -174,7 +173,6 @@
       "enabledGroup": "有効",
       "author": {
         "label": "作成者",
-        "all": "すべての作成者",
         "me": "自分",
         "promptStudio": "Prompt Studio"
       },
@@ -182,8 +180,8 @@
         "extension": "拡張機能",
         "enabled": "有効"
       },
-      "clearFilters": "フィルターをクリア",
-      "noMatches": "一致する拡張機能がありません。"
+      "noMatches": "検索に一致する拡張機能はありません。",
+      "clearSearch": "検索をクリア"
     }
   },
   "list": {

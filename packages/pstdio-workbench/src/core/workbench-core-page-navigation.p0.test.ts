@@ -120,6 +120,6 @@ describe("workbench core page navigation", () => {
       expect.objectContaining({ contributionId: "workbench.page-placement.tickets.%24main" }),
     ]);
     expect(harness.browser.pushes.at(-1)?.url).toBe("/projects/p1/extensions/acme.planner/tickets");
-    expect(harness.persistence.values.get("p1")?.location.page).toEqual(ticketsRef);
+    expect(harness.persistence.values.get("p1")?.location?.page).toEqual(ticketsRef);
   });
 });

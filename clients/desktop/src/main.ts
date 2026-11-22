@@ -308,7 +308,17 @@ const bootstrap = async () => {
     reportWorkbenchError: (report) => {
       const token = runtimeManager.lastDescriptor?.token;
       const details = workbenchErrorDetails(report, token ? [token] : []);
-      if (details) logger.error(details, "Workbench render failed");
+      if (!details) return;
+      logger.error(details, "Workbench render failed");
+      if (!details.projectId) {
+        windowController?.markWorkbenchFailed();
+        const error = new Error("workbench_unavailable: The workbench could not open. Retry to reopen it.");
+        // Startup or quit confirmation owns a pending load and exposes recovery after it settles.
+        if (!windowController?.abortWorkbenchStartup(error)) {
+          if (state.kind === "starting") void runtimeRecovery.recover(error);
+          else showWorkbenchRecovery({ reason: "render_failed" });
+        }
+      }
     },
     performance: performanceMonitor,
   });

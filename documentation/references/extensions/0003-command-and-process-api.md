@@ -496,7 +496,7 @@ read-only; allocate resources in `create` after the host owns their identity.
 This preflight runs only before initial allocation. `create` and `resolve` must
 still check backing-resource invariants when the environment changes afterward.
 
-The default Git Workspaces extension uses these public provider callbacks and
+The default Workspaces extension uses these public provider callbacks and
 `ctx.process` for Git operations. The host's existing `pstdio.worktree` identity
 routes to its installed workspace type, including stored legacy references.
 Backing references remain provider-owned JSON. Disabling the extension retains

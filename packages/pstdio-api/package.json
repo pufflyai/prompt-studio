@@ -53,7 +53,7 @@
     "workbench-fixture": "workspace:*",
     "pstdio-scripts": "workspace:*",
     "github": "workspace:*",
-    "git-workspaces": "workspace:*",
+    "workspaces": "workspace:*",
     "pstdio-terminal": "workspace:*"
   }
 }

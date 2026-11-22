@@ -1,4 +1,5 @@
 import type { ResourceRef } from "@pstdio/sdk/extensions";
+import type { WorkbenchPanelRegion } from "../layout/layout-regions";
 import type { WorkbenchLayout, WorkbenchWidgetPlacement } from "../layout/layout-types";
 import type { WorkbenchPageContribution } from "./page-registry";
 import { pageResourceContextKey } from "./page-resource-context";
@@ -7,10 +8,11 @@ export const resolvePageActivePlacement = (
   layout: WorkbenchLayout,
   page?: WorkbenchPageContribution,
   ownsPlacement?: (placement: WorkbenchWidgetPlacement) => boolean,
+  region: WorkbenchPanelRegion = "main",
 ) => {
   if (!page) return;
-  const main = layout.regions.main;
-  const selected = main.widgets.find((entry) => entry.widgetId === main.activeWidgetId) ?? main.widgets[0];
+  const host = layout.regions[region];
+  const selected = host.widgets.find((entry) => entry.widgetId === host.activeWidgetId) ?? host.widgets[0];
   return selected &&
     (ownsPlacement?.(selected) ||
       (selected.placementIdentity?.kind === "page" && selected.placementIdentity.pageId === page.id))

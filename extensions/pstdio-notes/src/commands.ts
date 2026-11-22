@@ -118,15 +118,3 @@ export const resolveNotesCommand = defineCommand({
     return results;
   },
 });
-export const authorizeNoteActivityCommand = defineCommand({
-  id: "notes.authorize-activity",
-  title: l10n("activity.authorize", "Check discussion access"),
-  params: { operation: params.text() },
-  async run(ctx, input) {
-    const access = await notesFileAccess(ctx);
-    return {
-      allowed: input.operation === "read" ? access.readable : access.writable,
-      reason: "Notes are read-only or unavailable.",
-    };
-  },
-});

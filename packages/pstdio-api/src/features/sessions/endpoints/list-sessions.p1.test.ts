@@ -69,3 +69,32 @@ test("HTTP time and anchor filters use the shared project query", async () => {
   expect(await response.json()).toMatchObject([{ id: session.id, usage_json: null, workspace_id: null }]);
   expect((await app.request(`/v1/sessions?project_id=${projectId}&anchor_type=ticket`)).status).toBe(400);
 });
+
+test("workspace shorthand selects the same complete history as its ID", async () => {
+  const workspace = await handle.deps.workspaceService.createStandalone({ project_id: projectId });
+  const session = await handle.deps.sessionService.create({
+    project_id: projectId,
+    title: "Shorthand history",
+    agent: "worker",
+  });
+  await handle.deps.workspaceSessionService.link(workspace.id, session.id);
+  await handle.deps.sessionService.archive(session.id);
+  const read = (id: string) =>
+    app.request(`/v1/sessions?${new URLSearchParams({ project_id: projectId, workspace_id: id, archived: "true" })}`);
+  const byId = await read(workspace.id);
+  const byName = await read(workspace.workspace_shorthand);
+  expect(byName.status).toBe(200);
+  expect(await byName.json()).toEqual(await byId.json());
+});
+
+test("unknown and foreign workspace filters fail instead of returning an empty history", async () => {
+  const foreign = await handle.deps.projectService.create({ name: "Foreign workspace owner" });
+  const workspace = await handle.deps.workspaceService.createStandalone({ project_id: foreign.id });
+  for (const id of ["WS-missing", workspace.id]) {
+    const response = await app.request(
+      `/v1/sessions?${new URLSearchParams({ project_id: projectId, workspace_id: id })}`,
+    );
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: `Workspace not found: ${id}` });
+  }
+});

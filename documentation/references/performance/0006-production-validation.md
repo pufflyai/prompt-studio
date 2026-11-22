@@ -2,6 +2,8 @@
 
 P3 runs the maintained acceptance workloads on exact candidate inputs. Manual and automatic runs use the same commands in the shared `scripts/test.ts --performance-family` plan entry point and `.github/workflows/production-desktop.yml`. Existing operation budgets, fixed workloads, sample counts and execution allowances remain in their owners. No new release ceilings are introduced.
 
+Performance results are advisory for release publication. Blocking certification requires functional, signed desktop, service, project-upgrade and artifact-identity evidence. After publication, independent benchmark and production-performance workflows measure the exact candidate; a failed or incomplete performance run remains visible in its own report. It does not become a passing result or delay publication.
+
 ## Enabled workloads
 
 | Family | Definitions | Contract |
@@ -10,7 +12,7 @@ P3 runs the maintained acceptance workloads on exact candidate inputs. Manual an
 | Browser | UI `chat-rendering.p3.bench.ts`, `chat-panel.p3.bench.ts`; every e2e `src/perf/*.p3.bench.ts`; `packaged-paged-collections.p3.bench.ts` | Maintained three-repeat browser configurations and existing operation assertions. The frontend runs directly on restored candidate output. Chat builds its own measurement Canvas. |
 | Navigation | `subnav.p3.bench.ts` | Default 30 samples and the fixed 15,000-file / 1,000-ticket / 1,000-session / five-workspace workload. Retained structure/data/editor budgets are set from hosted ubuntu-24.04 runs ([sidenav and subnav](0004-sidenav-subnav.md)). |
 | Planner | `planner-stress.diagnostic.ts --packaged`, `planner-board-cold-open.p3.bench.ts` | Maintained 1,000-ticket workload and three default cold-open samples. Cold-open uses its CI-qualified target ([board cold open](0002-planner-board-cold-open.md)). Stress measurements remain informative where no timing ceiling exists. |
-| Backend | Harness session resources, worktree cleanup, workbench resource inventory, session queries, document storage history | Fixed default standalone benchmark workloads on Linux and Apple Silicon macOS, plus Windows in stable releases. Correctness assertions remain blocking. Measurements without an existing operation ceiling remain informative. |
+| Backend | Harness session resources, worktree cleanup, workbench resource inventory, session queries, document storage history | Fixed default standalone benchmark workloads on Linux and Apple Silicon macOS, plus Windows in stable releases. Correctness assertions fail their measurement run; the release functional suites independently gate publication. Measurements without an existing operation ceiling remain informative. |
 | Relay | `services/relay/scripts/storage-bound.p3.bench.ts` | Maintained disposable-container workload and existing storage-bound contract. |
 
 Run an enabled family manually after restoring the candidate archive and installing its declared browser/native dependencies:
@@ -49,10 +51,12 @@ bun packages/pstdio-db/src/services/extension-storage/record-read-scale.diagnost
 PSTDIO_SCALE_READ_COLD=view bun packages/pstdio-db/src/services/extension-storage/record-read-scale.diagnostic.ts small 100000 /absolute/disposable/read-sample-01 sample /absolute/disposable/read-fixture
 ```
 
-Repeat fresh samples for every maintained cold operation and full frozen workload described in the diagnostic contract. These results do not grant production release acceptance. PS-909 owns the later full release contract. P3's production report certifies only its enabled acceptance workloads and does not claim that these diagnostic families have become release certification.
+Repeat fresh samples for every maintained cold operation and full frozen workload described in the diagnostic contract. These results do not grant production release acceptance. PS-909 owns the later full release contract. P3's production report describes only its enabled measurement workloads and does not claim that these diagnostic families have become release certification.
 
 ## Native CLI target ownership
 
 Production native CLI validation covers Linux x64/arm64, macOS x64/arm64 and Windows x64/arm64. The [official hosted-runner catalog](https://docs.github.com/en/actions/reference/runners/github-hosted-runners) supplies `ubuntu-24.04-arm` and `windows-11-arm`; Bun 1.4.4's [release assets](https://github.com/oven-sh/bun/releases/tag/bun-v1.4.4) include both aarch64 runtimes. Each full CLI suite retains the maintained Intel 60-second and other-platform 30-second allowance. Cross-compilation alone is not native execution evidence. Native ARM runs and their browser-install limitations must be assessed from real CI results before claiming complete platform coverage.
 
 Failing quarantined launch, workbench, and navigation cases were removed on 2026-11-14. Their earlier results do not establish current coverage. Navigation still collects the complete fixed workload; only its retained metric/request cases gate the result.
+
+*Updated at: 2026-11-19*

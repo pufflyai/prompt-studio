@@ -187,19 +187,19 @@ const restoreSharedPageTabs = (input: PageTabsInput, current: State["placements"
 
 export const scopePageMainTabs = (input: PageTabsInput) => {
   const { state, previous, layout, modeLayout } = input;
-  if (!state.activePageId) return state;
+  if (!state.activeModeId) return state;
   const changingPage = pageContextChanged(state, previous);
   const sameMode = state.projectId === previous.projectId && state.activeModeId === previous.activeModeId;
   const sharedLayout = sameMode ? layout : modeLayout;
   const pages = Object.values(state.pages);
-  const owner = collectionMainOwner(state.pages[state.activePageId], pages);
+  const owner = collectionMainOwner(state.pages[state.activePageId ?? ""], pages);
   // A collection and its detail routes keep one Main tray, so their tabs never depart it.
   const sameTray =
     sameMode &&
     owner?.main.kind === "panels" &&
     !owner.resource &&
     owner === collectionMainOwner(previous.pages[previous.activePageId ?? ""], pages);
-  const departing = previous.activePageId && !sameTray ? sharedKeys(layout, true) : new Set<string>();
+  const departing = previous.activeModeId && !sameTray ? sharedKeys(layout, true) : new Set<string>();
   const shared = sharedKeys(sharedLayout, false);
   const activated = new Set(state.reconciliation.activate.map((entry) => placementIdentityKey(entry.identity)));
   const retained = state.placements.filter((entry) => {

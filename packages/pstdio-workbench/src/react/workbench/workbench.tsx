@@ -120,8 +120,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasActivityBarWidgets,
     hasNavWidgets,
     hasSideHeaderWidgets,
-    hasSideWidgets,
-    hasSideMenus,
     hasSidenavWidgets,
     hasDockedStatusBar,
     hasStatusContent,
@@ -131,12 +129,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const showStatus = !fullscreen.active && hasDockedStatusBar;
   const sidePolicy = usePanelPolicy(workbench, "side");
   const sidenavPolicy = usePanelPolicy(workbench, "sidenav");
-  const hasSidePanel =
-    (sidePolicy.provided && !sidePolicy.canClose) ||
-    hasSideHeaderWidgets ||
-    hasSideWidgets ||
-    hasSidePanelHeader ||
-    hasSideMenus;
+  const hasSidePanel = sidePolicy.provided;
   const showSidenav = hasSidenavWidgets;
   const sidenavCollapsible = resolvePanelCollapsible(workbench, "sidenav");
   const persistedSidenavSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.size);

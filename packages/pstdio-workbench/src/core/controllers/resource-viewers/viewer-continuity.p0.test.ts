@@ -49,21 +49,23 @@ test("capturing a viewer survives pinning and moving it", async () => {
 });
 
 for (const kind of ["page", "panel"] as const) {
-  test(`a ${kind} opening pins its reused preview without moving it`, async () => {
-    const { w, side } = createResourceViewerFixture();
+  test(`a ${kind} opening pins its preview in the requested Main destination`, async () => {
+    const { w } = createResourceViewerFixture();
     await w.navigation.openPanel({
       panel: viewerPanel,
       resource: viewerResource("x"),
       region: "side",
       open: "preview",
     });
-    const before = side();
     await w.navigation.openTarget(
       kind === "page"
         ? { kind, page: viewerPage("reader"), resource: viewerResource("x"), open: "pin" }
         : { kind, panel: viewerPanel, resource: viewerResource("x"), open: "pin", region: "main" },
     );
-    expect(side()).toMatchObject({ instanceId: before.instanceId, tabRetention: "persistent" });
+    expect(w.pages.getContent() ?? w.layout.getActivePanel("main")).toMatchObject({
+      resource: { id: "x" },
+      tabRetention: "persistent",
+    });
     await w.navigation.openPanel({
       panel: viewerPanel,
       resource: viewerResource("y"),
@@ -75,7 +77,7 @@ for (const kind of ["page", "panel"] as const) {
         .listPanelInstances("side")
         .map((panel) => panel.resource?.id)
         .sort(),
-    ).toEqual(["x", "y"]);
+    ).toEqual(["y"]);
   });
 }
 
@@ -110,7 +112,12 @@ for (const operation of ["close", "switch"] as const) {
 
 test("compound navigation pins a reused Main preview before leaving its page", async () => {
   const { w } = createResourceViewerFixture({ tabs: true });
-  await w.navigation.openPage({ page: viewerPage("reader"), resource: viewerResource("x"), open: "preview" });
+  w.pageLocations.navigate({
+    kind: "page",
+    page: viewerPage("reader"),
+    resource: viewerResource("x"),
+    open: "preview",
+  });
   await w.navigation.openTarget({
     kind: "compound",
     targets: [
@@ -122,28 +129,29 @@ test("compound navigation pins a reused Main preview before leaving its page", a
   expect(w.layout.getActivePanel("main")).toMatchObject({ resource: { id: "x" }, tabRetention: "persistent" });
 });
 
-test("a compound page opening reuses a one-cardinality viewer with pin intent", async () => {
-  const { w, side } = createResourceViewerFixture({ viewerCardinality: "one", tabs: true });
+test("a compound page opening transfers a one-cardinality viewer with pin intent", async () => {
+  const { w } = createResourceViewerFixture({ viewerCardinality: "one", tabs: true });
   w.modePlacements.openPlacement({ panel: viewerPanel, resource: viewerResource("x") });
   await w.navigation.openTarget({
     kind: "compound",
     targets: [{ kind: "page", page: viewerPage("reader"), resource: viewerResource("x"), open: "pin" }],
   });
-  expect(side()).toMatchObject({ resource: { id: "x" }, tabRetention: "persistent" });
+  expect(w.layout.getActivePanel("main")).toMatchObject({ resource: { id: "x" }, tabRetention: "persistent" });
+  expect(w.layout.listPanelInstances("side")).toHaveLength(0);
 });
 
-test("compound pinning preserves a moved primary viewer on another page", async () => {
-  const { w, openMain, side, other } = createResourceViewerFixture({ tabs: true });
+test("compound pinning returns a moved primary viewer to Main", async () => {
+  const { w, openMain, other } = createResourceViewerFixture({ tabs: true });
   await openMain("x");
   const caller = w.layout.getActivePanel("main")!;
   w.pinPlacement(caller.placementIdentity!, false);
   w.movePanel(caller.instanceId, "side");
   other();
-  const location = w.pages.store.getState().location;
   await w.navigation.openTarget({
     kind: "compound",
     targets: [{ kind: "page", page: viewerPage("reader"), resource: viewerResource("x"), open: "pin" }],
   });
-  expect(side()).toMatchObject({ instanceId: caller.instanceId, tabRetention: "persistent" });
-  expect(w.pages.store.getState().location).toBe(location);
+  expect(w.layout.getActivePanel("main")).toMatchObject({ instanceId: caller.instanceId, tabRetention: "persistent" });
+  expect(w.pages.store.getState().location?.resource?.id).toBe("x");
+  expect(w.layout.listPanelInstances("side")).toHaveLength(0);
 });

@@ -38,6 +38,7 @@ export const BackingUpPreviousData: Story = {
 };
 export const WaitingForWorkbench: Story = {
   id: "patterns-desktop-lifecycle--waiting-for-workbench",
+  description: "The existing startup screen remains the only launch feedback while the dashboard opens.",
   args: { state: { kind: "starting", phase: "readiness" } },
 };
 export const Workbench: Story = {
@@ -61,7 +62,7 @@ export const ActiveWorkInWorkbench: Story = {
 };
 export const Recovery: Story = {
   id: "patterns-desktop-lifecycle--recovery",
-  description: "An error icon and message stay visible with the recovery actions supplied by the runtime.",
+  description: "Runtime, dashboard startup, and dashboard render failures use this existing recovery screen.",
   args: {
     state: {
       kind: "recovery",

@@ -1,0 +1,18 @@
+{
+  "seed": "tools-in-place-048",
+  "width": 1600,
+  "height": 400,
+  "layout": "scatter",
+  "kinds": ["page", "command", "editor", "skill", "hook", "automation"],
+  "count": 12,
+  "scale": 0.8690457874909043,
+  "offsetX": -0.0359672412648797,
+  "offsetY": -0.029686923599801955,
+  "backgroundTop": "#F7F2E8",
+  "backgroundBottom": "#EAE1D1",
+  "bleed": 0.6343409143621102,
+  "layers": 40,
+  "texture": 0.5223236742895097,
+  "gradient": 0.4054998308303766,
+  "grain": 0.49802470381837344
+}
