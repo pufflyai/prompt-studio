@@ -252,12 +252,8 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     navigationTrees,
     panelMenuState,
     preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
-    treeViews: {
-      getTreeState: renderers.getTreeState,
-      setNodeExpanded: renderers.setNodeExpanded,
-      setSectionExpanded: renderers.setSectionExpanded,
-      setSelectedNode: renderers.setSelectedNode,
-    },
+    // The type narrows the renderer registry to the tree-view state API.
+    treeViews: renderers,
     commandPaletteResources: createCommandPaletteResourceRegistry(),
     resources,
     views,

@@ -1,7 +1,11 @@
 import { createLevelNavigation, type WorkbenchModuleContext } from "@pstdio/workbench";
 import { subscribeSessionListData } from "@/modules/sessions/data/session-data-subscription";
-import { subscribeDashboardSelectedProject } from "@/shared/app/project-context";
+import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import {
+  getDashboardExtensionsRegisteredProjectId,
+  subscribeDashboardExtensionsRegisteredProject,
+} from "@/shared/extensions/extension-readiness";
 
 // Mode and page contributions share one host navigation view.
 export const updateDashboardSidenav = (
@@ -76,6 +80,16 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
     if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav))
       ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
   };
+  // Extensions contribute most navigation entries. Until the selected project's contributions
+  // are registered, show the tree skeleton instead of a partial list that fills in later.
+  const syncLoading = () => {
+    if (!ctx.views.getView(dashboardWidgetIds.dashboardSidenav)) return;
+    const projectId = getDashboardSelectedProjectId(ctx);
+    ctx.treeViews.setLoading(
+      dashboardWidgetIds.dashboardSidenav,
+      Boolean(projectId) && getDashboardExtensionsRegisteredProjectId(ctx) !== projectId,
+    );
+  };
   const navigation = createLevelNavigation(ctx);
   const readScope = () =>
     JSON.stringify([ctx.pages.store.getState().projectId, ctx.modes.getActiveModeId(), navigation.getReadKey()]);
@@ -92,12 +106,17 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
   const primaryResourceSubscription = ctx.onDidChangePrimaryResource(syncNavigation);
   const pageSubscription = ctx.pages.store.subscribeSelector((state) => state.location, syncNavigation);
   const unsubscribeDashboardData = subscribeSessionListData(refresh);
-  const unsubscribeProject = subscribeDashboardSelectedProject(ctx, refresh);
+  const unsubscribeProject = subscribeDashboardSelectedProject(ctx, () => {
+    syncLoading();
+    refresh();
+  });
+  const unsubscribeRegistration = subscribeDashboardExtensionsRegisteredProject(ctx, syncLoading);
   const navigationContributionSubscription = ctx.navigationTrees.onDidChange(() => {
     scope = readScope();
     syncSidenavForActiveMode();
   });
   syncSidenavForActiveMode();
+  syncLoading();
   return {
     dispose: () => {
       modeSubscription.dispose();
@@ -105,6 +124,7 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
       pageSubscription();
       unsubscribeDashboardData();
       unsubscribeProject();
+      unsubscribeRegistration();
       navigationContributionSubscription.dispose();
     },
   };
