@@ -95,6 +95,7 @@
       "connections": {
         "title": "連線",
         "description": "將此擴充功能連線到遠端服務。憑證保留在 Prompt Studio 主機中。",
+        "globalScope": "在此裝置上的所有本機專案之間共用。",
         "endpoint": "端點",
         "credential": "憑證",
         "credentialUnchanged": "留空以保留目前的憑證",

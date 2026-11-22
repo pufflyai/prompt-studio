@@ -18,6 +18,7 @@ const isValidSelectDescriptor = (descriptor: Record<string, unknown>) => {
   const values = new Set<string>();
   for (const option of descriptor.options) {
     if (!isRecord(option) || typeof option.label !== "string" || typeof option.value !== "string") return false;
+    if (option.localizedLabel !== undefined && !isLocalizableString(option.localizedLabel)) return false;
     values.add(option.value);
   }
 
@@ -63,6 +64,7 @@ const registerConnections = (ext: NormalizedExtension, source: LoadedExtensionSo
   for (const connection of connections) {
     if (!isRecord(connection) || typeof connection.id !== "string" || !isLocalizableString(connection.label)) continue;
     if (connection.transport !== "http") continue;
+    if (connection.scope !== undefined && connection.scope !== "project" && connection.scope !== "global") continue;
     if (!Array.isArray(connection.allowedMethods) || !Array.isArray(connection.allowedPathPrefixes)) continue;
     const record: RuntimeConnectionRecord = {
       ...contributionRecordBase(ext, source, "connection", connection.id),

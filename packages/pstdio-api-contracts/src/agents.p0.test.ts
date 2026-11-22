@@ -1,5 +1,26 @@
 import { describe, expect, test } from "bun:test";
-import { findAgentModel, resolveAgentModelParams } from "./agents";
+import { agentInfoSchema, agentModelSchema, findAgentModel, resolveAgentModelParams } from "./agents";
+import { l10n } from "./extension-kernel/l10n";
+
+test("agent listings and model overrides preserve localized harness choices", () => {
+  const mode = {
+    type: "select" as const,
+    options: [
+      { value: "plan", label: "Plan", localizedLabel: l10n("mode.plan", "Plan") },
+      { value: "agent", label: "Agent" },
+    ],
+  };
+  const agent = agentInfoSchema.parse({
+    id: "agent",
+    name: "Agent",
+    availability: { type: "INSTALLED" },
+    capabilities: [],
+    supportsModels: true,
+    params: { mode },
+  });
+  expect(agent.params?.mode).toEqual(mode);
+  expect(agentModelSchema.parse({ id: "model", paramOverrides: { mode } }).paramOverrides?.mode).toEqual(mode);
+});
 
 describe("resolveAgentModelParams", () => {
   test("replaces and removes harness params using model metadata", () => {

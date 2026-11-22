@@ -213,6 +213,8 @@ export interface WorkspaceTypeProvider extends ContributionDefinition<"workspace
 }
 
 export interface ExtensionConnectionContribution extends ContributionDefinition<"connection"> {
+  /** Global connections share one host-managed credential across local projects. Defaults to project. */
+  scope?: "project" | "global";
   label: Localizable<string>;
   transport: "http";
   auth: { type: "bearer" } | { type: "header"; headerName: string };

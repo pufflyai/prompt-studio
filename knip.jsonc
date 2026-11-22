@@ -381,6 +381,17 @@
       "ignoreDependencies": ["@openai/codex", "@anthropic-ai/claude-code", "@opencode/cli"]
     },
     // Webview entries are referenced by path through packageAsset(), so each extension lists its own.
+    "extensions/cloud-workspaces": {
+      "entry": [
+        "package.json",
+        "extension.ts",
+        "src/**/*.test.{ts,tsx}",
+        "src/workspace-history-webview.ts",
+        // The operator runs prepare.ts, and the image starts start.ts by path.
+        "src/codex-template/{prepare,start}.ts"
+      ],
+      "project": ["*.ts", "src/**/*.{ts,tsx}"]
+    },
     "extensions/pstdio-onboarding": {
       "entry": ["package.json", "extension.ts", "src/**/*.test.{ts,tsx}", "src/**/*.canvas.tsx", "src/setup-entry.tsx"],
       "project": ["*.ts", "src/**/*.{ts,tsx}"]

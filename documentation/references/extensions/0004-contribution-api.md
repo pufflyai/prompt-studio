@@ -474,8 +474,7 @@ fields to shrink when the owning view moves to a narrower panel.
 Webview popovers and dialogs cannot escape their iframe. Header controls that
 need a larger surface should open a declared single-view page with
 `navigation.open({ kind: "dialog", page })`; the host owns the modal, and the
-content can close it with `placement.close`. The Timeline Auto Build header uses
-this path. A native `actionBar` body is also available for host-rendered buttons
+content can close it with `placement.close`. A native `actionBar` body is also available for host-rendered buttons
 and menus. Menu sides are an initial layout preset, not a permission: menus on
 different edges can always remain open together. First-party tools group menus
 on the right by default, except Files in Files/Workspaces, which opens left. Extensions can declare different `viewMenus.side`
