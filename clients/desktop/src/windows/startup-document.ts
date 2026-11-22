@@ -1,6 +1,27 @@
 import type { WebContents } from "electron";
 import { LIFECYCLE_URL } from "./lifecycle-protocol";
 
+export const waitForStartupReadiness = (shown: Promise<void>, documentReady: Promise<void>, signal: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    // Runtime cancellation must release its caller without closing the shared document.
+    const aborted = () => {
+      signal.removeEventListener("abort", aborted);
+      reject(signal.reason);
+    };
+    signal.addEventListener("abort", aborted, { once: true });
+    void Promise.all([shown, documentReady]).then(
+      () => {
+        signal.removeEventListener("abort", aborted);
+        resolve();
+      },
+      (error) => {
+        signal.removeEventListener("abort", aborted);
+        reject(error);
+      },
+    );
+    if (signal.aborted) aborted();
+  });
+
 export const waitForStartupDom = (contents: WebContents, signal: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     let settled = false;
