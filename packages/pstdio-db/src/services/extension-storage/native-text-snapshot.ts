@@ -1,4 +1,4 @@
-import { NativeSourcePendingError, type StorageOwner } from "pstdio-sync";
+import { isEmptyDocument, NativeSourcePendingError, type StorageOwner } from "pstdio-sync";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
 import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
@@ -13,6 +13,15 @@ export const readNativeTextSnapshot = async (db: DbClient, owner: StorageOwner, 
     const { sources } = await loadResourceDocuments(tx, owner, [documentId]);
     const saved = sources.get(documentId);
     if (!saved) throw new NativeSourcePendingError();
-    return { state: Y.mergeUpdates(saved.states), revision: saved.revision };
+    const state = Y.mergeUpdates(saved.states);
+    const document = new Y.Doc();
+    try {
+      Y.applyUpdate(document, state);
+      // A registration may own projection intents before canonical text has arrived.
+      if (isEmptyDocument(document)) throw new NativeSourcePendingError();
+    } finally {
+      document.destroy();
+    }
+    return { state, revision: saved.revision };
   });
 };

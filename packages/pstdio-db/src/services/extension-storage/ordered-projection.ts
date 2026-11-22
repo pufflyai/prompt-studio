@@ -11,6 +11,7 @@ import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { decodeProjectionValue } from "./record-projection-codec";
 import { writeProjectedRecords } from "./record-projection-rows";
 import { refreshResourceQueryValues } from "./resource-query-values";
+import { removeRetainedRecords } from "./retained-records";
 
 export { orderedBody, orderedProjection } from "pstdio-sync/records";
 
@@ -24,7 +25,12 @@ export const publishOrderedProjection = async (
   if (!records.length) return { records: [], projected: 0 };
   const facets = await orderedProjectionFacets(tx, owner, records);
   const previous = await tx
-    .select({ recordId: current.record_id, deleted: current.deleted, nativeSources: current.native_sources })
+    .select({
+      recordId: current.record_id,
+      deleted: current.deleted,
+      nativeSources: current.native_sources,
+      retained: sql<boolean>`${current.meta}->>'retained'='1'`,
+    })
     .from(current)
     .where(
       and(
@@ -74,6 +80,8 @@ export const publishOrderedProjection = async (
     native_sources=CASE WHEN input.deleted THEN input.native_sources ELSE target.native_sources END
     FROM jsonb_to_recordset(${batch}::jsonb) AS input(record_id text,meta jsonb,base text,deleted boolean,value jsonb,asset jsonb,shared jsonb,native_sources jsonb)
     WHERE target.owner_id=(SELECT id FROM owners WHERE project_id=${owner.workbenchId} AND extension_id=${owner.extensionId}) AND target.record_id=input.record_id`);
+  const retained = previous.filter((row) => row.retained).map((row) => row.recordId);
+  if (retained.length) await removeRetainedRecords(tx, owner, retained);
   noteRecordPublication(
     tx,
     owner,

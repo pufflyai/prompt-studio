@@ -1,5 +1,6 @@
 import { and, eq, like, type SQL, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
+import { compactStorageTombstones } from "../services/extension-storage/compact-tombstones";
 import { legacyNodeRows } from "../services/extension-storage/index-node-upgrade";
 import { storageOwnerKey } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
@@ -57,5 +58,13 @@ export const createRetiredStorageCleanup = (db: DbClient, path: string, owners: 
         stopped,
         beforeDelete,
       );
+  };
+};
+
+export const createStorageCleanup = (db: DbClient, path: string, owners: StorageOwner[], defer: boolean) => {
+  const retiredRows = defer ? createRetiredStorageCleanup(db, path, owners) : async () => {};
+  return async (stopped: () => boolean) => {
+    await retiredRows(stopped);
+    if (!stopped()) await compactStorageTombstones(db, stopped);
   };
 };

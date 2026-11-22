@@ -91,8 +91,8 @@ export const stableRecordColumns = (record: OrderedRecord) => {
   const sources = object(body.nativeSources ?? null) ? (body.nativeSources as Record<string, Json>) : {};
   return {
     deleted: record.deleted,
-    // Deleted rows hide these columns at the public boundary. Retaining the sole body
-    // preserves restore-without-replacement until the separate tombstone decision changes it.
+    // Deleted rows hide these columns at the public boundary. Quiet compaction moves
+    // the sole canonical body into private files while preserving restore-without-replacement.
     value: encodeProjectionValue(body.value ?? null),
     asset: encodeProjectionValue(body.asset ?? null) as StorageRecord["asset"],
     shared: encodeProjectionValue(body.shared ?? null) as StorageRecord["shared"],
@@ -106,11 +106,15 @@ export const stableRecordColumns = (record: OrderedRecord) => {
   };
 };
 
+export const isCompactedCanonicalMeta = (meta: Json) =>
+  meta !== null && typeof meta === "object" && !Array.isArray(meta) && meta.retained === 1;
+
 /** A pending overlay never becomes its own confirmed base. Null metadata represents
  * an optimistic creation that has not acquired a canonical occurrence. */
 export const canonicalRecordFromRow = (row: CanonicalRecordRow): OrderedRecord | undefined => {
   if (row.base !== null) return decodeOrderedJson<OrderedRecord | null>(row.base) ?? undefined;
   if (row.meta === null) return;
+  if (isCompactedCanonicalMeta(row.meta)) throw new Error("A compacted canonical record requires its retained file");
   const metadata = decodeProjectionValue(row.meta) as unknown as RecordMetadata;
   const layout = metadata.body;
   const value =

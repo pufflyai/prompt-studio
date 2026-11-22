@@ -1,6 +1,7 @@
 import { and, eq, inArray, type SQL, sql } from "drizzle-orm";
 import { coreOwnerId } from "pstdio-sync/records";
 import { trackDocumentFiles } from "../services/extension-storage/document-files";
+import { clearRetainedRecords } from "../services/extension-storage/retained-records";
 import type { DbClient } from "./connection.pglite";
 import { documents as storage_documents } from "./schemas/documents";
 import { owners, storage_current_records } from "./schemas.pg";
@@ -24,7 +25,7 @@ export const deleteStorageDocuments = async (db: DbClient, where: SQL) =>
           )
       : [];
     const addresses = await tx
-      .select({ id: owners.id, project: owners.project_id })
+      .select({ id: owners.id, project: owners.project_id, extension: owners.extension_id })
       .from(owners)
       .where(inArray(owners.id, [...new Set(removed.map((row) => row.ownerId))]));
     const projects = new Map(addresses.map((row) => [row.id, row.project]));
@@ -35,6 +36,9 @@ export const deleteStorageDocuments = async (db: DbClient, where: SQL) =>
       .where(and(where, eq(storage_documents.key, "records")));
     if (roots.length) {
       const ids = roots.map((row) => row.ownerId);
+      for (const owner of addresses)
+        if (ids.includes(owner.id))
+          await clearRetainedRecords(tx, { workbenchId: owner.project, extensionId: owner.extension });
       await tx.delete(storage_current_records).where(inArray(storage_current_records.owner_id, ids));
       const coreProjects = sql`SELECT project_id FROM owners WHERE id IN (${sql.join(
         ids.map((id) => sql`${id}`),

@@ -1,6 +1,6 @@
 import { and } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
-import type { OrderedDecision, OrderedOperation } from "pstdio-sync/records";
+import type { OrderedDecision, OrderedOperation, OrderedRecord } from "pstdio-sync/records";
 import { applyOrderedNativeOperation } from "pstdio-sync/records";
 import type { createOrderedReceiptIndex, OrderedIndexReference } from "pstdio-sync/relay";
 import { encodeOrderedEntry, type OrderedReceipt } from "pstdio-sync/relay";
@@ -15,9 +15,10 @@ import { pendingOrderedOperations } from "./ordered-pending";
 import { applyBoundedOrderedOperation } from "./ordered-policy";
 import { orderedBody } from "./ordered-projection";
 import { operationDependencies } from "./ordered-rebase";
-import { canonicalRecordFromRow, canonicalRecordPredicate } from "./ordered-record-row";
+import { canonicalRecordPredicate } from "./ordered-record-row";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { orderedCursor, readOrderedOwner } from "./ordered-stream-state";
+import { readCanonicalRecord } from "./retained-records";
 
 const stagedDependencies = async (
   journal: OrderedJournal,
@@ -87,12 +88,11 @@ export const stageOrderedCheckpoint = async (
     .select()
     .from(canonical)
     .where(and(orderedOwnerWhere(canonical, owner), canonicalRecordPredicate(canonical)));
-  const records = new Map(
-    rows.flatMap((row) => {
-      const record = canonicalRecordFromRow(row);
-      return record ? [[row.record_id, record] as const] : [];
-    }),
-  );
+  const records = new Map<string, OrderedRecord>();
+  for (const row of rows) {
+    const record = await readCanonicalRecord(tx, owner, row);
+    if (record) records.set(row.record_id, record);
+  }
   const numbers = createStagedNumberRepair(owner, records);
   const receipts = await dirtyOrderedReceipts(journal);
   const decisions = new Map<string, OrderedDecision>();

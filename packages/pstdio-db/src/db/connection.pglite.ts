@@ -52,7 +52,7 @@ import { prepareRecoveryOwnerUpgrade } from "./recovery-owner-upgrade";
 import { prepareResourceLinkOwnerUpgrade } from "./resource-link-owner-upgrade";
 import { prepareCanonicalNumberUpgrade } from "./resource-numbers-upgrade";
 import { prepareResourcePrefixUpgrade } from "./resource-prefix-upgrade";
-import { createRetiredStorageCleanup } from "./retired-storage-cleanup";
+import { createStorageCleanup } from "./retired-storage-cleanup";
 import * as schema from "./schemas.pg";
 import { prepareSessionWorkspaceUpgrade } from "./session-workspace-upgrade";
 import { sourceStartupOptions } from "./source-startup-image";
@@ -373,7 +373,7 @@ export const createDb = async (options?: {
       db,
       path: dbPath,
       pglite: openedPglite,
-      cleanupRetiredRows: deferCleanup ? createRetiredStorageCleanup(db, dbPath, deferredOwners) : async () => {},
+      cleanupRetiredRows: createStorageCleanup(db, dbPath, deferredOwners, !!deferCleanup),
     };
   } catch (error) {
     await pglite?.close();

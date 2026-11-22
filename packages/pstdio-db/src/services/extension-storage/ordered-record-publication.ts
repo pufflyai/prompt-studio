@@ -2,8 +2,9 @@ import { and, inArray, isNull, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { OrderedRecord } from "pstdio-sync/records";
 import { records } from "../../db/schemas.pg";
-import { canonicalRecordFromRow, confirmedRecordBase, stableRecordColumns } from "./ordered-record-row";
+import { confirmedRecordBase, stableRecordColumns } from "./ordered-record-row";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { readCanonicalRecord } from "./retained-records";
 
 const dirty = new WeakMap<object, Map<string, Set<string>>>();
 /** Savepoint bookkeeping follows SQL release/rollback together with the staged bodies. */
@@ -53,7 +54,7 @@ export const finishOrderedRecordWrites = async (tx: OrderedTransaction, owner: S
     if (rows.some((row) => row.revision !== null))
       throw new Error("Canonical record writes require projection publication");
     for (const row of rows) {
-      const canonical = canonicalRecordFromRow(row);
+      const canonical = await readCanonicalRecord(tx, owner, row);
       if (!canonical) continue;
       const touched = await tx.execute<{ pending: boolean }>(sql`SELECT EXISTS(SELECT 1 FROM operations
         WHERE owner_id=${row.owner_id} AND envelope IS NOT NULL AND settled_epoch IS NULL
@@ -106,7 +107,7 @@ export const orderedProjectionFacets = async (tx: OrderedTransaction, owner: Sto
       facets.set(record.recordId, {
         ...stableRecordColumns(record),
         base: pending.has(record.recordId)
-          ? (row?.base ?? confirmedRecordBase(row ? canonicalRecordFromRow(row) : undefined))
+          ? (row?.base ?? confirmedRecordBase(row ? await readCanonicalRecord(tx, owner, row) : undefined))
           : null,
       });
     }

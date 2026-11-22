@@ -22,9 +22,9 @@ import {
   roomGeneration,
   saveOrderedMarker,
 } from "./ordered-native-metadata";
-import { canonicalRecordFromRow } from "./ordered-record-row";
 import { decodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { decodeProjectionValue } from "./record-projection-codec";
+import { readCanonicalRecord } from "./retained-records";
 
 import { storageOwnerKey } from "./storage-owner-key";
 
@@ -205,7 +205,7 @@ const privateFieldState = async (
     .select()
     .from(canonical)
     .where(and(orderedOwnerWhere(canonical, owner), eq(canonical.record_id, field.recordId)));
-  const record = before ?? (row ? canonicalRecordFromRow(row) : undefined);
+  const record = before ?? (row ? await readCanonicalRecord(tx, owner, row) : undefined);
   const document = new Y.Doc();
   try {
     const saved = record?.texts?.[field.pointer];

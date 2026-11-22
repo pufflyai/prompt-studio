@@ -5,8 +5,9 @@ import type { OrderedRecord } from "pstdio-sync/records";
 import type { Json } from "pstdio-sync-contracts";
 import { records } from "../../db/schemas.pg";
 import { noteCanonicalRecordWrite } from "./ordered-record-publication";
-import { canonicalRecordFromRow, confirmedRecordBase, stableRecordColumns } from "./ordered-record-row";
+import { confirmedRecordBase, stableRecordColumns } from "./ordered-record-row";
 import { type OrderedTransaction, orderedAddress, orderedOwnerWhere as ownerWhere } from "./ordered-sql";
+import { readCanonicalRecord } from "./retained-records";
 
 const confirmed = alias(records, "confirmed_record");
 const bodyUnlessPending = (column: SQLWrapper) =>
@@ -32,7 +33,7 @@ export const createOrderedCanonical = (tx: OrderedTransaction, owner: StorageOwn
         .from(confirmed)
         .where(and(ownerWhere(confirmed, owner), inArray(confirmed.record_id, ids.slice(offset, offset + 100))));
       for (const row of rows) {
-        const record = canonicalRecordFromRow(row);
+        const record = await readCanonicalRecord(tx, owner, row);
         if (record) found.set(row.record_id, record);
       }
     }

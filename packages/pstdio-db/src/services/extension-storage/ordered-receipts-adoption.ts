@@ -20,10 +20,10 @@ import { resetCanonicalNumberIndex } from "./ordered-number-canonical";
 import { rebaseOrderedProjection } from "./ordered-rebase";
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
 import { receiptRoots, sameReceiptRoot, saveReceiptRoots } from "./ordered-receipts-state";
-import { canonicalRecordFromRow } from "./ordered-record-row";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
 import { captureProjectedRecordChanges } from "./projected-record-changes";
+import { clearRetainedRecords, readCanonicalRecords } from "./retained-records";
 
 const checkpointEntries = async (remote: Map<string, Uint8Array[]>) => {
   const entries = [];
@@ -109,10 +109,11 @@ export const adoptOrderedCheckpoint = async (input: {
   // Capture locally settled records before replacing canonical state, including saves made
   // while our own founding upload was in flight. The tail must precede their new saves.
   const local = !(await orderedOwnerJoinedCloud(owned))
-    ? (await tx.select().from(canonical).where(orderedOwnerWhere(canonical, owner))).flatMap((row) => {
-        const record = canonicalRecordFromRow(row);
-        return record ? [record] : [];
-      })
+    ? await readCanonicalRecords(
+        tx,
+        owner,
+        await tx.select().from(canonical).where(orderedOwnerWhere(canonical, owner)),
+      )
     : [];
   const previous = receiptRoots(owned.receipt_root);
   const records = entries.flatMap((entry) => (entry.type === "record" ? [entry.record] : []));
@@ -144,6 +145,7 @@ export const adoptOrderedCheckpoint = async (input: {
   }
   if (new Set(records.map((record) => record.recordId)).size !== records.length)
     throw new Error("A checkpoint repeats a record");
+  await clearRetainedRecords(tx, owner);
   await tx.delete(canonical).where(orderedOwnerWhere(canonical, owner));
   await tx.delete(current).where(orderedOwnerWhere(current, owner));
   await tx.update(projections).set({ live_count: 0 }).where(orderedOwnerWhere(projections, owner));
