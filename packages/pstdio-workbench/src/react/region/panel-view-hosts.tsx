@@ -5,7 +5,6 @@ import {
   createContext,
   type ReactNode,
   type Ref,
-  useCallback,
   useContext,
   useEffect,
   useLayoutEffect,
@@ -70,14 +69,12 @@ export const usePanelViewSlot = (
   const active = useContext(ViewActivityContext);
   const [node, setNode] = useState<HTMLDivElement | null>(null);
   const current = useRef<HTMLDivElement | null>(null);
-  const ref = useCallback(
-    (next: HTMLDivElement | null) => {
-      if (!next && current.current) registry?.park(current.current);
-      current.current = next;
-      setNode(next);
-    },
-    [registry],
-  );
+  // The registry is fixed by the host; the ref owns this slot's mounted DOM lifetime.
+  const [ref] = useState(() => (next: HTMLDivElement | null) => {
+    if (!next && current.current) registry?.park(current.current);
+    current.current = next;
+    setNode(next);
+  });
   useLayoutEffect(() => {
     if (!region) return;
     registry?.register(region, node, surface, active, sizing);

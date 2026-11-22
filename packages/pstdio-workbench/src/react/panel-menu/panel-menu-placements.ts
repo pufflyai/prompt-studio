@@ -1,3 +1,4 @@
+import { contributionRefId } from "@pstdio/sdk/extensions";
 import {
   getActiveWorkbenchLocationPanel,
   getWorkbenchPanelForMenuRegion,
@@ -24,7 +25,22 @@ const resourceMenuVisible = (
     config && typeof config === "object" && "pageId" in config && typeof config.pageId === "string"
       ? workbench.pages.store.getState().pages[config.pageId]
       : undefined;
-  return Boolean(page?.resource && selected?.resource && resourceMatchesConstraint(page.resource, selected.resource));
+  if (!page?.resource || !selected?.resource || !resourceMatchesConstraint(page.resource, selected.resource))
+    return false;
+  const pages = workbench.pages.listPages();
+  const context = selected.pageContext?.page ?? selected.pageOwnerLocation?.page;
+  const candidates = pages.filter(
+    (candidate) =>
+      candidate.modeId === workbench.modes.getActiveModeId() &&
+      candidate.main.kind === "view" &&
+      contributionRefId(candidate.main.view) === menu.ownerViewId &&
+      candidate.resource &&
+      resourceMatchesConstraint(candidate.resource, selected.resource!),
+  );
+  const owner =
+    candidates.find((candidate) => context && contributionRefId(candidate.ref) === contributionRefId(context)) ??
+    candidates.find((candidate) => workbench.navigationTrees.resolveOwner("page", candidate.id));
+  return owner?.id === page.id;
 };
 
 /** Resolve menu content against its own panel's selected owner, including auxiliary resources. */
