@@ -125,7 +125,7 @@ export const WorkbenchContentHeader = (props: {
                     menuPath={menuPath}
                     controlSize="2xs"
                     compact={compact}
-                    vertical={!horizontal}
+                    position={position}
                     orderKey={settings.order.join("|")}
                     overflowIds={groups.overflowItems.map((item) => item.id)}
                   />

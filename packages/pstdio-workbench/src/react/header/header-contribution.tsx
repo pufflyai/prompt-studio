@@ -2,9 +2,11 @@ import { Box, IconButton } from "@chakra-ui/react";
 import { PANEL_HEADER_CONTROL_SIZE, ScopedPopover as Popover, Portal, Tooltip } from "@pstdio/ui";
 import { useState } from "react";
 import type { WorkbenchPanelRegion } from "../../core";
+import type { MenuHeaderPosition } from "../../core/controllers/panel-menus/menu-header-settings";
 import { usePanelViewSlot } from "../region/panel-view-hosts";
 import { WorkbenchIcon } from "../shared/icon";
 import { ViewActivityContext } from "../shared/view-activity-context";
+import { menuHeaderPopoverPlacement } from "./menu-header-popover-placement";
 
 const HeaderSlot = (props: { panel: WorkbenchPanelRegion; popup?: boolean }) => {
   const slot = usePanelViewSlot(props.panel, props.popup ? "page-header" : "header");
@@ -23,9 +25,9 @@ const HeaderSlot = (props: { panel: WorkbenchPanelRegion; popup?: boolean }) => 
 };
 
 /** Both destinations stay connected so docking a live guest does not remount it. */
-export const WorkbenchHeaderContribution = (props: { panel: WorkbenchPanelRegion; vertical: boolean }) => {
-  const { panel, vertical } = props;
-  const popup = vertical;
+export const WorkbenchHeaderContribution = (props: { panel: WorkbenchPanelRegion; position: MenuHeaderPosition }) => {
+  const { panel, position } = props;
+  const popup = position === "left" || position === "right";
   const [open, setOpen] = useState(false);
   const icon = <WorkbenchIcon name="SlidersHorizontal" size={14} />;
   return (
@@ -41,7 +43,7 @@ export const WorkbenchHeaderContribution = (props: { panel: WorkbenchPanelRegion
           onOpenChange={({ open }) => setOpen(open)}
           lazyMount={false}
           unmountOnExit={false}
-          positioning={{ placement: "bottom-end", flip: true }}
+          positioning={{ placement: menuHeaderPopoverPlacement(position), flip: true }}
         >
           <Popover.Trigger asChild>
             <Tooltip content="View controls">

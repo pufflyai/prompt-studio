@@ -2,6 +2,7 @@ import { Box, IconButton } from "@chakra-ui/react";
 import { PANEL_HEADER_CONTROL_SIZE, ScopedPopover as Popover, Portal, ResourceContextMenu, Tooltip } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { openOwnedViewMenu, selectViewMenuPlacement } from "../../core/controllers/panel-menus/open-view-menu";
+import { menuHeaderPopoverPlacement } from "../header/menu-header-popover-placement";
 import { useMenuHeaderSettings } from "../header/use-menu-header-settings";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchActivePanel } from "../shared/use-workbench-active-panel";
@@ -19,7 +20,7 @@ export const WorkbenchPanelMenuButton = (props: {
 }) => {
   const { workbench, panel, entry, view } = props;
   const owner = useWorkbenchActivePanel(workbench, panel);
-  const { configure } = useMenuHeaderSettings(workbench, owner);
+  const { settings, configure } = useMenuHeaderSettings(workbench, owner);
   const hasContent = usePanelMenuContent(workbench, entry.placement);
   const floatingMenu = useFloatingMenu();
   const open = view.canAttach
@@ -98,7 +99,10 @@ export const WorkbenchPanelMenuButton = (props: {
             closeOnInteractOutside={false}
             lazyMount={false}
             unmountOnExit={false}
-            positioning={{ placement: entry.side === "left" ? "bottom-start" : "bottom-end", flip: true }}
+            positioning={{
+              placement: menuHeaderPopoverPlacement(settings.position, entry.side === "left" ? "start" : "end"),
+              flip: true,
+            }}
           >
             <Popover.Trigger asChild>
               <IconButton {...triggerProps} size={PANEL_HEADER_CONTROL_SIZE} variant="ghost">

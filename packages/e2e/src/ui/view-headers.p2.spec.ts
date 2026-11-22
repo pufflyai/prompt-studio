@@ -271,11 +271,14 @@ headers(
         "keep while docking",
       );
       await page.keyboard.press("Escape");
+      await expect(page.getByRole("dialog", { name: "View controls", exact: true })).toBeHidden();
+      await expect(header.getByRole("button", { name: "View controls", exact: true })).toBeFocused();
       const lastIcon = header.getByRole("button", { name: "Close Main right menu", exact: true });
       const beforeOrder = await header
         .locator("[data-action-bar-item]")
         .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-action-bar-item")));
       await lastIcon.focus();
+      await expect(lastIcon).toBeFocused();
       await page.keyboard.press("Alt+ArrowUp");
       await expect
         .poll(() =>
