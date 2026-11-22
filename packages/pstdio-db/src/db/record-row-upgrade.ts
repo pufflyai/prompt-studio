@@ -208,6 +208,7 @@ export const prepareRecordRowFinalization = async (db: DbClient, path: string) =
       keys: ["id"],
       where: sql`false`,
       name: "record-row-finalization",
+      keepEmpty: true,
       capture: legacy || interrupted,
     },
     async () => {},

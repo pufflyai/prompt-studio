@@ -37,19 +37,30 @@ const hasSnapshot = async (path: string) => {
 };
 const captureRows = async (
   db: DbClient,
-  source: UpgradeSource,
+  source: UpgradeSource & { keepEmpty?: boolean },
   snapshot: string | undefined,
   normalize: (row: Row) => Promise<Row>,
 ) => {
   const memory: Row[] = [];
   const temporary = snapshot && `${snapshot}.tmp`;
-  const file = temporary ? await open(temporary, "w", 0o600) : undefined;
+  let file: Awaited<ReturnType<typeof open>> | undefined;
+  let captured = false;
   try {
     for await (const released of readUpgradeRows(db, source)) {
       const row = await normalize(released);
-      if (file) await file.writeFile(`${JSON.stringify(row)}\n`);
-      else memory.push(row);
+      captured = true;
+      if (temporary) {
+        file ??= await open(temporary, "w", 0o600);
+        await file.writeFile(`${JSON.stringify(row)}\n`);
+      } else memory.push(row);
     }
+    if (!captured && !source.keepEmpty) {
+      if (temporary) await rm(temporary, { force: true });
+      return;
+    }
+    // An explicit empty marker records work that must finish after DDL. Ordinary
+    // empty sources contain no data to preserve and need no durable file.
+    if (temporary) file ??= await open(temporary, "w", 0o600);
     await file?.sync();
   } catch (error) {
     if (temporary) await rm(temporary, { force: true });
@@ -78,7 +89,7 @@ const finishSnapshot = async (snapshot: string, archive?: string) => {
 export const prepareUpgradeSnapshot = async (
   db: DbClient,
   path: string,
-  source: UpgradeSource & { name: string; capture?: boolean; archive?: string | (() => string) },
+  source: UpgradeSource & { name: string; capture?: boolean; keepEmpty?: boolean; archive?: string | (() => string) },
   restore: (row: Row) => Promise<void>,
   normalize: (row: Row) => Promise<Row> = async (row) => row,
 ) => {
@@ -93,7 +104,9 @@ export const prepareUpgradeSnapshot = async (
       sql`SELECT to_regclass(${`public.${source.table}`})::text AS present`,
     );
     if (!table.present) return;
-    memory = await captureRows(db, source, snapshot, normalize);
+    const captured = await captureRows(db, source, snapshot, normalize);
+    if (captured === undefined) return;
+    memory = captured;
   }
   const complete = async () => {
     if (snapshot) {
