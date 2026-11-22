@@ -1,109 +1,59 @@
 import { expect, test } from "bun:test";
-import { eq } from "drizzle-orm";
-import { coreOwnerId, rememberResourceNumber, resourceNumbers, resourceNumbersDocumentId } from "pstdio-sync/records";
+import { rememberResourceNumber, resourceNumbers } from "pstdio-sync/records";
+import * as Y from "yjs";
 import { createDb } from "../db/connection.pglite";
-import { resource_numbers, storage_current_records, storage_documents } from "../db/schemas.pg";
+import { storage_current_records } from "../db/schemas.pg";
 import { createExtensionResourceSequencesDBService } from "./extension-resource-sequences";
 import { createDocumentStorageDBService } from "./extension-storage/document-storage";
-import { ensureStorageOwner } from "./extension-storage/storage-owner-key";
 import { createProjectsDBService } from "./projects/projects";
 
-test("closing an unused number service leaves its old source unopened for the next start", async () => {
+test("received legacy number documents import through the public adapter and retain aliases and allocation floors", async () => {
   const connection = await createDb({ path: ":memory:" });
+  const document = new Y.Doc();
   try {
-    const project = await createProjectsDBService(connection.db).create({ name: "Unused old numbers" });
-    await connection.db.insert(storage_documents).values({
-      owner_id: await ensureStorageOwner(connection.db, { workbenchId: project.id, extensionId: coreOwnerId }),
-      document_id: resourceNumbersDocumentId,
-      state: new Uint8Array([1]),
-    });
+    const project = await createProjectsDBService(connection.db).create({ name: "Received numbers" });
+    const resource = { id: "old-ticket", extensionId: "example.items", kind: "item", prefix: "IT", value: 7 };
+    resourceNumbers(document).set(resource.id, resource);
+    rememberResourceNumber(document, { ...resource, value: 50 });
+    const source = Y.encodeStateAsUpdate(document);
     const service = createExtensionResourceSequencesDBService(connection.db);
-    await expect(service.flush()).resolves.toBeUndefined();
-    expect((await connection.db.select().from(storage_documents))[0]!.state).toEqual(new Uint8Array([1]));
-  } finally {
-    await connection.close();
-  }
-});
-
-test("existing numbers and aliases move once into records and retain their allocation floor", async () => {
-  const connection = await createDb({ path: ":memory:" });
-  const documents = createDocumentStorageDBService(connection.db);
-  try {
-    const project = await createProjectsDBService(connection.db).create({ name: "Legacy numbers" });
-    const owner = { workbenchId: project.id, extensionId: coreOwnerId };
-    await documents.documents.open(resourceNumbersDocumentId).transaction(owner, async ({ document }) => {
-      const resource = { id: "old-ticket", extensionId: "example.items", kind: "item", prefix: "IT", value: 7 };
-      rememberResourceNumber(document, { ...resource, value: 50 });
-      resourceNumbers(document).set(resource.id, resource);
-      rememberResourceNumber(document, resource);
-    });
-    await connection.db.insert(resource_numbers).values({
-      project_id: project.id,
-      current: true,
-      prefix: "IT",
-      value: 7,
-      resource_id: "z-deleted-by-old-writer",
-      extension_id: "example.items",
-      kind: "item",
-      shorthand: "IT-7",
-    });
-    await connection.db.insert(resource_numbers).values({
-      project_id: project.id,
-      resource_id: "z-deleted-by-old-writer",
-      shorthand: "IT-99",
-      alias: true,
-      prefix: "IT",
-      value: 99,
-      extension_id: "example.items",
-      kind: "item",
-    });
+    await service.importLegacy(project.id, document);
     const input = { projectId: project.id, extensionId: "example.items", kind: "item", prefix: "IT" };
-    const service = createExtensionResourceSequencesDBService(connection.db, documents);
-    expect(await service.identity({ ...input, id: "old-ticket" })).toEqual({
-      id: "old-ticket",
+    expect(await service.identity({ ...input, id: resource.id })).toEqual({
+      id: resource.id,
       kind: "item",
       shorthand: "IT-7",
       aliases: ["IT-50"],
     });
-    expect(await service.identity({ ...input, id: "z-deleted-by-old-writer" })).toBeNull();
     expect((await service.allocate(input)).shorthand).toBe("IT-51");
-    expect(
-      await connection.db
-        .select()
-        .from(storage_documents)
-        .where(eq(storage_documents.document_id, resourceNumbersDocumentId)),
-    ).toEqual([]);
-    const source = await connection.db.select().from(storage_documents);
-    const restarted = createExtensionResourceSequencesDBService(connection.db, documents);
-    expect((await restarted.findByShorthand({ ...input, shorthand: "IT-50" })).map((r) => r.id)).toEqual([
-      "old-ticket",
+    await service.importLegacy(project.id, document);
+    expect((await service.findByShorthand({ ...input, shorthand: "IT-50" })).map((row) => row.id)).toEqual([
+      resource.id,
     ]);
-    expect(await connection.db.select().from(storage_documents)).toEqual(source);
+    expect(Y.encodeStateAsUpdate(document)).toEqual(source);
   } finally {
-    await documents.flushStatistics();
+    document.destroy();
     await connection.close();
   }
 });
 
-test("a failed move rolls every batch back and the same service can retry the original source", async () => {
+test("a failed received number import rolls back every page and the original document can be retried", async () => {
   const connection = await createDb({ path: ":memory:" });
   const documents = createDocumentStorageDBService(connection.db);
+  const document = new Y.Doc();
   try {
-    const project = await createProjectsDBService(connection.db).create({ name: "Interrupted move" });
-    const owner = { workbenchId: project.id, extensionId: coreOwnerId };
-    await documents.documents.open(resourceNumbersDocumentId).transaction(owner, async ({ document }) => {
-      for (let index = 0; index < 101; index++) {
-        const resource = {
-          id: `item-${index}`,
-          extensionId: "example.items",
-          kind: "item",
-          prefix: "IT",
-          value: index + 1,
-        };
-        resourceNumbers(document).set(resource.id, resource);
-        rememberResourceNumber(document, resource);
-      }
-    });
+    const project = await createProjectsDBService(connection.db).create({ name: "Interrupted received numbers" });
+    for (let index = 0; index < 101; index++) {
+      const resource = {
+        id: `item-${index}`,
+        extensionId: "example.items",
+        kind: "item",
+        prefix: "IT",
+        value: index + 1,
+      };
+      resourceNumbers(document).set(resource.id, resource);
+      rememberResourceNumber(document, resource);
+    }
     let interrupted = false;
     const failingDocuments = {
       ...documents,
@@ -134,23 +84,17 @@ test("a failed move rolls every batch back and the same service can retry the or
         };
       },
     };
-    const input = { projectId: project.id, extensionId: "example.items", kind: "item", prefix: "IT" };
-    const originalDocuments = await connection.db
-      .select()
-      .from(storage_documents)
-      .orderBy(storage_documents.document_id);
-    const failed = createExtensionResourceSequencesDBService(connection.db, failingDocuments);
-    const error = await failed.identity({ ...input, id: "item-0" }).catch((error: unknown) => error);
-    expect(error).toMatchObject({ message: "Interrupted move" });
+    const service = createExtensionResourceSequencesDBService(connection.db, failingDocuments);
+    const source = Y.encodeStateAsUpdate(document);
+    await expect(service.importLegacy(project.id, document)).rejects.toThrow("Interrupted move");
     expect(await connection.db.select().from(storage_current_records)).toEqual([]);
-    expect(await connection.db.select().from(storage_documents).orderBy(storage_documents.document_id)).toEqual(
-      originalDocuments,
-    );
-    await failed.flush();
-    const retried = failed;
-    expect((await retried.identity({ ...input, id: "item-100" }))?.shorthand).toBe("IT-101");
-    expect((await retried.allocate(input)).shorthand).toBe("IT-102");
+    expect(Y.encodeStateAsUpdate(document)).toEqual(source);
+    await service.importLegacy(project.id, document);
+    const input = { projectId: project.id, extensionId: "example.items", kind: "item", prefix: "IT" };
+    expect((await service.identity({ ...input, id: "item-100" }))?.shorthand).toBe("IT-101");
+    expect((await service.allocate(input)).shorthand).toBe("IT-102");
   } finally {
+    document.destroy();
     await documents.flushStatistics();
     await connection.close();
   }

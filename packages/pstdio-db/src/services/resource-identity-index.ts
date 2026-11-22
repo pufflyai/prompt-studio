@@ -6,7 +6,7 @@ import { resource_numbers as aliases, resource_numbers as identities, owners as 
 import { assertStorageOwnerAdmitted } from "../db/storage-admission";
 import { storageOwnerKey } from "./extension-storage/storage-owner-key";
 
-export const createResourceIdentityIndex = (db: DbClient, ready: () => Promise<void>) => {
+export const createResourceIdentityIndex = (db: DbClient) => {
   type Address = { projectId: string; extensionId: string; kind: string };
   type Connection = Pick<DbClient, "select">;
   const ownerWhere = (input: Address) =>
@@ -55,7 +55,6 @@ export const createResourceIdentityIndex = (db: DbClient, ready: () => Promise<v
     })) satisfies ResourceIdentity[];
   };
   const identityMany = async (input: Address & { ids: string[] }) => {
-    await ready();
     if (input.ids.length > 100) throw new Error("An identity batch can read at most 100 resources");
     if (!input.ids.length) return [];
     return db.transaction(async (tx) => {
@@ -72,7 +71,6 @@ export const createResourceIdentityIndex = (db: DbClient, ready: () => Promise<v
     identityMany,
     identity: async (input: Address & { id: string }) => (await identityMany({ ...input, ids: [input.id] }))[0] ?? null,
     findByShorthand: async (input: Address & { shorthand: string }) => {
-      await ready();
       return db.transaction(async (tx) => {
         await assertCurrent(tx, input.projectId);
         const aliasesForNumber = tx

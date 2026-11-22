@@ -2,36 +2,40 @@ import { and, eq, gt, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId } from "pstdio-sync/records";
 import type { DbClient } from "./connection.pglite";
+import { convertLegacyNumbers } from "./legacy-number-conversion";
+import { prepareLegacyNumberInput } from "./legacy-number-input";
 import { exportUnconvertedOwner } from "./legacy-owner-export";
 import { finishConvertedLegacyOwners } from "./legacy-record-completion";
 import { convertLegacyOwner } from "./legacy-record-conversion";
 import { storage_ordered_owners } from "./legacy-records-schema";
 import { owners, storage_documents } from "./schemas.pg";
-import { retainUnadmittedOwner } from "./storage-admission";
+import { retainUnadmittedOwner, unadmittedStorageOwners } from "./storage-admission";
 
 export interface LegacyConversionFailure {
   owner: StorageOwner;
   error: unknown;
   backupPath?: string;
 }
-const emptyFailedOwner = (db: DbClient, owner: StorageOwner, id: number) =>
+const emptyFailedOwner = (db: DbClient, owner: StorageOwner, id: number, legacy: boolean) =>
   db.transaction(async (tx) => {
     await tx.execute(sql`DELETE FROM storage_current_records WHERE owner_id=${id}`);
     await tx.delete(storage_documents).where(eq(storage_documents.owner_id, id));
     await tx.execute(sql`DELETE FROM storage_ordered_records WHERE owner_id=${id}`);
     await tx.execute(sql`DELETE FROM storage_ordered_operations WHERE owner_id=${id}`);
     await tx.execute(sql`DELETE FROM storage_ordered_receipts WHERE owner_id=${id}`);
-    await tx
-      .delete(storage_ordered_owners)
-      .where(
-        and(
-          eq(storage_ordered_owners.workbench_id, owner.workbenchId),
-          eq(storage_ordered_owners.extension_id, owner.extensionId),
-        ),
+    if (legacy) {
+      await tx
+        .delete(storage_ordered_owners)
+        .where(
+          and(
+            eq(storage_ordered_owners.workbench_id, owner.workbenchId),
+            eq(storage_ordered_owners.extension_id, owner.extensionId),
+          ),
+        );
+      await tx.execute(
+        sql`DELETE FROM storage_record_sync WHERE workbench_id=${owner.workbenchId} AND extension_id=${owner.extensionId}`,
       );
-    await tx.execute(
-      sql`DELETE FROM storage_record_sync WHERE workbench_id=${owner.workbenchId} AND extension_id=${owner.extensionId}`,
-    );
+    }
     await tx.execute(sql`DELETE FROM native_document_sources WHERE owner_id=${id}`);
     await tx.execute(sql`DELETE FROM native_document_file_projections WHERE owner_id=${id}`);
     if (owner.extensionId === coreOwnerId) {
@@ -54,9 +58,10 @@ const emptyFailedOwner = (db: DbClient, owner: StorageOwner, id: number) =>
       })
       .where(eq(owners.id, id))
       .returning({ revision: owners.revision });
-    await tx
-      .insert(storage_ordered_owners)
-      .values({ workbench_id: owner.workbenchId, extension_id: owner.extensionId });
+    if (legacy)
+      await tx
+        .insert(storage_ordered_owners)
+        .values({ workbench_id: owner.workbenchId, extension_id: owner.extensionId });
     if (owner.extensionId === coreOwnerId) {
       await tx
         .insert(storage_documents)
@@ -86,11 +91,11 @@ export const upgradeLegacyRecords = async (
     await db.execute<{ present: boolean }>(sql`
     SELECT to_regclass('public.storage_record_sync') IS NOT NULL AS present`)
   ).rows;
-  if (!present) return true;
-  await registerLegacyStreamOwners(db, options.signal);
+  if (present) await registerLegacyStreamOwners(db, options.signal);
   // The released join remains a Cloud-membership fact until ordered admission
   // supplies a remote epoch. Never revive a lost cursor on an admitted stream.
-  await db.execute(sql`UPDATE owners o SET joined=true FROM storage_record_sync s
+  if (present)
+    await db.execute(sql`UPDATE owners o SET joined=true FROM storage_record_sync s
     WHERE o.project_id=s.workbench_id AND o.extension_id=s.extension_id AND s.joined
       AND (o.epoch IS NULL OR o.epoch='' OR o.epoch LIKE 'local:%') AND NOT o.joined`);
   let preserved = true;
@@ -103,26 +108,35 @@ export const upgradeLegacyRecords = async (
       .where(
         and(
           gt(owners.id, after),
-          sql`(EXISTS (SELECT 1 FROM storage_documents d WHERE d.owner_id=${owners.id} AND d.document_id='records')
-            OR EXISTS (SELECT 1 FROM storage_record_sync s WHERE s.workbench_id=${owners.project_id} AND s.extension_id=${owners.extension_id}))
-            AND (NOT EXISTS (SELECT 1 FROM storage_ordered_owners p WHERE p.workbench_id=${owners.project_id}
-              AND p.extension_id=${owners.extension_id}) OR EXISTS (SELECT 1 FROM storage_documents c
-                WHERE c.owner_id=${owners.id} AND c.document_id='["ordered-conversion"]'))`,
+          sql`((owners.extension_id='pstdio' AND EXISTS (SELECT 1 FROM storage_documents n
+            WHERE n.owner_id=owners.id AND n.document_id='resource-identities')) OR ${
+              present
+                ? sql`
+            (EXISTS (SELECT 1 FROM storage_documents d WHERE d.owner_id=owners.id AND d.document_id='records')
+              OR EXISTS (SELECT 1 FROM storage_record_sync s WHERE s.workbench_id=owners.project_id AND s.extension_id=owners.extension_id))
+            AND (NOT EXISTS (SELECT 1 FROM storage_ordered_owners p WHERE p.workbench_id=owners.project_id
+              AND p.extension_id=owners.extension_id) OR EXISTS (SELECT 1 FROM storage_documents c
+                WHERE c.owner_id=owners.id AND c.document_id='["ordered-conversion"]'))`
+                : sql`false`
+            })`,
         ),
       )
       .orderBy(owners.id)
       .limit(1);
     if (!row) {
-      await finishConvertedLegacyOwners(db, options.signal);
-      await removeConvertedLegacyDocuments(db, options.signal);
+      if (present) {
+        await finishConvertedLegacyOwners(db, options.signal);
+        await removeConvertedLegacyDocuments(db, options.signal);
+      }
       return preserved;
     }
     const owner = { workbenchId: row.workbenchId, extensionId: row.extensionId };
     try {
-      await convertLegacyOwner(db, owner, options.signal);
+      if (present) await convertLegacyOwner(db, owner, options.signal);
+      await convertLegacyNumbers(db, database, owner, options.signal);
     } catch (error) {
       options.signal?.throwIfAborted();
-      if (!(await isolateFailedOwner(db, database, owner, row.id, error, failed))) {
+      if (!(await isolateFailedOwner(db, database, owner, row.id, error, failed, present))) {
         retainUnadmittedOwner(db, owner, error);
         preserved = false;
       }
@@ -138,11 +152,22 @@ const isolateFailedOwner = async (
   id: number,
   error: unknown,
   failed: (failure: LegacyConversionFailure) => void,
+  legacy: boolean,
 ) => {
   let backupPath: string | undefined;
   try {
     backupPath = await exportUnconvertedOwner(db, database, owner, id);
-    await emptyFailedOwner(db, owner, id);
+    if (
+      owner.extensionId === coreOwnerId &&
+      (
+        await db
+          .select({ id: storage_documents.document_id })
+          .from(storage_documents)
+          .where(and(eq(storage_documents.owner_id, id), eq(storage_documents.document_id, "resource-identities")))
+      ).length
+    )
+      await (await prepareLegacyNumberInput(db, database, owner))();
+    await emptyFailedOwner(db, owner, id, legacy);
   } catch (preservationError) {
     failed({
       owner,
@@ -177,11 +202,14 @@ const registerLegacyStreamOwners = async (db: DbClient, signal?: AbortSignal) =>
 };
 
 const removeConvertedLegacyDocuments = async (db: DbClient, signal?: AbortSignal) => {
+  const blocked = JSON.stringify(unadmittedStorageOwners(db));
   while (true) {
     signal?.throwIfAborted();
     const { rows } = await db.execute(sql`WITH page AS (
       SELECT d.owner_id,d.document_id FROM storage_documents d JOIN owners o ON o.id=d.owner_id
       WHERE starts_with(d.document_id, '["resource",')
+        AND NOT EXISTS (SELECT 1 FROM jsonb_to_recordset(${blocked}::jsonb) AS b("workbenchId" text,"extensionId" text)
+          WHERE b."workbenchId"=o.project_id AND b."extensionId"=o.extension_id)
         AND EXISTS (SELECT 1 FROM storage_ordered_owners p WHERE p.workbench_id=o.project_id
           AND p.extension_id=o.extension_id)
         AND NOT EXISTS (SELECT 1 FROM storage_documents c WHERE c.owner_id=d.owner_id

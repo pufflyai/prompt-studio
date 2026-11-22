@@ -38,6 +38,16 @@ const ownerSources = (owner: StorageOwner, id: number): UpgradeSource[] => {
 };
 const segment = (value: string) => encodeURIComponent(value).replace(/^\.+$/u, (dots) => dots.replaceAll(".", "%2E"));
 
+// Match PostgreSQL bytea and decimal bigint exports; user JSON remains unchanged.
+const exportRow = (row: Record<string, unknown>) =>
+  Object.fromEntries(
+    Object.entries(row).map(([key, value]) => {
+      if (typeof value === "bigint") return [key, value.toString()];
+      if (value instanceof Uint8Array) return [key, `\\x${Buffer.from(value).toString("hex")}`];
+      return [key, value];
+    }),
+  );
+
 /** Preserve authoritative legacy documents and frames plus any partially converted state. */
 export const exportUnconvertedOwner = async (db: DbClient, database: string, owner: StorageOwner, id: number) => {
   if (database === ":memory:") throw new Error("Cannot empty unconverted records without durable file storage");
@@ -54,15 +64,16 @@ export const exportUnconvertedOwner = async (db: DbClient, database: string, own
       `{"format":1,"database":${JSON.stringify(database)},"owner":${JSON.stringify(owner)},"tables":{`,
     );
     let firstTable = true;
-    for (const source of ownerSources(owner, id)) {
+    const { rows: available } = await db.execute<{ name: string }>(
+      sql`SELECT tablename AS name FROM pg_tables WHERE schemaname='public'`,
+    );
+    const tables = new Set(available.map((row) => row.name));
+    for (const source of ownerSources(owner, id).filter((source) => tables.has(source.table))) {
       await file.writeFile(`${firstTable ? "" : ","}${JSON.stringify(source.table)}:[`);
       firstTable = false;
       let firstRow = true;
       for await (const row of readUpgradeRows(db, source)) {
-        // Match PostgreSQL's JSON bytea representation; user JSON remains unchanged.
-        for (const [key, value] of Object.entries(row))
-          if (value instanceof Uint8Array) row[key] = `\\x${Buffer.from(value).toString("hex")}`;
-        await file.writeFile(`${firstRow ? "" : ","}${JSON.stringify(row)}`);
+        await file.writeFile(`${firstRow ? "" : ","}${JSON.stringify(exportRow(row))}`);
         firstRow = false;
       }
       await file.writeFile("]");

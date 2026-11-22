@@ -71,7 +71,7 @@ const finishSnapshot = async (snapshot: string, archive?: string) => {
 export const prepareUpgradeSnapshot = async (
   db: DbClient,
   path: string,
-  source: UpgradeSource & { name: string; capture?: boolean; archive?: string },
+  source: UpgradeSource & { name: string; capture?: boolean; archive?: string | (() => string) },
   restore: (row: Row) => Promise<void>,
   normalize: (row: Row) => Promise<Row> = async (row) => row,
 ) => {
@@ -90,10 +90,8 @@ export const prepareUpgradeSnapshot = async (
   }
   const complete = async () => {
     if (snapshot) {
-      await finishSnapshot(
-        snapshot,
-        source.archive ? join(`${path}-migration-exports`, `${source.archive}.jsonl`) : undefined,
-      );
+      const archive = typeof source.archive === "function" ? source.archive() : source.archive;
+      await finishSnapshot(snapshot, archive ? join(`${path}-migration-exports`, `${archive}.jsonl`) : undefined);
     }
   };
   const resume = async (retain = false) => {
