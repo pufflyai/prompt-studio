@@ -171,34 +171,23 @@ const TWO_DEVICE_TEST_TIMEOUT = 180_000;
 const pickerSecondLog = (root: string) =>
   join(import.meta.dirname, "../../test-results/packaged-runtime", `picker-second-${basename(root)}.jsonl`);
 
-const diagnoseReady = async (
-  ready: () => Promise<void>,
-  device: Awaited<ReturnType<typeof startDevice>>,
-  projectId: string,
-) => {
-  try {
-    await ready();
-  } catch (error) {
-    try {
-      const page = await device.client.workspaces.query(projectId);
-      console.error(
-        "Project readiness diagnostic",
-        page.items.map((workspace) => ({
-          isDefault: workspace.isDefault,
-          device: Boolean(workspace.device),
-          initializing: workspace.initializing,
-          providerState: workspace.providerState,
-          executionKind: workspace.executionKind,
-          hasRoot: Boolean(workspace.rootPath),
-          setupError: workspace.setupError,
-        })),
-      );
-    } catch (diagnosticError) {
-      console.error("Project readiness diagnostic failed", String(diagnosticError));
-    }
-    throw error;
-  }
-};
+const waitForPreparedProject = (device: Awaited<ReturnType<typeof startDevice>>, projectId: string) =>
+  waitFor(async () => {
+    const page = await device.client.workspaces.query(projectId);
+    const workspace = page.items.find((item) => item.isDefault && !item.device);
+    if (workspace?.setupError) throw new Error(workspace.setupError);
+    if (workspace && ["failed", "provider_missing"].includes(workspace.providerState ?? ""))
+      throw new Error("Project folder preparation failed");
+    const ready =
+      workspace &&
+      !workspace.initializing &&
+      (workspace.providerState ?? "ready") === "ready" &&
+      workspace.executionKind === "local" &&
+      Boolean(workspace.rootPath);
+    if (!ready) return false;
+    const sync = await device.client.account.projectSyncStatus(projectId);
+    return sync.state === "synced" && sync.offlineReady;
+  });
 
 setupPackagedSmokeTests();
 test(
@@ -300,9 +289,9 @@ test(
       await picker.retry();
       phase("retry requested");
       await Promise.all([first.reach(project.id, "synced"), second.reach(project.id, "synced")]);
-      await diagnoseReady(picker.ready, second, project.id);
-      // Folder preparation can replace a synced owner; navigation does not await its next download.
-      await waitFor(async () => (await second.client.account.projectSyncStatus(project.id)).offlineReady);
+      // Relay sync can finish before background folder setup and its replacement owner's download.
+      await waitForPreparedProject(second, project.id);
+      await picker.ready();
       phase("project folder prepared");
       expect((await second.command<Record<string, StorageRecord>>(project.id, "read")).note?.value).toBe(
         "written on the first device",
