@@ -3,22 +3,17 @@ import type { StorageOwner } from "pstdio-sync";
 import type { LogDelivery } from "pstdio-sync/logs";
 import type { StorageLogEntry } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_log_entries as entries } from "../../db/schemas.pg";
+import { storage_log_entries as entries, storage_log_streams as streams } from "../../db/schemas.pg";
 import { decodeLogPayload, logCutoff, logWhere, type OrderedLogAddress } from "./ordered-log-sql";
+import { storageOwnerKey } from "./storage-owner-key";
 
 /** A negative result avoids opening owner metadata; positive results still need stream retention rules. */
 export const hasOrderedLogPending = async (db: DbClient, owner: StorageOwner) => {
   const rows = await db
     .select({ id: entries.entry_id })
     .from(entries)
-    .where(
-      and(
-        eq(entries.workbench_id, owner.workbenchId),
-        eq(entries.extension_id, owner.extensionId),
-        eq(entries.local, true),
-        isNull(entries.relay_sequence),
-      ),
-    )
+    .innerJoin(streams, eq(entries.stream_id, streams.id))
+    .where(and(eq(streams.owner_id, storageOwnerKey(owner)), eq(entries.local, true), isNull(entries.relay_sequence)))
     .limit(1);
   return rows.length > 0;
 };

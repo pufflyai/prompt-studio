@@ -13,7 +13,6 @@ const parents = [
   s.storage_ordered_owners,
   s.storage_ordered_operations,
   s.storage_record_sync,
-  s.storage_log_streams,
   s.native_document_sources,
 ];
 const projectTables = [
@@ -26,16 +25,13 @@ const projectTables = [
   s.storage_ordered_touches,
   s.storage_ordered_receipts,
   s.storage_record_outbox,
-  s.storage_log_entries,
   s.native_document_file_projections,
   s.native_document_rooms,
-  s.storage_personal_history,
-  s.storage_personal_history_sources,
-  s.storage_personal_history_positions,
   s.storage_ordered_resource_numbers,
   s.recovery_point_owners,
 ];
 const otherTables = [
+  s.owners,
   s.board_views,
   s.preferences,
   s.credentials,
@@ -65,11 +61,14 @@ const assertNoConflicts = async (tx: Transaction, from: string, to: string) => {
   // retain both histories byte for byte. Ordered streams and shared document IDs cannot.
   const documents = new Set<PgTable>([s.storage_documents, s.storage_document_updates, s.storage_document_operations]);
   const owners = sql.join(
-    projectTables.map((table) => {
-      const textFile = documents.has(table) ? sql`starts_with(document_id, '["text-file",')` : sql`false`;
-      return sql`SELECT workbench_id AS scope, extension_id, ${textFile} AS text_file FROM ${table}
+    [
+      ...projectTables.map((table) => {
+        const textFile = documents.has(table) ? sql`starts_with(document_id, '["text-file",')` : sql`false`;
+        return sql`SELECT workbench_id AS scope, extension_id, ${textFile} AS text_file FROM ${table}
         WHERE ${ownerColumn} IN (${from}, ${to})`;
-    }),
+      }),
+      sql`SELECT project_id AS scope, extension_id, false AS text_file FROM ${s.owners} WHERE extension_id IN (${from}, ${to})`,
+    ],
     sql` UNION ALL `,
   );
   const scopes = await tx.execute(sql`SELECT scope FROM (${owners}) owners GROUP BY scope
@@ -80,6 +79,7 @@ const assertNoConflicts = async (tx: Transaction, from: string, to: string) => {
     ) LIMIT 1`);
   if (scopes.rows[0]) throw new ExtensionIdentityConflictError(from, to, String(scopes.rows[0].scope));
   for (const [table, scope] of [
+    [s.owners, sql`to_jsonb(project_id)`],
     [
       s.preferences,
       sql`jsonb_build_array(scope,

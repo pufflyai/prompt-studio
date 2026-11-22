@@ -24,7 +24,6 @@ const tables: PgTable[] = [
   s.storage_ordered_owners,
   s.storage_ordered_operations,
   s.storage_record_sync,
-  s.storage_log_streams,
   s.native_document_sources,
   s.storage_document_updates,
   s.storage_document_operations,
@@ -34,7 +33,6 @@ const tables: PgTable[] = [
   s.storage_ordered_touches,
   s.storage_ordered_receipts,
   s.storage_record_outbox,
-  s.storage_log_entries,
   s.native_document_file_projections,
   s.native_document_rooms,
 ];
@@ -151,11 +149,32 @@ test("two upgraded devices, an offline return and a clean join share encrypted s
         .where(eq(getTableColumns(table).extension_id!, current)),
     })),
   );
+  const [numericOwner] = await seed.db.select().from(s.owners).where(eq(s.owners.extension_id, current));
+  const numericStreams = await seed.db
+    .select()
+    .from(s.storage_log_streams)
+    .where(eq(s.storage_log_streams.owner_id, numericOwner!.id));
+  const numericEntries = await seed.db.select().from(s.storage_log_entries);
   phase("authored seed and offline snapshot ready");
   const upgraded = async () => {
     const db = await database();
     // One atomic fixture import avoids a separate durable transaction per copied table.
     await db.transaction(async (tx) => {
+      const { id: _ownerId, ...ownerValues } = numericOwner!;
+      const [copiedOwner] = await tx
+        .insert(s.owners)
+        .values({ ...ownerValues, extension_id: historical })
+        .returning();
+      for (const { id, owner_id: _owner, ...streamValues } of numericStreams) {
+        const [copiedStream] = await tx
+          .insert(s.storage_log_streams)
+          .values({ ...streamValues, owner_id: copiedOwner!.id })
+          .returning();
+        const rows = numericEntries
+          .filter((entry) => entry.stream_id === id)
+          .map((entry) => ({ ...entry, stream_id: copiedStream!.id }));
+        if (rows.length) await tx.insert(s.storage_log_entries).values(rows);
+      }
       for (const { table, rows } of snapshot)
         if (rows.length) await tx.insert(table).values(rows.map((row) => ({ ...row, extension_id: historical })));
     });

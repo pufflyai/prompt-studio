@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { projectExtensionRow } from "../services/extension-instances/project-extension-row";
 import type { createDb } from "./connection.pglite";
 import type { project_extensions } from "./schemas.pg";
+import { restoreTextStorageOwners } from "./storage-owner-upgrade.fixture";
 
 const restoreReleasedInstances = async (
   connection: Awaited<ReturnType<typeof createDb>>,
@@ -43,6 +44,7 @@ const restoreReleasedInstances = async (
 // These definitions come from the immutable migrations shipped in 0.48, not from
 // the candidate schema. Exercise the actual released data shapes before upgrading.
 export const restoreReleasedPreferenceTables = async (connection: Awaited<ReturnType<typeof createDb>>) => {
+  await restoreTextStorageOwners(connection);
   const folder = join(import.meta.dirname, "../../drizzle");
   const files = (await readdir(folder)).filter((name) => /^000[0-9]_.*\.sql$/.test(name)).sort();
   await restoreReleasedInstances(connection, folder, files);
@@ -123,8 +125,7 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
   await connection.pglite.exec(
     "DROP TABLE preferences; DROP TABLE credentials; ALTER TABLE board_views DROP COLUMN is_default; ALTER TABLE sessions DROP COLUMN workspace_id",
   );
-  const migrations = await connection.pglite.query<{ id: number }>(
-    "SELECT id FROM drizzle.__drizzle_migrations ORDER BY created_at DESC LIMIT 1",
-  );
-  await connection.pglite.query("DELETE FROM drizzle.__drizzle_migrations WHERE id = $1", [migrations.rows[0].id]);
+  const journal = JSON.parse(await readFile(join(folder, "meta/_journal.json"), "utf8"));
+  const appUpgrade = journal.entries.find((entry: { idx: number }) => entry.idx === 10);
+  await connection.pglite.query("DELETE FROM drizzle.__drizzle_migrations WHERE created_at >= $1", [appUpgrade.when]);
 };

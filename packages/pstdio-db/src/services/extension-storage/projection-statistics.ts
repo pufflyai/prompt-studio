@@ -10,7 +10,7 @@ import { analyzeRecordProjection } from "../../db/record-projection-statistics";
  */
 export const createProjectionStatistics = (
   db: Pick<DbClient, "execute" | "transaction">,
-  table: "storage_current_records" | "storage_log_entries" = "storage_current_records",
+  table: "storage_current_records" | "log_entries" = "storage_current_records",
 ) => {
   let changed = 0;
   let pending: Promise<void> | undefined;

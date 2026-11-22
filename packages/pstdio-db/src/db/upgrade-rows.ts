@@ -41,7 +41,7 @@ export async function* readUpgradeRows(db: DbClient, source: UpgradeSource) {
         sql`, `,
       )},
         octet_length(row_to_json(t)::text) AS encoded_bytes
-      FROM ${sql.identifier(source.table)} t ${boundary} ORDER BY ${sql.join(
+      FROM (SELECT * FROM ${sql.identifier(source.table)}) t ${boundary} ORDER BY ${sql.join(
         source.keys.map((key) => keyColumn(key, source.nullableKeys)),
         sql`, `,
       )} LIMIT 200

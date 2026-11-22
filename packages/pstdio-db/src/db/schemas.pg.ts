@@ -10,6 +10,7 @@ export * from "./schemas/extensions";
 export * from "./schemas/files";
 export * from "./schemas/native-documents";
 export * from "./schemas/notifications";
+export * from "./schemas/owners";
 export * from "./schemas/preferences";
 export * from "./schemas/projects";
 export * from "./schemas/recovery-points";

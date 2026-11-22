@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { createDb } from "../../db/connection.pglite";
 import { projects, storage_personal_history } from "../../db/schemas.pg";
 import { createPersonalHistoryIndex } from "./personal-history-index";
+import { ensureStorageOwner } from "./storage-owner-key";
 
 test("a cold personal-history point read does not hydrate the owner's history", async () => {
   const { db, close } = await createDb({ path: ":memory:" });
@@ -10,11 +11,11 @@ test("a cold personal-history point read does not hydrate the owner's history", 
     await db
       .insert(projects)
       .values({ id: "history-scale", name: "History", shorthand: "H", created_at: now, updated_at: now });
+    const ownerId = await ensureStorageOwner(db, { workbenchId: "history-scale", extensionId: "private" });
     for (let offset = 0; offset < 5000; offset += 100)
       await db.insert(storage_personal_history).values(
         Array.from({ length: 100 }, (_, index) => ({
-          workbench_id: "history-scale",
-          extension_id: "private",
+          owner_id: ownerId,
           device_id: "remote",
           kind: "sessions",
           record_id: `session-${String(offset + index).padStart(4, "0")}`,
@@ -36,7 +37,7 @@ test("a cold personal-history point read does not hydrate the owner's history", 
     let hydrated = 0;
     db.$client.query = async <T>(...args: Parameters<typeof query>) => {
       const result = await query<T>(...args);
-      if (String(args[0]).includes('from "storage_personal_history"')) hydrated += result.rows.length;
+      if (String(args[0]).includes('from "history_rows"')) hydrated += result.rows.length;
       return result;
     };
     const index = createPersonalHistoryIndex(db);
@@ -63,8 +64,7 @@ test("a cold personal-history point read does not hydrate the owner's history", 
     expect(new Set([...first.rows, ...second.rows, ...third.rows].map(({ id }) => id)).size).toBe(205);
     expect((await index.querySessions(owner, { accountId: "bob", deviceId: "local" }, input)).rows).toEqual([]);
     await db.insert(storage_personal_history).values({
-      workbench_id: owner.workbenchId,
-      extension_id: owner.extensionId,
+      owner_id: ownerId,
       device_id: "remote",
       kind: "workspace_sessions",
       record_id: "membership",
@@ -76,8 +76,7 @@ test("a cold personal-history point read does not hydrate the owner's history", 
       },
     });
     await db.insert(storage_personal_history).values({
-      workbench_id: owner.workbenchId,
-      extension_id: owner.extensionId,
+      owner_id: ownerId,
       device_id: "remote",
       kind: "workspaces",
       record_id: "workspace",
@@ -93,8 +92,7 @@ test("a cold personal-history point read does not hydrate the owner's history", 
     for (let offset = 0; offset < 5000; offset += 100)
       await db.insert(storage_personal_history).values(
         Array.from({ length: 100 }, (_, index) => ({
-          workbench_id: owner.workbenchId,
-          extension_id: owner.extensionId,
+          owner_id: ownerId,
           device_id: "remote",
           kind: "workspaces",
           record_id: `ws-${String(offset + index).padStart(4, "0")}`,
