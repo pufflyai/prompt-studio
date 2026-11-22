@@ -18,7 +18,7 @@ if (rawArgs.length === 1 && rawArgs[0] === "extension-input-inspector") {
   await runExtensionInputInspector();
 } else if (rawArgs.length === 1 && rawArgs[0] === "extension-backend-worker") {
   // Extension backend code runs here, outside the API process and without its environment secrets.
-  const { runBackendWorker } = await import("pstdio-extensions/backend-worker");
+  const { runBackendWorker } = await import("pstdio-extensions");
   runBackendWorker();
 } else if (rawArgs.length === 1 && rawArgs[0] === "performance-observer") {
   // The desktop's private sampler must answer its first probe without loading
