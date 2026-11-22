@@ -14,7 +14,6 @@ import type { WorkbenchCore } from "../../workbench-core-types";
 import { getPageLocationPreparation } from "../page-location/page-location-preparation";
 import { pageLocationTarget } from "../page-location/page-location-target";
 import { portablePagePanel } from "../page-runtime/portable-page-panel";
-import { viewerResourceKey } from "../resource-viewers/displayed-viewers";
 import { viewerTargetBinding } from "../resource-viewers/viewer-target-binding";
 import { preparePageNavigation } from "./page-navigation-preparation";
 
@@ -48,7 +47,7 @@ const panelRegion = (
       matches(entry.identity) &&
       (!target.resource ||
         (entry.value.resource &&
-          viewerResourceKey(core, entry.value.resource, entry.identity) ===
+          core.pages.resourceReferenceKey(entry.value.resource, viewerTargetBinding(core, target, state)) ===
             core.pages.resourceReferenceKey(target.resource, viewerTargetBinding(core, target, state)))),
   );
   if (existing)

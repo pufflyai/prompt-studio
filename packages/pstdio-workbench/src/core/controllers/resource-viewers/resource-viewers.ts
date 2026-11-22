@@ -2,6 +2,7 @@ import type {
   NavigationTargetViewer,
   PageLocation,
   PlacementIdentity,
+  ResourceConstraint,
   ResourceRef,
   ViewLocation,
 } from "pstdio-api-contracts/extension-kernel";
@@ -62,7 +63,9 @@ export const restorePageLocation = (
     .listPages()
     .find((page) => page.ref.id === location.page.id && page.ref.extensionId === location.page.extensionId);
   if (!page) return location;
-  const key = core.pages.resourceReferenceKey(location.resource, page.resource);
+  const referenceKey = (resource: ResourceRef, context?: ResourceConstraint) =>
+    core.pages.resourceReferenceKey({ ...resource, projectId: resource.projectId ?? projectId }, context);
+  const key = referenceKey(location.resource, page.resource);
   const previous = core.pages.store.getState();
   const next = {
     ...previous,
@@ -85,7 +88,7 @@ export const restorePageLocation = (
           !departing.has(widget.widgetId) &&
           widget.placementIdentity &&
           resourceViewerBinding(core, widget.placementIdentity)?.kind === "binding" &&
-          viewerResourceKey(core, widget.resource, widget.placementIdentity) === key,
+          referenceKey(widget.resource, resourceViewerConstraint(core, widget.placementIdentity)) === key,
       ),
   );
   if (!conflict) return location;

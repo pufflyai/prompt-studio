@@ -1,6 +1,200 @@
 import { expect, test } from "bun:test";
+import { defaultPageResourceCodec } from "pstdio-api-contracts";
+import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
+import { planMainDeparture } from "../navigation/main-page-departure";
 import { createResourceViewerFixture, viewerPage, viewerPanel, viewerResource } from "./resource-viewer-test-fixture";
 import { viewerHostKey } from "./viewer-host-continuity";
+
+const registerFollower = (
+  w: ReturnType<typeof createResourceViewerFixture>["w"],
+  options: { panels?: boolean; singlePrimary?: boolean; singleFollower?: boolean } = {},
+) => {
+  const reader = w.pages.getPage("reader")!;
+  w.pages.registerPage({
+    ...reader,
+    id: "paired",
+    ref: viewerPage("paired"),
+    path: "paired",
+    panelView: undefined,
+    ...(options.panels ? { main: { kind: "panels" as const } } : {}),
+    ...(options.singlePrimary && reader.main.kind === "view"
+      ? { main: { ...reader.main, cardinality: "one" as const } }
+      : {}),
+    slots: [
+      ...(options.singleFollower
+        ? [
+            {
+              id: "single",
+              region: "secondary" as const,
+              openOn: "page-resource" as const,
+              item: {
+                kind: "binding" as const,
+                binding: {
+                  kinds: [{ kind: "resource-kind" as const, extensionId: "example.readers", id: "record" }],
+                  view: { kind: "view" as const, id: "reader" },
+                  cardinality: "one" as const,
+                },
+              },
+            },
+          ]
+        : []),
+      {
+        id: "follower",
+        region: "side",
+        openOn: "page-resource",
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [{ kind: "resource-kind", extensionId: "example.readers", id: "record" }],
+            view: { kind: "view", id: "reader" },
+            cardinality: "many",
+          },
+        },
+      },
+    ],
+  });
+};
+
+test("resolved links retain a panels page's existing follower", () => {
+  const { w } = createResourceViewerFixture();
+  try {
+    registerFollower(w, { panels: true });
+    expect(
+      w.pageLocations.navigate({ kind: "page", page: viewerPage("paired"), resource: { type: "record", id: "x" } }).ok,
+    ).toBe(true);
+    const follower = w.layout.getActivePanel("side")!;
+    const host = viewerHostKey(w, follower.instanceId);
+    expect(w.pageLocations.replay({ ...w.pages.store.getState().location!, resource: viewerResource("x") }).ok).toBe(
+      true,
+    );
+    expect(w.layout.listPanelInstances("side")).toHaveLength(1);
+    expect(w.layout.getActivePanel("side")?.instanceId).toBe(follower.instanceId);
+    expect(viewerHostKey(w, follower.instanceId)).toBe(host);
+  } finally {
+    w.dispose();
+  }
+});
+
+test.each([
+  false,
+  true,
+])("fixed-cardinality viewers do not replace a retained many-resource follower (single primary: %s)", (singlePrimary) => {
+  const { w } = createResourceViewerFixture();
+  try {
+    registerFollower(w, { panels: !singlePrimary, singlePrimary, singleFollower: !singlePrimary });
+    expect(
+      w.pageLocations.navigate({ kind: "page", page: viewerPage("paired"), resource: { type: "record", id: "x" } }).ok,
+    ).toBe(true);
+    const follower = w.layout.getActivePanel("side")!;
+    const host = viewerHostKey(w, follower.instanceId);
+    expect(w.pageLocations.replay({ ...w.pages.store.getState().location!, resource: viewerResource("x") }).ok).toBe(
+      true,
+    );
+    expect(w.layout.listPanelInstances("side")).toHaveLength(1);
+    expect(w.layout.getActivePanel("side")?.instanceId).toBe(follower.instanceId);
+    expect(viewerHostKey(w, follower.instanceId)).toBe(host);
+  } finally {
+    w.dispose();
+  }
+});
+
+test("a page codec keeps distinct revisions in separate pinned viewers", () => {
+  const { w } = createResourceViewerFixture({
+    tabs: true,
+    pageResources: {
+      ...defaultPageResourceCodec,
+      toUri: (resource) => `${defaultPageResourceCodec.toUri(resource)}&revision=${resource.metadata?.revision}`,
+    },
+  });
+  try {
+    let firstId: string | undefined;
+    for (const [index, revision] of ["one", "two", "one"].entries()) {
+      expect(
+        w.pageLocations.navigate({
+          kind: "page",
+          page: viewerPage("reader"),
+          resource: { ...(index ? viewerResource("x") : { type: "record", id: "x" }), metadata: { revision } },
+          open: "pin",
+        }).ok,
+      ).toBe(true);
+      if (!index) firstId = w.layout.getActivePanel("main")!.instanceId;
+    }
+    expect(
+      w.layout
+        .listPanelInstances("main")
+        .map((panel) => panel.resource?.metadata?.revision)
+        .sort(),
+    ).toEqual(["one", "two"]);
+    expect(w.layout.getActivePanel("main")?.instanceId).toBe(firstId);
+  } finally {
+    w.dispose();
+  }
+});
+
+for (const method of ["boot", "switchProject"] as const)
+  test.each([
+    false,
+    true,
+  ])(`restoring a project's linked resource compares both viewers in that project (${method}, qualified panel: %s)`, async (qualified) => {
+    const { w, locations } = createResourceViewerFixture();
+    try {
+      expect(w.pageLocations.switchProject("destination").ok).toBe(true);
+      const bare = { type: "record", id: "x" };
+      const resolved = { ...viewerResource("x"), projectId: "destination" };
+      await w.navigation.openPanel({
+        panel: viewerPanel,
+        resource: qualified ? resolved : bare,
+        region: "side",
+        open: "pin",
+      });
+      expect(w.pageLocations.switchProject("project").ok).toBe(true);
+      locations.set("destination", {
+        ...locations.get("destination")!,
+        location: { page: viewerPage("reader"), resource: qualified ? bare : resolved },
+      });
+      expect(w.pageLocations[method]("destination").ok).toBe(true);
+      expect(w.pages.getContent()?.resource).toBeUndefined();
+      expect(w.layout.listPanelInstances("side")).toHaveLength(1);
+    } finally {
+      w.dispose();
+    }
+  });
+
+test("a follower already destined for Main matches its declared owner when local kinds are ambiguous", () => {
+  const { w } = createResourceViewerFixture();
+  try {
+    registerFollower(w);
+    w.pages.registerPage({
+      ...w.pages.getPage("reader")!,
+      id: "other-owner",
+      ref: { ...viewerPage("reader"), extensionId: "another.owner" },
+      path: "other-owner",
+      panelView: undefined,
+      resource: { kinds: [{ kind: "resource-kind", extensionId: "another.owner", id: "record" }] },
+    });
+    expect(
+      w.pageLocations.navigate({ kind: "page", page: viewerPage("paired"), resource: { type: "record", id: "x" } }).ok,
+    ).toBe(true);
+    const state = w.pages.store.getState();
+    const follower = state.placements.find(
+      (placement) => placement.identity.kind === "page" && placement.identity.slotId === "follower",
+    )!;
+    expect(
+      planMainDeparture(
+        w,
+        {
+          kind: "panel",
+          panel: { kind: "page-slot", page: viewerPage("paired"), id: "follower" },
+          resource: viewerResource("x"),
+        },
+        state,
+        new Map([[placementIdentityKey(follower.identity), { identity: follower.identity, region: "main" }]]),
+      ),
+    ).toBeUndefined();
+  } finally {
+    w.dispose();
+  }
+});
 
 test("opening a resolved resource transfers the linked Main viewer before its reference is refreshed", async () => {
   const { w, openSide } = createResourceViewerFixture();
