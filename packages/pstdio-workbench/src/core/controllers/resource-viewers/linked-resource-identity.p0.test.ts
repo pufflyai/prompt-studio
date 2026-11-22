@@ -128,3 +128,84 @@ test.each([false, true])("resolving a linked reference retains its host and comm
     expect(current().tabRetention).toBe("persistent");
   }
 });
+
+test.each([
+  [false, false],
+  [true, false],
+  [false, true],
+  [true, true],
+])("hydrating a linked page retains Main before replay (tabs: %s, another owner: %s)", (tabs, anotherOwner) => {
+  const { w } = createResourceViewerFixture({ tabs });
+  const link = { type: "record", id: "x" };
+  expect(w.pageLocations.navigate({ kind: "page", page: viewerPage("reader"), resource: link, open: "pin" }).ok).toBe(
+    true,
+  );
+  const current = () => (tabs ? w.layout.getActivePanel("main") : w.pages.getContent());
+  const previous = current()!;
+  const previousId = tabs ? w.layout.getActivePanel("main")!.instanceId : w.pages.getContent()!.widgetId;
+  const host = viewerHostKey(w, previousId);
+  const captured = w.viewers.captureContext(previous.placementIdentity!);
+  const resolved = { ...viewerResource("x"), label: "Current title", metadata: { writable: true } };
+  if (anotherOwner)
+    w.pages.registerPage({
+      ...w.pages.getPage("reader")!,
+      id: "other-owner-reader",
+      ref: { kind: "page", extensionId: "another.owner", id: "reader" },
+      path: "other-owner-reader",
+      resource: { kinds: [{ kind: "resource-kind", extensionId: "another.owner", id: "record" }] },
+      panelView: undefined,
+    });
+  w.pages.refreshResource({ ...resolved, extensionId: "another.owner" });
+  w.pages.refreshResource({ ...resolved, projectId: "another-project" });
+  expect(current()?.resource).toEqual(link);
+  w.pages.refreshResource(resolved);
+  expect(current()?.resource).toMatchObject({ id: "x", label: "Current title", metadata: { writable: true } });
+  expect(tabs ? w.layout.getActivePanel("main")?.instanceId : w.pages.getContent()?.widgetId).toBe(previousId);
+  expect(captured.isViewerCurrent?.()).toBe(true);
+  const location = w.pages.store.getState().location!;
+  expect(w.pageLocations.replay({ ...location, resource: resolved }).ok).toBe(true);
+  const currentId = tabs ? w.layout.getActivePanel("main")?.instanceId : w.pages.getContent()?.widgetId;
+  expect(currentId).toBe(previousId);
+  expect(viewerHostKey(w, currentId!)).toBe(host);
+  expect(captured.isViewerCurrent?.()).toBe(true);
+  expect(current()?.resource).toEqual(resolved);
+  w.dispose();
+});
+
+test("hydration uses each page slot's declared owner for a bare reference", () => {
+  const { w } = createResourceViewerFixture();
+  w.pages.registerPage({
+    ...w.pages.getPage("reader")!,
+    id: "paired",
+    ref: viewerPage("paired"),
+    path: "paired",
+    slots: [
+      {
+        id: "other",
+        region: "side",
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [{ kind: "resource-kind", extensionId: "another.owner", id: "record" }],
+            view: { kind: "view", id: "reader" },
+            cardinality: "many",
+          },
+        },
+      },
+    ],
+  });
+  const link = { type: "record", id: "x" };
+  expect(w.pageLocations.navigate({ kind: "page", page: viewerPage("paired"), resource: link }).ok).toBe(true);
+  w.pages.openSlot({ pageId: "paired", slotId: "other", resource: link, open: "pin" });
+  const mainId = w.pages.getContent()?.widgetId;
+  const sideId = w.layout.getActivePanel("side")?.instanceId;
+  w.pages.refreshResource({ ...viewerResource("x"), label: "Main owner" });
+  expect(w.pages.getContent()?.resource?.label).toBe("Main owner");
+  expect(w.layout.getActivePanel("side")?.resource).toEqual(link);
+  w.pages.refreshResource({ ...viewerResource("x"), extensionId: "another.owner", label: "Side owner" });
+  expect(w.pages.getContent()?.resource?.label).toBe("Main owner");
+  expect(w.layout.getActivePanel("side")?.resource?.label).toBe("Side owner");
+  expect(w.pages.getContent()?.widgetId).toBe(mainId);
+  expect(w.layout.getActivePanel("side")?.instanceId).toBe(sideId);
+  w.dispose();
+});

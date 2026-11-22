@@ -160,10 +160,11 @@ export const createWorkbenchPageRegistry = <Value>(
 
     refreshResource(resource) {
       const state = store.getState();
+      const pages = Object.values(state.pages);
       commit({
         ...state,
-        location: refreshResourceLocation(state.location, resource, registry.resourceReferenceKey),
-        pageStates: refreshPageResources(state.pageStates, resource, registry.resourceReferenceKey),
+        location: refreshResourceLocation(state.location, resource, registry.resourceReferenceKey, pages),
+        pageStates: refreshPageResources(state.pageStates, resource, registry.resourceReferenceKey, pages),
         action: "refreshPageResource",
       });
     },

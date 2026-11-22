@@ -11,7 +11,7 @@ export const retireConflictingMainViewers = (input: {
   previous: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
   sharedLayout?: WorkbenchLayout;
   isResourceViewer(identity: PlacementIdentity): boolean;
-  resourceKey(resource: ResourceRef): string;
+  resourceKey(resource: ResourceRef, identity: PlacementIdentity): string;
 }) => {
   const { state, previous, sharedLayout } = input;
   const departing = new Set(
@@ -28,12 +28,12 @@ export const retireConflictingMainViewers = (input: {
         input.isResourceViewer(identity) &&
         state.placements.some((entry) => placementIdentityKey(entry.identity) === placementIdentityKey(identity))
       )
-        auxiliary.set(input.resourceKey(widget.resource), placementIdentityKey(identity));
+        auxiliary.set(input.resourceKey(widget.resource, identity), placementIdentityKey(identity));
     }
   }
   const retired = state.placements.filter((entry) => {
     if (entry.region !== "main" || !entry.value.resource || !input.isResourceViewer(entry.identity)) return false;
-    const owner = auxiliary.get(input.resourceKey(entry.value.resource));
+    const owner = auxiliary.get(input.resourceKey(entry.value.resource, entry.identity));
     return owner !== undefined && owner !== placementIdentityKey(entry.identity);
   });
   if (!retired.length) return state;

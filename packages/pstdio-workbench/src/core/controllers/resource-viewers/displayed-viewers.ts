@@ -19,6 +19,14 @@ export const resourceViewerConstraint = (core: WorkbenchCore, identity: Placemen
 };
 export const viewerResourceKey = (core: WorkbenchCore, resource: ResourceRef, identity: PlacementIdentity) =>
   core.pages.resourceReferenceKey(resource, resourceViewerConstraint(core, identity));
+export const createResourceViewerRuntime = (getCore: () => WorkbenchCore) => ({
+  isResourceViewer: (identity: PlacementIdentity) => {
+    const core = getCore();
+    return Boolean(core && resourceViewerBinding(core, identity)?.kind === "binding");
+  },
+  resourceViewerKey: (resource: ResourceRef, identity: PlacementIdentity) =>
+    viewerResourceKey(getCore(), resource, identity),
+});
 export interface DisplayedResourceViewer {
   region: WorkbenchPanelRegion;
   widget: WorkbenchWidgetPlacement;
