@@ -67,6 +67,7 @@ import {
   deleteTemplateCommand,
   listTemplatesCommand,
   readTemplateCommand,
+  resetTemplateCommand,
   saveTemplateCommand,
 } from "./template-commands";
 import {
@@ -150,6 +151,7 @@ export const plannerCommands = [
   unlinkTicketCommand,
   listTemplatesCommand,
   readTemplateCommand,
+  resetTemplateCommand,
   saveTemplateCommand,
   deleteTemplateCommand,
   applyTicketTemplateCommand,
