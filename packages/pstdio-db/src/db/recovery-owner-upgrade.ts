@@ -7,7 +7,6 @@ import {
   type RecoveryReference,
   recoveryFilesFor,
 } from "../services/extension-storage/recovery-files";
-import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
 import { recovery_point_owners } from "./schemas.pg";
 import { decodeUpgradeBytes as decodeBytes } from "./upgrade-bytes";
@@ -24,6 +23,30 @@ type ReleasedOwner = {
   metadata: string;
 };
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
+const restoreOwnerAddresses = async (tx: Transaction, batch: ReleasedOwner[]) => {
+  const addresses = new Map<string, { project_id: string; extension_id: string }>();
+  for (const input of batch) {
+    if (input.owner_id !== undefined) continue;
+    const projectId = input.project_id ?? input.workbench_id;
+    if (typeof projectId !== "string" || typeof input.extension_id !== "string")
+      throw new Error("Invalid exported recovery owner");
+    addresses.set(JSON.stringify([projectId, input.extension_id]), {
+      project_id: projectId,
+      extension_id: input.extension_id,
+    });
+  }
+  if (!addresses.size) return new Map<string, number>();
+  const values = JSON.stringify([...addresses.values()]);
+  await tx.execute(sql`INSERT INTO owners (project_id,extension_id)
+    SELECT project_id,extension_id FROM jsonb_to_recordset(${values}::jsonb)
+      AS input(project_id text,extension_id text)
+    ON CONFLICT (project_id,extension_id) DO NOTHING`);
+  const { rows } = await tx.execute<{ id: number; project_id: string; extension_id: string }>(sql`
+    SELECT o.id,o.project_id,o.extension_id FROM owners o
+    JOIN jsonb_to_recordset(${values}::jsonb) AS input(project_id text,extension_id text)
+      ON o.project_id=input.project_id AND o.extension_id=input.extension_id`);
+  return new Map(rows.map((row) => [JSON.stringify([row.project_id, row.extension_id]), row.id]));
+};
 const normalizeOwner = async (
   tx: Transaction,
   input: ReleasedOwner,
@@ -38,10 +61,7 @@ const normalizeOwner = async (
     if (typeof input.extension_id !== "string") throw new Error("Invalid exported recovery owner");
     const address = JSON.stringify([projectId, input.extension_id]);
     ownerId = ownerIds.get(address);
-    if (ownerId === undefined) {
-      ownerId = await ensureStorageOwner(tx, { workbenchId: projectId, extensionId: input.extension_id });
-      ownerIds.set(address, ownerId);
-    }
+    if (ownerId === undefined) throw new Error("The exported recovery owner could not be restored");
   } else {
     const { rows } = await tx.execute(sql`SELECT id FROM owners WHERE id=${ownerId} AND project_id=${projectId}`);
     if (rows.length !== 1) throw new Error("Invalid exported recovery owner address");
@@ -80,7 +100,7 @@ export const prepareRecoveryOwnerUpgrade = async (db: DbClient, path: string) =>
     const batch = pending.splice(0);
     pendingBytes = 0;
     await db.transaction(async (tx) => {
-      const ownerIds = new Map<string, number>();
+      const ownerIds = await restoreOwnerAddresses(tx, batch);
       // Identical copies share a file. Reuse only within this bounded transaction:
       // collection cannot interleave, and every reused reference was already flushed.
       const written = new Map<string, RecoveryReference>();
