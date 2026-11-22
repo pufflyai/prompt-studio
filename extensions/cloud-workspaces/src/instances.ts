@@ -47,8 +47,8 @@ export function createInstances(root: string) {
   };
   const read = async <T>(id: string, file: string) =>
     JSON.parse(await readFile(join(directory(id), file), "utf8")) as T;
-  const write = async (id: string, file: string, value: unknown) => {
-    const path = join(directory(id), file);
+  // Replace files atomically so a concurrent reader never sees a partial file.
+  const write = async (path: string, value: unknown) => {
     const temporary = `${path}.${randomUUID()}.tmp`;
     await writeFile(temporary, JSON.stringify(value), { mode: 0o600 });
     await rename(temporary, path);
@@ -104,7 +104,7 @@ export function createInstances(root: string) {
   const ownerKeys = createOwnerKeys({
     read: (id) => read<OwnerKey>(id, "owner.json"),
     // This owner key stays on the host. Provider refs and workspace files contain only IDs.
-    write: (id, key) => write(id, "owner.json", key),
+    write: (id, key) => write(join(directory(id), "owner.json"), key),
     create: async (instance, expiresAt) =>
       JSON.parse(await cli(instance, ["superuser", "create", "--automation", "--expires", expiresAt, "--json"])),
     get,
@@ -114,13 +114,13 @@ export function createInstances(root: string) {
       // Check the new path before saving it, so a bad path cannot break an instance that worked before.
       const resolved = await resolveExecutable({ binary });
       const saved = await read<Instance>(id, "instance.json");
-      await write(id, "instance.json", { ...saved, binary: resolved });
+      await write(join(directory(id), "instance.json"), { ...saved, binary: resolved });
     }
     const instance = await get(id);
     if (instance.error) throw new Error(instance.error);
     if (instance.state === "stopped") await cli(instance, ["server", "start"]);
     await ownerKeys.issue(instance);
-    if (instance.removed) await write(id, "instance.json", { ...instance, removed: false });
+    if (instance.removed) await write(join(directory(id), "instance.json"), { ...instance, removed: false });
     return get(id);
   };
   const request = async <T>(id: string, path: string, options: RequestInit = {}) => {
@@ -148,19 +148,16 @@ export function createInstances(root: string) {
       directory(sessionId);
       directory(instanceId);
       directory(machineId);
+      const path = join(root, `${sessionId}.json`);
       if (!conversationId) {
         try {
-          const saved = JSON.parse(await readFile(join(root, `${sessionId}.json`), "utf8"));
+          const saved = JSON.parse(await readFile(path, "utf8"));
           if (saved.instanceId === instanceId && saved.machineId === machineId) conversationId = saved.conversationId;
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
         }
       }
-      await writeFile(
-        join(root, `${sessionId}.json`),
-        JSON.stringify({ instanceId, machineId, ...(conversationId ? { conversationId } : {}) }),
-        { mode: 0o600 },
-      );
+      await write(path, { instanceId, machineId, ...(conversationId ? { conversationId } : {}) });
     },
     async sessionTarget(sessionId: string) {
       directory(sessionId);
@@ -206,7 +203,7 @@ export function createInstances(root: string) {
       if (await controllerRunning(instance))
         throw new Error("Stop the instance before removing it. Its controller process is still running.");
       // Keep the controller database and checkpoints so saved conversations and recovery data survive removal.
-      await write(id, "instance.json", { ...instance, removed: true });
+      await write(join(directory(id), "instance.json"), { ...instance, removed: true });
     },
     async launch(input: InstanceLaunchInput, allocatePort: () => Promise<number>) {
       const workloadLimits = instanceLimits(input.manifests ?? []);
@@ -228,7 +225,7 @@ export function createInstances(root: string) {
           state: "stopped",
           ...(workloadLimits ? { workloadLimits } : {}),
         };
-        await write(id, "instance.json", instance);
+        await write(join(directory(id), "instance.json"), instance);
         initialized = true;
         const started = await start(id);
         for (const manifest of input.manifests ?? []) await this.publish(id, manifest);
