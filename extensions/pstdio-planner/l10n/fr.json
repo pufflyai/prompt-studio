@@ -1,4 +1,5 @@
 {
+  "commands.templates.reset.title": "Restaurer le modèle du paquet",
   "commands.keyboardStatusOptions": "Lister les statuts des tâches",
   "commands.keyboardStatus": "Changer le statut de la tâche",
   "params.keyboardStatus": "Statut",

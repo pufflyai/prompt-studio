@@ -24,6 +24,16 @@ test("inactive open tabs never expire and reopening a recent view restores its e
   expect(closedAgain.expires.get("session")).toBe(50 * 60_000);
 });
 
+test("closed previews release their view while open previews and pinned views retain theirs", () => {
+  const preview = { ...tab, tabRetention: "preview" as const };
+  const previous = { placements: [preview], expires: new Map<string, number>() };
+  expect(retainRecentViewPlacements(previous, [], registered, new Set(), 0).placements).toEqual([]);
+  expect(retainRecentViewPlacements(previous, [], registered, new Set([tab.widgetId]), 0)).toBe(previous);
+  expect(retainRecentViewPlacements(previous, [preview], registered, new Set(), 0)).toBe(previous);
+  const pinned = { placements: [{ ...tab, tabRetention: "persistent" as const }], expires: new Map<string, number>() };
+  expect(retainRecentViewPlacements(pinned, [], registered, new Set(), 0).placements).toEqual(pinned.placements);
+});
+
 test("returning to a cached view preserves mount order before the open placement snapshot catches up", () => {
   const second = { ...tab, widgetId: "second" };
   const previous = { placements: [tab, second], expires: new Map([[tab.widgetId, 30 * 60_000]]) };

@@ -39,7 +39,8 @@ pst agents install-skills <agent-id> [--global-skills] [--force]
 ```sh
 pst sessions create --prompt <text> [--title <title>] [--workspace-id <id>] [--project-id <id>] [--agent <agent>] [--model <model>] [--attach <path>...] [--original-session-id <id>]
 pst sessions list [--project-id <id>] [--status <status>] [--agent <agent>] [--workspace-id <id>] [--archived]
-pst sessions view --id <id>
+pst sessions view --id <id> [--json]
+pst sessions export --id <id>
 pst sessions follow-up --id <id> [--prompt <text> | --summary-of <id>] [--steer] [--summary-format <brief|detailed>] [--summary-role <assistant|all>] [--agent <agent>] [--model <model>] [--attach <path>...]
 pst sessions stream --id <id>
 pst sessions approve --id <id> --approval-id <id>
@@ -48,6 +49,10 @@ pst sessions stop --id <id>
 pst sessions archive --id <id>
 pst sessions resolve-session-id --agent <agent> --agent-session-id <id> [--cwd <path>] [--json]
 ```
+
+`sessions list --workspace-id` accepts a workspace ID or shorthand on current hosts and fails for an unknown workspace. Anchor filters require both `--anchor-type` and a stable `--anchor-id`. Resolve ticket shorthands through `get-ticket`. Before piping CLI output in Bash or zsh, use `set -o pipefail; pst ... | jq ...` in the same shell invocation; a failed read is not an empty result.
+
+Inspect Planner prompts with `pst pstdio.planner templates list --type prompt` and `templates read --name cleanup-board`. Reads report `source` (`package` or `project`) and `packageVersion`. Preserve custom content before an explicit `templates reset --name cleanup-board`, which restores that installed package's default. Update an older package through the host first.
 
 ## Workspaces
 
