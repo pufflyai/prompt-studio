@@ -1,6 +1,6 @@
 import { Box, Link, Text } from "@chakra-ui/react";
 import { ListRow, ScrollArea } from "@pstdio/ui";
-import { ArrowUpRight, CircleDot, MessagesSquare } from "lucide-react";
+import { ArrowUpRight, Github, MessagesSquare } from "lucide-react";
 import { Suspense } from "react";
 import { SIDEBAR_VIEWS, SITE_LINKS, VIEW_META } from "../../content/landing-content";
 import type { LandingPage } from "../../content/landing-pages";
@@ -9,7 +9,7 @@ import { BlogNavigation, DocsNavigation } from "../../services/landing-modules";
 import { landingPathForView, sectionForPage } from "../../services/landing-route";
 
 const EXTERNAL_LINKS = [
-  { label: "Issues", icon: CircleDot, href: SITE_LINKS.issues },
+  { label: "GitHub", icon: Github, href: SITE_LINKS.github },
   { label: "Discord", icon: MessagesSquare, href: SITE_LINKS.discord },
 ];
 
