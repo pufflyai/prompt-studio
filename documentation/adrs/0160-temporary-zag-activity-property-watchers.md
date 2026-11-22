@@ -20,6 +20,8 @@ Patch Zag's dependency tracker in both module formats to compare current depende
 
 Capture the machine’s live state during cleanup so reconnection restores effects for the preserved state, including Presence exit listeners. Presence also reconciles its current `present` property on machine entry, including reconnection. This replays a deferred visibility decision that Activity may have interrupted. Deferred close decisions recheck the current property so they cannot hide a popup that has since reopened. These repairs do not remount documents, retain disconnected DOM, or override styling.
 
+Reconciliation does nothing when Presence is already unmounted and `present` is false. Initial closed rendering has no exit animation to schedule, including in non-DOM renderers. Mounted or suspended exits still reconcile on reconnection.
+
 View-owned portal containers hide overlays immediately while their content is suspended. A dismissal revision closes application-owned state when that content resumes. These are platform lifecycle ownership; the dependency patches repair Zag’s property and effect reconciliation.
 
 ## Limitations
