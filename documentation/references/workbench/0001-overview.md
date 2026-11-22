@@ -103,6 +103,7 @@ persist across projects and reloads.
 **Default Side Panel**. The picker offers the Side Panel's available tabs and a generic
 **Side Panel** option. Changing the default does not require clearing existing tabs.
 Clicking the bubble activates the chosen tab when present.
+Existing Side tabs keep their own resource when Main navigates elsewhere.
 If a panel allows only one tab, choosing it restores its default view while keeping its resource.
 An unavailable saved choice opens the generic shell and stays saved for when its
 extension is enabled again. The dashboard defaults to **New session** only while

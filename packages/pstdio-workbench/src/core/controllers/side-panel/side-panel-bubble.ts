@@ -1,5 +1,5 @@
 import { getActiveLocationPlacement } from "../../registries/layout/layout-operations";
-import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
+import type { WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import { isWorkbenchPanelPlacementVisible } from "../../registries/layout/panel-widget-eligibility";
 import type { PreferenceRegistry } from "../../registries/preferences/preference-registry";
 import type { WorkbenchCore } from "../../workbench-core-types";
@@ -28,7 +28,7 @@ export const registerSidePanelBubblePreferences = (preferences: PreferenceRegist
 const sidePanelChoices = (workbench: WorkbenchCore) => {
   const panels = workbench.composition.panelsFor("side");
   const layout = workbench.layout.getLayout();
-  const isVisible = (placement: WorkbenchWidgetPlacement) => {
+  const isVisible = (placement: WorkbenchWidgetPlacement, region: WorkbenchPanelRegion) => {
     const widget = workbench.layout.getWidget(placement.contributionId);
     return (
       widget &&
@@ -37,17 +37,20 @@ const sidePanelChoices = (workbench: WorkbenchCore) => {
         workbench.getPrimaryResource(),
         workbench.modes.getActiveModeId(),
         placement,
-        { location: getActiveLocationPlacement(layout) },
+        {
+          ignoreResourceLocation: region === "side" || region === "secondary",
+          location: getActiveLocationPlacement(layout),
+        },
       )
     );
   };
-  const open = panels.open.filter(isVisible);
+  const open = panels.open.filter((placement) => isVisible(placement, "side"));
   const movable = (["main", "secondary"] as const).flatMap((region) =>
     layout.regions[region].widgets.filter(
       (placement) =>
         workbench.layout.getWidget(placement.contributionId)?.singleton &&
         workbench.getPanelDestinations(placement.widgetId).includes("side") &&
-        isVisible(placement),
+        isVisible(placement, region),
     ),
   );
   return { ...panels, open, movable };

@@ -66,6 +66,63 @@ test("a removed panel falls back to the Side Panel without running the host defa
   expect(workbench.preferences.getValue(sidePanelBubblePreferences.panel)).toBe("panel:inspector");
 });
 
+for (const region of ["side", "secondary"] as const) {
+  test(`reuses a resource-owned default from ${region} after Main navigation`, async () => {
+    const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+    workbench.modes.registerMode({ id: "project", activate() {} });
+    workbench.views.registerView({ id: "tool", title: "Tool", body: { kind: "react", render: () => null } });
+    const page = { kind: "page" as const, id: "tool", extensionId: "test" };
+    workbench.pages.registerPage({
+      id: "home",
+      ref: { ...page, id: "home" },
+      path: "",
+      modeId: "project",
+      main: { kind: "panels" },
+      slots: [],
+    });
+    workbench.pages.registerPage({
+      id: page.id,
+      ref: page,
+      path: "tools",
+      modeId: "project",
+      parentId: "home",
+      resource: { kinds: [{ kind: "resource-kind", id: "tool" }] },
+      main: { kind: "view", view: { kind: "view", id: "tool" }, cardinality: "one" },
+      slots: [],
+    });
+    workbench.pageLocations.setProject("project");
+    const alpha = { type: "tool", id: "alpha" };
+    workbench.pageLocations.navigate({ kind: "page", page, resource: alpha });
+    workbench.layout.registerPanel({
+      id: "inspector",
+      title: "Inspector",
+      region,
+      rendererId: "inspector",
+      singleton: true,
+      resourceKinds: ["tool"],
+      eligibleLocations: { resourceIds: ["alpha"], modeIds: ["project"] },
+    });
+    const inspector = workbench.layout.openPanel("inspector", { resource: alpha, strategy: { kind: "persistent" } });
+    workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "tool", id: "beta" } });
+    workbench.layout.registerPanel({
+      id: "other",
+      title: "Other",
+      region: "side",
+      rendererId: "other",
+      eligibleLocations: {},
+    });
+    const other = workbench.layout.openPanel("other");
+    expect(workbench.getPrimaryResource()?.id).toBe("beta");
+    expect(getSidePanelBubblePanels(workbench)).toContainEqual({ id: "inspector", title: "Inspector" });
+    await workbench.preferences.setValue(sidePanelBubblePreferences.panel, "panel:inspector", { scope: "user" });
+    await openSidePanelBubble(workbench);
+    expect(workbench.layout.getActivePanel("side")?.instanceId).toBe(inspector.instanceId);
+    expect(workbench.layout.getActivePanel("side")?.resource).toEqual(alpha);
+    expect(workbench.layout.listPanelInstances("side").map((panel) => panel.instanceId)).toContain(other.instanceId);
+    expect(workbench.getPrimaryResource()?.id).toBe("beta");
+  });
+}
+
 for (const singleton of [false, true]) {
   test(`a different view override opens the chosen view with ${singleton ? "one tab" : "multiple tabs"}`, async () => {
     const workbench = createWorkbench({ initialSidePanelMode: "closed" });
