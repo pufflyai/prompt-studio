@@ -56,7 +56,7 @@ defineKeybinding({
 });
 ```
 
-A create shortcut uses the first letter of the resource kind it creates. For actions on the visible item, use the `current` layer with `targetScope: "resource"` and a `when` condition. A direct chord must hold Alt, Ctrl, or Cmd; Prompt Studio refuses one that would type text. Prefer `Mod+...` chords, and avoid ones the browser or system already uses, such as `Mod+T` or `Mod+W`.
+A create shortcut uses the first letter of the resource kind it creates. For actions on the visible item, use the `current` layer with `targetScope: "resource"` and a `when` condition. A direct chord cannot start with a key that types text; Prompt Studio refuses one that would. Keys such as F2 or Escape work on their own. Prefer `Mod+...` chords, and avoid ones the browser or system already uses, such as `Mod+T` or `Mod+W`.
 
 ## Learn more
 

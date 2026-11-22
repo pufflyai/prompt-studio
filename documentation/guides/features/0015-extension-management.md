@@ -8,11 +8,11 @@ Every tool in Prompt Studio is an extension, including the first-party ones such
 
 An extension has a scope. A user extension is installed once for your user and can be turned on in any project. A repo extension lives in one project folder, under `.pstdio/extensions/`, and belongs to that repository.
 
-New projects start with a few default extensions, such as Home, Onboarding, the base themes, and Prompt Studio Skills. Onboarding offers agent harnesses and optional tools.
+New projects start with a few default extensions: Home, Onboarding, Workspaces, the session browser, the terminal, the base themes, and Prompt Studio Skills. Onboarding offers agent harnesses and optional tools.
 
 ## Manage extensions in Prompt Studio
 
-Open **Extensions** from the footer of the sidebar, press **Alt+Shift+O** (Option+Shift+O on macOS), or choose **Browse extensions** on the project's Start page.
+Open **Extensions** from the footer of the sidebar, press **Alt+Shift+O** (Option+Shift+O on macOS), or choose **Browse extensions** on the project's **Home** page.
 
 - **Installed** lists the extensions installed for this project or your user. Use the switch next to one to turn it on or off for this project. Turning it off removes its tools from this project; it does not uninstall it.
 - **Available** lists catalog extensions you can install. Choose **Install** to install one and turn it on for this project.
@@ -25,7 +25,7 @@ Choose an extension to open its page. The **Settings** tab holds its settings an
 From the terminal, run these inside a linked project folder:
 
 ```sh
-pst extensions add pstdio-planner
+pst extensions add planner
 pst extensions add ~/extensions/my-extension
 pst extensions update
 pst extensions check

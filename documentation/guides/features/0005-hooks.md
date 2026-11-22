@@ -14,7 +14,7 @@ For example, Planner's **Auto Build** hooks finished sessions, so its supervisor
 
 Hooks run on their own once the extension that declares them is installed and turned on in the project. There is nothing to start.
 
-To see an extension's hooks, run `pst extensions check`. It lists each hook with the event it observes.
+To see an extension's hooks, run `pst extensions check <extension-folder>` on its source folder. For installed extensions, `pst extensions check --json` includes each hook with the event it observes.
 
 ## Add a hook to your tool
 

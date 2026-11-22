@@ -50,7 +50,7 @@ The API and dashboard share an authenticated runtime. Core sync uses SSE. There 
 | `adrs` | Architecture decisions, including temporary limitations and removal criteria |
 | `lessons-learned` | Diagnosed failures and rules that prevent recurrence |
 
-Use topic folders within categories. References are grouped into `architecture/`, `cli/`, `extensions/`, `sdk/`, and `workbench/`. Guides group getting started, concepts, development, extension authoring, and SDK workflows. Requirements group API, CLI, dashboard, extension, and platform topics.
+Use topic folders within categories. References are grouped into `architecture/`, `cli/`, `extensions/`, `sdk/`, and `workbench/`. Guides group getting started, features, concepts, development, extension authoring, and SDK workflows. Requirements group API, CLI, dashboard, extension, and platform topics.
 
 Every file has a four-digit number within its own folder: `NNNN-kebab-case.md`. For example, `references/architecture/0001-adapters-and-features.md` and `references/sdk/0001-overview.md` belong to separate sequences. Avoid repeating a folder's topic in the filename. Keep published numbers stable and add the next number in that folder. ADRs and lessons retain their existing folders and identifiers; do not recycle removed numbers. Keep ADR proposal dates when their status changes. Consolidate superseded ADRs and remove obsolete workarounds under the [ADR cleanup rules](../guidance/0008-planning.md#3-architecture-decisions). Package and extension READMEs, extension-owned product docs, and Canvas design guidance stay beside their owners.
 
@@ -66,7 +66,7 @@ The website publishes some folders as the Docs tab at [prompt.studio/docs](https
 - References: `references/cli/`, `references/extensions/`, `references/sdk/`, and `references/workbench/`
 - Extensions: `extensions/<name>/README.md` and the numbered files in `extensions/<name>/docs/` for Planner, Notes, Reports, Artifacts, Remote Workspaces, the Claude Code, Codex, OpenCode, and Pi harnesses, and Extension Lab
 
-Nothing else is published. This guide, `guides/development/`, `references/architecture/`, PRDs, ADRs, lessons learned, and `extensions/pstdio-planner/docs/superseded/` stay in the repository. The allow-list of published folders and their sidebar labels lives in `clients/landing-page/src/content/docs-topics.ts`. A folder that is not on that list is never published, so a new folder stays private until someone adds it.
+Nothing else is published. This guide, `guides/development/`, `references/architecture/`, PRDs, ADRs, lessons learned, and `extensions/pstdio-planner/docs/superseded/` stay in the repository. The allow-list of published folders and their sidebar labels lives in `clients/landing-page/src/content/docs-topics.json`. A folder that is not on that list is never published, so a new folder stays private until someone adds it.
 
 Published pages are written for users and extension authors who read them on the website without the repository open. Keep contributor material, such as repository test commands and Docker development stacks, in `guides/development/` or in an extension's `AGENTS.md`.
 
@@ -109,7 +109,7 @@ Each canonical page has an owner. The owner reviews changes to it and keeps it t
 | Documentation | Owner |
 | --- | --- |
 | `guidance/` | Project maintainers |
-| `guides/getting-started/`, `guides/concepts/`, `references/cli/` | CLI and runtime maintainers (`pstdio`) |
+| `guides/getting-started/`, `guides/features/`, `guides/concepts/`, `references/cli/` | CLI and runtime maintainers (`pstdio`) |
 | `guides/extensions/`, `references/extensions/` | Extension platform maintainers (`pstdio-extensions`, `@pstdio/sdk/extensions`) |
 | `guides/sdk/`, `references/sdk/` | SDK maintainers (`@pstdio/sdk`) |
 | `references/workbench/` | Workbench maintainers (`@pstdio/workbench`) |
@@ -188,6 +188,27 @@ Follow the [write-blog-post skill](../../.pstdio/extensions/pstdio-dev/skills/wr
 - [0003 — Add tools](getting-started/0003-add-tools.md)
 - [0004 — Run agents](getting-started/0004-run-agents.md)
 - [0005 — Troubleshooting](getting-started/0005-troubleshooting.md)
+
+### Features
+
+- [0001 — Pages](features/0001-pages.md)
+- [0002 — Editors](features/0002-editors.md)
+- [0003 — Commands](features/0003-commands.md)
+- [0004 — Skills](features/0004-skills.md)
+- [0005 — Hooks](features/0005-hooks.md)
+- [0006 — Schedules](features/0006-schedules.md)
+- [0007 — Agents](features/0007-agents.md)
+- [0008 — Command line](features/0008-command-line.md)
+- [0009 — Workspaces](features/0009-workspaces.md)
+- [0010 — Search](features/0010-search.md)
+- [0011 — Notifications](features/0011-notifications.md)
+- [0012 — Navigation](features/0012-navigation.md)
+- [0013 — Links between tools](features/0013-links.md)
+- [0014 — Privacy and safety](features/0014-privacy-and-safety.md)
+- [0015 — Extension management](features/0015-extension-management.md)
+- [0016 — Keyboard shortcuts](features/0016-keyboard-shortcuts.md)
+- [0017 — Settings](features/0017-settings.md)
+- [0018 — Themes](features/0018-themes.md)
 
 ### How Prompt Studio works
 

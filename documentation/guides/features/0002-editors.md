@@ -6,11 +6,11 @@ An editor lets a tool open and change files or documents your way, such as a sto
 
 Prompt Studio has built-in editors for common files. A tool can reuse them for its own documents, or draw a custom editor for a format that needs one. Either way, the tool decides where the content is loaded from and where it is saved.
 
-Editors open as tabs. A tool can also keep a whole collection of open files, like a code editor: files open side by side in Main, with tools such as a file tree in Side or Secondary.
+Editors open as tabs. A tool can also keep a whole collection of open files, like a code editor: files open as tabs in Main, with tools such as a file tree in Side or Secondary.
 
 ## Use editors in Prompt Studio
 
-**Files** in the sidebar opens the project folder in the shared tree and editor. You can create, rename, move, and delete files and folders there, and save text with the editor's Save action or shortcut. This needs the Workspaces extension, which new projects get when you choose **Coding** during onboarding.
+**Files** in the sidebar opens the project folder in the shared tree and editor. You can create, rename, move, and delete files and folders there, and save text with the editor's Save action or shortcut. This needs the Workspaces extension, which new projects turn on by default.
 
 Tools bring their own editors. Notes, for example, opens each note in a Markdown editor. A tool's editor follows the same tab rules as any other view: you can drag its tab to another panel, and reopening the same document reuses its open tab.
 

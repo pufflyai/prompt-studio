@@ -18,7 +18,7 @@ These limits do not sandbox a tool's own code. An installed extension can read y
 
 - **Check repo extensions.** A project folder can bring its own extensions in `.pstdio/extensions`, and they run as soon as you open the folder. Open folders from people you trust, or check that folder first.
 - **Store keys in connections.** Open **Extensions**, choose the tool, and use the **Connections** card in its **Settings** tab. Enter the **Endpoint** and **Credential**, then choose **Connect**. **Check** runs the tool's declared health check, and **Revoke** removes the stored credential. The host keeps the credential in a file that only your user account can read.
-- **Limit automation.** A machine token works for one project, only for the commands you list, and only until it expires. Issue one with `pst auth tokens`.
+- **Limit automation.** A machine token works for one project, only for the commands you list, and only until it expires. Issue one with `pst auth tokens issue`.
 
 To run a connection's health check from the terminal:
 

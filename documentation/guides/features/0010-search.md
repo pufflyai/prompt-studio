@@ -8,7 +8,7 @@ Search is one list for everything you can open or run in a project. You do not n
 
 Search finds:
 
-- **Tools.** Every page your enabled extensions add, so you can open a tool without finding it in the sidebar.
+- **Tools.** Every top-level page your enabled extensions add, so you can open a tool without finding it in the sidebar.
 - **Files.** With the Workspaces extension enabled, **Workspace files** lists files in the open workspace, or in the project's default workspace. It covers local workspaces only.
 - **Things your tools make.** Tools list their own items, such as notes, artifacts, and canvases.
 - **Commands.** Actions from Prompt Studio and from your tools. A command without a keyboard shortcut is still available here, and commands that have one show it as a hint.

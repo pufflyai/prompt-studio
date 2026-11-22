@@ -4,12 +4,12 @@ Connect a ticket to its pull request, or a report to its data, across tools.
 
 ## What links give you
 
-A link connects two items in the same project, even when different tools own them. For example, a Planner ticket can link to the GitHub pull request that implements it. Each tool keeps its own data. The link only records which items belong together.
+A link connects two items in the same project, even when different tools own them. For example, a Planner ticket can link to the report or artifact that came out of it. Each tool keeps its own data. The link only records which items belong together.
 
 A link has a direction, from one item to another, and a purpose:
 
 - **context**: reference material. This is the default.
-- **primary**, **source**, and **result**: stronger relationships. For example, Planner can use a pull request linked as a result as evidence that a ticket was implemented.
+- **primary**, **source**, and **result**: stronger relationships. For example, Planner can use an item linked as a result as evidence that a ticket was implemented.
 
 A link never gives access to the other item's content. If the tool that owns a linked item is disabled or removed, the link stays and shows the item as unavailable, so you can still remove it.
 
@@ -17,7 +17,7 @@ A link never gives access to the other item's content. If the tool that owns a l
 
 Open an item and run **Related resources** from search (**Mod+P**). It lists the item's incoming and outgoing links. Choose **Link resource** to search your enabled tools for another item, pick a purpose, and add the link. Each link's menu offers **Open resource** and **Remove link**.
 
-For example, with the GitHub extension enabled, choose **Link resource** on a ticket and paste a pull request URL. Choose Context for reference or Result for implementation evidence.
+For example, choose **Link resource** on a ticket and pick the report that documents the work. Choose Context for reference or Result for implementation evidence.
 
 From the terminal, run these inside the project folder. Each item is a `ResourceRef` JSON object with its `type`, `id`, and owning `extensionId`:
 
@@ -41,7 +41,6 @@ A view that lists linked items should refresh on `viewDataEvents.resourceAnchors
 
 - [Related resources](../../references/sdk/0002-resources.md#related-resources) explains `resolveMany`, batching, and refresh events.
 - [SDK client](../../references/sdk/0003-api.md) lists the `resources` client methods.
-- [GitHub extension](../../../extensions/github/README.md) links tickets to pull requests.
 - [Navigation](0012-navigation.md) covers related items that open next to the one you are viewing.
 
 *Updated at: 2026-11-22*

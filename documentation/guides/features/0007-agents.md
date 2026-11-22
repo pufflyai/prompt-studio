@@ -6,17 +6,17 @@ Hand any task to Claude Code, Codex, or OpenCode without leaving your tool, and 
 
 Prompt Studio has no coding agent of its own. It runs the agents you already use, through harness extensions. A harness starts the agent, sends it your messages, and turns its output into a conversation that Prompt Studio shows and saves.
 
-Prompt Studio ships harnesses for Claude Code, Codex, and OpenCode. Choose the ones you want during project onboarding, or turn them on in **Extensions**. Optional harness extensions add Pi and GitHub Copilot. A harness does not install the agent or sign you in; install the agent and sign in with its own tools.
+Prompt Studio ships harnesses for Claude Code, Codex, OpenCode, and Pi. Choose the ones you want during project onboarding, or turn them on in **Extensions**. An optional harness extension adds GitHub Copilot. A harness does not install the agent or sign you in; install the agent and sign in with its own tools.
 
 One conversation with an agent is a session. Prompt Studio starts, queues, and stops sessions, saves the conversation, and shows approval requests. A session that finishes only means the agent stopped. Check the result before you rely on it.
 
 ## Use agents in Prompt Studio
 
-Choose **New conversation** on the project's Start page. The conversation opens in a side panel, so the tool you are working in stays visible. Pick an agent and model, type your request, and send it.
+Choose **New conversation** on the project's **Home** page. The conversation opens in a side panel, so the tool you are working in stays visible. Pick an agent and model, type your request, and send it.
 
 - The workspace selector above the message field chooses where the agent works. **Project folder** uses your project's own files.
 - When an agent asks before running a tool or changing a file, approve or deny the request in the session.
-- When too many sessions run at once, new ones wait as `queued` and start in order. Set the limit in **Settings → Workbench → Runtime → Max concurrent sessions**.
+- When too many sessions run at once, new ones wait as `queued` and start in order. In **Settings → Workbench → Runtime**, turn on **Limit concurrent sessions** and set **Max concurrent sessions**; turn it off for no limit.
 
 From the terminal, run these inside the project folder:
 

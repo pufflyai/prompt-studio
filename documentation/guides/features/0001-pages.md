@@ -17,7 +17,7 @@ Tables, boards, and forms are native views. Prompt Studio draws them, so they lo
 
 ## Use pages in Prompt Studio
 
-Enabled tools add their pages to the sidebar. You can also press **Mod+P** (Cmd+P on macOS, Ctrl+P elsewhere) and search for a tool by name: search lists every page your installed extensions add.
+Enabled tools add their pages to the sidebar. You can also press **Mod+P** (Cmd+P on macOS, Ctrl+P elsewhere) and search for a tool by name: search lists every tool (top-level page) your enabled extensions add.
 
 The workbench has three panel regions: Main, Side, and Secondary. A page fills Main, and its extra panels open in Side or Secondary. You can drag tabs between panels. Hover over a tab, or focus it with the keyboard, to see its full title.
 
