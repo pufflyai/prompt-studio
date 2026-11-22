@@ -121,7 +121,7 @@ test("generated file downloads pass exact bytes and names to the host", async ()
 
 test("device saves return the host outcome without claiming browser disk completion", async () => {
   const input = { name: "wave.svg", data: new Uint8Array([1, 2]), mimeType: "image/svg+xml" };
-  for (const status of ["initiated", "saved", "cancelled"]) {
+  for (const status of ["initiated", "saved", "cancelled"] as const) {
     const client = createWebviewClient<Record<string, never>>({
       extensionId: "test.export",
       call: async (method: string, value: unknown) => {
