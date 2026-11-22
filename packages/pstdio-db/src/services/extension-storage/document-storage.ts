@@ -12,6 +12,7 @@ import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
 import { createDocumentDirectory } from "./document-directory";
+import { assertNotRetainedDocument } from "./document-kind";
 import { createDocumentTransactions } from "./document-transactions";
 import { createNativeDocumentStore, openNativeDocument } from "./native-document-storage";
 import { createOrderedCloudReturn } from "./ordered-cloud-return";
@@ -57,6 +58,7 @@ const hasProjectedRecords = async (db: DbClient, owner: StorageOwner) => {
 export type StorageChange = StorageOwner & { documentId?: string; recordIds?: readonly string[] };
 
 const documentRevision = (db: DbClient, documentId: string) => async (owner: StorageOwner) => {
+  assertNotRetainedDocument(documentId);
   assertStorageOwnerAdmitted(db, owner);
   const [row] = await db
     .select({ revision: storage_documents.revision })
@@ -71,6 +73,7 @@ const discardDocument = async (
   owner: StorageOwner,
   documentId: string,
 ) => {
+  assertNotRetainedDocument(documentId);
   assertStorageOwnerAdmitted(db, owner);
   const address = addressFor(owner, documentId);
   await deleteStorageDocuments(
@@ -122,6 +125,7 @@ export const createDocumentStorageDBService = (
     id.startsWith('["editor-room",') ||
     id.startsWith('["host-local-migration",') ||
     id.startsWith(resourceDocumentId("").slice(0, -2)) ||
+    id.startsWith('["ordered-retention",') ||
     id.startsWith('["ordered-conversion') ||
     id.startsWith('["ordered-index-blob",') ||
     id.startsWith('["ordered-native-field",') ||

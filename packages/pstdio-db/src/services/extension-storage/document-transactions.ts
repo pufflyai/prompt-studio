@@ -5,6 +5,7 @@ import type { DbClient } from "../../db/connection.pglite";
 import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import type { createDocumentCache } from "./document-cache";
 import type { createDocumentDirectory } from "./document-directory";
+import { assertNotRetainedDocument } from "./document-kind";
 import { runDocumentTransaction } from "./document-persistence";
 import { lockStorageProject, refreshNativeRecordText } from "./native-record-projection";
 import { runOrderedNativeField } from "./ordered-native-field";
@@ -42,6 +43,7 @@ export const createDocumentTransactions = (
     admission?: { external?: boolean; generation?: string },
   ) => {
     const transaction: DocumentStore["transaction"] = async (owner, action) => {
+      assertNotRetainedDocument(documentId);
       owner = canonicalOwner(owner);
       assertStorageOwnerAdmitted(db, owner);
       const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId, document_id: documentId };
