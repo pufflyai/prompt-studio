@@ -171,3 +171,41 @@ test("reattaching after a restored machine keeps the old terminal request and it
     await f.close();
   }
 });
+
+test("Stop that races finalization does not restore the completed request", async () => {
+  let request: { requestId: string };
+  let posts = 0;
+  let finalized = false;
+  const stopReceipt = Promise.withResolvers<void>();
+  const f = await fixture(async (req) => {
+    const path = new URL(req.url).pathname;
+    if (path.endsWith("/cancel")) return Response.json({});
+    const receipt = () => ({
+      acceptance: { execution: { requestId: request.requestId } },
+      phase: finalized ? "terminal" : "running",
+      outcome: { status: "completed" },
+      finalizedAt: finalized ? new Date().toISOString() : null,
+    });
+    if (req.method !== "POST") return Response.json(receipt());
+    request = await req.json();
+    if (++posts === 1) return Response.json({});
+    // Stop read this receipt before the observer saw the request finalize.
+    const stale = receipt();
+    await stopReceipt.promise;
+    return Response.json(stale);
+  });
+  try {
+    const session = await startFileTurn(f.ctx, f.input, f.ref);
+    while (posts < 1) await Bun.sleep(10);
+    const stopping = session.stop();
+    while (posts < 2) await Bun.sleep(10);
+    finalized = true;
+    expect(await session.done).toEqual({ status: "completed" });
+    stopReceipt.resolve();
+    await stopping;
+    expect(await f.state.get(`file-turn:${f.input.sessionId}`)).toBeUndefined();
+    expect(await f.state.get(`file-cancel:${request!.requestId}`)).toBeUndefined();
+  } finally {
+    await f.close();
+  }
+});

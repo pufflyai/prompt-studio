@@ -21,9 +21,11 @@ type Target = {
 type InputReference = InputObjectReference;
 type Receipt = ExecutionRecord;
 type Request = WorkspaceRequest;
-type Pending = { target: string; request: Request; cancelId?: string };
+type Pending = { target: string; request: Request };
 const path = (ref: Target) => `/v1/workspaces/${ref.machineId}/requests`;
 const key = (sessionId: string) => `file-turn:${sessionId}`;
+// Stop keeps its cancel ID apart from the pending slot so it never rewrites a slot that finalization cleared.
+const cancelKey = (request: Pick<Request, "requestId">) => `file-cancel:${request.requestId}`;
 type FilePresentation = Pick<HarnessAttachment, "fileId" | "fileName" | "mimeType" | "sizeBytes" | "url">;
 
 export async function supportsFileTurns(ref: Target, signal?: AbortSignal) {
@@ -150,6 +152,7 @@ export async function reconnectFileTurn(ctx: HarnessContext, input: HarnessReatt
     });
     await ctx.state.set(`file-conversation:${input.sessionId}`, pending.request.conversationId);
     await ctx.state.delete(key(input.sessionId));
+    await ctx.state.delete(cancelKey(pending.request));
     return {
       agentSessionId: `${ref.sessionId}:${pending.request.conversationId}`,
       done: Promise.resolve(completedStatus(receipt)),
@@ -195,6 +198,7 @@ async function observeFileTurn(
       });
       if (receipt.finalizedAt) {
         await ctx.state.delete(key(input.sessionId));
+        await ctx.state.delete(cancelKey(pending.request));
         return completedStatus(receipt);
       }
       if (["unknown", "lost"].includes(receipt.phase)) return { status: "disconnected" as const };
@@ -209,18 +213,20 @@ async function observeFileTurn(
     agentSessionId: `${ref.sessionId}:${pending.request.conversationId}`,
     timeoutStrategy: "provider",
     async stop() {
+      // Save the cancel ID before reading the receipt, so either the observer's finalization or a final
+      // receipt read here removes it.
+      const cancelId = (await ctx.state.get<string>(cancelKey(pending.request))) ?? randomUUID();
+      await ctx.state.set(cancelKey(pending.request), cancelId);
       const receipt = await ref.instances.request<Receipt>(ref.instanceId, path(ref), {
         method: "POST",
         body: JSON.stringify(pending.request),
       });
-      if (receipt.finalizedAt) return;
-      pending.cancelId ??= randomUUID();
-      await ctx.state.set(key(input.sessionId), pending);
+      if (receipt.finalizedAt) return ctx.state.delete(cancelKey(pending.request));
       const execution = receipt.acceptance.execution;
       await ref.instances.request(
         ref.instanceId,
         `/v1/workspaces/${ref.machineId}/executions/${execution.requestId}/cancel`,
-        { method: "POST", body: JSON.stringify({ execution, cancelId: pending.cancelId, scope: "operation" }) },
+        { method: "POST", body: JSON.stringify({ execution, cancelId, scope: "operation" }) },
       );
     },
     done,
