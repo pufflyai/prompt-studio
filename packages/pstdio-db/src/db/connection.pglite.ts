@@ -246,7 +246,6 @@ export const createDb = async (options?: {
     attachDatabaseAuthority(db, dbPath);
     recoveryFilesFor(db, dbPath);
     documentFilesFor(db, dbPath);
-    attachDocumentCollector(db, (projectId, ids) => pruneDocumentFiles(db, projectId, ids));
     // The node folder belongs to this database, so another database can never clean it up.
     const indexNodes =
       dbPath === ":memory:"
@@ -347,6 +346,8 @@ export const createDb = async (options?: {
     await finishArtifactProjectionUpgrade?.();
     await restoreArtifactProjectionAdmission(db, dbPath);
     await pruneAllDocumentFiles(db);
+    // Conversion publishes bounded batches; collect their files once before exposing the database.
+    attachDocumentCollector(db, (projectId, ids) => pruneDocumentFiles(db, projectId, ids));
     if (migrated && !deferCleanup)
       await maintainDatabase(openedPglite, db, dbPath, fresh, onPhase, movedNodes || renamed);
     const projectIds = await db.select({ id: schema.projects.id }).from(schema.projects);

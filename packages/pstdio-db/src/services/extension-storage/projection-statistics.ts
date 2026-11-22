@@ -15,6 +15,7 @@ export const createProjectionStatistics = (
   let changed = 0;
   let pending: Promise<void> | undefined;
   const stale = async () => {
+    if (changed <= 50) return false;
     const { rows } = await db.execute<{ rows: number }>(
       sql`SELECT greatest(reltuples, 0) AS rows FROM pg_class WHERE relname = ${table}`,
     );

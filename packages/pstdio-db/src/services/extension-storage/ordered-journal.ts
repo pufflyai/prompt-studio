@@ -5,12 +5,11 @@ import {
   type OrderedDecision,
   type OrderedOperation,
   validateOrderedNativeOperation,
-  verifyOrderedAdmission,
   verifyOrderedOperation,
 } from "pstdio-sync/records";
-import { fingerprint, type Json } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { storage_ordered_operations as operations } from "../../db/schemas.pg";
+import { admitOrderedOperation } from "./ordered-admission";
 import {
   createOrderedAuthorship,
   orderedLocalOperation as local,
@@ -175,25 +174,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
         .orderBy(operations.local_sequence);
       return rows.map((row) => local(row)!);
     },
-    async admit(admission: OrderedAdmission) {
-      admission = await verifyOrderedAdmission(admission);
-      const row = await operation(admission.operation.operationId);
-      if (!row?.envelope || row.fingerprint !== admission.operation.fingerprint) throw identityError();
-      if (row.settled_epoch) throw new Error("A settled save cannot enter another order");
-      const identity = await fingerprint(admission as unknown as Json);
-      if (row.admission_epoch === admission.epoch && row.admission_fingerprint !== identity)
-        throw new Error("An admission is immutable within its order epoch");
-      if (row.admission_epoch === admission.epoch) return;
-      await tx
-        .update(operations)
-        .set({
-          admission_epoch: admission.epoch,
-          admission: encode(admission),
-          admission_fingerprint: identity,
-          delivered: false,
-        })
-        .where(operationWhere(row.operation_id));
-    },
+    admit: (admission: OrderedAdmission) => admitOrderedOperation(tx, owner, admission),
     async deliveredSequences(sequences: number[], epoch: string) {
       for (let offset = 0; offset < sequences.length; offset += 1_000)
         await tx
