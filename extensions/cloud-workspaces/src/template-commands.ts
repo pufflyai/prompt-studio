@@ -1,4 +1,4 @@
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { catalogPageRef, templateTarget } from "./lab-navigation";
 import { changed } from "./resources";
 import {
@@ -11,10 +11,15 @@ import {
 
 export const saveTemplate = defineCommand({
   id: "templates.save",
-  title: "Save agent template",
+  title: l10n("cloud-workspaces.save-agent-template", "Save agent template"),
   cli: true,
   mutating: true,
-  params: { source: params.longText({ label: "Template JSON or YAML", required: true }) },
+  params: {
+    source: params.longText({
+      label: l10n("cloud-workspaces.template-json-or-yaml", "Template JSON or YAML"),
+      required: true,
+    }),
+  },
   async run(ctx, input) {
     let source = input.source;
     if (!source.trim().startsWith("{")) source = JSON.stringify(Bun.YAML.parse(source));
@@ -28,11 +33,11 @@ export const saveTemplate = defineCommand({
 
 export const deleteTemplates = defineCommand({
   id: "templates.delete",
-  title: "Remove catalog templates",
+  title: l10n("cloud-workspaces.remove-catalog-templates", "Remove catalog templates"),
   cli: true,
   mutating: true,
   // A table selection sends the selected rows' IDs, which are catalog file paths.
-  params: { rowIds: params.list({ label: "Template files", required: true }) },
+  params: { rowIds: params.list({ label: l10n("cloud-workspaces.template-files", "Template files"), required: true }) },
   async run(ctx, input) {
     const files = catalogFiles(ctx);
     const listed = new Set((await listCatalog(files)).map((entry) => entry.path));
@@ -43,11 +48,13 @@ export const deleteTemplates = defineCommand({
   },
 });
 
-const rowParam = { rowId: params.text({ label: "Template file", required: true }) };
+const rowParam = {
+  rowId: params.text({ label: l10n("cloud-workspaces.template-file", "Template file"), required: true }),
+};
 
 export const deleteTemplateRow = defineCommand({
   id: "templates.delete-row",
-  title: "Remove template",
+  title: l10n("cloud-workspaces.remove-template", "Remove template"),
   mutating: true,
   params: rowParam,
   async run(ctx, input) {
@@ -57,7 +64,7 @@ export const deleteTemplateRow = defineCommand({
 
 export const viewTemplateRow = defineCommand({
   id: "templates.view-row",
-  title: "View template",
+  title: l10n("cloud-workspaces.view-template", "View template"),
   params: rowParam,
   async run(ctx, input) {
     await selectedTemplate(catalogFiles(ctx), input.rowId);
@@ -68,7 +75,7 @@ export const viewTemplateRow = defineCommand({
 
 export const openCatalog = defineCommand({
   id: "templates.open-catalog",
-  title: "Open template catalog",
+  title: l10n("cloud-workspaces.open-template-catalog", "Open template catalog"),
   async run(ctx) {
     ctx.navigation.open({ kind: "page", page: catalogPageRef });
     return {};

@@ -9,7 +9,7 @@ import { type ControllerMachine, machinePath } from "./machines";
 export const deployedConnection = defineConnection({
   id: "deployed-controller",
   scope: "global",
-  label: "Deployed PocketCoder controller",
+  label: l10n("cloud-workspaces.deployed-pocketcoder-controller", "Deployed PocketCoder controller"),
   transport: "http",
   auth: { type: "bearer" },
   allowedMethods: ["GET", "POST"],
@@ -30,7 +30,7 @@ export const deployedSettings = {
   },
   deployedName: {
     type: "string",
-    title: "Deployed instance name",
+    title: l10n("cloud-workspaces.deployed-instance-name", "Deployed instance name"),
     scope: "project",
     default: "Deployed PocketCoder",
   },

@@ -1,5 +1,5 @@
 import { setTimeout } from "node:timers/promises";
-import { defineCommand, type ExtensionContextBase, params } from "@pstdio/sdk/extensions";
+import { defineCommand, type ExtensionContextBase, l10n, params } from "@pstdio/sdk/extensions";
 import { instancesFor, PocketCoderHttpError } from "./instances";
 import { isTerminal, type Machine, machinePath } from "./machines";
 import { changed } from "./resources";
@@ -7,12 +7,12 @@ import { changed } from "./resources";
 export function createMachineWatch(getInstances = instancesFor) {
   return defineCommand({
     id: "machines.watch",
-    title: "Watch machine state",
+    title: l10n("cloud-workspaces.watch-machine-state", "Watch machine state"),
     cli: true,
     automation: true,
     params: {
-      instance: params.text({ label: "Instance ID", required: true }),
-      machineId: params.text({ label: "Machine ID", required: true }),
+      instance: params.text({ label: l10n("cloud-workspaces.instance-id", "Instance ID"), required: true }),
+      machineId: params.text({ label: l10n("cloud-workspaces.machine-id", "Machine ID"), required: true }),
     },
     async run(ctx, { instance, machineId }) {
       const instances = getInstances(ctx.projectId);

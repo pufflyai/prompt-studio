@@ -1,4 +1,4 @@
-import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
+import { type CommandContext, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { getDeployed } from "./deployed-controller";
 import { stopDeployedWorkspaceWorker } from "./deployed-machine";
 import { type ControllerMachine, isTerminal, machinePath } from "./machines";
@@ -8,11 +8,14 @@ export const dismissedDeployedMachineKey = (id: string) => `dismissed-deployed-m
 
 export const deployedSelectionWorker = defineCommand({
   id: "deployed.machines-selected-worker",
-  title: "Update selected machines in background",
+  title: l10n("cloud-workspaces.update-selected-machines-in-background", "Update selected machines in background"),
   automation: true,
   params: {
-    rowIds: params.list({ label: "Selected machines", required: true }),
-    remove: params.boolean({ label: "Remove from Cloud Workspaces", default: false }),
+    rowIds: params.list({ label: l10n("cloud-workspaces.selected-machines", "Selected machines"), required: true }),
+    remove: params.boolean({
+      label: l10n("cloud-workspaces.remove-from-cloud-workspaces", "Remove from Cloud Workspaces"),
+      default: false,
+    }),
   },
   async run(ctx, { rowIds, remove }) {
     const results = await Promise.allSettled(
@@ -58,17 +61,20 @@ async function queueSelection(ctx: CommandContext, rowIds: string[], remove: boo
 
 export const stopDeployedMachines = defineCommand({
   id: "deployed.machines-stop-selected",
-  title: "Stop selected machines",
+  title: l10n("cloud-workspaces.stop-selected-machines", "Stop selected machines"),
   mutating: true,
   params: {
-    rowIds: params.list({ label: "Selected machines", required: true }),
-    confirmed: params.boolean({ label: "Confirm stop", default: false }),
+    rowIds: params.list({ label: l10n("cloud-workspaces.selected-machines", "Selected machines"), required: true }),
+    confirmed: params.boolean({ label: l10n("cloud-workspaces.confirm-stop", "Confirm stop"), default: false }),
   },
   confirmation: {
     kind: "delete",
     confirmedParam: "confirmed",
-    description: "This stops the selected machines and any apps or tests running inside them.",
-    buttonLabel: "Stop selected",
+    description: l10n(
+      "cloud-workspaces.this-stops-the-selected-machines-and-any-apps-or-tests-running-inside-them",
+      "This stops the selected machines and any apps or tests running inside them.",
+    ),
+    buttonLabel: l10n("cloud-workspaces.stop-selected", "Stop selected"),
   },
   async run(ctx, { rowIds, confirmed }) {
     if (!confirmed) throw new Error("Confirm that you want to stop the selected machines.");
@@ -78,17 +84,20 @@ export const stopDeployedMachines = defineCommand({
 
 export const deleteDeployedMachines = defineCommand({
   id: "deployed.machines-delete-selected",
-  title: "Delete selected machines",
+  title: l10n("cloud-workspaces.delete-selected-machines", "Delete selected machines"),
   mutating: true,
   params: {
-    rowIds: params.list({ label: "Selected machines", required: true }),
-    confirmed: params.boolean({ label: "Confirm delete", default: false }),
+    rowIds: params.list({ label: l10n("cloud-workspaces.selected-machines", "Selected machines"), required: true }),
+    confirmed: params.boolean({ label: l10n("cloud-workspaces.confirm-delete", "Confirm delete"), default: false }),
   },
   confirmation: {
     kind: "delete",
     confirmedParam: "confirmed",
-    description: "This stops the selected machines and removes their rows from Cloud Workspaces.",
-    buttonLabel: "Delete selected",
+    description: l10n(
+      "cloud-workspaces.this-stops-the-selected-machines-and-removes-their-rows-from-cloud-workspaces",
+      "This stops the selected machines and removes their rows from Cloud Workspaces.",
+    ),
+    buttonLabel: l10n("cloud-workspaces.delete-selected", "Delete selected"),
   },
   async run(ctx, { rowIds, confirmed }) {
     if (!confirmed) throw new Error("Confirm that you want to delete the selected machines.");
@@ -98,15 +107,20 @@ export const deleteDeployedMachines = defineCommand({
 
 export const deleteDeployedMachine = defineCommand({
   id: "deployed.machine-delete",
-  title: "Delete machine",
+  title: l10n("cloud-workspaces.delete-machine", "Delete machine"),
   mutating: true,
   menus: [{ slot: deployedMachineActionsSlot, icon: "trash-2" }],
-  params: { confirmed: params.boolean({ label: "Confirm delete", default: false }) },
+  params: {
+    confirmed: params.boolean({ label: l10n("cloud-workspaces.confirm-delete", "Confirm delete"), default: false }),
+  },
   confirmation: {
     kind: "delete",
     confirmedParam: "confirmed",
-    description: "This stops the machine and removes its row from Cloud Workspaces.",
-    buttonLabel: "Delete machine",
+    description: l10n(
+      "cloud-workspaces.this-stops-the-machine-and-removes-its-row-from-cloud-workspaces",
+      "This stops the machine and removes its row from Cloud Workspaces.",
+    ),
+    buttonLabel: l10n("cloud-workspaces.delete-machine", "Delete machine"),
   },
   async run(ctx, { confirmed }) {
     if (ctx.resource?.type !== deployedMachineKind.id) throw new Error("Choose a deployed machine.");

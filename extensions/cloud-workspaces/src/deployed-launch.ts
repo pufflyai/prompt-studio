@@ -1,11 +1,14 @@
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { createDeployedWorkspace, listDeployed } from "./deployed-controller";
 import type { LabTemplate } from "./lab-model";
 import { changed } from "./resources";
 
 export const deployedTemplateChoices = defineCommand({
   id: "deployed.template-choices",
-  title: "List launchable templates on the deployed controller",
+  title: l10n(
+    "cloud-workspaces.list-launchable-templates-on-the-deployed-controller",
+    "List launchable templates on the deployed controller",
+  ),
   async run(ctx) {
     const templates = await listDeployed<LabTemplate>(ctx.connections, "/v1/templates");
     return templates
@@ -20,15 +23,15 @@ export const deployedTemplateChoices = defineCommand({
 
 export const launchDeployedWorkspace = defineCommand({
   id: "deployed.machine-launch",
-  title: "Launch workspace",
+  title: l10n("cloud-workspaces.launch-workspace", "Launch workspace"),
   mutating: true,
   params: {
     template: params.select({
-      label: "Template",
+      label: l10n("cloud-workspaces.template", "Template"),
       required: true,
       options: { command: deployedTemplateChoices.ref, valueField: "value", labelField: "label" },
     }),
-    name: params.text({ label: "Workspace name" }),
+    name: params.text({ label: l10n("cloud-workspaces.workspace-name", "Workspace name") }),
   },
   async run(ctx, input) {
     const [name, version] = input.template.split("@");

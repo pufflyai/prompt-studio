@@ -1,6 +1,7 @@
 import {
   defineNavigationItem,
   definePage,
+  type Localizable,
   l10n,
   type PlacementTabPresentation,
   workbenchModes,
@@ -16,7 +17,7 @@ import { instancesView, machinesView, templatesView } from "./native-tables";
 import { changed, instanceKind } from "./resources";
 import { workspaceHistoryView } from "./workspace-history-view";
 
-const instanceTab = (label: string): PlacementTabPresentation => ({
+const instanceTab = (label: Localizable<string>): PlacementTabPresentation => ({
   refreshEvents: [changed],
   async query(ctx, { renderer }) {
     const instances = await instancesFor(ctx.projectId).list();
@@ -26,7 +27,7 @@ const instanceTab = (label: string): PlacementTabPresentation => ({
       menu: [
         {
           id: "instances",
-          label: "PocketCoder instances",
+          label: l10n("cloud-workspaces.pocketcoder-instances", "PocketCoder instances"),
           rows: instances
             .filter((instance) => instance.state === "running" || instance.id === current)
             .sort((a, b) => Number(b.state === "running") - Number(a.state === "running"))
@@ -46,7 +47,7 @@ const instanceTab = (label: string): PlacementTabPresentation => ({
           rows: [
             {
               id: "browse",
-              label: "Manage instances",
+              label: l10n("cloud-workspaces.manage-instances", "Manage instances"),
               icon: "server",
               action: { kind: "page" as const, page: instancesPageRef },
             },
@@ -54,7 +55,7 @@ const instanceTab = (label: string): PlacementTabPresentation => ({
               ? [
                   {
                     id: "start",
-                    label: "Start instance",
+                    label: l10n("cloud-workspaces.start-instance", "Start instance"),
                     icon: "play",
                     action: {
                       kind: "command" as const,
@@ -63,7 +64,7 @@ const instanceTab = (label: string): PlacementTabPresentation => ({
                   },
                   {
                     id: "stop",
-                    label: "Stop instance",
+                    label: l10n("cloud-workspaces.stop-instance", "Stop instance"),
                     icon: "square",
                     action: {
                       kind: "command" as const,
@@ -74,7 +75,7 @@ const instanceTab = (label: string): PlacementTabPresentation => ({
                     ? [
                         {
                           id: "remove",
-                          label: "Remove instance",
+                          label: l10n("cloud-workspaces.remove-instance", "Remove instance"),
                           icon: "trash-2",
                           action: {
                             kind: "command" as const,
@@ -110,7 +111,7 @@ export const instancesPage = definePage({
 });
 export const deployedPage = definePage({
   id: "deployed",
-  title: "Deployed PocketCoder",
+  title: l10n("cloud-workspaces.deployed-pocketcoder", "Deployed PocketCoder"),
   icon: "cloud",
   path: "pocketcoder-deployed",
   mode: workbenchModes.project,
@@ -139,7 +140,7 @@ export const deployedPage = definePage({
 });
 export const catalogPage = definePage({
   id: "catalog",
-  title: "Template catalog",
+  title: l10n("cloud-workspaces.template-catalog", "Template catalog"),
   icon: "package",
   path: "pocketcoder-templates",
   mode: workbenchModes.project,
@@ -149,7 +150,7 @@ export const catalogPage = definePage({
 });
 export const instancePage = definePage({
   id: "instance",
-  title: "PocketCoder instance",
+  title: l10n("cloud-workspaces.pocketcoder-instance", "PocketCoder instance"),
   icon: "server",
   path: "pocketcoder-instance",
   mode: workbenchModes.project,
@@ -161,14 +162,14 @@ export const instancePage = definePage({
       id: "templates",
       region: "main",
       order: 0,
-      tab: instanceTab("Templates"),
+      tab: instanceTab(l10n("cloud-workspaces.templates", "Templates")),
       item: { kind: "view", view: templatesView.ref, presence: "open" },
     },
     {
       id: "machines",
       region: "main",
       order: 1,
-      tab: instanceTab("Machines"),
+      tab: instanceTab(l10n("cloud-workspaces.machines", "Machines")),
       item: { kind: "view", view: machinesView.ref, presence: "open" },
     },
   ],

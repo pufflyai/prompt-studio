@@ -7,6 +7,7 @@ export function drawWorkspaceHistory(
   points: WorkspaceCount[],
   peak: number,
   selected: number,
+  locale?: string,
 ) {
   const context = canvas.getContext("2d");
   const width = canvas.clientWidth;
@@ -47,7 +48,7 @@ export function drawWorkspaceHistory(
   }
 
   const formatter = new Intl.DateTimeFormat(
-    undefined,
+    locale,
     duration > 25 * 3600_000 ? { month: "short", day: "numeric" } : { hour: "numeric", minute: "2-digit" },
   );
   const columns = width < 460 ? 2 : 4;

@@ -1,4 +1,4 @@
-import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
+import { type CommandContext, defineCommand, type Localizable, l10n, params } from "@pstdio/sdk/extensions";
 import { createInstanceCommands } from "./instance-commands";
 import { createRemoveInstance } from "./instance-removal";
 import { instancesFor } from "./instances";
@@ -33,8 +33,10 @@ async function forEachRow(rowIds: string[], run: (rowId: string) => unknown) {
   return { rowIds };
 }
 
-const rowIdsParam = { rowIds: params.list({ label: "Selected rows", required: true }) };
-const rowIdParam = { rowId: params.text({ label: "Row", required: true }) };
+const rowIdsParam = {
+  rowIds: params.list({ label: l10n("cloud-workspaces.selected-rows", "Selected rows"), required: true }),
+};
+const rowIdParam = { rowId: params.text({ label: l10n("cloud-workspaces.row", "Row"), required: true }) };
 
 export function createSelectionCommands(getInstances = instancesFor) {
   const { startInstance, stopInstance } = createInstanceCommands(getInstances);
@@ -45,7 +47,7 @@ export function createSelectionCommands(getInstances = instancesFor) {
     await getInstances(ctx.projectId).retire(instance, name, version);
     await ctx.events.emit(changed, {});
   };
-  const selected = (id: string, title: string, run: (ctx: CommandContext, rowId: string) => unknown) =>
+  const selected = (id: string, title: Localizable<string>, run: (ctx: CommandContext, rowId: string) => unknown) =>
     defineCommand({
       id,
       title,
@@ -56,23 +58,37 @@ export function createSelectionCommands(getInstances = instancesFor) {
       },
     });
   return {
-    startSelected: selected("instances.start-selected", "Start instances", (ctx, instanceId) =>
-      startInstance.run(ctx, { instanceId }),
+    startSelected: selected(
+      "instances.start-selected",
+      l10n("cloud-workspaces.start-instances", "Start instances"),
+      (ctx, instanceId) => startInstance.run(ctx, { instanceId }),
     ),
-    stopSelected: selected("instances.stop-selected", "Stop instances", (ctx, instanceId) =>
-      stopInstance.run(ctx, { instanceId }),
+    stopSelected: selected(
+      "instances.stop-selected",
+      l10n("cloud-workspaces.stop-instances", "Stop instances"),
+      (ctx, instanceId) => stopInstance.run(ctx, { instanceId }),
     ),
-    removeSelected: selected("instances.remove-selected", "Remove instances", (ctx, instanceId) =>
-      removeInstance.run(ctx, { instanceId }),
+    removeSelected: selected(
+      "instances.remove-selected",
+      l10n("cloud-workspaces.remove-instances", "Remove instances"),
+      (ctx, instanceId) => removeInstance.run(ctx, { instanceId }),
     ),
-    deleteSelectedMachines: selected("machines.delete-selected", "Delete machines", (ctx, rowId) => {
-      const { instance, key } = instanceRow(rowId);
-      return deleteMachine.run(ctx, { instance, machineId: key });
-    }),
-    retireSelectedTemplates: selected("templates.retire-selected", "Remove templates", retire),
+    deleteSelectedMachines: selected(
+      "machines.delete-selected",
+      l10n("cloud-workspaces.delete-machines", "Delete machines"),
+      (ctx, rowId) => {
+        const { instance, key } = instanceRow(rowId);
+        return deleteMachine.run(ctx, { instance, machineId: key });
+      },
+    ),
+    retireSelectedTemplates: selected(
+      "templates.retire-selected",
+      l10n("cloud-workspaces.remove-templates", "Remove templates"),
+      retire,
+    ),
     retireTemplateRow: defineCommand({
       id: "templates.retire-row",
-      title: "Remove template",
+      title: l10n("cloud-workspaces.remove-template", "Remove template"),
       mutating: true,
       params: rowIdParam,
       async run(ctx, input) {
@@ -82,7 +98,7 @@ export function createSelectionCommands(getInstances = instancesFor) {
     }),
     viewPublishedTemplateRow: defineCommand({
       id: "templates.view-published-row",
-      title: "View template",
+      title: l10n("cloud-workspaces.view-template", "View template"),
       params: rowIdParam,
       async run(ctx, input) {
         const { name, version } = templateRow(input.rowId);

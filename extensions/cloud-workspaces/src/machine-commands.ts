@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { commandRef, defineCommand, params } from "@pstdio/sdk/extensions";
+import { commandRef, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { instancesFor } from "./instances";
 import { machineConnection } from "./machine-connection";
 import { dismissMachine } from "./machine-dismissals";
@@ -16,24 +16,24 @@ import { changed } from "./resources";
 
 const ref = (id: string) => commandRef({ extensionId: "pocketcoder.pocketcoder", id });
 const machineParams = {
-  instance: params.text({ label: "Instance ID", required: true }),
-  machineId: params.text({ label: "Machine ID", required: true }),
+  instance: params.text({ label: l10n("cloud-workspaces.instance-id", "Instance ID"), required: true }),
+  machineId: params.text({ label: l10n("cloud-workspaces.machine-id", "Machine ID"), required: true }),
 };
 
 export function createMachineCommands(getInstances = instancesFor) {
   const launchMachine = defineCommand({
     id: "machines.launch",
-    title: "Launch agent machine",
+    title: l10n("cloud-workspaces.launch-agent-machine", "Launch agent machine"),
     cli: true,
     mutating: true,
     params: {
       instance: params.select({
-        label: "PocketCoder instance",
+        label: l10n("cloud-workspaces.pocketcoder-instance", "PocketCoder instance"),
         required: true,
         options: { command: ref("instances.choices"), valueField: "value", labelField: "label" },
       }),
       template: params.select({
-        label: "Agent template",
+        label: l10n("cloud-workspaces.agent-template", "Agent template"),
         required: true,
         options: {
           command: ref("templates.choices"),
@@ -66,7 +66,7 @@ export function createMachineCommands(getInstances = instancesFor) {
   });
   const connectMachine = defineCommand({
     id: "machines.connect",
-    title: "Connect to agent",
+    title: l10n("cloud-workspaces.connect-to-agent", "Connect to agent"),
     cli: true,
     mutating: true,
     params: machineParams,
@@ -118,7 +118,7 @@ export function createMachineCommands(getInstances = instancesFor) {
   });
   const deleteMachine = defineCommand({
     id: "machines.delete",
-    title: "Delete machine",
+    title: l10n("cloud-workspaces.delete-machine", "Delete machine"),
     cli: true,
     mutating: true,
     params: machineParams,

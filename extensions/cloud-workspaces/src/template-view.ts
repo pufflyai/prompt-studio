@@ -1,11 +1,11 @@
-import { definePage, defineView, workbenchModes } from "@pstdio/sdk/extensions";
+import { definePage, defineView, l10n, workbenchModes } from "@pstdio/sdk/extensions";
 import { catalogPageRef } from "./lab-navigation";
 import { templateKind } from "./resources";
 import { catalogFiles, templateDocument } from "./template-catalog";
 
 export const templateFileView = defineView({
   id: "template-file",
-  title: "Agent template",
+  title: l10n("cloud-workspaces.agent-template", "Agent template"),
   icon: "package",
   body: {
     kind: "file",
@@ -19,7 +19,7 @@ export const templateFileView = defineView({
 
 export const templatePage = definePage({
   id: "template",
-  title: "Agent template",
+  title: l10n("cloud-workspaces.agent-template", "Agent template"),
   icon: "package",
   path: "pocketcoder-template",
   mode: workbenchModes.project,

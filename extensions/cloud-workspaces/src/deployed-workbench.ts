@@ -1,4 +1,4 @@
-import { defineCommand, defineView } from "@pstdio/sdk/extensions";
+import { defineCommand, defineView, l10n } from "@pstdio/sdk/extensions";
 import { refresh } from "./commands";
 import { deployedConnection, deployedName, deployedStatus, listDeployed } from "./deployed-controller";
 import { launchDeployedWorkspace } from "./deployed-launch";
@@ -13,7 +13,7 @@ import { changed, deployedMachineKind } from "./resources";
 
 export const openDeployed = defineCommand({
   id: "deployed.open",
-  title: "Browse deployed PocketCoder instance",
+  title: l10n("cloud-workspaces.browse-deployed-pocketcoder-instance", "Browse deployed PocketCoder instance"),
   cli: true,
   run(ctx) {
     ctx.navigation.open({ kind: "page", page: deployedPageRef });
@@ -32,7 +32,7 @@ const projectMachine = (machine: ControllerMachine) => ({
 
 export const readDeployed = defineCommand({
   id: "deployed.read",
-  title: "Read deployed PocketCoder instance",
+  title: l10n("cloud-workspaces.read-deployed-pocketcoder-instance", "Read deployed PocketCoder instance"),
   cli: true,
   async run(ctx) {
     const name = deployedName(await ctx.settings.all());
@@ -46,22 +46,31 @@ export const readDeployed = defineCommand({
   },
 });
 
-const refreshActions = [{ id: "refresh", label: "Refresh", icon: "refresh-cw", command: refresh.ref }];
+const refreshActions = [
+  { id: "refresh", label: l10n("cloud-workspaces.refresh", "Refresh"), icon: "refresh-cw", command: refresh.ref },
+];
 
 export const deployedInstancesView = defineView({
   id: "deployed-instances",
-  title: "Deployed instance",
+  title: l10n("cloud-workspaces.deployed-instance", "Deployed instance"),
   icon: "cloud",
   body: {
     kind: "dataTable",
     refreshEvents: [changed],
     toolbarActions: refreshActions,
     columns: [
-      { id: "name", label: "Instance" },
-      { id: "state", label: "Connection" },
-      { id: "error", label: "Details" },
+      { id: "name", label: l10n("cloud-workspaces.instance", "Instance") },
+      { id: "state", label: l10n("cloud-workspaces.connection", "Connection") },
+      { id: "error", label: l10n("cloud-workspaces.details", "Details") },
     ],
-    rowActions: [{ id: "open", label: "Browse instance", icon: "server", command: openDeployed.ref }],
+    rowActions: [
+      {
+        id: "open",
+        label: l10n("cloud-workspaces.browse-instance", "Browse instance"),
+        icon: "server",
+        command: openDeployed.ref,
+      },
+    ],
     async query(ctx) {
       const [settings, status] = await Promise.all([ctx.settings.all(), deployedStatus(ctx.connections)]);
       return { rows: [{ id: deployedConnection.id, values: { name: deployedName(settings), ...status } }] };
@@ -74,18 +83,18 @@ export const deployedInstancesView = defineView({
 
 export const deployedTemplatesView = defineView({
   id: "deployed-templates",
-  title: "Templates",
+  title: l10n("cloud-workspaces.templates", "Templates"),
   icon: "package",
   body: {
     kind: "dataTable",
     refreshEvents: [changed],
-    emptyTitle: "No visible templates",
+    emptyTitle: l10n("cloud-workspaces.no-visible-templates", "No visible templates"),
     toolbarActions: refreshActions,
     columns: [
-      { id: "name", label: "Template" },
-      { id: "version", label: "Version" },
-      { id: "status", label: "Status" },
-      { id: "description", label: "Description" },
+      { id: "name", label: l10n("cloud-workspaces.template", "Template") },
+      { id: "version", label: l10n("cloud-workspaces.version", "Version") },
+      { id: "status", label: l10n("cloud-workspaces.status", "Status") },
+      { id: "description", label: l10n("cloud-workspaces.description", "Description") },
     ],
     async query(ctx) {
       const templates = await listDeployed<LabTemplate>(ctx.connections, "/v1/templates");
@@ -101,16 +110,16 @@ export const deployedTemplatesView = defineView({
 
 export const deployedMachinesView = defineView({
   id: "deployed-machines",
-  title: "Machines",
+  title: l10n("cloud-workspaces.machines", "Machines"),
   icon: "bot",
   body: {
     kind: "dataTable",
     refreshEvents: [changed, "pocketcoder.pocketcoder.event.automation-run-changed"],
-    emptyTitle: "No visible machines",
+    emptyTitle: l10n("cloud-workspaces.no-visible-machines", "No visible machines"),
     toolbarActions: [
       {
         id: "launch",
-        label: "Launch workspace",
+        label: l10n("cloud-workspaces.launch-workspace", "Launch workspace"),
         icon: "plus",
         presentation: "primary",
         command: launchDeployedWorkspace.ref,
@@ -120,25 +129,37 @@ export const deployedMachinesView = defineView({
       ...refreshActions,
     ],
     columns: [
-      { id: "name", label: "Machine" },
-      { id: "template", label: "Template" },
-      { id: "state", label: "State" },
-      { id: "createdAt", label: "Created at", type: "date" },
-      { id: "error", label: "Reason" },
+      { id: "name", label: l10n("cloud-workspaces.machine", "Machine") },
+      { id: "template", label: l10n("cloud-workspaces.template", "Template") },
+      { id: "state", label: l10n("cloud-workspaces.state", "State") },
+      { id: "createdAt", label: l10n("cloud-workspaces.created-at", "Created at"), type: "date" },
+      { id: "error", label: l10n("cloud-workspaces.reason", "Reason") },
     ],
     selectionMode: "multiple",
     selectionActions: [
-      { id: "stop-selected", label: "Stop selected", icon: "square", command: stopDeployedMachines.ref },
+      {
+        id: "stop-selected",
+        label: l10n("cloud-workspaces.stop-selected", "Stop selected"),
+        icon: "square",
+        command: stopDeployedMachines.ref,
+      },
       {
         id: "delete-selected",
-        label: "Delete selected",
+        label: l10n("cloud-workspaces.delete-selected", "Delete selected"),
         icon: "trash-2",
         destructive: true,
         command: deleteDeployedMachines.ref,
       },
     ],
     defaultSorts: [{ attributeId: "createdAt", direction: "desc" }],
-    rowActions: [{ id: "open", label: "Open workspace", icon: "bot", command: openDeployedMachine.ref }],
+    rowActions: [
+      {
+        id: "open",
+        label: l10n("cloud-workspaces.open-workspace", "Open workspace"),
+        icon: "bot",
+        command: openDeployedMachine.ref,
+      },
+    ],
     async onRowActivate(ctx, { row }) {
       await ctx.commands.execute(openDeployedMachine.ref, { params: { machineId: row.id } });
     },

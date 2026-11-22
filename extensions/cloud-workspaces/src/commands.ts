@@ -9,7 +9,7 @@ import { deleteTemplates, saveTemplate } from "./template-commands";
 
 export const instanceChoices = defineCommand({
   id: "instances.choices",
-  title: "List running PocketCoder instances",
+  title: l10n("cloud-workspaces.list-running-pocketcoder-instances", "List running PocketCoder instances"),
   cli: true,
   async run(ctx) {
     return (await instancesFor(ctx.projectId).list())
@@ -18,16 +18,16 @@ export const instanceChoices = defineCommand({
   },
 });
 const instanceParam = params.select({
-  label: "PocketCoder instance",
+  label: l10n("cloud-workspaces.pocketcoder-instance", "PocketCoder instance"),
   required: true,
   options: { command: instanceChoices.ref, valueField: "value", labelField: "label" },
 });
 
 export const templateChoices = defineCommand({
   id: "templates.choices",
-  title: "List agent templates",
+  title: l10n("cloud-workspaces.list-agent-templates", "List agent templates"),
   cli: true,
-  params: { instance: params.text({ label: "Instance ID", required: true }) },
+  params: { instance: params.text({ label: l10n("cloud-workspaces.instance-id", "Instance ID"), required: true }) },
   async run(ctx, input) {
     const items = await instancesFor(ctx.projectId).items<{ name: string; version: string; status: string }>(
       input.instance,
@@ -41,10 +41,16 @@ export const templateChoices = defineCommand({
 
 export const importTemplates = defineCommand({
   id: "templates.import",
-  title: "Import agent templates",
+  title: l10n("cloud-workspaces.import-agent-templates", "Import agent templates"),
   cli: true,
   mutating: true,
-  params: { instance: instanceParam, directory: params.text({ label: "Prepared template folder", required: true }) },
+  params: {
+    instance: instanceParam,
+    directory: params.text({
+      label: l10n("cloud-workspaces.prepared-template-folder", "Prepared template folder"),
+      required: true,
+    }),
+  },
   async run(ctx, input) {
     await instancesFor(ctx.projectId).importTemplates(input.instance, input.directory);
     await ctx.events.emit(changed, {});

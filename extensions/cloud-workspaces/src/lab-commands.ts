@@ -54,10 +54,12 @@ export function createLabCommands(getInstances = instancesFor) {
   });
   const select = defineCommand({
     id: "lab.select",
-    title: "Select PocketCoder instance",
+    title: l10n("cloud-workspaces.select-pocketcoder-instance", "Select PocketCoder instance"),
     cli: true,
     mutating: true,
-    params: { instance: params.text({ label: "Instance ID", resolvedFrom: "resource" }) },
+    params: {
+      instance: params.text({ label: l10n("cloud-workspaces.instance-id", "Instance ID"), resolvedFrom: "resource" }),
+    },
     async run(ctx, input) {
       const id = input.instance ?? (ctx.resource?.type === "instance" ? ctx.resource.id : undefined);
       if (!id) throw new Error("Choose a PocketCoder instance.");

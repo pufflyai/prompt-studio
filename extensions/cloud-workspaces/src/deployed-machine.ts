@@ -1,4 +1,12 @@
-import { defineCommand, definePage, defineView, params, workbenchModes } from "@pstdio/sdk/extensions";
+import {
+  defineCommand,
+  definePage,
+  defineView,
+  type Localizable,
+  l10n,
+  params,
+  workbenchModes,
+} from "@pstdio/sdk/extensions";
 import { refresh } from "./commands";
 import { cancelDeployedWorkspace, getDeployed } from "./deployed-controller";
 import { readTestOutput, readWorkspaceLogs } from "./deployed-machine-output";
@@ -8,9 +16,11 @@ import { changed, deployedMachineActionsSlot, deployedMachineKind } from "./reso
 
 export const openDeployedMachine = defineCommand({
   id: "deployed.machine-open",
-  title: "Open deployed workspace",
+  title: l10n("cloud-workspaces.open-deployed-workspace", "Open deployed workspace"),
   cli: true,
-  params: { machineId: params.text({ label: "Machine ID", resolvedFrom: "resource" }) },
+  params: {
+    machineId: params.text({ label: l10n("cloud-workspaces.machine-id", "Machine ID"), resolvedFrom: "resource" }),
+  },
   async run(ctx, input) {
     const machineId = input.machineId ?? ctx.resource?.id;
     if (!machineId) throw new Error("Choose a deployed machine.");
@@ -33,9 +43,9 @@ export const openDeployedMachine = defineCommand({
 
 export const stopDeployedWorkspaceWorker = defineCommand({
   id: "deployed.machine-stop-worker",
-  title: "Stop deployed workspace in background",
+  title: l10n("cloud-workspaces.stop-deployed-workspace-in-background", "Stop deployed workspace in background"),
   automation: true,
-  params: { machineId: params.text({ label: "Machine ID", required: true }) },
+  params: { machineId: params.text({ label: l10n("cloud-workspaces.machine-id", "Machine ID"), required: true }) },
   async run(ctx, { machineId }) {
     try {
       let machine = await cancelDeployedWorkspace(ctx.connections, machineId, ctx.signal);
@@ -69,15 +79,20 @@ export const stopDeployedWorkspaceWorker = defineCommand({
 
 export const stopDeployedWorkspace = defineCommand({
   id: "deployed.machine-stop",
-  title: "Stop workspace",
+  title: l10n("cloud-workspaces.stop-workspace", "Stop workspace"),
   mutating: true,
   menus: [{ slot: deployedMachineActionsSlot, icon: "square", when: { metadata: { canStop: true } } }],
-  params: { confirmed: params.boolean({ label: "Confirm stop", default: false }) },
+  params: {
+    confirmed: params.boolean({ label: l10n("cloud-workspaces.confirm-stop", "Confirm stop"), default: false }),
+  },
   confirmation: {
     kind: "delete",
     confirmedParam: "confirmed",
-    description: "This stops the workspace and any app or test running inside it.",
-    buttonLabel: "Stop workspace",
+    description: l10n(
+      "cloud-workspaces.this-stops-the-workspace-and-any-app-or-test-running-inside-it",
+      "This stops the workspace and any app or test running inside it.",
+    ),
+    buttonLabel: l10n("cloud-workspaces.stop-workspace", "Stop workspace"),
   },
   async run(ctx, { confirmed }) {
     const resource = ctx.resource;
@@ -95,9 +110,9 @@ export const stopDeployedWorkspace = defineCommand({
 
 export const deployedMachineLogs = defineCommand({
   id: "deployed.logs",
-  title: "Read deployed workspace logs",
+  title: l10n("cloud-workspaces.read-deployed-workspace-logs", "Read deployed workspace logs"),
   cli: true,
-  params: { machineId: params.text({ label: "Machine ID", required: true }) },
+  params: { machineId: params.text({ label: l10n("cloud-workspaces.machine-id", "Machine ID"), required: true }) },
   async run(ctx, { machineId }) {
     const [testOutput, logs] = await Promise.all([
       readTestOutput(ctx.connections, machineId),
@@ -107,7 +122,7 @@ export const deployedMachineLogs = defineCommand({
   },
 });
 
-function logView(id: string, title: string, read: typeof readTestOutput, empty: string) {
+function logView(id: string, title: Localizable<string>, read: typeof readTestOutput, empty: string) {
   return defineView({
     id,
     title,
@@ -126,10 +141,20 @@ function logView(id: string, title: string, read: typeof readTestOutput, empty: 
   });
 }
 
-export const deployedTestOutputView = logView("test-output", "Test output", readTestOutput, "No test output yet");
-export const deployedWorkspaceLogsView = logView("workspace-logs", "Workspace logs", readWorkspaceLogs, "No logs yet");
+export const deployedTestOutputView = logView(
+  "test-output",
+  l10n("cloud-workspaces.test-output", "Test output"),
+  readTestOutput,
+  "No test output yet",
+);
+export const deployedWorkspaceLogsView = logView(
+  "workspace-logs",
+  l10n("cloud-workspaces.workspace-logs", "Workspace logs"),
+  readWorkspaceLogs,
+  "No logs yet",
+);
 
-const logTab = (label: string) => ({
+const logTab = (label: Localizable<string>) => ({
   query() {
     return {
       label,
@@ -137,7 +162,11 @@ const logTab = (label: string) => ({
         {
           id: "logs",
           rows: [
-            { id: "refresh", label: "Refresh", action: { kind: "command" as const, target: { command: refresh.ref } } },
+            {
+              id: "refresh",
+              label: l10n("cloud-workspaces.refresh", "Refresh"),
+              action: { kind: "command" as const, target: { command: refresh.ref } },
+            },
           ],
         },
       ],
@@ -147,7 +176,7 @@ const logTab = (label: string) => ({
 
 export const deployedMachinePage = definePage({
   id: "deployed-machine",
-  title: "Deployed workspace",
+  title: l10n("cloud-workspaces.deployed-workspace", "Deployed workspace"),
   icon: "bot",
   path: "pocketcoder-deployed-machine",
   mode: workbenchModes.project,
@@ -159,14 +188,14 @@ export const deployedMachinePage = definePage({
       id: "output",
       region: "main",
       order: 0,
-      tab: logTab("Test output"),
+      tab: logTab(l10n("cloud-workspaces.test-output", "Test output")),
       item: { kind: "view", view: deployedTestOutputView.ref, presence: "open" },
     },
     {
       id: "logs",
       region: "main",
       order: 1,
-      tab: logTab("Workspace logs"),
+      tab: logTab(l10n("cloud-workspaces.workspace-logs", "Workspace logs")),
       item: { kind: "view", view: deployedWorkspaceLogsView.ref, presence: "open" },
     },
   ],

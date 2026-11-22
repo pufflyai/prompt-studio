@@ -1,6 +1,7 @@
 import {
   defineWorkspaceType,
   type JsonObject,
+  l10n,
   params,
   type WorkspaceProviderRef,
   type WorkspaceProviderResult,
@@ -91,12 +92,23 @@ export function projectMachine(extensionId: string, instanceId: string, machine:
 }
 
 export const providerParams = {
-  instance: params.text({ label: "PocketCoder instance ID", required: true }),
-  template: params.text({ label: "Agent template", required: true }),
-  templateVersion: params.text({ label: "Template version (optional)" }),
-  externalId: params.text({ label: "Application task ID (optional)" }),
-  launchInput: params.longText({ label: "One-time launch input (JSON, optional)" }),
-  metadata: params.longText({ label: "Application metadata (JSON, optional)" }),
+  instance: params.text({
+    label: l10n("cloud-workspaces.pocketcoder-instance-id", "PocketCoder instance ID"),
+    required: true,
+  }),
+  template: params.text({ label: l10n("cloud-workspaces.agent-template", "Agent template"), required: true }),
+  templateVersion: params.text({
+    label: l10n("cloud-workspaces.template-version-optional", "Template version (optional)"),
+  }),
+  externalId: params.text({
+    label: l10n("cloud-workspaces.application-task-id-optional", "Application task ID (optional)"),
+  }),
+  launchInput: params.longText({
+    label: l10n("cloud-workspaces.one-time-launch-input-json-optional", "One-time launch input (JSON, optional)"),
+  }),
+  metadata: params.longText({
+    label: l10n("cloud-workspaces.application-metadata-json-optional", "Application metadata (JSON, optional)"),
+  }),
 };
 
 export function launchInputOf(source: unknown) {
@@ -111,7 +123,7 @@ export function launchInputOf(source: unknown) {
 export function createMachineProvider(getInstances = instancesFor) {
   return defineWorkspaceType({
     id: "machine",
-    label: "PocketCoder agent machine",
+    label: l10n("cloud-workspaces.pocketcoder-agent-machine", "PocketCoder agent machine"),
     icon: "server",
     params: providerParams,
     async create(ctx, input) {

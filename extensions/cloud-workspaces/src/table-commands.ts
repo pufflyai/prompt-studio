@@ -1,4 +1,4 @@
-import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
+import { type CommandContext, defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { importTemplates } from "./commands";
 import { catalogTemplateParam, publishTemplate } from "./instance-commands";
 import { instancesFor } from "./instances";
@@ -19,7 +19,7 @@ export const machineTarget = (ctx: Pick<CommandContext, "resource">) => {
 };
 export const selectedTemplateChoices = defineCommand({
   id: "templates.selected-choices",
-  title: "List templates for this instance",
+  title: l10n("cloud-workspaces.list-templates-for-this-instance", "List templates for this instance"),
   cli: true,
   async run(ctx) {
     const templates = await instancesFor(ctx.projectId).items<{ name: string; version: string; status: string }>(
@@ -36,11 +36,11 @@ export const selectedTemplateChoices = defineCommand({
 });
 export const launchSelectedMachine = defineCommand({
   id: "machines.launch-selected",
-  title: "Launch machine",
+  title: l10n("cloud-workspaces.launch-machine", "Launch machine"),
   mutating: true,
   params: {
     template: params.select({
-      label: "Agent template",
+      label: l10n("cloud-workspaces.agent-template", "Agent template"),
       required: true,
       options: { command: selectedTemplateChoices.ref, valueField: "value", labelField: "label" },
     }),
@@ -54,16 +54,21 @@ export const launchSelectedMachine = defineCommand({
 });
 export const importSelectedTemplates = defineCommand({
   id: "templates.import-selected",
-  title: "Import templates",
+  title: l10n("cloud-workspaces.import-templates", "Import templates"),
   mutating: true,
-  params: { directory: params.text({ label: "Prepared template folder", required: true }) },
+  params: {
+    directory: params.text({
+      label: l10n("cloud-workspaces.prepared-template-folder", "Prepared template folder"),
+      required: true,
+    }),
+  },
   async run(ctx, input) {
     return importTemplates.run(ctx, { ...input, instance: await instanceId(ctx) });
   },
 });
 export const publishSelectedTemplate = defineCommand({
   id: "templates.publish-selected",
-  title: "Add template",
+  title: l10n("cloud-workspaces.add-template", "Add template"),
   mutating: true,
   params: { template: catalogTemplateParam },
   async run(ctx, input) {
@@ -72,7 +77,7 @@ export const publishSelectedTemplate = defineCommand({
 });
 export const connectMachineRow = defineCommand({
   id: "machines.connect-row",
-  title: "Connect to agent",
+  title: l10n("cloud-workspaces.connect-to-agent", "Connect to agent"),
   menus: [{ slot: machineActionsSlot, icon: "messages-square", when: { metadata: { canConnect: true } } }],
   mutating: true,
   async run(ctx) {
@@ -81,7 +86,7 @@ export const connectMachineRow = defineCommand({
 });
 export const deleteMachineRow = defineCommand({
   id: "machines.delete-row",
-  title: "Delete machine",
+  title: l10n("cloud-workspaces.delete-machine", "Delete machine"),
   mutating: true,
   async run(ctx) {
     return deleteMachine.run(ctx, machineTarget(ctx));

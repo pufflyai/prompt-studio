@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { instancesFor, PocketCoderHttpError } from "./instances";
 import { type ControllerMachine, launchInputOf, machinePath, providerParams } from "./machines";
 import { changed } from "./resources";
@@ -10,15 +10,15 @@ export const lifecycleInputParams = {
   metadata: providerParams.metadata,
 };
 const lifecycleParams = {
-  instance: params.text({ label: "Instance ID", required: true }),
-  machineId: params.text({ label: "Source machine ID", required: true }),
+  instance: params.text({ label: l10n("cloud-workspaces.instance-id", "Instance ID"), required: true }),
+  machineId: params.text({ label: l10n("cloud-workspaces.source-machine-id", "Source machine ID"), required: true }),
   ...lifecycleInputParams,
 };
 
 export function createMachineLifecycle(getInstances = instancesFor) {
   const relaunchMachine = defineCommand({
     id: "machines.relaunch",
-    title: "Relaunch machine",
+    title: l10n("cloud-workspaces.relaunch-machine", "Relaunch machine"),
     cli: true,
     mutating: true,
     params: lifecycleParams,
@@ -42,7 +42,7 @@ export function createMachineLifecycle(getInstances = instancesFor) {
   });
   const resumeMachine = defineCommand({
     id: "machines.resume",
-    title: "Resume machine",
+    title: l10n("cloud-workspaces.resume-machine", "Resume machine"),
     cli: true,
     mutating: true,
     params: { ...lifecycleParams, templateVersion: providerParams.templateVersion },

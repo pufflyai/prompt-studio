@@ -1,4 +1,4 @@
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { getDeployed } from "./deployed-controller";
 import { type ControllerMachine, machinePath } from "./machines";
 import { deployedMachineActionsSlot } from "./resources";
@@ -13,10 +13,12 @@ export function canOpenDeployedPreview(machine: ControllerMachine) {
 
 export const openDeployedPreview = defineCommand({
   id: "deployed.preview-open",
-  title: "Open app preview",
+  title: l10n("cloud-workspaces.open-app-preview", "Open app preview"),
   cli: true,
   menus: [{ slot: deployedMachineActionsSlot, icon: "external-link", when: { metadata: { canOpenPreview: true } } }],
-  params: { machineId: params.text({ label: "Machine ID", resolvedFrom: "resource" }) },
+  params: {
+    machineId: params.text({ label: l10n("cloud-workspaces.machine-id", "Machine ID"), resolvedFrom: "resource" }),
+  },
   async run(ctx, input) {
     const id = input.machineId ?? ctx.resource?.id;
     if (!id) throw new Error("Choose a deployed preview workspace.");

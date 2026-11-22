@@ -2,6 +2,7 @@ import {
   defineHarness,
   type HarnessContext,
   type HarnessStartInput,
+  l10n,
   reconcileMessageHistory,
 } from "@pstdio/sdk/extensions";
 import { fileTurnMessages, reconnectFileTurn, resumeFileTurn, startFileTurn, supportsFileTurns } from "./file-turns";
@@ -68,7 +69,7 @@ export function createMachineHarness(getInstances = instancesFor) {
   };
   return defineHarness({
     id: "agent",
-    label: "PocketCoder agent",
+    label: l10n("cloud-workspaces.pocketcoder-agent", "PocketCoder agent"),
     cwdRequirement: "optional",
     capabilities: () => ["SessionReattach", "Attachments"],
     start: (ctx, input) => runs.run(ctx, input, (active) => send(ctx, active)),
