@@ -1,4 +1,3 @@
-import { useTooltipContext } from "@chakra-ui/react";
 import * as React from "react";
 import { ScopedTooltip as ChakraTooltip } from "@/utils/scoped-tooltip";
 import { Portal } from "@/utils/ui-scope";
@@ -15,24 +14,6 @@ export interface TooltipProps extends React.ComponentProps<typeof ChakraTooltip.
 }
 
 export const tooltipOpenDelay = 380;
-
-const TooltipHoverReset = (props: { disabled: boolean }) => {
-  const { disabled } = props;
-  const api = useTooltipContext();
-  const lastEnabledLeave = React.useRef<(() => void) | undefined>(undefined);
-
-  React.useLayoutEffect(() => {
-    if (!disabled) lastEnabledLeave.current = api.getTriggerProps().onPointerLeave as (() => void) | undefined;
-  }, [api, disabled]);
-
-  React.useLayoutEffect(() => {
-    // Zag ignores leave while disabled; its current callback does not use an event.
-    // See documentation/adrs/0088-temporary-tooltip-hover-reset.md.
-    if (disabled) lastEnabledLeave.current?.();
-  }, [disabled]);
-
-  return null;
-};
 
 export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(function Tooltip(props, ref) {
   const { children, disabled, portalled = true, content, contentProps, portalRef, ids, overflowRef, ...rest } = props;
@@ -95,7 +76,6 @@ export const Tooltip = React.forwardRef<HTMLDivElement, TooltipProps>(function T
       disabled={visibilityBlocked}
       open={visibilityBlocked && rest.open !== undefined ? false : rest.open}
     >
-      <TooltipHoverReset disabled={visibilityBlocked} />
       <ChakraTooltip.Trigger asChild>{children}</ChakraTooltip.Trigger>
       {!visibilityBlocked ? (
         <Portal disabled={!portalled} container={portalRef}>

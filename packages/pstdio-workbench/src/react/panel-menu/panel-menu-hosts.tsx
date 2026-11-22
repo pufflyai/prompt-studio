@@ -1,4 +1,5 @@
 import { Box } from "@chakra-ui/react";
+import { UiScopeActivity } from "@pstdio/ui";
 import {
   createContext,
   type ReactNode,
@@ -110,12 +111,14 @@ const MenuViewPortal = (props: {
   const [panel, side] = region.split("-") as ["main" | "secondary" | "side", "left" | "right"];
   return createPortal(
     <ViewActivityContext value={parentActive && active}>
-      <WorkbenchRegion
-        workbench={workbench}
-        region={region}
-        title={getWorkbenchPanelMenuLabel(panel, side)}
-        transparent
-      />
+      <UiScopeActivity active={active}>
+        <WorkbenchRegion
+          workbench={workbench}
+          region={region}
+          title={getWorkbenchPanelMenuLabel(panel, side)}
+          transparent
+        />
+      </UiScopeActivity>
     </ViewActivityContext>,
     entry.host,
   );

@@ -196,6 +196,7 @@ describe("createWorkbenchExtensionMetadata", () => {
     const connection = defineConnection({
       id: "control-plane",
       label: "Control plane",
+      scope: "global",
       transport: "http",
       auth: { type: "bearer" },
       allowedMethods: ["GET"],
@@ -212,9 +213,12 @@ describe("createWorkbenchExtensionMetadata", () => {
         label: "Control plane",
         authType: "bearer",
         supportsCheck: true,
+        scope: "global",
       },
     ]);
   });
+});
+describe("createWorkbenchExtensionMetadata navigation", () => {
   test("publishes alpha.4 view, placement, and navigation arrays without renderer records", () => {
     const mode = defineMode({ id: "review", label: "Review", regions: ["main", "side"] });
     const open = defineCommand({ id: "open", title: "Open", run: async () => undefined });

@@ -14,6 +14,7 @@
       "{workspaceRoot}/.npmrc",
       "{workspaceRoot}/tsconfig.base.json",
       "{workspaceRoot}/nx.json",
+      "{workspaceRoot}/patches/**/*",
       "{workspaceRoot}/scripts/build/**/*",
       "{workspaceRoot}/scripts/release/stage-package.ts",
       {
