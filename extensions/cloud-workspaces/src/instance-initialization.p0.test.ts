@@ -52,3 +52,35 @@ test("instance initialization uses the supplied port allocator and keeps control
     await fs.rm(root, { recursive: true, force: true });
   }
 });
+
+test("a failed launch keeps the instance state when the rollback cannot confirm the controller stopped", async () => {
+  const root = await fs.mkdtemp(join(tmpdir(), "cloud-instance-rollback-"));
+  const binary = join(root, "pocketcoder");
+  // A started controller whose status probe fails, as when the probe times out.
+  await fs.writeFile(
+    binary,
+    `#!/bin/sh
+shift 2
+case "$1 $2" in
+  "server start") mkdir -p "$POCKETCODER_STATE_DIR" && echo '{"pid":1}' > "$POCKETCODER_STATE_DIR/server.json" ;;
+  "server status") exit 1 ;;
+  "superuser create") echo '{"token":"owner","key":{"expires_at":"2099-01-01T00:00:00Z"}}' ;;
+esac
+`,
+    { mode: 0o755 },
+  );
+  // Nothing listens on the controller port, so publishing the template fails after startup.
+  const closed = Bun.serve({ port: 0, fetch: () => new Response() });
+  const port = closed.port!;
+  await closed.stop(true);
+  const ports = [port, port + 1];
+  try {
+    const instances = createInstances(join(root, "instances"));
+    await expect(
+      instances.launch({ name: "Publish fails", binary, manifests: [{}] }, async () => ports.shift()!),
+    ).rejects.toThrow();
+    expect(await fs.readdir(join(root, "instances"))).toHaveLength(1);
+  } finally {
+    await fs.rm(root, { recursive: true, force: true });
+  }
+});

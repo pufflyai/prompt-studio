@@ -235,7 +235,11 @@ export function createInstances(root: string) {
         if (input.templates) await this.importTemplates(id, input.templates);
         return started;
       } catch (error) {
-        if (initialized) await this.stop(id);
+        if (initialized) {
+          await this.stop(id);
+          // A failed status probe also reads as stopped, so keep the state unless the controller is confirmed gone.
+          if (await controllerRunning(await read<Instance>(id, "instance.json")).catch(() => true)) throw error;
+        }
         await rm(directory(id), { recursive: true });
         throw error;
       }
