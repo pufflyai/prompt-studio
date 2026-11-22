@@ -9,12 +9,37 @@ describe("createExtensionProcessEnvironment", () => {
         COMSPEC: "cmd.exe",
         SYSTEMROOT: "C:\\Windows",
         PSMODULEPATH: "C:\\Modules",
+        AppData: "roaming",
+        LocalAppData: "local",
         openai_api_key: "secret",
       },
       { PATH: "new" },
       "win32",
     );
-    expect(env).toEqual({ PATH: "new", ComSpec: "cmd.exe", SystemRoot: "C:\\Windows", PSModulePath: "C:\\Modules" });
+    expect(env).toEqual({
+      PATH: "new",
+      ComSpec: "cmd.exe",
+      SystemRoot: "C:\\Windows",
+      PSModulePath: "C:\\Modules",
+      APPDATA: "roaming",
+      LOCALAPPDATA: "local",
+    });
+  });
+
+  test("shares selected host variables only with the configured extension's commands", () => {
+    const host = {
+      PSTDIO_EXTENSION_PROCESS_ENV: "pstdio.github:GH_TOKEN,pstdio.github:GITHUB_TOKEN",
+      Gh_Token: "primary",
+      GITHUB_TOKEN: "fallback",
+      OTHER_TOKEN: "private",
+    };
+    expect(createExtensionProcessEnvironment(host, {}, "win32", "pstdio.github")).toEqual({
+      GH_TOKEN: "primary",
+      GITHUB_TOKEN: "fallback",
+    });
+    expect(createExtensionProcessEnvironment(host, {}, "win32", "other.github")).toEqual({});
+    expect(createExtensionProcessEnvironment(host, {}, "win32")).toEqual({});
+    expect(createExtensionInstallEnvironment(host, "win32")).toEqual({});
   });
 
   test("keeps Unix environment names case sensitive", () => {

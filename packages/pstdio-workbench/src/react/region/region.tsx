@@ -1,4 +1,5 @@
 import { Box, Flex } from "@chakra-ui/react";
+import { UiScopeActivity } from "@pstdio/ui";
 import { useLayoutEffect, useRef } from "react";
 import type {
   RegisteredPlaceholderContribution,
@@ -137,7 +138,13 @@ const WorkbenchRegionPlacement = (props: WorkbenchRegionPlacementProps) => {
       visibility={renderState.visibility}
       w="full"
     >
-      <WorkbenchWidgetHost workbench={workbench} placement={placement} />
+      <UiScopeActivity active={visible && (renderState.active || additive)}>
+        <WorkbenchWidgetHost
+          workbench={workbench}
+          placement={placement}
+          visible={visible && (renderState.active || additive)}
+        />
+      </UiScopeActivity>
     </Box>
   );
 };

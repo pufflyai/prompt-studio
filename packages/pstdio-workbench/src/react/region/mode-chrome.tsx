@@ -1,4 +1,5 @@
 import { Box } from "@chakra-ui/react";
+import { UiScopeActivity } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchRegion } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useRetainedViewPlacements } from "./use-retained-view-placements";
@@ -27,7 +28,14 @@ export const ModeChromeView = (props: { workbench: WorkbenchCore; viewId?: strin
           display={placement.viewId === viewId ? "flex" : "none"}
           inert={placement.viewId !== viewId}
         >
-          <WorkbenchWidgetHost workbench={workbench} region={region} placement={placement} />
+          <UiScopeActivity active={placement.viewId === viewId}>
+            <WorkbenchWidgetHost
+              workbench={workbench}
+              region={region}
+              placement={placement}
+              visible={placement.viewId === viewId}
+            />
+          </UiScopeActivity>
         </Box>
       ))}
     </Box>

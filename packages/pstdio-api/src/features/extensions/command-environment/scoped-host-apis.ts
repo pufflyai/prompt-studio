@@ -41,6 +41,7 @@ export const createScopedHostApis = (
   deps: ExtensionsRouteDeps,
   input: {
     project: ExtensionProjectContext;
+    extensionId: string;
     projectId: string;
     workspaceId?: string;
     eventId?: string;
@@ -71,7 +72,7 @@ export const createScopedHostApis = (
     sessions: createSessionsApi(deps, { projectId: input.projectId, project: input.project, signal, scope }),
     workspaces: createWorkspacesApi(deps, { projectId: input.projectId, signal }, runtimeDeps),
     connections: signal ? withConnectionSignal(hosts.connections, signal) : hosts.connections,
-    process: createProcessApi({ scope, resolveCwd }),
+    process: createProcessApi({ scope, resolveCwd, extensionId: input.extensionId }),
     terminal: scope && terminal ? withSessionOwnership(terminal, scope) : terminal,
   };
 };

@@ -97,8 +97,10 @@ test("sync bursts coalesce a held project read without rereading account status"
   const f = cloudQueryFixture();
   const initial = f.holdSync();
   try {
+    await f.account.read();
     f.observe(f.queries.account);
     f.observe(f.queries.projectSync);
+    await initial.entered;
     f.setSync({ state: "offline", offlineReady: true });
     for (let event = 0; event < 50; event++) f.emit(accountEvents.projectSyncChanged.id, "project");
     await f.account.read();

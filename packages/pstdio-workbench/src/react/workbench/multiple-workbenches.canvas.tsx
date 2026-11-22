@@ -3,8 +3,10 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import {
   ScopedDialog as Dialog,
   ScopedMenu as Menu,
+  ScopedPopover as Popover,
   Portal,
   psTheme,
+  UiScopeActivity,
   useFileIconThemePreference,
   useThemePreference,
 } from "@pstdio/ui";
@@ -58,6 +60,22 @@ const Editor = (props: {
           </Menu.Positioner>
         </Portal>
       </Menu.Root>
+      <UiScopeActivity active>
+        <Popover.Root>
+          <Popover.Trigger asChild>
+            <Button size="sm">{name} popover</Button>
+          </Popover.Trigger>
+          <Portal>
+            <Popover.Positioner>
+              <Popover.Content aria-label={`${name} popover`}>
+                <Popover.Body>
+                  <Input aria-label={`${name} popover draft`} />
+                </Popover.Body>
+              </Popover.Content>
+            </Popover.Positioner>
+          </Portal>
+        </Popover.Root>
+      </UiScopeActivity>
       <Button size="sm" onClick={() => setDialogOpen(true)}>
         {name} dialog
       </Button>
@@ -206,6 +224,7 @@ const meta = {
   title: "Product/Workbench/Multiple workbenches",
   component: MultipleWorkbenches,
   fullscreen: true,
+  description: "Switch projects while a popover is open; its unfinished input stays intact when the project returns.",
 } satisfies CanvasMeta<typeof MultipleWorkbenches>;
 export default meta;
 type Story = CanvasFrame<typeof meta>;
