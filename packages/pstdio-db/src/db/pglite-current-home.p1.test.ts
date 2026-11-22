@@ -7,21 +7,40 @@ import { createDb } from "./connection.pglite";
 import { retiredHomePath } from "./pglite-current-home";
 import { engineIdentity } from "./pglite-home-recovery";
 
+// Temporary PS-282 phase tracing: retain the existing cases, assertions and five-second allowances.
+const trace = (scenario: string) => {
+  const started = performance.now();
+  return (phase: string) =>
+    console.info(JSON.stringify({ diagnostic: "PS-282", scenario, phase, elapsedMs: performance.now() - started }));
+};
+
 test("createDb moves an old home into a JSON-exported backup and starts with a current database", async () => {
+  const mark = trace("legacy-home");
   const root = await mkdtemp(join(tmpdir(), "pglite-retire-"));
   const path = join(root, "pstdio.db");
   try {
+    mark("legacy.create.start");
     const old = await PGlite.create(path);
+    mark("legacy.create.end");
     await old.exec("create table projects(id text primary key, name text); insert into projects values ('p1', 'Kept')");
+    mark("legacy.seed.end");
     await old.close();
+    mark("legacy.close.end");
 
     const phases: string[] = [];
-    const db = await createDb({ path, onPhase: (phase) => phases.push(phase) });
+    const db = await createDb({
+      path,
+      onPhase: (phase) => {
+        phases.push(phase);
+        mark(phase);
+      },
+    });
     try {
       expect(phases).toEqual(expect.arrayContaining(["database_retiring", "database_retired", "database_migrated"]));
       expect((await db.pglite.query("select count(*)::int as count from projects")).rows).toEqual([{ count: 0 }]);
     } finally {
       await db.close();
+      mark("current.close.end");
     }
     const [backup] = await readdir(join(root, "backups"));
     expect(backup).toStartWith("pre-0.46-");
@@ -33,10 +52,12 @@ test("createDb moves an old home into a JSON-exported backup and starts with a c
     expect(phases.filter((phase) => phase === "database_retiring")).toHaveLength(1);
   } finally {
     await rm(root, { recursive: true, force: true });
+    mark("cleanup.end");
   }
 });
 
 test("first creation and symlink opens share one canonical current home", async () => {
+  const mark = trace("canonical-home");
   const root = await mkdtemp(join(tmpdir(), "pglite-runtime-initialize-"));
   const directory = join(root, "homes");
   const parentAlias = join(root, "parent-alias");
@@ -45,7 +66,10 @@ test("first creation and symlink opens share one canonical current home", async 
   const path = join(parentAlias, "database");
   try {
     const phases: string[] = [];
-    const onPhase = (phase: string) => phases.push(phase);
+    const onPhase = (phase: string) => {
+      phases.push(phase);
+      mark(phase);
+    };
     const first = await createDb({ path, onPhase });
     try {
       await first.pglite.exec(
@@ -62,6 +86,7 @@ test("first creation and symlink opens share one canonical current home", async 
       expect(first.path).toBe(join(await realpath(directory), "database"));
     } finally {
       await first.close();
+      mark("first.close.end");
     }
     const homeAlias = join(root, "home-alias");
     await symlink(join(directory, "database"), homeAlias, "junction");
@@ -71,21 +96,25 @@ test("first creation and symlink opens share one canonical current home", async 
       expect(JSON.parse(await readFile(join(homeAlias, ".pstdio-engine.json"), "utf8"))).toEqual(engineIdentity);
     } finally {
       await second.close();
+      mark("second.close.end");
     }
     expect(phases).not.toContain("database_retiring");
   } finally {
     await rm(root, { recursive: true, force: true });
+    mark("cleanup.end");
   }
 });
 
 test("a home the export cannot read is still moved aside with the error recorded", async () => {
+  const mark = trace("unreadable-home");
   const root = await mkdtemp(join(tmpdir(), "pglite-retire-unreadable-"));
   const path = join(root, "pstdio.db");
   try {
     await mkdir(path);
     await Bun.write(join(path, "notes.txt"), "not a database");
-    const db = await createDb({ path });
+    const db = await createDb({ path, onPhase: mark });
     await db.close();
+    mark("current.close.end");
     const [backup] = await readdir(join(root, "backups"));
     expect(await Bun.file(join(root, "backups", backup, "export-error.txt")).text()).toContain(
       "Database export worker failed",
@@ -93,10 +122,12 @@ test("a home the export cannot read is still moved aside with the error recorded
     expect(await Bun.file(join(root, "backups", backup, "database", "notes.txt")).text()).toBe("not a database");
   } finally {
     await rm(root, { recursive: true, force: true });
+    mark("cleanup.end");
   }
 });
 
 test("a start stopped during the export keeps the old home and leaves no partial backup", async () => {
+  const mark = trace("stopped-export");
   const root = await mkdtemp(join(tmpdir(), "pglite-retire-stopped-"));
   const path = join(root, "pstdio.db");
   try {
@@ -109,6 +140,7 @@ test("a start stopped during the export keeps the old home and leaves no partial
         path,
         signal: controller.signal,
         onPhase: (phase) => {
+          mark(phase);
           if (phase === "database_retiring") controller.abort(new Error("quit during export"));
         },
       }),
@@ -117,6 +149,7 @@ test("a start stopped during the export keeps the old home and leaves no partial
     expect(await readdir(join(root, "backups"))).toEqual([]);
   } finally {
     await rm(root, { recursive: true, force: true });
+    mark("cleanup.end");
   }
 });
 
