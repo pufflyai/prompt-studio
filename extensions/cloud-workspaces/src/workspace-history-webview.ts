@@ -62,6 +62,7 @@ export default defineExtensionView({
           "{{count}} running",
           { count: point.count },
         )}`;
+      else detail.textContent = "";
     };
 
     const loadingText = () => t("cloud-workspaces.history-loading", "Loading workspace history…");

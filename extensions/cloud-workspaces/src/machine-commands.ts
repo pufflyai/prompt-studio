@@ -88,6 +88,10 @@ export function createMachineCommands(getInstances = instancesFor) {
         sessionId = await previousMachineSession(ctx, input.instance, machine.id);
       if (connection.kind === "relay") await checkRelayDevice(ctx, connection.deviceId);
       const existing = sessionId ? await ctx.sessions.get(sessionId) : null;
+      const conversationId =
+        !existing && connection.kind === "session"
+          ? await latestMachineConversation(instances, input.instance, machine)
+          : undefined;
       const session =
         existing ??
         (await ctx.sessions.create({
@@ -105,12 +109,7 @@ export function createMachineCommands(getInstances = instancesFor) {
               }),
         }));
       if (connection.kind === "session")
-        await instances.bindSession(
-          session.id,
-          input.instance,
-          machine.id,
-          existing ? undefined : await latestMachineConversation(instances, input.instance, machine),
-        );
+        await instances.bindSession(session.id, input.instance, machine.id, conversationId);
       await ctx.storage.set(key, session.id);
       ctx.navigation.open(machineSessionTarget(ctx.projectId, session));
       return { machineId: machine.id, sessionId: session.id };

@@ -3,13 +3,13 @@ import { refresh } from "./commands";
 import { deployedConnection, deployedName, deployedStatus, listDeployed } from "./deployed-controller";
 import { launchDeployedWorkspace } from "./deployed-launch";
 import { openDeployedMachine } from "./deployed-machine";
-import { canOpenDeployedPreview } from "./deployed-preview";
+import { projectDeployedMachineResource } from "./deployed-machine-resource";
 import { deleteDeployedMachines, dismissedDeployedMachineKey, stopDeployedMachines } from "./deployed-selection";
 import type { LabTemplate } from "./lab-model";
 import { deployedPageRef } from "./lab-navigation";
 import { machineStateLabel } from "./machine-status";
-import { type ControllerMachine, isTerminal } from "./machines";
-import { changed, deployedMachineKind } from "./resources";
+import type { ControllerMachine } from "./machines";
+import { changed } from "./resources";
 
 export const openDeployed = defineCommand({
   id: "deployed.open",
@@ -177,15 +177,7 @@ export const deployedMachinesView = defineView({
             const { id, ...values } = projectMachine(machine);
             return {
               id,
-              resource: {
-                type: deployedMachineKind.id,
-                id,
-                label: values.name,
-                metadata: {
-                  canStop: !isTerminal(machine) && machine.state !== "terminating",
-                  canOpenPreview: canOpenDeployedPreview(machine),
-                },
-              },
+              resource: projectDeployedMachineResource(ctx, machine),
               values,
             };
           }),

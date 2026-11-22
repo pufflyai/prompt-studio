@@ -1,15 +1,10 @@
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import { getDeployed } from "./deployed-controller";
+import { canOpenDeployedPreview } from "./deployed-machine-resource";
 import { type ControllerMachine, machinePath } from "./machines";
 import { deployedMachineActionsSlot } from "./resources";
 
-export function canOpenDeployedPreview(machine: ControllerMachine) {
-  return (
-    machine.state === "ready" &&
-    machine.metadata?.purpose === "pstdio-preview" &&
-    ["prompt-studio-preview", "prompt-studio-preview-branch"].includes(machine.template.name)
-  );
-}
+export { canOpenDeployedPreview } from "./deployed-machine-resource";
 
 export const openDeployedPreview = defineCommand({
   id: "deployed.preview-open",

@@ -83,16 +83,20 @@ export const createDeployedWorkspace = (
     signal,
   });
 
-export async function listDeployed<T>(connections: Connections, path: string) {
-  const items: T[] = [];
+export async function* deployedItems<T>(connections: Connections, path: string): AsyncGenerator<T> {
   const query = new URLSearchParams({ limit: "100" });
   let cursor: string | null;
   do {
     const page = await getDeployed<Page<T>>(connections, `${path}?${query}`);
-    items.push(...page.items);
+    yield* page.items;
     cursor = page.next_cursor;
     if (cursor) query.set("cursor", cursor);
   } while (cursor);
+}
+
+export async function listDeployed<T>(connections: Connections, path: string) {
+  const items: T[] = [];
+  for await (const item of deployedItems<T>(connections, path)) items.push(item);
   return items;
 }
 

@@ -10,6 +10,7 @@ import {
 import { refresh } from "./commands";
 import { cancelDeployedWorkspace, getDeployed } from "./deployed-controller";
 import { readTestOutput, readWorkspaceLogs } from "./deployed-machine-output";
+import { projectDeployedMachineResource } from "./deployed-machine-resource";
 import { deployedMachinePageRef, deployedPageRef } from "./lab-navigation";
 import { type ControllerMachine, isTerminal, machinePath } from "./machines";
 import { changed, deployedMachineActionsSlot, deployedMachineKind } from "./resources";
@@ -28,14 +29,7 @@ export const openDeployedMachine = defineCommand({
     ctx.navigation.open({
       kind: "page",
       page: deployedMachinePageRef,
-      resource: {
-        type: deployedMachineKind.id,
-        extensionId: ctx.extensionId,
-        projectId: ctx.projectId,
-        id: machine.id,
-        label: machine.external_id,
-        icon: "bot",
-      },
+      resource: projectDeployedMachineResource(ctx, machine),
     });
     return { machineId: machine.id };
   },

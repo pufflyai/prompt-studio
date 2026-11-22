@@ -14,11 +14,12 @@ export function drawWorkspaceHistory(
   const height = canvas.clientHeight;
   const first = points[0];
   const last = points.at(-1);
-  if (!context || !first || !last || width < 90 || height < 70) return;
+  if (!context) return;
 
   const ratio = window.devicePixelRatio;
   canvas.width = Math.round(width * ratio);
   canvas.height = Math.round(height * ratio);
+  if (!first || !last || width < 90 || height < 70) return;
   context.scale(ratio, ratio);
 
   const style = getComputedStyle(canvas);

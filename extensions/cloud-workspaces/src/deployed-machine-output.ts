@@ -1,7 +1,8 @@
 import { stripVTControlCharacters } from "node:util";
 import type { ConversationMessage, LogChunk } from "@pstdio/pocketcoder-sdk";
 import type { ExtensionConnectionsApi } from "@pstdio/sdk/extensions";
-import { getDeployed, listDeployed } from "./deployed-controller";
+import { deployedItems, getDeployed, listDeployed } from "./deployed-controller";
+import { createLogTail } from "./log-tail";
 import { machinePath } from "./machines";
 
 type Connections = Pick<ExtensionConnectionsApi, "request">;
@@ -38,6 +39,8 @@ export async function readTestOutput(connections: Connections, machineId: string
 }
 
 export async function readWorkspaceLogs(connections: Connections, machineId: string) {
-  const chunks = await listDeployed<LogChunk>(connections, `${machinePath(machineId)}/logs`);
-  return tail(chunks.map((chunk) => chunk.content).join(""));
+  const output = createLogTail(outputLimit);
+  for await (const chunk of deployedItems<LogChunk>(connections, `${machinePath(machineId)}/logs`))
+    output.append(chunk.content);
+  return output.read();
 }

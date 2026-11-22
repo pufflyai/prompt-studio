@@ -21,11 +21,21 @@ export const saveTemplate = defineCommand({
     }),
   },
   async run(ctx, input) {
-    let source = input.source;
-    if (!source.trim().startsWith("{")) source = JSON.stringify(Bun.YAML.parse(source));
-    const template = parseCatalogTemplate("template.json", source);
-    const path = `${templateDirectory}/${encodeURIComponent(template.name)}-${encodeURIComponent(template.version)}.json`;
-    await catalogFiles(ctx).writeText(path, JSON.stringify(template.manifest, null, 2));
+    let manifest: unknown;
+    try {
+      manifest = JSON.parse(input.source);
+    } catch {
+      manifest = Bun.YAML.parse(input.source);
+    }
+    const template = parseCatalogTemplate("template.json", JSON.stringify(manifest));
+    const files = catalogFiles(ctx);
+    const existing = (await listCatalog(files)).find(
+      (entry) => entry.template?.name === template.name && entry.template.version === template.version,
+    );
+    const path =
+      existing?.path ??
+      `${templateDirectory}/${encodeURIComponent(JSON.stringify([template.name, template.version]))}.json`;
+    await files.writeText(path, JSON.stringify(template.manifest, null, 2));
     await ctx.events.emit(changed, {});
     return { path, name: template.name, version: template.version };
   },

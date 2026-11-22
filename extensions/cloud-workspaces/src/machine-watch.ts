@@ -19,10 +19,17 @@ export function createMachineWatch(getInstances = instancesFor) {
       const read = async <T>(path: string) => {
         while (true) {
           try {
-            return await instances.request<T>(instance, path, { signal: ctx.signal });
+            return await instances.request<T>(instance, path, {
+              signal: AbortSignal.any([ctx.signal, AbortSignal.timeout(35_000)]),
+            });
           } catch (error) {
             if (ctx.signal.aborted) throw error;
-            if (!(error instanceof TypeError) && !(error instanceof PocketCoderHttpError && error.status >= 500))
+            const timedOut = error instanceof DOMException && error.name === "TimeoutError";
+            if (
+              !timedOut &&
+              !(error instanceof TypeError) &&
+              !(error instanceof PocketCoderHttpError && error.status >= 500)
+            )
               throw error;
             await setTimeout(1_000, undefined, { signal: ctx.signal });
           }

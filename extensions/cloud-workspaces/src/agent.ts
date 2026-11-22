@@ -18,6 +18,7 @@ export function createMachineHarness(getInstances = instancesFor) {
       workspace?: HarnessStartInput["workspace"];
       agentSessionId?: string;
       sessionId?: string;
+      signal?: AbortSignal;
     },
   ) => {
     const execution = input.workspace?.executionTarget;
@@ -43,6 +44,7 @@ export function createMachineHarness(getInstances = instancesFor) {
       await instances.request(
         ref.instanceId,
         `/v1/workspaces/${ref.machineId}/conversations/${input.agentSessionId.split(":").at(-1)}?limit=1`,
+        { signal: input.signal },
       );
     return { ...ref, sessionId, instances };
   };

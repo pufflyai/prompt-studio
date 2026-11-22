@@ -19,6 +19,14 @@ export interface Instance {
   removed?: boolean;
 }
 
+interface InstanceLaunchInput {
+  name: string;
+  binary?: string;
+  projectRoot?: string;
+  templates?: string;
+  manifests?: unknown[];
+}
+
 export class PocketCoderHttpError extends Error {
   constructor(
     readonly status: number,
@@ -198,38 +206,34 @@ export function createInstances(root: string) {
       // Keep the controller database and checkpoints so saved conversations and recovery data survive removal.
       await write(id, "instance.json", { ...instance, removed: true });
     },
-    async launch(input: {
-      name: string;
-      binary?: string;
-      projectRoot?: string;
-      templates?: string;
-      manifests?: unknown[];
-    }) {
+    async launch(input: InstanceLaunchInput) {
       const workloadLimits = instanceLimits(input.manifests ?? []);
       const binary = await resolveExecutable(input);
       const id = randomUUID();
       await mkdir(directory(id), { recursive: true, mode: 0o700 });
-      await writeFile(join(directory(id), "empty.env"), "", { mode: 0o600 });
-      const operatorPort = await freePort();
-      let agentPort = await freePort();
-      while (agentPort === operatorPort) agentPort = await freePort();
-      const instance: Instance = {
-        id,
-        name: input.name,
-        binary,
-        url: `http://127.0.0.1:${operatorPort}`,
-        agentPort,
-        state: "stopped",
-        ...(workloadLimits ? { workloadLimits } : {}),
-      };
-      await write(id, "instance.json", instance);
+      let initialized = false;
       try {
+        await writeFile(join(directory(id), "empty.env"), "", { mode: 0o600 });
+        const operatorPort = await freePort();
+        let agentPort = await freePort();
+        while (agentPort === operatorPort) agentPort = await freePort();
+        const instance: Instance = {
+          id,
+          name: input.name,
+          binary,
+          url: `http://127.0.0.1:${operatorPort}`,
+          agentPort,
+          state: "stopped",
+          ...(workloadLimits ? { workloadLimits } : {}),
+        };
+        await write(id, "instance.json", instance);
+        initialized = true;
         const started = await start(id);
         for (const manifest of input.manifests ?? []) await this.publish(id, manifest);
         if (input.templates) await this.importTemplates(id, input.templates);
         return started;
       } catch (error) {
-        await this.stop(id);
+        if (initialized) await this.stop(id);
         await rm(directory(id), { recursive: true });
         throw error;
       }
