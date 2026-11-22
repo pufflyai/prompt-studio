@@ -4,7 +4,7 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createHeadersModule } from "./module";
 
 describe("createHeadersModule", () => {
-  test("places the project selector in Nav Chrome without adding it to the Sidenav", async () => {
+  test("places page navigation in Nav Chrome without adding it to the Sidenav", async () => {
     const workbench = createWorkbench();
 
     workbench.registerModule(createHeadersModule());

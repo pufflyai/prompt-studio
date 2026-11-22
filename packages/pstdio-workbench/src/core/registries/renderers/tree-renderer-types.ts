@@ -9,6 +9,8 @@ import type { ResourceRef } from "../resources/resource-registry";
 import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./renderer-registry";
 
 export interface TreeQueryContext {
+  /** Presentation state belongs to a resource/page, independently of the rendering surface. */
+  stateScope?: string;
   pageParams?: import("@pstdio/sdk/extensions").PageParams;
   signal?: AbortSignal;
   /** Publish available sections while the rest of the current read is still loading. */
@@ -244,10 +246,10 @@ export interface TreeRendererRegistry {
   getHeader(id: string, ctx?: TreeQueryContext): Promise<TreeViewSection[]>;
   getFooter(id: string, ctx?: TreeQueryContext): Promise<TreeViewSection[]>;
   getChildren(id: string, node: TreeNode, ctx?: TreeQueryContext): Promise<TreeNode[]>;
-  getTreeState(id: string): TreeRendererState;
-  setNodeExpanded(id: string, nodeId: string, expanded: boolean): void;
-  setSectionExpanded(id: string, sectionId: string, expanded: boolean): void;
-  setSelectedNode(id: string, nodeId: string | undefined): void;
+  getTreeState(id: string, stateScope?: string): TreeRendererState;
+  setNodeExpanded(id: string, nodeId: string, expanded: boolean, stateScope?: string): void;
+  setSectionExpanded(id: string, sectionId: string, expanded: boolean, stateScope?: string): void;
+  setSelectedNode(id: string, nodeId: string | undefined, stateScope?: string): void;
   setLoading(id: string, loading: boolean): void;
   refresh(id: string, event?: QueryChangeEnvelope): void;
   onDidRefresh(listener: TreeRendererRefreshListener): Disposable;

@@ -1,5 +1,5 @@
 import { type RelatedResourceOpening, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
-import type { WorkbenchModuleContext, WorkbenchRegionState } from "../../core";
+import { type WorkbenchModuleContext, type WorkbenchRegionState, workbenchPanelRegions } from "../../core";
 import { relatedResourcePageKey } from "./related-resource-page-key";
 
 const regions = ["side", "secondary"] as const;
@@ -179,9 +179,9 @@ export const createRelatedResourcePreferences = (
     },
     shouldReveal(source: ResourceRef, entry: RelatedResourceOpening) {
       const choices = forSource(source);
-      const actual = Object.values(ctx.layout.getLayout().regions).find((region) =>
-        region.widgets.some((panel) => resourceKey(panel.resource) === resourceKey(entry.resource)),
-      );
+      const actual = workbenchPanelRegions
+        .map((region) => ctx.layout.getLayout().regions[region])
+        .find((region) => region.widgets.some((panel) => resourceKey(panel.resource) === resourceKey(entry.resource)));
       const region = actual?.id ?? entry.region;
       return (region !== "side" && region !== "secondary") || choices[region]?.visible !== false;
     },

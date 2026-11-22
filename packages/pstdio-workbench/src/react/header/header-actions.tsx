@@ -7,6 +7,7 @@ import {
   type ResourceRef,
   type WorkbenchCommandExecutionContext,
   type WorkbenchCore,
+  type WorkbenchWidgetPlacement,
 } from "../../core";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { hasCommandParameters } from "../command-palette/command-palette-params";
@@ -20,6 +21,9 @@ interface WorkbenchHeaderActionsProps {
   workbench: WorkbenchCore;
   menuPath: MenuPath;
   controlSize?: "2xs" | "xs";
+  placement?: WorkbenchWidgetPlacement;
+  itemIds?: readonly string[];
+  iconOnly?: boolean;
 }
 
 const commandExecutionContext = (resource: ResourceRef | undefined): WorkbenchCommandExecutionContext | undefined =>
@@ -29,9 +33,25 @@ const WorkbenchInlineHeaderAction = (props: {
   item: WorkbenchMenuItem;
   onSelect: (item: WorkbenchMenuItem) => void;
   controlSize: "2xs" | "xs";
+  iconOnly?: boolean;
 }) => {
-  const { controlSize, item, onSelect } = props;
+  const { controlSize, item, onSelect, iconOnly } = props;
   const onClick = () => onSelect(item);
+
+  if (iconOnly)
+    return (
+      <Tooltip content={item.label}>
+        <IconButton
+          aria-label={item.label}
+          size={controlSize}
+          variant="ghost"
+          disabled={item.disabled}
+          onClick={onClick}
+        >
+          <WorkbenchIcon name={item.icon ?? "Circle"} size={14} />
+        </IconButton>
+      </Tooltip>
+    );
 
   if (item.group === "primary" || !item.icon) {
     return (
@@ -57,16 +77,26 @@ const WorkbenchInlineHeaderAction = (props: {
   );
 };
 
-export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
-  const { controlSize = "xs", menuPath, workbench } = props;
+export const useWorkbenchHeaderItems = (
+  workbench: WorkbenchCore,
+  menuPath: MenuPath,
+  placement?: WorkbenchWidgetPlacement,
+) => {
   const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
   // Command handlers can read the focused panel while the page's primary resource stays unchanged.
   const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
-  const resource = getAnchorResource(layout, "primary");
+  const resource = placement ? placement.resource : getAnchorResource(layout, "primary");
   const items = listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, menuPath, { resource });
-  const { inlineItems, overflowItems } = resolveWorkbenchHeaderActionGroups(items);
+  return { commands, resource, items };
+};
+
+export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
+  const { controlSize = "xs", menuPath, workbench, placement } = props;
+  const { commands, resource, items } = useWorkbenchHeaderItems(workbench, menuPath, placement);
+  const filtered = props.itemIds ? items.filter((item) => props.itemIds!.includes(item.id)) : items;
+  const { inlineItems, overflowItems } = resolveWorkbenchHeaderActionGroups(filtered);
 
   // Actions whose command declares parameters collect that input through the shared
   // command params dialog (opened via the command palette store) before running;
@@ -87,7 +117,13 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
   return (
     <HStack flexShrink={0} gap="2xs" minW="0">
       {inlineItems.map((item) => (
-        <WorkbenchInlineHeaderAction key={item.id} item={item} onSelect={onSelect} controlSize={controlSize} />
+        <WorkbenchInlineHeaderAction
+          key={item.id}
+          item={item}
+          onSelect={onSelect}
+          controlSize={controlSize}
+          iconOnly={props.iconOnly}
+        />
       ))}
       {overflowItems.length > 0 ? (
         <Menu.Root>

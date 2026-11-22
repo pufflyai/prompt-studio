@@ -28,6 +28,7 @@ export const useTreeRead = (
   ownerKey = JSON.stringify(["tree", treeViewId, viewId]),
   placement?: WorkbenchPanelInstance,
   enabled = true,
+  stateScope?: string,
 ) => {
   const pageParams = usePageParams(workbench, placement, enabled);
   // Look the renderers up where they are used: React Compiler treats a held call result as mutable until its
@@ -79,6 +80,7 @@ export const useTreeRead = (
   const refreshKey = JSON.stringify(scope ?? [resourceKey(resource), resourceKey(location?.resource), mode, pageOwner]);
   const queryKey = rendererQueryKey([
     treeViewId,
+    stateScope,
     viewId,
     project,
     resourceKey(resource),
@@ -120,13 +122,19 @@ export const useTreeRead = (
           )
       : undefined,
     load: async (signal, publish) => {
-      const ctx = { resource, viewId, filter, signal, pageParams };
+      const ctx = { resource, viewId, filter, signal, pageParams, stateScope };
       const trees = getWorkbenchRenderers(workbench);
       const data = await loadTreeData(trees, treeViewId, ctx, (available) => publish({ ...available, children: {} }));
       signal.throwIfAborted();
       const children =
         data && trees.getTreeRenderer(treeViewId)
-          ? await loadExpandedTreeChildren(trees, treeViewId, data, trees.getTreeState(treeViewId).expandedNodeIds, ctx)
+          ? await loadExpandedTreeChildren(
+              trees,
+              treeViewId,
+              data,
+              trees.getTreeState(treeViewId, stateScope).expandedNodeIds,
+              ctx,
+            )
           : {};
       return {
         header: data?.header ?? [],
