@@ -62,7 +62,7 @@ Treat source-linked type declarations as the signature authority. Call requireme
 
 The website publishes some folders as the Docs tab at [prompt.studio/docs](https://prompt.studio/docs/). It reads these files straight from the repository at build time:
 
-- Guides: `guides/getting-started/`, `guides/concepts/`, `guides/extensions/`, and `guides/sdk/`
+- Guides: `guides/getting-started/`, `guides/features/`, `guides/concepts/`, `guides/extensions/`, and `guides/sdk/`
 - References: `references/cli/`, `references/extensions/`, `references/sdk/`, and `references/workbench/`
 - Extensions: `extensions/<name>/README.md` and the numbered files in `extensions/<name>/docs/` for Planner, Notes, Reports, Artifacts, Remote Workspaces, the Claude Code, Codex, OpenCode, and Pi harnesses, and Extension Lab
 
