@@ -1,6 +1,27 @@
 import type { WebContents } from "electron";
 import { LIFECYCLE_URL } from "./lifecycle-protocol";
 
+export const waitForStartupReadiness = (shown: Promise<void>, documentReady: Promise<void>, signal: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    // Runtime cancellation must release its caller without closing the shared document.
+    const aborted = () => {
+      signal.removeEventListener("abort", aborted);
+      reject(signal.reason);
+    };
+    signal.addEventListener("abort", aborted, { once: true });
+    void Promise.all([shown, documentReady]).then(
+      () => {
+        signal.removeEventListener("abort", aborted);
+        resolve();
+      },
+      (error) => {
+        signal.removeEventListener("abort", aborted);
+        reject(error);
+      },
+    );
+    if (signal.aborted) aborted();
+  });
+
 export const waitForStartupDom = (contents: WebContents, signal: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     let settled = false;
@@ -9,6 +30,7 @@ export const waitForStartupDom = (contents: WebContents, signal: AbortSignal) =>
       settled = true;
       contents.removeListener("dom-ready", ready);
       contents.removeListener("did-fail-load", failed);
+      contents.removeListener("preload-error", preloadFailed);
       contents.removeListener("render-process-gone", crashed);
       contents.removeListener("destroyed", destroyed);
       signal.removeEventListener("abort", aborted);
@@ -21,11 +43,18 @@ export const waitForStartupDom = (contents: WebContents, signal: AbortSignal) =>
     const failed = (_event: unknown, code: number, description: string, _url: string, mainFrame: boolean) => {
       if (mainFrame) finish(new Error(`Startup document could not load: ${description} (${code})`));
     };
+    const preloadFailed = (_event: unknown, _path: string, error: Error) =>
+      finish(
+        new Error("workbench_unavailable: The desktop bridge could not initialize. Retry to reopen it.", {
+          cause: error,
+        }),
+      );
     const crashed = () => finish(new Error("Startup renderer exited before its document was ready"));
     const destroyed = () => finish(new Error("Startup window closed before its document was ready"));
     const aborted = () => finish(signal.reason);
     contents.on("dom-ready", ready);
     contents.on("did-fail-load", failed);
+    contents.on("preload-error", preloadFailed);
     contents.on("render-process-gone", crashed);
     contents.on("destroyed", destroyed);
     signal.addEventListener("abort", aborted, { once: true });

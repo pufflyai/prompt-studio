@@ -23,7 +23,7 @@ import {
   createShellLayoutContext,
 } from "./controllers/page-runtime/workbench-layout-context";
 import { createWorkbenchPanelMenuStateController } from "./controllers/panel-menus/panel-menu-state-controller";
-import { resourceViewerBinding } from "./controllers/resource-viewers/displayed-viewers";
+import { createResourceViewerRuntime } from "./controllers/resource-viewers/displayed-viewers";
 import { createWorkbenchViewerController } from "./controllers/resource-viewers/resource-viewers";
 import { createWorkbenchShellController } from "./controllers/shell/shell-controller";
 import { createModeSidePanel } from "./controllers/side-panel/mode-side-panel";
@@ -190,7 +190,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const pages = createLiveWorkbenchPageRegistry({
-    isResourceViewer: (identity) => Boolean(core && resourceViewerBinding(core, identity)?.kind === "binding"),
+    ...createResourceViewerRuntime(() => core),
     ...createPageLayoutCacheHandlers(layoutCache),
     loadModeLayout: layoutCache.readMode,
     saveModeLayout: layoutCache.saveMode,
