@@ -56,6 +56,13 @@ let failure: unknown;
 try {
   assert.match(baselineSha, /^[a-f0-9]{40}$/);
   assert.match(fixedSha, /^[a-f0-9]{40}$/);
+  // Merged PR branches can disappear. Fetch the pinned objects explicitly;
+  // checkout's heads/tags fetch does not retain every refs/pull/* commit.
+  git("fetch", "--no-tags", "--no-recurse-submodules", "origin", baselineSha, fixedSha);
+  assert.equal(git("rev-parse", `${baselineSha}^{tree}`), "2b3a20794c337d9f6dcf5b5b3e2e679510fa9a73");
+  assert.equal(git("rev-parse", `${fixedSha}^{tree}`), "02fe63039fad39208bc704afa87df747e2ae76af");
+  assert.equal(git("rev-parse", `${baselineSha}:${sourceFile}`), "7476e6578dc890af5a4952cd23271a1fd0364d2f");
+  assert.equal(git("rev-parse", `${fixedSha}:${sourceFile}`), "e6d10412a405dc9599f6b83ebf205731b9107be7");
   const before = git("show", `${baselineSha}:${sourceFile}`);
   const after = git("show", `${fixedSha}:${sourceFile}`);
   assert(before.includes(JSON.stringify(health.baseline)));
