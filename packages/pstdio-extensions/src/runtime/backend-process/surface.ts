@@ -1,3 +1,4 @@
+import { createStorageId } from "pstdio-api-contracts";
 /**
  * The explicit allowlist of host capabilities a backend worker may reach. The host resolves every
  * worker call against it and the worker builds its context facade from the same description, so
@@ -14,7 +15,31 @@ export type BackendSurface =
   | { kind: "notify" }
   | { kind: "object"; members: Record<string, BackendSurface> }
   /** A synchronous scope selection, such as `storage.collection(name)`, evaluated for each host call. */
-  | { kind: "factory"; returns: BackendSurface };
+  | { kind: "factory"; returns: BackendSurface }
+  /** A pure synchronous calculation the worker runs itself from host-provided data. Never a host call. */
+  | { kind: "local"; name: "storageId" }
+  | { kind: "local"; name: "recordId"; namespace: string[] }
+  /** The middleware result constructors of ctx.commands, such as `continue()` and `patchParams(params)`. */
+  | { kind: "local"; name: "middlewareResult"; type: MiddlewareResultType };
+
+type MiddlewareResultType = "continue" | "patchParams" | "replaceParams" | "replaceInvocation" | "reject";
+
+// Mirrors the runner's command helpers (runner/context.ts buildCommandsApi).
+const middlewareResult = (type: MiddlewareResultType) => {
+  if (type === "continue") return () => ({ type });
+  if (type === "patchParams" || type === "replaceParams") return (params: unknown) => ({ type, params });
+  if (type === "replaceInvocation") return (invocation: unknown) => ({ type, invocation });
+  return (input: Record<string, unknown>) => ({ type, ...input });
+};
+
+const localMember = (surface: Extract<BackendSurface, { kind: "local" }>) => {
+  if (surface.name === "storageId") return (prefix?: string) => createStorageId(prefix);
+  if (surface.name === "middlewareResult") return middlewareResult(surface.type);
+  const { namespace } = surface;
+  // Same encoding as pstdio-sync's storageRecordId, which this layer may not import. The process
+  // runtime API test compares the result with the host's own records.id.
+  return (key: string) => JSON.stringify([...namespace, key]);
+};
 
 /** One step from the context root: a property, or a factory call with its arguments. */
 export type SurfaceStep = { name: string; args?: unknown[] };
@@ -104,6 +129,8 @@ export const createSurfaceFacade = (
         return (...args: unknown[]) => channel.call(path, args);
       case "notify":
         return (...args: unknown[]) => channel.notify(path, args);
+      case "local":
+        return localMember(current);
       case "factory":
         return (...args: unknown[]) => {
           const steps = [...path.slice(0, -1), { name: path.at(-1)!.name, args }];

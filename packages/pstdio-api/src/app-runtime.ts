@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { projectEvents } from "pstdio-api-contracts/extension-kernel";
 import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
-import { withBackgroundPreparation } from "pstdio-extensions";
+import { closeBackendWorkers, withBackgroundPreparation } from "pstdio-extensions";
 import type { RouteDeps } from "./features/deps";
 import { createArtifactMountWatchService } from "./features/extensions/artifact-mount-watch/watch-service";
 import { fireExtensionEvent } from "./features/extensions/extension-event-runtime";
@@ -178,6 +178,8 @@ const createAppCloser = (input: {
         await traceShutdownPhase("extension_runtime", () => input.extensionRuntime.dispose());
         await traceShutdownPhase("artifact_mounts", () => input.artifactMountWatch.dispose());
         await traceShutdownPhase("extension_scheduler", () => input.extensionScheduler.dispose());
+        // Workers call back into host storage, so they stop before the database closes.
+        await traceShutdownPhase("extension_backends", closeBackendWorkers);
         await traceShutdownPhase("automation", () => input.automationService.close());
         await traceShutdownPhase("terminals", () => input.terminalSupervisor.dispose());
         await harnessesStopped;
