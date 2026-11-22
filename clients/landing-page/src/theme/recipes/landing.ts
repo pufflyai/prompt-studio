@@ -19,7 +19,6 @@ export const landingSlotRecipe = defineSlotRecipe({
     "sidebarFooter",
     "status",
     "statusLink",
-    "copyright",
     "releaseBadge",
     "body",
     "main",
@@ -144,7 +143,6 @@ export const landingSlotRecipe = defineSlotRecipe({
       "& svg": { boxSize: "icon-sm", flexShrink: 0 },
       _hover: { bg: "bg.hover", color: "fg" },
     },
-    copyright: { textStyle: { base: "label/XS", md: "label/S/medium" }, whiteSpace: "nowrap" },
     releaseBadge: { bg: "illustration.skill", color: "white" },
     body: { display: "flex", flex: 1, minHeight: 0, p: "panel-gap" },
     main: {

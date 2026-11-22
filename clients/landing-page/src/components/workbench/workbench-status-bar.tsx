@@ -1,4 +1,4 @@
-import { Box, chakra, HStack, Text } from "@chakra-ui/react";
+import { chakra, HStack } from "@chakra-ui/react";
 import { Building2, Scale, ShieldCheck } from "lucide-react";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
 import { StockholmIcon } from "../icons/stockholm-icon";
@@ -20,12 +20,10 @@ export const WorkbenchStatusBar = () => {
           {item.label}
         </chakra.a>
       ))}
-      <HStack gap="xs" color="fg" ms="auto" flexShrink="0">
-        <Box boxSize="icon-md" flexShrink="0">
-          <StockholmIcon />
-        </Box>
-        <Text css={styles.copyright}>© Pufflig AB. Stockholm, 2026</Text>
-      </HStack>
+      {/* The company widget sits at the trailing end, like the app's right-aligned status widgets. */}
+      <chakra.a href="/imprint/" css={styles.statusLink} ms="auto">
+        <StockholmIcon />© Pufflig AB · Stockholm 2026
+      </chakra.a>
     </HStack>
   );
 };
