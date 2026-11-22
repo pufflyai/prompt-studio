@@ -119,6 +119,21 @@ test("generated file downloads pass exact bytes and names to the host", async ()
   expect(calls).toEqual([{ method: "files.download", params: input }]);
 });
 
+test("device saves return the host outcome without claiming browser disk completion", async () => {
+  const input = { name: "wave.svg", data: new Uint8Array([1, 2]), mimeType: "image/svg+xml" };
+  for (const status of ["initiated", "saved", "cancelled"]) {
+    const client = createWebviewClient<Record<string, never>>({
+      extensionId: "test.export",
+      call: async (method: string, value: unknown) => {
+        expect(method).toBe("files.save");
+        expect(value).toEqual(input);
+        return { status };
+      },
+    } as GuestHost);
+    expect(await client.files.save(input)).toEqual({ status });
+  }
+});
+
 test("typed setting writes return the saved value from the host", async () => {
   const settings = { properties: { columns: { type: "number", scope: "project", default: 3 } } } as const;
   const host = {

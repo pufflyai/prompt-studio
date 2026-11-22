@@ -6,6 +6,7 @@ import type {
 } from "pstdio-api-contracts/extension-kernel";
 import { getApiClient } from "@/lib/api";
 import { downloadExtensionFile } from "./download-extension-file";
+import { saveExtensionFile } from "./save-extension-file";
 
 interface CreateExtensionFileCapabilitiesInput {
   extensionInstanceId: string;
@@ -17,6 +18,7 @@ export const createExtensionFileCapabilities = (input: CreateExtensionFileCapabi
   const files = input.files ?? getApiClient().extensions.files;
   return {
     download: downloadExtensionFile,
+    save: saveExtensionFile,
     upload: (params: WebviewFilesUploadParams) => files.upload(input.projectId, input.extensionInstanceId, params),
     list: (params: WebviewFilesListParams) => files.list(input.projectId, input.extensionInstanceId, params),
     delete: (params: WebviewFilesDeleteParams) => files.delete(input.projectId, input.extensionInstanceId, params.id),
