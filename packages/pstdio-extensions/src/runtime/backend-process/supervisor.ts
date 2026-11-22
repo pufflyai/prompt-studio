@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { finishRuntimeOperation, startRuntimeOperation } from "pstdio-diagnostics";
 import { createHostCalls, type HostInvocation } from "./host-calls";
 import {
   BACKEND_PROTOCOL_VERSION,
@@ -16,6 +17,7 @@ import {
 import { createFunctionTable, createImportTracker } from "./remote-values";
 import { type BackendSurface, collectSurfaceValues } from "./surface";
 import { createWatchdog, type WatchdogOptions } from "./watchdog";
+import { signalWorkerTree, sweepWorkerGroup } from "./worker-tree";
 
 const STOP_GRACE_MS = 2_000;
 const DRAIN_DEADLINE_MS = 30_000;
@@ -254,13 +256,18 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
       if (message.ok) loaded.resolve(message.value);
       else loaded.reject(workerError(message.error));
     } else if (message?.type === "result") settle(message);
-    else if (message?.type === "pong") watchdog.answered(message.rss);
-    else if (message?.type === "release") {
+    else if (message?.type === "pong") {
+      memory.last = message.rss;
+      memory.peak = Math.max(memory.peak, message.rss);
+      watchdog.answered(message.rss);
+    } else if (message?.type === "release") {
       invocations.get(message.invocationId)?.table.release(message.fnIds);
       dispose(message.invocationId);
     } else if (message) hostCalls.handle(message);
   };
 
+  const memory = { last: 0, peak: 0 };
+  const life = startRuntimeOperation("extension.backend.worker");
   const spawn = () => {
     try {
       return Bun.spawn(options.command, {
@@ -269,10 +276,12 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
         stdio: ["ignore", "inherit", "inherit"],
         serialization: "advanced",
         ipc: receive,
+        // Its own process group, so processes extension code starts stop with it.
+        detached: process.platform !== "win32",
         // A worker that drops its channel can never answer again, even if its process keeps running.
         onDisconnect: () => {
           fail(new BackendUnavailableError("The extension backend disconnected."));
-          child.kill("SIGKILL");
+          void signalWorkerTree(child, "SIGKILL");
         },
       });
     } catch (error) {
@@ -287,12 +296,16 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     (seq) => send({ v: BACKEND_PROTOCOL_VERSION, type: "ping", seq }),
     (reason) => {
       fail(new BackendUnavailableError(reason));
-      child.kill("SIGKILL");
+      void signalWorkerTree(child, "SIGKILL");
     },
     options.watchdog,
   );
 
   const exited = child.exited.then((code) => {
+    // One record per worker life, so memory can be compared across workers and workloads.
+    finishRuntimeOperation(life, { exitCode: code, lastRssBytes: memory.last, peakRssBytes: memory.peak });
+    // A crash or exit leaves the processes extension code started; they go with the worker.
+    sweepWorkerGroup(child.pid);
     watchdog.stop();
     fail(new BackendUnavailableError(`The extension backend exited (${code}).`));
     rmSync(cwd, { recursive: true, force: true });
@@ -304,8 +317,8 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
 
   const stop = async () => {
     fail(new BackendUnavailableError("The extension backend was stopped."));
-    child.kill("SIGTERM");
-    const timer = setTimeout(() => child.kill("SIGKILL"), STOP_GRACE_MS);
+    await signalWorkerTree(child, "SIGTERM");
+    const timer = setTimeout(() => void signalWorkerTree(child, "SIGKILL"), STOP_GRACE_MS);
     await exited;
     clearTimeout(timer);
   };
