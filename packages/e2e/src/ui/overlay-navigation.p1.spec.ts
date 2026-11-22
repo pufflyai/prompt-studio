@@ -19,13 +19,16 @@ test("Tickets display popup and tooltip dismiss across real app navigation", asy
     await search.fill("Keep my search");
     const display = page.getByRole("button", { name: "Display settings", exact: true });
     const popup = page.getByRole("dialog").filter({ hasText: "DISPLAY" });
-    await display.click();
-    await expect(popup).toBeVisible();
-    await home.click();
-    await expect(popup).toBeHidden();
-    await tickets.click();
-    await expect(search).toHaveValue("Keep my search");
-    await expect(popup).toBeHidden();
+    // Cover navigation before and after the pointer-down close reaches its exit-animation frame.
+    for (const delay of [0, 40]) {
+      await display.click();
+      await expect(popup).toBeVisible();
+      await home.click({ delay });
+      await expect(popup).toBeHidden();
+      await tickets.click();
+      await expect(search).toHaveValue("Keep my search");
+      await expect(popup).toBeHidden();
+    }
     await display.click();
     await expect(popup).toBeVisible();
     await popup.press("Escape");

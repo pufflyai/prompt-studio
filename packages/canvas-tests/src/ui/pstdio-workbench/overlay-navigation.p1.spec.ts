@@ -74,13 +74,16 @@ test("a collection display popup stays closed after its suspended view returns",
   await draft.fill("Keep my collection draft");
   const display = preview.getByRole("button", { name: "Display settings", exact: true });
   const popup = preview.getByRole("dialog").filter({ hasText: "DISPLAY" });
-  await display.click();
-  await expect(popup).toBeVisible();
-  await preview.getByRole("button", { name: "Page one", exact: true }).click();
-  await expect(popup).toBeHidden();
-  await preview.getByRole("button", { name: "Page suspended", exact: true }).click();
-  await expect(draft).toHaveValue("Keep my collection draft");
-  await expect(popup).toBeHidden();
+  // An immediate click can suspend the queued close; holding briefly can suspend an exit already running.
+  for (const delay of [0, 40]) {
+    await display.click();
+    await expect(popup).toBeVisible();
+    await preview.getByRole("button", { name: "Page one", exact: true }).click({ delay });
+    await expect(popup).toBeHidden();
+    await preview.getByRole("button", { name: "Page suspended", exact: true }).click();
+    await expect(draft).toHaveValue("Keep my collection draft");
+    await expect(popup).toBeHidden();
+  }
   await display.click();
   await expect(popup).toBeVisible();
   await popup.press("Escape");
