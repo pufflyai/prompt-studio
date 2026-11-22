@@ -50,33 +50,21 @@ export const WorkspacePage = ({ narrow = false }: { narrow?: boolean }) => {
       }}
     />
   );
-  const details =
-    right === "properties" ? (
-      <Stack p="sm" gap="sm">
-        <Text textStyle="label/XS" color="fg.muted">
-          Branch
-        </Text>
-        <Input size="xs" aria-label="Branch" value={branch} onChange={(event) => setBranch(event.target.value)} />
-        <Text textStyle="label/XS" color="fg.muted">
-          Base
-        </Text>
-        <Text textStyle="label/S">main</Text>
-      </Stack>
-    ) : (
-      <Stack p="sm" gap="sm">
-        <Text textStyle="label/S">You updated src/index.ts</Text>
-        <Text textStyle="label/XS" color="fg.muted">
-          2 minutes ago
-        </Text>
-        <Input
-          size="xs"
-          aria-label="Activity comment"
-          placeholder="Leave a comment…"
-          value={comment}
-          onChange={(event) => setComment(event.target.value)}
-        />
-      </Stack>
-    );
+  const properties = right === "properties";
+  const details = (
+    <Stack p="sm" gap="sm">
+      <Input
+        size="xs"
+        aria-label={properties ? "Branch" : "Activity comment"}
+        value={properties ? branch : comment}
+        placeholder={properties ? undefined : "Leave a comment…"}
+        onChange={(event) => (properties ? setBranch(event.target.value) : setComment(event.target.value))}
+      />
+      <Text textStyle="label/XS" color="fg.muted">
+        {properties ? "Base: main" : "You updated src/index.ts · 2 minutes ago"}
+      </Text>
+    </Stack>
+  );
   return (
     <Stack h="full" maxW={narrow ? "lg" : undefined} mx="auto" w="full" gap="0" bg="bg" minH="0">
       <Header borderBottomWidth="1px" borderColor="border.subtle">
@@ -170,9 +158,6 @@ export const WorkspacePage = ({ narrow = false }: { narrow?: boolean }) => {
             </Tabs.Content>
             <Tabs.Content value="changes" h="full" p="0">
               <Stack p="md" gap="sm">
-                <Text textStyle="label/XS" color="fg.muted">
-                  src/index.ts
-                </Text>
                 <Text as="pre" fontFamily="mono" textStyle="label/S" color="fg.error">
                   - export const ready = false;
                 </Text>

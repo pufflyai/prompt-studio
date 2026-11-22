@@ -95,6 +95,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     activeLocation,
     activeResource,
     hostRegion,
+    owner,
     stateScope,
     presentationKey,
     presentation,
@@ -185,7 +186,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
 
   const toggleSection = createToggleTreeSection(workbench, treeViewId, treeState.expandedSectionIds, stateScope);
 
-  const navigate = createTreeNavigator({ workbench, treeViewId, stateScope, hostRegion, onOpenResourceError });
+  const navigate = createTreeNavigator({ workbench, treeViewId, stateScope, hostRegion, owner, onOpenResourceError });
   const pinnedTreeProps = {
     draggable: isSidenav,
     expandedNodeIds: actionInput.expandedNodeIds,

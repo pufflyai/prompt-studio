@@ -79,6 +79,7 @@ const filesWorkbench = (resourceMenu = false) => {
     parentId: "home",
     resource: { kinds: [kind] },
     document: { metadataKey: "path" },
+    params: { focus: { type: "string" } },
     main: { kind: "view", view: { kind: "view", id: "file" }, cardinality: "one", presentation: "page" },
     slots: [],
   });
@@ -98,7 +99,7 @@ const MenuTree = (props: {
   }) => void;
 }) => {
   const { workbench, placement } = props;
-  const { activeLocation, activeResource, hostRegion } = useTreeNavigationState(workbench, placement);
+  const { activeLocation, activeResource, hostRegion, owner } = useTreeNavigationState(workbench, placement);
   const { body, childrenByNodeId } = useTreeData(workbench, "tree", placement.resource, placement.viewId);
   const activeNodeId = useTreeSelection(workbench, "tree", {
     sections: body,
@@ -110,20 +111,23 @@ const MenuTree = (props: {
   props.capture({
     activePageId: activeLocation?.page.id,
     activeNodeId,
-    navigate: createTreeNavigator({ workbench, treeViewId: "tree", hostRegion }),
+    navigate: createTreeNavigator({ workbench, treeViewId: "tree", hostRegion, owner }),
   });
   return null;
 };
 
-for (const region of ["side", "secondary"] as const)
-  test(`a ${region} preview's Files menu selects its document and opens rows in the same panel`, async () => {
+for (const [region, params] of (["side", "secondary"] as const).flatMap((region) =>
+  [undefined, { focus: "special" }].map((params) => [region, params] as const),
+))
+  test(`a ${region} Files tab reuses documents unless page params are explicit: ${Boolean(params)}`, async () => {
     const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
     const previous = environment.IS_REACT_ACT_ENVIRONMENT;
     environment.IS_REACT_ACT_ENVIRONMENT = true;
     const w = filesWorkbench();
     let renderer: ReactTestRenderer | undefined;
     try {
-      await w.navigation.openTarget({ kind: "page", page: page("files"), resource: file("src/app.ts"), region });
+      await w.navigation.openTarget({ kind: "page", page: page("files"), resource: file("src/app.ts") });
+      w.movePanel(w.pages.getContent()!.widgetId, region);
       let tree: Parameters<Parameters<typeof MenuTree>[0]["capture"]>[0] | undefined;
       const render = async () => {
         const menu = w.layout.getLayout().regions[`${region}-left-menu`].widgets[0]!;
@@ -143,15 +147,21 @@ for (const region of ["side", "secondary"] as const)
       await act(async () =>
         tree!.navigate({
           nodeId: "src/other.ts",
-          intent: { id: "target", payload: { kind: "page", page: page("files"), resource: file("src/other.ts") } },
+          intent: {
+            id: "target",
+            payload: { kind: "page", page: page("files"), resource: file("src/other.ts"), params },
+          },
         }),
       );
       const layout = w.layout.getLayout();
-      expect(layout.regions[region].widgets.map((entry) => entry.resource?.metadata?.path)).toEqual(["src/other.ts"]);
+      expect(layout.regions[region].widgets.map((entry) => entry.resource?.metadata?.path)).toEqual(
+        params ? ["src/other.ts", "src/app.ts"] : ["src/other.ts"],
+      );
+      expect(layout.regions[region].widgets[0]?.pageContext?.params).toEqual(params);
       expect(layout.regions.main.widgets).toEqual([]);
       expect(w.pages.store.getState().location?.page).toEqual(page("home"));
       await render();
-      expect(tree?.activeNodeId).toBe("src/other.ts");
+      expect(tree?.activeNodeId).toBe(params ? "src/app.ts" : "src/other.ts");
     } finally {
       await act(async () => renderer?.unmount());
       await w.dispose();

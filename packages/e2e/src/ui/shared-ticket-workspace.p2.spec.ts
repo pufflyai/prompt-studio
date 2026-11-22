@@ -95,7 +95,12 @@ test("ticket work opens a shared non-Git folder and loads files without Git requ
     // A non-Git folder adds no Changes view.
     await expect(page.getByRole("tab", { name: "Changes" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Changes", exact: true })).toHaveCount(0);
+    const filesTabs = page.locator('[data-workbench-panel-header="side"]').getByRole("tab");
+    await expect(filesTabs).toHaveCount(1);
+    await filesTabs.first().click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Pin tab", exact: true }).click();
     await sideFiles.getByRole("option", { name: "notes.md", exact: true }).click();
+    await expect(filesTabs).toHaveCount(1);
     await expect(page.locator(".monaco-editor .view-lines")).toContainText("Shared notes");
     expect(gitRequests).toEqual([]);
     expect(await (await request.get(workspaceUrl)).json()).toEqual([

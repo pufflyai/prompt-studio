@@ -9,6 +9,7 @@ import {
   workbenchPanelRegions,
 } from "../../../core";
 import { getResourceMenuPage } from "../../../core/controllers/panel-menus/resource-menu-page";
+import { findPlacementByWidgetId } from "../../../core/registries/layout/layout-operations";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { resolveTreeActiveResource } from "./tree-active-resource";
 
@@ -43,6 +44,9 @@ export const useTreeNavigationState = (workbench: WorkbenchCore, placement?: Wor
       ? state.layout.regions[hostRegion].widgets.find((entry) => entry.widgetId === placement?.instanceId)
       : undefined,
   );
+  const owner = host?.menuOwnerWidgetId
+    ? findPlacementByWidgetId(workbench.layout.getLayout(), host.menuOwnerWidgetId)?.placement
+    : undefined;
   const resourcePage = getResourceMenuPage(workbench, placement?.viewId);
   const capturedLocation = resourcePage
     ? { ...host?.pageContext, page: resourcePage.ref, resource: host?.resource }
@@ -59,5 +63,5 @@ export const useTreeNavigationState = (workbench: WorkbenchCore, placement?: Wor
   const activeResource = useWorkbenchStore(workbench.layout.store, (state) =>
     resolveTreeActiveResource(state.layout, activePage, activeLocation?.resource, region),
   );
-  return { projectId, activeLocation, activeResource, hostRegion: region };
+  return { projectId, activeLocation, activeResource, hostRegion: region, owner };
 };
