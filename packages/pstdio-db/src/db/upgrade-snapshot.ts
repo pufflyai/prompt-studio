@@ -1,6 +1,6 @@
 import { createReadStream } from "node:fs";
-import { mkdir, open, rename, rm, stat } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { mkdir, open, readdir, rename, rm, stat } from "node:fs/promises";
+import { basename, dirname, join } from "node:path";
 import { createInterface } from "node:readline";
 import { sql } from "drizzle-orm";
 import type { DbClient } from "./connection.pglite";
@@ -8,6 +8,13 @@ import { flushDirectory } from "./pglite-home-recovery";
 import { readUpgradeRows, type UpgradeSource } from "./upgrade-rows";
 
 type Row = Record<string, unknown>;
+
+export const hasUpgradeSnapshots = async (path: string) =>
+  path !== ":memory:" &&
+  (await readdir(dirname(path))).some(
+    (name) => name.startsWith(`${basename(path)}-`) && /-upgrade\.jsonl?(?:\.tmp)?$/u.test(name),
+  );
+
 async function* snapshotRows(path: string) {
   const stream = createReadStream(path, { encoding: "utf8" });
   const lines = createInterface({ input: stream, crlfDelay: Number.POSITIVE_INFINITY });

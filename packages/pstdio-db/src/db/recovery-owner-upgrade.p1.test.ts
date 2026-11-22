@@ -7,6 +7,7 @@ import { recoveryFilesFor } from "../services/extension-storage/recovery-files";
 import { createDb } from "./connection.pglite";
 import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
 import { prepareRecoveryOwnerUpgrade } from "./recovery-owner-upgrade";
+import { recovery_points } from "./schemas.pg";
 
 type ReleasedRecoveryRow = {
   workbench_id: string;
@@ -45,7 +46,11 @@ for (const interruption of ["normal", "schema", "restore", "large"])
         await previous.pglite.query<ReleasedRecoveryRow>(`SELECT * FROM recovery_point_owners
         ORDER BY workbench_id,hours,extension_id`)
       ).rows;
-      const captures = (await previous.pglite.query("SELECT * FROM recovery_points ORDER BY workbench_id,hours")).rows;
+      const captures = (
+        await previous.pglite.query<{ workbench_id: string; hours: number; captured_at: string }>(
+          "SELECT * FROM recovery_points ORDER BY workbench_id,hours",
+        )
+      ).rows;
       if (interruption === "schema" || interruption === "restore") {
         const finish = await prepareRecoveryOwnerUpgrade(previous.db, previous.path);
         expect((await previous.pglite.query("SELECT * FROM recovery_point_owners")).rows).toEqual([]);
@@ -94,10 +99,14 @@ for (const interruption of ["normal", "schema", "restore", "large"])
       };
       expect(await restored()).toEqual(original);
       expect(
-        (
-          await store.pglite.query(`SELECT project_id AS workbench_id,hours,captured_at
-        FROM recovery_points ORDER BY project_id,hours`)
-        ).rows,
+        await store.db
+          .select({
+            workbench_id: recovery_points.project_id,
+            hours: recovery_points.hours,
+            captured_at: recovery_points.captured_at,
+          })
+          .from(recovery_points)
+          .orderBy(recovery_points.project_id, recovery_points.hours),
       ).toEqual(captures);
       const archives = (await readdir(`${previous.path}-migration-exports`)).filter((name) =>
         name.startsWith("recovery-owners-files-"),

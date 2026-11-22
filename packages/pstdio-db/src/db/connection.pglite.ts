@@ -56,6 +56,7 @@ import { createRetiredStorageCleanup } from "./retired-storage-cleanup";
 import * as schema from "./schemas.pg";
 import { prepareSessionWorkspaceUpgrade } from "./session-workspace-upgrade";
 import { type DatabaseMaintenancePhase, invalidateMaintenance, maintainDatabase } from "./startup-maintenance";
+import { hasUpgradeSnapshots } from "./upgrade-snapshot";
 
 type EmbeddedFile = Blob & { name: string };
 // Bun's embedded file objects are runtime-specific; narrowing the contract keeps extraction testable
@@ -255,6 +256,14 @@ export const createDb = async (options?: {
     let finishArtifactProjectionUpgrade: (() => Promise<void>) | undefined;
     await withMigrationsFolder(async (migrationsFolder) => {
       if (!fs.existsSync(migrationsFolder)) return;
+      // An empty engine has no released tables. Durable conversion inputs may
+      // still exist beside a restored image, so those must resume normally.
+      if (fresh && !(await hasUpgradeSnapshots(dbPath))) {
+        await migratePglite(openedPglite, migrationsFolder);
+        await retireLegacyRecordTables(db, migrationsFolder);
+        migrated = true;
+        return;
+      }
       const finishRecordRows = await prepareRecordRowFinalization(db, dbPath);
       const finishProjectExtensionsUpgrade = await prepareProjectExtensionsUpgrade(db, dbPath);
       const finishResourceLinkOwnerUpgrade = await prepareResourceLinkOwnerUpgrade(db, dbPath);
