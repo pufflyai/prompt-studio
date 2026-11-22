@@ -25,6 +25,7 @@ for (const label of ["Main", "Chrome", "Suspended"]) {
       await expect(overlay).toBeHidden();
       await trigger.click();
       await expect(overlay).toBeVisible();
+      await expect(overlay.getByRole("button", { name: "Navigate from options", exact: true })).toBeFocused();
       await overlay.press("Escape");
       await expect(overlay).toBeHidden();
       await expect(trigger).toBeFocused();
