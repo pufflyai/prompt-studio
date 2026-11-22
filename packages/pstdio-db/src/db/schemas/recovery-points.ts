@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import { bigint, check, foreignKey, index, integer, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import { owners } from "./owners";
 import { projects } from "./projects";
-import { bytea } from "./types";
 
 // One row per kept recovery point. The fixed slots keep at most three points per project.
 export const recovery_points = pgTable(
@@ -31,10 +30,9 @@ export const recovery_point_owners = pgTable(
       .references(() => owners.id, { onDelete: "cascade" }),
     // The owner revision the records were read at. An unchanged revision reuses the saved records.
     revision: bigint("revision", { mode: "number" }).notNull(),
-    // Gzipped JSON of the owner's live records, read from the current-record projection.
-    records: bytea("records").notNull(),
-    // Gzipped JSON of the owner's text documents and data migration markers.
-    metadata: bytea("metadata").notNull(),
+    // The immutable file holds both compressed payloads. Rows contain no recovery bytes.
+    sha256: text("sha256").notNull(),
+    bytes: bigint("bytes", { mode: "number" }).notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.project_id, table.hours, table.owner_id] }),

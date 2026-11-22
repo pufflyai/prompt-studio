@@ -6,6 +6,7 @@ import { listBoardDefaults } from "../board-views/board-defaults";
 import { clearOwnerDocuments } from "../extension-storage/clear-documents";
 import { createDocumentStorageDBService } from "../extension-storage/document-storage";
 import { indexNodeFilesFor } from "../extension-storage/index-node-files";
+import { pruneRecoveryProject } from "../extension-storage/recovery-file-retention";
 import { getExtensionStorageOwner, hasOtherStorageProvider } from "../extension-storage/storage-owner";
 
 const instancePreferences = (instanceId: string) =>
@@ -56,8 +57,8 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
   };
 
   const deleteForInstance = async (extensionInstanceId: string) => {
-    let cleared: Awaited<ReturnType<typeof getExtensionStorageOwner>> = null;
-    const result = await db.transaction(async (tx) => {
+    const { result, cleared } = await db.transaction(async (tx) => {
+      let cleared: Awaited<ReturnType<typeof getExtensionStorageOwner>> = null;
       const owner = await getExtensionStorageOwner(tx, extensionInstanceId);
       if (owner) assertStorageOwnerAdmitted(db, owner);
       let boardDefaults: Awaited<ReturnType<typeof listBoardDefaults>> = [];
@@ -91,10 +92,13 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
         cleared = owner;
       }
       await tx.delete(preferences).where(instancePreferences(extensionInstanceId));
-      return { boardViews, boardDefaults, files: ownedFiles };
+      return { result: { boardViews, boardDefaults, files: ownedFiles }, cleared };
     });
     // Index node files leave only after the rows naming them are gone.
-    if (cleared) await indexNodeFilesFor(db).removeOwner(cleared);
+    if (cleared) {
+      await indexNodeFilesFor(db).removeOwner(cleared);
+      await pruneRecoveryProject(db, cleared.workbenchId);
+    }
     return result;
   };
 

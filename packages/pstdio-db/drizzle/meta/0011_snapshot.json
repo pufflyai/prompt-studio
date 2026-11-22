@@ -1,5 +1,5 @@
 {
-  "id": "118c0d6b-ef44-432c-9e48-28a65a719847",
+  "id": "9a8a6a62-cbf5-462c-b758-db245426ff14",
   "prevId": "7831c13a-76db-4e65-a402-222b04fffc09",
   "version": "7",
   "dialect": "postgresql",
@@ -2163,15 +2163,15 @@
           "primaryKey": false,
           "notNull": true
         },
-        "records": {
-          "name": "records",
-          "type": "bytea",
+        "sha256": {
+          "name": "sha256",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "metadata": {
-          "name": "metadata",
-          "type": "bytea",
+        "bytes": {
+          "name": "bytes",
+          "type": "bigint",
           "primaryKey": false,
           "notNull": true
         }

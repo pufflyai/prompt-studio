@@ -15,6 +15,7 @@ import {
 } from "../../db/schemas.pg";
 import { listProjectedRecords } from "./record-queries";
 import type { RecoveryRecord } from "./recovery-edits";
+import { type PreparedRecoveryBytes, prepareRecoveryBytes, type recoveryFilesFor } from "./recovery-files";
 import { storageOwnerKey } from "./storage-owner-key";
 
 type Reader = Pick<DbClient, "select" | "selectDistinct">;
@@ -27,8 +28,7 @@ export interface RecoveryMetadata {
 export interface RecoveryOwnerContent {
   extensionId: string;
   revision: number;
-  records: Uint8Array;
-  metadata: Uint8Array;
+  file: PreparedRecoveryBytes;
   /** The owner has live records or text. A project without any gets no recovery point. */
   hasData: boolean;
 }
@@ -115,7 +115,11 @@ const readMetadata = async (tx: Transaction, owner: StorageOwner) => {
  * its text documents and its migration markers. Locking the revision rows keeps commits out until
  * the transaction ends. An owner whose revision did not change reuses its saved records.
  */
-export const readProjectContent = async (tx: Transaction, projectId: string) => {
+export const readProjectContent = async (
+  tx: Transaction,
+  projectId: string,
+  files: ReturnType<typeof recoveryFilesFor>,
+) => {
   const revisions = new Map(
     (
       await tx
@@ -134,14 +138,21 @@ export const readProjectContent = async (tx: Transaction, projectId: string) => 
     const owner = { workbenchId: projectId, extensionId };
     const revision = revisions.get(extensionId)?.revision ?? 0;
     const [previous] = await tx
-      .select({ records: recovery_point_owners.records })
+      .select({
+        hours: recovery_point_owners.hours,
+        sha256: recovery_point_owners.sha256,
+        bytes: recovery_point_owners.bytes,
+      })
       .from(recovery_point_owners)
       .where(
         and(eq(recovery_point_owners.owner_id, storageOwnerKey(owner)), eq(recovery_point_owners.revision, revision)),
       )
       .limit(1);
+    // A prior copy only saves encoding work. Its loss must not prevent saving
+    // the authoritative live records, including an unselected owner during restore.
+    const reusable = previous && (await files.read(projectId, previous.hours, previous).catch(() => undefined));
     const records =
-      previous?.records ??
+      reusable?.records ??
       (await encodeRecovery(
         (
           await listProjectedRecords(tx, owner)
@@ -157,8 +168,7 @@ export const readProjectContent = async (tx: Transaction, projectId: string) => 
     content.push({
       extensionId,
       revision,
-      records,
-      metadata: await encodeRecovery(metadata),
+      file: await prepareRecoveryBytes({ records, metadata: await encodeRecovery(metadata) }),
       hasData: hasText || (revisions.get(extensionId)?.live ?? 0) > 0,
     });
   }

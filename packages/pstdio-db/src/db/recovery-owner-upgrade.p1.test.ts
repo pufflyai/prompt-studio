@@ -1,11 +1,21 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { migrate } from "drizzle-orm/pglite/migrator";
+import { recoveryFilesFor } from "../services/extension-storage/recovery-files";
 import { createDb } from "./connection.pglite";
 import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
 import { prepareRecoveryOwnerUpgrade } from "./recovery-owner-upgrade";
+
+type ReleasedRecoveryRow = {
+  workbench_id: string;
+  hours: number;
+  extension_id: string;
+  revision: number;
+  records: Uint8Array<ArrayBuffer>;
+  metadata: Uint8Array<ArrayBuffer>;
+};
 
 for (const interruption of ["normal", "schema", "restore", "large"])
   test(`recovery copies retain their exact bytes and capture times after ${interruption} owner upgrade`, async () => {
@@ -32,7 +42,7 @@ for (const interruption of ["normal", "schema", "restore", "large"])
           [new Uint8Array(5 * 1024 * 1024).fill(0xa5)],
         );
       const original = (
-        await previous.pglite.query(`SELECT * FROM recovery_point_owners
+        await previous.pglite.query<ReleasedRecoveryRow>(`SELECT * FROM recovery_point_owners
         ORDER BY workbench_id,hours,extension_id`)
       ).rows;
       const captures = (await previous.pglite.query("SELECT * FROM recovery_points ORDER BY workbench_id,hours")).rows;
@@ -59,12 +69,29 @@ for (const interruption of ["normal", "schema", "restore", "large"])
       await previous.close();
       previousClosed = true;
       store = await createDb({ path: previous.path });
-      const restored = async () =>
-        (
-          await store!.pglite.query(`SELECT r.project_id AS workbench_id,r.hours,
-        o.extension_id,r.revision,r.records,r.metadata FROM recovery_point_owners r JOIN owners o ON r.owner_id=o.id
-        ORDER BY r.project_id,r.hours,o.extension_id`)
-        ).rows;
+      const restored = async () => {
+        const { rows } = await store!.pglite.query<{
+          workbench_id: string;
+          hours: number;
+          extension_id: string;
+          revision: number;
+          sha256: string;
+          bytes: number;
+        }>(`SELECT r.project_id AS workbench_id,r.hours,o.extension_id,r.revision,r.sha256,r.bytes
+          FROM recovery_point_owners r JOIN owners o ON r.owner_id=o.id
+          ORDER BY r.project_id,r.hours,o.extension_id`);
+        const content = [];
+        for (const row of rows) {
+          const { sha256, bytes, ...owner } = row;
+          const payload = await recoveryFilesFor(store!.db).read(row.workbench_id, row.hours, { sha256, bytes });
+          content.push({
+            ...owner,
+            records: new Uint8Array(payload.records),
+            metadata: new Uint8Array(payload.metadata),
+          });
+        }
+        return content;
+      };
       expect(await restored()).toEqual(original);
       expect(
         (
@@ -72,7 +99,11 @@ for (const interruption of ["normal", "schema", "restore", "large"])
         FROM recovery_points ORDER BY project_id,hours`)
         ).rows,
       ).toEqual(captures);
-      const archive = (await readFile(`${previous.path}-migration-exports/recovery-owners.jsonl`, "utf8"))
+      const archives = (await readdir(`${previous.path}-migration-exports`)).filter((name) =>
+        name.startsWith("recovery-owners-files-"),
+      );
+      expect(archives).toHaveLength(1);
+      const archive = (await readFile(join(`${previous.path}-migration-exports`, archives[0]!), "utf8"))
         .trim()
         .split("\n")
         .map((line) => JSON.parse(line));

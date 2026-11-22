@@ -208,6 +208,8 @@ ALTER TABLE "storage_current_records" ADD COLUMN "owner_id" integer NOT NULL;-->
 ALTER TABLE "storage_current_records" ADD CONSTRAINT "storage_current_records_owner_id_record_id_pk" PRIMARY KEY("owner_id","record_id");--> statement-breakpoint
 ALTER TABLE "native_document_file_projections" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
 ALTER TABLE "native_document_rooms" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
+ALTER TABLE "recovery_point_owners" ADD COLUMN "sha256" text NOT NULL;--> statement-breakpoint
+ALTER TABLE "recovery_point_owners" ADD COLUMN "bytes" bigint NOT NULL;--> statement-breakpoint
 ALTER TABLE "storage_document_operations" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
 ALTER TABLE "storage_document_updates" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
 ALTER TABLE "owners" ADD CONSTRAINT "owners_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -259,6 +261,8 @@ ALTER TABLE "native_document_rooms" DROP COLUMN "extension_id";--> statement-bre
 ALTER TABLE "native_document_sources" DROP COLUMN "workbench_id";--> statement-breakpoint
 ALTER TABLE "native_document_sources" DROP COLUMN "extension_id";--> statement-breakpoint
 ALTER TABLE "recovery_point_owners" DROP COLUMN "extension_id";--> statement-breakpoint
+ALTER TABLE "recovery_point_owners" DROP COLUMN "records";--> statement-breakpoint
+ALTER TABLE "recovery_point_owners" DROP COLUMN "metadata";--> statement-breakpoint
 ALTER TABLE "storage_document_operations" DROP CONSTRAINT "storage_document_operations_pk";
 --> statement-breakpoint
 ALTER TABLE "storage_document_operations" DROP COLUMN "workbench_id";--> statement-breakpoint

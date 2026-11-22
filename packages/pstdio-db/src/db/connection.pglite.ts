@@ -17,6 +17,8 @@ import {
   createMemoryIndexNodeFiles,
 } from "../services/extension-storage/index-node-files";
 import { upgradeIndexNodesToFiles } from "../services/extension-storage/index-node-upgrade";
+import { pruneRecoveryFiles } from "../services/extension-storage/recovery-file-retention";
+import { recoveryFilesFor } from "../services/extension-storage/recovery-files";
 import { prepareAppPreferencesUpgrade } from "./app-preferences-upgrade";
 import { prepareAssetOwnerUpgrade } from "./asset-owner-upgrade";
 import { prepareAutomationOwnersUpgrade } from "./automation-owners-upgrade";
@@ -235,6 +237,7 @@ export const createDb = async (options?: {
 
     const db = drizzle(openedPglite, { schema });
     attachDatabaseAuthority(db, dbPath);
+    recoveryFilesFor(db, dbPath);
     // The node folder belongs to this database, so another database can never clean it up.
     const indexNodes =
       dbPath === ":memory:"
@@ -293,6 +296,7 @@ export const createDb = async (options?: {
     });
     // Copy durable receipts before opening. Remove old rows for both sides of an identity
     // rename now so the rename does not copy cache data or see a false conflict.
+    await pruneRecoveryFiles(db);
     onPhase("database_index_nodes");
     // A run that stops after deleting rows must leave offline space reclamation pending.
     const owed = () => invalidateMaintenance(dbPath);

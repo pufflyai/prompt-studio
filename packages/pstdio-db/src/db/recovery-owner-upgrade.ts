@@ -1,5 +1,8 @@
+import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import { sql } from "drizzle-orm";
+import { prepareRecoveryBytes, recoveryFilesFor } from "../services/extension-storage/recovery-files";
 import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
 import { recovery_point_owners } from "./schemas.pg";
@@ -7,44 +10,60 @@ import { decodeUpgradeBytes as decodeBytes } from "./upgrade-bytes";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
 type ReleasedOwner = {
-  workbench_id: string;
-  extension_id: string;
+  workbench_id?: string;
+  extension_id?: string;
+  project_id?: string;
+  owner_id?: number;
   hours: number;
-  revision: number;
+  revision: number | string;
   records: string;
   metadata: string;
 };
-
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
-const normalizeOwner = async (tx: Transaction, input: ReleasedOwner, ownerIds: Map<string, number>) => {
-  const { workbench_id, extension_id, records, metadata, ...row } = input;
-  if (typeof workbench_id !== "string" || typeof extension_id !== "string")
-    throw new Error("Invalid exported recovery owner");
-  const address = JSON.stringify([workbench_id, extension_id]);
-  let ownerId = ownerIds.get(address);
+const normalizeOwner = async (
+  tx: Transaction,
+  input: ReleasedOwner,
+  files: ReturnType<typeof recoveryFilesFor>,
+  ownerIds: Map<string, number>,
+) => {
+  const projectId = input.project_id ?? input.workbench_id;
+  if (typeof projectId !== "string") throw new Error("Invalid exported recovery project");
+  let ownerId = input.owner_id;
   if (ownerId === undefined) {
-    ownerId = await ensureStorageOwner(tx, { workbenchId: workbench_id, extensionId: extension_id });
-    ownerIds.set(address, ownerId);
+    if (typeof input.extension_id !== "string") throw new Error("Invalid exported recovery owner");
+    const address = JSON.stringify([projectId, input.extension_id]);
+    ownerId = ownerIds.get(address);
+    if (ownerId === undefined) {
+      ownerId = await ensureStorageOwner(tx, { workbenchId: projectId, extensionId: input.extension_id });
+      ownerIds.set(address, ownerId);
+    }
+  } else {
+    const { rows } = await tx.execute(sql`SELECT id FROM owners WHERE id=${ownerId} AND project_id=${projectId}`);
+    if (rows.length !== 1) throw new Error("Invalid exported recovery owner address");
   }
-  const revision = Number(row.revision);
+  const revision = Number(input.revision);
   if (!Number.isSafeInteger(revision)) throw new Error("Invalid exported recovery revision");
-  return {
-    ...row,
-    revision,
-    project_id: workbench_id,
-    owner_id: ownerId,
-    records: decodeBytes(records),
-    metadata: decodeBytes(metadata),
-  };
+  const reference = await files.put(
+    projectId,
+    input.hours,
+    await prepareRecoveryBytes({
+      records: decodeBytes(input.records),
+      metadata: decodeBytes(input.metadata),
+    }),
+  );
+  return { project_id: projectId, hours: input.hours, owner_id: ownerId, revision, ...reference };
 };
 
-/** Keep the saved recovery copies intact while their owner address becomes an integer FK. */
+/** Preserve exact released payloads before their byte columns leave the schema. */
 export const prepareRecoveryOwnerUpgrade = async (db: DbClient, path: string) => {
+  const files = recoveryFilesFor(db, path);
   const {
     rows: [columns],
-  } = await db.execute<{ legacy: boolean }>(sql`
+  } = await db.execute<{ legacy: boolean; bytes: boolean }>(sql`
     SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public'
-      AND table_name='recovery_point_owners' AND column_name='extension_id') AS legacy`);
+      AND table_name='recovery_point_owners' AND column_name='extension_id') AS legacy,
+    EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public'
+      AND table_name='recovery_point_owners' AND column_name='records') AS bytes`);
   const pending: ReleasedOwner[] = [];
   let pendingBytes = 0;
   const flush = async () => {
@@ -54,7 +73,7 @@ export const prepareRecoveryOwnerUpgrade = async (db: DbClient, path: string) =>
     await db.transaction(async (tx) => {
       const ownerIds = new Map<string, number>();
       const expected = [];
-      for (const input of batch) expected.push(await normalizeOwner(tx, input, ownerIds));
+      for (const input of batch) expected.push(await normalizeOwner(tx, input, files, ownerIds));
       const key = (row: { project_id: string; hours: number; owner_id: number }) =>
         JSON.stringify([row.project_id, row.hours, row.owner_id]);
       const existing = await tx
@@ -76,15 +95,16 @@ export const prepareRecoveryOwnerUpgrade = async (db: DbClient, path: string) =>
       if (missing.length) await tx.insert(recovery_point_owners).values(missing);
     });
   };
+  let sourceHash = "";
   const restore = await prepareUpgradeSnapshot(
     db,
     path,
     {
       table: "recovery_point_owners",
-      keys: ["workbench_id", "hours", "extension_id"],
+      keys: columns!.legacy ? ["workbench_id", "hours", "extension_id"] : ["project_id", "hours", "owner_id"],
       name: "recovery-owners",
-      archive: "recovery-owners",
-      capture: columns!.legacy,
+      archive: () => `recovery-owners-files-${sourceHash}`,
+      capture: columns!.bytes,
     },
     async (input) => {
       const bytes = Buffer.byteLength(JSON.stringify(input));
@@ -99,8 +119,13 @@ export const prepareRecoveryOwnerUpgrade = async (db: DbClient, path: string) =>
       metadata: `\\x${Buffer.from(input.metadata as Uint8Array).toString("hex")}`,
     }),
   );
-  // Durable input precedes the generated required FK and owner-column replacement.
-  if (columns!.legacy) await db.delete(recovery_point_owners);
+  if (restore && path !== ":memory:") {
+    const hash = createHash("sha256");
+    for await (const chunk of createReadStream(`${path}-recovery-owners-upgrade.jsonl`)) hash.update(chunk);
+    sourceHash = hash.digest("hex");
+  }
+  // Durable source precedes generated required columns, without a permanent placeholder default.
+  if (columns!.bytes) await db.delete(recovery_point_owners);
   if (!restore) return;
   return async () => {
     await restore(true);
