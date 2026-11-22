@@ -9,7 +9,8 @@ A session is one agent conversation and the work it does. It runs in the project
 ```sh
 pst sessions create --prompt <text> [options]
 pst sessions list [options]
-pst sessions view --id <session-id>
+pst sessions view --id <session-id> [--json]
+pst sessions export --id <session-id>
 pst sessions follow-up --id <session-id> [options]
 pst sessions fork --id <session-id>
 pst sessions import --source <backup-folder> --dry-run
@@ -124,6 +125,16 @@ pst sessions list --json
 pst sessions list --status in_progress --json
 pst sessions list --status awaiting_input --json
 ```
+
+`view --json` prints the complete session record. `export` prints a JSON object with `session` and the full `messages` array, including tool calls and results. It also works for readable conversations on other devices. Save large exports directly to a file:
+
+```sh
+pst sessions export --id <session-id> > conversation.json
+```
+
+Session workspace filters accept a workspace ID or shorthand such as `WS-1`. A missing workspace or one owned by another project is an error, rather than an empty session list. Anchor filters require both `--anchor-type` and `--anchor-id`; the ID must be the stable resource ID, not its display shorthand. Resolve a Planner ticket with `pst pstdio.planner get-ticket --id PS-12` first.
+
+In Bash or zsh, use `set -o pipefail; pst ... | jq ...` in the same shell invocation when piping to a reader. Otherwise a successful reader can hide a failed CLI command. An error or failed read is not evidence that no sessions exist.
 
 Use `stream` to follow live output in the terminal. When the agent asks for permission to use a tool, pass the session ID and the approval request ID to `approve` or `deny`. `stop` ends a running session. `archive` hides a session from the default list.
 

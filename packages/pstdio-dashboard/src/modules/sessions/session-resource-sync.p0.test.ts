@@ -4,12 +4,13 @@ import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { registerSessionResourceSync } from "./session-resource-sync";
 
-test.each([
-  "delete",
-  "archive",
-] as const)("session %s runs shared resource cleanup and preserves a foreign binding", (action) => {
+test.each(
+  (["delete", "archive"] as const).flatMap((action) =>
+    (["all", 0, 1, 2, 3] as const).map((variant) => [action, variant] as const),
+  ),
+)("session %s removes legacy variant %s and preserves foreign bindings", (action, variant) => {
   const w = createWorkbench();
-  const projectId = `session-removal-${action}`;
+  const projectId = `session-removal-${action}-${variant}`;
   selectDashboardProject(w, { id: projectId, name: "Removal" });
   w.modes.registerMode({ id: "project", activate() {} });
   w.views.registerView({ id: "session", title: "Session", body: { kind: "react", render: () => null } });
@@ -47,8 +48,8 @@ test.each([
     { ...session, extensionId: "foreign" },
     { ...session, projectId: "foreign" },
   ];
-  for (const resource of [...variants, ...foreign])
-    w.shellPlacements.openPlacement({ placementId: "sessions", resource, open: "pin" });
+  const placed = [...(variant === "all" ? variants : [variants[variant]!]), ...foreign];
+  for (const resource of placed) w.shellPlacements.openPlacement({ placementId: "sessions", resource, open: "pin" });
   const row = { id: session.id, project_id: projectId, title: "Removed", status: "completed", archived: false };
   getWriter("sessions")!.upsert(row);
   const unsubscribe = registerSessionResourceSync(w as WorkbenchModuleContext);
@@ -58,7 +59,14 @@ test.each([
     return [];
   });
   try {
-    expect(w.getOpenResources()).toHaveLength(6);
+    // Aliases reuse a viewer, so exercise each legacy shape separately while both
+    // foreign identities remain open. Removal history must retire every alias.
+    const placedResources = () => w.layout.listPanelInstances("side").map((panel) => panel.resource);
+    if (variant === "all") {
+      // References with and without the active project share a viewer; explicit owners remain distinct.
+      expect(w.getOpenResources()).toHaveLength(4);
+      expect(placedResources()).toEqual([variants[1], variants[3], ...foreign]);
+    } else expect(placedResources()).toEqual(placed);
     const version = w.resources.getRemovalVersion();
     if (action === "delete") getWriter("sessions")!.remove(session.id);
     else getWriter("sessions")!.upsert({ ...row, archived: true });
@@ -69,6 +77,7 @@ test.each([
     }
     for (const resource of foreign) expect(remaining).toContainEqual(resource);
     expect(remaining).toHaveLength(2);
+    expect(placedResources()).toEqual(foreign);
     expect(removed).toEqual(variants);
   } finally {
     unsubscribe();

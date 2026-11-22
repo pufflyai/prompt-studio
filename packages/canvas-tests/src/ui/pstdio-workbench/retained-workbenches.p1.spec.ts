@@ -5,7 +5,7 @@ const prefix = "packages/pstdio-workbench/src/react/workbench/multiple-workbench
 // Host activation can arrive while a modal owns pointer input.
 const select = (preview: FrameLocator, name: string) =>
   preview
-    .getByRole("button", { name: `Select ${name}`, exact: true })
+    .getByRole("button", { name: `Select ${name}`, exact: true, includeHidden: true })
     .evaluate((element: HTMLButtonElement) => element.click());
 
 // Critical: retained keyboard mode must preserve its search and release completed focus requests.
@@ -46,6 +46,20 @@ test("switching suspends a color picker and restores its open state", async ({ p
   await expect(picker.locator('[data-part="content"]')).toBeHidden();
   await picker.locator('[data-part="trigger"]').click();
   await expect(picker.locator('[data-part="content"]')).toBeVisible();
+});
+
+// Critical: switching projects must preserve unfinished uncontrolled fields in an open popover.
+test("switching projects preserves an open popover's unfinished input", async ({ page }) => {
+  const preview = await openCanvasPreview(page, `${prefix}RetainedProjects`);
+  await preview.getByRole("button", { name: "A popover", exact: true }).click();
+  const draft = preview.getByRole("textbox", { name: "A popover draft", exact: true });
+  await draft.fill("Unfinished popover input");
+  await select(preview, "B");
+  await expect(draft).toBeHidden();
+  await preview.getByRole("textbox", { name: "B draft", exact: true }).fill("B stays editable");
+  await select(preview, "A");
+  await expect(draft).toBeVisible();
+  await expect(draft).toHaveValue("Unfinished popover input");
 });
 
 // Critical: the enclosing theme provider remains the owner across activation and inner remounts.

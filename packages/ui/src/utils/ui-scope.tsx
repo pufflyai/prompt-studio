@@ -32,6 +32,10 @@ export const UiScopeActivity = (props: { active: boolean; children: ReactNode })
   const parent = useContext(UiScopeViewActivityContext);
   const parentPortal = useContext(UiScopePortalContext);
   const [portal, setPortal] = useState<HTMLDivElement | null>(null);
+  // Activity detaches refs while hidden; the retained portal still owns its unfinished content.
+  const attachPortal = (node: HTMLDivElement | null) => {
+    if (node) setPortal(node);
+  };
   // A suspended child can miss the inactive render; retain that dismissal until it resumes.
   const [activity, setActivity] = useState({ active, revision: 0 });
   if (activity.active !== active) {
@@ -47,7 +51,7 @@ export const UiScopeActivity = (props: { active: boolean; children: ReactNode })
       </UiScopeContext>
       <ChakraPortal container={parentPortal ?? scope?.root}>
         <Box
-          ref={setPortal}
+          ref={attachPortal}
           data-ui-view-overlays=""
           display={enabled ? "contents" : "none"}
           hidden={!enabled}

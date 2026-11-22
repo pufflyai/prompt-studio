@@ -2,10 +2,9 @@ import { Button, HStack, Input, Stack, Text } from "@chakra-ui/react";
 import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { ScopedPopover as Popover, Portal, Tooltip, UiScopeActivity } from "@pstdio/ui";
 import { KanbanRenderer } from "@pstdio/ui/kanban-renderer";
+import { createWorkbench, type WorkbenchCore } from "@pstdio/workbench";
+import { Workbench, WorkbenchThemeProvider } from "@pstdio/workbench/react";
 import { Activity, useState } from "react";
-import { createWorkbench, type WorkbenchCore } from "../../core";
-import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
-import { Workbench } from "../workbench/workbench";
 
 const pageRef = (id: string) => ({ kind: "page", extensionId: "preview", id }) as const;
 

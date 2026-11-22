@@ -25,7 +25,7 @@ export const resolveOut = (root: string, out = DEFAULT_OUT) => resolve(root, out
 export const readManifest = async (out: string) => {
   try {
     const manifest = JSON.parse(await readFile(join(out, "manifest.json"), "utf8")) as CanvasBuildManifest;
-    return manifest.format === MANIFEST_FORMAT ? manifest : undefined;
+    return manifest.format === 1 || manifest.format === MANIFEST_FORMAT ? manifest : undefined;
   } catch {
     return undefined;
   }
@@ -36,6 +36,7 @@ export const readManifest = async (out: string) => {
  * Cheap enough to poll: it lists files and reads modification times, but parses nothing.
  */
 export const isCurrent = async (root: string, manifest: CanvasBuildManifest) => {
+  if (manifest.format !== MANIFEST_FORMAT) return false;
   const findPreview = createPreviewFinder(root);
   const files = await listCanvasFiles(root);
   const built = manifest.canvases;

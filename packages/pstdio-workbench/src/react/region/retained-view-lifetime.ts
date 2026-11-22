@@ -21,6 +21,8 @@ export const retainRecentViewPlacements = (
     if (!placement.viewId || !registered.has(placement.viewId)) continue;
     const id = placement.widgetId;
     if (!retained || open?.has(id) || currentIds.has(id)) continue;
+    // Closing a preview retires its commands and bridge owner. Reopening needs a fresh view.
+    if (placement.tabRetention === "preview") continue;
     const deadline = previous.expires.get(id) ?? now + SESSION_RESOURCE_RETENTION_MS;
     if (deadline <= now) continue;
     expires.set(id, deadline);

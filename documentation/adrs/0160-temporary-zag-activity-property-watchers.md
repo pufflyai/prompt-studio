@@ -29,6 +29,8 @@ Capture the machine's live state during cleanup so reconnection restores its mat
 
 View and trigger identity stay intact, and normal DOM cleanup remains unchanged. Build-cache inputs include patch contents so edits to a registered patch invalidate previously compiled bundles.
 
+Reconciliation does nothing when Presence is already unmounted and `present` is false. Initial closed rendering has no exit animation to schedule, including in non-DOM renderers. Mounted or suspended exits still reconcile on reconnection.
+
 View-owned portal containers hide overlays immediately while their content is suspended. A dismissal revision closes application-owned state when that content resumes. These are platform lifecycle ownership; the dependency patches repair Zag’s property and effect reconciliation.
 
 ## Limitations
