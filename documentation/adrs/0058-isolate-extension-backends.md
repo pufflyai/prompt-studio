@@ -2,7 +2,7 @@
 
 Proposed: 2026-10-06
 
-Status: Proposed. Not implemented. PS-525 builds it. Until then, an installed extension has the access of the user's account.
+Status: Proposed. In progress under PS-525. The packaged CLI can start a private worker process for an extension backend (`packages/pstdio-extensions/src/runtime/backend-process`). The worker gets an allowlisted environment, and its context calls go only to host members the host allowlists. No extension runs there yet: every backend is still imported into the API process. Even in a worker, backend code keeps the user's OS account and file access until a platform sandbox ships, so it can still read `$PSTDIO_HOME`. Until then, an installed extension has the access of the user's account.
 
 ## Context
 
