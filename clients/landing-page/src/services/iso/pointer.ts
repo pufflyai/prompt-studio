@@ -1,4 +1,4 @@
-import { dust } from "./agents";
+import { dust, grabAgent, highFive } from "./agents";
 import { clamp } from "./motion";
 import { unproject } from "./projection";
 import { supportHeight } from "./render";
@@ -58,7 +58,23 @@ const settle = (scene: IsoScene, box: IsoBox) => {
   }
 };
 
+let releaseAgent: (() => void) | null = null;
+
+/** Releasing a pressed hand: put it down if it was picked up, otherwise high five it. */
+const releaseHand = (scene: IsoScene) => {
+  const { agent } = scene.agentPress!;
+  scene.agentPress = null;
+  if (releaseAgent) {
+    releaseAgent();
+    releaseAgent = null;
+  } else highFive(scene, agent);
+};
+
 const release = (scene: IsoScene) => {
+  if (scene.agentPress) {
+    releaseHand(scene);
+    return;
+  }
   const press = scene.press;
   scene.press = null;
   const box = scene.held;
@@ -82,6 +98,18 @@ export const bindPointer = (scene: IsoScene) => {
     scene.pointer = [sx, sy];
     hand.style.transform = `translate(${sx}px,${sy}px)`;
     hand.classList.add("iso-on");
+    const pressed = scene.agentPress;
+    if (pressed) {
+      if (!scene.heldAgent && Math.hypot(sx - pressed.at[0], sy - pressed.at[1]) > DRAG_DISTANCE)
+        releaseAgent = grabAgent(scene, pressed.agent);
+      const agent = scene.heldAgent;
+      if (agent?.held) {
+        const z = agent.held[2];
+        const [wx, wy] = unproject(scene, sx, sy, z);
+        agent.held = [clamp(wx, -40, scene.world.W + 40), clamp(wy, -40, scene.world.D + 40), z];
+      }
+      return;
+    }
     const press = scene.press;
     if (press && !scene.held && Math.hypot(sx - press.at[0], sy - press.at[1]) > DRAG_DISTANCE) startDrag(scene);
     const box = scene.held;

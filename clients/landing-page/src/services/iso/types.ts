@@ -62,6 +62,12 @@ export interface Agent {
   el: HTMLElement;
   icon: HTMLElement;
   shadow: HTMLElement;
+  /** Where the visitor holds the hand; it is drawn there while its work carries on underneath. */
+  held?: [number, number, number];
+  /** The box in the hand while it carries one; grabbing the hand drops it. */
+  carrying?: IsoBox;
+  /** Left over from being held: shrinks every frame so the hand springs back to its work. */
+  offset?: [number, number, number];
 }
 
 export interface DropTarget {

@@ -18,6 +18,9 @@ export class IsoScene implements Origin {
   agents: Agent[] = [];
   targets: DropTarget[] = [];
   held: IsoBox | null = null;
+  /** An agent hand the visitor pressed; a drag picks it up, a click high fives it. */
+  agentPress: { agent: Agent; at: readonly [number, number] } | null = null;
+  heldAgent: Agent | null = null;
   pointer: [number, number] | null = null;
   lastUser = Number.NEGATIVE_INFINITY;
   disposed = false;

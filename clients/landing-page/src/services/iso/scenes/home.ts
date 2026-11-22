@@ -1,86 +1,88 @@
 import { addAgent, agentFive, agentSays, carry, code, job, moveAgent, pat, puff, toss } from "../agents";
-import { kindColor, type ToolKind, workbench } from "../greek";
+import { ISO_SURFACE } from "../greek";
 import { pick } from "../motion";
-import type { Agent, IsoScene } from "../scene";
-import { BLOCK, type Piece, type Slot, type State, shapePieces } from "./home-pieces";
+import type { Agent, IsoBox, IsoScene } from "../scene";
+import { BLOCK, benchHtml, blockHtml, MAIN_AREA, PLATE, plusPoint, TOOL_ORDER, TOOLS } from "./home-ui";
 
-export const HOME_WORLD = { W: 330, D: 300, top: 70, bottom: 24 };
+export const HOME_WORLD = { W: 312, D: 278, top: 60, bottom: 18 };
 
-const PLATE = { x: 70, y: 70, w: 190, d: 160 };
+// Where agents stand to write code: around the workbench, never on it.
 const SPOTS: [number, number][] = [
-  [18, 30],
-  [252, 22],
-  [286, 120],
-  [262, 250],
+  [6, 14],
+  [268, 8],
+  [294, 120],
+  [290, 252],
   [150, 262],
-  [20, 230],
-  [10, 130],
+  [8, 248],
+  [4, 130],
 ];
-const BUILDS: [ToolKind, string, string[]][] = [
-  ["page", "tracker.tsx", ["export const Tracker = () =>", "  <Board columns={stages} />"]],
-  ["command", "invoices.ts", ['command("check-invoices",', "  () => totals.match(due))"]],
-  ["automation", "digest.ts", ['schedule("0 9 * * 1",', "  () => post(summary()))"]],
-  ["editor", "chart.tsx", ["<LineChart data={prices}", '  range="90d" />']],
-  ["skill", "review.md", ["# Review checklist", "- tests pass, copy reads well"]],
-];
-const MAX_TABS = 5;
+
+// block: made, on its way · held: in the visitor's hand · dropped: let go off the workbench
+type Piece = IsoBox & { state: "block" | "held" | "dropped"; claimed: boolean; generation: number };
 
 /**
- * Agents code tools, pat them into place, then open a new tab and start over. The visitor can
- * take any piece, even from an agent's hand; it turns back into a block and the agents fetch it.
+ * One tool at a time grows on the workbench. Agents write an improvement beside it, carry the
+ * result in and pat it into the panel: the ticket board gains columns, assignees, a list view.
+ * When the tool is done they high five, one clicks "+", and the next tab starts a new tool.
+ * The visitor can take any improvement, even from an agent's hand, and drop it on the panel
+ * to install it, or anywhere else for an agent to fetch it back.
  */
 export const setupHomeScene = (scene: IsoScene) => {
   let tabs = 1;
-  const plate = scene.add({ ...PLATE, h: 10, html: workbench(tabs) });
-  const slots: Slot[] = [
-    { x: 106, y: 88 },
-    { x: 180, y: 88 },
-    { x: 106, y: 156 },
-    { x: 180, y: 156 },
-  ].map((at) => ({ ...at, w: 66, d: 60, piece: null, reserved: false }));
+  let stage = 0;
+  let issued = 0;
+  let generation = 0;
+  let celebrating = false;
+  let chaser: Agent | null = null;
   const pieces: Piece[] = [];
   const taken = new Set<[number, number]>();
-  let next = 0;
-  let building = true;
-  let chaser: Agent | null = null;
+  // The workbench is large; swiping across it still scrolls the page. Only pieces capture touch.
+  const plate = scene.add({ ...PLATE, h: 10, html: benchHtml(tabs, stage), className: "iso-pan", color: ISO_SURFACE });
+  const tool = () => TOOLS[TOOL_ORDER[tabs - 1]];
+  const render = () => {
+    plate.top.innerHTML = benchHtml(tabs, stage);
+  };
   const agents = [
-    addAgent(scene, { name: "Claude", color: "var(--chakra-colors-agent-claude)", x: 300, y: 150, z: 50 }),
-    addAgent(scene, { name: "Codex", color: "var(--chakra-colors-agent-codex)", x: 28, y: 100, z: 50 }),
-    addAgent(scene, { name: "OpenCode", color: "var(--chakra-colors-agent-opencode)", x: 170, y: 280, z: 50 }),
+    addAgent(scene, { name: "Claude", color: "var(--chakra-colors-agent-claude)", x: 300, y: 170, z: 50 }),
+    addAgent(scene, { name: "Codex", color: "var(--chakra-colors-agent-codex)", x: 10, y: 100, z: 50 }),
+    addAgent(scene, { name: "OpenCode", color: "var(--chakra-colors-agent-opencode)", x: 170, y: 266, z: 50 }),
   ];
 
-  const { seat, toBlock, advance, patByHand, stageCount } = shapePieces(scene, slots);
-  const finish = async (agent: Agent, piece: Piece) => {
-    while (piece.state === "seated" && piece.stage < stageCount) await pat(scene, agent, piece, () => advance(piece));
+  const forget = (piece: Piece) => {
+    const index = pieces.indexOf(piece);
+    if (index >= 0) pieces.splice(index, 1);
+  };
+  // The block sinks into the panel, and the panel gains the next part.
+  const deliver = (piece: Piece) => {
+    forget(piece);
+    piece.drag = false;
+    scene.fadeOut(piece);
+    if (piece.generation !== generation) return;
+    stage = Math.min(stage + 1, tool().improvements.length);
+    render();
+    puff(scene, piece.x + piece.w / 2, piece.y + piece.d / 2, 10);
   };
 
-  // Turning to a new tab leaves the finished tools in the old tab and empties the workbench.
-  let generation = 0;
+  // A new tab starts the next tool from nothing; improvements still on their way are dropped.
   const turnPage = () => {
     generation++;
-    const plus = { x: PLATE.x + 30 + tabs * 25 + 4, y: PLATE.y + 5 };
+    const plus = plusPoint(plate.top);
     puff(scene, plus.x, plus.y, 10);
-    tabs = tabs >= MAX_TABS ? 1 : tabs + 1;
-    plate.top.innerHTML = workbench(tabs);
-    const old = pieces.splice(0);
-    for (const piece of old) {
+    tabs = tabs >= TOOL_ORDER.length ? 1 : tabs + 1;
+    stage = 0;
+    issued = 0;
+    render();
+    for (const piece of pieces.splice(0)) {
       piece.drag = false;
-      piece.t.z = 24;
-      piece.el.classList.add("iso-fade");
+      scene.fadeOut(piece);
     }
-    setTimeout(() => {
-      for (const piece of old) scene.remove(piece);
-    }, 450);
-    for (const slot of slots) Object.assign(slot, { piece: null, reserved: false });
   };
   scene.onAction = (action) => {
     if (action === "new-tab" && !scene.held) turnPage();
   };
 
   scene.onGrab = (box) => {
-    const piece = box as Piece;
-    piece.state = "held";
-    toBlock(piece);
+    (box as Piece).state = "held";
     chaser = agents.find((agent) => !agent.task) ?? null;
     if (!chaser) return;
     chaser.task = true;
@@ -104,132 +106,124 @@ export const setupHomeScene = (scene: IsoScene) => {
     chaser.y += (box.y - 6 - chaser.y) * 0.07;
     chaser.z += (box.z + box.lift + box.h + 24 - chaser.z) * 0.07;
   };
-  // Dropping a piece on the workbench puts it back on its own slot for the agents to finish.
+  // Dropping an improvement on the panel installs it, just as an agent's pat does.
   scene.targets.push({
-    x: 96,
-    y: 80,
-    w: 162,
-    d: 146,
+    ...MAIN_AREA,
     accept: (box) => (box as Piece).state === "held",
-    drop: (box) => seat(box as Piece),
+    drop: (box) => deliver(box as Piece),
   });
 
-  const fetch = async (agent: Agent, piece: Piece) => {
-    agentSays(agent, pick(["give that back", "mine!", "nice try"]), 1300);
-    const slot = slots[piece.slot];
-    const dest = { x: slot.x + slot.w / 2 - BLOCK.w / 2, y: slot.y + slot.d / 2 - BLOCK.d / 2, z: 10 };
-    if (!(await carry(agent, piece, dest, 34))) return;
-    seat(piece);
-    await finish(agent, piece);
+  const dropPoint = () => ({
+    x: MAIN_AREA.x + MAIN_AREA.w / 2 - BLOCK.w / 2 + (Math.random() - 0.5) * 60,
+    y: MAIN_AREA.y + MAIN_AREA.d / 2 - BLOCK.d / 2 + (Math.random() - 0.5) * 50,
+    z: 10,
+  });
+  const install = async (agent: Agent, piece: Piece) => {
+    const dest = dropPoint();
+    const delivered =
+      piece.state === "block" && Math.random() < 0.5
+        ? await toss(scene, agent, piece, dest, 70)
+        : await carry(agent, piece, dest, 26);
+    if (!delivered) {
+      // The visitor took the block or the hand; a block left lying around waits to be fetched.
+      if (!piece.held) piece.state = "dropped";
+      if (!agent.held) agentSays(agent, pick(["hey!", "I was using that", "rude"]), 1300);
+      return;
+    }
+    if (piece.generation !== generation) return;
+    piece.state = "block";
+    await pat(scene, agent, piece, () => deliver(piece));
+    // The pat never landed (the visitor held the hand or took the block): someone fetches it again.
+    if (pieces.includes(piece) && !piece.held) piece.state = "dropped";
   };
 
-  const build = async (agent: Agent, index: number) => {
+  const build = async (agent: Agent) => {
     const page = generation;
-    const slot = slots[index];
-    const [kind, fileName, lines] = BUILDS[next++ % BUILDS.length];
+    const kind = TOOL_ORDER[tabs - 1];
+    const step = TOOLS[kind].improvements[issued++];
     const spot = pick(SPOTS.filter((candidate) => !taken.has(candidate))) ?? SPOTS[0];
     taken.add(spot);
     const [x, y] = spot;
-    await moveAgent(agent, x + 13, y + 13, 46, 650);
-    await code(scene, agent, fileName, lines);
+    await moveAgent(agent, x + 13, y + 13, 46, 600);
+    await code(scene, agent, step.file, step.code);
     taken.delete(spot);
-    // The visitor opened a new tab while the agent was coding; this tool belongs to the old one.
+    // The visitor opened a new tab while the agent was coding; this belonged to the old tool.
     if (page !== generation) return;
     const piece = scene.add({
       x,
       y,
       ...BLOCK,
-      color: kindColor(kind),
+      color: TOOLS[kind].color,
+      html: blockHtml(kind),
       className: "iso-pop",
       drag: true,
-      kind,
-      state: "block" as State,
-      slot: index,
+      state: "block" as Piece["state"],
       claimed: true,
-      stage: 0,
-    });
-    piece.click = () => patByHand(piece);
+      generation: page,
+    }) as Piece;
+    scene.label(piece, `+ ${step.label}`, true);
     piece.z = 30;
     pieces.push(piece);
-    slot.piece = piece;
-    slot.reserved = false;
     puff(scene, x + 13, y + 13, 0);
-    await scene.wait(250);
-    const dest = { x: slot.x + slot.w / 2 - BLOCK.w / 2, y: slot.y + slot.d / 2 - BLOCK.d / 2, z: 10 };
-    const delivered =
-      Math.random() < 0.5 ? await toss(scene, agent, piece, dest, 80) : await carry(agent, piece, dest, 24);
-    if (!delivered) {
-      agentSays(agent, pick(["hey!", "I was using that", "rude"]), 1300);
-      piece.claimed = false;
-      return;
-    }
-    if (page !== generation) return;
-    seat(piece);
-    await finish(agent, piece);
+    await scene.wait(220);
+    await install(agent, piece);
     piece.claimed = false;
   };
 
-  // Each agent fetches dropped pieces first, then finishes seated ones, then builds new tools.
+  // Each agent fetches dropped improvements first, then builds the next one the tool still needs.
   const work = async (agent: Agent) => {
     await scene.wait(300 + Math.random() * 900);
     for (;;) {
       await scene.awake();
-      if (agent === chaser || !building) {
+      if (agent === chaser || celebrating) {
         await scene.wait(250);
         continue;
       }
-      const waiting = pieces.find((piece) => !piece.claimed && (piece.state === "dropped" || piece.state === "seated"));
-      if (waiting) {
-        waiting.claimed = true;
-        await job(agent, () => (waiting.state === "dropped" ? fetch(agent, waiting) : finish(agent, waiting)));
-        waiting.claimed = false;
+      const dropped = pieces.find((piece) => !piece.claimed && piece.state === "dropped");
+      if (dropped) {
+        dropped.claimed = true;
+        await job(agent, () => install(agent, dropped));
+        dropped.claimed = false;
         continue;
       }
-      const free = slots.findIndex((slot) => !slot.piece && !slot.reserved);
-      if (free < 0) {
-        await scene.wait(300);
+      if (issued < tool().improvements.length) {
+        await job(agent, () => build(agent));
         continue;
       }
-      slots[free].reserved = true;
-      await job(agent, () => build(agent, free));
+      await scene.wait(300);
     }
   };
 
-  const complete = () => slots.every((slot) => slot.piece?.state === "tool");
+  const complete = () => stage >= tool().improvements.length && pieces.length === 0;
 
   // An agent clicks "+" in the tab bar, just as the visitor can.
   const openTab = async (agent: Agent) => {
-    const plus = { x: PLATE.x + 30 + tabs * 25 + 4, y: PLATE.y + 5 };
-    await moveAgent(agent, plus.x, plus.y, 34, 700);
+    const plus = plusPoint(plate.top);
+    await moveAgent(agent, plus.x, plus.y, 34, 650);
     await moveAgent(agent, plus.x, plus.y, 14, 110);
     if (complete() && !scene.held) turnPage();
     await moveAgent(agent, plus.x, plus.y, 34, 160);
   };
-
-  // When every slot holds a tool, the agents celebrate and open a fresh tab.
+  // When the tool has every improvement, two agents high five and one opens the next tab.
   const celebrate = async () => {
-    building = false;
-    await scene.wait(2000);
+    celebrating = true;
     while (agents.some((agent) => agent.task)) await scene.wait(150);
-    // The visitor may have taken a tool while the agents finished up.
-    // Tools stay draggable throughout; taking one cancels the celebration and the agents fetch it.
-    building = !complete();
-    if (building) return;
-    const [first, second] = pick([agents.slice(0, 2), agents.slice(1), [agents[0], agents[2]]]);
-    await agentFive(scene, first, second);
-    await scene.wait(500);
-    if (complete()) {
+    if (complete() && !scene.held) {
+      await scene.wait(700);
+      const [first, second] = pick([agents.slice(0, 2), agents.slice(1), [agents[0], agents[2]]]);
+      await agentFive(scene, first, second);
+      await scene.wait(400);
       const agent = pick(agents);
-      await job(agent, () => openTab(agent));
-      await scene.wait(450);
+      if (complete()) await job(agent, () => openTab(agent));
+      await scene.wait(400);
     }
-    building = true;
+    celebrating = false;
   };
   const restart = async () => {
     for (;;) {
       await scene.awake();
       await scene.wait(400);
-      if (building && !scene.held && complete()) await celebrate();
+      if (!celebrating && !scene.held && complete()) await celebrate();
     }
   };
 

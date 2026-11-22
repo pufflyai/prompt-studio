@@ -6,41 +6,15 @@ import { useLandingDocument } from "../../hooks/use-landing-document";
 import { useLandingNavigation } from "../../hooks/use-landing-navigation";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
 import { useWindowChrome } from "../../hooks/use-window-chrome";
-import { CommandMenu, ExamplesPage, FeaturesPage, ReadingPage, WhatIsPage } from "../../services/landing-modules";
-import { landingPathForExample, sectionForPage } from "../../services/landing-route";
-import { StartHereView } from "../sections/start-here-view";
+import { CommandMenu, ReadingPage } from "../../services/landing-modules";
+import { sectionForPage } from "../../services/landing-route";
+import { type StudioPage, StudioScroll } from "../sections/studio-scroll";
 import { ProjectTabsBar } from "./project-tabs-bar";
 import { ResourceSidebar } from "./resource-sidebar";
 import { WorkbenchStatusBar } from "./workbench-status-bar";
 
-type StudioPage = LandingPage & { view: "start" | "what-is-prompt-studio" | "examples" | "features" };
-
 const isStudioPage = (page: LandingPage): page is StudioPage =>
   ["start", "what-is-prompt-studio", "examples", "features"].includes(page.view);
-
-interface StudioContentProps {
-  page: StudioPage;
-  onNavigate: (path: string, replace?: boolean) => void;
-}
-
-const StudioContent = (props: StudioContentProps) => {
-  const { page, onNavigate } = props;
-  if (page.view === "start") return <StartHereView />;
-  let content = <FeaturesPage.Component />;
-  if (page.view === "examples")
-    content = (
-      <ExamplesPage.Component
-        exampleId={page.exampleId}
-        onNavigate={(exampleId, replace) => onNavigate(landingPathForExample(exampleId), replace)}
-      />
-    );
-  if (page.view === "what-is-prompt-studio") content = <WhatIsPage.Component />;
-  return (
-    <Box layerStyle="panel" bg="bg" width="full" minWidth="0" height="full" overflow="hidden">
-      {content}
-    </Box>
-  );
-};
 
 interface WorkbenchLandingProps {
   initialPath: string;
@@ -60,7 +34,7 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
       <Box as="main" css={styles.main} aria-busy={loading || undefined}>
         <Suspense fallback={null}>
           {isStudioPage(shownPage) ? (
-            <StudioContent page={shownPage} onNavigate={navigate} />
+            <StudioScroll page={shownPage} onNavigate={navigate} />
           ) : (
             <ReadingPage.Component page={shownPage} pages={pages} document={document} />
           )}
