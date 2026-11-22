@@ -1,5 +1,5 @@
 import { Button, HStack, IconButton } from "@chakra-ui/react";
-import { ListRow, ScopedMenu as Menu, Portal, Tooltip } from "@pstdio/ui";
+import { BubbleButton, ListRow, ScopedMenu as Menu, Portal, Tooltip } from "@pstdio/ui";
 import { Fragment } from "react";
 import {
   getAnchorResource,
@@ -22,6 +22,9 @@ interface WorkbenchHeaderActionsProps {
   menuPath: MenuPath;
   controlSize?: "2xs" | "xs";
   placement?: WorkbenchWidgetPlacement;
+  itemIds?: readonly string[];
+  compact?: boolean;
+  iconOnly?: boolean;
 }
 
 const commandExecutionContext = (resource: ResourceRef | undefined): WorkbenchCommandExecutionContext | undefined =>
@@ -31,9 +34,39 @@ const WorkbenchInlineHeaderAction = (props: {
   item: WorkbenchMenuItem;
   onSelect: (item: WorkbenchMenuItem) => void;
   controlSize: "2xs" | "xs";
+  compact?: boolean;
+  iconOnly?: boolean;
 }) => {
-  const { controlSize, item, onSelect } = props;
+  const { controlSize, item, onSelect, compact, iconOnly } = props;
   const onClick = () => onSelect(item);
+
+  if (compact)
+    return (
+      <BubbleButton
+        aria-label={item.label}
+        tooltip={item.label}
+        disabled={item.disabled}
+        onClick={onClick}
+        containerProps={{ position: "relative", bottom: "auto", right: "auto" }}
+      >
+        <WorkbenchIcon name={item.icon ?? "Circle"} size={14} />
+      </BubbleButton>
+    );
+
+  if (iconOnly)
+    return (
+      <Tooltip content={item.label}>
+        <IconButton
+          aria-label={item.label}
+          size={controlSize}
+          variant="ghost"
+          disabled={item.disabled}
+          onClick={onClick}
+        >
+          <WorkbenchIcon name={item.icon ?? "Circle"} size={14} />
+        </IconButton>
+      </Tooltip>
+    );
 
   if (item.group === "primary" || !item.icon) {
     return (
@@ -77,7 +110,8 @@ export const useWorkbenchHeaderItems = (
 export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
   const { controlSize = "xs", menuPath, workbench, placement } = props;
   const { commands, resource, items } = useWorkbenchHeaderItems(workbench, menuPath, placement);
-  const { inlineItems, overflowItems } = resolveWorkbenchHeaderActionGroups(items);
+  const filtered = props.itemIds ? items.filter((item) => props.itemIds!.includes(item.id)) : items;
+  const { inlineItems, overflowItems } = resolveWorkbenchHeaderActionGroups(filtered);
 
   // Actions whose command declares parameters collect that input through the shared
   // command params dialog (opened via the command palette store) before running;
@@ -98,7 +132,14 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
   return (
     <HStack flexShrink={0} gap="2xs" minW="0">
       {inlineItems.map((item) => (
-        <WorkbenchInlineHeaderAction key={item.id} item={item} onSelect={onSelect} controlSize={controlSize} />
+        <WorkbenchInlineHeaderAction
+          key={item.id}
+          item={item}
+          onSelect={onSelect}
+          controlSize={controlSize}
+          compact={props.compact}
+          iconOnly={props.iconOnly}
+        />
       ))}
       {overflowItems.length > 0 ? (
         <Menu.Root>

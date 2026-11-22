@@ -84,6 +84,12 @@ export const createPanelViewFixture = (baseUrl: string) => {
       capabilities: ["navigation.open"],
     },
   });
+  const activity = defineView({
+    id: "letter-activity",
+    title: "Letter activity",
+    icon: "Activity",
+    body: { kind: "webview", entry: packageAsset("./letter-browser.tsx", baseUrl), capabilities: ["navigation.open"] },
+  });
   const kind = defineResourceKind({ id: "letter", label: "Letter", icon: "Mail" });
   const viewer = definePlacement({
     id: "letter-reader",
@@ -159,8 +165,11 @@ export const createPanelViewFixture = (baseUrl: string) => {
   return {
     commands: [addLetterViewer, completeLetter, deleteLetter, headerContext],
     resourceKinds: [kind],
-    views: [reader, browser, toolbar],
-    viewMenus: [defineViewMenu({ id: "letter-tools", owner: reader.ref, view: browser.ref, side: "right" })],
+    views: [reader, browser, toolbar, activity],
+    viewMenus: [
+      defineViewMenu({ id: "letter-tools", owner: reader.ref, view: browser.ref, side: "right" }),
+      defineViewMenu({ id: "letter-activity", owner: reader.ref, view: activity.ref, side: "bottom" }),
+    ],
     placements: [viewer, browserPanel],
     pages: [mailbox, letter, collection],
     navigationItems: [

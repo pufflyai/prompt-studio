@@ -13,7 +13,6 @@ import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { FullscreenControls } from "../workbench/fullscreen-controls";
 import { WorkbenchPanelToggles } from "../workbench/workbench-panel-toggles";
-import { WorkbenchContentHeader } from "./content-header";
 import { WorkbenchHeaderActions } from "./header-actions";
 import { WorkbenchBreadcrumbActions } from "./resource-actions";
 import { WorkbenchPresence } from "./workbench-presence";
@@ -88,7 +87,6 @@ const MainHeaderIdentity = (props: {
       <Box flex={hasMainHeader || !tabbed ? "1" : "0"} h="full" minW="0" overflow="hidden">
         <WorkbenchRegion workbench={workbench} region="main-header" title="Main header" />
       </Box>
-      <WorkbenchContentHeader workbench={workbench} panel="main" inline />
       <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
     </>
   );

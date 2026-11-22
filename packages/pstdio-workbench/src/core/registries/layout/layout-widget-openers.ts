@@ -1,4 +1,5 @@
 import { resourceKey } from "@pstdio/sdk/extensions";
+import type { CreateLayoutModelInput } from "./layout-model-types";
 import {
   buildUpdatedPlacement,
   createPlacement,
@@ -8,6 +9,11 @@ import {
   getActiveLocationPlacement,
   replaceRegionWidgets,
 } from "./layout-operations";
+import {
+  getWorkbenchPanelForMenuRegion,
+  isWorkbenchPanelMenuRegion,
+  workbenchPanelMenuRegions,
+} from "./layout-regions";
 import { placeWidget } from "./layout-tab-lifecycle";
 import type {
   OpenWidgetInput,
@@ -18,6 +24,7 @@ import type {
 } from "./layout-types";
 
 interface CreateWidgetOpenersInput {
+  resolvePanelMenuSide?: CreateLayoutModelInput["resolvePanelMenuSide"];
   getLayout(): WorkbenchLayout;
   validateOpen?(region: WorkbenchRegion, existing: WorkbenchWidgetPlacement | undefined, target: OpenWidgetInput): void;
   requireWidget(id: string): RegisteredWidgetContribution;
@@ -32,12 +39,21 @@ const openOwnedPanelMenus = (input: {
   placement: WorkbenchWidgetPlacement;
   requireWidget(id: string): RegisteredWidgetContribution;
   widget: RegisteredWidgetContribution;
+  resolvePanelMenuSide?: CreateLayoutModelInput["resolvePanelMenuSide"];
 }) => {
   for (const panelMenuId of input.widget.ownedPanelMenuIds ?? []) {
     const panelMenu = input.requireWidget(panelMenuId);
+    const side = input.resolvePanelMenuSide?.(input.placement, panelMenu);
+    const region =
+      side && isWorkbenchPanelMenuRegion(panelMenu.region)
+        ? workbenchPanelMenuRegions[getWorkbenchPanelForMenuRegion(panelMenu.region)][side]
+        : undefined;
     input.openWidget(panelMenuId, {
+      region,
       pinned: true,
       role: "panel-menu",
+      menuOwnerWidgetId: input.placement.widgetId,
+      pageContext: input.placement.pageContext,
       viewId: panelMenu.rendererId,
       resource: input.placement.resource,
       title: panelMenu.region === "main-left-menu" ? input.placement.resource?.label : panelMenu.title,
@@ -49,6 +65,15 @@ const findReusablePlacement = (
   layout: WorkbenchLayout,
   openInput: OpenWidgetInput,
 ) => {
+  if (openInput.role === "panel-menu" && openInput.menuOwnerWidgetId) {
+    for (const region of Object.values(layout.regions)) {
+      const index = region.widgets.findIndex(
+        (entry) => entry.contributionId === widget.id && entry.menuOwnerWidgetId === openInput.menuOwnerWidgetId,
+      );
+      if (index >= 0) return { regionId: region.id, index, placement: region.widgets[index] };
+    }
+    return undefined;
+  }
   if (!widget.singleton && widget.reuse === "none") return undefined;
   if (openInput.role === "sub-panel" || openInput.role === "panel-menu") {
     const ownerResourceKey = getActiveLocationPlacement(layout)?.resourceKey;
@@ -113,7 +138,12 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
   const { getLayout, requireWidget, applyAndActivate } = input;
   const bindToActiveLocation = (placement: WorkbenchWidgetPlacement, layout: WorkbenchLayout) => {
     if (placement.role !== "sub-panel" && placement.role !== "panel-menu") return placement;
-    return { ...placement, ownerResourceKey: getActiveLocationPlacement(layout)?.resourceKey };
+    return {
+      ...placement,
+      ownerResourceKey: placement.menuOwnerWidgetId
+        ? placement.resourceKey
+        : getActiveLocationPlacement(layout)?.resourceKey,
+    };
   };
   const updateSingleton = (
     widget: RegisteredWidgetContribution,
@@ -248,7 +278,13 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     } else {
       placement = insertWidget(widget, regionId, replacementIndex, placementInput);
     }
-    openOwnedPanelMenus({ openWidget, placement, requireWidget, widget });
+    openOwnedPanelMenus({
+      openWidget,
+      placement,
+      requireWidget,
+      widget,
+      resolvePanelMenuSide: input.resolvePanelMenuSide,
+    });
     return applyAndActivate(getLayout(), previewContent?.regionId ?? regionId, placement);
   };
   return { openWidget };

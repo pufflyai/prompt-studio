@@ -69,7 +69,7 @@ test("ticket work opens a shared non-Git folder and loads files without Git requ
       .getByRole("button", { name: "Open Side left menu", exact: true });
     if ((await filesOpener.getAttribute("aria-expanded")) !== "true") await filesOpener.click();
     await expect(filesOpener).toHaveAttribute("aria-expanded", "true");
-    const sideFiles = page.getByRole("menu", { name: "Open Side left menu", exact: true });
+    const sideFiles = page.getByRole("dialog", { name: "Files", exact: true });
     await expect(sideFiles.getByRole("option", { name: "notes.md", exact: true })).toBeVisible();
     // A non-Git folder adds no Changes view.
     await expect(page.getByRole("tab", { name: "Changes" })).toHaveCount(0);

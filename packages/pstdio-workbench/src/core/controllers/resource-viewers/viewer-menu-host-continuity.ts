@@ -5,14 +5,15 @@ import { replaceViewerHost } from "./viewer-host-continuity";
 const companions = (core: WorkbenchCore, owner: WorkbenchWidgetPlacement) => {
   const layout = core.layout.getLayout();
   return Object.values(workbenchPanelMenuRegions).flatMap((sides) =>
-    Object.entries(sides).flatMap(([side, region]) =>
+    Object.values(sides).flatMap((region) =>
       layout.regions[region].widgets.flatMap((placement) => {
         const widget = core.layout.getWidget(placement.contributionId);
         if (widget?.panelMenuOwner?.contributionId !== owner.contributionId) return [];
+        if (placement.menuOwnerWidgetId && placement.menuOwnerWidgetId !== owner.widgetId) return [];
         const config = widget.config;
         const contextId =
           config && typeof config === "object" && "viewContextId" in config ? config.viewContextId : widget.rendererId;
-        return [{ placement, signature: JSON.stringify([side, contextId, placement.viewId]) }];
+        return [{ placement, signature: JSON.stringify([contextId, placement.viewId]) }];
       }),
     ),
   );

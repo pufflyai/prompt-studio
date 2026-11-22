@@ -1,7 +1,6 @@
 import { Box } from "@chakra-ui/react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
-import { WorkbenchContentHeader } from "../header/content-header";
 import { WorkbenchPanelMenuLayout } from "../panel-menu/panel-menu";
 import { PanelHeader } from "../region/panel-header";
 import { WorkbenchRegion } from "../region/region";
@@ -57,7 +56,6 @@ export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => 
           <WorkbenchRegion workbench={workbench} region="secondary-header" title="Secondary Panel header" />
         </Box>
       </PanelHeader>
-      <WorkbenchContentHeader workbench={workbench} panel="secondary" />
       <WorkbenchTabDropTarget region="secondary" visible={policy.open} />
       <Box flex="1" minH="0" minW="0" overflow="hidden">
         <WorkbenchPanelMenuLayout workbench={workbench} panel="secondary">

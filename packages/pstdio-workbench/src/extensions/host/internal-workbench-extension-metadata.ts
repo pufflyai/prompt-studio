@@ -27,7 +27,7 @@ interface InternalWorkbenchExtensionPanelMenu {
   ownerPanelId: string;
   viewId: string;
   title: MetadataView["title"];
-  side: "left" | "right";
+  side: "left" | "right" | "bottom";
   group?: string;
   placement?: "first" | "default" | "last";
   hostTreeHeader?: "default" | "none";
@@ -38,6 +38,7 @@ interface InternalWorkbenchExtensionPanelMenu {
 
 export interface InternalWorkbenchExtensionPanel {
   headerViewId?: string;
+  menuHeader?: { multipleMenus?: boolean };
   id: string;
   extensionId: string;
   title: MetadataView["title"];

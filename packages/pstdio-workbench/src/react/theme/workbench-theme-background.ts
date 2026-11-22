@@ -23,16 +23,19 @@ const workbenchRegionBackgrounds = {
   "main-left-menu": workbenchBackgrounds.main,
   main: workbenchBackgrounds.main,
   "main-right-menu": workbenchBackgrounds.main,
+  "main-bottom-menu": workbenchBackgrounds.main,
   "secondary-header": workbenchBackgrounds.main,
   "secondary-left-menu": workbenchBackgrounds.main,
   secondary: workbenchBackgrounds.main,
   "secondary-right-menu": workbenchBackgrounds.main,
+  "secondary-bottom-menu": workbenchBackgrounds.main,
   status: workbenchBackgrounds.main,
   overlay: workbenchBackgrounds.main,
   "side-header": workbenchBackgrounds.main,
   "side-left-menu": workbenchBackgrounds.main,
   side: workbenchBackgrounds.main,
   "side-right-menu": workbenchBackgrounds.main,
+  "side-bottom-menu": workbenchBackgrounds.main,
 } as const satisfies Record<WorkbenchRegion, string>;
 
 export const workbenchCommandPaletteBackground = workbenchBackgrounds.widget;

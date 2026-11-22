@@ -94,8 +94,11 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
 
 const viewMenuPlacementPriority = { first: 1_000_000, default: 0, last: -1_000_000 } as const;
 
-export const registerViewMenus = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
-  input.metadata.panels
+export const registerViewMenus = (input: InternalRegisterWorkbenchExtensionContributionsInput) => [
+  ...input.metadata.panels.map((panel) =>
+    input.workbench.viewMenus.configureOwner(panel.id, panel.menuHeader?.multipleMenus ?? false),
+  ),
+  ...input.metadata.panels
     .flatMap((panel) => panel.panelMenus ?? [])
     .map((menu, index) =>
       input.workbench.viewMenus.registerViewMenu({
@@ -105,7 +108,8 @@ export const registerViewMenus = (input: InternalRegisterWorkbenchExtensionContr
         side: menu.side,
         priority: viewMenuPlacementPriority[menu.placement ?? "default"] - index,
       }),
-    );
+    ),
+];
 
 export const registerSettings = (input: InternalRegisterWorkbenchExtensionContributionsInput) => {
   const disposables: Disposable[] = [];

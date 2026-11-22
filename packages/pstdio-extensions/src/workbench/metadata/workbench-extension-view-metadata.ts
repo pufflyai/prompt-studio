@@ -218,6 +218,7 @@ export const toViewRecord = (
     extensionId: view.extensionId,
     title: view.contribution.title,
     icon: view.contribution.icon,
+    menuHeader: view.contribution.menuHeader,
     header: view.contribution.header
       ? { view: normalizedRef(view.contribution.header.view, view.extensionId) }
       : undefined,

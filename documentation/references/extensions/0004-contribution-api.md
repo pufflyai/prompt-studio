@@ -443,16 +443,19 @@ This additive surface requires host capability `view.actionBar.v1` and a
 supporting published SDK. Publish platform support before releasing independent
 extensions that adopt it. Older view kinds and activity items stay supported.
 
-## View-owned page and tab headers
+## View-owned menu headers
 
 On unreleased extension API 0.5.1, declare `header: { view: toolbar.ref }` on a view
 alongside its `body`. The toolbar is another declared view, using a native body or
 a bounded webview. Header references must name an available view and cannot form
 cycles.
 
-The host places those controls in the page header for standalone content, or a
-subheader below the tab strip for tabbed content. Existing `viewMenus` openers
-share that row. Main, Side, Secondary, and floating Side use the same contract;
+The host places those controls and `viewMenus` openers in one menu header, below
+page chrome or the tab strip. Users can dock it at the top, either side or the
+bottom, and reorder controls by dragging or using Alt + arrow keys. Menu icons
+are rightmost by default. Small panels use floating bubbles; a custom header
+opens as one retained controls surface. Menus have no title header or close
+button, and each edge displays one selected menu. Main, Side, Secondary, and floating Side use the same contract;
 every tab header keeps a bottom separator. Tab and whole-panel actions remain in
 the tab header.
 
@@ -472,7 +475,15 @@ need a larger surface should open a declared single-view page with
 `navigation.open({ kind: "dialog", page })`; the host owns the modal, and the
 content can close it with `placement.close`. The Timeline Auto Build header uses
 this path. A native `actionBar` body is also available for host-rendered buttons
-and menus.
+and menus. Set `menuHeader: { multipleMenus: true }` on an owner view to default
+to independent open menus on different edges. Prompt Studio defaults to one
+open menu. Users can override that policy in the menu header context menu and
+move individual menus to the left, right or bottom.
+
+Resource pages with navigation expose only their own page navigation as a
+Resources menu when tabbed. Standalone pages continue to use the routed project
+navigation. Focusing an auxiliary tab does not replace that navigation; its
+resource, expansion, selection, search and scroll remain bound to its owner.
 
 ## Native view toolbar actions
 

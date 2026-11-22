@@ -164,15 +164,22 @@ export const WorkbenchWidgetHost = (props: WorkbenchWidgetHostProps) => {
       ) : (
         <WorkbenchWidgetFallback label={`No renderer registered for ${rendererId}.`} />
       )}
-      {!props.viewId && resource && activity && showsActivity && props.region === "main" && (
-        <WorkbenchResourceActivity
-          key={resourceKey(resource)}
-          workbench={workbench}
-          binding={activity}
-          resource={resource}
-          visible={props.visible ?? true}
-        />
-      )}
+      {!props.viewId &&
+        !workbench.viewMenus
+          .listViewMenus()
+          .some((menu) => menu.ownerViewId === view?.id && menu.purpose === "activity") &&
+        resource &&
+        activity &&
+        showsActivity &&
+        props.region === "main" && (
+          <WorkbenchResourceActivity
+            key={resourceKey(resource)}
+            workbench={workbench}
+            binding={activity}
+            resource={resource}
+            visible={props.visible ?? true}
+          />
+        )}
     </Box>
   );
 };

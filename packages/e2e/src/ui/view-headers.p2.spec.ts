@@ -6,7 +6,12 @@ import { uiOrigin } from "../ui-server";
 
 const headers = fixtureTest("panels", test);
 const panel = (page: Page, id: string) => page.locator(`[data-workbench-panel="${id}"]:visible`);
-const toolbar = (page: Page, id: string) => panel(page, id).frameLocator('iframe[title="Letter toolbar"]:visible');
+const toolbar = (page: Page, id: string) =>
+  page.frameLocator(`[data-workbench-header-panel="${id}"] iframe[title="Letter toolbar"]:visible`);
+const openToolbar = async (page: Page, id: string) => {
+  if (await toolbar(page, id).getByRole("textbox", { name: "Letter search" }).isVisible()) return;
+  await panel(page, id).getByRole("button", { name: "View controls", exact: true }).click();
+};
 const move = async (page: Page, target: Locator, name: string) => {
   await target.click({ button: "right" });
   await page.getByRole("menuitem", { name, exact: true }).click();
@@ -38,8 +43,10 @@ headers("keeps a public header view and menus with their live tab across destina
     await expect(tab).toBeVisible();
     const subheader = side.locator('[data-workbench-content-header="side"]');
     await expect(subheader).toBeVisible();
+    await openToolbar(page, "side");
     await expect(toolbar(page, "side").getByRole("textbox", { name: "Letter search" })).toHaveValue("A query");
     await page.locator('[data-workbench-panel-header="main"]').click();
+    await openToolbar(page, "side");
     await toolbar(page, "side").getByRole("textbox", { name: "Letter search" }).focus();
     await page.keyboard.press("Tab");
     await page.keyboard.press("Enter");
@@ -70,11 +77,14 @@ headers("keeps a public header view and menus with their live tab across destina
       .frameLocator('iframe[title="Letter viewer"]:visible')
       .getByRole("button", { name: "Switch to B", exact: true })
       .click();
+    await openToolbar(page, "side");
     await expect(toolbar(page, "side").getByLabel("Header for B", { exact: true })).toBeVisible();
     await toolbar(page, "side").getByRole("textbox", { name: "Letter search" }).fill("B query");
     await tab.click();
+    await openToolbar(page, "side");
     await expect(toolbar(page, "side").getByRole("textbox", { name: "Letter search" })).toHaveValue("A query");
     await move(page, tab, "Move to Secondary");
+    await openToolbar(page, "secondary");
     await expect(toolbar(page, "secondary").getByRole("textbox", { name: "Letter search" })).toHaveValue("A query");
     await expect(panel(page, "secondary").locator('[data-workbench-panel-header="secondary"]')).toHaveCSS(
       "border-bottom-width",
@@ -90,6 +100,7 @@ headers("keeps a public header view and menus with their live tab across destina
       page.frameLocator('iframe[title="Letter browser"]:visible').getByRole("textbox", { name: "Letter menu draft" }),
     ).toHaveValue("menu state follows A");
     await page.keyboard.press("Escape");
+    await openToolbar(page, "secondary");
     await toolbar(page, "secondary").getByRole("button", { name: "Read header context" }).click();
     await expect(toolbar(page, "secondary").getByRole("status", { name: "Header context", exact: true })).toHaveText(
       "Command for A",
@@ -130,7 +141,7 @@ test("Extensions search remains usable after its page becomes a tab", async ({ p
     await page.goto(`/projects/${id}/extensions`);
     const main = panel(page, "main");
     await expect(
-      main.locator('[data-workbench-panel-header="main"]').getByRole("textbox", { name: /Search extensions/ }),
+      main.locator('[data-workbench-content-header="main"]').getByRole("textbox", { name: /Search extensions/ }),
     ).toBeVisible();
     await main.getByRole("textbox", { name: /Search extensions/ }).fill("Canvas");
     await page.getByRole("button", { name: "Enter Main fullscreen", exact: true }).click();
@@ -139,15 +150,99 @@ test("Extensions search remains usable after its page becomes a tab", async ({ p
     await move(page, main.locator('[data-workbench-panel-header="main"]'), "Move to Side");
     const side = panel(page, "side");
     await expect(side.getByRole("tab", { name: "Extensions", exact: true })).toBeVisible();
-    const search = side
-      .locator('[data-workbench-content-header="side"]')
+    await side.getByRole("button", { name: "View controls", exact: true }).click();
+    const search = page
+      .locator('[data-workbench-header-panel="side"]')
       .getByRole("textbox", { name: /Search extensions/ });
     await expect(search).toHaveValue("Canvas");
     await search.fill("no-such-extension-query");
     await expect(side.getByTestId("extensions-empty")).toBeVisible();
+    await page.keyboard.press("Escape");
     await side.getByRole("button", { name: "Clear search", exact: true }).click();
+    if (!(await search.isVisible())) await side.getByRole("button", { name: "View controls", exact: true }).click();
     await expect(search).toHaveValue("");
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${id}`);
   }
 });
+
+headers(
+  "docks one menu header, reorders icons and restores independent menus after floating",
+  async ({ page, request }) => {
+    const created = await request.post(`${uiOrigin}/v1/projects`, {
+      data: folderProjectInput({ name: "Movable menu header" }),
+    });
+    expect(created.ok()).toBe(true);
+    const { id } = await created.json();
+    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    try {
+      await page.goto(`/projects/${id}/extensions/test.panel-views/mailbox`);
+      const main = panel(page, "main");
+      const header = main.locator('[data-workbench-content-header="main"]');
+      await expect(toolbar(page, "main").getByRole("textbox", { name: "Letter search" })).toBeVisible();
+      await toolbar(page, "main").getByRole("textbox", { name: "Letter search" }).fill("keep while docking");
+      await expect(main.locator('[data-workbench-panel-menu="main-right-menu"]')).toBeVisible();
+      await main.getByRole("button", { name: "Open Main bottom menu", exact: true }).click();
+      await expect(main.locator('[data-workbench-panel-menu="main-bottom-menu"]')).toBeVisible();
+      await expect(main.locator('[data-workbench-panel-menu="main-right-menu"]')).not.toBeVisible();
+      await move(page, header, "Allow multiple open menus");
+      await expect(header).toHaveAttribute("data-menu-header-multiple", "true");
+      await main.getByRole("button", { name: "Open Main right menu", exact: true }).click();
+      await expect(main.locator('[data-workbench-panel-menu="main-bottom-menu"]')).toBeVisible();
+      await expect(main.locator('[data-workbench-panel-menu="main-right-menu"]')).toBeVisible();
+      const activity = main.getByRole("button", { name: "Close Main bottom menu", exact: true });
+      await move(page, activity, "Open Letter activity on the left");
+      await expect(main.locator('[data-workbench-panel-menu="main-left-menu"]')).toBeVisible();
+      await move(page, header, "Move menu header to right");
+      await expect(header).toHaveAttribute("data-menu-header-position", "right");
+      await expect(main.locator("[data-workbench-content-header]")).toHaveCount(1);
+      const bounds = await header.boundingBox();
+      const ownerBounds = await main.boundingBox();
+      expect(Math.abs(bounds!.x + bounds!.width - ownerBounds!.x - ownerBounds!.width)).toBeLessThan(2);
+      expect(bounds!.width).toBeLessThan(40);
+      await openToolbar(page, "main");
+      await expect(toolbar(page, "main").getByRole("textbox", { name: "Letter search" })).toHaveValue(
+        "keep while docking",
+      );
+      await page.keyboard.press("Escape");
+      const lastIcon = header.getByRole("button", { name: "Close Main right menu", exact: true });
+      const beforeOrder = await header
+        .locator("[data-action-bar-item]")
+        .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-action-bar-item")));
+      await lastIcon.focus();
+      await page.keyboard.press("Alt+ArrowUp");
+      await expect
+        .poll(() =>
+          header
+            .locator("[data-action-bar-item]")
+            .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-action-bar-item"))),
+        )
+        .not.toEqual(beforeOrder);
+      const order = await header
+        .locator("[data-action-bar-item]")
+        .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-action-bar-item")));
+      await page.setViewportSize({ width: 700, height: 600 });
+      await expect(header).toHaveAttribute("aria-label", "Floating menu header bubbles");
+      await expect(main.locator('[data-workbench-panel-menu="main-left-menu"]')).not.toBeVisible();
+      await header.getByRole("button", { name: "Open Main right menu", exact: true }).click();
+      await expect(page.getByRole("dialog", { name: "Letter browser", exact: true })).toBeVisible();
+      await page.keyboard.press("Escape");
+      await page.setViewportSize({ width: 1600, height: 1000 });
+      await expect(header).toHaveAttribute("aria-label", "Menu header dock");
+      await expect(main.locator('[data-workbench-panel-menu="main-left-menu"]')).toBeVisible();
+      await expect(main.locator('[data-workbench-panel-menu="main-right-menu"]')).toBeVisible();
+      await page.reload();
+      await expect(header).toHaveAttribute("data-menu-header-position", "right");
+      await expect
+        .poll(() =>
+          header
+            .locator("[data-action-bar-item]")
+            .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-action-bar-item"))),
+        )
+        .toEqual(order);
+    } finally {
+      await request.delete(`${uiOrigin}/v1/projects/${id}`);
+    }
+  },
+);

@@ -44,8 +44,8 @@ const createHeaderWorkbench = () => {
   });
   workbench.views.registerView({
     id: "filters",
-    title: "Filters",
-    icon: "ListFilter",
+    title: "Properties",
+    icon: "SlidersHorizontal",
     body: { kind: "react", render: () => <Text p="md">Extension filters</Text> },
   });
   workbench.views.registerView({
@@ -60,6 +60,32 @@ const createHeaderWorkbench = () => {
     side: "right",
     hiddenByDefault: true,
   });
+  for (const menu of [
+    { id: "files", title: "Resources", icon: "Files", side: "left" },
+    { id: "activity", title: "Activity", icon: "Activity", side: "bottom" },
+  ] as const) {
+    workbench.views.registerView({
+      id: menu.id,
+      title: menu.title,
+      icon: menu.icon,
+      body: {
+        kind: "react",
+        render: () => (
+          <Stack p="sm">
+            <Text>{menu.title} content</Text>
+            <Input size="xs" aria-label={`${menu.title} draft`} placeholder="This draft stays with the view" />
+          </Stack>
+        ),
+      },
+    });
+    workbench.viewMenus.registerViewMenu({
+      id: menu.id,
+      ownerViewId: "extensions",
+      viewId: menu.id,
+      side: menu.side,
+      hiddenByDefault: true,
+    });
+  }
   workbench.pages.registerPage({
     id: "tool",
     ref: tool,
@@ -85,13 +111,13 @@ const createHeaderWorkbench = () => {
   return workbench;
 };
 export default {
-  title: "Product/Workbench/Header/Page and tab controls",
+  title: "Product/Workbench/Header/Menu header",
   description:
-    "App-level project and panel controls sit above the workbench. View actions are centered in page chrome or the shared short tab subheader.",
+    "App-level project and panel controls sit above the workbench. View actions are vertically centered in one movable menu header. Right-click its empty space to dock or allow multiple menus; drag controls or use Alt + arrow keys to reorder. Narrow panels use floating bubbles.",
   fullscreen: true,
 } satisfies CanvasMeta;
 
-export const PageAndTabSubheaders = () => {
+export const MovableMenuHeader = () => {
   const [workbench] = useState(createHeaderWorkbench);
   const move = (region: "side" | "secondary") => {
     const content = workbench.pages.getContent();

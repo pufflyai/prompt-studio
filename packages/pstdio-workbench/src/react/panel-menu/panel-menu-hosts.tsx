@@ -107,7 +107,7 @@ const MenuViewPortal = (props: {
   const { region, entry, registry, workbench } = props;
   const parentActive = useContext(ViewActivityContext);
   const active = useSyncExternalStore(registry.subscribe, () => registry.active(region));
-  const [panel, side] = region.split("-") as ["main" | "secondary" | "side", "left" | "right"];
+  const [panel, side] = region.split("-") as ["main" | "secondary" | "side", "left" | "right" | "bottom"];
   return createPortal(
     <ViewActivityContext value={parentActive && active}>
       <WorkbenchRegion

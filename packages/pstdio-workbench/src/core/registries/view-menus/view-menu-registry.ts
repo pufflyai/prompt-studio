@@ -6,8 +6,9 @@ export interface WorkbenchViewMenuContribution {
   id: string;
   ownerViewId: string;
   viewId: string;
-  side: "left" | "right";
+  side: "left" | "right" | "bottom";
   priority?: number;
+  purpose?: "resources" | "activity";
   mountStrategy?: "active" | "keep-mounted";
   hiddenByDefault?: boolean;
   regionSize?: WorkbenchRegionSize;
@@ -17,6 +18,8 @@ export interface WorkbenchViewMenuContribution {
 }
 
 export interface WorkbenchViewMenuRegistry {
+  getOwnerPolicy(viewId: string): boolean;
+  configureOwner(viewId: string, multipleMenus: boolean): Disposable;
   registerViewMenu(menu: WorkbenchViewMenuContribution): Disposable;
   getViewMenu(id: string): WorkbenchViewMenuContribution | undefined;
   listViewMenus(ownerViewId?: string): WorkbenchViewMenuContribution[];
@@ -27,7 +30,7 @@ export const viewMenuPanelId = (placementId: string, menuId: string) =>
   `workbench.view-menu.${encodeURIComponent(placementId)}.${encodeURIComponent(menuId)}`;
 
 const viewMenuConfig = (menu: WorkbenchViewMenuContribution) => {
-  if (menu.config === undefined) return { viewContextId: menu.id };
+  if (menu.config === undefined) return { viewContextId: menu.id, menuPurpose: menu.purpose };
   if (!menu.config || typeof menu.config !== "object" || Array.isArray(menu.config)) {
     return { viewContextId: menu.id, value: menu.config };
   }
@@ -36,8 +39,14 @@ const viewMenuConfig = (menu: WorkbenchViewMenuContribution) => {
 
 export const createWorkbenchViewMenuRegistry = (input: { views: WorkbenchViewRegistry }): WorkbenchViewMenuRegistry => {
   const menus = new Map<string, WorkbenchViewMenuContribution>();
+  const policies = new Map<string, boolean>();
 
   return {
+    getOwnerPolicy: (id) => policies.get(id) ?? false,
+    configureOwner(id, multiple) {
+      policies.set(id, multiple);
+      return createDisposable(() => policies.delete(id));
+    },
     registerViewMenu(menu) {
       if (menus.has(menu.id)) throw new Error(`View menu already registered: ${menu.id}`);
       if (!input.views.getView(menu.ownerViewId)) {
