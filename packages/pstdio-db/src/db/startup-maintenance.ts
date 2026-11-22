@@ -56,7 +56,12 @@ export const maintainDatabase = async (
   if (!fresh || rows[0].legacy || changed) {
     onPhase("database_compacting");
     try {
-      await db.exec("VACUUM (FULL, ANALYZE)");
+      const { rows: tables } = await db.query<{ name: string }>(
+        "SELECT format('%I.%I',schemaname,tablename) AS name FROM pg_tables WHERE schemaname='public' ORDER BY tablename",
+      );
+      // Only application relations hold retired user data. Rewriting the engine's
+      // system catalogs adds startup cost without reclaiming that data.
+      if (tables.length) await db.exec(`VACUUM (FULL, ANALYZE) ${tables.map(({ name }) => name).join(", ")}`);
     } catch (error) {
       // Space reclamation is optional. In particular, FULL needs temporary disk space;
       // its failure must not lock people out of an otherwise usable database.

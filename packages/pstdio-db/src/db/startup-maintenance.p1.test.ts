@@ -49,7 +49,7 @@ test(
       phase("initial:closed");
       await rm(join(path, ".pstdio-maintenance.json"));
       execute.mockImplementation(function (this: PGlite, query, options) {
-        if (query === "VACUUM (FULL, ANALYZE)")
+        if (query.startsWith("VACUUM (FULL, ANALYZE)"))
           throw Object.assign(new Error("could not extend file: No space left on device"), { code: "53100" });
         return originalExec.call(this, query, options);
       });
