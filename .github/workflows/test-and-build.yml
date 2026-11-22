@@ -87,8 +87,9 @@ jobs:
           from pathlib import Path
           audit = Path(os.environ["RUNNER_TEMP"]) / "canonical-audit"
           audit.mkdir()
-          temporary = Path(os.environ["RUNNER_TEMP"]) / "canonical-private"
+          temporary = Path("/private/tmp") / ("pstdio-canonical-" + os.environ["GITHUB_RUN_ID"] + "-" + os.environ["GITHUB_RUN_ATTEMPT"])
           temporary.mkdir()
+          assert Path.home().resolve() not in temporary.resolve().parents
           actual = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
           assert actual == os.environ["EXPECTED_SOURCE"]
           tests = [line for line in os.environ["ADDITIONAL_TESTS"].splitlines() if line]
@@ -99,7 +100,9 @@ jobs:
               command += ["--test", test]
           metadata = {"source": actual, "workflowSha": os.environ["GITHUB_SHA"], "command": command, "additionalTests": tests, "scratch": str(temporary), "freeBytesBeforeCanonical": shutil.disk_usage(temporary).free}
           def save():
-              (audit / "invocation.json").write_text(json.dumps(metadata, indent=2) + "\n")
+              pending = audit / "invocation.pending.json"
+              pending.write_text(json.dumps(metadata, indent=2) + "\n")
+              pending.replace(audit / "invocation.json")
           def signal_group(child, signum):
               try:
                   os.killpg(child.pid, signum)
@@ -139,12 +142,20 @@ jobs:
         if: always()
         run: |
           python3 - <<'PYCODE'
-          import os, zipfile
+          import json, os, zipfile
           from pathlib import Path
           audit = Path(os.environ["RUNNER_TEMP"]) / "canonical-audit"
           audit.mkdir(exist_ok=True)
           workspace = Path(os.environ["GITHUB_WORKSPACE"])
-          private = Path(os.environ["RUNNER_TEMP"]) / "canonical-private"
+          metadata = audit / "invocation.json"
+          private = Path("/private/tmp") / ("pstdio-canonical-" + os.environ["GITHUB_RUN_ID"] + "-" + os.environ["GITHUB_RUN_ATTEMPT"])
+          if metadata.is_file():
+              try:
+                  recorded = Path(json.loads(metadata.read_text())["scratch"])
+                  if recorded != private:
+                      print("Recorded scratch differs from this run; preserving only this run's deterministic scratch")
+              except (ValueError, KeyError, TypeError, OSError) as error:
+                  print("Unreadable invocation metadata; preserving this run's deterministic scratch:", error)
           with zipfile.ZipFile(audit / "canonical-evidence.zip", "w", zipfile.ZIP_DEFLATED) as archive:
               for path in (workspace / "test-results/local-review").rglob("*"):
                   if path.is_file():
