@@ -1,4 +1,4 @@
-import { contributionRefId, type PlacementIdentity, resourceKey } from "@pstdio/sdk/extensions";
+import { contributionRefId, type PlacementIdentity, type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import { defaultPageResourceCodec } from "pstdio-api-contracts";
 import type { LayoutModel, WorkbenchRegion } from "../../registries/layout/layout-model";
 import type { WorkbenchLayout, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
@@ -45,6 +45,7 @@ import { selectedMainLayout } from "./selected-main-layout";
 import { connectTrayPreviewRemoval } from "./tray-preview-removal";
 export interface ConnectWorkbenchPageRuntimeInput {
   isResourceViewer?(identity: PlacementIdentity): boolean;
+  resourceViewerKey?(resource: ResourceRef, identity: PlacementIdentity): string;
   loadPageLayout?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): WorkbenchLayout | undefined;
   loadModeLayout?(projectId: string | undefined, modeId: string): WorkbenchLayout | undefined;
   saveModeLayout?(projectId: string | undefined, modeId: string, layout: WorkbenchLayout): void;
@@ -223,6 +224,7 @@ export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeIn
 };
 export interface CreateLiveWorkbenchPageRegistryInput {
   isResourceViewer?: ConnectWorkbenchPageRuntimeInput["isResourceViewer"];
+  resourceViewerKey?: ConnectWorkbenchPageRuntimeInput["resourceViewerKey"];
   loadPageLayout?: ConnectWorkbenchPageRuntimeInput["loadPageLayout"];
   loadModeLayout?: ConnectWorkbenchPageRuntimeInput["loadModeLayout"];
   saveModeLayout?: ConnectWorkbenchPageRuntimeInput["saveModeLayout"];
@@ -302,6 +304,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
   });
   const runtime = connectWorkbenchPageRuntime({
     isResourceViewer: input.isResourceViewer,
+    resourceViewerKey: input.resourceViewerKey,
     loadPageLayout: input.loadPageLayout,
     loadModeLayout: input.loadModeLayout,
     saveModeLayout: input.saveModeLayout,

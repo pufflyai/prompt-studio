@@ -1,6 +1,7 @@
 import { validatePageParamDefinitions } from "pstdio-api-contracts";
 import { canonicalRegistryId } from "../../shared/contributions/identity-aliases";
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
+import { contextualResourceRef } from "../../shared/contributions/resource-identity";
 import { createDisposable } from "../../shared/disposable";
 import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import { composeOwnedPlacements, reconcileOwnedPlacements } from "../layout/placement-reconciliation";
@@ -136,10 +137,16 @@ export const createWorkbenchPageRegistry = <Value>(
       return pageListing.sorted.slice();
     },
 
-    resourceReferenceKey(resource) {
-      const normalized = normalizeResource(resource);
+    resourceReferenceKey(resource, context) {
+      const state = store.getState();
+      const pages = Object.values(state.pages);
+      const normalized = contextualResourceRef(
+        normalizeResource(resource),
+        state.projectId,
+        context?.kinds ?? pages.flatMap((page) => page.resource?.kinds ?? []),
+      );
       const keys = new Set(
-        Object.values(store.getState().pages).flatMap((page) =>
+        pages.flatMap((page) =>
           page.document && page.resource && resourceMatchesConstraint(page.resource, normalized)
             ? [page.document.metadataKey]
             : [],
@@ -153,10 +160,11 @@ export const createWorkbenchPageRegistry = <Value>(
 
     refreshResource(resource) {
       const state = store.getState();
+      const pages = Object.values(state.pages);
       commit({
         ...state,
-        location: refreshResourceLocation(state.location, resource, registry.resourceReferenceKey),
-        pageStates: refreshPageResources(state.pageStates, resource, registry.resourceReferenceKey),
+        location: refreshResourceLocation(state.location, resource, registry.resourceReferenceKey, pages),
+        pageStates: refreshPageResources(state.pageStates, resource, registry.resourceReferenceKey, pages),
         action: "refreshPageResource",
       });
     },
