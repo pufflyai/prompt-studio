@@ -85,12 +85,13 @@ env:
 jobs:
   native_file:
     if: inputs.test_file != ''
-    runs-on: ${{ inputs.test_os || 'windows-latest' }}
+    runs-on: ${{ inputs.test_os == 'ubuntu-latest' && 'ubuntu-24.04' || inputs.test_os || 'windows-latest' }}
     timeout-minutes: 20
     env:
       CI_PROFILE: production
       GH_TOKEN: ${{ github.token }}
       DIAGNOSTIC_FILE: ${{ inputs.test_file }}
+      PLAN_DISPLAY: "true"
     steps:
       - uses: actions/checkout@v5
         with:
@@ -114,7 +115,7 @@ jobs:
           bun -e 'const child = Bun.spawnSync(["bun", "scripts/test.ts", "--file", process.env.DIAGNOSTIC_FILE, "--list", "--out", "test-results/ci/native-file-plan.json"], { stdio: ["inherit", "inherit", "inherit"] }); if (child.exitCode) process.exit(child.exitCode); const plan = await Bun.file("test-results/ci/native-file-plan.json").json(); await Bun.write(process.env.GITHUB_OUTPUT, "chromium=" + plan.runs.some((run) => run.runner === "packaged-cli") + String.fromCharCode(10));'
       - name: Install native Chromium for packaged CLI UI
         if: steps.native_plan.outputs.chromium == 'true'
-        run: bunx playwright@1.60.0 install chromium
+        run: bunx playwright@1.60.0 install --with-deps chromium
       # Direct argv preserves the native shell's signal behavior and keeps the input out of shell syntax.
       - name: Run the selected native file with its owning runner
         run: >-
