@@ -1,0 +1,110 @@
+import type { BackendSurface, SurfaceStep } from "./surface";
+
+/** Both sides reject messages of another version instead of guessing their meaning. */
+export const BACKEND_PROTOCOL_VERSION = 1;
+
+export interface SerializedBackendError {
+  name: string;
+  message: string;
+  code?: string;
+  stack?: string;
+}
+
+type Settled = { ok: true; value: unknown } | { ok: false; error: SerializedBackendError };
+
+export type HostToWorkerMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
+  | { type: "load"; entryPath: string }
+  | {
+      type: "invoke";
+      invocationId: string;
+      handlerId: string;
+      surface: BackendSurface;
+      values: Record<string, unknown>;
+      args: unknown[];
+    }
+  | { type: "cancel"; invocationId: string; reason: SerializedBackendError }
+  | ({ type: "reply"; requestId: string } & Settled)
+);
+
+export type WorkerToHostMessage = { v: typeof BACKEND_PROTOCOL_VERSION } & (
+  | { type: "ready" }
+  | ({ type: "loaded" } & Settled)
+  | ({ type: "result"; invocationId: string } & Settled)
+  | { type: "call"; invocationId: string; requestId: string; path: SurfaceStep[]; args: unknown[] }
+  | { type: "notify"; invocationId: string; path: SurfaceStep[]; args: unknown[] }
+);
+
+/** Marks a function in the definition the worker reports. Only the worker can run it. */
+export const HANDLER_MARKER = "$pstdioBackendHandler";
+export type BackendHandlerRef = { [HANDLER_MARKER]: string };
+
+export const isBackendHandlerRef = (value: unknown): value is BackendHandlerRef =>
+  typeof value === "object" && value !== null && typeof (value as Record<string, unknown>)[HANDLER_MARKER] === "string";
+
+export const serializeBackendError = (error: unknown): SerializedBackendError => {
+  if (error instanceof Error) {
+    const code = (error as { code?: unknown }).code;
+    return {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      ...(typeof code === "string" ? { code } : {}),
+    };
+  }
+  return { name: "Error", message: String(error) };
+};
+
+export const deserializeBackendError = (serialized: SerializedBackendError) => {
+  const error = new Error(serialized.message) as Error & { code?: string };
+  error.name = serialized.name;
+  if (serialized.stack) error.stack = serialized.stack;
+  if (serialized.code) error.code = serialized.code;
+  return error;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const optionalString = (value: unknown) => value === undefined || typeof value === "string";
+
+const isError = (value: unknown) =>
+  isRecord(value) &&
+  typeof value.name === "string" &&
+  typeof value.message === "string" &&
+  optionalString(value.code) &&
+  optionalString(value.stack);
+
+const isSettled = (message: Record<string, unknown>) =>
+  message.ok === true || (message.ok === false && isError(message.error));
+
+const isPath = (value: unknown) =>
+  Array.isArray(value) &&
+  value.every(
+    (step) => isRecord(step) && typeof step.name === "string" && (step.args === undefined || Array.isArray(step.args)),
+  );
+
+/** Validates what the worker sends. The host never trusts its shape or its claimed identity. */
+export const parseWorkerMessage = (message: unknown): WorkerToHostMessage | undefined => {
+  if (!isRecord(message) || message.v !== BACKEND_PROTOCOL_VERSION) return;
+  switch (message.type) {
+    case "ready":
+      return message as WorkerToHostMessage;
+    case "loaded":
+      return isSettled(message) ? (message as WorkerToHostMessage) : undefined;
+    case "result":
+      return typeof message.invocationId === "string" && isSettled(message)
+        ? (message as WorkerToHostMessage)
+        : undefined;
+    case "call":
+      return typeof message.invocationId === "string" &&
+        typeof message.requestId === "string" &&
+        isPath(message.path) &&
+        Array.isArray(message.args)
+        ? (message as WorkerToHostMessage)
+        : undefined;
+    case "notify":
+      return typeof message.invocationId === "string" && isPath(message.path) && Array.isArray(message.args)
+        ? (message as WorkerToHostMessage)
+        : undefined;
+  }
+};
