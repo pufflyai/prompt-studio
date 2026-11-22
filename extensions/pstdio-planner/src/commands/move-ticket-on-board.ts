@@ -54,7 +54,7 @@ export const moveTicketOnBoard = async (
       const current = (await planPlacements(ctx.storage).get(input.rowId))?.deadlineId ?? null;
       if (current === deadlineId) return save();
       const workflow = usableWorkflowStatuses(await readWorkflowStatuses(ctx));
-      await initializePlanPlacements(ctx.storage, workflow.completedStatusIds);
+      await initializePlanPlacements(ctx, workflow.completedStatusIds);
       return save(async () => {
         await movePlanPlacement(ctx.storage, { ticketId: input.rowId, deadlineId });
       });

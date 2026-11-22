@@ -23,7 +23,7 @@ export const moveTicketInPlan = async (
     };
     const ticketId = await planTicketId(ticketKey);
     const workflow = usableWorkflowStatuses(await readWorkflowStatuses(ctx));
-    await initializePlanPlacements(ctx.storage, workflow.completedStatusIds);
+    await initializePlanPlacements(ctx, workflow.completedStatusIds);
     const current = (await planPlacements(ctx.storage).get(ticketId))?.deadlineId ?? null;
     const moved = await movePlanPlacement(ctx.storage, {
       ticketId,

@@ -19,7 +19,7 @@ export async function placeNewTicket<T extends PlannerTicket>(
       const plan = await readPlanMetadata(ctx.storage);
       const deadlineId = deadlineOrNone(plan, milestone);
       const workflow = usableWorkflowStatuses(await readWorkflowStatuses(ctx));
-      await initializePlanPlacements(ctx.storage, workflow.completedStatusIds);
+      await initializePlanPlacements(ctx, workflow.completedStatusIds);
       const ticket = await create();
       created = ticket;
       try {

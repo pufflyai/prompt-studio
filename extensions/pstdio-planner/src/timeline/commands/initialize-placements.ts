@@ -1,10 +1,11 @@
 import { createCollectionRecordsIfAbsent } from "@pstdio/sdk/data";
-import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import type { ExtensionContextBase, ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import { withQueuedWriteGuard } from "../../data/write-guard";
 import { nextPlacementBatch } from "./placement-batch";
 import { readPlanMetadata } from "./placement-store";
 
 /** Order the remaining metadata in the database, then create one bounded placement batch. */
-export const initializePlanPlacements = async (storage: ExtensionStorageApi, completedStatusIds: string[]) => {
+const initializePlacements = async (storage: ExtensionStorageApi, completedStatusIds: string[]) => {
   await readPlanMetadata(storage);
   const tail = await storage.records.query({
     index: "timeline-placements",
@@ -25,3 +26,10 @@ export const initializePlanPlacements = async (storage: ExtensionStorageApi, com
     await createCollectionRecordsIfAbsent(storage, "timeline.placements", placements);
   }
 };
+
+export const initializePlanPlacements = (
+  ctx: Pick<ExtensionContextBase, "storage" | "projectId" | "extensionId">,
+  completedStatusIds: string[],
+) =>
+  // Serialize each owner's tail read and all pending batches, including read-triggered initialization.
+  withQueuedWriteGuard(ctx, "plan-initialization", () => initializePlacements(ctx.storage, completedStatusIds));
