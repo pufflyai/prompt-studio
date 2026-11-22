@@ -114,7 +114,7 @@ const createHeaderWorkbench = () => {
 export default {
   title: "Product/Workbench/Header/Menu header",
   description:
-    "App-level project and panel controls sit above the workbench. View actions are vertically centered in one movable menu header. Right-click its empty space to dock or allow multiple menus; drag controls or use Alt + arrow keys to reorder. Narrow panels use floating bubbles.",
+    "App-level controls sit above the workbench. Drag empty menu header space to dock it; drag its buttons or use Alt + arrow keys to reorder. Built-in menus start on the right, and menus on different edges can stay open together. Narrow panels keep a real header with inline actions; only menu content floats.",
   fullscreen: true,
 } satisfies CanvasMeta;
 
