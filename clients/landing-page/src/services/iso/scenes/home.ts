@@ -181,7 +181,7 @@ export const setupHomeScene = (scene: IsoScene) => {
     await scene.wait(300 + Math.random() * 900);
     for (;;) {
       await scene.awake();
-      if (agent === chaser || celebrating) {
+      if (agent === chaser || agent.held || celebrating) {
         await scene.wait(250);
         continue;
       }
