@@ -29,12 +29,15 @@ export const saveTemplate = defineCommand({
     }
     const template = parseCatalogTemplate("template.json", JSON.stringify(manifest));
     const files = catalogFiles(ctx);
-    const existing = (await listCatalog(files)).find(
+    const entries = await listCatalog(files);
+    const existing = entries.find(
       (entry) => entry.template?.name === template.name && entry.template.version === template.version,
     );
     const path =
       existing?.path ??
-      `${templateDirectory}/${encodeURIComponent(JSON.stringify([template.name, template.version]))}.json`;
+      `${templateDirectory}/identities/${encodeURIComponent(JSON.stringify([template.name, template.version]))}.json`;
+    if (!existing && entries.some((entry) => entry.path === path))
+      throw new Error("A different template already occupies this file. Move that file before saving this identity.");
     await files.writeText(path, JSON.stringify(template.manifest, null, 2));
     await ctx.events.emit(changed, {});
     return { path, name: template.name, version: template.version };

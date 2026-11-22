@@ -51,3 +51,25 @@ test("saving an existing catalog identity updates its original path", async () =
   expect(await listCatalog(files)).toHaveLength(1);
   expect(JSON.parse(await files.readText(path))).toEqual(updated);
 });
+
+test("a new identity cannot overwrite a tuple-like legacy filename", async () => {
+  const { ctx, files } = fixture();
+  const legacy = manifest('["a', 'b","v"]');
+  const path = `${templateDirectory}/${encodeURIComponent(legacy.metadata.name)}-${encodeURIComponent(legacy.spec.version)}.json`;
+  await files.writeText(path, JSON.stringify(legacy));
+  const result = await saveTemplate.run(ctx, { source: JSON.stringify(manifest("a-b", "v")) });
+  expect(result.path).not.toBe(path);
+  expect(JSON.parse(await files.readText(path))).toEqual(legacy);
+  expect(await listCatalog(files)).toHaveLength(2);
+  expect(await catalogPathFor(files, legacy.metadata.name, legacy.spec.version)).toBe(path);
+  expect(await catalogPathFor(files, "a-b", "v")).toBe(result.path);
+});
+
+test("saving refuses to replace a catalog file edited to another identity", async () => {
+  const { ctx, files } = fixture();
+  const { path } = await saveTemplate.run(ctx, { source: JSON.stringify(manifest()) });
+  const other = manifest("other", "2.0.0");
+  await files.writeText(path, JSON.stringify(other));
+  await expect(saveTemplate.run(ctx, { source: JSON.stringify(manifest()) })).rejects.toThrow("already");
+  expect(JSON.parse(await files.readText(path))).toEqual(other);
+});
