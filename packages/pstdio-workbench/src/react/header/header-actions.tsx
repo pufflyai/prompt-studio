@@ -1,5 +1,5 @@
 import { Button, HStack, IconButton } from "@chakra-ui/react";
-import { BubbleButton, ListRow, ScopedMenu as Menu, Portal, Tooltip } from "@pstdio/ui";
+import { ListRow, ScopedMenu as Menu, Portal, Tooltip } from "@pstdio/ui";
 import { Fragment } from "react";
 import {
   getAnchorResource,
@@ -23,7 +23,6 @@ interface WorkbenchHeaderActionsProps {
   controlSize?: "2xs" | "xs";
   placement?: WorkbenchWidgetPlacement;
   itemIds?: readonly string[];
-  compact?: boolean;
   iconOnly?: boolean;
 }
 
@@ -34,24 +33,10 @@ const WorkbenchInlineHeaderAction = (props: {
   item: WorkbenchMenuItem;
   onSelect: (item: WorkbenchMenuItem) => void;
   controlSize: "2xs" | "xs";
-  compact?: boolean;
   iconOnly?: boolean;
 }) => {
-  const { controlSize, item, onSelect, compact, iconOnly } = props;
+  const { controlSize, item, onSelect, iconOnly } = props;
   const onClick = () => onSelect(item);
-
-  if (compact)
-    return (
-      <BubbleButton
-        aria-label={item.label}
-        tooltip={item.label}
-        disabled={item.disabled}
-        onClick={onClick}
-        containerProps={{ position: "relative", bottom: "auto", right: "auto" }}
-      >
-        <WorkbenchIcon name={item.icon ?? "Circle"} size={14} />
-      </BubbleButton>
-    );
 
   if (iconOnly)
     return (
@@ -137,7 +122,6 @@ export const WorkbenchHeaderActions = (props: WorkbenchHeaderActionsProps) => {
           item={item}
           onSelect={onSelect}
           controlSize={controlSize}
-          compact={props.compact}
           iconOnly={props.iconOnly}
         />
       ))}

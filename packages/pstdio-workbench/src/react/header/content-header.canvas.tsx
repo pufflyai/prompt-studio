@@ -3,6 +3,7 @@ import type { CanvasMeta } from "@pstdio/canvas";
 import { Header } from "@pstdio/ui";
 import { useState } from "react";
 import { createWorkbench } from "../../core";
+import { openOwnedViewMenu } from "../../core/controllers/panel-menus/open-view-menu";
 import { Workbench, WorkbenchPanelToggles, WorkbenchThemeProvider } from "..";
 
 const tool = { kind: "page", extensionId: "preview", id: "tool" } as const;
@@ -58,11 +59,11 @@ const createHeaderWorkbench = () => {
     ownerViewId: "extensions",
     viewId: "filters",
     side: "right",
-    hiddenByDefault: true,
+    hiddenByDefault: false,
   });
   for (const menu of [
-    { id: "files", title: "Resources", icon: "Files", side: "left" },
-    { id: "activity", title: "Activity", icon: "Activity", side: "bottom" },
+    { id: "files", title: "Resources", icon: "Files", side: "right" },
+    { id: "activity", title: "Activity", icon: "Activity", side: "right" },
   ] as const) {
     workbench.views.registerView({
       id: menu.id,
@@ -83,7 +84,7 @@ const createHeaderWorkbench = () => {
       ownerViewId: "extensions",
       viewId: menu.id,
       side: menu.side,
-      hiddenByDefault: true,
+      hiddenByDefault: false,
     });
   }
   workbench.pages.registerPage({
@@ -128,6 +129,22 @@ export const MovableMenuHeader = () => {
       <HStack gap="sm" flexWrap="wrap">
         <Button size="xs" onClick={() => workbench.navigation.openTarget({ kind: "page", page: tool })}>
           Show Extensions page
+        </Button>
+        <Button
+          size="xs"
+          onClick={async () => {
+            await workbench.commands.executeCommand("workbench.configureMenuHeader", {
+              viewId: "extensions",
+              menuSides: { files: "left", filters: "right" },
+            });
+            const owner = workbench.pages.getContent();
+            if (owner) {
+              openOwnedViewMenu(workbench, owner.widgetId, "files");
+              openOwnedViewMenu(workbench, owner.widgetId, "filters");
+            }
+          }}
+        >
+          Open Resources left and Properties right
         </Button>
         <Button size="xs" onClick={() => move("side")}>
           Move page to Side

@@ -66,11 +66,22 @@ test("ticket work opens a shared non-Git folder and loads files without Git requ
     // The ticket's linked folder previews in Side, where its files are in the Side menu.
     const filesOpener = page
       .locator('[data-workbench-region="side"]')
-      .getByRole("button", { name: /^(Open|Close) Side left menu$/ });
+      .getByRole("button", { name: /^(Open|Close) Side right menu$/ });
     if ((await filesOpener.getAttribute("aria-expanded")) !== "true") await filesOpener.click();
     await expect(filesOpener).toHaveAttribute("aria-expanded", "true");
     const sideFiles = page.getByRole("dialog", { name: "Files", exact: true });
     await expect(sideFiles.getByRole("option", { name: "notes.md", exact: true })).toBeVisible();
+    // Pointer events from portaled menu content must not dock its owner's header.
+    const bubble = (await sideFiles.boundingBox())!;
+    await page.mouse.move(bubble.x + 20, bubble.y + bubble.height - 32);
+    await page.mouse.down();
+    await page.mouse.move(bubble.x + 40, bubble.y + bubble.height - 16, { steps: 5 });
+    await expect(page.locator("[data-menu-header-drop]")).toHaveCount(0);
+    await page.mouse.up();
+    await expect(page.locator('[data-workbench-content-header="side"]')).toHaveAttribute(
+      "data-menu-header-position",
+      "top",
+    );
     // A non-Git folder adds no Changes view.
     await expect(page.getByRole("tab", { name: "Changes" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Changes", exact: true })).toHaveCount(0);

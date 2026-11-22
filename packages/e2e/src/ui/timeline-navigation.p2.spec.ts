@@ -81,7 +81,6 @@ test("Auto Build stays in the timeline header and opens a host dialog after a pa
     await main.locator('[data-workbench-panel-header="main"]').click({ button: "right" });
     await page.getByRole("menuitem", { name: "Move to Side", exact: true }).click();
     const side = page.locator('[data-workbench-panel="side"]');
-    await side.getByRole("button", { name: "View controls", exact: true }).click();
     await page
       .locator('[data-workbench-header-panel="side"]')
       .frameLocator('iframe[title="Timeline actions"]:visible')

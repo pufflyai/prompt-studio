@@ -1,12 +1,5 @@
 import { Box, IconButton } from "@chakra-ui/react";
-import {
-  BubbleButton,
-  PANEL_HEADER_CONTROL_SIZE,
-  ScopedPopover as Popover,
-  Portal,
-  ResourceContextMenu,
-  Tooltip,
-} from "@pstdio/ui";
+import { PANEL_HEADER_CONTROL_SIZE, ScopedPopover as Popover, Portal, ResourceContextMenu, Tooltip } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { openOwnedViewMenu, selectViewMenuPlacement } from "../../core/controllers/panel-menus/open-view-menu";
 import { useMenuHeaderSettings } from "../header/use-menu-header-settings";
@@ -22,31 +15,34 @@ export const WorkbenchPanelMenuButton = (props: {
   workbench: WorkbenchCore;
   panel: WorkbenchPanelRegion;
   entry: PanelMenuEntry;
-  floating?: boolean;
   view: WorkbenchPanelMenuView;
 }) => {
-  const { workbench, panel, entry, view, floating = false } = props;
+  const { workbench, panel, entry, view } = props;
   const owner = useWorkbenchActivePanel(workbench, panel);
-  const { settings, configure } = useMenuHeaderSettings(workbench, owner);
+  const { configure } = useMenuHeaderSettings(workbench, owner);
   const hasContent = usePanelMenuContent(workbench, entry.placement);
   const floatingMenu = useFloatingMenu();
   const open = view.canAttach
     ? view.placementId === entry.placement.widgetId && !view.collapsed
-    : floatingMenu.id === entry.placement.widgetId;
+    : floatingMenu.ids.includes(entry.placement.widgetId);
   const select = (nextOpen: boolean) => {
     const peers = resolvePanelMenuEntries(workbench, panel);
     if (!peers.some((candidate) => candidate.placement.widgetId === entry.placement.widgetId)) return;
+    const closing = peers.filter((candidate) => candidate.region === entry.region);
     if (!view.canAttach) {
-      floatingMenu.select(nextOpen ? entry.placement.widgetId : undefined);
+      floatingMenu.setOpen(
+        entry.placement.widgetId,
+        nextOpen,
+        closing.map((peer) => peer.placement.widgetId),
+      );
       if (nextOpen) selectViewMenuPlacement(workbench, entry.placement.widgetId);
       return;
     }
-    const closing = settings.multipleMenus ? peers.filter((candidate) => candidate.region === entry.region) : peers;
     workbench.panelMenuState.setSelection(
       closing.map((candidate) => candidate.key),
       nextOpen ? entry.key : undefined,
     );
-    if (closing.some((candidate) => candidate.placement.widgetId === floatingMenu.id)) floatingMenu.select(undefined);
+    for (const peer of closing) floatingMenu.setOpen(peer.placement.widgetId, false);
     if (nextOpen) selectViewMenuPlacement(workbench, entry.placement.widgetId);
   };
   if (!hasContent) return null;
@@ -72,19 +68,13 @@ export const WorkbenchPanelMenuButton = (props: {
       );
       if (current?.side !== side) return;
       openOwnedViewMenu(workbench, owner.widgetId, entry.id);
-      floatingMenu.select(entry.placement.widgetId);
+      const peers = resolvePanelMenuEntries(workbench, panel)
+        .filter((candidate) => candidate.region === current.region)
+        .map((candidate) => candidate.placement.widgetId);
+      floatingMenu.setOpen(entry.placement.widgetId, true, peers);
     },
   }));
-  const button = floating ? (
-    <BubbleButton
-      {...triggerProps}
-      containerProps={{ position: "relative", bottom: "auto", right: "auto" }}
-      tooltip={entry.title}
-      onClick={view.canAttach ? () => select(!open) : undefined}
-    >
-      {icon}
-    </BubbleButton>
-  ) : (
+  const button = (
     <Tooltip content={entry.title}>
       <IconButton
         {...triggerProps}
@@ -105,24 +95,15 @@ export const WorkbenchPanelMenuButton = (props: {
           <Popover.Root
             open={open}
             onOpenChange={({ open }) => select(open)}
+            closeOnInteractOutside={false}
             lazyMount={false}
             unmountOnExit={false}
             positioning={{ placement: entry.side === "left" ? "bottom-start" : "bottom-end", flip: true }}
           >
             <Popover.Trigger asChild>
-              {floating ? (
-                <BubbleButton
-                  {...triggerProps}
-                  containerProps={{ position: "relative", bottom: "auto", right: "auto" }}
-                  tooltip={entry.title}
-                >
-                  {icon}
-                </BubbleButton>
-              ) : (
-                <IconButton {...triggerProps} size={PANEL_HEADER_CONTROL_SIZE} variant="ghost">
-                  {icon}
-                </IconButton>
-              )}
+              <IconButton {...triggerProps} size={PANEL_HEADER_CONTROL_SIZE} variant="ghost">
+                {icon}
+              </IconButton>
             </Popover.Trigger>
             <Portal>
               <Popover.Positioner>

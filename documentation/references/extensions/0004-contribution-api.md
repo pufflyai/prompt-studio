@@ -475,10 +475,17 @@ need a larger surface should open a declared single-view page with
 `navigation.open({ kind: "dialog", page })`; the host owns the modal, and the
 content can close it with `placement.close`. The Timeline Auto Build header uses
 this path. A native `actionBar` body is also available for host-rendered buttons
-and menus. Set `menuHeader: { multipleMenus: true }` on an owner view to default
-to independent open menus on different edges. Prompt Studio defaults to one
-open menu. Users can override that policy in the menu header context menu and
-move individual menus to the left, right or bottom.
+and menus. Menu sides are an initial layout preset, not a permission: menus on
+different edges can always remain open together. First-party tools group menus
+on the right by default. Extensions can declare different `viewMenus.side`
+arrangements, including several initially open edges. Menus sharing one edge
+use that edge's selected content pane. User placement and open-state choices
+win over the initial arrangement.
+
+Drag empty menu-header space to change its placement; drag a button to reorder
+it within the header. Narrow panels keep a real header with ordinary controls
+and shrinking search fields. Only menu content floats; the header and its
+actions never become a bubble tray.
 
 Resource pages with navigation expose only their own page navigation as a
 Resources menu when tabbed. Standalone pages continue to use the routed project

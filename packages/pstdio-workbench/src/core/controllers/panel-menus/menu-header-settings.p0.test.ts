@@ -10,15 +10,13 @@ test("menu header presentation persists by project and view", async () => {
     viewId: "editor",
     position: "right",
     order: ["menu:files", "contribution"],
-    multipleMenus: true,
   });
   expect(readMenuHeaderSettings(w, "editor")).toMatchObject({
     position: "right",
     order: ["menu:files", "contribution"],
-    multipleMenus: true,
   });
   w.pageLocations.setProject("two");
-  expect(readMenuHeaderSettings(w, "editor")).toMatchObject({ position: "top", multipleMenus: false });
+  expect(readMenuHeaderSettings(w, "editor")).toMatchObject({ position: "top" });
   w.pageLocations.setProject("one");
   expect(readMenuHeaderSettings(w, "editor").position).toBe("right");
 });
@@ -141,17 +139,38 @@ test("opening a closed menu on an occupied edge selects it without stealing the 
   expect(w.layout.getLayout().activeWidgetId).toBe(owner.widgetId);
 });
 
-test("restored view aliases share canonical menu header preferences and policy", async () => {
+test("restored view aliases share canonical menu header preferences", async () => {
   const { registerRegistryAliases } = await import("../../shared/contributions/identity-aliases");
   const w = createWorkbench();
   w.views.registerView({ id: "editor", title: "Editor", body: { kind: "react", render: () => null } });
   const aliases = registerRegistryAliases(w.views.store, new Map([["old-editor", "editor"]]));
   try {
-    w.viewMenus.configureOwner("editor", true);
-    expect(readMenuHeaderSettings(w, "old-editor").multipleMenus).toBe(true);
     await w.commands.executeCommand("workbench.configureMenuHeader", { viewId: "old-editor", position: "left" });
     expect(readMenuHeaderSettings(w, "editor").position).toBe("left");
   } finally {
     aliases.dispose();
   }
+});
+
+test("opening another menu edge preserves the existing open menu", async () => {
+  const { openOwnedViewMenu } = await import("./open-view-menu");
+  const w = createWorkbench();
+  for (const id of ["editor", "files", "properties"])
+    w.views.registerView({ id, title: id, body: { kind: "react", render: () => null } });
+  w.viewMenus.registerViewMenu({ id: "files", ownerViewId: "editor", viewId: "files", side: "left" });
+  w.viewMenus.registerViewMenu({ id: "properties", ownerViewId: "editor", viewId: "properties", side: "right" });
+  w.layout.registerPanel({
+    id: "document",
+    title: "Document",
+    rendererId: "editor",
+    region: "main",
+    panelMenus: w.viewMenus.definitionsFor("editor", "document"),
+  });
+  const owner = w.layout.openWidget("document", { viewId: "editor" });
+  const files = w.layout.getLayout().regions["main-left-menu"].widgets[0]!;
+  const properties = w.layout.getLayout().regions["main-right-menu"].widgets[0]!;
+  openOwnedViewMenu(w, owner.widgetId, "files");
+  openOwnedViewMenu(w, owner.widgetId, "properties");
+  expect(w.panelMenuState.isOpen(`panel-menu:${files.widgetId}`)).toBe(true);
+  expect(w.panelMenuState.isOpen(`panel-menu:${properties.widgetId}`)).toBe(true);
 });

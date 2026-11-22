@@ -132,7 +132,6 @@ export const viewDeclarationSchema = z
       .object({ view: localRefSchema("view") })
       .strict()
       .optional(),
-    menuHeader: z.object({ multipleMenus: z.boolean().optional() }).strict().optional(),
     body,
   })
   .strict();

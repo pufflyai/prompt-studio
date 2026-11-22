@@ -12,24 +12,20 @@ type Props = ComponentProps<typeof WorkbenchHeaderActions> & {
   menu?: PanelMenuEntry;
   menuView?: WorkbenchPanelMenuView;
   vertical: boolean;
+  compact?: boolean;
   orderKey: string;
   overflowIds: string[];
 };
 export const WorkbenchMenuHeaderControl = (props: Props) => {
-  const { panel, id, menu, menuView, vertical, orderKey, overflowIds, ...actions } = props;
+  const { panel, id, menu, menuView, vertical, compact, orderKey, overflowIds, ...actions } = props;
   if (menu && menuView)
-    return (
-      <WorkbenchPanelMenuButton
-        workbench={props.workbench}
-        panel={panel}
-        entry={menu}
-        view={menuView}
-        floating={props.compact}
-      />
-    );
-  if (id === "contribution")
-    return (
-      <WorkbenchHeaderContribution key={orderKey} panel={panel} compact={Boolean(props.compact)} vertical={vertical} />
-    );
-  return <WorkbenchHeaderActions {...actions} iconOnly={vertical} itemIds={id === "overflow" ? overflowIds : [id]} />;
+    return <WorkbenchPanelMenuButton workbench={props.workbench} panel={panel} entry={menu} view={menuView} />;
+  if (id === "contribution") return <WorkbenchHeaderContribution key={orderKey} panel={panel} vertical={vertical} />;
+  return (
+    <WorkbenchHeaderActions
+      {...actions}
+      iconOnly={vertical || compact}
+      itemIds={id === "overflow" ? overflowIds : [id]}
+    />
+  );
 };

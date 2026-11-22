@@ -50,7 +50,6 @@ const panels = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtensio
     return {
       id: view.id,
       headerViewId: view.header ? contributionRefId(view.header.view) : undefined,
-      menuHeader: view.menuHeader,
       extensionId: view.extensionId,
       title: view.title,
       icon: view.icon,

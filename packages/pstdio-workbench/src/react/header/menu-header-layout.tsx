@@ -5,7 +5,7 @@ import { menuHeaderPositions } from "../../core/controllers/panel-menus/menu-hea
 import { FloatingMenuContext } from "../panel-menu/floating-menu-context";
 import { useWorkbenchActivePanel } from "../shared/use-workbench-active-panel";
 import { WorkbenchContentHeader } from "./content-header";
-import { MENU_HEADER_DRAG_TYPE } from "./menu-header-drag";
+import { useMenuHeaderDrag } from "./use-menu-header-drag";
 import { useMenuHeaderSettings } from "./use-menu-header-settings";
 
 /** One dock surrounds the view and all of its menus. Its DOM order never changes. */
@@ -19,13 +19,19 @@ export const WorkbenchMenuHeaderLayout = (props: {
   const { settings, configure } = useMenuHeaderSettings(workbench, owner);
   const root = useRef<HTMLDivElement>(null);
   const [compact, setCompact] = useState(false);
-  const [dragging, setDragging] = useState(false);
-  const [floatingId, setFloatingId] = useState<string>();
+  const { dragging, handlers } = useMenuHeaderDrag(root, (position) => void configure({ position }));
+  const [floatingIds, setFloatingIds] = useState<string[]>([]);
+  const setFloatingOpen = (id: string, open: boolean, peers: readonly string[] = []) =>
+    setFloatingIds((current) => {
+      const next = current.filter((value) => value !== id && !peers.includes(value));
+      if (open) next.push(id);
+      return next.length === current.length && next.every((value, index) => value === current[index]) ? current : next;
+    });
   const ownerId = owner?.widgetId;
   useEffect(() => {
     void ownerId;
     void compact;
-    setFloatingId(undefined);
+    setFloatingIds([]);
   }, [ownerId, compact]);
   useLayoutEffect(() => {
     const element = root.current;
@@ -41,9 +47,9 @@ export const WorkbenchMenuHeaderLayout = (props: {
   }, []);
   const direction = { top: "column", bottom: "column-reverse", left: "row", right: "row-reverse" } as const;
   return (
-    <FloatingMenuContext value={{ id: floatingId, select: setFloatingId }}>
+    <FloatingMenuContext value={{ ids: floatingIds, setOpen: setFloatingOpen }}>
       <Flex ref={root} position="relative" direction={direction[settings.position]} h="full" w="full" minH="0" minW="0">
-        <WorkbenchContentHeader workbench={workbench} panel={panel} compact={compact} onDragChange={setDragging} />
+        <WorkbenchContentHeader workbench={workbench} panel={panel} compact={compact} dockDrag={handlers} />
         <Box flex="1" minH="0" minW="0" overflow="hidden">
           {children}
         </Box>
@@ -53,6 +59,7 @@ export const WorkbenchMenuHeaderLayout = (props: {
               return (
                 <Box
                   key={position}
+                  data-menu-header-drop={position}
                   position="absolute"
                   zIndex="tooltip"
                   bg="bg.muted"
@@ -65,15 +72,7 @@ export const WorkbenchMenuHeaderLayout = (props: {
                   w={horizontal ? "full" : "8"}
                   h={horizontal ? "8" : "full"}
                   {...{ [position]: "0" }}
-                  onDragOver={(event) => {
-                    if (event.dataTransfer.types.includes(MENU_HEADER_DRAG_TYPE)) event.preventDefault();
-                  }}
-                  onDrop={(event) => {
-                    if (event.dataTransfer.getData(MENU_HEADER_DRAG_TYPE) !== panel) return;
-                    event.preventDefault();
-                    void configure({ position });
-                    setDragging(false);
-                  }}
+                  pointerEvents="none"
                 >
                   {position}
                 </Box>

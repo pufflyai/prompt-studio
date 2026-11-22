@@ -38,7 +38,6 @@ interface InternalWorkbenchExtensionPanelMenu {
 
 export interface InternalWorkbenchExtensionPanel {
   headerViewId?: string;
-  menuHeader?: { multipleMenus?: boolean };
   id: string;
   extensionId: string;
   title: MetadataView["title"];

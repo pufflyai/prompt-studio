@@ -110,7 +110,7 @@ test("navigates ticket ancestry to a linked workspace and back", async ({ page, 
     ).toHaveAttribute("aria-selected", "true");
 
     // A row in the preview's Files menu opens the file in Side too, so Main keeps the ticket and its ancestry.
-    await side.getByRole("button", { name: "Open Side left menu", exact: true }).click();
+    await side.getByRole("button", { name: "Open Side right menu", exact: true }).click();
     await page.getByRole("option", { name: /^README\.md/ }).click();
     await expect(side).toContainText(/resource\s+hierarchy\s+e2e/);
     await expect(page).not.toHaveURL(/document=/);

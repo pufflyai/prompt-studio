@@ -1,6 +1,5 @@
 import { workbenchPanelMenuRegions } from "../../registries/layout/layout-regions";
 import type { WorkbenchCore } from "../../workbench-core-types";
-import { readMenuHeaderSettings } from "./menu-header-settings";
 
 /** Select a companion locally without changing the owning view, command resource or focus. */
 export const selectViewMenuPlacement = (core: WorkbenchCore, widgetId: string) => {
@@ -36,13 +35,8 @@ export const openOwnedViewMenu = (core: WorkbenchCore, ownerWidgetId: string, me
     return config && typeof config === "object" && "viewContextId" in config && config.viewContextId === menuId;
   });
   if (!target) return;
-  const settings = readMenuHeaderSettings(
-    core,
-    owner.viewId ?? core.layout.getWidget(owner.contributionId)?.rendererId ?? "",
-  );
   const closing = menus.filter(
-    (menu) =>
-      (!settings.multipleMenus || menu.region === target.region) && core.layout.getRegionCollapsible(menu.region),
+    (menu) => menu.region === target.region && core.layout.getRegionCollapsible(menu.region),
   );
   core.panelMenuState.setSelection(
     closing.map((menu) => `panel-menu:${menu.placement.widgetId}`),

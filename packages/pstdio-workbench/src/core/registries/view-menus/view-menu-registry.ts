@@ -18,8 +18,6 @@ export interface WorkbenchViewMenuContribution {
 }
 
 export interface WorkbenchViewMenuRegistry {
-  getOwnerPolicy(viewId: string): boolean;
-  configureOwner(viewId: string, multipleMenus: boolean): Disposable;
   registerViewMenu(menu: WorkbenchViewMenuContribution): Disposable;
   getViewMenu(id: string): WorkbenchViewMenuContribution | undefined;
   listViewMenus(ownerViewId?: string): WorkbenchViewMenuContribution[];
@@ -39,14 +37,8 @@ const viewMenuConfig = (menu: WorkbenchViewMenuContribution) => {
 
 export const createWorkbenchViewMenuRegistry = (input: { views: WorkbenchViewRegistry }): WorkbenchViewMenuRegistry => {
   const menus = new Map<string, WorkbenchViewMenuContribution>();
-  const policies = new Map<string, boolean>();
 
   return {
-    getOwnerPolicy: (id) => policies.get(id) ?? false,
-    configureOwner(id, multiple) {
-      policies.set(id, multiple);
-      return createDisposable(() => policies.delete(id));
-    },
     registerViewMenu(menu) {
       if (menus.has(menu.id)) throw new Error(`View menu already registered: ${menu.id}`);
       if (!input.views.getView(menu.ownerViewId)) {

@@ -49,13 +49,11 @@ describe("view-owned header contributions", () => {
       id: "reader",
       title: "Reader",
       header: { view: toolbar.ref },
-      menuHeader: { multipleMenus: true },
       body: { kind: "controls", query: () => ({ params: [] }) },
     });
     const metadata = workbenchExtensionMetadataSchema.parse(
       createWorkbenchExtensionMetadata({ runtime: normalize(reader, toolbar) }),
     );
-    expect(metadata.views.find((entry) => entry.localId === "reader")?.menuHeader).toEqual({ multipleMenus: true });
     expect(metadata.views.find((entry) => entry.localId === "reader")?.header).toEqual({
       view: { kind: "view", extensionId: "test.headers", id: "toolbar" },
     });

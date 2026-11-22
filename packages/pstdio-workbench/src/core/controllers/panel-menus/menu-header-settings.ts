@@ -9,7 +9,6 @@ const schema = z
     position: z.enum(menuHeaderPositions).optional(),
     order: z.array(z.string()).optional(),
     menuSides: z.record(z.string(), z.enum(["left", "right", "bottom"])).optional(),
-    multipleMenus: z.boolean().optional(),
   })
   .strict();
 export type MenuHeaderSettings = Required<z.infer<typeof schema>>;
@@ -23,16 +22,16 @@ export const readMenuHeaderSettings = (
   core: WorkbenchCore,
   viewId: string,
   projectId = core.pages.store.getState().projectId,
-  multipleMenus?: boolean,
 ): MenuHeaderSettings => {
   viewId = core.views.getView(viewId)?.id ?? viewId;
-  const saved = schema.safeParse(core.preferences.getOwnedValue(owner, "layout", scope(projectId, viewId)) ?? {});
+  const saved = schema
+    .strip()
+    .safeParse(core.preferences.getOwnedValue(owner, "layout", scope(projectId, viewId)) ?? {});
   const value = saved.success ? saved.data : {};
   return {
     position: value.position ?? "top",
     order: value.order ?? [],
     menuSides: value.menuSides ?? {},
-    multipleMenus: value.multipleMenus ?? multipleMenus ?? core.viewMenus.getOwnerPolicy(viewId),
   };
 };
 
@@ -84,7 +83,6 @@ export const configureMenuHeader = (core: WorkbenchCore, viewId: string, patch: 
   const projectId = core.pages.store.getState().projectId;
   const preferenceScope = scope(projectId, viewId);
   const change = schema.parse(patch);
-  const defaultMultiple = core.viewMenus.getOwnerPolicy(viewId);
   let pending = writes.get(core);
   if (!pending) {
     pending = new Map();
@@ -94,7 +92,7 @@ export const configureMenuHeader = (core: WorkbenchCore, viewId: string, patch: 
   const next = (pending.get(key) ?? Promise.resolve())
     .catch(() => {})
     .then(async () => {
-      const previous = readMenuHeaderSettings(core, viewId, projectId, defaultMultiple);
+      const previous = readMenuHeaderSettings(core, viewId, projectId);
       const settings = { ...previous, ...change, menuSides: { ...previous.menuSides, ...change.menuSides } };
       await core.preferences.setOwnedValue(owner, "layout", settings, preferenceScope);
       if (change.menuSides && core.pages.store.getState().projectId === projectId)

@@ -409,9 +409,6 @@ test("projects only a resource page's own navigation into its Resources menu", a
   const resource = { type: "artifact", id: "ticket-a", extensionId, projectId: "resource-menus" };
   const source: WorkbenchExtensionMetadata = {
     ...metadata,
-    views: metadata.views.map((view) =>
-      view.id === controlsViewId ? { ...view, menuHeader: { multipleMenus: true } } : view,
-    ),
     pages: [
       { ...metadata.pages[0]!, id: `${extensionId}.page.root`, localId: "root", path: "root" },
       ...metadata.pages.map((page) => ({
@@ -459,11 +456,10 @@ test("projects only a resource page's own navigation into its Resources menu", a
   });
   try {
     const menu = workbench.viewMenus.listViewMenus(controlsViewId).find((entry) => entry.purpose === "resources");
-    expect(menu).toMatchObject({ side: "left", ownerViewId: controlsViewId });
+    expect(menu).toMatchObject({ side: "right", ownerViewId: controlsViewId });
     workbench.modes.setActiveMode(modeId);
     const reader = workbench.layout.listWidgets().find((widget) => widget.id.endsWith(".resource-reader"));
     expect(reader?.ownedPanelMenuIds?.some((id) => id.includes("resources"))).toBe(true);
-    expect(workbench.viewMenus.getOwnerPolicy(controlsViewId)).toBe(true);
     const routed = workbench.pages.store.getState().location;
     const sections = await getWorkbenchRenderers(workbench).getBody(menu!.viewId, { resource });
     expect(sections.flatMap((section) => section.nodes).map((node) => node.label)).toEqual(["ticket-a"]);
@@ -500,7 +496,7 @@ test("a page exposes Activity for a resource kind owned by another extension", (
   });
   try {
     expect(workbench.viewMenus.listViewMenus(controlsViewId).find((menu) => menu.purpose === "activity")).toMatchObject(
-      { side: "bottom", ownerViewId: controlsViewId },
+      { side: "right", ownerViewId: controlsViewId },
     );
   } finally {
     registration.dispose();

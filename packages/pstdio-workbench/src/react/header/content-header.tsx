@@ -12,8 +12,8 @@ import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { resolveWorkbenchHeaderActionGroups } from "./header-action-items";
 import { useWorkbenchHeaderItems } from "./header-actions";
 import { WorkbenchMenuHeaderControl } from "./menu-header-control";
-import { MENU_HEADER_DRAG_TYPE } from "./menu-header-drag";
 import { menuHeaderGeometry } from "./menu-header-geometry";
+import type { useMenuHeaderDrag } from "./use-menu-header-drag";
 import { useMenuHeaderSettings } from "./use-menu-header-settings";
 
 /** Exactly one menu header for the selected live view, in pages and every tab panel. */
@@ -21,10 +21,10 @@ export const WorkbenchContentHeader = (props: {
   workbench: WorkbenchCore;
   panel: WorkbenchPanelRegion;
   compact?: boolean;
-  onDragChange?: (dragging: boolean) => void;
+  dockDrag?: ReturnType<typeof useMenuHeaderDrag>["handlers"];
 }) => {
   "use no memo";
-  const { workbench, panel, compact = false, onDragChange } = props;
+  const { workbench, panel, compact = false, dockDrag } = props;
   const placement = useWorkbenchActivePanel(workbench, panel);
   const header = useWorkbenchStore(workbench.views.store, () =>
     placement?.viewId ? workbench.views.getView(placement.viewId)?.header : undefined,
@@ -61,12 +61,6 @@ export const WorkbenchContentHeader = (props: {
       isSelected: position === edge,
       onSelect: () => configure({ position: edge }),
     })),
-    {
-      key: "multiple",
-      label: "Allow multiple open menus",
-      isSelected: settings.multipleMenus,
-      onSelect: () => configure({ multipleMenus: !settings.multipleMenus }),
-    },
   ];
   const toolbar = (
     <DndContext {...drag.context}>
@@ -74,25 +68,16 @@ export const WorkbenchContentHeader = (props: {
         <Stack
           ref={drag.viewport}
           tabIndex={0}
-          draggable
-          onDragStart={(event) => {
-            if ((event.target as HTMLElement).closest("[data-action-bar-item], button, input")) {
-              event.preventDefault();
-              return;
-            }
-            event.dataTransfer.setData(MENU_HEADER_DRAG_TYPE, panel);
-            onDragChange?.(true);
-          }}
-          onDragEnd={() => onDragChange?.(false)}
+          {...dockDrag}
           role="toolbar"
-          aria-label={compact ? "Floating menu header" : "Menu header"}
+          aria-label="Menu header"
           aria-orientation={horizontal ? "horizontal" : "vertical"}
           direction={horizontal ? "row" : "column"}
           gap="2xs"
           align="center"
           minW="0"
           w="full"
-          h={compact ? "auto" : "full"}
+          h="full"
           onKeyDownCapture={(event) => {
             if (!event.altKey || event.shiftKey || event.ctrlKey || event.metaKey) return;
             const button = event.target as HTMLElement;
@@ -112,7 +97,7 @@ export const WorkbenchContentHeader = (props: {
             );
           }}
         >
-          {horizontal && !compact ? <Box flex="1" /> : null}
+          {horizontal ? <Box flex="1" touchAction="none" /> : null}
           {controls.map((control) => {
             const menu = menus.find((entry) => entry.id === control.id);
             return (
@@ -121,13 +106,14 @@ export const WorkbenchContentHeader = (props: {
                 id={control.id}
                 horizontal={horizontal}
                 reorderable={controls.length > 1}
+                flexible={horizontal && control.id === "contribution"}
                 dropEdge={drag.drop?.id === control.id ? drag.drop.edge : undefined}
               >
                 <Box
-                  h={!compact && horizontal ? "8" : undefined}
+                  h={horizontal ? "8" : undefined}
                   display="flex"
                   alignItems="center"
-                  w={control.id === "contribution" && horizontal && !compact ? "min(420px, 40vw)" : undefined}
+                  w={control.id === "contribution" && horizontal ? "full" : undefined}
                 >
                   <WorkbenchMenuHeaderControl
                     workbench={workbench}
@@ -147,7 +133,7 @@ export const WorkbenchContentHeader = (props: {
               </SortableActionBarItem>
             );
           })}
-          {!horizontal && !compact ? <Box flex="1" w="full" /> : null}
+          {!horizontal ? <Box flex="1" w="full" touchAction="none" /> : null}
         </Stack>
       </ResourceContextMenu>
       <ActionBarDragPreview label={controls.find((item) => item.id === drag.activeId)?.label} />
@@ -159,9 +145,8 @@ export const WorkbenchContentHeader = (props: {
       variant="narrow"
       data-workbench-content-header={panel}
       data-menu-header-position={position}
-      data-menu-header-multiple={settings.multipleMenus}
-      aria-label={compact ? "Floating menu header bubbles" : "Menu header dock"}
-      {...menuHeaderGeometry(position, compact)}
+      aria-label="Menu header dock"
+      {...menuHeaderGeometry(position)}
       flexShrink="0"
       minW="0"
       gap="xs"

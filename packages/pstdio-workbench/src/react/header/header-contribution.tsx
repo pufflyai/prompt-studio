@@ -1,5 +1,5 @@
 import { Box, IconButton } from "@chakra-ui/react";
-import { BubbleButton, PANEL_HEADER_CONTROL_SIZE, ScopedPopover as Popover, Portal, Tooltip } from "@pstdio/ui";
+import { PANEL_HEADER_CONTROL_SIZE, ScopedPopover as Popover, Portal, Tooltip } from "@pstdio/ui";
 import { useState } from "react";
 import type { WorkbenchPanelRegion } from "../../core";
 import { usePanelViewSlot } from "../region/panel-view-hosts";
@@ -23,13 +23,9 @@ const HeaderSlot = (props: { panel: WorkbenchPanelRegion; popup?: boolean }) => 
 };
 
 /** Both destinations stay connected so docking a live guest does not remount it. */
-export const WorkbenchHeaderContribution = (props: {
-  panel: WorkbenchPanelRegion;
-  compact: boolean;
-  vertical: boolean;
-}) => {
-  const { panel, compact, vertical } = props;
-  const popup = compact || vertical;
+export const WorkbenchHeaderContribution = (props: { panel: WorkbenchPanelRegion; vertical: boolean }) => {
+  const { panel, vertical } = props;
+  const popup = vertical;
   const [open, setOpen] = useState(false);
   const icon = <WorkbenchIcon name="SlidersHorizontal" size={14} />;
   return (
@@ -48,21 +44,11 @@ export const WorkbenchHeaderContribution = (props: {
           positioning={{ placement: "bottom-end", flip: true }}
         >
           <Popover.Trigger asChild>
-            {compact ? (
-              <BubbleButton
-                aria-label="View controls"
-                tooltip="View controls"
-                containerProps={{ position: "relative", bottom: "auto", right: "auto" }}
-              >
+            <Tooltip content="View controls">
+              <IconButton aria-label="View controls" size={PANEL_HEADER_CONTROL_SIZE} variant="ghost">
                 {icon}
-              </BubbleButton>
-            ) : (
-              <Tooltip content="View controls">
-                <IconButton aria-label="View controls" size={PANEL_HEADER_CONTROL_SIZE} variant="ghost">
-                  {icon}
-                </IconButton>
-              </Tooltip>
-            )}
+              </IconButton>
+            </Tooltip>
           </Popover.Trigger>
           <Portal>
             <Popover.Positioner>

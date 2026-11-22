@@ -9,12 +9,9 @@ import {
   type WorkbenchRegionSize,
   workbenchPanelMenuRegions,
 } from "../../core";
-import { useMenuHeaderSettings } from "../header/use-menu-header-settings";
-import { useWorkbenchActivePanel } from "../shared/use-workbench-active-panel";
 import { useWorkbenchActiveModeId } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { resolvePanelCollapsible } from "../workbench/workbench-panel-state";
-import { resolvePanelMenuEntries } from "./panel-menu-entries";
 import { resolvePanelMenuRegionState } from "./panel-menu-placements";
 import { getWorkbenchPanelMenuAttachment } from "./panel-menu-sizing";
 import { usePanelMenuContent } from "./use-panel-menu-content";
@@ -104,21 +101,8 @@ export const useWorkbenchPanelMenus = (workbench: WorkbenchCore, panel: Workbenc
     useWorkbenchPanelMenu(workbench, panel, "right"),
     useWorkbenchPanelMenu(workbench, panel, "bottom"),
   ];
-  const placement = useWorkbenchActivePanel(workbench, panel);
-  const { settings } = useMenuHeaderSettings(workbench, placement);
-  const entries = resolvePanelMenuEntries(workbench, panel);
-  const open = workbench.panelMenuState.store.getState().openByMenuId;
-  const selected = entries.filter(
-    (entry) => entry.selected && views.some((view) => view.region === entry.region && view.has && !view.collapsed),
-  );
-  const exclusive = selected.find((entry) => open[entry.key] === true) ?? selected[0];
   const attachment = useWorkbenchPanelMenuAttachment(workbench, panel, views[0]!, views[1]!, views[2]!);
-  return views.map((view, index) => {
-    const exclusiveClosed =
-      !settings.multipleMenus && view.collapsible && exclusive && view.placementId !== exclusive.placement.widgetId;
-    const canAttach = attachment[index];
-    return { ...view, canAttach: Boolean(canAttach), collapsed: view.collapsed || Boolean(exclusiveClosed) };
-  });
+  return views.map((view, index) => ({ ...view, canAttach: Boolean(attachment[index]) }));
 };
 
 export const useWorkbenchPanelMenusPresent = (workbench: WorkbenchCore, panel: WorkbenchPanelRegion) => {

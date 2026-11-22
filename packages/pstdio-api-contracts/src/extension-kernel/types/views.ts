@@ -63,8 +63,6 @@ export interface ViewContribution extends ContributionDefinition<"view"> {
   readonly icon?: string;
   /** Controls that follow this live view into its movable menu header. */
   readonly header?: { readonly view: ViewRef };
-  /** Defaults to one open menu. People can override this presentation preference. */
-  readonly menuHeader?: { readonly multipleMenus?: boolean };
   readonly body: ViewBody;
 }
 

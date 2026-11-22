@@ -9,8 +9,12 @@ const panel = (page: Page, id: string) => page.locator(`[data-workbench-panel="$
 const toolbar = (page: Page, id: string) =>
   page.frameLocator(`[data-workbench-header-panel="${id}"] iframe[title="Letter toolbar"]:visible`);
 const openToolbar = async (page: Page, id: string) => {
-  if (await toolbar(page, id).getByRole("textbox", { name: "Letter search" }).isVisible()) return;
-  await panel(page, id).getByRole("button", { name: "View controls", exact: true }).click();
+  const position = await panel(page, id)
+    .locator("[data-workbench-content-header]")
+    .getAttribute("data-menu-header-position");
+  if (position === "left" || position === "right")
+    await panel(page, id).getByRole("button", { name: "View controls", exact: true }).click();
+  await expect(toolbar(page, id).getByRole("textbox", { name: "Letter search" })).toBeVisible();
 };
 const move = async (page: Page, target: Locator, name: string) => {
   await target.click({ button: "right" });
@@ -143,14 +147,28 @@ test("Extensions search remains usable after its page becomes a tab", async ({ p
     await expect(
       main.locator('[data-workbench-content-header="main"]').getByRole("textbox", { name: /Search extensions/ }),
     ).toBeVisible();
-    await main.getByRole("textbox", { name: /Search extensions/ }).fill("Canvas");
+    const mainSearch = main.getByRole("textbox", { name: /Search extensions/ });
+    await mainSearch.fill("Canvas search text");
+    await mainSearch.press("Home");
+    const input = (await mainSearch.boundingBox())!;
+    await page.mouse.move(input.x + 12, input.y + input.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(input.x + 72, input.y + input.height / 2, { steps: 10 });
+    await page.mouse.up();
+    await expect
+      .poll(() =>
+        mainSearch.evaluate((node: HTMLInputElement) =>
+          Math.abs((node.selectionEnd ?? 0) - (node.selectionStart ?? 0)),
+        ),
+      )
+      .toBeGreaterThan(0);
+    await mainSearch.fill("Canvas");
     await page.getByRole("button", { name: "Enter Main fullscreen", exact: true }).click();
     await expect(main.getByRole("textbox", { name: /Search extensions/ })).toHaveValue("Canvas");
     await page.getByRole("button", { name: "Exit Main fullscreen", exact: true }).click();
     await move(page, main.locator('[data-workbench-panel-header="main"]'), "Move to Side");
     const side = panel(page, "side");
     await expect(side.getByRole("tab", { name: "Extensions", exact: true })).toBeVisible();
-    await side.getByRole("button", { name: "View controls", exact: true }).click();
     const search = page
       .locator('[data-workbench-header-panel="side"]')
       .getByRole("textbox", { name: /Search extensions/ });
@@ -159,7 +177,6 @@ test("Extensions search remains usable after its page becomes a tab", async ({ p
     await expect(side.getByTestId("extensions-empty")).toBeVisible();
     await page.keyboard.press("Escape");
     await side.getByRole("button", { name: "Clear search", exact: true }).click();
-    if (!(await search.isVisible())) await side.getByRole("button", { name: "View controls", exact: true }).click();
     await expect(search).toHaveValue("");
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${id}`);
@@ -183,6 +200,7 @@ headers(
       await expect(toolbar(page, "main").getByRole("textbox", { name: "Letter search" })).toBeVisible();
       await toolbar(page, "main").getByRole("textbox", { name: "Letter search" }).fill("keep while docking");
       await expect(main.locator('[data-workbench-panel-menu="main-right-menu"]')).toBeVisible();
+      await expect(main.locator('[data-workbench-panel-menu="main-bottom-menu"]')).toBeVisible();
       await move(
         page,
         main.getByRole("button", { name: "Close Main right menu", exact: true }),
@@ -214,16 +232,34 @@ headers(
       await page.setViewportSize({ width: 1600, height: 1000 });
       await main.getByRole("button", { name: "Open Main bottom menu", exact: true }).click();
       await expect(main.locator('[data-workbench-panel-menu="main-bottom-menu"]')).toBeVisible();
-      await expect(main.locator('[data-workbench-panel-menu="main-right-menu"]')).not.toBeVisible();
-      await move(page, header, "Allow multiple open menus");
-      await expect(header).toHaveAttribute("data-menu-header-multiple", "true");
-      await main.getByRole("button", { name: "Open Main right menu", exact: true }).click();
-      await expect(main.locator('[data-workbench-panel-menu="main-bottom-menu"]')).toBeVisible();
       await expect(main.locator('[data-workbench-panel-menu="main-right-menu"]')).toBeVisible();
       const activity = main.getByRole("button", { name: "Close Main bottom menu", exact: true });
       await move(page, activity, "Open Letter activity on the left");
       await expect(main.locator('[data-workbench-panel-menu="main-left-menu"]')).toBeVisible();
-      await move(page, header, "Move menu header to right");
+      const iconOrder = () =>
+        header
+          .locator("[data-action-bar-item]")
+          .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-action-bar-item")));
+      const beforeDrag = await iconOrder();
+      const browserButton = header.getByRole("button", { name: "Close Main right menu", exact: true });
+      const activityButton = header.getByRole("button", { name: "Close Main left menu", exact: true });
+      const source = (await browserButton.boundingBox())!;
+      const target = (await activityButton.boundingBox())!;
+      await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(target.x + 2, target.y + target.height / 2, { steps: 10 });
+      await page.mouse.up();
+      await expect.poll(iconOrder).not.toEqual(beforeDrag);
+      await expect(header).toHaveAttribute("data-menu-header-position", "top");
+      const dockBounds = (await header.boundingBox())!;
+      await page.mouse.move(dockBounds.x + 8, dockBounds.y + dockBounds.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(dockBounds.x + 24, dockBounds.y + dockBounds.height / 2, { steps: 4 });
+      const rightDock = main.locator('[data-menu-header-drop="right"]');
+      await expect(rightDock).toBeVisible();
+      const dockTarget = (await rightDock.boundingBox())!;
+      await page.mouse.move(dockTarget.x + dockTarget.width / 2, dockTarget.y + dockTarget.height / 2, { steps: 10 });
+      await page.mouse.up();
       await expect(header).toHaveAttribute("data-menu-header-position", "right");
       await expect(main.locator("[data-workbench-content-header]")).toHaveCount(1);
       const bounds = await header.boundingBox();
@@ -252,7 +288,8 @@ headers(
         .locator("[data-action-bar-item]")
         .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("data-action-bar-item")));
       await page.setViewportSize({ width: 700, height: 600 });
-      await expect(header).toHaveAttribute("aria-label", "Floating menu header bubbles");
+      await expect(header).toHaveAttribute("aria-label", "Menu header dock");
+      await expect(header.getByRole("toolbar", { name: "Menu header", exact: true })).toBeVisible();
       await expect(main.locator('[data-workbench-panel-menu="main-left-menu"]')).not.toBeVisible();
       await move(
         page,
@@ -260,6 +297,10 @@ headers(
         "Open Letter browser on the right",
       );
       await expect(page.getByRole("dialog", { name: "Letter browser", exact: true })).toBeVisible();
+      await header.getByRole("button", { name: "Open Main left menu", exact: true }).click();
+      await expect(page.getByRole("dialog", { name: "Letter activity", exact: true })).toBeVisible();
+      await expect(page.getByRole("dialog", { name: "Letter browser", exact: true })).toBeVisible();
+      await page.keyboard.press("Escape");
       await page.keyboard.press("Escape");
       await page.setViewportSize({ width: 1600, height: 1000 });
       await expect(header).toHaveAttribute("aria-label", "Menu header dock");
