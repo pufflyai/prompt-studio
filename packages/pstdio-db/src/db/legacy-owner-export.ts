@@ -1,11 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, open, rename, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { sql } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId } from "pstdio-sync/records";
+import { exportDocumentFiles } from "../services/extension-storage/document-file-export";
 import type { DbClient } from "./connection.pglite";
 import { flushDirectory } from "./pglite-home-recovery";
+import { documents } from "./schemas/documents";
 import { readUpgradeRows, type UpgradeSource } from "./upgrade-rows";
 
 const ownerSources = (owner: StorageOwner, id: number): UpgradeSource[] => {
@@ -14,6 +16,8 @@ const ownerSources = (owner: StorageOwner, id: number): UpgradeSource[] => {
   const numbers = sql`project_id=${owner.workbenchId} AND ${owner.extensionId === coreOwnerId}`;
   return [
     { table: "owners", keys: ["id"], where: sql`id=${id}` },
+    { table: "documents", keys: ["owner_id", "key"], where },
+    { table: "file_projections", keys: ["owner_id", "root", "path"], where },
     { table: "storage_documents", keys: ["owner_id", "document_id"], where },
     { table: "storage_document_updates", keys: ["owner_id", "document_id", "revision"], where },
     { table: "storage_document_operations", keys: ["owner_id", "document_id", "operation_id"], where },
@@ -78,7 +82,29 @@ export const exportUnconvertedOwner = async (db: DbClient, database: string, own
       }
       await file.writeFile("]");
     }
-    await file.writeFile("}}\n");
+    await file.writeFile('},"document_files":[');
+    let after = 0;
+    let firstFile = true;
+    while (true) {
+      const batch = await db.transaction(async (tx) => {
+        const rows = await tx
+          .select()
+          .from(documents)
+          .where(and(eq(documents.owner_id, id), gt(documents.id, after)))
+          .orderBy(documents.id)
+          .limit(200);
+        for (const row of rows) {
+          await file.writeFile(
+            `${firstFile ? "" : ","}${JSON.stringify({ id: row.id, key: row.key, files: await exportDocumentFiles(tx, owner.workbenchId, row) })}`,
+          );
+          firstFile = false;
+        }
+        return rows;
+      });
+      if (!batch.length) break;
+      after = batch.at(-1)!.id;
+    }
+    await file.writeFile("]}\n");
     await file.sync();
   } catch (error) {
     await rm(temporary, { force: true });

@@ -77,8 +77,8 @@ for (const resumeEpoch of [null, "local:released"])
       ).toEqual([{ sync: null, outbox: null, ordered: null }]);
       expect(
         (
-          await connection.pglite.query(`SELECT document_id FROM storage_documents
-        WHERE document_id='["resource","card"]'`)
+          await connection.pglite.query(`SELECT key FROM documents
+        WHERE key='["resource","card"]'`)
         ).rows,
       ).toEqual([]);
       expect(

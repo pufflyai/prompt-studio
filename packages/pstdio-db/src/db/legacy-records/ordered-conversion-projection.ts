@@ -13,7 +13,7 @@ import {
   type OrderedTransaction,
   orderedOwnerWhere,
 } from "../../services/extension-storage/ordered-sql";
-import { storage_documents as documents } from "../schemas.pg";
+import { documents } from "../schemas/documents";
 import {
   type ConversionCursor,
   readConversionValues,
@@ -86,7 +86,5 @@ export const publishConvertedPage = async (
   await markOrderedNumberProjectionCurrent(tx, owner);
   const native = records.filter((record) => Object.keys(record.texts ?? {}).length).map((record) => record.recordId);
   if (native.length) await migrateLegacyNativeFields(journal, tx, owner, native, views);
-  await tx
-    .delete(documents)
-    .where(and(orderedOwnerWhere(documents, owner), inArray(documents.document_id, ids.map(viewId))));
+  await tx.delete(documents).where(and(orderedOwnerWhere(documents, owner), inArray(documents.key, ids.map(viewId))));
 };

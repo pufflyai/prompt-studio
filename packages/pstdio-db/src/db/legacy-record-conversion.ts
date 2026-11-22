@@ -30,7 +30,8 @@ import { stripLegacyPendingPaths } from "./legacy-records/ordered-legacy-baselin
 import { migrateLegacyPendingBatch } from "./legacy-records/ordered-legacy-pending";
 import { convertLegacyOrderedRecords } from "./legacy-records/ordered-legacy-record";
 import { storage_record_outbox as outbox, storage_ordered_owners as owners } from "./legacy-records-schema";
-import { storage_current_records as current, storage_documents as documents } from "./schemas.pg";
+import { documents } from "./schemas/documents";
+import { storage_current_records as current } from "./schemas.pg";
 
 const yieldTurn = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 const recordPage = async (tx: OrderedTransaction, owner: StorageOwner, after?: string) =>
@@ -86,19 +87,19 @@ const convertBatch = async (tx: OrderedTransaction, owner: StorageOwner, cursor:
   }
   if (cursor.phase === "cleanup") {
     const rows = await tx
-      .select({ id: documents.document_id })
+      .select({ id: documents.key })
       .from(documents)
       .where(
         and(
           orderedOwnerWhere(documents, owner),
-          sql`starts_with(${documents.document_id}, '["ordered-conversion-')`,
-          cursor.after === undefined ? undefined : gt(documents.document_id, cursor.after),
+          sql`starts_with(${documents.key}, '["ordered-conversion-')`,
+          cursor.after === undefined ? undefined : gt(documents.key, cursor.after),
         ),
       )
-      .orderBy(documents.document_id)
+      .orderBy(documents.key)
       .limit(100);
     const ids = rows.length ? rows.map((row) => row.id) : [conversionId];
-    await tx.delete(documents).where(and(orderedOwnerWhere(documents, owner), inArray(documents.document_id, ids)));
+    await tx.delete(documents).where(and(orderedOwnerWhere(documents, owner), inArray(documents.key, ids)));
     if (rows.length) await saveConversion(tx, owner, { phase: "cleanup", after: rows.at(-1)!.id });
     return;
   }
@@ -129,7 +130,7 @@ const convertBatch = async (tx: OrderedTransaction, owner: StorageOwner, cursor:
     );
     await tx
       .delete(documents)
-      .where(and(orderedOwnerWhere(documents, owner), inArray(documents.document_id, ids.map(conversionRecordId))));
+      .where(and(orderedOwnerWhere(documents, owner), inArray(documents.key, ids.map(conversionRecordId))));
   } else {
     await publishConvertedPage(journal, tx, owner, ids);
   }

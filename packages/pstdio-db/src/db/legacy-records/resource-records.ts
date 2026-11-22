@@ -1,4 +1,3 @@
-import { and, eq } from "drizzle-orm";
 import { type StorageOwner, StorageRevisionChangedError } from "pstdio-sync";
 import { editResourceDocument } from "pstdio-sync/records";
 import {
@@ -11,6 +10,7 @@ import {
 } from "pstdio-sync-contracts";
 import { createCommitQueue } from "../../services/extension-storage/commit-queue";
 import { dataMigrationContext } from "../../services/extension-storage/data-migration-context";
+import { readDocumentRetry, rememberDocumentRetry } from "../../services/extension-storage/document-retries";
 import { lockRecordOwner, saveRecordChanges } from "../../services/extension-storage/record-changes";
 import type { RecordDependencies } from "../../services/extension-storage/record-dependencies";
 import {
@@ -23,9 +23,7 @@ import {
   resourceDocumentId,
 } from "../../services/extension-storage/resource-document-persistence";
 import type { NumberChange } from "../../services/extension-storage/resource-number-repair";
-import { storageOwnerKey } from "../../services/extension-storage/storage-owner-key";
 import type { DbClient } from "../connection.pglite";
-import { storage_document_operations } from "../schemas.pg";
 import { bindNativeRecordSource } from "./bind-native-source";
 import { prepareNativeRecordWrite } from "./native-record-write";
 import { queueRecordUpload } from "./record-outbox";
@@ -40,25 +38,16 @@ const outcome = (operationId: string) => ({
   status: "saved-locally" as const,
 });
 
-const retryAddress = (owner: StorageOwner) => ({ owner_id: storageOwnerKey(owner), document_id: "records" });
-
 /** Records of one owner. Each record is its own Yjs document; reads use the SQL projection. */
 export const createResourceRecords = (db: DbClient, owner: StorageOwner, deps: RecordDependencies) => {
   // Owner-locked transactions load the latest state, so this handle can continue its
   // causal clock instead of adding a new Yjs writer to every record on every save.
   const writer = crypto.getRandomValues(new Uint32Array(1))[0]!;
   const { queryIn: _queryIn, ...queries } = createRecordQueries(db, owner, deps.diagnostics);
-  const receipt = (tx: Pick<DbClient, "select">, operationId: string) =>
-    tx
-      .select({ fingerprint: storage_document_operations.fingerprint })
-      .from(storage_document_operations)
-      .where(
-        and(
-          eq(storage_document_operations.owner_id, storageOwnerKey(owner)),
-          eq(storage_document_operations.document_id, "records"),
-          eq(storage_document_operations.operation_id, operationId),
-        ),
-      );
+  const receipt = async (tx: Pick<DbClient, "select">, operationId: string) => {
+    const fingerprint = await readDocumentRetry(tx, owner, "records", operationId);
+    return fingerprint === undefined ? [] : [{ fingerprint }];
+  };
   const commitIn = async (
     tx: Transaction,
     group: StorageGroup,
@@ -107,9 +96,7 @@ export const createResourceRecords = (db: DbClient, owner: StorageOwner, deps: R
     assertStorageLimits(records);
     const saved = await saveRecordChanges(tx, owner, revision, prepared);
     await queueRecordUpload(tx, owner, [...prepared, ...saved.repairs]);
-    await tx
-      .insert(storage_document_operations)
-      .values({ ...retryAddress(owner), operation_id: group.operationId, fingerprint: identity });
+    await rememberDocumentRetry(tx, owner, "records", group.operationId, identity);
     const bound = saved.records.filter((record) => "nativeSources" in record);
     const materialized = new Map(
       (

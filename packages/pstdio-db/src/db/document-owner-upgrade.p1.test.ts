@@ -9,6 +9,7 @@ import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
 import { prepareOrderedOwnerUpgrade } from "./ordered-owner-upgrade";
 import { prepareOwnerIndexUpgrade } from "./owner-index-upgrade";
 import { prepareOwnerProjectionUpgrade } from "./owner-projection-upgrade";
+import { countDocumentUpdates, releasedDocumentRows } from "./released-document-rows.fixture";
 
 const tables = [
   "storage_documents",
@@ -21,8 +22,23 @@ const tables = [
   "storage_resource_aliases",
   "storage_record_indexes",
 ];
+const compare = (first: string, second: string) => {
+  if (first === second) return 0;
+  return first < second ? -1 : 1;
+};
+const sorted = (rows: Record<string, unknown>[][]) =>
+  rows.map((table) =>
+    table
+      .map((row) => Object.fromEntries(Object.entries(row).sort(([a], [b]) => compare(a, b))))
+      .sort((a, b) => compare(JSON.stringify(a), JSON.stringify(b))),
+  );
 const numeric = new Set(tables.slice(0, 6).concat("storage_record_indexes"));
-const readRestoredTable = async (store: Awaited<ReturnType<typeof createDb>>["pglite"], table: string) => {
+const readRestoredTable = async (
+  store: Awaited<ReturnType<typeof createDb>>["pglite"],
+  table: string,
+  fileRows: Awaited<ReturnType<typeof releasedDocumentRows>>,
+) => {
+  if (tables.slice(0, 3).includes(table)) return fileRows[table]!;
   if (table === "storage_resource_identities" || table === "storage_resource_aliases") {
     const value =
       table === "storage_resource_identities"
@@ -38,7 +54,7 @@ const readRestoredTable = async (store: Awaited<ReturnType<typeof createDb>>["pg
       await store.query<{ row: Record<string, unknown> }>(`SELECT
     jsonb_build_object('workbench_id',project_id,'extension_id',extension_id,'document_id','records',
       'revision',numbers_revision) AS row FROM owners WHERE extension_id='pstdio'
-      AND EXISTS(SELECT 1 FROM storage_documents d WHERE d.owner_id=owners.id AND d.document_id='records')
+      AND EXISTS(SELECT 1 FROM documents d WHERE d.owner_id=owners.id AND d.key='records')
     ORDER BY row`)
     ).rows.map(({ row }) => row);
   }
@@ -57,7 +73,7 @@ const readRestoredTable = async (store: Awaited<ReturnType<typeof createDb>>["pg
         row: Record<string, unknown>;
       }>(`SELECT jsonb_build_object('workbench_id',o.project_id,
     'extension_id',o.extension_id,'document_id','records','revision',o.revision,'live_count',o.live_count) AS row
-    FROM owners o WHERE EXISTS (SELECT 1 FROM storage_documents d WHERE d.owner_id=o.id AND d.document_id='records') ORDER BY row`)
+    FROM owners o WHERE EXISTS (SELECT 1 FROM documents d WHERE d.owner_id=o.id AND d.key='records') ORDER BY row`)
     ).rows.map(({ row }) => row);
   }
   const expression = numeric.has(table)
@@ -117,21 +133,22 @@ for (const interruption of ["normal", "schema", "restore"])
         if (interruption === "restore") {
           await previous.pglite.exec(`CREATE FUNCTION stop_document_restore() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
             IF NEW.owner_id=(SELECT id FROM owners WHERE project_id='project-b' AND extension_id='pstdio') THEN RAISE EXCEPTION 'stop document restoration'; END IF; RETURN NEW; END $$;
-            CREATE TRIGGER stop_document_restore BEFORE INSERT ON storage_document_updates FOR EACH ROW EXECUTE FUNCTION stop_document_restore()`);
+            CREATE TRIGGER stop_document_restore BEFORE UPDATE ON documents FOR EACH ROW EXECUTE FUNCTION stop_document_restore()`);
           await expect(finish!()).rejects.toThrow("Failed query");
-          expect(
-            (await previous.pglite.query("SELECT count(*)::int AS count FROM storage_document_updates")).rows,
-          ).toEqual([{ count: 400 }]);
+          expect(await countDocumentUpdates(previous.db, false)).toBe(400);
           for (const table of tables)
             expect(await Bun.file(`${previous.path}-${table}-owners-upgrade.jsonl`).exists()).toBe(true);
-          await previous.pglite.exec("DROP TRIGGER stop_document_restore ON storage_document_updates");
+          await previous.pglite.exec("DROP TRIGGER stop_document_restore ON documents");
         }
       }
       await previous.close();
       closed = true;
       store = await createDb({ path: previous.path });
-      const restored = () => Promise.all(tables.map((table) => readRestoredTable(store!.pglite, table)));
-      expect(await restored()).toEqual(original);
+      const restored = async () => {
+        const fileRows = await releasedDocumentRows(store!);
+        return Promise.all(tables.map((table) => readRestoredTable(store!.pglite, table, fileRows)));
+      };
+      expect(sorted(await restored())).toEqual(sorted(original));
       const countTables = await store.pglite.query<{ database_name: string }>(
         "SELECT entry.value->>'database_name' AS database_name FROM owners o CROSS JOIN LATERAL jsonb_each(o.record_indexes) AS entry(key,value)",
       );
@@ -147,7 +164,7 @@ for (const interruption of ["normal", "schema", "restore"])
       }
       await store.close();
       store = await createDb({ path: previous.path });
-      expect(await restored()).toEqual(original);
+      expect(sorted(await restored())).toEqual(sorted(original));
     } finally {
       if (!closed) await previous.close();
       await store?.close();

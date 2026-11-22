@@ -4,6 +4,7 @@ import { board_views, files, preferences } from "../../db/schemas.pg";
 import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import { listBoardDefaults } from "../board-views/board-defaults";
 import { clearOwnerDocuments } from "../extension-storage/clear-documents";
+import { pruneAllDocumentFiles } from "../extension-storage/document-file-retention";
 import { createDocumentStorageDBService } from "../extension-storage/document-storage";
 import { indexNodeFilesFor } from "../extension-storage/index-node-files";
 import { pruneRecoveryProject } from "../extension-storage/recovery-file-retention";
@@ -98,6 +99,7 @@ export const createExtensionUserDataDBService = (db: DbClient) => {
     if (cleared) {
       await indexNodeFilesFor(db).removeOwner(cleared);
       await pruneRecoveryProject(db, cleared.workbenchId);
+      await pruneAllDocumentFiles(db, cleared.workbenchId);
     }
     return result;
   };

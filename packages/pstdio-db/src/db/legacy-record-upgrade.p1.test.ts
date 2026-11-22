@@ -6,11 +6,13 @@ import { sql } from "drizzle-orm";
 import { editResourceDocument } from "pstdio-sync/records";
 import { encodeRecordFrame } from "pstdio-sync/relay";
 import { createExtensionInstancesDBService } from "../services/extension-instances/extension-instances";
+import { readDocumentHistory, seedDocumentHistory } from "../services/extension-storage/document-history.fixture";
 import { createDocumentStorageDBService } from "../services/extension-storage/document-storage";
 import { createNativeDocumentRoomsDBService } from "../services/extension-storage/native-document-rooms";
 import { createNativeFileProjectionsDBService } from "../services/extension-storage/native-file-projections";
 import { createProjectionStatistics } from "../services/extension-storage/projection-statistics";
 import { createRecoveryPoints } from "../services/extension-storage/recovery-points";
+import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import { createExtensionUserDataDBService } from "../services/extension-user-data/extension-user-data";
 import { createInstalledExtensionSourcesDBService } from "../services/installed-extension-sources/installed-extension-sources";
 import { createDb } from "./connection.pglite";
@@ -102,7 +104,7 @@ test("opening an upgraded database converts unsent records and durably isolates 
     expect(backup.tables.storage_record_outbox).toEqual(
       original.filter((row) => row.extension_id === "example.corrupt"),
     );
-    expect(backup.tables.storage_documents.length).toBeGreaterThan(0);
+    expect(backup.tables.documents.length).toBeGreaterThan(0);
     const snapshot = await rows(connection, "storage_ordered_operations");
     expect(snapshot).toHaveLength(1);
     const savedBackup = await readFile(diagnostics[0]!.backupPath!, "utf8");
@@ -134,17 +136,19 @@ for (const failure of ["export", "deletion"])
       const originals = (await rows(connection, "storage_record_outbox")).filter(
         (row) => row.extension_id === "example.corrupt",
       );
-      const originalDocuments = (
-        await connection.pglite.query(`SELECT encode(state,'hex') AS state
-        FROM storage_documents WHERE document_id='["resource","card"]'
-        AND owner_id=(SELECT id FROM owners WHERE extension_id='example.corrupt')`)
-      ).rows;
+      const corruptOwner = await ensureStorageOwner(connection.db, {
+        workbenchId: "project",
+        extensionId: "example.corrupt",
+      });
+      const originalDocuments = (await readDocumentHistory(connection.db)).rows
+        .filter((row) => row.owner_id === corruptOwner && row.document_id === '["resource","card"]')
+        .map((row) => ({ state: Buffer.from(row.state).toString("hex") }));
       expect(originalDocuments).toHaveLength(1);
       if (failure === "deletion")
         await connection.pglite.exec(`CREATE FUNCTION stop_failed_owner_delete() RETURNS trigger LANGUAGE plpgsql AS $$
           BEGIN IF OLD.owner_id=(SELECT id FROM owners WHERE extension_id='example.corrupt')
           THEN RAISE EXCEPTION 'preserve failed owner'; END IF; RETURN OLD; END $$;
-          CREATE TRIGGER stop_failed_owner_delete BEFORE DELETE ON storage_documents
+          CREATE TRIGGER stop_failed_owner_delete BEFORE DELETE ON documents
           FOR EACH ROW EXECUTE FUNCTION stop_failed_owner_delete()`);
       else await Bun.write(join(root, "backups"), "Cannot create a backup directory here");
       await connection.close();
@@ -157,11 +161,9 @@ for (const failure of ["export", "deletion"])
         (await rows(connection, "storage_record_outbox")).filter((row) => row.extension_id === "example.corrupt"),
       ).toEqual(originals);
       expect(
-        (
-          await connection.pglite.query(`SELECT encode(state,'hex') AS state
-        FROM storage_documents WHERE document_id='["resource","card"]'
-        AND owner_id=(SELECT id FROM owners WHERE extension_id='example.corrupt')`)
-        ).rows,
+        (await readDocumentHistory(connection.db)).rows
+          .filter((row) => row.owner_id === corruptOwner && row.document_id === '["resource","card"]')
+          .map((row) => ({ state: Buffer.from(row.state).toString("hex") })),
       ).toEqual(originalDocuments);
       expect(
         (
@@ -233,8 +235,7 @@ for (const failure of ["export", "deletion"])
       await service
         .openTextDocument({ owner: { ...badOwner, extensionId: "example.healthy" }, fileId: "note.md" })
         .save("Healthy data stays usable");
-      if (failure === "deletion")
-        await connection.pglite.exec("DROP TRIGGER stop_failed_owner_delete ON storage_documents");
+      if (failure === "deletion") await connection.pglite.exec("DROP TRIGGER stop_failed_owner_delete ON documents");
       else await rm(join(root, "backups"));
       await connection.close();
       connection = undefined;
@@ -381,9 +382,7 @@ test("released text-owner records convert before the upgraded database opens", a
     expect(diagnostics[0]!.owner.extensionId).toBe("example.corrupt");
     const backup = JSON.parse(await readFile(diagnostics[0]!.backupPath!, "utf8"));
     expect(backup.tables.storage_record_outbox[0].frame).toBe("\\xff");
-    expect(
-      backup.tables.storage_documents.some((row: { document_id: string }) => row.document_id === '["resource","card"]'),
-    ).toBe(true);
+    expect(backup.tables.documents.some((row: { key: string }) => row.key === '["resource","card"]')).toBe(true);
   } finally {
     if (!previousClosed) await previous.close();
     await connection?.close();
@@ -444,9 +443,12 @@ test("a failed core owner admits healthy identity queries against its empty numb
           identity: { kind: "thing", idField: "id", shorthandField: "shorthand" },
         },
       ]);
-    await connection.pglite.exec(`INSERT INTO storage_documents(owner_id,document_id,state)
-      SELECT id,'records',decode('0000','hex') FROM owners WHERE project_id='project' AND extension_id='pstdio';
-      INSERT INTO storage_record_sync(workbench_id,extension_id,joined) VALUES ('project','pstdio',true);
+    await seedDocumentHistory(connection.db, {
+      owner_id: await ensureStorageOwner(connection.db, { workbenchId: "project", extensionId: "pstdio" }),
+      document_id: "records",
+      state: new Uint8Array([0, 0]),
+    });
+    await connection.pglite.exec(`      INSERT INTO storage_record_sync(workbench_id,extension_id,joined) VALUES ('project','pstdio',true);
       INSERT INTO storage_record_outbox(workbench_id,extension_id,frame) VALUES ('project','pstdio',decode('ff','hex'))`);
     await connection.close();
     connection = undefined;

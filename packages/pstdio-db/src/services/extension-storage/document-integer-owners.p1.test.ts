@@ -21,8 +21,8 @@ test("document and record state follows owner deletion without reviving a facade
     }
     const stale = text(f.svc, owner);
     expect(await stale.read()).toBe("Before 🦉\u0000");
-    const before = await f.db.execute<{ owner_id: number }>(sql`SELECT owner_id FROM storage_documents
-      WHERE document_id='["text-file","same-file"]' AND owner_id=(SELECT id FROM owners
+    const before = await f.db.execute<{ owner_id: number }>(sql`SELECT owner_id FROM documents
+      WHERE key='["text-file","same-file"]' AND owner_id=(SELECT id FROM owners
         WHERE project_id=${owner.workbenchId} AND extension_id=${owner.extensionId})`);
     expect(before.rows[0]!.owner_id).toBeNumber();
     await f.db.execute(
@@ -32,8 +32,8 @@ test("document and record state follows owner deletion without reviving a facade
     await text(fresh, owner).save("After");
     // The old and new documents both have revision one; only the physical owner differs.
     expect(await stale.read()).toBe("After");
-    const after = await f.db.execute<{ owner_id: number }>(sql`SELECT owner_id FROM storage_documents
-      WHERE document_id='["text-file","same-file"]' AND owner_id=(SELECT id FROM owners
+    const after = await f.db.execute<{ owner_id: number }>(sql`SELECT owner_id FROM documents
+      WHERE key='["text-file","same-file"]' AND owner_id=(SELECT id FROM owners
         WHERE project_id=${owner.workbenchId} AND extension_id=${owner.extensionId})`);
     expect(after.rows[0]!.owner_id).not.toBe(before.rows[0]!.owner_id);
     const empty = await fresh.open({ owner });

@@ -1,18 +1,16 @@
 import { isDeepStrictEqual } from "node:util";
 import { getTableColumns, getTableName, sql } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
+import { documentFilesFor } from "../services/extension-storage/document-files";
 import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
+import { restoreDocumentFileBatch } from "./document-file-upgrade";
 import { storage_resource_aliases, storage_resource_identities } from "./legacy-number-schema";
 import { storage_resource_projections } from "./legacy-records-schema";
 import { restoreNumberRevisions } from "./number-revision-upgrade";
 import { restoreResourceNumbers } from "./resource-numbers-upgrade";
-import {
-  storage_current_records,
-  storage_document_operations,
-  storage_document_updates,
-  storage_documents,
-} from "./schemas.pg";
+import { storage_document_operations, storage_document_updates, storage_documents } from "./schemas/storage-documents";
+import { storage_current_records } from "./schemas.pg";
 import { decodeUpgradeBytes as decodeBytes } from "./upgrade-bytes";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
@@ -103,6 +101,12 @@ const restoreBatch = async (
   source: (typeof sources)[number],
   batch: Record<string, unknown>[],
 ) => {
+  if (
+    [storage_documents, storage_document_updates, storage_document_operations].includes(
+      source.table as typeof storage_documents,
+    )
+  )
+    return restoreDocumentFileBatch(tx, getTableName(source.table), batch);
   if (source.table === storage_resource_projections) return restoreNumberRevisions(tx, batch);
   if (source.table === storage_resource_identities || source.table === storage_resource_aliases)
     return restoreResourceNumbers(tx, getTableName(source.table), batch);
@@ -144,6 +148,7 @@ const restoreBatch = async (
 
 /** Capture the entire FK graph before required integer keys replace released owner addresses. */
 export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string) => {
+  documentFilesFor(db, path);
   const {
     rows: [columns],
   } = await db.execute<{ legacy: boolean }>(sql`

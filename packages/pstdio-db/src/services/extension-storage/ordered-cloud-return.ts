@@ -1,17 +1,15 @@
 import { and, eq, inArray, like, or, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
-import {
-  storage_documents as documents,
-  resource_numbers as numbers,
-  owners,
-  owners as storageOwners,
-} from "../../db/schemas.pg";
+import { documents } from "../../db/schemas/documents";
+import { resource_numbers as numbers, owners, owners as storageOwners } from "../../db/schemas.pg";
 import {
   assertStorageOwnerAdmitted,
   assertStorageProjectAdmitted,
   storageProjectAdmissionPending,
 } from "../../db/storage-admission";
+import { readFileDocumentState } from "./document-file-persistence";
+import { documentFilesFor } from "./document-files";
 import { createOrderedJournal, withOrderedOwner } from "./ordered-journal";
 import { pendingOrderedOperations } from "./ordered-pending";
 import { rebaseOrderedProjection } from "./ordered-rebase";
@@ -199,24 +197,23 @@ export const createOrderedCloudReturn = (
             created: record.created,
           });
       }
-      const notices = (
-        await db
-          .select({ extensionId: storageOwners.extension_id, id: documents.document_id, state: documents.state })
+      const notices = await db.transaction(async (tx) => {
+        const saved = await tx
+          .select({ extensionId: storageOwners.extension_id, document: documents })
           .from(documents)
           .innerJoin(storageOwners, eq(storageOwners.id, documents.owner_id))
-          .where(
-            and(
-              sql`${documents.owner_id} IN (SELECT id FROM owners WHERE project_id=${projectId})`,
-              like(documents.document_id, `${orderedReplacedPrefix}%`),
+          .where(and(eq(storageOwners.project_id, projectId), like(documents.key, `${orderedReplacedPrefix}%`)));
+        const values = [];
+        for (const row of saved)
+          values.push({
+            extensionId: row.extensionId,
+            recordId: (JSON.parse(row.document.key) as string[])[1]!,
+            ...decodeOrderedJson<OrderedReplacedNotice>(
+              await readFileDocumentState(documentFilesFor(tx), projectId, row.document),
             ),
-          )
-      )
-        .map((row) => ({
-          extensionId: row.extensionId,
-          recordId: (JSON.parse(row.id) as string[])[1]!,
-          ...decodeOrderedJson<OrderedReplacedNotice>(row.state),
-        }))
-        .sort((first, second) => second.replacedAt - first.replacedAt);
+          });
+        return values.sort((first, second) => second.replacedAt - first.replacedAt);
+      });
       const names = await labels(db, projectId, [
         ...changed.records.map((record) => record.recordId),
         ...notices.map((notice) => notice.recordId),
@@ -274,7 +271,7 @@ export const createOrderedCloudReturn = (
         .where(
           and(
             sql`${documents.owner_id} IN (SELECT id FROM owners WHERE project_id=${projectId})`,
-            like(documents.document_id, `${orderedReplacedPrefix}%`),
+            like(documents.key, `${orderedReplacedPrefix}%`),
           ),
         );
     },

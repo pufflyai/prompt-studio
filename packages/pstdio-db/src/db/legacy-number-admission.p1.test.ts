@@ -6,6 +6,7 @@ import { coreOwnerId, rememberResourceNumber, resourceNumbers, resourceNumbersDo
 import { fingerprint } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import { createExtensionResourceSequencesDBService } from "../services/extension-resource-sequences";
+import { readDocumentHistory, seedDocumentHistory } from "../services/extension-storage/document-history.fixture";
 import { createDocumentStorageDBService } from "../services/extension-storage/document-storage";
 import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import { createProjectsDBService } from "../services/projects/projects";
@@ -63,13 +64,9 @@ test("opening admits legacy numbers before services and retains newer records wi
     await connection.close();
     connection = await createDb({ path });
     // Startup owns conversion: this assertion precedes construction of any number service.
-    expect(
-      (
-        await connection.pglite.query(
-          "SELECT document_id FROM storage_documents WHERE document_id='resource-identities'",
-        )
-      ).rows,
-    ).toEqual([]);
+    expect((await connection.pglite.query("SELECT key FROM documents WHERE key='resource-identities'")).rows).toEqual(
+      [],
+    );
     expect(
       (
         await connection.pglite.query(
@@ -150,11 +147,9 @@ test("interrupted number admission preserves its source and resumes after a comm
       for (let index = 0; index < 201; index++)
         resourceNumbers(document).set(`item-${index}`, number(`item-${index}`, index + 1));
     });
-    const original = (
-      await connection.pglite.query(
-        "SELECT state,revision FROM storage_documents WHERE document_id='resource-identities'",
-      )
-    ).rows;
+    const original = (await readDocumentHistory(connection.db)).rows.filter(
+      (row) => row.document_id === resourceNumbersDocumentId,
+    );
     const controller = new AbortController();
     const transaction = connection.db.transaction.bind(connection.db);
     type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
@@ -174,11 +169,7 @@ test("interrupted number admission preserves its source and resumes after a comm
     );
     connection.db.transaction = transaction;
     expect(
-      (
-        await connection.pglite.query(
-          "SELECT state,revision FROM storage_documents WHERE document_id='resource-identities'",
-        )
-      ).rows,
+      (await readDocumentHistory(connection.db)).rows.filter((row) => row.document_id === resourceNumbersDocumentId),
     ).toEqual(original);
     expect((await connection.pglite.query("SELECT count(*)::int AS count FROM storage_current_records")).rows).toEqual([
       { count: 100 },
@@ -197,13 +188,9 @@ test("interrupted number admission preserves its source and resumes after a comm
     ).rows;
     expect(saved).toHaveLength(3);
     expect(saved).toEqual(expect.arrayContaining(operations));
-    expect(
-      (
-        await connection.pglite.query(
-          "SELECT document_id FROM storage_documents WHERE document_id='resource-identities'",
-        )
-      ).rows,
-    ).toEqual([]);
+    expect((await connection.pglite.query("SELECT key FROM documents WHERE key='resource-identities'")).rows).toEqual(
+      [],
+    );
     const input = { projectId: project.id, extensionId: "example.items", kind: "item", prefix: "IT" };
     expect((await createExtensionResourceSequencesDBService(connection.db).allocate(input)).shorthand).toBe("IT-202");
   } finally {
@@ -223,10 +210,11 @@ test("failed number recovery retains and gates its owner while another project o
     const healthy = await projects.create({ name: "Healthy numbers" });
     const owner = { workbenchId: broken.id, extensionId: coreOwnerId };
     const ownerId = await ensureStorageOwner(connection.db, owner);
-    await connection.pglite.query(
-      "INSERT INTO storage_documents(owner_id,document_id,state) VALUES($1,'resource-identities',decode('ff','hex'))",
-      [ownerId],
-    );
+    await seedDocumentHistory(connection.db, {
+      owner_id: ownerId,
+      document_id: resourceNumbersDocumentId,
+      state: new Uint8Array([255]),
+    });
     await connection.pglite.query(
       `INSERT INTO resource_numbers(project_id,resource_id,extension_id,kind,shorthand,prefix,value,canonical)
       VALUES($1,'retained','example.items','item','IT-9223372036854775807','IT',9223372036854775807,true)`,
@@ -246,12 +234,9 @@ test("failed number recovery retains and gates its owner while another project o
     expect(failures).toHaveLength(1);
     expect(failures[0]!.backupPath).toBeUndefined();
     expect(
-      (
-        await connection.pglite.query(
-          "SELECT encode(state,'hex') AS state FROM storage_documents WHERE owner_id=$1 AND document_id='resource-identities'",
-          [ownerId],
-        )
-      ).rows,
+      (await readDocumentHistory(connection.db)).rows
+        .filter((row) => row.owner_id === ownerId && row.document_id === resourceNumbersDocumentId)
+        .map((row) => ({ state: Buffer.from(row.state).toString("hex") })),
     ).toEqual([{ state: "ff" }]);
     const service = createExtensionResourceSequencesDBService(connection.db);
     const input = { projectId: broken.id, extensionId: "example.items", kind: "item", prefix: "IT" };
@@ -262,19 +247,16 @@ test("failed number recovery retains and gates its owner while another project o
     connection = await createDb({ path, onLegacyConversionError: (failure) => failures.push(failure) });
     expect(failures).toHaveLength(2);
     const backup = JSON.parse(await readFile(failures[1]!.backupPath!, "utf8"));
-    expect(backup.tables.storage_documents).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ owner_id: ownerId, document_id: "resource-identities", state: "\\xff" }),
-      ]),
+    expect(backup.tables.documents).toEqual(
+      expect.arrayContaining([expect.objectContaining({ owner_id: ownerId, key: resourceNumbersDocumentId })]),
+    );
+    expect(backup.document_files.find((row: { key: string }) => row.key === resourceNumbersDocumentId).files).toEqual(
+      expect.arrayContaining([expect.objectContaining({ kind: "state", data: "\\xff" })]),
     );
     expect(String(backup.tables.resource_numbers[0].value)).toBe("9223372036854775807");
-    expect(
-      (
-        await connection.pglite.query(
-          "SELECT document_id FROM storage_documents WHERE document_id='resource-identities'",
-        )
-      ).rows,
-    ).toEqual([]);
+    expect((await connection.pglite.query("SELECT key FROM documents WHERE key='resource-identities'")).rows).toEqual(
+      [],
+    );
     expect(
       await createExtensionResourceSequencesDBService(connection.db).identity({ ...input, id: "retained" }),
     ).toBeNull();
@@ -312,12 +294,9 @@ for (const mode of ["deleted", "history-only", "deleted-joined", "history-only-j
         rememberResourceNumber(document, number("retired", 700));
       });
       const ownerId = await ensureStorageOwner(connection.db, owner);
-      const source = (
-        await connection.pglite.query<{ state: Uint8Array }>(
-          "SELECT state FROM storage_documents WHERE owner_id=$1 AND document_id='resource-identities'",
-          [ownerId],
-        )
-      ).rows[0]!.state;
+      const source = (await readDocumentHistory(connection.db)).rows.find(
+        (row) => row.owner_id === ownerId && row.document_id === resourceNumbersDocumentId,
+      )!.state;
       if (mode.endsWith("joined"))
         await connection.pglite.query("UPDATE owners SET joined=true,epoch='remote-floor-test' WHERE id=$1", [ownerId]);
       await documents.flushStatistics();
@@ -328,11 +307,13 @@ for (const mode of ["deleted", "history-only", "deleted-joined", "history-only-j
       expect(await service.identity({ ...input, id: "retired" })).toBeNull();
       const folder = `${path}-migration-exports`;
       const archiveName = (await readdir(folder)).find(
-        (name) => name.startsWith(`legacy-number-${ownerId}-`) && name.endsWith("-storage_documents.jsonl"),
+        (name) => name.startsWith(`legacy-number-${ownerId}-`) && name.endsWith("-documents.jsonl"),
       );
       expect(archiveName).toBeDefined();
       const archive = JSON.parse((await readFile(join(folder, archiveName!), "utf8")).trim());
-      expect(archive.state).toBe(`\\x${Buffer.from(source).toString("hex")}`);
+      expect(archive.files.find((file: { kind: string }) => file.kind === "state").data).toBe(
+        `\\x${Buffer.from(source).toString("hex")}`,
+      );
       if (mode.endsWith("joined"))
         expect(
           (await connection.pglite.query("SELECT canonical,current,alias FROM resource_numbers WHERE value=700")).rows,
@@ -370,35 +351,30 @@ test("unpreserved terminal number owners keep original resource histories while 
       [ownerId, broken.id, coreOwnerId],
       [healthyId, healthy.id, healthyOwner.extensionId],
     ] as const) {
-      await connection.pglite.query(
-        'INSERT INTO storage_documents(owner_id,document_id,state) VALUES($1,\'["resource","original"]\',$2)',
-        [id, bytes],
-      );
+      await seedDocumentHistory(connection.db, { owner_id: id, document_id: '["resource","original"]', state: bytes });
       await connection.pglite.query("INSERT INTO storage_ordered_owners(workbench_id,extension_id) VALUES($1,$2)", [
         projectId,
         extensionId,
       ]);
     }
-    await connection.pglite.query(
-      "INSERT INTO storage_documents(owner_id,document_id,state) VALUES($1,'resource-identities',decode('ff','hex'))",
-      [ownerId],
-    );
+    await seedDocumentHistory(connection.db, {
+      owner_id: ownerId,
+      document_id: resourceNumbersDocumentId,
+      state: new Uint8Array([255]),
+    });
     await writeFile(join(root, "backups"), "Blocked recovery directory");
     await connection.close();
     const failures: unknown[] = [];
     connection = await createDb({ path, onLegacyConversionError: (failure) => failures.push(failure) });
     expect(failures).toHaveLength(1);
     expect(
-      (
-        await connection.pglite.query(
-          'SELECT state FROM storage_documents WHERE owner_id=$1 AND document_id=\'["resource","original"]\'',
-          [ownerId],
-        )
-      ).rows,
+      (await readDocumentHistory(connection.db)).rows
+        .filter((row) => row.owner_id === ownerId && row.document_id === '["resource","original"]')
+        .map((row) => ({ state: row.state })),
     ).toEqual([{ state: bytes }]);
-    expect(
-      (await connection.pglite.query("SELECT document_id FROM storage_documents WHERE owner_id=$1", [healthyId])).rows,
-    ).toEqual([]);
+    expect((await connection.pglite.query("SELECT key FROM documents WHERE owner_id=$1", [healthyId])).rows).toEqual(
+      [],
+    );
   } finally {
     await connection?.close();
     await rm(root, { recursive: true, force: true });
@@ -438,11 +414,7 @@ test("legacy history refuses a colliding authored record and failed recovery lea
       ).rows,
     ).toEqual([{ value: { authored: "preserve" }, deleted: false }]);
     expect(
-      (
-        await connection.pglite.query(
-          "SELECT document_id FROM storage_documents WHERE document_id='resource-identities'",
-        )
-      ).rows,
+      (await connection.pglite.query("SELECT key FROM documents WHERE key='resource-identities'")).rows,
     ).toHaveLength(1);
   } finally {
     await connection?.close();

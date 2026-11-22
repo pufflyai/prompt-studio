@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { createDb } from "pstdio-db";
-import { createTextLogOwnerFixture } from "pstdio-db/test-fixtures";
+import { createTextLogOwnerFixture, readDocumentHistory, seedDocumentHistory } from "pstdio-db/test-fixtures";
 import { editResourceDocument } from "pstdio-sync/records";
 import { encodeRecordFrame } from "pstdio-sync/relay";
 import { buildBinary } from "./packaged-helpers";
@@ -40,15 +40,13 @@ test(
           "INSERT INTO owners(project_id,extension_id) VALUES ($1,$2) RETURNING id",
           address.slice(0, 2),
         );
-        await seed.pglite.query("INSERT INTO storage_documents (owner_id,document_id,state) VALUES ($1,$2,$3)", [
-          owner!.id,
-          address[2],
-          new Uint8Array([0, 0]),
-        ]);
-        await seed.pglite.query(
-          "INSERT INTO storage_document_updates (owner_id,document_id,revision,update) VALUES ($1,$2,1,$3)",
-          [owner!.id, address[2], randomBytes(2 * 1024 * 1024)],
-        );
+        await seedDocumentHistory(seed.db, {
+          owner_id: owner!.id,
+          document_id: address[2]!,
+          state: new Uint8Array([0, 0]),
+          revision: 1,
+          updates: [{ revision: 1, update: randomBytes(2 * 1024 * 1024) }],
+        });
       } finally {
         await seed.close();
       }
@@ -73,9 +71,9 @@ test(
       // Closing before the scheduled pass leaves its work pending for the next runtime.
       const inspect = await createDb({ path, deferCleanup: true });
       try {
-        expect((await inspect.pglite.query("SELECT document_id FROM storage_document_updates")).rows).toEqual([
-          { document_id: "transcript" },
-        ]);
+        const history = await readDocumentHistory(inspect.db);
+        expect(history.updates.map(({ document_id }) => ({ document_id }))).toEqual([{ document_id: "transcript" }]);
+        expect(history.updates[0]!.update.byteLength).toBe(2 * 1024 * 1024);
         expect((await inspect.pglite.query("SELECT title FROM sessions")).rows).toEqual([
           { title: "Keep this conversation" },
         ]);

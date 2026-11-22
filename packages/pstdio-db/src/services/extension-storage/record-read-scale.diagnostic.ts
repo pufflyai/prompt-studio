@@ -141,15 +141,13 @@ export const benchmarkReads = async (kind: Workload, count: number, root: string
 
     // Advance one resource to the write that compacts its checkpoint, outside the measurement.
     const row = createRow(kind, 0, 1, 3);
-    // A resource's revision is its newest update tail; its document row keeps the checkpoint.
+    // The document descriptor records its newest revision and folded checkpoint.
     const history = async () => {
       const result = await db.execute<{ revision: string; folded: string }>(sql`
-        select greatest(saved.revision, (select max(tails.revision) from storage_document_updates tails
-          where tails.owner_id = saved.owner_id
-            and tails.document_id = saved.document_id)) as revision, saved.folded_revision as folded
-        from storage_documents saved
+        select saved.revision, saved.folded_revision as folded
+        from documents saved
         where saved.owner_id = ${storageOwnerKey(databaseFixtureOwner)}
-          and saved.document_id = ${resourceDocumentId(row.id)}`);
+          and saved.key = ${resourceDocumentId(row.id)}`);
       return { revision: Number(result.rows[0].revision), folded: Number(result.rows[0].folded) };
     };
     const write = (title: string) =>

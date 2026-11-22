@@ -11,6 +11,8 @@ import { extensionIdentityRenames } from "pstdio-api-contracts/extension-host";
 import { normalizeEmbeddedFileName, relativeEmbeddedFileName } from "pstdio-paths";
 import type { StorageOwner } from "pstdio-sync";
 import { migrateExtensionIdentities } from "../services/extension-identity-migration";
+import { pruneAllDocumentFiles, pruneDocumentFiles } from "../services/extension-storage/document-file-retention";
+import { attachDocumentCollector, documentFilesFor } from "../services/extension-storage/document-files";
 import {
   attachIndexNodeFiles,
   createIndexNodeFiles,
@@ -20,6 +22,8 @@ import { upgradeIndexNodesToFiles } from "../services/extension-storage/index-no
 import { pruneRecoveryFiles } from "../services/extension-storage/recovery-file-retention";
 import { recoveryFilesFor } from "../services/extension-storage/recovery-files";
 import { prepareAppPreferencesUpgrade } from "./app-preferences-upgrade";
+import { restoreArtifactProjectionAdmission } from "./artifact-projection-admission";
+import { prepareArtifactProjectionUpgrade } from "./artifact-projection-upgrade";
 import { prepareAssetOwnerUpgrade } from "./asset-owner-upgrade";
 import { prepareAutomationOwnersUpgrade } from "./automation-owners-upgrade";
 import { prepareBoardDefaultsUpgrade } from "./board-defaults-upgrade";
@@ -238,6 +242,8 @@ export const createDb = async (options?: {
     const db = drizzle(openedPglite, { schema });
     attachDatabaseAuthority(db, dbPath);
     recoveryFilesFor(db, dbPath);
+    documentFilesFor(db, dbPath);
+    attachDocumentCollector(db, (projectId, ids) => pruneDocumentFiles(db, projectId, ids));
     // The node folder belongs to this database, so another database can never clean it up.
     const indexNodes =
       dbPath === ":memory:"
@@ -245,6 +251,7 @@ export const createDb = async (options?: {
         : createIndexNodeFiles(options?.indexNodesPath ?? `${dbPath}-index-nodes`);
     attachIndexNodeFiles(db, indexNodes);
     let migrated = false;
+    let finishArtifactProjectionUpgrade: (() => Promise<void>) | undefined;
     await withMigrationsFolder(async (migrationsFolder) => {
       if (!fs.existsSync(migrationsFolder)) return;
       const finishProjectExtensionsUpgrade = await prepareProjectExtensionsUpgrade(db, dbPath);
@@ -254,6 +261,7 @@ export const createDb = async (options?: {
       const finishOwnerProjectionUpgrade = await prepareOwnerProjectionUpgrade(db, dbPath);
       const finishCanonicalNumberUpgrade = await prepareCanonicalNumberUpgrade(db, dbPath);
       const finishDocumentOwnerUpgrade = await prepareDocumentOwnerUpgrade(db, dbPath);
+      finishArtifactProjectionUpgrade = await prepareArtifactProjectionUpgrade(db, dbPath);
       const finishNativeOwnerUpgrade = await prepareNativeOwnerUpgrade(db, dbPath);
       const finishRecoveryOwnerUpgrade = await prepareRecoveryOwnerUpgrade(db, dbPath);
       const finishOrderedOwnerUpgrade = await prepareOrderedOwnerUpgrade(db, dbPath);
@@ -275,8 +283,8 @@ export const createDb = async (options?: {
       await finishAssetOwnerUpgrade?.();
       await finishOrderedOwnerUpgrade?.();
       await finishRecoveryOwnerUpgrade?.();
-      await finishNativeOwnerUpgrade?.();
       await finishDocumentOwnerUpgrade?.();
+      await finishNativeOwnerUpgrade?.();
       await finishCanonicalNumberUpgrade?.();
       await finishOwnerProjectionUpgrade?.();
       await finishOwnerIndexUpgrade?.();
@@ -322,6 +330,9 @@ export const createDb = async (options?: {
           .where(inArray(schema.installed_extension_sources.extension_id, [error.from, error.to]));
       },
     });
+    await finishArtifactProjectionUpgrade?.();
+    await restoreArtifactProjectionAdmission(db, dbPath);
+    await pruneAllDocumentFiles(db);
     if (migrated && !deferCleanup)
       await maintainDatabase(openedPglite, db, dbPath, fresh, onPhase, movedNodes || renamed);
     const projectIds = await db.select({ id: schema.projects.id }).from(schema.projects);

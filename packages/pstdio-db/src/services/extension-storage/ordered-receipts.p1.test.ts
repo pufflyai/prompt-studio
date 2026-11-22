@@ -8,7 +8,6 @@ import { createDb } from "../../db/connection.pglite";
 import {
   projects,
   storage_current_records,
-  storage_documents,
   storage_ordered_operations,
   owners as storage_ordered_owners,
   storage_ordered_receipts,
@@ -16,6 +15,7 @@ import {
   storage_ordered_touches,
   owners as storageOwners,
 } from "../../db/schemas.pg";
+import { captureDocumentFiles, restoreDocumentBackup } from "./document-history.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
 import { attachIndexNodeFiles, createIndexNodeFiles } from "./index-node-files";
 import { withOrderedOwner } from "./ordered-journal";
@@ -95,7 +95,7 @@ const save = (operationId: string, model: string) => ({
 
 const capture = async (db: Awaited<ReturnType<typeof createDb>>["db"]) => ({
   storageOwners: await db.select().from(storageOwners),
-  documents: await db.select().from(storage_documents),
+  files: await captureDocumentFiles(db),
   records: await db.select().from(storage_ordered_records),
   operations: await db.select().from(storage_ordered_operations),
   touches: await db.select().from(storage_ordered_touches),
@@ -103,22 +103,24 @@ const capture = async (db: Awaited<ReturnType<typeof createDb>>["db"]) => ({
   current: await db.select().from(storage_current_records),
 });
 const restore = async (db: Awaited<ReturnType<typeof createDb>>["db"], backup: Awaited<ReturnType<typeof capture>>) => {
-  const ownerIds = new Map<number, number>();
-  for (const { id, ...fields } of backup.storageOwners) {
-    const [copied] = await db.insert(storageOwners).values(fields).returning({ id: storageOwners.id });
-    ownerIds.set(id, copied!.id);
-  }
-  const mapped = <T extends { owner_id: number }>(row: T) => {
-    const id = ownerIds.get(row.owner_id);
-    if (id === undefined) throw new Error("Backup owner is missing");
-    return { ...row, owner_id: id };
-  };
-  for (const row of backup.documents) await db.insert(storage_documents).values(row);
-  for (const row of backup.records) await db.insert(storage_ordered_records).values(mapped(row));
-  for (const row of backup.operations) await db.insert(storage_ordered_operations).values(mapped(row));
-  for (const row of backup.touches) await db.insert(storage_ordered_touches).values(mapped(row));
-  for (const row of backup.receipts) await db.insert(storage_ordered_receipts).values(mapped(row));
-  for (const row of backup.current) await db.insert(storage_current_records).values(row);
+  await db.transaction(async (tx) => {
+    const ownerIds = new Map<number, number>();
+    for (const { id, ...fields } of backup.storageOwners) {
+      const [copied] = await tx.insert(storageOwners).values(fields).returning({ id: storageOwners.id });
+      ownerIds.set(id, copied!.id);
+    }
+    const mapped = <T extends { owner_id: number }>(row: T) => {
+      const id = ownerIds.get(row.owner_id);
+      if (id === undefined) throw new Error("Backup owner is missing");
+      return { ...row, owner_id: id };
+    };
+    await restoreDocumentBackup(tx, backup.files, ownerIds);
+    for (const row of backup.records) await tx.insert(storage_ordered_records).values(mapped(row));
+    for (const row of backup.operations) await tx.insert(storage_ordered_operations).values(mapped(row));
+    for (const row of backup.touches) await tx.insert(storage_ordered_touches).values(mapped(row));
+    for (const row of backup.receipts) await tx.insert(storage_ordered_receipts).values(mapped(row));
+    for (const row of backup.current) await tx.insert(storage_current_records).values(mapped(row));
+  });
 };
 
 test("ordered latest states retain an encrypted receipt root instead of an inline history", async () => {

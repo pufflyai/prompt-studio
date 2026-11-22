@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { and, eq } from "drizzle-orm";
-import { storage_current_records, storage_document_updates } from "../../db/schemas.pg";
+import { documents, storage_current_records } from "../../db/schemas.pg";
 import { createExtensionUserDataDBService } from "../extension-user-data/extension-user-data";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
@@ -37,13 +37,8 @@ test("obsolete document journals can be discarded without loading their content 
   expect(
     await f.db
       .select()
-      .from(storage_document_updates)
-      .where(
-        and(
-          eq(storage_document_updates.owner_id, storageOwnerKey(f.owner)),
-          eq(storage_document_updates.document_id, name),
-        ),
-      ),
+      .from(documents)
+      .where(and(eq(documents.owner_id, storageOwnerKey(f.owner)), eq(documents.key, name))),
   ).toHaveLength(0);
 });
 
@@ -88,7 +83,7 @@ test("a durable multi-record update survives a new service and folds without rep
   expect((await reopened.records.read("ticket")).value).toEqual({ title: "Title 129", status: "ready" });
   expect((await reopened.records.read("note")).value).toBe("first\nlast");
   // Reads use one projected row per record instead of a growing per-record document journal.
-  expect(await f.db.select().from(storage_document_updates)).toHaveLength(0);
+  expect(await f.db.select().from(documents).where(eq(documents.kind, "shared"))).toHaveLength(0);
   expect(await f.db.select().from(storage_current_records)).toHaveLength(2);
 });
 

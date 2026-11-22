@@ -5,13 +5,8 @@ import {
   storage_ordered_owners as owners,
   storage_record_sync as sync,
 } from "../../db/legacy-records-schema";
-import {
-  storage_current_records as current,
-  storage_documents as documents,
-  storage_document_operations as operations,
-  owners as projections,
-  storage_document_updates as updates,
-} from "../../db/schemas.pg";
+import { storage_current_records as current, documents, owners as projections } from "../../db/schemas.pg";
+import { captureDocumentFiles, restoreDocumentBackup } from "./document-history.fixture";
 import { peers } from "./ordered-legacy-pending.fixture";
 
 test("a restored old pending frontier cannot reuse a known raw-frame identity with a new effective payload", async () => {
@@ -27,9 +22,7 @@ test("a restored old pending frontier cannot reuse a known raw-frame identity wi
     edits: [{ recordId: "card", replace: { title: "first", body: "first" } }],
   });
   const saved = {
-    documents: await second.db.select().from(documents),
-    updates: await second.db.select().from(updates),
-    operations: await second.db.select().from(operations),
+    files: await captureDocumentFiles(second.db),
     current: await second.db.select().from(current),
     projections: await second.db.select().from(projections),
     sync: await second.db.select().from(sync),
@@ -48,9 +41,7 @@ test("a restored old pending frontier cannot reuse a known raw-frame identity wi
     await tx.delete(current);
     await tx.delete(documents);
     await tx.delete(sync);
-    for (const row of saved.documents) await tx.insert(documents).values(row);
-    for (const row of saved.updates) await tx.insert(updates).values(row);
-    for (const row of saved.operations) await tx.insert(operations).values(row);
+    await restoreDocumentBackup(tx, saved.files);
     for (const row of saved.projections)
       await tx
         .update(projections)

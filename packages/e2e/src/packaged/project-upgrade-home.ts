@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { access } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
+import { readClosedDocumentText } from "pstdio-db/test-fixtures";
 import type { StackApi } from "pstdio-scripts/testing";
 import * as Y from "yjs";
 import savedQuota from "./fixtures/home-quota-047.json";
@@ -160,13 +161,13 @@ export const checkHomeHistory = async (input: ProjectUpgradeInput, project: stri
             [project, original, key, Y.encodeStateAsUpdate(document)],
           );
         } else {
-          const { rows } = await db.query<{ state: Uint8Array }>(
-            "SELECT state FROM storage_documents WHERE owner_id=(SELECT id FROM owners WHERE project_id=$1 AND extension_id=$2) AND document_id=$3",
-            [project, conflicted ? original : canonical, key],
+          const saved = await readClosedDocumentText(
+            db,
+            path,
+            { workbenchId: project, extensionId: conflicted ? original : canonical },
+            key,
           );
-          assert.equal(rows.length, 1, `Active Home lost access to ${key} after upgrade`);
-          Y.applyUpdate(document, rows[0]!.state);
-          assert.equal(document.getText("content").toString(), content, `Home changed ${key}`);
+          assert.equal(saved, content, `Home changed ${key}`);
         }
       } finally {
         document.destroy();

@@ -25,9 +25,9 @@ import {
 } from "../../services/extension-storage/ordered-sql";
 import { readProjectedRecords } from "../../services/extension-storage/record-queries";
 import type { storage_record_outbox as outbox } from "../legacy-records-schema";
+import { documents } from "../schemas/documents";
 import {
   storage_ordered_records as canonical,
-  storage_documents as documents,
   storage_ordered_operations as operations,
   storage_ordered_touches as touches,
 } from "../schemas.pg";
@@ -200,7 +200,7 @@ export const migrateLegacyPendingBatch = async (
     and(
       orderedOwnerWhere(documents, owner),
       inArray(
-        documents.document_id,
+        documents.key,
         rows.map((row) => conversionFrameId(row.sequence)),
       ),
     ),

@@ -1,15 +1,10 @@
-import { and, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
-import { readOrderedMarker, saveOrderedMarker } from "../../services/extension-storage/ordered-native-metadata";
 import {
-  decodeOrderedJson,
-  encodeOrderedJson,
-  type OrderedTransaction,
-  orderedOwnerWhere,
-} from "../../services/extension-storage/ordered-sql";
-import { ensureStorageOwner } from "../../services/extension-storage/storage-owner-key";
-import { storage_documents as documents } from "../schemas.pg";
-
+  readOrderedMarker,
+  readOrderedMarkers,
+  saveOrderedMarker,
+} from "../../services/extension-storage/ordered-native-metadata";
+import type { OrderedTransaction } from "../../services/extension-storage/ordered-sql";
 export const conversionId = '["ordered-conversion"]';
 export const conversionFrameId = (sequence: number) => JSON.stringify(["ordered-conversion-frame", sequence]);
 export const conversionRecordId = (id: string) => JSON.stringify(["ordered-conversion-record", id]);
@@ -33,13 +28,9 @@ export const readConversionValues = async <T>(
   ids: string[],
 ) => {
   const values = new Map<string, T>();
-  for (let offset = 0; offset < ids.length; offset += 100) {
-    const rows = await tx
-      .select({ id: documents.document_id, state: documents.state })
-      .from(documents)
-      .where(and(orderedOwnerWhere(documents, owner), inArray(documents.document_id, ids.slice(offset, offset + 100))));
-    for (const row of rows) values.set(row.id, decodeOrderedJson<T>(row.state));
-  }
+  for (let offset = 0; offset < ids.length; offset += 100)
+    for (const [id, value] of await readOrderedMarkers<T>(tx, owner, ids.slice(offset, offset + 100)))
+      values.set(id, value.value);
   return values;
 };
 export const saveConversionValues = async (
@@ -47,18 +38,5 @@ export const saveConversionValues = async (
   owner: StorageOwner,
   values: Map<string, unknown>,
 ) => {
-  const ownerId = await ensureStorageOwner(tx, owner);
-  const rows = [...values].map(([id, value]) => ({
-    owner_id: ownerId,
-    document_id: id,
-    state: encodeOrderedJson(value),
-  }));
-  for (let offset = 0; offset < rows.length; offset += 100)
-    await tx
-      .insert(documents)
-      .values(rows.slice(offset, offset + 100))
-      .onConflictDoUpdate({
-        target: [documents.owner_id, documents.document_id],
-        set: { state: sql`excluded.state`, revision: sql`${documents.revision} + 1` },
-      });
+  for (const [id, value] of values) await saveOrderedMarker(tx, owner, id, value);
 };

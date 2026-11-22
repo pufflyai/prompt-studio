@@ -9,8 +9,9 @@ import type { DbClient } from "../db/connection.pglite";
 import * as s from "../db/schemas.pg";
 import { unadmittedExtensionProjects, unadmittedStorageOwners } from "../db/storage-admission";
 import { availableIdentityProject, mergeTextOwnerHistories, textOnlyOwnerSql } from "./extension-identity-storage";
+import { ensureFileDocument, saveFileDocumentState } from "./extension-storage/document-file-persistence";
+import { documentFilesFor } from "./extension-storage/document-files";
 import { indexNodeFilesFor } from "./extension-storage/index-node-files";
-import { ensureStorageOwner } from "./extension-storage/storage-owner-key";
 
 const otherTables = [s.owners, s.board_views, s.preferences, s.credentials, s.resource_prefixes, s.resource_numbers];
 const ownerColumn = sql.identifier("extension_id");
@@ -39,8 +40,8 @@ const assertNoConflicts = async (tx: Transaction, from: string, to: string, excl
       sql`SELECT project_id AS scope,extension_id,false AS text_file FROM resource_numbers
         WHERE extension_id IN (${from},${to})`,
       sql`SELECT o.project_id AS scope, o.extension_id, ${textOnlyOwnerSql("o")} AS text_file FROM ${s.owners} o WHERE o.extension_id IN (${from}, ${to})`,
-      sql`SELECT o.project_id AS scope,o.extension_id,starts_with(d.document_id, '["text-file",') AS text_file
-        FROM storage_documents d JOIN owners o ON d.owner_id=o.id WHERE o.extension_id IN (${from},${to})`,
+      sql`SELECT o.project_id AS scope,o.extension_id,starts_with(d.key, '["text-file",') AS text_file
+        FROM documents d JOIN owners o ON d.owner_id=o.id WHERE o.extension_id IN (${from},${to})`,
     ],
     sql` UNION ALL `,
   );
@@ -48,8 +49,8 @@ const assertNoConflicts = async (tx: Transaction, from: string, to: string, excl
     await tx.execute(sql`SELECT scope FROM (${owners}) owners WHERE ${availableIdentityProject(sql`scope`, excluded)} GROUP BY scope
     HAVING count(DISTINCT extension_id) > 1 AND (
       (bool_or(NOT text_file AND extension_id = ${from}) AND bool_or(NOT text_file AND extension_id = ${to}))
-      OR EXISTS (SELECT 1 FROM storage_documents a JOIN owners ao ON a.owner_id=ao.id
-        JOIN owners bo ON bo.project_id=ao.project_id JOIN storage_documents b ON b.owner_id=bo.id AND b.document_id=a.document_id
+      OR EXISTS (SELECT 1 FROM documents a JOIN owners ao ON a.owner_id=ao.id
+        JOIN owners bo ON bo.project_id=ao.project_id JOIN documents b ON b.owner_id=bo.id AND b.key=a.key
         WHERE ao.project_id=owners.scope AND ao.extension_id=${from} AND bo.extension_id=${to})
       OR EXISTS (SELECT 1 FROM owners a JOIN owners b USING(project_id)
         WHERE a.project_id=owners.scope AND a.extension_id=${from} AND b.extension_id=${to}
@@ -97,7 +98,7 @@ export const migrateExtensionIdentities = async (
   );
   if (!renames.length) return false;
   const projects = await db.execute(sql`SELECT id FROM ${s.projects} p WHERE NOT EXISTS
-    (SELECT 1 FROM ${s.storage_documents} d JOIN owners o ON d.owner_id=o.id WHERE o.project_id = p.id AND o.extension_id = 'pstdio' AND d.document_id = ${markerId})`);
+    (SELECT 1 FROM ${s.documents} d JOIN owners o ON d.owner_id=o.id WHERE o.project_id = p.id AND o.extension_id = 'pstdio' AND d.key = ${markerId})`);
   const pending = projects.rows.map((row) => String(row.id));
   const oldIds = renames.map(({ from }) => `${from.publisher}.${from.name}`);
   const blocked = unadmittedStorageOwners(db).flatMap((owner) =>
@@ -196,18 +197,16 @@ export const migrateExtensionIdentities = async (
     document.getMap("data-migrations").set("first-party-identities", 1);
     const state = Y.encodeStateAsUpdate(document);
     document.destroy();
-    await db
-      .insert(s.storage_documents)
-      .values(
-        await Promise.all(
-          pending.map(async (workbenchId) => ({
-            owner_id: await ensureStorageOwner(db, { workbenchId, extensionId: "pstdio" }),
-            document_id: markerId,
-            state,
-          })),
-        ),
-      )
-      .onConflictDoNothing();
+    for (const workbenchId of pending)
+      await db.transaction(async (tx) => {
+        const owner = { workbenchId, extensionId: "pstdio" };
+        const { initialize } = await ensureFileDocument(tx, documentFilesFor(tx), {
+          owner,
+          key: markerId,
+          kind: "local",
+        });
+        if (initialize) await saveFileDocumentState(tx, owner, markerId, state);
+      });
   }
   await moveRenamedIndexNodes(db, renames);
   return renamed;

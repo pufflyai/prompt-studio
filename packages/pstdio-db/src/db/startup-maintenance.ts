@@ -30,7 +30,7 @@ export const maintainDatabase = async (
   const { rows } = await db.query<{ migration: string; legacy: boolean }>(
     `SELECT
       (SELECT hash || ':' || created_at::text FROM drizzle.__drizzle_migrations ORDER BY created_at DESC LIMIT 1) AS migration,
-      EXISTS (SELECT 1 FROM storage_documents WHERE owner_id IN (SELECT id FROM owners WHERE starts_with(extension_id, $1))) AS legacy`,
+      EXISTS (SELECT 1 FROM documents WHERE owner_id IN (SELECT id FROM owners WHERE starts_with(extension_id, $1))) AS legacy`,
     [legacyOwnerPrefix],
   );
   const expected = JSON.stringify({ version: 1, migration: rows[0].migration });

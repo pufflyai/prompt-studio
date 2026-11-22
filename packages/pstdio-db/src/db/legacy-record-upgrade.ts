@@ -1,6 +1,8 @@
 import { and, eq, gt, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId } from "pstdio-sync/records";
+import { ensureFileDocument } from "../services/extension-storage/document-file-persistence";
+import { documentFilesFor } from "../services/extension-storage/document-files";
 import type { DbClient } from "./connection.pglite";
 import { convertLegacyNumbers } from "./legacy-number-conversion";
 import { prepareLegacyNumberInput } from "./legacy-number-input";
@@ -8,7 +10,8 @@ import { exportUnconvertedOwner } from "./legacy-owner-export";
 import { finishConvertedLegacyOwners } from "./legacy-record-completion";
 import { convertLegacyOwner } from "./legacy-record-conversion";
 import { storage_ordered_owners } from "./legacy-records-schema";
-import { owners, storage_documents } from "./schemas.pg";
+import { documents as storage_documents } from "./schemas/documents";
+import { owners } from "./schemas.pg";
 import { retainUnadmittedOwner, unadmittedStorageOwners } from "./storage-admission";
 
 export interface LegacyConversionFailure {
@@ -36,8 +39,7 @@ const emptyFailedOwner = (db: DbClient, owner: StorageOwner, id: number, legacy:
         sql`DELETE FROM storage_record_sync WHERE workbench_id=${owner.workbenchId} AND extension_id=${owner.extensionId}`,
       );
     }
-    await tx.execute(sql`DELETE FROM native_document_sources WHERE owner_id=${id}`);
-    await tx.execute(sql`DELETE FROM native_document_file_projections WHERE owner_id=${id}`);
+    await tx.execute(sql`DELETE FROM file_projections WHERE owner_id=${id}`);
     if (owner.extensionId === coreOwnerId) {
       await tx.execute(sql`DELETE FROM resource_numbers WHERE project_id=${owner.workbenchId}`);
     }
@@ -63,9 +65,7 @@ const emptyFailedOwner = (db: DbClient, owner: StorageOwner, id: number, legacy:
         .insert(storage_ordered_owners)
         .values({ workbench_id: owner.workbenchId, extension_id: owner.extensionId });
     if (owner.extensionId === coreOwnerId) {
-      await tx
-        .insert(storage_documents)
-        .values({ owner_id: id, document_id: "records", state: new Uint8Array([0, 0]) });
+      await ensureFileDocument(tx, documentFilesFor(tx), { owner, key: "records", kind: "local" });
       await tx.update(owners).set({ numbers_revision: empty!.revision }).where(eq(owners.id, id));
     }
   });
@@ -108,15 +108,15 @@ export const upgradeLegacyRecords = async (
       .where(
         and(
           gt(owners.id, after),
-          sql`((owners.extension_id='pstdio' AND EXISTS (SELECT 1 FROM storage_documents n
-            WHERE n.owner_id=owners.id AND n.document_id='resource-identities')) OR ${
+          sql`((owners.extension_id='pstdio' AND EXISTS (SELECT 1 FROM documents n
+            WHERE n.owner_id=owners.id AND n.key='resource-identities')) OR ${
               present
                 ? sql`
-            (EXISTS (SELECT 1 FROM storage_documents d WHERE d.owner_id=owners.id AND d.document_id='records')
+            (EXISTS (SELECT 1 FROM documents d WHERE d.owner_id=owners.id AND d.key='records')
               OR EXISTS (SELECT 1 FROM storage_record_sync s WHERE s.workbench_id=owners.project_id AND s.extension_id=owners.extension_id))
             AND (NOT EXISTS (SELECT 1 FROM storage_ordered_owners p WHERE p.workbench_id=owners.project_id
-              AND p.extension_id=owners.extension_id) OR EXISTS (SELECT 1 FROM storage_documents c
-                WHERE c.owner_id=owners.id AND c.document_id='["ordered-conversion"]'))`
+              AND p.extension_id=owners.extension_id) OR EXISTS (SELECT 1 FROM documents c
+                WHERE c.owner_id=owners.id AND c.key='["ordered-conversion"]'))`
                 : sql`false`
             })`,
         ),
@@ -161,9 +161,9 @@ const isolateFailedOwner = async (
       owner.extensionId === coreOwnerId &&
       (
         await db
-          .select({ id: storage_documents.document_id })
+          .select({ id: storage_documents.key })
           .from(storage_documents)
-          .where(and(eq(storage_documents.owner_id, id), eq(storage_documents.document_id, "resource-identities")))
+          .where(and(eq(storage_documents.owner_id, id), eq(storage_documents.key, "resource-identities")))
       ).length
     )
       await (await prepareLegacyNumberInput(db, database, owner))();
@@ -206,17 +206,17 @@ const removeConvertedLegacyDocuments = async (db: DbClient, signal?: AbortSignal
   while (true) {
     signal?.throwIfAborted();
     const { rows } = await db.execute(sql`WITH page AS (
-      SELECT d.owner_id,d.document_id FROM storage_documents d JOIN owners o ON o.id=d.owner_id
-      WHERE starts_with(d.document_id, '["resource",')
+      SELECT d.owner_id,d.key FROM documents d JOIN owners o ON o.id=d.owner_id
+      WHERE starts_with(d.key, '["resource",')
         AND NOT EXISTS (SELECT 1 FROM jsonb_to_recordset(${blocked}::jsonb) AS b("workbenchId" text,"extensionId" text)
           WHERE b."workbenchId"=o.project_id AND b."extensionId"=o.extension_id)
         AND EXISTS (SELECT 1 FROM storage_ordered_owners p WHERE p.workbench_id=o.project_id
           AND p.extension_id=o.extension_id)
-        AND NOT EXISTS (SELECT 1 FROM storage_documents c WHERE c.owner_id=d.owner_id
-          AND c.document_id='["ordered-conversion"]')
-      ORDER BY d.owner_id,d.document_id LIMIT 200
-    ) DELETE FROM storage_documents d USING page p
-      WHERE d.owner_id=p.owner_id AND d.document_id=p.document_id RETURNING d.owner_id`);
+        AND NOT EXISTS (SELECT 1 FROM documents c WHERE c.owner_id=d.owner_id
+          AND c.key='["ordered-conversion"]')
+      ORDER BY d.owner_id,d.key LIMIT 200
+    ) DELETE FROM documents d USING page p
+      WHERE d.owner_id=p.owner_id AND d.key=p.key RETURNING d.owner_id`);
     if (!rows.length) return;
   }
 };

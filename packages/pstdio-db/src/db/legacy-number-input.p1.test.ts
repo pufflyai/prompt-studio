@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { coreOwnerId, rememberResourceNumber, resourceNumbers, resourceNumbersDocumentId } from "pstdio-sync/records";
 import * as Y from "yjs";
 import { createExtensionResourceSequencesDBService } from "../services/extension-resource-sequences";
+import { captureDocumentFiles } from "../services/extension-storage/document-history.fixture";
 import { createDocumentStorageDBService } from "../services/extension-storage/document-storage";
 import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import { createProjectsDBService } from "../services/projects/projects";
@@ -33,39 +34,35 @@ test("distinct retained inputs for one owner preserve both exact source graphs a
         resourceNumbers(document).set(resource.id, resource);
         rememberResourceNumber(document, { ...resource, value: floor });
       });
-      const {
-        rows: [source],
-      } = await connection.pglite.query<{ state: Uint8Array }>(
-        "SELECT state FROM storage_documents WHERE owner_id=$1 AND document_id='resource-identities'",
-        [ownerId],
-      );
-      expected.push(`\\x${Buffer.from(source!.state).toString("hex")}`);
+      const source = (await captureDocumentFiles(connection.db)).find(
+        (value) => value.row.owner_id === ownerId && value.row.key === resourceNumbersDocumentId,
+      )!;
+      expected.push(source.files);
       await documents.flushStatistics();
       await connection.close();
       connection = await createDb({ path });
     }
     const archivePath = `${path}-migration-exports`;
     const names = (await readdir(archivePath))
-      .filter((name) => name.startsWith(`legacy-number-${ownerId}-`) && name.endsWith("-storage_documents.jsonl"))
+      .filter((name) => name.startsWith(`legacy-number-${ownerId}-`) && name.endsWith("-documents.jsonl"))
       .sort();
     expect(names).toHaveLength(2);
     const originals = await Promise.all(
       names.map(async (name) => JSON.parse((await readFile(join(archivePath, name), "utf8")).trim())),
     );
-    expect(originals.map((row) => row.state).sort()).toEqual(expected.sort());
+    expect(originals.map((row) => row.files)).toEqual(expect.arrayContaining(expected));
     const reconstructed = [];
-    for (const [index, name] of names.entries()) {
+    for (const index of names.keys()) {
       const document = new Y.Doc();
       try {
-        Y.applyUpdate(document, Buffer.from(originals[index]!.state.slice(2), "hex"));
-        const updates = (
-          await readFile(
-            join(archivePath, name.replace("-storage_documents.jsonl", "-storage_document_updates.jsonl")),
-            "utf8",
-          )
-        ).trim();
-        for (const line of updates.split("\n").filter(Boolean))
-          Y.applyUpdate(document, Buffer.from(JSON.parse(line).update.slice(2), "hex"));
+        const files = originals[index]!.files as { kind: string; sha256: string; data: string }[];
+        const head = JSON.parse(
+          Buffer.from(files.find((file) => file.kind === "head")!.data.slice(2), "hex").toString(),
+        );
+        const read = (kind: string, sha256: string) =>
+          Buffer.from(files.find((file) => file.kind === kind && file.sha256 === sha256)!.data.slice(2), "hex");
+        Y.applyUpdate(document, read("state", head.snapshot.sha256));
+        for (const update of head.updates) Y.applyUpdate(document, read("update", update.sha256));
         reconstructed.push([...resourceNumbers(document).keys()]);
       } finally {
         document.destroy();
@@ -82,7 +79,7 @@ test("distinct retained inputs for one owner preserve both exact source graphs a
     connection = await createDb({ path });
     expect(
       (await readdir(archivePath))
-        .filter((name) => name.startsWith(`legacy-number-${ownerId}-`) && name.endsWith("-storage_documents.jsonl"))
+        .filter((name) => name.startsWith(`legacy-number-${ownerId}-`) && name.endsWith("-documents.jsonl"))
         .sort(),
     ).toEqual(names);
     expect(await Promise.all(names.map((name) => readFile(join(archivePath, name), "utf8")))).toEqual(

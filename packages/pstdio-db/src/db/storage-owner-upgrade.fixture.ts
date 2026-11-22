@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { sql } from "drizzle-orm";
 import { dropRecordIndexes } from "../services/extension-storage/record-index-lifecycle";
 import type { createDb } from "./connection.pglite";
+import { releasedDocumentRows } from "./released-document-rows.fixture";
 import { decodeUpgradeBytes } from "./upgrade-bytes";
 
 /** Preserve seeded data when an app-upgrade fixture reconstructs the released storage schema. */
@@ -13,20 +14,18 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     await query(`SELECT to_jsonb(link) AS row FROM (SELECT s.project_id,s.extension_id AS source_owner,l.source_kind,l.source_id,
     t.extension_id AS target_owner,l.target_kind,l.target_id,l.role,l.details
     FROM resource_links l JOIN owners s ON l.source_owner=s.id JOIN owners t ON l.target_owner=t.id) link`);
-  const documentTables = [
-    "storage_documents",
-    "storage_document_updates",
-    "storage_document_operations",
-    "storage_record_projections",
-    "storage_current_records",
-    "storage_record_indexes",
-  ];
-  const documents: Record<string, Record<string, unknown>[]> = {};
+  const documentTables = ["storage_record_projections", "storage_current_records", "storage_record_indexes"];
+  const releasedFiles = await releasedDocumentRows(connection);
+  const documents: Record<string, Record<string, unknown>[]> = {
+    storage_documents: releasedFiles.storage_documents!,
+    storage_document_updates: releasedFiles.storage_document_updates!,
+    storage_document_operations: releasedFiles.storage_document_operations!,
+  };
   const documentRows = async (table: string) => {
     if (table === "storage_record_projections")
       return query(`SELECT jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id,
         'document_id','records','revision',o.revision,'live_count',o.live_count) AS row FROM owners o
-        WHERE EXISTS (SELECT 1 FROM storage_documents d WHERE d.owner_id=o.id AND d.document_id='records')`);
+        WHERE EXISTS (SELECT 1 FROM documents d WHERE d.owner_id=o.id AND d.key='records')`);
     if (table === "storage_record_indexes")
       return query(`SELECT jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id,
         'name',entry.key,'definition',entry.value->'definition','database_name',entry.value->'database_name') AS row
@@ -38,7 +37,7 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
   for (const table of documentTables) documents[table] = await documentRows(table);
   documents.storage_resource_projections = await query(`SELECT jsonb_build_object('workbench_id',o.project_id,
     'extension_id',o.extension_id,'document_id','records','revision',o.numbers_revision) AS row FROM owners o
-    WHERE o.extension_id='pstdio' AND EXISTS(SELECT 1 FROM storage_documents d WHERE d.owner_id=o.id AND d.document_id='records')`);
+    WHERE o.extension_id='pstdio' AND EXISTS(SELECT 1 FROM documents d WHERE d.owner_id=o.id AND d.key='records')`);
   documents.storage_resource_identities = await query(`SELECT jsonb_build_object('workbench_id',project_id,
     'resource_id',resource_id,'extension_id',extension_id,'kind',kind,'shorthand',shorthand,'prefix',prefix,'value',value::text)
     AS row FROM resource_numbers WHERE current`);
@@ -73,17 +72,10 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
       "SELECT last_value,is_called FROM storage_ordered_operations_local_sequence_seq",
     )
   ).rows[0]!;
-  const recovery = await query(`SELECT (to_jsonb(r)-'owner_id'-'project_id') ||
-    jsonb_build_object('workbench_id',r.project_id,'extension_id',o.extension_id) AS row
-    FROM recovery_point_owners r JOIN owners o ON r.owner_id=o.id`);
+  const recovery = releasedFiles.recovery_point_owners!;
   const points = await query(`SELECT (to_jsonb(r)-'project_id') ||
     jsonb_build_object('workbench_id',project_id) AS row FROM recovery_points r`);
-  const native: Record<string, Record<string, unknown>[]> = {};
-  for (const table of ["native_document_sources", "native_document_rooms", "native_document_file_projections"])
-    native[table] = await query(`SELECT (to_jsonb(n)-'owner_id') ||
-      jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id) AS row
-      FROM ${table} n JOIN owners o ON n.owner_id=o.id`);
-  native.native_document_room_updates = await query("SELECT to_jsonb(n) AS row FROM native_document_room_updates n");
+  const native = releasedFiles;
   const assets = await query(`SELECT (to_jsonb(a)-'owner_id') ||
     jsonb_build_object('project_id',o.project_id,'extension_id',o.extension_id) AS row
     FROM asset_transfers a JOIN owners o ON a.owner_id=o.id`);
@@ -110,9 +102,11 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     )
   ).rows[0]!;
   await connection.pglite.exec(
-    "DROP TABLE resource_links; DROP TABLE resource_prefixes; DROP TABLE resource_numbers; DROP TABLE storage_current_records; DROP TABLE storage_document_operations; DROP TABLE storage_document_updates; DROP TABLE storage_documents; DROP TABLE native_document_room_updates; DROP TABLE native_document_rooms; DROP TABLE native_document_file_projections; DROP TABLE native_document_sources; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE IF EXISTS storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
+    "DROP TABLE resource_links; DROP TABLE resource_prefixes; DROP TABLE resource_numbers; DROP TABLE storage_current_records; DROP TABLE file_projections; DROP TABLE documents; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE IF EXISTS storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
   );
   const data = {
+    artifact_file_projection_roots: releasedFiles.artifact_file_projection_roots!,
+    artifact_file_projections: releasedFiles.artifact_file_projections!,
     resource_anchors: links,
     extension_resource_sequences: prefixes,
     ...documents,

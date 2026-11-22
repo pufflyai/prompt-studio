@@ -5,7 +5,8 @@ import { convertLegacyOwner as ensureOrderedOwner } from "../../db/legacy-record
 import { readConversion } from "../../db/legacy-records/ordered-conversion-state";
 import { createUnadmittedLegacyFixture } from "../../db/legacy-records/unadmitted.fixture";
 import { storage_record_outbox, storage_record_sync } from "../../db/legacy-records-schema";
-import { projects, storage_current_records, storage_documents } from "../../db/schemas.pg";
+import { projects, storage_current_records } from "../../db/schemas.pg";
+import { type SavedDocumentFixture, seedDocumentHistory } from "./document-history.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
 import { lockRecordOwner } from "./record-changes";
 import { resourceDocumentId } from "./resource-document-persistence";
@@ -27,7 +28,7 @@ export const seedLegacyBacklog = async (
   const ownerId = await ensureStorageOwner(db, backlogOwner);
   const clean = count / 3;
   for (let offset = 0; offset < count; offset += 100) {
-    const documents: (typeof storage_documents.$inferInsert)[] = [];
+    const documents: SavedDocumentFixture[] = [];
     const records: (typeof storage_current_records.$inferInsert)[] = [];
     const frames: (typeof storage_record_outbox.$inferInsert)[] = [];
     for (let index = offset; index < Math.min(count, offset + 100); index++) {
@@ -62,7 +63,7 @@ export const seedLegacyBacklog = async (
       document.destroy();
     }
     await db.transaction(async (tx) => {
-      await tx.insert(storage_documents).values(documents);
+      await seedDocumentHistory(tx, documents);
       await tx.insert(storage_current_records).values(records);
       if (frames.length) await tx.insert(storage_record_outbox).values(frames);
     });

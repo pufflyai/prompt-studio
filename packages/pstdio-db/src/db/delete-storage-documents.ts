@@ -1,15 +1,38 @@
 import { and, eq, inArray, type SQL, sql } from "drizzle-orm";
 import { coreOwnerId } from "pstdio-sync/records";
+import { trackDocumentFiles } from "../services/extension-storage/document-files";
 import type { DbClient } from "./connection.pglite";
-import { owners, storage_current_records, storage_documents } from "./schemas.pg";
+import { documents as storage_documents } from "./schemas/documents";
+import { owners, storage_current_records } from "./schemas.pg";
 
 /** Record query state belongs to the records document even though its counters share the owner row. */
 export const deleteStorageDocuments = async (db: DbClient, where: SQL) =>
   db.transaction(async (tx) => {
+    const removed = await tx
+      .select({ id: storage_documents.id, ownerId: storage_documents.owner_id })
+      .from(storage_documents)
+      .where(where);
+    const dependent = removed.length
+      ? await tx
+          .select({ id: storage_documents.id, ownerId: storage_documents.owner_id })
+          .from(storage_documents)
+          .where(
+            inArray(
+              storage_documents.room_of,
+              removed.map((row) => row.id),
+            ),
+          )
+      : [];
+    const addresses = await tx
+      .select({ id: owners.id, project: owners.project_id })
+      .from(owners)
+      .where(inArray(owners.id, [...new Set(removed.map((row) => row.ownerId))]));
+    const projects = new Map(addresses.map((row) => [row.id, row.project]));
+    for (const row of [...removed, ...dependent]) trackDocumentFiles(tx, projects.get(row.ownerId)!, row.id);
     const roots = await tx
       .select({ ownerId: storage_documents.owner_id })
       .from(storage_documents)
-      .where(and(where, eq(storage_documents.document_id, "records")));
+      .where(and(where, eq(storage_documents.key, "records")));
     if (roots.length) {
       const ids = roots.map((row) => row.ownerId);
       await tx.delete(storage_current_records).where(inArray(storage_current_records.owner_id, ids));

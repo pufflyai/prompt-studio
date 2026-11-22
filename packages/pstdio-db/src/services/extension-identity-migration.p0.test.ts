@@ -4,6 +4,7 @@ import { createDb } from "../db/connection.pglite";
 import * as s from "../db/schemas.pg";
 import { migrateExtensionIdentities } from "./extension-identity-migration";
 import { createExtensionSettingsDBService } from "./extension-settings/extension-settings";
+import { readDocumentHistory, seedDocumentHistory } from "./extension-storage/document-history.fixture";
 import { ensureStorageOwner, storageOwnerKey } from "./extension-storage/storage-owner-key";
 import { resourceLinkQuery } from "./resource-link-rows";
 
@@ -73,12 +74,14 @@ test("migration retains complete owner history, immutable bytes, sequence positi
       owner_id: await ensureStorageOwner(db, { workbenchId: owner.workbench_id, extensionId: old }),
     };
     const bytes = new Uint8Array([0, 255, 19, 0, 4]);
-    await db
-      .insert(s.storage_documents)
-      .values({ ...orderedOwner, document_id: "records", state: bytes, revision: 31, folded_revision: 8 });
-    await db
-      .insert(s.storage_document_updates)
-      .values({ ...orderedOwner, document_id: "records", revision: 31, update: bytes });
+    await seedDocumentHistory(db, {
+      ...orderedOwner,
+      document_id: "records",
+      state: bytes,
+      revision: 31,
+      folded_revision: 8,
+      updates: [{ revision: 31, update: bytes }],
+    });
     await db
       .update(s.owners)
       .set({ epoch: "epoch", after: 42, joined: true, pending_bytes: 10, receipt_root: bytes })
@@ -113,13 +116,13 @@ test("migration retains complete owner history, immutable bytes, sequence positi
       value_json: "retained",
     });
     await migrateExtensionIdentities(db);
-    expect((await db.select().from(s.storage_documents))[0]).toMatchObject({
+    expect((await readDocumentHistory(db)).rows[0]).toMatchObject({
       ...orderedOwner,
       state: bytes,
       revision: 31,
       folded_revision: 8,
     });
-    expect((await db.select().from(s.storage_document_updates))[0]?.update).toEqual(bytes);
+    expect((await readDocumentHistory(db)).updates[0]?.update).toEqual(bytes);
     expect((await db.select().from(s.storage_ordered_operations))[0]).toMatchObject({
       owner_id: orderedOwner.owner_id,
       operation_id: "save",
@@ -197,11 +200,14 @@ test("independent saved text files keep their contents, revisions and retry hist
         document_id,
       };
       const bytes = new Uint8Array([41, index]);
-      await db.insert(s.storage_documents).values({ ...owner, state: bytes, revision: 7, folded_revision: 6 });
-      await db.insert(s.storage_document_updates).values({ ...owner, revision: 7, update: bytes });
-      await db
-        .insert(s.storage_document_operations)
-        .values({ ...owner, operation_id: "edit", fingerprint: `saved-${index}` });
+      await seedDocumentHistory(db, {
+        ...owner,
+        state: bytes,
+        revision: 7,
+        folded_revision: 6,
+        updates: [{ revision: 7, update: bytes }],
+        operations: { edit: `saved-${index}` },
+      });
     }
     await migrateExtensionIdentities(db);
     await migrateExtensionIdentities(db);
@@ -212,21 +218,15 @@ test("independent saved text files keep their contents, revisions and retry hist
         document_id,
       };
       const bytes = new Uint8Array([41, index]);
-      expect(
-        await db.select().from(s.storage_documents).where(eq(s.storage_documents.document_id, document_id)),
-      ).toEqual([{ ...owner, state: bytes, revision: 7, folded_revision: 6 }]);
-      expect(
-        await db
-          .select()
-          .from(s.storage_document_updates)
-          .where(eq(s.storage_document_updates.document_id, document_id)),
-      ).toEqual([{ ...owner, revision: 7, update: bytes }]);
-      expect(
-        await db
-          .select()
-          .from(s.storage_document_operations)
-          .where(eq(s.storage_document_operations.document_id, document_id)),
-      ).toEqual([{ ...owner, operation_id: "edit", fingerprint: name }]);
+      expect((await readDocumentHistory(db)).rows.filter((row) => row.document_id === document_id)).toEqual([
+        { ...owner, state: bytes, revision: 7, folded_revision: 6 },
+      ]);
+      expect((await readDocumentHistory(db)).updates.filter((row) => row.document_id === document_id)).toEqual([
+        { ...owner, revision: 7, update: bytes },
+      ]);
+      expect((await readDocumentHistory(db)).operations.filter((row) => row.document_id === document_id)).toEqual([
+        { ...owner, operation_id: "edit", fingerprint: name },
+      ]);
     }
   } finally {
     await close();
@@ -239,7 +239,8 @@ test.each([
 ])("overlapping %s histories stop migration without overwriting either owner", async (documentId) => {
   const { db, close } = await setup();
   try {
-    await db.insert(s.storage_documents).values(
+    await seedDocumentHistory(
+      db,
       await Promise.all(
         [old, next].map(async (extension_id, index) => ({
           owner_id: await ensureStorageOwner(db, { workbenchId: "project", extensionId: extension_id }),
@@ -252,14 +253,14 @@ test.each([
     expect(
       await db
         .select()
-        .from(s.storage_documents)
-        .where(eq(s.storage_documents.owner_id, storageOwnerKey({ workbenchId: "project", extensionId: old }))),
+        .from(s.documents)
+        .where(eq(s.documents.owner_id, storageOwnerKey({ workbenchId: "project", extensionId: old }))),
     ).toHaveLength(1);
     expect(
       await db
         .select()
-        .from(s.storage_documents)
-        .where(eq(s.storage_documents.owner_id, storageOwnerKey({ workbenchId: "project", extensionId: next }))),
+        .from(s.documents)
+        .where(eq(s.documents.owner_id, storageOwnerKey({ workbenchId: "project", extensionId: next }))),
     ).toHaveLength(1);
   } finally {
     await close();
@@ -301,7 +302,7 @@ test.each(
   try {
     if (marked) await migrateExtensionIdentities(db);
     else
-      await db.insert(s.storage_documents).values({
+      await seedDocumentHistory(db, {
         owner_id: await ensureStorageOwner(db, { workbenchId: "project", extensionId: old }),
         document_id: "other-owner",
         state: new Uint8Array([17]),
@@ -347,12 +348,9 @@ test.each(
     });
     expect((await db.select().from(s.automation_tokens))[0]).toMatchObject({ id: "user-token", name: planner });
     if (!marked)
-      expect(
-        await db
-          .select()
-          .from(s.storage_documents)
-          .where(eq(s.storage_documents.owner_id, storageOwnerKey({ workbenchId: "project", extensionId: old }))),
-      ).toMatchObject([{ document_id: "other-owner", state: new Uint8Array([17]) }]);
+      expect((await readDocumentHistory(db)).rows.filter((row) => row.document_id === "other-owner")).toMatchObject([
+        { document_id: "other-owner", state: new Uint8Array([17]) },
+      ]);
   } finally {
     await close();
   }

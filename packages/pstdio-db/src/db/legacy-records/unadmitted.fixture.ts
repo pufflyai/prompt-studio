@@ -2,6 +2,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
+import { pruneDocumentFiles } from "../../services/extension-storage/document-file-retention";
+import { attachDocumentCollector, documentFilesFor } from "../../services/extension-storage/document-files";
 import {
   attachIndexNodeFiles,
   createIndexNodeFiles,
@@ -22,6 +24,8 @@ export const createUnadmittedLegacyFixture = async (path = ":memory:") => {
   try {
     await migrate(db, { migrationsFolder: join(import.meta.dirname, "../../../drizzle") });
     attachDatabaseAuthority(db, path);
+    documentFilesFor(db, path);
+    attachDocumentCollector(db, (project, ids) => pruneDocumentFiles(db, project, ids));
     attachIndexNodeFiles(
       db,
       path === ":memory:" ? createMemoryIndexNodeFiles() : createIndexNodeFiles(`${path}-index-nodes`),

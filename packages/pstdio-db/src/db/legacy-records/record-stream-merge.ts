@@ -9,7 +9,7 @@ import {
 } from "../../services/extension-storage/resource-document-persistence";
 import { storageOwnerKey } from "../../services/extension-storage/storage-owner-key";
 import type { DbClient } from "../connection.pglite";
-import { storage_documents } from "../schemas.pg";
+import { documents as storage_documents } from "../schemas/documents";
 import { resourceFoldEvery } from "./resource-records";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
@@ -25,15 +25,15 @@ const adoptionBaseline = (saved: { folded_revision: number; state: Uint8Array | 
 /** Record IDs of every record document this owner holds, deleted ones included. */
 export const localRecordIds = async (tx: Pick<DbClient, "select">, owner: StorageOwner, limit?: number) => {
   const rows = await tx
-    .select({ id: storage_documents.document_id })
+    .select({ id: storage_documents.key })
     .from(storage_documents)
     .where(
       and(
         eq(storage_documents.owner_id, storageOwnerKey(owner)),
-        like(storage_documents.document_id, `${resourceDocumentId("").slice(0, -2)}%`),
+        like(storage_documents.key, `${resourceDocumentId("").slice(0, -2)}%`),
       ),
     )
-    .orderBy(storage_documents.document_id)
+    .orderBy(storage_documents.key)
     .limit(limit ?? Number.MAX_SAFE_INTEGER);
   return rows.map((row) => (JSON.parse(row.id) as [string, string])[1]);
 };

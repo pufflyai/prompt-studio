@@ -6,7 +6,8 @@ import { createTextDocumentStorage } from "pstdio-sync/text";
 import type { StorageTextDeclaration } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { deleteStorageDocuments } from "../../db/delete-storage-documents";
-import { storage_current_records, storage_documents } from "../../db/schemas.pg";
+import { documents as storage_documents } from "../../db/schemas/documents";
+import { storage_current_records } from "../../db/schemas.pg";
 import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
@@ -60,7 +61,7 @@ const documentRevision = (db: DbClient, documentId: string) => async (owner: Sto
   const [row] = await db
     .select({ revision: storage_documents.revision })
     .from(storage_documents)
-    .where(and(eq(storage_documents.owner_id, storageOwnerKey(owner)), eq(storage_documents.document_id, documentId)));
+    .where(and(eq(storage_documents.owner_id, storageOwnerKey(owner)), eq(storage_documents.key, documentId)));
   return row?.revision ?? 0;
 };
 
@@ -74,7 +75,7 @@ const discardDocument = async (
   const address = addressFor(owner, documentId);
   await deleteStorageDocuments(
     db,
-    and(eq(storage_documents.owner_id, storageOwnerKey(owner)), eq(storage_documents.document_id, documentId))!,
+    and(eq(storage_documents.owner_id, storageOwnerKey(owner)), eq(storage_documents.key, documentId))!,
   );
   cache.discard(JSON.stringify(address));
 };
@@ -118,6 +119,7 @@ export const createDocumentStorageDBService = (
   const transaction = transactionFor("records");
   const nativeStore = (id: string) => createNativeDocumentStore(db, id, transactionFor, documentRevision(db, id));
   const isResourceDocument = (id: string) =>
+    id.startsWith('["editor-room",') ||
     id.startsWith('["host-local-migration",') ||
     id.startsWith(resourceDocumentId("").slice(0, -2)) ||
     id.startsWith('["ordered-conversion') ||
@@ -186,9 +188,9 @@ export const createDocumentStorageDBService = (
       assertStorageOwnerAdmitted(db, owner);
       if (await hasProjectedRecords(db, owner)) return true;
       const documents = await db
-        .select({ id: storage_documents.document_id })
+        .select({ id: storage_documents.key })
         .from(storage_documents)
-        .where(and(eq(storage_documents.owner_id, storageOwnerKey(owner))));
+        .where(and(eq(storage_documents.owner_id, storageOwnerKey(owner)), eq(storage_documents.kind, "shared")));
       for (const { id } of documents) {
         if (isResourceDocument(id)) continue;
         if (await transactionFor(id)(owner, async ({ document }) => hasDocumentUserData(document))) return true;

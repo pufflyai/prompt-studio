@@ -1,83 +1,74 @@
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
+import { isDeepStrictEqual } from "node:util";
 import { sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { resourceNumbersDocumentId } from "pstdio-sync/records";
+import { exportDocumentFiles } from "../services/extension-storage/document-file-export";
+import { withDocumentFileTransaction } from "../services/extension-storage/document-files";
 import { storageOwnerKey } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
+import type { documents } from "./schemas/documents";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
-const normalized = (row: Record<string, unknown>) =>
-  Object.fromEntries(
-    Object.entries(row).map(([key, value]) => {
-      if (typeof value === "bigint") return [key, value.toString()];
-      if (value instanceof Uint8Array) return [key, `\\x${Buffer.from(value).toString("hex")}`];
-      return [key, value];
-    }),
-  );
-const digest = (row: Record<string, unknown>) =>
-  createHash("sha256")
-    .update(JSON.stringify(Object.entries(row).sort()))
-    .digest("hex");
+type Row = typeof documents.$inferSelect;
+const normalize = (input: Record<string, unknown>) =>
+  ({
+    ...input,
+    id: Number(input.id),
+    owner_id: Number(input.owner_id),
+    revision: Number(input.revision),
+    folded_revision: Number(input.folded_revision),
+    state_bytes: Number(input.state_bytes),
+    room_of: input.room_of === null ? null : Number(input.room_of),
+  }) as Row;
 
-/** Preserve the exact residual Yjs source, including alias membership and its original
- * resource IDs. The converted history records need only allocation floors. */
+/** Preserve the exact residual graph, including its immutable checkpoint, update and
+ * retry files. The released SQL graph also remains in the one-time upgrade archive. */
 export const prepareLegacyNumberInput = async (db: DbClient, database: string, owner: StorageOwner) => {
   const [{ id }] = (await db.execute<{ id: number }>(sql`SELECT ${storageOwnerKey(owner)} AS id`)).rows;
-  const scope = sql`owner_id=${id} AND document_id=${resourceNumbersDocumentId}`;
-  const snapshots: NonNullable<Awaited<ReturnType<typeof prepareUpgradeSnapshot>>>[] = [];
   let graphHash = "";
-  const sources = [
-    ["storage_documents", ["owner_id", "document_id"]],
-    ["storage_document_updates", ["owner_id", "document_id", "revision"]],
-    ["storage_document_operations", ["owner_id", "document_id", "operation_id"]],
-  ] as const;
-  for (const [table, keys] of sources) {
-    const snapshot = await prepareUpgradeSnapshot(
-      db,
-      database,
-      {
-        table,
-        keys,
-        where: scope,
-        name: `legacy-number-${id}-${table}`,
-        archive: () => `legacy-number-${id}-${graphHash}-${table}`,
-      },
-      async (row) => {
-        const key = sql.join(
-          keys.map((key) => sql`${sql.identifier(key)}=${row[key]}`),
-          sql` AND `,
-        );
+  const name = `legacy-number-${id}-documents`;
+  const snapshot = await prepareUpgradeSnapshot(
+    db,
+    database,
+    {
+      table: "documents",
+      keys: ["owner_id", "key"],
+      where: sql`owner_id=${id} AND key=${resourceNumbersDocumentId}`,
+      name,
+      archive: () => `legacy-number-${id}-${graphHash}-documents`,
+    },
+    async (input) =>
+      withDocumentFileTransaction(db, async (tx) => {
         const {
           rows: [current],
-        } = await db.execute<Record<string, unknown>>(sql`SELECT * FROM ${sql.identifier(table)} WHERE ${key}`);
-        const { source_owner, ...original } = row;
+        } = await tx.execute<Record<string, unknown>>(
+          sql`SELECT * FROM documents WHERE owner_id=${id} AND key=${resourceNumbersDocumentId}`,
+        );
+        const { source_owner, files, ...original } = input;
         if (
-          JSON.stringify(source_owner) !== JSON.stringify(owner) ||
+          !isDeepStrictEqual(source_owner, owner) ||
           !current ||
-          digest(normalized(current)) !== digest(original)
+          !isDeepStrictEqual(normalize(current), original) ||
+          !isDeepStrictEqual(await exportDocumentFiles(tx, owner.workbenchId, normalize(current)), files)
         )
           throw new Error("Legacy number input changed during admission");
-      },
-      async (row) => ({ ...normalized(row), source_owner: owner }),
-    );
-    if (snapshot) snapshots.push(snapshot);
-  }
+      }),
+    async (input) =>
+      withDocumentFileTransaction(db, async (tx) => {
+        const row = normalize(input);
+        return { ...row, source_owner: owner, files: await exportDocumentFiles(tx, owner.workbenchId, row) };
+      }),
+  );
+  if (!snapshot) return async () => {};
   if (database !== ":memory:") {
-    // Address the entire graph, not each table separately: an unchanged document
-    // row can have distinct Yjs tails in two successive retained inputs.
     const hash = createHash("sha256");
-    for (const [table] of sources) {
-      hash.update(`${table}\0`);
-      for await (const chunk of createReadStream(`${database}-legacy-number-${id}-${table}-upgrade.jsonl`))
-        hash.update(chunk);
-      hash.update("\0");
-    }
+    for await (const chunk of createReadStream(`${database}-${name}-upgrade.jsonl`)) hash.update(chunk);
     graphHash = hash.digest("hex");
   }
   return async () => {
-    // All inputs remain live until every original snapshot has been validated and fsynced.
-    for (const snapshot of snapshots) await snapshot(true);
-    for (const snapshot of snapshots) await snapshot.complete();
+    await snapshot(true);
+    await snapshot.complete();
   };
 };

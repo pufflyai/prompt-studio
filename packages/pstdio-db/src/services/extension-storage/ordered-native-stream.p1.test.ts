@@ -8,12 +8,8 @@ import {
 } from "pstdio-sync/relay";
 import * as Y from "yjs";
 import { createDb } from "../../db/connection.pglite";
-import {
-  native_document_rooms,
-  projects,
-  storage_ordered_operations,
-  storage_ordered_receipts,
-} from "../../db/schemas.pg";
+import { projects, storage_ordered_operations, storage_ordered_receipts } from "../../db/schemas.pg";
+import { readNativeRoomHistory } from "./document-history.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createRelay } from "./record-stream-relay.fixture";
 
@@ -126,7 +122,7 @@ test("refused multi-record text saves retain each private history without crossi
     expect((await device.records.read("card:one")).value).toEqual({ body: "first base", model: "remote" });
     expect((await device.records.read("card:two")).value).toEqual({ body: "second base" });
   }
-  const retained = await first.db.select().from(native_document_rooms);
+  const retained = await readNativeRoomHistory(first.db);
   for (const [key, text] of [
     [firstKey, "FIRST private first base"],
     [secondKey, "SECOND private second base"],
@@ -329,7 +325,7 @@ test("native typing that observed a refused group stays private and creates no d
       row.request_fingerprint?.startsWith("native-text:"),
     ),
   ).toBe(false);
-  const retained = await first.db.select().from(native_document_rooms);
+  const retained = await readNativeRoomHistory(first.db);
   expect(
     retained.some((room) => {
       const document = new Y.Doc();

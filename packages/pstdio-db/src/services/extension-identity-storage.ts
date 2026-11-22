@@ -7,8 +7,7 @@ const otherStorage = [
   "storage_ordered_records",
   "storage_ordered_operations",
   "storage_ordered_receipts",
-  "native_document_sources",
-  "native_document_file_projections",
+  "file_projections",
   "log_streams",
   "history_rows",
   "history_sources",
@@ -24,8 +23,8 @@ export const textOnlyOwnerSql = (alias: string) => {
     AND ${owner}.state_id IS NULL AND ${owner}.through = 0 AND ${owner}.pending_bytes = 0
     AND ${owner}.state_bytes = 0 AND NOT ${owner}.skipped AND ${owner}.receipt_root IS NULL
     AND NOT EXISTS (SELECT 1 FROM storage_current_records r WHERE r.owner_id=${owner}.id)
-    AND NOT EXISTS (SELECT 1 FROM storage_documents d WHERE d.owner_id=${owner}.id
-      AND NOT starts_with(d.document_id, '["text-file",'))
+    AND NOT EXISTS (SELECT 1 FROM documents d WHERE d.owner_id=${owner}.id
+      AND (d.kind <> 'shared' OR NOT starts_with(d.key, '["text-file",')))
     AND NOT EXISTS (SELECT 1 FROM resource_links l WHERE l.source_owner=${owner}.id OR l.target_owner=${owner}.id)
     AND ${sql.join(
       otherStorage.map(
@@ -53,10 +52,7 @@ export const mergeTextOwnerHistories = async (
     WHERE a.extension_id=${from} AND b.extension_id=${to}
       AND ${availableIdentityProject(sql`a.project_id`, excluded)}`);
   for (const { previous, canonical } of rows) {
-    await tx.execute(sql`INSERT INTO storage_documents (owner_id,document_id,state,revision,folded_revision)
-      SELECT ${canonical},document_id,state,revision,folded_revision FROM storage_documents WHERE owner_id=${previous}`);
-    for (const table of ["storage_document_updates", "storage_document_operations"])
-      await tx.execute(sql`UPDATE ${sql.identifier(table)} SET owner_id=${canonical} WHERE owner_id=${previous}`);
+    await tx.execute(sql`UPDATE documents SET owner_id=${canonical} WHERE owner_id=${previous}`);
     await tx.execute(sql`DELETE FROM owners WHERE id=${previous}`);
   }
 };

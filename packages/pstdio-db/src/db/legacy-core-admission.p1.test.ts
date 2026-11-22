@@ -3,8 +3,10 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createExtensionResourceSequencesDBService } from "../services/extension-resource-sequences";
+import { seedDocumentHistory } from "../services/extension-storage/document-history.fixture";
 import { createDocumentStorageDBService } from "../services/extension-storage/document-storage";
 import { createProjectionStatistics } from "../services/extension-storage/projection-statistics";
+import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import { createDb } from "./connection.pglite";
 import { createResourceRecords } from "./legacy-records/resource-records";
 import { createUnadmittedLegacyFixture } from "./legacy-records/unadmitted.fixture";
@@ -66,10 +68,12 @@ test("unpreserved core data blocks dependent identity reads while unrelated heal
     expect((await records.query({ index: "things" })).records[0]!.fields.shorthand).toBe("T-2");
     expect((await records.aggregate({ index: "things", groupBy: "state" })).count).toBe(1);
     await connection.pglite.exec(`INSERT INTO storage_ordered_owners(workbench_id,extension_id)
-      VALUES('project','pstdio');
-      INSERT INTO storage_documents(owner_id,document_id,state)
-      SELECT id,'["ordered-conversion"]',decode('ff','hex') FROM owners
-      WHERE project_id='project' AND extension_id='pstdio'`);
+      VALUES('project','pstdio')`);
+    await seedDocumentHistory(connection.db, {
+      owner_id: await ensureStorageOwner(connection.db, { workbenchId: "project", extensionId: "pstdio" }),
+      document_id: '["ordered-conversion"]',
+      state: new Uint8Array([255]),
+    });
     await Bun.write(join(root, "backups"), "Cannot create a backup directory here");
     await statistics.flush();
     statistics = undefined;

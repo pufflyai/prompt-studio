@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { createNativeDocumentKey } from "pstdio-api-contracts";
 import { seedTextDocument } from "pstdio-sync/text";
 import * as Y from "yjs";
+import { roomDocumentId } from "./document-kind";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 
 test("native rooms and unfinished file saves follow owner deletion and recreation", async () => {
@@ -37,14 +38,14 @@ test("native rooms and unfinished file saves follow owner deletion and recreatio
       }
     };
     expect(await read(first, rooms[0]!.id)).toBe("Before 🦉");
-    const before = await f.db.execute<{ owner_id: number }>(sql`SELECT owner_id FROM native_document_rooms
-      WHERE id=${rooms[0]!.id}`);
+    const before = await f.db.execute<{ owner_id: number }>(sql`SELECT owner_id FROM documents
+      WHERE key=${roomDocumentId(rooms[0]!.id)}`);
     expect(before.rows[0]!.owner_id).toBeNumber();
     await f.db.execute(sql`DELETE FROM owners WHERE project_id=${first.workbenchId}
       AND extension_id=${first.extensionId}`);
     expect(
       (
-        await f.db.execute(sql`SELECT 1 FROM native_document_file_projections
+        await f.db.execute(sql`SELECT 1 FROM file_projections
       WHERE owner_id=${before.rows[0]!.owner_id}`)
       ).rows,
     ).toEqual([]);
@@ -54,10 +55,12 @@ test("native rooms and unfinished file saves follow owner deletion and recreatio
     expect(await read(other, rooms[1]!.id)).toBe("Before 🦉");
     const fresh = await f.svc.nativeRooms.create({ owner: first, documentKey, target, state: await state("After") });
     // A restored room may reuse its stable room ID and revision under the recreated owner.
-    await f.db.execute(sql`UPDATE native_document_rooms SET id=${rooms[0]!.id} WHERE id=${fresh.id}`);
+    await f.db.execute(
+      sql`UPDATE documents SET key=${roomDocumentId(rooms[0]!.id)} WHERE key=${roomDocumentId(fresh.id)}`,
+    );
     expect(await read(first, rooms[0]!.id)).toBe("After");
-    const after = await f.db.execute<{ owner_id: number }>(sql`SELECT owner_id FROM native_document_rooms
-      WHERE id=${rooms[0]!.id}`);
+    const after = await f.db.execute<{ owner_id: number }>(sql`SELECT owner_id FROM documents
+      WHERE key=${roomDocumentId(rooms[0]!.id)}`);
     expect(after.rows[0]!.owner_id).not.toBe(before.rows[0]!.owner_id);
     expect((await Array.fromAsync(f.svc.nativeRooms.pending())).map((row) => row.owner)).toEqual(
       expect.arrayContaining([first, other]),

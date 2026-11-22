@@ -8,6 +8,7 @@ import { createDocumentSync, createRecordStreamSync } from "pstdio-sync/relay";
 import { createDb } from "../../db/connection.pglite";
 import * as s from "../../db/schemas.pg";
 import { migrateExtensionIdentities } from "../extension-identity-migration";
+import { captureDocumentFiles, restoreDocumentBackup } from "./document-history.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createRelay } from "./record-stream-relay.fixture";
 import { storageOwnerKey } from "./storage-owner-key";
@@ -20,26 +21,21 @@ const current = "pstdio.notes";
 const historical = "pstdio.pstdio-notes";
 // Capture real authored state before migration, in FK order, rather than fabricating wire envelopes.
 const tables: PgTable[] = [
-  s.storage_documents,
-
   s.storage_ordered_operations,
 
-  s.native_document_sources,
-  s.storage_document_updates,
-  s.storage_document_operations,
   s.storage_current_records,
   s.storage_ordered_records,
   s.storage_ordered_touches,
   s.storage_ordered_receipts,
-
-  s.native_document_file_projections,
-  s.native_document_rooms,
 ];
 
-test("two upgraded devices, an offline return and a clean join share encrypted streams without rewriting queued history", async () => {
+const phaseLogger = () => {
   const started = performance.now();
-  const phase = (name: string) =>
-    console.info(`Extension rename sync: ${name} +${Math.round(performance.now() - started)}ms`);
+  return (name: string) => console.info(`Extension rename sync: ${name} +${Math.round(performance.now() - started)}ms`);
+};
+
+test("two upgraded devices, an offline return and a clean join share encrypted streams without rewriting queued history", async () => {
+  const phase = phaseLogger();
   const projectId = crypto.randomUUID();
   const owner = { workbenchId: projectId, extensionId: current };
   const space = await createSyncSpace({
@@ -139,6 +135,7 @@ test("two upgraded devices, an offline return and a clean join share encrypted s
     operationId: "offline-save",
     edits: [{ recordId: "note:offline", replace: { title: "Offline" } }],
   });
+  const savedFiles = await captureDocumentFiles(seed.db);
   const snapshot = await Promise.all(
     tables.map(async (table) => ({
       table,
@@ -187,6 +184,11 @@ test("two upgraded devices, an offline return and a clean join share encrypted s
                 "owner_id" in row ? { ...row, owner_id: copiedOwner!.id } : { ...row, extension_id: historical },
               ),
             );
+      await restoreDocumentBackup(
+        tx,
+        savedFiles.filter((value) => value.row.owner_id === numericOwner!.id),
+        new Map([[numericOwner!.id, copiedOwner!.id]]),
+      );
     });
     const before = await db.select().from(s.storage_ordered_operations);
     await migrateExtensionIdentities(db);
@@ -229,10 +231,8 @@ test("two upgraded devices, an offline return and a clean join share encrypted s
       expect(
         await device.db
           .select()
-          .from(s.storage_documents)
-          .where(
-            eq(s.storage_documents.owner_id, storageOwnerKey({ workbenchId: projectId, extensionId: historical })),
-          ),
+          .from(s.documents)
+          .where(eq(s.documents.owner_id, storageOwnerKey({ workbenchId: projectId, extensionId: historical }))),
       ).toEqual([]);
     }),
   );

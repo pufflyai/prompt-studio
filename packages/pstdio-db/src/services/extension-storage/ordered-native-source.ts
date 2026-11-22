@@ -21,18 +21,23 @@ import {
 } from "pstdio-sync/records";
 import { importTextSource } from "pstdio-sync/text";
 import { fingerprint, type Json } from "pstdio-sync-contracts";
-import { storage_current_records as current, storage_documents as documents, owners } from "../../db/schemas.pg";
+import { documents } from "../../db/schemas/documents";
+import { storage_current_records as current, owners } from "../../db/schemas.pg";
 import { registerSharedDocument } from "./document-directory";
 import { runDocumentTransaction } from "./document-persistence";
 import { nativeDocumentId, readNativeTextIn } from "./native-record-projection";
 import type { OrderedJournal } from "./ordered-journal";
-import { type OrderedFieldMarker, orderedFieldMarkerId, readOrderedMarker } from "./ordered-native-metadata";
+import {
+  type OrderedFieldMarker,
+  orderedFieldMarkerId,
+  readOrderedMarker,
+  saveOrderedMarker,
+} from "./ordered-native-metadata";
 import { rememberOrderedTextGeneration } from "./ordered-native-recovery";
 import { orderedBody } from "./ordered-projection";
 import { rebaseOrderedProjection } from "./ordered-rebase";
-import { encodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { readProjectedRecords } from "./record-queries";
-import { ensureStorageOwner } from "./storage-owner-key";
 
 export interface OrderedSourceInput {
   recordId: string;
@@ -54,6 +59,22 @@ const validateExistingSource = async (
   if (current === undefined) throw new NativeSourcePendingError();
   if (input.content !== current) throw new Error("A native file view must load its full source bytes");
 };
+
+const validateObservedRevision = async (
+  tx: Parameters<typeof readProjectedRecords>[0],
+  owner: StorageOwner,
+  recordId: string,
+  observer?: StorageObserver,
+) => {
+  const expected = observer?.expected?.(owner, recordId);
+  if (expected !== undefined && expected !== (await readProjectedRecords(tx, owner, [recordId]))[0]!.revision)
+    throw new StorageRevisionChangedError();
+};
+
+const existingSource = (sources: NativeRecordSources, field?: string) =>
+  Object.entries(sources).find(([, source]) =>
+    field ? "field" in source && source.field === field : "asset" in source,
+  );
 
 export const findOrderedNativeField = async (
   tx: Pick<OrderedTransaction, "select">,
@@ -81,9 +102,9 @@ export const findOrderedNativeField = async (
       generation: (await readOrderedMarker<OrderedFieldMarker>(tx, owner, orderedFieldMarkerId(key)))?.value.generation,
     };
   const [marker] = await tx
-    .select({ id: documents.document_id })
+    .select({ id: documents.key })
     .from(documents)
-    .where(and(orderedOwnerWhere(documents, owner), eq(documents.document_id, orderedFieldMarkerId(key))));
+    .where(and(orderedOwnerWhere(documents, owner), eq(documents.key, orderedFieldMarkerId(key))));
   if (marker) throw new NativeSourceRetiredError(row?.recordId);
   return undefined;
 };
@@ -158,16 +179,12 @@ export const bindOrderedNativeSource = async (
   const { views } = await rebaseOrderedProjection(journal, tx, owner, [input.recordId]);
   const record = views.get(input.recordId);
   if (!record || record.deleted) throw new NativeSourceRetiredError(input.recordId);
-  const expected = observer?.expected?.(owner, input.recordId);
-  if (expected !== undefined && expected !== (await readProjectedRecords(tx, owner, [input.recordId]))[0]!.revision)
-    throw new StorageRevisionChangedError();
+  await validateObservedRevision(tx, owner, input.recordId, observer);
   const body = orderedBody(record);
   const sources = body.nativeSources;
   const key = sourceAddress(sources, input.sourceKey ?? input.documentKey, record.lifetime, input.field);
   if (input.sourceKey && key !== input.documentKey) throw new StorageRevisionChangedError();
-  const existing = Object.entries(sources).find(([, source]) =>
-    input.field ? "field" in source && source.field === input.field : "asset" in source,
-  );
+  const existing = existingSource(sources, input.field);
   if (existing) {
     if (existing[0] !== key) throw new Error("The source already belongs to another text document");
     await validateExistingSource(tx, owner, input, key, body.value);
@@ -199,14 +216,12 @@ export const bindOrderedNativeSource = async (
       }),
     );
     source = { field: input.field, original: value, lifetime: record.lifetime };
-    await tx
-      .insert(documents)
-      .values({
-        owner_id: await ensureStorageOwner(tx, owner),
-        document_id: orderedFieldMarkerId(key),
-        state: encodeOrderedJson({ recordId: record.recordId, field: input.field, lifetime: record.lifetime }),
-      })
-      .onConflictDoNothing();
+    if (!(await readOrderedMarker(tx, owner, orderedFieldMarkerId(key))))
+      await saveOrderedMarker(tx, owner, orderedFieldMarkerId(key), {
+        recordId: record.recordId,
+        field: input.field,
+        lifetime: record.lifetime,
+      });
   } else source = await bindNativeAsset(tx, owner, key, value, body.asset, record.lifetime);
   const operationId = crypto.randomUUID();
   const requiresOriginalSource =

@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { and, eq, sql } from "drizzle-orm";
-import { storage_documents } from "pstdio-db";
+import { documents as storage_documents } from "pstdio-db";
 import { NativeSourcePendingError } from "pstdio-sync";
 import * as Y from "yjs";
 import { artifactFilesFixture } from "./artifact-files.fixture";
@@ -29,7 +29,7 @@ test.each([
             storage_documents.owner_id,
             sql`(SELECT id FROM owners WHERE project_id=${f.owner.workbenchId} AND extension_id=${f.owner.extensionId})`,
           ),
-          eq(storage_documents.document_id, JSON.stringify(["native-markdown", documentKey])),
+          eq(storage_documents.key, JSON.stringify(["native-markdown", documentKey])),
         ),
       );
     const repoRoot = copy === "existing" ? f.input.repoRoot : join(f.root, "new-device");
@@ -77,7 +77,7 @@ test("a pending child defers a concurrent ancestor replacement without blocking 
             storage_documents.owner_id,
             sql`(SELECT id FROM owners WHERE project_id=${f.owner.workbenchId} AND extension_id=${f.owner.extensionId})`,
           ),
-          eq(storage_documents.document_id, JSON.stringify(["native-markdown", documentKey])),
+          eq(storage_documents.key, JSON.stringify(["native-markdown", documentKey])),
         ),
       );
     const open = f.deps.extensionStorageService.openNativeTextDocument;

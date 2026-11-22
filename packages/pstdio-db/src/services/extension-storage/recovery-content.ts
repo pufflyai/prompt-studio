@@ -1,18 +1,19 @@
 import { promisify } from "node:util";
 import { gunzip, gzip } from "node:zlib";
-import { and, asc, eq, like } from "drizzle-orm";
+import { and, eq, like } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
+import { documents as storage_documents } from "../../db/schemas/documents";
 import { owners as storageOwners } from "../../db/schemas/owners";
 import {
   installed_extension_sources,
   project_extensions,
   owners as recordOwners,
   recovery_point_owners,
-  storage_document_updates,
-  storage_documents,
 } from "../../db/schemas.pg";
+import { fileDocumentWhere, loadFileDocument } from "./document-file-persistence";
+import { documentFilesFor } from "./document-files";
 import { listProjectedRecords } from "./record-queries";
 import type { RecoveryRecord } from "./recovery-edits";
 import { type PreparedRecoveryBytes, prepareRecoveryBytes, type recoveryFilesFor } from "./recovery-files";
@@ -46,14 +47,9 @@ const textPrefix = JSON.stringify(["text-file", ""]).slice(0, -3);
 export const textFileIds = async (db: Reader, owner: StorageOwner) =>
   (
     await db
-      .select({ id: storage_documents.document_id })
+      .select({ id: storage_documents.key })
       .from(storage_documents)
-      .where(
-        and(
-          eq(storage_documents.owner_id, storageOwnerKey(owner)),
-          like(storage_documents.document_id, `${textPrefix}%`),
-        ),
-      )
+      .where(and(eq(storage_documents.owner_id, storageOwnerKey(owner)), like(storage_documents.key, `${textPrefix}%`)))
   )
     .map((row) => (JSON.parse(row.id) as [string, string])[1])
     .sort();
@@ -80,21 +76,8 @@ export const dataOwners = async (db: Reader, projectId: string) =>
 
 // A read-only load of one saved document, so it can join the capture transaction.
 const readDocument = async (tx: Transaction, owner: StorageOwner, documentId: string) => {
-  const document = new Y.Doc();
-  const where = <T extends typeof storage_documents | typeof storage_document_updates>(table: T) =>
-    and(eq(table.owner_id, storageOwnerKey(owner)), eq(table.document_id, documentId));
-  const [saved] = await tx
-    .select({ state: storage_documents.state })
-    .from(storage_documents)
-    .where(where(storage_documents));
-  if (saved) Y.applyUpdate(document, saved.state);
-  const updates = await tx
-    .select({ update: storage_document_updates.update })
-    .from(storage_document_updates)
-    .where(where(storage_document_updates))
-    .orderBy(asc(storage_document_updates.revision));
-  for (const { update } of updates) Y.applyUpdate(document, update);
-  return document;
+  const [saved] = await tx.select().from(storage_documents).where(fileDocumentWhere(owner, documentId));
+  return saved ? (await loadFileDocument(documentFilesFor(tx), owner.workbenchId, saved)).document : new Y.Doc();
 };
 
 const readMetadata = async (tx: Transaction, owner: StorageOwner) => {

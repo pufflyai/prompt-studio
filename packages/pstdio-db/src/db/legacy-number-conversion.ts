@@ -14,7 +14,7 @@ import type { DbClient } from "./connection.pglite";
 import { retainLegacyNumberHistory } from "./legacy-number-history";
 import { prepareLegacyNumberInput } from "./legacy-number-input";
 import { rebuildLegacyNumberProjection } from "./legacy-number-projection";
-import { storage_documents } from "./schemas.pg";
+import { documents as storage_documents } from "./schemas/documents";
 
 /** Admit local old number documents before any service can observe the project. */
 export const convertLegacyNumbers = async (
@@ -26,9 +26,9 @@ export const convertLegacyNumbers = async (
   if (owner.extensionId !== coreOwnerId) return;
   const where = and(
     eq(storage_documents.owner_id, storageOwnerKey(owner)),
-    eq(storage_documents.document_id, resourceNumbersDocumentId),
+    eq(storage_documents.key, resourceNumbersDocumentId),
   );
-  if (!(await db.select({ id: storage_documents.document_id }).from(storage_documents).where(where)).length) return;
+  if (!(await db.select({ id: storage_documents.key }).from(storage_documents).where(where)).length) return;
   const loaded = await db.transaction((tx) =>
     runDocumentTransaction(
       tx,

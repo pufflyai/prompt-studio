@@ -4,11 +4,11 @@ import { legacyNodeRows } from "../services/extension-storage/index-node-upgrade
 import { storageOwnerKey } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
 import { deleteStorageDocuments } from "./delete-storage-documents";
-import { storage_documents as documents } from "./schemas.pg";
+import { documents } from "./schemas/documents";
 import { invalidateMaintenance, legacyOwnerPrefix } from "./startup-maintenance";
 
 const BATCH_SIZE = 32;
-const key = sql`(${documents.owner_id}, ${documents.document_id})`;
+const key = sql`(${documents.owner_id}, ${documents.key})`;
 const address = (row: { ownerId: number; documentId: string }) => sql`(${row.ownerId}, ${row.documentId})`;
 
 const removeRows = async (db: DbClient, filter: SQL, stopped: () => boolean, beforeDelete: () => Promise<void>) => {
@@ -20,11 +20,11 @@ const removeRows = async (db: DbClient, filter: SQL, stopped: () => boolean, bef
     const batch = await db
       .select({
         ownerId: documents.owner_id,
-        documentId: documents.document_id,
+        documentId: documents.key,
       })
       .from(documents)
       .where(and(filter, after ? sql`${key} > ${after}` : undefined))
-      .orderBy(documents.owner_id, documents.document_id)
+      .orderBy(documents.owner_id, documents.key)
       .limit(BATCH_SIZE);
     if (!batch.length) return true;
     if (stopped()) return false;
@@ -47,7 +47,7 @@ export const createRetiredStorageCleanup = (db: DbClient, path: string, owners: 
   return async (stopped: () => boolean) => {
     for (; nextOwner < owners.length; nextOwner++) {
       const owner = owners[nextOwner]!;
-      const filter = and(eq(documents.owner_id, storageOwnerKey(owner)), like(documents.document_id, legacyNodeRows))!;
+      const filter = and(eq(documents.owner_id, storageOwnerKey(owner)), like(documents.key, legacyNodeRows))!;
       if (!(await removeRows(db, filter, stopped, beforeDelete))) return;
     }
     if (!historyDone)

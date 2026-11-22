@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { storage_ordered_owners, storage_record_outbox } from "../../db/legacy-records-schema";
-import { storage_document_updates, storage_documents, storage_ordered_operations } from "../../db/schemas.pg";
+import { documents as storage_documents, storage_ordered_operations } from "../../db/schemas.pg";
 import { peers } from "./ordered-legacy-pending.fixture";
 import { resourceDocumentId } from "./resource-document-persistence";
 
@@ -275,18 +275,13 @@ test("missing legacy causal source leaves a resumable conversion while pending f
   const [source] = await second.db
     .select()
     .from(storage_documents)
-    .where(eq(storage_documents.document_id, resourceDocumentId("card")));
-  const updates = await second.db
-    .select()
-    .from(storage_document_updates)
-    .where(eq(storage_document_updates.document_id, resourceDocumentId("card")));
-  await second.db.delete(storage_documents).where(eq(storage_documents.document_id, resourceDocumentId("card")));
+    .where(eq(storage_documents.key, resourceDocumentId("card")));
+  await second.db.delete(storage_documents).where(eq(storage_documents.key, resourceDocumentId("card")));
   await expect(second.upgrade()).rejects.toThrow("missing its conversion source");
   expect(await second.db.select().from(storage_ordered_owners)).toHaveLength(1);
   expect(await second.db.select().from(storage_ordered_operations)).toHaveLength(0);
   expect(await second.db.select().from(storage_record_outbox)).toEqual(evidence);
   await second.db.insert(storage_documents).values(source!);
-  if (updates.length) await second.db.insert(storage_document_updates).values(updates);
   expect((await (await second.upgrade()).records.read("card")).value).toBe("pending");
 });
 

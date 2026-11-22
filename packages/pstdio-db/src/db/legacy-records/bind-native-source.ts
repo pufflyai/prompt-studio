@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, eq, max } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import {
   NativeSourcePendingError,
   type StorageObserver,
@@ -20,7 +20,7 @@ import { readProjectedRecords } from "../../services/extension-storage/record-qu
 import { resourceDocumentId } from "../../services/extension-storage/resource-document-persistence";
 import { storageOwnerKey } from "../../services/extension-storage/storage-owner-key";
 import type { DbClient } from "../connection.pglite";
-import { storage_document_updates, storage_documents } from "../schemas.pg";
+import { documents } from "../schemas/documents";
 import { nativeSourceAddressIn } from "./native-source-address";
 import { queueRecordUpload } from "./record-outbox";
 
@@ -119,21 +119,15 @@ export const bindNativeRecordSource = async (
     const source = { ...body, lifetime };
     native.document.destroy();
     const id = resourceDocumentId(input.recordId);
-    const scope = (table: typeof storage_documents | typeof storage_document_updates) =>
-      and(eq(table.owner_id, storageOwnerKey(owner)), eq(table.document_id, id));
     const [head] = await tx
-      .select({ revision: storage_documents.revision, folded: storage_documents.folded_revision })
-      .from(storage_documents)
-      .where(scope(storage_documents));
+      .select({ revision: documents.revision, folded: documents.folded_revision })
+      .from(documents)
+      .where(and(eq(documents.owner_id, storageOwnerKey(owner)), eq(documents.key, id)));
     if (!head) throw new Error("The source record needs its storage upgrade before binding");
-    const [tail] = await tx
-      .select({ revision: max(storage_document_updates.revision) })
-      .from(storage_document_updates)
-      .where(scope(storage_document_updates));
     const update = recordTextBindingUpdate(input.recordId, input.documentKey, source);
     const prepared = {
       id,
-      revision: Math.max(head.revision, tail?.revision ?? 0) + 1,
+      revision: head.revision + 1,
       foldedRevision: head.folded,
       checkpoint: null,
       update,

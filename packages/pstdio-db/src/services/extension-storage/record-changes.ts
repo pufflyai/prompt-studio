@@ -1,13 +1,15 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
-import { owners as recordOwners, storage_current_records, storage_documents } from "../../db/schemas.pg";
+import { owners as recordOwners, storage_current_records } from "../../db/schemas.pg";
+import { ensureFileDocument } from "./document-file-persistence";
+import { documentFilesFor } from "./document-files";
 import { lockStorageProject, type NativeProjectedRecord } from "./native-record-projection";
 import { publishProjectedRecords } from "./record-projection-rows";
 import { persistResourceDocuments } from "./resource-document-persistence";
 import { projectNumberRecords } from "./resource-number-records";
 import { previousNumbers, repairNumberRecords } from "./resource-number-repair";
-import { ensureStorageOwner, storageOwnerKey } from "./storage-owner-key";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
@@ -16,14 +18,7 @@ const ownerWhere = (owner: StorageOwner) => and(eq(recordOwners.id, storageOwner
 /** Locks the owner's projection row, which serializes its record writes, and returns its revision. */
 export const lockRecordOwner = async (tx: Transaction, owner: StorageOwner) => {
   await lockStorageProject(tx, owner.workbenchId);
-  await tx
-    .insert(storage_documents)
-    .values({
-      owner_id: await ensureStorageOwner(tx, owner),
-      document_id: "records",
-      state: new Uint8Array([0, 0]),
-    })
-    .onConflictDoNothing();
+  await ensureFileDocument(tx, documentFilesFor(tx), { owner, key: "records", kind: "local" });
   const [row] = await tx
     .select({ revision: recordOwners.revision })
     .from(recordOwners)

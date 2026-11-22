@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { eq, like } from "drizzle-orm";
 import { createDb } from "../../db/connection.pglite";
-import { projects, storage_documents, owners as storage_ordered_owners } from "../../db/schemas.pg";
+import { projects, documents as storage_documents, owners as storage_ordered_owners } from "../../db/schemas.pg";
+import { seedDocumentHistory } from "./document-history.fixture";
 import { createIndexNodeFiles, createMemoryIndexNodeFiles } from "./index-node-files";
 import { upgradeIndexNodesToFiles } from "./index-node-upgrade";
 import { orderedIndexBlobDocumentId } from "./ordered-receipts-blobs";
@@ -14,7 +15,7 @@ import { ensureStorageOwner } from "./storage-owner-key";
 // Blob ids are at least 16 characters; padding keeps the readable names distinct.
 const id = (name: string) => name.padEnd(16, "x");
 const reference = (name: string) => ({ blobId: id(name), byteLength: 4 });
-const nodeRows = like(storage_documents.document_id, '["ordered-index-blob",%');
+const nodeRows = like(storage_documents.key, '["ordered-index-blob",%');
 const folders: string[] = [];
 afterEach(async () => {
   for (const folder of folders.splice(0)) await rm(folder, { recursive: true, force: true });
@@ -41,17 +42,15 @@ const seed = async (db: Db, workbenchId = crypto.randomUUID()) => {
   const records = { workbenchId, extensionId: "example.records" };
   const logs = { workbenchId, extensionId: "example.history" };
   // Rows from before the upgrade stored children in locale order ("b" before "C").
-  await db
-    .insert(storage_documents)
-    .values([
-      row(records.extensionId, "root", ["b", "C"]),
-      row(records.extensionId, "b", []),
-      row(records.extensionId, "C", null),
-      row(records.extensionId, "published", ["b"]),
-      row(records.extensionId, "replaced", ["b"]),
-      row(logs.extensionId, "log-page", []),
-      row(logs.extensionId, "log-root", ["log-page"]),
-    ]);
+  await seedDocumentHistory(db, [
+    row(records.extensionId, "root", ["b", "C"]),
+    row(records.extensionId, "b", []),
+    row(records.extensionId, "C", null),
+    row(records.extensionId, "published", ["b"]),
+    row(records.extensionId, "replaced", ["b"]),
+    row(logs.extensionId, "log-page", []),
+    row(logs.extensionId, "log-root", ["log-page"]),
+  ]);
   const recordOwnerId = await ensureStorageOwner(db, records);
   await db
     .update(storage_ordered_owners)
@@ -99,7 +98,7 @@ test("an owner with an unreadable row keeps its rows while other owners move", a
   const { db, close } = await createDb({ path: ":memory:" });
   try {
     const { records, logs } = await seed(db);
-    await db.insert(storage_documents).values({
+    await seedDocumentHistory(db, {
       owner_id: await ensureStorageOwner(db, records),
       document_id: orderedIndexBlobDocumentId(id("broken")),
       state: encodeOrderedJson(null),
@@ -153,13 +152,14 @@ test("runtime startup preserves receipt files and defers stale rows until its ma
   const original = await createDb({ path });
   const { records, logs, workbenchId } = await seed(original.db);
   const retired = JSON.stringify(["pstdio.personal-history", "account"]);
-  await original.db.insert(storage_documents).values({
+  await seedDocumentHistory(original.db, {
     owner_id: await ensureStorageOwner(original.db, { workbenchId, extensionId: retired }),
     document_id: "transcript",
     state: new Uint8Array([0, 0]),
   });
   const logsOwnerId = await ensureStorageOwner(original.db, logs);
-  await original.db.insert(storage_documents).values(
+  await seedDocumentHistory(
+    original.db,
     Array.from({ length: 64 }, (_, index) => ({
       owner_id: logsOwnerId,
       document_id: orderedIndexBlobDocumentId(id(`stale-${index}`)),
@@ -174,13 +174,13 @@ test("runtime startup preserves receipt files and defers stale rows until its ma
     const files = createIndexNodeFiles(`${path}-index-nodes`);
     expect((await files.list(records, "receipts")).sort()).toEqual(["C", "b", "published", "root"].map(id));
     expect(
-      await firstRuntime.db.select({ id: storage_documents.document_id }).from(storage_documents).where(nodeRows),
+      await firstRuntime.db.select({ id: storage_documents.key }).from(storage_documents).where(nodeRows),
     ).toHaveLength(71);
     expect(phases).not.toContain("database_compacting");
     let checks = 0;
     await firstRuntime.cleanupRetiredRows(() => ++checks > 3);
     expect(
-      await firstRuntime.db.select({ id: storage_documents.document_id }).from(storage_documents).where(nodeRows),
+      await firstRuntime.db.select({ id: storage_documents.key }).from(storage_documents).where(nodeRows),
     ).toHaveLength(39);
   } finally {
     await firstRuntime.close();
@@ -192,7 +192,7 @@ test("runtime startup preserves receipt files and defers stale rows until its ma
     expect(await reopened.db.select().from(storage_documents).where(nodeRows)).toEqual([]);
     expect(
       await reopened.pglite.query(
-        "SELECT o.extension_id FROM storage_documents d JOIN owners o ON d.owner_id=o.id WHERE o.extension_id = $1",
+        "SELECT o.extension_id FROM documents d JOIN owners o ON d.owner_id=o.id WHERE o.extension_id = $1",
         [retired],
       ),
     ).toMatchObject({ rows: [] });

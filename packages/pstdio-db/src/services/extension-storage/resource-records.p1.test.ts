@@ -2,7 +2,7 @@ import { afterEach, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import * as schema from "../../db/schemas.pg";
-import { storage_documents, storage_ordered_operations } from "../../db/schemas.pg";
+import { documents as storage_documents, storage_ordered_operations } from "../../db/schemas.pg";
 import { createExtensionUserDataDBService } from "../extension-user-data/extension-user-data";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
@@ -177,7 +177,7 @@ test("a group commit larger than one write statement is saved in statements of b
 
 // Plain record values are canonical JSON, so saves add no per-record Yjs document or writer.
 const recordDocuments = async (f: Awaited<ReturnType<typeof fixture>>) =>
-  (await f.db.select({ id: storage_documents.document_id }).from(storage_documents)).filter(({ id }) =>
+  (await f.db.select({ id: storage_documents.key }).from(storage_documents)).filter(({ id }) =>
     id.startsWith(resourceDocumentId("").slice(0, -2)),
   );
 

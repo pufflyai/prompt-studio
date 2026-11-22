@@ -12,11 +12,8 @@ import {
   readOrderedPath,
 } from "pstdio-sync/records";
 import { canonicalJson, type Json } from "pstdio-sync-contracts";
-import {
-  storage_documents as documents,
-  storage_ordered_operations as operations,
-  storage_ordered_touches as touches,
-} from "../../db/schemas.pg";
+import { documents } from "../../db/schemas/documents";
+import { storage_ordered_operations as operations, storage_ordered_touches as touches } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
 import { readOrderedMarker, saveOrderedMarker } from "./ordered-native-metadata";
@@ -88,8 +85,7 @@ export const setOrderedReturnState = async (
   options: Omit<OrderedReturnMarker, "state"> = {},
 ) => {
   if (state) await saveOrderedMarker(tx, owner, returnMarker, { state, ...options } satisfies OrderedReturnMarker);
-  else
-    await tx.delete(documents).where(and(orderedOwnerWhere(documents, owner), eq(documents.document_id, returnMarker)));
+  else await tx.delete(documents).where(and(orderedOwnerWhere(documents, owner), eq(documents.key, returnMarker)));
 };
 
 export const editRecords = (local: Local) => local.operation.edits.map((edit) => edit.recordId);

@@ -13,6 +13,7 @@ import {
   storage_ordered_touches,
   owners as streamOwners,
 } from "../../db/schemas.pg";
+import { readNativeRoomHistory } from "./document-history.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createAssets, createRelay } from "./record-stream-relay.fixture";
 
@@ -363,8 +364,7 @@ for (const remoteDeleted of [false, true]) {
         await expect(native.applySource(editor, { generation: old.generation })).rejects.toMatchObject({
           code: "native_source_recovery",
         });
-        const { native_document_rooms } = await import("../../db/schemas.pg");
-        const recovered = await second.db.select().from(native_document_rooms);
+        const recovered = await readNativeRoomHistory(second.db);
         expect(recovered.some((room) => room.document_key === key)).toBe(true);
         expect(await native.read()).toBe("equal");
       } else {
@@ -413,9 +413,8 @@ test("refusing a delayed first-join text save preserves its captured native line
   await first.records.commit({ operationId: "retire-before-upload", edits: [{ recordId: "card", deleted: true }] });
   await first.sync.synchronize();
   await second.sync.synchronize();
-  const { native_document_rooms } = await import("../../db/schemas.pg");
   const privateText: string[] = [];
-  for (const room of await second.db.select().from(native_document_rooms)) {
+  for (const room of await readNativeRoomHistory(second.db)) {
     if (room.document_key !== key) continue;
     const copy = new Y.Doc();
     try {

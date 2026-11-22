@@ -2,6 +2,7 @@ import { and, asc, eq, gt, isNull, notInArray, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { project_extensions, projects } from "../../db/schemas.pg";
 import { projectExtensionRow } from "../extension-instances/project-extension-row";
+import { pruneAllDocumentFiles } from "../extension-storage/document-file-retention";
 import { dropRecordIndexes } from "../extension-storage/record-index-lifecycle";
 import { recordIndexRows as storage_record_indexes } from "../extension-storage/record-index-rows";
 import { pruneRecoveryProject } from "../extension-storage/recovery-file-retention";
@@ -121,6 +122,7 @@ export const createProjectsDBService = (db: DbClient) => {
       return { extensionInstances: extensionInstances.map(projectExtensionRow) };
     });
     if (result) await pruneRecoveryProject(db, id);
+    if (result) await pruneAllDocumentFiles(db, id);
     return result;
   };
 

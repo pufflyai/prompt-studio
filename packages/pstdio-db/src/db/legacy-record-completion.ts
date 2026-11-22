@@ -11,8 +11,8 @@ export const finishConvertedLegacyOwners = async (db: DbClient, signal?: AbortSi
     const { rows } = await db.execute<{ id: number; workbenchId: string; extensionId: string }>(sql`
       SELECT o.id,o.project_id AS "workbenchId",o.extension_id AS "extensionId" FROM owners o
       JOIN storage_ordered_owners p ON p.workbench_id=o.project_id AND p.extension_id=o.extension_id
-      WHERE o.id>${after} AND NOT EXISTS (SELECT 1 FROM storage_documents c
-        WHERE c.owner_id=o.id AND c.document_id='["ordered-conversion"]') ORDER BY o.id LIMIT 200`);
+      WHERE o.id>${after} AND NOT EXISTS (SELECT 1 FROM documents c
+        WHERE c.owner_id=o.id AND c.key='["ordered-conversion"]') ORDER BY o.id LIMIT 200`);
     if (!rows.length) return;
     for (const owner of rows) {
       signal?.throwIfAborted();
@@ -28,8 +28,8 @@ export const finishConvertedLegacyOwners = async (db: DbClient, signal?: AbortSi
               OR EXISTS (SELECT 1 FROM owners t JOIN storage_ordered_owners p
                 ON p.workbench_id=t.project_id AND p.extension_id=t.extension_id
                 WHERE t.project_id=${owner.workbenchId} AND t.extension_id=${canonical}
-                  AND NOT EXISTS (SELECT 1 FROM storage_documents c WHERE c.owner_id=t.id
-                    AND c.document_id='["ordered-conversion"]')) ON CONFLICT DO NOTHING`);
+                  AND NOT EXISTS (SELECT 1 FROM documents c WHERE c.owner_id=t.id
+                    AND c.key='["ordered-conversion"]')) ON CONFLICT DO NOTHING`);
       });
       while (true) {
         signal?.throwIfAborted();
