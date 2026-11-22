@@ -18,11 +18,7 @@ import {
   type StorageRecordQuery,
 } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import {
-  storage_current_records as current,
-  owners as projections,
-  storage_resource_projections,
-} from "../../db/schemas.pg";
+import { storage_current_records as current, owners as projections } from "../../db/schemas.pg";
 import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import { traceStorageQuery } from "./query-trace";
 import { aggregateCacheEpochs, aggregateCacheFor } from "./record-aggregate-cache";
@@ -186,10 +182,9 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
         .select({
           ownerId: projections.id,
           current: projections.revision,
-          projected: storage_resource_projections.revision,
+          projected: projections.numbers_revision,
         })
         .from(projections)
-        .leftJoin(storage_resource_projections, eq(storage_resource_projections.owner_id, projections.id))
         .where(eq(projections.id, storageOwnerKey({ ...owner, extensionId: "pstdio" })));
       if (core && core.current !== (core.projected ?? 0))
         throw new Error("Resource identity projection is stale; upgrade before reading");

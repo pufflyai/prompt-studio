@@ -12,6 +12,7 @@ CREATE TABLE "owners" (
 	"skipped" boolean DEFAULT false NOT NULL,
 	"receipt_root" "bytea",
 	"revision" bigint DEFAULT 0 NOT NULL,
+	"numbers_revision" bigint DEFAULT 0 NOT NULL,
 	"live_count" bigint DEFAULT 0 NOT NULL,
 	"record_indexes" jsonb DEFAULT '{}'::jsonb NOT NULL,
 	"history_cursor" text,
@@ -106,11 +107,16 @@ ALTER TABLE "storage_record_outbox" DISABLE ROW LEVEL SECURITY;--> statement-bre
 ALTER TABLE "storage_record_sync" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "storage_record_indexes" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "storage_record_projections" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "storage_resource_projections" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "storage_ordered_operations" DROP CONSTRAINT "storage_ordered_operations_workbench_id_extension_id_storage_ordered_owners_workbench_id_extension_id_fk";
 --> statement-breakpoint
 ALTER TABLE "storage_ordered_records" DROP CONSTRAINT "storage_ordered_records_workbench_id_extension_id_storage_ordered_owners_workbench_id_extension_id_fk";
 --> statement-breakpoint
 ALTER TABLE "storage_current_records" DROP CONSTRAINT "storage_current_records_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk";
+--> statement-breakpoint
+ALTER TABLE "storage_resource_aliases" DROP CONSTRAINT "storage_resource_aliases_workbench_id_storage_resource_projections_workbench_id_fk";
+--> statement-breakpoint
+ALTER TABLE "storage_resource_identities" DROP CONSTRAINT "storage_resource_identities_workbench_id_storage_resource_projections_workbench_id_fk";
 --> statement-breakpoint
 DROP TABLE "extension_resource_sequences" CASCADE;--> statement-breakpoint
 DROP TABLE "resource_anchors" CASCADE;--> statement-breakpoint
@@ -121,6 +127,7 @@ DROP TABLE "storage_personal_history_positions" CASCADE;--> statement-breakpoint
 DROP TABLE "storage_personal_history_sources" CASCADE;--> statement-breakpoint
 DROP TABLE "storage_record_indexes" CASCADE;--> statement-breakpoint
 DROP TABLE "storage_record_projections" CASCADE;--> statement-breakpoint
+DROP TABLE "storage_resource_projections" CASCADE;--> statement-breakpoint
 ALTER TABLE "recovery_point_owners" RENAME COLUMN "workbench_id" TO "project_id";--> statement-breakpoint
 ALTER TABLE "recovery_points" RENAME COLUMN "workbench_id" TO "project_id";--> statement-breakpoint
 ALTER TABLE "asset_transfers" DROP CONSTRAINT "asset_transfers_project_id_projects_id_fk";
@@ -146,8 +153,6 @@ ALTER TABLE "storage_ordered_receipts" DROP CONSTRAINT "storage_ordered_receipts
 ALTER TABLE "storage_ordered_touches" DROP CONSTRAINT "storage_ordered_touches_workbench_id_extension_id_operation_id_storage_ordered_operations_workbench_id_extension_id_operation_id_fk";
 --> statement-breakpoint
 ALTER TABLE "storage_current_records" DROP CONSTRAINT "storage_current_records_workbench_id_projects_id_fk";
---> statement-breakpoint
-ALTER TABLE "storage_resource_projections" DROP CONSTRAINT "storage_resource_projections_workbench_id_extension_id_document_id_storage_documents_workbench_id_extension_id_document_id_fk";
 --> statement-breakpoint
 DROP INDEX "storage_current_records_lifetime_upgrade_idx";--> statement-breakpoint
 DROP INDEX "storage_ordered_operations_pending_idx";--> statement-breakpoint
@@ -188,7 +193,6 @@ ALTER TABLE "native_document_file_projections" ADD COLUMN "owner_id" integer NOT
 ALTER TABLE "native_document_rooms" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
 ALTER TABLE "storage_document_operations" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
 ALTER TABLE "storage_document_updates" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
-ALTER TABLE "storage_resource_projections" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
 ALTER TABLE "owners" ADD CONSTRAINT "owners_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "resource_links" ADD CONSTRAINT "resource_links_source_owner_owners_id_fk" FOREIGN KEY ("source_owner") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "resource_links" ADD CONSTRAINT "resource_links_target_owner_owners_id_fk" FOREIGN KEY ("target_owner") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -216,11 +220,8 @@ ALTER TABLE "storage_ordered_receipts" ADD CONSTRAINT "storage_ordered_receipts_
 ALTER TABLE "storage_ordered_records" ADD CONSTRAINT "storage_ordered_records_owner_id_owners_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "storage_ordered_touches" ADD CONSTRAINT "storage_ordered_touches_owner_id_operation_id_storage_ordered_operations_owner_id_operation_id_fk" FOREIGN KEY ("owner_id","operation_id") REFERENCES "public"."storage_ordered_operations"("owner_id","operation_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "storage_current_records" ADD CONSTRAINT "storage_current_records_owner_id_owners_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "storage_resource_projections" ADD CONSTRAINT "storage_resource_projections_owner_id_owners_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "storage_resource_projections" ADD CONSTRAINT "storage_resource_projections_owner_id_document_id_storage_documents_owner_id_document_id_fk" FOREIGN KEY ("owner_id","document_id") REFERENCES "public"."storage_documents"("owner_id","document_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "native_rooms_source" ON "native_document_rooms" USING btree ("owner_id","document_key");--> statement-breakpoint
 CREATE INDEX "recovery_owner_revision" ON "recovery_point_owners" USING btree ("owner_id","revision");--> statement-breakpoint
-CREATE INDEX "storage_resource_projection_document" ON "storage_resource_projections" USING btree ("owner_id","document_id");--> statement-breakpoint
 CREATE INDEX "storage_ordered_operations_pending_idx" ON "storage_ordered_operations" USING btree ("owner_id","local_sequence") WHERE "storage_ordered_operations"."envelope" IS NOT NULL AND "storage_ordered_operations"."settled_epoch" IS NULL;--> statement-breakpoint
 CREATE INDEX "storage_ordered_receipts_operation_idx" ON "storage_ordered_receipts" USING btree ("owner_id","operation_id");--> statement-breakpoint
 CREATE INDEX "storage_ordered_receipts_unindexed_idx" ON "storage_ordered_receipts" USING btree ("owner_id","epoch","operation_id") WHERE "storage_ordered_receipts"."indexed" = false;--> statement-breakpoint
@@ -257,7 +258,6 @@ ALTER TABLE "storage_ordered_touches" DROP COLUMN "workbench_id";--> statement-b
 ALTER TABLE "storage_ordered_touches" DROP COLUMN "extension_id";--> statement-breakpoint
 ALTER TABLE "storage_current_records" DROP COLUMN "workbench_id";--> statement-breakpoint
 ALTER TABLE "storage_current_records" DROP COLUMN "extension_id";--> statement-breakpoint
-ALTER TABLE "storage_resource_projections" DROP COLUMN "extension_id";--> statement-breakpoint
 ALTER TABLE "native_document_file_projections" ADD CONSTRAINT "native_document_file_projections_pk" PRIMARY KEY("owner_id","document_key","projection_key");--> statement-breakpoint
 ALTER TABLE "storage_document_operations" ADD CONSTRAINT "storage_document_operations_pk" PRIMARY KEY("owner_id","document_id","operation_id");--> statement-breakpoint
 ALTER TABLE "storage_document_updates" ADD CONSTRAINT "storage_document_updates_pk" PRIMARY KEY("owner_id","document_id","revision");

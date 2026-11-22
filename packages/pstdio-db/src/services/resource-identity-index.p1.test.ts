@@ -7,11 +7,10 @@ import {
   storage_documents,
   storage_resource_aliases,
   storage_resource_identities,
-  storage_resource_projections,
 } from "../db/schemas.pg";
 import { createExtensionResourceSequencesDBService } from "./extension-resource-sequences";
 import { createDocumentStorageDBService } from "./extension-storage/document-storage";
-import { ensureStorageOwner, storageOwnerKey } from "./extension-storage/storage-owner-key";
+import { ensureStorageOwner } from "./extension-storage/storage-owner-key";
 import { createProjectsDBService } from "./projects/projects";
 
 test("closing an unused number service leaves its old source unopened for the next start", async () => {
@@ -43,9 +42,6 @@ test("existing numbers and aliases move once into records and retain their alloc
       resourceNumbers(document).set(resource.id, resource);
       rememberResourceNumber(document, resource);
     });
-    await connection.db
-      .insert(storage_resource_projections)
-      .values({ workbench_id: project.id, owner_id: storageOwnerKey(owner), revision: 0 });
     await connection.db.insert(storage_resource_identities).values({
       workbench_id: project.id,
       resource_id: "z-deleted-by-old-writer",

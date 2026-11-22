@@ -6,7 +6,7 @@ import { exportUnconvertedOwner } from "./legacy-owner-export";
 import { finishConvertedLegacyOwners } from "./legacy-record-completion";
 import { convertLegacyOwner } from "./legacy-record-conversion";
 import { storage_ordered_owners } from "./legacy-records-schema";
-import { owners, storage_documents, storage_resource_projections } from "./schemas.pg";
+import { owners, storage_documents } from "./schemas.pg";
 import { retainUnadmittedOwner } from "./storage-admission";
 
 export interface LegacyConversionFailure {
@@ -34,8 +34,11 @@ const emptyFailedOwner = (db: DbClient, owner: StorageOwner, id: number) =>
     );
     await tx.execute(sql`DELETE FROM native_document_sources WHERE owner_id=${id}`);
     await tx.execute(sql`DELETE FROM native_document_file_projections WHERE owner_id=${id}`);
-    if (owner.extensionId === coreOwnerId)
+    if (owner.extensionId === coreOwnerId) {
       await tx.execute(sql`DELETE FROM storage_ordered_resource_numbers WHERE workbench_id=${owner.workbenchId}`);
+      await tx.execute(sql`DELETE FROM storage_resource_aliases WHERE workbench_id=${owner.workbenchId}`);
+      await tx.execute(sql`DELETE FROM storage_resource_identities WHERE workbench_id=${owner.workbenchId}`);
+    }
     const [empty] = await tx
       .update(owners)
       .set({
@@ -60,12 +63,7 @@ const emptyFailedOwner = (db: DbClient, owner: StorageOwner, id: number) =>
       await tx
         .insert(storage_documents)
         .values({ owner_id: id, document_id: "records", state: new Uint8Array([0, 0]) });
-      await tx.insert(storage_resource_projections).values({
-        workbench_id: owner.workbenchId,
-        owner_id: id,
-        document_id: "records",
-        revision: empty!.revision,
-      });
+      await tx.update(owners).set({ numbers_revision: empty!.revision }).where(eq(owners.id, id));
     }
   });
 

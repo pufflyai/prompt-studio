@@ -4,7 +4,6 @@ import type { DbClient } from "../db/connection.pglite";
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 // Text files have independent histories. Any other owner state needs explicit conflict resolution.
 const otherStorage = [
-  "storage_resource_projections",
   "storage_ordered_records",
   "storage_ordered_operations",
   "storage_ordered_receipts",
@@ -20,7 +19,7 @@ export const textOnlyOwnerSql = (alias: string) => {
   const owner = sql.identifier(alias);
   return sql`${owner}.history_cursor IS NULL AND NOT ${owner}.history_migrated
     AND ${owner}.record_indexes = '{}'::jsonb
-    AND ${owner}.revision = 0 AND ${owner}.live_count = 0
+    AND ${owner}.revision = 0 AND ${owner}.numbers_revision = 0 AND ${owner}.live_count = 0
     AND ${owner}.epoch IS NULL AND NOT ${owner}.joined AND ${owner}.after = 0
     AND ${owner}.state_id IS NULL AND ${owner}.through = 0 AND ${owner}.pending_bytes = 0
     AND ${owner}.state_bytes = 0 AND NOT ${owner}.skipped AND ${owner}.receipt_root IS NULL

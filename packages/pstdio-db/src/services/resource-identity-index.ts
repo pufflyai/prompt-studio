@@ -5,7 +5,6 @@ import type { DbClient } from "../db/connection.pglite";
 import {
   storage_resource_aliases as aliases,
   storage_resource_identities as identities,
-  storage_resource_projections as projections,
   owners as recordOwners,
 } from "../db/schemas.pg";
 import { assertStorageOwnerAdmitted } from "../db/storage-admission";
@@ -23,9 +22,8 @@ export const createResourceIdentityIndex = (db: DbClient, ready: () => Promise<v
   const assertCurrent = async (connection: Connection, projectId: string) => {
     assertStorageOwnerAdmitted(db, { workbenchId: projectId, extensionId: coreOwnerId });
     const [row] = await connection
-      .select({ current: recordOwners.revision, projected: projections.revision })
+      .select({ current: recordOwners.revision, projected: recordOwners.numbers_revision })
       .from(recordOwners)
-      .leftJoin(projections, eq(projections.owner_id, recordOwners.id))
       .where(and(eq(recordOwners.id, storageOwnerKey({ workbenchId: projectId, extensionId: coreOwnerId }))));
     if (row && row.current !== (row.projected ?? 0))
       throw new Error("Resource identity projection is stale; upgrade before reading");

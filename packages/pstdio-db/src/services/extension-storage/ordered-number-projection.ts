@@ -10,11 +10,7 @@ import {
   readOrderedObservation,
 } from "pstdio-sync/records";
 import { fingerprint, type Json, type StorageRecord } from "pstdio-sync-contracts";
-import {
-  storage_resource_identities as identities,
-  storage_resource_projections as numberProjections,
-  owners as projections,
-} from "../../db/schemas.pg";
+import { storage_resource_identities as identities, owners as projections } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
 import type { OrderedNumberRepair } from "./ordered-number-limits";
 import { type OrderedNumberIndex, repairOrderedNumbers } from "./ordered-number-repair";
@@ -190,9 +186,9 @@ export const markOrderedNumberProjectionCurrent = async (tx: OrderedTransaction,
     .from(projections)
     .where(orderedOwnerWhere(projections, owner));
   await tx
-    .update(numberProjections)
-    .set({ revision: row?.revision ?? 0 })
-    .where(eq(numberProjections.workbench_id, owner.workbenchId));
+    .update(projections)
+    .set({ numbers_revision: row?.revision ?? 0 })
+    .where(orderedOwnerWhere(projections, owner));
 };
 
 /** One committed transaction reports its observable before/after shorthand, never intermediate repairs. */

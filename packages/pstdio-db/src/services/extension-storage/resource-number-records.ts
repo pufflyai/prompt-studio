@@ -7,7 +7,7 @@ import type { DbClient } from "../../db/connection.pglite";
 import {
   storage_resource_aliases as aliases,
   storage_resource_identities as identities,
-  storage_resource_projections as projections,
+  owners as projections,
   resource_prefixes as sequences,
 } from "../../db/schemas.pg";
 import { jsonBatches } from "./json-batches";
@@ -123,12 +123,9 @@ export const projectNumberRecords = async (
 ) => {
   if (owner.extensionId !== coreOwnerId || !records.length) return;
   await tx
-    .insert(projections)
-    .values({ workbench_id: owner.workbenchId, owner_id: storageOwnerKey(owner), document_id: "records", revision })
-    .onConflictDoUpdate({
-      target: projections.workbench_id,
-      set: { owner_id: storageOwnerKey(owner), document_id: "records", revision },
-    });
+    .update(projections)
+    .set({ numbers_revision: revision })
+    .where(eq(projections.id, storageOwnerKey(owner)));
   const ids = records.map((record) => record.recordId);
   for (let offset = 0; offset < ids.length; offset += 1_000) {
     const selected = ids.slice(offset, offset + 1_000);

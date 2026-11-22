@@ -36,8 +36,9 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
         FROM ${table} d JOIN owners o ON d.owner_id=o.id`);
   };
   for (const table of documentTables) documents[table] = await documentRows(table);
-  documents.storage_resource_projections = await query(`SELECT (to_jsonb(d)-'owner_id') ||
-    jsonb_build_object('extension_id',o.extension_id) AS row FROM storage_resource_projections d JOIN owners o ON d.owner_id=o.id`);
+  documents.storage_resource_projections = await query(`SELECT jsonb_build_object('workbench_id',o.project_id,
+    'extension_id',o.extension_id,'document_id','records','revision',o.numbers_revision) AS row FROM owners o
+    WHERE o.extension_id='pstdio' AND EXISTS(SELECT 1 FROM storage_documents d WHERE d.owner_id=o.id AND d.document_id='records')`);
   documents.storage_resource_identities = await query("SELECT to_jsonb(d) AS row FROM storage_resource_identities d");
   documents.storage_resource_aliases = await query("SELECT to_jsonb(d) AS row FROM storage_resource_aliases d");
   // The released reconstruction owns these generated query objects too.
@@ -100,7 +101,7 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     )
   ).rows[0]!;
   await connection.pglite.exec(
-    "DROP TABLE resource_links; DROP TABLE resource_prefixes; DROP TABLE storage_resource_aliases; DROP TABLE storage_resource_identities; DROP TABLE storage_resource_projections; DROP TABLE storage_current_records; DROP TABLE storage_document_operations; DROP TABLE storage_document_updates; DROP TABLE storage_documents; DROP TABLE native_document_room_updates; DROP TABLE native_document_rooms; DROP TABLE native_document_file_projections; DROP TABLE native_document_sources; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE IF EXISTS storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
+    "DROP TABLE resource_links; DROP TABLE resource_prefixes; DROP TABLE storage_resource_aliases; DROP TABLE storage_resource_identities; DROP TABLE storage_current_records; DROP TABLE storage_document_operations; DROP TABLE storage_document_updates; DROP TABLE storage_documents; DROP TABLE native_document_room_updates; DROP TABLE native_document_rooms; DROP TABLE native_document_file_projections; DROP TABLE native_document_sources; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE IF EXISTS storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
   );
   const data = {
     resource_anchors: links,

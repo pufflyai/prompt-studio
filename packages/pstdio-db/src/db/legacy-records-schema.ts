@@ -65,3 +65,11 @@ export const storage_record_outbox = pgTable(
     }).onDelete("cascade"),
   ],
 );
+
+/** Released number generation, restored into its global storage owner. */
+export const storage_resource_projections = pgTable("storage_resource_projections", {
+  workbench_id: text("workbench_id").primaryKey(),
+  extension_id: text("extension_id").notNull(),
+  document_id: text("document_id").notNull(),
+  revision: bigint("revision", { mode: "number" }).notNull(),
+});

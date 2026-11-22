@@ -86,6 +86,18 @@ for (const interruption of ["normal", "schema", "restore"])
       const restored = async () => {
         const rows = [];
         for (const table of tables) {
+          if (table === "storage_resource_projections") {
+            rows.push(
+              (
+                await store!.pglite.query<{ row: Record<string, unknown> }>(`SELECT
+              jsonb_build_object('workbench_id',project_id,'extension_id',extension_id,'document_id','records',
+                'revision',numbers_revision) AS row FROM owners WHERE extension_id='pstdio'
+                AND EXISTS(SELECT 1 FROM storage_documents d WHERE d.owner_id=owners.id AND d.document_id='records')
+              ORDER BY row`)
+              ).rows.map(({ row }) => row),
+            );
+            continue;
+          }
           if (table === "storage_record_indexes") {
             rows.push(
               (

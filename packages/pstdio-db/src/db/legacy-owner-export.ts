@@ -33,7 +33,6 @@ const ownerSources = (owner: StorageOwner, id: number): UpgradeSource[] => {
       where: sql`room_id IN (SELECT id FROM native_document_rooms WHERE owner_id=${id})`,
     },
     { table: "native_document_file_projections", keys: ["owner_id", "document_key", "projection_key"], where },
-    { table: "storage_resource_projections", keys: ["workbench_id"], where },
     { table: "storage_resource_identities", keys: ["workbench_id", "resource_id"], where: numbers },
     { table: "storage_resource_aliases", keys: ["workbench_id", "resource_id", "shorthand"], where: numbers },
     { table: "storage_ordered_resource_numbers", keys: ["workbench_id", "resource_id", "prefix"], where: numbers },

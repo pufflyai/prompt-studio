@@ -22,6 +22,7 @@ export const owners = pgTable(
     skipped: boolean("skipped").notNull().default(false),
     receipt_root: bytea("receipt_root"),
     revision: bigint("revision", { mode: "number" }).notNull().default(0),
+    numbers_revision: bigint("numbers_revision", { mode: "number" }).notNull().default(0),
     live_count: bigint("live_count", { mode: "number" }).notNull().default(0),
     record_indexes: jsonb("record_indexes")
       .$type<Record<string, { definition: StorageRecordIndex; database_name: string }>>()
