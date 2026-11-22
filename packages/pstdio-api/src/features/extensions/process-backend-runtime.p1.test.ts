@@ -67,6 +67,32 @@ export default {
     },
     { id: "crash", ref: { kind: "command", id: "crash" }, title: "Crash", run: () => process.exit(1) },
     {
+      id: "migrate",
+      ref: { kind: "command", id: "migrate" },
+      title: "Migrate",
+      async run(ctx) {
+        await ctx.storage.migrate(1, async (previous) => {
+          await ctx.storage.set("migrated-from", previous);
+        });
+        return ctx.storage.get("migrated-from");
+      },
+    },
+    {
+      id: "observe",
+      ref: { kind: "command", id: "observe" },
+      title: "Observe",
+      async run(ctx) {
+        const recordId = ctx.storage.records.id("watched");
+        let seen = 0;
+        const handle = ctx.storage.observe(() => { seen += 1; }, { recordIds: [recordId] });
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        await ctx.storage.set("watched", "changed");
+        for (let attempt = 0; seen === 0 && attempt < 50; attempt++) await new Promise((resolve) => setTimeout(resolve, 10));
+        handle.close();
+        return seen;
+      },
+    },
+    {
       id: "port",
       ref: { kind: "command", id: "port" },
       title: "Port",
@@ -346,4 +372,11 @@ test("an accepted source can return to the same content after another generation
   await writeFile(entryPath, define("replacement"));
   await handle.deps.extensionService.reloadInstalledSourceBySourcePath(source);
   expect(await ping()).toMatchObject({ ok: true, value: "replacement" });
+});
+
+test("process-mode handlers can pass callbacks to host storage", async () => {
+  expect((await execute("migrate")).outcome).toMatchObject({ ok: true, value: 0 });
+  const observed = (await execute("observe")).outcome;
+  expect(observed.ok).toBe(true);
+  expect(observed.value).toBeGreaterThan(0);
 });
