@@ -51,11 +51,11 @@ of the same optimized 1,000-publication loop completes in 24,493 ms. It spends
 19,005 ms in transactions, including 16,240 ms inside their SQL callbacks, and
 uses 29.1 CPU seconds. This supports isolating its deadline measurement from
 another file's database work; it does not establish contention as the only cause.
-Fresh execution of the complete fixture must still demonstrate the existing
-limits. No workload, platform, assertion or execution allowance is removed.
+Fresh execution must still finish the complete fixture within a finite
+allowance under the [timeout policy](../guidance/0004-ci.md#3-ci-timeouts-and-performance-budgets). Keep every workload, platform and assertion.
 The existing Linux quarantine entry follows the renamed file without changing
 its case selection, evidence, owner or removal criteria.
 
 ## Removal
 
-Remove the driver when the repository's Bun version releases completed file state within the current memory budget and passes the asynchronous skill-import regression with built-in isolation. Run the complete API suite and both release gates before removing it. Do not raise timeouts or alter the fixture's import semantics to satisfy that check.
+Remove the driver when the repository's Bun version releases completed file state within the current memory budget and passes the asynchronous skill-import regression with built-in isolation. Run the complete API suite and both release gates before removing it. Preserve the fixture's import semantics; changing an ordinary test allowance alone does not prove that the file-state retention problem is fixed.
