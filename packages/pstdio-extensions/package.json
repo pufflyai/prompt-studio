@@ -33,7 +33,9 @@
     "./prepared-cache": "./src/runtime/prepared-cache.ts",
     "./revision-dependencies": "./src/runtime/revision-dependencies.ts",
     "./preparation-command": "./src/runtime/preparation-command.ts",
-    "./preparation-client": "./src/runtime/preparation-client.ts"
+    "./preparation-client": "./src/runtime/preparation-client.ts",
+    "./backend-process": "./src/runtime/backend-process/index.ts",
+    "./backend-worker": "./src/runtime/backend-process/worker.ts"
   },
   "scripts": {
     "build": "bun run build:runtime",
