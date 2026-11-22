@@ -15,6 +15,9 @@ export async function runCli(binary: string, directory: string, env: Record<stri
   });
   let stdout = "";
   let stderr = "";
+  // A character can span two chunks; decoding each chunk alone would corrupt it.
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
   child.stdout.on("data", (data) => {
     stdout += data;
   });
