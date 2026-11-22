@@ -1,3 +1,4 @@
+import { storagePositionsDevice } from "pstdio-api-contracts";
 import { isNavigationScoped } from "../runner/host-context";
 import { serviceSurfaces } from "./service-surfaces";
 import type { BackendSurface } from "./surface";
@@ -10,24 +11,30 @@ const notify: BackendSurface = { kind: "notify" };
 const calls = (...names: string[]): Members => Object.fromEntries(names.map((name) => [name, { kind: "async" }]));
 const values = (...names: string[]): Members => Object.fromEntries(names.map((name) => [name, value]));
 
-// blobs.urlFor is synchronous and needs host URL data; it joins the surface with the other local helpers.
-const blobs = object(calls("put", "update", "get", "getBytes", "list", "delete"));
+type StorageData = { namespace?: string[]; deviceId?: string; filePrefix: string };
 
-const collection = object({
-  ...calls(
-    "read",
-    "get",
-    "list",
-    "put",
-    "update",
-    "updateIfUnchanged",
-    "createIfAbsent",
-    "deleteIfValue",
-    "create",
-    "delete",
-  ),
-  attachments: { kind: "factory", returns: blobs },
-});
+const blobs = (filePrefix: string) =>
+  object({
+    ...calls("put", "update", "get", "getBytes", "list", "delete"),
+    urlFor: { kind: "local", name: "fileUrl", prefix: filePrefix },
+  });
+
+const collection = (filePrefix: string) =>
+  object({
+    ...calls(
+      "read",
+      "get",
+      "list",
+      "put",
+      "update",
+      "updateIfUnchanged",
+      "createIfAbsent",
+      "deleteIfValue",
+      "create",
+      "delete",
+    ),
+    attachments: { kind: "factory", returns: blobs(filePrefix) },
+  });
 
 const records = (namespace?: string[]) =>
   object({
@@ -45,35 +52,55 @@ const records = (namespace?: string[]) =>
       "inspect",
       "resolve",
     ),
-    ...(namespace ? { id: { kind: "local", name: "recordId", namespace } } : {}),
+    id: namespace ? { kind: "local", name: "recordId", namespace } : { kind: "local", name: "scopedRecordId" },
   });
 
 const log = object({ ...calls("append", "read"), follow: { kind: "iterate", signalArg: 0 } });
 
-const storageMembers = (projectId: string, namespace?: string[]): Members => ({
+const storageMembers = ({
+  projectId,
+  namespace,
+  deviceId,
+  filePrefix,
+}: StorageData & { projectId: string }): Members => ({
   ...calls("get", "set", "delete", "canMigrate", "readLegacy"),
   migrate: { kind: "migrate", projectId },
   observe: { kind: "subscribe" },
   text: { kind: "factory", returns: object(calls("edit")) },
   log: { kind: "factory", returns: log },
+  assets: object(calls("stage", "getTransfer", "cancel", "read", "verifyComplete")),
   ids: object({ create: { kind: "local", name: "storageId" } }),
+  ...(deviceId ? { positions: object({ between: { kind: "local", name: "position", deviceId } }) } : {}),
   records: records(namespace),
-  files: blobs,
-  collection: { kind: "factory", returns: collection },
+  files: blobs(filePrefix),
+  collection: { kind: "factory", returns: collection(filePrefix) },
 });
 
-// A scope's record namespace is resolved by the host, so scoped storage does not offer records.id yet.
-const storageSurface = (projectId: string) => {
-  const scopedStorage = { kind: "object", members: storageMembers(projectId) } satisfies BackendSurface;
-  const scope = { kind: "factory", returns: scopedStorage, snapshotArguments: true } satisfies BackendSurface;
-  scopedStorage.members.scope = scope;
-  return object({ ...storageMembers(projectId, ["project", projectId, "kv"]), scope });
+/** Storage at the project scope; `scope(...)` resolves its record namespace in the worker. */
+const storageSurface = (projectId: string, data: Omit<StorageData, "namespace">) => {
+  // The host validates the scoped shape; the worker adds the scope's own records.id when it creates one.
+  // Both read one snapshot of the selector, taken when the scope is selected.
+  const scoped = { kind: "object", members: storageMembers({ ...data, projectId }) } satisfies BackendSurface;
+  const scope = {
+    kind: "factory",
+    returns: scoped,
+    snapshotArguments: true,
+    scopeOf: projectId,
+  } satisfies BackendSurface;
+  scoped.members.scope = scope;
+  return object({ ...storageMembers({ ...data, projectId, namespace: ["project", projectId, "kv"] }), scope });
 };
 
-type ContextData = { projectId: string; navigation?: unknown };
+type ContextData = {
+  projectId: string;
+  extensionId?: string;
+  navigation?: unknown;
+  storage?: unknown;
+};
 
 /** Describes only supported services that are present on this invocation's host context. */
 export const extensionContextSurface = (context: ContextData): BackendSurface => {
+  const { projectId, extensionId, storage } = context;
   const services: Members = {
     ...serviceSurfaces,
     logger: object({ info: notify, warn: notify, error: notify }),
@@ -92,7 +119,12 @@ export const extensionContextSurface = (context: ContextData): BackendSurface =>
     }),
     events: object(calls("emit")),
     settings: object(calls("all", "get", "set", "delete")),
-    storage: storageSurface(context.projectId),
+    storage: storageSurface(projectId, {
+      deviceId: ((storage as { positions?: object } | undefined)?.positions as Record<symbol, string> | undefined)?.[
+        storagePositionsDevice
+      ],
+      filePrefix: `/v1/projects/${encodeURIComponent(projectId)}/extensions/${encodeURIComponent(extensionId ?? "")}/files/`,
+    }),
   };
   return object({
     ...values(
