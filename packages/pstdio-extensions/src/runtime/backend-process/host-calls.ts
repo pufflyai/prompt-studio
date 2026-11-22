@@ -40,7 +40,7 @@ export const createHostCalls = (
   const callWorker = async (invocationId: string, fnId: string, args: unknown[]): Promise<unknown> => {
     const running = invocation(invocationId);
     if (!running || running.cancelled) throw new BackendUnavailableError("The invocation is no longer running.");
-    const exported = running.table.exportValue(args) as unknown[];
+    const exported = (await running.table.exportValue(args)) as unknown[];
     const requestId = `h${nextRequest++}`;
     // A listener can be called by a different invocation's event. Only a host operation owned
     // by this invocation can give its callback narrower async context.
@@ -84,7 +84,7 @@ export const createHostCalls = (
           discardValue(result);
           return;
         }
-        const value = running.table.exportValue(result);
+        const value = await running.table.exportValue(result);
         if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "reply", invocationId, requestId, ok: true, value }))
           throw new Error("The host result could not be sent to the worker.");
       });

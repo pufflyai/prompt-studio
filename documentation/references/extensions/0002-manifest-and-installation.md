@@ -214,11 +214,12 @@ to the host, such as a `storage.migrate` callback or a `storage.observe` listene
 or async iterables the host returns, such as a `close()` handle or `log.follow()`, work across the
 process boundary. They stay valid until the handler that created them returns.
 
-These members are not available yet:
+`terminal` and `localDirectory` are not available yet. `ids.create`, `records.id` (also inside
+`storage.scope(...)`), `positions.between`, `urlFor` and the middleware helpers are computed in the
+worker with the same results as the host. `Blob` arguments and `ReadableStream` results, such as
+`storage.assets.stage` and `read`, work across the boundary.
 
-- `storage.positions`, `storage.assets`, and `urlFor` on storage files and attachments
-- `records.id` inside `storage.scope(...)`
-- `terminal` and `localDirectory`
+A worker that has run nothing for 10 minutes stops. The next call starts it again.
 
 An `AbortSignal` you pass to a host call, such as `sessions.stream(id, onEvent, { signal })`, still
 cancels it. When your handler returns, the host closes any stream or iterator it left open.

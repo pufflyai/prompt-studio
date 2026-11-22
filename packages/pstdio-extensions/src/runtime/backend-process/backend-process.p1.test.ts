@@ -550,7 +550,10 @@ test("listener failures, host objects, abort signals and abandoned iterators sta
         },
         entity: async () => new Entity(),
         wait: ({ signal }: { signal: AbortSignal }) =>
-          new Promise((resolve) => signal.addEventListener("abort", () => resolve("aborted"), { once: true })),
+          new Promise((resolve) => {
+            if (signal.aborted) resolve("aborted");
+            signal.addEventListener("abort", () => resolve("aborted"), { once: true });
+          }),
         follow: async function* () {
           try {
             yield "first";
@@ -575,5 +578,31 @@ test("listener failures, host objects, abort signals and abandoned iterators sta
   } finally {
     process.off("unhandledRejection", onUnhandled);
     await worker.stop();
+  }
+});
+
+test("an idle worker retires, and a running call keeps its worker alive", async () => {
+  const pool = createBackendWorkerPool(() => ({ env: createExtensionProcessEnvironment(), entryPath }), {
+    idleMs: 100,
+  });
+  try {
+    const busy = await pool.acquire("source@1");
+    const controller = new AbortController();
+    const waiting = busy.invoke({
+      handlerId: handlerOf(busy.definition, "wait"),
+      context: {},
+      surface,
+      args: [],
+      signal: controller.signal,
+    });
+    await Bun.sleep(400);
+    expect(await pool.acquire("source@1")).toBe(busy);
+    controller.abort(new Error("done"));
+    await waiting.catch(() => {});
+    await Bun.sleep(400);
+    expect(await busy.exited).not.toBeUndefined();
+    expect(await pool.acquire("source@1")).not.toBe(busy);
+  } finally {
+    await pool.close();
   }
 });
