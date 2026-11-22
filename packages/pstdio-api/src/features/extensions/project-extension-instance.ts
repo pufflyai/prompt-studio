@@ -103,6 +103,7 @@ export const toProjectExtensionInstance = (
 ): ProjectExtensionInstance => {
   const manifest = (installedSource.manifest_json ?? {}) as Record<string, unknown>;
   const incompatible = compatibilityError(installedSource, { upgradable: options.canUpgrade });
+  const processEnvironment = (manifest.pstdio as { processEnvironment?: string[] } | undefined)?.processEnvironment;
   return {
     id: instance.id,
     projectId: instance.scope_id,
@@ -128,5 +129,6 @@ export const toProjectExtensionInstance = (
     updateAvailable: Boolean(
       diskSourceHash && installedSource.source_hash && diskSourceHash !== installedSource.source_hash,
     ),
+    ...(processEnvironment ? { processEnvironment } : {}),
   };
 };
