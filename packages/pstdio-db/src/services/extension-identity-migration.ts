@@ -35,7 +35,6 @@ const otherTables = [
   s.board_views,
   s.preferences,
   s.credentials,
-  s.assetTransfers,
   s.extension_resource_sequences,
   s.storage_resource_identities,
 ];
@@ -88,7 +87,6 @@ const assertNoConflicts = async (tx: Transaction, from: string, to: string) => {
     ],
     [s.credentials, sql`jsonb_build_array(project_id, contribution_id)`],
     [s.board_views, sql`jsonb_build_array(project_id, board_id)`],
-    [s.assetTransfers, sql`to_jsonb(project_id)`],
     [s.extension_resource_sequences, sql`to_jsonb(project_id)`],
     [s.storage_resource_identities, sql`to_jsonb(workbench_id)`],
   ] as const) {

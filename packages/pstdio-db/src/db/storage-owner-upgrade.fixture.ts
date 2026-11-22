@@ -6,6 +6,9 @@ import type { createDb } from "./connection.pglite";
 export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<typeof createDb>>) => {
   const query = async (source: string) =>
     (await connection.pglite.query<{ row: Record<string, unknown> }>(source)).rows.map(({ row }) => row);
+  const assets = await query(`SELECT (to_jsonb(a)-'owner_id') ||
+    jsonb_build_object('project_id',o.project_id,'extension_id',o.extension_id) AS row
+    FROM asset_transfers a JOIN owners o ON a.owner_id=o.id`);
   const logs = await query(`SELECT (to_jsonb(s)-'id'-'owner_id') ||
     jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id) AS row
     FROM log_streams s JOIN owners o ON s.owner_id=o.id`);
@@ -26,9 +29,10 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     )
   ).rows[0]!;
   await connection.pglite.exec(
-    "DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
+    "DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
   );
   const data = {
+    asset_transfers: assets,
     storage_log_streams: logs,
     storage_log_entries: entries,
     storage_personal_history: rows,

@@ -60,11 +60,21 @@ CREATE TABLE "history_sources" (
 	CONSTRAINT "history_sources_pk" PRIMARY KEY("owner_id","source_id","kind","device_id","record_id")
 );
 --> statement-breakpoint
+ALTER TABLE "storage_log_entries" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "storage_log_streams" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "storage_personal_history" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "storage_personal_history_positions" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "storage_personal_history_sources" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 DROP TABLE "storage_log_entries" CASCADE;--> statement-breakpoint
 DROP TABLE "storage_log_streams" CASCADE;--> statement-breakpoint
 DROP TABLE "storage_personal_history" CASCADE;--> statement-breakpoint
 DROP TABLE "storage_personal_history_positions" CASCADE;--> statement-breakpoint
 DROP TABLE "storage_personal_history_sources" CASCADE;--> statement-breakpoint
+ALTER TABLE "asset_transfers" DROP CONSTRAINT "asset_transfers_project_id_projects_id_fk";
+--> statement-breakpoint
+ALTER TABLE "asset_transfers" DROP CONSTRAINT "asset_transfers_project_id_extension_id_operation_id_pk";--> statement-breakpoint
+ALTER TABLE "asset_transfers" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
+ALTER TABLE "asset_transfers" ADD CONSTRAINT "asset_transfers_owner_id_operation_id_pk" PRIMARY KEY("owner_id","operation_id");--> statement-breakpoint
 ALTER TABLE "owners" ADD CONSTRAINT "owners_project_id_projects_id_fk" FOREIGN KEY ("project_id") REFERENCES "public"."projects"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "log_entries" ADD CONSTRAINT "log_entries_stream_fk" FOREIGN KEY ("stream_id") REFERENCES "public"."log_streams"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "log_streams" ADD CONSTRAINT "log_streams_owner_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -72,4 +82,7 @@ ALTER TABLE "history_rows" ADD CONSTRAINT "history_rows_owner_id_owners_id_fk" F
 ALTER TABLE "history_sources" ADD CONSTRAINT "history_sources_owner_id_owners_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "log_entries_relay_idx" ON "log_entries" USING btree ("stream_id","relay_sequence","relay_index");--> statement-breakpoint
 CREATE INDEX "log_entries_pending_idx" ON "log_entries" USING btree ("stream_id","local_sequence") WHERE "log_entries"."local" = true AND "log_entries"."relay_sequence" IS NULL;--> statement-breakpoint
-CREATE INDEX "log_entries_retention_idx" ON "log_entries" USING btree ("stream_id","created_at");
+CREATE INDEX "log_entries_retention_idx" ON "log_entries" USING btree ("stream_id","created_at");--> statement-breakpoint
+ALTER TABLE "asset_transfers" ADD CONSTRAINT "asset_transfers_owner_id_owners_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "asset_transfers" DROP COLUMN "project_id";--> statement-breakpoint
+ALTER TABLE "asset_transfers" DROP COLUMN "extension_id";

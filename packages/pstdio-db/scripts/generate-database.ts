@@ -36,12 +36,28 @@ for (const entry of after.filter((entry) => !before.some((old) => old.idx === en
       return target && dropped.has(target) ? [index] : [];
     }),
   );
-  if (!move.size) continue;
   const firstDrop = statements.findIndex((statement) => statement.trim().startsWith("DROP TABLE "));
   const ordered = statements.flatMap((statement, index) => [
     ...(index === firstDrop ? [...move].map((position) => statements[position]) : []),
     ...(move.has(index) ? [] : [statement]),
   ]);
+  // Drizzle can also put a replacement primary key before its newly added columns.
+  // Keep generated column additions before constraints that require those columns.
+  let movedColumns = false;
+  for (const statement of statements) {
+    const added = /^ALTER TABLE "([^"]+)" ADD COLUMN "([^"]+)" /u.exec(statement.trim());
+    if (!added) continue;
+    const constraint = ordered.findIndex(
+      (candidate) =>
+        candidate.trim().startsWith(`ALTER TABLE "${added[1]}" ADD CONSTRAINT `) && candidate.includes(`"${added[2]}"`),
+    );
+    const column = ordered.indexOf(statement);
+    if (constraint < 0 || column < constraint) continue;
+    ordered.splice(column, 1);
+    ordered.splice(constraint, 0, statement);
+    movedColumns = true;
+  }
+  if (!move.size && !movedColumns) continue;
   await Bun.write(file, ordered.join("--> statement-breakpoint"));
-  console.log("Generated foreign-key drops before their dropped parent tables.");
+  console.log("Generated columns and foreign-key drops before their dependent constraints and table drops.");
 }

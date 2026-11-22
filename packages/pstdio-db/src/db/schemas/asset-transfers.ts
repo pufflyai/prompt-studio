@@ -1,18 +1,17 @@
-import { jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import type { AssetReference } from "pstdio-api-contracts";
-import { projects } from "./projects";
+import { owners } from "./owners";
 
 export const assetTransfers = pgTable(
   "asset_transfers",
   {
-    project_id: text("project_id")
+    owner_id: integer("owner_id")
       .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    extension_id: text("extension_id").notNull(),
+      .references(() => owners.id, { onDelete: "cascade" }),
     operation_id: text("operation_id").notNull(),
     expected: jsonb("expected").$type<AssetReference>().notNull(),
     cancelled_at: text("cancelled_at"),
     created_at: text("created_at").notNull(),
   },
-  (table) => [primaryKey({ columns: [table.project_id, table.extension_id, table.operation_id] })],
+  (table) => [primaryKey({ columns: [table.owner_id, table.operation_id] })],
 );

@@ -1,5 +1,5 @@
 {
-  "id": "18f4738e-2918-4ce0-9984-8060b1b08d5e",
+  "id": "ed8810f4-d331-45a3-a66c-6649df269c88",
   "prevId": "7831c13a-76db-4e65-a402-222b04fffc09",
   "version": "7",
   "dialect": "postgresql",
@@ -277,15 +277,9 @@
       "name": "asset_transfers",
       "schema": "",
       "columns": {
-        "project_id": {
-          "name": "project_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "extension_id": {
-          "name": "extension_id",
-          "type": "text",
+        "owner_id": {
+          "name": "owner_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -316,12 +310,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "asset_transfers_project_id_projects_id_fk": {
-          "name": "asset_transfers_project_id_projects_id_fk",
+        "asset_transfers_owner_id_owners_id_fk": {
+          "name": "asset_transfers_owner_id_owners_id_fk",
           "tableFrom": "asset_transfers",
-          "tableTo": "projects",
+          "tableTo": "owners",
           "columnsFrom": [
-            "project_id"
+            "owner_id"
           ],
           "columnsTo": [
             "id"
@@ -331,11 +325,10 @@
         }
       },
       "compositePrimaryKeys": {
-        "asset_transfers_project_id_extension_id_operation_id_pk": {
-          "name": "asset_transfers_project_id_extension_id_operation_id_pk",
+        "asset_transfers_owner_id_operation_id_pk": {
+          "name": "asset_transfers_owner_id_operation_id_pk",
           "columns": [
-            "project_id",
-            "extension_id",
+            "owner_id",
             "operation_id"
           ]
         }

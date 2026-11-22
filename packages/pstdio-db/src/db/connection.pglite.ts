@@ -18,6 +18,7 @@ import {
 } from "../services/extension-storage/index-node-files";
 import { upgradeIndexNodesToFiles } from "../services/extension-storage/index-node-upgrade";
 import { prepareAppPreferencesUpgrade } from "./app-preferences-upgrade";
+import { prepareAssetOwnerUpgrade } from "./asset-owner-upgrade";
 import { prepareAutomationOwnersUpgrade } from "./automation-owners-upgrade";
 import { prepareBoardDefaultsUpgrade } from "./board-defaults-upgrade";
 import { prepareBoardOwnersUpgrade } from "./board-owners-upgrade";
@@ -232,6 +233,7 @@ export const createDb = async (options?: {
     await withMigrationsFolder(async (migrationsFolder) => {
       if (!fs.existsSync(migrationsFolder)) return;
       const finishProjectExtensionsUpgrade = await prepareProjectExtensionsUpgrade(db, dbPath);
+      const finishAssetOwnerUpgrade = await prepareAssetOwnerUpgrade(db, dbPath);
       const finishHistoryOwnerUpgrade = await prepareHistoryOwnerUpgrade(db, dbPath);
       const finishLogOwnerUpgrade = await prepareLogOwnerUpgrade(db, dbPath);
       const finishFileOwnersUpgrade = await prepareFileOwnersUpgrade(db, dbPath);
@@ -246,6 +248,7 @@ export const createDb = async (options?: {
       await finishProjectExtensionsUpgrade?.();
       await finishLogOwnerUpgrade?.();
       await finishHistoryOwnerUpgrade?.();
+      await finishAssetOwnerUpgrade?.();
       await finishPreferencesUpgrade?.();
       await finishExtensionPreferencesUpgrade?.();
       await finishConnectionCredentialsUpgrade?.();
