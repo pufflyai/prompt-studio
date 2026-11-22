@@ -2,6 +2,7 @@ import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
 import type { MarmaladeAction } from "./marmalade.types";
 import { marmaladeEditingState } from "./marmalade-editing-state";
 import { marmaladeChanged } from "./marmalade-events";
+import { exportMarmalade } from "./marmalade-export-command";
 import { marmaladePresentationResult, mutateMarmalade } from "./marmalade-mutations";
 import {
   inMarmaladeOrder,
@@ -86,6 +87,7 @@ export const executeMarmalade = defineCommand({
     ),
 });
 export const marmaladeCommands = {
+  "marmalade.export": exportMarmalade,
   "marmalade.read": readMarmalade,
   "marmalade.edit": editMarmalade,
   "marmalade.session.read": loadMarmalade,
