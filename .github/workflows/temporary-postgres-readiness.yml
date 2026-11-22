@@ -1,0 +1,39 @@
+name: Temporary PostgreSQL readiness reproduction
+
+on:
+  push:
+    branches:
+      - validation/postgres-readiness/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: temporary-postgres-readiness-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  readiness:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.4"
+      - name: Observe baseline and fixed health on the official initialization phases
+        env:
+          BASELINE_SHA: ef3ea20acd7822238367412fa0b43539c03bb367
+          FIXED_SHA: 23b9389cfa2386ea77b6601a9813a78aff712199
+          DIAGNOSTIC_OUTPUT: ${{ runner.temp }}/pr-2259-readiness-evidence
+          TMPDIR: ${{ runner.temp }}
+        run: bun .github/diagnostics/postgres-tcp-readiness.ts
+      - name: Retain complete readiness evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-readiness-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/pr-2259-readiness-evidence
+          if-no-files-found: error
