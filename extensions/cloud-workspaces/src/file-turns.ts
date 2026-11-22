@@ -184,6 +184,7 @@ async function observeFileTurn(
       // submission proves that this saved request never reached execution.
       if (firstSubmission && error instanceof PocketCoderHttpError && [400, 413, 422].includes(error.status)) {
         await ctx.state.delete(key(input.sessionId));
+        await ctx.state.delete(cancelKey(pending.request));
         ctx.logger.warn(error.message);
         return { status: "failed" as const };
       }
@@ -217,10 +218,14 @@ async function observeFileTurn(
       // receipt read here removes it.
       const cancelId = (await ctx.state.get<string>(cancelKey(pending.request))) ?? randomUUID();
       await ctx.state.set(cancelKey(pending.request), cancelId);
-      const receipt = await ref.instances.request<Receipt>(ref.instanceId, path(ref), {
-        method: "POST",
-        body: JSON.stringify(pending.request),
-      });
+      const receipt = await ref.instances
+        .request<Receipt>(ref.instanceId, path(ref), { method: "POST", body: JSON.stringify(pending.request) })
+        .catch(async (error: unknown) => {
+          // A rejected submission never ran, so nothing remains to cancel.
+          if (error instanceof PocketCoderHttpError && [400, 413, 422].includes(error.status))
+            await ctx.state.delete(cancelKey(pending.request));
+          throw error;
+        });
       if (receipt.finalizedAt) return ctx.state.delete(cancelKey(pending.request));
       const execution = receipt.acceptance.execution;
       await ref.instances.request(

@@ -224,3 +224,20 @@ test("a stalled receipt read disconnects a turn that has a run signal", async ()
     await f.close();
   }
 });
+
+test("a Stop after a rejected first submission leaves no cancel ID behind", async () => {
+  let requestId = "";
+  const f = await fixture(async (req) => {
+    requestId = ((await req.json()) as { requestId: string }).requestId;
+    return Response.json({ error: "invalid input" }, { status: 422 });
+  });
+  try {
+    const session = await startFileTurn(f.ctx, f.input, f.ref);
+    expect(await session.done).toEqual({ status: "failed" });
+    await expect(session.stop()).rejects.toThrow();
+    expect(requestId).not.toBe("");
+    expect(await f.state.get(`file-cancel:${requestId}`)).toBeUndefined();
+  } finally {
+    await f.close();
+  }
+});
