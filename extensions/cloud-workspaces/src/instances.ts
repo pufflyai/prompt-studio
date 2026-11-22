@@ -74,7 +74,12 @@ export function createInstances(root: string) {
     try {
       const binary = await resolveExecutable({ binary: instance.binary });
       const result = await runCli(binary, directory(id), environment(instance), ["server", "status", "--json"]);
+      const reported = /"state":\s*"(\w+)"/.exec(result.stdout)?.[1];
+      // The CLI exits 0 only for a healthy controller. Only a reported exit proves a stop; an unhealthy,
+      // timed-out or failed status check leaves the controller state unknown.
       instance.state = result.exitCode === 0 ? "running" : "stopped";
+      if (result.exitCode !== 0 && reported !== "not_running" && reported !== "stale")
+        instance.error = `Controller status: ${reported ?? (result.stderr.trim() || "unknown")}.`;
     } catch (error) {
       instance.state = "stopped";
       instance.error = String(error);

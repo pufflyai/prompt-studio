@@ -63,7 +63,7 @@ test("a failed launch keeps the instance state when the rollback cannot confirm 
 shift 2
 case "$1 $2" in
   "server start") mkdir -p "$POCKETCODER_STATE_DIR" && echo '{"pid":1}' > "$POCKETCODER_STATE_DIR/server.json" ;;
-  "server status") exit 1 ;;
+  "server status") [ -f "$POCKETCODER_STATE_DIR/server.json" ] || echo '{"state":"not_running"}'; exit 1 ;;
   "superuser create") echo '{"token":"owner","key":{"expires_at":"2099-01-01T00:00:00Z"}}' ;;
 esac
 `,
