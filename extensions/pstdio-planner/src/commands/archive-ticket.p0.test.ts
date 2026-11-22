@@ -155,7 +155,9 @@ describe("archive ticket", () => {
     });
     const cleanupJobs: Promise<unknown>[] = [];
     ctx.automation.enqueue = async ({ input }) => {
-      cleanupJobs.push(cleanupTicketWorkspacesCommand.run(ctx, { ticketIds: input.params?.ticketIds as string[] }));
+      cleanupJobs.push(
+        Promise.resolve(cleanupTicketWorkspacesCommand.run(ctx, { ticketIds: input.params?.ticketIds as string[] })),
+      );
       return queuedRun();
     };
     const result = await archiveTicketColumnActionCommand.run(ctx, input);
