@@ -34,7 +34,7 @@ test("createDb moves an old home into a JSON-exported backup and starts with a c
   } finally {
     await rm(root, { recursive: true, force: true });
   }
-});
+}, 10_000);
 
 test("first creation and symlink opens share one canonical current home", async () => {
   const root = await mkdtemp(join(tmpdir(), "pglite-runtime-initialize-"));

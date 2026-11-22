@@ -7,7 +7,7 @@ import type { WorkbenchPageRegistryStoreState } from "../../registries/pages/pag
 import { resourceMatchesConstraint } from "../../shared/contributions/reference-id";
 import type { WorkbenchCore } from "../../workbench-core-types";
 import { requirePanelOpen } from "../shell/panel-open-policy";
-import { resourceViewerBinding } from "./displayed-viewers";
+import { resourceViewerBinding, viewerResourceKey } from "./displayed-viewers";
 
 type State = WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>;
 const targetBinding = (core: WorkbenchCore, target: NavigationTargetPage | NavigationTargetPanel, state: State) => {
@@ -54,13 +54,13 @@ export const reusableNavigationViewer = (
   if (!binding) return undefined;
   if (!resourceMatchesConstraint(binding, target.resource))
     throw new Error("Viewer does not accept this resource kind");
-  const key = core.pages.resourceReferenceKey(target.resource);
+  const key = core.pages.resourceReferenceKey(target.resource, binding);
   const page = state.pages[state.activePageId ?? ""];
   const match = state.placements.find((placement) => {
     if (!placement.value.resource || resourceViewerBinding(core, placement.identity)?.kind !== "binding") return false;
     const region = actualRegion(core, placement.identity) ?? placement.region;
     if (region === "main" && isSingleViewPage(page) && !isPageContent(page, placement.identity)) return false;
-    return core.pages.resourceReferenceKey(placement.value.resource) === key;
+    return viewerResourceKey(core, placement.value.resource, placement.identity) === key;
   });
   if (!match) return undefined;
   const panel = target.panel;

@@ -16,6 +16,20 @@ const config = defineConfig({
       "iso-blink": { "50%": { opacity: 0 } },
       "iso-flash": { "30%": { filter: "brightness(1.35)" } },
       "rec-spin": { to: { transform: "rotate(360deg)" } },
+      "hint-bob": { "50%": { transform: "translateY(3px)" } },
+      "iso-wave": {
+        "0%": { transform: "translate(-50%, -50%) scale(.3)", opacity: 1 },
+        "100%": { transform: "translate(-50%, -50%) scale(4.5)", opacity: 0 },
+      },
+      "iso-wiggle": {
+        "0%, 100%": { transform: "translate(-50%, -55%) rotate(-14deg) scale(1.1)" },
+        "50%": { transform: "translate(-50%, -55%) rotate(14deg) scale(1.1)" },
+      },
+      "tp-arrive": {
+        "0%": { opacity: 0, boxShadow: "0 0 0 2px var(--chakra-colors-illustration-accent)" },
+        "30%": { opacity: 1 },
+        "100%": { boxShadow: "0 0 0 0 transparent" },
+      },
       "rec-turn": {
         from: { transform: "rotateX(-22deg) rotateY(0deg)" },
         to: { transform: "rotateX(-22deg) rotateY(360deg)" },

@@ -1,4 +1,4 @@
-import { afterAll, afterEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, spyOn, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -103,6 +103,43 @@ describe("startup default extensions", () => {
       expect(backgroundSettled).toBe(true);
     } finally {
       preparation.resolve();
+    }
+  });
+
+  test.each([
+    false,
+    true,
+  ])("continues other projects after Workspaces recovery fails (prepared: %s)", async (prepared) => {
+    process.env.PSTDIO_HOME = join(tempRoot, `home-workspace-list-failure-${prepared}`);
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+    delete process.env.PSTDIO_DISABLE_EMBED_MANIFEST;
+    const { deps, close } = await createTestApp({
+      databasePath: join(tempRoot, `workspace-list-db-${prepared}`),
+      storageRoot: join(tempRoot, `workspace-list-storage-${prepared}`),
+    });
+    const first = await deps.projectService.create({ name: "Unavailable project" });
+    const second = await deps.projectService.create({ name: "Healthy project" });
+    const list = spyOn(deps.workspaceService, "listForProviderReconciliation").mockImplementation(async (projectId) => {
+      if (projectId === first.id) throw new Error("Workspace listing unavailable");
+      return [];
+    });
+    const activate = spyOn(deps.extensionRuntimeCatalog, "activate");
+    const background: Promise<void>[] = [];
+    try {
+      await runStartupTasks(deps, undefined, {
+        ...(prepared ? { prepareDefaultExtensions: async () => {} } : {}),
+        recoverOrphanedSessions: async () => {},
+        onBackgroundTask: (task) => {
+          background.push(task);
+          void task.catch(() => {});
+        },
+      });
+      await Promise.all(background);
+      expect(activate.mock.calls.map(([projectId]) => projectId)).toContain(second.id);
+    } finally {
+      list.mockRestore();
+      activate.mockRestore();
+      await close();
     }
   });
 

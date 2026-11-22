@@ -5,6 +5,8 @@ import {
   createExtensionProcessEnvironment,
   type InvocationScope,
 } from "pstdio-extensions";
+import { redactSensitiveText } from "pstdio-logging";
+import { apiLogger } from "../../lib/logger";
 import { resolveProcessEnvironmentCommand } from "./process-command";
 import { signalProcessTree } from "./process-group";
 
@@ -96,6 +98,7 @@ const createStopGate = (kill: () => Promise<void>) => {
 };
 
 export interface ProcessApiOptions {
+  extensionId?: string;
   /** Invocation that owns the spawned children. Absent for host-level probes. */
   scope?: InvocationScope;
   resolveCwd?: (input: ProcessRunInput) => Promise<string>;
@@ -130,7 +133,7 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
     input = await resolveInput(input);
     ensureActive();
 
-    const env = createExtensionProcessEnvironment(process.env, input.env);
+    const env = createExtensionProcessEnvironment(process.env, input.env, process.platform, options.extensionId);
     const resolved = resolveProcessEnvironmentCommand(input.command, env, input.cwd);
     // Unix needs a separate process group to stop descendants. Windows detachment
     // disconnects the console instead and loses output from commands inside npm shims.
@@ -176,7 +179,20 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
     collect.catch(() => {});
 
     try {
-      return await Promise.race([collect, gate.failed]);
+      const result = await Promise.race([collect, gate.failed]);
+      if (result.exitCode !== 0 && options.extensionId) {
+        const secrets = Object.values(env).filter((value): value is string => Boolean(value));
+        apiLogger.error(
+          {
+            event: "extension.process.failed",
+            extensionId: options.extensionId,
+            exitCode: result.exitCode,
+            stderr: redactSensitiveText(result.stderr, secrets, 4096).trim(),
+          },
+          "Extension subprocess exited unsuccessfully.",
+        );
+      }
+      return result;
     } finally {
       await gate.finished;
       running.delete(gate.stop);
@@ -196,7 +212,7 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
     async spawnDetached(input) {
       input = await resolveInput(input);
       ensureActive();
-      const env = createExtensionProcessEnvironment(process.env, input.env);
+      const env = createExtensionProcessEnvironment(process.env, input.env, process.platform, options.extensionId);
       const resolved = resolveProcessEnvironmentCommand(input.command, env, input.cwd);
       const proc = spawner(resolved.argv, {
         detached: true,

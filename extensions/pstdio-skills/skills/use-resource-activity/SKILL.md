@@ -9,7 +9,7 @@ Requires the host and SDK providing extension API 0.4.2.
 
 Publish on the resource being worked on. A session is context for the work, not an Activity destination. Resource owners opt into discussion, changes, and outcomes; sessions retain their conversation without Activity.
 
-Use the complete resource reference: projectId, extensionId, type, and stable id. Labels and shorthands are not identity. For Planner, read the ticket with `pst tickets panel --id PS-12` and use its stable `id`, the project ID, and `pstdio.pstdio-planner` as the owner.
+Use the complete resource reference: projectId, extensionId, type, and stable id. Labels and shorthands are not identity. For Planner, read the ticket with `pst pstdio.planner get-ticket --id PS-12` and use its stable `id`, the project ID, and `pstdio.planner` as the owner.
 
 ## Read context
 
@@ -81,4 +81,4 @@ Retry the same handoff entry after failure. Its comment remains saved and its se
 
 New outcomes use Activity; do not create a duplicate Reports outcome. Historical RP references remain readable through Reports compatibility. A resource owner can migrate historical evidence with `ctx.activity.importEntry`; only the resource owner can import original authorship and timestamps.
 
-For Planner history, run `pst pstdio-planner migrate-ticket-outcomes --id PS-12` while the Reports compatibility extension is installed. It preserves bodies, files, original authors, timestamps, revision references and RP identities, then replaces Reports bodies with links to the verified Activity entries. The command can resume after interruption. New Planner submissions and reviews work without Reports installed. Reports with no unambiguous target remain readable in compatibility storage.
+For Planner history, run `pst pstdio.planner migrate-ticket-outcomes --id PS-12` while the Reports compatibility extension is installed. It preserves bodies, files, original authors, timestamps, revision references and RP identities, then replaces Reports bodies with links to the verified Activity entries. The command can resume after interruption. New Planner submissions and reviews work without Reports installed. Reports with no unambiguous target remain readable in compatibility storage.

@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import { gzipSync } from "node:zlib";
+import { createFontArchive } from "./archive-fonts";
 import { ASSET_TYPES } from "./bundle";
 import type { CanvasEntry, FrameManifest } from "./manifest";
 
@@ -20,10 +21,10 @@ export const metafileInputs = (root: string, metafile: Metafile) =>
 
 // Module files are named by content, so an existing file already holds these bytes. A new one
 // appears whole, because readers may load modules while a build runs.
-const writeModule = async (path: string, code: string) => {
+const writeModule = async (path: string, content: () => string) => {
   if (existsSync(path)) return;
   const temporary = `${path}.${randomUUID()}.tmp`;
-  await writeFile(temporary, encode(code));
+  await writeFile(temporary, content());
   await rename(temporary, path);
 };
 
@@ -102,16 +103,19 @@ export const archiveBuild = async (input: {
   const frames: FrameManifest = { entry: "", catalog: "", sources: {}, modules: {}, styles: [] };
   const chunkFor = new Map<string, string>();
   await mkdir(join(out, "modules"), { recursive: true });
+  const archiveFonts = createFontArchive(frames.modules, (file, data) => writeModule(join(out, file), () => data));
   for (const [path, output] of outputs) {
     const name = outputName(path);
+    if (!name.endsWith(".css") && !name.endsWith(".js")) continue;
     const raw = inlineAssets(await readFile(join(staging, name), "utf8"), assets);
-    const code = name.endsWith(".js") ? rewriteImports(raw, names) : raw;
+    const style = name.endsWith(".css") ? await archiveFonts(raw) : undefined;
+    const code = style?.code ?? rewriteImports(raw, names);
     const file = `modules/${createHash("sha256").update(code).digest("hex")}.txt`;
-    await writeModule(join(out, file), code);
+    await writeModule(join(out, file), () => encode(code));
     const bytes = Buffer.byteLength(code);
-    if (name.endsWith(".css")) {
+    if (style) {
       frames.styles.push(name);
-      frames.modules[name] = { file, imports: [], dynamicImports: [], bytes };
+      frames.modules[name] = { file, imports: style.imports, dynamicImports: [], bytes };
       continue;
     }
     frames.modules[name] = moduleEntry(root, output, file, bytes);

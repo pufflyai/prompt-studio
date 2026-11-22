@@ -37,6 +37,23 @@ const registerBackgroundTask = (task: Promise<void>, options?: StartupTaskOption
   );
 };
 
+const recoverProjectWorkspaces = async <T>(
+  projectId: string,
+  signal: AbortSignal | undefined,
+  recover: () => Promise<T>,
+) => {
+  try {
+    signal?.throwIfAborted();
+    return await recover();
+  } catch (err) {
+    signal?.throwIfAborted();
+    apiLogger.warn(
+      { err, event: "startup.workspace_recovery.error", project_id: projectId },
+      "Workspace recovery failed during startup",
+    );
+  }
+};
+
 const reconcileProjectWorkspaces = (deps: RouteDeps, projectIds: string[], signal?: AbortSignal) => {
   return Promise.allSettled(
     projectIds.map(async (projectId) => {
@@ -84,15 +101,17 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortS
     !hasCombinedWorkspaces &&
     (
       await Promise.all(
-        projects.map(async ({ id }) => {
-          const records = await deps.extensionService.listProjectExtensionInstances(id);
-          return (
-            records.some(
-              ({ instance, installedSource }) =>
-                instance.enabled && installedSource.extension_id === "pstdio.git-workspaces",
-            ) || (await needsBuiltInGitRecovery(deps, id, records))
-          );
-        }),
+        projects.map(({ id }) =>
+          recoverProjectWorkspaces(id, signal, async () => {
+            const records = await deps.extensionService.listProjectExtensionInstances(id);
+            return (
+              records.some(
+                ({ instance, installedSource }) =>
+                  instance.enabled && installedSource.extension_id === "pstdio.git-workspaces",
+              ) || (await needsBuiltInGitRecovery(deps, id, records))
+            );
+          }),
+        ),
       )
     ).some(Boolean);
 
@@ -200,10 +219,12 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
     defaultExtensionPreparation.then(async (installed) => {
       await adoptExtractedDefaultTools(deps, projectIds, signal, ["pstdio-terminal"]);
       for (const projectId of projectIds)
-        await adoptWorkspacesTool(
-          deps,
-          projectId,
-          installed.map(({ targetPath, sourceHash }) => ({ path: targetPath, hash: sourceHash })),
+        await recoverProjectWorkspaces(projectId, signal, () =>
+          adoptWorkspacesTool(
+            deps,
+            projectId,
+            installed.map(({ targetPath, sourceHash }) => ({ path: targetPath, hash: sourceHash })),
+          ),
         );
       await provisionRecoveredWorkspaces(deps, projectIds, signal);
       for (const projectId of projectIds) {
