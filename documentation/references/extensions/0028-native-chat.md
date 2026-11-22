@@ -187,7 +187,9 @@ preserves newer typing alongside the recovered bodies. Failed, denied or absent
 browser storage reports an error and never acknowledges recovery. Providers must
 keep their recovery source until this callback confirms it. The browser mode cannot
 be combined with `loadDraft` or `saveDraft` callbacks. It requires the additive
-`view.chat.browser-draft.v1` capability and a supporting published SDK and host.
+`view.chat.browser-draft.v1` capability, an `engines.pstdio` minimum of `^0.5.1`,
+and a supporting published SDK and host. Released SDK 0.48.0 exposes API 0.5.0 and
+does not contain this option.
 
 Sessions uses this generic browser mode. Its separate `legacySessionDraft` option
 only transfers an older host Sessions draft after a successful save; it does not
