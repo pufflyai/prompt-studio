@@ -46,6 +46,7 @@ export const WorkbenchPanelMenuButton = (props: {
       closing.map((candidate) => candidate.key),
       nextOpen ? entry.key : undefined,
     );
+    if (closing.some((candidate) => candidate.placement.widgetId === floatingMenu.id)) floatingMenu.select(undefined);
     if (nextOpen) selectViewMenuPlacement(workbench, entry.placement.widgetId);
   };
   if (!hasContent) return null;
@@ -71,7 +72,7 @@ export const WorkbenchPanelMenuButton = (props: {
       );
       if (current?.side !== side) return;
       openOwnedViewMenu(workbench, owner.widgetId, entry.id);
-      if (!view.canAttach) floatingMenu.select(entry.placement.widgetId);
+      floatingMenu.select(entry.placement.widgetId);
     },
   }));
   const button = floating ? (

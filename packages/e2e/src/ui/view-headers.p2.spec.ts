@@ -183,6 +183,35 @@ headers(
       await expect(toolbar(page, "main").getByRole("textbox", { name: "Letter search" })).toBeVisible();
       await toolbar(page, "main").getByRole("textbox", { name: "Letter search" }).fill("keep while docking");
       await expect(main.locator('[data-workbench-panel-menu="main-right-menu"]')).toBeVisible();
+      await move(
+        page,
+        main.getByRole("button", { name: "Close Main right menu", exact: true }),
+        "Open Letter browser on the bottom",
+      );
+      await expect(main.locator('[data-workbench-panel-menu="main-bottom-menu"]')).toBeVisible();
+      await main.getByRole("button", { name: "Close Main bottom menu: Letter browser", exact: true }).click();
+      await page.setViewportSize({ width: 1600, height: 400 });
+      await expect(page.getByRole("dialog", { name: "Letter browser", exact: true })).not.toBeVisible();
+      await move(
+        page,
+        main.getByRole("button", { name: "Open Main bottom menu: Letter browser", exact: true }),
+        "Open Letter browser on the right",
+      );
+      await expect(main.locator('[data-workbench-panel-menu="main-right-menu"]')).toBeVisible();
+      await move(
+        page,
+        main.getByRole("button", { name: "Close Main right menu", exact: true }),
+        "Open Letter browser on the bottom",
+      );
+      await expect(page.getByRole("dialog", { name: "Letter browser", exact: true })).toBeVisible();
+      await page.keyboard.press("Escape");
+      await move(
+        page,
+        main.getByRole("button", { name: "Open Main bottom menu: Letter browser", exact: true }),
+        "Open Letter browser on the right",
+      );
+      await expect(main.locator('[data-workbench-panel-menu="main-right-menu"]')).toBeVisible();
+      await page.setViewportSize({ width: 1600, height: 1000 });
       await main.getByRole("button", { name: "Open Main bottom menu", exact: true }).click();
       await expect(main.locator('[data-workbench-panel-menu="main-bottom-menu"]')).toBeVisible();
       await expect(main.locator('[data-workbench-panel-menu="main-right-menu"]')).not.toBeVisible();
