@@ -13,11 +13,11 @@ const viewer = () => ({
 
 export function usePlanWindow(client: PlanClient, filter: ViewFilterGroup, search: string, ready: boolean) {
   const { value: display } = useTimelinePresentation();
-  const scope = JSON.stringify({ filter, search, display });
-  const [window, setWindow] = useState(() => ({ scope, offset: 0, viewer: viewer() }));
+  const scope = JSON.stringify({ filter, search, display, ready });
+  const [window, setWindow] = useState(() => ({ client, scope, offset: 0, viewer: viewer() }));
   let current = window;
-  if (current.scope !== scope) {
-    current = { scope, offset: 0, viewer: viewer() };
+  if (current.scope !== scope || current.client !== client) {
+    current = { client, scope, offset: 0, viewer: viewer() };
     setWindow(current);
   }
   // The viewer clock belongs to this selection, including its subsequent pages.
@@ -36,8 +36,20 @@ export function usePlanWindow(client: PlanClient, filter: ViewFilterGroup, searc
     { events: planEvents },
   );
   const { value, error, retry } = usePlannerQuery(client, query, ready);
-  const plan = ready ? value : undefined;
-  const loading = !plan;
+  const [displayed, setDisplayed] = useState({ client, scope, value });
+  let retained = displayed;
+  if (
+    displayed.client !== client ||
+    displayed.scope !== scope ||
+    (ready && value !== undefined && displayed.value !== value) ||
+    (!ready && displayed.value !== undefined)
+  ) {
+    retained = { client, scope, value: ready ? value : undefined };
+    setDisplayed(retained);
+  }
+  // Keep one bounded window while its neighbour loads, within this exact selection and host only.
+  const plan = ready ? (value ?? retained.value) : undefined;
+  const loading = !ready || !value;
   const move = (direction: "previous" | "next") => {
     if (loading) return;
     const next = adjacentPlanWindow(current.offset, direction, Boolean(plan?.page.cursor));
