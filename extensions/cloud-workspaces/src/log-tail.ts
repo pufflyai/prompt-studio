@@ -10,9 +10,9 @@ const controls = new Map<string, State>([
 ]);
 const escapes: Record<string, State> = { "[": "csi", "]": "osc", P: "string", X: "string", "^": "string", _: "string" };
 
-function stringState(kind: "osc" | "string", escaped: boolean, char: string): State {
-  if (char === "\x9c" || (kind === "osc" && char === "\x07") || (escaped && char === "\\")) return "text";
-  if (char === "\x1b") return kind === "osc" ? "oscEscape" : "stringEscape";
+function stringState(kind: "osc" | "string", escaped: boolean, char: string) {
+  if (char === "\x9c" || (kind === "osc" && char === "\x07") || (escaped && char === "\\")) return "text" as const;
+  if (char === "\x1b") return kind === "osc" ? ("oscEscape" as const) : ("stringEscape" as const);
   return kind;
 }
 

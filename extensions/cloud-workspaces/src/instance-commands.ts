@@ -65,12 +65,15 @@ export function createInstanceCommands(getInstances = instancesFor) {
     async run(ctx, input) {
       const files = catalogFiles(ctx);
       const templates = await Promise.all(input.templates.map((path) => selectedTemplate(files, path)));
-      const instance = await getInstances(ctx.projectId).launch({
-        name: input.name,
-        binary: input.binary,
-        projectRoot: await projectRoot(ctx),
-        manifests: templates.map((template) => template.manifest),
-      });
+      const instance = await getInstances(ctx.projectId).launch(
+        {
+          name: input.name,
+          binary: input.binary,
+          projectRoot: await projectRoot(ctx),
+          manifests: templates.map((template) => template.manifest),
+        },
+        () => ctx.net.findFreePort({ host: "0.0.0.0" }),
+      );
       await ctx.events.emit(changed, {});
       return instance;
     },

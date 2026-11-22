@@ -10,7 +10,7 @@ export function createLabCommands(getInstances = instancesFor) {
     id: "lab.read",
     title: l10n("cloud-workspaces.read", "Read Cloud Workspaces"),
     cli: true,
-    async run(ctx): Promise<LabSnapshot> {
+    async run(ctx) {
       const controller = getInstances(ctx.projectId);
       const instances = await controller.list();
       const saved = await ctx.storage.get<string>("selected-instance");
@@ -49,7 +49,7 @@ export function createLabCommands(getInstances = instancesFor) {
             template: `${machine.template.name}@${machine.template.version}`,
             error: machine.failure?.log_tail ?? machine.reason_code ?? "",
           })),
-      };
+      } satisfies LabSnapshot;
     },
   });
   const select = defineCommand({

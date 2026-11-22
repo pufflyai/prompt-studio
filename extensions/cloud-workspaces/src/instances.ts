@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { resolveExecutable } from "./executable";
 import { inputEnvironment, instanceLimits } from "./instance-inputs";
-import { freePort, runCli } from "./local-cli";
+import { runCli } from "./local-cli";
 import { createOwnerKeys, type OwnerKey } from "./owner-keys";
 
 export interface Instance {
@@ -206,7 +206,7 @@ export function createInstances(root: string) {
       // Keep the controller database and checkpoints so saved conversations and recovery data survive removal.
       await write(id, "instance.json", { ...instance, removed: true });
     },
-    async launch(input: InstanceLaunchInput) {
+    async launch(input: InstanceLaunchInput, allocatePort: () => Promise<number>) {
       const workloadLimits = instanceLimits(input.manifests ?? []);
       const binary = await resolveExecutable(input);
       const id = randomUUID();
@@ -214,9 +214,9 @@ export function createInstances(root: string) {
       let initialized = false;
       try {
         await writeFile(join(directory(id), "empty.env"), "", { mode: 0o600 });
-        const operatorPort = await freePort();
-        let agentPort = await freePort();
-        while (agentPort === operatorPort) agentPort = await freePort();
+        const operatorPort = await allocatePort();
+        let agentPort = await allocatePort();
+        while (agentPort === operatorPort) agentPort = await allocatePort();
         const instance: Instance = {
           id,
           name: input.name,

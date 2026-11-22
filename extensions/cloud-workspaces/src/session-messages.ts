@@ -1,22 +1,22 @@
 import type { ConversationMessageInput, ConversationPart } from "@pstdio/pocketcoder-sdk";
 import type { SessionMessage, SessionMessagePart } from "@pstdio/sdk/extensions";
 
-export function sessionMessages(
-  messages: ConversationMessageInput[],
-  urls: Record<string, string> = {},
-): SessionMessage[] {
+export function sessionMessages(messages: ConversationMessageInput[], urls: Record<string, string> = {}) {
   return messages
     .filter((message) => message.identity?.fact?.type !== "turn_terminal")
-    .map((message, index) => ({
-      id: message.message_id,
-      role: message.role,
-      index,
-      createdAt: Date.parse(message.occurred_at),
-      parts: (message.parts ?? [{ type: "text", text: message.content }]).map((value) => part(value, urls)),
-    }));
+    .map(
+      (message, index) =>
+        ({
+          id: message.message_id,
+          role: message.role,
+          index,
+          createdAt: Date.parse(message.occurred_at),
+          parts: (message.parts ?? [{ type: "text", text: message.content }]).map((value) => part(value, urls)),
+        }) satisfies SessionMessage,
+    );
 }
 
-function part(value: ConversationPart, urls: Record<string, string>): SessionMessagePart {
+function part(value: ConversationPart, urls: Record<string, string>) {
   if (value.type === "tool")
     return {
       type: "tool",
@@ -24,8 +24,9 @@ function part(value: ConversationPart, urls: Record<string, string>): SessionMes
       callId: value.call_id,
       status: value.status === "canceled" ? "failed" : value.status,
       state: { status: value.status, input: value.input, output: value.output_text ?? value.output },
-    };
-  if (value.type === "error") return { type: "error", errorType: "other", message: value.message };
+    } satisfies SessionMessagePart;
+  if (value.type === "error")
+    return { type: "error", errorType: "other", message: value.message } satisfies SessionMessagePart;
   if (value.type === "file") {
     const url = urls[value.file_id];
     if (url)
@@ -36,8 +37,8 @@ function part(value: ConversationPart, urls: Record<string, string>): SessionMes
         mediaType: value.media_type,
         size: value.size_bytes,
         url,
-      };
-    return { type: "text", text: `File: ${value.name} (${value.size_bytes} bytes)` };
+      } satisfies SessionMessagePart;
+    return { type: "text", text: `File: ${value.name} (${value.size_bytes} bytes)` } satisfies SessionMessagePart;
   }
   return value;
 }

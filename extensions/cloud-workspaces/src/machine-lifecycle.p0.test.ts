@@ -37,7 +37,7 @@ test("disposing a restored machine run cancels its conversation probe", async ()
   const probe = Promise.withResolvers<never>();
   const harness = createMachineHarness(() => ({
     ...f.ref.instances,
-    request: async <T>(_instance: string, _path: string, options?: RequestInit): Promise<T> => {
+    request: async (_instance: string, _path: string, options?: RequestInit) => {
       const signal = options?.signal ?? undefined;
       entered.resolve(signal);
       signal?.addEventListener("abort", () => probe.reject(signal.reason), { once: true });
@@ -71,7 +71,7 @@ test("a timed-out machine watch request retries with its existing transport dead
   let reads = 0;
   const watch = createMachineWatch(() => ({
     ...f.ref.instances,
-    request: async <T>(_instance: string, _path: string, options?: RequestInit): Promise<T> => {
+    request: async <T>(_instance: string, _path: string, options?: RequestInit) => {
       expect(options?.signal).toBeDefined();
       reads++;
       if (reads === 2) throw new DOMException("Transport deadline", "TimeoutError");

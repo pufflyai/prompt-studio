@@ -1,7 +1,7 @@
 import type { ArtifactMount, CommandContext } from "@pstdio/sdk/extensions";
 
 export const templateDirectory = ".pstdio/extension-storage/pocketcoder.pocketcoder/templates";
-const object = (value: unknown): Record<string, unknown> => {
+const object = (value: unknown) => {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Expected a Template object.");
   return value as Record<string, unknown>;
 };

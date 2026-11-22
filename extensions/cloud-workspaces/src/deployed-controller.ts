@@ -83,7 +83,7 @@ export const createDeployedWorkspace = (
     signal,
   });
 
-export async function* deployedItems<T>(connections: Connections, path: string): AsyncGenerator<T> {
+export async function* deployedItems<T>(connections: Connections, path: string) {
   const query = new URLSearchParams({ limit: "100" });
   let cursor: string | null;
   do {

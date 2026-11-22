@@ -1,18 +1,4 @@
 import { spawn } from "node:child_process";
-import { createServer } from "node:net";
-
-export async function freePort() {
-  const server = createServer();
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(0, "0.0.0.0", resolve);
-  });
-  const address = server.address();
-  if (!address || typeof address === "string") throw new Error("Could not allocate a listener port.");
-  const port = address.port;
-  await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
-  return port;
-}
 
 export async function runCli(binary: string, directory: string, env: Record<string, string>, args: string[]) {
   // Keep the caller's .env and other instances' settings out of this controller.

@@ -6,7 +6,6 @@ import type {
   HarnessReattachInput,
   HarnessSession,
   HarnessStartInput,
-  SessionMessage,
 } from "@pstdio/sdk/extensions";
 import { type createInstances, PocketCoderHttpError } from "./instances";
 import { readSessionMessages } from "./session-messages";
@@ -80,12 +79,7 @@ async function read(ref: Target, request: Pick<Request, "requestId" | "conversat
   );
 }
 
-export async function fileTurnMessages(
-  ctx: HarnessContext,
-  ref: Target,
-  sessionId: string,
-  signal?: AbortSignal,
-): Promise<SessionMessage[]> {
+export async function fileTurnMessages(ctx: HarnessContext, ref: Target, sessionId: string, signal?: AbortSignal) {
   if (!sessionId) return [];
   return readSessionMessages(
     <T>(path: string) => ref.instances.request<T>(ref.instanceId, path, { signal }),
@@ -99,7 +93,7 @@ export async function startFileTurn(
   ctx: HarnessContext,
   input: HarnessStartInput & { agentSessionId?: string },
   ref: Target,
-): Promise<HarnessSession> {
+) {
   if (await ctx.state.get(key(input.sessionId)))
     throw new Error("Reconnect to the pending request before sending another message.");
   const conversationKey = `file-conversation:${input.sessionId}`;
@@ -114,7 +108,7 @@ export async function startFileTurn(
     });
     return {
       agentSessionId: `${ref.sessionId}:${conversationId}`,
-      done: Promise.resolve({ status: "completed" }),
+      done: Promise.resolve({ status: "completed" as const }),
       stop() {},
     };
   }
@@ -171,7 +165,7 @@ async function observeFileTurn(
   ref: Target,
   pending: Pending,
   firstSubmission: boolean,
-): Promise<HarnessSession> {
+) {
   const controller = new AbortController();
   const signal = input.signal ? AbortSignal.any([input.signal, controller.signal]) : controller.signal;
   const done = (async () => {
@@ -230,14 +224,14 @@ async function observeFileTurn(
       );
     },
     done,
-  };
+  } satisfies HarnessSession;
 }
 
 export async function resumeFileTurn(
   ctx: HarnessContext,
   input: HarnessStartInput & { agentSessionId: string },
   ref: Target,
-): Promise<HarnessSession> {
+) {
   const pending = await ctx.state.get<Pending>(key(input.sessionId));
   if (!pending) return startFileTurn(ctx, input, ref);
   let current = await reconnectFileTurn(ctx, input, ref);

@@ -1,7 +1,6 @@
-import { stripVTControlCharacters } from "node:util";
 import type { ConversationMessage, LogChunk } from "@pstdio/pocketcoder-sdk";
 import type { ExtensionConnectionsApi } from "@pstdio/sdk/extensions";
-import { deployedItems, getDeployed, listDeployed } from "./deployed-controller";
+import { deployedItems, getDeployed } from "./deployed-controller";
 import { createLogTail } from "./log-tail";
 import { machinePath } from "./machines";
 
@@ -10,32 +9,44 @@ type Message = Omit<ConversationMessage, "seq">;
 type OutputMessage = Pick<Message, "role" | "occurred_at" | "parts">;
 const outputLimit = 64 * 1024;
 
-function tail(text: string) {
-  const plain = stripVTControlCharacters(text);
-  if (plain.length <= outputLimit) return plain;
-  return `[Earlier output omitted]\n${plain.slice(-outputLimit)}`;
+function createTestOutput() {
+  const output = createLogTail(outputLimit);
+  let hasSection = false;
+  return {
+    append({ role, occurred_at, parts }: OutputMessage) {
+      if (role === "user") return;
+      for (const part of parts ?? []) {
+        if (part.type !== "tool" || !part.output_text) continue;
+        if (hasSection) output.append("\n\n");
+        output.append(`[${occurred_at}] ${part.name} (${part.status})\n`);
+        output.append(part.output_text);
+        hasSection = true;
+      }
+    },
+    read: output.read,
+  };
 }
 
 export function formatTestOutput(messages: OutputMessage[]) {
-  const sections = messages.flatMap(({ role, occurred_at, parts }) => {
-    if (role === "user") return [];
-    return (parts ?? []).flatMap((part) =>
-      part.type === "tool" && part.output_text
-        ? [`[${occurred_at}] ${part.name} (${part.status})\n${part.output_text}`]
-        : [],
-    );
-  });
-  return tail(sections.join("\n\n"));
+  const output = createTestOutput();
+  for (const message of messages) output.append(message);
+  return output.read();
 }
 
 export async function readTestOutput(connections: Connections, machineId: string) {
   const path = `${machinePath(machineId)}/conversation`;
   const { turns } = await getDeployed<{ turns: { messages: Message[] }[] }>(connections, `${path}/open`);
-  const stored = await listDeployed<ConversationMessage>(connections, path);
+  const output = createTestOutput();
+  const liveIds = new Set<string>();
+  for (const turn of turns) for (const message of turn.messages) liveIds.add(message.message_id);
   // A turn may finish between these reads. Use the stored output if it already committed.
-  const committed = new Set(stored.map((message) => message.message_id));
-  const live = turns.flatMap(({ messages }) => messages).filter((message) => !committed.has(message.message_id));
-  return formatTestOutput([...stored, ...live]);
+  for await (const message of deployedItems<ConversationMessage>(connections, path)) {
+    liveIds.delete(message.message_id);
+    output.append(message);
+  }
+  for (const turn of turns)
+    for (const message of turn.messages) if (liveIds.has(message.message_id)) output.append(message);
+  return output.read();
 }
 
 export async function readWorkspaceLogs(connections: Connections, machineId: string) {

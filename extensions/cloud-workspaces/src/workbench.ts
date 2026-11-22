@@ -17,81 +17,82 @@ import { instancesView, machinesView, templatesView } from "./native-tables";
 import { changed, instanceKind } from "./resources";
 import { workspaceHistoryView } from "./workspace-history-view";
 
-const instanceTab = (label: Localizable<string>): PlacementTabPresentation => ({
-  refreshEvents: [changed],
-  async query(ctx, { renderer }) {
-    const instances = await instancesFor(ctx.projectId).list();
-    const current = renderer.resource?.id;
-    return {
-      label,
-      menu: [
-        {
-          id: "instances",
-          label: l10n("cloud-workspaces.pocketcoder-instances", "PocketCoder instances"),
-          rows: instances
-            .filter((instance) => instance.state === "running" || instance.id === current)
-            .sort((a, b) => Number(b.state === "running") - Number(a.state === "running"))
-            .map((instance) => ({
-              id: instance.id,
-              label: instance.state === "running" ? instance.name : `${instance.name} (stopped)`,
-              icon: "server",
-              selected: instance.id === current,
-              action: {
-                kind: "command" as const,
-                target: { command: labCommands["lab.select"].ref, params: { instance: instance.id } },
+const instanceTab = (label: Localizable<string>) =>
+  ({
+    refreshEvents: [changed],
+    async query(ctx, { renderer }) {
+      const instances = await instancesFor(ctx.projectId).list();
+      const current = renderer.resource?.id;
+      return {
+        label,
+        menu: [
+          {
+            id: "instances",
+            label: l10n("cloud-workspaces.pocketcoder-instances", "PocketCoder instances"),
+            rows: instances
+              .filter((instance) => instance.state === "running" || instance.id === current)
+              .sort((a, b) => Number(b.state === "running") - Number(a.state === "running"))
+              .map((instance) => ({
+                id: instance.id,
+                label: instance.state === "running" ? instance.name : `${instance.name} (stopped)`,
+                icon: "server",
+                selected: instance.id === current,
+                action: {
+                  kind: "command" as const,
+                  target: { command: labCommands["lab.select"].ref, params: { instance: instance.id } },
+                },
+              })),
+          },
+          {
+            id: "manage",
+            rows: [
+              {
+                id: "browse",
+                label: l10n("cloud-workspaces.manage-instances", "Manage instances"),
+                icon: "server",
+                action: { kind: "page" as const, page: instancesPageRef },
               },
-            })),
-        },
-        {
-          id: "manage",
-          rows: [
-            {
-              id: "browse",
-              label: l10n("cloud-workspaces.manage-instances", "Manage instances"),
-              icon: "server",
-              action: { kind: "page" as const, page: instancesPageRef },
-            },
-            ...(current
-              ? [
-                  {
-                    id: "start",
-                    label: l10n("cloud-workspaces.start-instance", "Start instance"),
-                    icon: "play",
-                    action: {
-                      kind: "command" as const,
-                      target: { command: startInstance.ref, params: { instanceId: current } },
+              ...(current
+                ? [
+                    {
+                      id: "start",
+                      label: l10n("cloud-workspaces.start-instance", "Start instance"),
+                      icon: "play",
+                      action: {
+                        kind: "command" as const,
+                        target: { command: startInstance.ref, params: { instanceId: current } },
+                      },
                     },
-                  },
-                  {
-                    id: "stop",
-                    label: l10n("cloud-workspaces.stop-instance", "Stop instance"),
-                    icon: "square",
-                    action: {
-                      kind: "command" as const,
-                      target: { command: stopInstance.ref, params: { instanceId: current } },
+                    {
+                      id: "stop",
+                      label: l10n("cloud-workspaces.stop-instance", "Stop instance"),
+                      icon: "square",
+                      action: {
+                        kind: "command" as const,
+                        target: { command: stopInstance.ref, params: { instanceId: current } },
+                      },
                     },
-                  },
-                  ...(instances.find((instance) => instance.id === current)?.state === "stopped"
-                    ? [
-                        {
-                          id: "remove",
-                          label: l10n("cloud-workspaces.remove-instance", "Remove instance"),
-                          icon: "trash-2",
-                          action: {
-                            kind: "command" as const,
-                            target: { command: removeInstance.ref, params: { instanceId: current } },
+                    ...(instances.find((instance) => instance.id === current)?.state === "stopped"
+                      ? [
+                          {
+                            id: "remove",
+                            label: l10n("cloud-workspaces.remove-instance", "Remove instance"),
+                            icon: "trash-2",
+                            action: {
+                              kind: "command" as const,
+                              target: { command: removeInstance.ref, params: { instanceId: current } },
+                            },
                           },
-                        },
-                      ]
-                    : []),
-                ]
-              : []),
-          ],
-        },
-      ],
-    };
-  },
-});
+                        ]
+                      : []),
+                  ]
+                : []),
+            ],
+          },
+        ],
+      };
+    },
+  }) satisfies PlacementTabPresentation;
 export const instancesPage = definePage({
   id: "instances",
   title: l10n("cloud-workspaces.title", "Cloud Workspaces"),
