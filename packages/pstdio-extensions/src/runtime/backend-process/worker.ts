@@ -111,7 +111,7 @@ export const runBackendWorker = () => {
   const callHost = async (invocationId: string, fnId: string, args: unknown[]): Promise<unknown> => {
     const table = invocations.get(invocationId)?.table;
     if (!table) throw new Error("This invocation has finished.");
-    const exported = table.exportValue(args) as unknown[];
+    const exported = (await table.exportValue(args)) as unknown[];
     return request(invocationId, (requestId) => ({
       v: BACKEND_PROTOCOL_VERSION,
       type: "fn-call",
@@ -145,7 +145,7 @@ export const runBackendWorker = () => {
         invocationId,
         requestId,
         ok: true,
-        value: table.exportValue(result),
+        value: await table.exportValue(result),
       });
     } catch (error) {
       send({
@@ -168,7 +168,7 @@ export const runBackendWorker = () => {
       signal: controller.signal,
       call: async (path: SurfaceStep[], args: unknown[]) => {
         if (!invocations.has(invocationId)) throw new Error("This invocation has finished.");
-        const exported = table.exportValue(args) as unknown[];
+        const exported = (await table.exportValue(args)) as unknown[];
         return request(invocationId, (requestId) => ({
           v: BACKEND_PROTOCOL_VERSION,
           type: "call",

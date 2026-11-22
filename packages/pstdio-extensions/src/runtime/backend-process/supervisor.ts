@@ -47,6 +47,8 @@ export interface BackendWorker {
   /** Resolves as soon as the worker can no longer answer, which can be before its process exits. */
   readonly closed: Promise<void>;
   readonly exited: Promise<number | null>;
+  /** Whether an invocation is running, so an idle worker can be retired without interrupting one. */
+  readonly busy: boolean;
 }
 
 export interface BackendWorkerOptions {
@@ -227,7 +229,16 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     await ready.promise;
     if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "load", entryPath: options.entryPath }))
       throw stopped ?? new BackendUnavailableError("The extension backend could not be reached.");
-    return { definition: await loaded.promise, closed: closed.promise, exited, stop, invoke };
+    return {
+      definition: await loaded.promise,
+      closed: closed.promise,
+      exited,
+      stop,
+      invoke,
+      get busy() {
+        return invocations.size > 0;
+      },
+    };
   } catch (error) {
     await stop();
     throw error;

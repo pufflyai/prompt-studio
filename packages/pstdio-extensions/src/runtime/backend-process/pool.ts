@@ -17,13 +17,31 @@ export const backendWorkerCommand = () =>
  * One lazily started worker per source generation, shared by every project that enables it. A
  * worker that can no longer answer is forgotten, and only the next request starts another: no restart loop.
  */
-export const createBackendWorkerPool = (start: (key: string) => Omit<BackendWorkerOptions, "command">) => {
+// A disabled or removed extension stops being called, so idle retirement also releases its worker.
+const IDLE_MS = 10 * 60_000;
+
+export const createBackendWorkerPool = (
+  start: (key: string) => Omit<BackendWorkerOptions, "command">,
+  { idleMs = IDLE_MS } = {},
+) => {
   const workers = new Map<string, Promise<BackendWorker>>();
   const stopping = new Set<Promise<void>>();
+  const lastUsed = new Map<string, number>();
   let closing: Promise<void> | undefined;
+
+  const retireIdle = async () => {
+    const now = performance.now();
+    for (const [key, starting] of workers) {
+      const worker = await starting.catch(() => undefined);
+      if (worker && !worker.busy && now - (lastUsed.get(key) ?? now) >= idleMs) await retire(key);
+    }
+  };
+  const sweep = setInterval(() => void retireIdle(), Math.max(1, Math.min(idleMs, 60_000)));
+  sweep.unref?.();
 
   const acquire = (key: string) => {
     if (closing) return Promise.reject(new BackendUnavailableError("Extension backends are shutting down."));
+    lastUsed.set(key, performance.now());
     const existing = workers.get(key);
     if (existing) return existing;
     const starting = startBackendWorker({ command: backendWorkerCommand(), ...start(key) });
@@ -40,6 +58,7 @@ export const createBackendWorkerPool = (start: (key: string) => Omit<BackendWork
     const worker = workers.get(key);
     if (!worker) return Promise.resolve();
     workers.delete(key);
+    lastUsed.delete(key);
     const stopped = worker.then(
       (running) => running.stop(),
       () => {},

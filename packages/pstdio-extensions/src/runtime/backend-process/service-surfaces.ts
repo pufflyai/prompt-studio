@@ -164,13 +164,8 @@ export const serviceSurfaces: Members = {
  * later stage adds. Storage entries apply at every `storage.scope(...)` depth.
  */
 export const UNSUPPORTED_CONTEXT_MEMBERS = [
-  "storage.positions",
-  "storage.assets",
   // Offered by the SDK's in-memory test storage only; the host ctx has no records.transaction.
   "storage.records.transaction",
-  "storage.files.urlFor",
-  "storage.collection.attachments.urlFor",
-  "storage.scope.records.id",
   "stream.close",
   "terminal",
   "localDirectory",
@@ -182,7 +177,6 @@ const HOST_ONLY_CONTEXT_MEMBERS = ["resources.removedLinks"] as const;
 export const isUnsupportedContextMember = (path: string) => {
   if (HOST_ONLY_CONTEXT_MEMBERS.some((member) => path === member)) return true;
   const candidates = [path, path.replace(/^storage(\.scope)+(?=\.)/, "storage")];
-  if (path.startsWith("storage.scope.") && path.endsWith(".records.id")) return true;
   return UNSUPPORTED_CONTEXT_MEMBERS.some((member) =>
     candidates.some((candidate) => candidate === member || candidate.startsWith(`${member}.`)),
   );
