@@ -124,6 +124,17 @@ export const createMarmaladeStore = () => {
     },
     commitPreview,
     cancelPreview,
+    async prepareExport() {
+      const current = session;
+      if (!current) throw new Error("The document is not ready. Try again after it loads.");
+      await commitPreview();
+      await current.save();
+      if (session !== current) throw new Error("The document changed. Export it from its current view.");
+      const next = projection.getState();
+      if (next.error || next.hasDrafts || next.pendingCommands)
+        throw new Error("Save the document changes before exporting, then try again.");
+      return next.state.document.id;
+    },
     async retry() {
       const current = session;
       try {
