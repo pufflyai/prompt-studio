@@ -16,6 +16,10 @@ export type BackendSurface =
   | { kind: "async" }
   /** A one-way host method, such as logging. The worker does not wait for it. */
   | { kind: "notify"; check?: "navigationTarget" }
+  /** A synchronous host method that returns a `{ close() }` handle, such as `storage.observe`. */
+  | { kind: "subscribe" }
+  /** A synchronous host method that returns an async iterable, such as `log.follow`. */
+  | { kind: "iterate" }
   | { kind: "object"; members: Record<string, BackendSurface> }
   /** A synchronous scope selection, such as `storage.collection(name)`, evaluated for each host call. */
   | { kind: "factory"; returns: BackendSurface }
@@ -75,7 +79,12 @@ const allowsCall = (surface: BackendSurface, path: SurfaceStep[], kind: "async" 
   for (const [index, step] of path.entries()) {
     const member = memberOf(current, step.name);
     if (!member) return false;
-    if (index === path.length - 1) return member.kind === kind && !step.args;
+    // The worker calls subscribe and iterate members asynchronously and keeps their result locally.
+    if (index === path.length - 1)
+      return (
+        !step.args &&
+        (member.kind === kind || (kind === "async" && (member.kind === "subscribe" || member.kind === "iterate")))
+      );
     if (member.kind === "object" && !step.args) current = member;
     else if (member.kind === "factory" && step.args) current = member.returns;
     else return false;
@@ -122,6 +131,32 @@ export interface SurfaceFacadeChannel {
   signal: AbortSignal;
 }
 
+// The handle exists at once; closing it waits for the host's subscription and closes that.
+const subscription = (opened: Promise<unknown>) => {
+  opened.catch(() => {});
+  return {
+    close() {
+      void opened.then((handle) => (handle as { close?: () => unknown } | undefined)?.close?.()).catch(() => {});
+    },
+  };
+};
+
+// Iteration starts the host call on the first `next()`, so creating the iterable stays synchronous.
+const lazyIterable = (open: () => Promise<unknown>): AsyncIterable<unknown> => ({
+  [Symbol.asyncIterator]() {
+    let inner: Promise<AsyncIterator<unknown>> | undefined;
+    const iterator = () => {
+      inner ??= open().then((iterable) => (iterable as AsyncIterable<unknown>)[Symbol.asyncIterator]());
+      return inner;
+    };
+    return {
+      next: async () => (await iterator()).next(),
+      return: async (value?: unknown) =>
+        inner ? ((await (await inner).return?.(value)) ?? { done: true, value }) : { done: true, value },
+    };
+  },
+});
+
 /** Builds the worker-side object for a surface. No I/O happens until an async member is called. */
 export const createSurfaceFacade = (
   surface: BackendSurface,
@@ -143,6 +178,10 @@ export const createSurfaceFacade = (
             throw new Error("Invalid navigation target.");
           channel.notify(path, args);
         };
+      case "subscribe":
+        return (...args: unknown[]) => subscription(channel.call(path, args));
+      case "iterate":
+        return (...args: unknown[]) => lazyIterable(() => channel.call(path, args));
       case "local":
         return localMember(current);
       case "factory":

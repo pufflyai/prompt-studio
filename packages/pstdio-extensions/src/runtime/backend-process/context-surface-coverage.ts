@@ -8,6 +8,8 @@ const factoryArgs: Record<string, unknown[]> = {
   scope: [{ type: "project" }],
   mount: ["key"],
   attachments: ["item"],
+  text: ["record", "/body"],
+  log: ["entries"],
 };
 
 type Walk = { found: string[]; walked: Set<BackendSurface> };
