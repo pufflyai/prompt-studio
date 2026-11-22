@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { commandRefId } from "@pstdio/sdk/extensions";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { provisionProjectWorkspaces } from "./provision-coordinator";
 import { findWorkspaceProvider, runWorkspaceProviderOperation } from "./workspace-provider-runtime";
@@ -19,7 +20,7 @@ const fixtureManifest = {
   publisher: "fixture",
   version: "0.0.1",
   main: "extension.ts",
-  engines: { pstdio: "^0.4.0 || ^0.5.0" },
+  engines: { pstdio: `^${EXTENSION_API_VERSION}` },
 };
 const fixtureSource = `
 const capabilities = { files: "write", diff: false, merge: false, rebase: false, delete: true };

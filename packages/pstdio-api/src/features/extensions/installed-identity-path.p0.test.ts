@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { installedIdentityPath } from "./installed-identity-path";
 
 test("an instance upgrade selects its recorded directory when both Planner names exist", () => {
@@ -18,7 +19,7 @@ test("an instance upgrade selects its recorded directory when both Planner names
           name,
           version: "1.0.0",
           main: "extension.ts",
-          engines: { pstdio: "^0.5.0" },
+          engines: { pstdio: `^${EXTENSION_API_VERSION}` },
         }),
       );
     }
