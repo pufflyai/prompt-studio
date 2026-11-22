@@ -187,7 +187,7 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
             event: "extension.process.failed",
             extensionId: options.extensionId,
             exitCode: result.exitCode,
-            stderr: redactSensitiveText(result.stderr.trim(), secrets, 4096),
+            stderr: redactSensitiveText(result.stderr, secrets, 4096).trim(),
           },
           "Extension subprocess exited unsuccessfully.",
         );

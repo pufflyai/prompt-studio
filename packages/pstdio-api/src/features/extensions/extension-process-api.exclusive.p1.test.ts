@@ -34,12 +34,15 @@ const survivors = async (marker: string) => {
 };
 
 describe("createProcessApi", () => {
-  test("logs the child exit code and redacted stderr for failed extension processes", async () => {
+  test.each([
+    "fixture-token",
+    "fixture-token\n",
+  ])("logs the child exit code and redacted stderr with credential %j", async (token) => {
     const log = spyOn(apiLogger, "error").mockImplementation(() => {});
     try {
       const result = await createProcessApi({ extensionId: "example.check" }).run({
         command: [process.execPath, "-e", "console.error('login failed', process.env.GH_TOKEN); process.exit(4)"],
-        env: { GH_TOKEN: "fixture-token" },
+        env: { GH_TOKEN: token },
       });
       expect(result.exitCode).toBe(4);
       expect(log).toHaveBeenCalledWith(
