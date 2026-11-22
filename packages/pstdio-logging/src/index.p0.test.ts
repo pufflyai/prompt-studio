@@ -250,6 +250,20 @@ describe("createLogger", () => {
 });
 
 describe("redactSensitiveText", () => {
+  test("redacts an entire granted URL even when its query contains a labeled credential", () => {
+    const url = "postgres://alice:fixture-password@db/app?token=abc";
+    expect(redactSensitiveText(`failed ${url}`, [url])).toBe("failed [Redacted]");
+  });
+
+  test("bounds diagnostics and protects overlapping literals across the cutoff", () => {
+    expect(redactSensitiveText("prefix-abcdefghi", ["abcde", "defghi"], 12)).toBe("prefix-[Reda");
+    expect(redactSensitiveText("eeee", Array(12).fill("e"), 16)).toBe("[Redacted][Redac");
+  });
+  test.each([{}, { AUTH_MODE: "token" }])("protects labeled credentials with environment %j", (env) => {
+    const output = redactSensitiveText("token=credential-fixture-4d9a72", Object.values(env));
+    expect(output).toBe(env.AUTH_MODE ? "[Redacted]=[Redacted]" : "token=[Redacted]");
+  });
+
   test("removes bearer, named, URL, command, and known runtime secrets", () => {
     const secret = "runtime-secret-value";
     const redacted = redactSensitiveText(

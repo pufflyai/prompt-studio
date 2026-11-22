@@ -2,8 +2,10 @@
 
 import { defineCommand, type ExtensionContextBase, params } from "@pstdio/sdk/extensions";
 import { findStoredTicket } from "../../data/resolve";
+import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
 import { withWriteGuard } from "../../data/write-guard";
 import { planChanged } from "../contracts";
+import { initializePlanPlacements } from "./initialize-placements";
 import { movePlanPlacement, planPlacements, readPlanMetadata } from "./placement-store";
 import { deadlineOrNone } from "./plan-store";
 export const moveTicketInPlan = async (
@@ -20,6 +22,8 @@ export const moveTicketInPlan = async (
       return ticket.id;
     };
     const ticketId = await planTicketId(ticketKey);
+    const workflow = usableWorkflowStatuses(await readWorkflowStatuses(ctx));
+    await initializePlanPlacements(ctx.storage, workflow.completedStatusIds);
     const current = (await planPlacements(ctx.storage).get(ticketId))?.deadlineId ?? null;
     const moved = await movePlanPlacement(ctx.storage, {
       ticketId,

@@ -9,7 +9,7 @@ import {
 } from "@pstdio/sdk/extensions";
 import { buildChanged, buildFiles, buildMount, readBuild } from "./src/build-mount";
 import { commands } from "./src/commands";
-import { canvasPage, canvasPanel, canvasResource, canvasView, homePage } from "./src/navigation";
+import { canvasMain, canvasPage, canvasPanel, canvasResource, canvasView, homePage } from "./src/navigation";
 import { canvasTree } from "./src/navigation-tree";
 import { canvasResources } from "./src/resources";
 
@@ -40,7 +40,7 @@ export default defineExtension({
   resourceKinds: [canvasResource],
   commandPaletteResources: [canvasResources],
   views: [canvasView, tree],
-  placements: [canvasPanel],
+  placements: [canvasMain, canvasPanel],
   pages: [homePage, canvasPage],
   navigationItems: [
     defineNavigationItem({

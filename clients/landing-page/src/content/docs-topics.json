@@ -7,6 +7,12 @@
   },
   {
     "section": "Guides",
+    "label": "Features",
+    "path": "/docs/guides/features/",
+    "pages": "documentation/guides/features"
+  },
+  {
+    "section": "Guides",
     "label": "How Prompt Studio works",
     "path": "/docs/guides/concepts/",
     "pages": "documentation/guides/concepts"

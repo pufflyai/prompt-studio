@@ -1,7 +1,9 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
+import { readWorkflowStatuses, usableWorkflowStatuses } from "../../data/workflow-statuses";
 import { withWriteGuard } from "../../data/write-guard";
 import { planChanged } from "../contracts";
 import type { PlannerTicket } from "../planner";
+import { initializePlanPlacements } from "./initialize-placements";
 import { movePlanPlacement, readPlanMetadata } from "./placement-store";
 import { deadlineOrNone } from "./plan-store";
 
@@ -16,6 +18,8 @@ export async function placeNewTicket<T extends PlannerTicket>(
     return await withWriteGuard(ctx, "plan", async () => {
       const plan = await readPlanMetadata(ctx.storage);
       const deadlineId = deadlineOrNone(plan, milestone);
+      const workflow = usableWorkflowStatuses(await readWorkflowStatuses(ctx));
+      await initializePlanPlacements(ctx.storage, workflow.completedStatusIds);
       const ticket = await create();
       created = ticket;
       try {

@@ -47,13 +47,19 @@ export const renderAgent = (scene: Placer, agent: Agent, time: number) => {
     agent.y += (agent.wander[1] - agent.y) * 0.03;
     agent.z += (agent.wander[2] - agent.z) * 0.03;
   }
-  const bob = agent.task ? 0 : Math.sin(time / 600 + agent.phase) * 3;
-  const [sx, sy] = project(scene, agent.x, agent.y, agent.z + bob + (agent.raised ? 8 : 0));
+  const bob = agent.task || agent.held ? 0 : Math.sin(time / 600 + agent.phase) * 3;
+  let [x, y, z] = agent.held ?? [agent.x, agent.y, agent.z];
+  if (!agent.held && agent.offset) {
+    const [ox, oy, oz] = agent.offset;
+    [x, y, z] = [x + ox, y + oy, z + oz];
+    agent.offset = Math.hypot(ox, oy, oz) < 0.5 ? undefined : [ox * 0.86, oy * 0.86, oz * 0.86];
+  }
+  const [sx, sy] = project(scene, x, y, z + bob + (agent.raised ? 8 : 0));
   agent.el.style.transform = `translate(${sx}px,${sy}px)`;
-  scene.place(agent.shadow, agent.x - 9, agent.y - 9, 0, 18, 18);
+  scene.place(agent.shadow, x - 9, y - 9, 0, 18, 18);
   agent.shadow.style.opacity = agent.el.classList.contains("iso-away")
     ? "0"
-    : String(clamp(0.9 - agent.z * 0.008, 0.25, 0.9));
+    : String(clamp(0.9 - z * 0.008, 0.25, 0.9));
 };
 
 /** Height of whatever the box's center rests on, so a dropped box lands on top of it. */

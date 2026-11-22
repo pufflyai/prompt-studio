@@ -9,7 +9,7 @@ export const HomeScene = () => (
   <IsoSceneView
     world={HOME_WORLD}
     setup={setupHomeScene}
-    label="Agents write code, turn each result into a tool on the workbench, then open a new tab and build again."
+    label="Agents improve one tool at a time on the workbench: each writes a change, carries it in and pats it into the panel. A ticket board gains columns, assignees and a list view; then a new tab starts an image editor, a 3D editor and a UI editor."
   />
 );
 export const WhyScene = () => (

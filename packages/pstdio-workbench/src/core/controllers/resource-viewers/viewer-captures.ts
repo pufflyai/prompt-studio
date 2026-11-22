@@ -2,6 +2,7 @@ import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import { observeWorkbenchStoreTransitions } from "../../shared/store/workbench-store";
 import type { WorkbenchCore } from "../../workbench-core-types";
+import { viewerResourceKey } from "./displayed-viewers";
 
 interface CaptureLease {
   identity: PlacementIdentity;
@@ -20,7 +21,7 @@ export const createViewerCaptures = (
     const core = resolveCore();
     for (const [key, lease] of leases) {
       const source = resolveSource(core, lease.identity);
-      const resourceKey = source?.resource ? core.pages.resourceReferenceKey(source.resource) : undefined;
+      const resourceKey = source?.resource ? viewerResourceKey(core, source.resource, lease.identity) : undefined;
       if (source && lease.projectId === core.pages.store.getState().projectId && lease.resourceKey === resourceKey)
         continue;
       lease.current = false;
@@ -44,7 +45,7 @@ export const createViewerCaptures = (
         lease = {
           identity,
           projectId: core.pages.store.getState().projectId,
-          resourceKey: source?.resource ? core.pages.resourceReferenceKey(source.resource) : undefined,
+          resourceKey: source?.resource ? viewerResourceKey(core, source.resource, identity) : undefined,
           current: Boolean(source),
         };
         leases.set(key, lease);

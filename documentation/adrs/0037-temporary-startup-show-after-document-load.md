@@ -32,6 +32,12 @@ window becomes visible. Workbench attachment and native title bar updates still
 wait for that promise. This lets Chromium paint in a visible window. This is a
 temporary workaround, not the intended first-paint ordering.
 
+On a Linux VM with a shared GPU, Electron 43.8.1 also displayed the
+splash without reporting first contentful paint. The runtime answered its
+readiness request while the workbench waited indefinitely. For initial startup
+and recovery, use the lifecycle main document’s DOM readiness and the native
+window’s first show to allow workbench loading. Keep paint timing for measurement.
+
 Initialize lifecycle actions without waiting for animation frames. The lifecycle
 renderer remains mounted under the workbench, where occlusion can pause animation
 frames. Recovery and quit actions must continue to work in that state.

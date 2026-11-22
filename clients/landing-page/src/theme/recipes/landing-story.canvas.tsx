@@ -3,6 +3,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
 import { ExamplesView } from "../../components/sections/examples-view";
 import { WhatIsPromptStudioView } from "../../components/sections/what-is-prompt-studio-view";
+import { PageScroll } from "../../components/workbench/page-scroll";
 import type { ToolExampleId } from "../../content/tool-examples-content";
 
 const Examples = () => {
@@ -16,7 +17,9 @@ const meta = {
   decorators: [
     (Story) => (
       <Box height="100dvh">
-        <Story />
+        <PageScroll>
+          <Story />
+        </PageScroll>
       </Box>
     ),
   ],
@@ -26,7 +29,7 @@ type Story = CanvasFrame<typeof meta>;
 export const WhatIsPromptStudio: Story = {
   id: "theme-landing-chapters--what-is-prompt-studio",
   description:
-    "One scroll of four chapters that alternate scene and text: why, any shape, tools that work together, and yours. Each isometric scene loops on its own while it is on screen.",
+    "Four chapters that alternate scene and text: why, any shape, tools that work together, and yours. Each isometric scene loops on its own while it is on screen.",
 };
 export const ExampleRecordings: Story = {
   id: "theme-landing-chapters--example-recordings",
@@ -39,8 +42,10 @@ export const NarrowChapters: Story = {
   description: "Chapters stack text above the scene and the scenes scale down.",
   decorators: [
     (Story) => (
-      <Box width="80" height="full">
-        <Story />
+      <Box width="80" height="100dvh">
+        <PageScroll>
+          <Story />
+        </PageScroll>
       </Box>
     ),
   ],

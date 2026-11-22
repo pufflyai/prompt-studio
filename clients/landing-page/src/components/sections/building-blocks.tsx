@@ -39,7 +39,7 @@ export const BuildingBlocks = () => {
           <Box css={styles.blockSymbol}>
             <BlockSymbol kind={block.kind} large />
           </Box>
-          <Text as="h3" textStyle="heading/S">
+          <Text as="h4" textStyle="heading/S">
             {block.name}
           </Text>
           <Text textStyle="paragraph/M/regular">{block.detail}</Text>

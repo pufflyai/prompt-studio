@@ -23,6 +23,7 @@ export const Playback = (props: PlaybackProps) => {
   const register = outlet?.setActiveFrame;
   const reportHeight = outlet?.reportHeight;
   const open = outlet?.open;
+  const visible = outlet?.visible ?? true;
   useEffect(() => {
     if (!props.active || !register) return;
     register(props.frameId);
@@ -68,7 +69,7 @@ export const Playback = (props: PlaybackProps) => {
     send.current({ time: saved.time });
   }, [props.restored]);
   useEffect(() => {
-    if (!playing) return;
+    if (!playing || !visible) return;
     let frame = 0;
     let previous = performance.now();
     const tick = (now: number) => {
@@ -85,7 +86,7 @@ export const Playback = (props: PlaybackProps) => {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [playing, loop, rate, start, end]);
+  }, [playing, visible, loop, rate, start, end]);
   const seek = (value: number) => {
     interact();
     setPlaying(false);
