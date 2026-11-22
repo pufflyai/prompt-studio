@@ -5,7 +5,7 @@ import { encodeFileScope } from "../services/extension-files/extension-files";
 import { fileColumns } from "../services/files/files";
 import type { DbClient } from "./connection.pglite";
 import { cleanFileOwnerStaging, copyFileOwnerBytes, fileOwnerUuid } from "./file-owner-copies";
-import { writeFileOwnerExport } from "./file-owner-exports";
+import { createFileOwnerExportWriter } from "./file-owner-exports";
 import { files, skills } from "./schemas.pg";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
@@ -58,57 +58,91 @@ const baseMetadata = (row: typeof files.$inferSelect) => {
 };
 const sameIdentity = (row: typeof files.$inferSelect, expected: Identity) =>
   row.owner === expected.owner && row.scope === expected.scope && row.path === expected.path;
-const restore = async (db: DbClient, database: string, input: Input) => {
-  const result = await db.transaction(async (tx) => {
-    const [original] = await tx.select().from(files).where(eq(files.id, input.file.id)).for("update");
-    if (!original || !isDeepStrictEqual(baseMetadata(original), input.file))
-      throw new Error(`Original file metadata changed: ${input.file.id}`);
-    if (sameIdentity(original, input.identity)) return { file_id: original.id, storage_path: original.storage_path };
-    if (original.owner === null && original.file_kind === input.kind) {
-      await tx.update(files).set(input.identity).where(eq(files.id, original.id));
-      return { file_id: original.id, storage_path: original.storage_path };
-    }
-    const id = fileOwnerUuid(
-      JSON.stringify([
-        input.file.id,
-        input.file.project_id,
-        input.identity.owner,
-        input.identity.scope,
-        input.identity.path,
-      ]),
-    );
-    const storage_path = join(`${database}-owned-files`, id);
-    const [existing] = await tx.select().from(files).where(eq(files.id, id));
-    const metadata = { ...input.file, id, storage_path };
-    if (existing && (!sameIdentity(existing, input.identity) || !isDeepStrictEqual(baseMetadata(existing), metadata)))
-      throw new Error(`File migration UUID collision: ${id}`);
-    await copyFileOwnerBytes(database, id, input.file, input.identity);
-    if (!existing) await tx.insert(files).values({ ...metadata, ...input.identity });
-    return { file_id: id, storage_path };
-  });
-  await writeFileOwnerExport(database, "mappings", input.key, { ...input, converted: result });
+const restore = async (tx: Pick<DbClient, "select" | "update" | "insert">, database: string, input: Input) => {
+  const [original] = await tx.select().from(files).where(eq(files.id, input.file.id)).for("update");
+  if (!original || !isDeepStrictEqual(baseMetadata(original), input.file))
+    throw new Error(`Original file metadata changed: ${input.file.id}`);
+  if (sameIdentity(original, input.identity)) return { file_id: original.id, storage_path: original.storage_path };
+  if (original.owner === null && original.file_kind === input.kind) {
+    await tx.update(files).set(input.identity).where(eq(files.id, original.id));
+    return { file_id: original.id, storage_path: original.storage_path };
+  }
+  const id = fileOwnerUuid(
+    JSON.stringify([
+      input.file.id,
+      input.file.project_id,
+      input.identity.owner,
+      input.identity.scope,
+      input.identity.path,
+    ]),
+  );
+  const storage_path = join(`${database}-owned-files`, id);
+  const [existing] = await tx.select().from(files).where(eq(files.id, id));
+  const metadata = { ...input.file, id, storage_path };
+  if (existing && (!sameIdentity(existing, input.identity) || !isDeepStrictEqual(baseMetadata(existing), metadata)))
+    throw new Error(`File migration UUID collision: ${id}`);
+  await copyFileOwnerBytes(database, id, input.file, input.identity);
+  if (!existing) await tx.insert(files).values({ ...metadata, ...input.identity });
+  return { file_id: id, storage_path };
 };
 export const prepareFileOwnersUpgrade = async (db: DbClient, path: string) => {
   await cleanFileOwnerStaging(path);
-  const snapshots: Array<Awaited<ReturnType<typeof prepareUpgradeSnapshot>>> = [];
+  let writer: Awaited<ReturnType<typeof createFileOwnerExportWriter>> | undefined;
+  const snapshots: Array<{ restore: () => Promise<void>; complete: () => Promise<void> }> = [];
   for (const kind of ["skill", "extension"] as const) {
-    snapshots.push(
-      await prepareUpgradeSnapshot(
-        db,
-        path,
-        {
-          table: `${kind}_files`,
-          keys: kind === "skill" ? ["skill_id", "path"] : ["id"],
-          name: `${kind}-files`,
-          archive: `${kind}-files`,
-        },
-        (row) => restore(db, path, row as unknown as Input),
-        (row) => normalized(db, kind, row),
-      ),
+    const staged: Input[] = [];
+    let stagedBytes = 0;
+    const flush = async () => {
+      if (!staged.length) return;
+      const batch = staged.splice(0);
+      stagedBytes = 0;
+      const mappings = await db.transaction(async (tx) => {
+        const mappings = [];
+        for (const input of batch) mappings.push({ ...input, converted: await restore(tx, path, input) });
+        return mappings;
+      });
+      if (path === ":memory:") return;
+      writer ??= await createFileOwnerExportWriter(path, "mappings");
+      for (let start = 0; start < mappings.length; start += 8) {
+        const results = await Promise.allSettled(
+          mappings.slice(start, start + 8).map((mapping) => writer!.write(mapping.key, mapping)),
+        );
+        const failed = results.find((result) => result.status === "rejected");
+        if (failed) throw failed.reason;
+      }
+      // Original inputs remain durable until every mapping has been published and synced.
+      // A crash before this flush replays the committed batch from those inputs.
+      await writer.flush();
+    };
+    const snapshot = await prepareUpgradeSnapshot(
+      db,
+      path,
+      {
+        table: `${kind}_files`,
+        keys: kind === "skill" ? ["skill_id", "path"] : ["id"],
+        name: `${kind}-files`,
+        archive: `${kind}-files`,
+      },
+      async (row) => {
+        const bytes = Buffer.byteLength(JSON.stringify(row));
+        if (staged.length && stagedBytes + bytes > 4 * 1024 * 1024) await flush();
+        staged.push(row as unknown as Input);
+        stagedBytes += bytes;
+        if (staged.length === 200) await flush();
+      },
+      (row) => normalized(db, kind, row),
     );
+    if (snapshot)
+      snapshots.push({
+        restore: async () => {
+          await snapshot(true);
+          await flush();
+        },
+        complete: snapshot.complete,
+      });
   }
   return async () => {
-    for (const snapshot of snapshots) await snapshot?.(true);
-    for (const snapshot of snapshots) await snapshot?.complete();
+    for (const snapshot of snapshots) await snapshot.restore();
+    for (const snapshot of snapshots) await snapshot.complete();
   };
 };

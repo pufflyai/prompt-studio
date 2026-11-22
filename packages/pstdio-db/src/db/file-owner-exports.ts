@@ -17,13 +17,18 @@ export const readFileOwnerExport = async (database: string, kind: string, id: st
 };
 
 // One-time conversion evidence stays outside the database until explicitly removed.
-export const writeFileOwnerExport = async (database: string, kind: string, id: string, value: unknown) => {
-  if (database === ":memory:") return;
+export const createFileOwnerExportWriter = async (database: string, kind: string) => {
   const root = `${database}-migration-exports`;
   const folder = join(root, `file-${kind}`);
   await mkdir(folder, { recursive: true, mode: 0o700 });
   await flushDirectory(dirname(root));
   await flushDirectory(root);
+  return {
+    write: (id: string, value: unknown) => writeExport(database, kind, id, value),
+    flush: () => flushDirectory(folder),
+  };
+};
+const writeExport = async (database: string, kind: string, id: string, value: unknown) => {
   const target = fileOwnerExportPath(database, kind, id);
   const temporary = `${target}.${randomUUID()}.tmp`;
   try {
@@ -44,5 +49,11 @@ export const writeFileOwnerExport = async (database: string, kind: string, id: s
   } finally {
     await rm(temporary, { force: true });
   }
-  await flushDirectory(folder);
+};
+
+export const writeFileOwnerExport = async (database: string, kind: string, id: string, value: unknown) => {
+  if (database === ":memory:") return;
+  const writer = await createFileOwnerExportWriter(database, kind);
+  await writer.write(id, value);
+  await writer.flush();
 };

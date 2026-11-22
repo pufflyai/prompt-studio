@@ -17,7 +17,22 @@ import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 import { files, skills } from "./schemas.pg";
 
 const hash = (data: Uint8Array) => createHash("sha256").update(data).digest("hex");
-for (const interruption of ["normal", "schema", "restore"])
+const interruptMappingExport = async (store: Awaited<ReturnType<typeof createDb>>, finish: () => Promise<void>) => {
+  const path = store.path;
+  const exports = `${path}-migration-exports`;
+  await mkdir(exports, { recursive: true });
+  await writeFile(join(exports, "file-mappings"), "blocked export directory");
+  await expect(finish()).rejects.toThrow();
+  expect(
+    (await store.pglite.query<{ count: number }>("SELECT count(*)::int AS count FROM files WHERE owner IS NOT NULL"))
+      .rows[0]!.count,
+  ).toBeGreaterThan(0);
+  expect(await Bun.file(`${path}-skill-files-upgrade.jsonl`).exists()).toBe(true);
+  expect(await Bun.file(`${path}-extension-files-upgrade.jsonl`).exists()).toBe(true);
+  await unlink(join(exports, "file-mappings"));
+};
+
+for (const interruption of ["normal", "schema", "restore", "mappings"])
   test(`released file bindings preserve independent contents after ${interruption}`, async () => {
     const root = await mkdtemp(join(tmpdir(), "file-owners-upgrade-"));
     const path = join(root, "database");
@@ -130,6 +145,7 @@ for (const interruption of ["normal", "schema", "restore"])
         const finish = await prepareFileOwnersUpgrade(store.db, store.path);
         await prepareProjectExtensionsUpgrade(store.db, store.path);
         await migrate(store.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
+        if (interruption === "mappings") await interruptMappingExport(store, finish);
         if (interruption === "restore") {
           await store.pglite.exec(
             "CREATE FUNCTION fail_file_restore() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.owner = 'example.files' THEN RAISE EXCEPTION 'interrupt file restore'; END IF; RETURN NEW; END $$; CREATE TRIGGER interrupt_files BEFORE INSERT ON files FOR EACH ROW EXECUTE FUNCTION fail_file_restore()",

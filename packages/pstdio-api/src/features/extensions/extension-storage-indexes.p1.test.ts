@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createDb, createExtensionStorageDBService, createProjectsDBService } from "pstdio-db";
 import { normalizeExtensionSources } from "pstdio-extensions";
 import { installExtensionStorageIndexes } from "./extension-storage-indexes";
@@ -17,7 +18,7 @@ const runtimeFor = (names: [string, string]) =>
         version: "1.0.0",
         publisher: "example",
         main: "./extension.ts",
-        enginesPstdio: "^0.4.0 || ^0.5.0",
+        enginesPstdio: `^${EXTENSION_API_VERSION}`,
       },
       definition: { storageIndexes: [{ name, fields: { title: { path: ["title"], type: "string" as const } } }] },
     })),
@@ -105,7 +106,7 @@ test("an index candidate accepted before invalidation owns the fallback if the n
         publisher: "example",
         version: "1.0.0",
         main: "extension.ts",
-        engines: { pstdio: "^0.4.0 || ^0.5.0" },
+        engines: { pstdio: `^${EXTENSION_API_VERSION}` },
       }),
     );
     await writeFile(join(root, "extension.ts"), "export default {};");
@@ -150,7 +151,7 @@ test("an index candidate accepted before invalidation owns the fallback if the n
               version: "1.0.0",
               publisher: "example",
               main: "./extension.ts",
-              enginesPstdio: "^0.4.0 || ^0.5.0",
+              enginesPstdio: `^${EXTENSION_API_VERSION}`,
             },
             definition: { storageIndexes: [{ name: index, fields: { title: { path: ["title"], type: "string" } } }] },
           },
