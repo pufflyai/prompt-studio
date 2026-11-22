@@ -22,6 +22,53 @@ const tables = [
   "storage_record_indexes",
 ];
 const numeric = new Set(tables.slice(0, 6).concat("storage_record_indexes"));
+const readRestoredTable = async (store: Awaited<ReturnType<typeof createDb>>["pglite"], table: string) => {
+  if (table === "storage_resource_identities" || table === "storage_resource_aliases") {
+    const value =
+      table === "storage_resource_identities"
+        ? "jsonb_build_object('workbench_id',project_id,'resource_id',resource_id,'extension_id',extension_id,'kind',kind,'shorthand',shorthand,'prefix',prefix,'value',value)"
+        : "jsonb_build_object('workbench_id',project_id,'resource_id',resource_id,'shorthand',shorthand,'prefix',prefix,'value',value)";
+    return (
+      await store.query<{ row: Record<string, unknown> }>(`SELECT ${value} AS row
+    FROM resource_numbers WHERE ${table === "storage_resource_identities" ? "current" : "alias"} ORDER BY row`)
+    ).rows.map(({ row }) => row);
+  }
+  if (table === "storage_resource_projections") {
+    return (
+      await store.query<{ row: Record<string, unknown> }>(`SELECT
+    jsonb_build_object('workbench_id',project_id,'extension_id',extension_id,'document_id','records',
+      'revision',numbers_revision) AS row FROM owners WHERE extension_id='pstdio'
+      AND EXISTS(SELECT 1 FROM storage_documents d WHERE d.owner_id=owners.id AND d.document_id='records')
+    ORDER BY row`)
+    ).rows.map(({ row }) => row);
+  }
+  if (table === "storage_record_indexes") {
+    return (
+      await store.query<{
+        row: Record<string, unknown>;
+      }>(`SELECT jsonb_build_object('workbench_id',o.project_id,
+    'extension_id',o.extension_id,'name',entry.key,'definition',entry.value->'definition') AS row
+    FROM owners o CROSS JOIN LATERAL jsonb_each(o.record_indexes) AS entry(key,value) ORDER BY row`)
+    ).rows.map(({ row }) => row);
+  }
+  if (table === "storage_record_projections") {
+    return (
+      await store.query<{
+        row: Record<string, unknown>;
+      }>(`SELECT jsonb_build_object('workbench_id',o.project_id,
+    'extension_id',o.extension_id,'document_id','records','revision',o.revision,'live_count',o.live_count) AS row
+    FROM owners o WHERE EXISTS (SELECT 1 FROM storage_documents d WHERE d.owner_id=o.id AND d.document_id='records') ORDER BY row`)
+    ).rows.map(({ row }) => row);
+  }
+  const expression = numeric.has(table)
+    ? `(to_jsonb(t)-'owner_id') || jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id)`
+    : "to_jsonb(t)";
+  return (
+    await store.query<{ row: Record<string, unknown> }>(
+      `SELECT (${expression})${table === "storage_record_indexes" ? "-'database_name'" : ""} AS row FROM ${table} t ${numeric.has(table) ? "JOIN owners o ON t.owner_id=o.id" : ""} ORDER BY row`,
+    )
+  ).rows.map(({ row }) => row);
+};
 for (const interruption of ["normal", "schema", "restore"])
   test(`document tails, retry identities, records and numbers survive ${interruption} owner upgrade`, async () => {
     const root = await mkdtemp(join(tmpdir(), "document-owner-upgrade-"));
@@ -83,58 +130,7 @@ for (const interruption of ["normal", "schema", "restore"])
       await previous.close();
       closed = true;
       store = await createDb({ path: previous.path });
-      const restored = async () => {
-        const rows = [];
-        for (const table of tables) {
-          if (table === "storage_resource_projections") {
-            rows.push(
-              (
-                await store!.pglite.query<{ row: Record<string, unknown> }>(`SELECT
-              jsonb_build_object('workbench_id',project_id,'extension_id',extension_id,'document_id','records',
-                'revision',numbers_revision) AS row FROM owners WHERE extension_id='pstdio'
-                AND EXISTS(SELECT 1 FROM storage_documents d WHERE d.owner_id=owners.id AND d.document_id='records')
-              ORDER BY row`)
-              ).rows.map(({ row }) => row),
-            );
-            continue;
-          }
-          if (table === "storage_record_indexes") {
-            rows.push(
-              (
-                await store!.pglite.query<{
-                  row: Record<string, unknown>;
-                }>(`SELECT jsonb_build_object('workbench_id',o.project_id,
-              'extension_id',o.extension_id,'name',entry.key,'definition',entry.value->'definition') AS row
-              FROM owners o CROSS JOIN LATERAL jsonb_each(o.record_indexes) AS entry(key,value) ORDER BY row`)
-              ).rows.map(({ row }) => row),
-            );
-            continue;
-          }
-          if (table === "storage_record_projections") {
-            rows.push(
-              (
-                await store!.pglite.query<{
-                  row: Record<string, unknown>;
-                }>(`SELECT jsonb_build_object('workbench_id',o.project_id,
-              'extension_id',o.extension_id,'document_id','records','revision',o.revision,'live_count',o.live_count) AS row
-              FROM owners o WHERE EXISTS (SELECT 1 FROM storage_documents d WHERE d.owner_id=o.id AND d.document_id='records') ORDER BY row`)
-              ).rows.map(({ row }) => row),
-            );
-            continue;
-          }
-          const expression = numeric.has(table)
-            ? `(to_jsonb(t)-'owner_id') || jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id)`
-            : "to_jsonb(t)";
-          rows.push(
-            (
-              await store!.pglite.query<{ row: Record<string, unknown> }>(
-                `SELECT (${expression})${table === "storage_record_indexes" ? "-'database_name'" : ""} AS row FROM ${table} t ${numeric.has(table) ? "JOIN owners o ON t.owner_id=o.id" : ""} ORDER BY row`,
-              )
-            ).rows.map(({ row }) => row),
-          );
-        }
-        return rows;
-      };
+      const restored = () => Promise.all(tables.map((table) => readRestoredTable(store!.pglite, table)));
       expect(await restored()).toEqual(original);
       const countTables = await store.pglite.query<{ database_name: string }>(
         "SELECT entry.value->>'database_name' AS database_name FROM owners o CROSS JOIN LATERAL jsonb_each(o.record_indexes) AS entry(key,value)",

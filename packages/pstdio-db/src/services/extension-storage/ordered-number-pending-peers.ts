@@ -41,16 +41,16 @@ export const pendingOrderedNumberPeers = async (
         AS k(extension_id text, kind text, shorthand text)
     ), alias_matches AS MATERIALIZED (
       SELECT a.resource_id, r.extension_id, r.kind FROM requested r
-        INNER JOIN storage_resource_aliases a
-          ON a.workbench_id = ${owner.workbenchId} AND a.shorthand = r.shorthand
+        INNER JOIN resource_numbers a
+          ON a.alias AND a.project_id = ${owner.workbenchId} AND a.shorthand = r.shorthand
     ) SELECT candidate.resource_id FROM (
-      SELECT i.resource_id FROM storage_resource_identities i
+      SELECT i.resource_id FROM resource_numbers i
         INNER JOIN requested USING(extension_id, kind, shorthand)
-        WHERE i.workbench_id = ${owner.workbenchId}
+        WHERE i.current AND i.project_id = ${owner.workbenchId}
       UNION ALL
       SELECT m.resource_id FROM alias_matches m
-        INNER JOIN storage_resource_identities i
-          ON i.workbench_id = ${owner.workbenchId} AND i.resource_id = m.resource_id
+        INNER JOIN resource_numbers i
+          ON i.current AND i.project_id = ${owner.workbenchId} AND i.resource_id = m.resource_id
             AND i.extension_id = m.extension_id AND i.kind = m.kind
     ) candidate
     WHERE NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(${JSON.stringify(ids)}::jsonb) included(id)

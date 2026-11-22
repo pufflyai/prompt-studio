@@ -4,7 +4,7 @@ import { fingerprint } from "pstdio-sync-contracts";
 import type * as Y from "yjs";
 import type { DbClient } from "../db/connection.pglite";
 import { owners as storageOwners } from "../db/schemas/owners";
-import { storage_documents, storage_resource_aliases, storage_resource_identities } from "../db/schemas.pg";
+import { resource_numbers, storage_documents } from "../db/schemas.pg";
 import { dataMigrationContext } from "./extension-storage/data-migration-context";
 import { runDocumentTransaction } from "./extension-storage/document-persistence";
 import type { createDocumentStorageDBService } from "./extension-storage/document-storage";
@@ -63,8 +63,13 @@ export const upgradeResourceNumbers = async (
       );
       if (!(await tx.select().from(storage_documents).where(where)).length) return;
       // The old projection may lag its source. Rebuild it, rather than carrying ghost rows forward.
-      await tx.delete(storage_resource_aliases).where(eq(storage_resource_aliases.workbench_id, workbenchId));
-      await tx.delete(storage_resource_identities).where(eq(storage_resource_identities.workbench_id, workbenchId));
+      await tx
+        .update(resource_numbers)
+        .set({ current: false, alias: false })
+        .where(eq(resource_numbers.project_id, workbenchId));
+      await tx
+        .delete(resource_numbers)
+        .where(and(eq(resource_numbers.project_id, workbenchId), eq(resource_numbers.canonical, false)));
       await dataMigrationContext.run({ key: "core-resource-number-records-v1", histories: new Map() }, async () => {
         const loaded = await runDocumentTransaction(tx, { owner, address }, async ({ document }) => {
           await importResourceNumbers(records, document);

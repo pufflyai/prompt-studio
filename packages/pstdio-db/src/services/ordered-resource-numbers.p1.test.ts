@@ -114,6 +114,86 @@ test("ordered resource allocation keeps its local floor and converges offline co
   }
 });
 
+test("a pending replacement exposes only its optimistic aliases while keeping the confirmed claim", async () => {
+  const f = await pair(2, true);
+  try {
+    const [first, second] = f.devices;
+    await first!.records.commit({
+      operationId: "seed-nine",
+      edits: [{ recordId: "card", replace: numbered("card", 9) }],
+    });
+    await first!.sync.synchronize();
+    await second!.sync.synchronize();
+    const items = first!.documents.open({ owner: { ...f.owner, extensionId: f.input.extensionId } }).records;
+    await items.commit({ operationId: "item", edits: [{ recordId: "card", replace: { id: "card" } }] });
+    await items.defineIndexes([
+      {
+        name: "items",
+        fields: {
+          id: { path: ["id"], type: "string" },
+          shorthand: { path: ["unused"], type: "string" },
+          aliases: { path: ["unused"], type: "array" },
+        },
+        identity: { kind: "ticket", idField: "id", shorthandField: "shorthand", aliasesField: "aliases" },
+      },
+    ]);
+    for (const aliases of [[], ["PS-9"]]) {
+      await first!.records.commit({
+        operationId: `pending-twenty-${aliases.length}`,
+        edits: [{ recordId: "card", replace: numbered("card", 20, aliases) }],
+      });
+      expect(await first!.numbers.identity({ ...f.input, id: "card" })).toMatchObject({ shorthand: "PS-20", aliases });
+      expect((await first!.numbers.findByShorthand({ ...f.input, shorthand: "PS-9" })).map((r) => r.id)).toEqual(
+        aliases.length ? ["card"] : [],
+      );
+      const where = { field: "aliases", op: "contains" as const, value: "PS-9" };
+      expect((await items.query({ index: "items", where })).records.map((r) => r.recordId)).toEqual(
+        aliases.length ? ["card"] : [],
+      );
+      expect((await items.aggregate({ index: "items", where })).count).toBe(aliases.length);
+    }
+    await first!.sync.synchronize();
+    await second!.sync.synchronize();
+    for (const device of f.devices) {
+      expect(await device.numbers.identity({ ...f.input, id: "card" })).toMatchObject({
+        shorthand: "PS-20",
+        aliases: ["PS-9"],
+      });
+      expect((await device.numbers.allocate(f.input)).shorthand).toBe("PS-21");
+      expect(device.failures).toEqual([]);
+    }
+  } finally {
+    await f.close();
+  }
+});
+
+test("discarding a core projection preserves confirmed number claims for later collision repair", async () => {
+  const f = await pair(1, true);
+  try {
+    const device = f.devices[0]!;
+    await device.records.commit({
+      operationId: "canonical-nine",
+      edits: [{ recordId: "a", replace: numbered("a", 9) }],
+    });
+    await device.sync.synchronize();
+    await device.documents.documents.discard(f.owner, "records");
+    expect(await device.numbers.identity({ ...f.input, id: "a" })).toBeNull();
+    await device.records.commit({
+      operationId: "later-collision",
+      edits: [{ recordId: "z", replace: numbered("z", 9) }],
+    });
+    await device.sync.synchronize();
+    expect(await device.numbers.identity({ ...f.input, id: "z" })).toMatchObject({
+      shorthand: "PS-10",
+      aliases: ["PS-9"],
+    });
+    expect((await device.records.outcome("later-collision"))?.state).toBe("synced");
+    expect(device.failures).toEqual([]);
+  } finally {
+    await f.close();
+  }
+});
+
 test("canonical repairs preserve an independently shown optimistic alias", async () => {
   const f = await pair();
   try {

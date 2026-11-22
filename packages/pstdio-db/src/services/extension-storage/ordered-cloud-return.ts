@@ -3,7 +3,7 @@ import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
 import {
   storage_documents as documents,
-  storage_ordered_resource_numbers as numbers,
+  resource_numbers as numbers,
   owners,
   owners as storageOwners,
 } from "../../db/schemas.pg";
@@ -79,7 +79,11 @@ const labels = async (db: Pick<DbClient, "select">, projectId: string, recordIds
     .select({ id: numbers.resource_id, prefix: numbers.prefix, value: numbers.value })
     .from(numbers)
     .where(
-      and(eq(numbers.workbench_id, projectId), eq(numbers.current, true), inArray(numbers.resource_id, recordIds)),
+      and(
+        eq(numbers.project_id, projectId),
+        eq(numbers.canonical_current, true),
+        inArray(numbers.resource_id, recordIds),
+      ),
     );
   return new Map(rows.flatMap((row) => (row.value === null ? [] : [[row.id, `${row.prefix}-${row.value}`] as const])));
 };

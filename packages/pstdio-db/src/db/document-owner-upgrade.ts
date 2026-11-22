@@ -3,15 +3,15 @@ import { getTableColumns, getTableName, sql } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
+import { storage_resource_aliases, storage_resource_identities } from "./legacy-number-schema";
 import { storage_resource_projections } from "./legacy-records-schema";
 import { restoreNumberRevisions } from "./number-revision-upgrade";
+import { restoreResourceNumbers } from "./resource-numbers-upgrade";
 import {
   storage_current_records,
   storage_document_operations,
   storage_document_updates,
   storage_documents,
-  storage_resource_aliases,
-  storage_resource_identities,
 } from "./schemas.pg";
 import { decodeUpgradeBytes as decodeBytes } from "./upgrade-bytes";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
@@ -104,6 +104,8 @@ const restoreBatch = async (
   batch: Record<string, unknown>[],
 ) => {
   if (source.table === storage_resource_projections) return restoreNumberRevisions(tx, batch);
+  if (source.table === storage_resource_identities || source.table === storage_resource_aliases)
+    return restoreResourceNumbers(tx, getTableName(source.table), batch);
   const table: PgTable = source.table;
   const columns = getTableColumns(table);
   const keys = source.ownerKey ? ["owner_id", ...source.keys] : source.keys;
@@ -182,6 +184,8 @@ export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string) =>
         const row = { ...input };
         for (const column of source.bytes)
           if (row[column] !== null) row[column] = `\\x${Buffer.from(row[column] as Uint8Array).toString("hex")}`;
+        if (source.table === storage_resource_identities || source.table === storage_resource_aliases)
+          row.value = String(row.value);
         return row;
       },
     );

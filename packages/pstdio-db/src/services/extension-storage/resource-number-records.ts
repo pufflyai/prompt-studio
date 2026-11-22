@@ -5,8 +5,7 @@ import { coreOwnerId, type NumberedResource, retainedResourceValue } from "pstdi
 import type { StorageRecord } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import {
-  storage_resource_aliases as aliases,
-  storage_resource_identities as identities,
+  resource_numbers as identities,
   owners as projections,
   resource_prefixes as sequences,
 } from "../../db/schemas.pg";
@@ -63,16 +62,13 @@ export const numberValue = (record: StorageRecord) => {
 export const indexedNumberCandidate = async (tx: Transaction, projectId: string, prefix: string) => {
   const where = and(eq(sequences.project_id, projectId), eq(sequences.prefix, prefix));
   const [sequence] = await tx.select({ next: sequences.next_value }).from(sequences).where(where);
-  const highest = async (table: typeof identities | typeof aliases) => {
-    const [row] = await tx
-      .select({ value: table.value })
-      .from(table)
-      .where(and(eq(table.workbench_id, projectId), eq(table.prefix, prefix)))
-      .orderBy(desc(table.value))
-      .limit(1);
-    return row?.value ?? 0;
-  };
-  return Math.max((sequence?.next ?? 1) - 1, await highest(identities), await highest(aliases)) + 1;
+  const [highest] = await tx
+    .select({ value: identities.value })
+    .from(identities)
+    .where(and(eq(identities.project_id, projectId), eq(identities.prefix, prefix)))
+    .orderBy(desc(identities.value))
+    .limit(1);
+  return Math.max((sequence?.next ?? 1) - 1, highest?.value ?? 0) + 1;
 };
 export const nextIndexedNumber = async (tx: Transaction, projectId: string, prefix: string) => {
   const value = await indexedNumberCandidate(tx, projectId, prefix);
@@ -129,12 +125,9 @@ export const projectNumberRecords = async (
   const ids = records.map((record) => record.recordId);
   for (let offset = 0; offset < ids.length; offset += 1_000) {
     const selected = ids.slice(offset, offset + 1_000);
-    await tx
-      .delete(aliases)
-      .where(and(eq(aliases.workbench_id, owner.workbenchId), inArray(aliases.resource_id, selected)));
-    await tx
-      .delete(identities)
-      .where(and(eq(identities.workbench_id, owner.workbenchId), inArray(identities.resource_id, selected)));
+    const scope = and(eq(identities.project_id, owner.workbenchId), inArray(identities.resource_id, selected));
+    await tx.update(identities).set({ current: false, alias: false }).where(scope);
+    await tx.delete(identities).where(and(scope, eq(identities.canonical, false)));
   }
   const live = records.filter(isNumberRecord).map(numberValue);
   for (const batch of jsonBatches(
@@ -147,10 +140,12 @@ export const projectNumberRecords = async (
       shorthand: `${r.prefix}-${r.value}`,
     })),
   )) {
-    await tx.execute(sql`INSERT INTO storage_resource_identities
-      (workbench_id, resource_id, extension_id, kind, prefix, value, shorthand)
-      SELECT ${owner.workbenchId}, i.resource_id, i.extension_id, i.kind, i.prefix, i.value, i.shorthand
-      FROM jsonb_to_recordset(${batch}::jsonb) AS i(resource_id text, extension_id text, kind text, prefix text, value bigint, shorthand text)`);
+    await tx.execute(sql`INSERT INTO resource_numbers
+      (project_id, resource_id, extension_id, kind, prefix, value, shorthand,current)
+      SELECT ${owner.workbenchId}, i.resource_id, i.extension_id, i.kind, i.prefix, i.value, i.shorthand,true
+      FROM jsonb_to_recordset(${batch}::jsonb) AS i(resource_id text, extension_id text, kind text, prefix text, value bigint, shorthand text)
+      ON CONFLICT(project_id,shorthand,resource_id) DO UPDATE SET current=true,
+        extension_id=excluded.extension_id,kind=excluded.kind,prefix=excluded.prefix,value=excluded.value`);
   }
   // Retained tombstones also carry history to a fresh device before its first allocation.
   const retainedNumbers = await retainedNumberValues(
@@ -170,10 +165,18 @@ export const projectNumberRecords = async (
     ...new Map(history.map((entry) => [JSON.stringify([entry.resource_id, entry.shorthand]), entry])).values(),
   ];
 
-  for (const batch of jsonBatches(uniqueHistory)) {
-    await tx.execute(sql`INSERT INTO storage_resource_aliases (workbench_id, resource_id, shorthand, prefix, value)
-      SELECT ${owner.workbenchId}, i.resource_id, i.shorthand, i.prefix, i.value
-      FROM jsonb_to_recordset(${batch}::jsonb) AS i(resource_id text, shorthand text, prefix text, value bigint)`);
+  const namespaces = new Map([...live, ...retainedNumbers].map((row) => [row.id, row]));
+  for (const batch of jsonBatches(
+    uniqueHistory.map((row) => ({
+      ...row,
+      extension_id: namespaces.get(row.resource_id)?.extensionId ?? "",
+      kind: namespaces.get(row.resource_id)?.kind ?? "",
+    })),
+  )) {
+    await tx.execute(sql`INSERT INTO resource_numbers (project_id, resource_id, shorthand, prefix, value,extension_id,kind,alias)
+      SELECT ${owner.workbenchId}, i.resource_id, i.shorthand, i.prefix, i.value,i.extension_id,i.kind,true
+      FROM jsonb_to_recordset(${batch}::jsonb) AS i(resource_id text, shorthand text, prefix text, value bigint,extension_id text,kind text)
+      ON CONFLICT(project_id,shorthand,resource_id) DO UPDATE SET alias=true`);
   }
   const aliasesById = new Map<string, string[]>();
   for (const entry of uniqueHistory) {
@@ -226,13 +229,13 @@ export const numberCollisions = async (tx: Transaction, owner: StorageOwner, rec
   for (const batch of jsonBatches(
     keys.map((r) => ({ extension_id: r.extensionId, kind: r.kind, shorthand: `${r.prefix}-${r.value}` })),
   )) {
-    const result = await tx.execute(sql`SELECT i.* FROM storage_resource_identities i
+    const result = await tx.execute(sql`SELECT i.* FROM resource_numbers i
       INNER JOIN (SELECT DISTINCT extension_id, kind, shorthand FROM jsonb_to_recordset(${batch}::jsonb)
         AS k(extension_id text, kind text, shorthand text)) k
       USING (extension_id, kind, shorthand)
-      WHERE i.workbench_id = ${owner.workbenchId}
-      AND EXISTS (SELECT 1 FROM storage_resource_identities other
-        WHERE other.workbench_id = i.workbench_id AND other.extension_id = i.extension_id
+      WHERE i.current AND i.project_id = ${owner.workbenchId}
+      AND EXISTS (SELECT 1 FROM resource_numbers other
+        WHERE other.current AND other.project_id = i.project_id AND other.extension_id = i.extension_id
         AND other.kind = i.kind AND other.shorthand = i.shorthand
         AND other.resource_id COLLATE "C" < i.resource_id COLLATE "C")
       ORDER BY i.resource_id COLLATE "C"`);

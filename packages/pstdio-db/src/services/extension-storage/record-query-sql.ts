@@ -47,11 +47,11 @@ export const recordScopeSql = (owner: QuerySqlOwner, index: StorageRecordIndex, 
 const recordIdentitySql = (index: StorageRecordIndex, alias = "storage_current_records", field = "shorthand") => {
   if (!index.identity) throw new Error("Identity index declaration required");
   const id: SQL = recordFieldSql(index, index.identity.idField, alias);
-  return sql`(SELECT core.query_values #> ARRAY[${sqlLiteral(identityQueryKey)}, ${sqlLiteral(field)}] FROM storage_resource_identities AS identity
+  return sql`(SELECT core.query_values #> ARRAY[${sqlLiteral(identityQueryKey)}, ${sqlLiteral(field)}] FROM resource_numbers AS identity
     INNER JOIN owners target_owner ON target_owner.id = ${column("owner_id", alias)}
-    INNER JOIN owners core_owner ON core_owner.project_id = identity.workbench_id AND core_owner.extension_id = 'pstdio'
+    INNER JOIN owners core_owner ON core_owner.project_id = identity.project_id AND core_owner.extension_id = 'pstdio'
     INNER JOIN storage_current_records core ON core.owner_id = core_owner.id AND core.record_id = identity.resource_id
-    WHERE identity.workbench_id = target_owner.project_id AND identity.extension_id = target_owner.extension_id
+    WHERE identity.current AND identity.project_id = target_owner.project_id AND identity.extension_id = target_owner.extension_id
       AND identity.kind = ${sqlLiteral(index.identity.kind)} AND identity.resource_id = ${identityQueryText(id)})`;
 };
 const recordAncestorsSql = (source: SQL, path: SQL[]) => {

@@ -35,9 +35,7 @@ const emptyFailedOwner = (db: DbClient, owner: StorageOwner, id: number) =>
     await tx.execute(sql`DELETE FROM native_document_sources WHERE owner_id=${id}`);
     await tx.execute(sql`DELETE FROM native_document_file_projections WHERE owner_id=${id}`);
     if (owner.extensionId === coreOwnerId) {
-      await tx.execute(sql`DELETE FROM storage_ordered_resource_numbers WHERE workbench_id=${owner.workbenchId}`);
-      await tx.execute(sql`DELETE FROM storage_resource_aliases WHERE workbench_id=${owner.workbenchId}`);
-      await tx.execute(sql`DELETE FROM storage_resource_identities WHERE workbench_id=${owner.workbenchId}`);
+      await tx.execute(sql`DELETE FROM resource_numbers WHERE project_id=${owner.workbenchId}`);
     }
     const [empty] = await tx
       .update(owners)

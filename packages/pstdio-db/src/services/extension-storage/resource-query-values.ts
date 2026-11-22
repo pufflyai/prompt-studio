@@ -36,10 +36,10 @@ export const refreshResourceQueryValues = async (tx: Transaction, owner: Storage
     const selected = ids.slice(offset, offset + 100);
     const result = await tx.execute<{ id: string; shorthand: string; aliases: string[] }>(sql`
       SELECT identity.resource_id AS id, identity.shorthand,
-        coalesce((SELECT jsonb_agg(alias.shorthand ORDER BY alias.shorthand COLLATE "C") FROM storage_resource_aliases alias
-          WHERE alias.workbench_id = identity.workbench_id AND alias.resource_id = identity.resource_id), '[]'::jsonb) AS aliases
-      FROM storage_resource_identities identity
-      WHERE identity.workbench_id = ${owner.workbenchId} AND identity.resource_id IN (${sql.join(
+        coalesce((SELECT jsonb_agg(alias.shorthand ORDER BY alias.shorthand COLLATE "C") FROM resource_numbers alias
+          WHERE alias.alias AND alias.project_id = identity.project_id AND alias.resource_id = identity.resource_id), '[]'::jsonb) AS aliases
+      FROM resource_numbers identity
+      WHERE identity.current AND identity.project_id = ${owner.workbenchId} AND identity.resource_id IN (${sql.join(
         selected.map((id) => sql`${id}`),
         sql`, `,
       )})`);
@@ -62,11 +62,11 @@ export const prepareResourceQueryValues = async (tx: Transaction, owner: Storage
   for (;;) {
     const result = await tx.execute<{ id: string; shorthand: string; aliases: string[] }>(sql`
       SELECT identity.resource_id AS id, identity.shorthand,
-        coalesce((SELECT jsonb_agg(alias.shorthand ORDER BY alias.shorthand COLLATE "C") FROM storage_resource_aliases alias
-          WHERE alias.workbench_id = identity.workbench_id AND alias.resource_id = identity.resource_id), '[]'::jsonb) AS aliases
-      FROM storage_resource_identities identity INNER JOIN storage_current_records source
+        coalesce((SELECT jsonb_agg(alias.shorthand ORDER BY alias.shorthand COLLATE "C") FROM resource_numbers alias
+          WHERE alias.alias AND alias.project_id = identity.project_id AND alias.resource_id = identity.resource_id), '[]'::jsonb) AS aliases
+      FROM resource_numbers identity INNER JOIN storage_current_records source
         ON source.owner_id = ${storageOwnerKey({ ...owner, extensionId: "pstdio" })} AND source.record_id = identity.resource_id
-      WHERE identity.workbench_id = ${owner.workbenchId} AND NOT source.query_values ? ${identityQueryKey}
+      WHERE identity.current AND identity.project_id = ${owner.workbenchId} AND NOT source.query_values ? ${identityQueryKey}
       ORDER BY identity.resource_id COLLATE "C" LIMIT 100`);
     if (!result.rows.length) break;
     await writeResourceQueryValues(tx, owner.workbenchId, result.rows);

@@ -10,7 +10,7 @@ import {
   readOrderedObservation,
 } from "pstdio-sync/records";
 import { fingerprint, type Json, type StorageRecord } from "pstdio-sync-contracts";
-import { storage_resource_identities as identities, owners as projections } from "../../db/schemas.pg";
+import { resource_numbers as identities, owners as projections } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
 import type { OrderedNumberRepair } from "./ordered-number-limits";
 import { type OrderedNumberIndex, repairOrderedNumbers } from "./ordered-number-repair";
@@ -92,7 +92,8 @@ export const repairOptimisticNumbers = async (
         .from(identities)
         .where(
           and(
-            eq(identities.workbench_id, owner.workbenchId),
+            eq(identities.project_id, owner.workbenchId),
+            eq(identities.current, true),
             inArray(identities.resource_id, ids.slice(offset, offset + 500)),
           ),
         );
@@ -133,7 +134,8 @@ export const repairOptimisticNumbers = async (
         .from(identities)
         .where(
           and(
-            eq(identities.workbench_id, owner.workbenchId),
+            eq(identities.project_id, owner.workbenchId),
+            eq(identities.current, true),
             eq(identities.extension_id, number.extensionId),
             eq(identities.kind, number.kind),
             eq(identities.prefix, number.prefix),
@@ -215,7 +217,8 @@ export const projectPendingNumberAlias = async (
   if (!number || !shown || shown.prefix !== number.prefix) return { record, matches: false };
   if (number.value === shown.value) return { record, matches: true };
   const where = and(
-    eq(identities.workbench_id, owner.workbenchId),
+    eq(identities.project_id, owner.workbenchId),
+    eq(identities.current, true),
     eq(identities.extension_id, number.extensionId),
     eq(identities.kind, number.kind),
     eq(identities.prefix, number.prefix),

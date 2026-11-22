@@ -48,7 +48,7 @@ export const installCountIndex = async (
   const kind = literal(index.identity?.kind ?? "");
   const named = (alias: string) =>
     `(${alias}.query_values #> ARRAY[${literal(identityQueryKey)},'shorthand']) IS NOT NULL`;
-  const mapped = (alias: string) => `${alias}.extension_id=${extension} AND ${alias}.kind=${kind}`;
+  const mapped = (alias: string) => `${alias}.current AND ${alias}.extension_id=${extension} AND ${alias}.kind=${kind}`;
   const visible = (id: string) =>
     index.identity ? `EXISTS(SELECT 1 FROM ${identities} WHERE rid=${id} AND mapped AND named)` : "true";
   // Oversize values share a sentinel. Queries fall back to the canonical aggregate
@@ -64,9 +64,9 @@ export const installCountIndex = async (
     );
     await tx.execute(
       sql.raw(`INSERT INTO ${identities}
-      SELECT resource_id,true,${named("c")} FROM storage_resource_identities m
+      SELECT resource_id,true,${named("c")} FROM resource_numbers m
       LEFT JOIN storage_current_records c ON c.owner_id=${coreOwner} AND c.record_id=m.resource_id
-      WHERE m.workbench_id=${workbench} AND ${mapped("m")}`),
+      WHERE m.project_id=${workbench} AND ${mapped("m")}`),
     );
   }
   await tx.execute(
@@ -113,7 +113,7 @@ export const installCountIndex = async (
     );
   const syncFlag = (mapping: boolean) => {
     const test = mapping ? mapped : (v: string) => `${named(v)}`;
-    const scope = (v: string) => (mapping ? `${v}.workbench_id=${workbench}` : `${v}.owner_id=${coreOwner}`);
+    const scope = (v: string) => (mapping ? `${v}.project_id=${workbench}` : `${v}.owner_id=${coreOwner}`);
     const id = mapping ? "resource_id" : "record_id";
     return `old_flag := TG_OP<>'INSERT' AND ${scope("OLD")} AND ${test("OLD")};
       new_flag := TG_OP<>'DELETE' AND ${scope("NEW")} AND ${test("NEW")};
@@ -127,7 +127,7 @@ export const installCountIndex = async (
     `DECLARE old_flag boolean; new_flag boolean; old_row ${records}%ROWTYPE; new_dims jsonb; new_id text; BEGIN
     ${
       index.identity
-        ? `IF TG_TABLE_NAME='storage_resource_identities' THEN ${syncFlag(true)} RETURN NULL; END IF;
+        ? `IF TG_TABLE_NAME='resource_numbers' THEN ${syncFlag(true)} RETURN NULL; END IF;
     ${syncFlag(false)}`
         : ""
     }
@@ -147,10 +147,10 @@ export const installCountIndex = async (
     RETURN NULL;
   END`,
   );
-  for (const table of ["storage_current_records", ...(index.identity ? ["storage_resource_identities"] : [])]) {
+  for (const table of ["storage_current_records", ...(index.identity ? ["resource_numbers"] : [])]) {
     const belongs = (row: string) =>
-      table === "storage_resource_identities"
-        ? `(${row}.workbench_id=${workbench} AND ${mapped(row)})`
+      table === "resource_numbers"
+        ? `(${row}.project_id=${workbench} AND ${mapped(row)})`
         : `(${scope(row)}${index.identity ? ` OR (${row}.owner_id=${coreOwner} AND ${named(row)})` : ""})`;
     for (const [verb, condition] of [
       ["INSERT", belongs("new")],
@@ -167,7 +167,7 @@ export const installCountIndex = async (
 
 export const dropCountIndex = async (tx: Writer, index: StorageRecordIndex, name: string) => {
   if (!index.countBy?.length) return;
-  for (const table of ["storage_current_records", ...(index.identity ? ["storage_resource_identities"] : [])])
+  for (const table of ["storage_current_records", ...(index.identity ? ["resource_numbers"] : [])])
     for (const verb of ["insert", "delete", "update"])
       await tx.execute(sql.raw(`DROP TRIGGER IF EXISTS ${name}_tr_${verb} ON ${table}`));
   await tx.execute(

@@ -1,5 +1,4 @@
 import { type SQLWrapper, sql } from "drizzle-orm";
-import type { PgTable } from "drizzle-orm/pg-core";
 import {
   canonicalExtensionId,
   type ExtensionIdentityRename,
@@ -13,15 +12,7 @@ import { availableIdentityProject, mergeTextOwnerHistories, textOnlyOwnerSql } f
 import { indexNodeFilesFor } from "./extension-storage/index-node-files";
 import { ensureStorageOwner } from "./extension-storage/storage-owner-key";
 
-const projectTables = [s.storage_ordered_resource_numbers];
-const otherTables = [
-  s.owners,
-  s.board_views,
-  s.preferences,
-  s.credentials,
-  s.resource_prefixes,
-  s.storage_resource_identities,
-];
+const otherTables = [s.owners, s.board_views, s.preferences, s.credentials, s.resource_prefixes, s.resource_numbers];
 const ownerColumn = sql.identifier("extension_id");
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 const markerId = '["host-local-migration","first-party-identities-v1"]';
@@ -39,19 +30,14 @@ export class ExtensionIdentityConflictError extends Error {
   }
 }
 
-const projectColumn = (table: (typeof projectTables)[number] | (typeof otherTables)[number]) =>
-  "workbench_id" in table ? table.workbench_id : table.project_id;
+const projectColumn = (table: (typeof otherTables)[number]) => table.project_id;
 const assertNoConflicts = async (tx: Transaction, from: string, to: string, excluded: readonly string[]) => {
   // Each text file has its own document, updates and retry journal. Separate file IDs can
   // retain both histories byte for byte. Ordered streams and shared document IDs cannot.
-  const documents = new Set<PgTable>([s.storage_documents, s.storage_document_updates, s.storage_document_operations]);
   const owners = sql.join(
     [
-      ...projectTables.map((table) => {
-        const textFile = documents.has(table) ? sql`starts_with(document_id, '["text-file",')` : sql`false`;
-        return sql`SELECT workbench_id AS scope, extension_id, ${textFile} AS text_file FROM ${table}
-        WHERE ${ownerColumn} IN (${from}, ${to})`;
-      }),
+      sql`SELECT project_id AS scope,extension_id,false AS text_file FROM resource_numbers
+        WHERE extension_id IN (${from},${to})`,
       sql`SELECT o.project_id AS scope, o.extension_id, ${textOnlyOwnerSql("o")} AS text_file FROM ${s.owners} o WHERE o.extension_id IN (${from}, ${to})`,
       sql`SELECT o.project_id AS scope,o.extension_id,starts_with(d.document_id, '["text-file",') AS text_file
         FROM storage_documents d JOIN owners o ON d.owner_id=o.id WHERE o.extension_id IN (${from},${to})`,
@@ -80,7 +66,7 @@ const assertNoConflicts = async (tx: Transaction, from: string, to: string, excl
     [s.credentials, sql`jsonb_build_array(project_id, contribution_id)`],
     [s.board_views, sql`jsonb_build_array(project_id, board_id)`],
     [s.resource_prefixes, sql`to_jsonb(project_id)`],
-    [s.storage_resource_identities, sql`to_jsonb(workbench_id)`],
+    [s.resource_numbers, sql`to_jsonb(project_id)`],
   ] as const) {
     const result = await tx.execute(sql`SELECT ${scope} AS scope FROM ${table} WHERE ${ownerColumn} IN (${from}, ${to})
       AND ${availableIdentityProject(projectColumn(table), excluded)} GROUP BY 1 HAVING count(DISTINCT extension_id) > 1 LIMIT 1`);
@@ -134,16 +120,6 @@ export const migrateExtensionIdentities = async (
   const candidates = await db.execute(
     sql`SELECT DISTINCT extension_id FROM (${sql.join(
       [
-        ...(pending.length ? projectTables : []).map(
-          (table) =>
-            sql`SELECT extension_id FROM ${table} WHERE workbench_id IN (${sql.join(
-              pending.map((id) => sql`${id}`),
-              sql`, `,
-            )}) AND ${availableSource(table.workbench_id, ownerColumn)} AND ${ownerColumn} IN (${sql.join(
-              oldIds.map((id) => sql`${id}`),
-              sql`, `,
-            )})`,
-        ),
         ...otherTables.map(
           (table) => sql`SELECT extension_id FROM ${table}
             WHERE ${availableSource(projectColumn(table), ownerColumn)} AND ${ownerColumn} IN (${oldOwners})`,
@@ -181,7 +157,7 @@ export const migrateExtensionIdentities = async (
       await db.transaction(async (tx) => {
         await assertNoConflicts(tx, from, to, excluded);
         await mergeTextOwnerHistories(tx, from, to, excluded);
-        for (const table of [...projectTables, ...otherTables])
+        for (const table of otherTables)
           await tx.execute(sql`UPDATE ${table} SET ${ownerColumn} = ${to} WHERE ${ownerColumn} = ${from}
             AND ${availableIdentityProject(projectColumn(table), excluded)}`);
         await tx.execute(sql`UPDATE ${s.files} SET owner = ${to} WHERE owner = ${from}

@@ -39,8 +39,11 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
   documents.storage_resource_projections = await query(`SELECT jsonb_build_object('workbench_id',o.project_id,
     'extension_id',o.extension_id,'document_id','records','revision',o.numbers_revision) AS row FROM owners o
     WHERE o.extension_id='pstdio' AND EXISTS(SELECT 1 FROM storage_documents d WHERE d.owner_id=o.id AND d.document_id='records')`);
-  documents.storage_resource_identities = await query("SELECT to_jsonb(d) AS row FROM storage_resource_identities d");
-  documents.storage_resource_aliases = await query("SELECT to_jsonb(d) AS row FROM storage_resource_aliases d");
+  documents.storage_resource_identities = await query(`SELECT jsonb_build_object('workbench_id',project_id,
+    'resource_id',resource_id,'extension_id',extension_id,'kind',kind,'shorthand',shorthand,'prefix',prefix,'value',value::text)
+    AS row FROM resource_numbers WHERE current`);
+  documents.storage_resource_aliases = await query(`SELECT jsonb_build_object('workbench_id',project_id,
+    'resource_id',resource_id,'shorthand',shorthand,'prefix',prefix,'value',value::text) AS row FROM resource_numbers WHERE alias`);
   // The released reconstruction owns these generated query objects too.
   await dropRecordIndexes(connection.db, sql`true`);
   const ordered: Record<string, Record<string, unknown>[]> = {
@@ -59,6 +62,12 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     ordered[table] = await query(`SELECT (to_jsonb(s)-'owner_id') ||
       jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id) AS row
       FROM ${table} s JOIN owners o ON s.owner_id=o.id`);
+  ordered.storage_ordered_resource_numbers = await query(`SELECT jsonb_build_object('workbench_id',project_id,
+    'resource_id',resource_id,'prefix',prefix,'high_water',max(value)::text,
+    'extension_id',coalesce(max(extension_id)FILTER(WHERE canonical_current),''),
+    'kind',coalesce(max(kind)FILTER(WHERE canonical_current),''),'value',
+    (max(value)FILTER(WHERE canonical_current))::text,'current',bool_or(canonical_current)) AS row
+    FROM resource_numbers WHERE canonical GROUP BY project_id,resource_id,prefix`);
   const orderedSequence = (
     await connection.pglite.query<{ last_value: string; is_called: boolean }>(
       "SELECT last_value,is_called FROM storage_ordered_operations_local_sequence_seq",
@@ -101,7 +110,7 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     )
   ).rows[0]!;
   await connection.pglite.exec(
-    "DROP TABLE resource_links; DROP TABLE resource_prefixes; DROP TABLE storage_resource_aliases; DROP TABLE storage_resource_identities; DROP TABLE storage_current_records; DROP TABLE storage_document_operations; DROP TABLE storage_document_updates; DROP TABLE storage_documents; DROP TABLE native_document_room_updates; DROP TABLE native_document_rooms; DROP TABLE native_document_file_projections; DROP TABLE native_document_sources; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE IF EXISTS storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
+    "DROP TABLE resource_links; DROP TABLE resource_prefixes; DROP TABLE resource_numbers; DROP TABLE storage_current_records; DROP TABLE storage_document_operations; DROP TABLE storage_document_updates; DROP TABLE storage_documents; DROP TABLE native_document_room_updates; DROP TABLE native_document_rooms; DROP TABLE native_document_file_projections; DROP TABLE native_document_sources; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE IF EXISTS storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
   );
   const data = {
     resource_anchors: links,

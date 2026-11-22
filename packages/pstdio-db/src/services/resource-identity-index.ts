@@ -2,11 +2,7 @@ import { and, eq, inArray, or, sql } from "drizzle-orm";
 import type { ResourceIdentity } from "pstdio-api-contracts/extension-kernel";
 import { coreOwnerId } from "pstdio-sync/records";
 import type { DbClient } from "../db/connection.pglite";
-import {
-  storage_resource_aliases as aliases,
-  storage_resource_identities as identities,
-  owners as recordOwners,
-} from "../db/schemas.pg";
+import { resource_numbers as aliases, resource_numbers as identities, owners as recordOwners } from "../db/schemas.pg";
 import { assertStorageOwnerAdmitted } from "../db/storage-admission";
 import { storageOwnerKey } from "./extension-storage/storage-owner-key";
 
@@ -15,7 +11,8 @@ export const createResourceIdentityIndex = (db: DbClient, ready: () => Promise<v
   type Connection = Pick<DbClient, "select">;
   const ownerWhere = (input: Address) =>
     and(
-      eq(identities.workbench_id, input.projectId),
+      eq(identities.project_id, input.projectId),
+      eq(identities.current, true),
       eq(identities.extension_id, input.extensionId),
       eq(identities.kind, input.kind),
     );
@@ -35,7 +32,8 @@ export const createResourceIdentityIndex = (db: DbClient, ready: () => Promise<v
       .from(aliases)
       .where(
         and(
-          eq(aliases.workbench_id, input.projectId),
+          eq(aliases.project_id, input.projectId),
+          eq(aliases.alias, true),
           inArray(
             aliases.resource_id,
             rows.map((row) => row.resource_id),
@@ -80,7 +78,13 @@ export const createResourceIdentityIndex = (db: DbClient, ready: () => Promise<v
         const aliasesForNumber = tx
           .select({ id: aliases.resource_id })
           .from(aliases)
-          .where(and(eq(aliases.workbench_id, input.projectId), eq(aliases.shorthand, input.shorthand)));
+          .where(
+            and(
+              eq(aliases.project_id, input.projectId),
+              eq(aliases.alias, true),
+              eq(aliases.shorthand, input.shorthand),
+            ),
+          );
         const rows = await tx
           .select()
           .from(identities)

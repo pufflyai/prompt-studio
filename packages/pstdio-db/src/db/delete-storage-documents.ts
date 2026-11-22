@@ -17,8 +17,11 @@ export const deleteStorageDocuments = async (db: DbClient, where: SQL) =>
         ids.map((id) => sql`${id}`),
         sql`, `,
       )}) AND extension_id=${coreOwnerId}`;
-      await tx.execute(sql`DELETE FROM storage_resource_aliases WHERE workbench_id IN (${coreProjects})`);
-      await tx.execute(sql`DELETE FROM storage_resource_identities WHERE workbench_id IN (${coreProjects})`);
+      // Discard only the shown projection; the ordered journal still owns confirmed claims.
+      await tx.execute(
+        sql`UPDATE resource_numbers SET current=false,alias=false WHERE project_id IN (${coreProjects})`,
+      );
+      await tx.execute(sql`DELETE FROM resource_numbers WHERE NOT canonical AND project_id IN (${coreProjects})`);
       // Keep the generation monotonic for cursors, cached counts and saved recovery copies.
       await tx
         .update(owners)

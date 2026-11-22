@@ -2,12 +2,7 @@ import { expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 import { coreOwnerId, rememberResourceNumber, resourceNumbers, resourceNumbersDocumentId } from "pstdio-sync/records";
 import { createDb } from "../db/connection.pglite";
-import {
-  storage_current_records,
-  storage_documents,
-  storage_resource_aliases,
-  storage_resource_identities,
-} from "../db/schemas.pg";
+import { resource_numbers, storage_current_records, storage_documents } from "../db/schemas.pg";
 import { createExtensionResourceSequencesDBService } from "./extension-resource-sequences";
 import { createDocumentStorageDBService } from "./extension-storage/document-storage";
 import { ensureStorageOwner } from "./extension-storage/storage-owner-key";
@@ -42,16 +37,26 @@ test("existing numbers and aliases move once into records and retain their alloc
       resourceNumbers(document).set(resource.id, resource);
       rememberResourceNumber(document, resource);
     });
-    await connection.db.insert(storage_resource_identities).values({
-      workbench_id: project.id,
+    await connection.db.insert(resource_numbers).values({
+      project_id: project.id,
+      current: true,
+      prefix: "IT",
+      value: 7,
       resource_id: "z-deleted-by-old-writer",
       extension_id: "example.items",
       kind: "item",
       shorthand: "IT-7",
     });
-    await connection.db
-      .insert(storage_resource_aliases)
-      .values({ workbench_id: project.id, resource_id: "z-deleted-by-old-writer", shorthand: "IT-99" });
+    await connection.db.insert(resource_numbers).values({
+      project_id: project.id,
+      resource_id: "z-deleted-by-old-writer",
+      shorthand: "IT-99",
+      alias: true,
+      prefix: "IT",
+      value: 99,
+      extension_id: "example.items",
+      kind: "item",
+    });
     const input = { projectId: project.id, extensionId: "example.items", kind: "item", prefix: "IT" };
     const service = createExtensionResourceSequencesDBService(connection.db, documents);
     expect(await service.identity({ ...input, id: "old-ticket" })).toEqual({

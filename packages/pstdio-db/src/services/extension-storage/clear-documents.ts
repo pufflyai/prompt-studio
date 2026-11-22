@@ -61,8 +61,7 @@ export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) 
   await tx.delete(storage_document_operations).where(ownerWhere(storage_document_operations));
   await tx.delete(storage_current_records).where(ownerWhere(storage_current_records));
   if (owner.extensionId === coreOwnerId) {
-    await tx.execute(sql`DELETE FROM storage_resource_aliases WHERE workbench_id=${owner.workbenchId}`);
-    await tx.execute(sql`DELETE FROM storage_resource_identities WHERE workbench_id=${owner.workbenchId}`);
+    await tx.execute(sql`DELETE FROM resource_numbers WHERE project_id=${owner.workbenchId}`);
   }
   // Canonical records, stream state, pending saves and receipts share this owner lifetime.
   await tx.delete(owners).where(storageOwnerWhere(owner));

@@ -43,6 +43,7 @@ import { acquirePgliteLock } from "./pglite-lock";
 import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
 import { prepareRecoveryOwnerUpgrade } from "./recovery-owner-upgrade";
 import { prepareResourceLinkOwnerUpgrade } from "./resource-link-owner-upgrade";
+import { prepareCanonicalNumberUpgrade } from "./resource-numbers-upgrade";
 import { prepareResourcePrefixUpgrade } from "./resource-prefix-upgrade";
 import { createRetiredStorageCleanup } from "./retired-storage-cleanup";
 import * as schema from "./schemas.pg";
@@ -248,6 +249,7 @@ export const createDb = async (options?: {
       const finishResourcePrefixUpgrade = await prepareResourcePrefixUpgrade(db, dbPath);
       const finishOwnerIndexUpgrade = await prepareOwnerIndexUpgrade(db, dbPath);
       const finishOwnerProjectionUpgrade = await prepareOwnerProjectionUpgrade(db, dbPath);
+      const finishCanonicalNumberUpgrade = await prepareCanonicalNumberUpgrade(db, dbPath);
       const finishDocumentOwnerUpgrade = await prepareDocumentOwnerUpgrade(db, dbPath);
       const finishNativeOwnerUpgrade = await prepareNativeOwnerUpgrade(db, dbPath);
       const finishRecoveryOwnerUpgrade = await prepareRecoveryOwnerUpgrade(db, dbPath);
@@ -272,6 +274,7 @@ export const createDb = async (options?: {
       await finishRecoveryOwnerUpgrade?.();
       await finishNativeOwnerUpgrade?.();
       await finishDocumentOwnerUpgrade?.();
+      await finishCanonicalNumberUpgrade?.();
       await finishOwnerProjectionUpgrade?.();
       await finishOwnerIndexUpgrade?.();
       await finishPreferencesUpgrade?.();
