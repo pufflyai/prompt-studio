@@ -16,7 +16,8 @@ concurrency:
 
 jobs:
   review:
-    runs-on: ubuntu-latest
+    # The repository's pinned Playwright 1.60 supports Ubuntu 24.04.
+    runs-on: ubuntu-24.04
     env:
       REVIEW_SHA: 7b179d55552bf71686e0deb230a3a4c14bef4f56
       REVIEW_TREE: bbf1577dd9c106e1c8f3b17bb54c6a602f89f805
