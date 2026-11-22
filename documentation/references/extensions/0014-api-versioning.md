@@ -81,6 +81,13 @@ The [native chat view body](0028-native-chat.md) also shares the coordinated API
 step. Released extensions must use a published SDK containing that declaration
 and a host that supports it before adopting it.
 
+The additive native-chat `browserDraft` option and `view.chat.browser-draft.v1`
+capability share the unreleased API 0.5.0 step. Existing `loadDraft` and `saveDraft`
+providers keep their behavior. Publish the supporting SDK and host before separately
+releasing a browser-draft consumer; a local SDK link or tarball only qualifies the
+candidate. The consumer must pin the published SDK and pass `published_extensions`
+before leaving `waiting-for-release`.
+
 Scoped query ownership and invalidation metadata, host-supplied webview query scope,
 command-backed shared editing, storage/session metadata observation and optional
 `HarnessProvider.watchCommandState` also share this API 0.4.0 step. These additions

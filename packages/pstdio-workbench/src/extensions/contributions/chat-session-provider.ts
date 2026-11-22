@@ -5,6 +5,7 @@ import type { RegisterWorkbenchExtensionContributionsInput } from "../host/workb
 import type { createChatCommandBinding } from "./chat-command-binding";
 import { createChatDraftPersistence } from "./chat-draft-persistence";
 import { transferLegacyChatDraft } from "./chat-legacy-draft";
+import { createLocalChatDrafts } from "./chat-local-drafts";
 import type { ChatRecord } from "./chat-renderer-contributions";
 import { createChatSession } from "./chat-session";
 
@@ -24,17 +25,20 @@ export const createChatSessionProvider = (source: {
   const resource = render.instance.resource;
   let drafts: ReturnType<typeof createChatDraftPersistence> | undefined;
   let watchSource: RegisterWorkbenchExtensionContributionsInput | undefined;
+  const readLegacy = () =>
+    body.legacySessionDraft && input.projectId ? input.readLegacySessionDraft?.(input.projectId, draftKey) : undefined;
   const loadDraft = body.loadDraftHandlerId
     ? () =>
         transferLegacyChatDraft(
           () => binding().run(body.loadDraftHandlerId!, {}),
           body.saveDraftHandlerId ? (draft) => drafts!.saveDraft(draft) : undefined,
-          body.legacySessionDraft && input.projectId
-            ? input.readLegacySessionDraft?.(input.projectId, draftKey)
-            : undefined,
+          readLegacy(),
         )
     : undefined;
   const queries = input.queries ?? getWorkbenchQueries(render.workbench);
+  const local = Boolean(body.browserDraft);
+  const acknowledgeRecovery = body.browserDraft?.acknowledgeRecoveryHandlerId;
+  const providerSave = !local && body.saveDraftHandlerId;
   const session = createChatSession({
     queryContext: {
       queries,
@@ -49,19 +53,41 @@ export const createChatSessionProvider = (source: {
     onIdle: source.idle,
     captureWork: () => binding().captureRequired(),
     initial: body.initial,
-    query: (signal) => binding().run(body.queryHandlerId, {}, signal),
-    action: (action) => binding().required(body.actionHandlerId, { action }),
+    query: (signal, values) => binding().run(body.queryHandlerId, local ? { values } : {}, signal),
+    action: (action) =>
+      binding().required(body.actionHandlerId, {
+        action,
+        ...(localDrafts?.clientId && { draftClientId: localDrafts.clientId }),
+      }),
     loadDraft: loadDraft ? () => drafts?.loadDraft?.() ?? loadDraft() : undefined,
-    saveDraft: body.saveDraftHandlerId ? (draft) => drafts!.saveDraft(draft) : undefined,
-    captureSaveDraft: body.saveDraftHandlerId
+    saveDraft:
+      local || providerSave
+        ? async (draft) => {
+            if (localDrafts) localDrafts.save(draft);
+            else await drafts!.saveDraft(draft);
+          }
+        : undefined,
+    captureSaveDraft: providerSave
       ? () => {
           const captured = binding();
           const work = captured.captureRequired();
           return (draft) =>
-            work(() => drafts!.saveDraft(draft, (value) => captured.run(body.saveDraftHandlerId!, { draft: value })));
+            work(() => drafts!.saveDraft(draft, (value) => captured.run(providerSave, { draft: value })));
         }
       : undefined,
-    stageDraft: body.saveDraftHandlerId ? (draft) => drafts!.stageDraft(draft) : undefined,
+    stageDraft:
+      local || providerSave
+        ? (draft) => {
+            if (localDrafts) localDrafts.save(draft);
+            else drafts!.stageDraft(draft);
+          }
+        : undefined,
+    acknowledgeRecovery: acknowledgeRecovery
+      ? async (draft) => {
+          if (localDrafts?.clientId && localDrafts.contains(draft))
+            await binding().required(acknowledgeRecovery, { draft, draftClientId: localDrafts.clientId });
+        }
+      : undefined,
     watch: body.stream
       ? (signal) => {
           const input = source.input();
@@ -74,7 +100,7 @@ export const createChatSessionProvider = (source: {
               projectId: input.projectId,
               resource: renderer.resource,
               slot,
-              params: { renderer, draftKey },
+              params: { renderer, draftKey, ...(localDrafts?.clientId && { draftClientId: localDrafts.clientId }) },
               source: "dashboard",
             },
             signal,
@@ -82,18 +108,22 @@ export const createChatSessionProvider = (source: {
         }
       : undefined,
   });
-  drafts = body.saveDraftHandlerId
+  const storageKey = JSON.stringify([input.chatDraftStorageScope, ...session.query.key.slice(2, 6), key]);
+  const localDrafts = local ? createLocalChatDrafts(storageKey, readLegacy) : undefined;
+  drafts = providerSave
     ? createChatDraftPersistence({
-        key: JSON.stringify([input.chatDraftStorageScope, ...session.query.key.slice(2, 6), key]),
+        key: storageKey,
         load: loadDraft,
-        save: (draft) => binding().required(body.saveDraftHandlerId!, { draft }),
+        save: (draft) => binding().required(providerSave, { draft }),
       })
     : undefined;
+  localDrafts?.restore(session);
   drafts?.restore(session);
   return {
     session,
     queries,
     releaseDrafts: drafts?.dispose,
+    draftClientId: localDrafts?.clientId,
     isSource: (render: WorkbenchPanelRenderInput) =>
       watchSource?.workbench.views.store === render.workbench.views.store,
   };

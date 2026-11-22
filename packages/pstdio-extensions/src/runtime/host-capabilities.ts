@@ -21,6 +21,7 @@ export const dashboardExtensionHostCapabilities = {
     "view.controls.v1": { version: 1, since: "0.26.0" },
     "view.resourceList.v1": { version: 1, since: "0.46.0" },
     "view.chat.v1": { version: 1, since: "0.47.0" },
+    "view.chat.browser-draft.v1": { version: 1, since: "0.48.0" },
     "view.terminal.v1": { version: 1, since: "0.47.0" },
     "view.kanban.v1": { version: 1, since: "0.26.0" },
     "view.data-table.v1": { version: 1, since: "0.26.0" },
@@ -84,6 +85,9 @@ const runtimeRequirements = (runtime: ExtensionRuntime) => [
     ),
   ),
   ...runtime.placements.map((record) => requirement(record, record.id, "placement", "placement.v1")),
+  ...runtime.views
+    .filter((record) => record.contribution.body.kind === "chat" && record.contribution.body.browserDraft)
+    .map((record) => requirement(record, record.id, "view.chat.browserDraft", "view.chat.browser-draft.v1")),
   ...runtime.views
     .filter((record) => record.contribution.body.kind === "tree" && record.contribution.body.page)
     .map((record) => requirement(record, record.id, "view.tree.page", "view.tree.pages.v1")),
