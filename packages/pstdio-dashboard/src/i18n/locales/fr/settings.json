@@ -47,7 +47,13 @@
     "theme": "Thème",
     "themeHelper": "S'applique à tous les projets.",
     "openRelatedResources": "Ouvrir les ressources liées",
-    "openRelatedResourcesHelper": "Ouvrir automatiquement une ressource liée récente de chaque type dans un aperçu non épinglé."
+    "openRelatedResourcesHelper": "Ouvrir automatiquement une ressource liée récente de chaque type dans un aperçu non épinglé.",
+    "defaultSidePanel": "Panneau latéral par défaut",
+    "defaultSidePanelHelper": "S’ouvre lorsque vous cliquez sur la bulle.",
+    "defaultPanel": "Par défaut ({{panel}})",
+    "newSession": "Nouvelle session",
+    "sidePanel": "Panneau latéral",
+    "unavailableSidePanel": "Panneau indisponible"
   },
   "updates": {
     "title": "Canal de mise à jour",

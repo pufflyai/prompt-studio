@@ -47,7 +47,13 @@
     "theme": "主題",
     "themeHelper": "套用至所有專案。",
     "openRelatedResources": "開啟相關資源",
-    "openRelatedResourcesHelper": "自動以未釘選的預覽開啟每種類型的最近相關資源。"
+    "openRelatedResourcesHelper": "自動以未釘選的預覽開啟每種類型的最近相關資源。",
+    "defaultSidePanel": "預設側邊面板",
+    "defaultSidePanelHelper": "點擊氣泡時開啟。",
+    "defaultPanel": "預設（{{panel}}）",
+    "newSession": "新增工作階段",
+    "sidePanel": "側邊面板",
+    "unavailableSidePanel": "面板無法使用"
   },
   "updates": {
     "title": "更新通道",

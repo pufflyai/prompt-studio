@@ -47,7 +47,13 @@
     "theme": "테마",
     "themeHelper": "모든 프로젝트에 적용됩니다.",
     "openRelatedResources": "관련 리소스 열기",
-    "openRelatedResourcesHelper": "각 유형의 최근 관련 리소스를 고정되지 않은 미리보기로 자동으로 엽니다."
+    "openRelatedResourcesHelper": "각 유형의 최근 관련 리소스를 고정되지 않은 미리보기로 자동으로 엽니다.",
+    "defaultSidePanel": "기본 사이드 패널",
+    "defaultSidePanelHelper": "버블을 클릭하면 열립니다.",
+    "defaultPanel": "기본값 ({{panel}})",
+    "newSession": "새 세션",
+    "sidePanel": "사이드 패널",
+    "unavailableSidePanel": "사용할 수 없는 패널"
   },
   "updates": {
     "title": "업데이트 채널",

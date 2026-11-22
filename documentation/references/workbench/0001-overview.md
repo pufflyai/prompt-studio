@@ -91,18 +91,20 @@ Use `SearchableMenu` or resource actions with `isSelected` for shared selection 
 Native Chakra menu choices use `Menu.ItemText` and `Menu.ItemIndicator` with the shared recipe.
 
 The floating Side Panel hides its launcher while open and restores it when closed.
-Drag the bubble to the left, center, or right, or right-click and choose **Align left**,
-**Align center**, or **Align right**. While the bubble has focus, Alt+Shift+Left/Right
-changes alignment. **Settings → Workbench → Appearance → Show Side Panel bubble**
-controls visibility. These user preferences persist across projects and reloads.
+Drag the bubble or unused floating header space to the left, center, or right.
+Both share their saved alignment and move visibly while dragging. Right-click either
+for **Align left**, **Align center**, or **Align right**. While the bubble or floating
+header has focus, Alt+Shift+Left/Right changes alignment. These user preferences
+persist across projects and reloads.
 
-The bubble's **Default panel** context menu offers the Side Panel's available tabs
-and a generic **Side Panel** option. Clicking reuses the chosen tab when present.
+**Settings → Workbench → Appearance** contains **Show Side Panel bubble** and
+**Default Side Panel**. The picker offers the Side Panel's available tabs and a generic
+**Side Panel** option. Changing the default does not require clearing existing tabs.
+Clicking the bubble activates the chosen tab when present.
 If a panel allows only one tab, choosing it restores its default view while keeping its resource.
 An unavailable saved choice opens the generic shell and stays saved for when its
 extension is enabled again. The dashboard defaults to **New session** only while
-Sessions is enabled. Hosts can label their `onOpenSidePanel` action with
-`sidePanelBubbleDefaultLabel`. Hiding the bubble leaves the regular panel controls
+Sessions is enabled. Hiding the bubble leaves the regular panel controls
 available. Fullscreen uses its temporary Side overlay without changing the saved layout.
 
 The hidden launcher is inert and outside the accessibility tree. Panel content stays

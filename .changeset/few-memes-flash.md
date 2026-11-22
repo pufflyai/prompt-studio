@@ -3,4 +3,4 @@
 "@pstdio/workbench": minor
 ---
 
-Customize the Side Panel bubble's alignment, visibility, and default panel.
+Move the floating Side Panel and its bubble together; choose its default panel and bubble visibility in Appearance settings.

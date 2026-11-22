@@ -47,7 +47,13 @@
     "theme": "テーマ",
     "themeHelper": "すべてのプロジェクトに適用されます。",
     "openRelatedResources": "関連リソースを開く",
-    "openRelatedResourcesHelper": "各種類の最近の関連リソースを、ピン留めされていないプレビューで自動的に開きます。"
+    "openRelatedResourcesHelper": "各種類の最近の関連リソースを、ピン留めされていないプレビューで自動的に開きます。",
+    "defaultSidePanel": "既定のサイドパネル",
+    "defaultSidePanelHelper": "バブルをクリックしたときに開きます。",
+    "defaultPanel": "既定（{{panel}}）",
+    "newSession": "新しいセッション",
+    "sidePanel": "サイドパネル",
+    "unavailableSidePanel": "利用できないパネル"
   },
   "updates": {
     "title": "アップデートチャネル",

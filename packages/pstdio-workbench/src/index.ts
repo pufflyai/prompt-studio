@@ -254,6 +254,7 @@ export {
   dockedWorkbenchRegions,
   getKeybindingSteps,
   getNavigationTargetKey,
+  getSidePanelBubblePanels,
   getWorkbenchModePanelForRegion,
   getWorkbenchSelectionResourceKeys,
   headerLeadingMenuPath,

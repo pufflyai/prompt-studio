@@ -33,7 +33,6 @@ export const DashboardWorkbenchView = (props: DashboardWorkbenchViewProps) => {
       }
       renderParamField={createDashboardParamFieldRenderer(workbench)}
       sidePanelBubbleIcon={<WorkbenchIcon name="message-circle" size={20} />}
-      sidePanelBubbleDefaultLabel={sessionsAvailable ? "New session" : undefined}
       onOpenSidePanel={sessionsAvailable ? () => openDashboardSidePanel(workbench) : undefined}
     />
   );

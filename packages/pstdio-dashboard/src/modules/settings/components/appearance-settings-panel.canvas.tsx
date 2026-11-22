@@ -2,6 +2,7 @@ import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { defaultThemePreferences, ThemePreferenceProvider } from "@pstdio/ui";
 import { createWorkbench } from "@pstdio/workbench";
 import { openRelatedResourcesPreference } from "@pstdio/workbench/react";
+import { useState } from "react";
 import { AppearanceSettingsPanel } from "./appearance-settings-panel";
 
 const themePreferences = [
@@ -10,9 +11,19 @@ const themePreferences = [
   { id: "lab.ember", title: "Ember", mode: "dark" as const },
 ];
 const AppearanceExample = () => {
-  const workbench = createWorkbench();
-  workbench.preferences.registerSchema({
-    properties: { [openRelatedResourcesPreference]: { type: "boolean", scope: "user", default: true } },
+  const [workbench] = useState(() => {
+    const instance = createWorkbench();
+    instance.preferences.registerSchema({
+      properties: { [openRelatedResourcesPreference]: { type: "boolean", scope: "user", default: true } },
+    });
+    instance.layout.registerPanel({
+      id: "appearance.inspector",
+      title: "Inspector",
+      region: "side",
+      rendererId: "appearance.inspector",
+      eligibleLocations: {},
+    });
+    return instance;
   });
   return <AppearanceSettingsPanel workbench={workbench} />;
 };
@@ -31,6 +42,7 @@ export default meta;
 type Story = CanvasFrame<typeof meta>;
 export const Default: Story = {
   id: "settings-appearance--default",
+  description: "Choose the default Side Panel and show or hide its bubble alongside the theme preferences.",
 };
 export const RelatedResourcePreference: Story = {
   id: "settings-appearance--related-resource-preference",

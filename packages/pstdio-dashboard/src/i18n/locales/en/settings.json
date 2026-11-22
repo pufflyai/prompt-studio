@@ -62,7 +62,13 @@
     "theme": "Theme",
     "themeHelper": "Applies to every project.",
     "openRelatedResources": "Open related resources",
-    "openRelatedResourcesHelper": "Automatically open a recent related resource of each kind as an unpinned preview."
+    "openRelatedResourcesHelper": "Automatically open a recent related resource of each kind as an unpinned preview.",
+    "defaultSidePanel": "Default Side Panel",
+    "defaultSidePanelHelper": "Opens when you click the bubble.",
+    "defaultPanel": "Default ({{panel}})",
+    "newSession": "New session",
+    "sidePanel": "Side Panel",
+    "unavailableSidePanel": "Unavailable panel"
   },
   "updates": {
     "title": "Update channel",

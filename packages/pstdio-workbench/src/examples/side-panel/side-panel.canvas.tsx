@@ -81,7 +81,7 @@ export const AttachedOnly: Story = {
 export const DefaultBubble: Story = {
   id: "pstdio-workbench-reference-core-api-side-panel--default-bubble",
   description:
-    "Drag the bubble between left, center, and right, or right-click for alignment and the default panel. Alt+Shift+Left/Right also changes alignment.",
+    "Drag the bubble or the floating panel header between left, center, and right. Both share their position and alignment menu. Choose the default panel and bubble visibility in Appearance settings. Alt+Shift+Left/Right also changes alignment.",
   render: () => <SidePanelStory />,
 };
 export const CustomBubbleIcon: Story = {
