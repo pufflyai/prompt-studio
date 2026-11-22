@@ -1,8 +1,10 @@
 import { afterAll, beforeAll, expect, spyOn, test } from "bun:test";
 import { AsyncLocalStorage } from "node:async_hooks";
+import { subscribe, unsubscribe } from "node:diagnostics_channel";
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { runtimeOperationChannel } from "pstdio-diagnostics";
 import { createExtensionProcessEnvironment } from "../process-environment";
 import { markHostContext } from "../runner/host-context";
 import { backendWorkerCommand, createBackendWorkerPool } from "./pool";
@@ -154,6 +156,15 @@ export default {
       async run(ctx) {
         ctx.live.ready();
         await new Promise(() => {});
+      },
+    },
+    {
+      id: "orphan",
+      title: "Orphan",
+      run: (ctx, exit) => {
+        const child = Bun.spawn([process.execPath, "-e", "setInterval(() => {}, 1000)"], { stdio: ["ignore", "ignore", "ignore"] });
+        if (exit) setTimeout(() => process.exit(3), 50);
+        return child.pid;
       },
     },
     { id: "mark", title: "Mark", run: (ctx, path) => Bun.write(path, "ran") },
@@ -461,7 +472,12 @@ test("an abort during context value collection settles the invocation", async ()
       surface,
       args: [],
     });
-    const outcome = await Promise.race([waiting.catch((error: Error) => error.message), status.then(() => "pending")]);
+    // Stopping the worker below rejects the status call if it has not been answered yet.
+    const answered = status.then(
+      () => "pending",
+      () => "pending",
+    );
+    const outcome = await Promise.race([waiting.catch((error: Error) => error.message), answered]);
     expect(outcome).toBe("stopped during context read");
   } finally {
     await worker.stop();
@@ -1263,5 +1279,62 @@ test("a worker that ignores cancellation keeps its invocation only until the cle
     expect(worker.busy).toBe(false);
   } finally {
     await worker.stop();
+  }
+});
+
+const posixOnlyTest = process.platform === "win32" ? test.skip : test;
+const isAlive = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+const stopsWithin = async (pid: number) => {
+  for (let attempt = 0; isAlive(pid) && attempt < 100; attempt++) await Bun.sleep(20);
+  return !isAlive(pid);
+};
+
+posixOnlyTest("processes extension code starts stop with its worker, whether it is stopped or crashes", async () => {
+  const stopped = await start();
+  const left = (await stopped.invoke({
+    handlerId: handlerOf(stopped.definition, "orphan"),
+    context: {},
+    surface,
+    args: [false],
+  })) as number;
+  await stopped.stop();
+  expect(await stopsWithin(left)).toBe(true);
+
+  const crashing = await start();
+  const orphan = (await crashing.invoke({
+    handlerId: handlerOf(crashing.definition, "orphan"),
+    context: {},
+    surface,
+    args: [true],
+  })) as number;
+  await crashing.exited;
+  expect(await stopsWithin(orphan)).toBe(true);
+});
+
+test("each worker life is recorded with its exit code and peak memory", async () => {
+  const records: Array<Record<string, unknown>> = [];
+  const listener = (message: unknown) => records.push(message as Record<string, unknown>);
+  subscribe(runtimeOperationChannel, listener);
+  try {
+    const worker = await startBackendWorker({
+      command: backendWorkerCommand(),
+      env: createExtensionProcessEnvironment(),
+      entryPath,
+      watchdog: { heartbeatMs: 20 },
+    });
+    await Bun.sleep(150);
+    await worker.stop();
+    const life = records.find((record) => record.kind === "extension.backend.worker");
+    expect(life?.peakRssBytes).toBeGreaterThan(0);
+    expect(life).toHaveProperty("exitCode");
+  } finally {
+    unsubscribe(runtimeOperationChannel, listener);
   }
 });
