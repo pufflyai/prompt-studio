@@ -4,7 +4,9 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
+import { fileTurnFixture } from "./file-turns.test-fixture";
 import { createInstances } from "./instances";
+import { createMachineCommands } from "./machine-commands";
 import { createSelectionCommands, instanceRowId } from "./selection-commands";
 
 test.each([
@@ -62,5 +64,31 @@ test.each([
   } finally {
     server.stop(true);
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("canceling Delete stops waiting for the machine and keeps its row", async () => {
+  const waiting = Promise.withResolvers<void>();
+  const f = await fileTurnFixture((request) => {
+    const path = new URL(request.url).pathname;
+    if (path.endsWith("/cancel")) return Response.json({ id: f.ref.machineId, state: "terminating", change_cursor: 1 });
+    if (path.endsWith("/changes")) {
+      waiting.resolve();
+      return new Promise<Response>(() => {});
+    }
+    return Response.json({ id: f.ref.machineId, state: "running", change_cursor: 0 });
+  });
+  const cancel = new AbortController();
+  const storage = createMemoryStorage();
+  const ctx = makeCommandContext({ storage, projectId: "test", params: {}, overrides: { signal: cancel.signal } });
+  try {
+    const { deleteMachine } = createMachineCommands(() => f.ref.instances);
+    const deletion = deleteMachine.run(ctx, { instance: f.ref.instanceId, machineId: f.ref.machineId });
+    await waiting.promise;
+    cancel.abort();
+    await expect(deletion).rejects.toThrow();
+    expect(await storage.get(`dismissed-machines:${f.ref.instanceId}`)).toBeUndefined();
+  } finally {
+    await f.close();
   }
 });

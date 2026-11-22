@@ -113,13 +113,20 @@ export function createMachineCommands(getInstances = instancesFor) {
     params: machineParams,
     async run(ctx, input) {
       const instances = getInstances(ctx.projectId);
-      let machine = await instances.request<ControllerMachine>(input.instance, machinePath(input.machineId));
+      let machine = await instances.request<ControllerMachine>(input.instance, machinePath(input.machineId), {
+        signal: ctx.signal,
+      });
       if (!isTerminal(machine))
-        machine = await instances.request(input.instance, `${machinePath(machine.id)}/cancel`, { method: "POST" });
+        machine = await instances.request(input.instance, `${machinePath(machine.id)}/cancel`, {
+          method: "POST",
+          signal: ctx.signal,
+        });
+      // Canceling the command stops this wait; the controller still finishes the cancellation it accepted.
       while (!isTerminal(machine)) {
         const change = await instances.request<{ workspace: ControllerMachine }>(
           input.instance,
           `${machinePath(machine.id)}/changes?after=${machine.change_cursor}&wait=30`,
+          { signal: ctx.signal },
         );
         machine = change.workspace;
       }
