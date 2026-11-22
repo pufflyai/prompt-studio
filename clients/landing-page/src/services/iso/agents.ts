@@ -54,6 +54,7 @@ export const addAgent = (scene: IsoScene, spec: Pick<Agent, "name" | "color" | "
   };
   // A click high fives the hand; a drag picks it up (see pointer.ts).
   el.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
     event.stopPropagation();
     event.preventDefault();
     if (scene.held || scene.heldAgent) return;
@@ -236,7 +237,11 @@ export const carry = async (agent: Agent, box: IsoBox, dest: Point, arc = 0) => 
     // The visitor can snatch the box out of the hand, or pull the hand away so it drops the box;
     // the hand then stops where it is.
     lost ||= box.held || !box.carried || Boolean(agent.held);
-    if (lost) return;
+    if (lost) {
+      // Let go at once, so grabbing this hand later cannot drop a box someone else picked up.
+      if (agent.carrying === box) agent.carrying = undefined;
+      return;
+    }
     box.t.x = x0 + (dest.x - x0) * k;
     box.t.y = y0 + (dest.y - y0) * k;
     box.t.z = z0 + (z1 - z0) * k + arc * 4 * k * (1 - k);
@@ -272,7 +277,11 @@ export const toss = async (scene: IsoScene, agent: Agent, box: IsoBox, dest: Poi
   const [ux, uy] = [dx / length, dy / length];
   await tween(170, (k) => {
     lost ||= box.held || !box.carried || Boolean(agent.held);
-    if (lost) return;
+    if (lost) {
+      // Let go at once, so grabbing this hand later cannot drop a box someone else picked up.
+      if (agent.carrying === box) agent.carrying = undefined;
+      return;
+    }
     agent.x = ax - ux * 10 * k;
     agent.y = ay - uy * 10 * k;
     box.t.x = agent.x - box.t.w / 2;

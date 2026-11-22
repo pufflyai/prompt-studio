@@ -15,7 +15,7 @@ export const ExamplesView = (props: ExamplesViewProps) => {
     <Box css={styles.page} data-studio-section="examples">
       <Box as="section" css={styles.section} aria-labelledby="tool-examples-title">
         <Stack css={styles.intro}>
-          <Text id="tool-examples-title" as="h1" textStyle={{ base: "heading/L", md: "heading/XL" }}>
+          <Text id="tool-examples-title" as="h2" textStyle={{ base: "heading/L", md: "heading/XL" }}>
             What will you build?
           </Text>
           <Text textStyle="paragraph/L/regular" color="fg.muted">

@@ -21,6 +21,8 @@ export class IsoScene implements Origin {
   /** An agent hand the visitor pressed; a drag picks it up, a click high fives it. */
   agentPress: { agent: Agent; at: readonly [number, number] } | null = null;
   heldAgent: Agent | null = null;
+  /** Puts the held hand down; set while the visitor holds one. */
+  releaseAgent: (() => void) | null = null;
   pointer: [number, number] | null = null;
   lastUser = Number.NEGATIVE_INFINITY;
   disposed = false;
@@ -93,6 +95,10 @@ export class IsoScene implements Origin {
   dispose() {
     this.disposed = true;
     this.held = null;
+    // A hand held while the scene goes away stops its timers and its paused typing.
+    this.releaseAgent?.();
+    this.releaseAgent = null;
+    this.agentPress = null;
     for (const timer of this.timers) clearInterval(timer);
     for (const cleanup of this.cleanups) cleanup();
     this.host.replaceChildren();

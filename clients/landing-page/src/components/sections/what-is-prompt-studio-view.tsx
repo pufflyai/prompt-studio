@@ -46,7 +46,7 @@ export const WhatIsPromptStudioView = () => {
       {/* Set like a dictionary entry: headword, pronunciation and part of speech, numbered sense, example. */}
       <Box as="dl" css={styles.intro}>
         <Text as="dt">
-          <Text as="h1" id="what-is-title" css={styles.headword}>
+          <Text as="h2" id="what-is-title" css={styles.headword}>
             agentic workbench
           </Text>
           <Text as="span" css={styles.pronunciation}>
@@ -66,7 +66,7 @@ export const WhatIsPromptStudioView = () => {
       {CHAPTERS.map(({ id, title, body, Scene }) => (
         <Box as="section" key={id} id={id} css={styles.chapter} aria-labelledby={`${id}-title`}>
           <Box css={styles.copy} data-part="copy">
-            <Text as="h2" id={`${id}-title`} textStyle={{ base: "heading/M", md: "heading/L" }}>
+            <Text as="h3" id={`${id}-title`} textStyle={{ base: "heading/M", md: "heading/L" }}>
               {title}
             </Text>
             {body.map((paragraph) => (

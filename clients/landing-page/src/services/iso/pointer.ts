@@ -58,15 +58,13 @@ const settle = (scene: IsoScene, box: IsoBox) => {
   }
 };
 
-let releaseAgent: (() => void) | null = null;
-
 /** Releasing a pressed hand: put it down if it was picked up, otherwise high five it. */
 const releaseHand = (scene: IsoScene) => {
   const { agent } = scene.agentPress!;
   scene.agentPress = null;
-  if (releaseAgent) {
-    releaseAgent();
-    releaseAgent = null;
+  if (scene.releaseAgent) {
+    scene.releaseAgent();
+    scene.releaseAgent = null;
   } else highFive(scene, agent);
 };
 
@@ -101,7 +99,7 @@ export const bindPointer = (scene: IsoScene) => {
     const pressed = scene.agentPress;
     if (pressed) {
       if (!scene.heldAgent && Math.hypot(sx - pressed.at[0], sy - pressed.at[1]) > DRAG_DISTANCE)
-        releaseAgent = grabAgent(scene, pressed.agent);
+        scene.releaseAgent = grabAgent(scene, pressed.agent);
       const agent = scene.heldAgent;
       if (agent?.held) {
         const z = agent.held[2];
@@ -149,6 +147,17 @@ export const bindPointer = (scene: IsoScene) => {
     true,
   );
   const up = () => release(scene);
+  // A cancelled pointer (a scroll took over, a context menu) puts a held hand down without a high five.
+  const cancel = () => {
+    if (!scene.agentPress) return;
+    scene.agentPress = null;
+    scene.releaseAgent?.();
+    scene.releaseAgent = null;
+  };
   window.addEventListener("pointerup", up);
-  scene.cleanups.push(() => window.removeEventListener("pointerup", up));
+  window.addEventListener("pointercancel", cancel);
+  scene.cleanups.push(
+    () => window.removeEventListener("pointerup", up),
+    () => window.removeEventListener("pointercancel", cancel),
+  );
 };

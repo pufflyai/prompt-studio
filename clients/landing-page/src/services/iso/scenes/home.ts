@@ -18,7 +18,8 @@ const SPOTS: [number, number][] = [
 ];
 
 // block: made, on its way · held: in the visitor's hand · dropped: let go off the workbench
-type Piece = IsoBox & { state: "block" | "held" | "dropped"; claimed: boolean; generation: number };
+// `claimedBy` is the agent bringing it in; only that agent may give the claim up.
+type Piece = IsoBox & { state: "block" | "held" | "dropped"; claimedBy: Agent | null; generation: number };
 
 /**
  * One tool at a time grows on the workbench. Agents write an improvement beside it, carry the
@@ -54,6 +55,8 @@ export const setupHomeScene = (scene: IsoScene) => {
   };
   // The block sinks into the panel, and the panel gains the next part.
   const deliver = (piece: Piece) => {
+    // Each block installs once: the visitor may drop it on the panel while an agent pats it.
+    if (!pieces.includes(piece)) return;
     forget(piece);
     piece.drag = false;
     scene.fadeOut(piece);
@@ -97,7 +100,7 @@ export const setupHomeScene = (scene: IsoScene) => {
   scene.onFree = (box) => {
     const piece = box as Piece;
     piece.state = "dropped";
-    piece.claimed = false;
+    piece.claimedBy = null;
   };
   scene.onTick = () => {
     const box = scene.held;
@@ -132,7 +135,10 @@ export const setupHomeScene = (scene: IsoScene) => {
     }
     if (piece.generation !== generation) return;
     piece.state = "block";
-    await pat(scene, agent, piece, () => deliver(piece));
+    // A block the visitor took and dropped elsewhere mid-pat stays where it is.
+    await pat(scene, agent, piece, () => {
+      if (piece.state === "block") deliver(piece);
+    });
     // The pat never landed (the visitor held the hand or took the block): someone fetches it again.
     if (pieces.includes(piece) && !piece.held) piece.state = "dropped";
   };
@@ -158,7 +164,7 @@ export const setupHomeScene = (scene: IsoScene) => {
       className: "iso-pop",
       drag: true,
       state: "block" as Piece["state"],
-      claimed: true,
+      claimedBy: agent,
       generation: page,
     }) as Piece;
     scene.label(piece, `+ ${step.label}`, true);
@@ -167,7 +173,7 @@ export const setupHomeScene = (scene: IsoScene) => {
     puff(scene, x + 13, y + 13, 0);
     await scene.wait(220);
     await install(agent, piece);
-    piece.claimed = false;
+    if (piece.claimedBy === agent) piece.claimedBy = null;
   };
 
   // Each agent fetches dropped improvements first, then builds the next one the tool still needs.
@@ -179,11 +185,11 @@ export const setupHomeScene = (scene: IsoScene) => {
         await scene.wait(250);
         continue;
       }
-      const dropped = pieces.find((piece) => !piece.claimed && piece.state === "dropped");
+      const dropped = pieces.find((piece) => !piece.claimedBy && piece.state === "dropped");
       if (dropped) {
-        dropped.claimed = true;
+        dropped.claimedBy = agent;
         await job(agent, () => install(agent, dropped));
-        dropped.claimed = false;
+        if (dropped.claimedBy === agent) dropped.claimedBy = null;
         continue;
       }
       if (issued < tool().improvements.length) {

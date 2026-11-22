@@ -8,7 +8,7 @@ export const FeaturesView = () => {
   return (
     <Box css={styles.page} data-studio-section="features">
       <Stack css={styles.intro}>
-        <Text as="h1" textStyle={{ base: "heading/L", md: "heading/XL" }}>
+        <Text as="h2" textStyle={{ base: "heading/L", md: "heading/XL" }}>
           What your tools get for free.
         </Text>
         <Text textStyle="paragraph/L/regular" color="fg.muted">
@@ -16,20 +16,20 @@ export const FeaturesView = () => {
         </Text>
       </Stack>
       <Box as="section" css={styles.section} aria-labelledby="building-blocks-title">
-        <Text id="building-blocks-title" as="h2" textStyle="heading/M">
+        <Text id="building-blocks-title" as="h3" textStyle="heading/M">
           Building blocks
         </Text>
         <BuildingBlocks />
       </Box>
       <Box as="section" css={styles.section} aria-labelledby="shared-features-title">
-        <Text id="shared-features-title" as="h2" textStyle="heading/M">
+        <Text id="shared-features-title" as="h3" textStyle="heading/M">
           Shared by every tool
         </Text>
         <Box css={styles.blockGrid}>
           {WORKBENCH_SERVICES.map((service) => (
             <chakra.a key={service.id} href={service.docs} css={styles.block}>
               <Icon as={service.icon} boxSize="6" color="fg.muted" />
-              <Text as="h3" textStyle="heading/S">
+              <Text as="h4" textStyle="heading/S">
                 {service.name}
               </Text>
               <Text textStyle="paragraph/M/regular" color="fg.muted">
