@@ -58,3 +58,17 @@ test("nested commands share their caller's admission", async () => {
   const outcomes = await Promise.all(running);
   expect(outcomes.every((outcome) => outcome.ok && (outcome.value as { ok: boolean }).ok)).toBe(true);
 });
+
+test("cancelling a command that ignores cancellation frees its slot", async () => {
+  const never = new Promise<string>(() => {});
+  const runner = makeRunner({
+    commands: [{ id: "stuck", ref: { kind: "command", id: "stuck" }, title: "Stuck", run: () => never }],
+  });
+  const controllers = Array.from({ length: MAX_CONCURRENT_INVOCATIONS_PER_EXTENSION }, () => new AbortController());
+  for (const controller of controllers)
+    void runner.execute({ commandId: "pstdio.lab.command.stuck", projectId: "p1", signal: controller.signal });
+  const execute = () => runner.execute({ commandId: "pstdio.lab.command.stuck", projectId: "p1" });
+  expect(await execute()).toMatchObject({ code: "extension_overloaded" });
+  for (const controller of controllers) controller.abort();
+  expect(await Promise.race([execute(), Bun.sleep(20).then(() => "running")])).toBe("running");
+});

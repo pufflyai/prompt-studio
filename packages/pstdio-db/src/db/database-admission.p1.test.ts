@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
+import { currentRuntimeOperationOrigin, withRuntimeOperationOrigin } from "pstdio-diagnostics";
 import { openPglite } from "./open-pglite";
 
 test("an extension's write burst leaves core queries and the event loop responsive", async () => {
@@ -55,6 +55,37 @@ test("transactions still run as one admitted unit", async () => {
       { id: 1, value: 2 },
       { id: 2, value: 5 },
     ]);
+  } finally {
+    await database.close();
+  }
+});
+
+test("closing during a burst finishes admitted work and refuses later work", async () => {
+  const database = await openPglite(":memory:");
+  await database.exec("CREATE TABLE writes (id integer PRIMARY KEY)");
+  const burst = withRuntimeOperationOrigin({ kind: "command", name: "bulk", extensionId: "ext.bulk" }, () =>
+    Promise.allSettled(Array.from({ length: 2_000 }, (_, id) => database.query("INSERT INTO writes VALUES ($1)", [id]))),
+  );
+  await new Promise((resolve) => setImmediate(resolve));
+  await database.close();
+  const results = await burst;
+  expect(results.every((result) => result.status === "fulfilled")).toBe(true);
+  await expect(database.query("SELECT 1")).rejects.toThrow("PGlite is closed");
+});
+
+test("queued work keeps the origin of the caller that queued it", async () => {
+  const database = await openPglite(":memory:");
+  try {
+    const origins: (string | undefined)[] = [];
+    const extension = withRuntimeOperationOrigin({ kind: "command", name: "bulk", extensionId: "ext.a" }, () =>
+      Promise.all(Array.from({ length: 20 }, () => database.query("SELECT 1"))),
+    );
+    const core = database.transaction(async (tx) => {
+      origins.push(currentRuntimeOperationOrigin()?.extensionId);
+      await tx.query("SELECT 1");
+    });
+    await Promise.all([extension, core]);
+    expect(origins).toEqual([undefined]);
   } finally {
     await database.close();
   }

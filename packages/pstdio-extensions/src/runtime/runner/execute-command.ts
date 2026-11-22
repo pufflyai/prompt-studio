@@ -5,7 +5,7 @@ import type {
   CommandSource,
   JsonObject,
 } from "@pstdio/sdk/extensions";
-import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
+import { currentRuntimeOperationOrigin, withRuntimeOperationOrigin } from "pstdio-diagnostics";
 import type { RuntimeCommandRecord, RuntimeMiddlewareRecord } from "../../types/runtime";
 import { validateCollectionQueryRequest, validateCollectionQueryResult } from "./collection-query";
 import { readCommandRejection } from "./command-rejection";
@@ -47,10 +47,14 @@ export const executeExtensionCommand = async (
   input: InternalExecuteInput,
 ): Promise<CommandOutcome> => {
   const owner = findCommand(state.runtime, input.commandId) ?? findPrivateHandler(state.runtime, input.commandId);
-  const release = owner && input.depth === 0 ? admitInvocation(owner.extensionId) : undefined;
-  if (owner && input.depth === 0 && !release) return overloadedOutcome(owner.extensionId);
+  // Work already running for this extension, such as a nested command or a hook, shares its admission.
+  const admitting = owner && currentRuntimeOperationOrigin()?.extensionId !== owner.extensionId ? owner : undefined;
+  const release = admitting && admitInvocation(admitting.extensionId);
+  if (admitting && !release) return overloadedOutcome(admitting.extensionId);
   const scope = createInvocationScope({ logger: state.logger, parent: input.signal });
   scope.collectionQuery = input.collectionQuery;
+  // A cancelled handler that never settles must not hold the extension's allowance forever.
+  if (release) scope.signal.addEventListener("abort", release, { once: true });
   try {
     return await withRuntimeOperationOrigin(
       { kind: "command", name: input.commandId, projectId: input.projectId, extensionId: owner?.extensionId },

@@ -1,3 +1,4 @@
+import { AsyncResource } from "node:async_hooks";
 import type { PGlite } from "@electric-sql/pglite";
 import { currentRuntimeOperationOrigin, finishRuntimeOperation, startRuntimeOperation } from "pstdio-diagnostics";
 
@@ -19,6 +20,9 @@ export const createDatabaseAdmission = ({ sliceMs = DEFAULT_SLICE_MS } = {}) => 
   const extensions = new Map<string, Turn[]>();
   let active = false;
   let queued = 0;
+  let lastReleasedAt = Number.NEGATIVE_INFINITY;
+  let closing = false;
+  const drained = Promise.withResolvers<void>();
   let coreStreak = 0;
   let sliceStartedAt = performance.now();
   let turnObserved = false;
@@ -66,14 +70,24 @@ export const createDatabaseAdmission = ({ sliceMs = DEFAULT_SLICE_MS } = {}) => 
 
   const release = () => {
     active = false;
+    lastReleasedAt = performance.now();
     dispatch();
+    if (closing && !active && queued === 0) drained.resolve();
   };
 
   const run = <T>(extensionId: string | undefined, work: () => Promise<T>) =>
     new Promise<T>((resolve, reject) => {
+      if (closing) {
+        reject(new Error("PGlite is closed"));
+        return;
+      }
+      // A database left idle for a slice has already given the event loop its turn.
+      if (!active && queued === 0 && performance.now() - lastReleasedAt >= sliceMs) sliceStartedAt = performance.now();
       const waiting = startRuntimeOperation("database.admission", { queued });
       queued += 1;
-      const turn = () => {
+      // The turn starts from whichever caller released last. Bind it so the work, its diagnostics
+      // and any timers it creates keep the origin of the caller that queued it.
+      const turn = AsyncResource.bind(() => {
         queued -= 1;
         finishRuntimeOperation(waiting);
         let result: Promise<T>;
@@ -83,7 +97,7 @@ export const createDatabaseAdmission = ({ sliceMs = DEFAULT_SLICE_MS } = {}) => 
           result = Promise.reject(error);
         }
         result.then(resolve, reject).finally(release);
-      };
+      });
       if (extensionId === undefined) core.push(turn);
       else {
         const queue = extensions.get(extensionId);
@@ -93,20 +107,33 @@ export const createDatabaseAdmission = ({ sliceMs = DEFAULT_SLICE_MS } = {}) => 
       dispatch();
     });
 
-  return { run };
+  /** Admitted work finishes before the engine closes; work arriving afterwards is refused. */
+  const close = () => {
+    closing = true;
+    if (!active && queued === 0) drained.resolve();
+    return drained.promise;
+  };
+
+  return { run, close };
 };
 
 /**
  * PGlite routes query, exec and transaction through one exclusive section, and transaction
  * handles run inside it. Admitting that section schedules every top-level statement exactly once.
+ * Pauses between slices let shutdown start mid-burst, so close waits for the admitted work first.
  */
-export const admitPgliteWork = <Database extends Pick<PGlite, "_runExclusiveTransaction">>(
+export const admitPgliteWork = <Database extends Pick<PGlite, "_runExclusiveTransaction" | "close">>(
   database: Database,
   admission = createDatabaseAdmission(),
 ) => {
   const exclusive = database._runExclusiveTransaction;
   database._runExclusiveTransaction = function <T>(this: Database, work: () => Promise<T>) {
     return admission.run(currentRuntimeOperationOrigin()?.extensionId, () => exclusive.call(this, work) as Promise<T>);
+  };
+  const close = database.close;
+  database.close = async function (this: Database) {
+    await admission.close();
+    return close.call(this);
   };
   return database;
 };

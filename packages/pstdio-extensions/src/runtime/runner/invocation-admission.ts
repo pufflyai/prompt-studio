@@ -2,7 +2,8 @@ import type { CommandOutcome } from "@pstdio/sdk/extensions";
 
 /**
  * Commands of one extension share this allowance across every project, so opening more projects
- * or callers cannot multiply it. Nested commands run inside their caller's admission.
+ * or callers cannot multiply it. Work already running for the extension (nested commands, hooks)
+ * runs inside that admission. A slot is released when the invocation settles or is cancelled.
  */
 export const MAX_CONCURRENT_INVOCATIONS_PER_EXTENSION = 256;
 const RETRY_AFTER_MS = 1000;
