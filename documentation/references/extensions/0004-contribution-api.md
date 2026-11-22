@@ -478,7 +478,7 @@ content can close it with `placement.close`. The Timeline Auto Build header uses
 this path. A native `actionBar` body is also available for host-rendered buttons
 and menus. Menu sides are an initial layout preset, not a permission: menus on
 different edges can always remain open together. First-party tools group menus
-on the right by default. Extensions can declare different `viewMenus.side`
+on the right by default, except Files in Files/Workspaces, which opens left. Extensions can declare different `viewMenus.side`
 arrangements, including several initially open edges. Menus sharing one edge
 use that edge's selected content pane. User placement and open-state choices
 win over the initial arrangement.

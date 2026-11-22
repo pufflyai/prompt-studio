@@ -17,7 +17,7 @@ export default defineExtension({
   commandPaletteResources: [fileSearch],
   views: [fileView, filesTree, workspacesView, historyView, summaryView, changesView, actionView, sidebarView],
   pages: [workspaces, workspace, files, history, overview, action, createPage, devicePage],
-  viewMenus: [defineViewMenu({ id: "file-tree", owner: fileView.ref, view: filesTree.ref, side: "right" })],
+  viewMenus: [defineViewMenu({ id: "file-tree", owner: fileView.ref, view: filesTree.ref, side: "left" })],
   navigationTrees: [sidebar, ...workspaceSessionTrees],
   keybindings: [
     defineKeybinding({ id: "go-workspaces", layer: "go", key: "W", sticky: true, action: target }),
