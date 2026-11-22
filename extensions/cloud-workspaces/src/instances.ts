@@ -126,10 +126,12 @@ export function createInstances(root: string) {
   const request = async <T>(id: string, path: string, options: RequestInit = {}) => {
     const instance = await read<Instance>(id, "instance.json");
     const token = await ownerKeys.token(id);
+    // A caller's cancellation signal has no deadline, so it must not replace the one for a stalled controller.
+    const deadline = AbortSignal.timeout(35_000);
     const response = await fetch(`${instance.url}${path}`, {
       ...options,
       headers: { "content-type": "application/json", authorization: `Bearer ${token}`, ...options.headers },
-      signal: options.signal ?? AbortSignal.timeout(35_000),
+      signal: options.signal ? AbortSignal.any([options.signal, deadline]) : deadline,
     });
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null;

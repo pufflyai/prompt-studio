@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { reconnectFileTurn, resumeFileTurn, startFileTurn, supportsFileTurns } from "./file-turns";
 import { fileTurnFixture as fixture } from "./file-turns.test-fixture";
@@ -206,6 +206,21 @@ test("Stop that races finalization does not restore the completed request", asyn
     expect(await f.state.get(`file-turn:${f.input.sessionId}`)).toBeUndefined();
     expect(await f.state.get(`file-cancel:${request!.requestId}`)).toBeUndefined();
   } finally {
+    await f.close();
+  }
+});
+
+test("a stalled receipt read disconnects a turn that has a run signal", async () => {
+  const timeout = AbortSignal.timeout.bind(AbortSignal);
+  // Shorten the transport deadline so the stalled read gives up quickly.
+  const deadline = spyOn(AbortSignal, "timeout").mockImplementation((ms) => timeout(Math.min(ms, 100)));
+  const f = await fixture((req) => (req.method === "POST" ? Response.json({}) : new Promise<Response>(() => {})));
+  try {
+    const session = await startFileTurn(f.ctx, { ...f.input, signal: new AbortController().signal }, f.ref);
+    expect(await session.done).toEqual({ status: "disconnected" });
+    expect(await f.state.get(`file-turn:${f.input.sessionId}`)).toBeDefined();
+  } finally {
+    deadline.mockRestore();
     await f.close();
   }
 });
