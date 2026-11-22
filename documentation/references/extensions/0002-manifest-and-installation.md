@@ -228,7 +228,10 @@ from the host's own session id. The host still ends a session when the call that
 worker with the same results as the host. `Blob` arguments and `ReadableStream` results, such as
 `storage.assets.stage` and `read`, work across the boundary.
 
-A worker that has run nothing for 10 minutes stops. The next call starts it again.
+A worker that has run nothing for 10 minutes stops, including the worker of an extension that was
+disabled. The next call starts it again. Processes that extension code starts itself, for example
+with `Bun.spawn`, stop with their worker when it stops, crashes or is stopped by the host. Children
+started through `ctx.process` and `ctx.terminal` belong to the call or extension that started them.
 
 The host watches each worker from outside:
 - A worker whose event loop does not answer for 60 seconds is stopped, for example one stuck in an

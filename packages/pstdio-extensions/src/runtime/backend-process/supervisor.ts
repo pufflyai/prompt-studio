@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { finishRuntimeOperation, startRuntimeOperation } from "pstdio-diagnostics";
 import { createCommandRejection } from "../runner/command-rejection";
 import { createHostCalls } from "./host-calls";
 import {
@@ -31,6 +32,20 @@ const workerError = (serialized: SerializedBackendError) => {
   const error = deserializeBackendError(serialized) as Error & { code?: string };
   if (error.code && HOST_ERROR_CODES.has(error.code)) delete error.code;
   return error;
+};
+
+const sweepExitedWorkerGroup = (pid: number) => {
+  if (process.platform === "win32") return;
+  // A natural exit can leave the worker's original process group alive.
+  try {
+    process.kill(pid, 0);
+    return;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ESRCH") return;
+  }
+  try {
+    process.kill(-pid, "SIGKILL");
+  } catch {}
 };
 
 export interface BackendWorker {
@@ -173,6 +188,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     dispose(invocationId);
   };
 
+  const memory = { last: 0, peak: 0 };
   const receive = (raw: unknown) => {
     const message = parseWorkerMessage(raw);
     if (message?.type === "ready") ready.resolve();
@@ -180,14 +196,18 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
       if (message.ok) loaded.resolve(message.value);
       else loaded.reject(workerError(message.error));
     } else if (message?.type === "result") settle(message);
-    else if (message?.type === "pong") watchdog.answered(message.rss);
-    else if (message?.type === "group-anchor") groupAnchorReply?.(message.pid);
+    else if (message?.type === "pong") {
+      memory.last = message.rss;
+      memory.peak = Math.max(memory.peak, message.rss);
+      watchdog.answered(message.rss);
+    } else if (message?.type === "group-anchor") groupAnchorReply?.(message.pid);
     else if (message?.type === "release") {
       invocations.get(message.invocationId)?.table.release(message.fnIds);
       dispose(message.invocationId);
     } else if (message) hostCalls.handle(message);
   };
 
+  const life = startRuntimeOperation("extension.backend.worker");
   const spawn = () => {
     try {
       return Bun.spawn(options.command, {
@@ -195,6 +215,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
         // Bun cleans up descendants at orderly exit, including children spawned between host samples.
         env: process.platform === "win32" ? options.env : { ...options.env, BUN_FEATURE_FLAG_NO_ORPHANS: "1" },
         stdio: ["ignore", "inherit", "inherit"],
+        // Its own process group, so processes extension code starts stop with it.
         detached: process.platform !== "win32",
         serialization: "advanced",
         ipc: receive,
@@ -244,10 +265,15 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
   );
 
   const exited = child.exited.then(async (code) => {
+    // One record per worker life, so memory can be compared across workers and workloads.
+    finishRuntimeOperation(life, { exitCode: code, lastRssBytes: memory.last, peakRssBytes: memory.peak });
     watchdog.stop();
     fail(new BackendUnavailableError(`The extension backend exited (${code}).`));
     try {
-      await Promise.all([observation ? stopTree() : stopping, ...scopeCleanups]);
+      // Let the retained-descendant cleanup and any active anchor finish before sweeping the original group.
+      const sweep = () => sweepExitedWorkerGroup(child.pid);
+      const cleanup = observation ? stopTree() : stopping;
+      await Promise.all([cleanup?.finally(sweep) ?? sweep(), ...scopeCleanups]);
       return code;
     } finally {
       rmSync(cwd, { recursive: true, force: true });
