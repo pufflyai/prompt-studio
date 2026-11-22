@@ -45,7 +45,7 @@ The extension author must declare CLI access and connect the UI action to the co
 | `pst agents` | Discover harnesses and install skills. |
 | `pst sessions` | Run and inspect agent sessions. |
 | `pst workspaces` | Create, merge, and remove provider-backed workspaces. |
-| `pst extensions` | Install, update, develop, and check extensions. `add` and `dev` accept a folder path such as `.`, `..`, `./tool`, `~/tool`, or an absolute path; any other value is a catalog name. Both need a linked project. From a folder outside one, the error names the absolute command to run from your project folder. See [Scoped checks and versions](../extensions/0002-manifest-and-installation.md#scoped-checks-and-versions) for `check`. |
+| `pst extensions` | Install, update, develop, and check extensions. `add` and `dev` accept a folder path such as `.`, `..`, `./tool`, `~/tool`, or an absolute path; any other value is a catalog name. Both need a linked project. From a folder outside one, the error names the absolute command to run from your project folder. See [Scoped checks and versions](../extensions/0002-manifest-and-installation.md#scoped-checks-and-versions) for `check`. `permissions show`, `grant` and `revoke` manage the host environment names an extension may pass to its children; see [Host environment names](../extensions/0002-manifest-and-installation.md#host-environment-names). |
 | `pst notifications` | Create and manage project notifications. |
 | `pst inbox` | List pending project notifications. |
 | `pst views` | Manage shared board views. |

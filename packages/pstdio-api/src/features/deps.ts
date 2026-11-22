@@ -37,6 +37,7 @@ import type { ArtifactMountWriteLedger } from "./extensions/artifact-mount-watch
 import type { createExtensionConnectionService } from "./extensions/extension-connection-service";
 import type { createExtensionSettingsService } from "./extensions/extension-settings-service";
 import type { ExtensionWebviewAccess } from "./extensions/extension-webview-access";
+import type { ProcessEnvironmentPermissions } from "./extensions/process-environment/permissions";
 import type { ProjectExtensionRuntimeCatalog } from "./extensions/project-extension-runtime-catalog";
 import type { HarnessRegistryService } from "./harnesses/harness-registry-service";
 import type { RuntimeRouteDeps } from "./runtime/routes";
@@ -88,6 +89,7 @@ export interface RouteDeps {
   projectInfoService: ReturnType<typeof createProjectInfoDBService>;
   extensionFileService: ReturnType<typeof createExtensionFileService>;
   extensionConnectionService: ReturnType<typeof createExtensionConnectionService>;
+  extensionProcessEnvironment: ProcessEnvironmentPermissions;
   extensionSettingsDBService: ReturnType<typeof createExtensionSettingsDBService>;
   webviewPreferencesDBService: ReturnType<typeof createWebviewPreferencesDBService>;
   extensionService: ReturnType<typeof createExtensionService>;
