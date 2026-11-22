@@ -9,6 +9,7 @@ import {
   transferableCommandRejection,
   type WorkerToHostMessage,
 } from "./protocol";
+import { createFunctionTable, importValue } from "./remote-values";
 import { createSurfaceFacade, type SurfaceStep } from "./surface";
 
 type Handler = (...args: unknown[]) => unknown;
@@ -80,43 +81,87 @@ const send = (message: WorkerToHostMessage) => process.send?.(message);
  */
 export const runBackendWorker = () => {
   let handlers = new Map<string, Handler>();
-  const invocations = new Map<string, AbortController>();
+  const invocations = new Map<string, { controller: AbortController; table: ReturnType<typeof createFunctionTable> }>();
   const pending = new Map<string, ReturnType<typeof Promise.withResolvers<unknown>>>();
   let nextRequest = 0;
 
+  /** Sends a request to the host and resolves with its reply, importing any host functions in it. */
+  // Recursive with callHost, so TypeScript needs the return types spelled out.
+  const request = (invocationId: string, message: (requestId: string) => WorkerToHostMessage): Promise<unknown> => {
+    const requestId = `r${nextRequest++}`;
+    const reply = Promise.withResolvers<unknown>();
+    pending.set(requestId, reply);
+    send(message(requestId));
+    return reply.promise.then((value) => importValue(value, (fnId, args) => callHost(invocationId, fnId, args)));
+  };
+
+  const callHost = (invocationId: string, fnId: string, args: unknown[]): Promise<unknown> => {
+    const table = invocations.get(invocationId)?.table;
+    if (!table) return Promise.reject(new Error("This invocation has finished."));
+    const exported = table.exportValue(args) as unknown[];
+    return request(invocationId, (requestId) => ({
+      v: BACKEND_PROTOCOL_VERSION,
+      type: "fn-call",
+      invocationId,
+      requestId,
+      fnId,
+      args: exported,
+    }));
+  };
+
+  const answerHost = async (message: Extract<HostToWorkerMessage, { type: "fn-call" }>) => {
+    const table = invocations.get(message.invocationId)?.table;
+    try {
+      if (!table) throw new Error("This invocation has finished.");
+      const args = importValue(message.args, (fnId, inner) => callHost(message.invocationId, fnId, inner)) as unknown[];
+      const value = table.exportValue(await table.call(message.fnId, args));
+      send({ v: BACKEND_PROTOCOL_VERSION, type: "reply", requestId: message.requestId, ok: true, value });
+    } catch (error) {
+      const serialized = serializeBackendError(error);
+      send({ v: BACKEND_PROTOCOL_VERSION, type: "reply", requestId: message.requestId, ok: false, error: serialized });
+    }
+  };
+
   const invoke = async (message: Extract<HostToWorkerMessage, { type: "invoke" }>) => {
+    const { invocationId } = message;
     const controller = new AbortController();
-    invocations.set(message.invocationId, controller);
+    const table = createFunctionTable();
+    invocations.set(invocationId, { controller, table });
     const channel = {
       signal: controller.signal,
       call: (path: SurfaceStep[], args: unknown[]) => {
-        const requestId = `r${nextRequest++}`;
-        const reply = Promise.withResolvers<unknown>();
-        pending.set(requestId, reply);
-        send({ v: BACKEND_PROTOCOL_VERSION, type: "call", invocationId: message.invocationId, requestId, path, args });
-        return reply.promise;
+        const exported = table.exportValue(args) as unknown[];
+        return request(invocationId, (requestId) => ({
+          v: BACKEND_PROTOCOL_VERSION,
+          type: "call",
+          invocationId,
+          requestId,
+          path,
+          args: exported,
+        }));
       },
       notify: (path: SurfaceStep[], args: unknown[]) =>
-        send({ v: BACKEND_PROTOCOL_VERSION, type: "notify", invocationId: message.invocationId, path, args }),
+        send({ v: BACKEND_PROTOCOL_VERSION, type: "notify", invocationId, path, args }),
     };
     try {
       const handler = handlers.get(message.handlerId);
       if (!handler) throw new Error(`Unknown backend handler: ${message.handlerId}`);
       const context = createSurfaceFacade(message.surface, message.values, channel);
       const value = await handler(context, ...message.args);
-      send({ v: BACKEND_PROTOCOL_VERSION, type: "result", invocationId: message.invocationId, ok: true, value });
+      send({ v: BACKEND_PROTOCOL_VERSION, type: "result", invocationId, ok: true, value });
     } catch (error) {
       const rejection = transferableCommandRejection(readCommandRejection(error, controller.signal));
       send({
         v: BACKEND_PROTOCOL_VERSION,
         type: "result",
-        invocationId: message.invocationId,
+        invocationId,
         ok: false,
         error: serializeBackendError(error),
         rejection,
       });
     } finally {
-      invocations.delete(message.invocationId);
+      invocations.delete(invocationId);
+      table.clear();
     }
   };
 
@@ -133,17 +178,21 @@ export const runBackendWorker = () => {
     }
   };
 
+  const settle = (message: Extract<HostToWorkerMessage, { type: "reply" }>) => {
+    const reply = pending.get(message.requestId);
+    pending.delete(message.requestId);
+    if (message.ok) reply?.resolve(message.value);
+    else reply?.reject(deserializeBackendError(message.error));
+  };
+
   process.on("message", (raw: HostToWorkerMessage) => {
     if (raw?.v !== BACKEND_PROTOCOL_VERSION) return;
     if (raw.type === "load") void load(raw.entryPath);
     else if (raw.type === "invoke") void invoke(raw);
-    else if (raw.type === "cancel") invocations.get(raw.invocationId)?.abort(deserializeBackendError(raw.reason));
-    else if (raw.type === "reply") {
-      const reply = pending.get(raw.requestId);
-      pending.delete(raw.requestId);
-      if (raw.ok) reply?.resolve(raw.value);
-      else reply?.reject(deserializeBackendError(raw.error));
-    }
+    else if (raw.type === "cancel")
+      invocations.get(raw.invocationId)?.controller.abort(deserializeBackendError(raw.reason));
+    else if (raw.type === "reply") settle(raw);
+    else if (raw.type === "fn-call") void answerHost(raw);
   });
   // The host disconnects on retirement; nothing in this process outlives it.
   process.on("disconnect", () => process.exit(0));

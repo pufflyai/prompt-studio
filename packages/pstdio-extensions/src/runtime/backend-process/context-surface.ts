@@ -48,8 +48,13 @@ const records = (namespace?: string[]) =>
     ...(namespace ? { id: { kind: "local", name: "recordId", namespace } } : {}),
   });
 
+const log = object({ ...calls("append", "read"), follow: { kind: "iterate" } });
+
 const storageMembers = (namespace?: string[]): Members => ({
-  ...calls("get", "set", "delete", "canMigrate", "readLegacy"),
+  ...calls("get", "set", "delete", "canMigrate", "readLegacy", "migrate"),
+  observe: { kind: "subscribe" },
+  text: { kind: "factory", returns: object(calls("edit")) },
+  log: { kind: "factory", returns: log },
   ids: object({ create: { kind: "local", name: "storageId" } }),
   records: records(namespace),
   files: blobs,
