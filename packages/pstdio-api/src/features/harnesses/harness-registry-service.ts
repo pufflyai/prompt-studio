@@ -96,7 +96,7 @@ export const createHarnessRegistryService = (input: {
     projectId: options?.projectId,
     extensionId: record.extensionId,
     name: record.name,
-    process: createProcessApi(),
+    process: createProcessApi({ extensionId: record.extensionId }),
     net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
     connections:
       options?.projectId && input.createConnectionsApi
