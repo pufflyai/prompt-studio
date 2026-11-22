@@ -4,6 +4,7 @@ import {
   viewerPage,
   viewerResource,
 } from "../resource-viewers/resource-viewer-test-fixture";
+import { viewerHostKey } from "../resource-viewers/viewer-host-continuity";
 import { openDroppedPage, openPanelAsPage, panelPageDropTarget } from "./panel-page-drop";
 
 test("dropping a side conversation onto its page opens Main and removes the side tab", async () => {
@@ -11,9 +12,11 @@ test("dropping a side conversation onto its page opens Main and removes the side
   w.pageLocations.navigate({ kind: "page", page: viewerPage("reader") });
   await openSide("conversation");
   const original = side();
+  const liveHost = viewerHostKey(w, original.instanceId);
   expect(panelPageDropTarget(w, original.instanceId)).toMatchObject({ page: viewerPage("reader") });
   await openPanelAsPage(w, original.instanceId);
   expect(w.pages.getContent()?.resource?.id).toBe("conversation");
+  expect(viewerHostKey(w, w.pages.getContent()!.widgetId)).toBe(liveHost);
   expect(w.layout.listPanelInstances("side")).toHaveLength(0);
 });
 

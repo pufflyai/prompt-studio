@@ -72,7 +72,17 @@ test("ticket work opens a shared non-Git folder and loads files without Git requ
     const sideFiles = page.getByRole("dialog", { name: "Files", exact: true });
     await expect(sideFiles.getByRole("option", { name: "notes.md", exact: true })).toBeVisible();
     // Pointer events from portaled menu content must not dock its owner's header.
+    const owner = page.locator('[data-workbench-menu-bounds="side"]');
+    await expect
+      .poll(async () => {
+        const menu = (await sideFiles.boundingBox())!,
+          bounds = (await owner.boundingBox())!;
+        return Math.abs(menu.x + menu.width - bounds.x - bounds.width);
+      })
+      .toBeLessThan(2);
     const bubble = (await sideFiles.boundingBox())!;
+    expect(bubble.height).toBeLessThan(200);
+    expect(bubble.height).toBeLessThanOrEqual((await owner.boundingBox())!.height);
     await page.mouse.move(bubble.x + 20, bubble.y + bubble.height - 32);
     await page.mouse.down();
     await page.mouse.move(bubble.x + 40, bubble.y + bubble.height - 16, { steps: 5 });

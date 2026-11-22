@@ -63,7 +63,7 @@ const createHeaderWorkbench = () => {
   });
   for (const menu of [
     { id: "files", title: "Resources", icon: "Files", side: "right" },
-    { id: "activity", title: "Activity", icon: "Activity", side: "right" },
+    { id: "activity", title: "Activity", icon: "TextPen", side: "right" },
   ] as const) {
     workbench.views.registerView({
       id: menu.id,
@@ -114,7 +114,7 @@ const createHeaderWorkbench = () => {
 export default {
   title: "Product/Workbench/Header/Menu header",
   description:
-    "App-level controls sit above the workbench. Drag empty menu header space to dock it; drag its buttons or use Alt + arrow keys to reorder. Built-in menus start on the right, and menus on different edges can stay open together. Narrow panels keep a real header with inline actions; only menu content floats.",
+    "Pages put view controls and menus in their page header. Tabs alone have a movable menu header, hidden when empty. Built-in menus start on the right; different edges may stay open together. Narrow menus float at the parent content edge, hugging their content up to the parent height. Drag a tab menu header to dock it and its buttons to reorder.",
   fullscreen: true,
 } satisfies CanvasMeta;
 

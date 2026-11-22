@@ -17,6 +17,7 @@ import type {
   WorkbenchCore,
   WorkbenchPanelMenuRegion,
   WorkbenchPanelRegion,
+  WorkbenchPanelRenderInput,
   WorkbenchWidgetPlacement,
 } from "../../core";
 import { getWorkbenchPanelForMenuRegion, workbenchPanelMenuRegions, workbenchPanelRegions } from "../../core";
@@ -47,14 +48,24 @@ const isPanel = (region: ViewRegion): region is WorkbenchPanelRegion =>
   workbenchPanelRegions.includes(region as WorkbenchPanelRegion);
 
 type HeaderSurface = "content" | "header" | "page-header";
-type ViewSlot = { node: HTMLDivElement; active: boolean };
+type ViewSlot = { node: HTMLDivElement; active: boolean; sizing?: WorkbenchPanelRenderInput["sizing"] };
 type ViewSlots = Record<HeaderSurface, Partial<Record<ViewRegion, ViewSlot>>>;
 interface PanelViewSlots {
   park(node: HTMLElement): void;
-  register(region: ViewRegion, node: HTMLDivElement | null, surface: HeaderSurface, active: boolean): void;
+  register(
+    region: ViewRegion,
+    node: HTMLDivElement | null,
+    surface: HeaderSurface,
+    active: boolean,
+    sizing?: WorkbenchPanelRenderInput["sizing"],
+  ): void;
 }
 const PanelViewContext = createContext<PanelViewSlots | null>(null);
-export const usePanelViewSlot = (region: ViewRegion | undefined, surface: HeaderSurface = "content") => {
+export const usePanelViewSlot = (
+  region: ViewRegion | undefined,
+  surface: HeaderSurface = "content",
+  sizing?: WorkbenchPanelRenderInput["sizing"],
+) => {
   const registry = useContext(PanelViewContext);
   const active = useContext(ViewActivityContext);
   const [node, setNode] = useState<HTMLDivElement | null>(null);
@@ -69,9 +80,9 @@ export const usePanelViewSlot = (region: ViewRegion | undefined, surface: Header
   );
   useLayoutEffect(() => {
     if (!region) return;
-    registry?.register(region, node, surface, active);
+    registry?.register(region, node, surface, active, sizing);
     return () => registry?.register(region, null, surface, false);
-  }, [registry, region, node, surface, active]);
+  }, [registry, region, node, surface, active, sizing]);
   return { enabled: Boolean(registry && region), ref };
 };
 
@@ -106,6 +117,7 @@ const PanelViewPortal = (props: {
   slot?: HTMLElement;
   headerSlot?: HTMLElement;
   headerActive: boolean;
+  sizing?: WorkbenchPanelRenderInput["sizing"];
   region?: ViewRegion;
   active: boolean;
 }) => {
@@ -180,7 +192,13 @@ const PanelViewPortal = (props: {
         <RegionScrollArea>
           {/* Preserve collection state while deferring updates and reads for hidden pages. */}
           <Activity mode={active || !collection ? "visible" : "hidden"}>
-            <WorkbenchWidgetHost workbench={workbench} placement={placement} region={region} visible={active} />
+            <WorkbenchWidgetHost
+              workbench={workbench}
+              placement={placement}
+              region={region}
+              visible={active}
+              sizing={props.sizing}
+            />
           </Activity>
         </RegionScrollArea>
       </UiScopeActivity>
@@ -284,6 +302,7 @@ const ProjectViewHosts = (props: { workbench: WorkbenchCore; slots: ViewSlots })
             placement={placement}
             region={region}
             slot={region ? slots.content[region]?.node : undefined}
+            sizing={slots.content[region as ViewRegion]?.sizing}
             headerSlot={region && isPanel(region) ? slots[headerSurface][region]?.node : undefined}
             headerActive={Boolean(region && isPanel(region) && slots[headerSurface][region]?.active)}
             active={
@@ -309,11 +328,18 @@ export const WorkbenchPanelViewHosts = (props: { workbench: WorkbenchCore; child
           movePanelHost(child, parking.current);
       }
     },
-    register: (region, node, surface, active) =>
+    register: (region, node, surface, active, sizing) =>
       setSlots((previous) => {
         const current = previous[surface][region];
-        if (current?.node === (node ?? undefined) && (!node || current?.active === active)) return previous;
-        return { ...previous, [surface]: { ...previous[surface], [region]: node ? { node, active } : undefined } };
+        if (
+          current?.node === (node ?? undefined) &&
+          (!node || (current?.active === active && current?.sizing === sizing))
+        )
+          return previous;
+        return {
+          ...previous,
+          [surface]: { ...previous[surface], [region]: node ? { node, active, sizing } : undefined },
+        };
       }),
   }));
   return (

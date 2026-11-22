@@ -4,6 +4,7 @@ import type { WorkbenchCore } from "../../core";
 import { workbenchTopHeaderLeadingMenuPath, workbenchTopHeaderTrailingMenuPath } from "../../core";
 import { isSingleViewPage } from "../../core/registries/pages/page-main";
 import { WorkbenchBreadcrumbView } from "../breadcrumb/breadcrumb-view";
+import { useFloatingMenu } from "../panel-menu/floating-menu-context";
 import { useModeChrome } from "../region/mode-chrome";
 import { PanelDragHeader, usePanelPositionActions } from "../region/panel-position-controls";
 import { WorkbenchRegion } from "../region/region";
@@ -13,6 +14,7 @@ import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { FullscreenControls } from "../workbench/fullscreen-controls";
 import { WorkbenchPanelToggles } from "../workbench/workbench-panel-toggles";
+import { WorkbenchContentHeader } from "./content-header";
 import { WorkbenchHeaderActions } from "./header-actions";
 import { WorkbenchBreadcrumbActions } from "./resource-actions";
 import { WorkbenchPresence } from "./workbench-presence";
@@ -84,13 +86,20 @@ const MainHeaderIdentity = (props: {
       >
         <WorkbenchBreadcrumbActions workbench={workbench} />
       </HStack>
-      <Box flex={hasMainHeader || !tabbed ? "1" : "0"} h="full" minW="0" overflow="hidden">
+      <Box flex={hasMainHeader ? "1" : "0"} h="full" minW="0" overflow="hidden">
         <WorkbenchRegion workbench={workbench} region="main-header" title="Main header" />
       </Box>
       <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
     </>
   );
 };
+
+const MainPageControls = (props: { workbench: WorkbenchCore; tabbed: boolean }) =>
+  props.tabbed ? null : (
+    <Box flex="1" minW="0" h="full">
+      <WorkbenchContentHeader workbench={props.workbench} panel="main" inlinePage />
+    </Box>
+  );
 
 export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
   const {
@@ -104,6 +113,7 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
     workbench.pages.store,
     (state) => !isSingleViewPage(state.pages[state.activePageId ?? ""]),
   );
+  const menus = useFloatingMenu();
   const border = useWorkbenchStore(
     workbench.layout.store,
     () => tabbed || workbench.layout.getRegionHeaderBorderBottom("nav"),
@@ -121,7 +131,7 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
         region="main"
         data-workbench-region="nav"
         data-workbench-panel-header="main"
-        display={fullscreenControlsInTitleBar && !hasParticipants ? "none" : "flex"}
+        display={fullscreenControlsInTitleBar && !hasParticipants && !menus.headerPresent ? "none" : "flex"}
         variant="main"
         padding={chrome ? "0" : undefined}
         bg={workbenchBackgrounds.main}
@@ -150,6 +160,7 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
         <Box display={chrome !== undefined || fullscreen ? "none" : "contents"}>
           <MainHeaderIdentity workbench={workbench} tabbed={tabbed} hasNav={hasNav} hasMainHeader={hasMainHeader} />
         </Box>
+        <MainPageControls workbench={workbench} tabbed={tabbed} />
         {fullscreen || chrome === false ? <Box flex="1" minW="0" /> : null}
         <WorkbenchPresence workbench={workbench} />
         {panelControls && !fullscreen ? <WorkbenchPanelToggles workbench={workbench} /> : null}

@@ -450,14 +450,15 @@ alongside its `body`. The toolbar is another declared view, using a native body 
 a bounded webview. Header references must name an available view and cannot form
 cycles.
 
-The host places those controls and `viewMenus` openers in one menu header, below
-page chrome or the tab strip. Users can dock it at the top, either side or the
-bottom, and reorder controls by dragging or using Alt + arrow keys. Menu icons
-are rightmost by default. Small panels use floating bubbles; a custom header
-opens as one retained controls surface. Menus have no title header or close
-button, and each edge displays one selected menu. Main, Side, Secondary, and floating Side use the same contract;
-every tab header keeps a bottom separator. Tab and whole-panel actions remain in
-the tab header.
+Pages place these controls and `viewMenus` openers in their existing page header.
+Tabs alone get a separate menu header, hidden when its effective contributions
+are empty. Users can dock a tab's menu header at any edge and reorder controls
+by dragging or using Alt + arrow keys. Menu icons are rightmost by default.
+Narrow panels keep their header; only menu content floats. Popovers align with
+the parent content's right edge (left for left-positioned menus), hug their
+contents, and scroll within the parent's height. Menus have no extra title or
+close button; each edge displays one selected menu. Tab strips retain their
+bottom separator and whole-panel controls.
 
 The companion header inherits its owning live instance’s resource, project,
 workspace and page context. Switching tabs shows the selected instance’s header;

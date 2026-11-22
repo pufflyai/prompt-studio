@@ -4,6 +4,7 @@ import type {
   RegisteredPlaceholderContribution,
   WorkbenchCore,
   WorkbenchPanelMenuRegion,
+  WorkbenchPanelRenderInput,
   WorkbenchRegion as WorkbenchRegionId,
   WorkbenchWidgetPlacement,
 } from "../../core";
@@ -35,6 +36,7 @@ interface WorkbenchRegionProps {
   title?: string;
   pointerEvents?: "auto" | "none";
   transparent?: boolean;
+  sizing?: WorkbenchPanelRenderInput["sizing"];
 }
 
 // Header bars and the status bar lay their content out in a row, so they
@@ -183,7 +185,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   const menuRegion = [...panelMenuRegionIds].find((candidate) => candidate === region) as
     | WorkbenchPanelMenuRegion
     | undefined;
-  const panelSlot = usePanelViewSlot(panelRegion ?? menuRegion);
+  const panelSlot = usePanelViewSlot(panelRegion ?? menuRegion, "content", props.sizing);
   const sharedViews = panelSlot.enabled;
   const chrome = useModeChrome(workbench, region);
   const locationResource = useWorkbenchLocationResource(workbench);

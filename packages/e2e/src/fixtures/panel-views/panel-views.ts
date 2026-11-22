@@ -88,7 +88,17 @@ export const createPanelViewFixture = (baseUrl: string) => {
     id: "letter-activity",
     title: "Letter activity",
     icon: "Activity",
-    body: { kind: "webview", entry: packageAsset("./letter-browser.tsx", baseUrl), capabilities: ["navigation.open"] },
+    body: {
+      kind: "tree",
+      defaultExpandedSectionIds: ["events"],
+      body: async () => [
+        {
+          id: "events",
+          label: "Events",
+          nodes: Array.from({ length: 20 }, (_, index) => ({ id: `event-${index + 1}`, label: `Event ${index + 1}` })),
+        },
+      ],
+    },
   });
   const kind = defineResourceKind({ id: "letter", label: "Letter", icon: "Mail" });
   const viewer = definePlacement({
@@ -162,13 +172,15 @@ export const createPanelViewFixture = (baseUrl: string) => {
     main: { kind: "view", view: browser.ref, cardinality: "one" },
     slots: [],
   });
+  const emptyMenu = defineView({ id: "empty-menu", title: "Empty menu", body: { kind: "tree", body: async () => [] } });
   return {
     commands: [addLetterViewer, completeLetter, deleteLetter, headerContext],
     resourceKinds: [kind],
-    views: [reader, browser, toolbar, activity],
+    views: [reader, browser, toolbar, activity, emptyMenu],
     viewMenus: [
       defineViewMenu({ id: "letter-tools", owner: reader.ref, view: browser.ref, side: "right" }),
       defineViewMenu({ id: "letter-activity", owner: reader.ref, view: activity.ref, side: "bottom" }),
+      defineViewMenu({ id: "empty-tools", owner: browser.ref, view: emptyMenu.ref, side: "right" }),
     ],
     placements: [viewer, browserPanel],
     pages: [mailbox, letter, collection],

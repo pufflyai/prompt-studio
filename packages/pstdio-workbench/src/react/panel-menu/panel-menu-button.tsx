@@ -2,7 +2,6 @@ import { Box, IconButton } from "@chakra-ui/react";
 import { PANEL_HEADER_CONTROL_SIZE, ScopedPopover as Popover, Portal, ResourceContextMenu, Tooltip } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { openOwnedViewMenu, selectViewMenuPlacement } from "../../core/controllers/panel-menus/open-view-menu";
-import { menuHeaderPopoverPlacement } from "../header/menu-header-popover-placement";
 import { useMenuHeaderSettings } from "../header/use-menu-header-settings";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchActivePanel } from "../shared/use-workbench-active-panel";
@@ -10,7 +9,6 @@ import { useFloatingMenu } from "./floating-menu-context";
 import { type PanelMenuEntry, resolvePanelMenuEntries } from "./panel-menu-entries";
 import { WorkbenchPanelMenuSlot } from "./panel-menu-hosts";
 import type { WorkbenchPanelMenuView } from "./use-panel-menu";
-import { usePanelMenuContent } from "./use-panel-menu-content";
 
 export const WorkbenchPanelMenuButton = (props: {
   workbench: WorkbenchCore;
@@ -20,8 +18,7 @@ export const WorkbenchPanelMenuButton = (props: {
 }) => {
   const { workbench, panel, entry, view } = props;
   const owner = useWorkbenchActivePanel(workbench, panel);
-  const { settings, configure } = useMenuHeaderSettings(workbench, owner);
-  const hasContent = usePanelMenuContent(workbench, entry.placement);
+  const { configure } = useMenuHeaderSettings(workbench, owner);
   const floatingMenu = useFloatingMenu();
   const open = view.canAttach
     ? view.placementId === entry.placement.widgetId && !view.collapsed
@@ -46,7 +43,6 @@ export const WorkbenchPanelMenuButton = (props: {
     for (const peer of closing) floatingMenu.setOpen(peer.placement.widgetId, false);
     if (nextOpen) selectViewMenuPlacement(workbench, entry.placement.widgetId);
   };
-  if (!hasContent) return null;
   const sameSide = resolvePanelMenuEntries(workbench, panel).filter((candidate) => candidate.region === entry.region);
   const label = `${open ? "Close" : "Open"} ${view.label}${sameSide.length > 1 ? `: ${entry.title}` : ""}`;
   const icon = <WorkbenchIcon name={entry.icon} size={14} />;
@@ -100,8 +96,15 @@ export const WorkbenchPanelMenuButton = (props: {
             lazyMount={false}
             unmountOnExit={false}
             positioning={{
-              placement: menuHeaderPopoverPlacement(settings.position, entry.side === "left" ? "start" : "end"),
-              flip: true,
+              placement: entry.side === "left" ? "bottom-start" : "bottom-end",
+              getAnchorRect: () => {
+                const rect = floatingMenu.bounds.current?.getBoundingClientRect();
+                return rect ? { x: rect.x, y: rect.y, width: rect.width, height: 0 } : null;
+              },
+              offset: { mainAxis: 0 },
+              flip: false,
+              slide: false,
+              overflowPadding: 0,
             }}
           >
             <Popover.Trigger asChild>
@@ -111,7 +114,26 @@ export const WorkbenchPanelMenuButton = (props: {
             </Popover.Trigger>
             <Portal>
               <Popover.Positioner>
-                <Popover.Content aria-label={entry.title} w="72" h="80" maxH="var(--available-height)" p="0">
+                <Popover.Content
+                  aria-label={entry.title}
+                  w="max-content"
+                  minW="min(240px, var(--available-width))"
+                  maxW={
+                    floatingMenu.size.width ? `${Math.min(320, floatingMenu.size.width)}px` : "var(--available-width)"
+                  }
+                  maxH={floatingMenu.size.height ? `${floatingMenu.size.height}px` : "var(--available-height)"}
+                  overflow="hidden"
+                  css={
+                    floatingMenu.size.height
+                      ? {
+                          "& iframe, & [data-workbench-presentation], & [data-scope=scroll-area][data-part=viewport]": {
+                            maxHeight: `${Math.max(0, floatingMenu.size.height - 2)}px`,
+                          },
+                        }
+                      : undefined
+                  }
+                  p="0"
+                >
                   {view.placementId === entry.placement.widgetId ? (
                     <WorkbenchPanelMenuSlot
                       key={entry.region}

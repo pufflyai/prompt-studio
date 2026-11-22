@@ -31,6 +31,13 @@ headers("keeps a public header view and menus with their live tab across destina
   try {
     await page.goto(`/projects/${id}/extensions/test.panel-views/mailbox`);
     await expect(toolbar(page, "main").getByLabel("Header for landing", { exact: true })).toBeVisible();
+    await expect(panel(page, "main").locator('[data-workbench-content-header="main"]:visible')).toHaveCount(0);
+    await expect(
+      panel(page, "main")
+        .locator('[data-workbench-panel-header="main"]')
+        .frameLocator('iframe[title="Letter toolbar"]:visible')
+        .getByRole("textbox", { name: "Letter search" }),
+    ).toBeVisible();
     await toolbar(page, "main").getByRole("textbox", { name: "Letter search" }).fill("keep this query");
     await panel(page, "main")
       .frameLocator('iframe[title="Letter viewer"]:visible')
@@ -109,6 +116,23 @@ headers("keeps a public header view and menus with their live tab across destina
     await expect(toolbar(page, "secondary").getByRole("status", { name: "Header context", exact: true })).toHaveText(
       "Command for A",
     );
+    const returning = (await panel(page, "secondary")
+      .getByRole("tab", { name: "Letter A", exact: true })
+      .boundingBox())!;
+    const destination = (await panel(page, "main").boundingBox())!;
+    await page.mouse.move(returning.x + returning.width / 2, returning.y + returning.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(returning.x + returning.width / 2 + 10, returning.y + returning.height / 2, { steps: 3 });
+    await page.mouse.move(destination.x + destination.width / 2, destination.y + destination.height / 2, { steps: 12 });
+    await expect(page.locator('[data-workbench-tab-drop="main"][data-drop-active]')).toBeVisible();
+    await page.mouse.up();
+    await expect(
+      panel(page, "main")
+        .locator('[data-workbench-panel-header="main"]')
+        .frameLocator('iframe[title="Letter toolbar"]:visible')
+        .getByRole("textbox", { name: "Letter search" }),
+    ).toHaveValue("A query");
+    await expect(panel(page, "main").locator('[data-workbench-content-header="main"]:visible')).toHaveCount(0);
   } finally {
     await request.delete(`${uiOrigin}/v1/projects/${id}`);
   }
@@ -145,7 +169,7 @@ test("Extensions search remains usable after its page becomes a tab", async ({ p
     await page.goto(`/projects/${id}/extensions`);
     const main = panel(page, "main");
     await expect(
-      main.locator('[data-workbench-content-header="main"]').getByRole("textbox", { name: /Search extensions/ }),
+      main.locator('[data-workbench-panel-header="main"]').getByRole("textbox", { name: /Search extensions/ }),
     ).toBeVisible();
     const mainSearch = main.getByRole("textbox", { name: /Search extensions/ });
     await mainSearch.fill("Canvas search text");
@@ -194,8 +218,10 @@ headers(
     await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
     await page.setViewportSize({ width: 1600, height: 1000 });
     try {
-      await page.goto(`/projects/${id}/extensions/test.panel-views/mailbox`);
+      await page.goto(`/projects/${id}/extensions/test.panel-views/collection`);
       const main = panel(page, "main");
+      await main.getByRole("button", { name: "Add panel", exact: true }).click();
+      await page.getByRole("menuitem", { name: "New letter viewer", exact: true }).click();
       const header = main.locator('[data-workbench-content-header="main"]');
       await expect(toolbar(page, "main").getByRole("textbox", { name: "Letter search" })).toBeVisible();
       await toolbar(page, "main").getByRole("textbox", { name: "Letter search" }).fill("keep while docking");
@@ -303,6 +329,41 @@ headers(
       await header.getByRole("button", { name: "Open Main left menu", exact: true }).click();
       await expect(page.getByRole("dialog", { name: "Letter activity", exact: true })).toBeVisible();
       await expect(page.getByRole("dialog", { name: "Letter browser", exact: true })).toBeVisible();
+      const menuBounds = main.locator('[data-workbench-menu-bounds="main"]');
+      await expect
+        .poll(async () => {
+          const owner = (await menuBounds.boundingBox())!,
+            menu = (await page.getByRole("dialog", { name: "Letter activity", exact: true }).boundingBox())!;
+          return Math.abs(owner.x - menu.x);
+        })
+        .toBeLessThan(2);
+      await expect
+        .poll(async () => {
+          const owner = (await menuBounds.boundingBox())!,
+            menu = (await page.getByRole("dialog", { name: "Letter browser", exact: true }).boundingBox())!;
+          return Math.abs(owner.x + owner.width - menu.x - menu.width);
+        })
+        .toBeLessThan(2);
+      await page.setViewportSize({ width: 700, height: 260 });
+      await expect
+        .poll(async () => {
+          const owner = (await menuBounds.boundingBox())!,
+            menu = (await page.getByRole("dialog", { name: "Letter browser", exact: true }).boundingBox())!;
+          return menu.height - owner.height;
+        })
+        .toBeLessThanOrEqual(1);
+      const events = page.getByRole("dialog", { name: "Letter activity", exact: true });
+      const eventsBounds = (await events.boundingBox())!;
+      await expect
+        .poll(() =>
+          events
+            .locator('[data-scope="scroll-area"][data-part="viewport"]')
+            .evaluateAll((nodes) => Math.max(0, ...nodes.map((node) => node.clientHeight))),
+        )
+        .toBeLessThanOrEqual(eventsBounds.height);
+      await page.mouse.move(eventsBounds.x + 20, eventsBounds.y + eventsBounds.height / 2);
+      await page.mouse.wheel(0, 1000);
+      await expect(events.getByRole("option", { name: "Event 20", exact: true })).toBeInViewport({ ratio: 1 });
       await page.keyboard.press("Escape");
       await page.keyboard.press("Escape");
       await page.setViewportSize({ width: 1600, height: 1000 });

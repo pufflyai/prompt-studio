@@ -65,7 +65,7 @@ test("Auto Build stays in the timeline header and opens a host dialog after a pa
     await page.goto(path);
     const main = page.locator('[data-workbench-panel="main"]');
     const actions = main
-      .locator('[data-workbench-content-header="main"]')
+      .locator('[data-workbench-panel-header="main"]')
       .frameLocator('iframe[title="Timeline actions"]');
     await actions.getByRole("button", { name: "Auto Build", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Auto Build", exact: true });

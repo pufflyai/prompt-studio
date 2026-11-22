@@ -79,7 +79,7 @@ export const registerResourcePageMenus = (input: InternalRegisterWorkbenchExtens
       workbench.views.registerView({
         id,
         title: "Activity",
-        icon: "Activity",
+        icon: "TextPen",
         body: {
           kind: "react",
           render: ({ workbench, instance, visible }) => {

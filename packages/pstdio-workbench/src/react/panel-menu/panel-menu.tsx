@@ -2,6 +2,7 @@ import { AttachedMenu, ResizableSplitLayout } from "@pstdio/ui";
 import type { ReactNode } from "react";
 import type { WorkbenchCore, WorkbenchPanelRegion } from "../../core";
 import { WorkbenchMenuHeaderLayout } from "../header/menu-header-layout";
+import { useFloatingMenu, WorkbenchMenuHeaderProvider } from "./floating-menu-context";
 import { WorkbenchPanelMenuSlot } from "./panel-menu-hosts";
 import { PANEL_CONTENT_MIN_SIZE_PX } from "./panel-menu-sizing";
 import { useWorkbenchPanelMenus, type WorkbenchPanelMenuView } from "./use-panel-menu";
@@ -37,7 +38,7 @@ const MenuSplit = (props: { workbench: WorkbenchCore; view: WorkbenchPanelMenuVi
     />
   );
 };
-export const WorkbenchPanelMenuLayout = (props: {
+const WorkbenchPanelMenuContents = (props: {
   workbench: WorkbenchCore;
   panel: WorkbenchPanelRegion;
   children: ReactNode;
@@ -54,5 +55,17 @@ export const WorkbenchPanelMenuLayout = (props: {
         </MenuSplit>
       </MenuSplit>
     </WorkbenchMenuHeaderLayout>
+  );
+};
+
+export const WorkbenchPanelMenuLayout = (props: Parameters<typeof WorkbenchPanelMenuContents>[0]) => {
+  const context = useFloatingMenu();
+  const content = <WorkbenchPanelMenuContents {...props} />;
+  return context.panel === props.panel ? (
+    content
+  ) : (
+    <WorkbenchMenuHeaderProvider workbench={props.workbench} panel={props.panel}>
+      {content}
+    </WorkbenchMenuHeaderProvider>
   );
 };
