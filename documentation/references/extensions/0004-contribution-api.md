@@ -443,6 +443,55 @@ This additive surface requires host capability `view.actionBar.v1` and a
 supporting published SDK. Publish platform support before releasing independent
 extensions that adopt it. Older view kinds and activity items stay supported.
 
+## View-owned menu headers
+
+On unreleased extension API 0.5.1, declare `header: { view: toolbar.ref }` on a view
+alongside its `body`. The toolbar is another declared view, using a native body or
+a bounded webview. Header references must name an available view and cannot form
+cycles.
+
+Pages place these controls and `viewMenus` openers in their existing page header.
+Tabs alone get a separate menu header, hidden when its effective contributions
+are empty. Users can dock a tab's menu header at any edge and reorder controls
+by dragging or using Alt + arrow keys. Menu icons are rightmost by default.
+Narrow panels keep their header; only menu content floats. Popovers align with
+the parent content's right edge (left for left-positioned menus), hug their
+contents, and scroll within the parent's height. Menus have no extra title or
+close button; each edge displays one selected menu. Tab strips retain their
+bottom separator and whole-panel controls.
+
+The companion header inherits its owning live instance’s resource, project,
+workspace and page context. Switching tabs shows the selected instance’s header;
+moving that instance preserves its header guest and local state. Header commands
+use that instance even when another panel has focus. Use existing page params or
+extension-owned state when the header and body share search or filters.
+
+A custom header webview owns its styling inside the iframe. Import
+`@pstdio/ui/style.css`, mount the shared theme provider, and use compact shared
+controls in a bounded row that centers its children vertically. Allow search
+fields to shrink when the owning view moves to a narrower panel.
+
+Webview popovers and dialogs cannot escape their iframe. Header controls that
+need a larger surface should open a declared single-view page with
+`navigation.open({ kind: "dialog", page })`; the host owns the modal, and the
+content can close it with `placement.close`. A native `actionBar` body is also available for host-rendered buttons
+and menus. Menu sides are an initial layout preset, not a permission: menus on
+different edges can always remain open together. First-party tools group menus
+on the right by default, except Files in Files/Workspaces, which opens left. Extensions can declare different `viewMenus.side`
+arrangements, including several initially open edges. Menus sharing one edge
+use that edge's selected content pane. User placement and open-state choices
+win over the initial arrangement.
+
+Drag empty menu-header space to change its placement; drag a button to reorder
+it within the header. Narrow panels keep a real header with ordinary controls
+and shrinking search fields. Only menu content floats; the header and its
+actions never become a bubble tray.
+
+Resource pages with navigation expose only their own page navigation as a
+Resources menu when tabbed. Standalone pages continue to use the routed project
+navigation. Focusing an auxiliary tab does not replace that navigation; its
+resource, expansion, selection, search and scroll remain bound to its owner.
+
 ## Native view toolbar actions
 
 Both `dataTable` and `kanban` bodies accept `toolbarActions`. These actions stay

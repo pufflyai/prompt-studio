@@ -13,6 +13,8 @@ import { rendererRefreshScopes } from "./renderer-refresh-key";
 
 export interface WorkbenchPanelRenderInput {
   workbench: WorkbenchCore;
+  /** Actual rendered view; a companion header retains its owning instance identity. */
+  viewId?: string;
   panel: WorkbenchPanelContribution | PlaceholderContribution | RegisteredPlaceholderContribution;
   instance: WorkbenchPanelInstance;
   refresh: () => void;

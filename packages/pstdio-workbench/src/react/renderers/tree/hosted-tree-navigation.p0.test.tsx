@@ -7,6 +7,7 @@ import {
   type WorkbenchPanelInstance,
 } from "../../../core";
 import { toPanelInstance } from "../../../core/registries/layout/panel-api";
+import { useTreeViewState } from "./tree-presentation-state";
 import { createTreeNavigator } from "./tree-view";
 import { useTreeData } from "./use-tree-data";
 import { resolveTreeHostRegion, useTreeNavigationState } from "./use-tree-navigation-state";
@@ -22,7 +23,7 @@ const file = (path: string) => ({
 });
 
 // A Files page like pstdio.workspaces: its file view owns a Files tree menu whose rows target documents.
-const filesWorkbench = () => {
+const filesWorkbench = (resourceMenu = false) => {
   const w = createWorkbench({ initialSidePanelMode: "attached" });
   w.modes.registerMode({ id: "project", activate() {} });
   for (const id of ["file", "home"])
@@ -54,7 +55,14 @@ const filesWorkbench = () => {
       getChildren: () => [],
     },
   });
-  w.viewMenus.registerViewMenu({ id: "files.tree", ownerViewId: "file", viewId: "tree", side: "left" });
+  w.viewMenus.registerViewMenu({
+    id: "files.tree",
+    ownerViewId: "file",
+    viewId: "tree",
+    side: "left",
+    purpose: resourceMenu ? "resources" : undefined,
+    config: resourceMenu ? { pageId: "files" } : undefined,
+  });
   w.pages.registerPage({
     id: "home",
     ref: page("home"),
@@ -71,6 +79,7 @@ const filesWorkbench = () => {
     parentId: "home",
     resource: { kinds: [kind] },
     document: { metadataKey: "path" },
+    params: { focus: { type: "string" } },
     main: { kind: "view", view: { kind: "view", id: "file" }, cardinality: "one", presentation: "page" },
     slots: [],
   });
@@ -83,10 +92,14 @@ const filesWorkbench = () => {
 const MenuTree = (props: {
   workbench: ReturnType<typeof filesWorkbench>;
   placement: WorkbenchPanelInstance;
-  capture: (value: { activeNodeId: unknown; navigate: ReturnType<typeof createTreeNavigator> }) => void;
+  capture: (value: {
+    activePageId?: string;
+    activeNodeId: unknown;
+    navigate: ReturnType<typeof createTreeNavigator>;
+  }) => void;
 }) => {
   const { workbench, placement } = props;
-  const { activeLocation, activeResource, hostRegion } = useTreeNavigationState(workbench, placement);
+  const { activeLocation, activeResource, hostRegion, owner } = useTreeNavigationState(workbench, placement);
   const { body, childrenByNodeId } = useTreeData(workbench, "tree", placement.resource, placement.viewId);
   const activeNodeId = useTreeSelection(workbench, "tree", {
     sections: body,
@@ -95,19 +108,26 @@ const MenuTree = (props: {
     activeResource,
     selectedNodeId: getWorkbenchRenderers(workbench).getTreeState("tree")?.selectedNodeId,
   });
-  props.capture({ activeNodeId, navigate: createTreeNavigator({ workbench, treeViewId: "tree", hostRegion }) });
+  props.capture({
+    activePageId: activeLocation?.page.id,
+    activeNodeId,
+    navigate: createTreeNavigator({ workbench, treeViewId: "tree", hostRegion, owner }),
+  });
   return null;
 };
 
-for (const region of ["side", "secondary"] as const)
-  test(`a ${region} preview's Files menu selects its document and opens rows in the same panel`, async () => {
+for (const [region, params] of (["side", "secondary"] as const).flatMap((region) =>
+  [undefined, { focus: "special" }].map((params) => [region, params] as const),
+))
+  test(`a ${region} Files tab reuses documents unless page params are explicit: ${Boolean(params)}`, async () => {
     const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
     const previous = environment.IS_REACT_ACT_ENVIRONMENT;
     environment.IS_REACT_ACT_ENVIRONMENT = true;
     const w = filesWorkbench();
     let renderer: ReactTestRenderer | undefined;
     try {
-      await w.navigation.openTarget({ kind: "page", page: page("files"), resource: file("src/app.ts"), region });
+      await w.navigation.openTarget({ kind: "page", page: page("files"), resource: file("src/app.ts") });
+      w.movePanel(w.pages.getContent()!.widgetId, region);
       let tree: Parameters<Parameters<typeof MenuTree>[0]["capture"]>[0] | undefined;
       const render = async () => {
         const menu = w.layout.getLayout().regions[`${region}-left-menu`].widgets[0]!;
@@ -127,15 +147,21 @@ for (const region of ["side", "secondary"] as const)
       await act(async () =>
         tree!.navigate({
           nodeId: "src/other.ts",
-          intent: { id: "target", payload: { kind: "page", page: page("files"), resource: file("src/other.ts") } },
+          intent: {
+            id: "target",
+            payload: { kind: "page", page: page("files"), resource: file("src/other.ts"), params },
+          },
         }),
       );
       const layout = w.layout.getLayout();
-      expect(layout.regions[region].widgets.map((entry) => entry.resource?.metadata?.path)).toEqual(["src/other.ts"]);
+      expect(layout.regions[region].widgets.map((entry) => entry.resource?.metadata?.path)).toEqual(
+        params ? ["src/other.ts", "src/app.ts"] : ["src/other.ts"],
+      );
+      expect(layout.regions[region].widgets[0]?.pageContext?.params).toEqual(params);
       expect(layout.regions.main.widgets).toEqual([]);
       expect(w.pages.store.getState().location?.page).toEqual(page("home"));
       await render();
-      expect(tree?.activeNodeId).toBe("src/other.ts");
+      expect(tree?.activeNodeId).toBe(params ? "src/app.ts" : "src/other.ts");
     } finally {
       await act(async () => renderer?.unmount());
       await w.dispose();
@@ -149,6 +175,135 @@ test("a Files menu on a page in Main keeps the routed location", async () => {
   const layout = w.layout.getLayout();
   const menu = layout.regions["main-left-menu"].widgets[0];
   expect(menu).toBeDefined();
-  expect(resolveTreeHostRegion(layout, menu!.widgetId)).toBeUndefined();
+  expect(resolveTreeHostRegion(layout, menu!.widgetId)).toBe("main-left-menu");
   await w.dispose();
+});
+
+test("a resource tree in another page's preview uses its semantic resource page", async () => {
+  const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previous = environment.IS_REACT_ACT_ENVIRONMENT;
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  const w = filesWorkbench(true);
+  w.layout.registerPanel({
+    id: "timeline-preview",
+    title: "Preview",
+    rendererId: "file",
+    region: "side",
+    panelMenus: w.viewMenus.definitionsFor("file", "timeline-preview"),
+  });
+  w.layout.openWidget("timeline-preview", {
+    viewId: "file",
+    resource: file("src/app.ts"),
+    pageContext: { page: page("home") },
+  });
+  const menu = w.layout.getLayout().regions["side-left-menu"].widgets[0]!;
+  let result: Parameters<Parameters<typeof MenuTree>[0]["capture"]>[0] | undefined;
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      renderer = create(
+        <MenuTree
+          workbench={w}
+          placement={toPanelInstance(menu)}
+          capture={(value) => {
+            result = value;
+          }}
+        />,
+      );
+    });
+    expect(result?.activePageId).toBe("files");
+    expect(w.pages.store.getState().location?.page).toEqual(page("home"));
+  } finally {
+    await act(async () => renderer?.unmount());
+    await w.dispose();
+    environment.IS_REACT_ACT_ENVIRONMENT = previous;
+  }
+});
+
+test("a new resource tree scope displays declared node defaults without default sections", async () => {
+  const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previous = environment.IS_REACT_ACT_ENVIRONMENT;
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  const w = createWorkbench();
+  w.views.registerView({
+    id: "default-tree",
+    title: "Files",
+    body: { kind: "tree", defaultExpandedNodeIds: ["src"], getBody: () => [], getChildren: () => [] },
+  });
+  let expanded: string[] = [];
+  const Probe = () => {
+    expanded = useTreeViewState(w, "default-tree", file("src/app.ts"), undefined, false).treeState.expandedNodeIds;
+    return null;
+  };
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      renderer = create(<Probe />);
+    });
+    expect(expanded).toEqual(["src"]);
+  } finally {
+    await act(async () => renderer?.unmount());
+    await w.dispose();
+    environment.IS_REACT_ACT_ENVIRONMENT = previous;
+  }
+});
+
+test("resource navigation presentation survives transfer from project navigation to a tab menu", async () => {
+  const environment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean };
+  const previous = environment.IS_REACT_ACT_ENVIRONMENT;
+  environment.IS_REACT_ACT_ENVIRONMENT = true;
+  const w = filesWorkbench(true);
+  w.views.registerView({
+    id: "project-tree",
+    title: "Project navigation",
+    body: { kind: "tree", getBody: () => [], getChildren: () => [] },
+  });
+  w.navigationTrees.registerContribution({
+    id: "files.nav",
+    owner: { kind: "page", id: "files", extensionId: "example" },
+    sourceExtensionId: "example",
+    declarationIndex: 0,
+    viewId: "tree",
+  });
+  await w.navigation.openTarget({ kind: "page", page: page("files"), resource: file("src/app.ts") });
+  let current!: ReturnType<typeof useTreeViewState>;
+  const Probe = (props: { placement?: WorkbenchPanelInstance }) => {
+    current = useTreeViewState(
+      w,
+      props.placement ? "tree" : "project-tree",
+      props.placement?.resource,
+      props.placement,
+      !props.placement,
+    );
+    return null;
+  };
+  let renderer: ReactTestRenderer | undefined;
+  try {
+    await act(async () => {
+      renderer = create(<Probe />);
+    });
+    const scope = current.stateScope;
+    expect(scope).toBeDefined();
+    await act(async () => {
+      getWorkbenchRenderers(w).setNodeExpanded("project-tree", "src", true, scope);
+      getWorkbenchRenderers(w).setSelectedNode("project-tree", "src/app.ts", scope);
+      current.presentation.update({ filter: "app", scrollTop: 120 });
+    });
+    await act(async () => {
+      renderer!.unmount();
+      await w.movePanel(w.pages.getContent()!.widgetId, "side");
+    });
+    const menu = w.layout.getLayout().regions["side-left-menu"].widgets[0]!;
+    await act(async () => {
+      renderer = create(<Probe placement={toPanelInstance(menu)} />);
+    });
+    expect(current.stateScope).toBe(scope);
+    expect(current.treeState).toMatchObject({ expandedNodeIds: ["src"], selectedNodeId: "src/app.ts" });
+    expect(current.presentation).toMatchObject({ filter: "app", scrollTop: 120 });
+    expect(w.pages.store.getState().location?.page).toEqual(page("home"));
+  } finally {
+    await act(async () => renderer?.unmount());
+    await w.dispose();
+    environment.IS_REACT_ACT_ENVIRONMENT = previous;
+  }
 });

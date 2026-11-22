@@ -6,7 +6,7 @@ import { act, create, type ReactTestRenderer } from "react-test-renderer";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createHeadersModule } from "./module";
 
-test("desktop navigation shows resource breadcrumbs only for dedicated pages", async () => {
+test("navigation shows resource breadcrumbs only for dedicated pages", async () => {
   const w = createWorkbench();
   const ref = (id: string) => ({ kind: "page" as const, extensionId: "test.headers", id });
   w.modes.registerMode({ id: "project", activate() {} });
@@ -29,7 +29,7 @@ test("desktop navigation shows resource breadcrumbs only for dedicated pages", a
     main: { kind: "view", view: { kind: "view", id: "detail" }, cardinality: "one", presentation: "page" },
     slots: [],
   });
-  w.registerModule(createHeadersModule({ select() {}, clear() {} }));
+  w.registerModule(createHeadersModule());
   w.pageLocations.setProject("project");
   w.pageLocations.navigate({ kind: "page", page: ref("home") });
   const view = w.views.getView(dashboardWidgetIds.projectHeader)!;

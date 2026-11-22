@@ -41,6 +41,7 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
     return [
       input.workbench.views.registerView({
         id: panel.id,
+        header: panel.headerViewId ? { viewId: panel.headerViewId } : undefined,
         title: text(panel.title, panel.id),
         icon: panel.icon,
         body: {
@@ -68,7 +69,12 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
                   webviewId: panel.id,
                   placement: renderInput.instance,
                   textTarget: renderInput.textTarget,
-                  hostEvents: getBridgeWebviewHostEventPublisher(renderInput.workbench, renderInput.instance),
+                  hostEvents: getBridgeWebviewHostEventPublisher(
+                    renderInput.workbench,
+                    renderInput.instance,
+                    input.projectId,
+                    panel.id,
+                  ),
                 },
                 createHostAdapters: createExtensionHostAdapters(input, slotKind),
                 createProps:
@@ -88,8 +94,8 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
 
 const viewMenuPlacementPriority = { first: 1_000_000, default: 0, last: -1_000_000 } as const;
 
-export const registerViewMenus = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
-  input.metadata.panels
+export const registerViewMenus = (input: InternalRegisterWorkbenchExtensionContributionsInput) => [
+  ...input.metadata.panels
     .flatMap((panel) => panel.panelMenus ?? [])
     .map((menu, index) =>
       input.workbench.viewMenus.registerViewMenu({
@@ -99,7 +105,8 @@ export const registerViewMenus = (input: InternalRegisterWorkbenchExtensionContr
         side: menu.side,
         priority: viewMenuPlacementPriority[menu.placement ?? "default"] - index,
       }),
-    );
+    ),
+];
 
 export const registerSettings = (input: InternalRegisterWorkbenchExtensionContributionsInput) => {
   const disposables: Disposable[] = [];
