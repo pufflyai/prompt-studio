@@ -33,10 +33,13 @@ const positionPrefix = (before?: string, after?: string) => {
   }
 };
 
+/** The device id a positions API embeds, so an extension worker can compute the same positions locally. */
+export const storagePositionsDevice = Symbol.for("pstdio.storagePositions.device");
+
 /** Finite base-16 fractions, ordered with ordinary string comparison. */
 export const createStoragePositions = (deviceId: string) => {
   const device = bytesToHex(new TextEncoder().encode(deviceId));
-  return {
+  const positions = {
     between(before?: string, after?: string) {
       validatePosition(before);
       validatePosition(after);
@@ -47,4 +50,7 @@ export const createStoragePositions = (deviceId: string) => {
       return `${positionPrefix(before, after)}${device}0${suffix}1`;
     },
   };
+  // Non-enumerable: the device id is already visible inside every position, but it is not part of the API.
+  Object.defineProperty(positions, storagePositionsDevice, { value: deviceId });
+  return positions;
 };

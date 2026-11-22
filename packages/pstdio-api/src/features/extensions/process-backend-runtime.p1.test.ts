@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createStorageMigration } from "pstdio-api-contracts";
-import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { EXTENSION_API_VERSION, type ExtensionContextBase } from "pstdio-api-contracts/extension-kernel";
 import { closeBackendWorkers, prepareExtensionRevision, uncoveredContextFunctions } from "pstdio-extensions";
 import { createTestApp } from "../../test-utils/create-test-app";
 
@@ -145,6 +145,28 @@ export default {
         for (let attempt = 0; seen === 0 && attempt < 50; attempt++) await new Promise((resolve) => setTimeout(resolve, 10));
         handle.close();
         return seen;
+      },
+    },
+    {
+      id: "locals",
+      ref: { kind: "command", id: "locals" },
+      title: "Locals",
+      run(ctx) {
+        const first = ctx.storage.positions.between();
+        return {
+          scoped: ctx.storage.scope({ type: "resource", resource: { type: "ticket", id: "r1" } }).records.id("k"),
+          url: ctx.storage.files.urlFor("f1"),
+          ordered: ctx.storage.positions.between(undefined, first) < first,
+        };
+      },
+    },
+    {
+      id: "asset",
+      ref: { kind: "command", id: "asset" },
+      title: "Asset",
+      async run(ctx) {
+        const asset = await ctx.storage.assets.stage({ operationId: "op-asset", source: new Blob(["asset body"]) });
+        return new Response(await ctx.storage.assets.read(asset)).text();
       },
     },
     {
@@ -465,4 +487,25 @@ test("process-mode migration helpers preserve scoped identity and allow record m
       value: { moved: 1, previous: 0, position: migration.position(0, "entry") },
     },
   });
+});
+
+test("process-mode local helpers match the host's own results", async () => {
+  await handle.app.request(`/v1/projects/${projectId}/extensions/commands/example.in-process.command.capture/execute`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ params: {} }),
+  });
+  const host = (globalThis as { __processRuntimeHostContext?: ExtensionContextBase }).__processRuntimeHostContext!;
+  const { outcome } = await execute("locals");
+  expect(outcome.ok).toBe(true);
+  const value = outcome.value as { scoped: string; url: string; ordered: boolean };
+  expect(value.scoped).toBe(
+    host.storage.scope({ type: "resource", resource: { type: "ticket", id: "r1" } }).records.id("k"),
+  );
+  expect(value.url).toBe(host.storage.files.urlFor("f1").replace("example.in-process", "example.isolated"));
+  expect(value.ordered).toBe(true);
+});
+
+test("process-mode handlers stage Blobs and read asset streams", async () => {
+  expect((await execute("asset")).outcome).toMatchObject({ ok: true, value: "asset body" });
 });
