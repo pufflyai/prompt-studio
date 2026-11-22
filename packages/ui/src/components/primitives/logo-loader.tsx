@@ -11,7 +11,7 @@ const pose = (element: SVGPathElement, frame: ReturnType<typeof logoLoaderFrameA
 
 /** The Prompt Studio mark as a loading indicator: the ring tumbles inside the turning square. */
 export const LogoLoader = (props: LogoLoaderProps) => {
-  const { boxSize = "12", color = "fg.muted", ...rest } = props;
+  const { boxSize = "8", color = "fg.muted", ...rest } = props;
   const path = useRef<SVGPathElement>(null);
   useEffect(() => {
     const element = path.current;
