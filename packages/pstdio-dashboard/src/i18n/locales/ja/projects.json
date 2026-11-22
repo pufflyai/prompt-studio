@@ -113,7 +113,7 @@
       },
       "environmentAccess": {
         "title": "環境へのアクセス",
-        "description": "Prompt Studio を起動した環境の名前付きの値で、この拡張機能が起動するプログラムにのみ渡されます。値はここに表示されることも、拡張機能に送られることもありません。",
+        "description": "Prompt Studio を起動した環境の名前付きの値で、この拡張機能が起動するプログラムに渡されます。名前を許可すると、この拡張機能はその値を使用できます。",
         "notAllowed": "許可されていません",
         "partlyAllowed": "{{total}} 件中 {{count}} 件を許可",
         "allowed": "許可済み",

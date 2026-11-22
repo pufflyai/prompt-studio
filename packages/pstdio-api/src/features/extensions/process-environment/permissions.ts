@@ -69,6 +69,8 @@ export const createProcessEnvironmentPermissions = (input: {
   };
   const leases = new Map<string, Set<Lease>>();
   const retiring = new Set<string>();
+  // Grant changes for one extension run one at a time, so each sees the leases started under the last.
+  const changes = new Map<string, Promise<void>>();
 
   const requireSource = async (projectId: string, extensionId: string) => {
     const source = await input.findSource(projectId, extensionId);
@@ -93,7 +95,7 @@ export const createProcessEnvironmentPermissions = (input: {
 
   // Children started under the previous grant stop before the change takes effect. New children are
   // refused until the grant is replaced, so none can start between the two steps.
-  const replaceGrant = async (key: string, next: ProcessEnvironmentGrant | undefined, reason: unknown) => {
+  const applyGrant = async (key: string, next: ProcessEnvironmentGrant | undefined, reason: unknown) => {
     const map = await grants();
     const previous = map.get(key);
     const retire =
@@ -114,6 +116,16 @@ export const createProcessEnvironmentPermissions = (input: {
       retiring.delete(key);
     }
     await persist(map);
+  };
+
+  const replaceGrant = (key: string, next: ProcessEnvironmentGrant | undefined, reason: unknown) => {
+    const run = (changes.get(key) ?? Promise.resolve()).then(() => applyGrant(key, next, reason));
+    const settled = run.catch(() => {});
+    changes.set(key, settled);
+    void settled.then(() => {
+      if (changes.get(key) === settled) changes.delete(key);
+    });
+    return run;
   };
 
   return {
@@ -170,8 +182,10 @@ export const createProcessEnvironmentPermissions = (input: {
           `envFromHost asks for ${undeclared.join(", ")}, which ${extensionId} does not list in pstdio.processEnvironment. Add the names to its package.json and reload the extension.`,
         );
       const key = grantKey(projectId, extensionId);
-      const grant = (await grants()).get(key);
+      const map = await grants();
       const current = await input.findSource(projectId, extensionId);
+      // From here to the lease nothing awaits, so a revocation either sees this lease or runs first.
+      const grant = map.get(key);
       const usable =
         !retiring.has(key) &&
         current !== undefined &&

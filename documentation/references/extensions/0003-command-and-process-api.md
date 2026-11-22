@@ -64,9 +64,10 @@ exact extension source. The call then fails, and no child starts, when:
 - the host environment does not have the variable (`process_environment_unavailable`);
 - `env` also sets the name. `env` cannot replace a value requested with `envFromHost`.
 
-The value goes into the child's environment only. Your extension never receives it: no API returns
-it, and the host replaces it with `[Redacted]` in the child's `stdout` and `stderr` before returning
-them. When the user revokes the grant or narrows it, the host first stops the running children that
+The value goes into the child's environment only, and no `ctx` API returns it. The host replaces it
+with `[Redacted]` in the child's `stdout` and `stderr` before returning them. That only prevents
+accidental output: the extension chooses the command, so it can still pass the value on. Allowing a
+name lets the extension use its value. When the user revokes the grant or narrows it, the host first stops the running children that
 received it, including detached ones, and then retires the grant. A detached child that outlived a
 host restart is not stopped by a later revocation.
 
