@@ -49,14 +49,18 @@ const records = (namespace?: string[]) =>
     ...(namespace ? { id: { kind: "local", name: "recordId", namespace } } : {}),
   });
 
-const storageMembers = (namespace?: string[]) =>
-  ({
-    ...calls("get", "set", "delete", "canMigrate", "readLegacy"),
-    ids: object({ create: { kind: "local", name: "storageId" } }),
-    records: records(namespace),
-    files: blobs,
-    collection: { kind: "factory", returns: collection },
-  }) satisfies Members;
+const log = object({ ...calls("append", "read"), follow: { kind: "iterate" } });
+
+const storageMembers = (namespace?: string[]) => ({
+  ...calls("get", "set", "delete", "canMigrate", "readLegacy", "migrate"),
+  observe: { kind: "subscribe" },
+  text: { kind: "factory", returns: object(calls("edit")) },
+  log: { kind: "factory", returns: log },
+  ids: object({ create: { kind: "local", name: "storageId" } }),
+  records: records(namespace),
+  files: blobs,
+  collection: { kind: "factory", returns: collection },
+}) satisfies Members;
 
 // A scope's record namespace is resolved by the host, so scoped storage does not offer records.id yet.
 const scopedStorage: Extract<BackendSurface, { kind: "object" }> = { kind: "object", members: storageMembers() };

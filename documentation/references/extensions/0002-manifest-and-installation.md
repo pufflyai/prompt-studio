@@ -209,25 +209,23 @@ provider keys and the runtime token are not in its `process.env`.
 It is not a sandbox. The worker still runs as your OS account and can read the same files as the
 host, including the Prompt Studio home folder.
 
-In this release, handler code in the worker can use every `ctx` member that takes and returns
-plain data. That includes identity fields, `signal`, `logger`, `navigation.open`, `stream.write`,
-`commands`, `events`, `settings`, `storage`, `resources`, `views`, `artifacts`, `projectFiles`,
-`workspaceFiles`, `packageFiles`, `extensionFiles`, `files`, `skills`, `activity`, `notify`,
-`automation`, `process`, `net`, `connections.request`, `account`, `extensions`, `workspaces` and
-`sessions`.
+In this release, handler code in the worker can use almost every `ctx` member. Functions you pass
+to the host, such as a `storage.migrate` callback or a `storage.observe` listener, and functions
+or async iterables the host returns, such as a `close()` handle or `log.follow()`, work across the
+process boundary. They stay valid until the handler that created them returns.
 
-These members are not available yet, because they take callbacks or return streams or live handles:
+These members are not available yet:
 
-- `storage.observe`, `storage.migrate`, `storage.records.transaction`, `storage.positions`,
-  `storage.text`, `storage.log` and `storage.assets`
-- `urlFor` on storage files and attachments
+- `storage.positions`, `storage.assets`, and `urlFor` on storage files and attachments
 - `records.id` inside `storage.scope(...)`
-- `sessions.observeMetadata`, `sessions.stream` and `sessions.retainResources`
-- `connections.stream`, `terminal` and `localDirectory`
+- `terminal` and `localDirectory`
+
+An `AbortSignal` you pass to a host call, such as `sessions.stream(id, onEvent, { signal })`, still
+cancels it. When your handler returns, the host closes any stream or iterator it left open.
 
 Harnesses, workspace types, text sources and resource hierarchy providers are not loaded, and the
-extension reports an `extension_process_runtime_unsupported` diagnostic. Arguments and results must
-be plain data: objects, arrays, strings, numbers, booleans, `Date` and bytes.
+extension reports an `extension_process_runtime_unsupported` diagnostic. Other arguments and results
+must be plain data: objects, arrays, strings, numbers, booleans, `Date` and bytes.
 
 The host inspects contributions in a short-lived worker. A runtime worker starts on the first
 handler call. A source check finishes after inspection. A candidate that fails validation leaves
