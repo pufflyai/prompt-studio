@@ -6,6 +6,7 @@ import { migrate } from "drizzle-orm/pglite/migrator";
 import { createDb } from "./connection.pglite";
 import { prepareDocumentOwnerUpgrade } from "./document-owner-upgrade";
 import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
+import { prepareOrderedOwnerUpgrade } from "./ordered-owner-upgrade";
 import { prepareOwnerIndexUpgrade } from "./owner-index-upgrade";
 import { prepareOwnerProjectionUpgrade } from "./owner-projection-upgrade";
 
@@ -46,6 +47,10 @@ for (const interruption of ["normal", "schema", "restore"])
           '{"name":"things","fields":{"state":{"type":"string","path":["state"],"derive":{"kind":"string"}}},"countBy":["state"]}'::jsonb,'old-query-' || workbench_id || '-' || extension_id FROM storage_record_projections;`);
       await previous.pglite.exec(`INSERT INTO storage_documents (workbench_id,extension_id,document_id,state)
         SELECT id,'pstdio','["host-local-migration","first-party-identities-v1"]',decode('0000','hex') FROM projects`);
+      // This fixture exercises exact structural rewrites of already-ordered owners.
+      // Real legacy Yjs conversion and failure isolation have their own admission tests.
+      await previous.pglite.exec(`INSERT INTO storage_ordered_owners (workbench_id,extension_id)
+        SELECT workbench_id,extension_id FROM storage_record_projections`);
       const original: Record<string, unknown>[][] = [];
       for (const table of tables)
         original.push(
@@ -56,6 +61,7 @@ for (const interruption of ["normal", "schema", "restore"])
           ).rows.map(({ row }) => row),
         );
       if (interruption !== "normal") {
+        await prepareOrderedOwnerUpgrade(previous.db, previous.path);
         await prepareOwnerIndexUpgrade(previous.db, previous.path);
         await prepareOwnerProjectionUpgrade(previous.db, previous.path);
         const finish = await prepareDocumentOwnerUpgrade(previous.db, previous.path);

@@ -12,7 +12,8 @@ const child = Bun.spawn(["bunx", "drizzle-kit", "generate", "--config", "./drizz
 const code = await child.exited;
 if (code) process.exit(code);
 const after = (await Bun.file(journalPath).json()).entries as Entry[];
-for (const entry of after.filter((entry) => !before.some((old) => old.idx === entry.idx))) {
+const generated = after.filter((entry) => !before.some((old) => old.idx === entry.idx));
+for (const entry of generated) {
   const previous = after.find((candidate) => candidate.idx === entry.idx - 1);
   if (!previous) continue;
   const snapshot = await Bun.file(
@@ -78,4 +79,21 @@ for (const entry of after.filter((entry) => !before.some((old) => old.idx === en
   if (!move.size && !movedColumns && !movedKeys) continue;
   await Bun.write(file, ordered.join("--> statement-breakpoint"));
   console.log("Generated constraint drops and column additions before dependent schema changes.");
+}
+
+if (generated.length) {
+  const format = Bun.spawn(
+    [
+      "bunx",
+      "--no-install",
+      "biome",
+      "format",
+      "--write",
+      journalPath,
+      ...generated.map((entry) => join(folder, "meta", `${String(entry.idx).padStart(4, "0")}_snapshot.json`)),
+    ],
+    { stdin: "inherit", stdout: "inherit", stderr: "inherit" },
+  );
+  const formatCode = await format.exited;
+  if (formatCode) process.exit(formatCode);
 }

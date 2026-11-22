@@ -52,6 +52,13 @@ export const openAppDatabase = async (path: string, lifecycle: AppLifecycle = {}
     return await createDb({
       path,
       deferCleanup: true,
+      onLegacyConversionError: ({ owner, error, backupPath }) =>
+        apiLogger.error(
+          { err: error, owner, backupPath, event: "storage.legacy_conversion.failed" },
+          backupPath
+            ? "Legacy storage conversion failed; recovery data was saved"
+            : "Legacy storage conversion failed; original data was retained",
+        ),
       onPhase: (phase) => {
         logStartupPhase(phase);
         if (phase === "database_locked") lifecycle.onDatabaseLockAcquired?.();

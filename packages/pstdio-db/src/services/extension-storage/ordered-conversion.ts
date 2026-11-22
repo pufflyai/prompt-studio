@@ -2,13 +2,11 @@ import { and, desc, gt, inArray, lt, type SQL, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId } from "pstdio-sync/records";
 import type { DbClient } from "../../db/connection.pglite";
-import { owners as storageOwners } from "../../db/schemas/owners";
 import {
   storage_current_records as current,
   storage_documents as documents,
   storage_record_outbox as outbox,
   storage_ordered_owners as owners,
-  owners as projections,
 } from "../../db/schemas.pg";
 import { planLegacyBatch } from "./ordered-conversion-plan";
 import { conversionPendingPage, projectConversionBatch, publishConvertedPage } from "./ordered-conversion-projection";
@@ -196,39 +194,4 @@ export const ensureOrderedOwner = (db: DbClient, owner: StorageOwner, signal?: A
   });
   active.set(key, { promise: run, signals });
   return run;
-};
-
-/** Startup starts owners independently; a corrupt owner's input cannot roll back its neighbors. */
-export const convertLegacyOwners = async (
-  db: DbClient,
-  options: {
-    signal?: AbortSignal;
-    onError(owner: StorageOwner, error: unknown): void;
-    withProjectWork?: (id: string, task: () => Promise<void>) => Promise<void>;
-  },
-) => {
-  let after: { workbenchId: string; extensionId: string } | undefined;
-  while (!options.signal?.aborted) {
-    const [row] = await db
-      .select({ workbenchId: storageOwners.project_id, extensionId: storageOwners.extension_id })
-      .from(projections)
-      .where(
-        and(
-          sql`EXISTS (SELECT 1 FROM storage_documents d WHERE d.owner_id=${storageOwners.id} AND d.document_id='records')`,
-          after
-            ? sql`(${storageOwners.project_id}, ${storageOwners.extension_id}) > (${after.workbenchId}, ${after.extensionId})`
-            : undefined,
-        ),
-      )
-      .orderBy(storageOwners.project_id, storageOwners.extension_id)
-      .limit(1);
-    if (!row) return;
-    try {
-      const convert = () => ensureOrderedOwner(db, row, options.signal);
-      await (options.withProjectWork?.(row.workbenchId, convert) ?? convert());
-    } catch (error) {
-      if (!options.signal?.aborted) options.onError(row, error);
-    }
-    after = row;
-  }
 };

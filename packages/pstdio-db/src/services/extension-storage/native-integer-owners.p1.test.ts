@@ -42,6 +42,12 @@ test("native rooms and unfinished file saves follow owner deletion and recreatio
     expect(before.rows[0]!.owner_id).toBeNumber();
     await f.db.execute(sql`DELETE FROM owners WHERE project_id=${first.workbenchId}
       AND extension_id=${first.extensionId}`);
+    expect(
+      (
+        await f.db.execute(sql`SELECT 1 FROM native_document_file_projections
+      WHERE owner_id=${before.rows[0]!.owner_id}`)
+      ).rows,
+    ).toEqual([]);
     await expect(read(first, rooms[0]!.id)).rejects.toThrow("not found");
     expect(await f.svc.nativeFileProjections.read({ owner: first, documentKey })).toBeUndefined();
     expect(await Array.fromAsync(f.svc.nativeFileProjections.pending())).toEqual([{ owner: other, documentKey }]);

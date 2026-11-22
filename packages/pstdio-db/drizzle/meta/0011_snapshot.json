@@ -172,12 +172,8 @@
           "name": "activity_events_project_id_projects_id_fk",
           "tableFrom": "activity_events",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -185,12 +181,8 @@
           "name": "activity_events_source_extension_id_extensions_id_fk",
           "tableFrom": "activity_events",
           "tableTo": "extensions",
-          "columnsFrom": [
-            "source_extension_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["source_extension_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -249,12 +241,8 @@
           "name": "artifact_file_projections_projection_key_artifact_file_projection_roots_projection_key_fk",
           "tableFrom": "artifact_file_projections",
           "tableTo": "artifact_file_projection_roots",
-          "columnsFrom": [
-            "projection_key"
-          ],
-          "columnsTo": [
-            "projection_key"
-          ],
+          "columnsFrom": ["projection_key"],
+          "columnsTo": ["projection_key"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -262,10 +250,7 @@
       "compositePrimaryKeys": {
         "artifact_file_projections_projection_key_path_pk": {
           "name": "artifact_file_projections_projection_key_path_pk",
-          "columns": [
-            "projection_key",
-            "path"
-          ]
+          "columns": ["projection_key", "path"]
         }
       },
       "uniqueConstraints": {},
@@ -314,12 +299,8 @@
           "name": "asset_transfers_owner_id_owners_id_fk",
           "tableFrom": "asset_transfers",
           "tableTo": "owners",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -327,10 +308,7 @@
       "compositePrimaryKeys": {
         "asset_transfers_owner_id_operation_id_pk": {
           "name": "asset_transfers_owner_id_operation_id_pk",
-          "columns": [
-            "owner_id",
-            "operation_id"
-          ]
+          "columns": ["owner_id", "operation_id"]
         }
       },
       "uniqueConstraints": {},
@@ -488,12 +466,8 @@
           "name": "automation_runs_project_id_projects_id_fk",
           "tableFrom": "automation_runs",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -501,12 +475,8 @@
           "name": "automation_runs_token_id_automation_tokens_id_fk",
           "tableFrom": "automation_runs",
           "tableTo": "automation_tokens",
-          "columnsFrom": [
-            "token_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["token_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -625,12 +595,8 @@
           "name": "automation_tokens_project_id_projects_id_fk",
           "tableFrom": "automation_tokens",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -788,12 +754,8 @@
           "name": "board_views_project_id_projects_id_fk",
           "tableFrom": "board_views",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -916,12 +878,8 @@
           "name": "credentials_project_id_projects_id_fk",
           "tableFrom": "credentials",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -931,11 +889,7 @@
         "credentials_owner_uq": {
           "name": "credentials_owner_uq",
           "nullsNotDistinct": true,
-          "columns": [
-            "extension_id",
-            "contribution_id",
-            "project_id"
-          ]
+          "columns": ["extension_id", "contribution_id", "project_id"]
         }
       },
       "policies": {},
@@ -1017,12 +971,8 @@
           "name": "extension_resource_sequences_project_id_projects_id_fk",
           "tableFrom": "extension_resource_sequences",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1030,11 +980,7 @@
       "compositePrimaryKeys": {
         "extension_resource_sequences_project_id_extension_id_kind_pk": {
           "name": "extension_resource_sequences_project_id_extension_id_kind_pk",
-          "columns": [
-            "project_id",
-            "extension_id",
-            "kind"
-          ]
+          "columns": ["project_id", "extension_id", "kind"]
         }
       },
       "uniqueConstraints": {},
@@ -1248,12 +1194,8 @@
           "name": "project_extensions_project_id_projects_id_fk",
           "tableFrom": "project_extensions",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1261,12 +1203,8 @@
           "name": "project_extensions_extension_ref_extensions_id_fk",
           "tableFrom": "project_extensions",
           "tableTo": "extensions",
-          "columnsFrom": [
-            "extension_ref"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["extension_ref"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -1274,10 +1212,7 @@
       "compositePrimaryKeys": {
         "project_extensions_project_id_extension_ref_pk": {
           "name": "project_extensions_project_id_extension_ref_pk",
-          "columns": [
-            "project_id",
-            "extension_ref"
-          ]
+          "columns": ["project_id", "extension_ref"]
         }
       },
       "uniqueConstraints": {},
@@ -1424,12 +1359,8 @@
           "name": "files_project_id_projects_id_fk",
           "tableFrom": "files",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1489,12 +1420,8 @@
           "name": "native_document_file_projections_owner_id_owners_id_fk",
           "tableFrom": "native_document_file_projections",
           "tableTo": "owners",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1502,11 +1429,7 @@
       "compositePrimaryKeys": {
         "native_document_file_projections_pk": {
           "name": "native_document_file_projections_pk",
-          "columns": [
-            "owner_id",
-            "document_key",
-            "projection_key"
-          ]
+          "columns": ["owner_id", "document_key", "projection_key"]
         }
       },
       "uniqueConstraints": {},
@@ -1543,12 +1466,8 @@
           "name": "native_document_room_updates_room_id_native_document_rooms_id_fk",
           "tableFrom": "native_document_room_updates",
           "tableTo": "native_document_rooms",
-          "columnsFrom": [
-            "room_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["room_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1556,10 +1475,7 @@
       "compositePrimaryKeys": {
         "native_document_room_updates_room_id_revision_pk": {
           "name": "native_document_room_updates_room_id_revision_pk",
-          "columns": [
-            "room_id",
-            "revision"
-          ]
+          "columns": ["room_id", "revision"]
         }
       },
       "uniqueConstraints": {},
@@ -1638,14 +1554,8 @@
           "name": "native_document_rooms_owner_id_document_key_native_document_sources_owner_id_document_key_fk",
           "tableFrom": "native_document_rooms",
           "tableTo": "native_document_sources",
-          "columnsFrom": [
-            "owner_id",
-            "document_key"
-          ],
-          "columnsTo": [
-            "owner_id",
-            "document_key"
-          ],
+          "columnsFrom": ["owner_id", "document_key"],
+          "columnsTo": ["owner_id", "document_key"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1685,12 +1595,8 @@
           "name": "native_document_sources_owner_id_owners_id_fk",
           "tableFrom": "native_document_sources",
           "tableTo": "owners",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1698,10 +1604,7 @@
       "compositePrimaryKeys": {
         "native_document_sources_owner_id_document_key_pk": {
           "name": "native_document_sources_owner_id_document_key_pk",
-          "columns": [
-            "owner_id",
-            "document_key"
-          ]
+          "columns": ["owner_id", "document_key"]
         }
       },
       "uniqueConstraints": {},
@@ -1978,12 +1881,8 @@
           "name": "notifications_project_id_projects_id_fk",
           "tableFrom": "notifications",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2068,12 +1967,8 @@
           "name": "owners_project_id_projects_id_fk",
           "tableFrom": "owners",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2083,10 +1978,7 @@
         "owners_project_extension_unique": {
           "name": "owners_project_extension_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "project_id",
-            "extension_id"
-          ]
+          "columns": ["project_id", "extension_id"]
         }
       },
       "policies": {},
@@ -2184,12 +2076,8 @@
           "name": "preferences_project_id_projects_id_fk",
           "tableFrom": "preferences",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2197,12 +2085,7 @@
       "compositePrimaryKeys": {
         "preferences_scope_scope_id_extension_id_key_pk": {
           "name": "preferences_scope_scope_id_extension_id_key_pk",
-          "columns": [
-            "scope",
-            "scope_id",
-            "extension_id",
-            "key"
-          ]
+          "columns": ["scope", "scope_id", "extension_id", "key"]
         }
       },
       "uniqueConstraints": {},
@@ -2346,12 +2229,8 @@
           "name": "recovery_point_owners_owner_id_owners_id_fk",
           "tableFrom": "recovery_point_owners",
           "tableTo": "owners",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2359,14 +2238,8 @@
           "name": "recovery_point_owners_project_id_hours_recovery_points_project_id_hours_fk",
           "tableFrom": "recovery_point_owners",
           "tableTo": "recovery_points",
-          "columnsFrom": [
-            "project_id",
-            "hours"
-          ],
-          "columnsTo": [
-            "project_id",
-            "hours"
-          ],
+          "columnsFrom": ["project_id", "hours"],
+          "columnsTo": ["project_id", "hours"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2374,11 +2247,7 @@
       "compositePrimaryKeys": {
         "recovery_point_owners_project_id_hours_owner_id_pk": {
           "name": "recovery_point_owners_project_id_hours_owner_id_pk",
-          "columns": [
-            "project_id",
-            "hours",
-            "owner_id"
-          ]
+          "columns": ["project_id", "hours", "owner_id"]
         }
       },
       "uniqueConstraints": {},
@@ -2415,12 +2284,8 @@
           "name": "recovery_points_project_id_projects_id_fk",
           "tableFrom": "recovery_points",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2428,10 +2293,7 @@
       "compositePrimaryKeys": {
         "recovery_points_project_id_hours_pk": {
           "name": "recovery_points_project_id_hours_pk",
-          "columns": [
-            "project_id",
-            "hours"
-          ]
+          "columns": ["project_id", "hours"]
         }
       },
       "uniqueConstraints": {},
@@ -2550,12 +2412,8 @@
           "name": "resource_links_source_owner_owners_id_fk",
           "tableFrom": "resource_links",
           "tableTo": "owners",
-          "columnsFrom": [
-            "source_owner"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["source_owner"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2563,12 +2421,8 @@
           "name": "resource_links_target_owner_owners_id_fk",
           "tableFrom": "resource_links",
           "tableTo": "owners",
-          "columnsFrom": [
-            "target_owner"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["target_owner"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2576,14 +2430,7 @@
       "compositePrimaryKeys": {
         "resource_links_source_owner_source_kind_source_id_target_owner_target_kind_target_id_pk": {
           "name": "resource_links_source_owner_source_kind_source_id_target_owner_target_kind_target_id_pk",
-          "columns": [
-            "source_owner",
-            "source_kind",
-            "source_id",
-            "target_owner",
-            "target_kind",
-            "target_id"
-          ]
+          "columns": ["source_owner", "source_kind", "source_id", "target_owner", "target_kind", "target_id"]
         }
       },
       "uniqueConstraints": {},
@@ -2708,12 +2555,8 @@
           "name": "session_queue_entries_session_id_sessions_id_fk",
           "tableFrom": "session_queue_entries",
           "tableTo": "sessions",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2895,12 +2738,8 @@
           "name": "sessions_workspace_id_workspaces_id_fk",
           "tableFrom": "sessions",
           "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workspace_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -2908,12 +2747,8 @@
           "name": "sessions_project_id_projects_id_fk",
           "tableFrom": "sessions",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2921,12 +2756,8 @@
           "name": "sessions_session_file_id_files_id_fk",
           "tableFrom": "sessions",
           "tableTo": "files",
-          "columnsFrom": [
-            "session_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2991,12 +2822,8 @@
           "name": "skills_project_id_projects_id_fk",
           "tableFrom": "skills",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3042,14 +2869,8 @@
           "name": "storage_document_operations_document_fk",
           "tableFrom": "storage_document_operations",
           "tableTo": "storage_documents",
-          "columnsFrom": [
-            "owner_id",
-            "document_id"
-          ],
-          "columnsTo": [
-            "owner_id",
-            "document_id"
-          ],
+          "columnsFrom": ["owner_id", "document_id"],
+          "columnsTo": ["owner_id", "document_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3057,11 +2878,7 @@
       "compositePrimaryKeys": {
         "storage_document_operations_pk": {
           "name": "storage_document_operations_pk",
-          "columns": [
-            "owner_id",
-            "document_id",
-            "operation_id"
-          ]
+          "columns": ["owner_id", "document_id", "operation_id"]
         }
       },
       "uniqueConstraints": {},
@@ -3104,14 +2921,8 @@
           "name": "storage_document_updates_document_fk",
           "tableFrom": "storage_document_updates",
           "tableTo": "storage_documents",
-          "columnsFrom": [
-            "owner_id",
-            "document_id"
-          ],
-          "columnsTo": [
-            "owner_id",
-            "document_id"
-          ],
+          "columnsFrom": ["owner_id", "document_id"],
+          "columnsTo": ["owner_id", "document_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3119,11 +2930,7 @@
       "compositePrimaryKeys": {
         "storage_document_updates_pk": {
           "name": "storage_document_updates_pk",
-          "columns": [
-            "owner_id",
-            "document_id",
-            "revision"
-          ]
+          "columns": ["owner_id", "document_id", "revision"]
         }
       },
       "uniqueConstraints": {},
@@ -3174,12 +2981,8 @@
           "name": "storage_documents_owner_id_owners_id_fk",
           "tableFrom": "storage_documents",
           "tableTo": "owners",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3187,10 +2990,7 @@
       "compositePrimaryKeys": {
         "storage_documents_owner_id_document_id_pk": {
           "name": "storage_documents_owner_id_document_id_pk",
-          "columns": [
-            "owner_id",
-            "document_id"
-          ]
+          "columns": ["owner_id", "document_id"]
         }
       },
       "uniqueConstraints": {},
@@ -3347,12 +3147,8 @@
           "name": "log_entries_stream_fk",
           "tableFrom": "log_entries",
           "tableTo": "log_streams",
-          "columnsFrom": [
-            "stream_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["stream_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3360,10 +3156,7 @@
       "compositePrimaryKeys": {
         "log_entries_pk": {
           "name": "log_entries_pk",
-          "columns": [
-            "stream_id",
-            "entry_id"
-          ]
+          "columns": ["stream_id", "entry_id"]
         }
       },
       "uniqueConstraints": {},
@@ -3450,12 +3243,8 @@
           "name": "log_streams_owner_fk",
           "tableFrom": "log_streams",
           "tableTo": "owners",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3465,12 +3254,7 @@
         "log_streams_owner_address_unique": {
           "name": "log_streams_owner_address_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "owner_id",
-            "log_name",
-            "scope",
-            "stream"
-          ]
+          "columns": ["owner_id", "log_name", "scope", "stream"]
         }
       },
       "policies": {},
@@ -3578,12 +3362,8 @@
           "name": "storage_ordered_operations_owner_id_storage_ordered_owners_owner_id_fk",
           "tableFrom": "storage_ordered_operations",
           "tableTo": "storage_ordered_owners",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "owner_id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["owner_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3591,10 +3371,7 @@
       "compositePrimaryKeys": {
         "storage_ordered_operations_owner_id_operation_id_pk": {
           "name": "storage_ordered_operations_owner_id_operation_id_pk",
-          "columns": [
-            "owner_id",
-            "operation_id"
-          ]
+          "columns": ["owner_id", "operation_id"]
         }
       },
       "uniqueConstraints": {},
@@ -3679,12 +3456,8 @@
           "name": "storage_ordered_owners_owner_id_owners_id_fk",
           "tableFrom": "storage_ordered_owners",
           "tableTo": "owners",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3692,9 +3465,7 @@
       "compositePrimaryKeys": {
         "storage_ordered_owners_owner_id_pk": {
           "name": "storage_ordered_owners_owner_id_pk",
-          "columns": [
-            "owner_id"
-          ]
+          "columns": ["owner_id"]
         }
       },
       "uniqueConstraints": {},
@@ -3800,14 +3571,8 @@
           "name": "storage_ordered_receipts_owner_id_operation_id_storage_ordered_operations_owner_id_operation_id_fk",
           "tableFrom": "storage_ordered_receipts",
           "tableTo": "storage_ordered_operations",
-          "columnsFrom": [
-            "owner_id",
-            "operation_id"
-          ],
-          "columnsTo": [
-            "owner_id",
-            "operation_id"
-          ],
+          "columnsFrom": ["owner_id", "operation_id"],
+          "columnsTo": ["owner_id", "operation_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3815,11 +3580,7 @@
       "compositePrimaryKeys": {
         "storage_ordered_receipts_owner_id_epoch_operation_id_pk": {
           "name": "storage_ordered_receipts_owner_id_epoch_operation_id_pk",
-          "columns": [
-            "owner_id",
-            "epoch",
-            "operation_id"
-          ]
+          "columns": ["owner_id", "epoch", "operation_id"]
         }
       },
       "uniqueConstraints": {},
@@ -3856,12 +3617,8 @@
           "name": "storage_ordered_records_owner_id_storage_ordered_owners_owner_id_fk",
           "tableFrom": "storage_ordered_records",
           "tableTo": "storage_ordered_owners",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "owner_id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["owner_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3869,10 +3626,7 @@
       "compositePrimaryKeys": {
         "storage_ordered_records_owner_id_record_id_pk": {
           "name": "storage_ordered_records_owner_id_record_id_pk",
-          "columns": [
-            "owner_id",
-            "record_id"
-          ]
+          "columns": ["owner_id", "record_id"]
         }
       },
       "uniqueConstraints": {},
@@ -3964,14 +3718,8 @@
           "name": "storage_ordered_touches_owner_id_operation_id_storage_ordered_operations_owner_id_operation_id_fk",
           "tableFrom": "storage_ordered_touches",
           "tableTo": "storage_ordered_operations",
-          "columnsFrom": [
-            "owner_id",
-            "operation_id"
-          ],
-          "columnsTo": [
-            "owner_id",
-            "operation_id"
-          ],
+          "columnsFrom": ["owner_id", "operation_id"],
+          "columnsTo": ["owner_id", "operation_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3979,11 +3727,7 @@
       "compositePrimaryKeys": {
         "storage_ordered_touches_owner_id_record_id_operation_id_pk": {
           "name": "storage_ordered_touches_owner_id_record_id_operation_id_pk",
-          "columns": [
-            "owner_id",
-            "record_id",
-            "operation_id"
-          ]
+          "columns": ["owner_id", "record_id", "operation_id"]
         }
       },
       "uniqueConstraints": {},
@@ -4125,12 +3869,8 @@
           "name": "storage_ordered_resource_numbers_workbench_id_projects_id_fk",
           "tableFrom": "storage_ordered_resource_numbers",
           "tableTo": "projects",
-          "columnsFrom": [
-            "workbench_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workbench_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4138,11 +3878,7 @@
       "compositePrimaryKeys": {
         "storage_ordered_numbers_pk": {
           "name": "storage_ordered_numbers_pk",
-          "columns": [
-            "workbench_id",
-            "resource_id",
-            "prefix"
-          ]
+          "columns": ["workbench_id", "resource_id", "prefix"]
         }
       },
       "uniqueConstraints": {},
@@ -4203,12 +3939,8 @@
           "name": "history_rows_owner_id_owners_id_fk",
           "tableFrom": "history_rows",
           "tableTo": "owners",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4216,12 +3948,7 @@
       "compositePrimaryKeys": {
         "history_rows_pk": {
           "name": "history_rows_pk",
-          "columns": [
-            "owner_id",
-            "kind",
-            "device_id",
-            "record_id"
-          ]
+          "columns": ["owner_id", "kind", "device_id", "record_id"]
         }
       },
       "uniqueConstraints": {},
@@ -4300,12 +4027,8 @@
           "name": "history_sources_owner_id_owners_id_fk",
           "tableFrom": "history_sources",
           "tableTo": "owners",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4313,13 +4036,7 @@
       "compositePrimaryKeys": {
         "history_sources_pk": {
           "name": "history_sources_pk",
-          "columns": [
-            "owner_id",
-            "source_id",
-            "kind",
-            "device_id",
-            "record_id"
-          ]
+          "columns": ["owner_id", "source_id", "kind", "device_id", "record_id"]
         }
       },
       "uniqueConstraints": {},
@@ -4397,14 +4114,8 @@
           "name": "storage_record_outbox_sync_fk",
           "tableFrom": "storage_record_outbox",
           "tableTo": "storage_record_sync",
-          "columnsFrom": [
-            "workbench_id",
-            "extension_id"
-          ],
-          "columnsTo": [
-            "workbench_id",
-            "extension_id"
-          ],
+          "columnsFrom": ["workbench_id", "extension_id"],
+          "columnsTo": ["workbench_id", "extension_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4486,12 +4197,8 @@
           "name": "storage_record_sync_workbench_id_projects_id_fk",
           "tableFrom": "storage_record_sync",
           "tableTo": "projects",
-          "columnsFrom": [
-            "workbench_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workbench_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4499,10 +4206,7 @@
       "compositePrimaryKeys": {
         "storage_record_sync_workbench_id_extension_id_pk": {
           "name": "storage_record_sync_workbench_id_extension_id_pk",
-          "columns": [
-            "workbench_id",
-            "extension_id"
-          ]
+          "columns": ["workbench_id", "extension_id"]
         }
       },
       "uniqueConstraints": {},
@@ -4629,12 +4333,8 @@
           "name": "storage_current_records_owner_id_owners_id_fk",
           "tableFrom": "storage_current_records",
           "tableTo": "owners",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4642,10 +4342,7 @@
       "compositePrimaryKeys": {
         "storage_current_records_owner_id_record_id_pk": {
           "name": "storage_current_records_owner_id_record_id_pk",
-          "columns": [
-            "owner_id",
-            "record_id"
-          ]
+          "columns": ["owner_id", "record_id"]
         }
       },
       "uniqueConstraints": {},
@@ -4751,12 +4448,8 @@
           "name": "storage_resource_aliases_workbench_id_projects_id_fk",
           "tableFrom": "storage_resource_aliases",
           "tableTo": "projects",
-          "columnsFrom": [
-            "workbench_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workbench_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4764,12 +4457,8 @@
           "name": "storage_resource_aliases_workbench_id_storage_resource_projections_workbench_id_fk",
           "tableFrom": "storage_resource_aliases",
           "tableTo": "storage_resource_projections",
-          "columnsFrom": [
-            "workbench_id"
-          ],
-          "columnsTo": [
-            "workbench_id"
-          ],
+          "columnsFrom": ["workbench_id"],
+          "columnsTo": ["workbench_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4777,11 +4466,7 @@
       "compositePrimaryKeys": {
         "storage_resource_aliases_workbench_id_resource_id_shorthand_pk": {
           "name": "storage_resource_aliases_workbench_id_resource_id_shorthand_pk",
-          "columns": [
-            "workbench_id",
-            "resource_id",
-            "shorthand"
-          ]
+          "columns": ["workbench_id", "resource_id", "shorthand"]
         }
       },
       "uniqueConstraints": {},
@@ -4911,12 +4596,8 @@
           "name": "storage_resource_identities_workbench_id_projects_id_fk",
           "tableFrom": "storage_resource_identities",
           "tableTo": "projects",
-          "columnsFrom": [
-            "workbench_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workbench_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4924,12 +4605,8 @@
           "name": "storage_resource_identities_workbench_id_storage_resource_projections_workbench_id_fk",
           "tableFrom": "storage_resource_identities",
           "tableTo": "storage_resource_projections",
-          "columnsFrom": [
-            "workbench_id"
-          ],
-          "columnsTo": [
-            "workbench_id"
-          ],
+          "columnsFrom": ["workbench_id"],
+          "columnsTo": ["workbench_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4937,10 +4614,7 @@
       "compositePrimaryKeys": {
         "storage_resource_identities_workbench_id_resource_id_pk": {
           "name": "storage_resource_identities_workbench_id_resource_id_pk",
-          "columns": [
-            "workbench_id",
-            "resource_id"
-          ]
+          "columns": ["workbench_id", "resource_id"]
         }
       },
       "uniqueConstraints": {},
@@ -5006,12 +4680,8 @@
           "name": "storage_resource_projections_workbench_id_projects_id_fk",
           "tableFrom": "storage_resource_projections",
           "tableTo": "projects",
-          "columnsFrom": [
-            "workbench_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["workbench_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5019,12 +4689,8 @@
           "name": "storage_resource_projections_owner_id_owners_id_fk",
           "tableFrom": "storage_resource_projections",
           "tableTo": "owners",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5032,14 +4698,8 @@
           "name": "storage_resource_projections_owner_id_document_id_storage_documents_owner_id_document_id_fk",
           "tableFrom": "storage_resource_projections",
           "tableTo": "storage_documents",
-          "columnsFrom": [
-            "owner_id",
-            "document_id"
-          ],
-          "columnsTo": [
-            "owner_id",
-            "document_id"
-          ],
+          "columnsFrom": ["owner_id", "document_id"],
+          "columnsTo": ["owner_id", "document_id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5047,9 +4707,7 @@
       "compositePrimaryKeys": {
         "storage_resource_projections_workbench_id_pk": {
           "name": "storage_resource_projections_workbench_id_pk",
-          "columns": [
-            "workbench_id"
-          ]
+          "columns": ["workbench_id"]
         }
       },
       "uniqueConstraints": {},
@@ -5296,12 +4954,8 @@
           "name": "workspaces_project_id_projects_id_fk",
           "tableFrom": "workspaces",
           "tableTo": "projects",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5309,12 +4963,8 @@
           "name": "workspaces_startup_log_file_id_files_id_fk",
           "tableFrom": "workspaces",
           "tableTo": "files",
-          "columnsFrom": [
-            "startup_log_file_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["startup_log_file_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -5330,55 +4980,27 @@
     "public.activity_actor_type": {
       "name": "activity_actor_type",
       "schema": "public",
-      "values": [
-        "user",
-        "agent",
-        "system"
-      ]
+      "values": ["user", "agent", "system"]
     },
     "public.activity_source": {
       "name": "activity_source",
       "schema": "public",
-      "values": [
-        "ui",
-        "api",
-        "hook",
-        "system",
-        "agent"
-      ]
+      "values": ["ui", "api", "hook", "system", "agent"]
     },
     "public.extension_load_status": {
       "name": "extension_load_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "loaded",
-        "error",
-        "missing",
-        "disabled"
-      ]
+      "values": ["pending", "loaded", "error", "missing", "disabled"]
     },
     "public.extension_source_kind": {
       "name": "extension_source_kind",
       "schema": "public",
-      "values": [
-        "local_path",
-        "git",
-        "registry"
-      ]
+      "values": ["local_path", "git", "registry"]
     },
     "public.session_status": {
       "name": "session_status",
       "schema": "public",
-      "values": [
-        "in_progress",
-        "awaiting_input",
-        "queued",
-        "completed",
-        "failed",
-        "cancelled",
-        "disconnected"
-      ]
+      "values": ["in_progress", "awaiting_input", "queued", "completed", "failed", "cancelled", "disconnected"]
     }
   },
   "schemas": {},

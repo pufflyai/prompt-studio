@@ -1,5 +1,6 @@
 import { and, eq, like, not, or } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
+import type { Json, StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import {
   owners,
@@ -11,8 +12,10 @@ import {
   storage_record_sync,
 } from "../../db/schemas.pg";
 import { orderedOwnerWhere } from "./ordered-sql";
-import { dropRecordIndexes } from "./record-index-lifecycle";
+import { formatDatabasePrefix } from "./record-format-key";
+import { dropRecordIndexObjects, installRecordIndex } from "./record-index-lifecycle";
 import { recordIndexRows as storage_record_indexes } from "./record-index-rows";
+import { decodeProjectionValue } from "./record-projection-codec";
 import { resourceDocumentId } from "./resource-document-persistence";
 import { storageOwnerKey, storageOwnerWhere } from "./storage-owner-key";
 
@@ -20,7 +23,11 @@ type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
 export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) => {
   // Generated SQL objects have no FK lifetime; remove them while their declarations still exist.
-  await dropRecordIndexes(tx, eq(storage_record_indexes.owner_id, storageOwnerKey(owner)));
+  const indexes = await tx
+    .select({ definition: storage_record_indexes.definition, database_name: storage_record_indexes.database_name })
+    .from(storage_record_indexes)
+    .where(eq(storage_record_indexes.owner_id, storageOwnerKey(owner)));
+  await dropRecordIndexObjects(tx, indexes);
   const ownerWhere = (
     table:
       | typeof storage_documents
@@ -68,4 +75,13 @@ export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) 
   // so a cleared owner founds or joins again and may reuse its operation IDs.
   await tx.delete(storage_ordered_owners).where(orderedOwnerWhere(storage_ordered_owners, owner));
   await tx.delete(owners).where(storageOwnerWhere(owner));
+  // Deleting tool data keeps the installed tool's declared queries usable. Recreate
+  // their objects for the new owner generation; derived format caches rebuild on demand.
+  for (const index of indexes)
+    if (!index.database_name.startsWith(formatDatabasePrefix))
+      await installRecordIndex(
+        tx,
+        owner,
+        decodeProjectionValue(index.definition as unknown as Json) as unknown as StorageRecordIndex,
+      );
 };

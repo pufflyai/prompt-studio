@@ -28,6 +28,7 @@ import { prepareDocumentOwnerUpgrade } from "./document-owner-upgrade";
 import { prepareExtensionPreferencesUpgrade } from "./extension-preferences-upgrade";
 import { prepareFileOwnersUpgrade } from "./file-owners-upgrade";
 import { prepareHistoryOwnerUpgrade } from "./history-owner-upgrade";
+import { type LegacyConversionFailure, upgradeLegacyRecords } from "./legacy-record-upgrade";
 import { prepareLogOwnerUpgrade } from "./log-owner-upgrade";
 import { prepareNativeOwnerUpgrade } from "./native-owner-upgrade";
 import { openPglite } from "./open-pglite";
@@ -192,6 +193,7 @@ export const createDb = async (options?: {
   signal?: AbortSignal;
   /** Folder for encrypted index nodes; defaults to a sibling of the database folder. */
   indexNodesPath?: string;
+  onLegacyConversionError?: (failure: LegacyConversionFailure) => void;
   /** The runtime vacuums in the background and schedules deletion of retired rows. */
   deferCleanup?: boolean;
 }) => {
@@ -278,6 +280,7 @@ export const createDb = async (options?: {
       await finishResourceLinkOwnerUpgrade?.();
       await finishSessionWorkspaceUpgrade?.();
       await finishFileOwnersUpgrade();
+      await upgradeLegacyRecords(db, dbPath, { signal: options?.signal, failed: options?.onLegacyConversionError });
       migrated = true;
     });
     // Copy durable receipts before opening. Remove old rows for both sides of an identity

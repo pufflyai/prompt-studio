@@ -13,7 +13,6 @@ import { createDocumentDirectory } from "./document-directory";
 import { createDocumentTransactions } from "./document-transactions";
 import { createNativeDocumentStore, openNativeDocument } from "./native-document-storage";
 import { createOrderedCloudReturn } from "./ordered-cloud-return";
-import { convertLegacyOwners } from "./ordered-conversion";
 import { createOrderedLogs } from "./ordered-logs";
 import { createOrderedResourceRecords } from "./ordered-resource-records";
 import { createOrderedStreamStore } from "./ordered-stream-store";
@@ -147,8 +146,6 @@ export const createDocumentStorageDBService = (
   });
   return {
     transaction,
-    convertLegacyOwners: (options: Omit<Parameters<typeof convertLegacyOwners>[1], "withProjectWork">) =>
-      convertLegacyOwners(db, { ...options, withProjectWork }),
     logs,
     cloudReturn,
     observer,

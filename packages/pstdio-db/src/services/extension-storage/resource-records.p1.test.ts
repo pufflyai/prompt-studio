@@ -143,6 +143,9 @@ test("unfiltered totals follow live records without reading them", async () => {
   expect(statements.filter((query) => query.includes("storage_current_records"))).toEqual([]);
   await createExtensionUserDataDBService(f.db).deleteForInstance(f.instanceAId);
   expect(await total()).toBe(0);
+  expect((await records.query({ index: "all" })).records).toEqual([]);
+  await records.commit({ operationId: "seed", edits: [{ recordId: "fresh", replace: { n: 4 } }] });
+  expect(await total()).toBe(1);
 });
 
 test("a group commit larger than one write statement is saved in statements of bounded size", async () => {
