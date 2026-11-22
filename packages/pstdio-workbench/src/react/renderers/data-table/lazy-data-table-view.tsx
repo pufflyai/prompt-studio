@@ -1,4 +1,4 @@
-import { Spinner } from "@chakra-ui/react";
+import { LoadingState } from "@pstdio/ui";
 import { type ComponentProps, lazy, Suspense } from "react";
 import type { WorkbenchDataTableView as DataTableView } from "./data-table-view";
 
@@ -7,7 +7,7 @@ const DataTable = lazy(() =>
 );
 
 export const WorkbenchDataTableView = (props: ComponentProps<typeof DataTableView>) => (
-  <Suspense fallback={<Spinner />}>
+  <Suspense fallback={<LoadingState />}>
     <DataTable {...props} />
   </Suspense>
 );

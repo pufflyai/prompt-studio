@@ -1,6 +1,6 @@
 import { Box, Center, Spinner, Stack, Text } from "@chakra-ui/react";
 import type { LocalizableString } from "@pstdio/sdk/api";
-import { useUiScope } from "@pstdio/ui";
+import { LoadingState, useUiScope } from "@pstdio/ui";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { useWebviewKeyboardShortcuts, useWebviewObservation } from "@pstdio/workbench/react";
 import { sizesToContentHeight } from "pstdio-extensions/bridge/contract";
@@ -45,6 +45,23 @@ const WebviewLoadError = (props: { detail?: string }) => {
   );
 };
 
+// Content-sized webviews can be a single row tall, so they keep the small inline spinner.
+const WebviewLoading = (props: { compact: boolean }) => {
+  const { compact } = props;
+  if (compact) {
+    return (
+      <Center position="absolute" inset="0" bg={webviewSurfaceBackground} color="fg.muted" zIndex={1}>
+        <Spinner size="sm" />
+      </Center>
+    );
+  }
+  return (
+    <Box position="absolute" inset="0" display="flex" bg={webviewSurfaceBackground} zIndex={1}>
+      <LoadingState />
+    </Box>
+  );
+};
+
 export const StaticWebviewSurface = (props: {
   colorScheme: "dark" | "light";
   title: string;
@@ -59,11 +76,7 @@ export const StaticWebviewSurface = (props: {
 
   return (
     <Box position="relative" width="100%" height="100%" minH="0" bg={webviewSurfaceBackground}>
-      {state === "loading" ? (
-        <Center position="absolute" inset="0" bg={webviewSurfaceBackground} color="fg.muted" zIndex={1}>
-          <Spinner size="sm" />
-        </Center>
-      ) : null}
+      {state === "loading" ? <WebviewLoading compact={false} /> : null}
       {state === "error" ? <WebviewLoadError /> : null}
       <iframe
         title={title}
@@ -115,9 +128,7 @@ export const BridgedWebviewSurface = (props: {
     >
       {error ? <WebviewLoadError detail={error} /> : null}
       {!error && !ready ? (
-        <Center position="absolute" inset="0" bg={webviewSurfaceBackground} color="fg.muted" zIndex={1}>
-          <Spinner size="sm" />
-        </Center>
+        <WebviewLoading compact={props.sizing === "content-width" || sizesToContentHeight(props.sizing)} />
       ) : null}
       <ExtensionFrame
         visible={props.visible}
