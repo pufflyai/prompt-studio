@@ -6,6 +6,7 @@ import { fileColumns } from "../services/files/files";
 import type { DbClient } from "./connection.pglite";
 import { cleanFileOwnerStaging, copyFileOwnerBytes, fileOwnerUuid } from "./file-owner-copies";
 import { createFileOwnerExportWriter } from "./file-owner-exports";
+import { timestampToIso } from "./schemas/iso-timestamp";
 import { files, skills } from "./schemas.pg";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
@@ -59,29 +60,28 @@ const baseMetadata = (row: typeof files.$inferSelect) => {
 const sameIdentity = (row: typeof files.$inferSelect, expected: Identity) =>
   row.owner === expected.owner && row.scope === expected.scope && row.path === expected.path;
 const restore = async (tx: Pick<DbClient, "select" | "update" | "insert">, database: string, input: Input) => {
-  const [original] = await tx.select().from(files).where(eq(files.id, input.file.id)).for("update");
-  if (!original || !isDeepStrictEqual(baseMetadata(original), input.file))
-    throw new Error(`Original file metadata changed: ${input.file.id}`);
+  const file = {
+    ...input.file,
+    created_at: timestampToIso(input.file.created_at),
+    updated_at: timestampToIso(input.file.updated_at),
+  };
+  const [original] = await tx.select().from(files).where(eq(files.id, file.id)).for("update");
+  if (!original || !isDeepStrictEqual(baseMetadata(original), file))
+    throw new Error(`Original file metadata changed: ${file.id}`);
   if (sameIdentity(original, input.identity)) return { file_id: original.id, storage_path: original.storage_path };
   if (original.owner === null && original.file_kind === input.kind) {
     await tx.update(files).set(input.identity).where(eq(files.id, original.id));
     return { file_id: original.id, storage_path: original.storage_path };
   }
   const id = fileOwnerUuid(
-    JSON.stringify([
-      input.file.id,
-      input.file.project_id,
-      input.identity.owner,
-      input.identity.scope,
-      input.identity.path,
-    ]),
+    JSON.stringify([file.id, file.project_id, input.identity.owner, input.identity.scope, input.identity.path]),
   );
   const storage_path = join(`${database}-owned-files`, id);
   const [existing] = await tx.select().from(files).where(eq(files.id, id));
-  const metadata = { ...input.file, id, storage_path };
+  const metadata = { ...file, id, storage_path };
   if (existing && (!sameIdentity(existing, input.identity) || !isDeepStrictEqual(baseMetadata(existing), metadata)))
     throw new Error(`File migration UUID collision: ${id}`);
-  await copyFileOwnerBytes(database, id, input.file, input.identity);
+  await copyFileOwnerBytes(database, id, file, input.identity);
   if (!existing) await tx.insert(files).values({ ...metadata, ...input.identity });
   return { file_id: id, storage_path };
 };

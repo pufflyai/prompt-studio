@@ -76,6 +76,24 @@ for (const entry of generated) {
     ordered.splice(dependency, 0, statement);
     movedKeys = true;
   }
+  // PostgreSQL cannot implicitly assign text to timestamptz. Generate the
+  // explicit cast from the old schema, including tables renamed in this entry.
+  const renamedFrom = new Map<string, string>();
+  for (const statement of ordered) {
+    const rename = /^ALTER TABLE "([^"]+)" RENAME TO "([^"]+)";$/u.exec(statement.trim());
+    if (rename) renamedFrom.set(rename[2]!, rename[1]!);
+  }
+  let castTimestamps = false;
+  for (const [index, statement] of ordered.entries()) {
+    const change = /^ALTER TABLE "([^"]+)" ALTER COLUMN "([^"]+)" SET DATA TYPE timestamp with time zone;$/u.exec(
+      statement.trim(),
+    );
+    if (!change) continue;
+    const table = renamedFrom.get(change[1]!) ?? change[1]!;
+    if (snapshot.tables[`public.${table}`]?.columns[change[2]!]?.type !== "text") continue;
+    ordered[index] = statement.replace(/;\s*$/u, ` USING "${change[2]}"::timestamp with time zone;`);
+    castTimestamps = true;
+  }
   // This baseline needs the new owner graph before converting released frames.
   // Keep its generated input-table drops for admission's post-data transaction.
   const retired = new Set(["storage_record_sync", "storage_record_outbox", "storage_ordered_owners"]);
@@ -87,7 +105,7 @@ for (const entry of generated) {
     throw new Error("Legacy retirement must generate all three input-table drops together");
   if (deferred.length)
     await Bun.write(join(folder, `${entry.tag}.post-data.sql`), deferred.join("--> statement-breakpoint"));
-  if (!move.size && !movedColumns && !movedKeys && !deferred.length) continue;
+  if (!move.size && !movedColumns && !movedKeys && !castTimestamps && !deferred.length) continue;
   await Bun.write(file, ordered.filter((statement) => !deferred.includes(statement)).join("--> statement-breakpoint"));
   console.log("Generated constraint drops and column additions before dependent schema changes.");
 }

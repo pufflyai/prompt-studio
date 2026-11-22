@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import { and, eq } from "drizzle-orm";
 import type { DbClient } from "./connection.pglite";
+import { timestampToIso } from "./schemas/iso-timestamp";
 import { project_extensions, projects } from "./schemas.pg";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
@@ -33,8 +34,8 @@ export const prepareProjectExtensionsUpgrade = (db: DbClient, path: string) =>
         enabled: released.enabled,
         config_json: released.config_json,
         diagnostics_json: released.diagnostics_json,
-        created_at: released.created_at,
-        updated_at: released.updated_at,
+        created_at: timestampToIso(released.created_at),
+        updated_at: timestampToIso(released.updated_at),
       };
       const [existing] = await db
         .select()

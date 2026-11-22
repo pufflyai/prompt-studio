@@ -1,4 +1,5 @@
 import { index, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { isoTimestamp } from "./iso-timestamp";
 import { projects } from "./projects";
 
 export const preferences = pgTable(
@@ -11,7 +12,7 @@ export const preferences = pgTable(
     sync: text("sync").$type<"team" | "personal" | "device">().notNull(),
     value: jsonb("value").$type<unknown>(),
     project_id: text("project_id").references(() => projects.id, { onDelete: "cascade" }),
-    updated_at: text("updated_at").notNull(),
+    updated_at: isoTimestamp("updated_at").notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.scope, table.scope_id, table.extension_id, table.key] }),

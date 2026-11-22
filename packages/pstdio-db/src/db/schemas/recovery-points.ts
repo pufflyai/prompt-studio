@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { bigint, check, foreignKey, index, integer, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { isoTimestamp } from "./iso-timestamp";
 import { owners } from "./owners";
 import { projects } from "./projects";
 
@@ -11,7 +12,7 @@ export const recovery_points = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     hours: integer("hours").notNull(),
-    captured_at: text("captured_at").notNull(),
+    captured_at: isoTimestamp("captured_at").notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.project_id, table.hours] }),

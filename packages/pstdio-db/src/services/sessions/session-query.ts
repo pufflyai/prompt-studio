@@ -8,7 +8,10 @@ import { historyAnchorProjection, sessionColumns } from "../legacy-resource-link
 import { resourceLinkRows } from "../resource-link-rows";
 import { sessionAnchorCondition, workspaceAnchorCondition } from "./workspace-anchor-query";
 
-const activityTime = sql<string>`greatest(${sessions.last_request_ended}, ${sessions.last_request_started}, ${sessions.updated_at}, ${sessions.created_at})`;
+const activityTime =
+  sql<string>`greatest(${sessions.last_request_ended}, ${sessions.last_request_started}, ${sessions.updated_at}, ${sessions.created_at})`.mapWith(
+    sessions.updated_at,
+  );
 const queryOrder = (input: ExtensionSessionQuery) => {
   if (input.orderBy === "lastActivity") return activityTime;
   if (input.orderBy === "updated") return sql<string>`${sessions.updated_at}`;

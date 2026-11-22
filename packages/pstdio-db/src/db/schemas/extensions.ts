@@ -1,5 +1,6 @@
 import { boolean, index, jsonb, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { extensionLoadStatusEnum, extensionSourceKindEnum } from "./enums";
+import { isoTimestamp } from "./iso-timestamp";
 import { projects } from "./projects";
 import type { JsonObject } from "./types";
 
@@ -18,10 +19,10 @@ export const installed_extension_sources = pgTable(
     source_hash: text("source_hash"),
     loaded_revision: text("loaded_revision"),
     status: extensionLoadStatusEnum("status").notNull().default("pending"),
-    last_loaded_at: text("last_loaded_at"),
+    last_loaded_at: isoTimestamp("last_loaded_at"),
     last_error_json: jsonb("last_error_json").$type<JsonObject>(),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
+    created_at: isoTimestamp("created_at").notNull(),
+    updated_at: isoTimestamp("updated_at").notNull(),
   },
   (table) => [uniqueIndex("installed_ext_source_path_uq").on(table.source_path)],
 );
@@ -39,8 +40,8 @@ export const project_extensions = pgTable(
     enabled: boolean("enabled").notNull().default(true),
     config_json: jsonb("config_json").$type<JsonObject>().notNull().default({}),
     diagnostics_json: jsonb("diagnostics_json").$type<JsonObject>(),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
+    created_at: isoTimestamp("created_at").notNull(),
+    updated_at: isoTimestamp("updated_at").notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.project_id, table.extension_ref] }),

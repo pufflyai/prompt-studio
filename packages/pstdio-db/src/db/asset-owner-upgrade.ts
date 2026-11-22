@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from "node:util";
 import { and, eq, sql } from "drizzle-orm";
 import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
+import { timestampToIso } from "./schemas/iso-timestamp";
 import { assetTransfers } from "./schemas.pg";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
@@ -26,7 +27,12 @@ export const prepareAssetOwnerUpgrade = async (db: DbClient, path: string) => {
     await db.transaction(async (tx) => {
       for (const { project_id, extension_id, ...fields } of batch) {
         const ownerId = await ensureStorageOwner(tx, { workbenchId: project_id, extensionId: extension_id });
-        const expected = { ...fields, owner_id: ownerId };
+        const expected = {
+          ...fields,
+          created_at: timestampToIso(fields.created_at),
+          cancelled_at: fields.cancelled_at === null ? null : timestampToIso(fields.cancelled_at),
+          owner_id: ownerId,
+        };
         const [existing] = await tx
           .select()
           .from(assetTransfers)

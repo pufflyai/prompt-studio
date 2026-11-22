@@ -1,8 +1,9 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { type SQL, sql } from "drizzle-orm";
 import { projectExtensionRow } from "../services/extension-instances/project-extension-row";
 import type { createDb } from "./connection.pglite";
-import type { project_extensions } from "./schemas.pg";
+import { project_extensions } from "./schemas.pg";
 import { restoreTextStorageOwners } from "./storage-owner-upgrade.fixture";
 
 const restoreReleasedInstances = async (
@@ -15,10 +16,8 @@ const restoreReleasedInstances = async (
     for (const statement of source.split("--> statement-breakpoint"))
       if (statement.trim().startsWith('CREATE TABLE "extension_instances" (')) await connection.pglite.exec(statement);
   }
-  const instances = await connection.pglite.query<typeof project_extensions.$inferSelect>(
-    "SELECT * FROM project_extensions",
-  );
-  for (const row of instances.rows) {
+  const instances = await connection.db.select().from(project_extensions);
+  for (const row of instances) {
     const value = projectExtensionRow(row);
     await connection.pglite.query(
       `INSERT INTO extension_instances
@@ -39,6 +38,30 @@ const restoreReleasedInstances = async (
     );
   }
   await connection.pglite.exec("DROP TABLE project_extensions");
+};
+
+// Fixtures are created through current services, then reshaped to the actual
+// released schema. The release stored ISO text, including on tables it kept.
+const restoreReleasedTimestampColumns = async (connection: Awaited<ReturnType<typeof createDb>>) => {
+  const preceding = JSON.parse(
+    await readFile(join(import.meta.dirname, "../../drizzle/meta/0010_snapshot.json"), "utf8"),
+  );
+  const { rows } = await connection.db.execute<{ table_name: string; column_name: string }>(sql`
+    SELECT table_name,column_name FROM information_schema.columns
+    WHERE table_schema='public' AND data_type='timestamp with time zone'`);
+  const changes = new Map<string, SQL[]>();
+  for (const { table_name, column_name } of rows) {
+    if (preceding.tables[`public.${table_name}`]?.columns[column_name]?.type !== "text") continue;
+    const column = sql.identifier(column_name);
+    const columns = changes.get(table_name) ?? [];
+    columns.push(sql`ALTER COLUMN ${column} TYPE text USING CASE
+      WHEN date_trunc('milliseconds',${column})=${column}
+      THEN to_char(${column} AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')
+      ELSE to_char(${column} AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') END`);
+    changes.set(table_name, columns);
+  }
+  for (const [table, columns] of changes)
+    await connection.db.execute(sql`ALTER TABLE ${sql.identifier(table)} ${sql.join(columns, sql`, `)}`);
 };
 
 // These definitions come from the immutable migrations shipped in 0.48, not from
@@ -125,6 +148,7 @@ export const restoreReleasedPreferenceTables = async (connection: Awaited<Return
   await connection.pglite.exec(
     "DROP TABLE preferences; DROP TABLE credentials; ALTER TABLE board_views DROP COLUMN is_default; ALTER TABLE sessions DROP COLUMN workspace_id",
   );
+  await restoreReleasedTimestampColumns(connection);
   const journal = JSON.parse(await readFile(join(folder, "meta/_journal.json"), "utf8"));
   const appUpgrade = journal.entries.find((entry: { idx: number }) => entry.idx === 10);
   await connection.pglite.query("DELETE FROM drizzle.__drizzle_migrations WHERE created_at >= $1", [appUpgrade.when]);
