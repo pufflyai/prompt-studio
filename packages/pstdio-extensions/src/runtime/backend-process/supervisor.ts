@@ -47,6 +47,8 @@ export interface BackendWorker {
   invoke(invocation: BackendInvocation): Promise<unknown>;
   /** Stops the process. Pending invocations reject with BackendUnavailableError. */
   stop(): Promise<void>;
+  /** Resolves as soon as the worker can no longer answer, which can be before its process exits. */
+  readonly closed: Promise<void>;
   readonly exited: Promise<number | null>;
 }
 
@@ -72,8 +74,10 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
   // Bun reads .env files from the working directory at startup. An empty folder keeps host files out.
   const cwd = mkdtempSync(join(tmpdir(), "pstdio-backend-"));
 
+  const closed = Promise.withResolvers<void>();
   const fail = (error: BackendUnavailableError) => {
     stopped ??= error;
+    closed.resolve();
     ready.reject(error);
     loaded.reject(error);
     for (const running of invocations.values()) running.settle.reject(error);
@@ -223,7 +227,7 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     await ready.promise;
     if (!send({ v: BACKEND_PROTOCOL_VERSION, type: "load", entryPath: options.entryPath }))
       throw stopped ?? new BackendUnavailableError("The extension backend could not be reached.");
-    return { definition: await loaded.promise, exited, stop, invoke };
+    return { definition: await loaded.promise, closed: closed.promise, exited, stop, invoke };
   } catch (error) {
     await stop();
     throw error;

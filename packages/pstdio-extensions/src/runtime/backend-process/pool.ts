@@ -15,7 +15,7 @@ export const backendWorkerCommand = () =>
 
 /**
  * One lazily started worker per source generation, shared by every project that enables it. A
- * worker that exits is forgotten, and only the next request starts another: no restart loop.
+ * worker that can no longer answer is forgotten, and only the next request starts another: no restart loop.
  */
 export const createBackendWorkerPool = (start: (key: string) => Omit<BackendWorkerOptions, "command">) => {
   const workers = new Map<string, Promise<BackendWorker>>();
@@ -31,7 +31,7 @@ export const createBackendWorkerPool = (start: (key: string) => Omit<BackendWork
     const forget = () => {
       if (workers.get(key) === starting) workers.delete(key);
     };
-    starting.then((worker) => worker.exited.then(forget), forget);
+    starting.then((worker) => worker.closed.then(forget), forget);
     return starting;
   };
 
