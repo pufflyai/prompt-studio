@@ -5,7 +5,7 @@ import type {
   CommandSource,
   JsonObject,
 } from "@pstdio/sdk/extensions";
-import { currentRuntimeOperationOrigin, withRuntimeOperationOrigin } from "pstdio-diagnostics";
+import { withRuntimeOperationOrigin } from "pstdio-diagnostics";
 import type { RuntimeCommandRecord, RuntimeMiddlewareRecord } from "../../types/runtime";
 import { validateCollectionQueryRequest, validateCollectionQueryResult } from "./collection-query";
 import { readCommandRejection } from "./command-rejection";
@@ -14,7 +14,7 @@ import type { RunnerState } from "./context";
 import { lifecycleEventId } from "./dispatch";
 import { createEnvironmentCache, environmentFailedOutcome, withNotices } from "./environment";
 import { findCommand, findPrivateHandler, middlewaresFor, serializeError } from "./internals";
-import { admitInvocation, asExtension, overloadedOutcome } from "./invocation-admission";
+import { admitInvocation, asExtension, holdsAdmission, overloadedOutcome, withAdmission } from "./invocation-admission";
 import { type MiddlewareChainResult, runMiddlewareChain } from "./middleware";
 import { createInvocationScope, type InvocationScope } from "./scope";
 import type { CommandRunnerEnvironment, InternalExecuteInput } from "./types";
@@ -47,8 +47,7 @@ export const executeExtensionCommand = async (
   input: InternalExecuteInput,
 ): Promise<CommandOutcome> => {
   const owner = findCommand(state.runtime, input.commandId) ?? findPrivateHandler(state.runtime, input.commandId);
-  // Work already running for this extension, such as a nested command or a hook, shares its admission.
-  const admitting = owner && currentRuntimeOperationOrigin()?.extensionId !== owner.extensionId ? owner : undefined;
+  const admitting = owner && !holdsAdmission(owner.extensionId) ? owner : undefined;
   const release = admitting && admitInvocation(admitting.extensionId);
   if (admitting && !release) return overloadedOutcome(admitting.extensionId);
   const scope = createInvocationScope({ logger: state.logger, parent: input.signal });
@@ -56,10 +55,11 @@ export const executeExtensionCommand = async (
   // A cancelled handler that never settles must not hold the extension's allowance forever.
   if (release) scope.signal.addEventListener("abort", release, { once: true });
   try {
-    return await withRuntimeOperationOrigin(
-      { kind: "command", name: input.commandId, projectId: input.projectId },
-      () => runExtensionCommand(state, input, scope),
-    );
+    const run = () =>
+      withRuntimeOperationOrigin({ kind: "command", name: input.commandId, projectId: input.projectId }, () =>
+        runExtensionCommand(state, input, scope),
+      );
+    return await (admitting ? withAdmission(admitting.extensionId, run) : run());
   } finally {
     await scope.close();
     release?.();
