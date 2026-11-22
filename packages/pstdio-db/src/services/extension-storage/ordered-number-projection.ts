@@ -13,7 +13,7 @@ import { fingerprint, type Json, type StorageRecord } from "pstdio-sync-contract
 import {
   storage_resource_identities as identities,
   storage_resource_projections as numberProjections,
-  storage_record_projections as projections,
+  owners as projections,
 } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
 import type { OrderedNumberRepair } from "./ordered-number-limits";

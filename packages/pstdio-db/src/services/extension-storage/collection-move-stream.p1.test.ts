@@ -11,7 +11,6 @@ import {
   storage_ordered_owners,
   storage_ordered_records,
   storage_ordered_touches,
-  storage_record_projections,
   owners as storageOwners,
 } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
@@ -238,7 +237,6 @@ const tables = [
   storage_ordered_records,
   storage_ordered_operations,
   storage_ordered_touches,
-  storage_record_projections,
   storage_current_records,
 ] as const;
 const copyStorage = async (from: Device["db"], to: Device["db"]) => {

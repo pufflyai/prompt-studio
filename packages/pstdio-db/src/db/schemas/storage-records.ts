@@ -1,33 +1,14 @@
 import { sql } from "drizzle-orm";
-import { bigint, boolean, foreignKey, index, integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
 import type { NativeRecordSources } from "pstdio-sync/records";
 import type { StorageRecord, StorageRecordIndex } from "pstdio-sync-contracts";
 import { owners } from "./owners";
-import { storage_documents } from "./storage-documents";
 
 const ownerColumns = () => ({
   owner_id: integer("owner_id")
     .notNull()
     .references(() => owners.id, { onDelete: "cascade" }),
 });
-
-export const storage_record_projections = pgTable(
-  "storage_record_projections",
-  {
-    ...ownerColumns(),
-    document_id: text("document_id").notNull().default("records"),
-    revision: bigint("revision", { mode: "number" }).notNull(),
-    // Unfiltered totals read this instead of counting rows; commits keep it current.
-    live_count: bigint("live_count", { mode: "number" }).notNull().default(0),
-  },
-  (table) => [
-    primaryKey({ columns: [table.owner_id] }),
-    foreignKey({
-      columns: [table.owner_id, table.document_id],
-      foreignColumns: [storage_documents.owner_id, storage_documents.document_id],
-    }).onDelete("cascade"),
-  ],
-);
 
 export const storage_current_records = pgTable(
   "storage_current_records",
@@ -53,10 +34,6 @@ export const storage_current_records = pgTable(
     index("storage_current_records_lifetime_upgrade_idx")
       .on(table.owner_id, table.record_id)
       .where(sql`${table.record_lifetime} = '' AND NOT ${table.deleted}`),
-    foreignKey({
-      columns: [table.owner_id],
-      foreignColumns: [storage_record_projections.owner_id],
-    }).onDelete("cascade"),
   ],
 );
 

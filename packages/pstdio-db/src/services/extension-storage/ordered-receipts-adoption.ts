@@ -13,7 +13,7 @@ import { fingerprint, type Json } from "pstdio-sync-contracts";
 import {
   storage_ordered_records as canonical,
   storage_current_records as current,
-  storage_record_projections as projections,
+  owners as projections,
 } from "../../db/schemas.pg";
 import { dirtyOrderedReceipts } from "./ordered-checkpoint";
 import { queueOrderedCheckpointRepairs } from "./ordered-checkpoint-repair";

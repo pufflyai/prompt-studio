@@ -14,9 +14,9 @@ import { createRow, owners, scaleStorageIndexes, seedOwner, type Workload, workl
 import { createDb, type DbClient } from "../../db/connection.pglite";
 import {
   projects,
+  owners as recordOwners,
   storage_ordered_operations,
   storage_ordered_receipts,
-  storage_record_projections,
 } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createOrderedJournal } from "./ordered-journal";
@@ -103,8 +103,8 @@ export const verifyDatabaseFixture = async (db: DbClient, kind: Workload, count:
   const seedCommits = await verifyReceipts(db, kind, count, churn);
   const [projection] = await db
     .select()
-    .from(storage_record_projections)
-    .where(and(eq(storage_record_projections.owner_id, storageOwnerKey(databaseFixtureOwner))));
+    .from(recordOwners)
+    .where(and(eq(recordOwners.id, storageOwnerKey(databaseFixtureOwner))));
   assert.equal(projection?.revision, seedCommits, "Incomplete owner revision");
   assert.equal(projection.live_count, count, "Stored live count differs");
   for (const deleted of churn ? [false, true] : [false]) {

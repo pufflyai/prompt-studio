@@ -1,4 +1,4 @@
-import { boolean, integer, pgTable, text, unique } from "drizzle-orm/pg-core";
+import { bigint, boolean, integer, pgTable, text, unique } from "drizzle-orm/pg-core";
 import { projects } from "./projects";
 
 /** Stable local keys; project deletion owns the lifetime of every storage owner. */
@@ -10,6 +10,8 @@ export const owners = pgTable(
       .notNull()
       .references(() => projects.id, { onDelete: "cascade" }),
     extension_id: text("extension_id").notNull(),
+    revision: bigint("revision", { mode: "number" }).notNull().default(0),
+    live_count: bigint("live_count", { mode: "number" }).notNull().default(0),
     history_cursor: text("history_cursor"),
     history_migrated: boolean("history_migrated").notNull().default(false),
   },

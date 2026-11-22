@@ -1,5 +1,5 @@
 {
-  "id": "b960ee69-f3d7-42c9-a0bc-1608a9fb461d",
+  "id": "1e76384a-e284-4e44-b62e-6bff8b8cfd3d",
   "prevId": "7831c13a-76db-4e65-a402-222b04fffc09",
   "version": "7",
   "dialect": "postgresql",
@@ -2026,6 +2026,20 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "revision": {
+          "name": "revision",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "live_count": {
+          "name": "live_count",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "history_cursor": {
           "name": "history_cursor",
@@ -4616,19 +4630,6 @@
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
-        },
-        "storage_current_records_owner_id_storage_record_projections_owner_id_fk": {
-          "name": "storage_current_records_owner_id_storage_record_projections_owner_id_fk",
-          "tableFrom": "storage_current_records",
-          "tableTo": "storage_record_projections",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "owner_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
@@ -4696,81 +4697,6 @@
           "columns": [
             "owner_id",
             "name"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.storage_record_projections": {
-      "name": "storage_record_projections",
-      "schema": "",
-      "columns": {
-        "owner_id": {
-          "name": "owner_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "document_id": {
-          "name": "document_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'records'"
-        },
-        "revision": {
-          "name": "revision",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "live_count": {
-          "name": "live_count",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "storage_record_projections_owner_id_owners_id_fk": {
-          "name": "storage_record_projections_owner_id_owners_id_fk",
-          "tableFrom": "storage_record_projections",
-          "tableTo": "owners",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "storage_record_projections_owner_id_document_id_storage_documents_owner_id_document_id_fk": {
-          "name": "storage_record_projections_owner_id_document_id_storage_documents_owner_id_document_id_fk",
-          "tableFrom": "storage_record_projections",
-          "tableTo": "storage_documents",
-          "columnsFrom": [
-            "owner_id",
-            "document_id"
-          ],
-          "columnsTo": [
-            "owner_id",
-            "document_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "storage_record_projections_owner_id_pk": {
-          "name": "storage_record_projections_owner_id_pk",
-          "columns": [
-            "owner_id"
           ]
         }
       },

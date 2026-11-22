@@ -32,6 +32,7 @@ import { prepareLogOwnerUpgrade } from "./log-owner-upgrade";
 import { prepareNativeOwnerUpgrade } from "./native-owner-upgrade";
 import { openPglite } from "./open-pglite";
 import { prepareOrderedOwnerUpgrade } from "./ordered-owner-upgrade";
+import { prepareOwnerProjectionUpgrade } from "./owner-projection-upgrade";
 import { canonicalDbPath, resolveDbPath } from "./paths";
 import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-current-home";
 import { pgliteIdentity } from "./pglite-identity";
@@ -239,6 +240,7 @@ export const createDb = async (options?: {
       if (!fs.existsSync(migrationsFolder)) return;
       const finishProjectExtensionsUpgrade = await prepareProjectExtensionsUpgrade(db, dbPath);
       const finishResourceLinkOwnerUpgrade = await prepareResourceLinkOwnerUpgrade(db, dbPath);
+      const finishOwnerProjectionUpgrade = await prepareOwnerProjectionUpgrade(db, dbPath);
       const finishDocumentOwnerUpgrade = await prepareDocumentOwnerUpgrade(db, dbPath);
       const finishNativeOwnerUpgrade = await prepareNativeOwnerUpgrade(db, dbPath);
       const finishRecoveryOwnerUpgrade = await prepareRecoveryOwnerUpgrade(db, dbPath);
@@ -263,6 +265,7 @@ export const createDb = async (options?: {
       await finishRecoveryOwnerUpgrade?.();
       await finishNativeOwnerUpgrade?.();
       await finishDocumentOwnerUpgrade?.();
+      await finishOwnerProjectionUpgrade?.();
       await finishPreferencesUpgrade?.();
       await finishExtensionPreferencesUpgrade?.();
       await finishConnectionCredentialsUpgrade?.();
@@ -301,7 +304,8 @@ export const createDb = async (options?: {
           .where(inArray(schema.installed_extension_sources.extension_id, [error.from, error.to]));
       },
     });
-    if (migrated && !deferCleanup) await maintainDatabase(openedPglite, dbPath, fresh, onPhase, movedNodes || renamed);
+    if (migrated && !deferCleanup)
+      await maintainDatabase(openedPglite, db, dbPath, fresh, onPhase, movedNodes || renamed);
     const projectIds = await db.select({ id: schema.projects.id }).from(schema.projects);
     await indexNodes.retainProjects(new Set(projectIds.map((project) => project.id)));
     onPhase("database_migrated");

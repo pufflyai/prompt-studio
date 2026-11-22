@@ -1,6 +1,9 @@
 import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { PGlite } from "@electric-sql/pglite";
+import { sql } from "drizzle-orm";
+import type { DbClient } from "./connection.pglite";
+import { deleteStorageDocuments } from "./delete-storage-documents";
 
 // This retired host-owned format stored transcripts in CRDT documents. Current device logs
 // and local conversation files have separate owners and must survive this cleanup.
@@ -15,6 +18,7 @@ export const invalidateMaintenance = async (path: string) => {
 
 export const maintainDatabase = async (
   db: PGlite,
+  storage: DbClient,
   path: string,
   fresh: boolean,
   onPhase: (phase: DatabaseMaintenancePhase) => void,
@@ -41,9 +45,9 @@ export const maintainDatabase = async (
   await rm(marker, { force: true });
   if (rows[0].legacy) {
     onPhase("database_cleaning");
-    await db.query(
-      "DELETE FROM storage_documents WHERE owner_id IN (SELECT id FROM owners WHERE starts_with(extension_id, $1))",
-      [legacyOwnerPrefix],
+    await deleteStorageDocuments(
+      storage,
+      sql`owner_id IN (SELECT id FROM owners WHERE starts_with(extension_id, ${legacyOwnerPrefix}))`,
     );
   }
 

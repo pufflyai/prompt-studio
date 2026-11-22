@@ -21,7 +21,6 @@ const historical = "pstdio.pstdio-notes";
 // Capture real authored state before migration, in FK order, rather than fabricating wire envelopes.
 const tables: PgTable[] = [
   s.storage_documents,
-  s.storage_record_projections,
   s.storage_ordered_owners,
   s.storage_ordered_operations,
   s.storage_record_sync,

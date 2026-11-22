@@ -5,12 +5,7 @@ import { readTextDocumentSeed } from "pstdio-sync/text";
 import { fingerprint, type Json, type StorageRecord } from "pstdio-sync-contracts";
 import * as Y from "yjs";
 import type { DbClient } from "../../db/connection.pglite";
-import {
-  projects,
-  storage_current_records,
-  storage_ordered_owners,
-  storage_record_projections,
-} from "../../db/schemas.pg";
+import { projects, owners as recordOwners, storage_current_records, storage_ordered_owners } from "../../db/schemas.pg";
 import { orderedAssetRevision } from "./ordered-native-assets";
 import { orderedOwnerWhere } from "./ordered-sql";
 import { derivedQueryValues, readDerivedQueryIndexes } from "./record-derived-fields";
@@ -131,8 +126,8 @@ export const refreshNativeRecordText = async (tx: Transaction, owner: StorageOwn
   }
   if (changed)
     await tx
-      .update(storage_record_projections)
-      .set({ revision: sql`${storage_record_projections.revision} + 1` })
-      .where(and(eq(storage_record_projections.owner_id, storageOwnerKey(owner))));
+      .update(recordOwners)
+      .set({ revision: sql`${recordOwners.revision} + 1` })
+      .where(and(eq(recordOwners.id, storageOwnerKey(owner))));
   return changed;
 };

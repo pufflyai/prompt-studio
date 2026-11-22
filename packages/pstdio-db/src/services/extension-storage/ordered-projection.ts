@@ -2,7 +2,7 @@ import { and, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { OrderedRecord } from "pstdio-sync/records";
 import { assertStorageLimits } from "pstdio-sync-contracts";
-import { storage_current_records as current, storage_record_projections as projections } from "../../db/schemas.pg";
+import { storage_current_records as current, owners as projections } from "../../db/schemas.pg";
 import { projectOrderedNativeAssets } from "./ordered-native-assets";
 import { refreshOrderedNativeVersions } from "./ordered-native-versions";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";

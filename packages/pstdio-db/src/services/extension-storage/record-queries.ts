@@ -21,7 +21,7 @@ import type { DbClient } from "../../db/connection.pglite";
 import {
   storage_current_records as current,
   storage_record_indexes as indexes,
-  storage_record_projections as projections,
+  owners as projections,
   storage_resource_projections,
 } from "../../db/schemas.pg";
 import { traceStorageQuery } from "./query-trace";
@@ -152,7 +152,7 @@ const prepareQueryMetadata = async (
 
 export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnostics?: StorageDiagnostics) => {
   const ownerWhere = (table: typeof current | typeof indexes | typeof projections) =>
-    and(eq(table.owner_id, storageOwnerKey(owner)));
+    and(eq("owner_id" in table ? table.owner_id : table.id, storageOwnerKey(owner)));
   const physicalNames = new WeakMap<StorageRecordIndex, string>();
   const aggregateCache = aggregateCacheFor(db);
   const getIndex = async (connection: Pick<DbClient, "select">, name: string) => {
@@ -177,13 +177,13 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
     if (identities) {
       const [core] = await connection
         .select({
-          ownerId: projections.owner_id,
+          ownerId: projections.id,
           current: projections.revision,
           projected: storage_resource_projections.revision,
         })
         .from(projections)
-        .leftJoin(storage_resource_projections, eq(storage_resource_projections.owner_id, projections.owner_id))
-        .where(eq(projections.owner_id, storageOwnerKey({ ...owner, extensionId: "pstdio" })));
+        .leftJoin(storage_resource_projections, eq(storage_resource_projections.owner_id, projections.id))
+        .where(eq(projections.id, storageOwnerKey({ ...owner, extensionId: "pstdio" })));
       if (core && core.current !== (core.projected ?? 0))
         throw new Error("Resource identity projection is stale; upgrade before reading");
       identityRevision = `:${core?.ownerId ?? 0}:${core?.projected ?? 0}:${identityQueryVersion}`;
@@ -328,6 +328,5 @@ export const createRecordQueries = (db: DbClient, owner: StorageOwner, diagnosti
   return {
     ...api,
     queryIn,
-    hasProjection: async () => (await db.select().from(projections).where(ownerWhere(projections))).length > 0,
   };
 };

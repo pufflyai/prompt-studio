@@ -2,6 +2,8 @@ CREATE TABLE "owners" (
 	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "owners_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
 	"project_id" text NOT NULL,
 	"extension_id" text NOT NULL,
+	"revision" bigint DEFAULT 0 NOT NULL,
+	"live_count" bigint DEFAULT 0 NOT NULL,
 	"history_cursor" text,
 	"history_migrated" boolean DEFAULT false NOT NULL,
 	CONSTRAINT "owners_project_extension_unique" UNIQUE("project_id","extension_id")
@@ -78,12 +80,16 @@ ALTER TABLE "storage_log_streams" DISABLE ROW LEVEL SECURITY;--> statement-break
 ALTER TABLE "storage_personal_history" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "storage_personal_history_positions" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
 ALTER TABLE "storage_personal_history_sources" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "storage_record_projections" DISABLE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "storage_current_records" DROP CONSTRAINT "storage_current_records_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk";
+--> statement-breakpoint
 DROP TABLE "resource_anchors" CASCADE;--> statement-breakpoint
 DROP TABLE "storage_log_entries" CASCADE;--> statement-breakpoint
 DROP TABLE "storage_log_streams" CASCADE;--> statement-breakpoint
 DROP TABLE "storage_personal_history" CASCADE;--> statement-breakpoint
 DROP TABLE "storage_personal_history_positions" CASCADE;--> statement-breakpoint
 DROP TABLE "storage_personal_history_sources" CASCADE;--> statement-breakpoint
+DROP TABLE "storage_record_projections" CASCADE;--> statement-breakpoint
 ALTER TABLE "recovery_point_owners" RENAME COLUMN "workbench_id" TO "project_id";--> statement-breakpoint
 ALTER TABLE "recovery_points" RENAME COLUMN "workbench_id" TO "project_id";--> statement-breakpoint
 ALTER TABLE "asset_transfers" DROP CONSTRAINT "asset_transfers_project_id_projects_id_fk";
@@ -116,13 +122,7 @@ ALTER TABLE "storage_ordered_touches" DROP CONSTRAINT "storage_ordered_touches_w
 --> statement-breakpoint
 ALTER TABLE "storage_current_records" DROP CONSTRAINT "storage_current_records_workbench_id_projects_id_fk";
 --> statement-breakpoint
-ALTER TABLE "storage_current_records" DROP CONSTRAINT "storage_current_records_workbench_id_extension_id_storage_record_projections_workbench_id_extension_id_fk";
---> statement-breakpoint
 ALTER TABLE "storage_record_indexes" DROP CONSTRAINT "storage_record_indexes_workbench_id_projects_id_fk";
---> statement-breakpoint
-ALTER TABLE "storage_record_projections" DROP CONSTRAINT "storage_record_projections_workbench_id_projects_id_fk";
---> statement-breakpoint
-ALTER TABLE "storage_record_projections" DROP CONSTRAINT "storage_record_projections_workbench_id_extension_id_document_id_storage_documents_workbench_id_extension_id_document_id_fk";
 --> statement-breakpoint
 ALTER TABLE "storage_resource_projections" DROP CONSTRAINT "storage_resource_projections_workbench_id_extension_id_document_id_storage_documents_workbench_id_extension_id_document_id_fk";
 --> statement-breakpoint
@@ -144,7 +144,6 @@ ALTER TABLE "storage_ordered_records" DROP CONSTRAINT "storage_ordered_records_w
 ALTER TABLE "storage_ordered_touches" DROP CONSTRAINT "storage_ordered_touches_workbench_id_extension_id_record_id_operation_id_pk";--> statement-breakpoint
 ALTER TABLE "storage_current_records" DROP CONSTRAINT "storage_current_records_workbench_id_extension_id_record_id_pk";--> statement-breakpoint
 ALTER TABLE "storage_record_indexes" DROP CONSTRAINT "storage_record_indexes_workbench_id_extension_id_name_pk";--> statement-breakpoint
-ALTER TABLE "storage_record_projections" DROP CONSTRAINT "storage_record_projections_workbench_id_extension_id_pk";--> statement-breakpoint
 ALTER TABLE "asset_transfers" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
 ALTER TABLE "asset_transfers" ADD CONSTRAINT "asset_transfers_owner_id_operation_id_pk" PRIMARY KEY("owner_id","operation_id");--> statement-breakpoint
 ALTER TABLE "native_document_sources" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
@@ -168,8 +167,6 @@ ALTER TABLE "storage_current_records" ADD COLUMN "owner_id" integer NOT NULL;-->
 ALTER TABLE "storage_current_records" ADD CONSTRAINT "storage_current_records_owner_id_record_id_pk" PRIMARY KEY("owner_id","record_id");--> statement-breakpoint
 ALTER TABLE "storage_record_indexes" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
 ALTER TABLE "storage_record_indexes" ADD CONSTRAINT "storage_record_indexes_owner_id_name_pk" PRIMARY KEY("owner_id","name");--> statement-breakpoint
-ALTER TABLE "storage_record_projections" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
-ALTER TABLE "storage_record_projections" ADD CONSTRAINT "storage_record_projections_owner_id_pk" PRIMARY KEY("owner_id");--> statement-breakpoint
 ALTER TABLE "native_document_file_projections" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
 ALTER TABLE "native_document_rooms" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
 ALTER TABLE "storage_document_operations" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
@@ -202,10 +199,7 @@ ALTER TABLE "storage_ordered_receipts" ADD CONSTRAINT "storage_ordered_receipts_
 ALTER TABLE "storage_ordered_records" ADD CONSTRAINT "storage_ordered_records_owner_id_storage_ordered_owners_owner_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."storage_ordered_owners"("owner_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "storage_ordered_touches" ADD CONSTRAINT "storage_ordered_touches_owner_id_operation_id_storage_ordered_operations_owner_id_operation_id_fk" FOREIGN KEY ("owner_id","operation_id") REFERENCES "public"."storage_ordered_operations"("owner_id","operation_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "storage_current_records" ADD CONSTRAINT "storage_current_records_owner_id_owners_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "storage_current_records" ADD CONSTRAINT "storage_current_records_owner_id_storage_record_projections_owner_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."storage_record_projections"("owner_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "storage_record_indexes" ADD CONSTRAINT "storage_record_indexes_owner_id_owners_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "storage_record_projections" ADD CONSTRAINT "storage_record_projections_owner_id_owners_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "storage_record_projections" ADD CONSTRAINT "storage_record_projections_owner_id_document_id_storage_documents_owner_id_document_id_fk" FOREIGN KEY ("owner_id","document_id") REFERENCES "public"."storage_documents"("owner_id","document_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "storage_resource_projections" ADD CONSTRAINT "storage_resource_projections_owner_id_owners_id_fk" FOREIGN KEY ("owner_id") REFERENCES "public"."owners"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "storage_resource_projections" ADD CONSTRAINT "storage_resource_projections_owner_id_document_id_storage_documents_owner_id_document_id_fk" FOREIGN KEY ("owner_id","document_id") REFERENCES "public"."storage_documents"("owner_id","document_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "native_rooms_source" ON "native_document_rooms" USING btree ("owner_id","document_key");--> statement-breakpoint
@@ -252,8 +246,6 @@ ALTER TABLE "storage_current_records" DROP COLUMN "workbench_id";--> statement-b
 ALTER TABLE "storage_current_records" DROP COLUMN "extension_id";--> statement-breakpoint
 ALTER TABLE "storage_record_indexes" DROP COLUMN "workbench_id";--> statement-breakpoint
 ALTER TABLE "storage_record_indexes" DROP COLUMN "extension_id";--> statement-breakpoint
-ALTER TABLE "storage_record_projections" DROP COLUMN "workbench_id";--> statement-breakpoint
-ALTER TABLE "storage_record_projections" DROP COLUMN "extension_id";--> statement-breakpoint
 ALTER TABLE "storage_resource_projections" DROP COLUMN "extension_id";--> statement-breakpoint
 ALTER TABLE "native_document_file_projections" ADD CONSTRAINT "native_document_file_projections_pk" PRIMARY KEY("owner_id","document_key","projection_key");--> statement-breakpoint
 ALTER TABLE "storage_document_operations" ADD CONSTRAINT "storage_document_operations_pk" PRIMARY KEY("owner_id","document_id","operation_id");--> statement-breakpoint

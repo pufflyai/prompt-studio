@@ -6,7 +6,7 @@ import {
   storage_resource_aliases as aliases,
   storage_resource_identities as identities,
   storage_resource_projections as projections,
-  storage_record_projections,
+  owners as recordOwners,
 } from "../db/schemas.pg";
 import { storageOwnerKey } from "./extension-storage/storage-owner-key";
 
@@ -21,17 +21,10 @@ export const createResourceIdentityIndex = (db: DbClient, ready: () => Promise<v
     );
   const assertCurrent = async (connection: Connection, projectId: string) => {
     const [row] = await connection
-      .select({ current: storage_record_projections.revision, projected: projections.revision })
-      .from(storage_record_projections)
-      .leftJoin(projections, eq(projections.owner_id, storage_record_projections.owner_id))
-      .where(
-        and(
-          eq(
-            storage_record_projections.owner_id,
-            storageOwnerKey({ workbenchId: projectId, extensionId: coreOwnerId }),
-          ),
-        ),
-      );
+      .select({ current: recordOwners.revision, projected: projections.revision })
+      .from(recordOwners)
+      .leftJoin(projections, eq(projections.owner_id, recordOwners.id))
+      .where(and(eq(recordOwners.id, storageOwnerKey({ workbenchId: projectId, extensionId: coreOwnerId }))));
     if (row && row.current !== (row.projected ?? 0))
       throw new Error("Resource identity projection is stale; upgrade before reading");
   };

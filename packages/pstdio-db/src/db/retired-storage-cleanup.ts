@@ -3,6 +3,7 @@ import type { StorageOwner } from "pstdio-sync";
 import { legacyNodeRows } from "../services/extension-storage/index-node-upgrade";
 import { storageOwnerKey } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
+import { deleteStorageDocuments } from "./delete-storage-documents";
 import { storage_documents as documents } from "./schemas.pg";
 import { invalidateMaintenance, legacyOwnerPrefix } from "./startup-maintenance";
 
@@ -28,7 +29,7 @@ const removeRows = async (db: DbClient, filter: SQL, stopped: () => boolean, bef
     if (!batch.length) return true;
     if (stopped()) return false;
     await beforeDelete();
-    await db.delete(documents).where(sql`${key} IN (${sql.join(batch.map(address), sql`, `)})`);
+    await deleteStorageDocuments(db, sql`${key} IN (${sql.join(batch.map(address), sql`, `)})`);
     after = address(batch.at(-1)!);
   }
   return false;

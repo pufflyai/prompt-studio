@@ -18,7 +18,6 @@ import {
   storage_document_updates,
   storage_documents,
   storage_record_indexes,
-  storage_record_projections,
   storage_resource_aliases,
   storage_resource_identities,
   storage_resource_projections,
@@ -50,14 +49,6 @@ const sources = [
     keys: ["document_id", "operation_id"],
     bytes: [],
     numbers: [],
-  },
-  {
-    table: storage_record_projections,
-    owner: true,
-    ownerKey: true,
-    keys: [],
-    bytes: [],
-    numbers: ["revision", "live_count"],
   },
   { table: storage_current_records, owner: true, ownerKey: true, keys: ["record_id"], bytes: [], numbers: [] },
   {
@@ -234,7 +225,7 @@ export const prepareDocumentOwnerUpgrade = async (db: DbClient, path: string) =>
     );
     if (restore) restorations.push({ restore, flush });
   }
-  // All nine inputs must be durable before document deletion cascades to derived identities.
+  // All document inputs and the separately captured owner positions must be durable before document deletion cascades to derived identities.
   // Drop generated query triggers while their released columns still exist.
   if (columns!.legacy) {
     await dropRecordIndexes(db, sql`true`);

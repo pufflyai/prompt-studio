@@ -4,6 +4,7 @@ import { access, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
+import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import { createDb } from "./connection.pglite";
 
 const diskLimit = process.platform === "win32" ? 15_000 : undefined;
@@ -92,18 +93,20 @@ test(
       for (const [index, extension] of [...legacy, ...current].entries()) {
         const project = index === 1 ? "signed-out" : "offline";
         const document = index < 2 ? JSON.stringify(["transcript", String(index)]) : "records";
-        await client.pglite.query(
-          "INSERT INTO storage_documents (workbench_id,extension_id,document_id,state) VALUES ($1,$2,$3,$4)",
-          [project, extension, document, new Uint8Array([0, 0])],
-        );
+        const ownerId = await ensureStorageOwner(client.db, { workbenchId: project, extensionId: extension });
+        await client.pglite.query("INSERT INTO storage_documents (owner_id,document_id,state) VALUES ($1,$2,$3)", [
+          ownerId,
+          document,
+          new Uint8Array([0, 0]),
+        ]);
         // Retired transcripts need no directory entry and must never be decoded to remove them.
         await client.pglite.query(
-          "INSERT INTO storage_document_updates (workbench_id,extension_id,document_id,revision,update) VALUES ($1,$2,$3,1,$4)",
-          [project, extension, document, index < 2 ? randomBytes(512 * 1024) : new Uint8Array([0, 0])],
+          "INSERT INTO storage_document_updates (owner_id,document_id,revision,update) VALUES ($1,$2,1,$3)",
+          [ownerId, document, index < 2 ? randomBytes(512 * 1024) : new Uint8Array([0, 0])],
         );
         await client.pglite.query(
-          "INSERT INTO storage_document_operations (workbench_id,extension_id,document_id,operation_id,fingerprint) VALUES ($1,$2,$3,'operation','fingerprint')",
-          [project, extension, document],
+          "INSERT INTO storage_document_operations (owner_id,document_id,operation_id,fingerprint) VALUES ($1,$2,'operation','fingerprint')",
+          [ownerId, document],
         );
       }
       const before = await relation(client);
@@ -117,14 +120,18 @@ test(
       expect(phases.indexOf("database_cleaning")).toBeGreaterThan(phases.indexOf("database_opened"));
       expect(phases.indexOf("database_compacting")).toBeLessThan(phases.indexOf("database_migrated"));
       const remaining = await client.pglite.query<{ extension_id: string }>(
-        "SELECT extension_id FROM storage_documents WHERE NOT (extension_id = 'pstdio' AND document_id = $1) ORDER BY extension_id",
+        "SELECT extension_id FROM storage_documents JOIN owners ON owners.id=storage_documents.owner_id WHERE NOT (extension_id = 'pstdio' AND document_id = $1) ORDER BY extension_id",
         [JSON.stringify(["host-local-migration", "first-party-identities-v1"])],
       );
       expect(remaining.rows.map((row) => row.extension_id)).toEqual([...current].sort());
       for (const table of ["storage_document_updates", "storage_document_operations"])
-        expect((await client.pglite.query(`SELECT extension_id FROM ${table} ORDER BY extension_id`)).rows).toEqual(
-          remaining.rows,
-        );
+        expect(
+          (
+            await client.pglite.query(
+              `SELECT extension_id FROM ${table} JOIN owners ON owners.id=${table}.owner_id ORDER BY extension_id`,
+            )
+          ).rows,
+        ).toEqual(remaining.rows);
       expect((await client.pglite.query("SELECT title FROM sessions")).rows).toEqual([
         { title: "Keep this conversation" },
       ]);

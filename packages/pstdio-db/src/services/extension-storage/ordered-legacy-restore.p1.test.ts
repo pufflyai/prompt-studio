@@ -1,11 +1,12 @@
 import { expect, test } from "bun:test";
+import { eq } from "drizzle-orm";
 import {
   storage_current_records as current,
   storage_documents as documents,
   storage_document_operations as operations,
   storage_record_outbox as outbox,
   storage_ordered_owners as owners,
-  storage_record_projections as projections,
+  owners as projections,
   storage_record_sync as sync,
   storage_document_updates as updates,
 } from "../../db/schemas.pg";
@@ -39,12 +40,17 @@ test("a restored old pending frontier cannot reuse a known raw-frame identity wi
   await a.sync.synchronize();
   await second.db.transaction(async (tx) => {
     await tx.delete(owners);
+    await tx.delete(current);
     await tx.delete(documents);
     await tx.delete(sync);
     for (const row of saved.documents) await tx.insert(documents).values(row);
     for (const row of saved.updates) await tx.insert(updates).values(row);
     for (const row of saved.operations) await tx.insert(operations).values(row);
-    for (const row of saved.projections) await tx.insert(projections).values(row);
+    for (const row of saved.projections)
+      await tx
+        .update(projections)
+        .set({ revision: row.revision, live_count: row.live_count })
+        .where(eq(projections.id, row.id));
     for (const row of saved.current) await tx.insert(current).values(row);
     for (const row of saved.sync) await tx.insert(sync).values(row);
     for (const row of saved.outbox) await tx.insert(outbox).values(row);

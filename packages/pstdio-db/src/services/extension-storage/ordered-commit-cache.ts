@@ -1,7 +1,7 @@
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId, type OrderedRecord } from "pstdio-sync/records";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_ordered_owners as owners, storage_record_projections as projections } from "../../db/schemas.pg";
+import { storage_ordered_owners as owners, owners as projections } from "../../db/schemas.pg";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 
 type Entry = { owner: string; version: string; ids: Set<string>; views: Map<string, OrderedRecord> };

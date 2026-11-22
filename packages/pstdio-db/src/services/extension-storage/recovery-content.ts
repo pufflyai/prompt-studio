@@ -8,10 +8,10 @@ import { owners as storageOwners } from "../../db/schemas/owners";
 import {
   installed_extension_sources,
   project_extensions,
+  owners as recordOwners,
   recovery_point_owners,
   storage_document_updates,
   storage_documents,
-  storage_record_projections,
 } from "../../db/schemas.pg";
 import { listProjectedRecords } from "./record-queries";
 import type { RecoveryRecord } from "./recovery-edits";
@@ -121,11 +121,10 @@ export const readProjectContent = async (tx: Transaction, projectId: string) => 
       await tx
         .select({
           id: storageOwners.extension_id,
-          revision: storage_record_projections.revision,
-          live: storage_record_projections.live_count,
+          revision: recordOwners.revision,
+          live: recordOwners.live_count,
         })
-        .from(storage_record_projections)
-        .innerJoin(storageOwners, eq(storageOwners.id, storage_record_projections.owner_id))
+        .from(recordOwners)
         .where(eq(storageOwners.project_id, projectId))
         .for("share")
     ).map((row) => [row.id, row]),

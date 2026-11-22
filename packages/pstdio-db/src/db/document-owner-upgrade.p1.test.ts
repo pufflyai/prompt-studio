@@ -6,6 +6,7 @@ import { migrate } from "drizzle-orm/pglite/migrator";
 import { createDb } from "./connection.pglite";
 import { prepareDocumentOwnerUpgrade } from "./document-owner-upgrade";
 import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
+import { prepareOwnerProjectionUpgrade } from "./owner-projection-upgrade";
 
 const tables = [
   "storage_documents",
@@ -54,6 +55,7 @@ for (const interruption of ["normal", "schema", "restore"])
           ).rows.map(({ row }) => row),
         );
       if (interruption !== "normal") {
+        await prepareOwnerProjectionUpgrade(previous.db, previous.path);
         const finish = await prepareDocumentOwnerUpgrade(previous.db, previous.path);
         for (const table of tables) expect((await previous.pglite.query(`SELECT * FROM ${table}`)).rows).toEqual([]);
         await migrate(previous.db, { migrationsFolder: join(import.meta.dirname, "../../drizzle") });
@@ -76,6 +78,18 @@ for (const interruption of ["normal", "schema", "restore"])
       const restored = async () => {
         const rows = [];
         for (const table of tables) {
+          if (table === "storage_record_projections") {
+            rows.push(
+              (
+                await store!.pglite.query<{
+                  row: Record<string, unknown>;
+                }>(`SELECT jsonb_build_object('workbench_id',o.project_id,
+              'extension_id',o.extension_id,'document_id','records','revision',o.revision,'live_count',o.live_count) AS row
+              FROM owners o WHERE EXISTS (SELECT 1 FROM storage_documents d WHERE d.owner_id=o.id AND d.document_id='records') ORDER BY row`)
+              ).rows.map(({ row }) => row),
+            );
+            continue;
+          }
           const expression = numeric.has(table)
             ? `(to_jsonb(t)-'owner_id') || jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id)`
             : "to_jsonb(t)";

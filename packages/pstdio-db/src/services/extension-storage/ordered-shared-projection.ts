@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { type OrderedOperation, type OrderedRecord, orderedBody, orderedProjection } from "pstdio-sync/records";
-import { storage_record_projections as projections } from "../../db/schemas.pg";
+import { owners as projections } from "../../db/schemas.pg";
 import { jsonBatches } from "./json-batches";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { encodeProjectionValue } from "./record-projection-codec";

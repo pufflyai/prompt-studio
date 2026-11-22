@@ -1,7 +1,7 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_current_records, storage_documents, storage_record_projections } from "../../db/schemas.pg";
+import { owners as recordOwners, storage_current_records, storage_documents } from "../../db/schemas.pg";
 import { lockStorageProject, type NativeProjectedRecord } from "./native-record-projection";
 import { publishProjectedRecords } from "./record-projection-rows";
 import { persistResourceDocuments } from "./resource-document-persistence";
@@ -11,7 +11,7 @@ import { ensureStorageOwner, storageOwnerKey } from "./storage-owner-key";
 
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
 
-const ownerWhere = (owner: StorageOwner) => and(eq(storage_record_projections.owner_id, storageOwnerKey(owner)));
+const ownerWhere = (owner: StorageOwner) => and(eq(recordOwners.id, storageOwnerKey(owner)));
 
 /** Locks the owner's projection row, which serializes its record writes, and returns its revision. */
 export const lockRecordOwner = async (tx: Transaction, owner: StorageOwner) => {
@@ -24,13 +24,9 @@ export const lockRecordOwner = async (tx: Transaction, owner: StorageOwner) => {
       state: new Uint8Array([0, 0]),
     })
     .onConflictDoNothing();
-  await tx
-    .insert(storage_record_projections)
-    .values({ owner_id: await ensureStorageOwner(tx, owner), revision: 0 })
-    .onConflictDoNothing();
   const [row] = await tx
-    .select({ revision: storage_record_projections.revision })
-    .from(storage_record_projections)
+    .select({ revision: recordOwners.revision })
+    .from(recordOwners)
     .where(ownerWhere(owner))
     .for("update");
   return row!.revision;
@@ -86,8 +82,8 @@ export const saveRecordChanges = async (
   const live = (record: { exists: boolean; deleted: boolean }) => Number(record.exists && !record.deleted);
   const delta = records.reduce((sum, record) => sum + live(record) - Number(before.get(record.recordId) ?? false), 0);
   await tx
-    .update(storage_record_projections)
-    .set({ revision: revision + 1, live_count: sql`${storage_record_projections.live_count} + ${delta}` })
+    .update(recordOwners)
+    .set({ revision: revision + 1, live_count: sql`${recordOwners.live_count} + ${delta}` })
     .where(ownerWhere(owner));
   return {
     projected: projected + repairedCount,

@@ -1,4 +1,4 @@
-import { and, eq, like, not, or, sql } from "drizzle-orm";
+import { and, eq, like, not, or } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
 import {
@@ -9,7 +9,6 @@ import {
   storage_documents,
   storage_ordered_owners,
   storage_record_indexes,
-  storage_record_projections,
   storage_record_sync,
 } from "../../db/schemas.pg";
 import { orderedOwnerWhere } from "./ordered-sql";
@@ -27,8 +26,7 @@ export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) 
       | typeof storage_documents
       | typeof storage_document_updates
       | typeof storage_document_operations
-      | typeof storage_current_records
-      | typeof storage_record_projections,
+      | typeof storage_current_records,
   ) => and(eq(table.owner_id, storageOwnerKey(owner)));
   // Record documents and ordered markers/caches are removed outright; update tails cascade with them.
   // An emptied marker would no longer decode, and a cleared owner founds or joins its stream again.
@@ -70,9 +68,4 @@ export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) 
   // so a cleared owner founds or joins again and may reuse its operation IDs.
   await tx.delete(storage_ordered_owners).where(orderedOwnerWhere(storage_ordered_owners, owner));
   await tx.delete(owners).where(storageOwnerWhere(owner));
-  // Advancing the owner revision rejects cursors issued before the purge.
-  await tx
-    .update(storage_record_projections)
-    .set({ revision: sql`${storage_record_projections.revision} + 1`, live_count: 0 })
-    .where(ownerWhere(storage_record_projections));
 };

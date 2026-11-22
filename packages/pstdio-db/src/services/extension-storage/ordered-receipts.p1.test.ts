@@ -14,7 +14,6 @@ import {
   storage_ordered_receipts,
   storage_ordered_records,
   storage_ordered_touches,
-  storage_record_projections,
   owners as storageOwners,
 } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
@@ -103,7 +102,6 @@ const capture = async (db: Awaited<ReturnType<typeof createDb>>["db"]) => ({
   touches: await db.select().from(storage_ordered_touches),
   receipts: await db.select().from(storage_ordered_receipts),
   current: await db.select().from(storage_current_records),
-  projections: await db.select().from(storage_record_projections),
 });
 const restore = async (db: Awaited<ReturnType<typeof createDb>>["db"], backup: Awaited<ReturnType<typeof capture>>) => {
   const ownerIds = new Map<number, number>();
@@ -122,7 +120,6 @@ const restore = async (db: Awaited<ReturnType<typeof createDb>>["db"], backup: A
   for (const row of backup.operations) await db.insert(storage_ordered_operations).values(mapped(row));
   for (const row of backup.touches) await db.insert(storage_ordered_touches).values(mapped(row));
   for (const row of backup.receipts) await db.insert(storage_ordered_receipts).values(mapped(row));
-  for (const row of backup.projections) await db.insert(storage_record_projections).values(row);
   for (const row of backup.current) await db.insert(storage_current_records).values(row);
 };
 

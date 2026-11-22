@@ -5,6 +5,7 @@ import { createDocumentStorage } from "pstdio-sync/records";
 import { createTextDocumentStorage } from "pstdio-sync/text";
 import type { StorageTextDeclaration } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
+import { deleteStorageDocuments } from "../../db/delete-storage-documents";
 import { storage_current_records, storage_documents } from "../../db/schemas.pg";
 import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
@@ -69,9 +70,10 @@ const discardDocument = async (
   documentId: string,
 ) => {
   const address = addressFor(owner, documentId);
-  await db
-    .delete(storage_documents)
-    .where(and(eq(storage_documents.owner_id, storageOwnerKey(owner)), eq(storage_documents.document_id, documentId)));
+  await deleteStorageDocuments(
+    db,
+    and(eq(storage_documents.owner_id, storageOwnerKey(owner)), eq(storage_documents.document_id, documentId))!,
+  );
   cache.discard(JSON.stringify(address));
 };
 
