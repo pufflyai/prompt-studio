@@ -116,7 +116,7 @@
       },
       "environmentAccess": {
         "title": "環境存取",
-        "description": "來自啟動 Prompt Studio 之環境的具名值，僅傳遞給此擴充功能啟動的程式。這些值不會在此處顯示，也不會傳送給擴充功能。",
+        "description": "來自啟動 Prompt Studio 之環境的具名值，會傳遞給此擴充功能啟動的程式。允許某個名稱後，此擴充功能即可使用其值。",
         "notAllowed": "未允許",
         "partlyAllowed": "已允許 {{count}}/{{total}}",
         "allowed": "已允許",

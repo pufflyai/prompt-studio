@@ -138,6 +138,12 @@ describe("extension process environment permissions", () => {
     expect(existsSync(marker)).toBe(false);
   });
 
+  test("an unknown project reports the extension as missing", async () => {
+    const response = await owner("/v1/projects/missing-project/extension-process-environment/example.agent");
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({ code: "extension_not_found" });
+  });
+
   test("machine automation tokens and callers without the owner credential cannot grant or revoke", async () => {
     const { sourceIdentity } = await read();
     const { token } = await issueAutomationToken(owner, projectId, ["example.agent.command.agent"]);
