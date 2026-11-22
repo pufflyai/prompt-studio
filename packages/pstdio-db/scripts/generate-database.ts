@@ -94,6 +94,24 @@ for (const entry of generated) {
     ordered[index] = statement.replace(/;\s*$/u, ` USING "${change[2]}"::timestamp with time zone;`);
     castTimestamps = true;
   }
+  // Combine adjacent type changes so PostgreSQL rewrites each affected table
+  // once. Preserve every generated cast and its position relative to other DDL.
+  const timestampCast = (statement: string) =>
+    /^ALTER TABLE "([^"]+)" (ALTER COLUMN "[^"]+" SET DATA TYPE timestamp with time zone USING "[^"]+"::timestamp with time zone);$/u.exec(
+      statement.trim(),
+    );
+  for (let index = 0; index < ordered.length; index++) {
+    const first = timestampCast(ordered[index]!);
+    if (!first) continue;
+    const clauses = [first[2]!];
+    while (index + 1 < ordered.length) {
+      const next = timestampCast(ordered[index + 1]!);
+      if (!next || next[1] !== first[1]) break;
+      clauses.push(next[2]!);
+      ordered.splice(index + 1, 1);
+    }
+    if (clauses.length > 1) ordered[index] = `ALTER TABLE "${first[1]}" ${clauses.join(",\n")};\n`;
+  }
   // This baseline needs the new owner graph before converting released frames.
   // Keep its generated input-table drops for admission's post-data transaction.
   const retired = new Set(["storage_record_sync", "storage_record_outbox", "storage_ordered_owners"]);

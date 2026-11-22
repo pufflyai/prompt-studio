@@ -2,11 +2,13 @@ import { expect, test } from "bun:test";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { createAssetTransfersDBService } from "../services/asset-transfers/asset-transfers";
 import { prepareAssetOwnerUpgrade } from "./asset-owner-upgrade";
 import { createDb } from "./connection.pglite";
 import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
+import { assetTransfers, owners } from "./schemas.pg";
 
 for (const interruption of ["normal", "schema", "restore"])
   test(`asset transfers preserve upload identity and cancellation after ${interruption} owner upgrade`, async () => {
@@ -28,7 +30,9 @@ for (const interruption of ["normal", "schema", "restore"])
         INSERT INTO asset_transfers SELECT 'project-a','example.other',operation_id,expected,NULL,created_at
           FROM asset_transfers WHERE project_id='project-a' AND operation_id='operation-0';`);
       const original = (
-        await previous.pglite.query("SELECT * FROM asset_transfers ORDER BY project_id,extension_id,operation_id")
+        await previous.pglite.query<
+          Omit<typeof assetTransfers.$inferSelect, "owner_id"> & { project_id: string; extension_id: string }
+        >("SELECT * FROM asset_transfers ORDER BY project_id,extension_id,operation_id")
       ).rows;
       if (interruption !== "normal") {
         const finish = await prepareAssetOwnerUpgrade(previous.db, previous.path);
@@ -54,12 +58,19 @@ for (const interruption of ["normal", "schema", "restore"])
       await previous.close();
       previousClosed = true;
       store = await createDb({ path: previous.path });
-      const restored = async () =>
-        (
-          await store!.pglite.query(`SELECT o.project_id,o.extension_id,
-        a.operation_id,a.expected,a.cancelled_at,a.created_at FROM asset_transfers a JOIN owners o ON a.owner_id=o.id
-        ORDER BY o.project_id,o.extension_id,a.operation_id`)
-        ).rows;
+      const restored = () =>
+        store!.db
+          .select({
+            project_id: owners.project_id,
+            extension_id: owners.extension_id,
+            operation_id: assetTransfers.operation_id,
+            expected: assetTransfers.expected,
+            cancelled_at: assetTransfers.cancelled_at,
+            created_at: assetTransfers.created_at,
+          })
+          .from(assetTransfers)
+          .innerJoin(owners, eq(assetTransfers.owner_id, owners.id))
+          .orderBy(owners.project_id, owners.extension_id, assetTransfers.operation_id);
       expect(await restored()).toEqual(original);
       const owner = { workbenchId: "project-a", extensionId: "example.assets" };
       const transfers = createAssetTransfersDBService(store.db);

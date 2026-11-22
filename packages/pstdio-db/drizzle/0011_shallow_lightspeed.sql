@@ -244,51 +244,51 @@ ALTER TABLE "recovery_points" DROP CONSTRAINT "recovery_points_workbench_id_proj
 ALTER TABLE "asset_transfers" DROP CONSTRAINT "asset_transfers_project_id_extension_id_operation_id_pk";--> statement-breakpoint
 ALTER TABLE "recovery_point_owners" DROP CONSTRAINT "recovery_point_owners_workbench_id_hours_extension_id_pk";--> statement-breakpoint
 ALTER TABLE "recovery_points" DROP CONSTRAINT "recovery_points_workbench_id_hours_pk";--> statement-breakpoint
-ALTER TABLE "activity_events" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "asset_transfers" ALTER COLUMN "cancelled_at" SET DATA TYPE timestamp with time zone USING "cancelled_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "asset_transfers" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "automation_runs" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "automation_runs" ALTER COLUMN "started_at" SET DATA TYPE timestamp with time zone USING "started_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "automation_runs" ALTER COLUMN "finished_at" SET DATA TYPE timestamp with time zone USING "finished_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "automation_tokens" ALTER COLUMN "expires_at" SET DATA TYPE timestamp with time zone USING "expires_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "automation_tokens" ALTER COLUMN "last_used_at" SET DATA TYPE timestamp with time zone USING "last_used_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "automation_tokens" ALTER COLUMN "revoked_at" SET DATA TYPE timestamp with time zone USING "revoked_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "automation_tokens" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "board_views" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "board_views" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "credentials" ALTER COLUMN "expires_at" SET DATA TYPE timestamp with time zone USING "expires_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "credentials" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "credentials" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "extensions" ALTER COLUMN "last_loaded_at" SET DATA TYPE timestamp with time zone USING "last_loaded_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "extensions" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "extensions" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "project_extensions" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "project_extensions" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "files" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "files" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "notifications" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "notifications" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "notifications" ALTER COLUMN "read_at" SET DATA TYPE timestamp with time zone USING "read_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "notifications" ALTER COLUMN "resolved_at" SET DATA TYPE timestamp with time zone USING "resolved_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "notifications" ALTER COLUMN "expires_at" SET DATA TYPE timestamp with time zone USING "expires_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "preferences" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "projects" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "projects" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "projects" ALTER COLUMN "deleted_at" SET DATA TYPE timestamp with time zone USING "deleted_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "recovery_points" ALTER COLUMN "captured_at" SET DATA TYPE timestamp with time zone USING "captured_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "session_queue_entries" ALTER COLUMN "dispatch_started_at" SET DATA TYPE timestamp with time zone USING "dispatch_started_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "session_queue_entries" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "session_queue_entries" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "sessions" ALTER COLUMN "last_request_started" SET DATA TYPE timestamp with time zone USING "last_request_started"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "sessions" ALTER COLUMN "last_request_ended" SET DATA TYPE timestamp with time zone USING "last_request_ended"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "sessions" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "sessions" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "skills" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "skills" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "skills" ALTER COLUMN "deleted_at" SET DATA TYPE timestamp with time zone USING "deleted_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "workspaces" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "workspaces" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;--> statement-breakpoint
-ALTER TABLE "workspaces" ALTER COLUMN "deleted_at" SET DATA TYPE timestamp with time zone USING "deleted_at"::timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "activity_events" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;--> statement-breakpointALTER TABLE "asset_transfers" ALTER COLUMN "cancelled_at" SET DATA TYPE timestamp with time zone USING "cancelled_at"::timestamp with time zone,
+ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;
+--> statement-breakpointALTER TABLE "automation_runs" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone,
+ALTER COLUMN "started_at" SET DATA TYPE timestamp with time zone USING "started_at"::timestamp with time zone,
+ALTER COLUMN "finished_at" SET DATA TYPE timestamp with time zone USING "finished_at"::timestamp with time zone;
+--> statement-breakpointALTER TABLE "automation_tokens" ALTER COLUMN "expires_at" SET DATA TYPE timestamp with time zone USING "expires_at"::timestamp with time zone,
+ALTER COLUMN "last_used_at" SET DATA TYPE timestamp with time zone USING "last_used_at"::timestamp with time zone,
+ALTER COLUMN "revoked_at" SET DATA TYPE timestamp with time zone USING "revoked_at"::timestamp with time zone,
+ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone;
+--> statement-breakpointALTER TABLE "board_views" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone,
+ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;
+--> statement-breakpointALTER TABLE "credentials" ALTER COLUMN "expires_at" SET DATA TYPE timestamp with time zone USING "expires_at"::timestamp with time zone,
+ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone,
+ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;
+--> statement-breakpointALTER TABLE "extensions" ALTER COLUMN "last_loaded_at" SET DATA TYPE timestamp with time zone USING "last_loaded_at"::timestamp with time zone,
+ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone,
+ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;
+--> statement-breakpointALTER TABLE "project_extensions" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone,
+ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;
+--> statement-breakpointALTER TABLE "files" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone,
+ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;
+--> statement-breakpointALTER TABLE "notifications" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone,
+ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone,
+ALTER COLUMN "read_at" SET DATA TYPE timestamp with time zone USING "read_at"::timestamp with time zone,
+ALTER COLUMN "resolved_at" SET DATA TYPE timestamp with time zone USING "resolved_at"::timestamp with time zone,
+ALTER COLUMN "expires_at" SET DATA TYPE timestamp with time zone USING "expires_at"::timestamp with time zone;
+--> statement-breakpoint
+ALTER TABLE "preferences" ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;--> statement-breakpointALTER TABLE "projects" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone,
+ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone,
+ALTER COLUMN "deleted_at" SET DATA TYPE timestamp with time zone USING "deleted_at"::timestamp with time zone;
+--> statement-breakpoint
+ALTER TABLE "recovery_points" ALTER COLUMN "captured_at" SET DATA TYPE timestamp with time zone USING "captured_at"::timestamp with time zone;--> statement-breakpointALTER TABLE "session_queue_entries" ALTER COLUMN "dispatch_started_at" SET DATA TYPE timestamp with time zone USING "dispatch_started_at"::timestamp with time zone,
+ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone,
+ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;
+--> statement-breakpointALTER TABLE "sessions" ALTER COLUMN "last_request_started" SET DATA TYPE timestamp with time zone USING "last_request_started"::timestamp with time zone,
+ALTER COLUMN "last_request_ended" SET DATA TYPE timestamp with time zone USING "last_request_ended"::timestamp with time zone,
+ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone,
+ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone;
+--> statement-breakpointALTER TABLE "skills" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone,
+ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone,
+ALTER COLUMN "deleted_at" SET DATA TYPE timestamp with time zone USING "deleted_at"::timestamp with time zone;
+--> statement-breakpointALTER TABLE "workspaces" ALTER COLUMN "created_at" SET DATA TYPE timestamp with time zone USING "created_at"::timestamp with time zone,
+ALTER COLUMN "updated_at" SET DATA TYPE timestamp with time zone USING "updated_at"::timestamp with time zone,
+ALTER COLUMN "deleted_at" SET DATA TYPE timestamp with time zone USING "deleted_at"::timestamp with time zone;
+--> statement-breakpoint
 ALTER TABLE "asset_transfers" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
 ALTER TABLE "asset_transfers" ADD CONSTRAINT "asset_transfers_owner_id_operation_id_pk" PRIMARY KEY("owner_id","operation_id");--> statement-breakpoint
 ALTER TABLE "recovery_point_owners" ADD COLUMN "owner_id" integer NOT NULL;--> statement-breakpoint
