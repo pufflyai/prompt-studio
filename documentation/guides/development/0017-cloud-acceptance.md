@@ -217,9 +217,11 @@ the original direct-Bun 5-second setup timeouts remain failure evidence. The
 packaged browser scenarios are maintained preparation; their recorded Linux pass
 above does not replace later candidate qualification. They do not exercise the
 production Cloud extension UI; that requires its separately delivered candidate.
-The existing packaged test and fixture allowances remain unchanged. Do not raise
-Bun/Playwright timeouts, job limits, retries or budgets; do not drop a device, record,
-sample, file, platform or scenario to obtain a pass. Preserve slow-phase diagnostics.
+Functional test, fixture and job allowances may be adjusted under the
+[timeout policy](../../guidance/0004-ci.md#3-ci-timeouts-and-performance-budgets).
+Benchmark budgets and execution allowances still require approval. Do not retry
+unchanged failures or drop a device, record, sample, file, platform or scenario to
+obtain a pass. Preserve slow-phase diagnostics.
 
 Run affected package type/lint checks. Keep the PR draft; before any later ready
 transition, follow [PR completion](../../guidance/0004-ci.md), including full required
