@@ -42,6 +42,14 @@ import {
   uploadExtensionFileRoute,
 } from "./endpoints/extension-files";
 import {
+  getExtensionProcessEnvironmentHandler,
+  getExtensionProcessEnvironmentRoute,
+  grantExtensionProcessEnvironmentHandler,
+  grantExtensionProcessEnvironmentRoute,
+  revokeExtensionProcessEnvironmentHandler,
+  revokeExtensionProcessEnvironmentRoute,
+} from "./endpoints/extension-process-environment";
+import {
   deleteGlobalExtensionSettingHandler,
   deleteGlobalExtensionSettingRoute,
   deleteProjectExtensionSettingHandler,
@@ -159,6 +167,9 @@ const registerExtensionSettingsRoutes = (routes: ExtensionRoutes, deps: Extensio
   routes.openapi(configureExtensionConnectionRoute, configureExtensionConnectionHandler(deps));
   routes.openapi(checkExtensionConnectionRoute, checkExtensionConnectionHandler(deps));
   routes.openapi(deleteExtensionConnectionRoute, deleteExtensionConnectionHandler(deps));
+  routes.openapi(getExtensionProcessEnvironmentRoute, getExtensionProcessEnvironmentHandler(deps));
+  routes.openapi(grantExtensionProcessEnvironmentRoute, grantExtensionProcessEnvironmentHandler(deps));
+  routes.openapi(revokeExtensionProcessEnvironmentRoute, revokeExtensionProcessEnvironmentHandler(deps));
   routes.openapi(listProjectExtensionSettingsRoute, listProjectExtensionSettingsHandler(deps));
   routes.openapi(getProjectExtensionSettingRoute, getProjectExtensionSettingHandler(deps));
   routes.openapi(updateProjectExtensionSettingRoute, updateProjectExtensionSettingHandler(deps));

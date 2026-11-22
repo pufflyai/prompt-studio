@@ -8,6 +8,7 @@ import {
 } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionDiagnostic } from "../types/runtime";
 import { createDiagnostic } from "./diagnostics";
+import { parseProcessEnvironmentDeclaration } from "./process-environment-declaration";
 
 const ID_SEGMENT_PATTERN = /^[a-z][a-z0-9-]*$/;
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
@@ -28,6 +29,8 @@ export interface PackageManifest {
     projectFiles?: { tracked: boolean };
     /** "process" runs the backend in its own worker process instead of the API process (ADR 0058). */
     backendRuntime?: "process";
+    /** Host variable names the extension may ask the host to pass to the children it starts. */
+    processEnvironment?: string[];
   };
   id: string;
 }
@@ -139,10 +142,25 @@ const validatePstdioMetadata = (
     return null;
   }
 
-  if (scope === undefined && projectFiles === undefined && backendRuntime === undefined) return undefined;
+  const processEnvironment =
+    value.processEnvironment === undefined ? undefined : parseProcessEnvironmentDeclaration(value.processEnvironment);
+  if (processEnvironment?.error) {
+    diagnostics.push(
+      createDiagnostic({
+        code: "extension_manifest_invalid_value",
+        message: processEnvironment.error,
+        sourcePath: packagePath,
+      }),
+    );
+    return null;
+  }
+
+  if (scope === undefined && projectFiles === undefined && backendRuntime === undefined && !processEnvironment)
+    return undefined;
   return {
     ...(scope ? { scope } : {}),
     ...(backendRuntime ? { backendRuntime } : {}),
+    ...(processEnvironment ? { processEnvironment: processEnvironment.names } : {}),
     ...(projectFiles ? { projectFiles: { tracked: projectFiles.tracked as boolean } } : {}),
   };
 };

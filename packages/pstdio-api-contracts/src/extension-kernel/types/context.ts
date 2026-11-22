@@ -162,6 +162,13 @@ export interface ProcessRunInput {
   command: string[];
   cwd?: string;
   env?: Record<string, string>;
+  /**
+   * Host variables to pass to this child, by name. Each name must be listed in the package's
+   * `pstdio.processEnvironment` and allowed by the user for this project and extension source.
+   * The host adds the values to the child only; they are never returned to the extension.
+   * `env` cannot set a name listed here.
+   */
+  envFromHost?: string[];
   timeoutMs?: number;
 }
 
@@ -173,7 +180,7 @@ export interface ExtensionProcessApi {
    * It survives runtime and desktop shutdown and does not delay host exit.
    * The extension owns the child's lifetime and must arrange its cleanup.
    */
-  spawnDetached(input: { command: string[]; cwd?: string; env?: Record<string, string> }): Promise<{ pid?: number }>;
+  spawnDetached(input: Omit<ProcessRunInput, "timeoutMs">): Promise<{ pid?: number }>;
 }
 
 export type { TerminalEvent, TerminalSessionHandle, TerminalSessionRequest } from "../../extensions.terminal";

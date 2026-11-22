@@ -26,20 +26,35 @@ describe("createExtensionProcessEnvironment", () => {
     });
   });
 
-  test("shares selected host variables only with the configured extension's commands", () => {
-    const host = {
-      PSTDIO_EXTENSION_PROCESS_ENV: "pstdio.github:GH_TOKEN,pstdio.github:GITHUB_TOKEN",
-      Gh_Token: "primary",
-      GITHUB_TOKEN: "fallback",
-      OTHER_TOKEN: "private",
-    };
-    expect(createExtensionProcessEnvironment(host, {}, "win32", "pstdio.github")).toEqual({
-      GH_TOKEN: "primary",
+  test("adds only the requested host variables, keeping their values out of every other child", () => {
+    const host = { Gh_Token: "primary", GITHUB_TOKEN: "fallback", OTHER_TOKEN: "private" };
+    expect(createExtensionProcessEnvironment(host, {}, "win32", ["GH_TOKEN"])).toEqual({ GH_TOKEN: "primary" });
+    expect(createExtensionProcessEnvironment(host, {}, "linux", ["GITHUB_TOKEN"])).toEqual({
       GITHUB_TOKEN: "fallback",
     });
-    expect(createExtensionProcessEnvironment(host, {}, "win32", "other.github")).toEqual({});
     expect(createExtensionProcessEnvironment(host, {}, "win32")).toEqual({});
     expect(createExtensionInstallEnvironment(host, "win32")).toEqual({});
+  });
+
+  test("refuses explicit env that would replace a requested host variable", () => {
+    expect(() =>
+      createExtensionProcessEnvironment({ GH_TOKEN: "host" }, { gh_token: "forged" }, "win32", ["GH_TOKEN"]),
+    ).toThrow("envFromHost");
+    expect(() =>
+      createExtensionProcessEnvironment({ GH_TOKEN: "host" }, { GH_TOKEN: "forged" }, "linux", ["GH_TOKEN"]),
+    ).toThrow("envFromHost");
+  });
+
+  test("reports a requested variable the host does not have instead of sending an empty value", () => {
+    expect(() => createExtensionProcessEnvironment({ PATH: "/bin" }, {}, "linux", ["GH_TOKEN"])).toThrow(
+      expect.objectContaining({ code: "process_environment_unavailable" }),
+    );
+  });
+
+  test("never forwards reserved runtime or registry credentials, even when requested", () => {
+    const host = { PSTDIO_API_TOKEN: "runtime-secret", NPM_TOKEN: "registry-secret" };
+    expect(() => createExtensionProcessEnvironment(host, {}, "linux", ["PSTDIO_API_TOKEN"])).toThrow("reserved");
+    expect(() => createExtensionProcessEnvironment(host, {}, "linux", ["NPM_TOKEN"])).toThrow("reserved");
   });
 
   test("keeps Unix environment names case sensitive", () => {

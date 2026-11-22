@@ -30,13 +30,7 @@ A completed or failed webview build invalidates the relevant projected metadata 
 
 Extension backends run inside the API process. They are not isolated from the host: extension code can read the host environment, the connection secret files (ADR 0034), `runtime.json`, and the database. The extension context hides secret values, but that is an API boundary, not a security boundary. Child processes and terminals started through the context get an allowlisted environment, and connection requests pin their base URL. The target model, one process per extension backend with a filtered environment and a narrow message channel, is in [ADR 0058](../../adrs/0058-isolate-extension-backends.md).
 
-Commands inherit the host's profile directories, including `APPDATA` and `LOCALAPPDATA` on Windows. To share additional host variables with an extension's commands, set `PSTDIO_EXTENSION_PROCESS_ENV` to a comma-separated list of `publisher.name:VARIABLE` pairs in the environment that starts Prompt Studio. Each grant applies across projects to processes started with that extension's `ctx.process` API. Supply variable names only.
-
-For example, to let the GitHub extension use existing GitHub CLI tokens, run this PowerShell command and restart the desktop runtime from an environment that has picked up the change. A saved Windows CLI login works through the profile directories without this setting.
-
-```powershell
-[Environment]::SetEnvironmentVariable('PSTDIO_EXTENSION_PROCESS_ENV', 'pstdio.github:GH_TOKEN,pstdio.github:GITHUB_TOKEN', 'User')
-```
+Commands inherit the host's profile directories, including `APPDATA` and `LOCALAPPDATA` on Windows. Other host variables reach a child only when the extension declares the name in `pstdio.processEnvironment`, the user allows it for the project and extension source, and the extension names it in `envFromHost` when starting that child. The host permission service in `features/extensions/process-environment` owns those grants. See [host environment names](../extensions/0002-manifest-and-installation.md#host-environment-names).
 
 ## Shared catalog
 
