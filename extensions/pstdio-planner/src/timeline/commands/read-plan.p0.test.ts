@@ -286,6 +286,63 @@ test("waiting for prerequisites is distinct from a blocker on otherwise availabl
   });
 });
 
+test("legacy dependency links resolve before global blocker flags and counts", async () => {
+  const storage = createMemoryStorage();
+  const [ctx] = makeCommandArgs({ storage, params: {} });
+  const first = await createTicketCommand.run(ctx, { content: "# First prerequisite", statusId: "done" });
+  const second = await createTicketCommand.run(ctx, { content: "# Second prerequisite", statusId: "done" });
+  const archived = await createTicketCommand.run(ctx, { content: "# Archived prerequisite", statusId: "done" });
+  for (const ticket of [first, second])
+    await ticketsCollection(storage).put(ticket.id, { ...ticket, aliases: ["OLD-1"] });
+  await ticketsCollection(storage).put(archived.id, { ...archived, archived: true });
+  const cases = [
+    { links: [first.id], refs: first.shorthand, blocked: false },
+    { links: [` ${first.shorthand.toLowerCase()} `], refs: first.shorthand, blocked: false },
+    {
+      links: [first.id.toUpperCase(), second.shorthand.toLowerCase()],
+      refs: `${first.shorthand} and ${second.shorthand}`,
+      blocked: false,
+    },
+    { links: [first.id, first.shorthand], refs: "OLD-1", blocked: false },
+    { links: [first.shorthand], refs: "OLD-1", blocked: false },
+    { links: [first.id, second.shorthand], refs: "OLD-1", blocked: true },
+    { links: ["OLD-1"], refs: first.shorthand, blocked: true },
+    { links: ["missing"], refs: first.shorthand, blocked: true },
+    { links: [archived.shorthand], refs: archived.shorthand, blocked: true },
+  ];
+  const children: { id: string; blocked: boolean }[] = [];
+  for (const [index, { links, refs, blocked }] of cases.entries()) {
+    const ticket = await createTicketCommand.run(ctx, {
+      content: `# ${blocked ? "Independent" : "Resolved"} legacy dependency ${index}`,
+      statusId: "ready",
+    });
+    // Persist old agents' stored data without the writer clearing dependency-only prose.
+    await ticketsCollection(storage).put(ticket.id, {
+      ...ticket,
+      dependsOn: links,
+      blockedReason: `Complete ${refs} before implementing this dependent contract.`,
+    });
+    children.push({ id: ticket.id, blocked });
+  }
+  const independent = await createTicketCommand.run(ctx, { content: "# External blocker", statusId: "ready" });
+  await ticketsCollection(storage).put(independent.id, { ...independent, blockedReason: "Missing credentials" });
+
+  const plan = await readPlanCommand.run(ctx, {});
+  const rows = plan.sections.flatMap(({ rows }) => rows);
+  for (const { id, blocked } of children)
+    expect(rows.find((row) => row.id === id)?.flags.includes("blocked")).toBe(blocked);
+  expect(rows.find((row) => row.id === independent.id)?.flags).toContain("blocked");
+  expect(plan.sections[0]!.counts.blocked).toBe(5);
+  const firstPage = await readPlanCommand.run(ctx, {
+    page: { limit: 1, offset: 0, fields: ["title"], search: "" },
+  });
+  expect(firstPage.sections[0]!.counts.blocked).toBe(5);
+  const resolved = await readPlanCommand.run(ctx, {
+    filter: { conjunction: "and", rules: [{ attributeId: "title", condition: "contains", value: "Resolved" }] },
+  });
+  expect(resolved.sections[0]!.counts.blocked).toBe(0);
+});
+
 test("answering one request keeps another open request awaiting input", async () => {
   const storage = createMemoryStorage();
   const sessions = { create: async () => ({ type: "session", id: "chat", title: "Chat", status: "in_progress" }) };
