@@ -27,6 +27,14 @@ export const canvasPanel = definePlacement({
   mountStrategy: "keep-mounted",
   item: { kind: "binding", binding: { kinds: [canvasResource.ref], view: canvasView.ref, cardinality: "many" } },
 });
+// The Main viewer follows the page location. Explicit panel opens bind their own resource.
+export const canvasMain = definePlacement({
+  id: "canvas-main",
+  mode: workbenchModes.project,
+  region: "main",
+  mountStrategy: "keep-mounted",
+  item: { kind: "view", view: canvasView.ref, presence: "closed" },
+});
 export const homePage = definePage({
   id: "canvases",
   title: "UI Canvas",
@@ -44,14 +52,13 @@ export const canvasPage = definePage({
   mode: workbenchModes.project,
   resource: { kinds: [canvasResource.ref] },
   parent: homePage.ref,
-  main: { kind: "view", view: canvasView.ref, cardinality: "many", presentation: "page" },
+  main: { kind: "panels", landing: canvasMain.ref },
   panelView: canvasPanel.ref,
   slots: [],
 });
 export const canvasTarget = (id: string, label: string, projectId?: string) => ({
   kind: "page" as const,
   page: canvasPage.ref,
-  open: "preview" as const,
   resource: {
     type: canvasResource.id,
     id,

@@ -1,6 +1,7 @@
 import type { CommandContext } from "@pstdio/sdk/extensions";
 import { renderPrompt } from "@pstdio/sdk/prompts";
 import { plannerTemplateAssets } from "../../extension-assets";
+import { version as packageVersion } from "../../package.json";
 import { migratePlannerStorage } from "./migrate-storage";
 
 export interface StoredTemplate {
@@ -13,6 +14,8 @@ export interface StoredTemplate {
 
 export interface ResolvedTemplate extends Omit<StoredTemplate, "blobId" | "deleted"> {
   content: string;
+  source: "package" | "project";
+  packageVersion: string;
 }
 
 interface TemplatePreference {
@@ -25,6 +28,19 @@ const templates = (ctx: CommandContext) => ctx.storage.collection<StoredTemplate
 const preferences = (ctx: CommandContext) => ctx.storage.collection<TemplatePreference>("template-preferences");
 const normalizedName = (id: string) => id.replaceAll("_", "-");
 const assetByName = (name: string) => plannerTemplateAssets.find((asset) => normalizedName(asset.id) === name);
+
+const readPackageTemplate = async (ctx: CommandContext, name: string, preference?: TemplatePreference | null) => {
+  const asset = assetByName(name);
+  if (!asset) return null;
+  return {
+    name,
+    title: preference?.displayName ?? asset.title,
+    type: asset.type,
+    content: await ctx.packageFiles.readText(asset.path),
+    source: "package" as const,
+    packageVersion,
+  };
+};
 
 export const listOwnedTemplates = async (ctx: CommandContext, type?: string) => {
   await migratePlannerStorage(ctx);
@@ -48,6 +64,8 @@ export const listOwnedTemplates = async (ctx: CommandContext, type?: string) => 
     .map(({ item: { blobId: _blobId, deleted: _deleted, ...item }, preference }) => ({
       ...item,
       title: preference?.displayName ?? item.title,
+      source: _blobId ? ("project" as const) : ("package" as const),
+      packageVersion,
     }))
     .sort((left, right) => {
       const defaultName = defaultNames?.[left.type];
@@ -64,16 +82,16 @@ export const readOwnedTemplate = async (ctx: CommandContext, name: string): Prom
   if (stored?.deleted) return null;
   if (stored?.blobId) {
     const content = new TextDecoder().decode(await templates(ctx).attachments(name).getBytes(stored.blobId));
-    return { name: stored.name, title: preference?.displayName ?? stored.title, type: stored.type, content };
+    return {
+      name: stored.name,
+      title: preference?.displayName ?? stored.title,
+      type: stored.type,
+      content,
+      source: "project",
+      packageVersion,
+    };
   }
-  const asset = assetByName(name);
-  if (!asset) return null;
-  return {
-    name,
-    title: preference?.displayName ?? asset.title,
-    type: asset.type,
-    content: await ctx.packageFiles.readText(asset.path),
-  };
+  return readPackageTemplate(ctx, name, preference);
 };
 
 export const saveOwnedTemplate = async (
@@ -126,4 +144,21 @@ export const renderOwnedTemplate = async (ctx: CommandContext, name: string, dat
   const template = await readOwnedTemplate(ctx, name);
   if (!template) throw new Error(`Template not found: ${name}`);
   return renderPrompt(template.content, data);
+};
+
+export const resetOwnedTemplate = async (ctx: CommandContext, name: string) => {
+  if (!assetByName(name)) throw new Error(`No package template to restore: ${name}`);
+  await migratePlannerStorage(ctx);
+  const current = await templates(ctx).get(name);
+  const preference = await preferences(ctx).get(name);
+  const replacement = await readPackageTemplate(ctx, name, preference);
+  await templates(ctx).delete(name);
+  if (current?.blobId) {
+    try {
+      await templates(ctx).attachments(name).delete(current.blobId);
+    } catch (error) {
+      ctx.logger.warn("Template restored but the old attachment could not be removed", { name, error: String(error) });
+    }
+  }
+  return preference?.enabled === false ? null : replacement;
 };
