@@ -247,7 +247,13 @@ test("live messages reach the project's other devices and are never stored", asy
       payload,
     });
     const documentId = randomId("doc");
-    receiver.socket.send(JSON.stringify({ type: "subscribe", spaceOwner: null, topic: documentId }));
+    const receiverSubscription = randomId("subscription");
+    receiver.socket.send(
+      JSON.stringify({ type: "subscribe", spaceOwner: null, topic: documentId, requestId: receiverSubscription }),
+    );
+    // Admit the other socket before follow snapshots its presence; otherwise a later
+    // subscribers update can legitimately arrive before the document-change notice.
+    expect(await receiver.next()).toEqual({ type: "control-result", requestId: receiverSubscription, retryAfterMs: 0 });
     sender.socket.send(JSON.stringify({ type: "subscribe", spaceOwner: null, topic: documentId }));
     sender.socket.send(JSON.stringify({ type: "follow", spaceOwner: null, topic: documentId }));
     await sender.next();

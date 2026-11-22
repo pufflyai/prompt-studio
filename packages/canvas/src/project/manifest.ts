@@ -1,6 +1,6 @@
 // The contract between `pstdio-canvas` and the UI Canvas extension. Bump the format when a
 // reader could misread an older or newer manifest.
-export const MANIFEST_FORMAT = 1;
+export const MANIFEST_FORMAT = 2;
 
 // The folder UI Canvas reads, relative to the project root.
 export const DEFAULT_OUT = ".pstdio/extension-storage/pstdio.canvas/build";
@@ -39,7 +39,7 @@ export interface CanvasEntry {
 }
 
 export interface CanvasBuildManifest {
-  format: typeof MANIFEST_FORMAT;
+  format: 1 | typeof MANIFEST_FORMAT;
   builtAt: string;
   canvases: CanvasEntry[];
   frames: FrameManifest;

@@ -3,7 +3,8 @@ import { queryReadableSessions } from "../../../services/personal-history/querie
 import type { AppRouteHandler } from "../../../types";
 import { projectQueryFields, projectQueryMessage, validProjectQuery } from "../../project-query";
 import type { SessionsRouteDeps } from "../deps";
-import { sessionResponseSchema } from "../dto";
+import { notFoundResponseSchema, sessionResponseSchema } from "../dto";
+import { resolveSessionQueryWorkspaceId, SessionQueryWorkspaceNotFound } from "../query-sessions";
 import { toSessionResponse } from "../session-response";
 
 export const listSessionsRoute = createRoute({
@@ -21,7 +22,7 @@ export const listSessionsRoute = createRoute({
           .optional()
           .openapi({ description: "Filter by status" }),
         agent: z.string().optional().openapi({ description: "Filter by agent" }),
-        workspace_id: z.string().optional().openapi({ description: "Filter by linked workspace" }),
+        workspace_id: z.string().optional().openapi({ description: "Filter by linked workspace ID or shorthand" }),
         created_from: z.string().datetime({ offset: true }).optional(),
         created_to: z.string().datetime({ offset: true }).optional(),
         updated_from: z.string().datetime({ offset: true }).optional(),
@@ -36,6 +37,10 @@ export const listSessionsRoute = createRoute({
       }),
   },
   responses: {
+    404: {
+      description: "Workspace not found in this project.",
+      content: { "application/json": { schema: notFoundResponseSchema } },
+    },
     200: {
       description: "List of sessions.",
       content: { "application/json": { schema: z.array(sessionResponseSchema) } },
@@ -47,13 +52,21 @@ export const listSessionsHandler = (deps: SessionsRouteDeps): AppRouteHandler<ty
   return async (c) => {
     const query = c.req.valid("query");
 
+    const projectId = (query.projectId ?? query.project_id)!;
+    let workspaceId: string | undefined;
+    try {
+      workspaceId = await resolveSessionQueryWorkspaceId(deps, projectId, query.workspace_id, c.req.raw.signal);
+    } catch (error) {
+      if (error instanceof SessionQueryWorkspaceNotFound) return c.json({ error: error.message }, 404);
+      throw error;
+    }
     const page = await queryReadableSessions(
       deps,
-      (query.projectId ?? query.project_id)!,
+      projectId,
       {
         status: query.status ? [query.status] : undefined,
         agent: query.agent,
-        workspaceId: query.workspace_id,
+        workspaceId,
         includeArchived: query.archived === "true",
         createdFrom: query.created_from,
         createdTo: query.created_to,

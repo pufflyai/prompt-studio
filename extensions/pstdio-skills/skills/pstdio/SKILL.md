@@ -20,6 +20,16 @@ Use a dedicated skill for these tasks:
 
 Run `pst <command> --help` for the options of the installed version. See [references/cli-reference.md](references/cli-reference.md) for the command index and troubleshooting.
 
+## Reliable CLI reads
+
+In Bash or zsh, use `set -o pipefail; pst sessions list --json | jq ...` in the same shell invocation. Without it, a successful reader can hide a failed CLI command. For other shells, save command output to a file and check the command's exit status before parsing. Treat failed reads and error output as unavailable evidence, never as an empty result.
+
+Session anchor filters require both `--anchor-type` and `--anchor-id`. Use stable resource IDs; resolve a ticket shorthand with `pst pstdio.planner get-ticket --id <ticket>` first. Session workspace filters accept IDs or shorthands on current hosts; prefer the inventory's ID when working with older hosts.
+
+Read structured session details with `pst sessions view --id <id> --json` and the full conversation with `pst sessions export --id <id>`. Check installed command help first. Cache reads within a task and recheck mutable state before writing.
+
+If a Planner prompt calls unavailable commands, inspect `pst pstdio.planner templates read --name <name>`. The result identifies package content or a project override and the installed package version. Preserve custom content before explicitly restoring the current package default with `templates reset --name <name>`. Refresh an older installed extension through the host's normal update flow; resetting an override uses that installed package, not repository source.
+
 ## Main concepts
 
 ### Projects
