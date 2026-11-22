@@ -46,7 +46,7 @@ The routed page owns its breadcrumb and page actions. A collection page uses Mai
 
 Leaving a retained view dismisses its popovers, tooltips, and menus. Returning preserves document drafts and scroll position, with those overlays closed. This applies to page content, mode chrome, panel menus, and status details, including views that suspend rendering while hidden. Suspending the entire workbench still preserves unfinished overlay state for reactivation.
 
-A retained view inside an open dialog owns its overlay visibility boundary within that dialog. Switching the view hides its popups while the enclosing dialog stays open. A deeper dialog keeps its own popup focus owner; explicit portal containers remain authoritative.
+A retained view or surface inside an open dialog owns its overlay visibility boundary within that dialog. Switching the view dismisses its popups while the enclosing dialog stays open. Suspending a whole surface hides its popups and preserves their unfinished state for return. A deeper dialog keeps its own popup focus owner; explicit portal containers remain authoritative.
 
 ### Project selection
 

@@ -8,6 +8,8 @@ const ModalViews = () => {
   const [first, setFirst] = useState(true);
   const [nested, setNested] = useState(false);
   const [choice, setChoice] = useState("No nested choice");
+  const [surfaceActive, setSurfaceActive] = useState(true);
+  const [rootlessChoice, setRootlessChoice] = useState(false);
   return (
     <UiScopeProvider active>
       <UiScopeRoot>
@@ -82,6 +84,47 @@ const ModalViews = () => {
                       </Activity>
                     </UiScopeActivity>
                     {!first && <Text>Second modal view</Text>}
+                    <UiScopeProvider active>
+                      <Popover.Root>
+                        <Popover.Trigger asChild>
+                          <Button>Preference options</Button>
+                        </Popover.Trigger>
+                        <Portal>
+                          <Popover.Positioner>
+                            <Popover.Content aria-label="Preference options">
+                              <Popover.Body>
+                                <Button onClick={() => setRootlessChoice(true)}>Keep preference</Button>
+                              </Popover.Body>
+                            </Popover.Content>
+                          </Popover.Positioner>
+                        </Portal>
+                      </Popover.Root>
+                    </UiScopeProvider>
+                    {rootlessChoice && <Text>Preference kept</Text>}
+                    <Button onClick={() => setSurfaceActive(true)}>Restore nested surface</Button>
+                    <UiScopeProvider active={surfaceActive}>
+                      <UiScopeRoot>
+                        <Activity mode={surfaceActive ? "visible" : "hidden"}>
+                          <Stack align="start">
+                            <Popover.Root>
+                              <Popover.Trigger asChild>
+                                <Button>Surface options</Button>
+                              </Popover.Trigger>
+                              <Portal>
+                                <Popover.Positioner>
+                                  <Popover.Content aria-label="Surface options">
+                                    <Popover.Body>
+                                      <Input aria-label="Surface popup draft" />
+                                      <Button onClick={() => setSurfaceActive(false)}>Suspend nested surface</Button>
+                                    </Popover.Body>
+                                  </Popover.Content>
+                                </Popover.Positioner>
+                              </Portal>
+                            </Popover.Root>
+                          </Stack>
+                        </Activity>
+                      </UiScopeRoot>
+                    </UiScopeProvider>
                   </Stack>
                 </Dialog.Body>
               </Dialog.Content>

@@ -10,11 +10,11 @@ export interface UiScope {
 }
 const UiScopeContext = createContext<UiScope | null>(null);
 const UiScopeViewActivityContext = createContext({ active: true, revision: 0 });
-interface ViewPortal {
+interface PortalOwner {
   container: RefObject<HTMLDivElement | null>;
   modalContainer: PortalProps["container"];
 }
-const UiScopePortalContext = createContext<ViewPortal | null>(null);
+const UiScopePortalContext = createContext<PortalOwner | null>(null);
 
 /** Keeps window overlays and imperative component feedback inside their owning surface. */
 export const UiScopeProvider = (props: { active: boolean; children: ReactNode }) => {
@@ -72,6 +72,7 @@ export const UiScopeActivity = (props: { active: boolean; children: ReactNode })
 /** Render inside the host's Chakra provider; the scope itself creates no provider or DOM. */
 export const UiScopeRoot = (props: { children: ReactNode }) => {
   const scope = useUiScope();
+  const modalContainer = useContext(PortalContainerContext);
   return (
     <Box
       ref={scope?.root}
@@ -84,7 +85,11 @@ export const UiScopeRoot = (props: { children: ReactNode }) => {
       w="full"
       position="relative"
     >
-      {props.children}
+      {scope ? (
+        <UiScopePortalContext value={{ container: scope.root, modalContainer }}>{props.children}</UiScopePortalContext>
+      ) : (
+        props.children
+      )}
     </Box>
   );
 };
@@ -96,14 +101,14 @@ export const useUiScopeViewActivity = () => useContext(UiScopeViewActivityContex
 
 const useDefaultPortalContainer = () => {
   const scope = useUiScope();
-  const viewPortal = useContext(UiScopePortalContext);
+  const owner = useContext(UiScopePortalContext);
   const modalContainer = useContext(PortalContainerContext);
-  // A deeper modal owns its choices; a view inside the same modal owns their visibility.
-  if (modalContainer && modalContainer !== viewPortal?.modalContainer) return modalContainer;
-  return viewPortal?.container ?? modalContainer ?? scope?.root;
+  // A deeper modal owns its choices; a boundary inside that modal owns their visibility.
+  if (modalContainer && modalContainer !== owner?.modalContainer) return modalContainer;
+  return owner?.container ?? modalContainer ?? scope?.root;
 };
 
-/** Defaults to the closest modal/view owner, then its surface or the standalone document body. */
+/** Defaults to the closest modal, view or surface owner or the standalone document body. */
 export const Portal = (props: PortalProps & { children?: ReactNode }) => {
   const container = useDefaultPortalContainer();
   return <ChakraPortal {...props} container={props.container ?? container} />;
