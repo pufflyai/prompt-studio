@@ -19,8 +19,8 @@ on:
         description: Additional repository-relative tests, one per line
       test_os:
         type: choice
-        options: [macos-15]
-        default: macos-15
+        options: [macos-15-intel]
+        default: macos-15-intel
       release_channel:
         type: choice
         options: [stable]
@@ -32,7 +32,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   canonical_review:
-    runs-on: macos-15
+    runs-on: ${{ inputs.test_os }}
     timeout-minutes: 60
     env:
       EXPECTED_SOURCE: ${{ inputs.source_sha }}
@@ -73,6 +73,8 @@ jobs:
           free = shutil.disk_usage(os.environ["RUNNER_TEMP"]).free
           print("Isolated scratch free GiB:", free / 1024**3)
           assert free >= 18 * 1024**3, "Insufficient isolated scratch capacity"
+          memory = int(subprocess.check_output(["sysctl", "-n", "hw.memsize"], text=True))
+          assert memory >= 12 * 1024**3, "The full canonical workload requires the higher-memory standard runner"
           PYCODE
       - name: Install the repository's native dependencies
         run: bun scripts/ci/install-native-dependencies.ts
@@ -82,8 +84,8 @@ jobs:
       - name: Run the unchanged canonical review command
         timeout-minutes: 50
         run: |
-          python3 - <<'PYCODE'
-          import json, os, shutil, signal, subprocess, sys
+          exec python3 - <<'PYCODE'
+          import json, os, re, shutil, signal, subprocess, sys, time
           from pathlib import Path
           audit = Path(os.environ["RUNNER_TEMP"]) / "canonical-audit"
           audit.mkdir()
@@ -98,7 +100,7 @@ jobs:
           command = ["bun", "run", "test:review", "--base", "origin/main"]
           for test in tests:
               command += ["--test", test]
-          metadata = {"source": actual, "workflowSha": os.environ["GITHUB_SHA"], "command": command, "additionalTests": tests, "scratch": str(temporary), "freeBytesBeforeCanonical": shutil.disk_usage(temporary).free}
+          metadata = {"source": actual, "workflowSha": os.environ["GITHUB_SHA"], "command": command, "additionalTests": tests, "scratch": str(temporary), "freeBytesBeforeCanonical": shutil.disk_usage(temporary).free, "memoryBytes": int(subprocess.check_output(["sysctl", "-n", "hw.memsize"], text=True)), "logicalCPUs": int(subprocess.check_output(["sysctl", "-n", "hw.logicalcpu"], text=True)), "machine": os.uname().machine}
           def save():
               pending = audit / "invocation.pending.json"
               pending.write_text(json.dumps(metadata, indent=2) + "\n")
@@ -114,27 +116,47 @@ jobs:
           with (audit / "canonical-local-review.log").open("w") as log:
               child = subprocess.Popen(command, env={**os.environ, "TMPDIR": str(temporary)}, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, start_new_session=True)
               def interrupt(signum, _frame):
+                  if "interruptedSignal" in metadata:
+                      metadata.setdefault("additionalSignals", []).append(signum)
+                      save()
+                      signal_group(child, signal.SIGTERM)
+                      return
+                  metadata["interruptedSignal"] = signum
+                  metadata["sourceCleanupMayBeIncomplete"] = True
+                  save()
                   raise InterruptedError("Received signal " + str(signum))
               signal.signal(signal.SIGTERM, interrupt)
               signal.signal(signal.SIGINT, interrupt)
               try:
+                  last_status = time.monotonic()
                   for line in child.stdout:
                       log.write(line)
-                      sys.stdout.write(line)
+                      plain = re.sub(r"\x1b\[[0-9;]*m", "", line)
+                      if re.match(r"^(?:[a-f0-9-]+: (?:success|failure)|Test plan |Local review |Scratch:|Report:)", plain):
+                          print(plain, end="", flush=True)
+                      if time.monotonic() - last_status >= 60:
+                          print("Canonical workload continues; complete output is retained in the artifact", flush=True)
+                          last_status = time.monotonic()
                   code = child.wait()
               except BaseException as error:
                   metadata["supervisorError"] = str(error)
                   raise
               finally:
+                  log.flush()
                   if child.poll() is None:
                       signal_group(child, signal.SIGTERM)
                       try:
-                          child.wait(timeout=120)
+                          child.wait(timeout=5 if "interruptedSignal" in metadata else 120)
                       except subprocess.TimeoutExpired:
                           metadata["forcedTermination"] = True
+                          metadata["sourceCleanupMayBeIncomplete"] = True
+                          save()
                           signal_group(child, signal.SIGKILL)
-                          child.wait()
-                  metadata.update(exitCode=child.returncode, supervisorCode=code)
+                          try:
+                              child.wait(timeout=1)
+                          except subprocess.TimeoutExpired:
+                              metadata["supervisorChildReapIncomplete"] = True
+                  metadata.update(exitCode=child.poll(), supervisorCode=code)
                   save()
           sys.exit(code)
           PYCODE
