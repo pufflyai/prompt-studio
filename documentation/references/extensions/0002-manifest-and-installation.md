@@ -209,24 +209,25 @@ provider keys and the runtime token are not in its `process.env`.
 It is not a sandbox. The worker still runs as your OS account and can read the same files as the
 host, including the Prompt Studio home folder.
 
-In this release, handler code in the worker can use these parts of `ctx`:
+In this release, handler code in the worker can use every `ctx` member that takes and returns
+plain data. That includes identity fields, `signal`, `logger`, `navigation.open`, `stream.write`,
+`commands`, `events`, `settings`, `storage`, `resources`, `views`, `artifacts`, `projectFiles`,
+`workspaceFiles`, `packageFiles`, `extensionFiles`, `files`, `skills`, `activity`, `notify`,
+`automation`, `process`, `net`, `connections.request`, `account`, `extensions`, `workspaces` and
+`sessions`.
 
-- `projectId`, `workspaceId`, `project`, `extensionId`, `name`, `signal`, and the command or event
-  identity fields
-- `logger`, `navigation.open`, `stream.write`, `events.emit`, and `commands.execute` with the
-  middleware helpers `continue`, `patchParams`, `replaceParams`, `replaceInvocation` and `reject`
-- `settings`
-- `storage`: key-value calls, `collection` and its `attachments`, `files` (without `urlFor`),
-  `ids.create`, `canMigrate`, `readLegacy`, `scope`, and `records.read`, `list`, `commit`,
-  `commitIfCurrent`, `outcome`, `conflicts`, `inspect` and `resolve` (`records.id` only at the
-  project scope)
+These members are not available yet, because they take callbacks or return streams or live handles:
 
-Other `ctx` members are missing for now. That includes `storage.migrate`, `storage.observe`,
-`storage.text`, `storage.log`, other `records` calls, callbacks, process and terminal handles,
-sessions and workspaces. A terminal view's session handler cannot return a live session yet. Harnesses, workspace types, text
-sources and resource hierarchy providers are not loaded, and the extension reports an
-`extension_process_runtime_unsupported` diagnostic. Arguments and results must be plain data:
-objects, arrays, strings, numbers, booleans, `Date` and bytes.
+- `storage.observe`, `storage.migrate`, `storage.records.transaction`, `storage.positions`,
+  `storage.text`, `storage.log` and `storage.assets`
+- `urlFor` on storage files and attachments
+- `records.id` inside `storage.scope(...)`
+- `sessions.observeMetadata`, `sessions.stream` and `sessions.retainResources`
+- `connections.stream`, `terminal` and `localDirectory`
+
+Harnesses, workspace types, text sources and resource hierarchy providers are not loaded, and the
+extension reports an `extension_process_runtime_unsupported` diagnostic. Arguments and results must
+be plain data: objects, arrays, strings, numbers, booleans, `Date` and bytes.
 
 A worker that crashes rejects its running calls with `backend_unavailable`. The host does not
 retry them. The next call starts a new worker. When a changed source loads, the old worker stops
