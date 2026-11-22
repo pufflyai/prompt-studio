@@ -10,6 +10,7 @@ import {
   storage_ordered_records,
   storage_ordered_touches,
 } from "./schemas.pg";
+import { decodeUpgradeBytes as decodeBytes } from "./upgrade-bytes";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
 const sources = [
@@ -29,11 +30,7 @@ const sources = [
   { table: storage_ordered_touches, keys: ["record_id", "operation_id"], bytes: [], numbers: ["local_sequence"] },
   { table: storage_ordered_receipts, keys: ["epoch", "operation_id"], bytes: [], numbers: [] },
 ];
-const decodeBytes = (value: unknown) => {
-  if (typeof value !== "string" || !/^\\x(?:[0-9a-f]{2})*$/iu.test(value))
-    throw new Error("Invalid exported ordered storage bytes");
-  return new Uint8Array(Buffer.from(value.slice(2), "hex"));
-};
+
 const safeNumber = (value: unknown) => {
   const number = Number(value);
   if (!Number.isSafeInteger(number)) throw new Error("Invalid exported ordered storage position");

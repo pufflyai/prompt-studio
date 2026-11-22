@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { ensureStorageOwner } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
 import { storage_log_entries as entries, storage_log_streams as streams } from "./schemas.pg";
+import { decodeUpgradeBytes as decodeBytes } from "./upgrade-bytes";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
 type LegacyAddress = {
@@ -31,10 +32,6 @@ const streamWhere = (ownerId: number, row: LegacyAddress) =>
     eq(streams.stream, row.stream),
   );
 const ownerOf = (row: LegacyAddress) => ({ workbenchId: row.workbench_id, extensionId: row.extension_id });
-const decodeBytes = (value: string) => {
-  if (!/^\\x(?:[0-9a-f]{2})*$/iu.test(value)) throw new Error("Invalid exported log bytes");
-  return new Uint8Array(Buffer.from(value.slice(2), "hex"));
-};
 
 /** Capture both released tables before generated DDL; keep exact rows for recovery. */
 export const prepareLogOwnerUpgrade = async (db: DbClient, path: string) => {

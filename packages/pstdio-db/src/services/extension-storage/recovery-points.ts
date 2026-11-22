@@ -3,7 +3,7 @@ import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { canonicalExtensionId } from "pstdio-api-contracts/extension-host";
 import type { AssetStore, StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
-import { projects, recovery_point_owners, recovery_points } from "../../db/schemas.pg";
+import { projects, recovery_point_owners, recovery_points, owners as storageOwners } from "../../db/schemas.pg";
 import type { createDocumentStorageDBService } from "./document-storage";
 import {
   dataOwners,
@@ -15,6 +15,7 @@ import {
 import type { RecoveryRecord } from "./recovery-edits";
 import { createOwnerRestore, type SavedOwner } from "./recovery-restore";
 import { dueRecoveryHours, planRecoverySlots, type RecoveryHours } from "./recovery-slots";
+import { ensureStorageOwner } from "./storage-owner-key";
 
 /** The selected recovery point, extension or its files are not available. */
 export class RecoveryPointError extends Error {}
@@ -59,7 +60,7 @@ export const createRecoveryPoints = (
       await connection
         .select()
         .from(recovery_points)
-        .where(eq(recovery_points.workbench_id, projectId))
+        .where(eq(recovery_points.project_id, projectId))
         .orderBy(asc(recovery_points.hours))
     ).map((point) => ({ hours: point.hours as RecoveryHours, capturedAt: point.captured_at }));
 
@@ -74,15 +75,18 @@ export const createRecoveryPoints = (
     if (replaced.length)
       await tx
         .delete(recovery_points)
-        .where(and(eq(recovery_points.workbench_id, projectId), inArray(recovery_points.hours, replaced)));
+        .where(and(eq(recovery_points.project_id, projectId), inArray(recovery_points.hours, replaced)));
+    const ownerIds = new Map<string, number>();
+    for (const { extensionId } of content)
+      ownerIds.set(extensionId, await ensureStorageOwner(tx, { workbenchId: projectId, extensionId }));
     for (const hours of plan.write) {
-      await tx.insert(recovery_points).values({ workbench_id: projectId, hours, captured_at: capturedAt });
+      await tx.insert(recovery_points).values({ project_id: projectId, hours, captured_at: capturedAt });
       if (content.length)
         await tx.insert(recovery_point_owners).values(
           content.map(({ extensionId, revision, records, metadata }) => ({
-            workbench_id: projectId,
+            project_id: projectId,
             hours,
-            extension_id: extensionId,
+            owner_id: ownerIds.get(extensionId)!,
             revision,
             records,
             metadata,
@@ -131,9 +135,14 @@ export const createRecoveryPoints = (
     if (!points.some((point) => point.hours === input.hours && point.capturedAt === input.capturedAt))
       throw new RecoveryPointError("This recovery point changed or is no longer available. Refresh the list.");
     const rows = await db
-      .select()
+      .select({
+        extension_id: storageOwners.extension_id,
+        records: recovery_point_owners.records,
+        metadata: recovery_point_owners.metadata,
+      })
       .from(recovery_point_owners)
-      .where(and(eq(recovery_point_owners.workbench_id, projectId), eq(recovery_point_owners.hours, input.hours)));
+      .innerJoin(storageOwners, eq(storageOwners.id, recovery_point_owners.owner_id))
+      .where(and(eq(recovery_point_owners.project_id, projectId), eq(recovery_point_owners.hours, input.hours)));
     const known = new Set([
       ...rows.map((row) => canonicalExtensionId(row.extension_id)),
       ...(await dataOwners(db, projectId)).map(canonicalExtensionId),
@@ -188,17 +197,18 @@ export const createRecoveryPoints = (
     /** Projects that already have recovery points keep rotating them, even offline. */
     async projects() {
       const rows = await db
-        .selectDistinct({ id: recovery_points.workbench_id })
+        .selectDistinct({ id: recovery_points.project_id })
         .from(recovery_points)
-        .innerJoin(projects, eq(projects.id, recovery_points.workbench_id))
+        .innerJoin(projects, eq(projects.id, recovery_points.project_id))
         .where(isNull(projects.deleted_at));
       return rows.map((row) => row.id);
     },
     async list(projectId: string) {
       const saved = await db
-        .select({ hours: recovery_point_owners.hours, id: recovery_point_owners.extension_id })
+        .select({ hours: recovery_point_owners.hours, id: storageOwners.extension_id })
         .from(recovery_point_owners)
-        .where(eq(recovery_point_owners.workbench_id, projectId));
+        .innerJoin(storageOwners, eq(storageOwners.id, recovery_point_owners.owner_id))
+        .where(eq(recovery_point_owners.project_id, projectId));
       const current = await dataOwners(db, projectId);
       return (await savedPoints(db, projectId)).map((point) => ({
         ...point,

@@ -14,6 +14,7 @@ import {
 } from "../../db/schemas.pg";
 import { listProjectedRecords } from "./record-queries";
 import type { RecoveryRecord } from "./recovery-edits";
+import { storageOwnerKey } from "./storage-owner-key";
 
 type Reader = Pick<DbClient, "select" | "selectDistinct">;
 type Transaction = Parameters<Parameters<DbClient["transaction"]>[0]>[0];
@@ -139,11 +140,7 @@ export const readProjectContent = async (tx: Transaction, projectId: string) => 
       .select({ records: recovery_point_owners.records })
       .from(recovery_point_owners)
       .where(
-        and(
-          eq(recovery_point_owners.workbench_id, projectId),
-          eq(recovery_point_owners.extension_id, extensionId),
-          eq(recovery_point_owners.revision, revision),
-        ),
+        and(eq(recovery_point_owners.owner_id, storageOwnerKey(owner)), eq(recovery_point_owners.revision, revision)),
       )
       .limit(1);
     const records =

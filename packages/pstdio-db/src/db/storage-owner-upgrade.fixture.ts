@@ -1,6 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { createDb } from "./connection.pglite";
+import { decodeUpgradeBytes } from "./upgrade-bytes";
 
 /** Preserve seeded data when an app-upgrade fixture reconstructs the released storage schema. */
 export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<typeof createDb>>) => {
@@ -23,6 +24,11 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
       "SELECT last_value,is_called FROM storage_ordered_operations_local_sequence_seq",
     )
   ).rows[0]!;
+  const recovery = await query(`SELECT (to_jsonb(r)-'owner_id'-'project_id') ||
+    jsonb_build_object('workbench_id',r.project_id,'extension_id',o.extension_id) AS row
+    FROM recovery_point_owners r JOIN owners o ON r.owner_id=o.id`);
+  const points = await query(`SELECT (to_jsonb(r)-'project_id') ||
+    jsonb_build_object('workbench_id',project_id) AS row FROM recovery_points r`);
   const assets = await query(`SELECT (to_jsonb(a)-'owner_id') ||
     jsonb_build_object('project_id',o.project_id,'extension_id',o.extension_id) AS row
     FROM asset_transfers a JOIN owners o ON a.owner_id=o.id`);
@@ -46,9 +52,11 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     )
   ).rows[0]!;
   await connection.pglite.exec(
-    "DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
+    "DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_receipts; DROP TABLE storage_ordered_touches; DROP TABLE storage_ordered_records; DROP TABLE storage_ordered_operations; DROP TABLE storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
   );
   const data = {
+    recovery_points: points,
+    recovery_point_owners: recovery,
     ...ordered,
     asset_transfers: assets,
     storage_log_streams: logs,
@@ -85,15 +93,14 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
         columns.map((column) => {
           const value = row[column];
           const binaryColumns: Record<string, string[]> = {
+            recovery_point_owners: ["records", "metadata"],
             storage_log_entries: ["entry", "envelope"],
             storage_ordered_owners: ["receipt_root"],
             storage_ordered_records: ["state"],
             storage_ordered_operations: ["envelope", "admission"],
           };
           if (binaryColumns[table]?.includes(column) && value !== null) {
-            if (typeof value !== "string" || !/^\\x(?:[0-9a-f]{2})*$/u.test(value))
-              throw new Error(`Invalid released storage bytes: ${column}`);
-            return new Uint8Array(Buffer.from(value.slice(2), "hex"));
+            return decodeUpgradeBytes(value);
           }
           return value !== null && typeof value === "object" ? JSON.stringify(value) : value;
         }),

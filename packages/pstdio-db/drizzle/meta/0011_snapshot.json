@@ -1,5 +1,5 @@
 {
-  "id": "46b1e1dc-8385-42cc-9080-5e2905814c40",
+  "id": "272b948f-1aef-4dbc-8b20-de98870c48cc",
   "prevId": "7831c13a-76db-4e65-a402-222b04fffc09",
   "version": "7",
   "dialect": "postgresql",
@@ -2260,8 +2260,8 @@
       "name": "recovery_point_owners",
       "schema": "",
       "columns": {
-        "workbench_id": {
-          "name": "workbench_id",
+        "project_id": {
+          "name": "project_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -2272,9 +2272,9 @@
           "primaryKey": false,
           "notNull": true
         },
-        "extension_id": {
-          "name": "extension_id",
-          "type": "text",
+        "owner_id": {
+          "name": "owner_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
@@ -2297,18 +2297,53 @@
           "notNull": true
         }
       },
-      "indexes": {},
+      "indexes": {
+        "recovery_owner_revision": {
+          "name": "recovery_owner_revision",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "revision",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
-        "recovery_point_owners_workbench_id_hours_recovery_points_workbench_id_hours_fk": {
-          "name": "recovery_point_owners_workbench_id_hours_recovery_points_workbench_id_hours_fk",
+        "recovery_point_owners_owner_id_owners_id_fk": {
+          "name": "recovery_point_owners_owner_id_owners_id_fk",
+          "tableFrom": "recovery_point_owners",
+          "tableTo": "owners",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "recovery_point_owners_project_id_hours_recovery_points_project_id_hours_fk": {
+          "name": "recovery_point_owners_project_id_hours_recovery_points_project_id_hours_fk",
           "tableFrom": "recovery_point_owners",
           "tableTo": "recovery_points",
           "columnsFrom": [
-            "workbench_id",
+            "project_id",
             "hours"
           ],
           "columnsTo": [
-            "workbench_id",
+            "project_id",
             "hours"
           ],
           "onDelete": "cascade",
@@ -2316,12 +2351,12 @@
         }
       },
       "compositePrimaryKeys": {
-        "recovery_point_owners_workbench_id_hours_extension_id_pk": {
-          "name": "recovery_point_owners_workbench_id_hours_extension_id_pk",
+        "recovery_point_owners_project_id_hours_owner_id_pk": {
+          "name": "recovery_point_owners_project_id_hours_owner_id_pk",
           "columns": [
-            "workbench_id",
+            "project_id",
             "hours",
-            "extension_id"
+            "owner_id"
           ]
         }
       },
@@ -2334,8 +2369,8 @@
       "name": "recovery_points",
       "schema": "",
       "columns": {
-        "workbench_id": {
-          "name": "workbench_id",
+        "project_id": {
+          "name": "project_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -2355,12 +2390,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "recovery_points_workbench_id_projects_id_fk": {
-          "name": "recovery_points_workbench_id_projects_id_fk",
+        "recovery_points_project_id_projects_id_fk": {
+          "name": "recovery_points_project_id_projects_id_fk",
           "tableFrom": "recovery_points",
           "tableTo": "projects",
           "columnsFrom": [
-            "workbench_id"
+            "project_id"
           ],
           "columnsTo": [
             "id"
@@ -2370,10 +2405,10 @@
         }
       },
       "compositePrimaryKeys": {
-        "recovery_points_workbench_id_hours_pk": {
-          "name": "recovery_points_workbench_id_hours_pk",
+        "recovery_points_project_id_hours_pk": {
+          "name": "recovery_points_project_id_hours_pk",
           "columns": [
-            "workbench_id",
+            "project_id",
             "hours"
           ]
         }

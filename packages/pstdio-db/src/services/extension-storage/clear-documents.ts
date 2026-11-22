@@ -3,7 +3,6 @@ import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
 import {
   owners,
-  recovery_point_owners,
   storage_current_records,
   storage_document_operations,
   storage_document_updates,
@@ -54,15 +53,6 @@ export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) 
   await tx.delete(storage_document_updates).where(ownerWhere(storage_document_updates));
   await tx.delete(storage_document_operations).where(ownerWhere(storage_document_operations));
   await tx.delete(storage_current_records).where(ownerWhere(storage_current_records));
-  // Removing an extension's data also removes the copies kept for recovery.
-  await tx
-    .delete(recovery_point_owners)
-    .where(
-      and(
-        eq(recovery_point_owners.workbench_id, owner.workbenchId),
-        eq(recovery_point_owners.extension_id, owner.extensionId),
-      ),
-    );
   // The device joins the record stream again, with its saves still waiting for upload dropped.
   await tx
     .delete(storage_record_sync)
@@ -72,7 +62,7 @@ export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) 
         eq(storage_record_sync.extension_id, owner.extensionId),
       ),
     );
-  // Canonical records, pending saves, retained receipts and logs cascade from their owner rows,
+  // Canonical records, pending saves, recovery copies, retained receipts and logs cascade from their owner rows,
   // so a cleared owner founds or joins again and may reuse its operation IDs.
   await tx.delete(storage_ordered_owners).where(orderedOwnerWhere(storage_ordered_owners, owner));
   await tx.delete(owners).where(storageOwnerWhere(owner));

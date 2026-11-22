@@ -18,7 +18,6 @@ const projectTables = [
   s.native_document_file_projections,
   s.native_document_rooms,
   s.storage_ordered_resource_numbers,
-  s.recovery_point_owners,
 ];
 const otherTables = [
   s.owners,
