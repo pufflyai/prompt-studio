@@ -130,18 +130,27 @@ export const startBackendWorker = async (options: BackendWorkerOptions): Promise
     else if (message?.type === "notify") relay(message);
   };
 
-  const child = Bun.spawn(options.command, {
-    cwd,
-    env: options.env,
-    stdio: ["ignore", "inherit", "inherit"],
-    serialization: "advanced",
-    ipc: receive,
-    // A worker that drops its channel can never answer again, even if its process keeps running.
-    onDisconnect: () => {
-      fail(new BackendUnavailableError("The extension backend disconnected."));
-      child.kill("SIGKILL");
-    },
-  });
+  const spawn = () => {
+    try {
+      return Bun.spawn(options.command, {
+        cwd,
+        env: options.env,
+        stdio: ["ignore", "inherit", "inherit"],
+        serialization: "advanced",
+        ipc: receive,
+        // A worker that drops its channel can never answer again, even if its process keeps running.
+        onDisconnect: () => {
+          fail(new BackendUnavailableError("The extension backend disconnected."));
+          child.kill("SIGKILL");
+        },
+      });
+    } catch (error) {
+      // Nothing started, so nothing else will remove the working folder.
+      rmSync(cwd, { recursive: true, force: true });
+      throw error;
+    }
+  };
+  const child = spawn();
 
   const exited = child.exited.then((code) => {
     fail(new BackendUnavailableError(`The extension backend exited (${code}).`));

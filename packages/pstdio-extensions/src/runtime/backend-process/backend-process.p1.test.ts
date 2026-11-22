@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createExtensionProcessEnvironment } from "../process-environment";
@@ -293,4 +293,29 @@ test("retiring a generation stops its worker before a new one starts", async () 
   } finally {
     await pool.close();
   }
+});
+
+test("a worker that cannot start leaves no working folder behind", async () => {
+  const leftovers = async () => (await readdir(tmpdir())).filter((name) => name.startsWith("pstdio-backend-")).length;
+  const before = await leftovers();
+  await expect(
+    startBackendWorker({
+      command: [join(root, "missing-executable")],
+      env: createExtensionProcessEnvironment(),
+      entryPath,
+    }),
+  ).rejects.toThrow();
+  expect(await leftovers()).toBe(before);
+});
+
+test("closing the pool refuses new workers and stops every running one", async () => {
+  const pool = createBackendWorkerPool(() => ({ env: createExtensionProcessEnvironment(), entryPath }));
+  const running = await pool.acquire("source@1");
+  const closing = pool.close();
+  await expect(pool.acquire("source@2")).rejects.toBeInstanceOf(BackendUnavailableError);
+  await closing;
+  expect(await running.exited).not.toBeUndefined();
+  const reopened = await pool.acquire("source@1");
+  expect(reopened).not.toBe(running);
+  await pool.close();
 });
