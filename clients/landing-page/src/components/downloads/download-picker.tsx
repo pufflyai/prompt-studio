@@ -1,6 +1,7 @@
 import { Box, Button, HStack, Text } from "@chakra-ui/react";
 import { SearchableMenu } from "@pstdio/ui";
 import { ChevronDown, Download, SquareTerminal } from "lucide-react";
+import { useId } from "react";
 import { SITE_LINKS } from "../../content/landing-content";
 import { useDesktopDownloads } from "../../hooks/use-desktop-downloads";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
@@ -11,6 +12,8 @@ export const DownloadPicker = () => {
   const styles = useLandingStyles();
   const { release, selected, failed, selectDownload } = useDesktopDownloads();
   const loading = !release && !failed;
+  // The page shows a picker on the first screen and another at the end.
+  const buildId = useId();
   let description = "Finding a desktop build for your platform.";
   if (release) description = "The desktop app is not available on this platform yet.";
   if (selected && release) {
@@ -22,20 +25,20 @@ export const DownloadPicker = () => {
   return (
     <Box css={styles.download}>
       {loading ? (
-        <Button variant="primary" size="lg" disabled aria-describedby="download-build">
+        <Button variant="primary" size="lg" disabled aria-describedby={buildId}>
           <Download />
           Checking downloads…
         </Button>
       ) : (
         <Button asChild variant="primary" size="lg">
-          <a href={selected?.url ?? SITE_LINKS.installCli} aria-describedby="download-build">
+          <a href={selected?.url ?? SITE_LINKS.installCli} aria-describedby={buildId}>
             {selected ? <Download /> : <SquareTerminal />}
             {buttonLabel}
           </a>
         </Button>
       )}
       <HStack css={styles.downloadPlatforms}>
-        <Text id="download-build" textStyle="label/S/regular" color="fg.muted" aria-live="polite">
+        <Text id={buildId} textStyle="label/S/regular" color="fg.muted" aria-live="polite">
           {description}
         </Text>
         {release && (
