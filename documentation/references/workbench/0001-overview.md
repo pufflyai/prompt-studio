@@ -98,6 +98,7 @@ controls visibility. These user preferences persist across projects and reloads.
 
 The bubble's **Default panel** context menu offers the Side Panel's available tabs
 and a generic **Side Panel** option. Clicking reuses the chosen tab when present.
+If a panel allows only one tab, choosing it restores its default view while keeping its resource.
 An unavailable saved choice opens the generic shell and stays saved for when its
 extension is enabled again. The dashboard defaults to **New session** only while
 Sessions is enabled. Hosts can label their `onOpenSidePanel` action with

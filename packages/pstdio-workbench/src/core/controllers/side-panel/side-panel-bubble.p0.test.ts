@@ -66,38 +66,52 @@ test("a removed panel falls back to the Side Panel without running the host defa
   expect(workbench.preferences.getValue(sidePanelBubblePreferences.panel)).toBe("panel:inspector");
 });
 
-test("a different view override is not reused as the chosen panel", async () => {
-  const workbench = createWorkbench({ initialSidePanelMode: "closed" });
-  workbench.layout.registerPanel({
-    id: "conversation",
-    title: "Conversation",
-    region: "side",
-    rendererId: "conversation",
-    singleton: false,
-    eligibleLocations: {},
-    openCommand: { commandId: "new-conversation" },
+for (const singleton of [false, true]) {
+  test(`a different view override opens the chosen view with ${singleton ? "one tab" : "multiple tabs"}`, async () => {
+    const workbench = createWorkbench({ initialSidePanelMode: "closed" });
+    workbench.layout.registerPanel({
+      id: "conversation",
+      title: "Conversation",
+      region: "side",
+      rendererId: "conversation",
+      singleton,
+      eligibleLocations: {},
+      openCommand: { commandId: "new-conversation" },
+    });
+    workbench.commands.registerCommand(
+      { id: "new-conversation", label: "New conversation" },
+      {
+        execute: () =>
+          workbench.layout.openPanel("conversation", {
+            resource: { type: "conversation", id: "new" },
+            viewId: "conversation",
+            strategy: { kind: "persistent" },
+          }),
+      },
+    );
+    const reader = workbench.layout.openPanel("conversation", {
+      resource: { type: "conversation", id: "existing" },
+      viewId: "reader",
+      strategy: { kind: "persistent" },
+    });
+    await workbench.preferences.setValue(sidePanelBubblePreferences.panel, "panel:conversation", { scope: "user" });
+    await openSidePanelBubble(workbench);
+    const panel = workbench.layout.getActivePanel("side")!;
+    expect(panel.viewId ?? workbench.layout.getPanel(panel.panelId)?.rendererId).toBe("conversation");
+    expect(panel.resource?.id).toBe(singleton ? "existing" : "new");
+    if (singleton) {
+      expect(panel.instanceId).toBe(reader.instanceId);
+      workbench.movePanel(panel.instanceId, "main");
+      workbench.layout.updatePanel(panel.instanceId, { viewId: "reader" });
+      workbench.sidePanel.setMode("closed");
+      await openSidePanelBubble(workbench);
+      const reopened = workbench.layout.getActivePanel("side")!;
+      expect(reopened.instanceId).toBe(reader.instanceId);
+      expect(reopened.viewId ?? workbench.layout.getPanel(reopened.panelId)?.rendererId).toBe("conversation");
+      expect(reopened.resource?.id).toBe("existing");
+    } else expect(panel.instanceId).not.toBe(reader.instanceId);
   });
-  workbench.commands.registerCommand(
-    { id: "new-conversation", label: "New conversation" },
-    {
-      execute: () =>
-        workbench.layout.openPanel("conversation", {
-          resource: { type: "conversation", id: "new" },
-          viewId: "conversation",
-          strategy: { kind: "persistent" },
-        }),
-    },
-  );
-  const reader = workbench.layout.openPanel("conversation", {
-    resource: { type: "conversation", id: "existing" },
-    viewId: "reader",
-    strategy: { kind: "persistent" },
-  });
-  await workbench.preferences.setValue(sidePanelBubblePreferences.panel, "panel:conversation", { scope: "user" });
-  await openSidePanelBubble(workbench);
-  expect(workbench.layout.getActivePanel("side")?.instanceId).not.toBe(reader.instanceId);
-  expect(workbench.layout.getActivePanel("side")?.viewId).toBe("conversation");
-});
+}
 
 test("the generic Side Panel preference bypasses the optional host default", async () => {
   const workbench = createWorkbench({ initialSidePanelMode: "closed" });

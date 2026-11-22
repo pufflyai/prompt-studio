@@ -74,16 +74,21 @@ export const openSidePanelBubble = async (workbench: WorkbenchCore, openDefault?
   if (typeof selected === "string" && selected.startsWith("panel:")) {
     const id = selected.slice("panel:".length);
     const { open, addable, movable } = sidePanelChoices(workbench);
-    const rendererId = workbench.layout.getWidget(id)?.rendererId;
+    const widget = workbench.layout.getWidget(id);
+    const rendererId = widget?.rendererId;
     const matches = (panel: WorkbenchWidgetPlacement) =>
       panel.contributionId === id && (panel.viewId ?? rendererId) === rendererId;
     const activeId = workbench.layout.getLayout().regions.side.activeWidgetId;
     const existing = open.find((panel) => matches(panel) && panel.widgetId === activeId) ?? open.find(matches);
     const elsewhere = movable.find(matches);
-    if (existing) workbench.layout.activatePanel(existing.widgetId);
-    else if (elsewhere) {
-      workbench.movePanel(elsewhere.widgetId, "side");
-      workbench.layout.activatePanel(elsewhere.widgetId);
+    const singleton = widget?.singleton
+      ? [...open, ...movable].find((panel) => panel.contributionId === id)
+      : undefined;
+    const target = existing ?? elsewhere ?? singleton;
+    if (target) {
+      if (!open.includes(target)) workbench.movePanel(target.widgetId, "side");
+      if (!matches(target)) workbench.layout.updatePanel(target.widgetId, { viewId: null });
+      workbench.layout.activatePanel(target.widgetId);
     } else {
       const panel = addable.find((panel) => panel.panelId === id);
       if (panel)
