@@ -137,6 +137,48 @@ describe("readPackageManifest", () => {
     );
   });
 
+  test("reads the host environment names an extension requests for its children", () => {
+    const dir = createPackage({
+      name: "agent",
+      version: "1.0.0",
+      publisher: "acme",
+      main: "./extension.ts",
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+      pstdio: { processEnvironment: ["ANTHROPIC_API_KEY", "GH_TOKEN"] },
+    });
+
+    const result = readPackageManifest(dir);
+
+    expect(result.manifest?.pstdio?.processEnvironment).toEqual(["ANTHROPIC_API_KEY", "GH_TOKEN"]);
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  test.each([
+    [["OPENAI_*"], "exact variable name"],
+    [["GH_TOKEN", "GH_TOKEN"], "more than once"],
+    [["PSTDIO_API_TOKEN"], "reserved"],
+    [["pstdio_home"], "reserved"],
+    [["NPM_TOKEN"], "reserved"],
+    [["NODE_AUTH_TOKEN"], "reserved"],
+    [["npm_config_userconfig"], "reserved"],
+    ["GH_TOKEN", "array"],
+    [[""], "exact variable name"],
+  ])("rejects process environment declaration %j", (processEnvironment, message) => {
+    const dir = createPackage({
+      name: "agent",
+      version: "1.0.0",
+      publisher: "acme",
+      main: "./extension.ts",
+      engines: { pstdio: `^${EXTENSION_API_VERSION}` },
+      pstdio: { processEnvironment },
+    });
+
+    const result = readPackageManifest(dir);
+
+    expect(result.manifest).toBeNull();
+    expect(result.diagnostics.map((diagnostic) => diagnostic.message).join("\n")).toContain(message);
+  });
+
   test("rejects non-object pstdio declarations", () => {
     const dir = createPackage({
       name: "bad-pstdio",
