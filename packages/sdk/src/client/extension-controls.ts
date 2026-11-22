@@ -1,6 +1,8 @@
 import type {
   ExtensionBlobRef,
+  ExtensionProcessEnvironmentPermission,
   ExtensionSettingValueRecord,
+  GrantExtensionProcessEnvironmentInput,
   WebviewFilesListParams,
   WebviewFilesUploadParams,
   WebviewPreferencesGetParams,
@@ -46,7 +48,22 @@ const preferencesAt = (request: RequestFn, base: string) => ({
     }),
 });
 
+const processEnvironmentPath = (projectId: string, extensionId: string) =>
+  `/v1/projects/${encodeURIComponent(projectId)}/extension-process-environment/${encodeURIComponent(extensionId)}`;
+
 export const createExtensionControlsClient = (request: RequestFn) => ({
+  /** Host environment names an extension requests for its children, and the owner's grant. Never values. */
+  processEnvironment: {
+    get: (projectId: string, extensionId: string) =>
+      request<ExtensionProcessEnvironmentPermission>(processEnvironmentPath(projectId, extensionId)),
+    grant: (projectId: string, extensionId: string, input: GrantExtensionProcessEnvironmentInput) =>
+      request<ExtensionProcessEnvironmentPermission>(processEnvironmentPath(projectId, extensionId), {
+        method: "PUT",
+        body: input,
+      }),
+    revoke: (projectId: string, extensionId: string) =>
+      request<void>(processEnvironmentPath(projectId, extensionId), { method: "DELETE" }),
+  },
   projectSettings: {
     all: (projectId: string, instanceId: string, options?: { signal?: AbortSignal }) =>
       settingsAt(request, projectExtensionPath(projectId, instanceId)).all(options),
