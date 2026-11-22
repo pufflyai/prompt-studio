@@ -36,6 +36,7 @@ export type SessionHookDeps = Pick<
   | "boardViewsService"
   | "extensionAutomationPreferencesService"
   | "extensionConnectionService"
+  | "extensionProcessEnvironment"
   | "extensionFileService"
   | "extensionRuntimeCatalog"
   | "extensionResourceSequencesService"

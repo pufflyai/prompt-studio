@@ -19,6 +19,7 @@ import { subscribeExtensionEnablementInvalidation } from "./features/extensions/
 import type { LoadedExtensionSnapshot } from "./features/extensions/extension-runtime";
 import { installExtensionSource } from "./features/extensions/install-extension-source";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
+import { createProcessEnvironmentPermissions } from "./features/extensions/process-environment/permissions";
 import { completeProjectExtensionInstallation } from "./features/extensions/project-extension-lifecycle";
 import { createProjectExtensionRuntimeCatalog } from "./features/extensions/project-extension-runtime-catalog";
 import { subscribeProjectWorkspaceExtensionRefresh } from "./features/extensions/project-workspace-extension-refresh";
@@ -140,6 +141,13 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
         "Extension connection request completed",
       ),
   });
+  const extensionProcessEnvironment = createProcessEnvironmentPermissions({
+    path: join(input.storageRoot, "extension-process-environment.json"),
+    findSource: async (projectId, extensionId) =>
+      (await extensionService.listProjectExtensionInstances(projectId)).find(
+        ({ installedSource }) => installedSource.extension_id === extensionId,
+      )?.installedSource,
+  });
   const harnessRegistry = input.dependencies.createHarnessRegistry({
     installedExtensionSourcesService: input.installedExtensionSourcesDBService,
     extensionRuntimeCatalog,
@@ -189,6 +197,7 @@ export const wireAppExtensionServices = (input: WireExtensionServicesInput) => {
     extensionRuntime,
     extensionRuntimeCatalog,
     extensionConnectionService,
+    extensionProcessEnvironment,
     extensionService,
     extensionUpgradeService,
     harnessRegistry,
