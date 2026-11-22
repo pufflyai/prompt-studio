@@ -25,7 +25,7 @@ test("only the lifecycle document becoming ready releases workbench startup", as
   expect(contents.eventNames()).toEqual([]);
 });
 
-for (const ending of ["failed-load", "crashed", "destroyed"] as const)
+for (const ending of ["failed-load", "preload-failed", "crashed", "destroyed"] as const)
   test(`startup ${ending} rejects its readiness wait and detaches every listener`, async () => {
     const contents = lifecycle();
     const result = waitForStartupDom(contents as unknown as WebContents, new AbortController().signal).then(
@@ -33,6 +33,8 @@ for (const ending of ["failed-load", "crashed", "destroyed"] as const)
       (error: unknown) => error,
     );
     if (ending === "failed-load") contents.emit("did-fail-load", {}, -2, "Main document failed", LIFECYCLE_URL, true);
+    else if (ending === "preload-failed")
+      contents.emit("preload-error", {}, "/fixture/preload.cjs", new Error("Bridge failed"));
     else contents.emit(ending === "crashed" ? "render-process-gone" : "destroyed");
     expect(await result).toBeInstanceOf(Error);
     expect(contents.eventNames()).toEqual([]);

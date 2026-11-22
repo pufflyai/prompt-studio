@@ -1,4 +1,4 @@
-import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
+import type { PlacementIdentity, ResourceConstraint, ResourceRef } from "@pstdio/sdk/extensions";
 import type { WorkbenchPanelRegion, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import { pageSlots } from "../../registries/pages/page-main";
@@ -13,6 +13,20 @@ export const resourceViewerBinding = (core: WorkbenchCore, identity: PlacementId
   // Context followers project their source; they do not own an independent resource viewer.
   return slot?.openOn === "page-resource" ? undefined : slot?.item;
 };
+export const resourceViewerConstraint = (core: WorkbenchCore, identity: PlacementIdentity) => {
+  const item = resourceViewerBinding(core, identity);
+  return item?.kind === "binding" ? item.binding : undefined;
+};
+export const viewerResourceKey = (core: WorkbenchCore, resource: ResourceRef, identity: PlacementIdentity) =>
+  core.pages.resourceReferenceKey(resource, resourceViewerConstraint(core, identity));
+export const createResourceViewerRuntime = (getCore: () => WorkbenchCore) => ({
+  isResourceViewer: (identity: PlacementIdentity) => {
+    const core = getCore();
+    return Boolean(core && resourceViewerBinding(core, identity)?.kind === "binding");
+  },
+  resourceViewerKey: (resource: ResourceRef, identity: PlacementIdentity) =>
+    viewerResourceKey(getCore(), resource, identity),
+});
 export interface DisplayedResourceViewer {
   region: WorkbenchPanelRegion;
   widget: WorkbenchWidgetPlacement;
@@ -35,10 +49,16 @@ export const displayedResourceViewers = (core: WorkbenchCore): DisplayedResource
 };
 export const sameViewer = (left: PlacementIdentity, right: PlacementIdentity) =>
   placementIdentityKey(left) === placementIdentityKey(right);
-export const findDisplayedResource = (core: WorkbenchCore, resource: ResourceRef, exclude?: PlacementIdentity) => {
-  const key = core.pages.resourceReferenceKey(resource);
+export const findDisplayedResource = (
+  core: WorkbenchCore,
+  resource: ResourceRef,
+  exclude?: PlacementIdentity,
+  context?: ResourceConstraint,
+) => {
+  const key = core.pages.resourceReferenceKey(resource, context);
   return displayedResourceViewers(core).find(
     (viewer) =>
-      (!exclude || !sameViewer(viewer.identity, exclude)) && core.pages.resourceReferenceKey(viewer.resource) === key,
+      (!exclude || !sameViewer(viewer.identity, exclude)) &&
+      viewerResourceKey(core, viewer.resource, viewer.identity) === key,
   );
 };

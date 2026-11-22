@@ -117,3 +117,137 @@ test("loads the workbench when the startup window shows without a paint receipt 
     await removeTestDirectory(root);
   }
 });
+
+for (const operation of ["prepare", "show"] as const)
+  test(`aborting ${operation} releases startup before its document is ready and permits a replacement runtime`, async () => {
+    const root = mkdtempSync(join(tmpdir(), "desktop-window-abort-"));
+    let loginRequests = 0;
+    let workbenchRequests = 0;
+    const server = createServer((request, response) => {
+      if (request.url === "/runtime/browser-login") {
+        loginRequests++;
+        response.setHeader("content-type", "application/json");
+        response.end(JSON.stringify({ url: `http://${request.headers.host}/#browser-login=fixture-code` }));
+        return;
+      }
+      if (new URL(request.url ?? "/", "http://localhost").pathname === "/") workbenchRequests++;
+      response.setHeader("content-type", "text/html");
+      response.end("<!doctype html><main>Replacement workbench</main>");
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("Abort fixture did not bind a port");
+    try {
+      mkdirSync(join(root, "renderer"));
+      writeFileSync(join(root, "renderer/index.html"), "<!doctype html><main>Startup</main>");
+      writeFileSync(join(root, "preload.cjs"), "");
+      const entry = join(root, "main.mjs");
+      const build = spawnSync("bun", [
+        "build",
+        join(import.meta.dirname, "window-startup-abort-fixture.ts"),
+        "--outfile",
+        entry,
+        "--target=node",
+        "--format=esm",
+        "--external=electron",
+      ]);
+      expect(build.status, build.stderr.toString()).toBe(0);
+      const env = Object.fromEntries(
+        Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
+      );
+      delete env.ELECTRON_RUN_AS_NODE;
+      const application = spawn(require("electron") as string, [entry, `--user-data-dir=${join(root, "profile")}`], {
+        env: {
+          ...env,
+          PSTDIO_WINDOW_TEST_ORIGIN: `http://127.0.0.1:${address.port}`,
+          PSTDIO_WINDOW_TEST_OPERATION: operation,
+        },
+        stdio: ["ignore", "inherit", "inherit", "ipc"],
+      });
+      const messages = on(application, "message");
+      try {
+        expect((await messages.next()).value![0]).toEqual({ pending: true, workbenchCreated: false });
+        if (operation === "show") await expect.poll(() => loginRequests).toBe(1);
+        else expect(loginRequests).toBe(0);
+        application.send("abort");
+        expect((await messages.next()).value![0]).toEqual({
+          aborted: true,
+          settled: true,
+          reason: "Fixture runtime aborted",
+          workbenchCreated: false,
+        });
+        application.send("replace");
+        expect((await messages.next()).value![0]).toEqual({ replacementReady: true, workbenchCreated: true });
+        expect(workbenchRequests).toBe(1);
+        expect(loginRequests).toBe(operation === "show" ? 2 : 1);
+      } finally {
+        if (application.exitCode === null && application.signalCode === null) {
+          const exited = once(application, "exit");
+          application.kill("SIGTERM");
+          await exited;
+        }
+      }
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+      await removeTestDirectory(root);
+    }
+  });
+
+test("a startup preload failure rejects before creating a workbench without its bridge", async () => {
+  const root = mkdtempSync(join(tmpdir(), "desktop-window-preload-failure-"));
+  let loginRequests = 0;
+  const server = createServer((request, response) => {
+    if (request.url === "/runtime/browser-login") {
+      loginRequests++;
+      response.setHeader("content-type", "application/json");
+      response.end(JSON.stringify({ url: `http://${request.headers.host}/#browser-login=fixture-code` }));
+      return;
+    }
+    response.setHeader("content-type", "text/html");
+    response.end("<!doctype html><main>Workbench</main>");
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("Preload fixture did not bind a port");
+  try {
+    mkdirSync(join(root, "renderer"));
+    writeFileSync(join(root, "renderer/index.html"), "<!doctype html><main>Startup</main>");
+    writeFileSync(join(root, "preload.cjs"), 'throw new Error("Fixture preload initialization failed");');
+    const entry = join(root, "main.mjs");
+    const build = spawnSync("bun", [
+      "build",
+      join(import.meta.dirname, "window-preload-failure-fixture.ts"),
+      "--outfile",
+      entry,
+      "--target=node",
+      "--format=esm",
+      "--external=electron",
+    ]);
+    expect(build.status, build.stderr.toString()).toBe(0);
+    const env = Object.fromEntries(
+      Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined),
+    );
+    delete env.ELECTRON_RUN_AS_NODE;
+    const application = spawn(require("electron") as string, [entry, `--user-data-dir=${join(root, "profile")}`], {
+      env: { ...env, PSTDIO_WINDOW_TEST_ORIGIN: `http://127.0.0.1:${address.port}` },
+      stdio: ["ignore", "inherit", "inherit", "ipc"],
+    });
+    const messages = on(application, "message");
+    try {
+      const result = (await messages.next()).value![0];
+      expect(result).toMatchObject({ rejected: true, workbenchCreated: false });
+      expect(result.message).toMatch(/^workbench_unavailable:/);
+      expect(result.cause).toContain("Fixture preload initialization failed");
+      expect(loginRequests).toBe(0);
+    } finally {
+      if (application.exitCode === null && application.signalCode === null) {
+        const exited = once(application, "exit");
+        application.kill("SIGTERM");
+        await exited;
+      }
+    }
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await removeTestDirectory(root);
+  }
+});
