@@ -7,6 +7,7 @@ import { createDb } from "./connection.pglite";
 import { createTextLogOwnerFixture } from "./log-owner-upgrade.fixture";
 import { prepareOrderedOwnerUpgrade } from "./ordered-owner-upgrade";
 import { releasedOperationQuery } from "./released-operation-rows.fixture";
+import { releasedRecordRows } from "./released-record-rows.fixture";
 
 const tables = [
   "storage_ordered_owners",
@@ -35,7 +36,7 @@ for (const interruption of ["normal", "schema", "restore"])
         SELECT workbench_id,extension_id,'operation-' || n,'fingerprint-' || n,n+1,'request-' || n,
           decode('00ff0100','hex'),'earlier',decode('0100ff','hex'),'admission-' || n,n%2=0,
           CASE WHEN n%3=0 THEN 'earlier' ELSE NULL END FROM storage_ordered_owners CROSS JOIN generate_series(0,200) n;
-        INSERT INTO storage_ordered_records SELECT workbench_id,extension_id,'same-record',decode('00fe0001','hex')
+        INSERT INTO storage_ordered_records SELECT workbench_id,extension_id,'same-record',convert_to('{"recordId":"same-record","value":{"value":"retained"},"deleted":false,"lifetime":"initial","stamps":{}}','UTF8')
           FROM storage_ordered_owners;
         INSERT INTO storage_ordered_touches SELECT workbench_id,extension_id,'same-record',operation_id,local_sequence
           FROM storage_ordered_operations WHERE settled_epoch IS NULL;
@@ -79,6 +80,16 @@ for (const interruption of ["normal", "schema", "restore"])
       current = await createDb({ path: old.path });
       const verify = async () => {
         for (const table of tables) {
+          if (table === "storage_ordered_records") {
+            const normalize = (row: unknown) => {
+              const r = row as Record<string, unknown>;
+              return { ...r, state: JSON.parse(Buffer.from(String(r.state).slice(2), "hex").toString()) };
+            };
+            expect((await releasedRecordRows(current!.db)).storage_ordered_records!.map(normalize)).toEqual(
+              original[table]!.map(normalize),
+            );
+            continue;
+          }
           const query =
             table === "storage_ordered_owners"
               ? `SELECT jsonb_build_object('workbench_id',project_id,'extension_id',extension_id,

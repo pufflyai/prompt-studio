@@ -23,6 +23,7 @@ import { fenceOrderedNativeText, forgetOrderedTextGeneration } from "./ordered-n
 import { ensureOrderedOwner } from "./ordered-owner";
 import { operationReceipt, operationReceiptsIndexed } from "./ordered-receipt-values";
 import { createOrderedReceiptCache } from "./ordered-receipts-cache";
+import { finishOrderedRecordWrites } from "./ordered-record-publication";
 import {
   decodeOrderedJson as decode,
   encodeOrderedJson as encode,
@@ -277,7 +278,9 @@ export const withOrderedOwner = <T>(
   ensureOrderedOwner(db, owner).then(() =>
     db.transaction(async (tx) => {
       await lockRecordOwner(tx, owner);
-      return run(createOrderedJournal(tx, owner), tx);
+      const result = await run(createOrderedJournal(tx, owner), tx);
+      await finishOrderedRecordWrites(tx, owner);
+      return result;
     }),
   );
 

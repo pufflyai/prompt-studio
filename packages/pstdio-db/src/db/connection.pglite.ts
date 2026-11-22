@@ -47,6 +47,7 @@ import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-c
 import { pgliteIdentity } from "./pglite-identity";
 import { acquirePgliteLock } from "./pglite-lock";
 import { prepareProjectExtensionsUpgrade } from "./project-extensions-upgrade";
+import { prepareRecordRowFinalization } from "./record-row-upgrade";
 import { prepareRecoveryOwnerUpgrade } from "./recovery-owner-upgrade";
 import { prepareResourceLinkOwnerUpgrade } from "./resource-link-owner-upgrade";
 import { prepareCanonicalNumberUpgrade } from "./resource-numbers-upgrade";
@@ -254,6 +255,7 @@ export const createDb = async (options?: {
     let finishArtifactProjectionUpgrade: (() => Promise<void>) | undefined;
     await withMigrationsFolder(async (migrationsFolder) => {
       if (!fs.existsSync(migrationsFolder)) return;
+      const finishRecordRows = await prepareRecordRowFinalization(db, dbPath);
       const finishProjectExtensionsUpgrade = await prepareProjectExtensionsUpgrade(db, dbPath);
       const finishResourceLinkOwnerUpgrade = await prepareResourceLinkOwnerUpgrade(db, dbPath);
       const finishResourcePrefixUpgrade = await prepareResourcePrefixUpgrade(db, dbPath);
@@ -300,6 +302,7 @@ export const createDb = async (options?: {
       await finishFileOwnersUpgrade();
       if (await upgradeLegacyRecords(db, dbPath, { signal: options?.signal, failed: options?.onLegacyConversionError }))
         await retireLegacyRecordTables(db, migrationsFolder);
+      await finishRecordRows?.();
       migrated = true;
     });
     // Copy durable receipts before opening. Remove old rows for both sides of an identity

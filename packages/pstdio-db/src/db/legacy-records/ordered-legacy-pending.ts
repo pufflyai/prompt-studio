@@ -123,7 +123,8 @@ const normalizeBatch = async (
     }
   for (let offset = 0; offset < removed.length; offset += 1000)
     await tx
-      .delete(canonical)
+      .update(canonical)
+      .set({ meta: null, base: null })
       .where(
         and(orderedOwnerWhere(canonical, owner), inArray(canonical.record_id, removed.slice(offset, offset + 1000))),
       );

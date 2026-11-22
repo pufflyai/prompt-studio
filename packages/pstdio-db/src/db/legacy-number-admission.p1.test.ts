@@ -68,11 +68,7 @@ test("opening admits legacy numbers before services and retains newer records wi
       [],
     );
     expect(
-      (
-        await connection.pglite.query(
-          "SELECT value->>'value' AS value FROM storage_current_records WHERE record_id='old'",
-        )
-      ).rows,
+      (await connection.pglite.query("SELECT value->>'value' AS value FROM records WHERE record_id='old'")).rows,
     ).toEqual([{ value: "7" }]);
     const service = createExtensionResourceSequencesDBService(connection.db);
     const input = { projectId: project.id, extensionId: "example.items", kind: "item", prefix: "IT" };
@@ -120,11 +116,7 @@ test("a number-only owner is admitted even after the old stream tables have reti
     await connection.close();
     connection = await createDb({ path });
     expect(
-      (
-        await connection.pglite.query(
-          "SELECT value->>'value' AS value FROM storage_current_records WHERE record_id='only'",
-        )
-      ).rows,
+      (await connection.pglite.query("SELECT value->>'value' AS value FROM records WHERE record_id='only'")).rows,
     ).toEqual([{ value: "9" }]);
     const input = { projectId: project.id, extensionId: "example.items", kind: "item", prefix: "IT" };
     expect((await createExtensionResourceSequencesDBService(connection.db).allocate(input)).shorthand).toBe("IT-20");
@@ -158,9 +150,8 @@ test("interrupted number admission preserves its source and resumes after a comm
       config?: Parameters<DbClient["transaction"]>[1],
     ) => {
       const result = await transaction(run, config);
-      const count = (
-        await connection!.pglite.query<{ count: number }>("SELECT count(*)::int AS count FROM storage_current_records")
-      ).rows[0]!.count;
+      const count = (await connection!.pglite.query<{ count: number }>("SELECT count(*)::int AS count FROM records"))
+        .rows[0]!.count;
       if (count === 100) controller.abort(new Error("Interrupted after committed number page"));
       return result;
     };
@@ -171,7 +162,7 @@ test("interrupted number admission preserves its source and resumes after a comm
     expect(
       (await readDocumentHistory(connection.db)).rows.filter((row) => row.document_id === resourceNumbersDocumentId),
     ).toEqual(original);
-    expect((await connection.pglite.query("SELECT count(*)::int AS count FROM storage_current_records")).rows).toEqual([
+    expect((await connection.pglite.query("SELECT count(*)::int AS count FROM records")).rows).toEqual([
       { count: 100 },
     ]);
     const operations = (await connection.pglite.query("SELECT operation_id FROM operations ORDER BY operation_id"))
@@ -179,7 +170,7 @@ test("interrupted number admission preserves its source and resumes after a comm
     await documents.flushStatistics();
     await connection.close();
     connection = await createDb({ path });
-    expect((await connection.pglite.query("SELECT count(*)::int AS count FROM storage_current_records")).rows).toEqual([
+    expect((await connection.pglite.query("SELECT count(*)::int AS count FROM records")).rows).toEqual([
       { count: 201 },
     ]);
     const saved = (await connection.pglite.query("SELECT operation_id FROM operations ORDER BY operation_id")).rows;
@@ -404,11 +395,7 @@ test("legacy history refuses a colliding authored record and failed recovery lea
       message: "Retained legacy number history conflicts with an existing core record",
     });
     expect(
-      (
-        await connection.pglite.query("SELECT value,deleted FROM storage_current_records WHERE record_id=$1", [
-          recordId,
-        ])
-      ).rows,
+      (await connection.pglite.query("SELECT value,deleted FROM records WHERE record_id=$1", [recordId])).rows,
     ).toEqual([{ value: { authored: "preserve" }, deleted: false }]);
     expect(
       (await connection.pglite.query("SELECT key FROM documents WHERE key='resource-identities'")).rows,

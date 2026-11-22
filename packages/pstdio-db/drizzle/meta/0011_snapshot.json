@@ -1,5 +1,5 @@
 {
-  "id": "fe9fb79d-48d5-42ec-b12f-a0b259cfd25f",
+  "id": "22b976d8-df7e-4037-b30f-a24cc8c501df",
   "prevId": "7831c13a-76db-4e65-a402-222b04fffc09",
   "version": "7",
   "dialect": "postgresql",
@@ -3527,8 +3527,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.storage_ordered_records": {
-      "name": "storage_ordered_records",
+    "public.records": {
+      "name": "records",
       "schema": "",
       "columns": {
         "owner_id": {
@@ -3543,18 +3543,98 @@
           "primaryKey": false,
           "notNull": true
         },
-        "state": {
-          "name": "state",
-          "type": "bytea",
+        "deleted": {
+          "name": "deleted",
+          "type": "boolean",
           "primaryKey": false,
           "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "query_values": {
+          "name": "query_values",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "asset": {
+          "name": "asset",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shared": {
+          "name": "shared",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "native_sources": {
+          "name": "native_sources",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "native_versions": {
+          "name": "native_versions",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "record_lifetime": {
+          "name": "record_lifetime",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "revision": {
+          "name": "revision",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "meta": {
+          "name": "meta",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "base": {
+          "name": "base",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "records_native_sources_idx": {
+          "name": "records_native_sources_idx",
+          "columns": [
+            {
+              "expression": "native_sources",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
       "foreignKeys": {
-        "storage_ordered_records_owner_id_owners_id_fk": {
-          "name": "storage_ordered_records_owner_id_owners_id_fk",
-          "tableFrom": "storage_ordered_records",
+        "records_owner_id_owners_id_fk": {
+          "name": "records_owner_id_owners_id_fk",
+          "tableFrom": "records",
           "tableTo": "owners",
           "columnsFrom": ["owner_id"],
           "columnsTo": ["id"],
@@ -3563,8 +3643,8 @@
         }
       },
       "compositePrimaryKeys": {
-        "storage_ordered_records_owner_id_record_id_pk": {
-          "name": "storage_ordered_records_owner_id_record_id_pk",
+        "records_owner_id_record_id_pk": {
+          "name": "records_owner_id_record_id_pk",
           "columns": ["owner_id", "record_id"]
         }
       },
@@ -3724,120 +3804,6 @@
         "history_sources_pk": {
           "name": "history_sources_pk",
           "columns": ["owner_id", "source_id", "kind", "device_id", "record_id"]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.storage_current_records": {
-      "name": "storage_current_records",
-      "schema": "",
-      "columns": {
-        "owner_id": {
-          "name": "owner_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "record_id": {
-          "name": "record_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "deleted": {
-          "name": "deleted",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "value": {
-          "name": "value",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "query_values": {
-          "name": "query_values",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "asset": {
-          "name": "asset",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "shared": {
-          "name": "shared",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "native_sources": {
-          "name": "native_sources",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "native_versions": {
-          "name": "native_versions",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'{}'::jsonb"
-        },
-        "record_lifetime": {
-          "name": "record_lifetime",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "''"
-        },
-        "revision": {
-          "name": "revision",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "storage_current_records_native_sources_idx": {
-          "name": "storage_current_records_native_sources_idx",
-          "columns": [
-            {
-              "expression": "native_sources",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "gin",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "storage_current_records_owner_id_owners_id_fk": {
-          "name": "storage_current_records_owner_id_owners_id_fk",
-          "tableFrom": "storage_current_records",
-          "tableTo": "owners",
-          "columnsFrom": ["owner_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "storage_current_records_owner_id_record_id_pk": {
-          "name": "storage_current_records_owner_id_record_id_pk",
-          "columns": ["owner_id", "record_id"]
         }
       },
       "uniqueConstraints": {},

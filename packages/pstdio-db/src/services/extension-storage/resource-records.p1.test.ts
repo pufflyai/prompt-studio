@@ -4,6 +4,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import * as schema from "../../db/schemas.pg";
 import { documents as storage_documents, storage_ordered_operations } from "../../db/schemas.pg";
 import { createExtensionUserDataDBService } from "../extension-user-data/extension-user-data";
+import { attachDocumentFiles, documentFilesFor } from "./document-files";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 import { resourceDocumentId } from "./resource-document-persistence";
@@ -126,6 +127,7 @@ test("unfiltered totals follow live records without reading them", async () => {
   const f = await fixture();
   const statements: string[] = [];
   const db = drizzle(f.db.$client, { schema, logger: { logQuery: (query) => statements.push(query) } });
+  attachDocumentFiles(db, documentFilesFor(f.db));
   const records = createDocumentStorageDBService(db as unknown as typeof f.db).open({ owner: f.owner }).records;
   await records.defineIndexes([{ name: "all", fields: { n: { path: ["n"], type: "number" } } }]);
   const total = async () => (await records.aggregate({ index: "all" })).count;
@@ -140,7 +142,7 @@ test("unfiltered totals follow live records without reading them", async () => {
   expect(await total()).toBe(3);
   statements.length = 0;
   await total();
-  expect(statements.filter((query) => query.includes("storage_current_records"))).toEqual([]);
+  expect(statements.filter((query) => query.includes("records"))).toEqual([]);
   await createExtensionUserDataDBService(f.db).deleteForInstance(f.instanceAId);
   expect(await total()).toBe(0);
   expect((await records.query({ index: "all" })).records).toEqual([]);
@@ -158,6 +160,7 @@ test("a group commit larger than one write statement is saved in statements of b
     statements.push({ rows: (JSON.parse(rows) as unknown[]).length, bytes: Buffer.byteLength(rows) });
   };
   const db = drizzle(f.db.$client, { schema, logger: { logQuery } });
+  attachDocumentFiles(db, documentFilesFor(f.db));
   const records = createDocumentStorageDBService(db as unknown as typeof f.db).open({ owner: f.owner }).records;
   const content = "x".repeat(100_000);
   await records.commit({

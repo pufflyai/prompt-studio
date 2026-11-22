@@ -48,10 +48,10 @@ export const benchmarkReads = async (kind: Workload, count: number, root: string
   const counters = async () => {
     await db.execute(sql`select pg_stat_force_next_flush()`);
     const table = await db.execute<Record<string, string>>(
-      sql`select seq_scan, seq_tup_read, idx_scan, idx_tup_fetch from pg_stat_user_tables where relname = 'storage_current_records'`,
+      sql`select seq_scan, seq_tup_read, idx_scan, idx_tup_fetch from pg_stat_user_tables where relname = 'records'`,
     );
     const indexes = await db.execute<{ read: string }>(
-      sql`select coalesce(sum(idx_tup_read), 0) as read from pg_stat_user_indexes where relname = 'storage_current_records'`,
+      sql`select coalesce(sum(idx_tup_read), 0) as read from pg_stat_user_indexes where relname = 'records'`,
     );
     const row = table.rows[0];
     return {
@@ -166,7 +166,7 @@ export const benchmarkReads = async (kind: Workload, count: number, root: string
     emit("projection-size", {
       relations: (
         await db.execute(
-          sql`select relname, pg_total_relation_size(oid) as bytes from pg_class where relname like 'storage_current_records%' or relname like 'storage_query_%'`,
+          sql`select relname, pg_total_relation_size(oid) as bytes from pg_class where relname like 'records%' or relname like 'storage_query_%'`,
         )
       ).rows,
     });

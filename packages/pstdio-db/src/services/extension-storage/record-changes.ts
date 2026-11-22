@@ -1,7 +1,7 @@
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
-import { owners as recordOwners, storage_current_records } from "../../db/schemas.pg";
+import { records as current, owners as recordOwners } from "../../db/schemas.pg";
 import { ensureFileDocument } from "./document-file-persistence";
 import { documentFilesFor } from "./document-files";
 import { lockStorageProject, type NativeProjectedRecord } from "./native-record-projection";
@@ -53,12 +53,13 @@ export const saveRecordChanges = async (
   const before = new Map<string, boolean>();
   for (let offset = 0; offset < ids.length; offset += 1_000) {
     const rows = await tx
-      .select({ id: storage_current_records.record_id, deleted: storage_current_records.deleted })
-      .from(storage_current_records)
+      .select({ id: current.record_id, deleted: current.deleted })
+      .from(current)
       .where(
         and(
-          eq(storage_current_records.owner_id, storageOwnerKey(owner)),
-          inArray(storage_current_records.record_id, ids.slice(offset, offset + 1_000)),
+          eq(current.owner_id, storageOwnerKey(owner)),
+          isNotNull(current.revision),
+          inArray(current.record_id, ids.slice(offset, offset + 1_000)),
         ),
       );
     for (const row of rows) before.set(row.id, !row.deleted);

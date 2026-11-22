@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { drizzle } from "drizzle-orm/pglite";
 import * as schema from "../../db/schemas.pg";
+import { attachDocumentFiles, documentFilesFor } from "./document-files";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 
@@ -18,6 +19,7 @@ test("unchanged index admission checks catalog identities without reloading ever
         },
       },
     });
+    attachDocumentFiles(db, documentFilesFor(f.db));
     const records = createDocumentStorageDBService(db).open({
       owner: { workbenchId: f.projectAId, extensionId: "ext.example" },
     }).records;

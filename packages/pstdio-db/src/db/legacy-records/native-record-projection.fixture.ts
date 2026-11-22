@@ -3,7 +3,11 @@ import type { StorageOwner } from "pstdio-sync";
 import type { StorageRecord } from "pstdio-sync-contracts";
 import { materializeNativeRecord } from "../../services/extension-storage/native-record-projection";
 import { derivedQueryValues, readDerivedQueryIndexes } from "../../services/extension-storage/record-derived-fields";
-import { decodeProjectionValue, encodeProjectionValue } from "../../services/extension-storage/record-projection-codec";
+import {
+  decodeProjectionValue,
+  encodeProjectionValue,
+  projectionKey,
+} from "../../services/extension-storage/record-projection-codec";
 import { storageOwnerKey } from "../../services/extension-storage/storage-owner-key";
 import type { DbClient } from "../connection.pglite";
 import { owners as recordOwners, storage_current_records } from "../schemas.pg";
@@ -21,7 +25,8 @@ export const refreshNativeRecordText = async (tx: Transaction, owner: StorageOwn
       and(
         eq(storage_current_records.owner_id, storageOwnerKey(owner)),
         eq(storage_current_records.deleted, false),
-        sql`${storage_current_records.native_sources} ? ${key}`,
+        sql`${storage_current_records.native_sources} ? ${projectionKey(key)}`,
+        sql`${storage_current_records.revision} IS NOT NULL`,
       ),
     );
   let changed = 0;
@@ -35,8 +40,8 @@ export const refreshNativeRecordText = async (tx: Transaction, owner: StorageOwn
         value: decodeProjectionValue(row.value),
         asset: decodeProjectionValue(row.asset) as StorageRecord["asset"],
         shared: decodeProjectionValue(row.shared) as StorageRecord["shared"],
-        revision: row.revision,
-        nativeSources: row.native_sources,
+        revision: row.revision!,
+        nativeSources: decodeProjectionValue(row.native_sources as never) as unknown as typeof row.native_sources,
         nativeVersions: row.native_versions,
       },
       new Map([[key, content]]),

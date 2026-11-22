@@ -50,9 +50,9 @@ if (process.argv[2] === "--seed") {
           await db.execute(sql`select pg_stat_force_next_flush()`);
           const table = await db.execute<{ seq_rows: string; writes: string }>(sql`
           select seq_tup_read as seq_rows, n_tup_ins+n_tup_upd+n_tup_del as writes
-          from pg_stat_user_tables where relname='storage_current_records'`);
+          from pg_stat_user_tables where relname='records'`);
           const index = await db.execute<{ rows: string }>(sql`
-          select coalesce(sum(idx_tup_read),0) as rows from pg_stat_user_indexes where relname='storage_current_records'`);
+          select coalesce(sum(idx_tup_read),0) as rows from pg_stat_user_indexes where relname='records'`);
           assert.equal(table.rows.length, 1);
           return {
             sequential: Number(table.rows[0]!.seq_rows),
@@ -115,7 +115,7 @@ if (process.argv[2] === "--seed") {
             edits: maintenanceRows.map((value) => ({ recordId: value.id, replace: value })),
           });
           // Exercise the current PostgreSQL projection's real maintenance path, not retired legacy folding.
-          await db.execute(sql`vacuum (analyze) storage_current_records`);
+          await db.execute(sql`vacuum (analyze) records`);
           maintenanceDone = true;
         })();
         void maintenance.catch(() => {});

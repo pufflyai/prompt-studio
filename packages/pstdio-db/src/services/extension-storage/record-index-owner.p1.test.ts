@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { eq, sql } from "drizzle-orm";
 import type { StorageRecordIndex } from "pstdio-sync-contracts";
-import { owners as recordOwners, storage_current_records } from "../../db/schemas.pg";
+import { owners as recordOwners, records } from "../../db/schemas.pg";
 import { migrateExtensionIdentities } from "../extension-identity-migration";
 import { seedDocumentHistory } from "./document-history.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
@@ -77,7 +77,7 @@ test("renamed owners keep their group counts before and after reinstalling index
       .update(recordOwners)
       .set({ revision: 1, live_count: 1 })
       .where(eq(recordOwners.id, legacy.owner_id));
-    await fixture.db.insert(storage_current_records).values({
+    await fixture.db.insert(records).values({
       ...legacy,
       record_id: "one",
       deleted: false,

@@ -3,13 +3,7 @@ import { createSyncSpace } from "pstdio-sync/encryption";
 import { createLegacyRecordStorage, moveCollection, storageRecordId } from "pstdio-sync/records";
 import { createRecordStreamSync } from "pstdio-sync/relay";
 import { createDb } from "../../db/connection.pglite";
-import {
-  projects,
-  storage_current_records,
-  storage_ordered_operations,
-  storage_ordered_records,
-  owners as storageOwners,
-} from "../../db/schemas.pg";
+import { projects, records, storage_ordered_operations, owners as storageOwners } from "../../db/schemas.pg";
 import { captureDocumentFiles, restoreDocumentBackup } from "./document-history.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createRelay } from "./record-stream-relay.fixture";
@@ -229,7 +223,7 @@ test("two devices that move under different key prefixes end with every item und
 });
 
 // Copies a device's ordered storage, without receipts, as a backup taken before its pending save uploaded.
-const tables = [storage_ordered_records, storage_ordered_operations, storage_current_records] as const;
+const tables = [records, storage_ordered_operations] as const;
 const copyStorage = async (from: Device["db"], to: Device["db"]) => {
   const files = await captureDocumentFiles(from);
   await to.transaction(async (tx) => {

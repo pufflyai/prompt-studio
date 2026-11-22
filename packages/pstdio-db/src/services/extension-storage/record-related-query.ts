@@ -21,7 +21,7 @@ export const relatedRecordPredicateSql = (
   index: StorageRecordIndex,
   where: StoragePredicate | undefined,
   indexFor: (name: string) => StorageRecordIndex,
-  rootAlias = "storage_current_records",
+  rootAlias = "records",
 ) => {
   const statement = statementSequence++;
   const compile = (
@@ -73,7 +73,7 @@ export const relatedRecordPredicateSql = (
         const each = selection.every;
         const itemAlias = sql.identifier(`related_item_${statement}_${depth}`);
         const names = each ? new Map(variables).set(each.as, sql`${itemAlias}.value`) : variables;
-        const selected = sql`SELECT 1 FROM storage_current_records AS ${sql.identifier(targetAlias)}
+        const selected = sql`SELECT 1 FROM records AS ${sql.identifier(targetAlias)}
           WHERE ${recordScopeSql(owner, target, targetAlias)} AND ${sql.join(joins, sql` AND `)}
           AND ${compile(target, selection.where, targetAlias, depth + 1, [{ index: source, alias }, ...ancestors], names)}`;
         if (!each) return sql`EXISTS (${selected})`;

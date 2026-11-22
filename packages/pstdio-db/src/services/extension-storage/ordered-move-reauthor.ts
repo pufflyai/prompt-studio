@@ -1,4 +1,4 @@
-import { and, eq, like } from "drizzle-orm";
+import { and, eq, isNotNull, like } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import {
   forwardDisplacedSave,
@@ -8,7 +8,7 @@ import {
   planCatchUpMoves,
   prepareCatchUpMoves,
 } from "pstdio-sync/records";
-import { storage_current_records as current } from "../../db/schemas.pg";
+import { records as current } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
 import { rememberOrderedTextGeneration } from "./ordered-native-recovery";
 import { rebaseOrderedProjection } from "./ordered-rebase";
@@ -26,6 +26,7 @@ const collectionMarkers = async (tx: OrderedTransaction, owner: StorageOwner) =>
       .where(
         and(
           orderedOwnerWhere(current, owner),
+          isNotNull(current.revision),
           eq(current.deleted, false),
           like(current.record_id, '%,"collection-moved",%'),
         ),

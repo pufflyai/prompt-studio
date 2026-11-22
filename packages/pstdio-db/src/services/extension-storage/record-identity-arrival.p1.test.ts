@@ -102,7 +102,7 @@ test("upgrading repairs identities that arrived after the old query-metadata mar
     await f.db.execute(sql`UPDATE owners SET record_indexes = (record_indexes - ${currentMarker}) ||
       jsonb_build_object(${previousMarker}::text, record_indexes->${currentMarker})
       WHERE id = ${storageOwnerKey({ ...owner, extensionId: "pstdio" })}`);
-    await f.db.execute(sql`UPDATE storage_current_records SET query_values = '{}'::jsonb
+    await f.db.execute(sql`UPDATE records SET query_values = '{}'::jsonb
       WHERE owner_id = ${storageOwnerKey({ ...owner, extensionId: "pstdio" })} AND record_id = 'a'`);
     expect((await records.query({ index: "things", limit: 1 })).records[0]?.fields.shorthand).toBe("T-1");
   } finally {

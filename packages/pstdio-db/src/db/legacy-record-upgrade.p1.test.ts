@@ -92,7 +92,7 @@ test("opening an upgraded database converts unsent records and durably isolates 
     ).toEqual([{ extension_id: "example.healthy" }]);
     expect(
       (
-        await connection.pglite.query(`SELECT o.extension_id FROM storage_current_records r
+        await connection.pglite.query(`SELECT o.extension_id FROM records r
       JOIN owners o ON o.id=r.owner_id ORDER BY 1`)
       ).rows,
     ).toEqual([{ extension_id: "example.healthy" }]);
@@ -171,9 +171,9 @@ for (const failure of ["export", "deletion"])
         JOIN owners o ON o.id=p.owner_id`)
         ).rows,
       ).toEqual([{ extension_id: "example.healthy" }]);
-      expect(
-        (await connection.pglite.query("SELECT count(*)::int AS count FROM storage_current_records")).rows,
-      ).toEqual([{ count: 2 }]);
+      expect((await connection.pglite.query("SELECT count(*)::int AS count FROM records")).rows).toEqual([
+        { count: 2 },
+      ]);
       if (failure === "deletion") {
         const backup = JSON.parse(await readFile(diagnostics[0]!.backupPath!, "utf8"));
         expect(backup.tables.storage_record_outbox).toEqual(originals);
@@ -374,7 +374,7 @@ test("released text-owner records convert before the upgraded database opens", a
     ).toEqual([{ extension_id: "example.healthy" }]);
     expect(
       (
-        await connection.pglite.query(`SELECT o.extension_id,r.value FROM storage_current_records r
+        await connection.pglite.query(`SELECT o.extension_id,r.value FROM records r
       JOIN owners o ON o.id=r.owner_id`)
       ).rows,
     ).toEqual([{ extension_id: "example.healthy", value: { title: "example.healthy" } }]);

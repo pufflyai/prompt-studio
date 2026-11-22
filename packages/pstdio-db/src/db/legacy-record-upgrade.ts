@@ -21,9 +21,8 @@ export interface LegacyConversionFailure {
 }
 const emptyFailedOwner = (db: DbClient, owner: StorageOwner, id: number, legacy: boolean) =>
   db.transaction(async (tx) => {
-    await tx.execute(sql`DELETE FROM storage_current_records WHERE owner_id=${id}`);
+    await tx.execute(sql`DELETE FROM records WHERE owner_id=${id}`);
     await tx.delete(storage_documents).where(eq(storage_documents.owner_id, id));
-    await tx.execute(sql`DELETE FROM storage_ordered_records WHERE owner_id=${id}`);
     await tx.execute(sql`DELETE FROM operations WHERE owner_id=${id}`);
     if (legacy) {
       await tx

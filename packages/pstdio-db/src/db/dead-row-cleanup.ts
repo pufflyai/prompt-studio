@@ -42,7 +42,7 @@ export const vacuumDeadRows = async (
     if (options.stopped?.()) break;
     try {
       // PGlite queues each statement behind any open transaction, so a vacuum never runs inside one.
-      if (options.all && name === "storage_current_records") {
+      if (options.all && name === "records") {
         await db.exec(`VACUUM ${name}`);
         if (!options.stopped?.())
           await db.transaction((tx) => analyzeRecordProjection((statement) => tx.exec(statement)));

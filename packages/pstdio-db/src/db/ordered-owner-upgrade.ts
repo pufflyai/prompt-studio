@@ -8,9 +8,11 @@ import {
   storage_ordered_receipts,
   storage_ordered_touches,
 } from "./legacy-operation-schema";
+import { storage_ordered_records } from "./legacy-record-row-schema";
 import { storage_ordered_owners } from "./legacy-records-schema";
 import { restoreOperationFacts } from "./operation-upgrade-values";
-import { operations, owners, storage_ordered_records } from "./schemas.pg";
+import { restoreRecordRows } from "./record-row-upgrade";
+import { operations, owners } from "./schemas.pg";
 import { decodeUpgradeBytes as decodeBytes } from "./upgrade-bytes";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
@@ -103,6 +105,7 @@ const restoreBatch = async (
       getTableName(source.table) as "storage_ordered_touches" | "storage_ordered_receipts",
       expected,
     );
+  if (source.table === storage_ordered_records) return restoreRecordRows(tx, "canonical", expected);
   const tuple = (values: unknown[]) =>
     sql`(${sql.join(
       values.map((value) => sql`${value}`),

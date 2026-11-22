@@ -81,7 +81,7 @@ afterAll(async () => {
 
 const explain = async (projection: SQL) => {
   const result = await f.db.execute(
-    sql`EXPLAIN (ANALYZE, FORMAT JSON) SELECT ${projection} FROM storage_current_records WHERE ${recordScopeSql(await readQueryOwner(f.db, owner), indexes[0])}`,
+    sql`EXPLAIN (ANALYZE, FORMAT JSON) SELECT ${projection} FROM records WHERE ${recordScopeSql(await readQueryOwner(f.db, owner), indexes[0])}`,
   );
   const nodes: Record<string, unknown>[] = [];
   const walk = (value: unknown) => {
@@ -107,7 +107,7 @@ const visits = (nodes: Record<string, unknown>[]) =>
 test("lookup probes the target equality key instead of scanning all placements per resource", async () => {
   const targets = (
     await explain(recordFieldSql(indexes[0], "group", undefined, resolve, await readQueryOwner(f.db, owner)))
-  ).filter((node) => node.Alias === "storage_current_records_lookup");
+  ).filter((node) => node.Alias === "records_lookup");
   expect(visits(targets)).toBeLessThanOrEqual(600);
   expect(targets.some((node) => node["Index Cond"])).toBe(true);
   expect((await records.aggregate({ index: "resources", groupBy: "group", groupLimit: 10 })).groups).toContainEqual({
@@ -169,7 +169,7 @@ test("breadcrumb search walks each candidate lineage once", async () => {
 test("forward array lookups probe only referenced resources instead of every target", async () => {
   const targets = (
     await explain(recordFieldSql(indexes[0], "dependencyTitle", undefined, resolve, await readQueryOwner(f.db, owner)))
-  ).filter((node) => node.Alias === "storage_current_records_lookup");
+  ).filter((node) => node.Alias === "records_lookup");
   expect(visits(targets)).toBeLessThanOrEqual(600);
   expect(
     (

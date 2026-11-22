@@ -59,21 +59,21 @@ export const recordPrefixCandidatesSql = (
   const order = sql.join(recordIndexKeys({ ...index, equality: [] }), sql`, `);
   return sql`(
     WITH ordered_probe AS MATERIALIZED (
-      SELECT * FROM storage_current_records WHERE ${scope} ORDER BY ${order} LIMIT ${probeLimit}
+      SELECT * FROM records WHERE ${scope} ORDER BY ${order} LIMIT ${probeLimit}
     ), selected AS MATERIALIZED (
-      SELECT record_id FROM ordered_probe AS storage_current_records WHERE ${where}
+      SELECT record_id FROM ordered_probe AS records WHERE ${where}
     ), unsafe AS MATERIALIZED (
       SELECT 1 WHERE (SELECT count(*) FROM selected) < ${limit + offset}
-        OR EXISTS (SELECT 1 FROM ordered_probe AS storage_current_records WHERE NOT (${safe}))
+        OR EXISTS (SELECT 1 FROM ordered_probe AS records WHERE NOT (${safe}))
     )
     SELECT record_id AS selected_record_id FROM selected WHERE NOT EXISTS (SELECT 1 FROM unsafe)
     UNION ALL
     SELECT record_id AS selected_record_id FROM (
-      SELECT record_id FROM storage_current_records WHERE EXISTS (SELECT 1 FROM unsafe) AND ${where}
+      SELECT record_id FROM records WHERE EXISTS (SELECT 1 FROM unsafe) AND ${where}
       ORDER BY ${pageOrderSql(index)} LIMIT ${limit + offset}
     ) AS fallback
   ) AS candidates CROSS JOIN LATERAL (
-    SELECT * FROM storage_current_records WHERE storage_current_records.record_id = candidates.selected_record_id
-    AND storage_current_records.owner_id = ${queryOwnerKey(owner)} OFFSET 0
-  ) AS storage_current_records`;
+    SELECT * FROM records WHERE records.record_id = candidates.selected_record_id
+    AND records.owner_id = ${queryOwnerKey(owner)} OFFSET 0
+  ) AS records`;
 };

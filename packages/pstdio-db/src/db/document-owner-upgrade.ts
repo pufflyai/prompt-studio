@@ -6,11 +6,12 @@ import { ensureStorageOwner } from "../services/extension-storage/storage-owner-
 import type { DbClient } from "./connection.pglite";
 import { restoreDocumentFileBatch } from "./document-file-upgrade";
 import { storage_resource_aliases, storage_resource_identities } from "./legacy-number-schema";
+import { storage_current_records } from "./legacy-record-row-schema";
 import { storage_resource_projections } from "./legacy-records-schema";
 import { restoreNumberRevisions } from "./number-revision-upgrade";
+import { restoreRecordRows } from "./record-row-upgrade";
 import { restoreResourceNumbers } from "./resource-numbers-upgrade";
 import { storage_document_operations, storage_document_updates, storage_documents } from "./schemas/storage-documents";
-import { storage_current_records } from "./schemas.pg";
 import { decodeUpgradeBytes as decodeBytes } from "./upgrade-bytes";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
@@ -118,6 +119,7 @@ const restoreBatch = async (
   const ownerIds = new Map<string, number>();
   const expected = [];
   for (const row of batch) expected.push(await normalizedRow(tx, source, row, ownerIds));
+  if (source.table === storage_current_records) return restoreRecordRows(tx, "current", expected);
   const tuple = (values: unknown[]) =>
     sql`(${sql.join(
       values.map((value) => sql`${value}`),

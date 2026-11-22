@@ -33,7 +33,7 @@ export const writeProjectedRecords = async (tx: Transaction, owner: StorageOwner
     asset: encodeProjectionValue(record.asset),
     shared: encodeProjectionValue(record.shared),
     revision: record.revision,
-    native_sources: record.nativeSources ?? {},
+    native_sources: encodeProjectionValue((record.nativeSources ?? {}) as never),
     native_versions: record.nativeVersions ?? {},
     record_lifetime: record.recordLifetime ?? "",
   }));
@@ -54,15 +54,15 @@ export const writeProjectedRecords = async (tx: Transaction, owner: StorageOwner
   };
   for (const input of inputs()) {
     const changed = await tx.execute(sql`
-      INSERT INTO storage_current_records (owner_id, record_id, deleted, value, query_values, asset, shared, revision, native_sources, native_versions, record_lifetime)
+      INSERT INTO records (owner_id, record_id, deleted, value, query_values, asset, shared, revision, native_sources, native_versions, record_lifetime)
       ${input}
       ON CONFLICT (owner_id, record_id) DO UPDATE SET
         deleted = excluded.deleted, value = excluded.value,
-        query_values = excluded.query_values || ${owner.extensionId === "pstdio" ? sql`CASE WHEN storage_current_records.query_values ? ${identityQueryKey} THEN jsonb_build_object(${identityQueryKey}::text, storage_current_records.query_values -> ${identityQueryKey}) ELSE '{}'::jsonb END` : sql`'{}'::jsonb`},
+        query_values = excluded.query_values || ${owner.extensionId === "pstdio" ? sql`CASE WHEN records.query_values ? ${identityQueryKey} THEN jsonb_build_object(${identityQueryKey}::text, records.query_values -> ${identityQueryKey}) ELSE '{}'::jsonb END` : sql`'{}'::jsonb`},
         asset = excluded.asset, shared = excluded.shared,
         revision = excluded.revision, native_sources = excluded.native_sources, native_versions = excluded.native_versions,
         record_lifetime = excluded.record_lifetime
-      WHERE storage_current_records.revision <> excluded.revision OR storage_current_records.record_lifetime <> excluded.record_lifetime
+      WHERE records.revision IS DISTINCT FROM excluded.revision OR records.record_lifetime <> excluded.record_lifetime
       RETURNING record_id
     `);
     projected += changed.rows.length;

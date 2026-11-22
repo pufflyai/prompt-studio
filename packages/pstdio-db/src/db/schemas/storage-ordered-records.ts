@@ -7,24 +7,6 @@ const owner = () => ({
   owner_id: integer("owner_id").notNull(),
 });
 
-/** Only ordered data lives here; public queries use the existing optimistic SQL projection. */
-export const storage_ordered_records = pgTable(
-  "storage_ordered_records",
-  {
-    ...owner(),
-    record_id: text("record_id").notNull(),
-    // JSON bytes preserve every public JSON key/string, including NUL and lone surrogates.
-    state: bytea("state").notNull(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.owner_id, table.record_id] }),
-    foreignKey({
-      columns: [table.owner_id],
-      foreignColumns: [owners.id],
-    }).onDelete("cascade"),
-  ],
-);
-
 export interface OperationReceipt {
   state: "accepted" | "refused";
   admissionFingerprint: string;
@@ -69,5 +51,7 @@ export const operations = pgTable(
     foreignKey({ columns: [table.owner_id], foreignColumns: [owners.id] }).onDelete("cascade"),
   ],
 );
+
+export { records as storage_ordered_records } from "./storage-records";
 // Keep the internal adapter name while the physical schema has one operations table.
 export { operations as storage_ordered_operations };

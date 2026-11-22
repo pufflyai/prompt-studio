@@ -3,6 +3,7 @@ import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { drizzle } from "drizzle-orm/pglite";
 import { resolveCollectionIndexes } from "pstdio-api-contracts";
 import * as schema from "../../db/schemas.pg";
+import { attachDocumentFiles, documentFilesFor } from "./document-files";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
 
@@ -94,10 +95,12 @@ test("conditional saves compare revisions without materializing projected bodies
       schema,
       logger: {
         logQuery: (query) => {
-          if (query.startsWith("select") && query.includes('from "storage_current_records"')) queries.push(query);
+          if (query.startsWith("select") && query.includes('from "records"') && !query.includes('"confirmed_record"'))
+            queries.push(query);
         },
       },
     });
+    attachDocumentFiles(db, documentFilesFor(f.db));
     const owner = { workbenchId: f.projectAId, extensionId: "ext.example" };
     const service = createDocumentStorageDBService(db);
     const records = service.open({ owner }).records;

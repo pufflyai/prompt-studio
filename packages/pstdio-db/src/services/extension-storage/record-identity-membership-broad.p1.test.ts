@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import type { RecordEdit, StoragePredicate, StorageRecordIndex } from "pstdio-sync-contracts";
 import { createDb } from "../../db/connection.pglite";
 import * as schema from "../../db/schemas.pg";
+import { attachDocumentFiles, documentFilesFor } from "./document-files";
 import { createDocumentStorageDBService } from "./document-storage";
 import { attachIndexNodeFiles, createMemoryIndexNodeFiles } from "./index-node-files";
 
@@ -18,6 +19,7 @@ test("broad filtered counts probe each identity without comparing all document p
       },
     },
   });
+  attachDocumentFiles(db, documentFilesFor(connection.db));
   attachIndexNodeFiles(db, createMemoryIndexNodeFiles());
   const owner = { workbenchId: crypto.randomUUID(), extensionId: "search.example" };
   const store = createDocumentStorageDBService(db);
@@ -125,9 +127,7 @@ test("broad filtered counts probe each identity without comparing all document p
       { value: "in-progress", count: 1666 },
       { value: "ready", count: 1667 },
     ]);
-    const main = statements.filter(
-      (s) => s.query.includes("FROM storage_current_records") && s.query.includes("AS count"),
-    );
+    const main = statements.filter((s) => s.query.includes("FROM records") && s.query.includes("AS count"));
     expect(main).toHaveLength(1);
     const plan = await connection.pglite.query(`EXPLAIN (ANALYZE, FORMAT JSON) ${main[0].query}`, main[0].params);
     const rejectedPairs = (value: unknown): number => {

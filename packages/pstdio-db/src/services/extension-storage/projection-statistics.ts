@@ -10,7 +10,7 @@ import { analyzeRecordProjection } from "../../db/record-projection-statistics";
  */
 export const createProjectionStatistics = (
   db: Pick<DbClient, "execute" | "transaction">,
-  table: "storage_current_records" | "log_entries" = "storage_current_records",
+  table: "records" | "log_entries" = "records",
 ) => {
   let changed = 0;
   let pending: Promise<void> | undefined;
@@ -23,7 +23,7 @@ export const createProjectionStatistics = (
   const run = async () => {
     while (await stale()) {
       changed = 0;
-      if (table === "storage_current_records") {
+      if (table === "records") {
         await db.transaction((tx) => analyzeRecordProjection((statement) => tx.execute(sql.raw(statement))));
       } else {
         await db.execute(sql`ANALYZE ${sql.identifier(table)}`);

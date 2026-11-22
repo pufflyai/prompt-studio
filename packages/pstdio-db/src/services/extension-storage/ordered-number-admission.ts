@@ -5,6 +5,7 @@ import { repairCanonicalNumbers } from "./ordered-number-canonical";
 import { OrderedNumberLimitError } from "./ordered-number-limits";
 import { OrderedNumberRangeError } from "./ordered-number-repair";
 import type { applyBoundedOrderedOperation } from "./ordered-policy";
+import { withOrderedRecordSavepoint } from "./ordered-record-publication";
 import type { OrderedTransaction } from "./ordered-sql";
 
 /** A repaired author group must fit both range and storage limits; roll back its claims before refusing it. */
@@ -18,7 +19,7 @@ export const applyOrderedNumberPolicy = async (
 ) => {
   if (owner.extensionId !== coreOwnerId || result.decision.state !== "accepted" || known) return result;
   try {
-    const records = await tx.transaction((nested) =>
+    const records = await withOrderedRecordSavepoint(tx, (nested) =>
       repairCanonicalNumbers(
         createOrderedJournal(nested, owner),
         nested,

@@ -24,9 +24,9 @@ export const writeResourceQueryValues = async (
       fields: encodeProjectionValue({ [identityQueryKey]: { shorthand, aliases: [...new Set(aliases)].sort() } }),
     })),
   ))
-    await tx.execute(sql`UPDATE storage_current_records AS target SET query_values = target.query_values || input.fields
+    await tx.execute(sql`UPDATE records AS target SET query_values = target.query_values || input.fields
       FROM jsonb_to_recordset(${input}::jsonb) AS input(id text, fields jsonb)
-      WHERE target.owner_id = ${storageOwnerKey({ workbenchId: projectId, extensionId: "pstdio" })} AND target.record_id = input.id`);
+      WHERE target.revision IS NOT NULL AND NOT target.deleted AND target.owner_id = ${storageOwnerKey({ workbenchId: projectId, extensionId: "pstdio" })} AND target.record_id = input.id`);
 };
 
 /** Ordered number arbitration runs before the current record is published. Refresh only its touched identities afterward. */
@@ -64,9 +64,9 @@ export const prepareResourceQueryValues = async (tx: Transaction, owner: Storage
       SELECT identity.resource_id AS id, identity.shorthand,
         coalesce((SELECT jsonb_agg(alias.shorthand ORDER BY alias.shorthand COLLATE "C") FROM resource_numbers alias
           WHERE alias.alias AND alias.project_id = identity.project_id AND alias.resource_id = identity.resource_id), '[]'::jsonb) AS aliases
-      FROM resource_numbers identity INNER JOIN storage_current_records source
+      FROM resource_numbers identity INNER JOIN records source
         ON source.owner_id = ${storageOwnerKey({ ...owner, extensionId: "pstdio" })} AND source.record_id = identity.resource_id
-      WHERE identity.current AND identity.project_id = ${owner.workbenchId} AND NOT source.query_values ? ${identityQueryKey}
+      WHERE source.revision IS NOT NULL AND NOT source.deleted AND identity.current AND identity.project_id = ${owner.workbenchId} AND NOT source.query_values ? ${identityQueryKey}
       ORDER BY identity.resource_id COLLATE "C" LIMIT 100`);
     if (!result.rows.length) break;
     await writeResourceQueryValues(tx, owner.workbenchId, result.rows);

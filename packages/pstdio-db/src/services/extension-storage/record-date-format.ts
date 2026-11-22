@@ -2,7 +2,7 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { fingerprint, formatViewDate, type Json, type StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_current_records as current } from "../../db/schemas.pg";
+import { records as current } from "../../db/schemas.pg";
 import { formatCacheFields, formatCachePrefix, formatCacheSource, formatDatabasePrefix } from "./record-format-key";
 import { deleteRecordIndexRows, recordIndexRows as indexes, saveRecordIndexRow } from "./record-index-rows";
 import { decodeProjectionValue, encodeProjectionValue, projectionKey } from "./record-projection-codec";
@@ -93,7 +93,7 @@ export const prepareDateFormatIndexes = async (
           formatViewDate(decodeProjectionValue((row.source as Json) ?? null), format) ?? null,
         ),
       }));
-      await tx.execute(sql`UPDATE storage_current_records AS target SET query_values = target.query_values || jsonb_build_object(${projectionKey(name)}::text, jsonb_build_object('value', input.formatted))
+      await tx.execute(sql`UPDATE records AS target SET query_values = target.query_values || jsonb_build_object(${projectionKey(name)}::text, jsonb_build_object('value', input.formatted))
         FROM jsonb_to_recordset(${JSON.stringify(input)}::jsonb) AS input(record_id text, formatted jsonb)
         WHERE target.owner_id = ${storageOwnerKey(owner)} AND target.record_id = input.record_id`);
       after = rows.at(-1)!.recordId;
@@ -145,7 +145,7 @@ export const pruneDateFormatIndexes = async (
   if (evicted.length) {
     await deleteRecordIndexRows(tx, and(ownerWhere, inArray(indexes.name, evicted))!);
     await tx.execute(
-      sql`UPDATE storage_current_records SET query_values = query_values - ARRAY[${sql.join(
+      sql`UPDATE records SET query_values = query_values - ARRAY[${sql.join(
         evicted.map((key) => sql`${projectionKey(key)}`),
         sql`, `,
       )}]::text[] WHERE owner_id = ${storageOwnerKey(owner)}`,

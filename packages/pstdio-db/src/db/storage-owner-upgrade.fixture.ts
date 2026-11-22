@@ -5,6 +5,7 @@ import { dropRecordIndexes } from "../services/extension-storage/record-index-li
 import type { createDb } from "./connection.pglite";
 import { releasedDocumentRows } from "./released-document-rows.fixture";
 import { releasedOperationQuery } from "./released-operation-rows.fixture";
+import { releasedRecordRows } from "./released-record-rows.fixture";
 import { decodeUpgradeBytes } from "./upgrade-bytes";
 
 /** Preserve seeded data when an app-upgrade fixture reconstructs the released storage schema. */
@@ -17,12 +18,14 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     FROM resource_links l JOIN owners s ON l.source_owner=s.id JOIN owners t ON l.target_owner=t.id) link`);
   const documentTables = ["storage_record_projections", "storage_current_records", "storage_record_indexes"];
   const releasedFiles = await releasedDocumentRows(connection);
+  const recordRows = await releasedRecordRows(connection.db);
   const documents: Record<string, Record<string, unknown>[]> = {
     storage_documents: releasedFiles.storage_documents!,
     storage_document_updates: releasedFiles.storage_document_updates!,
     storage_document_operations: releasedFiles.storage_document_operations!,
   };
   const documentRows = async (table: string) => {
+    if (table === "storage_current_records") return recordRows.storage_current_records!;
     if (table === "storage_record_projections")
       return query(`SELECT jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id,
         'document_id','records','revision',o.revision,'live_count',o.live_count) AS row FROM owners o
@@ -59,7 +62,10 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     "storage_ordered_touches",
     "storage_ordered_receipts",
   ])
-    ordered[table] = await query(releasedOperationQuery(table));
+    ordered[table] =
+      table === "storage_ordered_records"
+        ? recordRows.storage_ordered_records!
+        : await query(releasedOperationQuery(table));
   ordered.storage_ordered_resource_numbers = await query(`SELECT jsonb_build_object('workbench_id',project_id,
     'resource_id',resource_id,'prefix',prefix,'high_water',max(value)::text,
     'extension_id',coalesce(max(extension_id)FILTER(WHERE canonical_current),''),
@@ -101,7 +107,7 @@ export const restoreTextStorageOwners = async (connection: Awaited<ReturnType<ty
     )
   ).rows[0]!;
   await connection.pglite.exec(
-    "DROP TABLE resource_links; DROP TABLE resource_prefixes; DROP TABLE resource_numbers; DROP TABLE storage_current_records; DROP TABLE file_projections; DROP TABLE documents; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE storage_ordered_records; DROP TABLE operations; DROP TABLE IF EXISTS storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
+    "DROP TABLE resource_links; DROP TABLE resource_prefixes; DROP TABLE resource_numbers; DROP TABLE records; DROP TABLE file_projections; DROP TABLE documents; DROP TABLE recovery_point_owners; DROP TABLE recovery_points; DROP TABLE operations; DROP TABLE IF EXISTS storage_ordered_owners; DROP TABLE asset_transfers; DROP TABLE log_entries; DROP TABLE log_streams; DROP TABLE history_sources; DROP TABLE history_rows; DROP TABLE owners",
   );
   const data = {
     artifact_file_projection_roots: releasedFiles.artifact_file_projection_roots!,

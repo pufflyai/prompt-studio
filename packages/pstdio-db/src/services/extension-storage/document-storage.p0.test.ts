@@ -1,6 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
 import { and, eq } from "drizzle-orm";
-import { documents, storage_current_records } from "../../db/schemas.pg";
+import { documents, records } from "../../db/schemas.pg";
 import { createExtensionUserDataDBService } from "../extension-user-data/extension-user-data";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
@@ -84,7 +84,7 @@ test("a durable multi-record update survives a new service and folds without rep
   expect((await reopened.records.read("note")).value).toBe("first\nlast");
   // Reads use one projected row per record instead of a growing per-record document journal.
   expect(await f.db.select().from(documents).where(eq(documents.kind, "shared"))).toHaveLength(0);
-  expect(await f.db.select().from(storage_current_records)).toHaveLength(2);
+  expect(await f.db.select().from(records)).toHaveLength(2);
 });
 
 test("another store sees a complete update only after its database commit", async () => {

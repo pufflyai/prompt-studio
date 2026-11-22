@@ -53,7 +53,7 @@ test("ordered records, pending groups and receipts use the same integer owner an
       });
     const keys = await fixture.db.execute<{ id: number }>(sql`
       SELECT owners.id FROM owners
-      JOIN storage_ordered_records r ON r.owner_id=owners.id
+      JOIN records r ON r.owner_id=owners.id
       JOIN operations o ON o.owner_id=owners.id
       WHERE o.touches @> ARRAY['same-record'] AND o.receipt ? 'earlier'
       ORDER BY owners.id`);

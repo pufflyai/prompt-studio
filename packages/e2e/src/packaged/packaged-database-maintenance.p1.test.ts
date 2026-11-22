@@ -148,8 +148,8 @@ test(
             ).rows,
           ).toEqual([{ sync: null, outbox: null, ordered: null }]);
           const saved = (
-            await inspect.query(`SELECT r.value,o.joined,o.epoch FROM storage_current_records r
-            JOIN owners o ON o.id=r.owner_id WHERE o.extension_id='example.upgrade'`)
+            await inspect.query(`SELECT r.value,o.joined,o.epoch FROM records r
+            JOIN owners o ON o.id=r.owner_id WHERE o.extension_id='example.upgrade' AND r.revision IS NOT NULL`)
           ).rows;
           expect(saved).toEqual([{ value: { title: "kept" }, joined: true, epoch: null }]);
           const pending = (

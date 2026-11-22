@@ -3,7 +3,7 @@ import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId } from "pstdio-sync/records";
 import type { Json, StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { owners, storage_current_records } from "../../db/schemas.pg";
+import { owners, records } from "../../db/schemas.pg";
 import { formatDatabasePrefix } from "./record-format-key";
 import { dropRecordIndexObjects, installRecordIndex } from "./record-index-lifecycle";
 import { recordIndexRows as storage_record_indexes } from "./record-index-rows";
@@ -19,7 +19,7 @@ export const clearOwnerDocuments = async (tx: Transaction, owner: StorageOwner) 
     .from(storage_record_indexes)
     .where(eq(storage_record_indexes.owner_id, storageOwnerKey(owner)));
   await dropRecordIndexObjects(tx, indexes);
-  await tx.delete(storage_current_records).where(eq(storage_current_records.owner_id, storageOwnerKey(owner)));
+  await tx.delete(records).where(eq(records.owner_id, storageOwnerKey(owner)));
   if (owner.extensionId === coreOwnerId) {
     await tx.execute(sql`DELETE FROM resource_numbers WHERE project_id=${owner.workbenchId}`);
   }

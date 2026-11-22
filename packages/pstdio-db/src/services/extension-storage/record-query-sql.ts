@@ -42,15 +42,15 @@ const column = (name: string, alias?: string) =>
   alias ? sql`${sql.identifier(alias)}.${sql.identifier(name)}` : sql`${sql.identifier(name)}`;
 export const recordScopeSql = (owner: QuerySqlOwner, index: StorageRecordIndex, alias?: string) =>
   sql`${column("owner_id", alias)} = ${queryOwnerKey(owner)}
-    AND NOT ${column("deleted", alias)} ${index.prefix === undefined ? sql`` : sql`AND starts_with(${column("record_id", alias)}, ${sqlLiteral(index.prefix)})`}
+    AND ${column("revision", alias)} IS NOT NULL AND NOT ${column("deleted", alias)} ${index.prefix === undefined ? sql`` : sql`AND starts_with(${column("record_id", alias)}, ${sqlLiteral(index.prefix)})`}
     ${index.identity ? sql`AND ${recordIdentitySql(index, alias)} IS NOT NULL` : sql``}`;
-const recordIdentitySql = (index: StorageRecordIndex, alias = "storage_current_records", field = "shorthand") => {
+const recordIdentitySql = (index: StorageRecordIndex, alias = "records", field = "shorthand") => {
   if (!index.identity) throw new Error("Identity index declaration required");
   const id: SQL = recordFieldSql(index, index.identity.idField, alias);
   return sql`(SELECT core.query_values #> ARRAY[${sqlLiteral(identityQueryKey)}, ${sqlLiteral(field)}] FROM resource_numbers AS identity
     INNER JOIN owners target_owner ON target_owner.id = ${column("owner_id", alias)}
     INNER JOIN owners core_owner ON core_owner.project_id = identity.project_id AND core_owner.extension_id = 'pstdio'
-    INNER JOIN storage_current_records core ON core.owner_id = core_owner.id AND core.record_id = identity.resource_id
+    INNER JOIN records core ON core.revision IS NOT NULL AND NOT core.deleted AND core.owner_id = core_owner.id AND core.record_id = identity.resource_id
     WHERE identity.current AND identity.project_id = target_owner.project_id AND identity.extension_id = target_owner.extension_id
       AND identity.kind = ${sqlLiteral(index.identity.kind)} AND identity.resource_id = ${identityQueryText(id)})`;
 };
@@ -80,7 +80,7 @@ export const recordFieldSql = (
   if (field.cases) return conditionalFieldSql(index, name, alias, resolve, owner);
   if (field.lookup) {
     if (!resolve) throw new Error("Related field needs installed indexes");
-    const outer = alias ?? "storage_current_records";
+    const outer = alias ?? "records";
     const value: SQL = recordLookupSql(
       index,
       field,
@@ -93,7 +93,7 @@ export const recordFieldSql = (
     return value;
   }
   if (index.hierarchy?.breadcrumbField === name) {
-    const outer = alias ?? "storage_current_records";
+    const outer = alias ?? "records";
     const value: SQL = recordHierarchySql(
       index,
       outer,
@@ -112,7 +112,7 @@ export const recordFieldSql = (
   if (field.expression) {
     const result: SQL = queryExpressionSql(field.expression, (name, up) => {
       if (up) throw new Error("Computed fields must be record local");
-      return recordFieldSql(index, name, alias ?? "storage_current_records", resolve, owner);
+      return recordFieldSql(index, name, alias ?? "records", resolve, owner);
     });
     return typedComputedFieldSql(result, field);
   }
@@ -331,7 +331,7 @@ const conditionalFieldSql = (
   const field = queryField(index, name);
   if (!field.cases) throw new Error("Conditional field declaration required");
 
-  const outer = alias ?? "storage_current_records";
+  const outer = alias ?? "records";
   const conditionOwner = owner ?? rowQueryOwner(outer);
   const indexFor =
     resolve ??

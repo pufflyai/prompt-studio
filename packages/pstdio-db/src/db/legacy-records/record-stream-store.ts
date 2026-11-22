@@ -76,6 +76,7 @@ export const createRecordStreamStore = (db: DbClient, owner: StorageOwner, deps:
             inArray(storage_current_records.record_id, recordIds.slice(offset, offset + 1_000)),
             eq(storage_current_records.deleted, false),
             isNotNull(storage_current_records.asset),
+            isNotNull(storage_current_records.revision),
           ),
         );
       for (const row of rows) if (row.asset) assets.set(row.id, row.asset);

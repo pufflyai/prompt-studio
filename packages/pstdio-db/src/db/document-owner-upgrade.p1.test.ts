@@ -10,6 +10,7 @@ import { prepareOrderedOwnerUpgrade } from "./ordered-owner-upgrade";
 import { prepareOwnerIndexUpgrade } from "./owner-index-upgrade";
 import { prepareOwnerProjectionUpgrade } from "./owner-projection-upgrade";
 import { countDocumentUpdates, releasedDocumentRows } from "./released-document-rows.fixture";
+import { releasedRecordRows } from "./released-record-rows.fixture";
 
 const tables = [
   "storage_documents",
@@ -38,7 +39,7 @@ const readRestoredTable = async (
   table: string,
   fileRows: Awaited<ReturnType<typeof releasedDocumentRows>>,
 ) => {
-  if (tables.slice(0, 3).includes(table)) return fileRows[table]!;
+  if (tables.slice(0, 3).includes(table) || table === "storage_current_records") return fileRows[table]!;
   if (table === "storage_resource_identities" || table === "storage_resource_aliases") {
     const value =
       table === "storage_resource_identities"
@@ -145,7 +146,7 @@ for (const interruption of ["normal", "schema", "restore"])
       closed = true;
       store = await createDb({ path: previous.path });
       const restored = async () => {
-        const fileRows = await releasedDocumentRows(store!);
+        const fileRows = { ...(await releasedDocumentRows(store!)), ...(await releasedRecordRows(store!.db)) };
         return Promise.all(tables.map((table) => readRestoredTable(store!.pglite, table, fileRows)));
       };
       expect(sorted(await restored())).toEqual(sorted(original));

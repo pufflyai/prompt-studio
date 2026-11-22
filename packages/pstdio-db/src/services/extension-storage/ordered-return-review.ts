@@ -1,7 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { jsonPointer, type OrderedOperation, type OrderedSkip } from "pstdio-sync/records";
-import { storage_current_records as current } from "../../db/schemas.pg";
+import { records as current } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
 import { saveOrderedMarker } from "./ordered-native-metadata";
 import { pendingOrderedOperations } from "./ordered-pending";
@@ -46,7 +46,7 @@ const liveCount = async (tx: OrderedTransaction, owner: StorageOwner) => {
   const [row] = await tx
     .select({ count: sql<number>`count(*)::int` })
     .from(current)
-    .where(and(orderedOwnerWhere(current, owner), eq(current.deleted, false)));
+    .where(and(orderedOwnerWhere(current, owner), eq(current.deleted, false), sql`${current.revision} IS NOT NULL`));
   return row?.count ?? 0;
 };
 

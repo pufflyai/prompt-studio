@@ -1,8 +1,10 @@
-import { sql } from "drizzle-orm";
+import { and, inArray, sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { type OrderedOperation, type OrderedRecord, orderedBody, orderedProjection } from "pstdio-sync/records";
-import { owners as projections } from "../../db/schemas.pg";
+import { records as current, owners as projections } from "../../db/schemas.pg";
 import { jsonBatches } from "./json-batches";
+import { noteRecordPublication } from "./ordered-record-publication";
+import { confirmedRecordBase, orderedRecordMetadata } from "./ordered-record-row";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { encodeProjectionValue } from "./record-projection-codec";
 import { storageOwnerKey } from "./storage-owner-key";
@@ -35,19 +37,40 @@ export const publishOrderedSharedProjection = async (input: {
   }
   // Other saves publish through canonical rebase or the full projection path.
   const records = await Promise.all(visible.map(orderedProjection));
+  // Read only the base's presence. An existing pending base stays inside PostgreSQL;
+  // only the first optimistic shared edit captures the unchanged confirmed view.
+  const baseline = await tx
+    .select({ id: current.record_id, pending: sql<boolean>`${current.base} IS NOT NULL` })
+    .from(current)
+    .where(
+      and(
+        orderedOwnerWhere(current, owner),
+        inArray(
+          current.record_id,
+          visible.map((record) => record.recordId),
+        ),
+      ),
+    );
+  const pending = new Set(baseline.filter((row) => row.pending).map((row) => row.id));
+  const metadata = new Map(visible.map((record) => [record.recordId, orderedRecordMetadata(record)]));
   let projected = 0;
   const rows = records.map((record) => ({
     record_id: record.recordId,
     shared: encodeProjectionValue(record.shared),
     revision: record.revision,
     lifetime: record.recordLifetime,
+    meta: metadata.get(record.recordId),
+    base: pending.has(record.recordId)
+      ? null
+      : Buffer.from(confirmedRecordBase(before.get(record.recordId))).toString("hex"),
   }));
   for (const batch of jsonBatches(rows)) {
     const changed = await tx.execute(sql`
-      UPDATE storage_current_records current SET shared = input.shared, revision = input.revision
-      FROM jsonb_to_recordset(${batch}::jsonb) AS input(record_id text, shared jsonb, revision text, lifetime text)
+      UPDATE records current SET shared = input.shared, revision = input.revision,
+        meta = input.meta, base = COALESCE(current.base, decode(input.base, 'hex'))
+      FROM jsonb_to_recordset(${batch}::jsonb) AS input(record_id text, shared jsonb, revision text, lifetime text, meta jsonb, base text)
       WHERE current.owner_id = ${storageOwnerKey(owner)}
-        AND current.record_id = input.record_id AND current.record_lifetime = input.lifetime AND NOT current.deleted
+        AND current.record_id = input.record_id AND current.record_lifetime = input.lifetime AND NOT current.deleted AND current.revision IS NOT NULL
       RETURNING current.record_id
     `);
     projected += changed.rows.length;
@@ -57,5 +80,10 @@ export const publishOrderedSharedProjection = async (input: {
     .update(projections)
     .set({ revision: sql`${projections.revision} + 1` })
     .where(orderedOwnerWhere(projections, owner));
+  noteRecordPublication(
+    tx,
+    owner,
+    visible.map((record) => record.recordId),
+  );
   return { records, projected };
 };

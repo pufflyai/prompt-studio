@@ -34,8 +34,9 @@ export const publishCommittedOrderedGroup = async (input: {
       owner,
       operation.edits.map((edit) => edit.recordId),
     );
+  const shared = await publishOrderedSharedProjection(input);
   return {
-    ...((await publishOrderedSharedProjection(input)) ?? (await publishOrderedProjection(tx, owner, projected))),
+    ...(shared ?? (await publishOrderedProjection(tx, owner, projected))),
     events: [] as NumberChange[],
     suppressed: new Set(projected.length ? [] : [operation.operationId]),
     recordIds: projected.map((record) => record.recordId),

@@ -1,11 +1,12 @@
-import { and, eq, gt, inArray, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNotNull, sql } from "drizzle-orm";
 import type { DocumentStore, StorageOwner } from "pstdio-sync";
 import type { DbClient } from "../../db/connection.pglite";
 import { documents } from "../../db/schemas/documents";
-import { storage_current_records as current } from "../../db/schemas.pg";
+import { records as current } from "../../db/schemas.pg";
 import { runDocumentTransaction } from "./document-persistence";
 import { orderedFieldMarkerId, readOrderedMarker, saveOrderedMarker } from "./ordered-native-metadata";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { decodeProjectionValue, projectionKey } from "./record-projection-codec";
 
 const bootstrapId = JSON.stringify(["ordered-directory"]);
 const nativeKey = (id: string) => (id.startsWith('["native-markdown",') ? (JSON.parse(id) as string[])[1] : undefined);
@@ -76,11 +77,14 @@ export const createDocumentDirectory = (
         .where(
           and(
             orderedOwnerWhere(current, owner),
-            sql`${current.native_sources} ?| ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(batch)}::jsonb))`,
+            isNotNull(current.revision),
+            sql`${current.native_sources} ?| ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(batch.map(projectionKey))}::jsonb))`,
           ),
         );
       for (const row of rows)
-        for (const [key, source] of Object.entries(row.sources))
+        for (const [key, source] of Object.entries(
+          decodeProjectionValue(row.sources as never) as unknown as import("pstdio-sync/records").NativeRecordSources,
+        ))
           if ("field" in source) hidden.add(JSON.stringify(["native-markdown", key]));
       const markers = await db
         .select({ id: documents.key })

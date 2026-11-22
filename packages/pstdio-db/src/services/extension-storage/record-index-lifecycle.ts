@@ -55,7 +55,7 @@ export const installRecordIndex = async (
   const keys = recordIndexKeys(index);
   if (keys.length) {
     await tx.execute(
-      sql`CREATE INDEX ${sql.identifier(name)} ON storage_current_records (${sql.join(keys, sql`, `)}) WHERE ${recordScopeSql(physical, { ...index, identity: undefined })}`,
+      sql`CREATE INDEX ${sql.identifier(name)} ON records (${sql.join(keys, sql`, `)}) WHERE ${recordScopeSql(physical, { ...index, identity: undefined })}`,
     );
     // Postgres ignores partial-index statistics when estimating rows. Without these,
     // an in-list looks like half the owner and the planner scans every row.
@@ -70,28 +70,26 @@ export const installRecordIndex = async (
     // point lookups and give LIMIT a separate path through the sort keys.
     if (localEqualityCount && orderKeys.length)
       await tx.execute(
-        sql`CREATE INDEX ${sql.identifier(`${name}_o`)} ON storage_current_records (${sql.join(orderKeys, sql`, `)}) WHERE ${recordScopeSql(physical, { ...index, identity: undefined })}`,
+        sql`CREATE INDEX ${sql.identifier(`${name}_o`)} ON records (${sql.join(orderKeys, sql`, `)}) WHERE ${recordScopeSql(physical, { ...index, identity: undefined })}`,
       );
     for (const [position, key] of keys.slice(0, localEqualityCount).entries()) {
       // A composite key only seeks its leading equality field. Preserve ordered seeks
       // when a filter names another declared equality field without fixing that prefix.
       if (position > 0)
         await tx.execute(
-          sql`CREATE INDEX ${sql.identifier(`${name}_e${position}`)} ON storage_current_records (${key}, ${sql.join(orderKeys, sql`, `)}) WHERE ${recordScopeSql(physical, { ...index, identity: undefined })}`,
+          sql`CREATE INDEX ${sql.identifier(`${name}_e${position}`)} ON records (${key}, ${sql.join(orderKeys, sql`, `)}) WHERE ${recordScopeSql(physical, { ...index, identity: undefined })}`,
         );
-      await tx.execute(
-        sql`CREATE STATISTICS ${sql.identifier(`${name}_s${position}`)} ON ${key} FROM storage_current_records`,
-      );
+      await tx.execute(sql`CREATE STATISTICS ${sql.identifier(`${name}_s${position}`)} ON ${key} FROM records`);
     }
     for (const [position, orderBy] of (index.alternateOrders ?? []).entries()) {
       const keys = recordIndexKeys({ ...index, equality: [], orderBy });
       await tx.execute(
-        sql`CREATE INDEX ${sql.identifier(`${name}_a${position}`)} ON storage_current_records (${sql.join(keys, sql`, `)}) WHERE ${recordScopeSql(physical, { ...index, identity: undefined })}`,
+        sql`CREATE INDEX ${sql.identifier(`${name}_a${position}`)} ON records (${sql.join(keys, sql`, `)}) WHERE ${recordScopeSql(physical, { ...index, identity: undefined })}`,
       );
     }
     for (const [position, [field]] of arrayIndexFields(index).entries())
       await tx.execute(
-        sql`CREATE INDEX ${sql.identifier(`${name}_g${position}`)} ON storage_current_records USING gin ((${recordFieldSql(index, field)})) WHERE ${recordScopeSql(physical, { ...index, identity: undefined })}`,
+        sql`CREATE INDEX ${sql.identifier(`${name}_g${position}`)} ON records USING gin ((${recordFieldSql(index, field)})) WHERE ${recordScopeSql(physical, { ...index, identity: undefined })}`,
       );
   }
   await installCountIndex(tx, physical, index, name);

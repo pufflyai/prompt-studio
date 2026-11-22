@@ -3,7 +3,7 @@ import type { StorageOwner } from "pstdio-sync";
 import { typedFieldValue } from "pstdio-sync/records";
 import { canonicalJson, type Json, type StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_current_records as current } from "../../db/schemas.pg";
+import { records as current } from "../../db/schemas.pg";
 import { recordIndexRows as indexes } from "./record-index-rows";
 import { decodeProjectionValue, encodeProjectionValue, projectionKey } from "./record-projection-codec";
 import type { StorageDiagnostics } from "./storage-diagnostics";
@@ -110,7 +110,7 @@ export const rebuildDerivedQueryValues = async (
       ),
     }));
     const merged = sql`(target.query_values - ${removed}) || input.query_values`;
-    await tx.execute(sql`UPDATE storage_current_records AS target SET query_values = ${merged}
+    await tx.execute(sql`UPDATE records AS target SET query_values = ${merged}
       FROM jsonb_to_recordset(${JSON.stringify(input)}::jsonb) AS input(record_id text, query_values jsonb)
       WHERE target.owner_id = ${storageOwnerKey(owner)}
         AND target.record_id = input.record_id AND target.query_values IS DISTINCT FROM (${merged})`);

@@ -7,10 +7,9 @@ import { createRecordStreamSync, decodeOrderedEntry, decodeRecordFrame } from "p
 import { createDb } from "../../db/connection.pglite";
 import {
   projects,
-  storage_current_records,
+  records,
   storage_ordered_operations,
   owners as storage_ordered_owners,
-  storage_ordered_records,
   owners as storageOwners,
 } from "../../db/schemas.pg";
 import { captureDocumentFiles, restoreDocumentBackup } from "./document-history.fixture";
@@ -95,9 +94,8 @@ const save = (operationId: string, model: string) => ({
 const capture = async (db: Awaited<ReturnType<typeof createDb>>["db"]) => ({
   storageOwners: await db.select().from(storageOwners),
   files: await captureDocumentFiles(db),
-  records: await db.select().from(storage_ordered_records),
   operations: await db.select().from(storage_ordered_operations),
-  current: await db.select().from(storage_current_records),
+  current: await db.select().from(records),
 });
 const restore = async (db: Awaited<ReturnType<typeof createDb>>["db"], backup: Awaited<ReturnType<typeof capture>>) => {
   await db.transaction(async (tx) => {
@@ -112,9 +110,8 @@ const restore = async (db: Awaited<ReturnType<typeof createDb>>["db"], backup: A
       return { ...row, owner_id: id };
     };
     await restoreDocumentBackup(tx, backup.files, ownerIds);
-    for (const row of backup.records) await tx.insert(storage_ordered_records).values(mapped(row));
     for (const row of backup.operations) await tx.insert(storage_ordered_operations).values(mapped(row));
-    for (const row of backup.current) await tx.insert(storage_current_records).values(mapped(row));
+    for (const row of backup.current) await tx.insert(records).values(mapped(row));
   });
 };
 

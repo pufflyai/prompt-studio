@@ -11,6 +11,7 @@ import type { createOrderedReceiptIndex, OrderedIndexReference } from "pstdio-sy
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import { storage_ordered_records as canonical } from "../../db/schemas.pg";
 import type { OrderedJournal } from "./ordered-journal";
+import { canonicalRecordPredicate } from "./ordered-record-row";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 
 type Index = ReturnType<typeof createOrderedReceiptIndex>;
@@ -105,7 +106,13 @@ export const queueOrderedCheckpointRepairs = async (input: {
     const rows = await tx
       .select({ id: canonical.record_id })
       .from(canonical)
-      .where(and(orderedOwnerWhere(canonical, owner), after === undefined ? undefined : gt(canonical.record_id, after)))
+      .where(
+        and(
+          orderedOwnerWhere(canonical, owner),
+          canonicalRecordPredicate(canonical),
+          after === undefined ? undefined : gt(canonical.record_id, after),
+        ),
+      )
       .orderBy(canonical.record_id)
       .limit(1_000);
     if (!rows.length) return repaired;

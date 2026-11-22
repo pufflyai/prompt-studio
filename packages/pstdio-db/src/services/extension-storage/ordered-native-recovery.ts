@@ -7,7 +7,7 @@ import * as Y from "yjs";
 import { documents } from "../../db/schemas/documents";
 import {
   storage_ordered_records as canonical,
-  storage_current_records as current,
+  records as current,
   storage_ordered_operations as operations,
 } from "../../db/schemas.pg";
 import { loadFileDocument } from "./document-file-persistence";
@@ -22,7 +22,9 @@ import {
   roomGeneration,
   saveOrderedMarker,
 } from "./ordered-native-metadata";
+import { canonicalRecordFromRow } from "./ordered-record-row";
 import { decodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { decodeProjectionValue } from "./record-projection-codec";
 
 import { storageOwnerKey } from "./storage-owner-key";
 
@@ -40,8 +42,12 @@ const fieldsFor = async (tx: OrderedTransaction, owner: StorageOwner, operation:
     const [row] = await tx
       .select({ sources: current.native_sources })
       .from(current)
-      .where(and(orderedOwnerWhere(current, owner), eq(current.record_id, edit.recordId)));
-    const bindings = { ...row?.sources };
+      .where(and(orderedOwnerWhere(current, owner), isNotNull(current.revision), eq(current.record_id, edit.recordId)));
+    const bindings = {
+      ...(decodeProjectionValue(
+        (row?.sources ?? {}) as never,
+      ) as unknown as import("pstdio-sync/records").NativeRecordSources),
+    };
     for (const change of edit.changes)
       if (
         change.path[0] === "nativeSources" &&
@@ -196,10 +202,10 @@ const privateFieldState = async (
   capturedState?: string,
 ) => {
   const [row] = await tx
-    .select({ state: canonical.state })
+    .select()
     .from(canonical)
     .where(and(orderedOwnerWhere(canonical, owner), eq(canonical.record_id, field.recordId)));
-  const record = before ?? (row ? decodeOrderedJson<OrderedRecord>(row.state) : undefined);
+  const record = before ?? (row ? canonicalRecordFromRow(row) : undefined);
   const document = new Y.Doc();
   try {
     const saved = record?.texts?.[field.pointer];

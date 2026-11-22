@@ -5,7 +5,7 @@ import { convertLegacyOwner as ensureOrderedOwner } from "../../db/legacy-record
 import { readConversion } from "../../db/legacy-records/ordered-conversion-state";
 import { createUnadmittedLegacyFixture } from "../../db/legacy-records/unadmitted.fixture";
 import { storage_record_outbox, storage_record_sync } from "../../db/legacy-records-schema";
-import { projects, storage_current_records } from "../../db/schemas.pg";
+import { records as currentRecords, projects } from "../../db/schemas.pg";
 import { type SavedDocumentFixture, seedDocumentHistory } from "./document-history.fixture";
 import { createDocumentStorageDBService } from "./document-storage";
 import { lockRecordOwner } from "./record-changes";
@@ -29,7 +29,7 @@ export const seedLegacyBacklog = async (
   const clean = count / 3;
   for (let offset = 0; offset < count; offset += 100) {
     const documents: SavedDocumentFixture[] = [];
-    const records: (typeof storage_current_records.$inferInsert)[] = [];
+    const records: (typeof currentRecords.$inferInsert)[] = [];
     const frames: (typeof storage_record_outbox.$inferInsert)[] = [];
     for (let index = offset; index < Math.min(count, offset + 100); index++) {
       const id = `record-${String(index).padStart(6, "0")}`;
@@ -64,7 +64,7 @@ export const seedLegacyBacklog = async (
     }
     await db.transaction(async (tx) => {
       await seedDocumentHistory(tx, documents);
-      await tx.insert(storage_current_records).values(records);
+      await tx.insert(currentRecords).values(records);
       if (frames.length) await tx.insert(storage_record_outbox).values(frames);
     });
   }
@@ -136,7 +136,7 @@ if (import.meta.main) {
         }
         if (mode === "interrupt" && cursor?.phase === "records" && cursor.after) {
           const row = await connection.db.execute(
-            sql`SELECT xmin::text AS version FROM storage_ordered_records WHERE owner_id=${storageOwnerKey(backlogOwner)} AND record_id='record-000000'`,
+            sql`SELECT xmin::text AS version FROM records WHERE owner_id=${storageOwnerKey(backlogOwner)} AND record_id='record-000000'`,
           );
           console.log(JSON.stringify({ checkpoint: cursor, firstVersion: row.rows[0]!.version }));
           // The parent kills this process after observing committed progress.
@@ -148,7 +148,7 @@ if (import.meta.main) {
     try {
       await Promise.all([converting, unrelated]);
       const row = await connection.db.execute(
-        sql`SELECT xmin::text AS version FROM storage_ordered_records WHERE owner_id=${storageOwnerKey(backlogOwner)} AND record_id='record-000000'`,
+        sql`SELECT xmin::text AS version FROM records WHERE owner_id=${storageOwnerKey(backlogOwner)} AND record_id='record-000000'`,
       );
       console.log(
         JSON.stringify({
@@ -160,7 +160,7 @@ if (import.meta.main) {
           firstVersion: row.rows[0]!.version,
           counts: (
             await connection.db.execute(
-              sql`SELECT (SELECT count(*) FROM storage_ordered_records) AS records, (SELECT count(*) FROM operations) AS operations, (SELECT count(*) FROM storage_record_outbox) AS legacy, (SELECT count(*) FROM projects) AS projects, (SELECT count(*) FROM storage_current_records) AS projected, (SELECT count(*) FROM storage_current_records WHERE deleted) AS tombstones`,
+              sql`SELECT (SELECT count(*) FROM records) AS records, (SELECT count(*) FROM operations) AS operations, (SELECT count(*) FROM storage_record_outbox) AS legacy, (SELECT count(*) FROM projects) AS projects, (SELECT count(*) FROM records) AS projected, (SELECT count(*) FROM records WHERE deleted) AS tombstones`,
             )
           ).rows[0],
         }),

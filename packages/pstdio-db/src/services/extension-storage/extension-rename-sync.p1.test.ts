@@ -23,8 +23,7 @@ const historical = "pstdio.pstdio-notes";
 const tables: PgTable[] = [
   s.storage_ordered_operations,
 
-  s.storage_current_records,
-  s.storage_ordered_records,
+  s.records,
 ];
 
 const phaseLogger = () => {

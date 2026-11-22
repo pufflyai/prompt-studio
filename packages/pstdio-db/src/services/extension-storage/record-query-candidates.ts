@@ -34,9 +34,9 @@ export const recordRelatedOrderCandidatesSql = (
     recordFieldSql(index, name, undefined, resolve, owner),
   );
   return sql`(SELECT record_id AS selected_record_id FROM ${source}
-    ORDER BY ${order} LIMIT ${limit + offset}) AS candidates INNER JOIN storage_current_records
-    ON storage_current_records.record_id = candidates.selected_record_id
-    AND storage_current_records.owner_id = ${queryOwnerKey(owner)}`;
+    ORDER BY ${order} LIMIT ${limit + offset}) AS candidates INNER JOIN records
+    ON records.record_id = candidates.selected_record_id
+    AND records.owner_id = ${queryOwnerKey(owner)}`;
 };
 
 /** Merge bounded ordered probes rather than walking the sort index until an IN
@@ -83,9 +83,9 @@ export const recordCandidateSourceSql = (
   const probe = recordEqualitySql(index, field, target, sql`wanted.value`);
   return sql`(SELECT candidate.record_id AS selected_record_id FROM jsonb_array_elements(${encoded}) AS wanted(value)
     CROSS JOIN LATERAL (
-      SELECT record_id FROM storage_current_records WHERE ${where} AND ${probe}
+      SELECT record_id FROM records WHERE ${where} AND ${probe}
       ORDER BY ${pageOrderSql(index, resolve, owner)} LIMIT ${limit + offset}
-    ) AS candidate) AS candidates INNER JOIN storage_current_records
-      ON storage_current_records.record_id = candidates.selected_record_id
-      AND storage_current_records.owner_id = ${queryOwnerKey(owner)}`;
+    ) AS candidate) AS candidates INNER JOIN records
+      ON records.record_id = candidates.selected_record_id
+      AND records.owner_id = ${queryOwnerKey(owner)}`;
 };

@@ -1,5 +1,6 @@
+import { and } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
-import type { OrderedDecision, OrderedOperation, OrderedRecord } from "pstdio-sync/records";
+import type { OrderedDecision, OrderedOperation } from "pstdio-sync/records";
 import { applyOrderedNativeOperation } from "pstdio-sync/records";
 import type { createOrderedReceiptIndex, OrderedIndexReference } from "pstdio-sync/relay";
 import { encodeOrderedEntry, type OrderedReceipt } from "pstdio-sync/relay";
@@ -14,7 +15,8 @@ import { pendingOrderedOperations } from "./ordered-pending";
 import { applyBoundedOrderedOperation } from "./ordered-policy";
 import { orderedBody } from "./ordered-projection";
 import { operationDependencies } from "./ordered-rebase";
-import { decodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { canonicalRecordFromRow, canonicalRecordPredicate } from "./ordered-record-row";
+import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { orderedCursor, readOrderedOwner } from "./ordered-stream-state";
 
 const stagedDependencies = async (
@@ -81,8 +83,16 @@ export const stageOrderedCheckpoint = async (
   resolve?: (id: string, fingerprint: string, epoch: string) => Promise<OrderedDecision | undefined>,
 ) => {
   const row = await readOrderedOwner(tx, owner);
-  const rows = await tx.select().from(canonical).where(orderedOwnerWhere(canonical, owner));
-  const records = new Map(rows.map((row) => [row.record_id, decodeOrderedJson<OrderedRecord>(row.state)]));
+  const rows = await tx
+    .select()
+    .from(canonical)
+    .where(and(orderedOwnerWhere(canonical, owner), canonicalRecordPredicate(canonical)));
+  const records = new Map(
+    rows.flatMap((row) => {
+      const record = canonicalRecordFromRow(row);
+      return record ? [[row.record_id, record] as const] : [];
+    }),
+  );
   const numbers = createStagedNumberRepair(owner, records);
   const receipts = await dirtyOrderedReceipts(journal);
   const decisions = new Map<string, OrderedDecision>();

@@ -151,6 +151,12 @@ const bindTransactions = (client: FileContext, files: ReturnType<typeof createDo
     }
   }) as typeof client.transaction;
 };
+/** Additional database handles on the same engine share the existing file authority. */
+export const attachDocumentFiles = (db: object, files: ReturnType<typeof createDocumentFiles>) => {
+  if (attached.get(db) === files) return;
+  if (attached.has(db)) throw new Error("Document files are already attached to this database");
+  bindTransactions(db as FileContext, files);
+};
 export const documentFilesFor = (db: object, database?: string) => {
   let files = attached.get(db);
   if (!files && database !== undefined) {

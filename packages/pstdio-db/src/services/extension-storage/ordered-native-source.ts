@@ -22,7 +22,7 @@ import {
 import { importTextSource } from "pstdio-sync/text";
 import { fingerprint, type Json } from "pstdio-sync-contracts";
 import { documents } from "../../db/schemas/documents";
-import { storage_current_records as current, owners } from "../../db/schemas.pg";
+import { records as current, owners } from "../../db/schemas.pg";
 import { registerSharedDocument } from "./document-directory";
 import { runDocumentTransaction } from "./document-persistence";
 import { nativeDocumentId, readNativeTextIn } from "./native-record-projection";
@@ -37,6 +37,7 @@ import { rememberOrderedTextGeneration } from "./ordered-native-recovery";
 import { orderedBody } from "./ordered-projection";
 import { rebaseOrderedProjection } from "./ordered-rebase";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { decodeProjectionValue, projectionKey } from "./record-projection-codec";
 import { readProjectedRecords } from "./record-queries";
 
 export interface OrderedSourceInput {
@@ -90,9 +91,16 @@ export const findOrderedNativeField = async (
     })
     .from(current)
     .innerJoin(owners, orderedOwnerWhere(owners, owner))
-    .where(and(orderedOwnerWhere(current, owner), sql`${current.native_sources} ? ${key}`))
+    .where(
+      and(
+        orderedOwnerWhere(current, owner),
+        sql`${current.revision} IS NOT NULL`,
+        eq(current.deleted, false),
+        sql`${current.native_sources} ? ${projectionKey(key)}`,
+      ),
+    )
     .limit(1);
-  const source = row?.sources[key];
+  const source = row ? (decodeProjectionValue(row.sources as never) as unknown as NativeRecordSources)[key] : undefined;
   if (row && !row.deleted && source && "field" in source)
     return {
       recordId: row.recordId,
@@ -259,9 +267,20 @@ export const orderedNativeAddress = async (
   const [row] = await tx
     .select({ deleted: current.deleted, lifetime: current.record_lifetime, sources: current.native_sources })
     .from(current)
-    .where(and(orderedOwnerWhere(current, owner), eq(current.record_id, input.recordId)));
+    .where(
+      and(
+        orderedOwnerWhere(current, owner),
+        eq(current.record_id, input.recordId),
+        sql`${current.revision} IS NOT NULL`,
+      ),
+    );
   if (!row || row.deleted) throw new NativeSourceRetiredError(input.recordId);
-  const key = sourceAddress(row.sources, input.documentKey, row.lifetime, input.field);
+  const key = sourceAddress(
+    decodeProjectionValue(row.sources as never) as unknown as NativeRecordSources,
+    input.documentKey,
+    row.lifetime,
+    input.field,
+  );
   const marker = await readOrderedMarker<OrderedFieldMarker>(tx, owner, orderedFieldMarkerId(key));
   return { documentKey: key, lifetime: row.lifetime, generation: marker?.value.generation };
 };

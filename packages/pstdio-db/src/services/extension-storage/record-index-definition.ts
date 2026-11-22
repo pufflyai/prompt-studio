@@ -4,7 +4,7 @@ import { compareQueryValues, validateIndexes } from "pstdio-sync/records";
 import type { Json, StorageRecordIndex } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { analyzeRecordProjection } from "../../db/record-projection-statistics";
-import { storage_current_records as current } from "../../db/schemas.pg";
+import { records as current } from "../../db/schemas.pg";
 import { traceStorageQuery } from "./query-trace";
 import { retainDateFormatIndexes } from "./record-date-format";
 import { derivedQueryChanges, rebuildDerivedQueryValues } from "./record-derived-fields";

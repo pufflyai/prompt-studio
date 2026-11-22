@@ -31,7 +31,7 @@ import { migrateLegacyPendingBatch } from "./legacy-records/ordered-legacy-pendi
 import { convertLegacyOrderedRecords } from "./legacy-records/ordered-legacy-record";
 import { storage_record_outbox as outbox, storage_ordered_owners as owners } from "./legacy-records-schema";
 import { documents } from "./schemas/documents";
-import { storage_current_records as current } from "./schemas.pg";
+import { records as current } from "./schemas.pg";
 
 const yieldTurn = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 const recordPage = async (tx: OrderedTransaction, owner: StorageOwner, after?: string) =>
@@ -157,7 +157,7 @@ export const convertLegacyOwner = async (db: DbClient, owner: StorageOwner, sign
       if (created.length) {
         const [{ present }] = (
           await tx.execute<{ present: boolean }>(sql`SELECT
-          EXISTS (SELECT 1 FROM storage_current_records WHERE owner_id=${storageOwnerKey(owner)})
+          EXISTS (SELECT 1 FROM records WHERE owner_id=${storageOwnerKey(owner)})
           OR EXISTS (SELECT 1 FROM storage_record_outbox WHERE workbench_id=${owner.workbenchId}
             AND extension_id=${owner.extensionId}) AS present`)
         ).rows;

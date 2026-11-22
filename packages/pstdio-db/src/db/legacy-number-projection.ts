@@ -5,7 +5,7 @@ import { markOrderedNumberProjectionCurrent } from "../services/extension-storag
 import { rebaseOrderedProjection } from "../services/extension-storage/ordered-rebase";
 import { storageOwnerKey } from "../services/extension-storage/storage-owner-key";
 import type { DbClient } from "./connection.pglite";
-import { storage_current_records as current, resource_numbers as numbers } from "./schemas.pg";
+import { records as current, resource_numbers as numbers } from "./schemas.pg";
 
 /** Rebuild the optimistic facets from current records, never from a stale released SQL projection. */
 export const rebuildLegacyNumberProjection = async (db: DbClient, owner: StorageOwner, signal?: AbortSignal) => {
@@ -14,7 +14,7 @@ export const rebuildLegacyNumberProjection = async (db: DbClient, owner: Storage
     signal?.throwIfAborted();
     const { rows } = await db.execute<{ id: string }>(sql`SELECT DISTINCT resource_id AS id FROM resource_numbers n
       WHERE project_id=${owner.workbenchId} AND (current OR alias)
-        AND NOT EXISTS(SELECT 1 FROM storage_current_records r WHERE r.owner_id=${ownerId} AND r.record_id=n.resource_id)
+        AND NOT EXISTS(SELECT 1 FROM records r WHERE r.owner_id=${ownerId} AND r.record_id=n.resource_id)
       ORDER BY resource_id LIMIT 100`);
     if (!rows.length) break;
     await db.transaction(async (tx) => {

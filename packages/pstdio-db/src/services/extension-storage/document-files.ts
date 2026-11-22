@@ -302,6 +302,7 @@ export const createDocumentFiles = (root?: string) => {
 };
 export {
   attachDocumentCollector,
+  attachDocumentFiles,
   documentFilesFor,
   trackDocumentFiles,
   withDocumentFileTransaction,

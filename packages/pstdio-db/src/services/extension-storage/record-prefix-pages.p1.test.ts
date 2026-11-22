@@ -46,7 +46,7 @@ test("short string ordered pages read a bounded candidate set even when the lead
         },
       })),
     });
-    await f.db.execute(sql`ANALYZE storage_current_records`);
+    await f.db.execute(sql`ANALYZE records`);
     const computed: NonNullable<StorageRecordQuery["computed"]> = {
       priority: {
         type: "string",
@@ -85,7 +85,7 @@ test("short string ordered pages read a bounded candidate set even when the lead
     );
     const scans: number[] = [];
     const visit = (node: Record<string, unknown>) => {
-      if (String(node["Node Type"]).includes("Scan") && node["Relation Name"] === "storage_current_records")
+      if (String(node["Node Type"]).includes("Scan") && node["Relation Name"] === "records")
         scans.push(
           (Number(node["Actual Rows"]) + Number(node["Rows Removed by Filter"] ?? 0)) * Number(node["Actual Loops"]),
         );

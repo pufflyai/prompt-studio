@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { owners } from "../../db/schemas.pg";
 import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
+import { canonicalRecordPredicate } from "./ordered-record-row";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { storageOwnerKey } from "./storage-owner-key";
 
@@ -16,8 +17,8 @@ export const readOrderedPending = async (db: Pick<OrderedTransaction, "select">,
       AND p.envelope IS NOT NULL AND p.settled_epoch IS NULL)
     OR (
       NOT (${owners.joined} OR (${owners.epoch} IS NOT NULL AND ${owners.epoch} <> '' AND ${owners.epoch} NOT LIKE 'local:%'))
-      AND EXISTS (SELECT 1 FROM storage_ordered_records c
-        WHERE c.owner_id = ${storageOwnerKey(owner)})
+      AND EXISTS (SELECT 1 FROM records c
+        WHERE c.owner_id = ${storageOwnerKey(owner)} AND ${canonicalRecordPredicate({ meta: sql`c.meta`, base: sql`c.base` })})
     )
   `,
     })

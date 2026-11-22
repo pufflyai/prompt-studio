@@ -1,3 +1,4 @@
+import { and } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { SyncSpace } from "pstdio-sync/encryption";
 import { coreOwnerId, type OrderedAdmission } from "pstdio-sync/records";
@@ -22,6 +23,7 @@ import { coverOrderedReceiptRoot, coversOrderedReceipts } from "./ordered-receip
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
 import { receiptRoots, sameReceiptRoot, saveReceiptRoots } from "./ordered-receipts-state";
 import { nextOrderedUpload } from "./ordered-receipts-upload";
+import { canonicalRecordPredicate } from "./ordered-record-row";
 import { recordOrderedReplaced } from "./ordered-return-review";
 import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { admissibleOrderedFrame, applyOrderedStreamFrame } from "./ordered-stream-frames";
@@ -31,8 +33,13 @@ import { createRecordStreamReferences, type RecordStreamDependencies } from "./r
 import type { NumberChange } from "./resource-number-repair";
 
 const hasCanonicalRecords = async (tx: OrderedTransaction, owner: StorageOwner) =>
-  (await tx.select({ id: canonical.record_id }).from(canonical).where(orderedOwnerWhere(canonical, owner)).limit(1))
-    .length > 0;
+  (
+    await tx
+      .select({ id: canonical.record_id })
+      .from(canonical)
+      .where(and(orderedOwnerWhere(canonical, owner), canonicalRecordPredicate(canonical)))
+      .limit(1)
+  ).length > 0;
 
 // Once per runtime and owner: later connections reuse the files this pass left in order.
 const collectedOwners = new WeakMap<DbClient, Set<string>>();

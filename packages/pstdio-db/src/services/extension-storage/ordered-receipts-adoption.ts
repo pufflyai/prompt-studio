@@ -10,11 +10,7 @@ import {
 import type { createOrderedReceiptIndex, OrderedIndexReference } from "pstdio-sync/relay";
 import { decodeOrderedEntry, type OrderedStreamEntry, type RecordStreamCursor } from "pstdio-sync/relay";
 import { fingerprint, type Json } from "pstdio-sync-contracts";
-import {
-  storage_ordered_records as canonical,
-  storage_current_records as current,
-  owners as projections,
-} from "../../db/schemas.pg";
+import { storage_ordered_records as canonical, records as current, owners as projections } from "../../db/schemas.pg";
 import { dirtyOrderedReceipts } from "./ordered-checkpoint";
 import { queueOrderedCheckpointRepairs } from "./ordered-checkpoint-repair";
 import type { OrderedJournal } from "./ordered-journal";
@@ -24,7 +20,8 @@ import { resetCanonicalNumberIndex } from "./ordered-number-canonical";
 import { rebaseOrderedProjection } from "./ordered-rebase";
 import { createOrderedReceiptResolver } from "./ordered-receipts-resolver";
 import { receiptRoots, sameReceiptRoot, saveReceiptRoots } from "./ordered-receipts-state";
-import { decodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { canonicalRecordFromRow } from "./ordered-record-row";
+import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner, saveOrderedCursor } from "./ordered-stream-state";
 import { captureProjectedRecordChanges } from "./projected-record-changes";
 
@@ -112,9 +109,10 @@ export const adoptOrderedCheckpoint = async (input: {
   // Capture locally settled records before replacing canonical state, including saves made
   // while our own founding upload was in flight. The tail must precede their new saves.
   const local = !(await orderedOwnerJoinedCloud(owned))
-    ? (await tx.select({ state: canonical.state }).from(canonical).where(orderedOwnerWhere(canonical, owner))).map(
-        (row) => decodeOrderedJson<OrderedRecord>(row.state),
-      )
+    ? (await tx.select().from(canonical).where(orderedOwnerWhere(canonical, owner))).flatMap((row) => {
+        const record = canonicalRecordFromRow(row);
+        return record ? [record] : [];
+      })
     : [];
   const previous = receiptRoots(owned.receipt_root);
   const records = entries.flatMap((entry) => (entry.type === "record" ? [entry.record] : []));

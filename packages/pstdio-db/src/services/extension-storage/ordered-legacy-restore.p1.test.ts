@@ -5,7 +5,7 @@ import {
   storage_ordered_owners as owners,
   storage_record_sync as sync,
 } from "../../db/legacy-records-schema";
-import { storage_current_records as current, documents, owners as projections } from "../../db/schemas.pg";
+import { records as current, documents, owners as projections } from "../../db/schemas.pg";
 import { captureDocumentFiles, restoreDocumentBackup } from "./document-history.fixture";
 import { peers } from "./ordered-legacy-pending.fixture";
 
@@ -34,7 +34,6 @@ test("a restored old pending frontier cannot reuse a known raw-frame identity wi
   await b.sync.synchronize();
   await a.sync.synchronize();
   await second.db.transaction(async (tx) => {
-    await tx.execute(sql`DELETE FROM storage_ordered_records`);
     await tx.execute(sql`DELETE FROM operations`);
     await tx.delete(owners);
     await tx.delete(current);

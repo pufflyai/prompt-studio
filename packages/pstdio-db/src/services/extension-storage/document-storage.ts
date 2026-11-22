@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
 import { canonicalOwner } from "pstdio-api-contracts/extension-host";
 import { type AssetStore, hasDocumentUserData, type StorageObserver, type StorageOwner } from "pstdio-sync";
 import { createDocumentStorage } from "pstdio-sync/records";
@@ -7,7 +7,7 @@ import type { StorageTextDeclaration } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
 import { deleteStorageDocuments } from "../../db/delete-storage-documents";
 import { documents as storage_documents } from "../../db/schemas/documents";
-import { storage_current_records } from "../../db/schemas.pg";
+import { records } from "../../db/schemas.pg";
 import { assertStorageOwnerAdmitted } from "../../db/storage-admission";
 import { createEnvironmentDBService } from "../environment/environment";
 import { createDocumentCache } from "./document-cache";
@@ -48,9 +48,9 @@ const notifyNumbers = (listeners: Set<(event: NumberChange) => void>, events: Nu
 
 const hasProjectedRecords = async (db: DbClient, owner: StorageOwner) => {
   const [record] = await db
-    .select({ id: storage_current_records.record_id })
-    .from(storage_current_records)
-    .where(and(eq(storage_current_records.owner_id, storageOwnerKey(owner))))
+    .select({ id: records.record_id })
+    .from(records)
+    .where(and(eq(records.owner_id, storageOwnerKey(owner)), isNotNull(records.revision)))
     .limit(1);
   return !!record;
 };

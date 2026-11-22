@@ -47,7 +47,7 @@ export const installCountIndex = async (
     extension = literal(owner.extensionId);
   const kind = literal(index.identity?.kind ?? "");
   const named = (alias: string) =>
-    `(${alias}.query_values #> ARRAY[${literal(identityQueryKey)},'shorthand']) IS NOT NULL`;
+    `(${alias}.revision IS NOT NULL AND NOT ${alias}.deleted AND (${alias}.query_values #> ARRAY[${literal(identityQueryKey)},'shorthand']) IS NOT NULL)`;
   const mapped = (alias: string) => `${alias}.current AND ${alias}.extension_id=${extension} AND ${alias}.kind=${kind}`;
   const visible = (id: string) =>
     index.identity ? `EXISTS(SELECT 1 FROM ${identities} WHERE rid=${id} AND mapped AND named)` : "true";
@@ -65,13 +65,13 @@ export const installCountIndex = async (
     await tx.execute(
       sql.raw(`INSERT INTO ${identities}
       SELECT resource_id,true,${named("c")} FROM resource_numbers m
-      LEFT JOIN storage_current_records c ON c.owner_id=${coreOwner} AND c.record_id=m.resource_id
+      LEFT JOIN records c ON c.owner_id=${coreOwner} AND c.record_id=m.resource_id
       WHERE m.project_id=${workbench} AND ${mapped("m")}`),
     );
   }
   await tx.execute(
     sql.raw(`INSERT INTO ${records} SELECT record_id,${resource("src")},${bounded(dimensions("src"))}
-    FROM storage_current_records src WHERE ${scope("src")}`),
+    FROM records src WHERE ${scope("src")}`),
   );
   await tx.execute(
     sql.raw(`INSERT INTO ${counts} SELECT dims,count(*) FROM ${records} r WHERE ${visible("r.rid")} GROUP BY dims`),
@@ -93,7 +93,7 @@ export const installCountIndex = async (
       `DECLARE was boolean; now_visible boolean; g record; BEGIN
       SELECT mapped AND named INTO was FROM ${identities} WHERE rid=key;
       IF mapping AND present THEN
-        SELECT EXISTS(SELECT 1 FROM storage_current_records c WHERE c.owner_id=${coreOwner}
+        SELECT EXISTS(SELECT 1 FROM records c WHERE c.owner_id=${coreOwner}
           AND c.record_id=key AND ${named("c")}) INTO now_visible;
         INSERT INTO ${identities} VALUES(key,true,now_visible) ON CONFLICT(rid) DO UPDATE SET named=excluded.named;
       ELSIF mapping THEN
@@ -147,7 +147,7 @@ export const installCountIndex = async (
     RETURN NULL;
   END`,
   );
-  for (const table of ["storage_current_records", ...(index.identity ? ["resource_numbers"] : [])]) {
+  for (const table of ["records", ...(index.identity ? ["resource_numbers"] : [])]) {
     const belongs = (row: string) =>
       table === "resource_numbers"
         ? `(${row}.project_id=${workbench} AND ${mapped(row)})`
@@ -167,7 +167,7 @@ export const installCountIndex = async (
 
 export const dropCountIndex = async (tx: Writer, index: StorageRecordIndex, name: string) => {
   if (!index.countBy?.length) return;
-  for (const table of ["storage_current_records", ...(index.identity ? ["resource_numbers"] : [])])
+  for (const table of ["records", ...(index.identity ? ["resource_numbers"] : [])])
     for (const verb of ["insert", "delete", "update"])
       await tx.execute(sql.raw(`DROP TRIGGER IF EXISTS ${name}_tr_${verb} ON ${table}`));
   await tx.execute(

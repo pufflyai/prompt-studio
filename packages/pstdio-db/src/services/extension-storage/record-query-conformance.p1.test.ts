@@ -244,7 +244,7 @@ test("selective pages use the declared equality and ordering index before materi
       replace: { status: rank % 100 === 0 ? "ready" : "other", rank },
     })),
   });
-  await f.db.execute(sql`ANALYZE storage_current_records`);
+  await f.db.execute(sql`ANALYZE records`);
   const page = await f.records.query({
     index: "ready",
     where: { field: "status", op: "eq", value: "ready" },
@@ -307,7 +307,7 @@ test("selective in-list pages probe the declared equality index after ordinary w
   expect(evidence).toContain('"Rows Removed by Filter":0');
   // Larger owners choose a full scan when the estimate is far above the 100 matches.
   const estimate = await f.db.execute<{ "QUERY PLAN": string }>(
-    sql`EXPLAIN SELECT count(*) FROM storage_current_records WHERE ${recordScopeSql(await readQueryOwner(f.db, owner), index)} AND ${predicateSql(index, where)}`,
+    sql`EXPLAIN SELECT count(*) FROM records WHERE ${recordScopeSql(await readQueryOwner(f.db, owner), index)} AND ${predicateSql(index, where)}`,
   );
   const rows = Math.max(...estimate.rows.map((row) => Number(/rows=(\d+)/.exec(row["QUERY PLAN"])?.[1] ?? 0)));
   expect(rows).toBeLessThan(500);
@@ -597,7 +597,7 @@ test("unfiltered record-ID pages stay bounded within an equality-indexed prefix"
       })),
     ],
   });
-  await f.db.execute(sql`ANALYZE storage_current_records`);
+  await f.db.execute(sql`ANALYZE records`);
   const page = await f.records.query({ index: index.name, limit: 3 });
   expect(page.records.map(({ recordId }) => recordId)).toEqual(["z/0000", "z/0001", "z/0002"]);
   const result = await f.db.execute(
@@ -628,12 +628,12 @@ test("a small ordered page probes each leading equality value even with a compet
     orderBy: [{ field: "rank", direction: "asc" }],
   };
   await f.records.defineIndexes([index, { ...index, name: "byRank", equality: [] }]);
-  await f.db.execute(sql`insert into storage_current_records (owner_id,record_id,deleted,value,revision)
+  await f.db.execute(sql`insert into records (owner_id,record_id,deleted,value,revision)
     select ${storageOwnerKey(f.owner)},'row-'||n,false,jsonb_build_object('group',case n when 1999 then null when 2000 then '' else 'present' end,'rank',lpad(n::text,4,'0')),'1' from generate_series(1,2000) n`);
   // Other collections in the same table make null look common to the planner.
-  await f.db.execute(sql`insert into storage_current_records (owner_id,record_id,deleted,value,revision)
+  await f.db.execute(sql`insert into records (owner_id,record_id,deleted,value,revision)
     select ${storageOwnerKey(f.owner)},'other-'||n,false,'{}'::jsonb,'1' from generate_series(1,4000) n`);
-  await f.db.execute(sql`analyze storage_current_records`);
+  await f.db.execute(sql`analyze records`);
   const where = { field: "group", op: "in" as const, value: [null, "", null] };
   const first = await f.records.query({ index: index.name, where, limit: 1 });
   expect(first.records.map((r) => r.recordId)).toEqual(["row-1999"]);
@@ -695,7 +695,7 @@ test("an indexed boolean keeps a small ordered page bounded with a competing equ
       { recordId: "item-invalid", replace: { published: "true", rank: "invalid" } },
     ],
   });
-  await f.db.execute(sql`ANALYZE storage_current_records`);
+  await f.db.execute(sql`ANALYZE records`);
   const where = { field: "published", op: "eq", value: true } as const;
   const page = (value: boolean | null) => f.records.query({ index: index.name, where: { ...where, value }, limit: 3 });
   expect((await page(true)).records.map((r) => r.recordId)).toEqual(["item-1999", "item-1998", "item-1997"]);

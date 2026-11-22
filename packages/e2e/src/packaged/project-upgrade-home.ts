@@ -95,17 +95,20 @@ const quotaJournalSql = (table: string, numeric: boolean, consolidated: boolean)
 const assertSavedQuota = async (db: PGlite, project: string, owners: string[], migrated: boolean) => {
   const {
     rows: [layout],
-  } = await db.query<{ numeric: boolean; documents: boolean; consolidated: boolean }>(`SELECT EXISTS (
+  } = await db.query<{ numeric: boolean; documents: boolean; consolidated: boolean; records: boolean }>(`SELECT EXISTS (
     SELECT 1 FROM information_schema.columns WHERE table_schema='public'
-      AND table_name='storage_ordered_operations' AND column_name='owner_id') AS numeric, to_regclass('public.operations') IS NOT NULL AS consolidated, EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='storage_current_records' AND column_name='owner_id') AS documents`);
+      AND table_name='storage_ordered_operations' AND column_name='owner_id') AS numeric, to_regclass('public.records') IS NOT NULL AS records, to_regclass('public.operations') IS NOT NULL AS consolidated, EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='storage_current_records' AND column_name='owner_id') AS documents`);
   for (const sample of savedQuota.storage_current_records.filter((row) => owners.includes(row.extension_id))) {
     const owner = migrated ? canonical : sample.extension_id;
-    const { rows } = await db.query<{ value: unknown }>(
-      layout!.documents
-        ? "SELECT value FROM storage_current_records WHERE owner_id=(SELECT id FROM owners WHERE project_id=$1 AND extension_id=$2) AND record_id=$3 AND NOT deleted"
-        : "SELECT value FROM storage_current_records WHERE workbench_id = $1 AND extension_id = $2 AND record_id = $3 AND NOT deleted",
-      [project, owner, sample.record_id],
-    );
+    let query =
+      "SELECT value FROM storage_current_records WHERE workbench_id=$1 AND extension_id=$2 AND record_id=$3 AND NOT deleted";
+    if (layout!.documents)
+      query =
+        "SELECT value FROM storage_current_records WHERE owner_id=(SELECT id FROM owners WHERE project_id=$1 AND extension_id=$2) AND record_id=$3 AND NOT deleted";
+    if (layout!.records)
+      query =
+        "SELECT value FROM records WHERE owner_id=(SELECT id FROM owners WHERE project_id=$1 AND extension_id=$2) AND record_id=$3 AND NOT deleted AND revision IS NOT NULL";
+    const { rows } = await db.query<{ value: unknown }>(query, [project, owner, sample.record_id]);
     assert.deepEqual(
       rows.map((row) => row.value),
       [sample.value],
