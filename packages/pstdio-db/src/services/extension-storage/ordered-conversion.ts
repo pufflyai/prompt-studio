@@ -32,6 +32,7 @@ import { type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
 import { orderedOwnerJoinedCloud, readOrderedOwner } from "./ordered-stream-state";
 import { lockRecordOwner } from "./record-changes";
 import { readProjectedRecords } from "./record-queries";
+import { ensureStorageOwner } from "./storage-owner-key";
 
 const jobs = new WeakMap<DbClient, Map<string, { promise: Promise<void>; signals: Set<AbortSignal> }>>();
 const yieldTurn = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
@@ -158,19 +159,16 @@ export const ensureOrderedOwner = (db: DbClient, owner: StorageOwner, signal?: A
   };
   const run = (async () => {
     checkAbort();
-    const [existing] = await db
-      .select({ id: owners.workbench_id })
-      .from(owners)
-      .where(orderedOwnerWhere(owners, owner));
+    const [existing] = await db.select({ id: owners.owner_id }).from(owners).where(orderedOwnerWhere(owners, owner));
     if (existing && !(await readConversion(db, owner))) return;
     if (!existing)
       await db.transaction(async (tx) => {
         await lockRecordOwner(tx, owner);
         const created = await tx
           .insert(owners)
-          .values({ workbench_id: owner.workbenchId, extension_id: owner.extensionId })
+          .values({ owner_id: await ensureStorageOwner(tx, owner) })
           .onConflictDoNothing()
-          .returning({ id: owners.workbench_id });
+          .returning({ id: owners.owner_id });
         if (created.length) {
           const [legacy] = await tx
             .select({

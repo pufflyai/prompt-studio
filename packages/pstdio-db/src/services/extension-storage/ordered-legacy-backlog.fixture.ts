@@ -14,6 +14,7 @@ import { ensureOrderedOwner } from "./ordered-conversion";
 import { readConversion } from "./ordered-conversion-state";
 import { lockRecordOwner } from "./record-changes";
 import { resourceDocumentId } from "./resource-document-persistence";
+import { storageOwnerKey } from "./storage-owner-key";
 
 export const backlogOwner = { workbenchId: "backlog-project", extensionId: "example.backlog" };
 export const seedLegacyBacklog = async (db: Awaited<ReturnType<typeof createDb>>["db"], count = 60_000) => {
@@ -131,7 +132,7 @@ if (import.meta.main) {
         }
         if (mode === "interrupt" && cursor?.phase === "records" && cursor.after) {
           const row = await connection.db.execute(
-            sql`SELECT xmin::text AS version FROM storage_ordered_records WHERE workbench_id=${backlogOwner.workbenchId} AND extension_id=${backlogOwner.extensionId} AND record_id='record-000000'`,
+            sql`SELECT xmin::text AS version FROM storage_ordered_records WHERE owner_id=${storageOwnerKey(backlogOwner)} AND record_id='record-000000'`,
           );
           console.log(JSON.stringify({ checkpoint: cursor, firstVersion: row.rows[0]!.version }));
           // The parent kills this process after observing committed progress.
@@ -143,7 +144,7 @@ if (import.meta.main) {
     try {
       await Promise.all([converting, unrelated]);
       const row = await connection.db.execute(
-        sql`SELECT xmin::text AS version FROM storage_ordered_records WHERE workbench_id=${backlogOwner.workbenchId} AND extension_id=${backlogOwner.extensionId} AND record_id='record-000000'`,
+        sql`SELECT xmin::text AS version FROM storage_ordered_records WHERE owner_id=${storageOwnerKey(backlogOwner)} AND record_id='record-000000'`,
       );
       console.log(
         JSON.stringify({

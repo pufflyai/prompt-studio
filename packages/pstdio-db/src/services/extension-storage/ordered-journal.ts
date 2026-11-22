@@ -29,10 +29,12 @@ import { createOrderedReceiptCache } from "./ordered-receipts-cache";
 import {
   decodeOrderedJson as decode,
   encodeOrderedJson as encode,
+  orderedAddress,
   orderedOwnerWhere as ownerWhere,
   type OrderedTransaction as Transaction,
 } from "./ordered-sql";
 import { lockRecordOwner } from "./record-changes";
+import { storageOwnerKey } from "./storage-owner-key";
 
 const identityError = () => new Error("Operation identity reused with changed payload");
 
@@ -40,13 +42,12 @@ const bindOperationIdentity = async (tx: Transaction, owner: StorageOwner, id: s
   const [row] = await tx
     .insert(operations)
     .values({
-      workbench_id: owner.workbenchId,
-      extension_id: owner.extensionId,
+      ...orderedAddress(owner),
       operation_id: id,
       fingerprint: identity,
     })
     .onConflictDoUpdate({
-      target: [operations.workbench_id, operations.extension_id, operations.operation_id],
+      target: [operations.owner_id, operations.operation_id],
       // Retain the original identity and payload while returning its locked row
       // in this statement; every admission otherwise repeats a separate lookup.
       set: { fingerprint: operations.fingerprint },
@@ -63,7 +64,7 @@ const queueOrderedOperation = async (
   requestFingerprint: string,
   operation: (id: string) => Promise<typeof operations.$inferSelect | undefined>,
 ) => {
-  const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId };
+  const address = orderedAddress(owner);
   input = await verifyOrderedOperation(input);
   if (isOrderedNativeRequest(requestFingerprint)) {
     validateOrderedNativeOperation(input);
@@ -80,7 +81,7 @@ const queueOrderedOperation = async (
       request_fingerprint: requestFingerprint,
     })
     .onConflictDoUpdate({
-      target: [operations.workbench_id, operations.extension_id, operations.operation_id],
+      target: [operations.owner_id, operations.operation_id],
       // A receipt can reserve the identity before authorship. Only that empty,
       // matching reservation may acquire an envelope and a fresh queue position.
       set: {
@@ -117,7 +118,7 @@ const queueOrderedOperation = async (
 
 /** All calls run inside the same project/owner lock as their projection and relay cursor. */
 export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
-  const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId };
+  const address = orderedAddress(owner);
   const operationWhere = (id: string) => and(ownerWhere(operations, owner), eq(operations.operation_id, id));
   const operation = async (id: string) => {
     const [row] = await tx.select().from(operations).where(operationWhere(id));
@@ -144,11 +145,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
       .from(receipts)
       .innerJoin(
         operations,
-        and(
-          eq(operations.workbench_id, receipts.workbench_id),
-          eq(operations.extension_id, receipts.extension_id),
-          eq(operations.operation_id, receipts.operation_id),
-        ),
+        and(eq(operations.owner_id, receipts.owner_id), eq(operations.operation_id, receipts.operation_id)),
       )
       .where(and(ownerWhere(receipts, owner), eq(receipts.operation_id, id), eq(receipts.epoch, epoch)));
     return row;
@@ -192,7 +189,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
           FROM jsonb_array_elements_text(${JSON.stringify(recordIds.slice(offset, offset + 1_000))}::jsonb) requested(record_id)
           CROSS JOIN LATERAL (
             SELECT membership.operation_id, membership.local_sequence FROM storage_ordered_touches membership
-            WHERE membership.workbench_id = ${owner.workbenchId} AND membership.extension_id = ${owner.extensionId}
+            WHERE membership.owner_id = ${storageOwnerKey(owner)}
               AND membership.record_id = requested.record_id AND membership.local_sequence > ${options.after ?? 0}
             ORDER BY membership.local_sequence LIMIT ${limit}
           ) picked ORDER BY picked.local_sequence LIMIT ${limit}
@@ -257,7 +254,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
           indexed: options.indexed ?? false,
         })
         .onConflictDoUpdate({
-          target: [receipts.workbench_id, receipts.extension_id, receipts.epoch, receipts.operation_id],
+          target: [receipts.owner_id, receipts.epoch, receipts.operation_id],
           // Return the retained decision without replacing its immutable contents.
           set: { indexed: options.indexed ? true : receipts.indexed },
         })

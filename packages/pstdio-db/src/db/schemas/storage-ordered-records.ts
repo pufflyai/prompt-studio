@@ -1,11 +1,10 @@
 import { sql } from "drizzle-orm";
-import { bigint, bigserial, boolean, foreignKey, index, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
-import { projects } from "./projects";
+import { bigint, bigserial, boolean, foreignKey, index, integer, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { owners } from "./owners";
 import { bytea } from "./types";
 
 const owner = () => ({
-  workbench_id: text("workbench_id").notNull(),
-  extension_id: text("extension_id").notNull(),
+  owner_id: integer("owner_id").notNull(),
 });
 
 /** New-format owner state. Its existence does not mean transport has opened. */
@@ -24,8 +23,8 @@ export const storage_ordered_owners = pgTable(
     receipt_root: bytea("receipt_root"),
   },
   (table) => [
-    primaryKey({ columns: [table.workbench_id, table.extension_id] }),
-    foreignKey({ columns: [table.workbench_id], foreignColumns: [projects.id] }).onDelete("cascade"),
+    primaryKey({ columns: [table.owner_id] }),
+    foreignKey({ columns: [table.owner_id], foreignColumns: [owners.id] }).onDelete("cascade"),
   ],
 );
 
@@ -39,10 +38,10 @@ export const storage_ordered_records = pgTable(
     state: bytea("state").notNull(),
   },
   (table) => [
-    primaryKey({ columns: [table.workbench_id, table.extension_id, table.record_id] }),
+    primaryKey({ columns: [table.owner_id, table.record_id] }),
     foreignKey({
-      columns: [table.workbench_id, table.extension_id],
-      foreignColumns: [storage_ordered_owners.workbench_id, storage_ordered_owners.extension_id],
+      columns: [table.owner_id],
+      foreignColumns: [storage_ordered_owners.owner_id],
     }).onDelete("cascade"),
   ],
 );
@@ -65,13 +64,13 @@ export const storage_ordered_operations = pgTable(
     settled_epoch: text("settled_epoch"),
   },
   (table) => [
-    primaryKey({ columns: [table.workbench_id, table.extension_id, table.operation_id] }),
+    primaryKey({ columns: [table.owner_id, table.operation_id] }),
     index("storage_ordered_operations_pending_idx")
-      .on(table.workbench_id, table.extension_id, table.local_sequence)
+      .on(table.owner_id, table.local_sequence)
       .where(sql`${table.envelope} IS NOT NULL AND ${table.settled_epoch} IS NULL`),
     foreignKey({
-      columns: [table.workbench_id, table.extension_id],
-      foreignColumns: [storage_ordered_owners.workbench_id, storage_ordered_owners.extension_id],
+      columns: [table.owner_id],
+      foreignColumns: [storage_ordered_owners.owner_id],
     }).onDelete("cascade"),
   ],
 );
@@ -86,21 +85,12 @@ export const storage_ordered_touches = pgTable(
     local_sequence: bigint("local_sequence", { mode: "number" }).notNull(),
   },
   (table) => [
-    primaryKey({ columns: [table.workbench_id, table.extension_id, table.record_id, table.operation_id] }),
-    index("storage_ordered_touches_operation_idx").on(table.workbench_id, table.extension_id, table.operation_id),
-    index("storage_ordered_touches_record_sequence_idx").on(
-      table.workbench_id,
-      table.extension_id,
-      table.record_id,
-      table.local_sequence,
-    ),
+    primaryKey({ columns: [table.owner_id, table.record_id, table.operation_id] }),
+    index("storage_ordered_touches_operation_idx").on(table.owner_id, table.operation_id),
+    index("storage_ordered_touches_record_sequence_idx").on(table.owner_id, table.record_id, table.local_sequence),
     foreignKey({
-      columns: [table.workbench_id, table.extension_id, table.operation_id],
-      foreignColumns: [
-        storage_ordered_operations.workbench_id,
-        storage_ordered_operations.extension_id,
-        storage_ordered_operations.operation_id,
-      ],
+      columns: [table.owner_id, table.operation_id],
+      foreignColumns: [storage_ordered_operations.owner_id, storage_ordered_operations.operation_id],
     }).onDelete("cascade"),
   ],
 );
@@ -118,19 +108,15 @@ export const storage_ordered_receipts = pgTable(
     indexed: boolean("indexed").notNull().default(false),
   },
   (table) => [
-    primaryKey({ columns: [table.workbench_id, table.extension_id, table.epoch, table.operation_id] }),
+    primaryKey({ columns: [table.owner_id, table.epoch, table.operation_id] }),
     // Deleting an operation cascades here; without this index each delete scans the owner's receipts.
-    index("storage_ordered_receipts_operation_idx").on(table.workbench_id, table.extension_id, table.operation_id),
+    index("storage_ordered_receipts_operation_idx").on(table.owner_id, table.operation_id),
     index("storage_ordered_receipts_unindexed_idx")
-      .on(table.workbench_id, table.extension_id, table.epoch, table.operation_id)
+      .on(table.owner_id, table.epoch, table.operation_id)
       .where(sql`${table.indexed} = false`),
     foreignKey({
-      columns: [table.workbench_id, table.extension_id, table.operation_id],
-      foreignColumns: [
-        storage_ordered_operations.workbench_id,
-        storage_ordered_operations.extension_id,
-        storage_ordered_operations.operation_id,
-      ],
+      columns: [table.owner_id, table.operation_id],
+      foreignColumns: [storage_ordered_operations.owner_id, storage_ordered_operations.operation_id],
     }).onDelete("cascade"),
   ],
 );

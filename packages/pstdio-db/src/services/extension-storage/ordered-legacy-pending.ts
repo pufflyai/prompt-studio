@@ -23,7 +23,7 @@ import { decodeLegacyPendingFrame, type LegacyRecordPlan } from "./ordered-legac
 import { convertLegacyOrderedRecords } from "./ordered-legacy-record";
 import { rememberOrderedTextGeneration } from "./ordered-native-recovery";
 import { indexInitialCanonicalNumbers, removeInitialCanonicalNumbers } from "./ordered-number-canonical";
-import { encodeOrderedJson, type OrderedTransaction, orderedOwnerWhere } from "./ordered-sql";
+import { encodeOrderedJson, type OrderedTransaction, orderedAddress, orderedOwnerWhere } from "./ordered-sql";
 import { readProjectedRecords } from "./record-queries";
 
 type JsonChange = OrderedOperation["edits"][number]["changes"][number];
@@ -162,7 +162,7 @@ export const migrateLegacyPendingBatch = async (
     if (value) prepared.push(value);
   }
   if (prepared.length) {
-    const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId };
+    const address = orderedAddress(owner);
     const saved = await tx
       .insert(operations)
       .values(

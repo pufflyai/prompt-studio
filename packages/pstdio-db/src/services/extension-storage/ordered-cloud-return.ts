@@ -5,6 +5,7 @@ import {
   storage_documents as documents,
   storage_ordered_resource_numbers as numbers,
   storage_ordered_owners as owners,
+  owners as storageOwners,
 } from "../../db/schemas.pg";
 import { ensureOrderedOwner } from "./ordered-conversion";
 import { readConversion } from "./ordered-conversion-state";
@@ -49,16 +50,17 @@ export interface CloudReturnStatus {
 
 const joinedOwners = (db: Pick<DbClient, "select">, projectIds?: string[]) =>
   db
-    .select({ workbenchId: owners.workbench_id, extensionId: owners.extension_id })
+    .select({ workbenchId: storageOwners.project_id, extensionId: storageOwners.extension_id })
     .from(owners)
+    .innerJoin(storageOwners, eq(owners.owner_id, storageOwners.id))
     .where(
       and(
-        projectIds ? inArray(owners.workbench_id, projectIds) : undefined,
+        projectIds ? inArray(storageOwners.project_id, projectIds) : undefined,
         or(
           owners.joined,
           sql`${owners.epoch} IS NOT NULL AND ${owners.epoch} <> '' AND ${owners.epoch} NOT LIKE 'local:%'`,
-          sql`EXISTS (SELECT 1 FROM storage_record_sync l WHERE l.workbench_id = ${owners.workbench_id}
-            AND l.extension_id = ${owners.extension_id} AND l.joined)`,
+          sql`EXISTS (SELECT 1 FROM storage_record_sync l WHERE l.workbench_id = ${storageOwners.project_id}
+            AND l.extension_id = ${storageOwners.extension_id} AND l.joined)`,
         ),
       ),
     );

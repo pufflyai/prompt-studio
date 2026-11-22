@@ -2,7 +2,11 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import type { StorageAggregateResult } from "pstdio-sync-contracts";
 import type { DbClient } from "../../db/connection.pglite";
-import { storage_record_sync as legacy, storage_ordered_owners as owners } from "../../db/schemas.pg";
+import {
+  storage_record_sync as legacy,
+  storage_ordered_owners as owners,
+  owners as storageOwners,
+} from "../../db/schemas.pg";
 
 /** Local epochs are fresh UUIDs after owner recreation. Joined/restored Cloud owners stay uncached. */
 export const aggregateCacheEpochs = async (
@@ -13,14 +17,19 @@ export const aggregateCacheEpochs = async (
   const extensions = [...new Set([owner.extensionId, ...(identities ? ["pstdio"] : [])])];
   const rows = await connection
     .select({
-      extensionId: owners.extension_id,
+      ownerId: owners.owner_id,
+      extensionId: storageOwners.extension_id,
       epoch: owners.epoch,
       joined: owners.joined,
       legacyJoined: legacy.joined,
     })
     .from(owners)
-    .leftJoin(legacy, and(eq(legacy.workbench_id, owners.workbench_id), eq(legacy.extension_id, owners.extension_id)))
-    .where(and(eq(owners.workbench_id, owner.workbenchId), inArray(owners.extension_id, extensions)));
+    .innerJoin(storageOwners, eq(owners.owner_id, storageOwners.id))
+    .leftJoin(
+      legacy,
+      and(eq(legacy.workbench_id, storageOwners.project_id), eq(legacy.extension_id, storageOwners.extension_id)),
+    )
+    .where(and(eq(storageOwners.project_id, owner.workbenchId), inArray(storageOwners.extension_id, extensions)));
   if (
     rows.length !== extensions.length ||
     rows.some(
@@ -31,7 +40,10 @@ export const aggregateCacheEpochs = async (
     )
   )
     return;
-  return extensions.map((id) => rows.find((row) => row.extensionId === id)!.epoch);
+  return extensions.map((id) => {
+    const row = rows.find((row) => row.extensionId === id)!;
+    return [row.ownerId, row.epoch];
+  });
 };
 
 const maximumEntryBytes = 65_536;

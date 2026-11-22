@@ -29,6 +29,7 @@ import { prepareFileOwnersUpgrade } from "./file-owners-upgrade";
 import { prepareHistoryOwnerUpgrade } from "./history-owner-upgrade";
 import { prepareLogOwnerUpgrade } from "./log-owner-upgrade";
 import { openPglite } from "./open-pglite";
+import { prepareOrderedOwnerUpgrade } from "./ordered-owner-upgrade";
 import { canonicalDbPath, resolveDbPath } from "./paths";
 import { type PgliteRetirementPhase, prepareCurrentPgliteHome } from "./pglite-current-home";
 import { pgliteIdentity } from "./pglite-identity";
@@ -233,6 +234,7 @@ export const createDb = async (options?: {
     await withMigrationsFolder(async (migrationsFolder) => {
       if (!fs.existsSync(migrationsFolder)) return;
       const finishProjectExtensionsUpgrade = await prepareProjectExtensionsUpgrade(db, dbPath);
+      const finishOrderedOwnerUpgrade = await prepareOrderedOwnerUpgrade(db, dbPath);
       const finishAssetOwnerUpgrade = await prepareAssetOwnerUpgrade(db, dbPath);
       const finishHistoryOwnerUpgrade = await prepareHistoryOwnerUpgrade(db, dbPath);
       const finishLogOwnerUpgrade = await prepareLogOwnerUpgrade(db, dbPath);
@@ -249,6 +251,7 @@ export const createDb = async (options?: {
       await finishLogOwnerUpgrade?.();
       await finishHistoryOwnerUpgrade?.();
       await finishAssetOwnerUpgrade?.();
+      await finishOrderedOwnerUpgrade?.();
       await finishPreferencesUpgrade?.();
       await finishExtensionPreferencesUpgrade?.();
       await finishConnectionCredentialsUpgrade?.();

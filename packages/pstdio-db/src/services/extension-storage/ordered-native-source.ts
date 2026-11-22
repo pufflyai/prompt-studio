@@ -71,10 +71,7 @@ export const findOrderedNativeField = async (
       deleted: current.deleted,
     })
     .from(current)
-    .innerJoin(
-      owners,
-      and(eq(owners.workbench_id, current.workbench_id), eq(owners.extension_id, current.extension_id)),
-    )
+    .innerJoin(owners, orderedOwnerWhere(owners, owner))
     .where(and(orderedOwnerWhere(current, owner), sql`${current.native_sources} ? ${key}`))
     .limit(1);
   const source = row?.sources[key];

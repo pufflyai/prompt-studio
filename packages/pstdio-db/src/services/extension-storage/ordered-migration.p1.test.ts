@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { createOrderedLogStore } from "./ordered-log-store";
 import { createProjectionStatistics } from "./projection-statistics";
 import { createResourceRecords as createLegacyRecords } from "./resource-records";
 
@@ -77,4 +78,26 @@ test("reading an outcome before any record access cannot bypass the owner's upgr
     edits: [{ recordId: "card", expectedRevision: record.revision, set: { "/title": "saved" } }],
   });
   expect((await records.read("card")).value).toEqual({ title: "saved" });
+});
+
+test("a log owner created before record access still converts its legacy records", async () => {
+  const f = await fixture();
+  await f.legacy.commit({
+    operationId: "legacy-save",
+    edits: [{ recordId: "retained", replace: { title: "Original" } }],
+  });
+  await createOrderedLogStore(f.db, {
+    owner: f.owner,
+    name: "activity",
+    scope: "project",
+    stream: "laptop",
+    writerId: "laptop",
+  }).append({ text: "Created the shared integer owner" });
+  const records = createDocumentStorageDBService(f.db).open({ owner: f.owner }).records;
+  expect((await records.read("retained")).value).toEqual({ title: "Original" });
+  await records.commit({
+    operationId: "after-conversion",
+    edits: [{ recordId: "retained", set: { "/title": "Changed" } }],
+  });
+  expect((await records.read("retained")).value).toEqual({ title: "Changed" });
 });

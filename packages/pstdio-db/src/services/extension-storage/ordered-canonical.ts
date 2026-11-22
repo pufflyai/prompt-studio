@@ -1,4 +1,5 @@
 import { and, inArray, sql } from "drizzle-orm";
+import type { PgInsertValue } from "drizzle-orm/pg-core";
 import type { StorageOwner } from "pstdio-sync";
 import type { OrderedRecord } from "pstdio-sync/records";
 import { storage_ordered_records as canonical } from "../../db/schemas.pg";
@@ -6,11 +7,12 @@ import {
   decodeOrderedJson as decode,
   encodeOrderedJson as encode,
   type OrderedTransaction,
+  orderedAddress,
   orderedOwnerWhere as ownerWhere,
 } from "./ordered-sql";
 
 export const createOrderedCanonical = (tx: OrderedTransaction, owner: StorageOwner) => {
-  const address = { workbench_id: owner.workbenchId, extension_id: owner.extensionId };
+  const address = orderedAddress(owner);
   return {
     async canonical(ids: string[]) {
       const found = new Map<string, OrderedRecord>();
@@ -24,7 +26,7 @@ export const createOrderedCanonical = (tx: OrderedTransaction, owner: StorageOwn
       return found;
     },
     async saveCanonical(records: OrderedRecord[]) {
-      let batch: (typeof canonical.$inferInsert)[] = [];
+      let batch: PgInsertValue<typeof canonical>[] = [];
       let bytes = 0;
       const flush = async () => {
         if (!batch.length) return;
@@ -32,7 +34,7 @@ export const createOrderedCanonical = (tx: OrderedTransaction, owner: StorageOwn
           .insert(canonical)
           .values(batch)
           .onConflictDoUpdate({
-            target: [canonical.workbench_id, canonical.extension_id, canonical.record_id],
+            target: [canonical.owner_id, canonical.record_id],
             set: { state: sql`excluded.state` },
           });
         batch = [];

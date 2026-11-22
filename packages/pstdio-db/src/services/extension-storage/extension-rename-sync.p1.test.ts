@@ -10,6 +10,7 @@ import * as s from "../../db/schemas.pg";
 import { migrateExtensionIdentities } from "../extension-identity-migration";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createRelay } from "./record-stream-relay.fixture";
+import { storageOwnerKey } from "./storage-owner-key";
 
 const cleanup: (() => Promise<unknown>)[] = [];
 afterEach(async () => {
@@ -146,7 +147,11 @@ test("two upgraded devices, an offline return and a clean join share encrypted s
       rows: await seed.db
         .select()
         .from(table)
-        .where(eq(getTableColumns(table).extension_id!, current)),
+        .where(
+          "owner_id" in getTableColumns(table)
+            ? eq(getTableColumns(table).owner_id!, storageOwnerKey(owner))
+            : eq(getTableColumns(table).extension_id!, current),
+        ),
     })),
   );
   const [numericOwner] = await seed.db.select().from(s.owners).where(eq(s.owners.extension_id, current));
@@ -176,12 +181,19 @@ test("two upgraded devices, an offline return and a clean join share encrypted s
         if (rows.length) await tx.insert(s.storage_log_entries).values(rows);
       }
       for (const { table, rows } of snapshot)
-        if (rows.length) await tx.insert(table).values(rows.map((row) => ({ ...row, extension_id: historical })));
+        if (rows.length)
+          await tx
+            .insert(table)
+            .values(
+              rows.map((row) =>
+                "owner_id" in row ? { ...row, owner_id: copiedOwner!.id } : { ...row, extension_id: historical },
+              ),
+            );
     });
     const before = await db.select().from(s.storage_ordered_operations);
     await migrateExtensionIdentities(db);
     const after = await db.select().from(s.storage_ordered_operations);
-    expect(after.map(({ extension_id: _, ...row }) => row)).toEqual(before.map(({ extension_id: _, ...row }) => row));
+    expect(after).toEqual(before);
     await migrateExtensionIdentities(db);
     return connect(db);
   };

@@ -1,10 +1,10 @@
 import { expect, test } from "bun:test";
-import { eq } from "drizzle-orm";
 import type { StorageRecordIndex } from "pstdio-sync-contracts";
 import { storage_ordered_owners as owners } from "../../db/schemas.pg";
 import { createProjectsDBService } from "../projects/projects";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createExtensionStorageFixture } from "./extension-storage.fixture";
+import { orderedOwnerWhere } from "./ordered-sql";
 
 test("aggregate snapshots isolate callers and owners and follow record and index changes", async () => {
   const fixture = await createExtensionStorageFixture();
@@ -60,7 +60,7 @@ test.each(["local", "Cloud"])("aggregate snapshots do not survive %s project del
       await fixture.db
         .update(owners)
         .set({ epoch: "same-cloud-checkpoint", joined: true })
-        .where(eq(owners.workbench_id, owner.workbenchId));
+        .where(orderedOwnerWhere(owners, owner));
     expect((await original.aggregate(selection)).count).toBe(1);
     await projects.hardDelete(fixture.projectAId);
     await projects.create({ id: fixture.projectAId, name: "Recreated" });
@@ -74,7 +74,7 @@ test.each(["local", "Cloud"])("aggregate snapshots do not survive %s project del
       await fixture.db
         .update(owners)
         .set({ epoch: "same-cloud-checkpoint", joined: true })
-        .where(eq(owners.workbench_id, owner.workbenchId));
+        .where(orderedOwnerWhere(owners, owner));
     expect((await replacement.aggregate(selection)).count).toBe(0);
   } finally {
     await fixture.close();

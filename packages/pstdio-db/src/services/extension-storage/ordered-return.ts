@@ -304,11 +304,7 @@ const unfoldedRecords = async (tx: Pick<OrderedTransaction, "selectDistinct">, o
     .from(touches)
     .innerJoin(
       operations,
-      and(
-        eq(operations.workbench_id, touches.workbench_id),
-        eq(operations.extension_id, touches.extension_id),
-        eq(operations.operation_id, touches.operation_id),
-      ),
+      and(eq(operations.owner_id, touches.owner_id), eq(operations.operation_id, touches.operation_id)),
     )
     .where(and(pendingWhere(owner), eq(operations.delivered, false), unfolded));
   return rows.map((row) => row.recordId);

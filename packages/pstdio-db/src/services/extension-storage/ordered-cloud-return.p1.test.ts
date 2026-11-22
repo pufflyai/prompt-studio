@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from "bun:test";
-import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, isNotNull, isNull, sql } from "drizzle-orm";
 import { createSyncSpace } from "pstdio-sync/encryption";
 import { createRecordStreamSync } from "pstdio-sync/relay";
 import type { Json } from "pstdio-sync-contracts";
@@ -8,6 +8,7 @@ import { storage_ordered_operations as operations, projects } from "../../db/sch
 import { createDocumentStorageDBService } from "./document-storage";
 import { readConversion, saveConversion } from "./ordered-conversion-state";
 import { orderedReturnLimits, readOrderedReturnState } from "./ordered-return";
+import { orderedOwnerWhere } from "./ordered-sql";
 import { createRelay } from "./record-stream-relay.fixture";
 
 const cleanup: (() => Promise<unknown>)[] = [];
@@ -64,7 +65,7 @@ const devices = async () => {
         .select({ count: sql<number>`count(*)::int` })
         .from(operations)
         .where(
-          and(eq(operations.workbench_id, projectId), isNotNull(operations.envelope), isNull(operations.settled_epoch)),
+          and(orderedOwnerWhere(operations, owner), isNotNull(operations.envelope), isNull(operations.settled_epoch)),
         );
       return row!.count;
     };

@@ -4,6 +4,7 @@ import { createDb } from "../db/connection.pglite";
 import * as s from "../db/schemas.pg";
 import { migrateExtensionIdentities } from "./extension-identity-migration";
 import { createExtensionSettingsDBService } from "./extension-settings/extension-settings";
+import { ensureStorageOwner } from "./extension-storage/storage-owner-key";
 
 const old = "pstdio.pstdio-notes";
 const next = "pstdio.notes";
@@ -67,6 +68,9 @@ test("migration retains complete owner history, immutable bytes, sequence positi
       updated_at: now,
     });
     const owner = { workbench_id: "project", extension_id: old };
+    const orderedOwner = {
+      owner_id: await ensureStorageOwner(db, { workbenchId: owner.workbench_id, extensionId: old }),
+    };
     const bytes = new Uint8Array([0, 255, 19, 0, 4]);
     await db
       .insert(s.storage_documents)
@@ -76,15 +80,15 @@ test("migration retains complete owner history, immutable bytes, sequence positi
       .values({ ...owner, document_id: "records", revision: 31, update: bytes });
     await db
       .insert(s.storage_ordered_owners)
-      .values({ ...owner, epoch: "epoch", after: 42, joined: true, pending_bytes: 10, receipt_root: bytes });
+      .values({ ...orderedOwner, epoch: "epoch", after: 42, joined: true, pending_bytes: 10, receipt_root: bytes });
     await db
       .insert(s.storage_ordered_operations)
-      .values({ ...owner, operation_id: "save", fingerprint: "immutable", local_sequence: 19, envelope: bytes });
+      .values({ ...orderedOwner, operation_id: "save", fingerprint: "immutable", local_sequence: 19, envelope: bytes });
     await db
       .insert(s.storage_ordered_touches)
-      .values({ ...owner, operation_id: "save", record_id: "note", local_sequence: 19 });
+      .values({ ...orderedOwner, operation_id: "save", record_id: "note", local_sequence: 19 });
     await db.insert(s.storage_ordered_receipts).values({
-      ...owner,
+      ...orderedOwner,
       operation_id: "save",
       epoch: "epoch",
       admission_fingerprint: "receipt",
@@ -116,22 +120,27 @@ test("migration retains complete owner history, immutable bytes, sequence positi
     });
     expect((await db.select().from(s.storage_document_updates))[0]?.update).toEqual(bytes);
     expect((await db.select().from(s.storage_ordered_operations))[0]).toMatchObject({
-      extension_id: next,
+      owner_id: orderedOwner.owner_id,
       operation_id: "save",
       fingerprint: "immutable",
       local_sequence: 19,
       envelope: bytes,
     });
     expect((await db.select().from(s.storage_ordered_receipts))[0]).toMatchObject({
-      extension_id: next,
+      owner_id: orderedOwner.owner_id,
       indexed: true,
     });
     expect((await db.select().from(s.storage_ordered_owners))[0]).toMatchObject({
-      extension_id: next,
+      owner_id: orderedOwner.owner_id,
       epoch: "epoch",
       after: 42,
       pending_bytes: 10,
       receipt_root: bytes,
+    });
+    expect((await db.select().from(s.owners))[0]).toMatchObject({
+      id: orderedOwner.owner_id,
+      project_id: "project",
+      extension_id: next,
     });
     expect((await db.select().from(s.project_extensions))[0]).toMatchObject({
       extension_ref: "source",

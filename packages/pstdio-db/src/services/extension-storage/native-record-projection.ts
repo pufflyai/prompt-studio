@@ -77,7 +77,7 @@ export const projectNativeRecordText = async (tx: Transaction, owner: StorageOwn
 /** Only indexed bindings for this standalone text are refreshed; no record documents are loaded. */
 export const refreshNativeRecordText = async (tx: Transaction, owner: StorageOwner, key: string, content: string) => {
   const [ordered] = await tx
-    .select({ id: storage_ordered_owners.workbench_id })
+    .select({ id: storage_ordered_owners.owner_id })
     .from(storage_ordered_owners)
     .where(orderedOwnerWhere(storage_ordered_owners, owner));
   const rows = await tx

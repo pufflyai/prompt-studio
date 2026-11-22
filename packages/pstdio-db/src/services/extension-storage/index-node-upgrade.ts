@@ -6,7 +6,7 @@ import { storage_documents as documents, storage_ordered_owners as owners } from
 import { type IndexNodeFiles, sortIndexChildren } from "./index-node-files";
 import { orderedIndexBlobDocumentId } from "./ordered-receipts-blobs";
 import { receiptRoots } from "./ordered-receipts-state";
-import { decodeOrderedJson } from "./ordered-sql";
+import { decodeOrderedJson, orderedOwnerWhere } from "./ordered-sql";
 
 interface StoredNode {
   version: 1;
@@ -69,7 +69,7 @@ const copyOwnerReceipts = async (db: DbClient, files: IndexNodeFiles, owner: Sto
   const [row] = await db
     .select({ receipt_root: owners.receipt_root })
     .from(owners)
-    .where(and(eq(owners.workbench_id, owner.workbenchId), eq(owners.extension_id, owner.extensionId)));
+    .where(orderedOwnerWhere(owners, owner));
   const roots = row ? receiptRoots(row.receipt_root) : { root: null, published: null };
   const seen = new Set<string>();
   let pending = [roots.root, roots.published].filter((root) => !!root).map((root) => root!.blobId);

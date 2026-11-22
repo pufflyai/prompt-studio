@@ -12,6 +12,7 @@ import {
   storage_ordered_records,
   storage_ordered_touches,
   storage_record_projections,
+  owners as storageOwners,
 } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
 import { createRelay } from "./record-stream-relay.fixture";
@@ -241,8 +242,16 @@ const tables = [
   storage_current_records,
 ] as const;
 const copyStorage = async (from: Device["db"], to: Device["db"]) => {
+  const ownerIds = new Map<number, number>();
+  for (const { id, ...fields } of await from.select().from(storageOwners)) {
+    const [copied] = await to.insert(storageOwners).values(fields).returning({ id: storageOwners.id });
+    ownerIds.set(id, copied!.id);
+  }
   for (const table of tables)
-    for (const row of await from.select().from(table)) await to.insert(table).values(row as never);
+    for (const row of await from.select().from(table)) {
+      const copy = "owner_id" in row ? { ...row, owner_id: ownerIds.get(row.owner_id) } : row;
+      await to.insert(table).values(copy as never);
+    }
 };
 
 test("an offline write that a compacted checkpoint refuses still reaches the moved record", async () => {

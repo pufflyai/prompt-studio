@@ -7,23 +7,13 @@ import * as s from "../db/schemas.pg";
 import { indexNodeFilesFor } from "./extension-storage/index-node-files";
 
 // Ordered by foreign-key dependency. Only these composite-key parents need a new key before moving children.
-const parents = [
-  s.storage_documents,
-  s.storage_record_projections,
-  s.storage_ordered_owners,
-  s.storage_ordered_operations,
-  s.storage_record_sync,
-  s.native_document_sources,
-];
+const parents = [s.storage_documents, s.storage_record_projections, s.storage_record_sync, s.native_document_sources];
 const projectTables = [
   ...parents,
   s.storage_document_updates,
   s.storage_document_operations,
   s.storage_current_records,
   s.storage_record_indexes,
-  s.storage_ordered_records,
-  s.storage_ordered_touches,
-  s.storage_ordered_receipts,
   s.storage_record_outbox,
   s.native_document_file_projections,
   s.native_document_rooms,
@@ -259,7 +249,8 @@ const moveRenamedIndexNodes = async (db: DbClient, renames: readonly ExtensionId
     const from = `${previous.publisher}.${previous.name}`;
     if (!(await files.hasExtension(from))) continue;
     const remaining = await db.execute(
-      sql`SELECT 1 FROM ${s.storage_ordered_owners} WHERE extension_id = ${from} LIMIT 1`,
+      sql`SELECT 1 FROM ${s.storage_ordered_owners} ordered_owner JOIN ${s.owners} o
+        ON ordered_owner.owner_id=o.id WHERE o.extension_id = ${from} LIMIT 1`,
     );
     if (!remaining.rows.length) await files.moveExtension(from, `${canonical.publisher}.${canonical.name}`);
   }

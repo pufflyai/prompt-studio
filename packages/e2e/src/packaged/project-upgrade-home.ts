@@ -71,6 +71,11 @@ const loadSavedQuota = async (db: PGlite, project: string, owners: string[]) => 
 };
 
 const assertSavedQuota = async (db: PGlite, project: string, owners: string[], migrated: boolean) => {
+  const {
+    rows: [layout],
+  } = await db.query<{ numeric: boolean }>(`SELECT EXISTS (
+    SELECT 1 FROM information_schema.columns WHERE table_schema='public'
+      AND table_name='storage_ordered_operations' AND column_name='owner_id') AS numeric`);
   for (const sample of savedQuota.storage_current_records.filter((row) => owners.includes(row.extension_id))) {
     const owner = migrated ? canonical : sample.extension_id;
     const { rows } = await db.query<{ value: unknown }>(
@@ -86,8 +91,15 @@ const assertSavedQuota = async (db: PGlite, project: string, owners: string[], m
       for (const entry of savedQuota[table].filter((row) => row.extension_id === sample.extension_id)) {
         // local_sequence is assigned by the receiving database on insert.
         const data = { ...entry, extension_id: owner };
+        const from = layout!.numeric ? `${table} t JOIN owners o ON t.owner_id=o.id` : `${table} t`;
+        const address = layout!.numeric
+          ? "o.project_id=$1 AND o.extension_id=$2"
+          : "t.workbench_id=$1 AND t.extension_id=$2";
+        const retained = layout!.numeric
+          ? "(to_jsonb(t)-'owner_id') || jsonb_build_object('extension_id',o.extension_id)"
+          : "to_jsonb(t)";
         const matches = await db.query(
-          `SELECT 1 FROM ${table} t WHERE workbench_id = $1 AND extension_id = $2 AND operation_id = $3 AND to_jsonb(t) @> ($4::jsonb - 'local_sequence')`,
+          `SELECT 1 FROM ${from} WHERE ${address} AND t.operation_id = $3 AND (${retained}) @> ($4::jsonb - 'local_sequence')`,
           [project, owner, entry.operation_id, JSON.stringify(data)],
         );
         assert.equal(matches.rows.length, 1, `Home lost or changed ${table} for ${sample.record_id}`);

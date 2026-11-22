@@ -9,6 +9,7 @@ import { createIndexNodeFiles, createMemoryIndexNodeFiles } from "./index-node-f
 import { upgradeIndexNodesToFiles } from "./index-node-upgrade";
 import { orderedIndexBlobDocumentId } from "./ordered-receipts-blobs";
 import { encodeOrderedJson } from "./ordered-sql";
+import { ensureStorageOwner } from "./storage-owner-key";
 
 // Blob ids are at least 16 characters; padding keeps the readable names distinct.
 const id = (name: string) => name.padEnd(16, "x");
@@ -50,8 +51,7 @@ const seed = async (db: Db, workbenchId = crypto.randomUUID()) => {
       row(logs.extensionId, "log-root", ["log-page"]),
     ]);
   await db.insert(storage_ordered_owners).values({
-    workbench_id: workbenchId,
-    extension_id: records.extensionId,
+    owner_id: await ensureStorageOwner(db, records),
     receipt_root: encodeOrderedJson({
       version: 1,
       root: { blobId: id("root"), byteLength: 9 },

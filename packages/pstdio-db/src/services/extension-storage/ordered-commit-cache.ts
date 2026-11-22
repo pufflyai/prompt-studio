@@ -1,4 +1,3 @@
-import { and, eq } from "drizzle-orm";
 import type { StorageOwner } from "pstdio-sync";
 import { coreOwnerId, type OrderedRecord } from "pstdio-sync/records";
 import type { DbClient } from "../../db/connection.pglite";
@@ -15,12 +14,9 @@ export const createOrderedCommitCache = (db: DbClient, owner: StorageOwner) => {
   const address = JSON.stringify([owner.workbenchId, owner.extensionId]);
   const version = async (tx: OrderedTransaction) => {
     const [row] = await tx
-      .select({ revision: projections.revision, epoch: owners.epoch, after: owners.after })
+      .select({ ownerId: owners.owner_id, revision: projections.revision, epoch: owners.epoch, after: owners.after })
       .from(projections)
-      .innerJoin(
-        owners,
-        and(eq(owners.workbench_id, projections.workbench_id), eq(owners.extension_id, projections.extension_id)),
-      )
+      .innerJoin(owners, orderedOwnerWhere(owners, owner))
       .where(orderedOwnerWhere(projections, owner));
     return row ? JSON.stringify(row) : undefined;
   };

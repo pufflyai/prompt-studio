@@ -15,6 +15,7 @@ import {
   storage_ordered_records,
   storage_ordered_touches,
   storage_record_projections,
+  owners as storageOwners,
 } from "../../db/schemas.pg";
 import { createDocumentStorageDBService } from "./document-storage";
 import { attachIndexNodeFiles, createIndexNodeFiles } from "./index-node-files";
@@ -94,6 +95,7 @@ const save = (operationId: string, model: string) => ({
 });
 
 const capture = async (db: Awaited<ReturnType<typeof createDb>>["db"]) => ({
+  storageOwners: await db.select().from(storageOwners),
   documents: await db.select().from(storage_documents),
   owners: await db.select().from(storage_ordered_owners),
   records: await db.select().from(storage_ordered_records),
@@ -104,12 +106,22 @@ const capture = async (db: Awaited<ReturnType<typeof createDb>>["db"]) => ({
   projections: await db.select().from(storage_record_projections),
 });
 const restore = async (db: Awaited<ReturnType<typeof createDb>>["db"], backup: Awaited<ReturnType<typeof capture>>) => {
+  const ownerIds = new Map<number, number>();
+  for (const { id, ...fields } of backup.storageOwners) {
+    const [copied] = await db.insert(storageOwners).values(fields).returning({ id: storageOwners.id });
+    ownerIds.set(id, copied!.id);
+  }
+  const mapped = <T extends { owner_id: number }>(row: T) => {
+    const id = ownerIds.get(row.owner_id);
+    if (id === undefined) throw new Error("Backup owner is missing");
+    return { ...row, owner_id: id };
+  };
   for (const row of backup.documents) await db.insert(storage_documents).values(row);
-  for (const row of backup.owners) await db.insert(storage_ordered_owners).values(row);
-  for (const row of backup.records) await db.insert(storage_ordered_records).values(row);
-  for (const row of backup.operations) await db.insert(storage_ordered_operations).values(row);
-  for (const row of backup.touches) await db.insert(storage_ordered_touches).values(row);
-  for (const row of backup.receipts) await db.insert(storage_ordered_receipts).values(row);
+  for (const row of backup.owners) await db.insert(storage_ordered_owners).values(mapped(row));
+  for (const row of backup.records) await db.insert(storage_ordered_records).values(mapped(row));
+  for (const row of backup.operations) await db.insert(storage_ordered_operations).values(mapped(row));
+  for (const row of backup.touches) await db.insert(storage_ordered_touches).values(mapped(row));
+  for (const row of backup.receipts) await db.insert(storage_ordered_receipts).values(mapped(row));
   for (const row of backup.projections) await db.insert(storage_record_projections).values(row);
   for (const row of backup.current) await db.insert(storage_current_records).values(row);
 };

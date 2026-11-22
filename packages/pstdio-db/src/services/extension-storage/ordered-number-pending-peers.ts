@@ -5,6 +5,7 @@ import { jsonBatches } from "./json-batches";
 import type { OrderedJournal } from "./ordered-journal";
 import { orderedNumber } from "./ordered-number-values";
 import type { OrderedTransaction } from "./ordered-sql";
+import { storageOwnerKey } from "./storage-owner-key";
 
 /** Number claims couple otherwise independent records. Include pending claimants before
  * checking a repair's author-group budget. Shown aliases retain original claims after
@@ -55,7 +56,7 @@ export const pendingOrderedNumberPeers = async (
     WHERE NOT EXISTS (SELECT 1 FROM jsonb_array_elements_text(${JSON.stringify(ids)}::jsonb) included(id)
       WHERE included.id = candidate.resource_id)
       AND EXISTS (SELECT 1 FROM storage_ordered_touches t
-        WHERE t.workbench_id = ${owner.workbenchId} AND t.extension_id = ${owner.extensionId}
+        WHERE t.owner_id = ${storageOwnerKey(owner)}
           AND t.record_id = candidate.resource_id)
     LIMIT 100`);
     for (const row of result.rows as { resource_id: string }[])

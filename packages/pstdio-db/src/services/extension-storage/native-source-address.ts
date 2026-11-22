@@ -19,7 +19,7 @@ export const nativeSourceAddressIn = async (
   input: { recordId: string; documentKey: string; field?: string },
 ) => {
   const [ordered] = await tx
-    .select({ id: storage_ordered_owners.workbench_id })
+    .select({ id: storage_ordered_owners.owner_id })
     .from(storage_ordered_owners)
     .where(orderedOwnerWhere(storage_ordered_owners, owner));
   if (ordered) return orderedNativeAddress(tx, owner, input);

@@ -118,11 +118,7 @@ async function* pendingText(tx: OrderedTransaction, owner: StorageOwner, recordI
       .from(operations)
       .innerJoin(
         touches,
-        and(
-          eq(touches.workbench_id, operations.workbench_id),
-          eq(touches.extension_id, operations.extension_id),
-          eq(touches.operation_id, operations.operation_id),
-        ),
+        and(eq(touches.owner_id, operations.owner_id), eq(touches.operation_id, operations.operation_id)),
       )
       .where(
         and(
