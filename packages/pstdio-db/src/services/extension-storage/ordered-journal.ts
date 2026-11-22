@@ -20,7 +20,7 @@ import { createOrderedDependencyCache } from "./ordered-dependency-cache";
 import { isOrderedNativeRequest } from "./ordered-native-identity";
 import { fenceOrderedNativeText, forgetOrderedTextGeneration } from "./ordered-native-recovery";
 import { ensureOrderedOwner } from "./ordered-owner";
-import { operationReceipt, operationReceiptsIndexed } from "./ordered-receipt-values";
+import { operationIndexedAt, operationReceipt, operationReceiptsIndexed } from "./ordered-receipt-values";
 import { createOrderedReceiptCache } from "./ordered-receipts-cache";
 import { finishOrderedRecordWrites } from "./ordered-record-publication";
 import { readOrderedSaveOutcome } from "./ordered-save-outcome";
@@ -32,11 +32,18 @@ import {
   type OrderedTransaction as Transaction,
 } from "./ordered-sql";
 import { lockRecordOwner } from "./record-changes";
+import { type RetainedOperation, readRetainedOperation } from "./retained-operations";
 import { storageOwnerKey } from "./storage-owner-key";
 
 const identityError = () => new Error("Operation identity reused with changed payload");
 
-const bindOperationIdentity = async (tx: Transaction, owner: StorageOwner, id: string, identity: string) => {
+const bindOperationIdentity = async (
+  tx: Transaction,
+  owner: StorageOwner,
+  id: string,
+  identity: string,
+  retained: (id: string) => Promise<RetainedOperation | undefined>,
+) => {
   const [row] = await tx
     .insert(operations)
     .values({
@@ -52,6 +59,18 @@ const bindOperationIdentity = async (tx: Transaction, owner: StorageOwner, id: s
     })
     .returning();
   if (row!.fingerprint !== identity) throw identityError();
+  if (!row!.request_fingerprint && !row!.envelope && !Object.keys(row!.receipt).length) {
+    const saved = await retained(id);
+    if (saved) {
+      if (saved.fingerprint !== identity) throw identityError();
+      const [restored] = await tx
+        .update(operations)
+        .set({ ...saved, owner_id: row!.owner_id })
+        .where(and(ownerWhere(operations, owner), eq(operations.operation_id, id)))
+        .returning();
+      return restored!;
+    }
+  }
   return row!;
 };
 
@@ -61,8 +80,13 @@ const queueOrderedOperation = async (
   input: OrderedOperation,
   requestFingerprint: string,
   operation: (id: string) => Promise<typeof operations.$inferSelect | undefined>,
+  retained: (id: string) => Promise<RetainedOperation | undefined>,
 ) => {
   input = await verifyOrderedOperation(input);
+  if (await retained(input.operationId)) {
+    const previous = await bindOperationIdentity(tx, owner, input.operationId, input.fingerprint, retained);
+    if (previous.request_fingerprint) return retryOrderedLocalOperation(previous, input, requestFingerprint);
+  }
   if (isOrderedNativeRequest(requestFingerprint)) {
     validateOrderedNativeOperation(input);
     const previous = await operation(input.operationId);
@@ -106,11 +130,16 @@ const queueOrderedOperation = async (
 /** All calls run inside the same project/owner lock as their projection and relay cursor. */
 export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
   const operationWhere = (id: string) => and(ownerWhere(operations, owner), eq(operations.operation_id, id));
+  const cold = new Map<string, Promise<RetainedOperation | undefined>>();
+  const retained = (id: string) => {
+    if (!cold.has(id)) cold.set(id, readRetainedOperation(tx, owner, id));
+    return cold.get(id)!;
+  };
   const operation = async (id: string) => {
     const [row] = await tx.select().from(operations).where(operationWhere(id));
-    return row;
+    return row ?? retained(id);
   };
-  const bind = (id: string, identity: string) => bindOperationIdentity(tx, owner, id, identity);
+  const bind = (id: string, identity: string) => bindOperationIdentity(tx, owner, id, identity, retained);
   // Receipts are immutable, so a found receipt stays valid for this owner transaction.
   const held = new Map<string, Awaited<ReturnType<typeof readDecision>>>();
   const cachedDecision = async (id: string, epoch: string) => {
@@ -124,7 +153,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
     (await createOrderedReceiptCache(tx, owner).cachedReceipt(id, epoch))?.decision;
   const pendingWhere = () =>
     and(ownerWhere(operations, owner), isNotNull(operations.envelope), isNull(operations.settled_epoch));
-  const dependencies = createOrderedDependencyCache(tx, owner, cachedDecision);
+  const dependencies = createOrderedDependencyCache(tx, owner, cachedDecision, operation);
   return {
     authoredOutcome: (id: string) => readOrderedSaveOutcome(tx, owner, id),
     knownDependency: dependencies.known,
@@ -132,7 +161,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
     bindIdentity: bind,
     ...createOrderedAuthorship(tx, owner, operation),
     queue: (input: OrderedOperation, requestFingerprint: string) =>
-      queueOrderedOperation(tx, owner, input, requestFingerprint, operation),
+      queueOrderedOperation(tx, owner, input, requestFingerprint, operation, retained),
     async pending(options: { after?: number; limit?: number } = {}) {
       const rows = await tx
         .select()
@@ -200,12 +229,24 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
         ...Object.entries(row.receipt),
         [
           decision.epoch,
-          { state: decision.state, admissionFingerprint, indexed: !!retained?.indexed || !!options.indexed },
+          {
+            state: decision.state,
+            admissionFingerprint,
+            indexed: !!retained?.indexed || !!options.indexed,
+            ...(retained?.indexedAt || options.indexed
+              ? { indexedAt: retained?.indexedAt ?? new Date().toISOString() }
+              : {}),
+          },
         ],
       ]);
       await tx
         .update(operations)
-        .set({ receipt, receipt_epoch: decision.epoch, receipt_indexed: operationReceiptsIndexed(receipt) })
+        .set({
+          receipt,
+          receipt_epoch: decision.epoch,
+          receipt_indexed: operationReceiptsIndexed(receipt),
+          indexed_at: operationIndexedAt(receipt),
+        })
         .where(operationWhere(decision.operationId));
       await dependencies.remember(decision);
       // Historical decisions remain queryable but never settle a wrapper admitted in another epoch.
@@ -214,7 +255,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
           await fenceOrderedNativeText(tx, owner, decode<OrderedOperation>(row.envelope));
         await tx
           .update(operations)
-          .set({ settled_epoch: decision.epoch, touches: [] })
+          .set({ settled_epoch: decision.epoch, touches: [], envelope: null, admission: null })
           .where(operationWhere(decision.operationId));
         await forgetOrderedTextGeneration(tx, owner, decision.operationId);
       }
@@ -243,7 +284,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
       if (decision.state === "refused") await fenceOrderedNativeText(tx, owner, decode<OrderedOperation>(row.envelope));
       await tx
         .update(operations)
-        .set({ settled_epoch: decision.epoch, touches: [] })
+        .set({ settled_epoch: decision.epoch, touches: [], envelope: null, admission: null })
         .where(operationWhere(decision.operationId));
       await forgetOrderedTextGeneration(tx, owner, decision.operationId);
     },

@@ -131,7 +131,7 @@ export const adoptOrderedCheckpoint = async (input: {
   const dirty = await dirtyOrderedReceipts(journal);
   for (let offset = 0; offset < dirty.length; offset += 100)
     root = await index.append(root, dirty.slice(offset, offset + 100));
-  const resolver = createOrderedReceiptResolver(journal, root, index);
+  const resolver = createOrderedReceiptResolver(journal, root, index, meta.receiptRoot);
   let after = 0;
   const pendingIds = new Set<string>();
   while (true) {

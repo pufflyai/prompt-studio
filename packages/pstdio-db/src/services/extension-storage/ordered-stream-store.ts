@@ -219,8 +219,8 @@ export const createOrderedStreamStore = (db: DbClient, owner: StorageOwner, deps
       const draft = await run(async (journal, tx) => {
         const row = await readOrderedOwner(tx, owner);
         const found = options?.found ?? !orderedCursor(row).joined;
-        const root = receiptRoots(row.receipt_root).root;
-        const resolver = createOrderedReceiptResolver(journal, root, receiptIndex());
+        const { root, published } = receiptRoots(row.receipt_root);
+        const resolver = createOrderedReceiptResolver(journal, root, receiptIndex(), published);
         const epoch = found ? crypto.randomUUID() : row.epoch!;
         if (found) await rebaseOrderedProjection(journal, tx, owner, await resolver.reconcilePending(epoch));
         return {

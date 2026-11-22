@@ -157,7 +157,7 @@ export const repairOptimisticNumbers = async (
         },
         views,
       );
-      if (!(await journal.localOperation(operationId)))
+      if (!(await journal.requestIdentity(operationId)))
         await journal.queue(operation, await fingerprint(operation as unknown as Json));
       const known = await journal.outcome(operationId);
       return known

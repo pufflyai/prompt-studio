@@ -3441,6 +3441,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": true
+        },
+        "indexed_at": {
+          "name": "indexed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -3499,7 +3505,29 @@
             }
           ],
           "isUnique": false,
-          "where": "\"operations\".\"receipt_indexed\" = false",
+          "where": "\"operations\".\"receipt_indexed\" = false OR (\"operations\".\"indexed_at\" IS NULL AND \"operations\".\"receipt\" <> '{}'::jsonb)",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "operations_retention_idx": {
+          "name": "operations_retention_idx",
+          "columns": [
+            {
+              "expression": "owner_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "indexed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"operations\".\"indexed_at\" IS NOT NULL AND \"operations\".\"envelope\" IS NULL",
           "concurrently": false,
           "method": "btree",
           "with": {}

@@ -337,3 +337,8 @@ ALTER TABLE "asset_transfers" DROP COLUMN "extension_id";--> statement-breakpoin
 ALTER TABLE "recovery_point_owners" DROP COLUMN "extension_id";--> statement-breakpoint
 ALTER TABLE "recovery_point_owners" DROP COLUMN "records";--> statement-breakpoint
 ALTER TABLE "recovery_point_owners" DROP COLUMN "metadata";
+--> statement-breakpoint
+DROP INDEX "operations_unindexed_idx";--> statement-breakpoint
+ALTER TABLE "operations" ADD COLUMN "indexed_at" timestamp with time zone;--> statement-breakpoint
+CREATE INDEX "operations_retention_idx" ON "operations" USING btree ("owner_id","indexed_at") WHERE "operations"."indexed_at" IS NOT NULL AND "operations"."envelope" IS NULL;--> statement-breakpoint
+CREATE INDEX "operations_unindexed_idx" ON "operations" USING btree ("owner_id","operation_id") WHERE "operations"."receipt_indexed" = false OR ("operations"."indexed_at" IS NULL AND "operations"."receipt" <> '{}'::jsonb);

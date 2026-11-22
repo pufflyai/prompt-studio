@@ -12,6 +12,7 @@ export const createOrderedDependencyCache = (
   tx: OrderedTransaction,
   owner: StorageOwner,
   exact: (id: string, epoch: string) => Promise<OrderedDecision | undefined>,
+  operation?: (id: string) => Promise<typeof operations.$inferSelect | undefined>,
 ) => {
   // One owner transaction replays the same pending dependencies on every rebase. Decisions arrive
   // through `remember` or `forget`, and an entry belongs to the order epoch it was read in.
@@ -39,10 +40,14 @@ export const createOrderedDependencyCache = (
       memo.delete(id);
     },
     async known(id: string) {
-      const [row] = await tx
-        .select()
-        .from(operations)
-        .where(and(orderedOwnerWhere(operations, owner), eq(operations.operation_id, id)));
+      const row = operation
+        ? await operation(id)
+        : (
+            await tx
+              .select()
+              .from(operations)
+              .where(and(orderedOwnerWhere(operations, owner), eq(operations.operation_id, id)))
+          )[0];
       // This device's own save that never entered an order has no decision anywhere yet.
       if (row?.envelope && !row.admission_epoch && !row.settled_epoch) return undefined;
       const [parent] = await tx.select({ epoch: owners.epoch }).from(owners).where(orderedOwnerWhere(owners, owner));

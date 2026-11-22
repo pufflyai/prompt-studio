@@ -92,7 +92,7 @@ export const createDisplacedSaves = (owner: StorageOwner) => {
       skipped: OrderedSkip[],
     ) => {
       const refused = decision.state === "refused";
-      if (!(refused || skipped.length) || !(await journal.localOperation(operation.operationId))) return;
+      if (!(refused || skipped.length) || !(await journal.requestIdentity(operation.operationId))) return;
       const saves = notes.get(tx) ?? [];
       saves.push({ operation, refused, skipped: new Set(skipped.map((skip) => skip.recordId)) });
       notes.set(tx, saves);

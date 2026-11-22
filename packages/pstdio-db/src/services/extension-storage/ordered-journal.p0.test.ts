@@ -170,7 +170,9 @@ test("only the exact admitted decision settles a save; a late old receipt cannot
     expect(await journal.pending()).toEqual([]);
     expect(await journal.pendingFor(["setting", "audit"])).toEqual([]);
     expect(await journal.outcome(input.operationId)).toEqual(exact);
-    expect((await journal.localOperation(input.operationId))?.operation).toEqual(input);
+    expect(await journal.localOperation(input.operationId)).toBeUndefined();
+    expect(await journal.requestIdentity(input.operationId)).toBe(request);
+    expect((await journal.queue(input, request)).operation).toEqual(input);
     expect(await journal.cachedDecision(input.operationId, "old")).toEqual(decision(input.fingerprint, "old"));
   });
 });

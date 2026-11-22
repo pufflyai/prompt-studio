@@ -107,7 +107,7 @@ export const recordOrderedReplaced = async (
   skipped: OrderedSkip[],
 ) => {
   // Only this device's own saves become notices; other devices' skipped writes are not news here.
-  if (!skipped.length || !(await journal.localOperation(operation.operationId))) return;
+  if (!skipped.length || !(await journal.requestIdentity(operation.operationId))) return;
   const replacedAt = Date.now();
   for (const skip of skipped) {
     const edit = operation.edits.find((candidate) => candidate.recordId === skip.recordId);

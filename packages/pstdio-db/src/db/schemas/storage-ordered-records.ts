@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { bigserial, boolean, foreignKey, index, integer, jsonb, pgTable, primaryKey, text } from "drizzle-orm/pg-core";
+import { isoTimestamp } from "./iso-timestamp";
 import { owners } from "./owners";
 import { bytea } from "./types";
 
@@ -11,6 +12,8 @@ export interface OperationReceipt {
   state: "accepted" | "refused";
   admissionFingerprint: string;
   indexed: boolean;
+  /** Private proof time; older indexed flags alone do not authorize SQL pruning. */
+  indexedAt?: string;
 }
 export type OperationReceipts = Record<string, OperationReceipt>;
 
@@ -36,6 +39,8 @@ export const operations = pgTable(
     receipt: jsonb("receipt").$type<OperationReceipts>().notNull().default({}),
     /** All cached receipt facts are covered by the owner's encrypted receipt index. */
     receipt_indexed: boolean("receipt_indexed").notNull().default(true),
+    /** Seven-day retention starts only when every exact receipt has committed index coverage. */
+    indexed_at: isoTimestamp("indexed_at"),
   },
   (table) => [
     primaryKey({ columns: [table.owner_id, table.operation_id] }),
@@ -47,7 +52,12 @@ export const operations = pgTable(
       .where(sql`${table.envelope} IS NOT NULL AND ${table.settled_epoch} IS NULL`),
     index("operations_unindexed_idx")
       .on(table.owner_id, table.operation_id)
-      .where(sql`${table.receipt_indexed} = false`),
+      .where(
+        sql`${table.receipt_indexed} = false OR (${table.indexed_at} IS NULL AND ${table.receipt} <> '{}'::jsonb)`,
+      ),
+    index("operations_retention_idx")
+      .on(table.owner_id, table.indexed_at)
+      .where(sql`${table.indexed_at} IS NOT NULL AND ${table.envelope} IS NULL`),
     foreignKey({ columns: [table.owner_id], foreignColumns: [owners.id] }).onDelete("cascade"),
   ],
 );
