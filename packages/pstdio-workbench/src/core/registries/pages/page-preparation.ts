@@ -16,6 +16,7 @@ import type {
   WorkbenchPageSlotOpenInput,
 } from "./page-registry-types";
 import { pageResourceContextKey, pageResourceInstanceKey } from "./page-resource-context";
+import { currentPageResourceState } from "./page-resource-continuity";
 import {
   emptyPageState,
   openPageResourceBindings,
@@ -37,6 +38,7 @@ const locationActivations = (
   state: WorkbenchPageRuntimeState,
   target: WorkbenchPageLocationCommitInput,
   resources: WorkbenchPageResourceCodec,
+  resourceKey: (resource: ResourceRef) => string,
   openFollowers: boolean,
 ) => {
   const primary = primarySlot(page);
@@ -46,9 +48,7 @@ const locationActivations = (
     main.kind === "panels" && !target.pageStates
       ? page.slots.find((slot) => slot.id === main.landing && (!slot.isAvailable || slot.isAvailable(target.resource)))
       : undefined;
-  const followers = openFollowers
-    ? pageFollowerIdentities(page, target.resource, (resource) => pageResourceInstanceKey(page, resource, resources))
-    : [];
+  const followers = openFollowers ? pageFollowerIdentities(page, target.resource, resourceKey) : [];
   return [
     ...(primary && instanceKey ? [pagePlacementIdentity(page.id, primary.id, instanceKey)] : []),
     ...(landing
@@ -139,7 +139,9 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
   ) => {
     const pageStates = target.pageStates ?? current.pageStates;
     const page = requirePage(current, target.pageId);
-    const resourceKey = (resource: ResourceRef) => pageResourceInstanceKey(page, resource, input.resources);
+    const retained = currentPageResourceState(page, target, current, input.resources);
+    const resourceKey =
+      retained?.resourceKey ?? ((resource: ResourceRef) => pageResourceInstanceKey(page, resource, input.resources));
     const normalizedTarget = {
       ...target,
       pageContext: { page: target.location.page, parent: target.location.parent, params: target.location.params },
@@ -147,7 +149,10 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
     };
     const stateKey = pageStateKey(page, target.location, input.resources);
     const currentPageState =
-      pageStates[stateKey] ?? input.restorePageState?.(page, target.location, target.projectId) ?? emptyPageState(page);
+      retained?.state ??
+      pageStates[stateKey] ??
+      input.restorePageState?.(page, target.location, target.projectId) ??
+      emptyPageState(page);
     const primaryState = target.pageStates
       ? currentPageState
       : selectPrimaryTarget({ page, state: currentPageState, target: normalizedTarget, resourceKey });
@@ -173,7 +178,7 @@ export const createPagePreparation = <Value>(input: CreateWorkbenchPageRegistryI
         activate: [
           ...(independentLanding ? [independentLanding.identity] : []),
           ...(owned?.landing ? [owned.landing] : []),
-          ...locationActivations(page, pageState, normalizedTarget, input.resources, openFollowers),
+          ...locationActivations(page, pageState, normalizedTarget, input.resources, resourceKey, openFollowers),
         ],
         action: target.action,
       },

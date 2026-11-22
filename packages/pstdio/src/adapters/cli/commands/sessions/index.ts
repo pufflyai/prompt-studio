@@ -3,6 +3,7 @@ import * as approveCommand from "./approve";
 import * as archiveCommand from "./archive";
 import * as createCommand from "./create";
 import * as denyCommand from "./deny";
+import * as exportCommand from "./export";
 import * as followUpCommand from "./follow-up";
 import * as forkCommand from "./fork";
 import * as importCommand from "./import";
@@ -24,6 +25,7 @@ export const { command, describe, subcommands, builder, handler } = defineComman
   denyCommand,
   followUpCommand,
   forkCommand,
+  exportCommand,
   importCommand,
   importsCommand,
   listCommand,

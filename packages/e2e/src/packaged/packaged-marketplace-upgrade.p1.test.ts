@@ -1,16 +1,17 @@
 import { beforeAll, expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { chromium, expect as expectPage } from "@playwright/test";
+import type { ListProjectExtensionsResponse } from "pstdio-api-contracts";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { folderProjectInput } from "../helpers/folder-project";
 import { logTestPhase } from "../scripts/log-test-phase";
 import { PACKAGED_DASHBOARD_BROWSER } from "./packaged-chromium";
-import { buildBinary } from "./packaged-helpers";
+import { buildBinary, runPackagedAsync } from "./packaged-helpers";
 import { runtimeAuthorization, signInBrowser, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 beforeAll(() => {
@@ -115,6 +116,88 @@ const createProjectRepository = (root: string) => {
   runGit(repo, ["commit", "-m", "seed project"]);
   return repo;
 };
+
+test("upgrades UI Canvas with its standalone webview dependencies", async () => {
+  const root = mkdtempSync(join(tmpdir(), "pstdio-canvas-upgrade-"));
+  let child: ChildProcess | undefined;
+  try {
+    const repository = createProjectRepository(join(root, "catalog"));
+    const canvasPath = "extensions/canvas";
+    const target = join(repository, canvasPath);
+    const previousVersion = "0.0.0";
+    writeExtension(target, {
+      displayName: "UI Canvas",
+      enginesPstdio: `^${EXTENSION_API_VERSION}`,
+      name: "canvas",
+      version: previousVersion,
+    });
+    runGit(repository, ["add", "."]);
+    runGit(repository, ["commit", "-m", "previous Canvas"]);
+    runGit(repository, ["tag", "canvas-previous"]);
+
+    const source = resolve(import.meta.dirname, "../../../..", canvasPath);
+    const manifest = JSON.parse(readFileSync(join(source, "package.json"), "utf8")) as {
+      files: string[];
+      version: string;
+    };
+    for (const file of ["package.json", ...manifest.files])
+      cpSync(join(source, file), join(target, file), { recursive: true });
+    runGit(repository, ["add", "."]);
+    runGit(repository, ["commit", "-m", "current Canvas"]);
+    runGit(repository, ["tag", "canvas-current"]);
+
+    const catalog = JSON.parse(
+      readFileSync(resolve(import.meta.dirname, "../../../pstdio-api/files/extension-catalog.json"), "utf8"),
+    );
+    const canvas = catalog.extensions.find((entry: { installName: string }) => entry.installName === "canvas");
+    canvas.origin.url = pathToFileURL(repository).href;
+    const catalogPath = join(root, "catalog.json");
+    writeFileSync(catalogPath, JSON.stringify({ ...catalog, extensions: [canvas] }));
+    const runtime = await startPackagedServe(root, {
+      PSTDIO_EXTENSION_CATALOG: catalogPath,
+      PSTDIO_EXTENSION_RELEASE_REF: "canvas-current",
+      PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
+        defaultExtensions: [{ source: "canvas", ref: "canvas-previous", skipInstall: true }],
+      }),
+    });
+    child = runtime.child;
+    const headers = runtimeAuthorization(runtime.descriptor);
+    const projectPath = createProjectRepository(root);
+    const created = await fetch(`${runtime.baseUrl}/v1/projects`, {
+      method: "POST",
+      headers: { ...headers, "content-type": "application/json" },
+      body: JSON.stringify(folderProjectInput({ name: "Canvas Upgrade" }, projectPath)),
+    });
+    expect(created.status).toBe(201);
+    const { id } = (await created.json()) as { id: string };
+    const listCanvas = async () => {
+      const response = await fetch(`${runtime.baseUrl}/v1/projects/${id}/extensions`, { headers });
+      expect(response.status).toBe(200);
+      const { extensions } = (await response.json()) as ListProjectExtensionsResponse;
+      return extensions.find((extension) => extension.installName === "canvas");
+    };
+    const previous = await listCanvas();
+    expect(previous).toMatchObject({ version: previousVersion, canUpgrade: true });
+
+    const output = await runPackagedAsync(["extensions", "update", "canvas", "--project-id", id], projectPath, {
+      PSTDIO_HOME: root,
+      PSTDIO_API_URL: runtime.baseUrl,
+      PSTDIO_API_TOKEN: runtime.descriptor.token,
+    });
+    expect(output).toContain(`Updated canvas to ${manifest.version}.`);
+    // The host only activates a replacement after building all of its managed webviews.
+    expect(await listCanvas()).toMatchObject({
+      id: previous!.id,
+      version: manifest.version,
+      enabled: true,
+      status: "loaded",
+      canUpgrade: false,
+    });
+  } finally {
+    if (child) await stopProcess(child);
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 browserTest("updates an incompatible default extension and reinstalls it from Marketplace", async () => {
   const startedAt = Date.now();

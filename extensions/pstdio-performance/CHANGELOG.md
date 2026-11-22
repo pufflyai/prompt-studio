@@ -1,5 +1,28 @@
 # pstdio-performance
 
+## 0.2.0
+
+_2026-11-21_
+
+### Minor Changes
+
+- b557d47: Add cancellable backend CPU profiles and function-call captures to Performance Monitoring, with matching CLI status and JSON export. Keep bounded evidence on the runtime machine and replace the temporary repository diagnostic extension.
+- 52fbda2: Use canonical first-party package names and concise Notes commands on migration-capable API 0.5 hosts. Remove declared global CLI shortcuts and use publisher-qualified Planner and Reports commands.
+- f94c3f2: Add React render highlighting in the Performance popover footer, use shared scrolling for the metrics, and keep backend diagnostic captures in the CLI.
+- 324e652: Preserve shared project and document state while views switch or reopen, adopt retained read owners and scoped invalidation, and keep required saves and bounded recovery work with their domain owners.
+- 226fbff: Record the next backend CPU spike with recent CPU profiles, database origins and timings, and chat encoding measurements in one bounded local export. Preserve completed recording windows if the backend is interrupted.
+
+### Patch Changes
+
+- b510245: Prepare bundled extensions for API 0.5 without dropping their existing host ranges, and return Planner, Reports and Artifacts paths and links using the host-provided owner.
+
+  Use publisher-qualified Planner and Reports commands in shipped skills, prompts, help examples and documentation so agent instructions also work after the API 0.5 shortcut removal.
+
+  Keep ticket page ancestry and fresh draft ignore rules on the host-provided owner, including timeline rows, pulls and workspace provisioning.
+
+- 7d834a4: Install the React query dependency required by Performance Monitoring so isolated installations can activate its views and complete project setup.
+- a0fb3f5: Keep action errors local and dismissible, show system notices in the status bar, and represent workspace readiness in the conversation controls.
+
 ## 0.1.1
 
 _2026-11-12_

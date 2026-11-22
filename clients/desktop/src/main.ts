@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { app, autoUpdater, clipboard, dialog, ipcMain, Menu, protocol, shell } from "electron";
+import { app, autoUpdater, clipboard, ipcMain, Menu, protocol, shell } from "electron";
 import { createLogger, resolveDefaultLogPath } from "pstdio-logging";
 import { resolvePstdioRuntimeDescriptorPath, resolvePstdioUpdateChannelPath } from "pstdio-paths";
 import { createMacOSCliSetup } from "./cli/macos-cli-setup";
@@ -8,13 +8,15 @@ import { formatDesktopDiagnostics } from "./diagnostics/diagnostics";
 import { workbenchErrorDetails } from "./diagnostics/workbench-error";
 import { registerDesktopIpc } from "./ipc/register-desktop-ipc";
 import {
+  type DesktopRecoveryError,
   type DesktopState,
   initialDesktopState,
-  type RuntimeActivity,
   transitionDesktopState,
 } from "./lifecycle/lifecycle-machine";
+import { askToCancelActiveWork, showNativeRecovery } from "./lifecycle/native-recovery";
 import { createQuitFlow } from "./lifecycle/quit-flow";
 import { recoveryError } from "./lifecycle/recovery-error";
+import { createRecoveryPresentation } from "./lifecycle/recovery-presentation";
 import { createRuntimeRecovery } from "./lifecycle/runtime-recovery";
 import { startWorkbench } from "./lifecycle/start-workbench";
 import { createDesktopPerformanceMonitor } from "./performance/create-desktop-performance-monitor";
@@ -122,7 +124,9 @@ const runtimeManager = new DesktopRuntimeManager({
   onPhase: (phase) => setState({ kind: "starting", phase }),
   onIntentionalShutdown: () => {
     setState({ kind: "closing" });
-    void windowController?.showLifecycle();
+    void windowController?.showLifecycle().catch((error) => {
+      logger.warn({ event: "desktop.closing.unavailable", message: String(error) }, "Closing interface unavailable");
+    });
     void runtimeManager.waitForExit().then(() => quitFlow.finishQuit());
   },
   onUnexpectedExit: (detail) => {
@@ -130,21 +134,6 @@ const runtimeManager = new DesktopRuntimeManager({
     void runtimeRecovery.recover(new Error(detail));
   },
 });
-
-// The dashboard shows the quit dialog. Asking to quit again means it may not be visible,
-// for example when the dashboard failed to load, so ask with a native dialog that always shows.
-const askToCancelActiveWork = async (activity: RuntimeActivity) => {
-  const labels = [...activity.sessions, ...activity.terminals, ...activity.jobs].map((item) => item.label);
-  const { response } = await dialog.showMessageBox({
-    type: "warning",
-    message: "Active work is still running",
-    detail: `Canceling this work will stop: ${labels.join(", ")}. This cannot be undone.`,
-    buttons: ["Keep Prompt Studio open", "Cancel work and quit"],
-    defaultId: 0,
-    cancelId: 0,
-  });
-  return response === 1;
-};
 
 const quitFlow = createQuitFlow({
   runtimeManager,
@@ -167,6 +156,17 @@ const quitFlow = createQuitFlow({
     const message = error instanceof Error ? error.message : String(error);
     logger.error({ event: "desktop.quit.failed", message }, "Desktop quit failed");
   },
+});
+
+const presentRecovery = createRecoveryPresentation({
+  showLifecycle: () => windowController!.showLifecycle(),
+  showNative: showNativeRecovery,
+  openLogs: () => shell.showItemInFolder(resolveDefaultLogPath()),
+  retry: () => {
+    void runtimeRecovery.start();
+  },
+  quit: () => quitFlow.requestQuit(),
+  isQuitting: () => quitFlow.isQuitting() || state.kind === "closing" || state.kind === "detached",
 });
 
 const runtimeRecovery = createRuntimeRecovery({
@@ -193,22 +193,20 @@ const runtimeRecovery = createRuntimeRecovery({
       "Runtime start failed",
     );
     setState({ kind: "recovery", error: recoveryError(error) });
-    await windowController?.showLifecycle();
+    await presentRecovery(recoveryError(error));
   },
 });
 
 const showWorkbenchRecovery = (failure: WorkbenchLoadFailure) => {
   if (state.kind !== "workbench" && state.kind !== "confirming_active_work") return;
   logger.error({ event: "desktop.workbench.unavailable", ...failure }, "Workbench renderer unavailable");
-  setState({
-    kind: "recovery",
-    error: {
-      code: "workbench_unavailable",
-      message: "The workbench stopped. Retry to reopen it.",
-      actions: ["retry", "open_logs", "quit"],
-    },
-  });
-  void windowController?.showLifecycle().catch(() => {
+  const error: DesktopRecoveryError = {
+    code: "workbench_unavailable",
+    message: "The workbench stopped. Retry to reopen it.",
+    actions: ["retry", "open_logs", "quit"],
+  };
+  setState({ kind: "recovery", error });
+  void presentRecovery(error).catch(() => {
     logger.error({ event: "desktop.workbench.recovery.failed" }, "Could not show workbench recovery");
   });
 };
@@ -308,7 +306,17 @@ const bootstrap = async () => {
     reportWorkbenchError: (report) => {
       const token = runtimeManager.lastDescriptor?.token;
       const details = workbenchErrorDetails(report, token ? [token] : []);
-      if (details) logger.error(details, "Workbench render failed");
+      if (!details) return;
+      logger.error(details, "Workbench render failed");
+      if (!details.projectId) {
+        windowController?.markWorkbenchFailed();
+        const error = new Error("workbench_unavailable: The workbench could not open. Retry to reopen it.");
+        // Startup or quit confirmation owns a pending load and exposes recovery after it settles.
+        if (!windowController?.abortWorkbenchStartup(error)) {
+          if (state.kind === "starting") void runtimeRecovery.recover(error);
+          else showWorkbenchRecovery({ reason: "render_failed" });
+        }
+      }
     },
     performance: performanceMonitor,
   });

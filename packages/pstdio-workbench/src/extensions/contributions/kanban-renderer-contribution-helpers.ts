@@ -24,6 +24,7 @@ export type Localizer = (value: unknown, fallback?: string) => string;
 export interface MutableAttributeSource {
   source: KanbanRendererContribution["attributes"];
   set(attributes: WorkbenchExtensionKanbanRendererRecord["attributes"] | undefined): void;
+  resolve(attributes: WorkbenchExtensionKanbanRendererRecord["attributes"] | undefined): AttributeDescriptor[];
 }
 type UnknownDisplayReporter = (attributeId: string, kind: string) => void;
 export const isQueryResult = (value: unknown): value is QueryResult =>
@@ -91,6 +92,10 @@ export const createMutableAttributeSource = (
     source: {
       getSnapshot: () => projection.getState().attributes,
       subscribe: (listener) => projection.subscribeSelector((state) => state.attributes, listener),
+    },
+    resolve(attributes) {
+      if (JSON.stringify(attributes) === signature) return projection.getState().attributes;
+      return localizeAttributes(record, attributes, localize, decorate, reportUnknownDisplay, openNote);
     },
     set(attributes) {
       const nextSignature = JSON.stringify(attributes);

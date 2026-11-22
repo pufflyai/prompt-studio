@@ -1,5 +1,30 @@
 # pstdio-artifacts
 
+## 0.47.0
+
+_2026-11-21_
+
+### Minor Changes
+
+- bed751b: Export any saved artifact version as portable HTML with its theme and embedded content, from the artifact actions menu beside the breadcrumb or CLI.
+
+  Open artifacts as single-resource pages and choose saved versions from a bounded, scrollable dropdown in the panel header, with creation dates and checked radio selection.
+
+  Match preview and exported HTML scrollbars to the shared ScrollArea theme.
+
+- 52fbda2: Use canonical first-party package names and concise Notes commands on migration-capable API 0.5 hosts. Remove declared global CLI shortcuts and use publisher-qualified Planner and Reports commands.
+- 324e652: Preserve shared project and document state while views switch or reopen, adopt retained read owners and scoped invalidation, and keep required saves and bounded recovery work with their domain owners.
+
+### Patch Changes
+
+- b510245: Prepare bundled extensions for API 0.5 without dropping their existing host ranges, and return Planner, Reports and Artifacts paths and links using the host-provided owner.
+
+  Use publisher-qualified Planner and Reports commands in shipped skills, prompts, help examples and documentation so agent instructions also work after the API 0.5 shortcut removal.
+
+  Keep ticket page ancestry and fresh draft ignore rules on the host-provided owner, including timeline rows, pulls and workspace provisioning.
+
+- a0fb3f5: Keep action errors local and dismissible, show system notices in the status bar, and represent workspace readiness in the conversation controls.
+
 ## 0.46.1
 
 _2026-11-12_

@@ -29,11 +29,10 @@ test("loads the attached workbench while lifecycle resources are still loading",
         workbenchLoaded = true;
       },
     },
-    { start: async () => runtime },
+    { start: async () => runtime, cancelStart: async () => {} },
   );
   try {
-    await Promise.resolve();
-    await Promise.resolve();
+    await Bun.sleep(0);
     expect(workbenchLoaded).toBe(true);
   } finally {
     lifecycle.resolve();
@@ -57,6 +56,7 @@ test("prepares the workbench while its runtime starts and reveals it only after 
       },
     },
     {
+      cancelStart: async () => {},
       start: (onStarting?: (descriptor: ManagedRuntime["descriptor"]) => void) => {
         onStarting?.(runtime.descriptor);
         return ready.promise;
@@ -72,4 +72,102 @@ test("prepares the workbench while its runtime starts and reveals it only after 
     await startup;
   }
   expect(revealed).toBe(true);
+});
+
+test("cancels pending runtime readiness after preparation fails and waits for cleanup", async () => {
+  const ready = Promise.withResolvers<ManagedRuntime>();
+  const cleanup = Promise.withResolvers<void>();
+  const failure = new Error("workbench_unavailable: Fixture bundle failed");
+  let cancelled = false;
+  let settled = false;
+  let revealed = false;
+  const startup = startWorkbench(
+    {
+      showLifecycle: async () => {},
+      prepareWorkbench: async () => {
+        throw failure;
+      },
+      showWorkbench: async () => {
+        revealed = true;
+        throw failure;
+      },
+    },
+    {
+      start: (onStarting?: (descriptor: ManagedRuntime["descriptor"]) => void) => {
+        onStarting?.(runtime.descriptor);
+        return ready.promise;
+      },
+      cancelStart: async () => {
+        cancelled = true;
+        ready.reject(new Error("Runtime startup cancelled"));
+        await cleanup.promise;
+      },
+    },
+  ).catch((error: unknown) => {
+    settled = true;
+    return error;
+  });
+  try {
+    await Bun.sleep(0);
+    expect(cancelled).toBe(true);
+    expect(settled).toBe(false);
+    expect(revealed).toBe(false);
+  } finally {
+    ready.resolve(runtime);
+    cleanup.resolve();
+    expect(await startup).toBe(failure);
+  }
+});
+
+test("preserves the runtime startup failure when early browser login fails", async () => {
+  const ready = Promise.withResolvers<ManagedRuntime>();
+  const runtimeFailure = new Error("pglite_recovery_failure: Fixture database failed to open");
+  const startup = startWorkbench(
+    {
+      showLifecycle: async () => {},
+      prepareWorkbench: async () => {
+        throw new Error("Runtime browser login failed with status 503");
+      },
+      showWorkbench: async () => {
+        throw new Error("Failed runtime must not reveal a workbench");
+      },
+    },
+    {
+      start: (onStarting?: (descriptor: ManagedRuntime["descriptor"]) => void) => {
+        onStarting?.(runtime.descriptor);
+        return ready.promise;
+      },
+      cancelStart: async () => {},
+    },
+  ).catch((error: unknown) => error);
+  await Bun.sleep(0);
+  ready.reject(runtimeFailure);
+  expect(await startup).toBe(runtimeFailure);
+});
+
+test("preserves a diagnosed runtime failure when its asset request fails first", async () => {
+  const ready = Promise.withResolvers<ManagedRuntime>();
+  const runtimeFailure = new Error("pglite_recovery_failure: Fixture database failed to open");
+  const startup = startWorkbench(
+    {
+      showLifecycle: async () => {},
+      prepareWorkbench: async () => {
+        throw new Error("workbench_unavailable: The workbench app files could not load");
+      },
+      showWorkbench: async () => {
+        throw new Error("Failed runtime must not reveal a workbench");
+      },
+    },
+    {
+      start: (onStarting?: (descriptor: ManagedRuntime["descriptor"]) => void) => {
+        onStarting?.(runtime.descriptor);
+        return ready.promise;
+      },
+      cancelStart: async () => {
+        ready.reject(runtimeFailure);
+        await ready.promise.catch(() => {});
+      },
+    },
+  ).catch((error: unknown) => error);
+  expect(await startup).toBe(runtimeFailure);
 });

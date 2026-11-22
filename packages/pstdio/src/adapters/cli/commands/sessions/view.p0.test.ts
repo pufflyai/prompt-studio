@@ -59,3 +59,10 @@ describe("sessions view", () => {
     expect(handler(argv({ id: "nonexistent" }))).rejects.toThrow("Session not found: nonexistent");
   });
 });
+
+test("session view JSON preserves the complete record", async () => {
+  const session = makeSession({ cwd: "/work/project" });
+  const deps = makeDeps({ getSession: async () => session });
+  await createHandler(deps)(argv({ id: session.id, json: true }));
+  expect(JSON.parse(deps.log.mock.calls[0][0])).toEqual(session);
+});

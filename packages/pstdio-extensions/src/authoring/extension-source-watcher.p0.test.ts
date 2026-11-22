@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createExtensionSourceWatcher } from "./extension-source-watcher";
+import { hashExtensionSource } from "./hash-extension-source";
 
 type Listener = (eventType: string, filename: string | Buffer | null) => void;
 
@@ -25,6 +26,38 @@ let root: string;
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "pstdio-extension-watcher-test-"));
+});
+
+test("drops queued source inspection after the extension is uninstalled", async () => {
+  const sourcePath = join(root, "removed");
+  mkdirSync(sourcePath);
+  writeFileSync(join(sourcePath, "extension.ts"), "export default {};");
+  const errors: unknown[] = [];
+  const changes: string[] = [];
+  let listener: Listener | undefined;
+  const watcher = await createExtensionSourceWatcher({
+    debounceMs: 5,
+    listInstalledSources: async () => [{ install_name: "removed", source_path: sourcePath }],
+    onSourceChanged: async (path) => {
+      changes.push(path);
+      hashExtensionSource(path);
+    },
+    onError: (error) => errors.push(error),
+    watch: (_path, callback) => {
+      listener = callback;
+      return new FakeWatcher(callback);
+    },
+  });
+  try {
+    listener!("change", "extension.ts");
+    rmSync(sourcePath, { recursive: true, force: true });
+    await delay(15);
+    expect(errors).toEqual([]);
+    expect(changes).toEqual([]);
+  } finally {
+    watcher.dispose();
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 describe("createExtensionSourceWatcher", () => {

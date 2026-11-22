@@ -19,13 +19,15 @@ const moduleFile = (root: string, manifest: CanvasBuildManifest, id: string) =>
   join(resolveOut(root), manifest.frames.modules[manifest.frames.sources[id]!.script]!.file);
 const decode = (path: string) => gunzipSync(Buffer.from(readFileSync(path, "utf8"), "base64")).toString();
 
-test("imported images and fonts are inlined, because frames cannot fetch relative files", async () => {
+test("stylesheets share archived font bytes and scripts retain inline images", async () => {
   // Large enough that Bun emits the font as a file instead of inlining it itself.
   const font = Buffer.alloc(64 * 1024, 7).toString("latin1");
   const root = project({
     "src/logo.png": "\x89PNG\r\n\x1a\nlogo",
     "src/brand.woff2": font,
     "src/brand.css": "@font-face { font-family: Brand; src: url(./brand.woff2); }\n.brand { font-family: Brand; }\n",
+    "src/other.css": "@font-face { font-family: Other; src: url(./brand.woff2); }",
+    "src/other.canvas.tsx": 'import "./other.css"; export const Other = () => <div />;',
     "src/brand.canvas.tsx": `import "./brand.css";\nimport logo from "./logo.png";\nexport const Logo = () => <img src={logo} className="brand" />;\n`,
   });
   const { manifest } = await buildCanvases({ root });
@@ -34,7 +36,14 @@ test("imported images and fonts are inlined, because frames cannot fetch relativ
   const styles = (script.css ?? []).map((name) => decode(join(out, manifest.frames.modules[name]!.file))).join("");
 
   expect(decode(join(out, script.file))).toContain('"data:image/png;base64,');
-  expect(styles).toMatch(/url\("?data:font\/woff2;base64,/);
+  const [fontName] = manifest.frames.modules[script.css![0]!]!.imports;
+  expect(fontName).toMatch(/^[a-f0-9]{64}\.woff2$/);
+  expect(styles).toContain(`canvas-font:${fontName}`);
+  expect(styles).not.toContain("data:font/");
+  const other = manifest.frames.modules[manifest.frames.sources["src/other.canvas.tsx"]!.script]!;
+  expect(manifest.frames.modules[other.css![0]!]!.imports).toEqual([fontName]);
+  const packed = JSON.parse(readFileSync(join(out, manifest.frames.modules[fontName!]!.file), "utf8"));
+  expect(Buffer.from(packed[fontName!], "base64")).toEqual(Buffer.from(font));
   expect(styles).not.toContain("./brand");
 });
 
@@ -54,6 +63,21 @@ test("a rebuild leaves unchanged module files untouched while it writes changed 
   expect(moduleFile(root, second, "src/card.canvas.tsx")).toBe(card);
   expect(statSync(card).mtimeMs).toBe(written);
   expect(moduleFile(root, second, "src/button.canvas.tsx")).not.toBe(moduleFile(root, first, "src/button.canvas.tsx"));
+});
+
+test("a format upgrade rebuilds and keeps files from the previous generation", async () => {
+  const root = project();
+  const out = resolveOut(root);
+  const first = (await buildCanvases({ root })).manifest;
+  const legacy = "modules/previous-generation.txt";
+  first.format = 1;
+  first.frames.modules["legacy.js"] = { file: legacy, bytes: 1, imports: [], dynamicImports: [] };
+  writeFileSync(join(out, legacy), "x");
+  writeFileSync(join(out, "manifest.json"), JSON.stringify(first));
+  const next = await buildCanvases({ root });
+  expect(next.built).toBe(true);
+  expect(next.manifest.format).toBe(2);
+  expect(existsSync(join(out, legacy))).toBe(true);
 });
 
 test("builds into one output folder take turns, so neither removes the other's modules", async () => {

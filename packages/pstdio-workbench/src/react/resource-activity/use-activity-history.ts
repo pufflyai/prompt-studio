@@ -43,6 +43,8 @@ export const useActivityHistory = (
     }
   };
   const loadEvent = useEffectEvent(loadEarlier);
+  // Runs after every commit: a notice that appears or clears above the feed while a page loads
+  // moves the reader without changing items, so the next prepend must keep that position instead.
   useLayoutEffect(() => {
     const saved = anchor.current;
     if (!saved?.element.isConnected) return;
@@ -50,12 +52,12 @@ export const useActivityHistory = (
       // Account for scrolling while queued/reading, including intervening live reads.
       saved.viewport.scrollTop +=
         saved.element.getBoundingClientRect().top - saved.top + saved.viewport.scrollTop - saved.scrollTop;
-      saved.top = saved.element.getBoundingClientRect().top;
-      saved.scrollTop = saved.viewport.scrollTop;
       saved.items = items;
     }
+    saved.top = saved.element.getBoundingClientRect().top;
+    saved.scrollTop = saved.viewport.scrollTop;
     if (completed && saved.finished) anchor.current = null;
-  }, [items, completed]);
+  });
   useEffect(() => {
     if (!hasEarlier || !visible || !boundary.current) return;
     let armed = true;

@@ -1,5 +1,6 @@
 import type { ResourceRef } from "@pstdio/sdk/extensions";
 import type { WorkbenchLayout } from "../../registries/layout/layout-types";
+import type { WorkbenchPageResourceCodec } from "../../registries/pages/page-registry-types";
 import { createWorkbench } from "../../workbench-core";
 import type {
   PersistedWorkbenchPageLocation,
@@ -29,11 +30,13 @@ export const createResourceViewerFixture = (
     browser?: WorkbenchPageLocationBrowser;
     boot?: boolean;
     registerPages?: (core: ReturnType<typeof createWorkbench>) => void;
+    pageResources?: WorkbenchPageResourceCodec;
   } = {},
 ) => {
   const saved = options.saved ?? new Map<string | undefined, WorkbenchLayout>();
   const locations = options.locations ?? new Map<string, PersistedWorkbenchPageLocation>();
   const w = createWorkbench({
+    pageResources: options.pageResources,
     defaultPage: viewerPage("home"),
     pageLocationBrowser: options.browser,
     ...(options.sideCanOpen === false ? { defaultPanelOpenByRegionId: { side: true } } : {}),
