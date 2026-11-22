@@ -139,7 +139,7 @@ export const scenarios = [
     tickets: 1_000,
     editsPerTicket: 3,
     layout: "list",
-    pageSize: 100,
+    pageSize: 50,
     search: "Planner stress background",
     filter: { archived: false, status: ["ready", "in-progress"], excludePriority: "default-priority-low" },
     actions: ["cold actionable content", "filter/search", "next page", "move ticket", "reopen persisted result"],
