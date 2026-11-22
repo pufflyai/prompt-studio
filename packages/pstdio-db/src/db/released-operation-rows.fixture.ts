@@ -2,7 +2,7 @@
 export const releasedOperationQuery = (table: string) => {
   if (table === "storage_ordered_operations")
     return `SELECT
-    to_jsonb(s)-'owner_id'-'touches'-'receipt_epoch'-'receipt'-'receipt_indexed' ||
+    to_jsonb(s)-'owner_id'-'touches'-'receipt_epoch'-'receipt'-'receipt_indexed'-'indexed_at' ||
     jsonb_build_object('workbench_id',o.project_id,'extension_id',o.extension_id) AS row
     FROM operations s JOIN owners o ON s.owner_id=o.id`;
   if (table === "storage_ordered_touches")
