@@ -58,7 +58,7 @@ test.each([
     return [];
   });
   try {
-    // Owner aliases share a viewer; references with and without an explicit project remain distinct.
+    // References with and without the active project share a viewer; explicit owners remain distinct.
     expect(w.getOpenResources()).toHaveLength(4);
     const version = w.resources.getRemovalVersion();
     if (action === "delete") getWriter("sessions")!.remove(session.id);
