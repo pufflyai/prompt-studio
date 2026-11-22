@@ -65,7 +65,7 @@ test("Auto Build stays in the timeline header and opens a host dialog after a pa
     await page.goto(path);
     const main = page.locator('[data-workbench-panel="main"]');
     const actions = main
-      .locator('[data-workbench-panel-header="main"]')
+      .locator('[data-workbench-content-header="main"]')
       .frameLocator('iframe[title="Timeline actions"]');
     await actions.getByRole("button", { name: "Auto Build", exact: true }).click();
     const dialog = page.getByRole("dialog", { name: "Auto Build", exact: true });
@@ -81,9 +81,10 @@ test("Auto Build stays in the timeline header and opens a host dialog after a pa
     await main.locator('[data-workbench-panel-header="main"]').click({ button: "right" });
     await page.getByRole("menuitem", { name: "Move to Side", exact: true }).click();
     const side = page.locator('[data-workbench-panel="side"]');
-    await side
-      .locator('[data-workbench-content-header="side"]')
-      .frameLocator('iframe[title="Timeline actions"]')
+    await side.getByRole("button", { name: "View controls", exact: true }).click();
+    await page
+      .locator('[data-workbench-header-panel="side"]')
+      .frameLocator('iframe[title="Timeline actions"]:visible')
       .getByRole("button", { name: "Auto Build", exact: true })
       .click();
     await expect(dialog).toBeVisible();

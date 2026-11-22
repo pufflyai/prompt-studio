@@ -66,7 +66,7 @@ test("ticket work opens a shared non-Git folder and loads files without Git requ
     // The ticket's linked folder previews in Side, where its files are in the Side menu.
     const filesOpener = page
       .locator('[data-workbench-region="side"]')
-      .getByRole("button", { name: "Open Side left menu", exact: true });
+      .getByRole("button", { name: /^(Open|Close) Side left menu$/ });
     if ((await filesOpener.getAttribute("aria-expanded")) !== "true") await filesOpener.click();
     await expect(filesOpener).toHaveAttribute("aria-expanded", "true");
     const sideFiles = page.getByRole("dialog", { name: "Files", exact: true });
