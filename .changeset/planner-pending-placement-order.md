@@ -8,4 +8,4 @@ Serialize first-use Timeline placement initialization across concurrent readers 
 
 Keep first-page ticket reads coherent through successive synchronization revisions, including display-name enrichment, and stop restarting when the command is canceled.
 
-Keep earlier unanswered Auto Build requests accessible after a later page empties, and include ticket workers beyond the first page of live sessions.
+Keep earlier unanswered Auto Build requests accessible after a later page empties, include ticket workers beyond the first page of live sessions, and reject gate reviews for archived tickets.

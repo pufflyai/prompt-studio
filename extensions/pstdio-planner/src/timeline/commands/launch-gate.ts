@@ -27,7 +27,7 @@ export const launchGateCommand = defineCommand({
   params: { ticket: params.text({ required: true }) },
   async run(ctx, { ticket }) {
     const row = await findTicket(ctx, ticket);
-    if (!row) {
+    if (!row || row.archived) {
       throw new Error("Unknown ticket.");
     }
     const workflow = usableWorkflowStatuses(await readWorkflowStatuses(ctx));
