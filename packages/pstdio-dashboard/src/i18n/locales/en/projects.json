@@ -115,7 +115,7 @@
       },
       "environmentAccess": {
         "title": "Environment access",
-        "description": "Named values from the environment that started Prompt Studio, passed only to programs this extension starts. Values are never shown here or sent to the extension.",
+        "description": "Named values from the environment that started Prompt Studio, passed to programs this extension starts. Allowing a name lets this extension use its value.",
         "notAllowed": "Not allowed",
         "partlyAllowed": "{{count}} of {{total}} allowed",
         "allowed": "Allowed",
