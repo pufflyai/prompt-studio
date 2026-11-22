@@ -121,7 +121,7 @@ export function createMachineCommands(getInstances = instancesFor) {
           method: "POST",
           signal: ctx.signal,
         });
-      // Canceling the command stops this wait; the controller still finishes the cancellation it accepted.
+      // Canceling the command stops this wait; the controller still finishes its accepted cancellation.
       while (!isTerminal(machine)) {
         const change = await instances.request<{ workspace: ControllerMachine }>(
           input.instance,
@@ -130,6 +130,7 @@ export function createMachineCommands(getInstances = instancesFor) {
         );
         machine = change.workspace;
       }
+      ctx.signal.throwIfAborted();
       await dismissMachine(ctx, input.instance, machine.id);
       await ctx.events.emit(changed, {});
       return { machineId: machine.id, state: machine.state };

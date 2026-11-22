@@ -6,13 +6,17 @@ import type { HarnessContext, HarnessEventSink } from "@pstdio/sdk/extensions";
 import { createMemoryStorage, makeCommandContext } from "@pstdio/sdk/testing";
 import { createInstances } from "./instances";
 
-export async function fileTurnFixture(handle: (request: Request) => Response | Promise<Response>) {
+export async function fileTurnFixture(
+  handle: (request: Request) => Response | Promise<Response>,
+  options: { conversation?: boolean } = {},
+) {
   const server = Bun.serve({
     port: 0,
     fetch(request) {
       const path = new URL(request.url).pathname;
-      if (path.includes("/conversation/open")) return Response.json({ turns: [] });
-      if (path.includes("/conversations/")) return Response.json({ items: [], next_cursor: null });
+      if (!options.conversation && path.includes("/conversation/open")) return Response.json({ turns: [] });
+      if (!options.conversation && path.includes("/conversations/"))
+        return Response.json({ items: [], next_cursor: null });
       return handle(request);
     },
   });

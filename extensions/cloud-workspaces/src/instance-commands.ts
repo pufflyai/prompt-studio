@@ -133,7 +133,7 @@ export function createInstanceCommands(getInstances = instancesFor) {
       const instanceId = input.instanceId || (ctx.resource?.type === "instance" ? ctx.resource.id : undefined);
       if (!instanceId) throw new Error("Choose a PocketCoder instance.");
       const instance = await instances.get(instanceId);
-      // A failed status check also reads as stopped, but the controller may still run.
+      // A failed status check can read as stopped while its controller still runs.
       if (instance.error) throw new Error(instance.error);
       if (instance.state === "running") {
         const machines = await instances.items<Machine>(instanceId, "/v1/workspaces");

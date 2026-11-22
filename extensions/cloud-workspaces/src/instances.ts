@@ -40,6 +40,30 @@ export class PocketCoderHttpError extends Error {
 export const instancesFor = (projectId: string) =>
   createInstances(join(homedir(), ".local", "share", "pocketcoder-pstdio", projectId));
 
+async function controllerRunning(instance: Instance, directory: string, environment: Record<string, string>) {
+  const serverFile = join(directory, "state/server.json");
+  if (!(await Bun.file(serverFile).exists())) return false;
+  const binary = await resolveExecutable({ binary: instance.binary }).catch(() => undefined);
+  if (binary) {
+    const result = await runCli(binary, directory, environment, ["server", "status", "--json"]);
+    return !["not_running", "stale"].includes((JSON.parse(result.stdout) as { state: string }).state);
+  }
+  // A moved executable cannot report status, so only a missing recorded process proves exit.
+  const { pid } = JSON.parse(await readFile(serverFile, "utf8")) as { pid: number };
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code !== "ESRCH";
+  }
+}
+
+async function writeJson(path: string, value: unknown) {
+  const temporary = `${path}.${randomUUID()}.tmp`;
+  await writeFile(temporary, JSON.stringify(value), { mode: 0o600 });
+  await rename(temporary, path);
+}
+
 export function createInstances(root: string) {
   const directory = (id: string) => {
     if (!/^[0-9a-f-]{36}$/.test(id)) throw new Error("Invalid PocketCoder instance ID.");
@@ -47,12 +71,7 @@ export function createInstances(root: string) {
   };
   const read = async <T>(id: string, file: string) =>
     JSON.parse(await readFile(join(directory(id), file), "utf8")) as T;
-  // Replace files atomically so a concurrent reader never sees a partial file.
-  const write = async (path: string, value: unknown) => {
-    const temporary = `${path}.${randomUUID()}.tmp`;
-    await writeFile(temporary, JSON.stringify(value), { mode: 0o600 });
-    await rename(temporary, path);
-  };
+  const write = (id: string, file: string, value: unknown) => writeJson(join(directory(id), file), value);
   const environment = (instance: Instance) => ({
     POCKETCODER_DIR: join(directory(instance.id), "data"),
     POCKETCODER_STATE_DIR: join(directory(instance.id), "state"),
@@ -73,43 +92,26 @@ export function createInstances(root: string) {
     const instance = await read<Instance>(id, "instance.json");
     try {
       const binary = await resolveExecutable({ binary: instance.binary });
+      // The released CLI has no JSON status before startup or after a clean stop.
+      if (!(await Bun.file(join(directory(id), "state/server.json")).exists())) {
+        instance.state = "stopped";
+        return instance;
+      }
       const result = await runCli(binary, directory(id), environment(instance), ["server", "status", "--json"]);
-      const reported = /"state":\s*"(\w+)"/.exec(result.stdout)?.[1];
-      // The CLI exits 0 only for a healthy controller. Only a reported exit proves a stop; an unhealthy,
-      // timed-out or failed status check leaves the controller state unknown.
-      instance.state = result.exitCode === 0 ? "running" : "stopped";
-      if (result.exitCode !== 0 && reported !== "not_running" && reported !== "stale")
-        instance.error = `Controller status: ${reported ?? (result.stderr.trim() || "unknown")}.`;
+      const status = JSON.parse(result.stdout) as { state: string };
+      if (result.exitCode === 0 && status.state === "running") instance.state = "running";
+      else if (["not_running", "stale"].includes(status.state)) instance.state = "stopped";
+      else throw new Error(result.stderr.trim() || `PocketCoder controller health is ${status.state ?? "unknown"}.`);
     } catch (error) {
       instance.state = "stopped";
       instance.error = String(error);
     }
     return instance;
   };
-  const controllerRunning = async (instance: Instance) => {
-    const instanceDirectory = directory(instance.id);
-    const serverFile = join(instanceDirectory, "state/server.json");
-    if (!(await Bun.file(serverFile).exists())) return false;
-    const binary = await resolveExecutable({ binary: instance.binary }).catch(() => undefined);
-    if (binary) {
-      const result = await runCli(binary, instanceDirectory, environment(instance), ["server", "status", "--json"]);
-      return !["not_running", "stale"].includes((JSON.parse(result.stdout) as { state: string }).state);
-    }
-    // A moved or deleted executable cannot report status, so check the recorded process directly.
-    // Otherwise the instance could be neither started nor removed.
-    const { pid } = JSON.parse(await readFile(serverFile, "utf8")) as { pid: number };
-    try {
-      process.kill(pid, 0);
-      return true;
-    } catch (error) {
-      // EPERM means the process exists but belongs to another user, so only ESRCH proves it exited.
-      return (error as NodeJS.ErrnoException).code !== "ESRCH";
-    }
-  };
   const ownerKeys = createOwnerKeys({
     read: (id) => read<OwnerKey>(id, "owner.json"),
     // This owner key stays on the host. Provider refs and workspace files contain only IDs.
-    write: (id, key) => write(join(directory(id), "owner.json"), key),
+    write: (id, key) => write(id, "owner.json", key),
     create: async (instance, expiresAt) =>
       JSON.parse(await cli(instance, ["superuser", "create", "--automation", "--expires", expiresAt, "--json"])),
     get,
@@ -119,24 +121,24 @@ export function createInstances(root: string) {
       // Check the new path before saving it, so a bad path cannot break an instance that worked before.
       const resolved = await resolveExecutable({ binary });
       const saved = await read<Instance>(id, "instance.json");
-      await write(join(directory(id), "instance.json"), { ...saved, binary: resolved });
+      await write(id, "instance.json", { ...saved, binary: resolved });
     }
     const instance = await get(id);
     if (instance.error) throw new Error(instance.error);
     if (instance.state === "stopped") await cli(instance, ["server", "start"]);
     await ownerKeys.issue(instance);
-    if (instance.removed) await write(join(directory(id), "instance.json"), { ...instance, removed: false });
+    if (instance.removed) await write(id, "instance.json", { ...instance, removed: false });
     return get(id);
   };
   const request = async <T>(id: string, path: string, options: RequestInit = {}) => {
     const instance = await read<Instance>(id, "instance.json");
     const token = await ownerKeys.token(id);
-    // A caller's cancellation signal has no deadline, so it must not replace the one for a stalled controller.
-    const deadline = AbortSignal.timeout(35_000);
     const response = await fetch(`${instance.url}${path}`, {
       ...options,
       headers: { "content-type": "application/json", authorization: `Bearer ${token}`, ...options.headers },
-      signal: options.signal ? AbortSignal.any([options.signal, deadline]) : deadline,
+      signal: options.signal
+        ? AbortSignal.any([options.signal, AbortSignal.timeout(35_000)])
+        : AbortSignal.timeout(35_000),
     });
     if (!response.ok) {
       const body = (await response.json().catch(() => null)) as { error?: { code?: string; message?: string } } | null;
@@ -153,16 +155,19 @@ export function createInstances(root: string) {
       directory(sessionId);
       directory(instanceId);
       directory(machineId);
-      const path = join(root, `${sessionId}.json`);
       if (!conversationId) {
         try {
-          const saved = JSON.parse(await readFile(path, "utf8"));
+          const saved = JSON.parse(await readFile(join(root, `${sessionId}.json`), "utf8"));
           if (saved.instanceId === instanceId && saved.machineId === machineId) conversationId = saved.conversationId;
         } catch (error) {
           if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
         }
       }
-      await write(path, { instanceId, machineId, ...(conversationId ? { conversationId } : {}) });
+      await writeJson(join(root, `${sessionId}.json`), {
+        instanceId,
+        machineId,
+        ...(conversationId ? { conversationId } : {}),
+      });
     },
     async sessionTarget(sessionId: string) {
       directory(sessionId);
@@ -205,10 +210,10 @@ export function createInstances(root: string) {
     },
     async remove(id: string) {
       const instance = await read<Instance>(id, "instance.json");
-      if (await controllerRunning(instance))
+      if (await controllerRunning(instance, directory(instance.id), environment(instance)))
         throw new Error("Stop the instance before removing it. Its controller process is still running.");
       // Keep the controller database and checkpoints so saved conversations and recovery data survive removal.
-      await write(join(directory(id), "instance.json"), { ...instance, removed: true });
+      await write(id, "instance.json", { ...instance, removed: true });
     },
     async launch(input: InstanceLaunchInput, allocatePort: () => Promise<number>) {
       const workloadLimits = instanceLimits(input.manifests ?? []);
@@ -230,17 +235,20 @@ export function createInstances(root: string) {
           state: "stopped",
           ...(workloadLimits ? { workloadLimits } : {}),
         };
-        await write(join(directory(id), "instance.json"), instance);
+        await write(id, "instance.json", instance);
         initialized = true;
         const started = await start(id);
         for (const manifest of input.manifests ?? []) await this.publish(id, manifest);
         if (input.templates) await this.importTemplates(id, input.templates);
         return started;
       } catch (error) {
-        if (initialized) {
-          await this.stop(id);
-          // A failed status probe also reads as stopped, so keep the state unless the controller is confirmed gone.
-          if (await controllerRunning(await read<Instance>(id, "instance.json")).catch(() => true)) throw error;
+        try {
+          if (initialized) await this.stop(id);
+        } catch (cleanupError) {
+          throw new AggregateError(
+            [error, cleanupError],
+            `PocketCoder launch failed and its controller could not be confirmed stopped. Recovery state remains at ${directory(id)}.`,
+          );
         }
         await rm(directory(id), { recursive: true });
         throw error;
@@ -272,8 +280,12 @@ export function createInstances(root: string) {
     },
     async stop(id: string) {
       const instance = await get(id);
+      if (instance.error) throw new Error(instance.error);
       if (instance.state === "running") await cli(instance, ["server", "stop"]);
-      return get(id);
+      const stopped = await get(id);
+      if (stopped.error) throw new Error(stopped.error);
+      if (stopped.state !== "stopped") throw new Error("PocketCoder controller is still running.");
+      return stopped;
     },
   };
 }

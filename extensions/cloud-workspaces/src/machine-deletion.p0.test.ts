@@ -67,6 +67,31 @@ test.each([
   }
 });
 
+test("canceling Delete stops its changes read and preserves the machine row", async () => {
+  const controller = new AbortController();
+  const f = await fileTurnFixture((request) => {
+    const path = new URL(request.url).pathname;
+    if (path.endsWith("/changes")) {
+      controller.abort();
+      return Response.json({ workspace: { id: f.ref.machineId, state: "canceled", change_cursor: 2 } });
+    }
+    return Response.json({
+      id: f.ref.machineId,
+      state: path.endsWith("/cancel") ? "terminating" : "ready",
+      change_cursor: 1,
+    });
+  });
+  const storage = createMemoryStorage();
+  const ctx = makeCommandContext({ storage, params: {}, overrides: { signal: controller.signal } });
+  try {
+    const command = createMachineCommands(() => f.ref.instances).deleteMachine;
+    await expect(command.run(ctx, { instance: f.ref.instanceId, machineId: f.ref.machineId })).rejects.toThrow();
+    expect(await storage.get(`dismissed-machines:${f.ref.instanceId}`)).toBeUndefined();
+  } finally {
+    await f.close();
+  }
+});
+
 test("canceling Delete stops waiting for the machine and keeps its row", async () => {
   const waiting = Promise.withResolvers<void>();
   const f = await fileTurnFixture((request) => {

@@ -8,7 +8,7 @@ import type {
   HarnessStartInput,
 } from "@pstdio/sdk/extensions";
 import { type createInstances, PocketCoderHttpError } from "./instances";
-import { readSessionMessages } from "./session-messages";
+import { createSessionMessageReader } from "./session-messages";
 
 type Instances = ReturnType<typeof createInstances>;
 type Target = {
@@ -21,11 +21,9 @@ type Target = {
 type InputReference = InputObjectReference;
 type Receipt = ExecutionRecord;
 type Request = WorkspaceRequest;
-type Pending = { target: string; request: Request };
+type Pending = { target: string; request: Request; cancelId?: string };
 const path = (ref: Target) => `/v1/workspaces/${ref.machineId}/requests`;
 const key = (sessionId: string) => `file-turn:${sessionId}`;
-// Stop keeps its cancel ID apart from the pending slot so it never rewrites a slot that finalization cleared.
-const cancelKey = (request: Pick<Request, "requestId">) => `file-cancel:${request.requestId}`;
 type FilePresentation = Pick<HarnessAttachment, "fileId" | "fileName" | "mimeType" | "sizeBytes" | "url">;
 
 export async function supportsFileTurns(ref: Target, signal?: AbortSignal) {
@@ -81,14 +79,18 @@ async function read(ref: Target, request: Pick<Request, "requestId" | "conversat
   );
 }
 
-export async function fileTurnMessages(ctx: HarnessContext, ref: Target, sessionId: string, signal?: AbortSignal) {
-  if (!sessionId) return [];
-  return readSessionMessages(
+function messageReader(ctx: HarnessContext, ref: Target, sessionId: string, signal?: AbortSignal) {
+  return createSessionMessageReader(
     <T>(path: string) => ref.instances.request<T>(ref.instanceId, path, { signal }),
     ref.machineId,
     sessionId,
     async (id) => (await ctx.state.get<FilePresentation>(`file-presentation:${sessionId}:${id}`))?.url,
   );
+}
+
+export async function fileTurnMessages(ctx: HarnessContext, ref: Target, sessionId: string, signal?: AbortSignal) {
+  if (!sessionId) return [];
+  return (await messageReader(ctx, ref, sessionId, signal)()) ?? [];
 }
 
 export async function startFileTurn(
@@ -152,7 +154,6 @@ export async function reconnectFileTurn(ctx: HarnessContext, input: HarnessReatt
     });
     await ctx.state.set(`file-conversation:${input.sessionId}`, pending.request.conversationId);
     await ctx.state.delete(key(input.sessionId));
-    await ctx.state.delete(cancelKey(pending.request));
     return {
       agentSessionId: `${ref.sessionId}:${pending.request.conversationId}`,
       done: Promise.resolve(completedStatus(receipt)),
@@ -184,22 +185,23 @@ async function observeFileTurn(
       // submission proves that this saved request never reached execution.
       if (firstSubmission && error instanceof PocketCoderHttpError && [400, 413, 422].includes(error.status)) {
         await ctx.state.delete(key(input.sessionId));
-        await ctx.state.delete(cancelKey(pending.request));
         ctx.logger.warn(error.message);
         return { status: "failed" as const };
       }
       throw error;
     }
+    const refresh = messageReader(ctx, ref, pending.request.conversationId, signal);
+    let previousReceipt: Receipt | undefined;
     while (!signal.aborted) {
       const receipt = await read(ref, pending.request, signal);
-      input.events.push({
-        op: "replace",
-        path: "/messages",
-        value: await fileTurnMessages(ctx, ref, pending.request.conversationId, signal),
-      });
+      const settled = !!receipt.settledAt && receipt.settledAt !== previousReceipt?.settledAt;
+      const ended =
+        receipt.phase !== previousReceipt?.phase && ["unknown", "lost", "terminal", "canceled"].includes(receipt.phase);
+      const messages = await refresh(!!receipt.finalizedAt || settled || ended);
+      if (messages) input.events.push({ op: "replace", path: "/messages", value: messages });
+      previousReceipt = receipt;
       if (receipt.finalizedAt) {
         await ctx.state.delete(key(input.sessionId));
-        await ctx.state.delete(cancelKey(pending.request));
         return completedStatus(receipt);
       }
       if (["unknown", "lost"].includes(receipt.phase)) return { status: "disconnected" as const };
@@ -214,24 +216,23 @@ async function observeFileTurn(
     agentSessionId: `${ref.sessionId}:${pending.request.conversationId}`,
     timeoutStrategy: "provider",
     async stop() {
-      // Save the cancel ID before reading the receipt, so either the observer's finalization or a final
-      // receipt read here removes it.
-      const cancelId = (await ctx.state.get<string>(cancelKey(pending.request))) ?? randomUUID();
-      await ctx.state.set(cancelKey(pending.request), cancelId);
-      const receipt = await ref.instances
-        .request<Receipt>(ref.instanceId, path(ref), { method: "POST", body: JSON.stringify(pending.request) })
-        .catch(async (error: unknown) => {
-          // A rejected submission never ran, so nothing remains to cancel.
-          if (error instanceof PocketCoderHttpError && [400, 413, 422].includes(error.status))
-            await ctx.state.delete(cancelKey(pending.request));
-          throw error;
-        });
-      if (receipt.finalizedAt) return ctx.state.delete(cancelKey(pending.request));
+      const receipt = await ref.instances.request<Receipt>(ref.instanceId, path(ref), {
+        method: "POST",
+        body: JSON.stringify(pending.request),
+      });
+      if (receipt.finalizedAt) return;
       const execution = receipt.acceptance.execution;
       await ref.instances.request(
         ref.instanceId,
         `/v1/workspaces/${ref.machineId}/executions/${execution.requestId}/cancel`,
-        { method: "POST", body: JSON.stringify({ execution, cancelId, scope: "operation" }) },
+        {
+          method: "POST",
+          body: JSON.stringify({
+            execution,
+            cancelId: receipt.cancel?.cancelId ?? pending.cancelId ?? pending.request.requestId,
+            scope: "operation",
+          }),
+        },
       );
     },
     done,

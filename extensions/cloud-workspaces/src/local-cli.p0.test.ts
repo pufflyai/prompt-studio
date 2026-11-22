@@ -4,6 +4,33 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runCli } from "./local-cli";
 
+test("controller output preserves Unicode split across stdout and stderr chunks", async () => {
+  const root = await mkdtemp(join(tmpdir(), "pc-cli-encoding-"));
+  const script = join(root, "emit.ts");
+  await writeFile(join(root, "empty.env"), "");
+  await writeFile(
+    script,
+    `
+const bytes = Buffer.from("é雪");
+for (const stream of [process.stdout, process.stderr]) {
+  stream.write(bytes.subarray(0, 1));
+  await Bun.sleep(20);
+  stream.write(bytes.subarray(1, 3));
+  await Bun.sleep(20);
+  stream.write(bytes.subarray(3));
+}
+`,
+  );
+  try {
+    const result = await runCli(process.execPath, root, {}, [script]);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe("é雪");
+    expect(result.stderr).toBe("é雪");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("CLI output keeps characters that span output chunks", async () => {
   const directory = await mkdtemp(join(tmpdir(), "cloud-local-cli-"));
   const binary = join(directory, "pocketcoder");

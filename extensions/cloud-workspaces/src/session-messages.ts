@@ -43,20 +43,83 @@ function part(value: ConversationPart, urls: Record<string, string>) {
   return value;
 }
 
-export async function readSessionMessages(
-  request: <T>(path: string) => Promise<T>,
+type MessageRequest = <T>(path: string) => Promise<T>;
+type OpenTurn = { conversation_id: string; turn_id: string; messages: ConversationMessageInput[] };
+
+function trackDepartures(
+  previous: Map<string, OpenTurn>,
+  current: Map<string, OpenTurn>,
+  pending: Map<string, OpenTurn>,
+) {
+  for (const [id, turn] of previous) if (!current.has(id)) pending.set(id, turn);
+  for (const id of current.keys()) pending.delete(id);
+}
+
+function confirmCommits(pending: Map<string, OpenTurn>, stored: Map<string, ConversationMessageInput>) {
+  if (!pending.size) return false;
+  const committed = new Set(
+    [...stored.values()].flatMap((message) => (message.identity ? [message.identity.turn_id] : [])),
+  );
+  let changed = false;
+  for (const id of pending.keys()) {
+    if (committed.has(id)) {
+      pending.delete(id);
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+export function createSessionMessageReader(
+  request: MessageRequest,
   workspaceId: string,
   conversationId: string,
   fileUrl?: (id: string) => Promise<string | undefined>,
 ) {
   const base = `/v1/workspaces/${workspaceId}`;
-  const open = await request<{ turns: { conversation_id: string; messages: ConversationMessageInput[] }[] }>(
-    `${base}/conversation/open?conversationId=${encodeURIComponent(conversationId)}`,
-  );
-  const messages = new Map<string, ConversationMessageInput>();
-  for (const turn of open.turns)
-    if (turn.conversation_id === conversationId)
+  let stored: Map<string, ConversationMessageInput> | undefined;
+  let previousSignature: string | undefined;
+  let previousTurns = new Map<string, OpenTurn>();
+  const pending = new Map<string, OpenTurn>();
+  return async (refreshHistory = false) => {
+    const open = await request<{ turns: OpenTurn[] }>(
+      `${base}/conversation/open?conversationId=${encodeURIComponent(conversationId)}`,
+    );
+    const turns = open.turns.filter((turn) => turn.conversation_id === conversationId);
+    const currentTurns = new Map(turns.map((turn) => [turn.turn_id, turn]));
+    trackDepartures(previousTurns, currentTurns, pending);
+    const signature = JSON.stringify(turns);
+    const first = !stored;
+    const canonical = first || refreshHistory || pending.size > 0;
+    if (!canonical && signature === previousSignature) return;
+    if (canonical) stored = await storedMessages(request, `${base}/conversations/${conversationId}`);
+    const committed = confirmCommits(pending, stored!);
+    const changed = first || refreshHistory || committed || signature !== previousSignature;
+    previousSignature = signature;
+    previousTurns = currentTurns;
+    if (!changed) return;
+    const messages = new Map<string, ConversationMessageInput>();
+    // Eviction precedes durable commit. Keep the last live snapshot until its
+    // turn identity is visible in saved rows, including across empty polls.
+    for (const turn of [...pending.values(), ...turns])
       for (const message of turn.messages) messages.set(message.message_id, message);
+    // Durable rows always win, including across separately sampled live snapshots.
+    for (const [id, message] of stored!) messages.set(id, message);
+    const values = [...messages.values()];
+    const urls = await fileUrls(values, fileUrl);
+    return sessionMessages(
+      values.sort(
+        (a, b) =>
+          Date.parse(a.occurred_at) - Date.parse(b.occurred_at) ||
+          (a.identity?.sequence ?? 0) - (b.identity?.sequence ?? 0),
+      ),
+      urls,
+    );
+  };
+}
+
+async function storedMessages(request: MessageRequest, path: string) {
+  const messages = new Map<string, ConversationMessageInput>();
   let cursor: string | null = null;
   do {
     const query = new URLSearchParams({ limit: "200" });
@@ -64,7 +127,7 @@ export async function readSessionMessages(
     const page: { items: ConversationMessageInput[]; next_cursor: string | null } = await request<{
       items: ConversationMessageInput[];
       next_cursor: string | null;
-    }>(`${base}/conversations/${conversationId}?${query}`).catch((error) => {
+    }>(`${path}?${query}`).catch((error) => {
       if (error && typeof error === "object" && "code" in error && error.code === "conversation.not_found")
         return { items: [], next_cursor: null };
       throw error;
@@ -72,15 +135,7 @@ export async function readSessionMessages(
     for (const message of page.items) messages.set(message.message_id, message);
     cursor = page.next_cursor;
   } while (cursor);
-  const urls = await fileUrls([...messages.values()], fileUrl);
-  return sessionMessages(
-    [...messages.values()].sort(
-      (a, b) =>
-        Date.parse(a.occurred_at) - Date.parse(b.occurred_at) ||
-        (a.identity?.sequence ?? 0) - (b.identity?.sequence ?? 0),
-    ),
-    urls,
-  );
+  return messages;
 }
 
 async function fileUrls(messages: ConversationMessageInput[], fileUrl?: (id: string) => Promise<string | undefined>) {

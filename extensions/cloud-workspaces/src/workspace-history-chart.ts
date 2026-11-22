@@ -30,9 +30,8 @@ export function drawWorkspaceHistory(
   const bottom = height - 31;
   const tick = Math.max(1, Math.ceil(peak / 4));
   const highest = tick * Math.max(1, Math.ceil(peak / tick));
-  // A single timestamp has no span; one millisecond keeps every coordinate finite and plots it at the left edge.
-  const duration = Math.max(1, last.time - first.time);
-  const x = (time: number) => left + ((time - first.time) / duration) * (right - left);
+  const duration = last.time - first.time;
+  const x = (time: number) => left + (duration === 0 ? 0.5 : (time - first.time) / duration) * (right - left);
   const y = (count: number) => bottom - (count / highest) * (bottom - top);
 
   context.font = "12px system-ui";
@@ -53,12 +52,13 @@ export function drawWorkspaceHistory(
     locale,
     duration > 25 * 3600_000 ? { month: "short", day: "numeric" } : { hour: "numeric", minute: "2-digit" },
   );
-  const columns = width < 460 ? 2 : 4;
+  let columns = width < 460 ? 2 : 4;
+  if (duration === 0) columns = 0;
   for (let index = 0; index <= columns; index += 1) {
-    const time = first.time + duration * (index / columns);
+    const time = columns === 0 ? first.time : first.time + duration * (index / columns);
     context.textAlign = "center";
-    if (index === 0) context.textAlign = "left";
-    if (index === columns) context.textAlign = "right";
+    if (columns > 0 && index === 0) context.textAlign = "left";
+    if (columns > 0 && index === columns) context.textAlign = "right";
     context.fillText(formatter.format(time), x(time), bottom + 17);
   }
 
