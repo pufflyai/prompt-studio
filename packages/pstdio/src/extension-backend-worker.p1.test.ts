@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { HANDLER_MARKER, startBackendWorker } from "pstdio-extensions/backend-process";
+import { HANDLER_MARKER, startBackendWorker } from "pstdio-extensions";
 
 test("the CLI starts an extension backend worker without the API or a database", async () => {
   const root = await mkdtemp(join(tmpdir(), "cli-backend-worker-"));
