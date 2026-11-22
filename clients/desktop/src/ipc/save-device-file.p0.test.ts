@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, chown, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createDeviceFileSaver } from "./save-device-file";
@@ -33,6 +33,35 @@ test("cancelling Save as never writes a file or reports success", async () => {
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test.skipIf(process.platform === "win32")(
+  "overwriting a file preserves its permissions and replaces its contents",
+  async () => {
+    const root = await mkdtemp(join(tmpdir(), "device-permissions-"));
+    const path = join(root, "private.svg");
+    const saver = createDeviceFileSaver(async () => ({ canceled: false, filePath: path }));
+    try {
+      for (const mode of [0o600, 0o640]) {
+        await writeFile(path, "previous export");
+        const group = process.getgroups?.().find((id) => id !== process.getgid?.());
+        if (group !== undefined) await chown(path, process.getuid!(), group);
+        await chmod(path, mode);
+        const previous = await stat(path);
+        expect(await saver({ name: "page.svg", data: new TextEncoder().encode("new export") })).toEqual({
+          status: "saved",
+        });
+        const saved = await stat(path);
+        expect(saved.mode & 0o777).toBe(mode);
+        expect(saved.uid).toBe(previous.uid);
+        expect(saved.gid).toBe(previous.gid);
+        expect(await readFile(path, "utf8")).toBe("new export");
+      }
+      expect(await readdir(root)).toEqual(["private.svg"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  },
+);
 
 test("failed writes reject and a new Save as can recover", async () => {
   const root = await mkdtemp(join(tmpdir(), "device-retry-"));

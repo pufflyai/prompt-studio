@@ -1,4 +1,4 @@
-import { mkdtemp, rename, rm, writeFile } from "node:fs/promises";
+import { chmod, chown, mkdtemp, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { SaveDialogOptions, SaveDialogReturnValue } from "electron";
 import { deviceFileInputSchema } from "pstdio-api-contracts/extension-kernel";
@@ -24,6 +24,19 @@ export const createDeviceFileSaver =
       try {
         const path = join(staging, "content");
         await write(path, bytes);
+        const existing = await stat(destination.filePath).catch((error: NodeJS.ErrnoException) => {
+          if (error.code === "ENOENT") return undefined;
+          throw error;
+        });
+        // Rename replaces access metadata too; keep a private destination private.
+        if (existing) {
+          if (process.platform !== "win32") {
+            const staged = await stat(path);
+            if (staged.uid !== existing.uid || staged.gid !== existing.gid)
+              await chown(path, existing.uid, existing.gid);
+          }
+          await chmod(path, existing.mode & 0o777);
+        }
         await rename(path, destination.filePath);
         return { status: "saved" as const };
       } finally {
