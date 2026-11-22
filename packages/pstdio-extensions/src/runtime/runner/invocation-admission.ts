@@ -1,0 +1,44 @@
+import type { CommandOutcome } from "@pstdio/sdk/extensions";
+
+/**
+ * Commands of one extension share this allowance across every project, so opening more projects
+ * or callers cannot multiply it. Nested commands run inside their caller's admission.
+ */
+export const MAX_CONCURRENT_INVOCATIONS_PER_EXTENSION = 256;
+const RETRY_AFTER_MS = 1000;
+
+const running = new Map<string, number>();
+
+export const admitInvocation = (extensionId: string) => {
+  const count = running.get(extensionId) ?? 0;
+  if (count >= MAX_CONCURRENT_INVOCATIONS_PER_EXTENSION) return;
+  running.set(extensionId, count + 1);
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    const remaining = (running.get(extensionId) ?? 1) - 1;
+    if (remaining === 0) running.delete(extensionId);
+    else running.set(extensionId, remaining);
+  };
+};
+
+/** Rejected before the handler starts, so the caller can retry without any partial write. */
+export const overloadedOutcome = (extensionId: string): CommandOutcome => {
+  const reason = `${extensionId} is already running ${MAX_CONCURRENT_INVOCATIONS_PER_EXTENSION} commands. Retry after some of them finish.`;
+  return {
+    ok: false,
+    status: "rejected",
+    code: "extension_overloaded",
+    reason,
+    diagnostics: [
+      {
+        code: "extension_overloaded",
+        message: reason,
+        severity: "warning",
+        extensionId,
+        metadata: { retryAfterMs: RETRY_AFTER_MS },
+      },
+    ],
+  };
+};

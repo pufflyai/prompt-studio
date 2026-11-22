@@ -43,6 +43,26 @@ owns their lifetime.
 command, and stays open when the command simply returns, so a command can hand it to work the host
 keeps running afterwards, such as a session started with `ctx.sessions.create()`.
 
+## Host load limits
+
+The host shares one database and one API process among the workbench, core and every extension.
+It keeps them responsive when an extension does a lot of work at once.
+
+- Database work started by a command, middleware, private handler or hook belongs to its extension.
+  Core reads and writes go first. Extensions then take turns, so one extension's queue does not
+  delay another extension's work. Your own calls keep their order. A transaction runs as one unit.
+- During a long burst, the host pauses briefly about every 10 ms so it can answer health checks,
+  cancellation and other requests. Bulk work still finishes, but it never stops the API from
+  responding.
+- One extension can run at most 256 top-level commands at once, across all projects. A new command
+  over the limit returns `{ ok: false, status: "rejected", code: "extension_overloaded" }` before
+  its handler starts. Its diagnostic has `metadata.retryAfterMs`. Nested `ctx.commands.execute`
+  calls count as part of the command that made them.
+
+These limits apply to database work. Extension code still runs in the API process. Synchronous CPU
+work, such as a long loop, still blocks the host until the backend process boundary in ADR 0058
+ships. Prefer bounded batches over `Promise.all` across hundreds of storage calls.
+
 ## Commands
 
 Commands are executable operations used by the CLI, dashboard menus, command palette, schedules, automations, and other commands.
