@@ -55,6 +55,7 @@ import { prepareResourcePrefixUpgrade } from "./resource-prefix-upgrade";
 import { createRetiredStorageCleanup } from "./retired-storage-cleanup";
 import * as schema from "./schemas.pg";
 import { prepareSessionWorkspaceUpgrade } from "./session-workspace-upgrade";
+import { sourceStartupOptions } from "./source-startup-image";
 import { type DatabaseMaintenancePhase, invalidateMaintenance, maintainDatabase } from "./startup-maintenance";
 import { hasUpgradeSnapshots } from "./upgrade-snapshot";
 
@@ -224,7 +225,7 @@ export const createDb = async (options?: {
     onPhase("database_locked");
     options?.signal?.throwIfAborted();
     const embedded = getEmbeddedFiles();
-    const pgliteOpts = await resolvePgliteOptions(embedded);
+    const pgliteOpts = await sourceStartupOptions(await resolvePgliteOptions(embedded));
     onPhase("database_engine_loaded");
     if (dbPath !== ":memory:")
       await prepareCurrentPgliteHome({

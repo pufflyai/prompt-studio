@@ -3,7 +3,13 @@ import type { DbClient } from "./connection.pglite";
 
 const captureBytes = 4 * 1024 * 1024;
 type SourcePosition = Record<string, unknown> & { encoded_bytes: number };
-export type UpgradeSource = { table: string; keys: readonly string[]; nullableKeys?: readonly string[]; where?: SQL };
+export type UpgradeSource = {
+  table: string;
+  keys: readonly string[];
+  nullableKeys?: readonly string[];
+  where?: SQL;
+  select?: SQL;
+};
 const keyColumn = (key: string, nullable: readonly string[] = []) =>
   nullable.includes(key) ? sql`coalesce(${sql.identifier(key)}, '')` : sql`${sql.identifier(key)}`;
 const keyTuple = (keys: readonly string[], nullable?: readonly string[]) =>
@@ -29,6 +35,7 @@ function* byteBoundedGroups(positions: SourcePosition[]) {
   }
 }
 export async function* readUpgradeRows(db: DbClient, source: UpgradeSource) {
+  const rows = source.select ?? sql`SELECT * FROM ${sql.identifier(source.table)}`;
   let after: Record<string, unknown> | undefined;
   for (;;) {
     const key = keyTuple(source.keys, source.nullableKeys);
@@ -42,7 +49,7 @@ export async function* readUpgradeRows(db: DbClient, source: UpgradeSource) {
         sql`, `,
       )},
         octet_length(row_to_json(t)::text) AS encoded_bytes
-      FROM (SELECT * FROM ${sql.identifier(source.table)}) t WHERE ${scope} ${boundary} ORDER BY ${sql.join(
+      FROM (${rows}) t WHERE ${scope} ${boundary} ORDER BY ${sql.join(
         source.keys.map((key) => keyColumn(key, source.nullableKeys)),
         sql`, `,
       )} LIMIT 200
@@ -51,13 +58,13 @@ export async function* readUpgradeRows(db: DbClient, source: UpgradeSource) {
     for (const group of byteBoundedGroups(positions)) {
       const lower = group.first ? positions[group.first - 1] : after;
       const start = lower ? sql`${key} > ${positionTuple(source.keys, lower)} AND` : sql``;
-      const { rows } = await db.execute<Record<string, unknown>>(sql`SELECT * FROM ${sql.identifier(source.table)}
+      const { rows: batch } = await db.execute<Record<string, unknown>>(sql`SELECT * FROM (${rows}) t
         WHERE ${scope} AND ${start} ${key} <= ${positionTuple(source.keys, group.last)}
         ORDER BY ${sql.join(
           source.keys.map((key) => keyColumn(key, source.nullableKeys)),
           sql`, `,
         )} LIMIT 200`);
-      for (const row of rows) yield row;
+      for (const row of batch) yield row;
     }
     after = positions.at(-1);
   }

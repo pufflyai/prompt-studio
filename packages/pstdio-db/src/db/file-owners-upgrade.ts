@@ -1,13 +1,12 @@
 import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { encodeFileScope } from "../services/extension-files/extension-files";
-import { fileColumns } from "../services/files/files";
 import type { DbClient } from "./connection.pglite";
 import { cleanFileOwnerStaging, copyFileOwnerBytes, fileOwnerUuid } from "./file-owner-copies";
 import { createFileOwnerExportWriter } from "./file-owner-exports";
 import { timestampToIso } from "./schemas/iso-timestamp";
-import { files, skills } from "./schemas.pg";
+import { files } from "./schemas.pg";
 import { prepareUpgradeSnapshot } from "./upgrade-snapshot";
 
 type Metadata = Omit<typeof files.$inferSelect, "owner" | "scope" | "path">;
@@ -19,30 +18,36 @@ type Input = {
   file: Metadata;
   identity: Identity;
 };
-const normalized = async (db: DbClient, kind: Input["kind"], released: Record<string, unknown>) => {
-  const [file] = await db
-    .select(fileColumns)
-    .from(files)
-    .where(eq(files.id, released.file_id as string));
-  if (!file || file.project_id !== released.project_id) throw new Error("File binding does not belong to project.");
+// Keep capture bounded by the source reader, including joined metadata. Released
+// binding fields are archived unchanged; the joined fields are private conversion input.
+const captureBindings = (kind: Input["kind"]) =>
+  kind === "skill"
+    ? sql`SELECT b.*, row_to_json(f) AS upgrade_file, s.project_id AS upgrade_project
+        FROM skill_files b LEFT JOIN files f ON f.id=b.file_id LEFT JOIN skills s ON s.id=b.skill_id`
+    : sql`SELECT b.*, row_to_json(f) AS upgrade_file, s.extension_id AS upgrade_owner,
+        i.scope_type AS upgrade_scope, i.scope_id AS upgrade_project
+        FROM extension_files b LEFT JOIN files f ON f.id=b.file_id
+        LEFT JOIN extension_instances i ON i.id=b.extension_instance_id
+        LEFT JOIN installed_extension_sources s ON s.id=i.installed_extension_id`;
+const normalized = async (kind: Input["kind"], input: Record<string, unknown>) => {
+  const { upgrade_file, upgrade_project, upgrade_owner, upgrade_scope, ...released } = input;
+  if (!upgrade_file) throw new Error("File binding does not belong to project.");
+  const { owner, scope, path, ...metadata } = upgrade_file as typeof files.$inferSelect;
+  const file: Metadata = {
+    ...metadata,
+    created_at: timestampToIso(metadata.created_at),
+    updated_at: timestampToIso(metadata.updated_at),
+  };
+  if (file.project_id !== released.project_id) throw new Error("File binding does not belong to project.");
   let identity: Identity;
   if (kind === "skill") {
-    const [skill] = await db
-      .select({ project: skills.project_id })
-      .from(skills)
-      .where(eq(skills.id, released.skill_id as string));
-    if (skill?.project !== file.project_id) throw new Error("Skill file does not belong to project.");
+    if (upgrade_project !== file.project_id) throw new Error("Skill file does not belong to project.");
     identity = { owner: `skill:${released.skill_id}`, scope: null, path: released.path as string };
   } else {
-    const {
-      rows: [owner],
-    } = await db.execute<{ extension_id: string }>(sql`
-      SELECT s.extension_id FROM extension_instances i JOIN installed_extension_sources s ON s.id = i.installed_extension_id
-      WHERE i.id = ${released.extension_instance_id} AND i.scope_type = 'project' AND i.scope_id = ${file.project_id}
-    `);
-    if (!owner) throw new Error("Extension file does not belong to project.");
+    if (typeof upgrade_owner !== "string" || upgrade_scope !== "project" || upgrade_project !== file.project_id)
+      throw new Error("Extension file does not belong to project.");
     identity = {
-      owner: owner.extension_id,
+      owner: upgrade_owner,
       path: null,
       scope: encodeFileScope({
         scope_type: released.scope_type as string,
@@ -85,6 +90,55 @@ const restore = async (tx: Pick<DbClient, "select" | "update" | "insert">, datab
   if (!existing) await tx.insert(files).values({ ...metadata, ...input.identity });
   return { file_id: id, storage_path };
 };
+const restoreBatch = async (
+  tx: Parameters<Parameters<DbClient["transaction"]>[0]>[0],
+  database: string,
+  batch: Input[],
+) => {
+  const ids = batch.map((input) => input.file.id);
+  const counts = new Map<string, number>();
+  for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
+  const { rows: sizes } = await tx.execute<{ bytes: number }>(sql`
+    SELECT octet_length(row_to_json(f)::text) AS bytes FROM files f
+    WHERE id IN (${sql.join(
+      ids.map((id) => sql`${id}`),
+      sql`, `,
+    )}) FOR UPDATE`);
+  // A resumed snapshot can meet changed, much larger metadata. Reject conflicts
+  // one row at a time instead of hydrating an unbounded batch just to reject it.
+  if (sizes.reduce((bytes, row) => bytes + row.bytes, 0) > 4 * 1024 * 1024) {
+    const mappings = [];
+    for (const input of batch) mappings.push({ ...input, converted: await restore(tx, database, input) });
+    return mappings;
+  }
+  const originals = new Map(
+    (await tx.select().from(files).where(inArray(files.id, ids)).for("update")).map((row) => [row.id, row]),
+  );
+  const claims: Array<Identity & { id: string }> = [];
+  const mappings = [];
+  for (const input of batch) {
+    const original = originals.get(input.file.id);
+    // Shared originals must retain the ordered per-binding copy logic. Only an
+    // unambiguous original can acquire its owner in the single batch update.
+    if (counts.get(input.file.id) === 1 && original?.owner === null && original.file_kind === input.kind) {
+      const expected = {
+        ...input.file,
+        created_at: timestampToIso(input.file.created_at),
+        updated_at: timestampToIso(input.file.updated_at),
+      };
+      if (!isDeepStrictEqual(baseMetadata(original), expected))
+        throw new Error(`Original file metadata changed: ${input.file.id}`);
+      claims.push({ id: original.id, ...input.identity });
+      mappings.push({ ...input, converted: { file_id: original.id, storage_path: original.storage_path } });
+    } else mappings.push({ ...input, converted: await restore(tx, database, input) });
+  }
+  if (claims.length)
+    await tx.execute(sql`UPDATE files f SET owner=c.owner,scope=c.scope,path=c.path
+      FROM jsonb_to_recordset(${JSON.stringify(claims)}::jsonb) AS c(id text,owner text,scope text,path text)
+      WHERE f.id=c.id`);
+  return mappings;
+};
+
 export const prepareFileOwnersUpgrade = async (db: DbClient, path: string) => {
   await cleanFileOwnerStaging(path);
   let writer: Awaited<ReturnType<typeof createFileOwnerExportWriter>> | undefined;
@@ -96,11 +150,7 @@ export const prepareFileOwnersUpgrade = async (db: DbClient, path: string) => {
       if (!staged.length) return;
       const batch = staged.splice(0);
       stagedBytes = 0;
-      const mappings = await db.transaction(async (tx) => {
-        const mappings = [];
-        for (const input of batch) mappings.push({ ...input, converted: await restore(tx, path, input) });
-        return mappings;
-      });
+      const mappings = await db.transaction((tx) => restoreBatch(tx, path, batch));
       if (path === ":memory:") return;
       writer ??= await createFileOwnerExportWriter(path, "mappings");
       for (let start = 0; start < mappings.length; start += 8) {
@@ -119,6 +169,7 @@ export const prepareFileOwnersUpgrade = async (db: DbClient, path: string) => {
       path,
       {
         table: `${kind}_files`,
+        select: captureBindings(kind),
         keys: kind === "skill" ? ["skill_id", "path"] : ["id"],
         name: `${kind}-files`,
         archive: `${kind}-files`,
@@ -130,7 +181,7 @@ export const prepareFileOwnersUpgrade = async (db: DbClient, path: string) => {
         stagedBytes += bytes;
         if (staged.length === 200) await flush();
       },
-      (row) => normalized(db, kind, row),
+      (row) => normalized(kind, row),
     );
     if (snapshot)
       snapshots.push({
