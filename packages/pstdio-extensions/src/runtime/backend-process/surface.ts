@@ -1,4 +1,4 @@
-import { createStorageId, createStorageMigration } from "pstdio-api-contracts";
+import { createStorageId, createStorageMigration, createStoragePositions } from "pstdio-api-contracts";
 import { isNavigationTarget } from "pstdio-api-contracts/extension-kernel";
 import { createCommandRejection } from "../runner/command-rejection";
 import { openIterator } from "./iterator-lifetime";
@@ -24,10 +24,20 @@ export type BackendSurface =
   | { kind: "migrate"; projectId: string }
   | { kind: "object"; members: Record<string, BackendSurface> }
   /** A synchronous scope selection, such as `storage.collection(name)`, evaluated for each host call. */
-  | { kind: "factory"; returns: BackendSurface; snapshotArguments?: boolean }
+  | {
+      kind: "factory";
+      returns: BackendSurface;
+      snapshotArguments?: boolean;
+      /** Set on `storage.scope`: the project whose scopes the worker resolves for a local `records.id`. */
+      scopeOf?: string;
+    }
   /** A pure synchronous calculation the worker runs itself from host-provided data. Never a host call. */
   | { kind: "local"; name: "storageId" }
   | { kind: "local"; name: "recordId"; namespace: string[] }
+  | { kind: "local"; name: "position"; deviceId: string }
+  /** `records.id` of scoped storage. Its `storage.scope(...)` factory replaces it with the scope's namespace. */
+  | { kind: "local"; name: "scopedRecordId" }
+  | { kind: "local"; name: "fileUrl"; prefix: string }
   /** The middleware result constructors of ctx.commands, such as `continue()` and `patchParams(params)`. */
   | { kind: "local"; name: "middlewareResult"; type: MiddlewareResultType };
 
@@ -44,10 +54,30 @@ const middlewareResult = (type: MiddlewareResultType) => {
 const localMember = (surface: Extract<BackendSurface, { kind: "local" }>) => {
   if (surface.name === "storageId") return (prefix?: string) => createStorageId(prefix);
   if (surface.name === "middlewareResult") return middlewareResult(surface.type);
+  if (surface.name === "position") return createStoragePositions(surface.deviceId).between;
+  if (surface.name === "scopedRecordId")
+    return () => {
+      throw new Error("records.id is only available on storage returned by storage.scope(...).");
+    };
+  if (surface.name === "fileUrl") {
+    const { prefix } = surface;
+    return (id: string) => `${prefix}${encodeURIComponent(id)}/content`;
+  }
   const { namespace } = surface;
   // Same encoding as pstdio-sync's storageRecordId, which this layer may not import. The process
   // runtime API test compares the result with the host's own records.id.
   return (key: string) => JSON.stringify([...namespace, key]);
+};
+
+// Mirrors the host's resolveStorageScopeInput (command-environment/storage.ts) and recordId's "kv" namespace.
+const scopeNamespace = (projectId: string, scope: StorageScope) => {
+  if (scope?.type === "project") return ["project", projectId, "kv"];
+  if (scope?.type === "resource") {
+    if (!scope.resource?.id) throw new Error("resource storage scope requires resource.id");
+    return ["resource", scope.resource.id, "kv"];
+  }
+  if (!scope?.id) throw new Error(`${scope?.type} storage scope requires id`);
+  return [scope.type!, scope.id, "kv"];
 };
 
 /** One step from the context root: a property, or a factory call with its arguments. */
@@ -240,7 +270,13 @@ export const createSurfaceFacade = (
         return (...args: unknown[]) => {
           const input = current.snapshotArguments ? structuredClone(args) : args;
           const steps = [...path.slice(0, -1), { name: path.at(-1)!.name, args: input }];
-          return build(current.returns, steps, undefined);
+          const created = build(current.returns, steps, undefined) as { records?: Record<string, unknown> };
+          if (current.scopeOf !== undefined && created.records) {
+            // The same snapshot as the host path, so a later edit to the caller's selector changes neither.
+            const namespace = scopeNamespace(current.scopeOf, input[0] as StorageScope);
+            created.records.id = localMember({ kind: "local", name: "recordId", namespace });
+          }
+          return created;
         };
       case "object": {
         const facade: Record<string, unknown> = {};

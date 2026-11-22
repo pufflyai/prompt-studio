@@ -12,11 +12,13 @@ import { deserializeBackendError, type SerializedBackendError, serializeBackendE
 const FUNCTION_MARKER = "$pstdioFunction";
 const ITERATOR_MARKER = "$pstdioIterator";
 const SIGNAL_MARKER = "$pstdioSignal";
-const MARKERS = [FUNCTION_MARKER, ITERATOR_MARKER, SIGNAL_MARKER];
+const BLOB_MARKER = "$pstdioBlob";
+const MARKERS = [FUNCTION_MARKER, ITERATOR_MARKER, SIGNAL_MARKER, BLOB_MARKER];
 
 type RemoteFunction = (...args: unknown[]) => unknown;
 type FunctionRef = { [FUNCTION_MARKER]: string };
-type IteratorRef = { [ITERATOR_MARKER]: { next: FunctionRef; return: FunctionRef } };
+type IteratorRef = { [ITERATOR_MARKER]: { next: FunctionRef; return: FunctionRef; stream?: boolean } };
+type BlobRef = { [BLOB_MARKER]: { type: string; bytes: Uint8Array } };
 type AbortReason = { error: SerializedBackendError } | { value: unknown };
 type SignalRef = {
   [SIGNAL_MARKER]: { aborted: true; reason: AbortReason } | { aborted: false; onAbort: FunctionRef };
@@ -64,6 +66,23 @@ const isSignalRef = (value: unknown): value is SignalRef =>
 
 const isAsyncIterable = (value: object): value is AsyncIterable<unknown> => Symbol.asyncIterator in value;
 
+const isBlobRef = (value: unknown): value is BlobRef =>
+  isRecord(value) && isRecord(value[BLOB_MARKER]) && value[BLOB_MARKER].bytes instanceof Uint8Array;
+
+// Bun's IPC does not carry Blobs, and reading one is asynchronous, so their bytes are read first.
+const materializeBlobs = async (value: unknown, seen = new Set<object>()): Promise<unknown> => {
+  if (value instanceof Blob)
+    return { [BLOB_MARKER]: { type: value.type, bytes: new Uint8Array(await value.arrayBuffer()) } };
+  if (value === null || typeof value !== "object" || seen.has(value)) return value;
+  if (!Array.isArray(value) && !isPlainObject(value)) return value;
+  seen.add(value);
+  if (Array.isArray(value)) return Promise.all(value.map((entry) => materializeBlobs(entry, seen)));
+  const entries = await Promise.all(
+    Object.entries(value).map(async ([key, entry]) => [key, await materializeBlobs(entry, seen)] as const),
+  );
+  return Object.fromEntries(entries);
+};
+
 export const createFunctionTable = () => {
   const functions = new Map<string, { fn: RemoteFunction; cleanup: boolean }>();
   const disposers = new Set<() => unknown>();
@@ -100,6 +119,7 @@ export const createFunctionTable = () => {
     disposers.add(close);
     return {
       [ITERATOR_MARKER]: {
+        stream: iterable instanceof ReadableStream,
         next: register(async () => {
           if (done) return { done: true, value: undefined };
           const result = await iterator.next();
@@ -158,9 +178,10 @@ export const createFunctionTable = () => {
     if (Array.isArray(value)) {
       const copy: unknown[] = [];
       seen.set(value, copy);
-      for (const entry of value) copy.push(exportValue(entry, seen));
+      for (const entry of value) copy.push(exportSync(entry, seen));
       return copy;
     }
+    if (isBlobRef(value)) return value;
     if (MARKERS.some((marker) => marker in value))
       throw new TypeError(`Values sent to or from an extension backend cannot use the keys ${MARKERS.join(", ")}.`);
     const copy: Record<string, unknown> = {};
@@ -169,14 +190,14 @@ export const createFunctionTable = () => {
       const exported =
         key === "close" && typeof entry === "function"
           ? exportClose(value, entry as RemoteFunction)
-          : exportValue(entry, seen);
+          : exportSync(entry, seen);
       setData(copy, key, exported);
     }
     return copy;
   };
 
   /** Replaces this side's functions, iterables and signals with references. Other data is cloned. */
-  const exportValue = (value: unknown, seen = new WeakMap<object, unknown>()): unknown => {
+  const exportSync = (value: unknown, seen = new WeakMap<object, unknown>()): unknown => {
     if (typeof value === "function") return register(value as RemoteFunction);
     if (value === null || typeof value !== "object") return value;
     if (value instanceof AbortSignal) return exportSignal(value);
@@ -184,6 +205,8 @@ export const createFunctionTable = () => {
     if (isAsyncIterable(value)) return exportIterable(value);
     return Array.isArray(value) || isPlainObject(value) ? exportPlain(value, seen) : value;
   };
+
+  const exportValue = async (value: unknown) => exportSync(await materializeBlobs(value));
 
   const call = async (id: string, args: () => unknown[], cleanupOnly = false) => {
     const entry = functions.get(id);
@@ -202,11 +225,11 @@ export const createFunctionTable = () => {
 /** A host operation can produce a reader or handle after its caller has departed. */
 export const discardValue = (value: unknown) => {
   const table = createFunctionTable();
-  try {
-    table.exportValue(value);
-  } finally {
-    table.clear();
-  }
+  // Exporting registers the value's closers; clearing the table runs them.
+  void table
+    .exportValue(value)
+    .catch(() => {})
+    .finally(() => table.clear());
 };
 
 /** Replaces references from the other side with stubs that call back through `invoke`. */
@@ -228,7 +251,21 @@ export const importValue = (
       next: () => invoke(next[FUNCTION_MARKER], []) as Promise<IteratorResult<unknown>>,
       return: (result?: unknown) => invoke(finish[FUNCTION_MARKER], [result]) as Promise<IteratorResult<unknown>>,
     };
-    return { [Symbol.asyncIterator]: () => iterator };
+    if (!value[ITERATOR_MARKER].stream) return { [Symbol.asyncIterator]: () => iterator };
+    return new ReadableStream({
+      async pull(controller) {
+        const result = await iterator.next();
+        if (result.done) controller.close();
+        else controller.enqueue(result.value);
+      },
+      cancel: async () => {
+        await iterator.return?.();
+      },
+    });
+  }
+  if (isBlobRef(value)) {
+    const { type, bytes } = value[BLOB_MARKER];
+    return new Blob([bytes as Uint8Array<ArrayBuffer>], { type });
   }
   if (isSignalRef(value)) {
     const controller = new AbortController();
