@@ -1,8 +1,14 @@
 import type { CommandExecuteRequest, UpgradeProjectExtensionResponse } from "@pstdio/sdk/api";
 import type { ScopedQuery } from "@pstdio/sdk/extensions";
 import { useScopedQuery } from "@pstdio/sdk/extensions/react";
+import { useEffect, useSyncExternalStore } from "react";
 import { addLocalExtensionFolder, type DroppedExtensionFolder } from "./api";
 import { getAutomationPreferences } from "./automation-preferences";
+import {
+  type ExtensionSettingTarget,
+  getExtensionSettingOperations,
+  type SettingIdentity,
+} from "./extension-setting-operations";
 import { publishExtensionCommandEvent } from "./extension-webview-broadcast";
 import { getProjectExtensionQueries } from "./project-extension-queries";
 import { trackExtensionSourceChange, useExtensionMutation } from "./use-extension-mutation";
@@ -24,8 +30,32 @@ export const useExtensionContributions = (projectId: string | undefined, instanc
   useCatalogQuery(getProjectExtensionQueries(projectId).contributions(instanceId), Boolean(projectId && instanceId));
 export const useMarketplaceExtensionContributions = (projectId: string | undefined, installName: string | undefined) =>
   useCatalogQuery(getProjectExtensionQueries(projectId).marketplace(installName), Boolean(projectId && installName));
-export const useProjectExtensionSettings = (projectId: string | undefined, instanceId: string | undefined) =>
-  useCatalogQuery(getProjectExtensionQueries(projectId).settings(instanceId), Boolean(projectId && instanceId));
+export const useProjectExtensionSettings = (target: ExtensionSettingTarget) => {
+  const { projectId, instanceId, installName, installedExtensionId } = target;
+  const settings = getExtensionSettingOperations();
+  const query = getProjectExtensionQueries(projectId).settings(instanceId);
+  const snapshot = useCatalogQuery(query, Boolean(projectId && instanceId));
+  useSyncExternalStore(settings.subscribe, settings.snapshot, settings.snapshot);
+  useEffect(() => {
+    if (!projectId || !instanceId) return;
+    return settings.observe({
+      target: { projectId, instanceId, installName, installedExtensionId },
+      current: (key) => query.getSnapshot().data?.settings.find((setting) => setting.key === key),
+      accept(record) {
+        const current = query.getSnapshot().data;
+        if (!current || query.isDisposed()) return;
+        query.cancel();
+        query.accept({
+          settings: current.settings.map((setting) => (setting.key === record.key ? record : setting)),
+        });
+      },
+    });
+  }, [query, settings, projectId, instanceId, installName, installedExtensionId]);
+  return {
+    ...snapshot,
+    data: snapshot.data && { settings: snapshot.data.settings.map((record) => settings.project(target, record)) },
+  };
+};
 
 export const useInstallMarketplaceExtension = (projectId: string | undefined) =>
   useExtensionMutation(projectId, "install", {
@@ -79,14 +109,10 @@ export const useUpgradeProjectExtension = (projectId: string | undefined) =>
   });
 export const useUpdateProjectExtensionSetting = (projectId: string | undefined) =>
   useExtensionMutation(projectId, "setting", {
-    run: async (
-      { instanceId, key, value }: { instanceId: string; key: string; value: unknown },
-      { api, projectId },
-    ) => {
-      if (value === undefined) return api.extensions.projectSettings.delete(projectId, instanceId, key);
-      return api.extensions.projectSettings.set(projectId, instanceId, key, value);
-    },
-    accept: (_result, variables, cache) => cache.invalidateSettings(variables.instanceId),
+    run: (
+      { target, setting, value }: { target: ExtensionSettingTarget; setting: SettingIdentity; value: unknown },
+      { projectId, owner, assertCurrent },
+    ) => getExtensionSettingOperations(owner).update({ ...target, projectId }, setting, value, assertCurrent),
   });
 export const useUninstallProjectExtension = (projectId: string | undefined) =>
   useExtensionMutation(projectId, "uninstall", {

@@ -3,55 +3,55 @@ import type {
   ExtensionWebviewSettingsAdapter,
 } from "@pstdio/workbench/extensions";
 import { getApiClient } from "@/lib/api";
-import {
-  deleteGlobalExtensionSetting,
-  deleteProjectExtensionSetting,
-  getGlobalExtensionSetting,
-  getProjectExtensionSetting,
-  listGlobalExtensionSettings,
-  listProjectExtensionSettings,
-  updateGlobalExtensionSetting,
-  updateProjectExtensionSetting,
-} from "./api";
+import type { RuntimeCollections } from "@/lib/sync/collections";
+import { getExtensionSettingOperations } from "./extension-setting-operations";
+import { getCachedDashboardExtensionMetadata } from "./workbench-extension-contributions";
 
-interface SettingsOwner {
-  projectId?: string;
-  extensionInstanceId?: string;
-  installName?: string;
-}
-
-export const createDashboardWebviewSettingsAdapter = (owner: SettingsOwner) => {
-  const { projectId, extensionInstanceId, installName } = owner;
-  if (projectId && extensionInstanceId)
-    return {
-      all: async () =>
-        Object.fromEntries(
-          (await listProjectExtensionSettings(projectId, extensionInstanceId)).settings.map((setting) => [
-            setting.key,
-            setting.value,
-          ]),
-        ),
-      get: async (key) => (await getProjectExtensionSetting(projectId, extensionInstanceId, key)).value,
-      set: async (key, value) => ({
-        value: (await updateProjectExtensionSetting(projectId, extensionInstanceId, key, value)).value,
-      }),
-      delete: async (key) => {
-        await deleteProjectExtensionSetting(projectId, extensionInstanceId, key);
-      },
-    } satisfies ExtensionWebviewSettingsAdapter;
-  if (installName)
-    return {
-      all: async () =>
-        Object.fromEntries(
-          (await listGlobalExtensionSettings(installName)).settings.map((setting) => [setting.key, setting.value]),
-        ),
-      get: async (key) => (await getGlobalExtensionSetting(installName, key)).value,
-      set: async (key, value) => ({ value: (await updateGlobalExtensionSetting(installName, key, value)).value }),
-      delete: async (key) => {
-        await deleteGlobalExtensionSetting(installName, key);
-      },
-    } satisfies ExtensionWebviewSettingsAdapter;
-  return undefined;
+export const createDashboardWebviewSettingsAdapter = (
+  runtime: RuntimeCollections,
+  props: { projectId?: string; extensionId?: string; extensionInstanceId?: string; installName?: string },
+  installedExtensionId: string | undefined,
+  assertViewerCurrent: () => void,
+): ExtensionWebviewSettingsAdapter | undefined => {
+  const { projectId, extensionId, extensionInstanceId: instanceId, installName } = props;
+  const target = { projectId, instanceId, installedExtensionId, installName };
+  if (!(target.projectId && target.instanceId) && !target.installName) return;
+  const settings = getExtensionSettingOperations(runtime);
+  const endpoint = settings.transport(target);
+  const authority = settings.authority();
+  const assertCurrent = () => {
+    assertViewerCurrent();
+    if (settings.authority() !== authority) throw new Error("This extension setting belongs to a closed account.");
+  };
+  const write = async (key: string, value: unknown) => {
+    assertCurrent();
+    const declared = getCachedDashboardExtensionMetadata(projectId, runtime)?.settingsDefinitions?.find(
+      (definition) => definition.key === key && definition.extensionId === extensionId,
+    );
+    const definition = declared ?? (await endpoint.get(key));
+    return settings.update(target, definition, value, assertCurrent);
+  };
+  return {
+    async all() {
+      assertCurrent();
+      const result = await endpoint.all();
+      assertCurrent();
+      return Object.fromEntries(result.settings.map((record) => [record.key, settings.project(target, record).value]));
+    },
+    async get(key) {
+      assertCurrent();
+      const result = await endpoint.get(key);
+      assertCurrent();
+      return settings.project(target, result).value;
+    },
+    async set(key, value) {
+      const result = await write(key, value);
+      return { value: result.setting?.value };
+    },
+    async delete(key) {
+      await write(key, undefined);
+    },
+  };
 };
 
 export const createDashboardWebviewNotificationsAdapter = (input: {

@@ -58,7 +58,8 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
     ) ?? [];
   const { t } = useTranslation("projects");
   const setAutomationEnabled = useSetExtensionAutomationEnabled(projectId);
-  const settingsQuery = useProjectExtensionSettings(projectId, extension.id);
+  const settingTarget = { projectId, instanceId: extension.id, installedExtensionId: extension.installedExtensionId };
+  const settingsQuery = useProjectExtensionSettings(settingTarget);
   // The per-extension endpoint documents contributions even while the extension
   // is disabled, unlike the workbench metadata which only covers enabled ones.
   const contributionsQuery = useExtensionContributions(projectId, extension.id);
@@ -158,8 +159,10 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
         }}
         onChangeSetting={(key, value) => {
           clearError();
+          const setting = settingsQuery.data?.settings.find((record) => record.key === key);
+          if (!setting) return;
           updateSetting.mutate(
-            { instanceId: extension.id, key, value },
+            { target: settingTarget, setting: { key, scope: setting.scope, extensionId: setting.extensionId }, value },
             { onError: (error) => showError({ title: error.message }) },
           );
         }}
