@@ -1,7 +1,9 @@
 import { expect, test } from "bun:test";
+import type { ProcessHandle } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { folderProjectInput } from "../../test-utils/folder-project-input";
-import { createSessionHarnessOperation } from "./session-harness-commands";
+import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
+import { createSessionHarnessOperation, invokeSessionHarnessOperation } from "./session-harness-commands";
 
 test("a failed first-operation workspace link leaves a failed session", async () => {
   const app = await createTestApp();
@@ -70,6 +72,44 @@ test("an unavailable workspace rejects a native operation before creating a sess
     });
     await expect(run()).rejects.toThrow("provider state is provisioning");
     expect(await app.deps.sessionService.list(project.id)).toEqual([]);
+  } finally {
+    await app.close();
+  }
+});
+
+test("a native operation refused after preparation stops the children it started", async () => {
+  let child: ProcessHandle | undefined;
+  const record = createTestHarnessRecord("native-release", {
+    provider: {
+      prepareOperation: (ctx) => {
+        child = ctx.process.spawn({ command: [process.execPath, "-e", "setInterval(() => {}, 1000)"] });
+        return { execution: "exclusive", invoke: async () => ({ kind: "completed" }) };
+      },
+    },
+  });
+  const app = await createTestApp({ harnessRegistry: createTestHarnessRegistry([record]) });
+  try {
+    const project = await (
+      await app.app.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(folderProjectInput({ name: "Refused operation" })),
+      })
+    ).json();
+    const session = await app.deps.sessionService.create({
+      project_id: project.id,
+      title: "Busy",
+      agent: testHarnessId("native-release"),
+    });
+    await app.deps.sessionService.resume(session.id);
+    await expect(
+      invokeSessionHarnessOperation(app.deps, session.id, { kind: "command", text: "/review" }),
+    ).rejects.toThrow("Finish or stop the current work");
+    const outcome = await Promise.race([
+      child!.exited.then(() => "stopped"),
+      Bun.sleep(3_000).then(() => "still running"),
+    ]);
+    expect(outcome).toBe("stopped");
   } finally {
     await app.close();
   }

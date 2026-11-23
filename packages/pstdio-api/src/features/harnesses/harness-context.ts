@@ -47,10 +47,10 @@ export const createHarnessContextFactory = (input: {
         callOwner: owner,
         extensionOwner: () => owner,
         // Detection and model calls pass no workspace and run on this device.
-        resolveTarget: async (workspaceId) => {
+        resolveTarget: async (workspaceId, signal) => {
           if (!workspaceId) return undefined;
           const { projectId, targets } = projectOf(options?.projectId, "process_target_unavailable");
-          return targets.process({ projectId, workspaceId });
+          return targets.process({ projectId, workspaceId }, signal);
         },
       }),
       targetFiles: {

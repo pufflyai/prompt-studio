@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join, relative } from "node:path";
-import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { EXTENSION_API_VERSION, type ProcessHandle } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { remoteReadOnlyCapabilities } from "../workspaces/workspace-provider-identity";
 import { readTargetText } from "./extension-targets";
@@ -12,7 +12,7 @@ let root: string;
 let handle: Awaited<ReturnType<typeof createTestApp>>;
 let closed = false;
 const projects = { main: "", other: "" };
-const workspaces = { remote: "", bare: "", other: "" };
+const workspaces = { remote: "", bare: "", slow: "", other: "" };
 let instanceId = "";
 const providerRef = { version: 1, data: { machine: "devbox-7" } };
 const previous = { home: process.env.PSTDIO_HOME, defaults: process.env.PSTDIO_DEFAULT_EXTENSIONS };
@@ -52,6 +52,17 @@ export default {
       },
     },
     {
+      id: "fire",
+      ref: { kind: "command", id: "fire" },
+      title: "Fire",
+      async run(ctx, params) {
+        ctx.process.spawn(params);
+        // Return only once the provider is inside its spawn call.
+        while (!globalThis.__slowProviderEntered) await new Promise((resolve) => setTimeout(resolve, 10));
+        return "returned";
+      },
+    },
+    {
       id: "keep",
       ref: { kind: "command", id: "keep" },
       title: "Keep",
@@ -77,6 +88,19 @@ export default {
       },
     },
     { id: "bare", ref: { kind: "workspace-type", id: "bare" }, label: "Bare", create: ready, resolve: ready },
+    {
+      id: "slow",
+      ref: { kind: "workspace-type", id: "slow" },
+      label: "Slow",
+      create: ready,
+      resolve: ready,
+      // Starts a local helper, then never answers; the caller must not wait for it.
+      spawn(ctx) {
+        globalThis.__slowProviderHelper = ctx.process.spawn({ command: [process.execPath, "-e", "setInterval(() => {}, 1000)"] });
+        globalThis.__slowProviderEntered = true;
+        return new Promise(() => {});
+      },
+    },
   ],
 };
 `;
@@ -90,7 +114,7 @@ setInterval(() => {}, 1000);`,
   );
 };
 
-const addRemoteWorkspace = async (projectId: string, type: "remote" | "bare") => {
+const addRemoteWorkspace = async (projectId: string, type: "remote" | "bare" | "slow") => {
   const workspace = await handle.deps.workspaceService.createStandalone({
     project_id: projectId,
     provider_id: `example.spawner.workspace-type.${type}`,
@@ -148,6 +172,7 @@ beforeAll(async () => {
   }
   workspaces.remote = await addRemoteWorkspace(projects.main, "remote");
   workspaces.bare = await addRemoteWorkspace(projects.main, "bare");
+  workspaces.slow = await addRemoteWorkspace(projects.main, "slow");
 });
 
 afterAll(async () => {
@@ -236,6 +261,19 @@ test("a remote workspace without provider support fails clearly instead of runni
   await expect(
     readTargetText(handle.deps, { projectId: projects.main, workspaceId: workspaces.bare, path: "~/.claude/x.jsonl" }),
   ).rejects.toMatchObject({ code: "target_file_unsupported" });
+});
+
+test("a command that leaves a spawn opening on an unresponsive provider still ends, and the provider's call is closed", async () => {
+  const outcome = await Promise.race([
+    execute(projects.main, "fire", { command: ["agent"], workspaceId: workspaces.slow }),
+    Bun.sleep(4_000).then(() => "hung"),
+  ]);
+  expect(outcome).toMatchObject({ ok: true, value: "returned" });
+  // The provider's own context closed, so the helper it started for this child stopped too.
+  const helper = (globalThis as { __slowProviderHelper?: ProcessHandle }).__slowProviderHelper!;
+  expect(await Promise.race([helper.exited.then(() => "stopped"), Bun.sleep(3_000).then(() => "running")])).toBe(
+    "stopped",
+  );
 });
 
 test("target files read local paths relative to the workspace or the home, and remote ones through the provider", async () => {

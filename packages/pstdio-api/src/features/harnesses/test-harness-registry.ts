@@ -7,7 +7,7 @@ import {
   type HarnessSessionResources,
 } from "pstdio-api-runtime-host";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
-import { failedProcessHandle } from "pstdio-extensions";
+import { createProcessApi } from "../extensions/extension-process-api";
 import type { HarnessRegistryService } from "./harness-registry-service";
 
 // Test support: an in-memory harness registry mirroring the namespaced ids the
@@ -53,7 +53,7 @@ export const createTestHarnessRegistry = (
   const resources = options?.sessionResources ?? createHarnessSessionResources();
   const registry = createHarnessRegistry(
     records,
-    (record, options) => ({
+    (record, options, owner) => ({
       projectId: options?.projectId,
       extensionId: record.extensionId,
       name: record.name,
@@ -61,7 +61,8 @@ export const createTestHarnessRegistry = (
         run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
         runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
         spawnDetached: async () => ({}),
-        spawn: () => failedProcessHandle(new Error("No test process configured.")),
+        // Real children, owned like the host's: the instance, narrowed to each call by the registry.
+        spawn: createProcessApi({ callOwner: owner, extensionOwner: () => owner }).spawn,
       },
       targetFiles: {
         readText: async () => {
