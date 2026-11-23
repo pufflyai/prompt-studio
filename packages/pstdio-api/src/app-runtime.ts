@@ -284,9 +284,10 @@ export const startAppLifecycle = async (input: {
     if (!startupAbort.signal.aborted) apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed");
   });
 
+  const getStartupBackgroundDone = () => Promise.all(startupBackgroundTasks).then(() => undefined);
   // Recovered extension selections need every dependency and the closer that stops them.
   input.deps.extensionInstallations.start();
-  return createAppCloser({
+  const close = createAppCloser({
     ...input,
     closeBackendWorkers,
     // Imports stop while their session and file dependencies are still available.
@@ -308,6 +309,9 @@ export const startAppLifecycle = async (input: {
     nativeDocuments: input.deps.nativeDocuments,
     textEditing: input.deps.textEditing,
     startupDone,
-    getStartupBackgroundDone: () => Promise.all(startupBackgroundTasks).then(() => undefined),
+    getStartupBackgroundDone,
   });
+  // Startup registers its background tasks before it settles, so this waits for all of them. Their
+  // owners log failures; this only says when the runtime has stopped starting up.
+  return { close, startupSettled: startupDone.then(getStartupBackgroundDone).catch(() => {}) };
 };
