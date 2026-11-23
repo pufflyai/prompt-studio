@@ -44,20 +44,27 @@ const bindOperationIdentity = async (
   identity: string,
   retained: (id: string) => Promise<RetainedOperation | undefined>,
 ) => {
-  const [row] = await tx
-    .insert(operations)
-    .values({
-      ...orderedAddress(owner),
-      operation_id: id,
-      fingerprint: identity,
-    })
-    .onConflictDoUpdate({
-      target: [operations.owner_id, operations.operation_id],
-      // Retain the original identity and payload while returning its locked row
-      // in this statement; every admission otherwise repeats a separate lookup.
-      set: { fingerprint: operations.fingerprint },
-    })
-    .returning();
+  const read = () =>
+    tx
+      .select()
+      .from(operations)
+      .where(and(ownerWhere(operations, owner), eq(operations.operation_id, id)));
+  // Most decisions bind an already authored operation. Read its current row
+  // without rewriting an immutable identity or consuming another queue sequence.
+  let [row] = await read();
+  if (!row)
+    [row] = await tx
+      .insert(operations)
+      .values({
+        ...orderedAddress(owner),
+        operation_id: id,
+        fingerprint: identity,
+      })
+      .onConflictDoNothing({ target: [operations.owner_id, operations.operation_id] })
+      .returning();
+  // A conflicting insertion can become visible only after the INSERT snapshot.
+  if (!row) [row] = await read();
+  if (!row) throw new Error("An ordered operation reservation is missing");
   if (row!.fingerprint !== identity) throw identityError();
   if (!row!.request_fingerprint && !row!.envelope && !Object.keys(row!.receipt).length) {
     const saved = await retained(id);
