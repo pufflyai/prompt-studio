@@ -54,7 +54,10 @@ test("keeps a submitted ticket unresolved if the server commits and its response
     await expect(page).toHaveURL(boardUrl);
     await form.getByRole("button", { name: "Inspect resources" }).click();
     await expect(form).toBeHidden();
-    await expect(page.locator('[data-status-bar-item="workbench.system-activity"]')).toBeVisible();
+    await page.locator('[data-status-bar-item="workbench.system-activity"]').click();
+    await expect(page.getByRole("button", { name: "Inspect resources", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Copy draft", exact: true })).toBeEnabled();
+    await page.keyboard.press("Escape");
     await add.click();
     await expect(unresolved).toBeVisible();
     await expect(submit).toBeDisabled();
