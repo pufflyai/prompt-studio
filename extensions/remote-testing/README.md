@@ -15,7 +15,13 @@ command there, stops the environment when the run finishes, and saves the full l
 
 - **Runs**: every run with its status, command, the session that started it, environment,
   start time, duration, exit code and log. Prompt Studio collects results in the background
-  after the CLI returns. Double-click a run, or use its menu, to
+  after the CLI returns. If a runner disappears without a final receipt, collection marks
+  the run timed out after its command duration and the existing 30-minute source-transfer
+  and log-collection allowance, then
+  stops its owned environment. An explicitly kept environment stays open; collection
+  cancels its overdue request when the controller can return its receipt and retains the
+  workspace claim until a terminal receipt confirms cancellation. A receipt that
+  already finished retains its actual result. Double-click a run, or use its menu, to
   open its session. The menu also cancels a running run.
 - **Environments**: running test environments, whether each is free or which run holds it,
   whether it uses the current template, and when it stops. Start one ahead of time, stop one
@@ -70,5 +76,13 @@ Connections are global on this device. Configure them once through any local pro
 
 Test environments are Linux amd64 workspaces with Bun, Git, strace and Chromium. They have
 no Docker, so suites that start containers still run locally.
+
+Set the session service's `process.env.HOME` to `/workspace` and
+`process.env.POCKETCODER_SESSION_DIRECTORY` to `/workspace/.pocketcoder-sessions` in the
+approved runner templates. The service starts with its declared environment; an image's
+`ENV HOME` does not configure it. Browser installers use the home directory for caches.
+The memory-backed `/tmp` is only 256 MiB and cannot hold a downloaded browser alongside
+the producer journal. Keep both browser caches and that journal on the workspace volume.
+Apply these values to the published default template and both approved branch bases.
 
 For branch launches, install approved rendered manifests as `branch-templates/tests.json` and `branch-templates/preview.json` in this extension's project storage. Configure **PocketCoder branch templates** with a finite `templates:write` key scoped to `remote-tests-branch` and `prompt-studio-preview-branch`. Configure the runner key to launch both branch families. Both keys stay on the Prompt Studio host.

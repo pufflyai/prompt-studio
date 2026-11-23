@@ -1,6 +1,6 @@
 import type { ExtensionProcessApi, ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import type { BranchKind, BranchSource, TemplateRef } from "./branch-templates";
-import { type Api, canRetryControllerRequest, readControllerWithRetry, waitForControllerPoll } from "./connection";
+import { type Api, canRetryControllerRequest, waitForControllerPoll } from "./connection";
 import type { EnvironmentCleanupInput } from "./environment-cleanup";
 import {
   claimEnvironment,
@@ -11,6 +11,8 @@ import {
   stopEnvironment,
   waitUntilReady,
 } from "./environments";
+import { readRunReceipt, runDeadline, TRANSFER_ALLOWANCE_SECONDS } from "./run-deadline";
+import { type Receipt, summarize, timeoutReceipt } from "./run-result";
 import type { Settings } from "./settings";
 import { withSourceArchive } from "./source";
 import type { RunStorage } from "./storage";
@@ -29,7 +31,7 @@ export interface RunDeps {
   changed?(): Promise<unknown>;
 }
 
-type RunCollectionDeps = Pick<RunDeps, "api" | "store" | "saveLog" | "changed"> & {
+export type RunCollectionDeps = Pick<RunDeps, "api" | "store" | "saveLog" | "changed"> & {
   storage: Pick<RunStorage, "download">;
 };
 
@@ -60,14 +62,6 @@ export interface RunSummary {
   error?: string;
 }
 
-interface Receipt {
-  finalizedAt?: string | null;
-  acceptance: { execution: Record<string, unknown> };
-  outcome?: { status?: string; finalResponse?: string } | null;
-}
-
-const MARKER = "REMOTE_TEST_RESULT ";
-const TAIL_LINES = 60;
 const sources = (runId: string) => `sources/${runId}.tar.gz`;
 const logs = (runId: string) => `logs/${runId}.log`;
 
@@ -155,10 +149,10 @@ export async function startRun(
     const message = JSON.stringify({
       type: "pocketcoder.remote-test/v1",
       runId,
-      source: { url: await deps.storage.signedUrl("GET", sources(runId), 1800), sha256 },
+      source: { url: await deps.storage.signedUrl("GET", sources(runId), TRANSFER_ALLOWANCE_SECONDS), sha256 },
       command,
       timeoutSeconds,
-      log: { url: await deps.storage.signedUrl("PUT", logs(runId), timeoutSeconds + 1800) },
+      log: { url: await deps.storage.signedUrl("PUT", logs(runId), timeoutSeconds + TRANSFER_ALLOWANCE_SECONDS) },
     });
     record = {
       runId,
@@ -265,63 +259,53 @@ export async function checkRun(
   retryTransient = false,
 ) {
   if (record.summary) return record.summary;
-  const receipt = retryTransient
-    ? await readControllerWithRetry<Receipt>(deps.api, requestPath(record), signal)
-    : await deps.api<Receipt>({ method: "GET", path: requestPath(record), signal });
-  if (!receipt.finalizedAt) return null;
+  let receipt = await readRunReceipt<Receipt>(deps.api, requestPath(record), record, signal, retryTransient);
+  const expired = !receipt?.finalizedAt && Date.now() >= runDeadline(record);
+  if (!receipt?.finalizedAt && !expired) return null;
+  if (expired) {
+    if (!record.stopAfterRun && (await renewEnvironmentClaim(deps.store, record.environmentId, record.runId, 1800))) {
+      // Cancellation acknowledges intent. Keep a reusable workspace claimed until
+      // a terminal receipt proves the old command can no longer write its files.
+      if (receipt) await cancelOverdueRequest(deps.api, record, receipt, signal);
+      return null;
+    }
+    receipt = timeoutReceipt(record);
+  }
   // The runner uploads its log before the controller finalizes the request.
   if (record.stopAfterRun) await stopCollectedEnvironment(deps, record, signal, retryTransient);
-  const summary = await summarize(deps, record, receipt, signal, retryTransient);
+  const summary = await summarize(deps, record, receipt!, signal, retryTransient);
+  if (expired) summary.error = "The remote runner did not return a final receipt before the run deadline.";
   await deps.store.set(`run:${record.runId}`, { ...record, summary });
   await releaseEnvironment(deps.store, record.environmentId, record.runId);
   await notifyRunChange(deps);
   return summary;
 }
 
-async function summarize(
-  deps: RunCollectionDeps,
-  record: RunRecord,
-  receipt: Receipt,
-  signal?: AbortSignal,
-  retryTransient = false,
-): Promise<RunSummary> {
-  const response = receipt.outcome?.finalResponse ?? "";
-  const line = response.split("\n").find((text) => text.startsWith(MARKER));
-  const result = line
-    ? (JSON.parse(line.slice(MARKER.length)) as {
-        exitCode: number | null;
-        durationMs: number;
-        timedOut: boolean;
-        error?: string;
-      })
-    : null;
-  const log = await deps.storage.download(logs(record.runId), { signal, retryTransient });
-  const text = log ? new TextDecoder().decode(log) : "";
-  const logPath = log ? await deps.saveLog(record.runId, text) : null;
-  const base = {
-    runId: record.runId,
-    environmentId: record.environmentId,
-    exitCode: result?.exitCode ?? null,
-    durationMs: result?.durationMs ?? Date.now() - Date.parse(record.startedAt),
-    logPath,
-    tail: text.split("\n").slice(-TAIL_LINES).join("\n"),
-  };
-  if (receipt.outcome?.status === "canceled") return { ...base, status: "canceled" };
-  if (!result) return { ...base, status: "error", error: response || JSON.stringify(receipt.outcome) };
-  if (result.error) return { ...base, status: "error", error: result.error };
-  if (result.timedOut) return { ...base, status: "timed_out" };
-  return { ...base, status: result.exitCode === 0 ? "passed" : "failed" };
-}
-
 export async function cancelRun(deps: RunDeps, record: RunRecord) {
   const receipt = await deps.api<Receipt>({ method: "GET", path: requestPath(record) });
   if (receipt.finalizedAt) return false;
-  await deps.api({
+  if (receipt.cancel) return true;
+  await cancelRequest(deps.api, record, receipt);
+  return true;
+}
+
+async function cancelOverdueRequest(api: Api, record: RunRecord, receipt: Receipt, signal?: AbortSignal) {
+  if (receipt.cancel) return;
+  try {
+    await cancelRequest(api, record, receipt, signal);
+  } catch (error) {
+    signal?.throwIfAborted();
+    if (!canRetryControllerRequest(error)) throw error;
+  }
+}
+
+async function cancelRequest(api: Api, record: RunRecord, receipt: Receipt, signal?: AbortSignal) {
+  await api({
     method: "POST",
     path: `/v1/workspaces/${record.environmentId}/executions/${record.requestId}/cancel`,
-    body: { execution: receipt.acceptance.execution as never, cancelId: crypto.randomUUID(), scope: "operation" },
+    body: { execution: receipt.acceptance.execution as never, cancelId: record.runId, scope: "operation" },
+    signal,
   });
-  return true;
 }
 
 export async function listRuns(store: ExtensionStorageApi) {
