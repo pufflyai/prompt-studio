@@ -173,7 +173,7 @@ export const createOrderedJournal = (tx: Transaction, owner: StorageOwner) => {
     knownDependency: dependencies.known,
     cachedDecision,
     bindIdentity: bind,
-    ...createOrderedAuthorship(tx, owner, operation),
+    ...createOrderedAuthorship(tx, owner, operation, retained),
     queue: (input: OrderedOperation, requestFingerprint: string) =>
       queueOrderedOperation(tx, owner, input, requestFingerprint, operation, retained),
     async pending(options: { after?: number; limit?: number } = {}) {
