@@ -20,6 +20,8 @@ export type DatabaseWorkerRequest =
   | { type: "begin"; id: number }
   | { type: "end"; id: number; txId: number; commit: boolean }
   | { type: "cleanup"; id: number }
+  /** The API thread's `stopped()` turned true; the running cleanup stops at its next check. */
+  | { type: "stop-cleanup" }
   | { type: "close"; id: number };
 
 export interface SerializedDatabaseError {
