@@ -213,7 +213,12 @@ export const createScopedQueryClient = (
       const retiring = [...entries.values()];
       entries.clear();
       try {
-        runQueryCleanup([() => stop?.(), ...retiring.map((entry) => entry.dispose), notifyRetirement]);
+        runQueryCleanup([
+          () => stop?.(),
+          () => notifyScopeRetirement({}),
+          ...retiring.map((entry) => entry.dispose),
+          notifyRetirement,
+        ]);
       } finally {
         retirementListeners.clear();
         scopeRetirementListeners.clear();

@@ -53,6 +53,21 @@ const changeStatus = (entry: Entry, status: OperationPreview["status"]) => {
   entry.preview = { ...entry.preview, status, intent: status === "rejected" ? undefined : entry.preview.intent };
 };
 
+const retireEntry = (entry: Entry) => {
+  const error = retiredError();
+  entry.controller.abort(error);
+  entry.preview = { ...entry.preview, intent: undefined };
+  entry.execute = undefined;
+  entry.check = undefined;
+  const { status } = entry.preview;
+  if (recoveryStatus(status)) return;
+
+  const interrupted = entry.acknowledged ? "unconfirmed" : "unknown";
+  changeStatus(entry, status === "queued" ? "rejected" : interrupted);
+  entry.error = error;
+  entry.reject(error);
+};
+
 const initialPreview = <T>(input: OperationInput<T>, id: symbol, defaultProjectId?: string): OperationPreview => ({
   id,
   projectId: input.projectId ?? defaultProjectId,
@@ -153,18 +168,7 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
     for (const entry of entries.values()) {
       if (entry.controller.signal.aborted) continue;
       if (!Object.entries(retired).every(([key, value]) => entry.scope[key as keyof QueryScope] === value)) continue;
-      const { status } = entry.preview;
-      const error = retiredError();
-      entry.controller.abort(error);
-      entry.preview = { ...entry.preview, intent: undefined };
-      entry.execute = undefined;
-      entry.check = undefined;
-      if (status === "queued" || status === "writing" || status === "reconciling") {
-        const outcome = entry.acknowledged ? "unconfirmed" : status === "queued" ? "rejected" : "unknown";
-        changeStatus(entry, outcome);
-        entry.error = error;
-        entry.reject(error);
-      }
+      retireEntry(entry);
     }
     publish();
     schedule();
@@ -298,8 +302,11 @@ const createWorkbenchOperations = (queries: ScopedQueryClient) => {
     },
     async transfer(id: symbol, receive: (draft: unknown) => boolean | Promise<boolean>) {
       const entry = findRecovery(id);
-      if (!entry || entry.draft === undefined || !(await receive(entry.draft))) return false;
-      if (entries.get(id) === entry) clearDraft(entry);
+      if (!entry || entry.draft === undefined) return false;
+      const wasRetired = entry.controller.signal.aborted;
+      if (!(await receive(entry.draft)) || findRecovery(id) !== entry || entry.controller.signal.aborted !== wasRetired)
+        return false;
+      clearDraft(entry);
       return true;
     },
   };

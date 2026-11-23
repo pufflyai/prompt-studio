@@ -290,6 +290,67 @@ test("late transport rejection cannot reclassify retired recovery", async () => 
   });
 });
 
+test("a draft transfer completing after retirement cannot release the original recovery", async () => {
+  const { queries, operations, subject } = setup();
+  const attempt = operations.submit({
+    domain: "title",
+    subjects: [subject],
+    title: "Rename ticket",
+    draft: "My draft",
+    write: () => {
+      throw new Error("Rejected");
+    },
+    classify: () => "rejected",
+  });
+  await expect(attempt.result).rejects.toThrow("Rejected");
+  const received = Promise.withResolvers<boolean>();
+  const transfer = operations.transfer(attempt.id, () => received.promise);
+  queries.setAuthority({ accountId: "work" });
+  received.resolve(true);
+  expect(await transfer).toBe(false);
+  queries.setAuthority({ accountId: "personal" });
+  expect(operations.getSnapshot().recovery[0]?.draft).toBe("My draft");
+  expect(await operations.transfer(attempt.id, () => true)).toBe(true);
+});
+
+test("disposing the runtime aborts active and queued operations without reconciling old data", async () => {
+  const { queries, operations, subject } = setup();
+  const transport = Promise.withResolvers<void>();
+  let signal: AbortSignal | undefined;
+  let writes = 0;
+  let reconciliations = 0;
+  const active = operations.submit({
+    domain: "title",
+    subjects: [subject],
+    title: "Rename ticket",
+    write: (current) => {
+      writes++;
+      signal = current;
+      return transport.promise;
+    },
+    reconcile: () => {
+      reconciliations++;
+    },
+  });
+  const queued = operations.submit({
+    domain: "title",
+    subjects: [subject],
+    title: "Rename ticket",
+    write: () => {
+      writes++;
+    },
+  });
+
+  const outcomes = Promise.allSettled([active.result, queued.result]);
+  await Promise.resolve();
+  queries.dispose();
+  expect(signal?.aborted).toBe(true);
+  expect(operations.getSnapshot()).toEqual({ pending: [], recovery: [] });
+  transport.resolve();
+  expect((await outcomes).map(({ status }) => status)).toEqual(["rejected", "rejected"]);
+  expect({ writes, reconciliations }).toEqual({ writes: 1, reconciliations: 0 });
+});
+
 test("capacity preserves all retained drafts and sends no new write", async () => {
   const { operations, subject } = setup();
   for (let index = 0; index < 128; index++) {
