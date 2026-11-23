@@ -1,8 +1,8 @@
 import { Box, Button, Stack } from "@chakra-ui/react";
-import { type CanvasFrame, type CanvasMeta } from "@pstdio/canvas";
+import type { CanvasFrame, CanvasMeta } from "@pstdio/canvas";
 import { useState } from "react";
-import { smoothSnapshot } from "../../src/components/performance-snapshot.fixtures";
 import { PerformancePopoverContent } from "./performance-popover-content";
+import { smoothSnapshot } from "./performance-snapshot.fixtures";
 
 const PerformanceActionFeedback = () => {
   const [confirmed, setConfirmed] = useState(false);
@@ -43,7 +43,7 @@ const PerformanceActionFeedback = () => {
   );
 };
 const meta = {
-  title: "Proposals/PS-289 Performance actions",
+  title: "Extensions/Performance/Pending actions",
   component: PerformanceActionFeedback,
 } satisfies CanvasMeta<typeof PerformanceActionFeedback>;
 export default meta;
