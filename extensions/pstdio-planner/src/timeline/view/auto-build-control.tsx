@@ -39,11 +39,7 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
         reviewRequests={autoBuild.mode?.reviewRequests}
         requestErrors={autoBuild.mode?.requestErrors}
         onAnswerRequest={(requestId, response) => client.commands.review({ requestId, response })}
-        onOpenRequestChat={async (requestId) => {
-          const result = await client.commands["review-requests.open"]({ requestId });
-          props.onClose?.();
-          return result;
-        }}
+        onOpenRequestChat={(requestId) => client.commands["review-requests.open"]({ requestId })}
         onPause={() => autoBuild.transition("pause")}
         onResume={() => autoBuild.transition("resume")}
         completed={autoBuild.mode?.completed}
@@ -57,17 +53,16 @@ export function AutoBuildControl(props: AutoBuildControlProps) {
         capacity={autoBuild.mode?.capacity.limit ?? 0}
         stuck={autoBuild.mode?.stuck}
         error={autoBuild.mode?.configurationError ?? autoBuild.mode?.error}
-        onOpenSession={async (session) => {
-          await host.call("navigation.open", {
+        onOpenSession={(session) =>
+          host.call("navigation.open", {
             target: {
               kind: "panel",
               panel: sessionBrowser.panels.conversation,
               open: "preview",
               resource: { type: "session", id: session.id, extensionId: "pstdio", label: session.title },
             },
-          });
-          props.onClose?.();
-        }}
+          })
+        }
         actionError={autoBuild.error}
         onDismissActionError={autoBuild.dismissError}
         disabled={!autoBuild.mode || autoBuild.saving}

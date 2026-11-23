@@ -10,12 +10,14 @@ import { AutoBuildControl } from "./auto-build-control";
 import { createPlanClient } from "./use-plan";
 
 function TimelineActions(props: Pick<ComponentProps<typeof AutoBuildControl>, "host" | "t">) {
-  const [client] = useState(() => createPlanClient(props.host));
+  const { host, t } = props;
+  const [client] = useState(() => createPlanClient(host));
   return (
     <ChakraProvider value={psTheme}>
       <Flex h="100dvh" minW="0" align="center" justify="end">
         <AutoBuildControl
-          {...props}
+          host={host}
+          t={t}
           client={client}
           onOpen={() =>
             void client.navigation.open({
