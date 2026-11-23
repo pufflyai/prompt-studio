@@ -13,9 +13,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - pr: 2377
-            head: d8e4f454581e5091bd3b15ee64ebb1d9b0f5d453
-            test: extensions/harness-open-code/src/harness-catalog-lifecycle.p0.test.ts
+          - pr: 2379
+            head: 0e6236808a87ab147f247283cc0d46bc1ab75d7c
+            test: packages/canvas-tests/src/ui/ui/chat-tail-resize.p1.spec.ts
     env:
       REVIEW_HEAD: ${{ matrix.head }}
       REVIEW_TEST: ${{ matrix.test }}
