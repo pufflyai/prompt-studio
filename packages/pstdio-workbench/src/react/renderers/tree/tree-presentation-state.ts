@@ -71,7 +71,9 @@ export const useTreePresentationState = (workbench: WorkbenchCore, key: string) 
     prunePresentations(workbench);
     for (const listener of listeners.get(workbench)?.get(key) ?? []) listener();
   };
-  return { ...snapshot, update };
+  const setFilter = (filter: string) =>
+    update(filter.trim() === snapshot.filter.trim() ? { filter } : { filter, scrollTop: 0 });
+  return { ...snapshot, update, setFilter };
 };
 
 export const useTreeViewState = (
@@ -92,24 +94,26 @@ export const useTreeViewState = (
   const presentationKey = stateScope ?? JSON.stringify([navigation.projectId, treeViewId]);
   const presentation = useTreePresentationState(workbench, presentationKey);
   const stateKey = treeStateKey(treeViewId, stateScope);
-  const declared = useWorkbenchStore(getWorkbenchRenderers(workbench).treeStore, (state) => state.trees[treeViewId]);
+  const { treeStore } = getWorkbenchRenderers(workbench);
+  const declared = useWorkbenchStore(treeStore, (state) => state.trees[treeViewId]);
   const fallback = {
     expandedNodeIds: declared?.defaultExpandedNodeIds ?? [],
     expandedSectionIds: declared?.defaultExpandedSectionIds ?? [],
   };
-  const treeState =
-    useWorkbenchStore(getWorkbenchRenderers(workbench).treeStore, (state) => state.statesByTreeId[stateKey]) ??
-    fallback;
-  return { ...navigation, stateScope, presentationKey, presentation, treeState };
+  const scopedState = useWorkbenchStore(treeStore, (state) => state.statesByTreeId[stateKey]) ?? fallback;
+  // The host's loading flag applies to this tree regardless of its current resource scope.
+  const loading = useWorkbenchStore(treeStore, (state) => state.statesByTreeId[treeViewId]?.loading);
+  return { ...navigation, stateScope, presentationKey, presentation, treeState: { ...scopedState, loading } };
 };
 export const useTreeScrollRestoration = (
   scroll: RefObject<HTMLDivElement | null>,
   key: string,
+  query: string | undefined,
   top: number,
   loading: boolean,
 ) => {
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Restore on owner changes or after loading, never in response to the scroll being saved.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Restore on owner or query changes and after loading, never in response to the scroll being saved.
   useLayoutEffect(() => {
     if (scroll.current) scroll.current.scrollTop = top;
-  }, [scroll, key, loading]);
+  }, [scroll, key, query, loading]);
 };

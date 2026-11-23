@@ -1,5 +1,5 @@
-import { Button, Code, HStack, Input, Spinner, Stack } from "@chakra-ui/react";
-import { CopyButton, EmptyState } from "@pstdio/ui";
+import { Button, Code, HStack, Input, Stack } from "@chakra-ui/react";
+import { CopyButton, EmptyState, LogoLoader } from "@pstdio/ui";
 import { SelectionInput } from "@pstdio/ui/param-editor";
 import type { HarnessAuthenticationPrompt, HarnessAuthenticationQuestion } from "pstdio-api-contracts";
 import { useState } from "react";
@@ -76,7 +76,7 @@ export const HarnessBrowserProgress = (props: HarnessBrowserProgressProps) => {
         question?.title ?? t(action === "login" ? "harnessAccount.loginTitle" : "harnessAccount.logoutTitle", { name })
       }
       description={question ? undefined : (message ?? prompt?.message ?? instructions)}
-      icon={question ? undefined : <Spinner size="lg" />}
+      icon={question ? undefined : <LogoLoader />}
     >
       <Stack gap="sm" align="center" w="full" maxW="sm">
         {prompt?.code ? (
