@@ -1,0 +1,116 @@
+name: Dispatch the gated nightly for pr-2407
+on:
+  push:
+    branches: [diagnostics/nightly-after-pr-2407-gate]
+    paths: [.github/workflows/nightly-after-pr-2407-gate.yml]
+permissions: {}
+concurrency:
+  group: nightly-after-pr-2407-gate
+  cancel-in-progress: false
+jobs:
+  dispatch:
+    runs-on: ubuntu-24.04
+    permissions:
+      actions: write
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GATE_RUN: "45276982727"
+      GATE_WORKFLOW_SHA: 57fe5dd24901b61c537bdba8b8f8e3d517d867be
+      SOURCE_SHA: 0d23189332f92c6378c6e171a461e0a69e29e7c9
+      BASE_SHA: e78df2fe1265d95a42d15a6f9f8bcc29fa4ee655
+      MERGE_RUN: "45276790936"
+      STABLE_TAG: pstdio@0.48.0
+      NIGHTLY_TAG: pstdio@0.49.0-nightly.20261123204845
+    steps:
+      - name: Wait for the exact gate attempt
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          run_identity=$(gh run view "$GATE_RUN" --repo "$GITHUB_REPOSITORY" \
+            --json databaseId,attempt,event,headBranch,headSha,workflowName)
+          jq -e --arg run "$GATE_RUN" --arg sha "$GATE_WORKFLOW_SHA" \
+            '(.databaseId | tostring) == $run and .attempt == 1 and .event == "push" and
+             .headBranch == "diagnostics/release-gate-recovery" and .headSha == $sha and
+             .workflowName == "Hosted release gate recovery"' <<< "$run_identity"
+          gh run watch "$GATE_RUN" --repo "$GITHUB_REPOSITORY" --interval 20 --exit-status
+          gh run view "$GATE_RUN" --repo "$GITHUB_REPOSITORY" --json attempt,status,conclusion \
+            --jq '.attempt == 1 and .status == "completed" and .conclusion == "success"' |
+            grep -Fx true
+      - name: Verify the merged source and both upgrade pairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          evidence="$RUNNER_TEMP/verified-gate"
+          gh run download "$GATE_RUN" --repo "$GITHUB_REPOSITORY" \
+            --name "release-gates-$SOURCE_SHA-attempt-1" --dir "$evidence"
+          jq -e --arg source "$SOURCE_SHA" --arg stable "$STABLE_TAG" --arg nightly "$NIGHTLY_TAG" \
+            '.source == $source and .stable == $stable and .nightly == $nightly' "$evidence/identity.json"
+          read -r digest binary < "$evidence/candidate.sha256"
+          [[ "$digest" =~ ^[a-f0-9]{64}$ ]]
+          test "$binary" = dist/pstdio
+          for channel in stable nightly; do
+            tag="$STABLE_TAG"
+            if [[ "$channel" == nightly ]]; then tag="$NIGHTLY_TAG"; fi
+            runs=("$evidence/$channel"/run-*)
+            test "${#runs[@]}" = 1
+            for profile in active aged; do
+              jq -e '.status == "passed"' "${runs[0]}/$profile/result.json"
+              jq -e --arg source "$SOURCE_SHA" --arg tag "$tag" --arg profile "$profile" --arg digest "$digest" \
+                '.candidateRef == $source and .from == $tag and .profile == $profile and .candidateDigest == $digest' \
+                "${runs[0]}/$profile/versions.json"
+            done
+          done
+          echo "Verified gate $GATE_RUN, source $SOURCE_SHA, candidate SHA-256 $digest"
+      - name: Wait for the exact merge-group candidate to land
+        shell: bash
+        env:
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          merge_identity=$(gh run view "$MERGE_RUN" --json databaseId,attempt,event,headBranch,headSha,workflowName)
+          jq -e --arg run "$MERGE_RUN" --arg source "$SOURCE_SHA" \
+            --arg ref "gh-readonly-queue/main/pr-2407-$BASE_SHA" \
+            '(.databaseId | tostring) == $run and .attempt == 1 and .event == "merge_group" and
+             .headBranch == $ref and .headSha == $source and .workflowName == "Test and Build"' <<< "$merge_identity"
+          gh run watch "$MERGE_RUN" --interval 20 --exit-status
+          for _ in {1..24}; do
+            pull_request=$(gh pr view 2407 --json state,mergeCommit)
+            if jq -e --arg source "$SOURCE_SHA" '.state == "MERGED" and .mergeCommit.oid == $source' <<< "$pull_request"; then
+              exit 0
+            fi
+            jq -e '.state == "OPEN"' <<< "$pull_request"
+            current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+            if [[ "$current" != "$BASE_SHA" && "$current" != "$SOURCE_SHA" ]]; then
+              echo "::error::Main advanced to $current while waiting for the verified merge"
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "::error::PR #2407 did not merge at $SOURCE_SHA after its merge-group checks passed"
+          exit 1
+      - name: Dispatch the nightly once from the verified main revision
+        shell: bash
+        env:
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh pr view 2407 --json state,mergeCommit | jq -e --arg source "$SOURCE_SHA" \
+            '.state == "MERGED" and .mergeCommit.oid == $source'
+          previous=$(gh run list --workflow release-packages.yml --branch main --event workflow_dispatch \
+            --commit "$SOURCE_SHA" --limit 1 --json headSha,url)
+          jq -e 'length == 0' <<< "$previous"
+          current=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          if [[ "$current" != "$SOURCE_SHA" ]]; then
+            echo "::error::Main moved to $current after the gate for $SOURCE_SHA"
+            exit 1
+          fi
+          run_url=$(gh workflow run release-packages.yml --ref main -f channel=nightly)
+          if [[ -z "$run_url" ]]; then
+            run_url=$(gh run list --workflow release-packages.yml --branch main --event workflow_dispatch \
+              --commit "$SOURCE_SHA" --limit 1 --json url --jq '.[0].url // empty')
+          fi
+          [[ "$run_url" =~ ^https://github\.com/pufflyai/prompt-studio/actions/runs/[0-9]+$ ]]
+          printf 'Nightly dispatched for %s\n%s\n' "$SOURCE_SHA" "$run_url" | tee -a "$GITHUB_STEP_SUMMARY"
