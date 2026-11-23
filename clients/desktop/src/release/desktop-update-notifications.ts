@@ -1,4 +1,4 @@
-import type { DesktopUpdateNotice } from "../desktop-api";
+import type { DesktopUpdateNotice, DesktopUpdatePhase } from "../desktop-api";
 import type { DesktopUpdateReceipt } from "./desktop-update-receipt";
 
 interface DesktopUpdateNotificationsOptions {
@@ -10,16 +10,32 @@ interface DesktopUpdateNotificationsOptions {
 
 export const createDesktopUpdateNotifications = (options: DesktopUpdateNotificationsOptions) => {
   let pending: DesktopUpdateNotice | undefined;
-  const show = (title: string, message?: string, level: DesktopUpdateNotice["level"] = "info") => {
+  let currentProgress: DesktopUpdateNotice | undefined;
+  const show = (title: string, message?: string, level: "info" | "error" = "info") => {
+    currentProgress = undefined;
     pending = { level, title, message };
     options.onNotice();
   };
 
   return {
     take() {
-      const notice = pending;
+      const notice = pending ?? currentProgress;
       pending = undefined;
       return notice;
+    },
+    progress(phase: DesktopUpdatePhase | undefined) {
+      if (phase) {
+        pending = undefined;
+        currentProgress = {
+          level: "info",
+          title: phase === "checking" ? "Checking for updates…" : "Downloading update…",
+        };
+      } else {
+        if (!currentProgress) return;
+        currentProgress = undefined;
+        pending = { kind: "clear-progress" };
+      }
+      options.onNotice();
     },
     notAvailable: () =>
       show(

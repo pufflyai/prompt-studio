@@ -1,10 +1,10 @@
 import { Button, HStack, Stack } from "@chakra-ui/react";
 import { useState } from "react";
-import { createWorkbench } from "../../src/core";
-import { WorkbenchThemeProvider } from "../../src/react/theme/workbench-theme-provider";
-import { WorkbenchStatusBar } from "../../src/react/workbench/workbench-panels";
+import { createWorkbench } from "../../core";
+import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
+import { WorkbenchStatusBar } from "../workbench/workbench-panels";
 
-export default { title: "Proposals/PS-289 Desktop update progress" };
+export default { title: "Workbench/Feedback/Desktop update progress" };
 
 export const DesktopUpdateProgress = () => {
   const [workbench] = useState(() => createWorkbench());

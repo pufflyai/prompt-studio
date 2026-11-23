@@ -6,9 +6,11 @@ interface UpdateNotice {
   message?: string;
 }
 
+type UpdateNoticeEvent = UpdateNotice | { kind: "clear-progress" };
+
 interface DesktopUpdateNoticeBridge {
   onUpdateNotice: (listener: () => void) => () => void;
-  takeUpdateNotice: () => Promise<UpdateNotice | undefined>;
+  takeUpdateNotice: () => Promise<UpdateNoticeEvent | undefined>;
 }
 
 const hasUpdateNotices = (bridge: unknown): bridge is DesktopUpdateNoticeBridge =>
@@ -47,15 +49,32 @@ export const connectDesktopUpdateNotices = (
     });
     publish();
   };
-  const receive = () => {
-    void bridge
-      .takeUpdateNotice()
-      .then((notice) => {
-        if (!notice || !connected) return;
+  let receiving = false;
+  let requested = false;
+  const takeNotices = async () => {
+    receiving = true;
+    while (connected && requested) {
+      requested = false;
+      let notice: UpdateNoticeEvent | undefined;
+      try {
+        notice = await bridge.takeUpdateNotice();
+      } catch {
+        continue;
+      }
+      if (!notice || !connected) continue;
+      if ("kind" in notice) {
+        pending = undefined;
+        owner?.notifications.dismiss(updateNoticeId);
+      } else {
         pending = notice;
         publish();
-      })
-      .catch(() => {});
+      }
+    }
+    receiving = false;
+  };
+  const receive = () => {
+    requested = true;
+    if (!receiving) void takeNotices();
   };
   followActiveWorkbench();
   const stopWorkbench = subscribeWorkbench?.(followActiveWorkbench);

@@ -21,3 +21,23 @@ test("an update completed before the workbench connects is delivered once", () =
   expect(notifications.take()).toMatchObject({ level: "info", message: expect.stringContaining("2.0.0") });
   expect(notifications.take()).toBeUndefined();
 });
+
+test("completed native results replace progress and survive its cleanup", () => {
+  const notifications = createDesktopUpdateNotifications({
+    currentVersion: "1.0.0",
+    receipt: { recordDownload: () => {}, consumeInstalled: () => false },
+    onNotice: () => {},
+    logError: () => {},
+  });
+  notifications.progress("checking");
+  expect(notifications.take()).toMatchObject({ level: "info" });
+  notifications.progress("downloading");
+  notifications.downloaded("2.0.0");
+  notifications.progress(undefined);
+  expect(notifications.take()).toMatchObject({ message: expect.stringContaining("2.0.0") });
+
+  notifications.progress("checking");
+  expect(notifications.take()).toBeDefined();
+  notifications.progress(undefined);
+  expect(notifications.take()).toEqual({ kind: "clear-progress" });
+});
