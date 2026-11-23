@@ -218,15 +218,18 @@ test("keeps install retries and toggle progress attached to their controls acros
   expect(toggles[0]!.request().postDataJSON()).toEqual({ enabled });
   await expect(detail.getByRole("status").filter({ hasText: catalog.displayName })).toHaveCount(1);
   await expect(detailToggle).toHaveAttribute("aria-busy", "true");
+  await expect(detailToggle).toHaveJSProperty("checked", enabled);
   await expect(detail.locator('[data-part="thumb"] [data-testid="extension-toggle-spinner"]')).toBeVisible();
   await page.goBack();
   await expect(rowToggle).toBeDisabled();
   await expect(rowToggle).toHaveAttribute("aria-busy", "true");
+  await expect(rowToggle).toHaveJSProperty("checked", enabled);
   await expect(installedRow.locator('[data-part="thumb"] [data-testid="extension-toggle-spinner"]')).toBeVisible();
   await expect(installedRow.getByTestId("extension-row-upgrade")).toHaveCount(0);
   await toggles[0]!.fulfill({ status: 400, json: { error: "Could not change extension state" } });
   const toggleError = installedRow.getByRole("alert");
   await expect(toggleError).toContainText("Could not change extension state");
+  await expect(rowToggle).toHaveJSProperty("checked", instance.enabled);
 
   const reload = Promise.withResolvers<Route>();
   await page.route(`**/v1/projects/${project.id}/extensions/${instance.id}/reload`, (route) => reload.resolve(route));

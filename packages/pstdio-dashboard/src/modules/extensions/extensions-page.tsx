@@ -1,6 +1,7 @@
 import type { WorkbenchModuleContext, WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { getDashboardQueryClient } from "@/lib/query-client";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { dashboardExtensionDetailPage, dashboardExtensionsPage } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -22,6 +23,14 @@ const ExtensionsPage = (props: { input: WorkbenchPanelRenderInput }) => {
 };
 
 export const registerExtensionsPage = (ctx: WorkbenchModuleContext) => {
+  ctx.commands.registerCommand(
+    { id: dashboardCommandIds.openExtensions, label: "Open extensions", category: "Extensions" },
+    {
+      execute: () => {
+        ctx.pageLocations.navigate({ kind: "page", page: dashboardExtensionsPage });
+      },
+    },
+  );
   ctx.resources.registerKind({
     kind: "extension",
     extensionId: "pstdio",

@@ -1,3 +1,11 @@
+import {
+  classifyApiWrite,
+  type OperationRecovery,
+  operationSubject,
+  type ResourceRef,
+  type WorkbenchOperations,
+} from "@pstdio/workbench";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import type { ExtensionActionState } from "./extension-action-feedback";
 import { defaultExtensionFilters, type ExtensionFilters } from "./extension-filters";
 
@@ -8,8 +16,32 @@ export interface ExtensionUpgradeBatch {
   failed: number;
 }
 
+const domain = "extension.inventory";
+const unresolvedHint = "Inspect Extensions or discard this attempt in System activity.";
+
+interface InventoryTracker {
+  projectId: string;
+  operations: WorkbenchOperations;
+  isCurrent?(): boolean;
+}
+
+interface ActionOptions<T> {
+  operation?: ExtensionActionState["operation"];
+  enabled?: boolean;
+  queuedLabel?: string;
+  installedId?: (result: T) => string;
+  draft?: unknown;
+  source?: ResourceRef;
+}
+
 const marketplaceActionPrefix = "marketplace:";
 export const marketplaceActionKey = (name: string) => `${marketplaceActionPrefix}${name}`;
+
+const reclaimDraft = async (tracker: InventoryTracker | undefined, recovery?: OperationRecovery) => {
+  if (!tracker || recovery?.draft === undefined) return true;
+  const moved = await tracker.operations.transfer(recovery.id, () => true);
+  return moved || !tracker.operations.getSnapshot().recovery.some((entry) => entry.id === recovery.id);
+};
 
 interface ActionSnapshot {
   filters: ExtensionFilters;
@@ -19,7 +51,7 @@ interface ActionSnapshot {
   batch?: ExtensionUpgradeBatch;
 }
 
-export const createExtensionActions = () => {
+export const createExtensionActions = (tracker?: InventoryTracker) => {
   let snapshot: ActionSnapshot = { actions: {}, installedIds: {}, replacement: null, filters: defaultExtensionFilters };
   const listeners = new Set<() => void>();
   const active = new Set<string>();
@@ -38,43 +70,89 @@ export const createExtensionActions = () => {
     delete actions[id];
     publish({ ...snapshot, actions });
   };
+  const accept = (id: string, instanceId?: string) => {
+    const actions = { ...snapshot.actions };
+    delete actions[id];
+    if (instanceId && !active.has(instanceId)) {
+      delete actions[instanceId];
+      retries.delete(instanceId);
+    }
+    publish({
+      ...snapshot,
+      actions,
+      installedIds:
+        instanceId && id.startsWith(marketplaceActionPrefix)
+          ? { ...snapshot.installedIds, [id]: instanceId }
+          : snapshot.installedIds,
+    });
+  };
   const run = async <T>(
     id: string,
     labels: { running: string; failed: string },
     work: (started: () => void) => Promise<T>,
-    options: {
-      operation?: ExtensionActionState["operation"];
-      queuedLabel?: string;
-      installedId?: (result: T) => string;
-    } = {},
+    options: ActionOptions<T> = {},
   ) => {
-    if (active.has(id)) return false;
+    if (active.has(id) || tracker?.isCurrent?.() === false) return false;
+    const subject = tracker && operationSubject("extension-inventory", tracker.projectId, id);
+    const blocked = tracker?.operations
+      .getSnapshot()
+      .pending.some(
+        (entry) => subject && entry.subjects.includes(subject) && ["unknown", "unconfirmed"].includes(entry.status),
+      );
+    const { operation, enabled, queuedLabel } = options;
+    const unresolved = () =>
+      setAction(id, {
+        operation,
+        status: "error",
+        label: "Outcome unconfirmed",
+        error: unresolvedHint,
+        retryable: false,
+      });
+    if (blocked) {
+      unresolved();
+      return false;
+    }
     active.add(id);
     retries.delete(id);
-    const { operation, queuedLabel } = options;
-    const start = () => setAction(id, { operation, status: "running", label: labels.running });
+    const start = () => setAction(id, { operation, enabled, status: "running", label: labels.running });
     if (queuedLabel) setAction(id, { operation, status: "queued", label: queuedLabel });
     else start();
+    let attemptId: symbol | undefined;
     try {
-      const result = await work(start);
-      const instanceId = options.installedId?.(result);
-      const actions = { ...snapshot.actions };
-      delete actions[id];
-      if (instanceId && !active.has(instanceId)) {
-        delete actions[instanceId];
-        retries.delete(instanceId);
-      }
-      publish({
-        ...snapshot,
-        actions,
-        installedIds:
-          instanceId && id.startsWith(marketplaceActionPrefix)
-            ? { ...snapshot.installedIds, [id]: instanceId }
-            : snapshot.installedIds,
-      });
+      const running =
+        tracker && subject
+          ? tracker.operations.submit({
+              projectId: tracker.projectId,
+              subjects: [subject],
+              domain,
+              title: labels.running,
+              source: options.source,
+              sourceCommand: { id: dashboardCommandIds.openExtensions },
+              draft: options.draft,
+              releaseOnDiscard: true,
+              classify: classifyApiWrite,
+              write: async (signal) => {
+                signal.throwIfAborted();
+                const result = await work(start);
+                signal.throwIfAborted();
+                return result;
+              },
+            })
+          : undefined;
+      attemptId = running?.id;
+      const result = await (running?.result ?? work(start));
+      accept(id, options.installedId?.(result));
       return true;
     } catch (error) {
-      retries.set(id, () => run(id, labels, work, options));
+      const recovery = tracker?.operations.getSnapshot().recovery.find((entry) => entry.id === attemptId);
+      if (recovery && recovery.status !== "rejected") {
+        unresolved();
+        return false;
+      }
+      retries.set(id, async () => {
+        if (active.has(id) || !(await reclaimDraft(tracker, recovery))) return false;
+        return run(id, labels, work, options);
+      });
       setAction(id, {
         operation,
         status: "error",
@@ -143,10 +221,10 @@ export const createExtensionActions = () => {
 
 // Both pages observe the same inventory. A new project or runtime gets a new owner.
 const owners = new WeakMap<object, ReturnType<typeof createExtensionActions>>();
-export const getExtensionActions = (inventory: object) => {
+export const getExtensionActions = (inventory: object, tracker?: InventoryTracker) => {
   let owner = owners.get(inventory);
   if (!owner) {
-    owner = createExtensionActions();
+    owner = createExtensionActions(tracker);
     owners.set(inventory, owner);
   }
   return owner;

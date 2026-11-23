@@ -1,4 +1,7 @@
 import { expect, test } from "bun:test";
+import { PstdioConnectionError } from "@pstdio/sdk/client";
+import { createScopedQueryClient } from "@pstdio/sdk/extensions";
+import { getWorkbenchOperations } from "@pstdio/workbench";
 import { createExtensionActions, getExtensionActions } from "./extension-actions";
 
 const labels = { running: "Upgrading", failed: "Upgrade failed" };
@@ -151,4 +154,39 @@ test("reinstalling clears a stale failure and retry from the restored instance",
   expect(owner.getSnapshot().actions["notes-instance"]?.status).toBe("running");
   gate.resolve();
   await upgrade;
+});
+
+test("uncertain installs remain blocked across views and dismissal until the draft is discarded", async () => {
+  const queries = createScopedQueryClient({ runtimeId: "dashboard", extensionId: "pstdio" });
+  const operations = getWorkbenchOperations(queries);
+  const inventory = {};
+  const list = getExtensionActions(inventory, { projectId: "project", operations });
+  const detail = getExtensionActions(inventory, { projectId: "project", operations });
+  const key = "marketplace:notes";
+  const installLabels = { running: "Installing", failed: "Install failed" };
+  let writes = 0;
+  const draft = { extension: "Notes", installName: "notes" };
+  const submit = (view: typeof list) =>
+    view.run(
+      key,
+      installLabels,
+      async () => {
+        writes++;
+        if (writes === 1) throw new PstdioConnectionError(new Error("Response lost"));
+      },
+      { draft },
+    );
+
+  expect(await submit(list)).toBe(false);
+  const entry = operations.getSnapshot().recovery[0];
+  expect(entry).toMatchObject({ projectId: "project", status: "unknown", draft, canCheck: false });
+  expect(detail.getSnapshot().actions[key]).toMatchObject({ retryable: false });
+  detail.dismiss(key);
+  expect(await submit(detail)).toBe(false);
+  expect(writes).toBe(1);
+  expect(operations.getSnapshot().recovery[0]?.draft).toEqual(draft);
+  operations.discard(entry.id);
+  expect(await submit(detail)).toBe(true);
+  expect(writes).toBe(2);
+  queries.dispose();
 });
