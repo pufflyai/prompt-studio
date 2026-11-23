@@ -1,0 +1,54 @@
+name: Release repair review
+on:
+  push:
+    branches: [test/release-repair-review-20261123]
+    paths: [.github/workflows/release-repair-review.yml]
+permissions:
+  contents: read
+jobs:
+  review:
+    name: Local review for PR ${{ matrix.pr }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - pr: 2366
+            head: 58638646820cf9b118a83d3476ad76fbd66e9659
+            test: clients/desktop/src/e2e/desktop-active-work.p2.spec.ts
+          - pr: 2368
+            head: d7f102222a3142508ac5f9fe1cc6a62078051f86
+            test: packages/canvas-tests/src/ui/pstdio-workbench/tree-pagination.p1.spec.ts
+          - pr: 2373
+            head: 3ad792cf9f26e485b4f73181031bcd935b5374d9
+            test: packages/e2e/src/ui/extension-upgrade-pool.p1.spec.ts
+    env:
+      REVIEW_HEAD: ${{ matrix.head }}
+      REVIEW_TEST: ${{ matrix.test }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check out the exact repair commit
+        run: |
+          git checkout --detach "$REVIEW_HEAD"
+          test "$(git rev-parse HEAD)" = "$REVIEW_HEAD"
+          docker info --format '{{.ServerVersion}}'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - name: Run the repository review workload
+        run: |
+          bun run test:review --base origin/main --test "$REVIEW_TEST" --list
+          xvfb-run --auto-servernum bun run test:review --base origin/main --test "$REVIEW_TEST"
+      - name: Preserve the review report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-repair-review-${{ matrix.pr }}
+          path: test-results/local-review/*.json
+          if-no-files-found: warn
