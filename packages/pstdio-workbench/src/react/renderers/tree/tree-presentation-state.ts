@@ -71,7 +71,9 @@ export const useTreePresentationState = (workbench: WorkbenchCore, key: string) 
     prunePresentations(workbench);
     for (const listener of listeners.get(workbench)?.get(key) ?? []) listener();
   };
-  return { ...snapshot, update };
+  const setFilter = (filter: string) =>
+    update(filter.trim() === snapshot.filter.trim() ? { filter } : { filter, scrollTop: 0 });
+  return { ...snapshot, update, setFilter };
 };
 
 export const useTreeViewState = (
@@ -106,11 +108,12 @@ export const useTreeViewState = (
 export const useTreeScrollRestoration = (
   scroll: RefObject<HTMLDivElement | null>,
   key: string,
+  query: string | undefined,
   top: number,
   loading: boolean,
 ) => {
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Restore on owner changes or after loading, never in response to the scroll being saved.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Restore on owner or query changes and after loading, never in response to the scroll being saved.
   useLayoutEffect(() => {
     if (scroll.current) scroll.current.scrollTop = top;
-  }, [scroll, key, loading]);
+  }, [scroll, key, query, loading]);
 };

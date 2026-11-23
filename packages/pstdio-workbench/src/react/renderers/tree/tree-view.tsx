@@ -101,14 +101,14 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     presentation,
     treeState,
   } = useTreeViewState(workbench, treeViewId, resource, props.placement, isSidenav);
-  const filter = presentation.filter;
+  const query = treeRenderer?.searchable ? presentation.filter.trim() || undefined : undefined;
   const { body, childrenByNodeId, moveNode, error, footer, groupScope, header, loadChildren, loading, retry } =
     useTreeData(
       workbench,
       treeViewId,
       resource,
       viewId,
-      treeRenderer?.searchable ? filter.trim() || undefined : undefined,
+      query,
       props.readOwnerKey,
       onOpenResourceError,
       props.placement,
@@ -168,7 +168,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     stateScope,
   );
 
-  useTreeScrollRestoration(scrollRef, presentationKey, presentation.scrollTop, loading);
+  useTreeScrollRestoration(scrollRef, presentationKey, query, presentation.scrollTop, loading);
 
   if (!treeRenderer) return <MissingTreeRenderer />;
 
@@ -232,8 +232,8 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
         <TreeViewSearch
           visible={Boolean(treeRenderer.searchable)}
           placeholder={treeRenderer.searchPlaceholder}
-          value={filter}
-          onChange={(filter) => presentation.update({ filter })}
+          value={presentation.filter}
+          onChange={presentation.setFilter}
         />
         {error && !isSidenav ? <RendererReadNotice error={error} retry={retry} /> : null}
         <ScrollArea
