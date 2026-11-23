@@ -15,6 +15,44 @@ const registerPanelWithMenus = (layout: ReturnType<typeof createLayoutModel>) =>
   });
 };
 describe("panel menu ownership", () => {
+  test("retains separate companion menus for two live resources", () => {
+    const layout = createLayoutModel();
+    layout.registerPanel({
+      id: "documents",
+      title: "Documents",
+      region: "main",
+      rendererId: "documents",
+      singleton: false,
+      panelMenus: [{ id: "document.files", title: "Files", side: "left", rendererId: "files" }],
+    });
+    const first = layout.openWidget("documents", { resource: { type: "document", id: "a" }, pinned: true });
+    const firstMenu = layout.getLayout().regions["main-left-menu"].widgets[0];
+    const second = layout.openWidget("documents", { resource: { type: "document", id: "b" }, pinned: true });
+    const menus = layout.getLayout().regions["main-left-menu"].widgets;
+    expect(menus).toHaveLength(2);
+    expect(menus.find((menu) => menu.widgetId === firstMenu?.widgetId)?.resource?.id).toBe("a");
+    layout.activateWidget(first.widgetId);
+    layout.openWidget("documents", { resource: { type: "document", id: "b" }, region: "side" });
+    expect(layout.getLayout().regions["main-left-menu"].widgets[0]?.widgetId).toBe(firstMenu?.widgetId);
+    expect(layout.getLayout().regions["side-left-menu"].widgets[0]?.resource?.id).toBe("b");
+    expect(layout.getLayout().regions.side.widgets[0]?.widgetId).toBe(second.widgetId);
+  });
+  test("bottom menus follow the same owner when it moves", () => {
+    const layout = createLayoutModel();
+    layout.registerPanel({
+      id: "document",
+      title: "Document",
+      region: "main",
+      rendererId: "document",
+      panelMenus: [{ id: "activity", title: "Activity", side: "bottom", rendererId: "activity" }],
+    });
+    layout.openWidget("document", { resource: { type: "document", id: "a" } });
+    const menu = layout.getLayout().regions["main-bottom-menu"].widgets[0];
+    expect(menu?.viewId).toBe("activity");
+    layout.openWidget("document", { region: "side", resource: { type: "document", id: "a" } });
+    expect(layout.getLayout().regions["main-bottom-menu"].widgets).toEqual([]);
+    expect(layout.getLayout().regions["side-bottom-menu"].widgets[0]?.widgetId).toBe(menu?.widgetId);
+  });
   test("menus follow their panel instance when it moves to another allowed region", () => {
     const layout = createLayoutModel();
     registerPanelWithMenus(layout);
@@ -79,7 +117,12 @@ test("a resource menu follows the active owner tab instead of the first tab", ()
   });
   const first = layout.openWidget("sessions", { resource: { type: "session", id: "first" }, pinned: true });
   layout.openWidget("sessions", { resource: { type: "session", id: "second" }, pinned: true });
-  const menu = () => layout.getLayout().regions["side-right-menu"].widgets[0];
+  const menu = () =>
+    layout
+      .getLayout()
+      .regions["side-right-menu"].widgets.find(
+        (menu) => menu.menuOwnerWidgetId === layout.getLayout().regions.side.activeWidgetId,
+      );
   expect(layout.getLayout().regions.side.widgets).toHaveLength(2);
   expect(menu()?.resource?.id).toBe("second");
   layout.activateWidget(first.widgetId);

@@ -251,12 +251,14 @@ test("names the process that hosts an extension and ends its frames when paused"
     await expect(row).toBeVisible();
     expect(await detailsFrame.evaluate((frame, original) => frame === original, loadedFrame)).toBe(true);
     const pause = row.getByRole("button", { name: "Pause webview-host", exact: true });
-    // Enter the live CPU list before clicking: pointer entry freezes its order,
-    // which can otherwise move the target between Playwright's stability check and input.
+    // Enter the live CPU list before activating: pointer entry freezes its order.
     await pause.hover();
+    // Use native keyboard activation for lifecycle coverage while the live popover updates.
+    await pause.focus();
+    await expect(pause).toBeFocused();
     // Pausing and resuming must never show the extension twice or drop its row.
     let rows = rowCountsWhile(app.page, fixtureId, 4_000);
-    await pause.click();
+    await pause.press("Enter");
     expect(await rows).toEqual([1]);
     await expect(app.page.locator('iframe[title="Host page"]')).toHaveCount(0);
     await expect.poll(async () => (await readSnapshot(app!.page))?.pausedExtensionIds).toEqual([fixtureId]);
@@ -265,8 +267,10 @@ test("names the process that hosts an extension and ends its frames when paused"
     // A paused row keeps the name it had while its views ran.
     const resume = row.getByRole("button", { name: "Resume webview-host", exact: true });
     await resume.hover();
+    await resume.focus();
+    await expect(resume).toBeFocused();
     rows = rowCountsWhile(app.page, fixtureId, 4_000);
-    await resume.click();
+    await resume.press("Enter");
     expect(await rows).toEqual([1]);
     await expect(app.page.locator('iframe[title="Host page"]')).toHaveCount(1);
   } finally {

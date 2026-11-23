@@ -7,6 +7,7 @@ export const useTreeSelection = (
   workbench: WorkbenchCore,
   treeViewId: string,
   input: Parameters<typeof resolveTreeListSelection>[0],
+  stateScope?: string,
 ) => {
   input = { ...input, resourceReferenceKey: (resource) => workbench.pages.resourceReferenceKey(resource) };
   const { sections, childrenByNodeId } = input;
@@ -31,8 +32,8 @@ export const useTreeSelection = (
     if (!ancestors) return;
     revealed.current.selections.add(key);
     const trees = getWorkbenchRenderers(workbench);
-    for (const id of ancestors.nodes) trees.setNodeExpanded(treeViewId, id, true);
-    for (const id of ancestors.sections) trees.setSectionExpanded(treeViewId, id, true);
-  }, [workbench, treeViewId, context, key, intent, ids, sections, childrenByNodeId]);
+    for (const id of ancestors.nodes) trees.setNodeExpanded(treeViewId, id, true, stateScope);
+    for (const id of ancestors.sections) trees.setSectionExpanded(treeViewId, id, true, stateScope);
+  }, [workbench, treeViewId, stateScope, context, key, intent, ids, sections, childrenByNodeId]);
   return selectedNodeIds;
 };

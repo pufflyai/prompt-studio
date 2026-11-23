@@ -50,15 +50,14 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
         .getByRole("button", { name: "Add panel" })
         .click();
       const openTerminal = app.page.getByRole("menuitem", { name: "Open terminal", exact: true });
-      const trayTerminal = app.page
+      const emptyTerminal = app.page
         .getByRole("region", { name: "Secondary Panel", exact: true })
-        .getByRole("group", { name: "Available tabs", exact: true })
         .getByRole("button", { name: "Open terminal", exact: true });
       const input = app.page.getByRole("textbox", { name: "Terminal input" });
-      // The panel can expose its launcher in a menu or the empty tray before opening the terminal.
-      await expect(openTerminal.or(trayTerminal).or(input).first()).toBeVisible();
+      // Late contributions can expose the empty-panel button after Add panel was clicked.
+      await expect(openTerminal.or(emptyTerminal).or(input).first()).toBeVisible();
       if (await openTerminal.isVisible()) await openTerminal.click();
-      else if (await trayTerminal.isVisible()) await trayTerminal.click();
+      else if (await emptyTerminal.isVisible()) await emptyTerminal.click();
       const socket = await socketOpened;
       expect(new URL(socket.url()).origin).toBe(app.runtime.origin.replace(/^http/, "ws"));
       const readTerminals = async () => (await readRuntimeActivity(app!.runtime)).terminals;

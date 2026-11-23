@@ -7,6 +7,7 @@ export const buildUpdatedPlacement = (
   update: OpenWidgetInput,
 ): WorkbenchWidgetPlacement => {
   const next: WorkbenchWidgetPlacement = { ...placement };
+  if (update.menuOwnerWidgetId !== undefined) next.menuOwnerWidgetId = update.menuOwnerWidgetId;
   if (update.pageContext !== undefined) next.pageContext = update.pageContext;
   if (update.viewId !== undefined) next.viewId = update.viewId ?? undefined;
   if (update.resource === null) {
@@ -39,6 +40,7 @@ export const createPlacement = (
   widgetId,
   contributionId: widget.id,
   pageContext: spec.pageContext,
+  menuOwnerWidgetId: spec.menuOwnerWidgetId,
   viewId: spec.viewId ?? undefined,
   ownerId: spec.ownerId ?? widget.ownerId,
   source: spec.source ?? widget.source,

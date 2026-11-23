@@ -16,7 +16,7 @@ With Bun 1.3.14 on Windows, an extension replacement scenario fails with EPERM i
 
 Run installation and startup-refresh integration scenarios in ordinary Bun subprocesses. Assert their exit status and retain assertions inside each scenario. Keep scenarios next to their tests. Run the same subprocess tests on every platform so CI exercises one test design.
 
-This adds process startup cost but keeps production installation unchanged. Do not increase test or CI timeouts. Keep ordinary unit tests in the test runner.
+This adds process startup cost but keeps production installation unchanged. Functional test and CI allowances follow the [timeout policy](../guidance/0004-ci.md#3-ci-timeouts-and-performance-budgets) and may be adjusted without separate approval. Keep ordinary unit tests in the test runner.
 
 ## Removal
 

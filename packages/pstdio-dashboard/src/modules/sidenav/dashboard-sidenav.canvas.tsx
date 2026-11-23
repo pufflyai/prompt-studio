@@ -21,7 +21,7 @@ import { registerExtensionsPage } from "../extensions/extensions-page";
 import { createHeadersModule } from "../headers/module";
 import { createHelpModule } from "../help/module";
 import { createNotificationsModule } from "../notifications/module";
-import { DesktopProjectTabsController } from "../projects/desktop-project-tabs-controller";
+import { BrowserAppHeader } from "../projects/components/browser-app-header";
 import { createProjectsModule } from "../projects/module";
 import { createSessionsModule } from "../sessions/module";
 import { createSettingsModule } from "../settings/module";
@@ -196,7 +196,7 @@ const linkSessionsToWorkspace = () => {
     { id: "link-2", workspace_id: "workspace-1", session_id: "session-yesterday" },
   ]);
 };
-const bootstrapWorkbench = (desktop = false) => {
+const bootstrapWorkbench = () => {
   seedSidenavStory(PROJECT_ID);
   linkSessionsToWorkspace();
   const workbench = createWorkbench({ defaultPage: dashboardHomePage });
@@ -232,7 +232,7 @@ const bootstrapWorkbench = (desktop = false) => {
     },
     createWorkspacesModule(),
     createProjectsModule(),
-    createHeadersModule(desktop ? new DesktopProjectTabsController([], async () => {}) : undefined),
+    createHeadersModule(),
     createHelpModule(),
     createNotificationsModule(),
     createSessionsModule(),
@@ -264,16 +264,20 @@ const meta = {
 } satisfies CanvasMeta;
 export default meta;
 type Story = CanvasFrame;
-const SidenavStory = (props: { open: (workbench: WorkbenchCore) => void; desktop?: boolean }) => {
-  const { open, desktop } = props;
+const SidenavStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
+  const { open } = props;
   const [workbench] = useState(() => {
-    const next = bootstrapWorkbench(desktop);
+    const next = bootstrapWorkbench();
     open(next);
     return next;
   });
   return (
     <Box h="100dvh" w="full">
-      <Workbench workbench={workbench} />
+      <Workbench
+        workbench={workbench}
+        panelControlsPlacement="host"
+        titleBar={<BrowserAppHeader workbench={workbench} />}
+      />
     </Box>
   );
 };
@@ -332,11 +336,6 @@ export const TicketMode: Story = {
   id: "dashboard-sidenav--ticket-mode",
   name: "Ticket page navigation",
   render: () => <SidenavStory open={openTicketPage} />,
-};
-export const DesktopSessionNavigation: Story = {
-  id: "dashboard-sidenav--desktop-session-navigation",
-  name: "Desktop session navigation",
-  render: () => <SidenavStory desktop open={(workbench) => void openSessionsPage(workbench)} />,
 };
 // F22: the linked resource keeps the ticket ancestry and Back restores the selected ticket.
 export const TicketWorkspaceBackJourney: Story = {

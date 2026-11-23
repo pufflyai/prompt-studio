@@ -1,18 +1,13 @@
+import { createTreeNavigator } from "./tree-navigator";
+
+export { createTreeNavigator } from "./tree-navigator";
+
 import { Box, Flex, Text } from "@chakra-ui/react";
 import { type ResourceContextAction, ScrollArea, TreeList, TreeListDragProvider } from "@pstdio/ui";
-import { type ReactNode, useEffect, useRef, useState } from "react";
-import type {
-  NavigationTarget,
-  ResourceRef,
-  TreeRendererState,
-  TreeViewSection,
-  WorkbenchCore,
-  WorkbenchPanelInstance,
-  WorkbenchPanelRegion,
-} from "../../../core";
+import { type ReactNode, useEffect, useRef } from "react";
+import type { ResourceRef, TreeViewSection, WorkbenchCore, WorkbenchPanelInstance } from "../../../core";
 import { getWorkbenchRenderers } from "../../../core";
 import type { TreeGroupScope } from "../../../core/registries/renderers/tree-renderer-types";
-import { reportUserActionError } from "../../../core/shared/run-user-action";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { WorkbenchIcon } from "../../shared/icon";
 import type { SidenavContextActionsChange } from "../../shared/sidenav-context-actions";
@@ -25,16 +20,12 @@ import { toTreeListSection } from "./tree-list-adapter";
 import { TreeModeReturn } from "./tree-mode-return";
 import { TreeParamsDialog } from "./tree-params-dialog";
 import { pinnedOnlyNodeIds } from "./tree-pinned-only";
+import { useTreeScrollRestoration, useTreeViewState } from "./tree-presentation-state";
 import { createTreeTabDropHandler } from "./tree-tab-drop";
 import { TreeViewBody } from "./tree-view-body";
-import {
-  createToggleTreeNode,
-  createToggleTreeSection,
-  shouldSelectTreeNodeForNavigationTarget,
-} from "./tree-view-navigation";
+import { createToggleTreeNode, createToggleTreeSection } from "./tree-view-navigation";
 import { TreeViewSearch } from "./tree-view-search";
 import { useTreeData } from "./use-tree-data";
-import { useTreeNavigationState } from "./use-tree-navigation-state";
 import { useTreeSelection } from "./use-tree-selection";
 import { useTreeViewCustomization } from "./use-tree-view-customization";
 
@@ -51,8 +42,6 @@ interface WorkbenchTreeViewProps {
   onOpenResourceError?: (error: unknown) => void;
   onSidenavContextActionsChange?: SidenavContextActionsChange;
 }
-
-const EMPTY_TREE_STATE: TreeRendererState = { expandedNodeIds: [], expandedSectionIds: [] };
 
 const treeCustomizationOptions = (sections: TreeViewSection[], isSidenav: boolean, groupScope?: TreeGroupScope) => ({
   suppressNodeContextMenus: isSidenav,
@@ -87,49 +76,6 @@ const useSidenavContextActions = (
   );
 };
 
-interface TreeNavigationContext {
-  workbench: WorkbenchCore;
-  treeViewId: string;
-  hostRegion?: WorkbenchPanelRegion;
-  onOpenResourceError?: (error: unknown) => void;
-}
-
-/** A row in a tree hosted outside Main opens its resource in that same panel unless it names a region. */
-const hostedTreeTarget = (target: NavigationTarget, region: WorkbenchPanelRegion | undefined): NavigationTarget => {
-  if (!region) return target;
-  if (target.kind === "compound")
-    return {
-      ...target,
-      targets: target.targets.map((item) => (item.resource && !item.region ? { ...item, region } : item)),
-    };
-  if ((target.kind === "page" || target.kind === "panel") && target.resource && !target.region)
-    return { ...target, region };
-  return target;
-};
-
-const navigateTreeNode = (
-  context: TreeNavigationContext,
-  nodeId: string,
-  intent: { id?: string; payload?: unknown } | undefined,
-) => {
-  if (intent?.id === "target") {
-    const target = intent.payload as NavigationTarget;
-    if (shouldSelectTreeNodeForNavigationTarget(target)) {
-      getWorkbenchRenderers(context.workbench).setSelectedNode(context.treeViewId, nodeId);
-    }
-    void context.workbench.navigation.openTarget(hostedTreeTarget(target, context.hostRegion)).catch((error) => {
-      if (context.onOpenResourceError) context.onOpenResourceError(error);
-      else reportUserActionError(context.workbench, "Open", error);
-    });
-    return;
-  }
-};
-
-// Share one handler across every list so unrelated list props do not replace row navigation callbacks.
-export const createTreeNavigator =
-  (context: TreeNavigationContext) => (event: { nodeId: string; intent?: { id?: string; payload?: unknown } }) =>
-    navigateTreeNode(context, event.nodeId, event.intent);
-
 export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const {
     workbench,
@@ -144,11 +90,18 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const isSidenav = Boolean(onSidenavContextActionsChange);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const treeRenderer = getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId);
-  const [filter, setFilter] = useState("");
-  const treeState =
-    useWorkbenchStore(getWorkbenchRenderers(workbench).treeStore, (state) => state.statesByTreeId[treeViewId]) ??
-    EMPTY_TREE_STATE;
-  const { projectId, activeLocation, activeResource, hostRegion } = useTreeNavigationState(workbench, props.placement);
+  const {
+    projectId,
+    activeLocation,
+    activeResource,
+    hostRegion,
+    owner,
+    stateScope,
+    presentationKey,
+    presentation,
+    treeState,
+  } = useTreeViewState(workbench, treeViewId, resource, props.placement, isSidenav);
+  const filter = presentation.filter;
   const { body, childrenByNodeId, moveNode, error, footer, groupScope, header, loadChildren, loading, retry } =
     useTreeData(
       workbench,
@@ -159,6 +112,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       props.readOwnerKey,
       onOpenResourceError,
       props.placement,
+      stateScope,
     );
   const actionInput = useTreeActionInput(`${treeViewId}:${projectId}:${resource?.id}`, treeState.expandedNodeIds);
   const shortcutHints = useWorkbenchStore(workbench.keyboard.store, (state) => state.active || state.preview);
@@ -171,9 +125,6 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   };
   const adaptSections = (sections: TreeViewSection[]) =>
     actionInput.sections(sections.map((section) => toTreeListSection(section, childrenByNodeId, adapterContext)));
-  const rawSections = adaptSections(body);
-  const rawHeaderSections = adaptSections(header);
-  const rawFooterSections = adaptSections(footer);
   const {
     visibleHeaderSections,
     visibleSections,
@@ -186,9 +137,9 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   } = useTreeViewCustomization(
     `${treeViewId}:${projectId ?? "global"}`,
     {
-      headerSections: rawHeaderSections,
-      sections: rawSections,
-      footerSections: rawFooterSections,
+      headerSections: adaptSections(header),
+      sections: adaptSections(body),
+      footerSections: adaptSections(footer),
     },
     {
       visibleIcon: <WorkbenchIcon name="eye" size={14} />,
@@ -203,20 +154,28 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     customizationRevision,
     onSidenavContextActionsChange,
   );
-  const activeNodeSelection = useTreeSelection(workbench, treeViewId, {
-    sections: [...header, ...body, ...footer],
-    childrenByNodeId,
-    activeNodeId,
-    activeLocation,
-    activeResource,
-    selectedNodeId: treeState.selectedNodeId,
-  });
+  const activeNodeSelection = useTreeSelection(
+    workbench,
+    treeViewId,
+    {
+      sections: [...header, ...body, ...footer],
+      childrenByNodeId,
+      activeNodeId,
+      activeLocation,
+      activeResource,
+      selectedNodeId: treeState.selectedNodeId,
+    },
+    stateScope,
+  );
+
+  useTreeScrollRestoration(scrollRef, presentationKey, presentation.scrollTop, loading);
 
   if (!treeRenderer) return <MissingTreeRenderer />;
 
   const toggleNode = createToggleTreeNode({
     workbench,
     treeViewId,
+    stateScope,
     body,
     header,
     footer,
@@ -225,9 +184,22 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     loadChildren,
   });
 
-  const toggleSection = createToggleTreeSection(workbench, treeViewId, treeState.expandedSectionIds);
+  const toggleSection = createToggleTreeSection(workbench, treeViewId, treeState.expandedSectionIds, stateScope);
 
-  const navigate = createTreeNavigator({ workbench, treeViewId, hostRegion, onOpenResourceError });
+  const navigate = createTreeNavigator({ workbench, treeViewId, stateScope, hostRegion, owner, onOpenResourceError });
+  const pinnedTreeProps = {
+    draggable: isSidenav,
+    expandedNodeIds: actionInput.expandedNodeIds,
+    expandedSectionIds: treeState.expandedSectionIds,
+    activeNodeId: activeNodeSelection,
+    rowVariant: "compact" as const,
+    nodeGap: "1px",
+    onToggleSection: toggleSection,
+    onToggleNode: toggleNode,
+    onReorderNodes,
+    canMove: treeRenderer.canMove,
+    onNavigate: navigate,
+  };
 
   return (
     <TreeListDragProvider
@@ -249,21 +221,10 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
         {visibleHeaderSections.length > 0 ? (
           <Flex bg={workbenchBackgrounds.sidenav} flexShrink={0}>
             <TreeList
+              {...pinnedTreeProps}
               sections={visibleHeaderSections}
-              draggable={isSidenav}
-              expandedNodeIds={actionInput.expandedNodeIds}
-              expandedSectionIds={treeState.expandedSectionIds}
-              activeNodeId={activeNodeSelection}
-              rowVariant="compact"
-              // Header sections separate owners (mode and levels), so their rows read as one list.
               sectionGap="1px"
-              nodeGap="1px"
-              onToggleSection={toggleSection}
-              onToggleNode={toggleNode}
               onReorderSections={(nextSectionIds) => onReorderSections("header", nextSectionIds)}
-              onReorderNodes={onReorderNodes}
-              canMove={treeRenderer.canMove}
-              onNavigate={navigate}
             />
           </Flex>
         ) : null}
@@ -272,7 +233,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           visible={Boolean(treeRenderer.searchable)}
           placeholder={treeRenderer.searchPlaceholder}
           value={filter}
-          onChange={setFilter}
+          onChange={(filter) => presentation.update({ filter })}
         />
         {error && !isSidenav ? <RendererReadNotice error={error} retry={retry} /> : null}
         <ScrollArea
@@ -283,6 +244,9 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           viewportProps={{
             display: "block",
             style: { overflowX: "hidden" },
+            onScroll: (event) => {
+              if (!loading) presentation.update({ scrollTop: event.currentTarget.scrollTop });
+            },
           }}
           contentProps={{
             style: { minWidth: "100%", width: "100%", minHeight: "100%", display: "flex", flexDirection: "column" },
@@ -317,20 +281,10 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
         {visibleFooterSections.length > 0 ? (
           <Flex bg={workbenchBackgrounds.sidenav} flexShrink={0}>
             <TreeList
+              {...pinnedTreeProps}
               sections={visibleFooterSections}
-              draggable={isSidenav}
-              expandedNodeIds={actionInput.expandedNodeIds}
-              expandedSectionIds={treeState.expandedSectionIds}
-              activeNodeId={activeNodeSelection}
-              rowVariant="compact"
               sectionGap="md"
-              nodeGap="1px"
-              onToggleSection={toggleSection}
-              onToggleNode={toggleNode}
               onReorderSections={(nextSectionIds) => onReorderSections("footer", nextSectionIds)}
-              onReorderNodes={onReorderNodes}
-              canMove={treeRenderer.canMove}
-              onNavigate={navigate}
             />
           </Flex>
         ) : null}

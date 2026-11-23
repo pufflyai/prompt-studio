@@ -3,6 +3,7 @@
   "navigation.workspaces": "Espacios de trabajo",
   "navigation.sessions": "Sesiones",
   "timeline.page.title": "Cronología del proyecto",
+  "timeline.actions.title": "Acciones de la cronología",
   "timeline.view.title": "Cronología del proyecto",
   "commands.autoBuild.title": "Construir automáticamente",
   "commands.openTickets": "Abrir tickets",

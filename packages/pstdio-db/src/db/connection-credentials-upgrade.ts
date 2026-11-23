@@ -4,7 +4,11 @@ import { dirname } from "node:path";
 import { createInterface } from "node:readline";
 import { sql } from "drizzle-orm";
 import { credentialProvider } from "../services/extension-connections/credentials";
-import type { ConnectionConfiguration } from "../services/extension-connections/extension-connections";
+import {
+  type ConnectionConfiguration,
+  configuredCredentialKey,
+  connectionPreference,
+} from "../services/extension-connections/extension-connections";
 import type { DbClient } from "./connection.pglite";
 import { flushDirectory } from "./pglite-home-recovery";
 import { credentials, type ExtensionConnectionCheck } from "./schemas/credentials";
@@ -13,7 +17,7 @@ import { readUpgradeRows } from "./upgrade-rows";
 
 type ReleasedConnection = Record<string, unknown> &
   ConnectionConfiguration & {
-    project_id: string;
+    project_id: string | null;
     extension_id: string;
     contribution_id: string;
     secret_ref: string | null;
@@ -30,20 +34,32 @@ async function* readSnapshot(path: string) {
     stream.destroy();
   }
 }
+async function* readReleasedConnections(db: DbClient, tables: Set<string>) {
+  if (tables.has("extension_connections"))
+    for await (const row of readUpgradeRows(db, { table: "extension_connections", keys: ["id"] }))
+      yield row as ReleasedConnection;
+  if (tables.has("extension_settings"))
+    for await (const row of readUpgradeRows(db, {
+      table: "extension_settings",
+      keys: ["owner_type", "owner_id", "extension_id", "key"],
+      where: sql`owner_type = 'device_connection'`,
+    })) {
+      const saved = row.value_json as ReleasedConnection;
+      yield { ...saved, project_id: null, extension_id: String(row.extension_id), contribution_id: String(row.key) };
+    }
+}
 const capture = async (db: DbClient, snapshot: string | undefined) => {
-  const {
-    rows: [table],
-  } = await db.execute<{ present: string | null }>(
-    sql`SELECT to_regclass('public.extension_connections')::text AS present`,
-  );
-  if (!table.present) return;
+  const { rows } = await db.execute<{ table_name: string }>(sql`
+    SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'
+    AND table_name IN ('extension_connections', 'extension_settings')`);
+  if (!rows.length) return;
   const memory: ReleasedConnection[] = [];
   const temporary = snapshot && `${snapshot}.tmp`;
   const file = temporary ? await open(temporary, "w", 0o600) : undefined;
   try {
-    for await (const row of readUpgradeRows(db, { table: "extension_connections", keys: ["id"] })) {
+    for await (const row of readReleasedConnections(db, new Set(rows.map(({ table_name }) => table_name)))) {
       if (file) await file.writeFile(`${JSON.stringify(row)}\n`);
-      else memory.push(row as ReleasedConnection);
+      else memory.push(row);
     }
     await file?.sync();
   } catch (error) {
@@ -96,15 +112,11 @@ export const prepareConnectionCredentialsUpgrade = async (db: DbClient, path: st
           secret_ref,
           last_check_json,
         } = row;
+        const key = { projectId: project_id, extensionId: extension_id, contributionId: contribution_id };
         await tx
           .insert(preferences)
           .values({
-            scope: "project",
-            scope_id: project_id,
-            project_id,
-            extension_id,
-            key: `connection:${contribution_id}`,
-            sync: "team",
+            ...connectionPreference(key),
             value: { id, base_url, auth_type, auth_header_name, config_json, created_at },
             updated_at,
           })
@@ -118,7 +130,7 @@ export const prepareConnectionCredentialsUpgrade = async (db: DbClient, path: st
               id,
               project_id,
               extension_id,
-              contribution_id,
+              contribution_id: configuredCredentialKey(key).contributionId,
               provider: credentialProvider(base_url),
               auth_type,
               auth_header_name,

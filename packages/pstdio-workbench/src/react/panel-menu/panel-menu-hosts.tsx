@@ -1,4 +1,5 @@
 import { Box } from "@chakra-ui/react";
+import { UiScopeActivity } from "@pstdio/ui";
 import {
   createContext,
   type ReactNode,
@@ -51,8 +52,10 @@ const createMenuHosts = () => {
         listeners.delete(listener);
       };
     },
-    active(region: WorkbenchPanelMenuRegion) {
-      return Object.values(entries.get(region)?.slots ?? {}).some((slot) => slot.active);
+    presentation(region: WorkbenchPanelMenuRegion) {
+      const slots = entries.get(region)?.slots;
+      if (slots?.floating?.active) return "floating";
+      return slots?.attached?.active ? "attached" : undefined;
     },
     attach(region: WorkbenchPanelMenuRegion, presentation: Presentation, node: HTMLDivElement | null) {
       const entry = entries.get(region);
@@ -106,16 +109,20 @@ const MenuViewPortal = (props: {
 }) => {
   const { region, entry, registry, workbench } = props;
   const parentActive = useContext(ViewActivityContext);
-  const active = useSyncExternalStore(registry.subscribe, () => registry.active(region));
-  const [panel, side] = region.split("-") as ["main" | "secondary" | "side", "left" | "right"];
+  const presentation = useSyncExternalStore(registry.subscribe, () => registry.presentation(region));
+  const active = Boolean(presentation);
+  const [panel, side] = region.split("-") as ["main" | "secondary" | "side", "left" | "right" | "bottom"];
   return createPortal(
     <ViewActivityContext value={parentActive && active}>
-      <WorkbenchRegion
-        workbench={workbench}
-        region={region}
-        title={getWorkbenchPanelMenuLabel(panel, side)}
-        transparent
-      />
+      <UiScopeActivity active={active}>
+        <WorkbenchRegion
+          workbench={workbench}
+          region={region}
+          title={getWorkbenchPanelMenuLabel(panel, side)}
+          transparent
+          sizing={presentation === "floating" ? "bounded-height" : undefined}
+        />
+      </UiScopeActivity>
     </ViewActivityContext>,
     entry.host,
   );

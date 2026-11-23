@@ -33,7 +33,11 @@ interface LegacyInstancePreference extends Record<string, unknown> {
   automation_id?: string;
 }
 const sources = [
-  { table: "extension_settings", keys: ["owner_type", "owner_id", "extension_id", "key"] },
+  {
+    table: "extension_settings",
+    keys: ["owner_type", "owner_id", "extension_id", "key"],
+    where: sql`owner_type <> 'device_connection'`,
+  },
   { table: "extension_skill_preferences", keys: ["project_id", "extension_instance_id", "skill_key"] },
   { table: "extension_automation_preferences", keys: ["project_id", "extension_instance_id", "automation_id"] },
   { table: "webview_preferences", keys: ["extension_id", "name", "scope_type", "scope_id"] },

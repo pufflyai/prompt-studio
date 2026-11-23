@@ -12,6 +12,7 @@ import type {
   WorkbenchPanelContribution,
   WorkbenchPanelInstance,
   WorkbenchPanelMenuContribution,
+  WorkbenchPanelMenuSide,
   WorkbenchRegion,
   WorkbenchRegionSettings,
   WorkbenchRegionSize,
@@ -44,6 +45,10 @@ export interface LayoutPersistenceAdapter {
 }
 
 export interface CreateLayoutModelInput {
+  resolvePanelMenuSide?(
+    owner: WorkbenchWidgetPlacement,
+    menu: RegisteredWidgetContribution,
+  ): WorkbenchPanelMenuSide | undefined;
   defaultRegionVisibility?: Partial<Record<WorkbenchRegion, boolean>>;
   persistence?: LayoutPersistenceAdapter;
   normalizeLayout?(layout: WorkbenchLayout): WorkbenchLayout;

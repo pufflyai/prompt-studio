@@ -8,6 +8,7 @@ export const workbenchExtensionConnectionRecordSchema = z.object({
   label: localizableStringSchema,
   authType: z.enum(["bearer", "header"]),
   supportsCheck: z.boolean(),
+  scope: z.enum(["project", "global"]).optional(),
 });
 
 export const extensionConnectionRecordSchema = z.object({
@@ -17,6 +18,7 @@ export const extensionConnectionRecordSchema = z.object({
   baseUrl: z.string(),
   authType: z.enum(["bearer", "header"]),
   configured: z.boolean(),
+  scope: z.enum(["project", "global"]).optional(),
   lastCheck: z
     .object({
       ok: z.boolean(),

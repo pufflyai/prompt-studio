@@ -14,7 +14,11 @@ const deps = {
 
 test("project-only provider callbacks can run tools in an explicit local directory", async () => {
   const scope = createInvocationScope({ logger: { info() {}, warn() {}, error() {} } });
-  const process = createWorkspaceProviderProcess(deps, { projectId: "project", providerId: "provider" }, scope);
+  const process = createWorkspaceProviderProcess(
+    deps,
+    { projectId: "project", providerId: "provider", extensionId: "example.provider" },
+    scope,
+  );
   const cwd = await realpath(tmpdir());
   try {
     const result = await process.runOrThrow({ cwd, command: ["bun", "-e", "process.stdout.write(process.cwd())"] });
@@ -28,7 +32,7 @@ test("explicit process directories retain workspace ownership checks", async () 
   const scope = createInvocationScope({ logger: { info() {}, warn() {}, error() {} } });
   const process = createWorkspaceProviderProcess(
     deps,
-    { projectId: "project", providerId: "provider", workspaceId: "foreign" },
+    { projectId: "project", providerId: "provider", extensionId: "example.provider", workspaceId: "foreign" },
     scope,
   );
   try {

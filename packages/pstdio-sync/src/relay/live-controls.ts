@@ -16,11 +16,20 @@ export const createLiveControls = (
   let connected = false;
   let pending: { requestId: string; key: string; entry: Entry; adding: boolean } | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let routingPending = false;
   const flush = () => {
-    if (!connected || pending || timer) return;
+    if (!connected) {
+      routingPending = desired.size > 0;
+      return;
+    }
+    if (pending || timer) {
+      routingPending = true;
+      return;
+    }
     // Remove retired state first, including when replacing a full subscription set.
     const removed = different(applied, desired);
     const next = removed ?? different(desired, applied);
+    routingPending = Boolean(next);
     if (!next) return;
     const [key, entry] = next;
     pending = { requestId: crypto.randomUUID(), key, entry, adding: !removed };
@@ -32,8 +41,11 @@ export const createLiveControls = (
     timer = undefined;
     pending = undefined;
     applied.clear();
+    routingPending = desired.size > 0;
   };
   return {
+    // Sample the existing reconciliation; status reads do not scan routes or send work.
+    pending: () => routingPending,
     reset,
     ready() {
       reset();

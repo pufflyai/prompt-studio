@@ -21,6 +21,7 @@ export interface WorkbenchPanelMenuStateController {
   store: WorkbenchStore<WorkbenchPanelMenuState>;
   isOpen(menuId: string): boolean;
   setOpen(menuId: string, open: boolean): void;
+  setSelection(menuIds: readonly string[], openMenuId?: string): void;
   toggle(menuId: string): void;
   setPersistenceScope(scope: string | undefined): void;
   getPersistenceScope(): string | undefined;
@@ -60,6 +61,13 @@ export const createWorkbenchPanelMenuStateController = (
     store,
 
     isOpen,
+
+    setSelection(menuIds, openMenuId) {
+      const openByMenuId = { ...store.getState().openByMenuId };
+      for (const id of menuIds) openByMenuId[id] = id === openMenuId;
+      store.setState({ openByMenuId }, false, "selectMenu");
+      persistState();
+    },
 
     setOpen(menuId, open) {
       const snapshot = store.getState();

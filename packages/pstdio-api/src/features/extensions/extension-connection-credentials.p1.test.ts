@@ -8,10 +8,10 @@ import {
   projects,
 } from "pstdio-db";
 import { createMemoryConnectionSecretStore } from "./connection-secret-store";
-import { createExtensionConnectionService } from "./extension-connection-service";
+import { createExtensionConnectionService, type ExtensionConnectionServiceDeps } from "./extension-connection-service";
 import { contribution } from "./extension-connection-service.test-fixture";
 
-const setup = async (isExtensionInstalled?: (projectId: string, extensionId: string) => Promise<boolean>) => {
+const setup = async (isExtensionInstalled?: ExtensionConnectionServiceDeps["isExtensionInstalled"]) => {
   const store = await createDb({ path: ":memory:" });
   for (const id of ["first", "second"]) await createProjectsDBService(store.db).create({ id, name: id });
   const received: string[] = [];

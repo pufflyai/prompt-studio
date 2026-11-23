@@ -7,12 +7,13 @@ import {
   resourceKey,
   type ViewLocation,
 } from "@pstdio/sdk/extensions";
-import type {
-  NavigationTarget,
-  NavigationTargetPanel,
-  ResourceRef,
-  WorkbenchModuleContext,
-  WorkbenchRegion,
+import {
+  type NavigationTarget,
+  type NavigationTargetPanel,
+  type ResourceRef,
+  type WorkbenchModuleContext,
+  type WorkbenchRegion,
+  workbenchPanelRegions,
 } from "../../core";
 import { getPageLocationPreparation } from "../../core/controllers/page-location/page-location-preparation";
 import { isWorkbenchModePanelAvailable } from "../../core/registries/modes/mode-layout";
@@ -26,7 +27,8 @@ const findPage = (ctx: WorkbenchModuleContext, ref: PageRef) =>
 const resolvePanelReference = (ctx: WorkbenchModuleContext, panel: NavigationTargetPanel["panel"]) =>
   panel.kind === "page-slot" ? (replacedPageSlot(ctx.modePlacements, panel)?.ref ?? panel) : panel;
 const findOpenResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) =>
-  Object.values(ctx.layout.getLayout().regions)
+  workbenchPanelRegions
+    .map((region) => ctx.layout.getLayout().regions[region])
     .flatMap((region) => region.widgets.map((panel) => ({ region: region.id, panel })))
     .find(({ panel }) => panel.resource && resourceKey(panel.resource) === resourceKey(resource));
 const pagePreviewView = (ctx: WorkbenchModuleContext, pageRef: PageRef, resource: ResourceRef) => {

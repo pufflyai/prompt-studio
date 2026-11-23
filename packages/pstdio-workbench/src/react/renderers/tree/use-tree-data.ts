@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import type { WorkbenchPanelInstance } from "../../../core";
 import { getWorkbenchRenderers, type ResourceRef, type TreeNode, type WorkbenchCore } from "../../../core";
+import { treeStateKey } from "../../../core/registries/renderers/tree-state-scope";
 import { reportUserActionError } from "../../../core/shared/run-user-action";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { useSharedEqualValue } from "../share-equal-value";
@@ -24,6 +25,7 @@ export const useTreeData = (
   ownerKey = JSON.stringify(["tree", treeViewId, viewId]),
   onMoveError?: (error: unknown) => void,
   placement?: WorkbenchPanelInstance,
+  stateScope?: string,
 ) => {
   const {
     read,
@@ -36,9 +38,12 @@ export const useTreeData = (
     changes,
     navigationRegistrations,
     pageParams,
-  } = useTreeRead(workbench, treeViewId, resource, viewId, filter, ownerKey, placement);
+  } = useTreeRead(workbench, treeViewId, resource, viewId, filter, ownerKey, placement, true, stateScope);
   // Only the mounted renderer initializes expansion; presence observers share its finite read.
-  useEffect(() => expandDefaultTreeSections(getWorkbenchRenderers(workbench), treeViewId), [workbench, treeViewId]);
+  useEffect(
+    () => expandDefaultTreeSections(getWorkbenchRenderers(workbench), treeViewId, stateScope),
+    [workbench, treeViewId, stateScope],
+  );
   const loaded = {
     body: read.loading && !read.value?.body.length ? structure.body : (read.value?.body ?? []),
     header: read.value?.header ?? structure.header,
@@ -67,7 +72,7 @@ export const useTreeData = (
     tree,
     read.value,
     read.loading,
-    getWorkbenchRenderers(workbench).getTreeState(treeViewId),
+    getWorkbenchRenderers(workbench).getTreeState(treeViewId, stateScope),
   );
   const loadChildren = (id: string, retry = true) => {
     void pages
@@ -76,6 +81,7 @@ export const useTreeData = (
         (current, signal) =>
           getWorkbenchRenderers(workbench).getChildren(treeViewId, current, {
             resource,
+            stateScope,
             viewId,
             filter,
             pageParams,
@@ -87,7 +93,7 @@ export const useTreeData = (
   };
   const treeState = useWorkbenchStore(
     getWorkbenchRenderers(workbench).treeStore,
-    (state) => state.statesByTreeId[treeViewId],
+    (state) => state.statesByTreeId[treeStateKey(treeViewId, stateScope)],
   );
   useEffect(() => {
     for (const id of treeState?.expandedNodeIds ?? []) loadChildren(id, false);

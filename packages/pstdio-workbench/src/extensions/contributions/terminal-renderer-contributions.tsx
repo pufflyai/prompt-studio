@@ -1,4 +1,5 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { contributionRefId } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import { runUserAction } from "../../core/shared/run-user-action";
 import { watchClosedTerminalPlacements } from "../../react/terminal/watch-terminal-placements";
@@ -54,6 +55,7 @@ const createOwner = (
           id: view.id,
           title: text(currentView.title, view.id),
           icon: currentView.icon,
+          header: currentView.header ? { viewId: contributionRefId(currentView.header.view) } : undefined,
           body: {
             kind: "terminal",
             render: (render) =>

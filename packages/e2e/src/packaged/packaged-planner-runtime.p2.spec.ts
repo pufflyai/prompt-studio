@@ -177,19 +177,24 @@ const expectConflictsPreserved = async (execute: Execute, trackId: string, track
   expect(conflicts.filter((row) => row.attributes.archived === "archived")).toHaveLength(ARCHIVED_CONFLICTS);
 };
 
-const expectAutoBuildFilter = async (timeline: FrameLocator) => {
-  await timeline.getByRole("button", { name: "Auto Build", exact: true }).click();
-  const autoBuild = timeline.getByRole("dialog", { name: "Auto Build", exact: true });
+const expectAutoBuildFilter = async (page: Page) => {
+  await page
+    .frameLocator('iframe[title="Timeline actions"]:visible')
+    .getByRole("button", { name: "Auto Build", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "Auto Build", exact: true });
+  const autoBuild = dialog.frameLocator('iframe[title="Auto Build"]');
   // The lazy editor's initial autofocus must finish before opening another control.
   await expect(autoBuild.getByRole("textbox")).toBeFocused();
   await expect(autoBuild.locator(".katex")).toHaveCSS("font-family", /KaTeX_Main/);
   await autoBuild.getByRole("button", { name: "Filter", exact: true }).click();
-  const filterMenu = timeline.getByTestId("filter-menu");
+  const filterMenu = autoBuild.getByTestId("filter-menu");
   await filterMenu.getByRole("button", { name: "Title", exact: true }).click();
   await filterMenu.getByRole("textbox", { name: "Value", exact: true }).fill("Seeded");
   await filterMenu.getByRole("button", { name: "Apply filter", exact: true }).click();
-  await expect(autoBuild.getByRole("group", { name: "Title filter", exact: true })).toBeVisible();
-  await autoBuild.getByRole("textbox", { name: "Value", exact: true }).press("Enter");
+  const titleFilter = autoBuild.getByRole("group", { name: "Title filter", exact: true });
+  await expect(titleFilter).toBeVisible();
+  await titleFilter.getByRole("textbox", { name: "Value", exact: true }).press("Enter");
   await autoBuild.getByRole("button", { name: "Remove Title filter", exact: true }).click();
   await expect(autoBuild.getByRole("group", { name: "Title filter", exact: true })).toHaveCount(0);
   await autoBuild.getByRole("button", { name: "Cancel", exact: true }).click();
@@ -322,7 +327,7 @@ browserTest("serves populated Planner projects and recovers cached webviews", as
     await timeline.getByRole("tab", { name: "All", exact: true }).click();
     await valid.execute("timeline.views.delete", { id: focusedView.id });
 
-    await expectAutoBuildFilter(timeline);
+    await expectAutoBuildFilter(page);
 
     phase("views checked; conflict start");
     // Ordinary ticket work stays available while Planner reports the Track problem.

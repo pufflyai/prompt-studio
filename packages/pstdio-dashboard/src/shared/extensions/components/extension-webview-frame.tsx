@@ -92,7 +92,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const [fallbackHostEvents] = useState(createHostEventPublisher);
   const hostEvents =
     props.workbench && props.placement
-      ? getBridgeWebviewHostEventPublisher(props.workbench, props.placement, projectId)
+      ? getBridgeWebviewHostEventPublisher(props.workbench, props.placement, projectId, props.webviewId)
       : fallbackHostEvents;
   const { pageLocation, pageParams } = useWebviewPageProps(props.workbench, props.placement);
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
