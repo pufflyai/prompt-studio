@@ -42,6 +42,11 @@
       "project": ["src/**/*.ts"],
       "ignore": ["dist/**"]
     },
+    "services/cloud-access": {
+      "entry": ["src/server.ts", "src/cli.ts", "src/**/*.test.ts"],
+      "project": ["src/**/*.ts"],
+      "ignore": ["dist/**"]
+    },
     "services/account-manager": {
       "entry": [
         "src/index.ts",

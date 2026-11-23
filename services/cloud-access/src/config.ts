@@ -112,7 +112,6 @@ export const runInputSchema = z.strictObject({
   deadline: z.iso.datetime(),
   instance: instanceSchema.optional(),
 });
-export type RunInput = z.infer<typeof runInputSchema>;
 
 export const sessionSchema = setupSchema.extend({
   controllerUrl: serviceUrl,
