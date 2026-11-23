@@ -1,0 +1,98 @@
+name: Release terminal output canonical review
+on:
+  push:
+    branches: [diagnostics/release-terminal-output-review]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        scope: [canonical, desktop-sandbox]
+    env:
+      REVIEW_HEAD: de172f0bbb9561254400453b9d5899f1a3fb7445
+      REVIEW_TEST: packages/e2e/src/ui/extension-webviews.p2.spec.ts
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.REVIEW_HEAD }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "26.7.0"
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - name: Prepare the exact review source and browser engines
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$REVIEW_HEAD"
+          git fetch origin main
+          printf 'Exact head %s with main %s\n' "$REVIEW_HEAD" "$(git rev-parse origin/main)"
+          docker info --format '{{.ServerVersion}}'
+          docker compose version
+          df -h .
+          command -v xvfb-run
+          bunx playwright@1.60.0 install --with-deps chromium firefox
+          bun run test:review --base origin/main --test "$REVIEW_TEST" --list > "$RUNNER_TEMP/review-plan.json"
+          jq -e '{head,mergeBase,digest:.testPlan.digest,invocations:(.testPlan.runs|length)}' "$RUNNER_TEMP/review-plan.json"
+      - name: Run the canonical repository review
+        if: matrix.scope == 'canonical'
+        shell: bash
+        run: |
+          set -euo pipefail
+          xvfb-run -a bun run test:review --base origin/main --test "$REVIEW_TEST" \
+            2>&1 | tee "$RUNNER_TEMP/review-command.log"
+      - name: Replay exact desktop invocations with the repository sandbox setup
+        if: matrix.scope == 'desktop-sandbox'
+        shell: bash
+        run: |
+          set -euo pipefail
+          bun install --frozen-lockfile
+          xvfb-run -a bun -e '
+            import { mkdtemp } from "node:fs/promises";
+            import { join } from "node:path";
+            import { tmpdir } from "node:os";
+            import { executePlan } from "./scripts/ci/run-test-plan";
+            import { cleanupReviewCompose } from "./scripts/ci/local-review-compose";
+            import { localReviewEnvironment } from "./scripts/ci/local-review-source";
+
+            const directory = await mkdtemp(join(tmpdir(), "pstdio-review-replay-"));
+            const report = JSON.parse(await Bun.file(join(process.env.RUNNER_TEMP, "review-plan.json")).text());
+            const plan = report.testPlan;
+            if (plan.source.sha !== process.env.REVIEW_HEAD) throw new Error("Unexpected plan revision");
+            const runIds = plan.runs.filter((run) => run.runner === "desktop").map((run) => run.id);
+            if (!runIds.length) throw new Error("The review plan did not include desktop checks");
+            console.log({planDigest: plan.digest, runIds});
+            try {
+              const result = await executePlan(plan, {
+                root: process.cwd(),
+                runIds,
+                env: { ...localReviewEnvironment(directory), CI_PROFILE: "production" },
+              });
+              process.exitCode = result.outcome === "success" ? 0 : 1;
+            } finally {
+              const cleanup = await cleanupReviewCompose(directory);
+              if (cleanup.some((entry) => entry.outcome !== "success")) process.exitCode = 1;
+            }
+          ' 2>&1 | tee "$RUNNER_TEMP/review-command.log"
+      - name: Preserve the exact review plan and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: terminal-output-review-${{ matrix.scope }}-de172f0bbb
+          path: |
+            ${{ runner.temp }}/review-plan.json
+            ${{ runner.temp }}/review-command.log
+            test-results/local-review/*.json
+            test-results/ci/planned/**/execution.json
+            /tmp/pstdio-local-review-*/checks.json
+            /tmp/pstdio-local-review-*/logs/**/*.log
+            /tmp/pstdio-local-review-*/source/test-results/ci/planned/**/execution.json
+            /tmp/pstdio-local-review-*/source/packages/e2e/test-results/**/trace.zip
+            /tmp/pstdio-local-review-*/source/packages/e2e/test-results/**/error-context.md
+          if-no-files-found: error
