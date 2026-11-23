@@ -266,3 +266,61 @@ test("revoking a grant stops a spawned child that received it", async () => {
   expect(await handle.exited).toMatchObject({ code: null });
   expect(await waitFor(() => !pids.some(alive))).toBe(true);
 });
+
+test("an extension-owned child starts even when its call returns before the target resolves", async () => {
+  const scope = createInvocationScope({ logger });
+  const extensionOwner = createProcessOwner();
+  const api = createProcessApi({
+    scope,
+    extensionOwner: () => extensionOwner,
+    resolveTarget: async () => {
+      await Bun.sleep(50);
+      return { kind: "local", root: join(root, "workspace") };
+    },
+  });
+  const marker = join(root, "returned-early");
+  // The handler does not await `started` before its invocation ends.
+  const handle = api.spawn({ command: bun("tree.ts", marker), lifetime: "extension" });
+  await scope.close();
+  await handle.started;
+  const pids = await treeOf(marker);
+  expect(pids.every(alive)).toBe(true);
+  await extensionOwner.close();
+  expect(await waitFor(() => !pids.some(alive))).toBe(true);
+});
+
+test("closing an owner does not wait for a target that is still opening, and a late target starts nothing", async () => {
+  const scope = createInvocationScope({ logger });
+  const target = Promise.withResolvers<{ kind: "local"; root: string }>();
+  let targetSignal: AbortSignal | undefined;
+  let localSpawns = 0;
+  const api = createProcessApi({
+    scope,
+    resolveTarget: (_workspaceId, signal) => {
+      targetSignal = signal;
+      return target.promise;
+    },
+    spawner: ((...args: Parameters<typeof Bun.spawn>) => {
+      localSpawns += 1;
+      return Bun.spawn(...args);
+    }) as typeof Bun.spawn,
+  });
+  const marker = join(root, "run-beside-pending-spawn");
+  const running = api.run({ command: bun("tree.ts", marker) }).then(
+    () => "finished",
+    () => "stopped",
+  );
+  const pids = await treeOf(marker);
+  const handle = api.spawn({ command: bun("echo.ts") });
+  const closed = await Promise.race([scope.close().then(() => "closed"), Bun.sleep(3_000).then(() => "hung")]);
+  expect(closed).toBe("closed");
+  expect(await running).toBe("stopped");
+  expect(await waitFor(() => !pids.some(alive))).toBe(true);
+  expect(targetSignal?.aborted).toBe(true);
+  await expect(handle.started).rejects.toMatchObject({ code: "process_owner_closed" });
+  expect(await handle.exited).toEqual({ code: null, signal: null });
+  target.resolve({ kind: "local", root: join(root, "workspace") });
+  await Bun.sleep(100);
+  // The run above is the only child that ever started.
+  expect(localSpawns).toBe(1);
+});

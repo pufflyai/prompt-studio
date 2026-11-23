@@ -139,3 +139,31 @@ test("disposing a harness stops call children of a turn that never finished", as
   await registry.dispose();
   expect(killed("stuck-turn")).toBe(true);
 });
+
+test("releasing a prepared operation that was never invoked stops its children; after invoke it has no effect", async () => {
+  const done = Promise.withResolvers<HarnessExit>();
+  let operations = 0;
+  const { registry, handle, killed } = harness({
+    prepareOperation: (ctx) => {
+      ctx.process.spawn({ command: [`op-${++operations}`] });
+      return {
+        execution: "exclusive",
+        invoke: async () => ({ kind: "started", session: { done: done.promise, stop: () => {} } }),
+      };
+    },
+  });
+  const abandoned = await handle.prepareOperation({ sessionId: "s1" }, { kind: "command", text: "/review" });
+  abandoned.release();
+  await settle();
+  expect(killed("op-1")).toBe(true);
+
+  const invoked = await handle.prepareOperation({ sessionId: "s1" }, { kind: "command", text: "/review" });
+  await invoked.invoke({ events: { push: () => {}, getMessages: () => [] } });
+  invoked.release();
+  await settle();
+  expect(killed("op-2")).toBe(false);
+  done.resolve({ status: "completed" });
+  await settle();
+  expect(killed("op-2")).toBe(true);
+  await registry.dispose();
+});

@@ -105,7 +105,7 @@ const saveParams = (deps: SessionsRouteDeps, id: string, params: HarnessParams |
 const invokeControl = async (
   deps: SessionsRouteDeps,
   id: string,
-  prepared: PreparedHarnessOperation,
+  prepared: PreparedHarnessOperation & { release(): void },
   harnessId: string,
   entry: ActiveSession,
   control: { signal: AbortSignal; release(): void },
@@ -130,6 +130,7 @@ const invokeControl = async (
     throw new HarnessOperationError(error instanceof Error ? error.message : String(error), 400);
   } finally {
     control.release();
+    prepared.release();
     emitSessionCommandsChanged(deps.eventBus, id);
   }
 };
@@ -138,6 +139,47 @@ const emitOperationLifecycle = async (deps: SessionsRouteDeps, id: string, lifec
   if (lifecycle === "started") deps.sessionService.emitStartedHook?.(session);
   else deps.sessionService.emitResumedHook?.(session);
 };
+// Admits a prepared operation into the session: a control joins the running session; any other
+// operation needs an idle session and, when exclusive, a free execution slot.
+const admitPreparedOperation = async <P extends PreparedHarnessOperation>(
+  deps: SessionsRouteDeps,
+  id: string,
+  session: { status: string },
+  harnessId: string,
+  prepared: P,
+  signal?: AbortSignal,
+) => {
+  const active = deps.sessionService.store.get(id);
+  if (active?.cancellationRequested) throw new HarnessOperationError("The session is stopping.", 409);
+  if (prepared.execution === "control" && active?.session) {
+    const finished = Promise.withResolvers<void>();
+    const invocation = { done: finished.promise, abort: new AbortController() };
+    active.controlInvocations.add(invocation);
+    const release = () => {
+      active.controlInvocations.delete(invocation);
+      finished.resolve();
+    };
+    return {
+      harnessId,
+      prepared,
+      entry: null,
+      control: { entry: active, release, signal: invocation.abort.signal },
+    };
+  }
+  if (["in_progress", "awaiting_input", "queued"].includes(session.status))
+    throw new HarnessOperationError("Finish or stop the current work before running this command.", 409);
+  const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(id);
+  if (prepared.execution === "exclusive" && !(await hasCreateCapacity(deps, workspace?.id)))
+    throw new HarnessOperationError("All execution slots are in use. Try again when one is free.", 409);
+  const resumed = await deps.sessionService.resume(id, {
+    expectedStatus: session.status as "completed" | "failed" | "cancelled" | "disconnected",
+    emitResumedHook: false,
+  });
+  if (!resumed) throw new HarnessOperationError("Session changed before the command started.", 409);
+  const entry = initializeConversation(id, deps, async () => {}, signal);
+  return { harnessId, prepared, entry, control: null };
+};
+
 export const invokeSessionHarnessOperation = async (
   deps: SessionsRouteDeps,
   id: string,
@@ -150,45 +192,24 @@ export const invokeSessionHarnessOperation = async (
     const { session, harness, input, options } = await resolve(deps, id, true);
     if (expectedHarnessId && harness.id !== expectedHarnessId)
       throw new HarnessOperationError("The harness changed. Reload its commands before trying again.", 409);
-    let prepared: PreparedHarnessOperation;
+    let prepared: Awaited<ReturnType<typeof harness.prepareOperation>>;
     try {
       prepared = await harness.prepareOperation(input, operation, options);
     } catch (error) {
       throw new HarnessOperationRefused(error);
     }
-    const active = deps.sessionService.store.get(id);
-    if (active?.cancellationRequested) throw new HarnessOperationError("The session is stopping.", 409);
-    if (prepared.execution === "control" && active?.session) {
-      const finished = Promise.withResolvers<void>();
-      const invocation = { done: finished.promise, abort: new AbortController() };
-      active.controlInvocations.add(invocation);
-      const release = () => {
-        active.controlInvocations.delete(invocation);
-        finished.resolve();
-      };
-      return {
-        harnessId: harness.id,
-        prepared,
-        entry: null,
-        control: { entry: active, release, signal: invocation.abort.signal },
-      };
+    // Until it is invoked, the prepared operation holds its children; every refusal here ends them.
+    try {
+      return await admitPreparedOperation(deps, id, session, harness.id, prepared, signal);
+    } catch (error) {
+      prepared.release();
+      throw error;
     }
-    if (["in_progress", "awaiting_input", "queued"].includes(session.status))
-      throw new HarnessOperationError("Finish or stop the current work before running this command.", 409);
-    const workspace = await deps.workspaceSessionService.getWorkspaceBySessionId(id);
-    if (prepared.execution === "exclusive" && !(await hasCreateCapacity(deps, workspace?.id)))
-      throw new HarnessOperationError("All execution slots are in use. Try again when one is free.", 409);
-    const resumed = await deps.sessionService.resume(id, {
-      expectedStatus: session.status as "completed" | "failed" | "cancelled" | "disconnected",
-      emitResumedHook: false,
-    });
-    if (!resumed) throw new HarnessOperationError("Session changed before the command started.", 409);
-    const entry = initializeConversation(id, deps, async () => {}, signal);
-    return { harnessId: harness.id, prepared, entry, control: null };
   });
   const { harnessId, prepared, entry } = context;
   if (context.control)
     return invokeControl(deps, id, prepared, harnessId, context.control.entry, context.control, signal);
+  // Unreachable: admission returns a conversation entry whenever it returns no control.
   if (!entry) throw new Error("Harness command has no conversation owner.");
 
   const abort = new AbortController();
@@ -253,6 +274,7 @@ export const invokeSessionHarnessOperation = async (
     if (error instanceof HarnessOperationError) throw error;
     throw new HarnessOperationError(error instanceof Error ? error.message : String(error), 400);
   } finally {
+    prepared.release();
     emitSessionCommandsChanged(deps.eventBus, id);
   }
 };

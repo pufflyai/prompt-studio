@@ -37,14 +37,27 @@ export const createExtensionProcessOwners = (input: {
   };
 
   return {
-    owner(projectId: string, source: ProcessEnvironmentSource): ProcessOwner {
+    owner(projectId: string, source: ProcessEnvironmentSource) {
       const identity = sourceIdentity(source);
       const key = JSON.stringify([projectId, source.extension_id, identity]);
       let generation = generations.get(key);
       if (!generation) {
-        generation = { projectId, extensionId: source.extension_id, identity, owner: createProcessOwner() };
-        if (disposed) void generation.owner.close();
-        else generations.set(key, generation);
+        const created: Generation = {
+          projectId,
+          extensionId: source.extension_id,
+          identity,
+          owner: createProcessOwner(),
+        };
+        generation = created;
+        if (disposed) void created.owner.close();
+        else {
+          generations.set(key, created);
+          // A call that was already running when its source was disabled or replaced must not
+          // revive a retired generation; no later invalidation would stop it.
+          void stillCurrent(created).then((current) => {
+            if (!current) return retire(key, created);
+          });
+        }
       }
       return generation.owner;
     },
